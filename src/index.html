@@ -1,20 +1,28 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Mr. Voice</title>
     <link rel="stylesheet" href="index.css">
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="./stylesheets/bootstrap.min.css" />
+    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
 
     <!-- Bootstrap Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script>let $ = require('jquery');</script>
-    <script>require('popper.js');</script>
-    <script>require('bootstrap');</script>
+    <!-- <script>let $ = require('jquery');</script> -->
   </head>
   <body>
-    <h1>💖 Hello World!</h1>
-    <p>Welcome to your Electron application.</p>
+    <h1>Welcome To Mr. Voice</h1>
+      <div class="form-group">
+        <label for="omni_search">Search Term</label>
+        <input type="text" class="form-control" id="omni_search">
+      </div>
+      <button type="submit" class="btn btn-primary" onclick="searchData()">Search</button>
+
+      <hr />
+
+
   </body>
+  <script src="renderer.js"></script>
 </html>
