@@ -1,4 +1,5 @@
 var db = new sqlite3.Database('/Users/minter/mrvoice.db');
+var sound;
 
 function searchData(){
   db.serialize(function() {
@@ -14,4 +15,16 @@ function searchData(){
         $('#search_results').append("<tr><td>" + row.title + "</td><td>" + row.artist + "</td></tr>");
     });
   });
+}
+
+function playSelected(){
+  sound = new Howl({
+    src: ['sound.mp3']
+  });
+
+  sound.play();
+}
+
+function stopSelected(){
+  sound.stop();
 }
