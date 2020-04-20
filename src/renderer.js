@@ -10,6 +10,7 @@ function searchData(){
       throw err;
     }
         console.log('Found ' + row.title + ' by ' + row.artist);
+        $('#search_results').append("<tr><td>" + row.title + "</td><td>" + row.artist + "</td></tr>");
     });
   });
 

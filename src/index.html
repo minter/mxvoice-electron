@@ -8,9 +8,20 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
 
-    <!-- Bootstrap Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <!-- Insert this line above script imports  -->
+    <script>
+      if (typeof module === 'object') { window.module = module; module = undefined; }
+    </script>
+    
+    <!-- normal script imports etc  -->
+    <script src="https://code.jquery.com/jquery-3.5.0.min.js"
+      integrity="sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ=" crossorigin="anonymous"></script>
+    
+    <!-- Insert this line after script imports -->
+    <script>if (window.module) module = window.module;</script>
+
     <!-- <script>let $ = require('jquery');</script> -->
+    
   </head>
   <body>
     <h1>Welcome To Mr. Voice</h1>
@@ -24,7 +35,8 @@
         <table class="table" id="search_results">
           <thead>
             <tr>
-              <th>Results</th>
+              <th>Title</th>
+              <th>Artist</th>
             </tr>
           </thead>
           <tbody>
