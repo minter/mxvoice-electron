@@ -2,12 +2,17 @@ var db = new sqlite3.Database('/Users/minter/mrvoice.db');
 
 function searchData(){
   db.serialize(function() {
-    db.each("SELECT code AS id, description AS info FROM categories", function(err, row) {
-        console.log(row.id + ": " + row.info);
+    var value = document.getElementById('omni_search').value
+    console.log('Called with value ' + value);
+    var search_term = '%' + value + '%';
+    db.each("SELECT * from mrvoice WHERE info LIKE ? OR title LIKE ? OR artist like ?", [search_term, search_term, search_term], function(err, row) {
+    if (err) {
+      throw err;
+    }
+        console.log('Found ' + row.title + ' by ' + row.artist);
     });
   });
 
-  var value = document.getElementById("omni_search").value;
   // var value = $('#omni_search').value;
-  console.log('Called with value ' + value);
+  // console.log('Called with value ' + value);
 }
