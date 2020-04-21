@@ -17,7 +17,7 @@ function searchData(){
   db.serialize(function() {
     var category = $( "#category_select" ).val();
     console.log('Using category ' + category);
-    var value = document.getElementById('omni_search').value
+    var value = document.getElementById('omni_search').value.trim();
     console.log('Called with value ' + value);
     $('#search_results tbody').find("tr").remove();
     var search_term = '%' + value + '%';
