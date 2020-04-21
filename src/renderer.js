@@ -51,6 +51,9 @@ function playSelected(){
   console.log('Got song ID ' + song_id);
 
   if (song_id) {
+    if (sound) {
+      sound.stop();
+    }
     db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
       var filename = row.filename;
       console.log("Inside get, Filename is " + filename);
