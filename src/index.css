@@ -7,9 +7,13 @@ body {
 
 .my-custom-scrollbar {
 position: relative;
-height: 200px;
+height: 500px;
 overflow: auto;
 }
 .table-wrapper-scroll-y {
 display: block;
+}
+
+#selected_row {
+  background-color: blue;
 }

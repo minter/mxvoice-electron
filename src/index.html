@@ -19,9 +19,6 @@
 
     <!-- Insert this line after script imports -->
     <script>if (window.module) module = window.module;</script>
-
-    <!-- <script>let $ = require('jquery');</script> -->
-
   </head>
   <body>
     <h1>Welcome To Mr. Voice</h1>
@@ -48,4 +45,10 @@
       <button class="btn btn-primary" onclick="stopSelected()">Stop</button>
   </body>
   <script src="renderer.js"></script>
+  <script type="text/javascript">
+    $('#search_results').on('click', 'tbody tr', function(event) {
+      $('#selected_row').removeAttr('id');
+      $(this).attr('id', 'selected_row');
+    });
+  </script>
 </html>

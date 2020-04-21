@@ -12,17 +12,36 @@ function searchData(){
       throw err;
     }
         console.log('Found ' + row.title + ' by ' + row.artist);
-        $('#search_results').append("<tr><td>" + row.title + "</td><td>" + row.artist + "</td></tr>");
+        $('#search_results').append("<tr songid='" + row.id + "'><td>" + row.title + "</td><td>" + row.artist + "</td></tr>");
     });
   });
 }
 
 function playSelected(){
-  sound = new Howl({
-    src: ['sound.mp3']
-  });
+  //$('#selected_row').attr('songid');
+  //$('#selected_row').removeAttr('id');
 
-  sound.play();
+  // $('#myTable').on('click', '.clickable-row', function(event) {
+  //   if($(this).hasClass('active')){
+  //     $(this).removeClass('active');
+  //   } else {
+  //     $(this).addClass('active').siblings().removeClass('active');
+  //   }
+  // });
+  var song_id = $('#selected_row').attr('songid');
+  // var filename;
+  console.log('Got song ID ' + song_id);
+
+  if (song_id) {
+    db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
+      var filename = row.filename;
+      console.log("Inside get, Filename is " + filename);
+      sound = new Howl({
+        src: [path.join('/Users', 'minter', 'mp3', filename)]
+      });
+      sound.play();
+    });
+  }
 }
 
 function stopSelected(){
