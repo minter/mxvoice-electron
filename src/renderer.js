@@ -7,7 +7,7 @@ function populateCategorySelect(){
   if (err) {
     throw err;
   }
-    $('#category_select').append('<option value="' + row.code + '">' + row.description + '</option>');
+    $('#category_select').append(`<option value="${row.code}">${row.description}</option>`);
     console.log('Found ' + row.code + ' as ' + row.description);
   });
 
@@ -36,12 +36,12 @@ function searchData(){
       query_string = " WHERE " + query_segments.join(' AND ');
     }
     console.log("Query string is " + query_string);
-    db.each("SELECT * from mrvoice" + query_string, query_params, function(err, row) {
+    db.each("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist', query_params, function(err, row) {
     if (err) {
       throw err;
     }
         console.log('Found ' + row.title + ' by ' + row.artist);
-        $('#search_results').append("<tr songid='" + row.id + "'><td>" + row.title + "</td><td>" + row.artist + "</td></tr>");
+        $('#search_results').append(`<tr songid='${row.id}'><td>${row.category}</td><td>${row.info}</td><td>${row.title}</td><td>${row.artist}</td><td>${row.time}</td></tr>`);
     });
   });
 }
