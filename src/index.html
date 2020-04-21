@@ -23,29 +23,31 @@
   <body>
     <div class="container">
     <h1>Welcome To Mr. Voice</h1>
-      <div class="form-group">
+      <form onsubmit="searchData();return false;">
+        <div class="form-group">
+          <div class="row">
+            <div class="col">
+              <label for="category_select">Category</label>
+              <select id="category_select">
+                <option value="*">All Categories</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">    
+            <div class="form-group">
+              <label for="omni_search">Search Term</label>
+              <input type="text" class="form-control" id="omni_search">
+            </div>
+          </div>
+        </div>
         <div class="row">
           <div class="col">
-            <label for="category_select">Category</label>
-            <select id="category_select">
-              <option value="*">All Categories</option>
-            </select>
+            <button type="submit" class="btn btn-primary">Search</button>
           </div>
         </div>
-      </div>
-      <div class="row">
-        <div class="col">    
-          <div class="form-group">
-            <label for="omni_search">Search Term</label>
-            <input type="text" class="form-control" id="omni_search">
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col">
-          <button type="submit" class="btn btn-primary" onclick="searchData()">Search</button>
-        </div>
-      </div>
+      </form>
 
       <div class="row">
         <div class="col">
