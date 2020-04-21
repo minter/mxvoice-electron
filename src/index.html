@@ -62,5 +62,8 @@
       $('#selected_row').removeAttr('id');
       $(this).attr('id', 'selected_row');
     });
+    $('#search_results').on('dblclick', 'tbody tr.song', function(event) {
+      playSelected();
+    });
   </script>
 </html>
