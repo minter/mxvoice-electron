@@ -1,4 +1,4 @@
-var db = new sqlite3.Database('/Users/minter/mrvoice.db');
+var db = new sqlite3.Database(path.join(homedir, 'mrvoice.db'));
 var sound;
 
 function searchData(){
@@ -37,7 +37,7 @@ function playSelected(){
       var filename = row.filename;
       console.log("Inside get, Filename is " + filename);
       sound = new Howl({
-        src: [path.join('/Users', 'minter', 'mp3', filename)]
+        src: [path.join(homedir, 'mp3', filename)]
       });
       sound.play();
     });
