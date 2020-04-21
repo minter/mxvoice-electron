@@ -16,3 +16,7 @@ display: block;
 #selected_row {
   background-color: blue;
 }
+
+#search_form {
+  padding-bottom: 15px;
+}

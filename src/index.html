@@ -23,7 +23,7 @@
   <body>
     <div class="container">
     <h1>Welcome To Mr. Voice</h1>
-      <form onsubmit="searchData();return false;">
+      <form id="search_form" onsubmit="searchData();return false;">
         <div class="form-group">
           <div class="row">
             <div class="col">
@@ -71,8 +71,8 @@
 
       <div class="row">
         <div class="col">
-          <button class="btn btn-primary" onclick="playSelected()">Play</button>
-          <button class="btn btn-primary" onclick="stopSelected()">Stop</button>
+          <button class="btn btn-success" onclick="playSelected()">Play</button>
+          <button class="btn btn-danger" onclick="stopSelected()">Stop</button>
         </div>
       </div>
     </div>
