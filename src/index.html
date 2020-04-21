@@ -16,6 +16,7 @@
     <!-- normal script imports etc  -->
     <script src="https://code.jquery.com/jquery-3.5.0.min.js"
       integrity="sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ=" crossorigin="anonymous"></script>
+    <script src="../node_modules/mousetrap/mousetrap.min.js"></script>
 
     <!-- Insert this line after script imports -->
     <script>if (window.module) module = window.module;</script>
@@ -65,5 +66,8 @@
     $('#search_results').on('dblclick', 'tbody tr.song', function(event) {
       playSelected();
     });
+
+    Mousetrap.bind('esc', function() { stopSelected(); });
+
   </script>
 </html>
