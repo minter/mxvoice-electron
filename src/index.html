@@ -21,37 +21,59 @@
     <script>if (window.module) module = window.module;</script>
   </head>
   <body>
+    <div class="container">
     <h1>Welcome To Mr. Voice</h1>
       <div class="form-group">
-        <label for="category_select">Category</label>
-        <select id="category_select">
-          <option value="*">All Categories</option>
-        </select>
+        <div class="row">
+          <div class="col">
+            <label for="category_select">Category</label>
+            <select id="category_select">
+              <option value="*">All Categories</option>
+            </select>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label for="omni_search">Search Term</label>
-        <input type="text" class="form-control" id="omni_search">
+      <div class="row">
+        <div class="col">    
+          <div class="form-group">
+            <label for="omni_search">Search Term</label>
+            <input type="text" class="form-control" id="omni_search">
+          </div>
+        </div>
       </div>
-      <button type="submit" class="btn btn-primary" onclick="searchData()">Search</button>
-
-      <div class="table-wrapper-scroll-y my-custom-scrollbar">
-        <table class="table" id="search_results">
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Info</th>
-              <th>Title</th>
-              <th>Artist</th>
-              <th>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-          </tbody>
-        </table>
+      <div class="row">
+        <div class="col">
+          <button type="submit" class="btn btn-primary" onclick="searchData()">Search</button>
+        </div>
       </div>
 
-      <button class="btn btn-primary" onclick="playSelected()">Play</button>
-      <button class="btn btn-primary" onclick="stopSelected()">Stop</button>
+      <div class="row">
+        <div class="col">
+          <div class="table-wrapper-scroll-y my-custom-scrollbar">
+            <table class="table table-sm" id="search_results">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Info</th>
+                  <th>Title</th>
+                  <th>Artist</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <button class="btn btn-primary" onclick="playSelected()">Play</button>
+          <button class="btn btn-primary" onclick="stopSelected()">Stop</button>
+        </div>
+      </div>
+    </div>
   </body>
   <script src="renderer.js"></script>
   <script type="text/javascript">
