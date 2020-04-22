@@ -36,6 +36,7 @@ function searchData(){
       query_string = " WHERE " + query_segments.join(' AND ');
     }
     console.log("Query string is " + query_string);
+    t.clear();
     db.each("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist', query_params, function(err, row) {
     if (err) {
       throw err;
