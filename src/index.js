@@ -71,6 +71,21 @@ app.on('activate', () => {
   }
 });
 
+if (process.platform == 'darwin') {
+  app.setAboutPanelOptions({
+    applicationName: app.name,
+    applicationVersion: app.getVersion(),
+    copyright: 'Copyright 2020',
+    authors: [
+      'Wade Minter',
+      'Andrew Berkowitz'
+    ],
+    website: 'https://mrvoice.net/',
+    credits: "Wade Minter <wade@wademinter.com>\nAndrew Berkowitz<andrew@andrewberkowitz.com>"
+  })
+}
+
+
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
 
