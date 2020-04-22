@@ -1,4 +1,4 @@
-var db = new sqlite3.Database(path.join(homedir, 'mrvoice.db'));
+var db = new sqlite3.Database(path.join(preferences.locations.database_directory, 'mrvoice.db'));
 var sound;
 
 function populateCategorySelect(){
@@ -58,7 +58,7 @@ function playSelected(){
       var filename = row.filename;
       console.log("Inside get, Filename is " + filename);
       sound = new Howl({
-        src: [path.join(homedir, 'mp3', filename)]
+        src: [path.join(preferences.locations.music_directory, filename)]
       });
       sound.play();
     });

@@ -14,7 +14,7 @@
   "keywords": [],
   "author": {
     "name": "H. Wade Minter",
-    "email": "minter@lunenburg.org"
+    "email": "wade@wademinter.com"
   },
   "license": "MIT",
   "config": {
@@ -26,6 +26,12 @@
           "config": {
             "name": "mrvoice"
           }
+        },
+        {
+          "name": "@electron-forge/maker-dmg",
+          "platforms": [
+            "darwin"
+          ]
         },
         {
           "name": "@electron-forge/maker-zip",
@@ -46,17 +52,20 @@
   },
   "dependencies": {
     "bootstrap": "^4.4.1",
+    "electron-preferences": "^2.0.0",
     "electron-settings": "^3.2.0",
     "electron-squirrel-startup": "^1.0.0",
     "electron-util": "^0.14.1",
     "howler": "^2.1.3",
     "jquery": "^3.5.0",
     "mousetrap": "^1.6.5",
+    "n-readlines": "^1.0.0",
     "popper.js": "^1.14.4",
     "sqlite3": "^4.1.1"
   },
   "devDependencies": {
     "@electron-forge/cli": "6.0.0-beta.50",
+    "@electron-forge/maker-dmg": "6.0.0-beta.50",
     "@electron-forge/maker-deb": "6.0.0-beta.50",
     "@electron-forge/maker-rpm": "6.0.0-beta.50",
     "@electron-forge/maker-squirrel": "6.0.0-beta.50",

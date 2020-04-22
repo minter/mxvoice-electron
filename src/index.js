@@ -1,8 +1,14 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
 const { is } = require('electron-util');
-// Enable live reload
+const os = require('os');
+const fs = require('fs');
+const readlines = require('n-readlines');
+const ElectronPreferences = require('electron-preferences');
 
+let mainWindow;
+
+// Enable live reload
 if (is.development) {
   require("electron-reload")(__dirname);
 }
@@ -13,8 +19,11 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 }
 
 const createWindow = () => {
+
+  checkOldConfig();
+
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 1024,
     webPreferences: {
@@ -37,6 +46,13 @@ const createWindow = () => {
 // Some APIs can only be used after this event occurs.
 app.on('ready', createWindow);
 
+app.on('closed', function() {
+  // Dereference the window object, usually you would store windows
+  // in an array if your app supports multi windows, this is the time
+  // when you should delete the corresponding element.
+  mainWindow = null;
+});
+
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {
   // On OS X it is common for applications and their menu bar
@@ -58,10 +74,193 @@ app.on('activate', () => {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
 
-// db.serialize(function() {
-//   db.each("SELECT code AS id, description AS info FROM categories", function(err, row) {
-//       console.log(row.id + ": " + row.info);
-//   });
-// });
+// Menus
+var application_menu = [
+  {
+    label: 'Songs',
+    submenu: [
+      {
+        label: 'Add Song'
+      },
+      {
+        label: 'Edit Selected Song'
+      }
+    ]
+  },
+  {
+    label: 'Hotkeys',
+    submenu: [
+      {
+        label: 'Open Hotkeys File'
+      },
+      {
+        label: 'Save Hotkeys To File'
+      }
+    ]
+  }
+]
 
-// db.close();
+if (process.platform == 'darwin') {
+  const name = app.name;
+  application_menu.unshift({
+    label: name,
+    submenu: [
+      {
+        label: 'About ' + name,
+        role: 'about'
+      },
+      {
+        type: 'separator'
+      },
+      {
+        label: 'Preferences',
+        click: () => {
+          preferences.show();
+          }
+      },
+      {
+        type: 'separator'
+      },
+      {
+        label: 'Hide ' + name,
+        accelerator: 'Command+H',
+        role: 'hide'
+      },
+      {
+        label: 'Hide Others',
+        accelerator: 'Command+Shift+H',
+        role: 'hideothers'
+      },
+      {
+        label: 'Show All',
+        role: 'unhide'
+      },
+      {
+        label: 'Developer Tools',
+        click: () => {
+          mainWindow.openDevTools();
+          }
+      },
+      {
+        type: 'separator'
+      },
+      {
+        label: 'Quit',
+        accelerator: 'Command+Q',
+        click: () => { app.quit(); }
+      },
+    ]
+  });
+}
+
+menu = Menu.buildFromTemplate(application_menu);
+Menu.setApplicationMenu(menu);
+
+
+// Preferences
+const preferences = new ElectronPreferences({
+    /**
+     * Where should preferences be saved?
+     */
+    'dataStore': path.resolve(app.getPath('userData'), 'preferences.json'),
+    /**
+     * Default values.
+     */
+    'defaults': {
+        'locations': {
+          'music_directory': path.join(os.homedir(), 'mp3'),
+          'hotkey_directory': path.join(os.homedir(), 'hotkeys'),
+          'database_directory': os.homedir()
+        }
+        // 'notes': {
+        //     'folder': path.resolve(os.homedir(), 'Notes')
+        // },
+        // 'markdown': {
+        //     'auto_format_links': true,
+        //     'show_gutter': false
+        // },
+        // 'preview': {
+        //     'show': true
+        // },
+        // 'drawer': {
+        //     'show': true
+        // }
+    },
+    'onLoad': (preferences) => {
+      return preferences;
+    },
+    'sections': [
+        {
+            'id': 'locations',
+            'label': 'Data Locations',
+            /**
+             * See the list of available icons below.
+             */
+            'icon': 'archive-2',
+            'form': {
+                'groups': [
+                    {
+                        /**
+                         * Group heading is optional.
+                         */
+                        'fields': [
+                          {
+                              'label': 'Database Directory',
+                              'key': 'database_directory',
+                              'type': 'directory',
+                              'help': 'The location to store your mrvoice.db file'
+                          },
+
+                          {
+                              'label': 'Music File Directory',
+                              'key': 'music_directory',
+                              'type': 'directory',
+                              'help': 'The place to store the actual audio files'
+                          },
+                          {
+                              'label': 'Hotkey Directory',
+                              'key': 'hotkey_directory',
+                              'type': 'directory',
+                              'help': 'The place to store your saved hotkeys'
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+   });
+
+   // Config migration
+   function checkOldConfig() {
+     var config_path;
+     if (process.platform == 'darwin') {
+       config_path = path.join(app.getPath('home'), 'mrvoice.cfg');
+     }
+     else if (process.platform == 'win32') {
+       config_path = path.join('C:', 'mrvoice.cfg');
+     }
+
+     if (fs.existsSync(config_path)) {
+       // An old config file exists, we need to load the preferences
+       console.log("Found old Mr. Voice config file at " + config_path);
+       old_settings = [];
+
+       const line_reader = new readlines(config_path);
+
+       while (line = line_reader.next()) {
+         [key, val] = line.toString().trim().split('::');
+         old_settings[key] = val;
+       }
+       console.log('Preferences are ' + preferences);
+       console.log('Current value of file path is ' + preferences.value('locations.music_directory'));
+       console.log('Setting value of file path to ' + old_settings['filepath']);
+       preferences.value('locations.database_directory', path.dirname(old_settings['db_file']));
+       preferences.value('locations.music_directory', old_settings['filepath']);
+       preferences.value('locations.hotkey_directory', old_settings['savedir']);
+
+       fs.rename(config_path, config_path + '.converted', function(err) {
+         if ( err ) console.log('RENAME ERROR: ' + err);
+       });
+     }
+   };
