@@ -14,9 +14,13 @@ display: block;
 }
 
 #selected_row {
-  background-color: blue;
+  background-color: lightgoldenrodyellow;
 }
 
 #search_form {
   padding-bottom: 15px;
+}
+
+.dt-bootstrap4 {
+  cursor: pointer;
 }

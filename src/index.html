@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="index.css">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.20/css/dataTables.bootstrap4.min.css">
+
 
     <!-- Insert this line above script imports  -->
     <script>
@@ -16,6 +18,9 @@
     <!-- normal script imports etc  -->
     <script src="../node_modules/jquery/dist/jquery.min.js"></script>
     <script src="../node_modules/mousetrap/mousetrap.min.js"></script>
+    <script src="../node_modules/datatables.net/js/jquery.dataTables.min.js"></script>
+    <script src="../node_modules/datatables.net/js/dataTables.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.20/js/dataTables.bootstrap4.min.js"></script>
 
     <!-- Insert this line after script imports -->
     <script>if (window.module) module = window.module;</script>
@@ -37,14 +42,13 @@
         <div class="row">
           <div class="col">    
             <div class="form-group">
-              <label for="omni_search">Search Term</label>
-              <input type="text" class="form-control" id="omni_search">
+              <input type="text" class="form-control" placeholder="Search for music and sound..." id="omni_search">
             </div>
           </div>
         </div>
         <div class="row">
           <div class="col">
-            <button type="submit" class="btn btn-primary">Search</button>
+            <button type="submit" class="btn btn-primary">Go</button>
           </div>
         </div>
       </form>
@@ -52,8 +56,8 @@
       <div class="row">
         <div class="col">
           <div class="table-wrapper-scroll-y my-custom-scrollbar">
-            <table class="table table-sm" id="search_results">
-              <thead>
+            <table class="table" id="search_results">
+              <thead class="thead-dark">
                 <tr>
                   <th>Category</th>
                   <th>Info</th>
@@ -91,6 +95,11 @@
     });
 
     Mousetrap.bind('esc', function() { stopSelected(); });
+    
+    var t = $("#search_results").DataTable({
+      paging: false,
+      info: false
+    });
 
   </script>
 </html>
