@@ -7,8 +7,7 @@
     <link rel="stylesheet" href="index.css">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.20/css/dataTables.bootstrap4.min.css">
-
+    <link rel="stylesheet" href="../node_modules/datatables.net-bs4/css/dataTables.bootstrap4.min.css">
 
     <!-- Insert this line above script imports  -->
     <script>
@@ -19,8 +18,8 @@
     <script src="../node_modules/jquery/dist/jquery.min.js"></script>
     <script src="../node_modules/mousetrap/mousetrap.min.js"></script>
     <script src="../node_modules/datatables.net/js/jquery.dataTables.min.js"></script>
-    <script src="../node_modules/datatables.net/js/dataTables.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.10.20/js/dataTables.bootstrap4.min.js"></script>
+    <script src="../node_modules/datatables.net-dt/js/dataTables.dataTables.min.js"></script>
+    <script src="../node_modules/datatables.net-bs4/js/dataTables.bootstrap4.min.js"></script>
 
     <!-- Insert this line after script imports -->
     <script>if (window.module) module = window.module;</script>
@@ -56,7 +55,7 @@
       <div class="row">
         <div class="col">
           <div class="table-wrapper-scroll-y my-custom-scrollbar">
-            <table class="table" id="search_results">
+            <table class="table table-hover table-sm" id="search_results">
               <thead class="thead-dark">
                 <tr>
                   <th>Category</th>
@@ -98,7 +97,10 @@
     
     var t = $("#search_results").DataTable({
       paging: false,
-      info: false
+      info: false,
+      "language": {
+        "emptyTable": "You ain't searched for nothing yet"
+      }
     });
 
   </script>

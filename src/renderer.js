@@ -41,8 +41,17 @@ function searchData(){
       throw err;
     }
         console.log('Found ' + row.title + ' by ' + row.artist);
-        var rowNode = t.row.add([row.category, row.info, row.title, row.artist, row.time]).draw().node();
-        $(rowNode).addClass('song').attr("songid",row.id);
+        var rowNode = t.row
+          .add([
+            row.category,
+            row.info,
+            row.title,
+            row.artist,
+            row.time,
+          ])
+          .draw()
+          .node();
+        $(rowNode).addClass('song unselectable').attr("songid",row.id);
     });
   });
 }
