@@ -25,61 +25,99 @@
     <script>if (window.module) module = window.module;</script>
   </head>
   <body>
-    <div class="container">
-    <h1>Welcome To Mr. Voice</h1>
-      <form id="search_form" onsubmit="searchData();return false;">
-        <div class="form-group">
+    <div class="container-fluid">
+      <div class="row h-100 no-gutters">
+        <div class="col-9">
+          <div class="row no-gutters">
+            <div class="col-4">
+                <div class="h-100 card rounded-0">
+                  <div class="card-header">
+                    Holding Tank
+                  </div>
+                  <div class="card-body">
+                    Songs go here
+                  </div>
+                </div>
+            </div>
+            <div class="col-8">
+             <div class="card rounded-0">
+               <div class="card-header">Search</div>
+                <div class="card-body">
+                  <form id="search_form" onsubmit="searchData();return false;">
+                    
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <div class="input-group-text">
+                          <select id="category_select">
+                            <option value="*">All Categories</option>
+                          </select>
+                        </div>
+                      </div>
+                      <input type="text" class="form-control" placeholder="Search for music and sound..." id="omni_search">
+                      <div class="input-group-append">
+                        <button type="submit" class="btn btn-primary">Go</button>
+                      </div>
+                    </div>
+                  </form>
+                  
+                      <div class="table-wrapper-scroll-y my-custom-scrollbar">
+                        <table class="table table-hover table-sm" id="search_results">
+                          <thead class="thead-dark">
+                            <tr>
+                              <th>Category</th>
+                              <th>Info</th>
+                              <th>Title</th>
+                              <th>Artist</th>
+                              <th>Time</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                          </tbody>
+                        </table>
+                      </div>
+                </div>
+             </div>
+            </div>
+          </div>
           <div class="row">
             <div class="col">
-              <label for="category_select">Category</label>
-              <select id="category_select">
-                <option value="*">All Categories</option>
-              </select>
+              <div class="card rounded-0">
+                <div class="card-body">
+                  <button class="btn btn-success" onclick="playSelected()">Play</button>
+                  <button class="btn btn-danger" onclick="stopSelected()">Stop</button>
+                </div>
+              </div>
+            </div>
+          </div>  
+            
+        </div>
+        <div class="col-3">
+          <div class="h-50 row">
+            <div class="col">
+              <div class="card h-100 rounded-0">
+                <div class="card-header">Hotkeys</div>
+                  <div class="card-body">
+                   Hotkeys go here
+                  </div>
+                </div>
+              </div>
+            </div>
+          <div class="h-50 row">
+            <div class="col">
+              <div class="card h-100 rounded-0">
+                <div class="card-header">Queue</div>
+                <div class="card-body">
+                  Queue goes here
+                </div>
+              </div>
+            </div>
             </div>
           </div>
-        </div>
-        <div class="row">
-          <div class="col">    
-            <div class="form-group">
-              <input type="text" class="form-control" placeholder="Search for music and sound..." id="omni_search">
-            </div>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <button type="submit" class="btn btn-primary">Go</button>
-          </div>
-        </div>
-      </form>
-
-      <div class="row">
-        <div class="col">
-          <div class="table-wrapper-scroll-y my-custom-scrollbar">
-            <table class="table table-hover table-sm" id="search_results">
-              <thead class="thead-dark">
-                <tr>
-                  <th>Category</th>
-                  <th>Info</th>
-                  <th>Title</th>
-                  <th>Artist</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col">
-          <button class="btn btn-success" onclick="playSelected()">Play</button>
-          <button class="btn btn-danger" onclick="stopSelected()">Stop</button>
         </div>
       </div>
     </div>
   </body>
+
   <script src="renderer.js"></script>
   <script type="text/javascript">
     $( document ).ready(function() {
@@ -97,6 +135,7 @@
     
     var t = $("#search_results").DataTable({
       paging: false,
+      searching: false,
       info: false,
       "language": {
         "emptyTable": "You ain't searched for nothing yet"
