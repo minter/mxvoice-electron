@@ -52,6 +52,9 @@
   },
   "dependencies": {
     "bootstrap": "^4.4.1",
+    "datatables.net": "^1.10.20",
+    "datatables.net-bs4": "^1.10.20",
+    "datatables.net-dt": "^1.10.20",
     "electron-preferences": "^2.0.0",
     "electron-settings": "^3.2.0",
     "electron-squirrel-startup": "^1.0.0",

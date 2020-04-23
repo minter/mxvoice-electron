@@ -36,12 +36,23 @@ function searchData(){
       query_string = " WHERE " + query_segments.join(' AND ');
     }
     console.log("Query string is " + query_string);
+    t.clear();
     db.each("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist', query_params, function(err, row) {
     if (err) {
       throw err;
     }
         console.log('Found ' + row.title + ' by ' + row.artist);
-        $('#search_results').append(`<tr class="song" songid='${row.id}'><td>${row.category}</td><td>${row.info}</td><td>${row.title}</td><td>${row.artist}</td><td>${row.time}</td></tr>`);
+        var rowNode = t.row
+          .add([
+            row.category,
+            row.info,
+            row.title,
+            row.artist,
+            row.time,
+          ])
+          .draw()
+          .node();
+        $(rowNode).addClass('song unselectable').attr("songid",row.id);
     });
   });
 }
