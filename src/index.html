@@ -31,9 +31,9 @@
           <div class="row no-gutters">
             <div class="col-4">
                 <div class="h-100 card rounded-0">
-                  <div class="card-header">
+                  <h6 class="card-header">
                     Holding Tank
-                  </div>
+                  </h6>
                   <div class="card-body">
                     Songs go here
                   </div>
@@ -41,19 +41,17 @@
             </div>
             <div class="col-8">
              <div class="card rounded-0">
-               <div class="card-header">Search</div>
+               <h6 class="card-header">Search</h6>
                 <div class="card-body">
                   <form id="search_form" onsubmit="searchData();return false;">
                     
                     <div class="input-group mb-3">
                       <div class="input-group-prepend">
-                        <div class="input-group-text">
-                          <select id="category_select">
+                          <select class="custom-select" id="category_select">
                             <option value="*">All Categories</option>
                           </select>
-                        </div>
                       </div>
-                      <input type="text" class="form-control" placeholder="Search for music and sound..." id="omni_search">
+                      <input type="text" class="form-control" placeholder="Enter search term..." id="omni_search">
                       <div class="input-group-append">
                         <button type="submit" class="btn btn-primary">Go</button>
                       </div>
@@ -92,20 +90,20 @@
             
         </div>
         <div class="col-3">
-          <div class="h-50 row">
+          <div class="h-75 row">
             <div class="col">
               <div class="card h-100 rounded-0">
-                <div class="card-header">Hotkeys</div>
+                <h6 class="card-header">Hotkeys</h6>
                   <div class="card-body">
-                   Hotkeys go here
+                    Hotkeys go here
                   </div>
                 </div>
               </div>
             </div>
-          <div class="h-50 row">
+          <div class="h-25 row">
             <div class="col">
               <div class="card h-100 rounded-0">
-                <div class="card-header">Queue</div>
+                <h6 class="card-header">Queue</h6>
                 <div class="card-body">
                   Queue goes here
                 </div>

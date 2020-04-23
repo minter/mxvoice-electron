@@ -10,6 +10,7 @@ overflow: auto;
 .table-wrapper-scroll-y {
 display: block;
 cursor: pointer;
+min-height: 600px;
 font-size: 11px;
 }
 
@@ -29,4 +30,8 @@ font-size: 11px;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+#category_select {
+  max-width: 200px;
 }
