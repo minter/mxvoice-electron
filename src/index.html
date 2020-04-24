@@ -188,11 +188,11 @@
     });
 
     $("#hotkeys_list li").on("dragover", function (event) {
+      $(this).addClass("active");
       allowHotkeyDrop(event.originalEvent);
     });
 
     $("#hotkeys_list li").on("dragenter", function (event) {
-      $(this).addClass("active");
     });
 
     $("#hotkeys_list li").on("dragleave", function (event) {

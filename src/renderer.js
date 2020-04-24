@@ -2,18 +2,12 @@ var db = new sqlite3.Database(path.join(preferences.locations.database_directory
 var sound;
 var categories = [];
 
-Mousetrap.bind('f1', function() { playSongFromHotkey('f1'); });
-Mousetrap.bind('f2', function() { playSongFromHotkey('f2'); });
-Mousetrap.bind('f3', function() { playSongFromHotkey('f3'); });
-Mousetrap.bind('f4', function() { playSongFromHotkey('f4'); });
-Mousetrap.bind('f5', function() { playSongFromHotkey('f5'); });
-Mousetrap.bind('f6', function() { playSongFromHotkey('f6'); });
-Mousetrap.bind('f7', function() { playSongFromHotkey('f7'); });
-Mousetrap.bind('f8', function() { playSongFromHotkey('f8'); });
-Mousetrap.bind('f9', function() { playSongFromHotkey('f9'); });
-Mousetrap.bind('f10', function() { playSongFromHotkey('f10'); });
-Mousetrap.bind('f11', function() { playSongFromHotkey('f11'); });
-Mousetrap.bind('f12', function() { playSongFromHotkey('f12'); });
+// Set up fkeys
+for(let i=1;i<=12;i++) {
+  Mousetrap.bind(`f${i}`, function () {
+    playSongFromHotkey(`f${i}`);
+  });
+} 
 
 function playSongFromHotkey(hotkey) {
   console.log ('Getting song ID from hotkey ' + hotkey);
