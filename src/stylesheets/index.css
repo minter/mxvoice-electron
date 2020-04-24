@@ -43,8 +43,20 @@ font-size: 11px;
 
 #hotkeys_list li {
   margin-bottom: 3px;
+  overflow: hidden;
 }
 
 #hotkeys_list .badge {
   width: 30px;
+  margin-right: 2px;
+}
+
+#hotkeys_list span {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.dragenter {
+  background-color: yellowgreen;
+  border: 3px dashed black;
 }

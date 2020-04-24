@@ -87,57 +87,67 @@
           </div>
 
         </div>
-        <div class="col-3">
-          <div class="h-75 row">
+        <div class="col-3 h-100">
+          <div class="row">
             <div class="col">
               <div class="card h-100 rounded-0">
                 <h6 class="card-header bg-secondary text-white">Hotkeys</h6>
                   <div class="card-body">
-                    <ul class="list-group d-flex" id="hotkeys_list">
-                      <li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                    <ul class="list-group list-group-flush" id="hotkeys_list">
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey">
                         <div class="badge badge-dark">F1</div>
-                        <span class="value"></span>
+                        <span></span>
                       </li>
-                      <li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F2</div>
-                        <span class="value"></span>
-                      </li><li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                        <span></span>
+                      </li>
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F3</div>
-                        <span class="value"></span>
-                      </li><li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                        <span></span>
+                      </li>
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F4</div>
-                        <span class="value"></span>
-                      </li><li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                        <span></span>
+                      </li>
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F5</div>
-                        <span class="value"></span>
-                      </li><li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                        <span></span>
+                      </li>
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F6</div>
-                        <span class="value"></span>
-                      </li><li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                        <span></span>
+                      </li>
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F7</div>
-                        <span class="value"></span>
-                      </li><li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                        <span></span>
+                      </li>
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F8</div>
-                        <span class="value"></span>
-                      </li><li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                        <span></span>
+                      </li>
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F9</div>
-                        <span class="value"></span>
-                      </li><li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                        <span></span>
+                      </li>
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F10</div>
-                        <span class="value"></span>
-                      </li><li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                        <span></span>
+                      </li>
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F11</div>
-                        <span class="value"></span>
-                      </li><li class="list-group-item p-2" id="f1_hotkey" ondrop="hotkeyDrop(event)" ondragover="allowHotkeyDrop(event)">
+                        <span></span>
+                      </li>
+                      <li class="list-group-item text-nowrap p-1" id="f1_hotkey" >
                         <div class="badge badge-dark">F12</div>
-                        <span class="value"></span>
+                        <span></span>
                       </li>
                     </ul>
                   </div>
                 </div>
               </div>
             </div>
-          <div class="h-25 row">
+          <div class="row">
             <div class="col">
               <div class="card h-100 rounded-0">
                 <h6 class="card-header bg-secondary text-white">Queue</h6>
@@ -172,5 +182,25 @@
 
     Mousetrap.bind('esc', function() { stopSelected(); });
 
+    $("#hotkeys_list li").on("drop", function(event) {
+      $(this).removeClass("active");
+      hotkeyDrop(event.originalEvent);
+    });
+
+    $("#hotkeys_list li").on("dragover", function (event) {
+      allowHotkeyDrop(event.originalEvent);
+    });
+
+    $("#hotkeys_list li").on("dragenter", function (event) {
+      $(this).addClass("active");
+    });
+
+    $("#hotkeys_list li").on("dragleave", function (event) {
+       $(this).removeClass("active");
+    });
+   
+
+
   </script>
 </html>
+ 

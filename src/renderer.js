@@ -81,7 +81,7 @@ function hotkeyDrop(event) {
     title = row.title || '[Untitled]'
     artist = row.artist || '[Unknown Artist]'
     event.target.setAttribute('songid', song_id);
-    event.target.innerHTML = [title, artist].join(' by ');
+    $(event.target).find("span").html([title, artist].join(' by '));
   });
 }
 
