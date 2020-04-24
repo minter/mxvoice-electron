@@ -45,7 +45,7 @@
 
                     <div class="input-group mb-3">
                       <div class="input-group-prepend">
-                          <select class="custom-select" onchange="searchData();blur();" id="category_select">
+                          <select class="custom-select" id="category_select">
                             <option value="*">All Categories</option>
                           </select>
                       </div>
@@ -198,6 +198,11 @@
 
     $("#hotkeys_list li").on("dragleave", function (event) {
        $(this).removeClass("active");
+    });
+
+    $("#category_select").on("change", function() {
+       searchData();
+       $("#omni_search").focus();
     });
    
 
