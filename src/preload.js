@@ -1,5 +1,6 @@
 const { ipcRenderer, remote } = require('electron');
 window.preferences = ipcRenderer.sendSync('getPreferences');
+window.Mousetrap = require('mousetrap');
 
 window.sqlite3 = require('sqlite3').verbose();
 const { Howl, Howler } = require('howler');

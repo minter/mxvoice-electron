@@ -1,6 +1,29 @@
 var db = new sqlite3.Database(path.join(preferences.locations.database_directory, 'mrvoice.db'));
 var sound;
-var categories = []
+var categories = [];
+
+Mousetrap.bind('f1', function() { playSongFromHotkey('f1'); });
+Mousetrap.bind('f2', function() { playSongFromHotkey('f2'); });
+Mousetrap.bind('f3', function() { playSongFromHotkey('f3'); });
+Mousetrap.bind('f4', function() { playSongFromHotkey('f4'); });
+Mousetrap.bind('f5', function() { playSongFromHotkey('f5'); });
+Mousetrap.bind('f6', function() { playSongFromHotkey('f6'); });
+Mousetrap.bind('f7', function() { playSongFromHotkey('f7'); });
+Mousetrap.bind('f8', function() { playSongFromHotkey('f8'); });
+Mousetrap.bind('f9', function() { playSongFromHotkey('f9'); });
+Mousetrap.bind('f10', function() { playSongFromHotkey('f10'); });
+Mousetrap.bind('f11', function() { playSongFromHotkey('f11'); });
+Mousetrap.bind('f12', function() { playSongFromHotkey('f12'); });
+
+function playSongFromHotkey(hotkey) {
+  console.log ('Getting song ID from hotkey ' + hotkey);
+  var song_id = $(`#${hotkey}_hotkey`).attr('songid');
+  console.log (`Found song ID ${song_id}`);
+  if (song_id) {
+    console.log (`Preparing to play song ${song_id}`);
+    playSongFromId(song_id);
+  }
+}
 
 function populateCategorySelect(){
   console.log("Populating categories");
@@ -10,7 +33,7 @@ function populateCategorySelect(){
   }
     categories[row.code] = row.description;
     $('#category_select').append(`<option value="${row.code}">${row.description}</option>`);
-    console.log('Found ' + row.code + ' as ' + row.description);
+    //console.log('Found ' + row.code + ' as ' + row.description);
   });
 
 }
@@ -20,7 +43,7 @@ function searchData(){
     var category = $( "#category_select" ).val();
     console.log('Using category ' + category);
     var value = document.getElementById('omni_search').value.trim();
-    console.log('Called with value ' + value);
+    console.log('Called with search string ' + value);
     $('#search_results tbody').find("tr").remove();
     var search_term = '%' + value + '%';
     var query_params = [];
@@ -42,16 +65,15 @@ function searchData(){
     if (err) {
       throw err;
     }
-        console.log('Found ' + row.title + ' by ' + row.artist);
+        //console.log('Found ' + row.title + ' by ' + row.artist);
         $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info}</td><td>${row.title}</td><td>${row.artist}</td><td>${row.time}</td></tr>`);
 
     });
   });
 }
 
-function playSelected(){
-  var song_id = $('#selected_row').attr('songid');
-  console.log('Got song ID ' + song_id);
+function playSongFromId(song_id){
+  console.log('Playing song from song ID ' + song_id);
 
   if (song_id) {
     if (sound) {
@@ -68,14 +90,19 @@ function playSelected(){
   }
 }
 
-function stopSelected(){
+function playSelected(){
+  var song_id = $('#selected_row').attr('songid');
+  console.log('Got song ID ' + song_id);
+  playSongFromId(song_id);
+}
+
+function stopPlaying(){
   sound.stop();
 }
 
 function hotkeyDrop(event) {
   event.preventDefault();
   var song_id = event.dataTransfer.getData("text");
-  console.log("hotkeyDrop Fired for song ID " + song_id);
   var myrow = db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) { return row });
   db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
     title = row.title || '[Untitled]'
