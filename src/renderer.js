@@ -98,12 +98,13 @@ function stopPlaying(){
 function hotkeyDrop(event) {
   event.preventDefault();
   var song_id = event.dataTransfer.getData("text");
+  var target = $(event.target).is("span") ? $(event.target).parent() : $(event.target);
   var myrow = db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) { return row });
   db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
     title = row.title || '[Untitled]'
     artist = row.artist || '[Unknown Artist]'
-    event.target.setAttribute('songid', song_id);
-    $(event.target).find("span").html([title, artist].join(' by '));
+    target.attr('songid', song_id);
+    target.find("span").html([title, artist].join(' by '));
   });
 }
 
