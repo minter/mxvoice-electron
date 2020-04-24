@@ -24,14 +24,14 @@
     <!-- Insert this line after script imports -->
     <script>if (window.module) module = window.module;</script>
   </head>
-  <body>
+  <body class="bg-dark">
     <div class="container-fluid">
       <div class="row h-100 no-gutters">
         <div class="col-9">
           <div class="row no-gutters">
             <div class="col-4">
                 <div class="h-100 card rounded-0">
-                  <h6 class="card-header bg-dark text-white">
+                  <h6 class="card-header bg-secondary text-white">
                     Holding Tank
                   </h6>
                   <div class="card-body">
@@ -41,7 +41,7 @@
             </div>
             <div class="col-8">
              <div class="card rounded-0">
-               <h6 class="card-header bg-dark text-white">Search</h6>
+               <h6 class="card-header bg-secondary text-white">Search</h6>
                 <div class="card-body">
                   <form id="search_form" onsubmit="searchData();return false;">
 
@@ -60,7 +60,7 @@
 
                       <div class="table-wrapper-scroll-y my-custom-scrollbar">
                         <table class="table table-hover table-sm" id="search_results">
-                          <thead class="thead-dark">
+                          <thead class="thead">
                             <tr>
                               <th>Category</th>
                               <th>Info</th>
@@ -93,10 +93,10 @@
           <div class="h-50 row">
             <div class="col">
               <div class="card h-100 rounded-0">
-                <h6 class="card-header bg-dark text-white">Hotkeys</h6>
+                <h6 class="card-header bg-secondary text-white">Hotkeys</h6>
                   <div class="card-body">
                     <p class="card-text">
-                    <ul>
+                    <ul class="list-group">
                       <li="f1_hotkey">F1: <span class="value"></span><br/></li>
                       <li="f2_hotkey">F2: <span class="value"></span><br/></li>
                       <li="f3_hotkey">F3: <span class="value"></span><br/></li>
@@ -118,7 +118,7 @@
           <div class="h-50 row">
             <div class="col">
               <div class="card h-100 rounded-0">
-                <h6 class="card-header bg-dark text-white">Queue</h6>
+                <h6 class="card-header bg-secondary text-white">Queue</h6>
                 <div class="card-body">
                   Queue goes here
                 </div>
