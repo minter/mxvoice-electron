@@ -40,3 +40,11 @@ font-size: 11px;
 #category_select {
   max-width: 200px;
 }
+
+#hotkeys_list li {
+  margin-bottom: 3px;
+}
+
+#hotkeys_list .badge {
+  width: 30px;
+}
