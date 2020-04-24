@@ -43,8 +43,8 @@ function searchData(){
       throw err;
     }
         console.log('Found ' + row.title + ' by ' + row.artist);
-        $("#search_results").append(`<tr class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info}</td><td>${row.title}</td><td>${row.artist}</td><td>${row.time}</td></tr>`);
-        
+        $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info}</td><td>${row.title}</td><td>${row.artist}</td><td>${row.time}</td></tr>`);
+
     });
   });
 }
@@ -70,4 +70,26 @@ function playSelected(){
 
 function stopSelected(){
   sound.stop();
+}
+
+function hotkeyDrop(event) {
+  event.preventDefault();
+  var song_id = event.dataTransfer.getData("text");
+  console.log("hotkeyDrop Fired for song ID " + song_id);
+  var myrow = db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) { return row });
+  db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
+    title = row.title || '[Untitled]'
+    artist = row.artist || '[Unknown Artist]'
+    event.target.setAttribute('songid', song_id);
+    event.target.innerHTML = [title, artist].join(' by ');
+  });
+}
+
+function allowHotkeyDrop(event) {
+  event.preventDefault();
+}
+
+function songDrag(event) {
+  console.log('Starting drag for ID ' + event.target.getAttribute('songid'));
+  event.dataTransfer.setData("text", event.target.getAttribute('songid'));
 }
