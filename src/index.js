@@ -95,6 +95,22 @@ var application_menu = [
     label: 'Edit',
     submenu: [
       {
+        label: 'Cut',
+        role: 'cut'
+      },
+      {
+        label: 'Copy',
+        role: 'copy'
+      },
+      {
+        label: 'Paste',
+        role: 'paste'
+      },
+      {
+        label: 'Paste And Match Style',
+        role: 'pasteAndMatchStyle'
+      },
+      {
         label: 'Select All',
         role: 'selectAll'
       }
