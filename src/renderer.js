@@ -1,5 +1,6 @@
 var db = new sqlite3.Database(path.join(preferences.locations.database_directory, 'mrvoice.db'));
 var sound;
+var categories = []
 
 function populateCategorySelect(){
   console.log("Populating categories");
@@ -7,6 +8,7 @@ function populateCategorySelect(){
   if (err) {
     throw err;
   }
+    categories[row.code] = row.description;
     $('#category_select').append(`<option value="${row.code}">${row.description}</option>`);
     console.log('Found ' + row.code + ' as ' + row.description);
   });
@@ -44,7 +46,7 @@ function searchData(){
         console.log('Found ' + row.title + ' by ' + row.artist);
         var rowNode = t.row
           .add([
-            row.category,
+            categories[row.category],
             row.info,
             row.title,
             row.artist,

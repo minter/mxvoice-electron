@@ -44,7 +44,7 @@
                <h6 class="card-header bg-dark text-white">Search</h6>
                 <div class="card-body">
                   <form id="search_form" onsubmit="searchData();return false;">
-                    
+
                     <div class="input-group mb-3">
                       <div class="input-group-prepend">
                           <select class="custom-select" id="category_select">
@@ -57,7 +57,7 @@
                       </div>
                     </div>
                   </form>
-                  
+
                       <div class="table-wrapper-scroll-y my-custom-scrollbar">
                         <table class="table table-hover table-sm" id="search_results">
                           <thead class="thead-dark">
@@ -86,21 +86,36 @@
                 </div>
               </div>
             </div>
-          </div>  
-            
+          </div>
+
         </div>
         <div class="col-3">
-          <div class="h-75 row">
+          <div class="h-50 row">
             <div class="col">
               <div class="card h-100 rounded-0">
                 <h6 class="card-header bg-dark text-white">Hotkeys</h6>
                   <div class="card-body">
-                    Hotkeys go here
+                    <p class="card-text">
+                    <ul>
+                      <li="f1_hotkey">F1: <span class="value"></span><br/></li>
+                      <li="f2_hotkey">F2: <span class="value"></span><br/></li>
+                      <li="f3_hotkey">F3: <span class="value"></span><br/></li>
+                      <li="f4_hotkey">F4: <span class="value"></span><br/></li>
+                      <li="f5_hotkey">F5: <span class="value"></span><br/></li>
+                      <li="f6_hotkey">F6: <span class="value"></span><br/></li>
+                      <li="f7_hotkey">F7: <span class="value"></span><br/></li>
+                      <li="f8_hotkey">F8: <span class="value"></span><br/></li>
+                      <li="f9_hotkey">F9: <span class="value"></span><br/></li>
+                      <li="f10_hotkey">F10: <span class="value"></span><br/></li>
+                      <li="f11_hotkey">F11: <span class="value"></span><br/></li>
+                      <li="f12_hotkey">F12: <span class="value"></span><br/></li>
+                    </ul>
+                  </p>
                   </div>
                 </div>
               </div>
             </div>
-          <div class="h-25 row">
+          <div class="h-50 row">
             <div class="col">
               <div class="card h-100 rounded-0">
                 <h6 class="card-header bg-dark text-white">Queue</h6>
@@ -130,10 +145,12 @@
     });
 
     Mousetrap.bind('esc', function() { stopSelected(); });
-    
+
     var t = $("#search_results").DataTable({
       paging: false,
       searching: false,
+      scrollY:        '70vh',
+      scrollCollapse: true,
       info: false,
       "language": {
         "emptyTable": "You ain't searched for nothing yet"
