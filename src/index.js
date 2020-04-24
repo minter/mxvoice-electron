@@ -92,6 +92,15 @@ if (process.platform == 'darwin') {
 // Menus
 var application_menu = [
   {
+    label: 'Edit',
+    submenu: [
+      {
+        label: 'Select All',
+        role: 'selectAll'
+      }
+    ]
+  },
+  {
     label: 'Songs',
     submenu: [
       {
