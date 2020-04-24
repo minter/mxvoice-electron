@@ -16,6 +16,7 @@ function playSongFromHotkey(hotkey) {
   if (song_id) {
     console.log (`Preparing to play song ${song_id}`);
     playSongFromId(song_id);
+     $(`#${hotkey}_hotkey`).fadeOut(100).fadeIn(100);
   }
 }
 
