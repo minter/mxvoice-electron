@@ -181,11 +181,15 @@
     });
 
     Mousetrap.bind('esc', function() { stopPlaying(); });
+    Mousetrap.bind('command+l', function () {
+      $("#omni_search").focus().select();
+    });
 
     $("#hotkeys_list li").on("drop", function(event) {
       $(this).removeClass("active");
       hotkeyDrop(event.originalEvent);
     });
+
 
     $("#hotkeys_list li").on("dragover", function (event) {
       $(this).addClass("active");
