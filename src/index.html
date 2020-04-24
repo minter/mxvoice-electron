@@ -6,7 +6,7 @@
     <title>Mr. Voice</title>
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
-   
+
     <!-- Site-Specific CSS -->
     <link rel="stylesheet" href="stylesheets/index.css">
 
@@ -80,7 +80,7 @@
               <div class="card rounded-0">
                 <div class="card-body">
                   <button class="btn btn-success" onclick="playSelected()">Play</button>
-                  <button class="btn btn-danger" onclick="stopSelected()">Stop</button>
+                  <button class="btn btn-danger" onclick="stopPlaying()">Stop</button>
                 </div>
               </div>
             </div>
@@ -146,7 +146,7 @@
       playSelected();
     });
 
-    Mousetrap.bind('esc', function() { stopSelected(); });
+    Mousetrap.bind('esc', function() { stopPlaying(); });
 
   </script>
 </html>
