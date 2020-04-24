@@ -16,6 +16,7 @@ overflow: auto;
 display: block;
 cursor: pointer;
 min-height: 600px;
+max-height: 600px;
 font-size: 11px;
 }
 
