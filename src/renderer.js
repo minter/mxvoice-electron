@@ -25,7 +25,7 @@ function populateHotkeys(fkeys) {
     console.log(`Setting ${key} to ${fkeys[key]}`);
     if (fkeys[key]) {
       $(`#${key}_hotkey`).attr('songid', fkeys[key]);
-      $(`#${key}_hotkey span`).html('Poo');
+      setLabelFromSongId(fkeys[key], $(`#${key}_hotkey span`))
     }
     else {
       $(`#${key}_hotkey`).removeAttr('songid');
@@ -78,6 +78,20 @@ function searchData(){
         $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info}</td><td>${row.title}</td><td>${row.artist}</td><td>${row.time}</td></tr>`);
 
     });
+  });
+}
+
+function setLabelFromSongId(song_id, element) {
+  console.log(`Looking up song information for ${song_id}`);
+  db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
+    if(err) {
+      element.html('');
+    } else {
+      var title = row.title || '[Unknown Title]';
+      var artist = row.artist || '[Unknown Artist]';
+      var time = row.time || '[??:??]';
+      element.html(`${title} by ${artist} (${time})`);
+    }
   });
 }
 
