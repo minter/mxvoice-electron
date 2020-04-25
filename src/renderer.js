@@ -34,6 +34,15 @@ function populateHotkeys(fkeys) {
   }
 }
 
+function clearHotkeys() {
+  if (confirm('Please confirm that you want to clear your hotkeys')) {
+    for(let key=1;key<=12;key++) {
+      $(`#f${key}_hotkey`).removeAttr('songid');
+      $(`#f${key}_hotkey span`).html('');
+    }
+  }
+}
+
 function populateCategorySelect(){
   console.log("Populating categories");
   db.each("SELECT * FROM categories ORDER BY description ASC", [], function(err, row) {
