@@ -132,6 +132,7 @@ var application_menu = [
     submenu: [
       {
         label: 'Open Hotkeys File',
+        accelerator: 'CommandOrControl+O',
         click: () => {
           loadHotkeysFile();
         }
