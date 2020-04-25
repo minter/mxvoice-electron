@@ -338,8 +338,9 @@ const preferences = new ElectronPreferences({
        preferences.value('locations.music_directory', old_settings['filepath']);
        preferences.value('locations.hotkey_directory', old_settings['savedir']);
 
-       fs.rename(config_path, config_path + '.converted', function(err) {
-         if ( err ) console.log('RENAME ERROR: ' + err);
-       });
+       // Save renaming the old config file for final releases
+       // fs.rename(config_path, config_path + '.converted', function(err) {
+       //   if ( err ) console.log('RENAME ERROR: ' + err);
+       // });
      }
    };

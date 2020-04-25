@@ -78,9 +78,20 @@
           <div class="row">
             <div class="col">
               <div class="card rounded-0">
-                <div class="card-body">
-                  <button class="btn btn-success" onclick="playSelected()">Play</button>
-                  <button class="btn btn-danger" onclick="stopPlaying()">Stop</button>
+                <div class="card-body row">
+                  <div class="col-auto">
+                    <button class="btn btn-success" onclick="playSelected()">Play</button>
+                    <span id="timer">0:00</span>
+                  </div>
+                  <div class="col">
+                    <div class="audio-progress">
+                      <div id="progress"></div>
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <span id="duration">0:00</span>
+                    <button class="btn btn-danger" onclick="stopPlaying()">Stop</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -204,9 +215,8 @@
        searchData();
        $("#omni_search").focus();
     });
-   
+
 
 
   </script>
 </html>
- 
