@@ -1,4 +1,4 @@
-const { ipcRenderer, remote, Menu, MenuItem, dialog } = require('electron');
+const { ipcRenderer, remote } = require('electron');
 window.preferences = ipcRenderer.sendSync('getPreferences');
 window.Mousetrap = require('mousetrap');
 
@@ -7,5 +7,6 @@ const { Howl, Howler } = require('howler');
 window.path = require('path');
 window.homedir = require('os').homedir();
 
-window.platform = remote.process.platform;
-window.app = remote.app;
+ipcRenderer.on('fkey_load', function(event, fkeys) {
+  populateHotkeys(fkeys);
+});

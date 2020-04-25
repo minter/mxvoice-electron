@@ -7,7 +7,7 @@ for(let i=1;i<=12;i++) {
   Mousetrap.bind(`f${i}`, function () {
     playSongFromHotkey(`f${i}`);
   });
-} 
+}
 
 function playSongFromHotkey(hotkey) {
   console.log ('Getting song ID from hotkey ' + hotkey);
@@ -17,6 +17,20 @@ function playSongFromHotkey(hotkey) {
     console.log (`Preparing to play song ${song_id}`);
     playSongFromId(song_id);
      $(`#${hotkey}_hotkey`).fadeOut(100).fadeIn(100);
+  }
+}
+
+function populateHotkeys(fkeys) {
+  for (var key in fkeys) {
+    console.log(`Setting ${key} to ${fkeys[key]}`);
+    if (fkeys[key]) {
+      $(`#${key}_hotkey`).attr('songid', fkeys[key]);
+      $(`#${key}_hotkey span`).html('Poo');
+    }
+    else {
+      $(`#${key}_hotkey`).removeAttr('songid');
+      $(`#${key}_hotkey span`).html('');
+    }
   }
 }
 
