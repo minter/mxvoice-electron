@@ -25,7 +25,7 @@ function populateHotkeys(fkeys) {
     console.log(`Setting ${key} to ${fkeys[key]}`);
     if (fkeys[key]) {
       $(`#${key}_hotkey`).attr('songid', fkeys[key]);
-      setLabelFromSongId(fkeys[key], $(`#${key}_hotkey span`))
+      setLabelFromSongId(fkeys[key], $(`#${key}_hotkey`))
     }
     else {
       $(`#${key}_hotkey`).removeAttr('songid');
@@ -85,12 +85,12 @@ function setLabelFromSongId(song_id, element) {
   console.log(`Looking up song information for ${song_id}`);
   db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
     if(err) {
-      element.html('');
+      $(element).find('span').html('');
     } else {
       var title = row.title || '[Unknown Title]';
       var artist = row.artist || '[Unknown Artist]';
       var time = row.time || '[??:??]';
-      element.html(`${title} by ${artist} (${time})`);
+      $(element).find('span').html(`${title} by ${artist} (${time})`);
     }
   });
 }
@@ -127,13 +127,8 @@ function hotkeyDrop(event) {
   event.preventDefault();
   var song_id = event.dataTransfer.getData("text");
   var target = $(event.target).is("span") ? $(event.target).parent() : $(event.target);
-  var myrow = db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) { return row });
-  db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
-    title = row.title || '[Untitled]'
-    artist = row.artist || '[Unknown Artist]'
-    target.attr('songid', song_id);
-    target.find("span").html([title, artist].join(' by '));
-  });
+  target.attr('songid', song_id);
+  setLabelFromSongId(song_id,target);
 }
 
 function allowHotkeyDrop(event) {
