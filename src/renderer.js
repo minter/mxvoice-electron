@@ -95,6 +95,26 @@ function setLabelFromSongId(song_id, element) {
   });
 }
 
+var howlerUtils = {
+	formatTime: function (secs) {
+		var minutes = Math.floor(secs / 60) || 0;
+		var seconds = (secs - minutes * 60) || 0;
+		return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+	},
+	updateTimeTracker: function () {
+		var self = this;
+		var seek = sound.seek() || 0;
+		var currentTime = howlerUtils.formatTime(Math.round(seek));
+
+		$('#timer').text(currentTime);
+		progress.style.width = (((seek / self.duration()) * 100) || 0) + '%';
+
+		if (self.playing()) {
+			requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
+		}
+	}
+};
+
 function playSongFromId(song_id){
   console.log('Playing song from song ID ' + song_id);
 
@@ -106,7 +126,15 @@ function playSongFromId(song_id){
       var filename = row.filename;
       console.log("Inside get, Filename is " + filename);
       sound = new Howl({
-        src: [path.join(preferences.locations.music_directory, filename)]
+        src: [path.join(preferences.locations.music_directory, filename)],
+        html5: true,
+        onplay: function() {
+          var time = Math.round(sound.duration());
+
+          $('#duration').html(howlerUtils.formatTime(time));
+          // Start upating the progress of the track.
+          requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
+        }
       });
       sound.play();
     });
@@ -120,6 +148,8 @@ function playSelected(){
 }
 
 function stopPlaying(){
+  duration.innerHTML = '0:00';
+  timer.innerHTML = '0:00';
   sound.stop();
 }
 
