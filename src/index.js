@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { is } = require('electron-util');
 const os = require('os');
@@ -131,7 +131,10 @@ var application_menu = [
     label: 'Hotkeys',
     submenu: [
       {
-        label: 'Open Hotkeys File'
+        label: 'Open Hotkeys File',
+        click: () => {
+          loadHotkeysFile();
+        }
       },
       {
         label: 'Save Hotkeys To File'
@@ -270,6 +273,32 @@ const preferences = new ElectronPreferences({
                 }
               ]
    });
+
+   function loadHotkeysFile() {
+     console.log("Loading hotkeys file");
+     dialog.showOpenDialog(mainWindow, {
+       buttonLabel: 'Open',
+       filters: [
+         { name: 'Mr. Voice Hotkey Files', extensions: ['mrv'] }
+       ],
+       defaultPath: preferences.value('locations.hotkey_directory'),
+       message: 'Select your Mr. Voice hotkey file',
+       properties: ['openFile']
+     }).then(result => {
+       if (result.canceled == true) {
+         console.log('Silently exiting hotkey load');
+         return;
+       }
+       else {
+         var filename = result.filePaths[0];
+         console.log(`Processing file ${filename}`);
+       }
+       // console.log(result.canceled)
+       // console.log(result.filePaths)
+     }).catch(err => {
+       console.log(err)
+     })
+   }
 
    // Config migration
    function checkOldConfig() {
