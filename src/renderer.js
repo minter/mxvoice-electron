@@ -104,13 +104,17 @@ var howlerUtils = {
 	updateTimeTracker: function () {
 		var self = this;
 		var seek = sound.seek() || 0;
+    var remaining = self.duration() - seek;
 		var currentTime = howlerUtils.formatTime(Math.round(seek));
+    var remainingTime = howlerUtils.formatTime(Math.round(remaining));
 
-		$('#timer').text(currentTime);
-		progress.style.width = (((seek / self.duration()) * 100) || 0) + '%';
 
 		if (self.playing()) {
 			requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
+      $('#timer').text(currentTime);
+      console.log(`Remaining is ${remainingTime}`);
+      $('#duration').text(remainingTime);
+      progress.style.width = (((seek / self.duration()) * 100) || 0) + '%';
 		}
 	}
 };
@@ -130,10 +134,19 @@ function playSongFromId(song_id){
         html5: true,
         onplay: function() {
           var time = Math.round(sound.duration());
-
-          $('#duration').html(howlerUtils.formatTime(time));
-          // Start upating the progress of the track.
           requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
+        },
+        onend: function() {
+          console.log('Finished!');
+          $('#duration').text('0:00');
+          $('#timer').text('0:00');
+          progress.style.width = '0%';
+        },
+        onstop: function() {
+          console.log('Stopped!');
+          $('#duration').text('0:00');
+          $('#timer').text('0:00');
+          progress.style.width = '0%';
         }
       });
       sound.play();
@@ -148,8 +161,6 @@ function playSelected(){
 }
 
 function stopPlaying(){
-  duration.innerHTML = '0:00';
-  timer.innerHTML = '0:00';
   sound.stop();
 }
 
