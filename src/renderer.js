@@ -43,6 +43,12 @@ function clearHotkeys() {
   }
 }
 
+function readHotkeys() {
+  for(let key=1;key<=12;key++){
+    console.log( `Key F${key} is ` + $(`#f${key}_hotkey`).attr('songid') )
+  }
+}
+
 function openHotkeyFile() {
   ipcRenderer.send('open-hotkey-file');
 }
