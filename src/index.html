@@ -7,6 +7,9 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
 
+    <!-- FontAwesome CSS -->
+    <link rel="stylesheet" href="../node_modules/@fortawesome/fontawesome-free/css/all.css">
+
     <!-- Site-Specific CSS -->
     <link rel="stylesheet" href="stylesheets/index.css">
 
@@ -102,7 +105,14 @@
           <div class="row">
             <div class="col">
               <div class="card h-100 rounded-0">
-                <h6 class="card-header bg-secondary text-white">Hotkeys <a href="#" onclick="clearHotkeys()">[Clear]</a></h6>
+                <h6 class="card-header bg-secondary text-white">
+                  Hotkeys
+                  <span class="icon_bar">
+                    <a href="#"><i title="Save Hotkeys To File" class="fas fa-save"></i></a>
+                    <a href="#"><i title="Load Hotkey File" class="fas fa-folder-open"></i></a>
+                    <a href="#" onclick="clearHotkeys()"><i title="Clear Hotkey List" class="fas fa-trash"></i></a>
+                  </span>
+                </h6>
                   <div class="card-body">
                     <ul class="list-group list-group-flush" id="hotkeys_list">
                       <li class="list-group-item text-nowrap p-1" id="f1_hotkey">
@@ -176,6 +186,9 @@
 
     <!-- Include all compiled plugins (below), or include individual files as needed -->
   <script src="../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+  <!-- FontAwesome Javascript -->
+  <link rel="stylesheet" href="../node_modules/@fortawesome/fontawesome-free/js/all.css">
+
   </body>
 
   <script src="renderer.js"></script>
