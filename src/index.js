@@ -85,6 +85,15 @@ if (process.platform == 'darwin') {
   })
 }
 
+ipcMain.on('open-hotkey-file', (event, arg) => {
+  console.log("Main process starting hotkey open");
+  loadHotkeysFile();
+});
+
+ipcMain.on('save-hotkey-file', (event, arg) => {
+  console.log("Main process starting hotkey save");
+  saveHotkeysFile();
+});
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
@@ -138,7 +147,11 @@ var application_menu = [
         }
       },
       {
-        label: 'Save Hotkeys To File'
+        label: 'Save Hotkeys To File',
+        accelerator: 'CommandOrControl+S',
+        click: () => {
+          saveHotkeysFile();
+        }
       }
     ]
   }
@@ -303,12 +316,33 @@ const preferences = new ElectronPreferences({
 
          mainWindow.webContents.send('fkey_load', fkey_mapping);
        }
-       // console.log(result.canceled)
-       // console.log(result.filePaths)
      }).catch(err => {
        console.log(err)
      })
    }
+
+   function saveHotkeysFile() {
+     console.log("Saving current hotkeys to a file");
+     dialog.showSaveDialog(mainWindow, {
+       buttonLabel: 'Save',
+       filters: [
+         { name: 'Mr. Voice Hotkey Files', extensions: ['mrv'] }
+       ],
+       defaultPath: preferences.value('locations.hotkey_directory'),
+       message: 'Select your Mr. Voice hotkey file'
+     }).then(result => {
+       if (result.canceled == true) {
+         console.log('Silently exiting hotkey save');
+         return;
+       }
+       else {
+         var filename = result.filePath;
+         console.log(`Processing file ${filename}`);
+       }
+      }).catch(err => {
+       console.log(err)
+      })
+     }
 
    // Config migration
    function checkOldConfig() {

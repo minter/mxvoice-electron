@@ -43,6 +43,14 @@ function clearHotkeys() {
   }
 }
 
+function openHotkeyFile() {
+  ipcRenderer.send('open-hotkey-file');
+}
+
+function saveHotkeyFile() {
+  ipcRenderer.send('save-hotkey-file');
+}
+
 function populateCategorySelect(){
   console.log("Populating categories");
   db.each("SELECT * FROM categories ORDER BY description ASC", [], function(err, row) {
