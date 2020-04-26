@@ -22,7 +22,6 @@ function playSongFromHotkey(hotkey) {
 
 function populateHotkeys(fkeys) {
   for (var key in fkeys) {
-    console.log(`Setting ${key} to ${fkeys[key]}`);
     if (fkeys[key]) {
       $(`#${key}_hotkey`).attr('songid', fkeys[key]);
       setLabelFromSongId(fkeys[key], $(`#${key}_hotkey`))
@@ -43,18 +42,23 @@ function clearHotkeys() {
   }
 }
 
-function readHotkeys() {
-  for(let key=1;key<=12;key++){
-    console.log( `Key F${key} is ` + $(`#f${key}_hotkey`).attr('songid') )
-  }
-}
+// function readHotkeys() {
+//   for(let key=1;key<=12;key++){
+//     console.log( `Key F${key} is ` + $(`#f${key}_hotkey`).attr('songid') )
+//   }
+// }
 
 function openHotkeyFile() {
   ipcRenderer.send('open-hotkey-file');
 }
 
 function saveHotkeyFile() {
-  ipcRenderer.send('save-hotkey-file');
+  console.log('Renderer starting saveHotkeyFile');
+  var hotkeyArray = [];
+  for(let key=1;key<=12;key++){
+    hotkeyArray.push($(`#f${key}_hotkey`).attr('songid'));
+  }
+  ipcRenderer.send('save-hotkey-file', hotkeyArray);
 }
 
 function populateCategorySelect(){
@@ -105,7 +109,6 @@ function searchData(){
 }
 
 function setLabelFromSongId(song_id, element) {
-  console.log(`Looking up song information for ${song_id}`);
   db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
     if(err) {
       $(element).find('span').html('');
@@ -135,7 +138,6 @@ var howlerUtils = {
 		if (self.playing()) {
 			requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
       $('#timer').text(currentTime);
-      console.log(`Remaining is ${remainingTime}`);
       $('#duration').text(remainingTime);
       progress.style.width = (((seek / self.duration()) * 100) || 0) + '%';
 		}
@@ -184,7 +186,9 @@ function playSelected(){
 }
 
 function stopPlaying(){
-  sound.stop();
+  if (sound) {
+    sound.stop();
+  }
 }
 
 function hotkeyDrop(event) {

@@ -92,7 +92,9 @@ ipcMain.on('open-hotkey-file', (event, arg) => {
 
 ipcMain.on('save-hotkey-file', (event, arg) => {
   console.log("Main process starting hotkey save");
-  saveHotkeysFile();
+  console.log(`Arg is ${arg}`);
+  console.log(`First element is ${arg[0]}`);
+  saveHotkeysFile(arg);
 });
 
 // In this file you can include the rest of your app's specific main process
@@ -150,7 +152,7 @@ var application_menu = [
         label: 'Save Hotkeys To File',
         accelerator: 'CommandOrControl+S',
         click: () => {
-          saveHotkeysFile();
+          mainWindow.webContents.send('start_hotkey_save');
         }
       }
     ]
@@ -321,8 +323,7 @@ const preferences = new ElectronPreferences({
      })
    }
 
-   function saveHotkeysFile() {
-     console.log("Saving current hotkeys to a file");
+   function saveHotkeysFile(hotkeyArray) {
      dialog.showSaveDialog(mainWindow, {
        buttonLabel: 'Save',
        filters: [
@@ -338,6 +339,12 @@ const preferences = new ElectronPreferences({
        else {
          var filename = result.filePath;
          console.log(`Processing file ${filename}`);
+         var file = fs.createWriteStream(filename);
+         for(let i = 0; i < hotkeyArray.length; i++){
+           var keyId = `f${i + 1}`;
+           file.write([keyId, hotkeyArray[i]].join('::') + '\n');
+         }
+         file.end();
        }
       }).catch(err => {
        console.log(err)
