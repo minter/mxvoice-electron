@@ -38,6 +38,13 @@ To build for a different platform (for example, if you are on a Mac and want to 
 
 Note that building Windows binaries on a Mac requires `mono` and `wine`, available via Homebrew.
 
+## References and Utilities
+
+Helpful tools and documentation:
+* [Electron.js](https://www.electronjs.org)
+* [Electron Forge](https://www.electronforge.io)
+* [Free Windows developer VM](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/) from Microsoft
+
 ## Authors
 Mr. Voice 3 is brought to you with love by:
 * Wade Minter (<wade@wademinter.com>)
