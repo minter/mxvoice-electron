@@ -133,13 +133,14 @@ var howlerUtils = {
     var remaining = self.duration() - seek;
 		var currentTime = howlerUtils.formatTime(Math.round(seek));
     var remainingTime = howlerUtils.formatTime(Math.round(remaining));
-
+    $("#timer").text(currentTime);
+    $("#duration").text(`-${remainingTime}`);
 
 		if (self.playing()) {
-			requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
-      $('#timer').text(currentTime);
-      $('#duration').text(remainingTime);
-      progress.style.width = (((seek / self.duration()) * 100) || 0) + '%';
+      requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
+      $("#audio_progress").width(
+              ((seek / self.duration()) * 100 || 0) + "%"
+      );
 		}
 	}
 };
@@ -160,21 +161,26 @@ function playSongFromId(song_id){
         onplay: function() {
           var time = Math.round(sound.duration());
           requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
+          $("#song_now_playing").html(`${row.title} by ${row.artist}`);
         },
         onend: function() {
           console.log('Finished!');
-          $('#duration').text('0:00');
-          $('#timer').text('0:00');
-          progress.style.width = '0%';
+          $("#duration").html('0:00');
+          $("#timer").html('0:00');
+          $("#audio_progress").width("0%");
+          $("#song_now_playing").html("&nbsp;");
         },
         onstop: function() {
           console.log('Stopped!');
-          $('#duration').text('0:00');
-          $('#timer').text('0:00');
-          progress.style.width = '0%';
+          $("#duration").html('0:00');
+          $("#timer").html('0:00');
+          $("#audio_progress").width("0%");
+          $("#song_now_playing").html("&nbsp;");
         }
       });
       sound.play();
+        $("#play_button").addClass("disabled");
+        $("#stop_button").removeClass("disabled");
     });
   }
 }
@@ -188,6 +194,9 @@ function playSelected(){
 function stopPlaying(){
   if (sound) {
     sound.stop();
+    $("#audio_progress").width("0");
+    $("#play_button").removeClass("disabled");
+    $("#stop_button").addClass("disabled");
   }
 }
 

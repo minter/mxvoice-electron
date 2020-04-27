@@ -76,21 +76,33 @@ font-size: 11px;
   border: 3px dashed black;
 }
 
-.audio-progress{
-	height: 22px;
-  display: inline-block;
-  width: 100%;
-	position: relative;
-	margin-top: 15px;
-	background-color: #e5eff1;
+#timer {
+  width: 100px;
 }
 
-#progress {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 0%;
-	height: 100%;
-	background-color: #006182;
-	z-index: 1;
+#duration {
+  width: 100px;
+  text-align: right;
 }
+
+#player {
+  background-color: black;
+}
+
+#song_now_playing {
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+#now_playing_bar div {
+  
+  font-size: 14px;
+  padding-bottom: 5px;
+  color: white;
+  font-family: 'Courier', sans-serif;
+}
+
+#play_column, #stop_column {
+  text-align: center;
+}
+
