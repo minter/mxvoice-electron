@@ -330,7 +330,7 @@ const preferences = new ElectronPreferences({
          { name: 'Mr. Voice Hotkey Files', extensions: ['mrv'] }
        ],
        defaultPath: preferences.value('locations.hotkey_directory'),
-       message: 'Select your Mr. Voice hotkey file'
+       message: 'Save your Mr. Voice hotkey file'
      }).then(result => {
        if (result.canceled == true) {
          console.log('Silently exiting hotkey save');

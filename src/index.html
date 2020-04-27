@@ -107,12 +107,18 @@
               <div class="card h-100 rounded-0">
                 <h6 class="card-header bg-secondary text-white">
                   Hotkeys
-                  <span class="icon_bar">
-                    <a href="#"><i title="Save Hotkeys To File" onclick="saveHotkeyFile()" class="fas fa-save"></i></a>
-                    <a href="#"><i title="Load Hotkey File" onclick="openHotkeyFile()" class="fas fa-folder-open"></i></a>
-                    <a href="#" onclick="clearHotkeys()"><i title="Clear Hotkey List" class="fas fa-trash"></i></a>
-                  </span>
-                </h6>
+                    <div class="icon-bar">
+                      <a href="#">
+                        <i title="Load Hotkey File" onclick="openHotkeyFile()" class="far fa-sm fa-folder-open"></i>
+                      </a>
+                      <a href="#">
+                        <i title="Save Hotkeys To File" onclick="saveHotkeyFile()" class="far fa-sm fa-save"></i>
+                      </a>
+                      <a href="#">
+                        <i title="Clear Hotkey List" onclick="clearHotkeys()" class="far fa-sm fa-trash-alt"></i>
+                      </a>
+                    </div>
+                  </h6>
                   <div class="card-body">
                     <ul class="list-group list-group-flush" id="hotkeys_list">
                       <li class="list-group-item text-nowrap p-1" id="f1_hotkey">
