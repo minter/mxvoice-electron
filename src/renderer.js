@@ -153,9 +153,14 @@ function addToHoldingTank(song_id, element) {
       var title = row.title || "[Unknown Title]";
       var artist = row.artist || "[Unknown Artist]";
       var time = row.time || "[??:??]";
-      var song_row = `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
 
-      $(`#holding_tank ul li[songid=${song_id}]`).first().remove();
+      current_song = $(`#holding_tank ul li.now_playing`).first();
+      if (autoplay && current_song.attr('songid') == song_id) {
+          var now_playing = "now_playing";
+          current_song.remove();
+      }
+
+      var song_row = `<li class='list-group-item ${now_playing}' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
 
       if ($(element).is("li")) {
         $(element)
@@ -229,11 +234,19 @@ function playSongFromId(song_id){
         onend: function() {
           song_ended();
           if (autoplay) {
-            song_node = $("#holding_tank ul li").first();
-            if (song_node) {
-              playSongFromId(song_node.attr("songid"));
-              song = song_node.detach();
-              $("#holding_tank ul").append(song);
+            var now_playing = $(".now_playing").first();
+            if (now_playing.length) {
+              now_playing.removeClass("now_playing");
+              next_song = now_playing.next();
+              next_song.addClass("now_playing");
+            } else {
+              next_song = $("#holding_tank ul li").first();
+              next_song.addClass("now_playing");
+            }
+            if (next_song.length) {
+              playSongFromId(next_song.attr("songid"));
+            } else {
+              $("#holding_tank ul li.now_playing").first().removeClass("now_playing");
             }
           }
         },

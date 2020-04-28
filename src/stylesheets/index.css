@@ -140,7 +140,7 @@ h6 a {
   color: white;
 }
 
-
-
-
-
+.now_playing {
+  color: green;
+  font-weight: bold;
+}
