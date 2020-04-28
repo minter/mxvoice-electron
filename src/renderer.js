@@ -122,6 +122,19 @@ function setLabelFromSongId(song_id, element) {
   });
 }
 
+function addToHoldingTank(song_id, element) {
+  db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function (err, row) {
+    if (err) {
+      
+    } else {
+      var title = row.title || "[Unknown Title]";
+      var artist = row.artist || "[Unknown Artist]";
+      var time = row.time || "[??:??]";
+      $(element).append(`<li class='list-group-item'>${title} by ${artist} (${time})</li>`);
+    }
+  });
+}
+
 var howlerUtils = {
 	formatTime: function (secs) {
 		var minutes = Math.floor(secs / 60) || 0;
@@ -210,6 +223,14 @@ function hotkeyDrop(event) {
   var target = $(event.target).is("span") ? $(event.target).parent() : $(event.target);
   target.attr('songid', song_id);
   setLabelFromSongId(song_id,target);
+}
+
+function holdingTankDrop(event) {
+  event.preventDefault();
+  var song_id = event.dataTransfer.getData("text");
+  var target = $(event.target);
+  target.attr("songid", song_id);
+  addToHoldingTank(song_id, target);
 }
 
 function allowHotkeyDrop(event) {

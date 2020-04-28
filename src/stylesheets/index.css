@@ -110,3 +110,18 @@ font-size: 11px;
   font-weight: bold;
 }
 
+#holding_tank {
+  font-size: 12px;
+  min-height: 600px;
+  max-height: 600px;
+}
+
+#holding_tank li {
+  border: 0;
+  border-bottom: 1px dotted lightgrey;
+  margin: 5px;
+  padding: 0;
+}
+
+
+
