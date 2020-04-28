@@ -35,6 +35,7 @@ font-size: 11px;
 }
 
 #selected_row {
+  font-weight: bold;
   background-color: lightgoldenrodyellow;
 }
 
