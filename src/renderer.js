@@ -207,7 +207,7 @@ function stopPlaying(){
 function hotkeyDrop(event) {
   event.preventDefault();
   var song_id = event.dataTransfer.getData("text");
-  var target = $(event.target).is("span") ? $(event.target).parent() : $(event.target);
+  var target = $(event.currentTarget);
   target.attr('songid', song_id);
   setLabelFromSongId(song_id,target);
 }
