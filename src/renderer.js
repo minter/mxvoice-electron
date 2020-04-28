@@ -219,7 +219,10 @@ function playSongFromId(song_id){
         onplay: function() {
           var time = Math.round(sound.duration());
           globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
-          $("#song_now_playing").html(`${row.title} by ${row.artist}`).fadeIn(100);
+          var title = row.title || "";
+          var artist = row.artist || "";
+          artist = artist.length ? "by " + artist : artist;
+          $("#song_now_playing").html(`${title} ${artist}`).fadeIn(100);
           $("#play_button").addClass("disabled");
           $("#stop_button").removeClass("disabled");
         },
