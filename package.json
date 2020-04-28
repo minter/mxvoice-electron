@@ -1,7 +1,7 @@
 {
   "name": "mrvoice",
   "productName": "Mr. Voice",
-  "version": "3.0.0alpha",
+  "version": "2.9.0",
   "description": "Improv Audio Software",
   "main": "src/index.js",
   "scripts": {
