@@ -256,18 +256,18 @@
     });
 
     $("#hotkeys_list li").on("drop", function(event) {
-      $(this).removeClass("active");
+      $(this).removeClass("drop_target");
       hotkeyDrop(event.originalEvent);
     });
 
 
     $("#hotkeys_list li").on("dragover", function (event) {
-      $(this).addClass("active");
+      $(this).addClass("drop_target");
       allowHotkeyDrop(event.originalEvent);
     });
 
     $("#hotkeys_list li").on("dragleave", function (event) {
-       $(this).removeClass("active");
+       $(this).removeClass("drop_target");
     });
 
     $("#category_select").on("change", function() {
