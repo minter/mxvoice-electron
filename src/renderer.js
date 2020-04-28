@@ -131,6 +131,9 @@ function addToHoldingTank(song_id, element) {
       var artist = row.artist || "[Unknown Artist]";
       var time = row.time || "[??:??]";
       var song_row = `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
+
+      $(`#holding_tank ul li[songid=${song_id}]`).first().remove();
+      
       if ($(element).is("li")) {
         $(element) 
         .after(song_row);

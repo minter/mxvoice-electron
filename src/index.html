@@ -250,6 +250,11 @@
       return false;
     });
 
+    Mousetrap.bind('return', function () {
+      playSelected();
+      return false;
+    });
+
     $("#hotkeys_list li").on("drop", function(event) {
       $(this).removeClass("active");
       hotkeyDrop(event.originalEvent);
@@ -270,13 +275,20 @@
        $("#omni_search").focus();
     });
 
-      $("#holding_tank").on("drop", function (event) {
-        holdingTankDrop(event.originalEvent);
+    $("#holding_tank").on("drop", function (event) {
+      holdingTankDrop(event.originalEvent);
+      $(event.originalEvent.target).removeClass("dropzone");
+    });
+
+    $("#holding_tank").on("dragover", function (event) {
+        allowHotkeyDrop(event.originalEvent);
+        $(event.originalEvent.target).addClass("dropzone");
       });
 
-      $("#holding_tank").on("dragover", function (event) {
-          allowHotkeyDrop(event.originalEvent);
-      });
+    $("#holding_tank").on("dragleave", function (event) {
+        allowHotkeyDrop(event.originalEvent);
+        $(event.originalEvent.target).removeClass("dropzone");
+    });
 
 
 
