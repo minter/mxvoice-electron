@@ -240,9 +240,12 @@
     });
 
     Mousetrap.bind('esc', function() { stopPlaying(); });
+    
     Mousetrap.bind('command+l', function () {
       $("#omni_search").focus().select();
     });
+
+    Mousetrap.bind('tab', function () { sendToHotkeys() });
 
     $("#hotkeys_list li").on("drop", function(event) {
       $(this).removeClass("active");
