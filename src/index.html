@@ -307,6 +307,17 @@
         $(event.originalEvent.target).removeClass("dropzone");
     });
 
+    $("#omni_search").on("keydown", function (e) {
+      if (e.code == 'Tab') {
+        if (first_row = $("#search_results tbody tr").first()) {
+          $("#selected_row").removeAttr("id");
+          first_row.attr("id", "selected_row");
+          $("#omni_search").blur();
+          return false;
+        }
+      }
+    });
+
 
 
   </script>
