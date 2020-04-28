@@ -72,7 +72,7 @@
                   </form>
 
                       <div class="table-wrapper-scroll-y my-custom-scrollbar">
-                        <table class="table table-hover table-sm" id="search_results">
+                        <table class="table table-sm" id="search_results">
                           <thead class="thead">
                             <tr>
                               <th>Category</th>
@@ -253,6 +253,16 @@
     Mousetrap.bind('return', function () {
       playSelected();
       return false;
+    });
+
+    Mousetrap.bind('down', function () {
+        selectNext();
+        return false;
+    });
+
+    Mousetrap.bind('up', function () {
+        selectPrev();
+        return false;
     });
 
     $("#hotkeys_list li").on("drop", function(event) {

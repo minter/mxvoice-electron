@@ -133,7 +133,7 @@ function addToHoldingTank(song_id, element) {
       var song_row = `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
 
       $(`#holding_tank ul li[songid=${song_id}]`).first().remove();
-      
+
       if ($(element).is("li")) {
         $(element) 
         .after(song_row);
@@ -258,4 +258,12 @@ function sendToHotkeys() {
     setLabelFromSongId(song_id,target);
   }
   return false;
+}
+
+function selectNext() {
+  $("#selected_row").removeAttr("id").next().attr("id","selected_row");
+}
+
+function selectPrev() {
+  $("#selected_row").removeAttr("id").prev().attr("id", "selected_row");
 }
