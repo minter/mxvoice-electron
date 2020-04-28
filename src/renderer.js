@@ -37,11 +37,9 @@ function populateHotkeys(fkeys) {
 
 function populateHoldingTank(songIds) {
   $('#holding_tank ul').empty();
-  var target = $("#holding_tank");
-
-  for (var songId in songIds) {
-   addToHoldingTank(songId,target);
-  }
+  songIds.forEach(songId => {
+   addToHoldingTank(songId, $("#holding_tank"));
+  });
   return false;
 }
 
