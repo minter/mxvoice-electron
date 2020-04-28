@@ -103,7 +103,7 @@ function searchData(){
       throw err;
     }
         //console.log('Found ' + row.title + ' by ' + row.artist);
-        $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info || ''}</td><td>${row.title || ''}</td><td>${row.artist || ''}</td><td>${row.time}</td></tr>`);
+        $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
 
     });
   });
