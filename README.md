@@ -28,15 +28,22 @@ That should launch the app onto your desktop!
 
 ## Building
 
+### OS X
+
 To build packages for release, use the `npm run make` command. This will use the makers defined in `package.json`, along with your current system architecture (e.g., `darwin`) and build any available targets.
 
-Build output of `npm run make` will be available in the `out/` subdirectory.
+Build output of `npm run make` will be available in the `out/` subdirectory. Currently, this produces both a `.dmg` and a `.zip` file, with the `.dmg` being preferred.
 
-To build for a different platform (for example, if you are on a Mac and want to build Windows binaries), you can pass a platform flag:
+### Windows
 
-`npm run make --platform=win32`
+It is allegedly possible to build Windows binaries on the Mac, though getting that to work has proven challenging.
 
-Note that building Windows binaries on a Mac requires `mono` and `wine`, available via Homebrew.
+To build on a Windows system, run:
+
+* `npm run make -- --arch=ia32`
+* `npm run make -- --arch=x64`
+
+This will build two binaries - one 32-bit, one 64-bit. As with OS X, installer files will be the `out/` directory.
 
 ## References and Utilities
 
