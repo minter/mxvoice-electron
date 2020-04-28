@@ -110,7 +110,6 @@ function searchData(){
 }
 
 function setLabelFromSongId(song_id, element) {
-  console.log(element);
   db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
     if(err) {
       $(element).find('span').html('');
@@ -131,11 +130,15 @@ function addToHoldingTank(song_id, element) {
       var title = row.title || "[Unknown Title]";
       var artist = row.artist || "[Unknown Artist]";
       var time = row.time || "[??:??]";
-      $(element)
+      var song_row = `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
+      if ($(element).is("li")) {
+        $(element) 
+        .after(song_row);
+      } else {
+        $(element)
         .find("ul")
-        .append(
-          `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`
-        );
+        .append(song_row);
+      }
     }
   });
 }
@@ -232,7 +235,7 @@ function hotkeyDrop(event) {
 
 function holdingTankDrop(event) {
   event.preventDefault();
-  addToHoldingTank(event.dataTransfer.getData("text"), $(event.currentTarget));
+  addToHoldingTank(event.dataTransfer.getData("text"), $(event.target));
 }
 
 function allowHotkeyDrop(event) {
@@ -251,4 +254,5 @@ function sendToHotkeys() {
     target.attr('songid',song_id);
     setLabelFromSongId(song_id,target);
   }
+  return false;
 }

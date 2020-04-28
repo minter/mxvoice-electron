@@ -245,7 +245,10 @@
       $("#omni_search").focus().select();
     });
 
-    Mousetrap.bind('tab', function () { sendToHotkeys() });
+    Mousetrap.bind('tab', function () {
+      sendToHotkeys();
+      return false;
+    });
 
     $("#hotkeys_list li").on("drop", function(event) {
       $(this).removeClass("active");
