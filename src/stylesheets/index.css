@@ -26,11 +26,10 @@ font-size: 11px;
 }
 
 .icon-bar a {
-  color: white;
   margin-left: 5px;
 }
 
-.icon-bar a:hover {
+.icon-bar a:hover, h6 a:hover {
   color: darkslategray;
 }
 
@@ -135,6 +134,10 @@ font-size: 11px;
   border: 0;
   margin: 0;
   padding: 3px;
+}
+
+h6 a {
+  color: white;
 }
 
 

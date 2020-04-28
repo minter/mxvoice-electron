@@ -2,6 +2,7 @@ var db = new sqlite3.Database(path.join(preferences.locations.database_directory
 var sound;
 var categories = [];
 var globalAnimation;
+var autoplay = false;
 
 // Set up fkeys
 for(let i=1;i<=12;i++) {
@@ -201,8 +202,15 @@ function playSongFromId(song_id){
           $("#stop_button").removeClass("disabled");
         },
         onend: function() {
-          console.log('Finished!');
           song_ended();
+          if (autoplay) {
+            song_node = $("#holding_tank ul li").first();
+            if (song_node) {
+              playSongFromId(song_node.attr("songid"));
+              song = song_node.detach();
+              $("#holding_tank ul").append(song);
+            }
+          }
         },
         onstop: function() {
           console.log('Stopped!');
@@ -275,4 +283,9 @@ function selectNext() {
 
 function selectPrev() {
   $("#selected_row").removeAttr("id").prev().attr("id", "selected_row");
+}
+
+function toggleAutoPlay() {
+    $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
+    autoplay = !autoplay;
 }
