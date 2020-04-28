@@ -260,6 +260,15 @@ function sendToHotkeys() {
   return false;
 }
 
+function sendToHoldingTank() {
+  target = $("#holding_tank");
+  song_id = $("#selected_row").attr("songid");
+  if (song_id) {
+    addToHoldingTank(song_id,target);
+  }
+  return false;
+}
+
 function selectNext() {
   $("#selected_row").removeAttr("id").next().attr("id","selected_row");
 }

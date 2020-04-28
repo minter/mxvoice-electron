@@ -250,6 +250,11 @@
       return false;
     });
 
+    Mousetrap.bind('shift+tab', function () {
+      sendToHoldingTank();
+      return false;
+    });
+
     Mousetrap.bind('return', function () {
       playSelected();
       return false;
