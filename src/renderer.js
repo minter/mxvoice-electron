@@ -1,6 +1,7 @@
 var db = new sqlite3.Database(path.join(preferences.locations.database_directory, 'mrvoice.db'));
 var sound;
 var categories = [];
+var globalAnimation;
 
 // Set up fkeys
 for(let i=1;i<=12;i++) {
@@ -133,17 +134,27 @@ var howlerUtils = {
     var remaining = self.duration() - seek;
 		var currentTime = howlerUtils.formatTime(Math.round(seek));
     var remainingTime = howlerUtils.formatTime(Math.round(remaining));
-    $("#timer").text(currentTime);
-    $("#duration").text(`-${remainingTime}`);
-
 		if (self.playing()) {
       requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
       $("#audio_progress").width(
               ((seek / self.duration()) * 100 || 0) + "%"
       );
-		}
+      $("#timer").text(currentTime);
+      $("#duration").text(`-${remainingTime}`);
+		} else {
+      cancelAnimationFrame(globalAnimation);
+    }
 	}
 };
+
+function song_ended() {
+  $("#duration").html("0:00");
+  $("#timer").html("0:00");
+  $("#audio_progress").width("0%");
+  $("#song_now_playing").html("&nbsp;");
+  $("#play_button").removeClass("disabled");
+  $("#stop_button").addClass("disabled");
+}
 
 function playSongFromId(song_id){
   console.log('Playing song from song ID ' + song_id);
@@ -160,27 +171,23 @@ function playSongFromId(song_id){
         html5: true,
         onplay: function() {
           var time = Math.round(sound.duration());
-          requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
+          globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
           $("#song_now_playing").html(`${row.title} by ${row.artist}`);
+          $("#play_button").addClass("disabled");
+          $("#stop_button").removeClass("disabled");
         },
         onend: function() {
           console.log('Finished!');
-          $("#duration").html('0:00');
-          $("#timer").html('0:00');
-          $("#audio_progress").width("0%");
-          $("#song_now_playing").html("&nbsp;");
+          song_ended();
         },
         onstop: function() {
           console.log('Stopped!');
-          $("#duration").html('0:00');
-          $("#timer").html('0:00');
-          $("#audio_progress").width("0%");
-          $("#song_now_playing").html("&nbsp;");
+          song_ended();
         }
       });
+      
       sound.play();
-        $("#play_button").addClass("disabled");
-        $("#stop_button").removeClass("disabled");
+       
     });
   }
 }
@@ -194,9 +201,6 @@ function playSelected(){
 function stopPlaying(){
   if (sound) {
     sound.stop();
-    $("#audio_progress").width("0");
-    $("#play_button").removeClass("disabled");
-    $("#stop_button").addClass("disabled");
   }
 }
 
