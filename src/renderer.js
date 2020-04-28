@@ -34,6 +34,17 @@ function populateHotkeys(fkeys) {
   }
 }
 
+function populateHoldingTank(songIds) {
+  $('#holding_tank ul').empty();
+  var target = $("#holding_tank");
+
+  for (var songId in songIds) {
+   addToHoldingTank(songId,target);
+  }
+  return false;
+}
+
+
 function clearHotkeys() {
   if (confirm('Are you sure you want clear your hotkeys?')) {
     for(let key=1;key<=12;key++) {
@@ -43,14 +54,18 @@ function clearHotkeys() {
   }
 }
 
-// function readHotkeys() {
-//   for(let key=1;key<=12;key++){
-//     console.log( `Key F${key} is ` + $(`#f${key}_hotkey`).attr('songid') )
-//   }
-// }
+function clearHoldingTank() {
+  if (confirm('Are you sure you want clear your holding tank?')) {
+    $('#holding_tank ul').empty();
+  }
+}
 
 function openHotkeyFile() {
   ipcRenderer.send('open-hotkey-file');
+}
+
+function openHoldingTankFile() {
+  ipcRenderer.send('open-holding-tank-file');
 }
 
 function saveHotkeyFile() {
@@ -60,6 +75,15 @@ function saveHotkeyFile() {
     hotkeyArray.push($(`#f${key}_hotkey`).attr('songid'));
   }
   ipcRenderer.send('save-hotkey-file', hotkeyArray);
+}
+
+function saveHoldingTankFile() {
+  console.log('Renderer starting saveHoldingTankFile');
+  var holdingTankArray = [];
+  $('#holding_tank ul li').each(function() {
+    holdingTankArray.push($(this).attr('songid'));
+  })
+  ipcRenderer.send('save-holding-tank-file', holdingTankArray);
 }
 
 function populateCategorySelect(){
@@ -125,7 +149,7 @@ function setLabelFromSongId(song_id, element) {
 function addToHoldingTank(song_id, element) {
   db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function (err, row) {
     if (err) {
-      
+
     } else {
       var title = row.title || "[Unknown Title]";
       var artist = row.artist || "[Unknown Artist]";
@@ -135,7 +159,7 @@ function addToHoldingTank(song_id, element) {
       $(`#holding_tank ul li[songid=${song_id}]`).first().remove();
 
       if ($(element).is("li")) {
-        $(element) 
+        $(element)
         .after(song_row);
       } else {
         $(element)
@@ -211,7 +235,7 @@ function playSongFromId(song_id){
       });
 
       sound.play();
-       
+
     });
   }
 }

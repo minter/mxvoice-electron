@@ -5,6 +5,11 @@ ipcRenderer.on('fkey_load', function(event, fkeys) {
   populateHotkeys(fkeys);
 });
 
+ipcRenderer.on('holding_tank_load', function(event, songIds) {
+  populateHoldingTank(songIds);
+});
+
+
 ipcRenderer.on('start_hotkey_save', function(event, fkeys) {
   saveHotkeyFile();
 })
