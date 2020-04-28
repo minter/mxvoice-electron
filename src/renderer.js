@@ -130,7 +130,11 @@ function addToHoldingTank(song_id, element) {
       var title = row.title || "[Unknown Title]";
       var artist = row.artist || "[Unknown Artist]";
       var time = row.time || "[??:??]";
-      $(element).append(`<li class='list-group-item'>${title} by ${artist} (${time})</li>`);
+      $(element)
+        .find("ul")
+        .append(
+          `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`
+        );
     }
   });
 }
@@ -227,10 +231,7 @@ function hotkeyDrop(event) {
 
 function holdingTankDrop(event) {
   event.preventDefault();
-  var song_id = event.dataTransfer.getData("text");
-  var target = $(event.target);
-  target.attr("songid", song_id);
-  addToHoldingTank(song_id, target);
+  addToHoldingTank(event.dataTransfer.getData("text"), $(event.currentTarget));
 }
 
 function allowHotkeyDrop(event) {

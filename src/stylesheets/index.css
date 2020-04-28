@@ -112,15 +112,20 @@ font-size: 11px;
 
 #holding_tank {
   font-size: 12px;
-  min-height: 600px;
-  max-height: 600px;
+  min-height: 700px;
+  max-height: 700px;
+  position: relative;
+  overflow: auto;
+  cursor: pointer;
+  user-select: none;
 }
 
 #holding_tank li {
   border: 0;
-  border-bottom: 1px dotted lightgrey;
-  margin: 5px;
+  margin: 0;
   padding: 0;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
 

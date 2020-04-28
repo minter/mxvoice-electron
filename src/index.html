@@ -47,7 +47,8 @@
                     </div>
                   </h6>
                   <div id="holding_tank" class="card-body">
-                    <ul class="list-group list-group-flush"></ul>
+                    <ul class="list-group list-group-flush">
+                    </ul>
                   </div>
                 </div>
             </div>
@@ -219,11 +220,22 @@
     $( document ).ready(function() {
       populateCategorySelect();
     });
+
     $('#search_results').on('click', 'tbody tr', function(event) {
       $('#selected_row').removeAttr('id');
       $(this).attr('id', 'selected_row');
     });
+
     $('#search_results').on('dblclick', 'tbody tr.song', function(event) {
+      playSelected();
+    });
+
+    $('#holding_tank').on('click', 'ul li', function (event) {
+        $('#selected_row').removeAttr('id');
+        $(this).attr('id', 'selected_row');
+    });
+
+    $('#holding_tank').on('dblclick', 'ul li', function (event) {
       playSelected();
     });
 
