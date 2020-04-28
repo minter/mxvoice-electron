@@ -97,6 +97,19 @@ ipcMain.on('save-hotkey-file', (event, arg) => {
   saveHotkeysFile(arg);
 });
 
+ipcMain.on('open-holding-tank-file', (event, arg) => {
+  console.log("Main process starting holding tank open");
+  loadHoldingTankFile();
+});
+
+ipcMain.on('save-holding-tank-file', (event, arg) => {
+  console.log("Main process starting holding tank save");
+  console.log(`Arg is ${arg}`);
+  console.log(`First element is ${arg[0]}`);
+  saveHoldingTankFile(arg);
+});
+
+
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
 
@@ -323,6 +336,38 @@ const preferences = new ElectronPreferences({
      })
    }
 
+   function loadHoldingTankFile() {
+     var song_ids = [];
+     console.log("Loading holding tank file");
+     dialog.showOpenDialog(mainWindow, {
+       buttonLabel: 'Open',
+       filters: [
+         { name: 'Mr. Voice Holding Tank Files', extensions: ['hld'] }
+       ],
+       defaultPath: preferences.value('locations.hotkey_directory'),
+       message: 'Select your Mr. Voice holding tank file',
+       properties: ['openFile']
+     }).then(result => {
+       if (result.canceled == true) {
+         console.log('Silently exiting holding tank load');
+         return;
+       }
+       else {
+         var filename = result.filePaths[0];
+         console.log(`Processing file ${filename}`);
+         const line_reader = new readlines(filename);
+
+         while (line = line_reader.next()) {
+           song_ids.push(line.toString().trim());
+         }
+         mainWindow.webContents.send('holding_tank_load', song_ids);
+       }
+     }).catch(err => {
+       console.log(err)
+     })
+   }
+
+
    function saveHotkeysFile(hotkeyArray) {
      dialog.showSaveDialog(mainWindow, {
        buttonLabel: 'Save',
@@ -350,6 +395,33 @@ const preferences = new ElectronPreferences({
        console.log(err)
       })
      }
+
+     function saveHoldingTankFile(holdingTankArray) {
+       dialog.showSaveDialog(mainWindow, {
+         buttonLabel: 'Save',
+         filters: [
+           { name: 'Mr. Voice Holding Tank Files', extensions: ['hld'] }
+         ],
+         defaultPath: preferences.value('locations.hotkey_directory'),
+         message: 'Save your Mr. Voice holding tank file'
+       }).then(result => {
+         if (result.canceled == true) {
+           console.log('Silently exiting holding tank save');
+           return;
+         }
+         else {
+           var filename = result.filePath;
+           console.log(`Processing file ${filename}`);
+           var file = fs.createWriteStream(filename);
+           for(let i = 0; i < holdingTankArray.length; i++){
+             file.write(holdingTankArray[i] + '\n');
+           }
+           file.end();
+         }
+        }).catch(err => {
+         console.log(err)
+        })
+       }
 
    // Config migration
    function checkOldConfig() {

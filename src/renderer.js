@@ -2,6 +2,7 @@ var db = new sqlite3.Database(path.join(preferences.locations.database_directory
 var sound;
 var categories = [];
 var globalAnimation;
+var autoplay = false;
 
 // Set up fkeys
 for(let i=1;i<=12;i++) {
@@ -34,6 +35,15 @@ function populateHotkeys(fkeys) {
   }
 }
 
+function populateHoldingTank(songIds) {
+  $('#holding_tank ul').empty();
+  songIds.forEach(songId => {
+   addToHoldingTank(songId, $("#holding_tank"));
+  });
+  return false;
+}
+
+
 function clearHotkeys() {
   if (confirm('Are you sure you want clear your hotkeys?')) {
     for(let key=1;key<=12;key++) {
@@ -43,14 +53,18 @@ function clearHotkeys() {
   }
 }
 
-// function readHotkeys() {
-//   for(let key=1;key<=12;key++){
-//     console.log( `Key F${key} is ` + $(`#f${key}_hotkey`).attr('songid') )
-//   }
-// }
+function clearHoldingTank() {
+  if (confirm('Are you sure you want clear your holding tank?')) {
+    $('#holding_tank ul').empty();
+  }
+}
 
 function openHotkeyFile() {
   ipcRenderer.send('open-hotkey-file');
+}
+
+function openHoldingTankFile() {
+  ipcRenderer.send('open-holding-tank-file');
 }
 
 function saveHotkeyFile() {
@@ -60,6 +74,15 @@ function saveHotkeyFile() {
     hotkeyArray.push($(`#f${key}_hotkey`).attr('songid'));
   }
   ipcRenderer.send('save-hotkey-file', hotkeyArray);
+}
+
+function saveHoldingTankFile() {
+  console.log('Renderer starting saveHoldingTankFile');
+  var holdingTankArray = [];
+  $('#holding_tank ul li').each(function() {
+    holdingTankArray.push($(this).attr('songid'));
+  })
+  ipcRenderer.send('save-holding-tank-file', holdingTankArray);
 }
 
 function populateCategorySelect(){
@@ -103,7 +126,7 @@ function searchData(){
       throw err;
     }
         //console.log('Found ' + row.title + ' by ' + row.artist);
-        $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info || ''}</td><td>${row.title || ''}</td><td>${row.artist || ''}</td><td>${row.time}</td></tr>`);
+        $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
 
     });
   });
@@ -118,6 +141,30 @@ function setLabelFromSongId(song_id, element) {
       var artist = row.artist || '[Unknown Artist]';
       var time = row.time || '[??:??]';
       $(element).find('span').html(`${title} by ${artist} (${time})`);
+    }
+  });
+}
+
+function addToHoldingTank(song_id, element) {
+  db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function (err, row) {
+    if (err) {
+
+    } else {
+      var title = row.title || "[Unknown Title]";
+      var artist = row.artist || "[Unknown Artist]";
+      var time = row.time || "[??:??]";
+      var song_row = `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
+
+      $(`#holding_tank ul li[songid=${song_id}]`).first().remove();
+
+      if ($(element).is("li")) {
+        $(element)
+        .after(song_row);
+      } else {
+        $(element)
+        .find("ul")
+        .append(song_row);
+      }
     }
   });
 }
@@ -177,8 +224,15 @@ function playSongFromId(song_id){
           $("#stop_button").removeClass("disabled");
         },
         onend: function() {
-          console.log('Finished!');
           song_ended();
+          if (autoplay) {
+            song_node = $("#holding_tank ul li").first();
+            if (song_node) {
+              playSongFromId(song_node.attr("songid"));
+              song = song_node.detach();
+              $("#holding_tank ul").append(song);
+            }
+          }
         },
         onstop: function() {
           console.log('Stopped!');
@@ -187,7 +241,7 @@ function playSongFromId(song_id){
       });
 
       sound.play();
-       
+
     });
   }
 }
@@ -212,6 +266,11 @@ function hotkeyDrop(event) {
   setLabelFromSongId(song_id,target);
 }
 
+function holdingTankDrop(event) {
+  event.preventDefault();
+  addToHoldingTank(event.dataTransfer.getData("text"), $(event.target));
+}
+
 function allowHotkeyDrop(event) {
   event.preventDefault();
 }
@@ -219,4 +278,36 @@ function allowHotkeyDrop(event) {
 function songDrag(event) {
   console.log('Starting drag for ID ' + event.target.getAttribute('songid'));
   event.dataTransfer.setData("text", event.target.getAttribute('songid'));
+}
+
+function sendToHotkeys() {
+  target = $("#hotkeys_list li").not("[songid]").first();
+  song_id = $("#selected_row").attr("songid");
+  if (target && song_id) {
+    target.attr('songid',song_id);
+    setLabelFromSongId(song_id,target);
+  }
+  return false;
+}
+
+function sendToHoldingTank() {
+  target = $("#holding_tank");
+  song_id = $("#selected_row").attr("songid");
+  if (song_id) {
+    addToHoldingTank(song_id,target);
+  }
+  return false;
+}
+
+function selectNext() {
+  $("#selected_row").removeAttr("id").next().attr("id","selected_row");
+}
+
+function selectPrev() {
+  $("#selected_row").removeAttr("id").prev().attr("id", "selected_row");
+}
+
+function toggleAutoPlay() {
+    $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
+    autoplay = !autoplay;
 }

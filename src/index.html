@@ -33,7 +33,9 @@
             <div class="col-4">
                 <div class="h-100 card rounded-0">
                   <h6 class="card-header bg-secondary text-white">
-                    Holding Tank
+                    Holding Tank &nbsp;<a href="#">
+                      <i title="AutoPlay" id="autoplay_button" onclick="toggleAutoPlay()" class="fas fa-sm fa-play-circle"></i>
+                    </a>
                     <div class="icon-bar">
                       <a href="#">
                         <i title="Load Holding Tank File" onclick="openHoldingTankFile()" class="far fa-sm fa-folder-open"></i>
@@ -46,8 +48,9 @@
                       </a>
                     </div>
                   </h6>
-                  <div class="card-body">
-                    Songs go here
+                  <div id="holding_tank" class="card-body">
+                    <ul class="list-group list-group-flush">
+                    </ul>
                   </div>
                 </div>
             </div>
@@ -71,7 +74,7 @@
                   </form>
 
                       <div class="table-wrapper-scroll-y my-custom-scrollbar">
-                        <table class="table table-hover table-sm" id="search_results">
+                        <table class="table table-sm" id="search_results">
                           <thead class="thead">
                             <tr>
                               <th>Category</th>
@@ -219,37 +222,89 @@
     $( document ).ready(function() {
       populateCategorySelect();
     });
+
     $('#search_results').on('click', 'tbody tr', function(event) {
       $('#selected_row').removeAttr('id');
       $(this).attr('id', 'selected_row');
     });
+
     $('#search_results').on('dblclick', 'tbody tr.song', function(event) {
       playSelected();
     });
 
+    $('#holding_tank').on('click', 'ul li', function (event) {
+        $('#selected_row').removeAttr('id');
+        $(this).attr('id', 'selected_row');
+    });
+
+    $('#holding_tank').on('dblclick', 'ul li', function (event) {
+      playSelected();
+    });
+
     Mousetrap.bind('esc', function() { stopPlaying(); });
+    
     Mousetrap.bind('command+l', function () {
       $("#omni_search").focus().select();
     });
 
+    Mousetrap.bind('tab', function () {
+      sendToHotkeys();
+      return false;
+    });
+
+    Mousetrap.bind('shift+tab', function () {
+      sendToHoldingTank();
+      return false;
+    });
+
+    Mousetrap.bind('return', function () {
+      playSelected();
+      return false;
+    });
+
+    Mousetrap.bind('down', function () {
+        selectNext();
+        return false;
+    });
+
+    Mousetrap.bind('up', function () {
+        selectPrev();
+        return false;
+    });
+
     $("#hotkeys_list li").on("drop", function(event) {
-      $(this).removeClass("active");
+      $(this).removeClass("drop_target");
       hotkeyDrop(event.originalEvent);
     });
 
 
     $("#hotkeys_list li").on("dragover", function (event) {
-      $(this).addClass("active");
+      $(this).addClass("drop_target");
       allowHotkeyDrop(event.originalEvent);
     });
 
     $("#hotkeys_list li").on("dragleave", function (event) {
-       $(this).removeClass("active");
+       $(this).removeClass("drop_target");
     });
 
     $("#category_select").on("change", function() {
        searchData();
        $("#omni_search").focus();
+    });
+
+    $("#holding_tank").on("drop", function (event) {
+      holdingTankDrop(event.originalEvent);
+      $(event.originalEvent.target).removeClass("dropzone");
+    });
+
+    $("#holding_tank").on("dragover", function (event) {
+        allowHotkeyDrop(event.originalEvent);
+        $(event.originalEvent.target).addClass("dropzone");
+      });
+
+    $("#holding_tank").on("dragleave", function (event) {
+        allowHotkeyDrop(event.originalEvent);
+        $(event.originalEvent.target).removeClass("dropzone");
     });
 
 

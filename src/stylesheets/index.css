@@ -26,16 +26,21 @@ font-size: 11px;
 }
 
 .icon-bar a {
-  color: white;
   margin-left: 5px;
 }
 
-.icon-bar a:hover {
+.icon-bar a:hover, h6 a:hover {
   color: darkslategray;
 }
 
 #selected_row {
-  background-color: lightgoldenrodyellow;
+  color: white;
+  background-color: darkslateblue;
+}
+
+.drop_target {
+  color: white;
+  background-color: darkslateblue;
 }
 
 #search_form {
@@ -109,4 +114,33 @@ font-size: 11px;
 .song_title {
   font-weight: bold;
 }
+
+.dropzone {
+  border-bottom: 1px dotted black !important;
+}
+
+#holding_tank {
+  font-size: 12px;
+  min-height: 700px;
+  max-height: 700px;
+  position: relative;
+  overflow: auto;
+  cursor: pointer;
+  user-select: none;
+  margin-left: -3px;
+}
+
+#holding_tank li {
+  border: 0;
+  margin: 0;
+  padding: 3px;
+}
+
+h6 a {
+  color: white;
+}
+
+
+
+
 
