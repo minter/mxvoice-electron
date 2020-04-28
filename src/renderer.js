@@ -151,7 +151,7 @@ function song_ended() {
   $("#duration").html("0:00");
   $("#timer").html("0:00");
   $("#audio_progress").width("0%");
-  $("#song_now_playing").html("&nbsp;");
+  $("#song_now_playing").fadeOut(100);
   $("#play_button").removeClass("disabled");
   $("#stop_button").addClass("disabled");
 }
@@ -172,7 +172,7 @@ function playSongFromId(song_id){
         onplay: function() {
           var time = Math.round(sound.duration());
           globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
-          $("#song_now_playing").html(`${row.title} by ${row.artist}`);
+          $("#song_now_playing").html(`${row.title} by ${row.artist}`).fadeIn(100);
           $("#play_button").addClass("disabled");
           $("#stop_button").removeClass("disabled");
         },
@@ -185,7 +185,7 @@ function playSongFromId(song_id){
           song_ended();
         }
       });
-      
+
       sound.play();
        
     });
