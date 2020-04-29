@@ -313,9 +313,7 @@
     });
 
     $("#omni_search").on("keydown", function (e) {
-      if (e.code == 'Enter') {
-        searchData();
-      }
+    
       if (e.code == 'Tab') {
         if (first_row = $("#search_results tbody tr").first()) {
           $("#selected_row").removeAttr("id");
