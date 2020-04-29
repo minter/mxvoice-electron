@@ -238,7 +238,7 @@
     });
 
     $('#holding_tank').on('dblclick', 'ul li', function (event) {
-      $(".now_playing").removeClass("now_playing");
+      $(".now_playing").first().removeClass("now_playing");
       if (autoplay) {
         $("#selected_row").addClass("now_playing");
       }

@@ -157,13 +157,13 @@ function addToHoldingTank(song_id, element) {
       var artist = row.artist || "[Unknown Artist]";
       var time = row.time || "[??:??]";
 
-      current_song = $(`#holding_tank ul li.now_playing`).first();
-      if (autoplay && current_song.attr('songid') == song_id) {
-          var now_playing = "now_playing";
-          current_song.remove();
+      var existing_song = $(`#holding_tank ul li[songid=${song_id}]`);
+      if (existing_song.length) {
+        console.log("here");
+        var song_row = existing_song.detach();
+      } else {
+        var song_row = `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
       }
-
-      var song_row = `<li class='list-group-item ${now_playing}' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
 
       if ($(element).is("li")) {
         $(element)
@@ -236,26 +236,10 @@ function playSongFromId(song_id){
         },
         onend: function() {
           song_ended();
-          if (autoplay) {
-            var now_playing = $(".now_playing").first();
-            if (now_playing.length) {
-              now_playing.removeClass("now_playing");
-              next_song = now_playing.next();
-              next_song.addClass("now_playing");
-            } else {
-              next_song = $("#holding_tank ul li").first();
-            }
-            if (next_song.length) {
-              playSongFromId(next_song.attr("songid"));
-              next_song.addClass("now_playing");
-            } else {
-              $("#holding_tank ul li.now_playing").first().removeClass("now_playing");
-            }
-          }
+          autoplay_next();
         },
         onstop: function() {
           console.log('Stopped!');
-          $(".now_playing").removeClass("now_playing");
           song_ended();
         }
       });
@@ -263,6 +247,25 @@ function playSongFromId(song_id){
       sound.play();
 
     });
+  }
+}
+
+function autoplay_next() {
+  if (autoplay) {
+    var now_playing = $(".now_playing").first();
+    if (now_playing.length) {
+      now_playing.removeClass("now_playing");
+      next_song = now_playing.next();
+      next_song.addClass("now_playing");
+    } else {
+      next_song = $("#holding_tank ul li").first();
+    }
+    if (next_song.length) {
+      playSongFromId(next_song.attr("songid"));
+      next_song.addClass("now_playing");
+    } else {
+      $("li.now_playing").first().removeClass("now_playing");
+    }
   }
 }
 
@@ -274,6 +277,9 @@ function playSelected(){
 
 function stopPlaying(){
   if (sound) {
+    if (autoplay) {
+      $(".now_playing").first().removeClass("now_playing");
+    }
     sound.stop();
   }
 }
@@ -330,6 +336,7 @@ function selectPrev() {
 function toggleAutoPlay() {
     $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
     $("#holding_tank").toggleClass("autoplaying");
+    $(".now_playing").first().toggleClass("now_playing");
     autoplay = !autoplay;
 }
 

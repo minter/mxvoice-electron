@@ -33,11 +33,6 @@ font-size: 11px;
   color: darkslategray;
 }
 
-#selected_row {
-  color: white;
-  background-color: darkslateblue;
-}
-
 .drop_target {
   color: white;
   background-color: darkslateblue;
@@ -128,7 +123,6 @@ font-size: 11px;
   cursor: pointer;
   user-select: none;
   margin-left: -3px;
-  background-color: none;
 }
 
 #holding_tank li {
@@ -137,8 +131,6 @@ font-size: 11px;
   padding: 3px;
   background-color: transparent;
 }
-
-
 
 h6 a {
   color: white;
@@ -151,4 +143,9 @@ h6 a {
 
 .autoplaying {
   background-color: #F0F5F1;
+}
+
+#selected_row {
+  color: white;
+  background-color: darkslateblue !important;
 }
