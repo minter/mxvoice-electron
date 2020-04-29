@@ -123,7 +123,7 @@ function searchData(){
     console.log("Query string is " + query_string);
 
     if( $( '#omni_search' ).val() ) {
-      $( '#omni_search' ).val('');
+      $( '#omni_search' ).select();
       $( '#category_select' )[0].selectedIndex = 0;
     }
     db.each("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist', query_params, function(err, row) {
