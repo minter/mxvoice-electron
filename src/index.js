@@ -223,6 +223,42 @@ if (process.platform == 'darwin') {
       },
     ]
   });
+} else {
+  const name = app.name;
+  application_menu.unshift({
+    label: 'File',
+    submenu: [
+      {
+        label: 'About ' + name,
+        role: 'about'
+      },
+      {
+        type: 'separator'
+      },
+      {
+        label: 'Preferences',
+        click: () => {
+          preferences.show();
+          }
+      },
+      {
+        type: 'separator'
+      },
+      {
+        label: 'Developer Tools',
+        click: () => {
+          mainWindow.openDevTools();
+          }
+      },
+      {
+        type: 'separator'
+      },
+      {
+        label: 'Exit',
+        click: () => { app.quit(); }
+      },
+    ]
+  });
 }
 
 menu = Menu.buildFromTemplate(application_menu);

@@ -67,8 +67,8 @@
                           </select>
                       </div>
                       <input type="text" class="form-control" placeholder="Enter search term..." id="omni_search">
-                      <div class="input-group-append">
-                        <button type="submit" class="btn btn-primary">Go</button>
+                      <div class="input-group-prepend">
+                        <button type="reset" id="reset_button" class="btn btn-secondary"><i title="Reset Search" class="fas fa-sm fa-times"></i></button>
                       </div>
                     </div>
                   </form>
@@ -276,6 +276,11 @@
         return false;
     });
 
+    Mousetrap.bind(['backspace', 'del'], function () {
+        deleteSong();
+        return false;
+      });
+
     $("#hotkeys_list li").on("drop", function(event) {
       $(this).removeClass("drop_target");
       hotkeyDrop(event.originalEvent);
@@ -312,6 +317,9 @@
     });
 
     $("#omni_search").on("keydown", function (e) {
+      if (e.code == 'Enter') {
+        searchData();
+      }
       if (e.code == 'Tab') {
         if (first_row = $("#search_results tbody tr").first()) {
           $("#selected_row").removeAttr("id");
@@ -321,6 +329,14 @@
         }
       }
     });
+
+    $("#reset_button").on("click", function () {
+        $("#omni_search").val('');
+        $('#category_select').prop('selectedIndex',0);
+        $("#omni_search").focus();
+        $('#search_results tbody').find("tr").remove();
+        return false;
+      });
 
 
 

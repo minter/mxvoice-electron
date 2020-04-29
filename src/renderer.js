@@ -102,7 +102,7 @@ function searchData(){
   db.serialize(function() {
     var category = $( "#category_select" ).val();
     console.log('Using category ' + category);
-    var value = document.getElementById('omni_search').value.trim();
+    var value = $( '#omni_search' ).val().trim();
     console.log('Called with search string ' + value);
     $('#search_results tbody').find("tr").remove();
     var search_term = '%' + value + '%';
@@ -121,6 +121,9 @@ function searchData(){
       query_string = " WHERE " + query_segments.join(' AND ');
     }
     console.log("Query string is " + query_string);
+
+    $( '#omni_search' ).select();
+    
     db.each("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist', query_params, function(err, row) {
     if (err) {
       throw err;
@@ -326,4 +329,10 @@ function selectPrev() {
 function toggleAutoPlay() {
     $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
     autoplay = !autoplay;
+}
+
+function deleteSong() {
+  console.log("here");
+  $("#selected_row").remove();
+  return false;
 }
