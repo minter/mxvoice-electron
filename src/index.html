@@ -272,6 +272,11 @@
         return false;
     });
 
+    Mousetrap.bind(['backspace', 'del'], function () {
+        deleteSong();
+        return false;
+      });
+
     $("#hotkeys_list li").on("drop", function(event) {
       $(this).removeClass("drop_target");
       hotkeyDrop(event.originalEvent);

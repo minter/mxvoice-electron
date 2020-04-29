@@ -314,3 +314,9 @@ function toggleAutoPlay() {
     $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
     autoplay = !autoplay;
 }
+
+function deleteSong() {
+  console.log("here");
+  $("#selected_row").remove();
+  return false;
+}
