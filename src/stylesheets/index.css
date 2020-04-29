@@ -128,13 +128,17 @@ font-size: 11px;
   cursor: pointer;
   user-select: none;
   margin-left: -3px;
+  background-color: none;
 }
 
 #holding_tank li {
   border: 0;
   margin: 0;
   padding: 3px;
+  background-color: transparent;
 }
+
+
 
 h6 a {
   color: white;
@@ -143,4 +147,8 @@ h6 a {
 .now_playing {
   color: green;
   font-weight: bold;
+}
+
+.autoplaying {
+  background-color: #F0F5F1;
 }

@@ -244,10 +244,10 @@ function playSongFromId(song_id){
               next_song.addClass("now_playing");
             } else {
               next_song = $("#holding_tank ul li").first();
-              next_song.addClass("now_playing");
             }
             if (next_song.length) {
               playSongFromId(next_song.attr("songid"));
+              next_song.addClass("now_playing");
             } else {
               $("#holding_tank ul li.now_playing").first().removeClass("now_playing");
             }
@@ -255,6 +255,7 @@ function playSongFromId(song_id){
         },
         onstop: function() {
           console.log('Stopped!');
+          $(".now_playing").removeClass("now_playing");
           song_ended();
         }
       });
@@ -328,6 +329,7 @@ function selectPrev() {
 
 function toggleAutoPlay() {
     $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
+    $("#holding_tank").toggleClass("autoplaying");
     autoplay = !autoplay;
 }
 
