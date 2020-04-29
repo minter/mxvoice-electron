@@ -255,7 +255,6 @@ if (process.platform == 'darwin') {
       },
       {
         label: 'Exit',
-        accelerator: 'Control+X',
         click: () => { app.quit(); }
       },
     ]
