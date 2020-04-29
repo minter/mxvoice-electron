@@ -224,6 +224,7 @@ if (process.platform == 'darwin') {
     ]
   });
 } else {
+  const name = app.name;
   application_menu.unshift({
     label: 'File',
     submenu: [
