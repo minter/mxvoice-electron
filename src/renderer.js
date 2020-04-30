@@ -334,10 +334,16 @@ function selectPrev() {
 }
 
 function toggleAutoPlay() {
+    autoplay = !autoplay;  
     $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
     $("#holding_tank").toggleClass("autoplaying");
     $(".now_playing").first().toggleClass("now_playing");
-    autoplay = !autoplay;
+    if (autoplay) {
+      $("#holding_tank_label").html("Auto Play");
+    } else {
+      $("#holding_tank_label").html("Holding Tank");
+    }
+
 }
 
 function deleteSong() {
