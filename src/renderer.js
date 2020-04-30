@@ -123,7 +123,7 @@ function searchData(){
     console.log("Query string is " + query_string);
 
     $( '#omni_search' ).select();
-    
+
     db.each("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist', query_params, function(err, row) {
     if (err) {
       throw err;
@@ -275,12 +275,19 @@ function playSelected(){
   playSongFromId(song_id);
 }
 
-function stopPlaying(){
+function stopPlaying(fadeOut = false){
   if (sound) {
+    sound.on('fade', function(){
+      sound.stop();
+    });
     if (autoplay) {
       $(".now_playing").first().removeClass("now_playing");
     }
-    sound.stop();
+    if (fadeOut) {
+      sound.fade(1,0,1000);
+    } else {
+      sound.stop();
+    }
   }
 }
 
@@ -334,7 +341,7 @@ function selectPrev() {
 }
 
 function toggleAutoPlay() {
-    autoplay = !autoplay;  
+    autoplay = !autoplay;
     $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
     $("#holding_tank").toggleClass("autoplaying");
     $(".now_playing").first().toggleClass("now_playing");
