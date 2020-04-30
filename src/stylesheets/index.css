@@ -33,11 +33,6 @@ font-size: 11px;
   color: darkslategray;
 }
 
-#selected_row {
-  color: white;
-  background-color: darkslateblue;
-}
-
 .drop_target {
   color: white;
   background-color: darkslateblue;
@@ -134,12 +129,36 @@ font-size: 11px;
   border: 0;
   margin: 0;
   padding: 3px;
+  background-color: transparent;
 }
 
 h6 a {
   color: white;
 }
 
+.now_playing {
+  color: green;
+  font-weight: bold;
+}
 
+.icon::before {
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+}
 
+.now_playing::before {
+  font-family: "Font Awesome 5 Free"; font-weight: 900; content: "\f028";
+  padding-right: 5px;
+}
 
+.autoplaying {
+  background-color: #F0F5F1;
+}
+
+#selected_row {
+  color: white;
+  background-color: darkslateblue !important;
+}
