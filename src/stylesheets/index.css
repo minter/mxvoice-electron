@@ -3,7 +3,7 @@ body {
 }
 
 #top-row {
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - 90px);
 }
 
 .container-fluid {
@@ -75,7 +75,7 @@ font-size: 11px;
 
 #hotkeys_list .badge {
   width: 30px;
-  margin-right: 2px;
+  margin-right: 2px;;
 }
 
 #hotkeys_list span {
