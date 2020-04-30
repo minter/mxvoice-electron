@@ -123,8 +123,10 @@ function searchData(){
     }
         //console.log('Found ' + row.title + ' by ' + row.artist);
         $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
-
     });
+
+    scale_scrollable();
+
   });
 }
 
@@ -352,6 +354,10 @@ function deleteSong() {
   return false;
 }
 
+function scale_scrollable() {
+  $(".table-wrapper-scroll-y").height($(window).height() - 240 + "px");
+}
+
 
 $( document ).ready(function() {
     
@@ -487,4 +493,9 @@ $( document ).ready(function() {
       stopPlaying();
     }
   });
+  
+  $(window).resize(function() {
+    this.scale_scrollable();
+  });
+
 });
