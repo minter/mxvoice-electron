@@ -13,6 +13,10 @@
     <!-- Site-Specific CSS -->
     <link rel="stylesheet" href="stylesheets/index.css">
 
+    <!-- Google Fonts -->
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=ArchivoNarrow">
+
     <!-- Insert this line above script imports  -->
     <script>
       if (typeof module === 'object') { window.module = module; module = undefined; }
@@ -28,15 +32,16 @@
   <body>
     <div class="container-fluid">
       
-      <div class="row no-gutters">
+      <div id="top-row" class="row no-gutters">
 
         <!-- Begin Holding Tank -->
 
         <div class="col-3">
 
           <div class="h-100 card rounded-0" style="margin-right: -12px;">
-            <h6 class="card-header rounded-0 bg-dark text-white">
+            <h6 class="card-header rounded-0 bg-dark">
               <span id="holding_tank_label">Holding Tank</span> &nbsp;<a href="#">
+                
                 <i title="AutoPlay" id="autoplay_button" onclick="toggleAutoPlay()" class="fas fa-sm fa-play-circle"></i>
               </a>
               <div class="icon-bar">
@@ -51,7 +56,7 @@
                 </a>
               </div>
             </h6>
-            <div id="holding_tank" class="card-body">
+            <div id="holding_tank" class="card-body table-wrapper-scroll-y my-custom-scrollbar">
               <ul class="list-group list-group-flush">
               </ul>
             </div>
@@ -65,8 +70,14 @@
 
         <div class="col-6">
         
-          <div class="card rounded-0">
-            <h6 class="card-header rounded-0 bg-dark text-white">Search</h6>
+          <div class="card rounded-0 h-100">
+            <h6 class="card-header rounded-0 bg-dark">Search
+              <div class="icon-bar">
+                <a href="#">
+                  <!-- Icons could go here -->
+                </a>
+            </div>
+            </h6>
             <div class="card-body">
               <form id="search_form" onsubmit="searchData();return false;">
           
@@ -84,7 +95,7 @@
                 </div>
               </form>
           
-              <div class="table-wrapper-scroll-y my-custom-scrollbar">
+              <div class="table-wrapper-scroll-y my-custom-scrollbar h-100">
                 <table class="table table-sm" id="search_results">
                   <thead class="thead">
                     <tr>
@@ -111,7 +122,7 @@
         <div class="col-3">
         
           <div class="card h-100 rounded-0"style="margin-left: -12px;">
-                <h6 class="card-header rounded-0 bg-dark text-white">
+                <h6 class="card-header rounded-0 bg-dark">
                   Hotkeys
                     <div class="icon-bar">
                       <a href="#">
