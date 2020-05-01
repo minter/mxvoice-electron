@@ -26,7 +26,8 @@
         {
           "name": "@electron-forge/maker-squirrel",
           "config": {
-            "name": "mxvoice"
+            "setupIcon": "src/assets/icons/mxvoice.ico",
+
           }
         },
         {
