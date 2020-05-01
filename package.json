@@ -1,7 +1,7 @@
 {
-  "name": "mrvoice",
-  "productName": "Mr. Voice",
-  "version": "2.9.0",
+  "name": "Mx. Voice",
+  "productName": "Mx. Voice",
+  "version": "3.0.0-alpha1",
   "description": "Improv Audio Software",
   "main": "src/index.js",
   "scripts": {
@@ -26,7 +26,7 @@
         {
           "name": "@electron-forge/maker-squirrel",
           "config": {
-            "name": "mrvoice"
+            "name": "mxvoice"
           }
         },
         {
