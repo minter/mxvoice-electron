@@ -1,7 +1,7 @@
 {
-  "name": "mrvoice",
-  "productName": "Mr. Voice",
-  "version": "2.9.0",
+  "name": "mxvoice",
+  "productName": "Mx. Voice",
+  "version": "3.0.0-alpha1",
   "description": "Improv Audio Software",
   "main": "src/index.js",
   "scripts": {
@@ -19,12 +19,14 @@
   "license": "MIT",
   "config": {
     "forge": {
-      "packagerConfig": {},
+      "packagerConfig": {
+        "icon": "src/assets/icons/mxvoice"
+      },
       "makers": [
         {
           "name": "@electron-forge/maker-squirrel",
           "config": {
-            "name": "mrvoice"
+            "setupIcon": "src/assets/icons/mxvoice.ico"
           }
         },
         {

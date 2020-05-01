@@ -24,8 +24,8 @@ const createWindow = () => {
 
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 1024,
+    width: (preferences.value('config.browser_width') || 1280),
+    height: (preferences.value('config.browser_height') || 1024),
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
@@ -41,6 +41,12 @@ const createWindow = () => {
 
   mainWindow.$ = mainWindow.jQuery = require('jquery');
   // mainWindow.Bootstrap = require('bootstrap');
+
+  mainWindow.on('will-resize', (_event, newBounds) => {
+    preferences.value('config.browser_width', newBounds.width);
+    preferences.value('config.browser_height', newBounds.height);
+  });
+
 };
 
 // This method will be called when Electron has finished
@@ -72,6 +78,7 @@ app.on('activate', () => {
     createWindow();
   }
 });
+
 
 if (process.platform == 'darwin') {
   app.setAboutPanelOptions({
@@ -281,6 +288,10 @@ const preferences = new ElectronPreferences({
           'music_directory': path.join(os.homedir(), 'mp3'),
           'hotkey_directory': path.join(os.homedir(), 'hotkeys'),
           'database_directory': os.homedir()
+        },
+        'config': {
+          'browser_width': 1280,
+          'browser_height': 1024
         }
         // 'notes': {
         //     'folder': path.resolve(os.homedir(), 'Notes')
