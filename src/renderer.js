@@ -98,6 +98,7 @@ function searchData(){
     var value = $( '#omni_search' ).val().trim();
     console.log('Called with search string ' + value);
     $('#search_results tbody').find("tr").remove();
+    $("#search_results thead").show();
     var search_term = '%' + value + '%';
     var query_params = [];
     var query_segments = [];
@@ -483,6 +484,7 @@ $( document ).ready(function() {
     $("#category_select").prop("selectedIndex", 0);
     $("#omni_search").focus();
     $("#search_results tbody").find("tr").remove();
+    $("#search_results thead").hide();
     return false;
   });
 
@@ -497,5 +499,7 @@ $( document ).ready(function() {
   $(window).resize(function() {
     this.scale_scrollable();
   });
+
+  $("#search_results thead").hide();
 
 });

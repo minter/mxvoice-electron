@@ -54,7 +54,6 @@ font-size: 11px;
   padding-bottom: 15px;
 }
 
-
 .unselectable {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -75,7 +74,8 @@ font-size: 11px;
 
 #hotkeys_list .badge {
   width: 30px;
-  margin-right: 2px;;
+  margin-right: 2px;
+  background-color: slategray;
 }
 
 #hotkeys_list span {
@@ -131,10 +131,11 @@ font-size: 11px;
 }
 
 #holding_tank li {
-  border: 0;
-  margin: 0;
-  padding: 3px;
-  background-color: transparent;
+  border: 1px solid lightsteelblue;
+  border-radius: 5px;
+  margin: 2px;
+  padding: 6px;
+  background-color: lightsteelblue;
 }
 
 h6 {
@@ -173,5 +174,5 @@ h6 a {
 
 #selected_row {
   color: white;
-  background-color: darkslateblue !important;
+  background-color: lightslategrey !important;
 }
