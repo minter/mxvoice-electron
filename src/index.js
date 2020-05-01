@@ -90,7 +90,7 @@ if (process.platform == 'darwin') {
       'Andrew Berkowitz'
     ],
     website: 'https://mrvoice.net/',
-    credits: "Wade Minter <wade@wademinter.com>\nAndrew Berkowitz<andrew@andrewberkowitz.com>"
+    credits: "Wade Minter <wade@wademinter.com>\nAndrew Berkowitz <andrew@andrewberkowitz.com>"
   })
 }
 
@@ -361,10 +361,10 @@ const preferences = new ElectronPreferences({
      dialog.showOpenDialog(mainWindow, {
        buttonLabel: 'Open',
        filters: [
-         { name: 'Mr. Voice Hotkey Files', extensions: ['mrv'] }
+         { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
        ],
        defaultPath: preferences.value('locations.hotkey_directory'),
-       message: 'Select your Mr. Voice hotkey file',
+       message: 'Select your Mx. Voice hotkey file',
        properties: ['openFile']
      }).then(result => {
        if (result.canceled == true) {
@@ -394,10 +394,10 @@ const preferences = new ElectronPreferences({
      dialog.showOpenDialog(mainWindow, {
        buttonLabel: 'Open',
        filters: [
-         { name: 'Mr. Voice Holding Tank Files', extensions: ['hld'] }
+         { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
        ],
        defaultPath: preferences.value('locations.hotkey_directory'),
-       message: 'Select your Mr. Voice holding tank file',
+       message: 'Select your Mx. Voice holding tank file',
        properties: ['openFile']
      }).then(result => {
        if (result.canceled == true) {
@@ -424,10 +424,10 @@ const preferences = new ElectronPreferences({
      dialog.showSaveDialog(mainWindow, {
        buttonLabel: 'Save',
        filters: [
-         { name: 'Mr. Voice Hotkey Files', extensions: ['mrv'] }
+         { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
        ],
        defaultPath: preferences.value('locations.hotkey_directory'),
-       message: 'Save your Mr. Voice hotkey file'
+       message: 'Save your Mx. Voice hotkey file'
      }).then(result => {
        if (result.canceled == true) {
          console.log('Silently exiting hotkey save');
@@ -452,10 +452,10 @@ const preferences = new ElectronPreferences({
        dialog.showSaveDialog(mainWindow, {
          buttonLabel: 'Save',
          filters: [
-           { name: 'Mr. Voice Holding Tank Files', extensions: ['hld'] }
+           { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
          ],
          defaultPath: preferences.value('locations.hotkey_directory'),
-         message: 'Save your Mr. Voice holding tank file'
+         message: 'Save your Mx. Voice holding tank file'
        }).then(result => {
          if (result.canceled == true) {
            console.log('Silently exiting holding tank save');
@@ -510,7 +510,7 @@ const preferences = new ElectronPreferences({
 
      if (fs.existsSync(config_path)) {
        // An old config file exists, we need to load the preferences
-       console.log("Found old Mr. Voice config file at " + config_path);
+       console.log("Found old Mx. Voice config file at " + config_path);
        old_settings = [];
 
        const line_reader = new readlines(config_path);

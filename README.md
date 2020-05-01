@@ -1,4 +1,4 @@
-# Mr. Voice
+# Mx. Voice
 *Improv Audio Software, Version 3*
 
 ## About
@@ -9,7 +9,7 @@ Thus, 20 years later, this project to rewrite the software in a more modern way.
 
 ## Developing
 
-Mr. Voice 3 depends on node.js being available on your system, along with `npm` and `yarn`. We recommend node 13+.
+Mx. Voice 3 depends on node.js being available on your system, along with `npm` and `yarn`. We recommend node 13+.
 
 Check out the source code from Github. Go into the `mrvoice-electron` folder.
 
@@ -53,6 +53,6 @@ Helpful tools and documentation:
 * [Free Windows developer VM](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/) from Microsoft
 
 ## Authors
-Mr. Voice 3 is brought to you with love by:
+Mx. Voice 3 is brought to you with love by:
 * Wade Minter (<wade@wademinter.com>)
 * Andrew Berkowitz (<andrew@andrewberkowitz.com>)
