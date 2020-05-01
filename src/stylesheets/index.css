@@ -67,18 +67,18 @@ font-size: 11px;
   max-width: 200px;
 }
 
-#hotkeys_list li {
+.hotkeys li {
   margin-bottom: 3px;
   overflow: hidden;
 }
 
-#hotkeys_list .badge {
+.hotkeys .badge {
   width: 30px;
   margin-right: 2px;
   background-color: slategray;
 }
 
-#hotkeys_list span {
+.hotkeys span {
   font-size: 12px;
   font-weight: bold;
 }
@@ -175,4 +175,8 @@ h6 a {
 #selected_row {
   color: white;
   background-color: lightslategrey !important;
+}
+
+.nav-item {
+  font-size: 11px;
 }
