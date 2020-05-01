@@ -10,7 +10,6 @@ body {
   min-height: 100vh;
   overflow: auto;
   padding: 0;
-  background-color: pink;
 }
 
 .card {
