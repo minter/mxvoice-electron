@@ -6,24 +6,24 @@ var autoplay = false;
 
 function playSongFromHotkey(hotkey) {
   console.log ('Getting song ID from hotkey ' + hotkey);
-  var song_id = $(`#${hotkey}_hotkey`).attr('songid');
+  var song_id = $(`.hotkeys.active #${hotkey}_hotkey`).attr('songid');
   console.log (`Found song ID ${song_id}`);
   if (song_id) {
     console.log (`Preparing to play song ${song_id}`);
     playSongFromId(song_id);
-     $(`#${hotkey}_hotkey`).fadeOut(100).fadeIn(100);
+     $(`.hotkeys.active #${hotkey}_hotkey`).fadeOut(100).fadeIn(100);
   }
 }
 
 function populateHotkeys(fkeys) {
   for (var key in fkeys) {
     if (fkeys[key]) {
-      $(`#${key}_hotkey`).attr('songid', fkeys[key]);
-      setLabelFromSongId(fkeys[key], $(`#${key}_hotkey`))
+      $(`.hotkeys.active #${key}_hotkey`).attr('songid', fkeys[key]);
+      setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`))
     }
     else {
-      $(`#${key}_hotkey`).removeAttr('songid');
-      $(`#${key}_hotkey span`).html('');
+      $(`.hotkeys.active #${key}_hotkey`).removeAttr('songid');
+      $(`.hotkeys.active #${key}_hotkey span`).html('');
     }
   }
 }
@@ -40,8 +40,8 @@ function populateHoldingTank(songIds) {
 function clearHotkeys() {
   if (confirm('Are you sure you want clear your hotkeys?')) {
     for(let key=1;key<=12;key++) {
-      $(`#f${key}_hotkey`).removeAttr('songid');
-      $(`#f${key}_hotkey span`).html('');
+      $(`.hotkeys.active #f${key}_hotkey`).removeAttr('songid');
+      $(`.hotkeys.active #f${key}_hotkey span`).html('');
     }
   }
 }
@@ -310,7 +310,7 @@ function songDrag(event) {
 }
 
 function sendToHotkeys() {
-  target = $("#hotkeys_list li").not("[songid]").first();
+  target = $(".hotkeys.active li").not("[songid]").first();
   song_id = $("#selected_row").attr("songid");
   if (target && song_id) {
     target.attr('songid',song_id);
@@ -359,6 +359,30 @@ function scale_scrollable() {
   $(".table-wrapper-scroll-y").height($(window).height() - 240 + "px");
 }
 
+function switchToHotkeyTab(tab) {
+  $(`#hotkey_tabs li:nth-child(${tab}) a`).tab('show');
+}
+
+function renameHotkeyTab() {
+
+  prompt({
+    title: "Rename Hotkey Tab",
+    label: "Rename this tab:",
+    value: $(".nav-link.active").text(),
+    type: "input",
+    alwaysOnTop: true,
+  })
+    .then((r) => {
+      if (r === null) {
+        console.log("user canceled");
+      } else {
+        $(".nav-link.active").text(r);
+      }
+    })
+    .catch(console.error);
+  
+
+}
 
 $( document ).ready(function() {
     
@@ -401,6 +425,13 @@ $( document ).ready(function() {
         playSongFromHotkey(`f${i}`);
       }
     );
+  }
+
+  for (let i = 1; i<=5; i++) {
+    Mousetrap.bind(`command+${i}`, function () {
+      switchToHotkeyTab(i);
+    });
+
   }
 
   Mousetrap(search_field).bind("esc", function () {
@@ -448,17 +479,17 @@ $( document ).ready(function() {
     return false;
   });
 
-  $("#hotkeys_list li").on("drop", function (event) {
+  $(".hotkeys li").on("drop", function (event) {
     $(this).removeClass("drop_target");
     hotkeyDrop(event.originalEvent);
   });
 
-  $("#hotkeys_list li").on("dragover", function (event) {
+  $(".hotkeys li").on("dragover", function (event) {
     $(this).addClass("drop_target");
     allowHotkeyDrop(event.originalEvent);
   });
 
-  $("#hotkeys_list li").on("dragleave", function (event) {
+  $(".hotkeys li").on("dragleave", function (event) {
     $(this).removeClass("drop_target");
   });
 
@@ -491,11 +522,6 @@ $( document ).ready(function() {
         return false;
       }
     }
-
-    // if (fkeys.includes(e.code)) {
-    //   console.log("here");
-    //   Mousetrap.trigger(`${e.code}`);
-    // }
   });
 
   $("#reset_button").on("click", function () {
@@ -516,5 +542,15 @@ $( document ).ready(function() {
   });
 
   $("#search_results thead").hide();
+
+  // Set up hotkey tabs
+
+  for (var i = 2; i<=5; i++) {
+    var node = $("#hotkeys_list_1").clone();
+    node.attr("id",`hotkeys_list_${i}`);
+    node.removeClass('show active');
+    $(".tab-content").append(node);
+    
+  }
 
 });
