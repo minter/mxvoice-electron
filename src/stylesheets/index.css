@@ -104,10 +104,10 @@ font-size: 11px;
 }
 #now_playing_bar div {
   
-  font-size: 14px;
+  font-size: 16px;
   padding-bottom: 7px;
   color: white;
-  font-family: 'Courier', sans-serif;
+  font-family: 'Share Tech Mono', 'Courier', sans-serif;
 }
 
 #play_column, #stop_column {
