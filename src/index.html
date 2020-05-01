@@ -208,7 +208,7 @@
                         <span></span>
                       </li>
                     </ul>
-                    
+
                     </div>
                   </div>
                 </div>
@@ -270,14 +270,15 @@
           </div>
           <div class="modal-body">
             <form>
+                <input type="hidden" id="song-form-filename">
               <div class="form-group">
                 <label for="song-form-category">Category</label>
-                <select class="form-control" id="song-form-category">
+                <select class="form-control" id="song-form-category" required>
                 </select>
               </div>
               <div class="form-group">
                 <label for="song-form-title" class="col-form-label">Title:</label>
-                <input type="text" class="form-control" id="song-form-title">
+                <input type="text" class="form-control" id="song-form-title" required>
               </div>
               <div class="form-group">
                 <label for="song-form-artist" class="col-form-label">Artist:</label>
@@ -291,7 +292,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-primary">Save Song</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="saveNewSong()">Save Song</button>
           </div>
         </div>
       </div>
@@ -305,5 +306,5 @@
   </body>
 
   <script src="renderer.js"></script>
-  
+
 </html>

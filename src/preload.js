@@ -1,6 +1,7 @@
 const { ipcRenderer, remote } = require('electron');
 const { Howl, Howler } = require('howler');
 const NodeID3 = require('node-id3');
+const { v4: uuidv4 } = require('uuid');
 
 ipcRenderer.on('fkey_load', function(event, fkeys) {
   populateHotkeys(fkeys);
@@ -22,6 +23,7 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
     console.log(`Title is ${tags['title']}`);
     $('#song-form-title').val(tags['title']);
     $('#song-form-artist').val(tags['artist']);
+    $('#song-form-filename').val(filename);
   });
   db.each("SELECT * FROM categories ORDER BY description ASC", [], function(err, row) {
   if (err) {
@@ -40,5 +42,7 @@ process.once('loaded', () => {
   global.preferences = ipcRenderer.sendSync('getPreferences'),
   global.Mousetrap = require('mousetrap'),
   global.ipcRenderer = ipcRenderer,
-  global.prompt = require('electron-prompt')
+  global.prompt = require('electron-prompt'),
+  global.uuidv4 = uuidv4,
+  global.fs = require('fs')
 })

@@ -380,8 +380,21 @@ function renameHotkeyTab() {
       }
     })
     .catch(console.error);
+}
 
-
+function saveNewSong() {
+  console.log("Starting save process");
+  var filename = $('#song-form-filename').val();
+  var pathData = path.parse(filename);
+  var title = $('#song-form-title').val();
+  var artist = $('#song-form-artist').val();
+  var info = $('#song-form-info').val();
+  var category = $('#song-form-category').val();
+  console.log(`Saving title: ${title}, artist: ${artist}, category: ${category}, info: ${info}, filename: ${filename}`);
+  var uuid = uuidv4();
+  var newFilename = `${pathData.name}-${uuid}${pathData.ext}`
+  var newPath = path.join(preferences.locations.music_directory, newFilename );
+  console.log(`Copying ${filename} to ${newPath}`);
 }
 
 $( document ).ready(function() {
