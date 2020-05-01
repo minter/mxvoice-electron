@@ -164,6 +164,8 @@ function addToHoldingTank(song_id, element) {
       if ($(element).is("li")) {
         $(element)
         .after(song_row);
+      } else if ($(element).is('div')) {
+        $(element).find('ul').append(song_row);
       } else {
         $(element).append(song_row);
       }
