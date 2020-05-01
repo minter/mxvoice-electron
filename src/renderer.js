@@ -364,13 +364,6 @@ $( document ).ready(function() {
     
   populateCategorySelect();
 
-    // Set up fkeys
-  for(let i=1;i<=12;i++) {
-    Mousetrap.bind(`f${i}`, function () {
-      playSongFromHotkey(`f${i}`);
-    });
-  }
-
   $("#search_results").on("click", "tbody tr", function (event) {
     $("#selected_row").removeAttr("id");
     $(this).attr("id", "selected_row");
@@ -391,6 +384,27 @@ $( document ).ready(function() {
       $("#selected_row").addClass("now_playing");
     }
     playSelected();
+  });
+
+   // Set up fkeys
+
+  var search_field = document.getElementById("omni_search");
+  
+  for(let i=1;i<=12;i++) {
+    Mousetrap.bind(`f${i}`, function () {
+      playSongFromHotkey(`f${i}`);
+    });
+
+    Mousetrap(search_field).bind(
+      `f${i}`,
+      function () {
+        playSongFromHotkey(`f${i}`);
+      }
+    );
+  }
+
+  Mousetrap(search_field).bind("esc", function () {
+    stopPlaying();
   });
 
   Mousetrap.bind("esc", function () {
@@ -477,6 +491,11 @@ $( document ).ready(function() {
         return false;
       }
     }
+
+    // if (fkeys.includes(e.code)) {
+    //   console.log("here");
+    //   Mousetrap.trigger(`${e.code}`);
+    // }
   });
 
   $("#reset_button").on("click", function () {
@@ -494,10 +513,6 @@ $( document ).ready(function() {
     } else {
       stopPlaying();
     }
-  });
-  
-  $(window).resize(function() {
-    this.scale_scrollable();
   });
 
   $("#search_results thead").hide();
