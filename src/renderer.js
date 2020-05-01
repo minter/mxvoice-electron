@@ -602,11 +602,11 @@ $( document ).ready(function() {
   }
 
   $('#addSongModal').on('hidden.bs.modal', function (e) {
-    $('#song-form-category').empty();
-    $('#song-form-title').empty();
-    $('#song-form-artist').empty();
-    $('#song-form-info').empty();
-    $('#song-form-duration').empty();
+    $('#song-form-category').val('');
+    $('#song-form-title').val('');
+    $('#song-form-artist').val('');
+    $('#song-form-info').val('');
+    $('#song-form-duration').val('');
   })
 
 });
