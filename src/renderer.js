@@ -133,6 +133,7 @@ function searchData(){
 }
 
 function setLabelFromSongId(song_id, element) {
+  //console.log(element);
   db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
     if(err) {
       $(element).find('span').html('');
@@ -140,7 +141,26 @@ function setLabelFromSongId(song_id, element) {
       var title = row.title || '[Unknown Title]';
       var artist = row.artist || '[Unknown Artist]';
       var time = row.time || '[??:??]';
-      $(element).find('span').html(`${title} by ${artist} (${time})`);
+
+      // Handle swapping
+      var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(element);
+      console.log(original_song_node);
+      if (original_song_node.length) {
+        var old_song = original_song_node.find('span').detach();
+        var destination_song = $(element).find('span').detach();
+        original_song_node.append(destination_song);
+        if (destination_song.attr('songid')) {
+          original_song_node.attr("songid", destination_song.attr("songid"));
+        } else {
+          original_song_node.removeAttr("songid");
+        }
+        
+        $(element).append(old_song);
+
+      } else {
+        $(element).find("span").html(`${title} by ${artist} (${time})`);
+        $(element).find("span").attr("songid", song_id);
+      }
     }
   });
 }
@@ -350,7 +370,13 @@ function toggleAutoPlay() {
 }
 
 function deleteSong() {
-  $("#selected_row").remove();
+  if ($("#selected_row").is('span')) {
+    $("#selected_row").parent().removeAttr('songid');
+    $("#selected_row").empty();
+    $("#selected_row").removeAttr('id');
+  } else {
+    $("#selected_row").remove();
+  }
   return false;
 }
 
@@ -509,6 +535,17 @@ $( document ).ready(function() {
     if (autoplay) {
       $("#selected_row").addClass("now_playing");
     }
+    playSelected();
+  });
+
+  $(".hotkeys").on("click", "li span", function (event) {
+    console.log("here");
+    $("#selected_row").removeAttr("id");
+    $(this).attr("id", "selected_row");
+  });
+
+  $(".hotkeys").on("dblclick", "li", function (event) {
+    $(".now_playing").first().removeClass("now_playing");
     playSelected();
   });
 

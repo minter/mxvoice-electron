@@ -67,19 +67,24 @@ font-size: 11px;
 }
 
 .hotkeys li {
-  margin-bottom: 3px;
+  padding: 4px 0 7px 0;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .hotkeys .badge {
   width: 30px;
-  margin-right: 2px;
-  background-color: slategray;
+  margin-right: 0;
+  background-color: darkslategray;
 }
 
 .hotkeys span {
   font-size: 12px;
   font-weight: bold;
+  padding: 5px;
+  padding-left: 3px;
+  border-radius: 5px;
+  overflow: hidden;
 }
 
 .dragenter {
