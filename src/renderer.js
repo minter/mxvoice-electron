@@ -390,12 +390,13 @@ function saveNewSong() {
   var artist = $('#song-form-artist').val();
   var info = $('#song-form-info').val();
   var category = $('#song-form-category').val();
-  console.log(`Saving title: ${title}, artist: ${artist}, category: ${category}, info: ${info}, filename: ${filename}`);
+  var duration = $('#song-form-duration').val();
   var uuid = uuidv4();
   var newFilename = `${pathData.name}-${uuid}${pathData.ext}`
   var newPath = path.join(preferences.locations.music_directory, newFilename );
-  console.log(`Copying ${filename} to ${newPath}`);
-  // fs.copyFileSync(filename, newFilename);
+
+  db.run("INSERT INTO mrvoice (title, artist, category, info, filename, time) VALUES (?, ?, ?, ?, ?, ?)", [title, artist, category, info, newFilename, duration]);
+  fs.copyFileSync(filename, newPath);
 }
 
 $( document ).ready(function() {

@@ -18,9 +18,16 @@ ipcRenderer.on('start_hotkey_save', function(event, fkeys) {
 
 ipcRenderer.on('add_dialog_load', function(event, filename) {
   console.log(`Renderer received filename ${filename}`);
+  var sound = new Howl({
+    src: filename
+  });
+  sound.once('load', function(){
+    var durationSeconds = sound.duration().toFixed(0);
+    var durationString = new Date(durationSeconds * 1000).toISOString().substr(14, 5);
+    $('#song-form-duration').val(durationString);
+  });
 
   NodeID3.read(filename, function(err, tags) {
-    console.log(`Title is ${tags['title']}`);
     $('#song-form-title').val(tags['title']);
     $('#song-form-artist').val(tags['artist']);
     $('#song-form-filename').val(filename);
