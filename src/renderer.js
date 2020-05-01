@@ -361,7 +361,7 @@ function scale_scrollable() {
 
 
 $( document ).ready(function() {
-    
+
   populateCategorySelect();
 
   $("#search_results").on("click", "tbody tr", function (event) {
@@ -389,7 +389,7 @@ $( document ).ready(function() {
    // Set up fkeys
 
   var search_field = document.getElementById("omni_search");
-  
+
   for(let i=1;i<=12;i++) {
     Mousetrap.bind(`f${i}`, function () {
       playSongFromHotkey(`f${i}`);
@@ -516,5 +516,12 @@ $( document ).ready(function() {
   });
 
   $("#search_results thead").hide();
+
+  $('#addSongModal').on('hidden.bs.modal', function (e) {
+    $('#song-form-category').empty();
+    $('#song-form-title').empty();
+    $('#song-form-artist').empty();
+    $('#song-form-info').empty();
+  })
 
 });

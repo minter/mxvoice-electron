@@ -63,6 +63,7 @@
     "jquery": "^3.5.0",
     "mousetrap": "^1.6.5",
     "n-readlines": "^1.0.0",
+    "node-id3": "^0.1.16",
     "popper.js": "^1.14.4",
     "sqlite3": "^4.1.1"
   },

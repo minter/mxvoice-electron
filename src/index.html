@@ -240,7 +240,7 @@
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel">New song</h5>
+            <h5 class="modal-title" id="exampleModalLabel">Add New Song</h5>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -248,18 +248,27 @@
           <div class="modal-body">
             <form>
               <div class="form-group">
-                <label for="recipient-name" class="col-form-label">Recipient:</label>
-                <input type="text" class="form-control" id="recipient-name">
+                <label for="song-form-category">Category</label>
+                <select class="form-control" id="song-form-category">
+                </select>
               </div>
               <div class="form-group">
-                <label for="message-text" class="col-form-label">Message:</label>
-                <textarea class="form-control" id="message-text"></textarea>
+                <label for="song-form-title" class="col-form-label">Title:</label>
+                <input type="text" class="form-control" id="song-form-title">
+              </div>
+              <div class="form-group">
+                <label for="song-form-artist" class="col-form-label">Artist:</label>
+                <input type="text" class="form-control" id="song-form-artist">
+              </div>
+              <div class="form-group">
+                <label for="song-form-info" class="col-form-label">Info:</label>
+                <input type="text" class="form-control" id="song-form-info">
               </div>
             </form>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-primary">Send message</button>
+            <button type="button" class="btn btn-primary">Save Song</button>
           </div>
         </div>
       </div>
