@@ -252,7 +252,7 @@ function autoplay_next() {
       next_song = now_playing.next();
       next_song.addClass("now_playing");
     } else {
-      next_song = $("#holding_tank ul li").first();
+      next_song = $(".holding_tank.active li").first();
     }
     if (next_song.length) {
       playSongFromId(next_song.attr("songid"));
@@ -365,7 +365,7 @@ function renameHotkeyTab() {
   prompt({
     title: "Rename Hotkey Tab",
     label: "Rename this tab:",
-    value: $(".nav-link.active").text(),
+    value: $("#hotkey_tabs .nav-link.active").text(),
     type: "input",
     alwaysOnTop: true,
   })
@@ -373,12 +373,30 @@ function renameHotkeyTab() {
       if (r === null) {
         console.log("user canceled");
       } else {
-        $(".nav-link.active").text(r);
+        $("#hotkey_tabs .nav-link.active").text(r);
       }
     })
     .catch(console.error);
   
 
+}
+
+function renameHoldingTankTab() {
+  prompt({
+    title: "Rename Holding Tank Tab",
+    label: "Rename this tab:",
+    value: $("#holding_tank_tabs .nav-link.active").text(),
+    type: "input",
+    alwaysOnTop: true,
+  })
+    .then((r) => {
+      if (r === null) {
+        console.log("user canceled");
+      } else {
+        $("#holding_tank_tabs .nav-link.active").text(r);
+      }
+    })
+    .catch(console.error);
 }
 
 $( document ).ready(function() {
