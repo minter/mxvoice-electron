@@ -14,6 +14,11 @@ ipcRenderer.on('start_hotkey_save', function(event, fkeys) {
   saveHotkeyFile();
 })
 
+ipcRenderer.on('add_dialog_load', function(event, filename) {
+  console.log(`Renderer received filename ${filename}`);
+  $('#addSongModal').modal();
+})
+
 process.once('loaded', () => {
   global.homedir = require('os').homedir(),
   global.path = require('path'),

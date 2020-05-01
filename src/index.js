@@ -153,7 +153,10 @@ var application_menu = [
     label: 'Songs',
     submenu: [
       {
-        label: 'Add Song'
+        label: 'Add Song',
+        click: () => {
+          addFileDialog();
+        }
       },
       {
         label: 'Edit Selected Song'
@@ -470,6 +473,29 @@ const preferences = new ElectronPreferences({
         }).catch(err => {
          console.log(err)
         })
+       }
+       function addFileDialog() {
+         console.log("Adding new file");
+         dialog.showOpenDialog(mainWindow, {
+           buttonLabel: 'Add',
+           filters: [
+             { name: 'MP3 Files', extensions: ['mp3'] }
+           ],
+           message: 'Choose audio file to add to Mr. Voice',
+           properties: ['openFile']
+         }).then(result => {
+           if (result.canceled == true) {
+             console.log('Silently exiting add file');
+             return;
+           }
+           else {
+             var filename = result.filePaths[0];
+             console.log(`Processing file ${filename}`);
+             mainWindow.webContents.send('add_dialog_load', filename);
+           }
+         }).catch(err => {
+           console.log(err)
+         })
        }
 
    // Config migration
