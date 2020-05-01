@@ -63,6 +63,7 @@
     "howler": "^2.1.3",
     "jquery": "^3.5.0",
     "mousetrap": "^1.6.5",
+    "mp4js": "0.0.2",
     "n-readlines": "^1.0.0",
     "node-id3": "^0.1.16",
     "popper.js": "^1.14.4",

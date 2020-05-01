@@ -479,7 +479,7 @@ const preferences = new ElectronPreferences({
          dialog.showOpenDialog(mainWindow, {
            buttonLabel: 'Add',
            filters: [
-             { name: 'MP3 Files', extensions: ['mp3'] }
+             { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav'] }
            ],
            message: 'Choose audio file to add to Mr. Voice',
            properties: ['openFile']

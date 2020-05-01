@@ -1,6 +1,9 @@
 const { ipcRenderer, remote } = require('electron');
 const { Howl, Howler } = require('howler');
 const NodeID3 = require('node-id3');
+var mp4 = require('mp4js');
+const path = require('path');
+
 const { v4: uuidv4 } = require('uuid');
 
 ipcRenderer.on('fkey_load', function(event, fkeys) {
@@ -27,11 +30,23 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
     $('#song-form-duration').val(durationString);
   });
 
-  NodeID3.read(filename, function(err, tags) {
-    $('#song-form-title').val(tags['title']);
-    $('#song-form-artist').val(tags['artist']);
-    $('#song-form-filename').val(filename);
-  });
+  var pathData = path.parse(filename);
+
+  if(pathData.ext.toLowerCase() == '.mp3') {
+    NodeID3.read(filename, function(err, tags) {
+      $('#song-form-title').val(tags['title']);
+      $('#song-form-artist').val(tags['artist']);
+    });
+  } else if (['.mp4', '.m4a'].includes(pathData.ext.toLowerCase())) {
+    console.log('Checking an MP4 file');
+    mp4({ file: filename, type: 'local' }, function(err, tags) {
+      $('#song-form-title').val(tags['title']);
+      $('#song-form-artist').val(tags['artist']);
+     });
+  }
+
+  $('#song-form-filename').val(filename);
+
   db.each("SELECT * FROM categories ORDER BY description ASC", [], function(err, row) {
   if (err) {
     throw err;
@@ -44,7 +59,7 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
 
 process.once('loaded', () => {
   global.homedir = require('os').homedir(),
-  global.path = require('path'),
+  global.path = path,
   global.sqlite3 = require('sqlite3').verbose(),
   global.preferences = ipcRenderer.sendSync('getPreferences'),
   global.Mousetrap = require('mousetrap'),

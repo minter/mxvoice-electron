@@ -606,6 +606,7 @@ $( document ).ready(function() {
     $('#song-form-title').empty();
     $('#song-form-artist').empty();
     $('#song-form-info').empty();
+    $('#song-form-duration').empty();
   })
 
 });
