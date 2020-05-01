@@ -368,9 +368,9 @@ function renameHotkeyTab() {
   prompt({
     title: "Rename Hotkey Tab",
     label: "Rename this tab:",
-    value: "Tab Name",
+    value: $(".nav-link.active").text(),
     type: "input",
-    alwaysOnTop: true
+    alwaysOnTop: true,
   })
     .then((r) => {
       if (r === null) {
