@@ -39,5 +39,6 @@ process.once('loaded', () => {
   global.sqlite3 = require('sqlite3').verbose(),
   global.preferences = ipcRenderer.sendSync('getPreferences'),
   global.Mousetrap = require('mousetrap'),
-  global.ipcRenderer = ipcRenderer
+  global.ipcRenderer = ipcRenderer,
+  global.prompt = require('electron-prompt')
 })
