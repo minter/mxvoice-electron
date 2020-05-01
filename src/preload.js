@@ -28,6 +28,7 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
     var durationSeconds = sound.duration().toFixed(0);
     var durationString = new Date(durationSeconds * 1000).toISOString().substr(14, 5);
     $('#song-form-duration').val(durationString);
+    sound.unload();
   });
 
   var pathData = path.parse(filename);
