@@ -98,6 +98,7 @@ function searchData(){
     var value = $( '#omni_search' ).val().trim();
     console.log('Called with search string ' + value);
     $('#search_results tbody').find("tr").remove();
+    $("#search_results thead").show();
     var search_term = '%' + value + '%';
     var query_params = [];
     var query_segments = [];
@@ -123,8 +124,10 @@ function searchData(){
     }
         //console.log('Found ' + row.title + ' by ' + row.artist);
         $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
-
     });
+
+    scale_scrollable();
+
   });
 }
 
@@ -352,6 +355,10 @@ function deleteSong() {
   return false;
 }
 
+function scale_scrollable() {
+  $(".table-wrapper-scroll-y").height($(window).height() - 240 + "px");
+}
+
 
 $( document ).ready(function() {
     
@@ -477,6 +484,7 @@ $( document ).ready(function() {
     $("#category_select").prop("selectedIndex", 0);
     $("#omni_search").focus();
     $("#search_results tbody").find("tr").remove();
+    $("#search_results thead").hide();
     return false;
   });
 
@@ -487,4 +495,11 @@ $( document ).ready(function() {
       stopPlaying();
     }
   });
+  
+  $(window).resize(function() {
+    this.scale_scrollable();
+  });
+
+  $("#search_results thead").hide();
+
 });
