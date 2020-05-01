@@ -121,7 +121,7 @@ font-size: 11px;
   border-bottom: 1px dotted black !important;
 }
 
-#holding_tank {
+.holding_tank {
   font-size: 12px;
   position: relative;
   overflow: auto;
@@ -129,7 +129,7 @@ font-size: 11px;
   user-select: none;
 }
 
-#holding_tank li {
+.holding_tank li {
   border: 1px solid lightsteelblue;
   border-radius: 5px;
   margin: 2px;
