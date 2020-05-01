@@ -395,6 +395,7 @@ function saveNewSong() {
   var newFilename = `${pathData.name}-${uuid}${pathData.ext}`
   var newPath = path.join(preferences.locations.music_directory, newFilename );
   console.log(`Copying ${filename} to ${newPath}`);
+  // fs.copyFileSync(filename, newFilename);
 }
 
 $( document ).ready(function() {
