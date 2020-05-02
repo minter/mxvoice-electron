@@ -519,7 +519,7 @@ const preferences = new ElectronPreferences({
            filters: [
              { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav'] }
            ],
-           message: 'Choose audio file to add to Mr. Voice',
+           message: 'Choose audio file to add to Mx. Voice',
            properties: ['openFile']
          }).then(result => {
            if (result.canceled == true) {
