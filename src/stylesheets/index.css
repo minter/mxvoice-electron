@@ -184,3 +184,14 @@ h6 a {
 .nav-item {
   font-size: 11px;
 }
+
+.modal {
+  font-size: 12px;
+}
+
+.modal label {
+  font-weight: bold;
+  text-align: right;
+  margin-right: 0;
+  padding-right: 0;
+}
