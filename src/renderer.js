@@ -233,7 +233,11 @@ function playSongFromId(song_id){
         var title = row.title || "";
         var artist = row.artist || "";
         artist = artist.length ? "by " + artist : artist;
-        $("#song_now_playing").html(`${title} ${artist}`).fadeIn(100);
+        $("#song_now_playing")
+          .html(
+            `<i title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
+          )
+          .fadeIn(100);
         $("#play_button").addClass("disabled");
         $("#stop_button").removeClass("disabled");
       },
