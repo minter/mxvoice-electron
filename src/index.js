@@ -521,9 +521,6 @@ const preferences = new ElectronPreferences({
          [key, val] = line.toString().trim().split('::');
          old_settings[key] = val;
        }
-       console.log('Preferences are ' + preferences);
-       console.log('Current value of file path is ' + preferences.value('locations.music_directory'));
-       console.log('Setting value of file path to ' + old_settings['filepath']);
        preferences.value('locations.database_directory', path.dirname(old_settings['db_file']));
        preferences.value('locations.music_directory', old_settings['filepath']);
        preferences.value('locations.hotkey_directory', old_settings['savedir']);
