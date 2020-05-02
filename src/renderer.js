@@ -302,9 +302,11 @@ function pausePlaying() {
     if (sound.playing()) {
       sound.pause();
       $("#song_spinner").removeClass('fa-spin');
+      $("#progress_bar .progress-bar").removeClass("progress-bar-animated progress-bar-striped");
     } else {
       sound.play();
       $("#song_spinner").addClass("fa-spin");
+      $("#progress_bar .progress-bar").addClass("progress-bar-animated progress-bar-striped");
     }
   }
 }
