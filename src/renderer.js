@@ -493,52 +493,66 @@ function saveBulkUpload(event) {
   $('#bulkAddModal').modal('hide');
   var dirname = $('#bulk-add-path').val()
   var category = $('#bulk-add-category').val()
+  var songs = []
   console.log(`Bulk adding into category ${category}`)
   var files = fs.readdirSync(dirname);
+
   for (var i in files) {
     var filename = files[i]
+    console.log(`Filename is ${filename}`)
+    console.log(`Dirname is ${dirname}`)
     var fullPath = path.join(dirname, filename)
     console.log(`Full path is ${fullPath}`)
     var pathData = path.parse(filename);
     $('#search_results tbody').find("tr").remove();
     $("#search_results thead").show();
     if (['.mp3', '.mp4', '.m4a'].includes(pathData.ext.toLowerCase())) {
-      console.log(`Attempting to add file ${files[i]}`);
+      songs.push(fullPath);
+    }
+  }
 
+  console.log(`Songs are ${songs}`)
       // var sound = new Howl({
       //   src: fullPath
       // });
       //
       // sound.once('load', function(){
-        console.log(`Sound is loaded for ${files[i]}`)
+  for (var i = 0; i < songs.length; i++) {
+    var songSourcePath = songs[i]
+        console.log(`Working on ${songSourcePath}`)
+        var songSourcePathData = path.parse(songSourcePath)
         // var durationSeconds = sound.duration().toFixed(0);
         // var durationString = new Date(durationSeconds * 1000).toISOString().substr(14, 5);
         var durationString = '00:00'
-        if(pathData.ext.toLowerCase() == '.mp3') {
-          console.log(`${fullPath} is an MP3`)
-          NodeID3.read(fullPath, function(err, tags) {
+        if(songSourcePathData.ext.toLowerCase() == '.mp3') {
+          const mp3SourcePath = songSourcePath;
+          console.log(`${mp3SourcePath} is an MP3`)
+          NodeID3.read(mp3SourcePath, function(err, tags) {
             var title = tags['title']
             var artist = tags['artist']
             var uuid = uuidv4();
-            var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/\s/g, "");
+            var newFilename = `${artist}-${title}-${uuid}${path.extname(mp3SourcePath)}`.replace(/\s/g, "");
             var newPath = path.join(preferences.locations.music_directory, newFilename );
             const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)");
             const info = stmt.run(title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000));
-            fs.copyFileSync(fullPath, newPath);
+            console.log(`Copying MP3 file ${songSourcePath} to ${newPath}`)
+            fs.copyFileSync(mp3SourcePath, newPath);
             $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${info.lastInsertRowid}'><td>${categories[category]}</td><td></td><td style='font-weight: bold'>${title || ''}</td><td style='font-weight:bold'>${artist || ''}</td><td>${durationString}</td></tr>`);
 
           });
-        } else if (['.mp4', '.m4a'].includes(pathData.ext.toLowerCase())) {
-          console.log(`${fullPath} is an MP3`)
-          mp4({ file: fullPath, type: 'local' }, function(err, tags) {
+        } else if (['.mp4', '.m4a'].includes(songSourcePathData.ext.toLowerCase())) {
+          const mp4SourcePath = songSourcePath;
+          console.log(`${mp4SourcePath} is an MP4`)
+          mp4({ file: mp4SourcePath, type: 'local' }, function(err, tags) {
             var title = tags['title']
             var artist = tags['artist']
             var uuid = uuidv4();
-            var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/\s/g, "");
+            var newFilename = `${artist}-${title}-${uuid}${path.extname(mp4SourcePath)}`.replace(/\s/g, "");
             var newPath = path.join(preferences.locations.music_directory, newFilename );
             const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)");
             const info = stmt.run(title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000));
-            fs.copyFileSync(fullPath, newPath);
+            console.log(`Copying MP4 file ${mp4SourcePath} to ${newPath}`)
+            fs.copyFileSync(mp4SourcePath, newPath);
             $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${info.lastInsertRowid}'><td>${categories[category]}</td><td></td><td style='font-weight: bold'>${title || ''}</td><td style='font-weight:bold'>${artist || ''}</td><td>${durationString}</td></tr>`);
            });
          }
@@ -548,7 +562,6 @@ function saveBulkUpload(event) {
 
     }
   }
-}
 
 function toggle_selected_row(row) {
   // if ($(row).attr('id') == "selected_row") {
