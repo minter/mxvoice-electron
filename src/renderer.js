@@ -707,8 +707,13 @@ $( document ).ready(function() {
       sound.seek(sound.duration() * percent);
       sound.play();
     }
-
   })
+
+  $("#volume").on('change',function() {
+    if (sound) {
+      sound.volume($(this).val()/100);
+    }
+  });
 
   $("#search_results thead").hide();
 

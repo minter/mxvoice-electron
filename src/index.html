@@ -253,7 +253,7 @@
                 <button id="play_button" class="btn btn-success btn-lg" style="border-radius: 30px;" onclick="playSelected()"><i title="Play"
                     class="fas fa-sm fa-play"></i></button>
               </div>
-              <div class="col-10">
+              <div class="col-8">
                 <div id="now_playing_bar" class="flex-row d-flex justify-content-between">
                   <div id="timer">0:00</div>
                   <div id="song_now_playing">&nbsp;</div>
@@ -268,6 +268,9 @@
               </div>
               <div id="stop_column" class="col-1">
                 <button id="stop_button" class="btn btn-danger btn-lg disabled"><i title="Stop" class="fas fa-sm fa-stop"></i></button>
+              </div>
+              <div id="controls_column" class="col-2 d-flex align-items-center">
+                <input type="range" class="custom-range" value="100" id="volume" >
               </div>
             </div>
           </div>
