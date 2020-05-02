@@ -409,6 +409,10 @@ function saveNewSong() {
   const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, info, filename, time) VALUES (?, ?, ?, ?, ?, ?)");
   stmt.run(title, artist, category, info, newFilename, duration);
   fs.copyFileSync(filename, newPath);
+
+  // Song has been saved, now let's show item
+  $("#omni_search").val(title);
+  searchData();
 }
 
 function renameHoldingTankTab() {
