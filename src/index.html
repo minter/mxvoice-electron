@@ -281,17 +281,17 @@
 
     </div>
 
-    <div class="modal fade" id="addSongModal" tabindex="-1" role="dialog" >
+    <div class="modal fade" id="songFormModal" tabindex="-1" role="dialog" >
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header bg-dark">
-            <h6 class="modal-title text-white" id="exampleModalLabel">Add New Song</h6>
+            <h6 class="modal-title text-white" id="songFormModalTitle"></h6>
             <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
           <div class="modal-body">
-            <form onsubmit="saveNewSong(event)">
+            <form>
                 <input type="hidden" id="song-form-filename">
                 <input type="hidden" id="song-form-songid">
               <div class="form-group row">
@@ -329,7 +329,7 @@
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn btn-success btn-sm">Add Song</button>
+              <button type="submit" id="songFormSubmitButton" class="btn btn-success btn-sm"></button>
             </div>
           </form>
         </div>
