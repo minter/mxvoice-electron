@@ -413,13 +413,21 @@ function renameHoldingTankTab() {
     .catch(console.error);
 }
 
+function toggle_selected_row(row) {
+  // if ($(row).attr('id') == "selected_row") {
+  //   $(row).removeAttr("id");
+  // } else {
+    $("#selected_row").removeAttr('id');
+    $(row).attr("id", "selected_row");
+  // }
+}
+
 $( document ).ready(function() {
 
   populateCategorySelect();
 
   $("#search_results").on("click", "tbody tr", function (event) {
-    $("#selected_row").removeAttr("id");
-    $(this).attr("id", "selected_row");
+    toggle_selected_row(this);
   });
 
   $("#search_results").on("dblclick", "tbody tr.song", function (event) {
@@ -511,9 +519,7 @@ $( document ).ready(function() {
   }
 
   $(".holding_tank").on("click", "li", function (event) {
-    console.log("here");
-    $("#selected_row").removeAttr("id");
-    $(this).attr("id", "selected_row");
+    toggle_selected_row(this);
   });
 
   $(".holding_tank").on("dblclick", "li", function (event) {
@@ -525,9 +531,7 @@ $( document ).ready(function() {
   });
 
   $(".hotkeys").on("click", "li span", function (event) {
-    console.log("here");
-    $("#selected_row").removeAttr("id");
-    $(this).attr("id", "selected_row");
+    toggle_selected_row(this);
   });
 
   $(".hotkeys").on("dblclick", "li", function (event) {
