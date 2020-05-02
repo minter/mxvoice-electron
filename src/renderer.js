@@ -436,12 +436,16 @@ function deleteSelectedSong() {
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?")
     var songRow = songStmt.get(songId);
     var filename = songRow.filename;
-    if (confirm(`Are you sure you want to delete ${songRow.title}?`)) {
+    if (confirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`)) {
       console.log("Proceeding with delete");
       const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?")
       if(deleteStmt.run(songId)) {
         fs.unlinkSync(path.join(preferences.locations.music_directory, filename));
-        $('#selected_row').remove();
+        // Remove song anywhere it appears
+        $(`.holding_tank li[songid=${songId}]`).remove();
+        $(`.hotkeys li span[songid=${songId}]`).remove();
+        $(`.hotkeys li [songid=${songId}]`).removeAttr('id');
+        $(`#search_results tr[songid=${songId}]`).remove();
       } else {
         console.log("Error deleting song from database")
       }
