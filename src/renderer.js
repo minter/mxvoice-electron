@@ -522,7 +522,9 @@ $( document ).ready(function() {
   });
 
   Mousetrap.bind("return", function () {
-    playSelected();
+    if (!$("#addSongModal").hasClass('show')) {
+      playSelected();
+    } 
     return false;
   });
 
@@ -662,5 +664,14 @@ $( document ).ready(function() {
     $('#song-form-info').val('');
     $('#song-form-duration').val('');
   })
+
+    $("#addSongModal").on("shown.bs.modal", function (e) {
+      console.log($("#song-form-title").val().length);
+      if (!$("#song-form-title").val().length) {
+        $("#song-form-title").focus();
+      } else {
+        $("#song-form-info").focus();
+      }  
+    });
 
 });
