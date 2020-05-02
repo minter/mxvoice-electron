@@ -391,8 +391,30 @@ function renameHotkeyTab() {
       }
     })
     .catch(console.error);
+}
 
+function saveNewSong(event) {
+  event.preventDefault();
+  $(`#addSongModal`).modal('hide');
+  console.log("Starting save process");
+  var filename = $('#song-form-filename').val();
+  var pathData = path.parse(filename);
+  var title = $('#song-form-title').val();
+  var artist = $('#song-form-artist').val();
+  var info = $('#song-form-info').val();
+  var category = $('#song-form-category').val();
+  var duration = $('#song-form-duration').val();
+  var uuid = uuidv4();
+  var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/\s/g, "");
+  var newPath = path.join(preferences.locations.music_directory, newFilename );
 
+  const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, info, filename, time) VALUES (?, ?, ?, ?, ?, ?)");
+  stmt.run(title, artist, category, info, newFilename, duration);
+  fs.copyFileSync(filename, newPath);
+
+  // Song has been saved, now let's show item
+  $("#omni_search").val(title);
+  searchData();
 }
 
 function renameHoldingTankTab() {
@@ -411,6 +433,30 @@ function renameHoldingTankTab() {
       }
     })
     .catch(console.error);
+}
+
+function deleteSelectedSong() {
+  var songId = $('#selected_row').attr('songid');
+  if (songId) {
+    console.log(`Preparing to delete song ${songId}`);
+    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?")
+    var songRow = songStmt.get(songId);
+    var filename = songRow.filename;
+    if (confirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`)) {
+      console.log("Proceeding with delete");
+      const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?")
+      if(deleteStmt.run(songId)) {
+        fs.unlinkSync(path.join(preferences.locations.music_directory, filename));
+        // Remove song anywhere it appears
+        $(`.holding_tank li[songid=${songId}]`).remove();
+        $(`.hotkeys li span[songid=${songId}]`).remove();
+        $(`.hotkeys li [songid=${songId}]`).removeAttr('id');
+        $(`#search_results tr[songid=${songId}]`).remove();
+      } else {
+        console.log("Error deleting song from database")
+      }
+    }
+  }
 }
 
 function toggle_selected_row(row) {
@@ -484,7 +530,9 @@ $( document ).ready(function() {
   });
 
   Mousetrap.bind("return", function () {
-    playSelected();
+    if (!$("#addSongModal").hasClass('show')) {
+      playSelected();
+    }
     return false;
   });
 
@@ -602,5 +650,32 @@ $( document ).ready(function() {
   });
 
   $("#search_results thead").hide();
+
+  // Set up hotkey tabs
+
+  for (var i = 2; i<=5; i++) {
+    var node = $("#hotkeys_list_1").clone();
+    node.attr("id",`hotkeys_list_${i}`);
+    node.removeClass('show active');
+    $(".tab-content").append(node);
+
+  }
+
+  $('#addSongModal').on('hidden.bs.modal', function (e) {
+    $('#song-form-category').val('');
+    $('#song-form-title').val('');
+    $('#song-form-artist').val('');
+    $('#song-form-info').val('');
+    $('#song-form-duration').val('');
+  })
+
+    $("#addSongModal").on("shown.bs.modal", function (e) {
+      console.log($("#song-form-title").val().length);
+      if (!$("#song-form-title").val().length) {
+        $("#song-form-title").focus();
+      } else {
+        $("#song-form-info").focus();
+      }
+    });
 
 });
