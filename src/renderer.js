@@ -233,7 +233,11 @@ function playSongFromId(song_id){
         var title = row.title || "";
         var artist = row.artist || "";
         artist = artist.length ? "by " + artist : artist;
-        $("#song_now_playing").html(`${title} ${artist}`).fadeIn(100);
+        $("#song_now_playing")
+          .html(
+            `<i title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
+          )
+          .fadeIn(100);
         $("#play_button").addClass("disabled");
         $("#stop_button").removeClass("disabled");
       },
@@ -316,8 +320,14 @@ function songDrag(event) {
 }
 
 function sendToHotkeys() {
+  if ($("#selected_row").is("span")) {
+    return;
+  }
   target = $(".hotkeys.active li").not("[songid]").first();
   song_id = $("#selected_row").attr("songid");
+  if ($(`.hotkeys.active li[songid=${song_id}]`).length) {
+    return;
+  }
   if (target && song_id) {
     target.attr('songid',song_id);
     setLabelFromSongId(song_id,target);
@@ -675,7 +685,6 @@ $( document ).ready(function() {
     holding_tank_node.attr("id", `holding_tank_${i}`);
     holding_tank_node.removeClass("show active");
     $("#holding-tank-tab-content").append(holding_tank_node);
-
   }
 
   $(".holding_tank").on("click", "li", function (event) {
@@ -696,6 +705,10 @@ $( document ).ready(function() {
 
   $(".hotkeys").on("dblclick", "li", function (event) {
     $(".now_playing").first().removeClass("now_playing");
+    $("#selected_row").removeAttr('id');
+    if ($(this).find('span').text().length) {
+      $(this).find("span").attr("id", "selected_row");
+    }
     playSelected();
   });
 
@@ -762,16 +775,6 @@ $( document ).ready(function() {
   });
 
   $("#search_results thead").hide();
-
-  // Set up hotkey tabs
-
-  for (var i = 2; i<=5; i++) {
-    var node = $("#hotkeys_list_1").clone();
-    node.attr("id",`hotkeys_list_${i}`);
-    node.removeClass('show active');
-    $(".tab-content").append(node);
-
-  }
 
   $('#songFormModal').on('hidden.bs.modal', function (e) {
     $('#song-form-category').val('');
