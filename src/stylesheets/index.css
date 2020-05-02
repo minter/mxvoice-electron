@@ -208,3 +208,11 @@ h6 a {
   background-color: #000000;
   background-image: linear-gradient(315deg, #000000 0%, #414141 74%);
 }
+
+#progress_bar {
+  cursor: pointer;
+}
+
+.progress-bar {
+  transition: none;
+}

@@ -235,7 +235,7 @@ function playSongFromId(song_id){
         artist = artist.length ? "by " + artist : artist;
         $("#song_now_playing")
           .html(
-            `<i title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
+            `<i id="song_spinner" title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
           )
           .fadeIn(100);
         $("#play_button").addClass("disabled");
@@ -293,6 +293,18 @@ function stopPlaying(fadeOut = false){
       sound.fade(1,0,1000);
     } else {
       sound.stop();
+    }
+  }
+}
+
+function pausePlaying() {
+  if (sound) {
+    if (sound.playing()) {
+      sound.pause();
+      $("#song_spinner").removeClass('fa-spin');
+    } else {
+      sound.play();
+      $("#song_spinner").addClass("fa-spin");
     }
   }
 }
@@ -551,6 +563,11 @@ $( document ).ready(function() {
     return false;
   });
 
+  Mousetrap.bind("space", function () {
+    pausePlaying();
+    return false;
+  });
+
   Mousetrap.bind("shift+tab", function () {
     sendToHoldingTank();
     return false;
@@ -678,6 +695,15 @@ $( document ).ready(function() {
       stopPlaying();
     }
   });
+
+  $("#progress_bar").click(function(e) {
+    var percent = (e.clientX - $(this).offset().left) / $(this).width();
+    if (sound) {
+      sound.seek(sound.duration() * percent);
+      sound.play();
+    }
+
+  })
 
   $("#search_results thead").hide();
 
