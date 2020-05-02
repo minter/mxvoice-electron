@@ -563,7 +563,6 @@ $( document ).ready(function() {
     holding_tank_node.attr("id", `holding_tank_${i}`);
     holding_tank_node.removeClass("show active");
     $("#holding-tank-tab-content").append(holding_tank_node);
-
   }
 
   $(".holding_tank").on("click", "li", function (event) {
@@ -650,16 +649,6 @@ $( document ).ready(function() {
   });
 
   $("#search_results thead").hide();
-
-  // Set up hotkey tabs
-
-  for (var i = 2; i<=5; i++) {
-    var node = $("#hotkeys_list_1").clone();
-    node.attr("id",`hotkeys_list_${i}`);
-    node.removeClass('show active');
-    $(".tab-content").append(node);
-
-  }
 
   $('#addSongModal').on('hidden.bs.modal', function (e) {
     $('#song-form-category').val('');
