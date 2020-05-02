@@ -522,64 +522,34 @@ function saveBulkUpload(event) {
   }
 
   console.log(`Songs are ${songs}`)
-      // var sound = new Howl({
-      //   src: fullPath
-      // });
-      //
-      // sound.once('load', function(){
   for (var i = 0; i < songs.length; i++) {
     var songSourcePath = songs[i]
-        console.log(`Working on ${songSourcePath}`)
-        var songSourcePathData = path.parse(songSourcePath)
-        // var durationSeconds = sound.duration().toFixed(0);
-        // var durationString = new Date(durationSeconds * 1000).toISOString().substr(14, 5);
-        var durationString = '00:00'
-        if(songSourcePathData.ext.toLowerCase() == '.mp3') {
-          const mp3SourcePath = songSourcePath;
-          console.log(`${mp3SourcePath} is an MP3`)
-          NodeID3.read(mp3SourcePath, function(err, tags) {
-            var title = tags['title']
-            if (!title) { return }
-            console.log(`Working with MP3 titled ${title}`)
-            var artist = tags['artist']
-            var uuid = uuidv4();
-            var newFilename = `${artist}-${title}-${uuid}${path.extname(mp3SourcePath)}`.replace(/\s/g, "");
-            var newPath = path.join(preferences.locations.music_directory, newFilename );
-            const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)");
-            const info = stmt.run(title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000));
-            console.log(`Copying MP3 file ${songSourcePath} to ${newPath}`)
-            fs.copyFileSync(mp3SourcePath, newPath);
-            $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${info.lastInsertRowid}'><td>${categories[category]}</td><td></td><td style='font-weight: bold'>${title || ''}</td><td style='font-weight:bold'>${artist || ''}</td><td>${durationString}</td></tr>`);
+    console.log(`songSourcePath is ${songs[i]}`)
+    mm.parseFile(songSourcePath)
+    .then( metadata => {
+      var durationSeconds = metadata.format.duration.toFixed(0);
+      var durationString = new Date(durationSeconds * 1000).toISOString().substr(14, 5);
 
-          });
-        } else if (['.mp4', '.m4a'].includes(songSourcePathData.ext.toLowerCase())) {
-          const mp4SourcePath = songSourcePath;
-          console.log(`${mp4SourcePath} is an MP4`)
-          mp4({ file: mp4SourcePath, type: 'local' }, function(err, tags) {
-            if (err) {
-              console.log(`Got MP4 error ${err}`)
-            } else {
-              var title = tags['title']
-              if (!title) { return }
-              console.log(`Working with MP4 titled ${title}`)
-              var artist = tags['artist']
-              var uuid = uuidv4();
-              var newFilename = `${artist}-${title}-${uuid}${path.extname(mp4SourcePath)}`.replace(/\s/g, "");
-              var newPath = path.join(preferences.locations.music_directory, newFilename );
-              const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)");
-              const info = stmt.run(title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000));
-              console.log(`Copying MP4 file ${mp4SourcePath} to ${newPath}`)
-              fs.copyFileSync(mp4SourcePath, newPath);
-              $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${info.lastInsertRowid}'><td>${categories[category]}</td><td></td><td style='font-weight: bold'>${title || ''}</td><td style='font-weight:bold'>${artist || ''}</td><td>${durationString}</td></tr>`);
-            }
-           });
-         }
+      console.log(util.inspect(metadata, { showHidden: false, depth: null }));
 
-      //   sound.unload();
-      // });
-
-    }
+      var title = metadata.common.title
+      if (!title) { return }
+      console.log(`Working with audio titled ${title}`)
+      var artist = metadata.common.artist
+      var uuid = uuidv4();
+      var newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/\s/g, "");
+      var newPath = path.join(preferences.locations.music_directory, newFilename );
+      const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)");
+      const info = stmt.run(title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000));
+      console.log(`Copying audio file ${songSourcePath} to ${newPath}`)
+      fs.copyFileSync(songSourcePath, newPath);
+      $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${info.lastInsertRowid}'><td>${categories[category]}</td><td></td><td style='font-weight: bold'>${title || ''}</td><td style='font-weight:bold'>${artist || ''}</td><td>${durationString}</td></tr>`);
+    })
+    .catch( err => {
+      console.error(err.message);
+    });
   }
+}
 
 function toggle_selected_row(row) {
   // if ($(row).attr('id') == "selected_row") {
