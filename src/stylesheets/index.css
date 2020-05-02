@@ -192,6 +192,9 @@ h6 a {
 .modal label {
   font-weight: bold;
   text-align: right;
-  margin-right: 0;
   padding-right: 0;
+}
+
+.modal .close, .modal .btn {
+  font-size: 12px;
 }
