@@ -403,7 +403,7 @@ function saveNewSong() {
   var category = $('#song-form-category').val();
   var duration = $('#song-form-duration').val();
   var uuid = uuidv4();
-  var newFilename = `${pathData.name}-${uuid}${pathData.ext}`
+  var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/\s/g, "");
   var newPath = path.join(preferences.locations.music_directory, newFilename );
 
   const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, info, filename, time) VALUES (?, ?, ?, ?, ?, ?)");
@@ -427,6 +427,26 @@ function renameHoldingTankTab() {
       }
     })
     .catch(console.error);
+}
+
+function deleteSelectedSong() {
+  var songId = $('#selected_row').attr('songid');
+  if (songId) {
+    console.log(`Preparing to delete song ${songId}`);
+    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?")
+    var songRow = songStmt.get(songId);
+    var filename = songRow.filename;
+    if (confirm(`Are you sure you want to delete ${songRow.title}?`)) {
+      console.log("Proceeding with delete");
+      const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?")
+      if(deleteStmt.run(songId)) {
+        fs.unlinkSync(path.join(preferences.locations.music_directory, filename));
+        $('#selected_row').remove();
+      } else {
+        console.log("Error deleting song from database")
+      }
+    }
+  }
 }
 
 $( document ).ready(function() {

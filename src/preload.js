@@ -48,7 +48,7 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
   }
 
   $('#song-form-filename').val(filename);
-
+  $('#song-form-category').empty();
   const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
   for (const row of stmt.iterate()) {
     categories[row.code] = row.description;
@@ -56,6 +56,11 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
   }
   $('#addSongModal').modal();
 })
+
+ipcRenderer.on('delete_selected_song', function(event) {
+  console.log('Received delete_selected_song message')
+  deleteSelectedSong();
+});
 
 process.once('loaded', () => {
   global.homedir = require('os').homedir(),

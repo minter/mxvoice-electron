@@ -162,6 +162,12 @@ var application_menu = [
       },
       {
         label: 'Edit Selected Song'
+      },
+      {
+        label: 'Delete Selected Song',
+        click: () => {
+          sendDeleteSong();
+        }
       }
     ]
   },
@@ -500,6 +506,10 @@ const preferences = new ElectronPreferences({
          })
        }
 
+    function sendDeleteSong() {
+      console.log('Sending delete_selected_song message');
+      mainWindow.webContents.send('delete_selected_song');
+    }
    // Config migration
    function checkOldConfig() {
      var config_path;
