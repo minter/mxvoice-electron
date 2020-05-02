@@ -1,5 +1,9 @@
 const { ipcRenderer, remote } = require('electron');
 const { Howl, Howler } = require('howler');
+const preferences = ipcRenderer.sendSync('getPreferences')
+const path = require('path');
+console.log(`DB path is ${path.join(preferences.locations.database_directory, 'mrvoice.db')}`)
+const db = require('better-sqlite3')(path.join(preferences.locations.database_directory, 'mrvoice.db'));
 
 ipcRenderer.on('fkey_load', function(event, fkeys) {
   populateHotkeys(fkeys);
@@ -16,10 +20,10 @@ ipcRenderer.on('start_hotkey_save', function(event, fkeys) {
 
 process.once('loaded', () => {
   global.homedir = require('os').homedir(),
-  global.path = require('path'),
-  global.sqlite3 = require('sqlite3').verbose(),
-  global.preferences = ipcRenderer.sendSync('getPreferences'),
+  global.path = path,
+  global.preferences = preferences,
   global.Mousetrap = require('mousetrap'),
   global.ipcRenderer = ipcRenderer,
+  global.db = db,
   global.prompt = require('electron-prompt')
 })

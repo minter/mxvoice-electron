@@ -1,4 +1,4 @@
-var db = new sqlite3.Database(path.join(preferences.locations.database_directory, 'mrvoice.db'));
+// var db = new sqlite3.Database(path.join(preferences.locations.database_directory, 'mrvoice.db'));
 var sound;
 var categories = [];
 var globalAnimation;
@@ -81,116 +81,102 @@ function saveHoldingTankFile() {
 
 function populateCategorySelect(){
   console.log("Populating categories");
-  db.each("SELECT * FROM categories ORDER BY description ASC", [], function(err, row) {
-  if (err) {
-    throw err;
-  }
+  var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+  for (const row of stmt.iterate()) {
     categories[row.code] = row.description;
     $('#category_select').append(`<option value="${row.code}">${row.description}</option>`);
     //console.log('Found ' + row.code + ' as ' + row.description);
-  });
-
+  };
 }
 
 function searchData(){
-  db.serialize(function() {
-    var category = $( "#category_select" ).val();
-    console.log('Using category ' + category);
-    var value = $( '#omni_search' ).val().trim();
-    console.log('Called with search string ' + value);
-    $('#search_results tbody').find("tr").remove();
-    $("#search_results thead").show();
-    var search_term = '%' + value + '%';
-    var query_params = [];
-    var query_segments = [];
-    var query_string = '';
-    if (category != '*') {
-      query_segments.push('category = ?');
-      query_params.push(category);
-    }
-    if (value != '') {
-      query_segments.push('(info LIKE ? OR title LIKE ? OR artist like ?)');
-      query_params.push(search_term, search_term, search_term);
-    }
-    if (query_segments.length != 0) {
-      query_string = " WHERE " + query_segments.join(' AND ');
-    }
-    console.log("Query string is " + query_string);
+  var category = $( "#category_select" ).val();
+  console.log('Using category ' + category);
+  var value = $( '#omni_search' ).val().trim();
+  console.log('Called with search string ' + value);
+  $('#search_results tbody').find("tr").remove();
+  $("#search_results thead").show();
+  var search_term = '%' + value + '%';
+  var query_params = [];
+  var query_segments = [];
+  var query_string = '';
+  if (category != '*') {
+    query_segments.push('category = ?');
+    query_params.push(category);
+  }
+  if (value != '') {
+    query_segments.push('(info LIKE ? OR title LIKE ? OR artist like ?)');
+    query_params.push(search_term, search_term, search_term);
+  }
+  if (query_segments.length != 0) {
+    query_string = " WHERE " + query_segments.join(' AND ');
+  }
+  console.log("Query string is " + query_string);
 
-    $( '#omni_search' ).select();
+  $( '#omni_search' ).select();
 
-    db.each("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist', query_params, function(err, row) {
-    if (err) {
-      throw err;
-    }
-        //console.log('Found ' + row.title + ' by ' + row.artist);
-        $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
-    });
+  var stmt = db.prepare("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist');
+  for (const row of stmt.iterate(query_params)) {
+    //console.log('Found ' + row.title + ' by ' + row.artist);
+    $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td>${categories[row.category]}</td><td>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
+  }
 
-    scale_scrollable();
+  scale_scrollable();
 
-  });
 }
+
 
 function setLabelFromSongId(song_id, element) {
   //console.log(element);
-  db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
-    if(err) {
-      $(element).find('span').html('');
+  var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+  var row = stmt.get(song_id);
+  var title = row.title || '[Unknown Title]';
+  var artist = row.artist || '[Unknown Artist]';
+  var time = row.time || '[??:??]';
+
+  // Handle swapping
+  var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(element);
+  console.log(original_song_node);
+  if (original_song_node.length) {
+    var old_song = original_song_node.find('span').detach();
+    var destination_song = $(element).find('span').detach();
+    original_song_node.append(destination_song);
+    if (destination_song.attr('songid')) {
+      original_song_node.attr("songid", destination_song.attr("songid"));
     } else {
-      var title = row.title || '[Unknown Title]';
-      var artist = row.artist || '[Unknown Artist]';
-      var time = row.time || '[??:??]';
-
-      // Handle swapping
-      var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(element);
-      console.log(original_song_node);
-      if (original_song_node.length) {
-        var old_song = original_song_node.find('span').detach();
-        var destination_song = $(element).find('span').detach();
-        original_song_node.append(destination_song);
-        if (destination_song.attr('songid')) {
-          original_song_node.attr("songid", destination_song.attr("songid"));
-        } else {
-          original_song_node.removeAttr("songid");
-        }
-        
-        $(element).append(old_song);
-
-      } else {
-        $(element).find("span").html(`${title} by ${artist} (${time})`);
-        $(element).find("span").attr("songid", song_id);
-      }
+      original_song_node.removeAttr("songid");
     }
-  });
+
+    $(element).append(old_song);
+
+  } else {
+    $(element).find("span").html(`${title} by ${artist} (${time})`);
+    $(element).find("span").attr("songid", song_id);
+  }
 }
 
 function addToHoldingTank(song_id, element) {
-  db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function (err, row) {
-    if (err) {
+  var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+  var row = stmt.get(song_id);
+  var title = row.title || "[Unknown Title]";
+  var artist = row.artist || "[Unknown Artist]";
+  var time = row.time || "[??:??]";
 
-    } else {
-      var title = row.title || "[Unknown Title]";
-      var artist = row.artist || "[Unknown Artist]";
-      var time = row.time || "[??:??]";
+  var existing_song = $(`.holding_tank.active li[songid=${song_id}]`);
+  if (existing_song.length) {
+    var song_row = existing_song.detach();
+  } else {
+    var song_row = `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
+  }
 
-      var existing_song = $(`.holding_tank.active li[songid=${song_id}]`);
-      if (existing_song.length) {
-        var song_row = existing_song.detach();
-      } else {
-        var song_row = `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
-      }
-
-      if ($(element).is("li")) {
-        $(element)
-        .after(song_row);
-      } else if ($(element).is('div')) {
-        $(element).find('ul.active').append(song_row);
-      } else {
-        $(element).append(song_row);
-      }
-    }
-  });
+  if ($(element).is("li")) {
+    $(element)
+    .after(song_row);
+  } else if ($(element).is('div')) {
+    $(element).find('ul.active').append(song_row);
+  } else {
+    $(element).append(song_row);
+  }
 }
 
 var howlerUtils = {
@@ -234,35 +220,35 @@ function playSongFromId(song_id){
     if (sound) {
       sound.stop();
     }
-    db.get("SELECT * from mrvoice WHERE id = ?", [song_id], function(err, row) {
-      var filename = row.filename;
-      console.log("Inside get, Filename is " + filename);
-      sound = new Howl({
-        src: [path.join(preferences.locations.music_directory, filename)],
-        html5: true,
-        onplay: function() {
-          var time = Math.round(sound.duration());
-          globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
-          var title = row.title || "";
-          var artist = row.artist || "";
-          artist = artist.length ? "by " + artist : artist;
-          $("#song_now_playing").html(`${title} ${artist}`).fadeIn(100);
-          $("#play_button").addClass("disabled");
-          $("#stop_button").removeClass("disabled");
-        },
-        onend: function() {
-          song_ended();
-          autoplay_next();
-        },
-        onstop: function() {
-          console.log('Stopped!');
-          song_ended();
-        }
-      });
-
-      sound.play();
-
+    var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+    var row = stmt.get(song_id);
+    var filename = row.filename;
+    console.log("Inside get, Filename is " + filename);
+    sound = new Howl({
+      src: [path.join(preferences.locations.music_directory, filename)],
+      html5: true,
+      onplay: function() {
+        var time = Math.round(sound.duration());
+        globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
+        var title = row.title || "";
+        var artist = row.artist || "";
+        artist = artist.length ? "by " + artist : artist;
+        $("#song_now_playing").html(`${title} ${artist}`).fadeIn(100);
+        $("#play_button").addClass("disabled");
+        $("#stop_button").removeClass("disabled");
+      },
+      onend: function() {
+        song_ended();
+        autoplay_next();
+      },
+      onstop: function() {
+        console.log('Stopped!');
+        song_ended();
+      }
     });
+
+    sound.play();
+
   }
 }
 
@@ -405,7 +391,7 @@ function renameHotkeyTab() {
       }
     })
     .catch(console.error);
-  
+
 
 }
 
@@ -428,7 +414,7 @@ function renameHoldingTankTab() {
 }
 
 $( document ).ready(function() {
-    
+
   populateCategorySelect();
 
   $("#search_results").on("click", "tbody tr", function (event) {
@@ -443,7 +429,7 @@ $( document ).ready(function() {
    // Set up fkeys
 
   var search_field = document.getElementById("omni_search");
-  
+
   for(let i=1;i<=12;i++) {
     Mousetrap.bind(`f${i}`, function () {
       playSongFromHotkey(`f${i}`);
@@ -521,7 +507,7 @@ $( document ).ready(function() {
     holding_tank_node.attr("id", `holding_tank_${i}`);
     holding_tank_node.removeClass("show active");
     $("#holding-tank-tab-content").append(holding_tank_node);
-    
+
   }
 
   $(".holding_tank").on("click", "li", function (event) {
