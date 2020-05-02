@@ -54,6 +54,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.13.0",
+    "better-sqlite3": "^7.0.1",
     "bootstrap": "^4.4.1",
     "electron-preferences": "^2.0.0",
     "electron-prompt": "^1.5.1",
@@ -64,8 +65,7 @@
     "jquery": "^3.5.0",
     "mousetrap": "^1.6.5",
     "n-readlines": "^1.0.0",
-    "popper.js": "^1.14.4",
-    "sqlite3": "^4.1.1"
+    "popper.js": "^1.14.4"
   },
   "devDependencies": {
     "@electron-forge/cli": "6.0.0-beta.50",
