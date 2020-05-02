@@ -1,9 +1,10 @@
 const { ipcRenderer, remote } = require('electron');
 const { Howl, Howler } = require('howler');
+const preferences = ipcRenderer.sendSync('getPreferences')
+const path = require('path');
+const db = require('better-sqlite3')(path.join(preferences.locations.database_directory, 'mrvoice.db'));
 const NodeID3 = require('node-id3');
 var mp4 = require('mp4js');
-const path = require('path');
-
 const { v4: uuidv4 } = require('uuid');
 
 ipcRenderer.on('fkey_load', function(event, fkeys) {
@@ -61,11 +62,11 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
 process.once('loaded', () => {
   global.homedir = require('os').homedir(),
   global.path = path,
-  global.sqlite3 = require('sqlite3').verbose(),
-  global.preferences = ipcRenderer.sendSync('getPreferences'),
+  global.preferences = preferences,
   global.Mousetrap = require('mousetrap'),
   global.ipcRenderer = ipcRenderer,
   global.prompt = require('electron-prompt'),
   global.uuidv4 = uuidv4,
-  global.fs = require('fs')
+  global.fs = require('fs'),
+  global.db = db
 })

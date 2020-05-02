@@ -79,6 +79,8 @@ app.on('activate', () => {
   }
 });
 
+// Removes a deprecation warning when building
+app.allowRendererProcessReuse = true;
 
 if (process.platform == 'darwin') {
   app.setAboutPanelOptions({

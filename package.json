@@ -54,6 +54,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.13.0",
+    "better-sqlite3": "^7.0.1",
     "bootstrap": "^4.4.1",
     "electron-preferences": "^2.0.0",
     "electron-prompt": "^1.5.1",
@@ -67,7 +68,6 @@
     "n-readlines": "^1.0.0",
     "node-id3": "^0.1.16",
     "popper.js": "^1.14.4",
-    "sqlite3": "^4.1.1",
     "uuid": "^8.0.0"
   },
   "devDependencies": {
