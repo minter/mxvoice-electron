@@ -321,10 +321,13 @@ function songDrag(event) {
 
 function sendToHotkeys() {
   if ($("#selected_row").is("span")) {
-    return
+    return;
   }
   target = $(".hotkeys.active li").not("[songid]").first();
   song_id = $("#selected_row").attr("songid");
+  if ($(`.hotkeys.active li[songid=${song_id}]`).length) {
+    return;
+  }
   if (target && song_id) {
     target.attr('songid',song_id);
     setLabelFromSongId(song_id,target);
@@ -607,6 +610,10 @@ $( document ).ready(function() {
 
   $(".hotkeys").on("dblclick", "li", function (event) {
     $(".now_playing").first().removeClass("now_playing");
+    $("#selected_row").removeAttr('id');
+    if ($(this).find('span').text().length) {
+      $(this).find("span").attr("id", "selected_row");
+    }
     playSelected();
   });
 
