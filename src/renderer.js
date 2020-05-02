@@ -240,6 +240,9 @@ function playSongFromId(song_id){
           .fadeIn(100);
         $("#play_button").addClass("disabled");
         $("#stop_button").removeClass("disabled");
+        $("#progress_bar .progress-bar").addClass(
+          "progress-bar-animated progress-bar-striped"
+        );
       },
       onend: function() {
         song_ended();
