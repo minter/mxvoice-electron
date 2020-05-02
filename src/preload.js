@@ -20,6 +20,11 @@ ipcRenderer.on('start_hotkey_save', function(event, fkeys) {
   saveHotkeyFile();
 })
 
+ipcRenderer.on('bulk_add_dialog_load', function(event, dirname) {
+  console.log(`Renderer received directory ${dirname}`)
+  showBulkAddModal(dirname);
+});
+
 ipcRenderer.on('add_dialog_load', function(event, filename) {
   console.log(`Renderer received filename ${filename}`);
   var sound = new Howl({
@@ -107,6 +112,8 @@ process.once('loaded', () => {
   global.ipcRenderer = ipcRenderer,
   global.prompt = require('electron-prompt'),
   global.uuidv4 = uuidv4,
+  global.mp4 = mp4,
+  global.NodeID3 = NodeID3,
   global.fs = require('fs'),
   global.db = db
 })

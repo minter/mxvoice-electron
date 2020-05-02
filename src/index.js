@@ -161,6 +161,12 @@ var application_menu = [
         }
       },
       {
+        label: 'Add All Songs In Directory',
+        click: () => {
+          addDirectoryDialog();
+        }
+      },
+      {
         label: 'Edit Selected Song',
         click: () => {
           sendEditSong();
@@ -485,6 +491,27 @@ const preferences = new ElectronPreferences({
          console.log(err)
         })
        }
+
+       function addDirectoryDialog() {
+         console.log("Adding directory of songs");
+         dialog.showOpenDialog(mainWindow, {
+           buttonLabel: 'Add All',
+           message: 'Choose directory of music to add',
+           properties: ['openDirectory']
+         }).then(result => {
+           if (result.canceled == true) {
+             console.log('Silently exiting add file');
+             return;
+           } else {
+             var dirname = result.filePaths[0];
+             console.log(`Processing directory ${dirname}`);
+             mainWindow.webContents.send('bulk_add_dialog_load', dirname);
+           }
+         }).catch(err => {
+           console.log(err)
+         })
+       }
+
        function addFileDialog() {
          console.log("Adding new file");
          dialog.showOpenDialog(mainWindow, {
