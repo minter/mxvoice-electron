@@ -320,6 +320,9 @@ function songDrag(event) {
 }
 
 function sendToHotkeys() {
+  if ($("#selected_row").is("span")) {
+    return
+  }
   target = $(".hotkeys.active li").not("[songid]").first();
   song_id = $("#selected_row").attr("songid");
   if (target && song_id) {
