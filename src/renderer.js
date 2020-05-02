@@ -393,9 +393,26 @@ function renameHotkeyTab() {
     .catch(console.error);
 }
 
+function saveEditedSong(event) {
+  event.preventDefault();
+  $(`#songFormModal`).modal('hide');
+  console.log("Starting edit process");
+  var songId = $('#song-form-songid').val();
+  var title = $('#song-form-title').val();
+  var artist = $('#song-form-artist').val();
+  var info = $('#song-form-info').val();
+  var category = $('#song-form-category').val();
+
+  const stmt = db.prepare("UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?");
+  stmt.run(title, artist, category, info, songId);
+
+  $("#omni_search").val(title);
+  searchData();
+}
+
 function saveNewSong(event) {
   event.preventDefault();
-  $(`#addSongModal`).modal('hide');
+  $(`#songFormModal`).modal('hide');
   console.log("Starting save process");
   var filename = $('#song-form-filename').val();
   var pathData = path.parse(filename);
@@ -530,7 +547,7 @@ $( document ).ready(function() {
   });
 
   Mousetrap.bind("return", function () {
-    if (!$("#addSongModal").hasClass('show')) {
+    if (!$("#songFormModal").hasClass('show')) {
       playSelected();
     }
     return false;
@@ -650,7 +667,7 @@ $( document ).ready(function() {
 
   $("#search_results thead").hide();
 
-  $('#addSongModal').on('hidden.bs.modal', function (e) {
+  $('#songFormModal').on('hidden.bs.modal', function (e) {
     $('#song-form-category').val('');
     $('#song-form-title').val('');
     $('#song-form-artist').val('');
@@ -658,7 +675,7 @@ $( document ).ready(function() {
     $('#song-form-duration').val('');
   })
 
-    $("#addSongModal").on("shown.bs.modal", function (e) {
+    $("#songFormModal").on("shown.bs.modal", function (e) {
       console.log($("#song-form-title").val().length);
       if (!$("#song-form-title").val().length) {
         $("#song-form-title").focus();
