@@ -49,13 +49,11 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
 
   $('#song-form-filename').val(filename);
 
-  db.each("SELECT * FROM categories ORDER BY description ASC", [], function(err, row) {
-  if (err) {
-    throw err;
-  }
+  const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+  for (const row of stmt.iterate()) {
     categories[row.code] = row.description;
     $('#song-form-category').append(`<option value="${row.code}">${row.description}</option>`);
-  });
+  }
   $('#addSongModal').modal();
 })
 

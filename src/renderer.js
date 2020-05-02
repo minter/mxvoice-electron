@@ -406,7 +406,8 @@ function saveNewSong() {
   var newFilename = `${pathData.name}-${uuid}${pathData.ext}`
   var newPath = path.join(preferences.locations.music_directory, newFilename );
 
-  db.run("INSERT INTO mrvoice (title, artist, category, info, filename, time) VALUES (?, ?, ?, ?, ?, ?)", [title, artist, category, info, newFilename, duration]);
+  const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, info, filename, time) VALUES (?, ?, ?, ?, ?, ?)");
+  stmt.run(title, artist, category, info, newFilename, duration);
   fs.copyFileSync(filename, newPath);
 }
 
