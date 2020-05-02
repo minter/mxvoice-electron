@@ -498,41 +498,16 @@ function showBulkAddModal(directory) {
   $('#bulkAddModal').modal();
 }
 
-function saveBulkUpload(event) {
-  event.preventDefault();
-  $('#bulkAddModal').modal('hide');
-  var dirname = $('#bulk-add-path').val()
-  var category = $('#bulk-add-category').val()
-  var songs = []
-  console.log(`Bulk adding into category ${category}`)
-  var files = fs.readdirSync(dirname);
+function addSongsByPath(pathArray) {
+  const songSourcePath = pathArray.shift();
+  if (songSourcePath) {
+    return mm.parseFile(songSourcePath).then(metadata => {
+      var category = $('#bulk-add-category').val()
 
-  for (var i in files) {
-    var filename = files[i]
-    console.log(`Filename is ${filename}`)
-    console.log(`Dirname is ${dirname}`)
-    var fullPath = path.join(dirname, filename)
-    console.log(`Full path is ${fullPath}`)
-    var pathData = path.parse(filename);
-    $('#search_results tbody').find("tr").remove();
-    $("#search_results thead").show();
-    if (['.mp3', '.mp4', '.m4a'].includes(pathData.ext.toLowerCase())) {
-      songs.push(fullPath);
-    }
-  }
-
-  console.log(`Songs are ${songs}`)
-  for (var i = 0; i < songs.length; i++) {
-    var songSourcePath = songs[i]
-    console.log(`songSourcePath is ${songs[i]}`)
-    mm.parseFile(songSourcePath)
-    .then( metadata => {
       var durationSeconds = metadata.format.duration.toFixed(0);
       var durationString = new Date(durationSeconds * 1000).toISOString().substr(14, 5);
 
-      console.log(util.inspect(metadata, { showHidden: false, depth: null }));
-
-      var title = metadata.common.title
+      var title = metadata.common.title || path.parse(songSourcePath).name
       if (!title) { return }
       console.log(`Working with audio titled ${title}`)
       var artist = metadata.common.artist
@@ -544,11 +519,35 @@ function saveBulkUpload(event) {
       console.log(`Copying audio file ${songSourcePath} to ${newPath}`)
       fs.copyFileSync(songSourcePath, newPath);
       $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${info.lastInsertRowid}'><td>${categories[category]}</td><td></td><td style='font-weight: bold'>${title || ''}</td><td style='font-weight:bold'>${artist || ''}</td><td>${durationString}</td></tr>`);
+
+
+      return addSongsByPath(pathArray); // process rest of the files AFTER we are finished
     })
-    .catch( err => {
-      console.error(err.message);
-    });
   }
+  return Promise.resolve();
+}
+
+function saveBulkUpload(event) {
+  event.preventDefault();
+  $('#bulkAddModal').modal('hide');
+  var dirname = $('#bulk-add-path').val()
+  var songs = []
+  var files = fs.readdirSync(dirname);
+
+  for (var i in files) {
+    var filename = files[i]
+    var fullPath = path.join(dirname, filename)
+    var pathData = path.parse(filename);
+    if (['.mp3', '.mp4', '.m4a', '.wav'].includes(pathData.ext.toLowerCase())) {
+      songs.push(fullPath);
+    }
+  }
+
+  $('#search_results tbody').find("tr").remove();
+  $("#search_results thead").show();
+
+  addSongsByPath(songs);
+
 }
 
 function toggle_selected_row(row) {
