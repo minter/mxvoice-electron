@@ -393,7 +393,9 @@ function renameHotkeyTab() {
     .catch(console.error);
 }
 
-function saveNewSong() {
+function saveNewSong(event) {
+  event.preventDefault();
+  $(`#addSongModal`).modal('hide');
   console.log("Starting save process");
   var filename = $('#song-form-filename').val();
   var pathData = path.parse(filename);
