@@ -435,8 +435,8 @@ function saveNewSong(event) {
   var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/\s/g, "");
   var newPath = path.join(preferences.locations.music_directory, newFilename );
 
-  const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, info, filename, time) VALUES (?, ?, ?, ?, ?, ?)");
-  stmt.run(title, artist, category, info, newFilename, duration);
+  const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)");
+  stmt.run(title, artist, category, info, newFilename, duration, Math.floor(Date.now() / 1000));
   fs.copyFileSync(filename, newPath);
 
   // Song has been saved, now let's show item
@@ -484,6 +484,70 @@ function deleteSelectedSong() {
       }
     }
   }
+}
+
+function showBulkAddModal(directory) {
+  $('#bulk-add-path').val(directory)
+  $('#bulk-add-category').empty();
+  const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+  for (const row of stmt.iterate()) {
+    categories[row.code] = row.description;
+    $('#bulk-add-category').append(`<option value="${row.code}">${row.description}</option>`);
+  }
+
+  $('#bulkAddModal').modal();
+}
+
+function addSongsByPath(pathArray) {
+  const songSourcePath = pathArray.shift();
+  if (songSourcePath) {
+    return mm.parseFile(songSourcePath).then(metadata => {
+      var category = $('#bulk-add-category').val()
+
+      var durationSeconds = metadata.format.duration.toFixed(0);
+      var durationString = new Date(durationSeconds * 1000).toISOString().substr(14, 5);
+
+      var title = metadata.common.title || path.parse(songSourcePath).name
+      if (!title) { return }
+      console.log(`Working with audio titled ${title}`)
+      var artist = metadata.common.artist
+      var uuid = uuidv4();
+      var newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/\s/g, "");
+      var newPath = path.join(preferences.locations.music_directory, newFilename );
+      const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)");
+      const info = stmt.run(title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000));
+      console.log(`Copying audio file ${songSourcePath} to ${newPath}`)
+      fs.copyFileSync(songSourcePath, newPath);
+      $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${info.lastInsertRowid}'><td>${categories[category]}</td><td></td><td style='font-weight: bold'>${title || ''}</td><td style='font-weight:bold'>${artist || ''}</td><td>${durationString}</td></tr>`);
+
+
+      return addSongsByPath(pathArray); // process rest of the files AFTER we are finished
+    })
+  }
+  return Promise.resolve();
+}
+
+function saveBulkUpload(event) {
+  event.preventDefault();
+  $('#bulkAddModal').modal('hide');
+  var dirname = $('#bulk-add-path').val()
+  var songs = []
+  var files = fs.readdirSync(dirname);
+
+  for (var i in files) {
+    var filename = files[i]
+    var fullPath = path.join(dirname, filename)
+    var pathData = path.parse(filename);
+    if (['.mp3', '.mp4', '.m4a', '.wav'].includes(pathData.ext.toLowerCase())) {
+      songs.push(fullPath);
+    }
+  }
+
+  $('#search_results tbody').find("tr").remove();
+  $("#search_results thead").show();
+
+  addSongsByPath(songs);
+
 }
 
 function toggle_selected_row(row) {
