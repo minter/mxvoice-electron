@@ -54,13 +54,50 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
     categories[row.code] = row.description;
     $('#song-form-category').append(`<option value="${row.code}">${row.description}</option>`);
   }
-  $('#addSongModal').modal();
+  $('#songFormModal form').attr('onsubmit', 'saveNewSong(event)')
+  $('#songFormModalTitle').html('Add New Song To Mx. Voice')
+  $('#songFormSubmitButton').html('Add Song');
+  $('#songFormModal').modal();
 })
 
 ipcRenderer.on('delete_selected_song', function(event) {
   console.log('Received delete_selected_song message')
   deleteSelectedSong();
 });
+
+ipcRenderer.on('edit_selected_song', function(event) {
+  console.log('Received edit_selected_song message')
+  var songId = $('#selected_row').attr('songid');
+  const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
+
+  if (songId) {
+    var songInfo = stmt.get(songId);
+
+    $('#song-form-songid').val(songId);
+    $('#song-form-category').empty();
+    const categoryStmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+    for (const row of categoryStmt.iterate()) {
+      categories[row.code] = row.description;
+      if (row.code == songInfo.category) {
+        $('#song-form-category').append(`<option selected="selected" value="${row.code}">${row.description}</option>`);
+      } else {
+        $('#song-form-category').append(`<option value="${row.code}">${row.description}</option>`);
+      }
+    }
+
+
+    $('#song-form-title').val(songInfo.title);
+    $('#song-form-artist').val(songInfo.artist);
+    $('#song-form-info').val(songInfo.info);
+    $('#song-form-duration').val(songInfo.time);
+    $('#songFormModal form').attr('onsubmit', 'saveEditedSong(event)')
+    $('#songFormModalTitle').html('Edit This Song')
+    $('#songFormSubmitButton').html('Save');
+    $('#songFormModal').modal();
+
+  }
+});
+
 
 process.once('loaded', () => {
   global.homedir = require('os').homedir(),
