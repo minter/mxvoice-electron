@@ -4,6 +4,7 @@ var categories = [];
 var globalAnimation;
 var autoplay = false;
 var loop = false;
+var sound_canceled = false;
 
 function playSongFromHotkey(hotkey) {
   console.log ('Getting song ID from hotkey ' + hotkey);
@@ -212,11 +213,11 @@ function song_ended() {
   $("#song_now_playing").fadeOut(100);
   $("#play_button").removeClass("d-none");
   $("#stop_button").addClass("d-none");
+  sound_canceled = true;
 }
 
 function playSongFromId(song_id){
   console.log('Playing song from song ID ' + song_id);
-
   if (song_id) {
     if (sound) {
       sound.stop();
@@ -230,6 +231,7 @@ function playSongFromId(song_id){
       html5: true,
       volume: $('#volume').val()/100,
       onplay: function() {
+        sound_canceled = false;
         var time = Math.round(sound.duration());
         globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
         var title = row.title || "";
@@ -307,7 +309,7 @@ function stopPlaying(fadeOut = false){
 }
 
 function pausePlaying() {
-  if (sound) {
+  if (sound && !sound_canceled) {
     toggle_play_button();
     if (sound.playing()) {
       sound.pause();
@@ -745,7 +747,9 @@ $( document ).ready(function() {
   });
 
   $("#play_button").click(function (e) {
-    sound.play();
+    if (!sound_canceled) {
+      sound.play();
+    }
   });
 
   $("#progress_bar").click(function(e) {

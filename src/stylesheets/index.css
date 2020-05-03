@@ -225,6 +225,10 @@ h6 a {
   margin-right: 15px;
 }
 
+#controls_column button {
+  width: 36px;
+}
+
 #controls_column #full_button {
   margin-right: 0;
 }
