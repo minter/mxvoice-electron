@@ -616,6 +616,7 @@ function saveCategories(event) {
     if (info.changes == 1) {
       console.log(`Saving changes to ${code} - new description is ${description}`)
     }
+    populateCategorySelect()
     populateCategoriesModal()
   })
 
@@ -632,6 +633,7 @@ function addNewCategory(event) {
     console.log(`Added new row into database`)
     $('#newCategoryCode').val('')
     $('#newCategoryDescription').val('')
+    populateCategorySelect()
     populateCategoriesModal()
   }
 }
