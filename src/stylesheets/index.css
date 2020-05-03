@@ -200,6 +200,14 @@ h6 a {
   padding-right: 0;
 }
 
+.delete_link {
+  color: red;
+}
+
+.category-description {
+  margin-left: 12px;
+  margin: 1px !important;
+}
 .modal .close, .modal .btn, .modal input, .modal select {
   font-size: 12px;
 }

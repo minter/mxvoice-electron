@@ -558,19 +558,30 @@ function populateCategoriesModal() {
   const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
   for (const row of stmt.iterate()) {
 
-    $('#categoryList').append(`<div class="form-group row">
+    $("#categoryList").append(`<div class="form-group row">
                     
-                    <div class="col-sm-10">
-                      <input type="text" class="form-control categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
+                    <div class="col-sm-8">
+                      <div catcode="${row.code}" class="category-description">${row.description}</div>
+                      <input style="display: none;" type="text" class="form-control categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
                     </div>
-                    <div class="col-sm-2">
-                      <button type="button" class="btn btn-sm btn-danger" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</button>
+                    <div class="col-sm-4">
+                    <a href="#" onclick="editCategory('${row.code}')">Edit</a>&nbsp; 
+                    <a class="delete_link" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
                     </div>
 
                   `);
   }
 
 }
+
+function editCategory(code) {
+    $(".categoryDescription").hide();
+    $(".category-description").show();
+    $(`.category-description[catcode=${code}]`).hide();
+    $(`.categoryDescription[catcode=${code}]`).show().select();
+
+}
+
 function openCategoriesModal() {
   populateCategoriesModal()
   $('#categoryManagementModal').modal();
@@ -579,7 +590,7 @@ function openCategoriesModal() {
 
 function deleteCategory(event,code,description) {
   event.preventDefault()
-  if (confirm(`Are you sure you want to delete ${code} from Mx. Voice permanently?`)) {
+  if (confirm(`Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`)) {
     console.log(`Deleting category ${code}`)
 
     const uncategorizedCheckStmt = db.prepare("INSERT OR REPLACE INTO categories VALUES(?, ?);")
