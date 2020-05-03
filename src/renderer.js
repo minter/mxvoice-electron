@@ -228,6 +228,7 @@ function playSongFromId(song_id){
     sound = new Howl({
       src: [path.join(preferences.locations.music_directory, filename)],
       html5: true,
+      volume: $('#volume').val()/100,
       onplay: function() {
         var time = Math.round(sound.duration());
         globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
@@ -756,32 +757,36 @@ $( document ).ready(function() {
   })
 
   $("#volume").on('change',function() {
+    var volume = $(this).val()/100;
     if (sound) {
-      sound.volume($(this).val()/100);
-      console.log(sound.volume());
-      if (sound.volume() == 1) {
-        sound_on_full(true);
-      } else {
-        sound_on_full(false);
-      }
-      if (sound.volume() == 0) {
-        mute_on(true);
-      } else {
-        mute_on(false);
-      }
+      sound.volume(volume);
+    }
+    if (volume == 1) {
+      sound_on_full(true);
+    } else {
+      sound_on_full(false);
+    }
+    if (volume == 0) {
+      mute_on(true);
+    } else {
+      mute_on(false);
     }
   });
 
   $('#mute_button').click(function() {
     $('#volume').val(0);
-    sound.volume(0);
+    if (sound) {
+      sound.volume(0);
+    }
     mute_on(true);
     sound_on_full(false);
   });
 
   $("#full_button").click(function () {
     $("#volume").val(100);
-    sound.volume(1);
+    if (sound) {
+      sound.volume(1);
+    }
     mute_on(false);
     sound_on_full(true);
   });
