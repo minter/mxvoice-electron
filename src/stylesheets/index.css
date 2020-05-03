@@ -216,3 +216,20 @@ h6 a {
 .progress-bar {
   transition: none;
 }
+
+#play_button, #stop_button {
+  border-radius: 30px;
+}
+
+#controls_column input, #controls_column button {
+  margin-right: 15px;
+}
+
+#controls_column #full_button {
+  margin-right: 0;
+}
+
+#controls_column .custom_range {
+
+
+}
