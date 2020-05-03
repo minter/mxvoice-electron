@@ -20,7 +20,7 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 
 const createWindow = () => {
 
-  checkOldConfig();
+  checkFirstRun();
 
   // Create the browser window.
   mainWindow = new BrowserWindow({
@@ -317,9 +317,9 @@ const preferences = new ElectronPreferences({
      */
     'defaults': {
         'locations': {
-          'music_directory': path.join(os.homedir(), 'mp3'),
-          'hotkey_directory': path.join(os.homedir(), 'hotkeys'),
-          'database_directory': os.homedir()
+          'music_directory': path.join(app.getPath('userData'), 'mp3'),
+          'hotkey_directory': path.join(app.getPath('userData'), 'hotkeys'),
+          'database_directory': app.getPath('userData')
         },
         'config': {
           'browser_width': 1280,
@@ -563,6 +563,33 @@ const preferences = new ElectronPreferences({
       mainWindow.webContents.send('manage_categories');
     }
 
+    // Handle first-time running
+    function checkFirstRun() {
+      console.log(`First run preference returns ${preferences.value('system.first_run_completed')}`)
+      if (!preferences.value('system.first_run_completed')) {
+        var oldConfig = checkOldConfig();
+        console.log(`Old config function returned ${oldConfig}`)
+        if (oldConfig) {
+          console.log("Migrated old config settings, checking no further")
+        } else {
+          console.log("Preparing for first-time setup")
+          fs.mkdirSync(preferences.value('locations.music_directory'))
+          fs.mkdirSync(preferences.value('locations.hotkey_directory'))
+
+          const initDb = require('better-sqlite3')(path.join(preferences.value('locations.database_directory'), 'mxvoice.db'));
+          initDb.exec(`CREATE TABLE IF NOT EXISTS 'categories' (   code varchar(8) NOT NULL,   description varchar(255) NOT NULL );
+CREATE TABLE mrvoice (   id INTEGER PRIMARY KEY,   title varchar(255) NOT NULL,   artist varchar(255),   category varchar(8) NOT NULL,   info varchar(255),   filename varchar(255) NOT NULL,   time varchar(10),   modtime timestamp(6),   publisher varchar(16),   md5 varchar(32) );
+CREATE UNIQUE INDEX 'category_code_index' ON categories(code);
+INSERT INTO categories VALUES('UNC', 'Uncategorized');
+INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('Rock Bumper', 'Patrick Short', 'UNC', 'PatrickShort-CSzRockBumper.mp3', '00:49', '${Math.floor(Date.now() / 1000)}');
+`)
+          fs.copyFileSync(path.join(__dirname, 'assets', 'music', 'CSz Rock Bumper.mp3'), path.join(preferences.value('locations.music_directory'), 'PatrickShort-CSzRockBumper.mp3'))
+          console.log(`mxvoice.db created at ${preferences.value('locations.database_directory')}`)
+          initDb.close()
+          preferences.value('system.first_run_completed', true)
+        }
+      }
+    }
 
    // Config migration
    function checkOldConfig() {
@@ -588,10 +615,14 @@ const preferences = new ElectronPreferences({
        preferences.value('locations.database_directory', path.dirname(old_settings['db_file']));
        preferences.value('locations.music_directory', old_settings['filepath']);
        preferences.value('locations.hotkey_directory', old_settings['savedir']);
+       preferences.value('system.first_run_completed', true)
+       return true
 
        // Save renaming the old config file for final releases
        // fs.rename(config_path, config_path + '.converted', function(err) {
        //   if ( err ) console.log('RENAME ERROR: ' + err);
        // });
+     } else {
+       return false
      }
    };

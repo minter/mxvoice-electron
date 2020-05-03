@@ -1,8 +1,14 @@
-const { ipcRenderer, remote } = require('electron');
-const { Howl, Howler } = require('howler');
+const { ipcRenderer, remote } = require('electron')
+const { Howl, Howler } = require('howler')
 const preferences = ipcRenderer.sendSync('getPreferences')
-const path = require('path');
-const db = require('better-sqlite3')(path.join(preferences.locations.database_directory, 'mrvoice.db'));
+const path = require('path')
+const fs = require('fs')
+var dbName = 'mxvoice.db'
+if (fs.existsSync(path.join(preferences.locations.database_directory, 'mrvoice.db'))) {
+  dbName = 'mrvoice.db'
+} 
+console.log(`Attempting to open database file ${path.join(preferences.locations.database_directory, dbName)}`)
+const db = require('better-sqlite3')(path.join(preferences.locations.database_directory, dbName));
 const { v4: uuidv4 } = require('uuid');
 const mm = require('music-metadata');
 
@@ -108,7 +114,7 @@ process.once('loaded', () => {
   global.uuidv4 = uuidv4,
   global.mm = mm,
   global.util = require('util'),
-  global.fs = require('fs'),
+  global.fs = fs,
   global.db = db
 
   if (db.pragma('index_info(category_code_index)').length == 0) {
