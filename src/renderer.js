@@ -546,10 +546,10 @@ function mute_on(bool) {
 
 function loop_on(bool) {
   if (bool == true) {
-    $("#loop_button").addClass("btn-primary");
+    $("#loop_button").addClass("btn-success");
     $("#loop_button").removeClass("btn-secondary");
   } else {
-    $("#loop_button").removeClass("btn-primary");
+    $("#loop_button").removeClass("btn-success");
     $("#loop_button").addClass("btn-secondary");
   }
 }
