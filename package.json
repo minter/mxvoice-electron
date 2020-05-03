@@ -1,7 +1,7 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "3.0.0-alpha1",
+  "version": "3.0.0-beta1",
   "description": "Improv Audio Software",
   "main": "src/index.js",
   "scripts": {

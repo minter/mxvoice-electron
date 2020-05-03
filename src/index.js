@@ -603,7 +603,7 @@ INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('
 
      if (fs.existsSync(config_path)) {
        // An old config file exists, we need to load the preferences
-       console.log("Found old Mx. Voice config file at " + config_path);
+       console.log("Found old Mr. Voice 2 config file at " + config_path);
        old_settings = [];
 
        const line_reader = new readlines(config_path);
