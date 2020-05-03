@@ -559,16 +559,12 @@ function populateCategoriesModal() {
   for (const row of stmt.iterate()) {
 
     $('#categoryList').append(`<div class="form-group row">
-                    <label for="categoryCode-${row.code}" class="col-sm-2 col-form-label">Code</label>
-                    <div class="col-sm-2">
-                      <input type="text" class="form-control categoryCode" id="categoryCode-${row.code}" disabled value="${row.code}">
-                    </div>
                     <label for="categoryDescription-${row.code}" class="col-sm-2 col-form-label">Description</label>
-                    <div class="col-sm-4">
-                      <input type="text" class="form-control categoryDescription" id="categoryDescription-${row.code}" value="${row.description}" required>
+                    <div class="col-sm-8">
+                      <input type="text" class="form-control categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
                     </div>
                     <div class="col-sm-1">
-                      <button type="button" class="btn btn-sm btn-danger" onclick="deleteCategory(event,'${row.code}')">Delete</button>
+                      <button type="button" class="btn btn-sm btn-danger" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</button>
                     </div>
 
                   `);
@@ -581,7 +577,7 @@ function openCategoriesModal() {
 
 }
 
-function deleteCategory(event,code) {
+function deleteCategory(event,code,description) {
   event.preventDefault()
   if (confirm(`Are you sure you want to delete ${code} from Mx. Voice permanently?`)) {
     console.log(`Deleting category ${code}`)
@@ -608,7 +604,7 @@ function deleteCategory(event,code) {
 function saveCategories(event) {
   event.preventDefault();
   $('#categoryList div.row').each(function() {
-    var code = $(this).find('.categoryCode').val();
+    var code = $(this).find('.categoryDescription').attr('catcode')
     console.log(`Checking code ${code}`)
     var description = $(this).find('.categoryDescription').val();
     const stmt = db.prepare("UPDATE categories SET description = ? WHERE code = ? AND description != ?")
@@ -624,8 +620,19 @@ function saveCategories(event) {
 function addNewCategory(event) {
   event.preventDefault();
   console.log(`Adding new category`)
-  var code = $('#newCategoryCode').val();
   var description = $('#newCategoryDescription').val();
+  var code = description.replace(/\s/g, "").substr(0,4).toUpperCase()
+  var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?")
+  var loopCount = 1
+  var newCode = code
+  while (row = codeCheckStmt.get(newCode)) {
+    console.log(`Found a code collision on ${code}`)
+    var newCode = `${code}${loopCount}`
+    loopCount = loopCount + 1
+    console.log(`NewCode is ${newCode}`)
+  }
+  console.log(`Out of loop, setting code to ${newCode}`)
+  code = newCode
   console.log(`Adding ${code} :: ${description}`)
   const stmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
   const info = stmt.run(code, description)
