@@ -198,6 +198,18 @@ var application_menu = [
         }
       }
     ]
+  },
+  {
+    label: 'Categories',
+    submenu: [
+      {
+        label: 'Manage Categories',
+        click: () => {
+          manageCategories();
+        }
+      }
+    ]
+
   }
 ]
 
@@ -545,6 +557,12 @@ const preferences = new ElectronPreferences({
       console.log('Sending edit_selected_song message');
       mainWindow.webContents.send('edit_selected_song');
     }
+
+    function manageCategories() {
+      console.log('Sending manage_categories message');
+      mainWindow.webContents.send('manage_categories');
+    }
+
 
    // Config migration
    function checkOldConfig() {

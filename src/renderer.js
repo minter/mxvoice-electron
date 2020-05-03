@@ -81,6 +81,8 @@ function saveHoldingTankFile() {
 
 function populateCategorySelect(){
   console.log("Populating categories");
+  $('#category_select option').remove()
+  $('#category_select').append(`<option value="*">All Categories</option>`)
   var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
   for (const row of stmt.iterate()) {
     categories[row.code] = row.description;
@@ -548,6 +550,110 @@ function saveBulkUpload(event) {
 
   addSongsByPath(songs);
 
+}
+
+function populateCategoriesModal() {
+  $('#categoryList').find('div.row').remove();
+
+  const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+  for (const row of stmt.iterate()) {
+
+    $("#categoryList").append(`<div class="form-group row">
+                    
+                    <div class="col-sm-8">
+                      <div catcode="${row.code}" class="category-description">${row.description}</div>
+                      <input style="display: none;" type="text" class="form-control categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
+                    </div>
+                    <div class="col-sm-4">
+                    <a href="#" onclick="editCategory('${row.code}')">Edit</a>&nbsp; 
+                    <a class="delete_link" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
+                    </div>
+
+                  `);
+  }
+
+}
+
+function editCategory(code) {
+    $(".categoryDescription").hide();
+    $(".category-description").show();
+    $(`.category-description[catcode=${code}]`).hide();
+    $(`.categoryDescription[catcode=${code}]`).show().select();
+
+}
+
+function openCategoriesModal() {
+  populateCategoriesModal()
+  $('#categoryManagementModal').modal();
+
+}
+
+function deleteCategory(event,code,description) {
+  event.preventDefault()
+  if (confirm(`Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`)) {
+    console.log(`Deleting category ${code}`)
+
+    const uncategorizedCheckStmt = db.prepare("INSERT OR REPLACE INTO categories VALUES(?, ?);")
+    const uncategorizedCheckInfo = uncategorizedCheckStmt.run('UNC', 'Uncategorized')
+    if (uncategorizedCheckInfo.changes == 1) {
+      console.log(`Had to upsert Uncategorized table`)
+    }
+    const stmt = db.prepare('UPDATE mrvoice SET category = ? WHERE category = ?')
+    const info = stmt.run('UNC', code)
+    console.log(`Updated ${info.changes} rows to uncategorized`)
+
+    const deleteStmt = db.prepare("DELETE FROM categories WHERE code = ?")
+    const deleteInfo = deleteStmt.run(code)
+    if (deleteInfo.changes == 1) {
+      console.log(`Deleted category ${code}`)
+    }
+    populateCategorySelect()
+    populateCategoriesModal()
+  }
+}
+
+function saveCategories(event) {
+  event.preventDefault();
+  $('#categoryList div.row').each(function() {
+    var code = $(this).find('.categoryDescription').attr('catcode')
+    console.log(`Checking code ${code}`)
+    var description = $(this).find('.categoryDescription').val();
+    const stmt = db.prepare("UPDATE categories SET description = ? WHERE code = ? AND description != ?")
+    const info = stmt.run(description, code, description)
+    if (info.changes == 1) {
+      console.log(`Saving changes to ${code} - new description is ${description}`)
+    }
+    populateCategorySelect()
+    populateCategoriesModal()
+  })
+
+}
+function addNewCategory(event) {
+  event.preventDefault();
+  console.log(`Adding new category`)
+  var description = $('#newCategoryDescription').val();
+  var code = description.replace(/\s/g, "").substr(0,4).toUpperCase()
+  var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?")
+  var loopCount = 1
+  var newCode = code
+  while (row = codeCheckStmt.get(newCode)) {
+    console.log(`Found a code collision on ${code}`)
+    var newCode = `${code}${loopCount}`
+    loopCount = loopCount + 1
+    console.log(`NewCode is ${newCode}`)
+  }
+  console.log(`Out of loop, setting code to ${newCode}`)
+  code = newCode
+  console.log(`Adding ${code} :: ${description}`)
+  const stmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
+  const info = stmt.run(code, description)
+  if (info.changes == 1) {
+    console.log(`Added new row into database`)
+    $('#newCategoryCode').val('')
+    $('#newCategoryDescription').val('')
+    populateCategorySelect()
+    populateCategoriesModal()
+  }
 }
 
 function toggle_selected_row(row) {

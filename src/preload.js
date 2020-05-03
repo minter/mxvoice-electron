@@ -10,6 +10,11 @@ ipcRenderer.on('fkey_load', function(event, fkeys) {
   populateHotkeys(fkeys);
 });
 
+ipcRenderer.on('manage_categories', function(event) {
+  openCategoriesModal();
+});
+
+
 ipcRenderer.on('holding_tank_load', function(event, songIds) {
   populateHoldingTank(songIds);
 });
@@ -92,6 +97,8 @@ ipcRenderer.on('edit_selected_song', function(event) {
 
 
 process.once('loaded', () => {
+
+  // Ensure that there is a unique index on category code
   global.homedir = require('os').homedir(),
   global.path = path,
   global.preferences = preferences,
@@ -103,4 +110,11 @@ process.once('loaded', () => {
   global.util = require('util'),
   global.fs = require('fs'),
   global.db = db
+
+  if (db.pragma('index_info(category_code_index)').length == 0) {
+    console.log(`Creating unique index on category codes`)
+    const stmt = db.prepare("CREATE UNIQUE INDEX 'category_code_index' ON categories(code)")
+    const info = stmt.run()
+  }
+
 })
