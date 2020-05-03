@@ -81,6 +81,8 @@ function saveHoldingTankFile() {
 
 function populateCategorySelect(){
   console.log("Populating categories");
+  $('#category_select option').remove()
+  $('#category_select').append(`<option value="*">All Categories</option>`)
   var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
   for (const row of stmt.iterate()) {
     categories[row.code] = row.description;
@@ -548,6 +550,90 @@ function saveBulkUpload(event) {
 
   addSongsByPath(songs);
 
+}
+
+function populateCategoriesModal() {
+  $('#categoryList').find('div.row').remove();
+
+  const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+  for (const row of stmt.iterate()) {
+
+    $('#categoryList').append(`<div class="form-group row">
+                    <label for="categoryCode-${row.code}" class="col-sm-2 col-form-label">Code</label>
+                    <div class="col-sm-2">
+                      <input type="text" class="form-control categoryCode" id="categoryCode-${row.code}" disabled value="${row.code}">
+                    </div>
+                    <label for="categoryDescription-${row.code}" class="col-sm-2 col-form-label">Description</label>
+                    <div class="col-sm-4">
+                      <input type="text" class="form-control categoryDescription" id="categoryDescription-${row.code}" value="${row.description}" required>
+                    </div>
+                    <div class="col-sm-1">
+                      <button type="button" class="btn btn-sm btn-danger" onclick="deleteCategory(event,'${row.code}')">Delete</button>
+                    </div>
+
+                  `);
+  }
+
+}
+function openCategoriesModal() {
+  populateCategoriesModal()
+  $('#categoryManagementModal').modal();
+
+}
+
+function deleteCategory(event,code) {
+  event.preventDefault()
+  if (confirm(`Are you sure you want to delete ${code} from Mx. Voice permanently?`)) {
+    console.log(`Deleting category ${code}`)
+
+    const uncategorizedCheckStmt = db.prepare("INSERT OR REPLACE INTO categories VALUES(?, ?);")
+    const uncategorizedCheckInfo = uncategorizedCheckStmt.run('UNC', 'Uncategorized')
+    if (uncategorizedCheckInfo.changes == 1) {
+      console.log(`Had to upsert Uncategorized table`)
+    }
+    const stmt = db.prepare('UPDATE mrvoice SET category = ? WHERE category = ?')
+    const info = stmt.run('UNC', code)
+    console.log(`Updated ${info.changes} rows to uncategorized`)
+
+    const deleteStmt = db.prepare("DELETE FROM categories WHERE code = ?")
+    const deleteInfo = deleteStmt.run(code)
+    if (deleteInfo.changes == 1) {
+      console.log(`Deleted category ${code}`)
+    }
+    populateCategorySelect()
+    populateCategoriesModal()
+  }
+}
+
+function saveCategories(event) {
+  event.preventDefault();
+  $('#categoryList div.row').each(function() {
+    var code = $(this).find('.categoryCode').val();
+    console.log(`Checking code ${code}`)
+    var description = $(this).find('.categoryDescription').val();
+    const stmt = db.prepare("UPDATE categories SET description = ? WHERE code = ? AND description != ?")
+    const info = stmt.run(description, code, description)
+    if (info.changes == 1) {
+      console.log(`Saving changes to ${code} - new description is ${description}`)
+    }
+    populateCategoriesModal()
+  })
+
+}
+function addNewCategory(event) {
+  event.preventDefault();
+  console.log(`Adding new category`)
+  var code = $('#newCategoryCode').val();
+  var description = $('#newCategoryDescription').val();
+  console.log(`Adding ${code} :: ${description}`)
+  const stmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
+  const info = stmt.run(code, description)
+  if (info.changes == 1) {
+    console.log(`Added new row into database`)
+    $('#newCategoryCode').val('')
+    $('#newCategoryDescription').val('')
+    populateCategoriesModal()
+  }
 }
 
 function toggle_selected_row(row) {

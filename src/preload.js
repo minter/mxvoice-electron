@@ -10,6 +10,11 @@ ipcRenderer.on('fkey_load', function(event, fkeys) {
   populateHotkeys(fkeys);
 });
 
+ipcRenderer.on('manage_categories', function(event) {
+  openCategoriesModal();
+});
+
+
 ipcRenderer.on('holding_tank_load', function(event, songIds) {
   populateHoldingTank(songIds);
 });

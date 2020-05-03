@@ -106,7 +106,6 @@
                 <div class="input-group mb-3">
                   <div class="input-group-prepend">
                     <select class="custom-select" id="category_select">
-                      <option value="*">All Categories</option>
                     </select>
                   </div>
                   <input type="text" class="form-control" placeholder="Enter search term..." id="omni_search">
@@ -280,6 +279,48 @@
 
 
     </div>
+
+    <div class="modal fade" id="categoryManagementModal" role="dialog" >
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header bg-dark">
+            <h6 class="modal-title text-white">Manage Categories</h6>
+            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form onsubmit="addNewCategory(event)">
+              <div class="form-group row">
+                <label for="newCategoryCode" class="col-sm-2 col-form-label">Code</label>
+                <div class="col-sm-2">
+                  <input type="text" class="form-control" id="newCategoryCode" required>
+                </div>
+                <label for="newCategoryDescription" class="col-sm-2 col-form-label">Description</label>
+                <div class="col-sm-4">
+                  <input type="text" class="form-control" id="newCategoryDescription" required>
+                </div>
+                <div class="col-sm-1">
+                  <button type="submit" class="btn btn-sm btn-success">Add</button>
+                </div>
+              </div>
+            </form>
+
+            <hr />
+
+            <form id="currentCategoriesForm" onsubmit="saveCategories(event)">
+              <div id="categoryList">
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+              <button type="submit" id="categoryEditSubmitButton" class="btn btn-success btn-sm">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
     <div class="modal fade" id="bulkAddModal" role="dialog" >
       <div class="modal-dialog" role="document">
