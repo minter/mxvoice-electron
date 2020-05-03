@@ -559,11 +559,11 @@ function populateCategoriesModal() {
   for (const row of stmt.iterate()) {
 
     $('#categoryList').append(`<div class="form-group row">
-                    <label for="categoryDescription-${row.code}" class="col-sm-2 col-form-label">Description</label>
-                    <div class="col-sm-8">
+                    
+                    <div class="col-sm-10">
                       <input type="text" class="form-control categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
                     </div>
-                    <div class="col-sm-1">
+                    <div class="col-sm-2">
                       <button type="button" class="btn btn-sm btn-danger" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</button>
                     </div>
 
