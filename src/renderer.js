@@ -3,6 +3,8 @@ var sound;
 var categories = [];
 var globalAnimation;
 var autoplay = false;
+var loop = false;
+var sound_canceled = false;
 
 function playSongFromHotkey(hotkey) {
   console.log ('Getting song ID from hotkey ' + hotkey);
@@ -211,13 +213,13 @@ function song_ended() {
   $("#timer").html("0:00");
   $("#audio_progress").width("0%");
   $("#song_now_playing").fadeOut(100);
-  $("#play_button").removeClass("disabled");
-  $("#stop_button").addClass("disabled");
+  $("#play_button").removeClass("d-none");
+  $("#stop_button").addClass("d-none");
+  sound_canceled = true;
 }
 
 function playSongFromId(song_id){
   console.log('Playing song from song ID ' + song_id);
-
   if (song_id) {
     if (sound) {
       sound.stop();
@@ -229,7 +231,9 @@ function playSongFromId(song_id){
     sound = new Howl({
       src: [path.join(preferences.locations.music_directory, filename)],
       html5: true,
+      volume: $('#volume').val()/100,
       onplay: function() {
+        sound_canceled = false;
         var time = Math.round(sound.duration());
         globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
         var title = row.title || "";
@@ -237,15 +241,22 @@ function playSongFromId(song_id){
         artist = artist.length ? "by " + artist : artist;
         $("#song_now_playing")
           .html(
-            `<i title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
+            `<i id="song_spinner" title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
           )
           .fadeIn(100);
-        $("#play_button").addClass("disabled");
-        $("#stop_button").removeClass("disabled");
+        $("#play_button").addClass("d-none");
+        $("#stop_button").removeClass("d-none");
+        $("#progress_bar .progress-bar").addClass(
+          "progress-bar-animated progress-bar-striped"
+        );
       },
       onend: function() {
         song_ended();
-        autoplay_next();
+        if (loop) {
+          sound.play();
+        } else {
+          autoplay_next();
+        }
       },
       onstop: function() {
         console.log('Stopped!');
@@ -297,6 +308,26 @@ function stopPlaying(fadeOut = false){
       sound.stop();
     }
   }
+}
+
+function pausePlaying() {
+  if (sound && !sound_canceled) {
+    toggle_play_button();
+    if (sound.playing()) {
+      sound.pause();
+      $("#song_spinner").removeClass('fa-spin');
+      $("#progress_bar .progress-bar").removeClass("progress-bar-animated progress-bar-striped");
+    } else {
+      sound.play();
+      $("#song_spinner").addClass("fa-spin");
+      $("#progress_bar .progress-bar").addClass("progress-bar-animated progress-bar-striped");
+    }
+  }
+}
+
+function toggle_play_button() {
+  $('#play_button').toggleClass('d-none');
+  $('#stop_button').toggleClass('d-none');
 }
 
 function hotkeyDrop(event) {
@@ -665,6 +696,37 @@ function toggle_selected_row(row) {
   // }
 }
 
+function sound_on_full(bool) {
+  if (bool == true) {
+    $('#full_button').addClass('btn-primary');
+    $("#full_button").removeClass("btn-secondary");
+  } else {
+    $("#full_button").removeClass("btn-primary");
+    $("#full_button").addClass("btn-secondary");
+  }
+}
+
+
+function mute_on(bool) {
+  if (bool == true) {
+    $("#mute_button").addClass("btn-danger");
+    $("#mute_button").removeClass("btn-secondary");
+  } else {
+    $("#mute_button").removeClass("btn-danger");
+    $("#mute_button").addClass("btn-secondary");
+  }
+}
+
+function loop_on(bool) {
+  if (bool == true) {
+    $("#loop_button").addClass("btn-success");
+    $("#loop_button").removeClass("btn-secondary");
+  } else {
+    $("#loop_button").removeClass("btn-success");
+    $("#loop_button").addClass("btn-secondary");
+  }
+}
+
 $( document ).ready(function() {
 
   populateCategorySelect();
@@ -718,6 +780,11 @@ $( document ).ready(function() {
 
   Mousetrap.bind("tab", function () {
     sendToHotkeys();
+    return false;
+  });
+
+  Mousetrap.bind("space", function () {
+    pausePlaying();
     return false;
   });
 
@@ -843,10 +910,64 @@ $( document ).ready(function() {
 
   $("#stop_button").click(function (e) {
     if (e.shiftKey) {
-      stopPlaying(true);
+      pausePlaying(true);
     } else {
-      stopPlaying();
+      pausePlaying();
     }
+  });
+
+  $("#play_button").click(function (e) {
+    if (!sound_canceled) {
+      sound.play();
+    }
+  });
+
+  $("#progress_bar").click(function(e) {
+    var percent = (e.clientX - $(this).offset().left) / $(this).width();
+    if (sound) {
+      sound.seek(sound.duration() * percent);
+      sound.play();
+    }
+  })
+
+  $("#volume").on('change',function() {
+    var volume = $(this).val()/100;
+    if (sound) {
+      sound.volume(volume);
+    }
+    if (volume == 1) {
+      sound_on_full(true);
+    } else {
+      sound_on_full(false);
+    }
+    if (volume == 0) {
+      mute_on(true);
+    } else {
+      mute_on(false);
+    }
+  });
+
+  $('#mute_button').click(function() {
+    $('#volume').val(0);
+    if (sound) {
+      sound.volume(0);
+    }
+    mute_on(true);
+    sound_on_full(false);
+  });
+
+  $("#full_button").click(function () {
+    $("#volume").val(100);
+    if (sound) {
+      sound.volume(1);
+    }
+    mute_on(false);
+    sound_on_full(true);
+  });
+
+  $("#loop_button").click(function () {
+    loop = !loop;
+    loop_on(loop);
   });
 
   $("#search_results thead").hide();
