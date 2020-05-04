@@ -328,7 +328,8 @@ function pausePlaying(fadeOut = false) {
       $("#progress_bar .progress-bar").removeClass("progress-bar-animated progress-bar-striped");
       if (fadeOut) {
         var old_volume = sound.volume();
-        sound.fade(sound.volume(), 0, 1000);
+        var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000)
+        sound.fade(sound.volume(), 0, fadeDuration);
       } else {
         sound.pause();
       }
