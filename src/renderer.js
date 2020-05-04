@@ -303,7 +303,6 @@ function stopPlaying(fadeOut = false){
     }
     if (fadeOut) {
       var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000)
-      console.log(`Fading out over ${fadeDuration}ms`)
       sound.fade(1,0,fadeDuration);
     } else {
       sound.stop();
