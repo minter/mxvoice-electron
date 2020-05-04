@@ -214,6 +214,10 @@ function song_ended() {
   $("#song_now_playing").fadeOut(100);
   $("#play_button").removeClass("d-none");
   $("#pause_button").addClass("d-none");
+  if (!$("#selected_row").length) {
+    $("#play_button").attr("disabled", true);
+  }
+  $("#stop_button").attr("disabled", true);
   sound_canceled = true;
 }
 
@@ -245,6 +249,8 @@ function playSongFromId(song_id){
           .fadeIn(100);
         $("#play_button").addClass("d-none");
         $("#pause_button").removeClass("d-none");
+        $("#stop_button").removeAttr('disabled');
+        $("#play_button").removeAttr("disabled");
         $("#progress_bar .progress-bar").addClass(
           "progress-bar-animated progress-bar-striped"
         );
@@ -692,6 +698,7 @@ function toggle_selected_row(row) {
   // } else {
     $("#selected_row").removeAttr('id');
     $(row).attr("id", "selected_row");
+    $("#play_button").removeAttr('disabled');
   // }
 }
 
@@ -908,16 +915,28 @@ $( document ).ready(function() {
   });
 
   $("#pause_button").click(function (e) {
-    if (e.shiftKey) {
-      pausePlaying(true);
-    } else {
-      pausePlaying();
-    }
+    pausePlaying();
   });
 
   $("#play_button").click(function (e) {
-    if (!sound_canceled) {
-      sound.play();
+    if (sound) {
+      if (!sound_canceled) {
+        sound.play();
+      } else {
+        playSelected();
+      }
+    } else {
+      playSelected();
+    }
+  });
+
+  $("#stop_button").click(function (e) {
+    if (sound) {
+      if (e.shiftKey) {
+        stopPlaying(true);
+      } else {
+        stopPlaying();
+      }
     }
   });
 
