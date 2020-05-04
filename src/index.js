@@ -309,81 +309,96 @@ Menu.setApplicationMenu(menu);
 
 // Preferences
 const preferences = new ElectronPreferences({
-    /**
-     * Where should preferences be saved?
-     */
-    'dataStore': path.resolve(app.getPath('userData'), 'preferences.json'),
-    /**
-     * Default values.
-     */
-    'defaults': {
-        'locations': {
-          'music_directory': path.join(app.getPath('userData'), 'mp3'),
-          'hotkey_directory': path.join(app.getPath('userData'), 'hotkeys'),
-          'database_directory': app.getPath('userData')
-        },
-        'config': {
-          'browser_width': 1280,
-          'browser_height': 1024
-        }
-        // 'notes': {
-        //     'folder': path.resolve(os.homedir(), 'Notes')
-        // },
-        // 'markdown': {
-        //     'auto_format_links': true,
-        //     'show_gutter': false
-        // },
-        // 'preview': {
-        //     'show': true
-        // },
-        // 'drawer': {
-        //     'show': true
-        // }
+  /**
+   * Where should preferences be saved?
+   */
+  'dataStore': path.resolve(app.getPath('userData'), 'preferences.json'),
+  /**
+   * Default values.
+   */
+  'defaults': {
+    'locations': {
+      'music_directory': path.join(app.getPath('userData'), 'mp3'),
+      'hotkey_directory': path.join(app.getPath('userData'), 'hotkeys'),
+      'database_directory': app.getPath('userData')
     },
-    'onLoad': (preferences) => {
-      return preferences;
+    'config': {
+      'browser_width': 1280,
+      'browser_height': 1024
     },
-    'sections': [
-        {
-            'id': 'locations',
-            'label': 'Data Locations',
-            /**
-             * See the list of available icons below.
-             */
-            'icon': 'archive-2',
-            'form': {
-                'groups': [
-                    {
-                        /**
-                         * Group heading is optional.
-                         */
-                        'fields': [
-                          {
-                              'label': 'Database Directory',
-                              'key': 'database_directory',
-                              'type': 'directory',
-                              'help': 'The location to store your mxvoice.db file'
-                          },
+    'audio': {
+      'fade_out_seconds': 2
+    }
+  },
+  'onLoad': (preferences) => {
+    return preferences;
+  },
+  'sections': [
+      {
+          'id': 'locations',
+          'label': 'Data Locations',
+          /**
+           * See the list of available icons below.
+           */
+          'icon': 'archive-2',
+          'form': {
+            'groups': [
+              {
+                /**
+                 * Group heading is optional.
+                 */
+                'fields': [
+                  {
+                    'label': 'Database Directory',
+                    'key': 'database_directory',
+                    'type': 'directory',
+                    'help': 'The location to store your mxvoice.db file'
+                  },
 
-                          {
-                              'label': 'Music File Directory',
-                              'key': 'music_directory',
-                              'type': 'directory',
-                              'help': 'The place to store the actual audio files'
-                          },
-                          {
-                              'label': 'Hotkey Directory',
-                              'key': 'hotkey_directory',
-                              'type': 'directory',
-                              'help': 'The place to store your saved hotkeys'
-                          }
-                        ]
-                      }
-                    ]
+                  {
+                      'label': 'Music File Directory',
+                      'key': 'music_directory',
+                      'type': 'directory',
+                      'help': 'The place to store the actual audio files'
+                  },
+                  {
+                      'label': 'Hotkey Directory',
+                      'key': 'hotkey_directory',
+                      'type': 'directory',
+                      'help': 'The place to store your saved hotkeys'
                   }
-                }
-              ]
-   });
+                ]
+              }
+            ]
+          }
+        },
+        {
+          'id': 'audio',
+          'label': 'Sound Configuration',
+          /**
+           * See the list of available icons below.
+           */
+          'icon': 'bell-53',
+          'form': {
+            'groups': [
+              {
+                /**
+                * Group heading is optional.
+                */
+                'fields': [
+                  {
+                    'label': 'Fade Out Time (seconds)',
+                      'key': 'fade_out_seconds',
+                      'type': 'text',
+                      'help': 'How long (in seconds) to perform a fade-out'
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+  });
 
    function loadHotkeysFile() {
      var fkey_mapping = [];
