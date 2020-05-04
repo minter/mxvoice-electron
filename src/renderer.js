@@ -213,7 +213,11 @@ function song_ended() {
   $("#audio_progress").width("0%");
   $("#song_now_playing").fadeOut(100);
   $("#play_button").removeClass("d-none");
-  $("#stop_button").addClass("d-none");
+  $("#pause_button").addClass("d-none");
+  if (!$("#selected_row").length) {
+    $("#play_button").attr("disabled", true);
+  }
+  $("#stop_button").attr("disabled", true);
   sound_canceled = true;
 }
 
@@ -244,7 +248,9 @@ function playSongFromId(song_id){
           )
           .fadeIn(100);
         $("#play_button").addClass("d-none");
-        $("#stop_button").removeClass("d-none");
+        $("#pause_button").removeClass("d-none");
+        $("#stop_button").removeAttr('disabled');
+        $("#play_button").removeAttr("disabled");
         $("#progress_bar .progress-bar").addClass(
           "progress-bar-animated progress-bar-striped"
         );
@@ -303,20 +309,29 @@ function stopPlaying(fadeOut = false){
     }
     if (fadeOut) {
       var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000)
-      sound.fade(1,0,fadeDuration);
+      sound.fade(sound.volume(),0,fadeDuration);
     } else {
       sound.stop();
     }
   }
 }
 
-function pausePlaying() {
+function pausePlaying(fadeOut = false) {
   if (sound && !sound_canceled) {
     toggle_play_button();
     if (sound.playing()) {
-      sound.pause();
+      sound.on("fade", function () {
+        sound.pause();
+        sound.volume(old_volume);
+      });
       $("#song_spinner").removeClass('fa-spin');
       $("#progress_bar .progress-bar").removeClass("progress-bar-animated progress-bar-striped");
+      if (fadeOut) {
+        var old_volume = sound.volume();
+        sound.fade(sound.volume(), 0, 1000);
+      } else {
+        sound.pause();
+      }
     } else {
       sound.play();
       $("#song_spinner").addClass("fa-spin");
@@ -327,7 +342,7 @@ function pausePlaying() {
 
 function toggle_play_button() {
   $('#play_button').toggleClass('d-none');
-  $('#stop_button').toggleClass('d-none');
+  $('#pause_button').toggleClass('d-none');
 }
 
 function hotkeyDrop(event) {
@@ -693,6 +708,7 @@ function toggle_selected_row(row) {
   // } else {
     $("#selected_row").removeAttr('id');
     $(row).attr("id", "selected_row");
+    $("#play_button").removeAttr('disabled');
   // }
 }
 
@@ -785,6 +801,11 @@ $( document ).ready(function() {
 
   Mousetrap.bind("space", function () {
     pausePlaying();
+    return false;
+  });
+
+  Mousetrap.bind("shift+space", function () {
+    pausePlaying(true);
     return false;
   });
 
@@ -908,17 +929,35 @@ $( document ).ready(function() {
     return false;
   });
 
-  $("#stop_button").click(function (e) {
-    if (e.shiftKey) {
-      pausePlaying(true);
-    } else {
-      pausePlaying();
+  $("#pause_button").click(function (e) {
+    if (sound) {
+      if (e.shiftKey) {
+        pausePlaying(true);
+      } else {
+        pausePlaying();
+      }
     }
   });
 
   $("#play_button").click(function (e) {
-    if (!sound_canceled) {
-      sound.play();
+    if (sound) {
+      if (!sound_canceled) {
+        sound.play();
+      } else {
+        playSelected();
+      }
+    } else {
+      playSelected();
+    }
+  });
+
+  $("#stop_button").click(function (e) {
+    if (sound) {
+      if (e.shiftKey) {
+        stopPlaying(true);
+      } else {
+        stopPlaying();
+      }
     }
   });
 

@@ -225,7 +225,7 @@ h6 a {
   transition: none;
 }
 
-#play_button, #stop_button {
+#play_button, #pause_button {
   border-radius: 30px;
 }
 
