@@ -1,4 +1,3 @@
-// var db = new sqlite3.Database(path.join(preferences.locations.database_directory, 'mrvoice.db'));
 var sound;
 var categories = [];
 var globalAnimation;
@@ -590,13 +589,13 @@ function populateCategoriesModal() {
   for (const row of stmt.iterate()) {
 
     $("#categoryList").append(`<div class="form-group row">
-                    
+
                     <div class="col-sm-8">
                       <div catcode="${row.code}" class="category-description">${row.description}</div>
                       <input style="display: none;" type="text" class="form-control categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
                     </div>
                     <div class="col-sm-4">
-                    <a href="#" onclick="editCategory('${row.code}')">Edit</a>&nbsp; 
+                    <a href="#" onclick="editCategory('${row.code}')">Edit</a>&nbsp;
                     <a class="delete_link" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
                     </div>
 
