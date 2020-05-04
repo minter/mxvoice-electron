@@ -6,11 +6,16 @@ const fs = require('fs')
 var dbName = 'mxvoice.db'
 if (fs.existsSync(path.join(preferences.locations.database_directory, 'mrvoice.db'))) {
   dbName = 'mrvoice.db'
-} 
+}
 console.log(`Attempting to open database file ${path.join(preferences.locations.database_directory, dbName)}`)
 const db = require('better-sqlite3')(path.join(preferences.locations.database_directory, dbName));
 const { v4: uuidv4 } = require('uuid');
 const mm = require('music-metadata');
+
+ipcRenderer.on('preferencesUpdated', (e, newPreferences) => {
+    console.log('Preferences were updated', newPreferences);
+    global.preferences = newPreferences
+});
 
 ipcRenderer.on('fkey_load', function(event, fkeys) {
   populateHotkeys(fkeys);

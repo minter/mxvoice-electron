@@ -308,7 +308,9 @@ function stopPlaying(fadeOut = false){
       $(".now_playing").first().removeClass("now_playing");
     }
     if (fadeOut) {
-      sound.fade(sound.volume(),0,1000);
+      var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000)
+      console.log(`Value of fade duration is ${fadeDuration}`)
+      sound.fade(sound.volume(),0,fadeDuration);
     } else {
       sound.stop();
     }
@@ -327,7 +329,8 @@ function pausePlaying(fadeOut = false) {
       $("#progress_bar .progress-bar").removeClass("progress-bar-animated progress-bar-striped");
       if (fadeOut) {
         var old_volume = sound.volume();
-        sound.fade(sound.volume(), 0, 1000);
+        var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000)
+        sound.fade(sound.volume(), 0, fadeDuration);
       } else {
         sound.pause();
       }
