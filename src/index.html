@@ -249,11 +249,11 @@
           <div class="card rounded-0 bg-dark" id="player">
             <div class="card-body row">
               <div id="play_column" class="col-1">
-                <button id="play_button" class="btn btn-success btn-lg"><i title="Play"
+                <button id="play_button" class="btn btn-success btn-lg" disabled><i title="Play"
                     class="fas fa-sm fa-play"></i></button>
-                <button id="stop_button" class="d-none btn btn-warning btn-lg"><i title="Stop" class="fas fa-sm fa-pause"></i></button>
+                <button id="pause_button" class="d-none btn btn-warning btn-lg"><i title="Stop" class="fas fa-sm fa-pause"></i></button>
               </div>
-              <div class="col-8">
+              <div class="col-7">
                 <div id="now_playing_bar" class="flex-row d-flex justify-content-between">
                   <div id="timer">0:00</div>
                   <div id="song_now_playing">&nbsp;</div>
@@ -265,6 +265,9 @@
                       role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                   </div>
                 </div>
+              </div>
+              <div id="stop_column" class="col-1">
+                <button id="stop_button" class="btn btn-danger btn-lg" disabled><i title="Stop" class="fas fa-sm fa-stop"></i></button>
               </div>
               <div id="controls_column" class="col-3 d-flex align-items-center">
                 <button id="loop_button" class="btn btn-secondary btn-sm"><i title="Loop" class="fas fa-sm fa-sync-alt fa-flip-vertical"></i></button>
