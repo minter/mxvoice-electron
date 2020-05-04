@@ -213,7 +213,7 @@ function song_ended() {
   $("#audio_progress").width("0%");
   $("#song_now_playing").fadeOut(100);
   $("#play_button").removeClass("d-none");
-  $("#stop_button").addClass("d-none");
+  $("#pause_button").addClass("d-none");
   sound_canceled = true;
 }
 
@@ -244,7 +244,7 @@ function playSongFromId(song_id){
           )
           .fadeIn(100);
         $("#play_button").addClass("d-none");
-        $("#stop_button").removeClass("d-none");
+        $("#pause_button").removeClass("d-none");
         $("#progress_bar .progress-bar").addClass(
           "progress-bar-animated progress-bar-striped"
         );
@@ -326,7 +326,7 @@ function pausePlaying() {
 
 function toggle_play_button() {
   $('#play_button').toggleClass('d-none');
-  $('#stop_button').toggleClass('d-none');
+  $('#pause_button').toggleClass('d-none');
 }
 
 function hotkeyDrop(event) {
@@ -907,7 +907,7 @@ $( document ).ready(function() {
     return false;
   });
 
-  $("#stop_button").click(function (e) {
+  $("#pause_button").click(function (e) {
     if (e.shiftKey) {
       pausePlaying(true);
     } else {
