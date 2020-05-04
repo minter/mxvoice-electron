@@ -742,6 +742,10 @@ function loop_on(bool) {
   }
 }
 
+function changeVolume(i) {
+    $('#volume').val((i/9)*100).trigger('change');
+}
+
 $( document ).ready(function() {
 
   populateCategorySelect();
@@ -776,6 +780,12 @@ $( document ).ready(function() {
       switchToHotkeyTab(i);
     });
 
+  }
+
+  for (let i = 0; i <= 10; i++) {
+    Mousetrap.bind(`${i}`, function () {
+      changeVolume(i);
+    });
   }
 
   Mousetrap(search_field).bind("esc", function () {
