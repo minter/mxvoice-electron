@@ -33,7 +33,10 @@
           "name": "@electron-forge/maker-dmg",
           "platforms": [
             "darwin"
-          ]
+          ],
+          "config": {
+            "background": "src/assets/images/dmg-background-image.png"
+          }
         },
         {
           "name": "@electron-forge/maker-zip",
