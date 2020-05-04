@@ -361,7 +361,7 @@ const preferences = new ElectronPreferences({
                               'label': 'Database Directory',
                               'key': 'database_directory',
                               'type': 'directory',
-                              'help': 'The location to store your mrvoice.db file'
+                              'help': 'The location to store your mxvoice.db file'
                           },
 
                           {
