@@ -1,15 +1,16 @@
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, autoUpdater } = require('electron');
 const path = require('path');
 const { is } = require('electron-util');
 const os = require('os');
 const fs = require('fs');
 const readlines = require('n-readlines');
 const ElectronPreferences = require('electron-preferences');
+const isDev = require('electron-is-dev');
 
 let mainWindow;
 
 // Enable live reload
-if (is.development) {
+if (isDev) {
   require("electron-reload")(__dirname);
 }
 
