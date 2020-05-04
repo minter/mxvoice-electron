@@ -308,20 +308,29 @@ function stopPlaying(fadeOut = false){
       $(".now_playing").first().removeClass("now_playing");
     }
     if (fadeOut) {
-      sound.fade(1,0,1000);
+      sound.fade(sound.volume(),0,1000);
     } else {
       sound.stop();
     }
   }
 }
 
-function pausePlaying() {
+function pausePlaying(fadeOut = false) {
   if (sound && !sound_canceled) {
     toggle_play_button();
     if (sound.playing()) {
-      sound.pause();
+      sound.on("fade", function () {
+        sound.pause();
+        sound.volume(old_volume);
+      });
       $("#song_spinner").removeClass('fa-spin');
       $("#progress_bar .progress-bar").removeClass("progress-bar-animated progress-bar-striped");
+      if (fadeOut) {
+        var old_volume = sound.volume();
+        sound.fade(sound.volume(), 0, 1000);
+      } else {
+        sound.pause();
+      }
     } else {
       sound.play();
       $("#song_spinner").addClass("fa-spin");
@@ -794,6 +803,11 @@ $( document ).ready(function() {
     return false;
   });
 
+  Mousetrap.bind("shift+space", function () {
+    pausePlaying(true);
+    return false;
+  });
+
   Mousetrap.bind("shift+tab", function () {
     sendToHoldingTank();
     return false;
@@ -915,7 +929,13 @@ $( document ).ready(function() {
   });
 
   $("#pause_button").click(function (e) {
-    pausePlaying();
+    if (sound) {
+      if (e.shiftKey) {
+        pausePlaying(true);
+      } else {
+        pausePlaying();
+      }
+    }
   });
 
   $("#play_button").click(function (e) {
