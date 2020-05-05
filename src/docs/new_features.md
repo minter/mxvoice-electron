@@ -1,7 +1,7 @@
 # New Features in Mx. Voice
 
 - Native Mac and Windows app – nothing else to install
-- Everthing in one window
+- Everything in one window
 - Integrated audio player with play/pause/stop/mute/loop/volume
 - Tabbed hotkeys – up to five sets of hotkeys at your fingertips
 - Tabbed holding tank – up to five holding tanks

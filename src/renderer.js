@@ -632,6 +632,7 @@ function editCategory(code) {
 
 function openCategoriesModal() {
   populateCategoriesModal()
+
   $('#categoryManagementModal').modal();
 
 }
@@ -1010,6 +1011,10 @@ $( document ).ready(function() {
     loop = !loop;
     loop_on(loop);
   });
+
+  $('.modal').on('show.bs.modal', function() {
+    $(".modal").modal("hide");
+  })
 
   $("#search_results thead").hide();
 
