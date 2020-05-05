@@ -34,6 +34,8 @@ To build packages for release, use the `npm run make` command. This will use the
 
 Build output of `npm run make` will be available in the `out/` subdirectory. Currently, this produces both a `.dmg` and a `.zip` file, with the `.dmg` being preferred.
 
+To enable debug output of the make command, set this environment variable: `DEBUG=electron-osx-sign*`
+
 ### Windows
 
 It is allegedly possible to build Windows binaries on the Mac, though getting that to work has proven challenging.
