@@ -69,7 +69,7 @@ function saveHotkeyFile() {
   console.log('Renderer starting saveHotkeyFile');
   var hotkeyArray = [];
   for(let key=1;key<=12;key++){
-    hotkeyArray.push($(`#f${key}_hotkey`).attr('songid'));
+    hotkeyArray.push($(`.hotkeys.active li#f${key}_hotkey`).attr('songid'));
   }
   if ( !/^\d$/.test($('#hotkey_tabs li a.active').text()) ) {
     hotkeyArray.push($('#hotkey_tabs li a.active').text())
