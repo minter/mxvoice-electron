@@ -35,7 +35,8 @@
             "darwin"
           ],
           "config": {
-            "background": "src/assets/images/dmg-background-image.png"
+            "background": "src/assets/images/dmg-background-image.png",
+            "icon": "src/assets/icons/dmg-image.icns"
           }
         },
         {
