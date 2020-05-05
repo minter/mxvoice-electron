@@ -16,7 +16,7 @@ function playSongFromHotkey(hotkey) {
   }
 }
 
-function populateHotkeys(fkeys) {
+function populateHotkeys(fkeys, title) {
   for (var key in fkeys) {
     if (fkeys[key]) {
       $(`.hotkeys.active #${key}_hotkey`).attr('songid', fkeys[key]);
@@ -26,6 +26,9 @@ function populateHotkeys(fkeys) {
       $(`.hotkeys.active #${key}_hotkey`).removeAttr('songid');
       $(`.hotkeys.active #${key}_hotkey span`).html('');
     }
+  }
+  if (title) {
+    $('#hotkey_tabs li a.active').text(title)
   }
 }
 
@@ -67,6 +70,9 @@ function saveHotkeyFile() {
   var hotkeyArray = [];
   for(let key=1;key<=12;key++){
     hotkeyArray.push($(`#f${key}_hotkey`).attr('songid'));
+  }
+  if ( !/^\d$/.test($('#hotkey_tabs li a.active').text()) ) {
+    hotkeyArray.push($('#hotkey_tabs li a.active').text())
   }
   ipcRenderer.send('save-hotkey-file', hotkeyArray);
 }

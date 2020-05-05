@@ -420,13 +420,17 @@ const preferences = new ElectronPreferences({
          var filename = result.filePaths[0];
          console.log(`Processing file ${filename}`);
          const line_reader = new readlines(filename);
+         var title
 
          while (line = line_reader.next()) {
            [key, val] = line.toString().trim().split('::');
-           fkey_mapping[key] = val;
+           if (/^\D\d+$/.test(key)) {
+             fkey_mapping[key] = val;
+           } else {
+             title = val.replace('_', ' ')
+           }
          }
-
-         mainWindow.webContents.send('fkey_load', fkey_mapping);
+         mainWindow.webContents.send('fkey_load', fkey_mapping, title);
        }
      }).catch(err => {
        console.log(err)
@@ -484,7 +488,12 @@ const preferences = new ElectronPreferences({
          var file = fs.createWriteStream(filename);
          for(let i = 0; i < hotkeyArray.length; i++){
            var keyId = `f${i + 1}`;
-           file.write([keyId, hotkeyArray[i]].join('::') + '\n');
+           console.log(`Hotkey array ${i} is ${hotkeyArray[i]}`)
+           if (hotkeyArray[i] === undefined || /^\d+$/.test(hotkeyArray[i])) {
+             file.write([keyId, hotkeyArray[i]].join('::') + '\n');
+           } else {
+             file.write(['tab_name', hotkeyArray[i].replace(' ', '_')].join('::') + '\n')
+           }
          }
          file.end();
        }

@@ -17,8 +17,8 @@ ipcRenderer.on('preferencesUpdated', (e, newPreferences) => {
     global.preferences = newPreferences
 });
 
-ipcRenderer.on('fkey_load', function(event, fkeys) {
-  populateHotkeys(fkeys);
+ipcRenderer.on('fkey_load', function(event, fkeys, title) {
+  populateHotkeys(fkeys, title);
 });
 
 ipcRenderer.on('manage_categories', function(event) {
