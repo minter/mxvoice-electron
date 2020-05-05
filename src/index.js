@@ -266,9 +266,9 @@ if (process.platform == 'darwin') {
     ]
   });
 } else {
-  application_menu[1].submenu.push(
+  application_menu[0].submenu.push(
     {
-      role: 'separator'
+      type: 'separator'
     },
     {
       label: 'Preferences',
