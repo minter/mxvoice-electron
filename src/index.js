@@ -93,7 +93,7 @@ if (process.platform == 'darwin') {
       'Andrew Berkowitz'
     ],
     website: 'https://mrvoice.net/',
-    credits: "Wade Minter <wade@wademinter.com>\nAndrew Berkowitz <andrew@andrewberkowitz.com>"
+    credits: "Wade Minter\nAndrew Berkowitz"
   })
 }
 
@@ -266,9 +266,32 @@ if (process.platform == 'darwin') {
     ]
   });
 } else {
+  application_menu[1].submenu.push(
+    {
+      role: 'separator'
+    },
+    {
+      label: 'Preferences',
+      click: () => {
+        preferences.show();
+      }
+    }
+  )
   const name = app.name;
+
   application_menu.unshift({
     label: 'File',
+    submenu: [
+      {
+        label: 'Exit',
+        click: () => { app.quit(); }
+      }
+    ]
+  })
+
+  application_menu.push({
+    label: 'Help',
+    role: 'help',
     submenu: [
       {
         label: 'About ' + name,
@@ -278,27 +301,11 @@ if (process.platform == 'darwin') {
         type: 'separator'
       },
       {
-        label: 'Preferences',
-        click: () => {
-          preferences.show();
-          }
-      },
-      {
-        type: 'separator'
-      },
-      {
         label: 'Developer Tools',
         click: () => {
           mainWindow.openDevTools();
-          }
-      },
-      {
-        type: 'separator'
-      },
-      {
-        label: 'Exit',
-        click: () => { app.quit(); }
-      },
+        }
+      }
     ]
   });
 }
