@@ -969,6 +969,7 @@ $( document ).ready(function() {
       sound.mute(!sound.mute());
     }
     $("#mute_button").toggleClass("btn-danger btn-secondary");
+    $("#song_now_playing").toggleClass("text-secondary");
   });
 
   $("#loop_button").click(function () {
