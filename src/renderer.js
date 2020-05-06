@@ -200,15 +200,11 @@ var howlerUtils = {
     var remaining = self.duration() - seek;
 		var currentTime = howlerUtils.formatTime(Math.round(seek));
     var remainingTime = howlerUtils.formatTime(Math.round(remaining));
-		if (self.playing()) {
-      requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
-      $("#audio_progress").width(
-              ((seek / self.duration()) * 100 || 0) + "%"
-      );
+    globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
+    if (!sound_canceled) {
+      $("#audio_progress").width(((seek / self.duration()) * 100 || 0) + "%");
       $("#timer").text(currentTime);
       $("#duration").text(`-${remainingTime}`);
-		} else {
-      cancelAnimationFrame(globalAnimation);
     }
 	}
 };
@@ -974,7 +970,6 @@ $( document ).ready(function() {
     var percent = (e.clientX - $(this).offset().left) / $(this).width();
     if (sound) {
       sound.seek(sound.duration() * percent);
-      sound.play();
     }
   })
 
