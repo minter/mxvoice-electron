@@ -83,6 +83,7 @@ app.on('activate', () => {
 
 // Removes a deprecation warning when building
 app.allowRendererProcessReuse = true;
+app.setAppLogsPath();
 
 if (process.platform == 'darwin') {
   app.setAboutPanelOptions({
