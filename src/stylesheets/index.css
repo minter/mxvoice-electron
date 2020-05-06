@@ -243,7 +243,11 @@ h6 a {
   margin-right: 0;
 }
 
-#controls_column .custom_range {
-
-
+@media screen and (max-width: 1045px) and (min-width: 935px) {
+  .hide-1{
+    display:none;
+  }
+  .hide-2{
+    display:none;
+  }
 }
