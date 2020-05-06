@@ -3,6 +3,8 @@ const { Howl, Howler } = require('howler')
 const preferences = ipcRenderer.sendSync('getPreferences')
 const path = require('path')
 const fs = require('fs')
+const log = require('electron-log');
+console.log = log.log;
 var dbName = 'mxvoice.db'
 if (fs.existsSync(path.join(preferences.locations.database_directory, 'mrvoice.db'))) {
   dbName = 'mrvoice.db'
