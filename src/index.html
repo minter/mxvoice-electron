@@ -25,6 +25,7 @@
     <!-- normal script imports etc  -->
     <script src="../node_modules/jquery/dist/jquery.min.js"></script>
     <script src="../node_modules/mousetrap/mousetrap.min.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
 
     <!-- Insert this line after script imports -->
     <script>if (window.module) module = window.module;</script>
@@ -260,7 +261,7 @@
                   <div id="duration">0:00</div>
                 </div>
                 <div class="flex-row">
-                  <div id="progress_bar" class="progress" style="height: 8px;">
+                  <div id="progress_bar" class="progress" data-toggle="tooltip" data-placement="bottom" title="0:00" style="height: 8px;">
                     <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" id="audio_progress"
                       role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                   </div>
@@ -413,7 +414,37 @@
       </div>
     </div>
 
+    <!-- First run modal -->
+
+    <div class="modal fade" id="firstRunModal" role="dialog">
+      <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header bg-dark">
+            <h6 class="modal-title text-white">Get Started</h6>
+            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <img src="./assets/icons/mxvoice.png" style="width: 50%; padding: 5px 0 20px 0;"" class="img-fluid" alt="Mx. Voice" />
+            <h3>Welcome!
+              <small class="text-muted">Let's get started</small>
+            </h3>
+            <p class="lead">This is the fastest, easiest way to play music, sound effects and audio drops for theater, improv shows, radio programs and more.</p>
+            <p></p>
+            <p><strong>New to Mx. Voice?</strong> Before you can start using Mx. Voice you'll need to import some songs or sounds. Head on up to the <strong>Songs</strong> menu to add audio tracks to the Mx. Voice database.</p>
+            <p><strong>Previous user of Mr. Voice?</strong> If you already have a database of songs from old versions of Mr. Voice, you can copy all of that into this installation. Contact <a href="mailto:minter@lunenburg.org">support</a> for assistance.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success btn-sm" data-dismiss="modal">Got It!</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
     <!-- Include all compiled plugins (below), or include individual files as needed -->
+
   <script src="../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
   <!-- FontAwesome Javascript -->
   <script src="../node_modules/@fortawesome/fontawesome-free/js/all.js"></script>

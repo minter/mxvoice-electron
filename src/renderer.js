@@ -999,5 +999,13 @@ $( document ).ready(function() {
         $("#song-form-info").focus();
       }
     });
+    
+    // Is there only one song in the db? Pop the first-run modal
+
+    var stmt = db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
+    var query = stmt.get();
+    if (query.count <= 1) {
+      $(`#firstRunModal`).modal("show");
+    }
 
 });
