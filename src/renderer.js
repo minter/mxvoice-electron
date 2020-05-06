@@ -214,6 +214,7 @@ function song_ended() {
   $("#timer").html("0:00");
   $("#audio_progress").width("0%");
   $("#song_now_playing").fadeOut(100);
+  $("song_now_playing").removeAttr('songid');
   $("#play_button").removeClass("d-none");
   $("#pause_button").addClass("d-none");
   if (!$("#selected_row").length) {
@@ -249,6 +250,7 @@ function playSongFromId(song_id){
             `<i id="song_spinner" title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
           )
           .fadeIn(100);
+        $("#song_now_playing").attr('songid',song_id);
         $("#play_button").addClass("d-none");
         $("#pause_button").removeClass("d-none");
         $("#stop_button").removeAttr('disabled');
@@ -408,9 +410,10 @@ function toggleAutoPlay() {
     autoplay = !autoplay;
     $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
     $("#holding_tank").toggleClass("autoplaying");
-    $(".now_playing").first().toggleClass("now_playing");
+    $(".now_playing").removeClass("now_playing");
     if (autoplay) {
       $("#holding_tank_label").html("Auto Play");
+      $(`.holding_tank li[songid=${$('#song_now_playing').attr('songid')}]`).addClass('now_playing');
     } else {
       $("#holding_tank_label").html("Holding Tank");
     }
