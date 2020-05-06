@@ -6,6 +6,7 @@ const fs = require('fs');
 const readlines = require('n-readlines');
 const ElectronPreferences = require('electron-preferences');
 const isDev = require('electron-is-dev');
+require('update-electron-app')()
 
 let mainWindow;
 

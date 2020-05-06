@@ -3,6 +3,7 @@
   "productName": "Mx. Voice",
   "version": "3.0.0-beta1",
   "description": "Improv Audio Software",
+  "repository": "https://github.com/minter/mxvoice-electron",
   "appBundleId": "app.mxvoice.mxvoice",
   "main": "src/index.js",
   "scripts": {
@@ -37,6 +38,7 @@
     "music-metadata": "^6.3.7",
     "n-readlines": "^1.0.0",
     "popper.js": "^1.14.4",
+    "update-electron-app": "^1.5.0",
     "uuid": "^8.0.0"
   },
   "devDependencies": {

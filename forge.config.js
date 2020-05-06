@@ -56,7 +56,8 @@ const config = {
           owner: "minter",
           name: "mxvoice-electron"
         },
-        prerelease: true
+        draft: true,
+        prerelease: false
       }
     }
   ]
