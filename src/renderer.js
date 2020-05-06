@@ -202,6 +202,7 @@ var howlerUtils = {
     var remainingTime = howlerUtils.formatTime(Math.round(remaining));
     globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
     if (!sound_canceled) {
+      sound.volume($("#volume").val() / 100);
       $("#audio_progress").width(((seek / self.duration()) * 100 || 0) + "%");
       $("#timer").text(currentTime);
       $("#duration").text(`-${remainingTime}`);
@@ -238,6 +239,7 @@ function playSongFromId(song_id){
       src: [path.join(preferences.locations.music_directory, filename)],
       html5: true,
       volume: $('#volume').val()/100,
+      mute: $("#mute_button").hasClass("btn-danger"),
       onplay: function() {
         sound_canceled = false;
         var time = Math.round(sound.duration());
@@ -720,27 +722,6 @@ function toggle_selected_row(row) {
   // }
 }
 
-function sound_on_full(bool) {
-  if (bool == true) {
-    $('#full_button').addClass('btn-primary');
-    $("#full_button").removeClass("btn-secondary");
-  } else {
-    $("#full_button").removeClass("btn-primary");
-    $("#full_button").addClass("btn-secondary");
-  }
-}
-
-
-function mute_on(bool) {
-  if (bool == true) {
-    $("#mute_button").addClass("btn-danger");
-    $("#mute_button").removeClass("btn-secondary");
-  } else {
-    $("#mute_button").removeClass("btn-danger");
-    $("#mute_button").addClass("btn-secondary");
-  }
-}
-
 function loop_on(bool) {
   if (bool == true) {
     $("#loop_button").addClass("btn-success");
@@ -981,34 +962,13 @@ $( document ).ready(function() {
     if (sound) {
       sound.volume(volume);
     }
-    if (volume == 1) {
-      sound_on_full(true);
-    } else {
-      sound_on_full(false);
-    }
-    if (volume == 0) {
-      mute_on(true);
-    } else {
-      mute_on(false);
-    }
   });
 
   $('#mute_button').click(function() {
-    $('#volume').val(0);
     if (sound) {
-      sound.volume(0);
+      sound.mute(!sound.mute());
     }
-    mute_on(true);
-    sound_on_full(false);
-  });
-
-  $("#full_button").click(function () {
-    $("#volume").val(100);
-    if (sound) {
-      sound.volume(1);
-    }
-    mute_on(false);
-    sound_on_full(true);
+    $("#mute_button").toggleClass("btn-danger btn-secondary");
   });
 
   $("#loop_button").click(function () {
