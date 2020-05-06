@@ -590,7 +590,7 @@ function saveBulkUpload(event) {
     var filename = files[i]
     var fullPath = path.join(dirname, filename)
     var pathData = path.parse(filename);
-    if (['.mp3', '.mp4', '.m4a', '.wav'].includes(pathData.ext.toLowerCase())) {
+    if (['.mp3', '.mp4', '.m4a', '.wav', '.ogg'].includes(pathData.ext.toLowerCase())) {
       songs.push(fullPath);
     }
   }

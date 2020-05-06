@@ -6,6 +6,9 @@ const fs = require('fs');
 const readlines = require('n-readlines');
 const ElectronPreferences = require('electron-preferences');
 const isDev = require('electron-is-dev');
+const log = require('electron-log');
+console.log = log.log;
+require('update-electron-app')()
 
 let mainWindow;
 
@@ -82,6 +85,7 @@ app.on('activate', () => {
 
 // Removes a deprecation warning when building
 app.allowRendererProcessReuse = true;
+app.setAppLogsPath();
 
 if (process.platform == 'darwin') {
   app.setAboutPanelOptions({
@@ -561,7 +565,7 @@ const preferences = new ElectronPreferences({
          dialog.showOpenDialog(mainWindow, {
            buttonLabel: 'Add',
            filters: [
-             { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav'] }
+             { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav', 'ogg'] }
            ],
            message: 'Choose audio file to add to Mx. Voice',
            properties: ['openFile']
