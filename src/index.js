@@ -565,7 +565,7 @@ const preferences = new ElectronPreferences({
          dialog.showOpenDialog(mainWindow, {
            buttonLabel: 'Add',
            filters: [
-             { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav'] }
+             { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav', 'ogg'] }
            ],
            message: 'Choose audio file to add to Mx. Voice',
            properties: ['openFile']
