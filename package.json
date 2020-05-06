@@ -3,6 +3,7 @@
   "productName": "Mx. Voice",
   "version": "3.0.0-beta1",
   "description": "Improv Audio Software",
+  "appBundleId": "app.mxvoice.mxvoice",
   "main": "src/index.js",
   "scripts": {
     "start": "electron-forge start",
@@ -18,47 +19,7 @@
   },
   "license": "MIT",
   "config": {
-    "forge": {
-      "packagerConfig": {
-        "icon": "src/assets/icons/mxvoice"
-      },
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "setupIcon": "src/assets/icons/mxvoice.ico"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-dmg",
-          "platforms": [
-            "darwin"
-          ],
-          "config": {
-            "background": "src/assets/images/dmg-background-image.png",
-            "icon": "src/assets/icons/dmg-image.icns"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin"
-          ]
-        }
-      ],
-      "publishers": [
-        {
-          "name": "@electron-forge/publisher-github",
-          "config": {
-            "repository": {
-              "owner": "minter",
-              "name": "mxvoice-electron"
-            },
-            "prerelease": true
-          }
-        }
-      ]
-    }
+    "forge": "./forge.config.js"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.13.0",
