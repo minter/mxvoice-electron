@@ -15,7 +15,6 @@ const { v4: uuidv4 } = require('uuid');
 const mm = require('music-metadata');
 
 ipcRenderer.on('preferencesUpdated', (e, newPreferences) => {
-    console.log('Preferences were updated', newPreferences);
     global.preferences = newPreferences
 });
 
