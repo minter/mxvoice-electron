@@ -25,7 +25,9 @@ const config = {
     {
       name: "@electron-forge/maker-squirrel",
       config: {
-        setupIcon: "src/assets/icons/mxvoice.ico"
+        setupIcon: "src/assets/icons/mxvoice.ico",
+        certificatePassword: process.env.WINDOWS_CERTIFICATE_PASSWORD,
+        certificateFile: process.env.WINDOWS_CERTIFICATE_FILE
       }
     },
     {
