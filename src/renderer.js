@@ -202,7 +202,6 @@ var howlerUtils = {
     var remainingTime = howlerUtils.formatTime(Math.round(remaining));
     globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
     if (!sound_canceled) {
-      sound.volume($("#volume").val() / 100);
       $("#audio_progress").width(((seek / self.duration()) * 100 || 0) + "%");
       $("#timer").text(currentTime);
       $("#duration").text(`-${remainingTime}`);
@@ -314,8 +313,7 @@ function stopPlaying(fadeOut = false){
       $(".now_playing").first().removeClass("now_playing");
     }
     if (fadeOut) {
-      var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000)
-      console.log(`Value of fade duration is ${fadeDuration}`)
+      var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000);
       sound.fade(sound.volume(),0,fadeDuration);
     } else {
       sound.stop();
@@ -968,6 +966,7 @@ $( document ).ready(function() {
     if (sound) {
       sound.mute(!sound.mute());
     }
+    sound.volume($("#volume").val() / 100);
     $("#mute_button").toggleClass("btn-danger btn-secondary");
     $("#song_now_playing").toggleClass("text-secondary");
   });
