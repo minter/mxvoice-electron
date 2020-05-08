@@ -998,6 +998,10 @@ $( document ).ready(function() {
         $("#song-form-info").focus();
       }
     });
+
+    $(window).on('resize', function() {
+      this.scale_scrollable();
+    });
     
     // Is there only one song in the db? Pop the first-run modal
 
