@@ -251,3 +251,11 @@ h6 a {
     display:none;
   }
 }
+
+#holding-tank-column, #hotkeys-column {
+  min-width: 250px;
+}
+
+#search-column {
+  flex-grow: 1;
+}
