@@ -485,6 +485,30 @@ function saveNewSong(event) {
   var artist = $('#song-form-artist').val();
   var info = $('#song-form-info').val();
   var category = $('#song-form-category').val();
+
+  if (category == "--NEW--") {
+    var code = category
+    var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?")
+    var loopCount = 1
+    var newCode = code
+    while (row = codeCheckStmt.get(newCode)) {
+      console.log(`Found a code collision on ${code}`)
+      var newCode = `${code}${loopCount}`
+      loopCount = loopCount + 1
+      console.log(`NewCode is ${newCode}`)
+    }
+    console.log(`Out of loop, setting code to ${newCode}`)
+    code = newCode
+    const categoryInsertStmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
+    const categoryInfo = categoryInsertStmt.run(code, $('#song-form-new-category').val())
+    if (categoryInfo.changes == 1) {
+      console.log(`Added new row into database`)
+      populateCategorySelect()
+      populateCategoriesModal()
+      category = code
+    }
+  }
+
   var duration = $('#song-form-duration').val();
   var uuid = uuidv4();
   var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/\s/g, "");
@@ -549,15 +573,15 @@ function showBulkAddModal(directory) {
     categories[row.code] = row.description;
     $('#bulk-add-category').append(`<option value="${row.code}">${row.description}</option>`);
   }
+  $('#bulk-add-category').append(`<option value="--NEW--">--ADD NEW CATEGORY--</option>`);
 
   $('#bulkAddModal').modal();
 }
 
-function addSongsByPath(pathArray) {
+function addSongsByPath(pathArray, category) {
   const songSourcePath = pathArray.shift();
   if (songSourcePath) {
     return mm.parseFile(songSourcePath).then(metadata => {
-      var category = $('#bulk-add-category').val()
 
       var durationSeconds = metadata.format.duration.toFixed(0);
       var durationString = new Date(durationSeconds * 1000).toISOString().substr(14, 5);
@@ -576,7 +600,7 @@ function addSongsByPath(pathArray) {
       $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${info.lastInsertRowid}'><td>${categories[category]}</td><td></td><td style='font-weight: bold'>${title || ''}</td><td style='font-weight:bold'>${artist || ''}</td><td>${durationString}</td></tr>`);
 
 
-      return addSongsByPath(pathArray); // process rest of the files AFTER we are finished
+      return addSongsByPath(pathArray, category); // process rest of the files AFTER we are finished
     })
   }
   return Promise.resolve();
@@ -601,7 +625,32 @@ function saveBulkUpload(event) {
   $('#search_results tbody').find("tr").remove();
   $("#search_results thead").show();
 
-  addSongsByPath(songs);
+  var category = $('#bulk-add-category').val()
+
+  if (category == "--NEW--") {
+    var code = category
+    var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?")
+    var loopCount = 1
+    var newCode = code
+    while (row = codeCheckStmt.get(newCode)) {
+      console.log(`Found a code collision on ${code}`)
+      var newCode = `${code}${loopCount}`
+      loopCount = loopCount + 1
+      console.log(`NewCode is ${newCode}`)
+    }
+    console.log(`Out of loop, setting code to ${newCode}`)
+    code = newCode
+    const categoryInsertStmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
+    const categoryInfo = categoryInsertStmt.run(code, $('#song-form-new-category').val())
+    if (categoryInfo.changes == 1) {
+      console.log(`Added new row into database`)
+      populateCategorySelect()
+      populateCategoriesModal()
+      category = code
+    }
+  }
+
+  addSongsByPath(songs, category);
 
 }
 
@@ -1002,7 +1051,7 @@ $( document ).ready(function() {
     $(window).on('resize', function() {
       this.scale_scrollable();
     });
-    
+
     // Is there only one song in the db? Pop the first-run modal
 
     var stmt = db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
@@ -1011,4 +1060,14 @@ $( document ).ready(function() {
       $(`#firstRunModal`).modal("show");
     }
 
+    $(".category-menu").change(function(){
+        $(this).find("option:selected").each(function(){
+            var optionValue = $(this).attr("value");
+            if(optionValue == "--NEW--"){
+                $("#SongFormNewCategory").show();
+            } else{
+                $("#SongFormNewCategory").hide();
+            }
+        });
+    }).change();
 });
