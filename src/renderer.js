@@ -1037,6 +1037,7 @@ $( document ).ready(function() {
     $('#song-form-artist').val('');
     $('#song-form-info').val('');
     $('#song-form-duration').val('');
+    $("#SongFormNewCategory").hide();
   })
 
     $("#songFormModal").on("shown.bs.modal", function (e) {
@@ -1060,7 +1061,7 @@ $( document ).ready(function() {
       $(`#firstRunModal`).modal("show");
     }
 
-    $(".category-menu").change(function(){
+    $("#song-form-category").change(function(){
         $(this).find("option:selected").each(function(){
             var optionValue = $(this).attr("value");
             if(optionValue == "--NEW--"){
@@ -1070,4 +1071,19 @@ $( document ).ready(function() {
             }
         });
     }).change();
+
+    $("#bulk-add-category").change(function(){
+        $(this).find("option:selected").each(function(){
+            var optionValue = $(this).attr("value");
+            if(optionValue == "--NEW--"){
+                $("#bulkSongFormNewCategory").show();
+            } else{
+                $("#bulkSongFormNewCategory").hide();
+            }
+        });
+    }).change();
+
+    $('#bulkAddModal').on('hidden.bs.modal', function (e) {
+      $("#bulkSongFormNewCategory").hide();
+    })
 });
