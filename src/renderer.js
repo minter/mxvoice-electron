@@ -573,7 +573,8 @@ function showBulkAddModal(directory) {
     categories[row.code] = row.description;
     $('#bulk-add-category').append(`<option value="${row.code}">${row.description}</option>`);
   }
-  $('#bulk-add-category').append(`<option value="--NEW--">--ADD NEW CATEGORY--</option>`);
+  $('#bulk-add-category').append(`<option value="" disabled>-----------------------</option>`);
+  $('#bulk-add-category').append(`<option value="--NEW--">ADD NEW CATEGORY...</option>`);
 
   $('#bulkAddModal').modal();
 }

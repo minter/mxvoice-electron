@@ -58,7 +58,8 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
       categories[row.code] = row.description;
       $('#song-form-category').append(`<option value="${row.code}">${row.description}</option>`);
     }
-    $('#song-form-category').append(`<option value="--NEW--">--ADD NEW CATEGORY--</option>`);
+    $('#song-form-category').append(`<option value="" disabled>-----------------------</option>`);
+    $('#song-form-category').append(`<option value="--NEW--">ADD NEW CATEGORY...</option>`);
 
     $('#songFormModal form').attr('onsubmit', 'saveNewSong(event)')
     $('#songFormModalTitle').html('Add New Song To Mx. Voice')
