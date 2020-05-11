@@ -11,6 +11,8 @@ function playSongFromHotkey(hotkey) {
   console.log (`Found song ID ${song_id}`);
   if (song_id) {
     console.log (`Preparing to play song ${song_id}`);
+    autoplay = true;
+    toggleAutoPlay();
     playSongFromId(song_id);
      $(`.hotkeys.active #${hotkey}_hotkey`).fadeOut(100).fadeIn(100);
   }
@@ -286,8 +288,6 @@ function autoplay_next() {
       now_playing.removeClass("now_playing");
       next_song = now_playing.next();
       next_song.addClass("now_playing");
-    } else {
-      next_song = $(".holding_tank.active li").first();
     }
     if (next_song.length) {
       playSongFromId(next_song.attr("songid"));
@@ -298,9 +298,17 @@ function autoplay_next() {
   }
 }
 
+function cancel_autoplay() {
+  if (!$("#holding-tank-column").has($("#selected_row")).length) {
+    autoplay = true;
+    toggleAutoPlay();
+  }
+}
+
 function playSelected(){
   var song_id = $('#selected_row').attr('songid');
   console.log('Got song ID ' + song_id);
+  cancel_autoplay();
   playSongFromId(song_id);
 }
 
@@ -408,14 +416,15 @@ function selectPrev() {
 
 function toggleAutoPlay() {
     autoplay = !autoplay;
-    $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
-    $("#holding_tank").toggleClass("autoplaying");
     $(".now_playing").removeClass("now_playing");
+    $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
     if (autoplay) {
       $("#holding_tank_label").html("Auto Play");
       $(`.holding_tank li[songid=${$('#song_now_playing').attr('songid')}]`).addClass('now_playing');
+      $("#holding_tank").addClass("autoplaying");
     } else {
-      $("#holding_tank_label").html("Holding Tank");
+      $("#holding_tank_label").html("Holding Tank");      
+      $("#holding_tank").removeClass("autoplaying");
     }
 
 }
