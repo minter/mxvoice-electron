@@ -8,7 +8,37 @@ const ElectronPreferences = require('electron-preferences');
 const isDev = require('electron-is-dev');
 const log = require('electron-log');
 console.log = log.log;
-require('update-electron-app')()
+
+const server = 'https://mxvoice.now.sh'
+const feed = `${server}/update/${process.platform}/${app.getVersion()}`
+
+if (!isDev) {
+  autoUpdater.setFeedURL(feed)
+
+  setInterval(() => {
+    autoUpdater.checkForUpdates()
+  }, 60000)
+}
+
+autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
+  const dialogOpts = {
+    type: 'info',
+    buttons: ['Restart', 'Later'],
+    title: 'Application Update',
+    message: process.platform === 'win32' ? releaseNotes : releaseName,
+    detail: 'A new version has been downloaded. Restart the application to apply the updates.'
+  }
+
+  dialog.showMessageBox(dialogOpts).then((returnValue) => {
+    if (returnValue.response === 0) autoUpdater.quitAndInstall()
+  })
+})
+
+autoUpdater.on('error', message => {
+  console.error('There was a problem updating the application')
+  console.error(message)
+})
+
 
 let mainWindow;
 
