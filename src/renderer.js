@@ -375,12 +375,7 @@ function songDrag(event) {
 
 function columnDrag(event) {
   console.log("Starting drag for column ID " + event.target.getAttribute("id"));
-  event.dataTransfer.setData(
-    "application/x-moz-node",
-    event.target.getAttribute("id")
-  );
-  console.log(event.dataTransfer.getData(
-    "application/x-moz-node"));
+  event.dataTransfer.setData("application/x-moz-node",event.target.getAttribute("id"));
 }
 
 function sendToHotkeys() {
@@ -904,17 +899,14 @@ $( document ).ready(function() {
 
   $(".card-header").on("drop", function (event) {
     if (event.originalEvent.dataTransfer.getData("text").length) return;
-    var original_column = $(
-      `#${event.originalEvent.dataTransfer.getData("application/x-moz-node")}`
-    );
-    var target_column = $(event.target).parent().parent();
-    var parent_div = [...target_column.parent().children()];
-    if (parent_div.indexOf(original_column) > parent_div.indexOf(target_column)) {
-      target_column.after(original_column.detach());
-    } else {
+    var original_column = $(`#${event.originalEvent.dataTransfer.getData("application/x-moz-node")}`);
+    var target_column = $(event.target).closest('.col');
+    var columns = $('#top-row').children();
+    if (columns.index(original_column) > columns.index(target_column)) {
       target_column.before(original_column.detach());
+    } else {
+      target_column.after(original_column.detach());
     }
-
   });
 
   $("#holding_tank").on("dragover", function (event) {
