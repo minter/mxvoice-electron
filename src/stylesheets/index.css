@@ -259,3 +259,22 @@ h6 a {
 #search-column {
   flex-grow: 1;
 }
+
+#player-col {
+  position: relative;
+}
+
+#waveform {
+  position: absolute;
+  top: -122px;
+  left: 12px;
+  height: 100px;
+  width: calc(100% - 24px);
+  z-index: 1;
+  border-radius: 10px 10px 0 0;
+  opacity: .95;
+}
+
+.hidden {
+  visibility: hidden;
+}
