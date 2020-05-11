@@ -487,7 +487,8 @@ function saveNewSong(event) {
   var category = $('#song-form-category').val();
 
   if (category == "--NEW--") {
-    var code = category
+    var description = $('#song-form-new-category').val();
+    var code = description.replace(/\s/g, "").substr(0,4).toUpperCase()
     var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?")
     var loopCount = 1
     var newCode = code
@@ -500,7 +501,16 @@ function saveNewSong(event) {
     console.log(`Out of loop, setting code to ${newCode}`)
     code = newCode
     const categoryInsertStmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
-    const categoryInfo = categoryInsertStmt.run(code, $('#song-form-new-category').val())
+    try {
+      const categoryInfo = categoryInsertStmt.run(code, $('#song-form-new-category').val())
+    } catch(err) {
+      if(err.message.match(/UNIQUE constraint/)) {
+        var description = $('#song-form-new-category').val()
+        $('#song-form-new-category').val('')
+        alert(`Couldn't add a category named "${description}" - apparently one already exists!`)
+        return
+      }
+    }
     if (categoryInfo.changes == 1) {
       console.log(`Added new row into database`)
       populateCategorySelect()
@@ -629,7 +639,8 @@ function saveBulkUpload(event) {
   var category = $('#bulk-add-category').val()
 
   if (category == "--NEW--") {
-    var code = category
+    var description = $('#bulk-song-form-new-category').val();
+    var code = description.replace(/\s/g, "").substr(0,4).toUpperCase()
     var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?")
     var loopCount = 1
     var newCode = code
@@ -642,7 +653,16 @@ function saveBulkUpload(event) {
     console.log(`Out of loop, setting code to ${newCode}`)
     code = newCode
     const categoryInsertStmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
-    const categoryInfo = categoryInsertStmt.run(code, $('#song-form-new-category').val())
+    try {
+      const categoryInfo = categoryInsertStmt.run(code, description)
+    } catch(err) {
+      if(err.message.match(/UNIQUE constraint/)) {
+        var description = $('#bulk-song-form-new-category').val()
+        $('#bulk-song-form-new-category').val('')
+        alert(`Couldn't add a category named "${description}" - apparently one already exists!`)
+        return
+      }
+    }
     if (categoryInfo.changes == 1) {
       console.log(`Added new row into database`)
       populateCategorySelect()
@@ -750,7 +770,14 @@ function addNewCategory(event) {
   code = newCode
   console.log(`Adding ${code} :: ${description}`)
   const stmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
-  const info = stmt.run(code, description)
+  try {
+    const info = stmt.run(code, description)
+  } catch(err) {
+    if(err.message.match(/UNIQUE constraint/)) {
+      $('#newCategoryDescription').val('')
+      alert(`Couldn't add a category named "${description}" - apparently one already exists!`)
+    }
+  }
   if (info.changes == 1) {
     console.log(`Added new row into database`)
     $('#newCategoryCode').val('')

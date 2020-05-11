@@ -132,4 +132,11 @@ process.once('loaded', () => {
     const info = stmt.run()
   }
 
+  if (db.pragma('index_info(category_description_index)').length == 0) {
+    console.log(`Creating unique index on category descriptions`)
+    const stmt = db.prepare("CREATE UNIQUE INDEX 'category_description_index' ON categories(description)")
+    const info = stmt.run()
+  }
+
+
 })
