@@ -11,7 +11,7 @@ Thus, 20 years later, this project to rewrite the software in a more modern way.
 
 Mx. Voice 3 depends on node.js being available on your system, along with `npm` and `yarn`. We recommend node 13+.
 
-Check out the source code from Github. Go into the `mrvoice-electron` folder.
+Check out the [source code from Github](https://github.com/minter/mxvoice-electron/). Go into the `mxvoice-electron` folder.
 
 The first time that you run the software in development mode, you will need to install the dependencies. Do that by running:
 
@@ -19,7 +19,7 @@ The first time that you run the software in development mode, you will need to i
 
 This should install any required node modules in the `node_modules` subdirectory. Please report any problems installing dependencies.
 
-Once your node dependencies are installed, you can run the currently-checked-out code with:
+Once your node dependencies are installed, you can run the currently-checked-out code in development mode with:
 
 `npm start`
 
@@ -36,23 +36,25 @@ Build output of `npm run make` will be available in the `out/` subdirectory. Cur
 
 To enable debug output of the make command, set this environment variable: `DEBUG=electron-osx-sign*`
 
+To publish the release to the official Mx. Voice GitHub Releases, use `npm run publish`. This requires a `GITHUB_TOKEN` environment variable to be set, with permissions to upload releases, as well as environment variables `APPLE_ID` and `APPLE_ID_PASSWORD`, set to a login and an app password with development rights to code-sign and notarize the app.
+
 ### Windows
 
-It is allegedly possible to build Windows binaries on the Mac, though getting that to work has proven challenging.
+It is allegedly possible to build Windows binaries on the Mac, though getting that to work has proven challenging. So we're using an Azure-based Windows VM for builds.
 
 To build on a Windows system, run:
 
 * `npm run make -- --arch=ia32`
-* `npm run make -- --arch=x64`
 
-This will build two binaries - one 32-bit, one 64-bit. As with OS X, installer files will be the `out/` directory.
+This will build a 32-bit installer package, which can work on both 32-bit and 64-bit versions of Windows (whereas a 64-bit package would not work on 32-bit Windows). As with OS X, installer files will be the `out/` directory.
+
+Publishing to the official Mx. Voice GitHub Releases is also done with `npm run publish -- --arch=ia32`. It requires the `GITHUB_TOKEN` environment variable with appropriate access, as well as en`WINDOWS_CERTIFICATE_FILE` (the path to the code signing certificate file) and `WINDOWS_CERTIFICATE_PASSWORD` (the password to unlock the cert)
 
 ## References and Utilities
 
 Helpful tools and documentation:
 * [Electron.js](https://www.electronjs.org)
 * [Electron Forge](https://www.electronforge.io)
-* [Free Windows developer VM](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/) from Microsoft
 
 ## Authors
 Mx. Voice 3 is brought to you with love by:
