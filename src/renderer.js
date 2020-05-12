@@ -503,6 +503,12 @@ function saveNewSong(event) {
     const categoryInsertStmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
     try {
       const categoryInfo = categoryInsertStmt.run(code, $('#song-form-new-category').val())
+      if (categoryInfo.changes == 1) {
+        console.log(`Added new row into database`)
+        populateCategorySelect()
+        populateCategoriesModal()
+        category = code
+      }
     } catch(err) {
       if(err.message.match(/UNIQUE constraint/)) {
         var description = $('#song-form-new-category').val()
@@ -510,12 +516,6 @@ function saveNewSong(event) {
         alert(`Couldn't add a category named "${description}" - apparently one already exists!`)
         return
       }
-    }
-    if (categoryInfo.changes == 1) {
-      console.log(`Added new row into database`)
-      populateCategorySelect()
-      populateCategoriesModal()
-      category = code
     }
   }
 
