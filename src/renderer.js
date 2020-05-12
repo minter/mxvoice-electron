@@ -11,6 +11,8 @@ function playSongFromHotkey(hotkey) {
   console.log (`Found song ID ${song_id}`);
   if (song_id) {
     console.log (`Preparing to play song ${song_id}`);
+    autoplay = true;
+    toggleAutoPlay();
     playSongFromId(song_id);
      $(`.hotkeys.active #${hotkey}_hotkey`).fadeOut(100).fadeIn(100);
   }
@@ -286,8 +288,6 @@ function autoplay_next() {
       now_playing.removeClass("now_playing");
       next_song = now_playing.next();
       next_song.addClass("now_playing");
-    } else {
-      next_song = $(".holding_tank.active li").first();
     }
     if (next_song.length) {
       playSongFromId(next_song.attr("songid"));
@@ -298,9 +298,17 @@ function autoplay_next() {
   }
 }
 
+function cancel_autoplay() {
+  if (!$("#holding-tank-column").has($("#selected_row")).length) {
+    autoplay = true;
+    toggleAutoPlay();
+  }
+}
+
 function playSelected(){
   var song_id = $('#selected_row').attr('songid');
   console.log('Got song ID ' + song_id);
+  cancel_autoplay();
   playSongFromId(song_id);
 }
 
@@ -373,6 +381,11 @@ function songDrag(event) {
   event.dataTransfer.setData("text", event.target.getAttribute('songid'));
 }
 
+function columnDrag(event) {
+  console.log("Starting drag for column ID " + event.target.getAttribute("id"));
+  event.dataTransfer.setData("application/x-moz-node",event.target.getAttribute("id"));
+}
+
 function sendToHotkeys() {
   if ($("#selected_row").is("span")) {
     return;
@@ -408,14 +421,15 @@ function selectPrev() {
 
 function toggleAutoPlay() {
     autoplay = !autoplay;
-    $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
-    $("#holding_tank").toggleClass("autoplaying");
     $(".now_playing").removeClass("now_playing");
+    $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
     if (autoplay) {
       $("#holding_tank_label").html("Auto Play");
       $(`.holding_tank li[songid=${$('#song_now_playing').attr('songid')}]`).addClass('now_playing');
+      $("#holding_tank").addClass("autoplaying");
     } else {
-      $("#holding_tank_label").html("Holding Tank");
+      $("#holding_tank_label").html("Holding Tank");      
+      $("#holding_tank").removeClass("autoplaying");
     }
 
 }
@@ -941,6 +955,7 @@ $( document ).ready(function() {
 
   $(".hotkeys li").on("drop", function (event) {
     $(this).removeClass("drop_target");
+    if (!event.originalEvent.dataTransfer.getData("text").length) return;
     hotkeyDrop(event.originalEvent);
   });
 
@@ -959,8 +974,25 @@ $( document ).ready(function() {
   });
 
   $("#holding_tank").on("drop", function (event) {
-    holdingTankDrop(event.originalEvent);
     $(event.originalEvent.target).removeClass("dropzone");
+    if (!event.originalEvent.dataTransfer.getData("text").length) return;
+    holdingTankDrop(event.originalEvent);
+  });
+
+  $(".card-header").on("dragover", function (event) {
+    event.preventDefault();
+  });
+
+  $(".card-header").on("drop", function (event) {
+    if (event.originalEvent.dataTransfer.getData("text").length) return;
+    var original_column = $(`#${event.originalEvent.dataTransfer.getData("application/x-moz-node")}`);
+    var target_column = $(event.target).closest('.col');
+    var columns = $('#top-row').children();
+    if (columns.index(original_column) > columns.index(target_column)) {
+      target_column.before(original_column.detach());
+    } else {
+      target_column.after(original_column.detach());
+    }
   });
 
   $("#holding_tank").on("dragover", function (event) {
