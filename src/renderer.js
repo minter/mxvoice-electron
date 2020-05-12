@@ -373,6 +373,11 @@ function songDrag(event) {
   event.dataTransfer.setData("text", event.target.getAttribute('songid'));
 }
 
+function columnDrag(event) {
+  console.log("Starting drag for column ID " + event.target.getAttribute("id"));
+  event.dataTransfer.setData("application/x-moz-node",event.target.getAttribute("id"));
+}
+
 function sendToHotkeys() {
   if ($("#selected_row").is("span")) {
     return;
@@ -864,6 +869,7 @@ $( document ).ready(function() {
 
   $(".hotkeys li").on("drop", function (event) {
     $(this).removeClass("drop_target");
+    if (!event.originalEvent.dataTransfer.getData("text").length) return;
     hotkeyDrop(event.originalEvent);
   });
 
@@ -882,8 +888,25 @@ $( document ).ready(function() {
   });
 
   $("#holding_tank").on("drop", function (event) {
-    holdingTankDrop(event.originalEvent);
     $(event.originalEvent.target).removeClass("dropzone");
+    if (!event.originalEvent.dataTransfer.getData("text").length) return;
+    holdingTankDrop(event.originalEvent);
+  });
+
+  $(".card-header").on("dragover", function (event) {
+    event.preventDefault();
+  });
+
+  $(".card-header").on("drop", function (event) {
+    if (event.originalEvent.dataTransfer.getData("text").length) return;
+    var original_column = $(`#${event.originalEvent.dataTransfer.getData("application/x-moz-node")}`);
+    var target_column = $(event.target).closest('.col');
+    var columns = $('#top-row').children();
+    if (columns.index(original_column) > columns.index(target_column)) {
+      target_column.before(original_column.detach());
+    } else {
+      target_column.after(original_column.detach());
+    }
   });
 
   $("#holding_tank").on("dragover", function (event) {
