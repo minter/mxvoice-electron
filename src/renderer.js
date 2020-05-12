@@ -1034,6 +1034,16 @@ $( document ).ready(function() {
     $(window).on('resize', function() {
       this.scale_scrollable();
     });
+
+    $(window).on('blur', function () {
+      $('.card-header').addClass('unfocused');
+      $('#player').addClass('unfocused');
+    });
+
+    $(window).on('focus', function () {
+      $('.card-header').removeClass('unfocused');
+      $('#player').removeClass('unfocused');
+    });
     
     // Is there only one song in the db? Pop the first-run modal
 

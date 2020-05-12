@@ -254,3 +254,8 @@ h6 a {
 #search-column {
   flex-grow: 1;
 }
+
+.unfocused {
+  outline: 5px ridge red;
+  outline-offset: -5px;
+}
