@@ -7,10 +7,10 @@ var sound_canceled = false;
 
 // Animate.css
 
-const animateCSS = (element, animation, prefix = 'animate__') =>
+const animateCSS = (element, animation, speed = '', prefix = 'animate__') =>
   // We create a Promise and return it
   new Promise((resolve, reject) => {
-    const animationName = `${prefix}${animation}`;
+    const animationName = `${prefix}${animation} ${speed}`;
     const node = element;
 
     node.addClass(`${prefix}animated ${animationName}`);
@@ -456,13 +456,15 @@ function toggleAutoPlay() {
 }
 
 function deleteSong() {
-  if ($("#selected_row").is('span')) {
-    $("#selected_row").parent().removeAttr('songid');
-    $("#selected_row").empty();
-    $("#selected_row").removeAttr('id');
-  } else {
-    $("#selected_row").remove();
-  }
+  animateCSS($('#selected_row'), 'zoomOut', 'animate__faster').then(() => {
+    if ($("#selected_row").is('span')) {
+      $("#selected_row").parent().removeAttr('songid');
+      $("#selected_row").empty();
+      $("#selected_row").removeAttr('id');
+    } else {
+      $("#selected_row").remove();
+    }
+  });;
   return false;
 }
 
