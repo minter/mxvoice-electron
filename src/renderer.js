@@ -5,6 +5,27 @@ var autoplay = false;
 var loop = false;
 var sound_canceled = false;
 
+// Animate.css
+
+const animateCSS = (element, animation, prefix = 'animate__') =>
+  // We create a Promise and return it
+  new Promise((resolve, reject) => {
+    const animationName = `${prefix}${animation}`;
+    const node = element;
+
+    node.addClass(`${prefix}animated ${animationName}`);
+
+    // When the animation ends, we clean the classes and resolve the Promise
+    function handleAnimationEnd() {
+      node.removeClass(`${prefix}animated ${animationName}`);
+      node.off('animationend', handleAnimationEnd);
+
+      resolve('Animation ended');
+    }
+
+    node.on('animationend', handleAnimationEnd);
+  });
+
 function playSongFromHotkey(hotkey) {
   console.log ('Getting song ID from hotkey ' + hotkey);
   var song_id = $(`.hotkeys.active #${hotkey}_hotkey`).attr('songid');
@@ -14,7 +35,7 @@ function playSongFromHotkey(hotkey) {
     autoplay = true;
     toggleAutoPlay();
     playSongFromId(song_id);
-     $(`.hotkeys.active #${hotkey}_hotkey`).fadeOut(100).fadeIn(100);
+    animateCSS($(`.hotkeys.active #${hotkey}_hotkey`), 'flash');
   }
 }
 
@@ -916,6 +937,7 @@ $( document ).ready(function() {
     } else {
       target_column.after(original_column.detach());
     }
+    original_column.addClass("animate__animated animate__jello");
   });
 
   $("#holding_tank").on("dragover", function (event) {
