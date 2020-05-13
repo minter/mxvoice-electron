@@ -1,5 +1,5 @@
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+:root {
+  --highlight-color: lightsteelblue;
 }
 
 .card {
@@ -25,7 +25,6 @@ body {
 }
 
 #now_playing_bar div {
-  
   color: white;
 }
 
@@ -34,16 +33,13 @@ body {
 }
 
 .holding_tank li {
-  border: 1px solid lightsteelblue;
-  background-color: lightsteelblue;
+  border: 1px solid var(--highlight-color);
+  background-color: var(--highlight-color);
 }
 
-h6 {
-  color: lightsteelblue;
-}
-
+h6,
 h6 a {
-  color: lightsteelblue;
+  color: var(--highlight-color);
 }
 
 .now_playing {
