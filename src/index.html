@@ -33,6 +33,7 @@
     <!-- normal script imports etc  -->
     <script src="../node_modules/jquery/dist/jquery.min.js"></script>
     <script src="../node_modules/mousetrap/mousetrap.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js"></script>
 
     <!-- Insert this line after script imports -->
     <script>if (window.module) module = window.module;</script>
@@ -261,24 +262,30 @@
                     class="fas fa-sm fa-play"></i></button>
                 <button id="pause_button" class="d-none btn btn-warning btn-lg"><i title="Stop" class="fas fa-sm fa-pause"></i></button>
               </div>
-              <div class="col-7">
+              <div id="player-col" class="col-7">
                 <div id="now_playing_bar" class="flex-row d-flex justify-content-between">
                   <div id="timer">0:00</div>
                   <div id="song_now_playing">&nbsp;</div>
                   <div id="duration">0:00</div>
                 </div>
                 <div class="flex-row">
+                  <div id="waveform" class="hidden"></div>
                   <div id="progress_bar" class="progress" data-toggle="tooltip" data-placement="bottom" title="0:00" style="height: 8px;">
                     <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" id="audio_progress"
                       role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                   </div>
+
                 </div>
               </div>
               <div id="stop_column" class="col-1">
                 <button id="stop_button" class="btn btn-danger btn-lg" disabled><i title="Stop" class="fas fa-sm fa-stop"></i></button>
               </div>
               <div id="controls_column" class="col-3 d-flex align-items-center">
-                <button id="loop_button" class="btn btn-secondary btn-sm"><i title="Loop" class="fas fa-md fa-sync-alt fa-flip-vertical"></i></button>
+                <button id="waveform_button" class="btn btn-secondary btn-sm" title="Waveform"><img src="./assets/icons/waveform.svg"
+                    style="filter: invert(100%); width: 15px;" /></button>
+                <button id="loop_button"
+                  class="btn btn-secondary btn-sm"><i title="Loop"
+                    class="fas fa-md fa-sync-alt fa-flip-vertical"></i></button>
                 <button id="mute_button" class="btn btn-secondary btn-sm"><i title="Mute" class="fas fa-md fa-volume-mute"></i></button>
                 <input type="range" class="custom-range mousetrap" value="100" id="volume">
               </div>

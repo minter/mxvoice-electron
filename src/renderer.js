@@ -4,6 +4,16 @@ var globalAnimation;
 var autoplay = false;
 var loop = false;
 var sound_canceled = false;
+var wavesurfer = WaveSurfer.create({
+  container: '#waveform',
+  waveColor: '#e9ecef',
+  backgroundColor: '#343a40',
+  progressColor: '#007bff',
+  cursorColor: 'white',
+  cursorWidth: 0,
+  responsive: true,
+  height: 105
+});
 
 // Animate.css
 
@@ -226,6 +236,7 @@ var howlerUtils = {
     globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
     if (!sound_canceled) {
       $("#audio_progress").width(((seek / self.duration()) * 100 || 0) + "%");
+      wavesurfer.seekTo(seek / self.duration());
       $("#timer").text(currentTime);
       $("#duration").text(`-${remainingTime}`);
     }
@@ -245,6 +256,7 @@ function song_ended() {
   }
   $("#stop_button").attr("disabled", true);
   sound_canceled = true;
+  wavesurfer.empty();
 }
 
 function playSongFromId(song_id){
@@ -256,9 +268,10 @@ function playSongFromId(song_id){
     var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
     var row = stmt.get(song_id);
     var filename = row.filename;
+    var sound_path = [path.join(preferences.locations.music_directory, filename)];
     console.log("Inside get, Filename is " + filename);
     sound = new Howl({
-      src: [path.join(preferences.locations.music_directory, filename)],
+      src: sound_path,
       html5: true,
       volume: $('#volume').val()/100,
       mute: $("#mute_button").hasClass("btn-danger"),
@@ -269,6 +282,7 @@ function playSongFromId(song_id){
         var title = row.title || "";
         var artist = row.artist || "";
         artist = artist.length ? "by " + artist : artist;
+        wavesurfer.load(sound_path);
         $("#song_now_playing")
           .html(
             `<i id="song_spinner" title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
@@ -1011,6 +1025,13 @@ $( document ).ready(function() {
     }
   })
 
+  $("#waveform").click(function (e) {
+    var percent = (e.clientX - $(this).offset().left) / $(this).width();
+    if (sound) {
+      sound.seek(sound.duration() * percent);
+    }
+  })
+
   $("#volume").on('change',function() {
     var volume = $(this).val()/100;
     if (sound) {
@@ -1030,6 +1051,11 @@ $( document ).ready(function() {
   $("#loop_button").click(function () {
     loop = !loop;
     loop_on(loop);
+  });
+
+  $("#waveform_button").click(function () {
+    $('#waveform').toggleClass('hidden',10000);
+    $(this).toggleClass('btn-primary btn-secondary');
   });
 
   $('.modal').on('show.bs.modal', function() {
