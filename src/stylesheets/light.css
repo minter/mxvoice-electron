@@ -1,0 +1,69 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.card {
+  border: 1px solid #666;
+}
+
+.card-header {
+  background-color: #0d324d;
+}
+
+.icon-bar a:hover, h6 a:hover {
+  color: gray;
+}
+
+.drop_target {
+  color: white;
+  background-color: darkslateblue;
+}
+
+.dragenter {
+  background-color: yellowgreen;
+  border: 3px dashed black;
+}
+
+#now_playing_bar div {
+  
+  color: white;
+}
+
+.dropzone {
+  border-bottom: 1px dotted black !important;
+}
+
+.holding_tank li {
+  border: 1px solid lightsteelblue;
+  background-color: lightsteelblue;
+}
+
+h6 {
+  color: lightsteelblue;
+}
+
+h6 a {
+  color: lightsteelblue;
+}
+
+.now_playing {
+  color: green;
+}
+
+.autoplaying {
+  background-color: #F0F5F1;
+}
+
+#selected_row {
+  color: white;
+  background-color: lightslategrey !important;
+}
+
+.delete_link {
+  color: red;
+}
+
+#player {
+  background-color: #000000;
+  background-image: linear-gradient(315deg, #000000 0%, #414141 74%);
+}

@@ -12,14 +12,6 @@ body {
   padding: 0;
 }
 
-.card {
-  border: 1px solid #666;
-}
-
-.card-header {
-  background-color: #0d324d;
-}
-
 .my-custom-scrollbar {
 position: relative;
 overflow-y: scroll;
@@ -38,15 +30,6 @@ font-size: 11px;
 .icon-bar a {
   margin-left: 7px;
   font-size: 18px;
-}
-
-.icon-bar a:hover, h6 a:hover {
-  color: gray;
-}
-
-.drop_target {
-  color: white;
-  background-color: darkslateblue;
 }
 
 #search_form {
@@ -75,7 +58,6 @@ font-size: 11px;
 .hotkeys .badge {
   width: 30px;
   margin-right: 0;
-  background-color: darkslategray;
 }
 
 .hotkeys span {
@@ -85,11 +67,6 @@ font-size: 11px;
   padding-left: 3px;
   border-radius: 5px;
   overflow: hidden;
-}
-
-.dragenter {
-  background-color: yellowgreen;
-  border: 3px dashed black;
 }
 
 #timer {
@@ -111,7 +88,6 @@ font-size: 11px;
   
   font-size: 16px;
   padding-bottom: 7px;
-  color: white;
   font-family: 'Share Tech Mono', 'Courier', sans-serif;
 }
 
@@ -123,10 +99,6 @@ font-size: 11px;
   font-weight: bold;
 }
 
-.dropzone {
-  border-bottom: 1px dotted black !important;
-}
-
 .holding_tank {
   font-size: 12px;
   position: relative;
@@ -136,28 +108,23 @@ font-size: 11px;
 }
 
 .holding_tank li {
-  border: 1px solid lightsteelblue;
   border-radius: 5px;
   margin: 2px;
   padding: 6px;
-  background-color: lightsteelblue;
 }
 
 h6 {
   font-size: 12px;
   text-transform: uppercase;
-  color: lightsteelblue;
   white-space: nowrap;
   line-height: 17px;
 }
 
 h6 a {
-  color: lightsteelblue;
   font-size: 14px;
 }
 
 .now_playing {
-  color: green;
   font-weight: bold;
 }
 
@@ -174,15 +141,6 @@ h6 a {
   padding-right: 5px;
 }
 
-.autoplaying {
-  background-color: #F0F5F1;
-}
-
-#selected_row {
-  color: white;
-  background-color: lightslategrey !important;
-}
-
 .nav-item {
   font-size: 11px;
 }
@@ -197,21 +155,12 @@ h6 a {
   padding-right: 0;
 }
 
-.delete_link {
-  color: red;
-}
-
 .category-description {
   margin-left: 12px;
   margin: 1px !important;
 }
 .modal .close, .modal .btn, .modal input, .modal select {
   font-size: 12px;
-}
-
-#player {
-  background-color: #000000;
-  background-image: linear-gradient(315deg, #000000 0%, #414141 74%);
 }
 
 #progress_bar {
