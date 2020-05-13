@@ -1,6 +1,46 @@
 :root {
   --highlight-color: #a8d0e6;
   --header-color: #24305e;
+  --panel-color: white;
+  --card-border: black;
+  --card-text: black;
+  --inverse-card-text: white;
+  --autoplay: #F0F5F1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --highlight-color: #a8d0e6;
+    --header-color: #24305e;
+    --panel-color: black;
+    --card-border: #505050;
+    --card-text: white;
+    --inverse-card-text: black;
+    --autoplay: #282828;
+  }
+
+  table td {
+    color: var(--card-text);
+    border-top: 1px solid var(--card-border) !important;
+  }
+
+  .nav-link {
+    color: var(--card-text) !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--card-border) !important;
+  }
+
+  .nav-link.active {
+    
+    border: 1px solid var(--card-border) !important;
+    border-bottom: 0 !important;
+    background-color: var(--panel-color) !important;
+  }
+
+  .nav-item {
+    background-color: var(--inverse-card-text);
+  }
+
 }
 
 thead {
@@ -22,8 +62,14 @@ h6 a {
   background-color: var(--header-color);
 }
 
+#now_playing_bar div {
+  color: white;
+}
+
 .card {
-  border: 1px solid black;
+  color: var(--card-text);
+  border: 1px solid var(--card-border);
+  background-color: var(--panel-color);
 }
 
 .card-header, .modal-header {
@@ -39,10 +85,6 @@ h6 a {
   background-color: #f8e9a1;
 }
 
-#now_playing_bar div {
-  color: white;
-}
-
 .dropzone {
   border-bottom: 1px dotted black !important;
 }
@@ -50,6 +92,11 @@ h6 a {
 .holding_tank li {
   border: 1px solid var(--highlight-color);
   background-color: var(--highlight-color);
+  color: var(--inverse-card-text);
+}
+
+.hotkeys li {
+  background-color: var(--panel-color);
 }
 
 .now_playing {
@@ -57,7 +104,7 @@ h6 a {
 }
 
 .autoplaying {
-  background-color: #F0F5F1;
+  background-color: var(--autoplay);
 }
 
 .delete_link {
@@ -69,6 +116,3 @@ h6 a {
   color: white;
 }
 
-.nav-link {
-  color: var(--header-color)
-}
