@@ -1,5 +1,5 @@
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 #top-row {
@@ -47,6 +47,11 @@ font-size: 11px;
 
 #category_select {
   max-width: 200px;
+  border-radius: 20px 0 0 20px;
+}
+
+#reset_button {
+  border-radius: 0 20px 20px 0;
 }
 
 .hotkeys li {

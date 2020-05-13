@@ -8,17 +8,26 @@ thead {
   color: white;
 }
 
-.card {
-  border: 1px solid #b5b9c2;
-}
-
-.card-header {
-  background-color: var(--header-color);
-}
-
 h6,
 h6 a {
   color: white;
+}
+
+#selected_row {
+  color: white;
+  background-color: #374785 !important;
+}
+
+#player {
+  background-color: var(--header-color);
+}
+
+.card {
+  border: 1px solid black;
+}
+
+.card-header, .modal-header {
+  background-color: var(--header-color);
 }
 
 .icon-bar a:hover, h6 a:hover {
@@ -51,15 +60,15 @@ h6 a {
   background-color: #F0F5F1;
 }
 
-#selected_row {
-  color: white;
-  background-color: #374785 !important;
-}
-
 .delete_link {
   color: red;
 }
 
-#player {
-  background-color: var(--header-color);
+.badge {
+  background-color: darkolivegreen;
+  color: white;
+}
+
+.nav-link {
+  color: var(--header-color)
 }
