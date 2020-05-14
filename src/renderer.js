@@ -442,7 +442,7 @@ function toggleAutoPlay() {
       $(`.holding_tank li[songid=${$('#song_now_playing').attr('songid')}]`).addClass('now_playing');
       $("#holding_tank").addClass("autoplaying");
     } else {
-      $("#holding_tank_label").html("Holding Tank");      
+      $("#holding_tank_label").html("Holding Tank");
       $("#holding_tank").removeClass("autoplaying");
     }
 
@@ -683,6 +683,12 @@ function saveBulkUpload(event) {
     const categoryInsertStmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
     try {
       const categoryInfo = categoryInsertStmt.run(code, description)
+      if (categoryInfo.changes == 1) {
+        console.log(`Added new row into database`)
+        populateCategorySelect()
+        populateCategoriesModal()
+        category = code
+      }
     } catch(err) {
       if(err.message.match(/UNIQUE constraint/)) {
         var description = $('#bulk-song-form-new-category').val()
@@ -690,12 +696,6 @@ function saveBulkUpload(event) {
         alert(`Couldn't add a category named "${description}" - apparently one already exists!`)
         return
       }
-    }
-    if (categoryInfo.changes == 1) {
-      console.log(`Added new row into database`)
-      populateCategorySelect()
-      populateCategoriesModal()
-      category = code
     }
   }
 
