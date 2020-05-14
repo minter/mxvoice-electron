@@ -92,7 +92,7 @@ h6 a {
 .holding_tank li {
   border: 1px solid var(--highlight-color);
   background-color: var(--highlight-color);
-  color: var(--inverse-card-text);
+  color: black;
 }
 
 .hotkeys li {
