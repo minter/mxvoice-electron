@@ -478,7 +478,7 @@ function deleteSong() {
     } else {
       $("#selected_row").remove();
     }
-  });;
+  });
   return false;
 }
 
@@ -1054,8 +1054,20 @@ $( document ).ready(function() {
   });
 
   $("#waveform_button").click(function () {
-    $('#waveform').toggleClass('hidden',10000);
-    $(this).toggleClass('btn-primary btn-secondary');
+    if ($('#waveform').hasClass('hidden')) {
+      $('#waveform').removeClass('hidden');
+      $(this).addClass('btn-primary');
+      $(this).removeClass('btn-secondary');
+      animateCSS($('#waveform'), 'fadeInUp').then(() => {
+        
+      });
+    } else {
+      $(this).removeClass('btn-primary');
+      $(this).addClass('btn-secondary');
+       animateCSS($('#waveform'), 'fadeOutDown').then(() => {
+         $('#waveform').addClass('hidden');
+       });
+    }
   });
 
   $('.modal').on('show.bs.modal', function() {

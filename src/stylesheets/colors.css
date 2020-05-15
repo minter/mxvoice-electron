@@ -1,8 +1,8 @@
 :root {
   --highlight-color: #a8d0e6;
-  --header-color: #24305e;
-  --panel-color: white;
-  --card-border: black;
+  --header-color: rgb(45, 45, 45);
+  --panel-color: rgb(243,243,243);
+  --card-border: rgb(45, 45, 45);
   --card-text: black;
   --inverse-card-text: white;
   --autoplay: #F0F5F1;
@@ -10,18 +10,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --highlight-color: #a8d0e6;
-    --header-color: #24305e;
-    --panel-color: black;
+    --highlight-color: rgb(79,80,81);
+    --header-color: #454545;
+    --panel-color: rgb(30,30,30);
     --card-border: #505050;
     --card-text: white;
     --inverse-card-text: black;
     --autoplay: #282828;
+    --holding-tank-item: rgb(66,59,47);
   }
 
   table td {
     color: var(--card-text);
-    border-top: 1px solid var(--card-border) !important;
+    border-top: 1px dotted var(--card-border) !important;
   }
 
   .nav-link {
@@ -38,14 +39,15 @@
   }
 
   .nav-item {
-    background-color: var(--inverse-card-text);
+    background-color: var(--panel-color);
   }
 
 }
 
-thead {
+th {
   background-color: var(--header-color);
   color: white;
+  border: 0 !important;
 }
 
 h6,
@@ -55,7 +57,7 @@ h6 a {
 
 #selected_row {
   color: white;
-  background-color: #374785 !important;
+  background-color: var(--highlight-color) !important;
 }
 
 #player {
@@ -91,8 +93,8 @@ h6 a {
 
 .holding_tank li {
   border: 1px solid var(--highlight-color);
-  background-color: var(--highlight-color);
-  color: black;
+  background-color: var(--holding-tank-item);
+  color: --inverse-card-text;
 }
 
 .hotkeys li {
@@ -112,7 +114,7 @@ h6 a {
 }
 
 .badge {
-  background-color: darkolivegreen;
+  background-color: rgb(66,73,63);
   color: white;
 }
 
