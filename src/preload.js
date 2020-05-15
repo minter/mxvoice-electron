@@ -58,6 +58,9 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
       categories[row.code] = row.description;
       $('#song-form-category').append(`<option value="${row.code}">${row.description}</option>`);
     }
+    $('#song-form-category').append(`<option value="" disabled>-----------------------</option>`);
+    $('#song-form-category').append(`<option value="--NEW--">ADD NEW CATEGORY...</option>`);
+
     $('#songFormModal form').attr('onsubmit', 'saveNewSong(event)')
     $('#songFormModalTitle').html('Add New Song To Mx. Voice')
     $('#songFormSubmitButton').html('Add Song');
@@ -128,5 +131,12 @@ process.once('loaded', () => {
     const stmt = db.prepare("CREATE UNIQUE INDEX 'category_code_index' ON categories(code)")
     const info = stmt.run()
   }
+
+  if (db.pragma('index_info(category_description_index)').length == 0) {
+    console.log(`Creating unique index on category descriptions`)
+    const stmt = db.prepare("CREATE UNIQUE INDEX 'category_description_index' ON categories(description)")
+    const info = stmt.run()
+  }
+
 
 })
