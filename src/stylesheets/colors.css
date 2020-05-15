@@ -127,7 +127,7 @@ table td {
 }
 
 .badge {
-  background-color: rgb(66,73,63);
-  color: white;
+  background-color: var(--card-text);
+  color: var(--inverse-card-text);
 }
 
