@@ -2,10 +2,10 @@
   --highlight-color: rgb(145,183,216);
   --header-color: rgb(236,236,236);
   --panel-color: white;
-  --card-border: #d3d3d3;
+  --card-border: #e0e0e0;
   --card-text: black;
   --inverse-card-text: white;
-  --autoplay: rgb(157, 157, 119);
+  --autoplay: rgb(83,164,81);
   --player: rgb(45, 45, 45);
   --holding-tank-item: rgb(203,209,213);
 }
@@ -18,32 +18,9 @@
     --card-border: #505050;
     --card-text: white;
     --inverse-card-text: black;
-    --autoplay: rgb(157,157,119);
+    --autoplay: rgb(83, 164, 81);
     --holding-tank-item: rgb(50,50,50);
   }
-
-  table td {
-    color: var(--card-text);
-    border-top: 1px dotted var(--card-border) !important;
-  }
-
-  .nav-link {
-    color: var(--card-text) !important;
-    border: 0 !important;
-    border-bottom: 1px solid var(--card-border) !important;
-  }
-
-  .nav-link.active {
-    
-    border: 1px solid var(--card-border) !important;
-    border-bottom: 0 !important;
-    background-color: var(--panel-color) !important;
-  }
-
-  .nav-item {
-    background-color: var(--panel-color);
-  }
-
 }
 
 th {
@@ -65,7 +42,15 @@ h6 a,
 }
 
 #player {
-  background-color: var(--player);
+  background: linear-gradient(27deg, #151515 5px, transparent 5px) 0 5px,
+  linear-gradient(207deg, #151515 5px, transparent 5px) 10px 0px,
+  linear-gradient(27deg, #222 5px, transparent 5px) 0px 10px,
+  linear-gradient(207deg, #222 5px, transparent 5px) 10px 5px,
+  linear-gradient(90deg, #1b1b1b 10px, transparent 10px),
+  linear-gradient(#1d1d1d 25%, #1a1a1a 25%, #1a1a1a 50%, transparent 50%, transparent 75%, #242424 75%, #242424);
+  background-color: #131313;
+  background-size: 20px 20px;
+  border: 0;
 }
 
 #now_playing_bar div {
@@ -80,10 +65,32 @@ h6 a,
 
 .card-header, .modal-header {
   background-color: var(--header-color);
+  border-bottom: 0;
 }
 
 .icon-bar a:hover, h6 a:hover {
   color: gray;
+}
+
+table td {
+  color: var(--card-text);
+  border-top: 1px dotted var(--card-border) !important;
+}
+
+.nav-link {
+  color: var(--card-text) !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--card-border) !important;
+}
+
+.nav-link.active {
+  border: 1px solid var(--card-border) !important;
+  border-bottom: 0 !important;
+  background-color: var(--panel-color) !important;
+}
+
+.nav-item {
+  background-color: var(--panel-color);
 }
 
 .dropzone {
@@ -110,7 +117,10 @@ h6 a,
 }
 
 .autoplaying {
-  background-color: var(--autoplay);
+  background-color: var(--panel-color);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23237536' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+  position: relative;
+  top: -3px;
 }
 
 .delete_link {

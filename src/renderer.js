@@ -12,7 +12,7 @@ var wavesurfer = WaveSurfer.create({
   cursorColor: 'white',
   cursorWidth: 0,
   responsive: true,
-  height: 105
+  height: 100
 });
 
 // Animate.css
@@ -785,6 +785,8 @@ function loop_on(bool) {
 }
 
 $( document ).ready(function() {
+
+  scale_scrollable();
 
   populateCategorySelect();
 
