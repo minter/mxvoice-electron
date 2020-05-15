@@ -1,23 +1,25 @@
 :root {
-  --highlight-color: #a8d0e6;
-  --header-color: rgb(45, 45, 45);
-  --panel-color: rgb(243,243,243);
-  --card-border: rgb(45, 45, 45);
+  --highlight-color: rgb(145,183,216);
+  --header-color: rgb(236,236,236);
+  --panel-color: white;
+  --card-border: #d3d3d3;
   --card-text: black;
   --inverse-card-text: white;
-  --autoplay: #F0F5F1;
+  --autoplay: rgb(157, 157, 119);
+  --player: rgb(45, 45, 45);
+  --holding-tank-item: rgb(203,209,213);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --highlight-color: rgb(79,80,81);
-    --header-color: #454545;
+    --header-color: rgb(45, 45, 45);
     --panel-color: rgb(30,30,30);
     --card-border: #505050;
     --card-text: white;
     --inverse-card-text: black;
     --autoplay: rgb(157,157,119);
-    --holding-tank-item: rgb(66,59,47);
+    --holding-tank-item: rgb(50,50,50);
   }
 
   table td {
@@ -46,22 +48,24 @@
 
 th {
   background-color: var(--header-color);
-  color: white;
+  color: var(--card-text);
   border: 0 !important;
 }
 
 h6,
-h6 a {
-  color: white;
+h6 a,
+.modal-title,
+.close {
+  color: var(--card-text);
 }
 
 #selected_row {
-  color: white;
+  color: var(--card-text);
   background-color: var(--highlight-color) !important;
 }
 
 #player {
-  background-color: var(--header-color);
+  background-color: var(--player);
 }
 
 #now_playing_bar div {
@@ -82,23 +86,23 @@ h6 a {
   color: gray;
 }
 
-.drop_target {
-  color: white;
-  background-color: #f8e9a1;
-}
-
 .dropzone {
   border-bottom: 1px dotted black !important;
 }
 
 .holding_tank li {
-  border: 1px solid var(--highlight-color);
+  border: 1px solid var(--holding-tank-item);
   background-color: var(--holding-tank-item);
-  color: --inverse-card-text;
+  color: var(--card-text);
 }
 
 .hotkeys li {
   background-color: var(--panel-color);
+}
+
+.drop_target {
+  color: white;
+  background-color: var(--highlight-color) !important;
 }
 
 .now_playing {
