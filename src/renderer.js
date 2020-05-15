@@ -457,12 +457,15 @@ function selectPrev() {
 function toggleAutoPlay() {
     autoplay = !autoplay;
     $(".now_playing").removeClass("now_playing");
-    $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
     if (autoplay) {
       $("#holding_tank_label").html("Auto Play");
+      $("#autoplay_button").addClass("fa-stop");
+      $("#autoplay_button").removeClass("fa-play-circle");
       $(`.holding_tank li[songid=${$('#song_now_playing').attr('songid')}]`).addClass('now_playing');
       $("#holding_tank").addClass("autoplaying");
     } else {
+      $("#autoplay_button").removeClass("fa-stop");
+      $("#autoplay_button").addClass("fa-play-circle");
       $("#holding_tank_label").html("Holding Tank");      
       $("#holding_tank").removeClass("autoplaying");
     }
