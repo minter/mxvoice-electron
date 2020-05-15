@@ -458,7 +458,7 @@ function toggleAutoPlay() {
     autoplay = !autoplay;
     $(".now_playing").removeClass("now_playing");
     if (autoplay) {
-      $("#holding_tank_label").html("Auto Play");
+      $("#holding_tank_label").html("Auto-Play");
       $("#autoplay_button").addClass("fa-stop");
       $("#autoplay_button").removeClass("fa-play-circle");
       $(`.holding_tank li[songid=${$('#song_now_playing').attr('songid')}]`).addClass('now_playing');

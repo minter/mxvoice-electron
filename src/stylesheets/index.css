@@ -6,6 +6,13 @@ body {
   min-height: calc(100vh - 90px);
 }
 
+#autoplay_button {
+  position: absolute;
+  left: 117px;
+  top: 15px;
+
+}
+
 .container-fluid {
   min-height: 100vh;
   overflow: auto;
