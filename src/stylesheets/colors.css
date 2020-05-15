@@ -16,7 +16,7 @@
     --card-border: #505050;
     --card-text: white;
     --inverse-card-text: black;
-    --autoplay: #282828;
+    --autoplay: rgb(157,157,119);
     --holding-tank-item: rgb(66,59,47);
   }
 
