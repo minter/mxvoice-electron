@@ -45,7 +45,7 @@ function playSongFromHotkey(hotkey) {
     autoplay = true;
     toggleAutoPlay();
     playSongFromId(song_id);
-    animateCSS($(`.hotkeys.active #${hotkey}_hotkey`), 'flash');
+    animateCSS($(`.hotkeys.active #${hotkey}_hotkey`), 'flipInX');
   }
 }
 
