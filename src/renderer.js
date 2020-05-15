@@ -135,6 +135,7 @@ function searchData(){
   console.log("Query string is " + query_string);
 
   $( '#omni_search' ).select();
+  $("#category_select").prop("selectedIndex", 0);
 
   var stmt = db.prepare("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist');
   for (const row of stmt.iterate(query_params)) {
@@ -983,8 +984,10 @@ $( document ).ready(function() {
   });
 
   $("#category_select").on("change", function () {
+    var category = $( "#category_select" ).prop('selectedIndex');
     searchData();
     $("#omni_search").focus();
+    $("#category_select").prop('selectedIndex', category);
   });
 
   $("#holding_tank").on("drop", function (event) {
