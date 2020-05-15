@@ -105,6 +105,7 @@ table td {
 
 .hotkeys li {
   background-color: var(--panel-color);
+  border-bottom: 1px dotted var(--card-border) !important;
 }
 
 .drop_target {
