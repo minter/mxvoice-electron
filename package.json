@@ -1,7 +1,7 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "3.0.0-beta4",
+  "version": "3.0.0-beta5",
   "description": "Improv Audio Software",
   "repository": "https://github.com/minter/mxvoice-electron",
   "appBundleId": "app.mxvoice.mxvoice",
