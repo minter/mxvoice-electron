@@ -1120,6 +1120,7 @@ $( document ).ready(function() {
   $('#songFormModal').on('hidden.bs.modal', function (e) {
     $('#song-form-category').val('');
     $('#song-form-title').val('');
+    $('#song-form-new-category').val('');
     $('#song-form-artist').val('');
     $('#song-form-info').val('');
     $('#song-form-duration').val('');
@@ -1152,8 +1153,10 @@ $( document ).ready(function() {
             var optionValue = $(this).attr("value");
             if(optionValue == "--NEW--"){
                 $("#SongFormNewCategory").show();
+                $("#song-form-new-category").attr('required', 'required')
             } else{
                 $("#SongFormNewCategory").hide();
+                $("#song-form-new-category").removeAttr("required")
             }
         });
     }).change();
@@ -1163,13 +1166,16 @@ $( document ).ready(function() {
             var optionValue = $(this).attr("value");
             if(optionValue == "--NEW--"){
                 $("#bulkSongFormNewCategory").show();
+                $("#bulk-song-form-new-category").attr('required', 'required')
             } else{
                 $("#bulkSongFormNewCategory").hide();
+                $("#bulk-song-form-new-category").removeAttr('required');
             }
         });
     }).change();
 
     $('#bulkAddModal').on('hidden.bs.modal', function (e) {
       $("#bulkSongFormNewCategory").hide();
+      $("#bulk-song-form-new-category").val('');
     })
 });
