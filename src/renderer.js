@@ -12,8 +12,29 @@ var wavesurfer = WaveSurfer.create({
   cursorColor: 'white',
   cursorWidth: 0,
   responsive: true,
-  height: 105
+  height: 100
 });
+
+// Animate.css
+
+const animateCSS = (element, animation, speed = '', prefix = 'animate__') =>
+  // We create a Promise and return it
+  new Promise((resolve, reject) => {
+    const animationName = `${prefix}${animation} ${speed}`;
+    const node = element;
+
+    node.addClass(`${prefix}animated ${animationName}`);
+
+    // When the animation ends, we clean the classes and resolve the Promise
+    function handleAnimationEnd() {
+      node.removeClass(`${prefix}animated ${animationName}`);
+      node.off('animationend', handleAnimationEnd);
+
+      resolve('Animation ended');
+    }
+
+    node.on('animationend', handleAnimationEnd);
+  });
 
 function playSongFromHotkey(hotkey) {
   console.log ('Getting song ID from hotkey ' + hotkey);
@@ -24,7 +45,7 @@ function playSongFromHotkey(hotkey) {
     autoplay = true;
     toggleAutoPlay();
     playSongFromId(song_id);
-     $(`.hotkeys.active #${hotkey}_hotkey`).fadeOut(100).fadeIn(100);
+    animateCSS($(`.hotkeys.active #${hotkey}_hotkey`), 'flipInX');
   }
 }
 
@@ -437,26 +458,31 @@ function selectPrev() {
 function toggleAutoPlay() {
     autoplay = !autoplay;
     $(".now_playing").removeClass("now_playing");
-    $("#autoplay_button").toggleClass("fa-stop fa-play-circle");
     if (autoplay) {
-      $("#holding_tank_label").html("Auto Play");
+      $("#holding_tank_label").html("Auto-Play");
+      $("#autoplay_button").addClass("fa-stop");
+      $("#autoplay_button").removeClass("fa-play-circle");
       $(`.holding_tank li[songid=${$('#song_now_playing').attr('songid')}]`).addClass('now_playing');
       $("#holding_tank").addClass("autoplaying");
     } else {
-      $("#holding_tank_label").html("Holding Tank");
+      $("#autoplay_button").removeClass("fa-stop");
+      $("#autoplay_button").addClass("fa-play-circle");
+      $("#holding_tank_label").html("Holding Tank");      
       $("#holding_tank").removeClass("autoplaying");
     }
 
 }
 
 function deleteSong() {
-  if ($("#selected_row").is('span')) {
-    $("#selected_row").parent().removeAttr('songid');
-    $("#selected_row").empty();
-    $("#selected_row").removeAttr('id');
-  } else {
-    $("#selected_row").remove();
-  }
+  animateCSS($('#selected_row'), 'zoomOut', 'animate__faster').then(() => {
+    if ($("#selected_row").is('span')) {
+      $("#selected_row").parent().removeAttr('songid');
+      $("#selected_row").empty();
+      $("#selected_row").removeAttr('id');
+    } else {
+      $("#selected_row").remove();
+    }
+  });
   return false;
 }
 
@@ -838,6 +864,8 @@ function loop_on(bool) {
 
 $( document ).ready(function() {
 
+  scale_scrollable();
+
   populateCategorySelect();
 
   $("#search_results").on("click", "tbody tr", function (event) {
@@ -1010,6 +1038,7 @@ $( document ).ready(function() {
     } else {
       target_column.after(original_column.detach());
     }
+    original_column.addClass("animate__animated animate__jello");
   });
 
   $("#holding_tank").on("dragover", function (event) {
@@ -1110,8 +1139,20 @@ $( document ).ready(function() {
   });
 
   $("#waveform_button").click(function () {
-    $('#waveform').toggleClass('hidden',10000);
-    $(this).toggleClass('btn-primary btn-secondary');
+    if ($('#waveform').hasClass('hidden')) {
+      $('#waveform').removeClass('hidden');
+      $(this).addClass('btn-primary');
+      $(this).removeClass('btn-secondary');
+      animateCSS($('#waveform'), 'fadeInUp').then(() => {
+        
+      });
+    } else {
+      $(this).removeClass('btn-primary');
+      $(this).addClass('btn-secondary');
+       animateCSS($('#waveform'), 'fadeOutDown').then(() => {
+         $('#waveform').addClass('hidden');
+       });
+    }
   });
 
   $('.modal').on('show.bs.modal', function() {

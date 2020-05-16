@@ -1,0 +1,133 @@
+:root {
+  --highlight-color: rgb(145,183,216);
+  --header-color: rgb(236,236,236);
+  --panel-color: white;
+  --card-border: #e0e0e0;
+  --card-text: rgb(36,36,36);
+  --inverse-card-text: white;
+  --autoplay: rgb(83,164,81);
+  --player: rgb(45, 45, 45);
+  --holding-tank-item: rgb(203,209,213);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --highlight-color: rgb(79,80,81);
+    --header-color: rgb(45, 45, 45);
+    --panel-color: rgb(30,30,30);
+    --card-border: #505050;
+    --card-text: rgb(226,226,226);
+    --inverse-card-text: black;
+    --autoplay: rgb(83, 164, 81);
+    --holding-tank-item: rgb(50,50,50);
+  }
+}
+
+th {
+  background-color: var(--header-color);
+  color: var(--card-text);
+  border: 0 !important;
+}
+
+h6,
+h6 a,
+.modal-title,
+.close {
+  color: var(--card-text);
+}
+
+#selected_row {
+  color: var(--card-text);
+  background-color: var(--highlight-color) !important;
+}
+
+#player {
+  background-color: var(--header-color);
+}
+
+#now_playing_bar div {
+  color: var(--card-text);
+}
+
+.progress {
+  background-color: #a9a9a9;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  background: #a9a9a9;
+}
+
+.card {
+  color: var(--card-text);
+  border: 1px solid var(--card-border);
+  background-color: var(--panel-color);
+}
+
+.card-header, .modal-header {
+  background-color: var(--header-color);
+  border-bottom: 0;
+}
+
+.icon-bar a:hover, h6 a:hover {
+  color: gray;
+}
+
+table td {
+  color: var(--card-text);
+  border-top: 1px dotted var(--card-border) !important;
+}
+
+.nav-link {
+  color: var(--card-text) !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--card-border) !important;
+}
+
+.nav-link.active {
+  border: 1px solid var(--card-border) !important;
+  border-bottom: 0 !important;
+  background-color: var(--panel-color) !important;
+}
+
+.nav-item {
+  background-color: var(--panel-color);
+}
+
+.dropzone {
+  border-bottom: 1px dotted black !important;
+}
+
+.holding_tank li {
+  border: 1px solid var(--holding-tank-item);
+  background-color: var(--holding-tank-item);
+  color: var(--card-text);
+}
+
+.hotkeys li {
+  background-color: var(--panel-color);
+  border-bottom: 1px dotted var(--card-border) !important;
+}
+
+.drop_target {
+  color: white;
+  background-color: var(--highlight-color) !important;
+}
+
+.now_playing {
+  color: green;
+}
+
+.autoplaying {
+  background-color: var(--panel-color);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23237536' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+}
+
+.delete_link {
+  color: red;
+}
+
+.badge {
+  background-color: var(--card-text);
+  color: var(--inverse-card-text);
+}
+
