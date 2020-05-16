@@ -46,7 +46,11 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
   mm.parseFile(filename)
   .then( metadata => {
     var pathData = path.parse(filename);
-    var durationSeconds = metadata.format.duration.toFixed(0);
+    var duration = metadata.format.duration
+    var durationSeconds = 0
+    if(duration) {
+      durationSeconds = duration.toFixed(0);
+    }
     var durationString = new Date(durationSeconds * 1000).toISOString().substr(14, 5);
     $('#song-form-duration').val(durationString);
     $('#song-form-title').val(metadata.common.title);
