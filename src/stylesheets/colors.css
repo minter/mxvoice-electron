@@ -8,6 +8,7 @@
   --autoplay: rgb(83,164,81);
   --player: rgb(45, 45, 45);
   --holding-tank-item: rgb(203,209,213);
+  --context-menu-list: white;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,6 +21,7 @@
     --inverse-card-text: black;
     --autoplay: rgb(83, 164, 81);
     --holding-tank-item: rgb(50,50,50);
+    --context-menu-list: rgb(30,30,30);
   }
 }
 
@@ -97,6 +99,18 @@ table td {
   border-bottom: 1px dotted black !important;
 }
 
+.context-menu-list {
+  background: var(--context-menu-list);
+  background-color: var(--context-menu-list);
+}
+
+.context-menu-item {
+  background: var(--context-menu-list);
+  background-color: var(--context-menu-list);
+  color: var(--card-text);
+
+}
+
 .holding_tank li {
   border: 1px solid var(--holding-tank-item);
   background-color: var(--holding-tank-item);
@@ -130,4 +144,3 @@ table td {
   background-color: var(--card-text);
   color: var(--inverse-card-text);
 }
-
