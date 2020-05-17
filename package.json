@@ -39,7 +39,8 @@
     "music-metadata": "^6.3.7",
     "n-readlines": "^1.0.0",
     "popper.js": "^1.14.4",
-    "uuid": "^8.0.0"
+    "uuid": "^8.0.0",
+    "wavesurfer.js": "^3.3.3"
   },
   "devDependencies": {
     "@electron-forge/cli": "6.0.0-beta.51",
