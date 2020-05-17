@@ -1011,6 +1011,12 @@ $( document ).ready(function() {
   $.contextMenu({
       selector: '.context-menu',
       items: {
+        play: {
+            name: "Play",
+            callback: function(key, opt){
+                playSelected();
+            }
+        },
         edit: {
             name: "Edit",
             callback: function(key, opt){
