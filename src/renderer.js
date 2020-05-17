@@ -1013,18 +1013,21 @@ $( document ).ready(function() {
       items: {
         play: {
             name: "Play",
+            icon: 'fas fa-play-circle',
             callback: function(key, opt){
                 playSelected();
             }
         },
         edit: {
             name: "Edit",
+            icon: 'fas fa-edit',
             callback: function(key, opt){
                 editSelectedSong();
             }
         },
         delete: {
           name: "Delete",
+          icon: 'fas fa-trash-alt',
           callback: function(key, opt){
               deleteSelectedSong();
           }
