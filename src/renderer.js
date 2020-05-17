@@ -161,7 +161,7 @@ function searchData(){
   var stmt = db.prepare("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist');
   for (const row of stmt.iterate(query_params)) {
     //console.log('Found ' + row.title + ' by ' + row.artist);
-    $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${row.id}'><td class='hide-1'>${categories[row.category]}</td><td class='hide-2'>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
+    $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${row.id}'><td class='hide-1'>${categories[row.category]}</td><td class='hide-2'>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
   }
 
   scale_scrollable();
@@ -467,7 +467,7 @@ function toggleAutoPlay() {
     } else {
       $("#autoplay_button").removeClass("fa-stop");
       $("#autoplay_button").addClass("fa-play-circle");
-      $("#holding_tank_label").html("Holding Tank");      
+      $("#holding_tank_label").html("Holding Tank");
       $("#holding_tank").removeClass("autoplaying");
     }
 
@@ -606,6 +606,38 @@ function renameHoldingTankTab() {
     .catch(console.error);
 }
 
+function editSelectedSong() {
+  var songId = $('#selected_row').attr('songid');
+  const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
+
+  if (songId) {
+    var songInfo = stmt.get(songId);
+
+    $('#song-form-songid').val(songId);
+    $('#song-form-category').empty();
+    const categoryStmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+    for (const row of categoryStmt.iterate()) {
+      categories[row.code] = row.description;
+      if (row.code == songInfo.category) {
+        $('#song-form-category').append(`<option selected="selected" value="${row.code}">${row.description}</option>`);
+      } else {
+        $('#song-form-category').append(`<option value="${row.code}">${row.description}</option>`);
+      }
+    }
+
+
+    $('#song-form-title').val(songInfo.title);
+    $('#song-form-artist').val(songInfo.artist);
+    $('#song-form-info').val(songInfo.info);
+    $('#song-form-duration').val(songInfo.time);
+    $('#songFormModal form').attr('onsubmit', 'saveEditedSong(event)')
+    $('#songFormModalTitle').html('Edit This Song')
+    $('#songFormSubmitButton').html('Save');
+    $('#songFormModal').modal();
+
+  }
+
+}
 function deleteSelectedSong() {
   var songId = $('#selected_row').attr('songid');
   if (songId) {
@@ -872,6 +904,11 @@ $( document ).ready(function() {
     toggle_selected_row(this);
   });
 
+  $("#search_results").on("contextmenu", "tbody tr", function (event) {
+    toggle_selected_row(this);
+  });
+
+
   $("#search_results").on("dblclick", "tbody tr.song", function (event) {
     playSelected();
   });
@@ -970,6 +1007,33 @@ $( document ).ready(function() {
     holding_tank_node.removeClass("show active");
     $("#holding-tank-tab-content").append(holding_tank_node);
   }
+
+  $.contextMenu({
+      selector: '.context-menu',
+      items: {
+        play: {
+            name: "Play",
+            icon: 'fas fa-play-circle',
+            callback: function(key, opt){
+                playSelected();
+            }
+        },
+        edit: {
+            name: "Edit",
+            icon: 'fas fa-edit',
+            callback: function(key, opt){
+                editSelectedSong();
+            }
+        },
+        delete: {
+          name: "Delete",
+          icon: 'fas fa-trash-alt',
+          callback: function(key, opt){
+              deleteSelectedSong();
+          }
+        }
+    }
+  });
 
   $(".holding_tank").on("click", "li", function (event) {
     toggle_selected_row(this);
@@ -1144,7 +1208,7 @@ $( document ).ready(function() {
       $(this).addClass('btn-primary');
       $(this).removeClass('btn-secondary');
       animateCSS($('#waveform'), 'fadeInUp').then(() => {
-        
+
       });
     } else {
       $(this).removeClass('btn-primary');
