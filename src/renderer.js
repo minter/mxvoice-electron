@@ -904,6 +904,11 @@ $( document ).ready(function() {
     toggle_selected_row(this);
   });
 
+  $("#search_results").on("contextmenu", "tbody tr", function (event) {
+    toggle_selected_row(this);
+  });
+
+
   $("#search_results").on("dblclick", "tbody tr.song", function (event) {
     playSelected();
   });
