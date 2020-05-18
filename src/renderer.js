@@ -236,8 +236,9 @@ var howlerUtils = {
     var remainingTime = howlerUtils.formatTime(Math.round(remaining));
     globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
     if (!sound_canceled) {
-      $("#audio_progress").width(((seek / self.duration()) * 100 || 0) + "%");
-      wavesurfer.seekTo(seek / self.duration());
+      var percent_elapsed = seek / self.duration();
+      $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
+      if (!isNaN(percent_elapsed)) wavesurfer.seekTo(percent_elapsed);
       $("#timer").text(currentTime);
       $("#duration").text(`-${remainingTime}`);
     }
