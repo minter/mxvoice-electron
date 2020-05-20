@@ -1,23 +1,22 @@
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 #top-row {
   min-height: calc(100vh - 90px);
 }
 
+#autoplay_button {
+  position: absolute;
+  left: 117px;
+  top: 15px;
+
+}
+
 .container-fluid {
   min-height: 100vh;
   overflow: auto;
   padding: 0;
-}
-
-.card {
-  border: 1px solid #666;
-}
-
-.card-header {
-  background-color: #0d324d;
 }
 
 .my-custom-scrollbar {
@@ -38,58 +37,11 @@ font-size: 11px;
 .icon-bar a {
   margin-left: 7px;
   font-size: 18px;
-}
-
-.icon-bar a:hover, h6 a:hover {
-  color: gray;
-}
-
-.drop_target {
-  color: white;
-  background-color: darkslateblue;
+  text-decoration: none;
 }
 
 #search_form {
   padding-bottom: 15px;
-}
-
-.unselectable {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-}
-
-#category_select {
-  max-width: 200px;
-}
-
-.hotkeys li {
-  padding: 4px 0 7px 0;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.hotkeys .badge {
-  width: 30px;
-  margin-right: 0;
-  background-color: darkslategray;
-}
-
-.hotkeys span {
-  font-size: 12px;
-  font-weight: bold;
-  padding: 5px;
-  padding-left: 3px;
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.dragenter {
-  background-color: yellowgreen;
-  border: 3px dashed black;
 }
 
 #timer {
@@ -108,23 +60,56 @@ font-size: 11px;
 }
 
 #now_playing_bar div {
-  
+
   font-size: 16px;
-  padding-bottom: 7px;
-  color: white;
+  padding-bottom: 8px;
   font-family: 'Share Tech Mono', 'Courier', sans-serif;
 }
 
-#play_column, #stop_column {
+#play_column,
+#stop_column {
   text-align: center;
+}
+
+#category_select {
+  max-width: 200px;
+  border-radius: 20px 0 0 20px;
+}
+
+#reset_button {
+  border-radius: 0 20px 20px 0;
+}
+
+.unselectable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.hotkeys li {
+  padding: 4px 0 7px 0;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.hotkeys .badge {
+  width: 30px;
+  margin-right: 0;
+}
+
+.hotkeys span {
+  font-size: 12px;
+  font-weight: bold;
+  padding: 5px;
+  padding-left: 3px;
+  overflow: hidden;
 }
 
 .song_title {
   font-weight: bold;
-}
-
-.dropzone {
-  border-bottom: 1px dotted black !important;
 }
 
 .holding_tank {
@@ -135,29 +120,24 @@ font-size: 11px;
   user-select: none;
 }
 
-.holding_tank li {
-  border: 1px solid lightsteelblue;
-  border-radius: 5px;
-  margin: 2px;
+.holding_tank .list-group-item {
+  border-radius: 0;
+  margin: 1px;
   padding: 6px;
-  background-color: lightsteelblue;
 }
 
 h6 {
   font-size: 12px;
   text-transform: uppercase;
-  color: lightsteelblue;
   white-space: nowrap;
   line-height: 17px;
 }
 
 h6 a {
-  color: lightsteelblue;
   font-size: 14px;
 }
 
 .now_playing {
-  color: green;
   font-weight: bold;
 }
 
@@ -174,13 +154,10 @@ h6 a {
   padding-right: 5px;
 }
 
-.autoplaying {
-  background-color: #F0F5F1;
-}
-
-#selected_row {
-  color: white;
-  background-color: lightslategrey !important;
+.nav-link.active {
+  position: relative !important;
+  top: -3px !important;
+  height: 36px;
 }
 
 .nav-item {
@@ -197,21 +174,12 @@ h6 a {
   padding-right: 0;
 }
 
-.delete_link {
-  color: red;
-}
-
 .category-description {
   margin-left: 12px;
   margin: 1px !important;
 }
 .modal .close, .modal .btn, .modal input, .modal select {
   font-size: 12px;
-}
-
-#player {
-  background-color: #000000;
-  background-image: linear-gradient(315deg, #000000 0%, #414141 74%);
 }
 
 #progress_bar {
@@ -258,4 +226,22 @@ h6 a {
 .unfocused {
   outline: 5px ridge red;
   outline-offset: -5px;
+}
+#player-col {
+  position: relative;
+}
+
+#waveform {
+  position: absolute;
+  top: -121px;
+  left: 12px;
+  height: 100px;
+  width: calc(100% - 24px);
+  z-index: 1;
+  border-radius: 10px 10px 0 0;
+  opacity: .95;
+}
+
+.hidden {
+  visibility: hidden;
 }

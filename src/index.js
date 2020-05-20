@@ -646,6 +646,7 @@ const preferences = new ElectronPreferences({
           initDb.exec(`CREATE TABLE IF NOT EXISTS 'categories' (   code varchar(8) NOT NULL,   description varchar(255) NOT NULL );
 CREATE TABLE mrvoice (   id INTEGER PRIMARY KEY,   title varchar(255) NOT NULL,   artist varchar(255),   category varchar(8) NOT NULL,   info varchar(255),   filename varchar(255) NOT NULL,   time varchar(10),   modtime timestamp(6),   publisher varchar(16),   md5 varchar(32) );
 CREATE UNIQUE INDEX 'category_code_index' ON categories(code);
+CREATE UNIQUE INDEX 'category_description_index' ON categories(description);
 INSERT INTO categories VALUES('UNC', 'Uncategorized');
 INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('Rock Bumper', 'Patrick Short', 'UNC', 'PatrickShort-CSzRockBumper.mp3', '00:49', '${Math.floor(Date.now() / 1000)}');
 `)

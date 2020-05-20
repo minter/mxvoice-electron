@@ -46,7 +46,11 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
   mm.parseFile(filename)
   .then( metadata => {
     var pathData = path.parse(filename);
-    var durationSeconds = metadata.format.duration.toFixed(0);
+    var duration = metadata.format.duration
+    var durationSeconds = 0
+    if(duration) {
+      durationSeconds = duration.toFixed(0);
+    }
     var durationString = new Date(durationSeconds * 1000).toISOString().substr(14, 5);
     $('#song-form-duration').val(durationString);
     $('#song-form-title').val(metadata.common.title);
@@ -58,6 +62,9 @@ ipcRenderer.on('add_dialog_load', function(event, filename) {
       categories[row.code] = row.description;
       $('#song-form-category').append(`<option value="${row.code}">${row.description}</option>`);
     }
+    $('#song-form-category').append(`<option value="" disabled>-----------------------</option>`);
+    $('#song-form-category').append(`<option value="--NEW--">ADD NEW CATEGORY...</option>`);
+
     $('#songFormModal form').attr('onsubmit', 'saveNewSong(event)')
     $('#songFormModalTitle').html('Add New Song To Mx. Voice')
     $('#songFormSubmitButton').html('Add Song');
@@ -76,35 +83,7 @@ ipcRenderer.on('delete_selected_song', function(event) {
 
 ipcRenderer.on('edit_selected_song', function(event) {
   console.log('Received edit_selected_song message')
-  var songId = $('#selected_row').attr('songid');
-  const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
-
-  if (songId) {
-    var songInfo = stmt.get(songId);
-
-    $('#song-form-songid').val(songId);
-    $('#song-form-category').empty();
-    const categoryStmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-    for (const row of categoryStmt.iterate()) {
-      categories[row.code] = row.description;
-      if (row.code == songInfo.category) {
-        $('#song-form-category').append(`<option selected="selected" value="${row.code}">${row.description}</option>`);
-      } else {
-        $('#song-form-category').append(`<option value="${row.code}">${row.description}</option>`);
-      }
-    }
-
-
-    $('#song-form-title').val(songInfo.title);
-    $('#song-form-artist').val(songInfo.artist);
-    $('#song-form-info').val(songInfo.info);
-    $('#song-form-duration').val(songInfo.time);
-    $('#songFormModal form').attr('onsubmit', 'saveEditedSong(event)')
-    $('#songFormModalTitle').html('Edit This Song')
-    $('#songFormSubmitButton').html('Save');
-    $('#songFormModal').modal();
-
-  }
+  editSelectedSong();
 });
 
 
@@ -128,5 +107,12 @@ process.once('loaded', () => {
     const stmt = db.prepare("CREATE UNIQUE INDEX 'category_code_index' ON categories(code)")
     const info = stmt.run()
   }
+
+  if (db.pragma('index_info(category_description_index)').length == 0) {
+    console.log(`Creating unique index on category descriptions`)
+    const stmt = db.prepare("CREATE UNIQUE INDEX 'category_description_index' ON categories(description)")
+    const info = stmt.run()
+  }
+
 
 })
