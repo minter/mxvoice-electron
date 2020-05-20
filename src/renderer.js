@@ -690,7 +690,7 @@ function addSongsByPath(pathArray, category) {
       console.log(`Working with audio titled ${title}`)
       var artist = metadata.common.artist
       var uuid = uuidv4();
-      var newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/\s/g, "");
+      var newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
       var newPath = path.join(preferences.locations.music_directory, newFilename );
       const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)");
       const info = stmt.run(title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000));
