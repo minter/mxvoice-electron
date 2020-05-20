@@ -37,6 +37,7 @@ font-size: 11px;
 .icon-bar a {
   margin-left: 7px;
   font-size: 18px;
+  text-decoration: none;
 }
 
 #search_form {
