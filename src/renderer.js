@@ -696,7 +696,7 @@ function addSongsByPath(pathArray, category) {
       const info = stmt.run(title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000));
       console.log(`Copying audio file ${songSourcePath} to ${newPath}`)
       fs.copyFileSync(songSourcePath, newPath);
-      $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable' songid='${info.lastInsertRowid}'><td>${categories[category]}</td><td></td><td style='font-weight: bold'>${title || ''}</td><td style='font-weight:bold'>${artist || ''}</td><td>${durationString}</td></tr>`);
+      $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${info.lastInsertRowid}'><td>${categories[category]}</td><td></td><td style='font-weight: bold'>${title || ''}</td><td style='font-weight:bold'>${artist || ''}</td><td>${durationString}</td></tr>`);
 
 
       return addSongsByPath(pathArray, category); // process rest of the files AFTER we are finished
@@ -709,17 +709,28 @@ function saveBulkUpload(event) {
   event.preventDefault();
   $('#bulkAddModal').modal('hide');
   var dirname = $('#bulk-add-path').val()
-  var songs = []
-  var files = fs.readdirSync(dirname);
 
-  for (var i in files) {
-    var filename = files[i]
-    var fullPath = path.join(dirname, filename)
-    var pathData = path.parse(filename);
-    if (['.mp3', '.mp4', '.m4a', '.wav', '.ogg'].includes(pathData.ext.toLowerCase())) {
-      songs.push(fullPath);
-    }
+  var walk = function(dir) {
+      var results = [];
+      var list = fs.readdirSync(dir);
+      list.forEach(function(file) {
+          file = dir + '/' + file;
+          var stat = fs.statSync(file);
+          if (stat && stat.isDirectory()) {
+              /* Recurse into a subdirectory */
+              results = results.concat(walk(file));
+          } else {
+              /* Is a file */
+              var pathData = path.parse(file);
+              if (['.mp3', '.mp4', '.m4a', '.wav', '.ogg'].includes(pathData.ext.toLowerCase())) {
+                results.push(file);
+            }
+          }
+      });
+      return results;
   }
+
+  var songs = walk(dirname);
 
   $('#search_results tbody').find("tr").remove();
   $("#search_results thead").show();
@@ -860,18 +871,18 @@ function addNewCategory(event) {
   const stmt = db.prepare("INSERT INTO categories VALUES (?, ?)")
   try {
     const info = stmt.run(code, description)
+    if (info.changes == 1) {
+      console.log(`Added new row into database`)
+      $('#newCategoryCode').val('')
+      $('#newCategoryDescription').val('')
+      populateCategorySelect()
+      populateCategoriesModal()
+    }
   } catch(err) {
     if(err.message.match(/UNIQUE constraint/)) {
       $('#newCategoryDescription').val('')
       alert(`Couldn't add a category named "${description}" - apparently one already exists!`)
     }
-  }
-  if (info.changes == 1) {
-    console.log(`Added new row into database`)
-    $('#newCategoryCode').val('')
-    $('#newCategoryDescription').val('')
-    populateCategorySelect()
-    populateCategoriesModal()
   }
 }
 
