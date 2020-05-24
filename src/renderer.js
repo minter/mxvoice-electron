@@ -229,19 +229,24 @@ var howlerUtils = {
 		return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
 	},
 	updateTimeTracker: function () {
-		var self = this;
-		var seek = sound.seek() || 0;
-    var remaining = self.duration() - seek;
-		var currentTime = howlerUtils.formatTime(Math.round(seek));
-    var remainingTime = howlerUtils.formatTime(Math.round(remaining));
-    globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
-    if (!sound_canceled) {
-      var percent_elapsed = seek / self.duration();
-      $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
-      if (!isNaN(percent_elapsed)) wavesurfer.seekTo(percent_elapsed);
-      $("#timer").text(currentTime);
-      $("#duration").text(`-${remainingTime}`);
+    if (sound.state()=="loaded") {
+      var self = this;
+      var seek = sound.seek() || 0;
+      var remaining = self.duration() - seek;
+      var currentTime = howlerUtils.formatTime(Math.round(seek));
+      var remainingTime = howlerUtils.formatTime(Math.round(remaining));
+      if (!sound_canceled) {
+        var percent_elapsed = seek / self.duration();
+        $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
+        wavesurfer.seekTo(percent_elapsed);
+        $("#timer").text(currentTime);
+        $("#duration").text(`-${remainingTime}`);
+      }
+      globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
+    } else {
+      cancelAnimationFrame(globalAnimation);
     }
+		
 	}
 };
 
@@ -265,7 +270,7 @@ function playSongFromId(song_id){
   console.log('Playing song from song ID ' + song_id);
   if (song_id) {
     if (sound) {
-      sound.stop();
+      sound.unload();
     }
     var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
     var row = stmt.get(song_id);
@@ -352,7 +357,7 @@ function playSelected(){
 function stopPlaying(fadeOut = false){
   if (sound) {
     sound.on('fade', function(){
-      sound.stop();
+      sound.unload();
     });
     if (autoplay) {
       $(".now_playing").first().removeClass("now_playing");
@@ -361,7 +366,7 @@ function stopPlaying(fadeOut = false){
       var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000);
       sound.fade(sound.volume(),0,fadeDuration);
     } else {
-      sound.stop();
+      sound.unload();
     }
   }
 }
