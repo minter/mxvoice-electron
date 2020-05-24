@@ -3,7 +3,6 @@ var categories = [];
 var globalAnimation;
 var autoplay = false;
 var loop = false;
-var sound_canceled = false;
 var wavesurfer = WaveSurfer.create({
   container: '#waveform',
   waveColor: '#e9ecef',
@@ -235,16 +234,15 @@ var howlerUtils = {
       var remaining = self.duration() - seek;
       var currentTime = howlerUtils.formatTime(Math.round(seek));
       var remainingTime = howlerUtils.formatTime(Math.round(remaining));
-      if (!sound_canceled) {
-        var percent_elapsed = seek / self.duration();
-        $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
-        wavesurfer.seekTo(percent_elapsed);
-        $("#timer").text(currentTime);
-        $("#duration").text(`-${remainingTime}`);
-      }
+      var percent_elapsed = seek / self.duration();
+      $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
+      if (!isNaN(percent_elapsed)) wavesurfer.seekTo(percent_elapsed);
+      $("#timer").text(currentTime);
+      $("#duration").text(`-${remainingTime}`);
       globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
     } else {
       cancelAnimationFrame(globalAnimation);
+      wavesurfer.empty();
     }
 		
 	}
@@ -262,8 +260,6 @@ function song_ended() {
     $("#play_button").attr("disabled", true);
   }
   $("#stop_button").attr("disabled", true);
-  sound_canceled = true;
-  wavesurfer.empty();
 }
 
 function playSongFromId(song_id){
@@ -283,7 +279,6 @@ function playSongFromId(song_id){
       volume: $('#volume').val()/100,
       mute: $("#mute_button").hasClass("btn-danger"),
       onplay: function() {
-        sound_canceled = false;
         var time = Math.round(sound.duration());
         globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
         var title = row.title || "";
@@ -309,6 +304,7 @@ function playSongFromId(song_id){
         if (loop) {
           sound.play();
         } else {
+          sound.unload();
           autoplay_next();
         }
       },
@@ -372,7 +368,7 @@ function stopPlaying(fadeOut = false){
 }
 
 function pausePlaying(fadeOut = false) {
-  if (sound && !sound_canceled) {
+  if (sound) {
     toggle_play_button();
     if (sound.playing()) {
       sound.on("fade", function () {
@@ -1163,15 +1159,7 @@ $( document ).ready(function() {
   });
 
   $("#play_button").click(function (e) {
-    if (sound) {
-      if (!sound_canceled) {
-        sound.play();
-      } else {
-        playSelected();
-      }
-    } else {
-      playSelected();
-    }
+    playSelected();
   });
 
   $("#stop_button").click(function (e) {
