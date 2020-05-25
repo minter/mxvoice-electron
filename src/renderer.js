@@ -231,23 +231,22 @@ var howlerUtils = {
     return (s.state() == 'loaded');
   },
 	updateTimeTracker: function () {
-    if (howlerUtils.isLoaded(sound)) {
-      var self = this;
-      var seek = sound.seek() || 0;
-      var remaining = self.duration() - seek;
-      var currentTime = howlerUtils.formatTime(Math.round(seek));
-      var remainingTime = howlerUtils.formatTime(Math.round(remaining));
-      var percent_elapsed = seek / self.duration();
-      $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
-      if (!isNaN(percent_elapsed)) wavesurfer.seekTo(percent_elapsed);
-      $("#timer").text(currentTime);
-      $("#duration").text(`-${remainingTime}`);
-      globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
-    } else {
+    if (!howlerUtils.isLoaded(sound)) {
       cancelAnimationFrame(globalAnimation);
       wavesurfer.empty();
+      return;
     }
-		
+    var self = this;
+    var seek = sound.seek() || 0;
+    var remaining = self.duration() - seek;
+    var currentTime = howlerUtils.formatTime(Math.round(seek));
+    var remainingTime = howlerUtils.formatTime(Math.round(remaining));
+    var percent_elapsed = seek / self.duration();
+    $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
+    if (!isNaN(percent_elapsed)) wavesurfer.seekTo(percent_elapsed);
+    $("#timer").text(currentTime);
+    $("#duration").text(`-${remainingTime}`);
+    globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
 	}
 };
 
