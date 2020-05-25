@@ -128,7 +128,34 @@
                     <button type="reset" id="reset_button" class="btn btn-secondary"><i title="Reset Search"
                         class="fas fa-sm fa-times"></i></button>
                   </div>
+                  <div class="input-group-prepend">
+                    <button id="advanced_search_button" class="btn btn-primary"><i title="Advanced Search" id="advanced-search-icon"
+                        class="fas fa-sm fa-plus"></i></button>
+                  </div>
                 </div>
+
+                <!-- Advanced Search -->
+
+                <div class="form-row" id="advanced-search" style="display:none;">
+                  <div class="col">
+                    <input type="text" id="title-search" class="form-control" placeholder="Title">
+                  </div>
+                  <div class="col">
+                    <input type="text" id="artist-search" class="form-control" placeholder="Artist">
+                  </div>
+                  <div class="col">
+                    <select id="date-search" name="Song Added" class="custom-select form-control">
+                      <option selected>Added Any Time</option>
+                      <option>Added Past Week</option>
+                      <option>Added Past Month</option>
+                      <option>Added Past 3 Months</option>
+                      <option>Added Past 6 Months</option>
+                      <option>Added Past Year</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- End Advanced Search -->
               </form>
 
               <div class="table-wrapper-scroll-y my-custom-scrollbar">
