@@ -226,9 +226,12 @@ var howlerUtils = {
 		var minutes = Math.floor(secs / 60) || 0;
 		var seconds = (secs - minutes * 60) || 0;
 		return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-	},
+  },
+  isLoaded: function(s) {
+    return (s.state() == 'loaded');
+  },
 	updateTimeTracker: function () {
-    if (sound.state()=="loaded") {
+    if (howlerUtils.isLoaded(sound)) {
       var self = this;
       var seek = sound.seek() || 0;
       var remaining = self.duration() - seek;
