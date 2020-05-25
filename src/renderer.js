@@ -3,7 +3,6 @@ var categories = [];
 var globalAnimation;
 var autoplay = false;
 var loop = false;
-var sound_canceled = false;
 var wavesurfer = WaveSurfer.create({
   container: '#waveform',
   waveColor: '#e9ecef',
@@ -227,21 +226,27 @@ var howlerUtils = {
 		var minutes = Math.floor(secs / 60) || 0;
 		var seconds = (secs - minutes * 60) || 0;
 		return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-	},
+  },
+  isLoaded: function(s) {
+    return (s.state() == 'loaded');
+  },
 	updateTimeTracker: function () {
-		var self = this;
-		var seek = sound.seek() || 0;
-    var remaining = self.duration() - seek;
-		var currentTime = howlerUtils.formatTime(Math.round(seek));
-    var remainingTime = howlerUtils.formatTime(Math.round(remaining));
-    globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
-    if (!sound_canceled) {
-      var percent_elapsed = seek / self.duration();
-      $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
-      if (!isNaN(percent_elapsed)) wavesurfer.seekTo(percent_elapsed);
-      $("#timer").text(currentTime);
-      $("#duration").text(`-${remainingTime}`);
+    if (!howlerUtils.isLoaded(sound)) {
+      cancelAnimationFrame(globalAnimation);
+      wavesurfer.empty();
+      return;
     }
+    var self = this;
+    var seek = sound.seek() || 0;
+    var remaining = self.duration() - seek;
+    var currentTime = howlerUtils.formatTime(Math.round(seek));
+    var remainingTime = howlerUtils.formatTime(Math.round(remaining));
+    var percent_elapsed = seek / self.duration();
+    $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
+    if (!isNaN(percent_elapsed)) wavesurfer.seekTo(percent_elapsed);
+    $("#timer").text(currentTime);
+    $("#duration").text(`-${remainingTime}`);
+    globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(self));
 	}
 };
 
@@ -257,15 +262,13 @@ function song_ended() {
     $("#play_button").attr("disabled", true);
   }
   $("#stop_button").attr("disabled", true);
-  sound_canceled = true;
-  wavesurfer.empty();
 }
 
 function playSongFromId(song_id){
   console.log('Playing song from song ID ' + song_id);
   if (song_id) {
     if (sound) {
-      sound.stop();
+      sound.unload();
     }
     var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
     var row = stmt.get(song_id);
@@ -278,7 +281,6 @@ function playSongFromId(song_id){
       volume: $('#volume').val()/100,
       mute: $("#mute_button").hasClass("btn-danger"),
       onplay: function() {
-        sound_canceled = false;
         var time = Math.round(sound.duration());
         globalAnimation = requestAnimationFrame(howlerUtils.updateTimeTracker.bind(this));
         var title = row.title || "";
@@ -304,6 +306,7 @@ function playSongFromId(song_id){
         if (loop) {
           sound.play();
         } else {
+          sound.unload();
           autoplay_next();
         }
       },
@@ -352,7 +355,7 @@ function playSelected(){
 function stopPlaying(fadeOut = false){
   if (sound) {
     sound.on('fade', function(){
-      sound.stop();
+      sound.unload();
     });
     if (autoplay) {
       $(".now_playing").first().removeClass("now_playing");
@@ -361,13 +364,13 @@ function stopPlaying(fadeOut = false){
       var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000);
       sound.fade(sound.volume(),0,fadeDuration);
     } else {
-      sound.stop();
+      sound.unload();
     }
   }
 }
 
 function pausePlaying(fadeOut = false) {
-  if (sound && !sound_canceled) {
+  if (sound) {
     toggle_play_button();
     if (sound.playing()) {
       sound.on("fade", function () {
@@ -1158,15 +1161,7 @@ $( document ).ready(function() {
   });
 
   $("#play_button").click(function (e) {
-    if (sound) {
-      if (!sound_canceled) {
-        sound.play();
-      } else {
-        playSelected();
-      }
-    } else {
-      playSelected();
-    }
+    playSelected();
   });
 
   $("#stop_button").click(function (e) {
