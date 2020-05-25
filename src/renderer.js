@@ -268,6 +268,7 @@ function playSongFromId(song_id){
   console.log('Playing song from song ID ' + song_id);
   if (song_id) {
     if (sound) {
+      sound.off('fade');
       sound.unload();
     }
     var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
