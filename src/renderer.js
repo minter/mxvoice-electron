@@ -581,7 +581,7 @@ function saveNewSong(event) {
 
   var duration = $('#song-form-duration').val();
   var uuid = uuidv4();
-  var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/\s/g, "");
+  var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/[^-.\w]/g, "");
   var newPath = path.join(preferences.locations.music_directory, newFilename );
 
   const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -691,7 +691,6 @@ function addSongsByPath(pathArray, category) {
 
       var title = metadata.common.title || path.parse(songSourcePath).name
       if (!title) { return }
-      console.log(`Working with audio titled ${title}`)
       var artist = metadata.common.artist
       var uuid = uuidv4();
       var newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
