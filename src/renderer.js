@@ -1267,8 +1267,8 @@ $( document ).ready(function() {
   $('#mute_button').click(function() {
     if (sound) {
       sound.mute(!sound.mute());
+      sound.volume($("#volume").val() / 100);
     }
-    sound.volume($("#volume").val() / 100);
     $("#mute_button").toggleClass("btn-danger btn-secondary");
     $("#song_now_playing").toggleClass("text-secondary");
   });
