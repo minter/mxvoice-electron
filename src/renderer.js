@@ -131,19 +131,21 @@ function populateCategorySelect(){
 }
 
 function searchData(){
-  var category = $( "#category_select" ).val();
-  console.log('Using category ' + category);
-  var omni = $( '#omni_search' ).val().trim();
+
   $('#search_results tbody').find("tr").remove();
   $("#search_results thead").show();
-  var search_term = '%' + omni + '%';
+
+  var raw_html = [];
   var query_params = [];
   var query_segments = [];
   var query_string = '';
+  var category = $("#category_select").val();
+  
   if (category != '*') {
     query_segments.push('category = ?');
     query_params.push(category);
   }
+
   if ($('#advanced-search').is(':visible')) {
     var title = $("#title-search").val().trim();
     var artist = $("#artist-search").val().trim();
@@ -170,6 +172,8 @@ function searchData(){
       query_string = " WHERE " + query_segments.join(' AND ');
     }
   } else {
+    var omni = $('#omni_search').val().trim();
+    var search_term = '%' + omni + '%';
     if (omni != '') {
       query_segments.push('(info LIKE ? OR title LIKE ? OR artist like ?)');
       query_params.push(search_term, search_term, search_term);
@@ -181,18 +185,17 @@ function searchData(){
   
   console.log("Query string is" + query_string);
 
-  $( '#omni_search' ).select();
-  $("#category_select").prop("selectedIndex", 0);
-
   var stmt = db.prepare("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist');
   const rows = stmt.all(query_params);
-  var raw_html = [];
   rows.forEach((row) => {
     raw_html.push(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${row.id}'><td class='hide-1'>${categories[row.category]}</td><td class='hide-2'>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
   });
   $("#search_results").append(raw_html.join(''));
+  
   scale_scrollable();
-
+  
+  $('#omni_search').select();
+  $("#category_select").prop("selectedIndex", 0);
 }
 
 function setLabelFromSongId(song_id, element) {
