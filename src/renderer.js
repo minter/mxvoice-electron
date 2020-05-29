@@ -1184,7 +1184,7 @@ $( document ).ready(function() {
   });
 
   $("#reset_button").on("click", function () {
-    $("#search_form").reset();
+    $("#search_form").trigger('reset');
     $("#omni_search").focus();
     $("#search_results tbody").find("tr").remove();
     $("#search_results thead").hide();
@@ -1192,6 +1192,7 @@ $( document ).ready(function() {
   });
 
   $("#advanced_search_button").on("click", function () {
+    $("#search_form").trigger('reset');
     if ($("#advanced-search").is(':visible')) {
       $("#advanced-search-icon").toggleClass('fa-plus fa-minus');
       $("#title-search").hide();
