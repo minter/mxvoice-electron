@@ -1197,6 +1197,7 @@ $( document ).ready(function() {
       $("#advanced-search-icon").toggleClass('fa-plus fa-minus');
       $("#title-search").hide();
       $("#omni_search").show();
+      $("#omni_search").focus();
       animateCSS($('#advanced-search'), 'fadeOutUp').then(() => {
         $("#advanced-search").hide();
         scale_scrollable();
@@ -1205,6 +1206,7 @@ $( document ).ready(function() {
       $("#advanced-search-icon").toggleClass('fa-plus fa-minus');
       $("#advanced-search").show();
       $("#title-search").show();
+      $("#title-search").focus();
       $("#omni_search").hide();
       scale_scrollable();
       animateCSS($('#advanced-search'), 'fadeInDown').then(() => {
