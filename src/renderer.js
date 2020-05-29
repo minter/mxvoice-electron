@@ -132,13 +132,15 @@ function populateCategorySelect(){
 
 function searchData(){
   var category = $( "#category_select" ).val();
-  var title = $("#title-search").val();
   console.log('Using category ' + category);
-  var value = $( '#omni_search' ).val().trim();
-  console.log('Called with search string ' + value);
+  var omni = $( '#omni_search' ).val().trim();
+  var title = $("#title-search").val().trim();
+  var artist = $("#artist-search").val().trim();
+  var info = $("#info-search").val().trim();
+  var since = $('#date-search').val();
   $('#search_results tbody').find("tr").remove();
   $("#search_results thead").show();
-  var search_term = '%' + value + '%';
+  var search_term = '%' + omni + '%';
   var query_params = [];
   var query_segments = [];
   var query_string = '';
@@ -146,18 +148,38 @@ function searchData(){
     query_segments.push('category = ?');
     query_params.push(category);
   }
-  if (title.length) {
-    query_segments.push('title = ?');
-    query_params.push(title);
+  if ($('#advanced-search').is(':visible')) {
+    if (title.length) {
+      query_segments.push('title LIKE ?');
+      query_params.push(`%${title}%`);
+    }
+    if (artist.length) {
+      query_segments.push('artist LIKE ?');
+      query_params.push(`%${artist}%`);
+    }
+    if (info.length) {
+      query_segments.push('info LIKE ?');
+      query_params.push(`%${info}%`);
+    }
+    if (since.length) {
+      query_segments.push("modtime > ?");
+      var today = new Date();
+      query_params.push(Math.round(today.setDate(today.getDate() - since) / 1000));
+    }
+    if (query_segments.length != 0) {
+      query_string = " WHERE " + query_segments.join(' AND ');
+    }
+  } else {
+    if (omni != '') {
+      query_segments.push('(info LIKE ? OR title LIKE ? OR artist like ?)');
+      query_params.push(search_term, search_term, search_term);
+    }
+    if (query_segments.length != 0) {
+      query_string = " WHERE " + query_segments.join(' AND ');
+    }
   }
-  if (value != '') {
-    query_segments.push('(info LIKE ? OR title LIKE ? OR artist like ?)');
-    query_params.push(search_term, search_term, search_term);
-  }
-  if (query_segments.length != 0) {
-    query_string = " WHERE " + query_segments.join(' AND ');
-  }
-  console.log("Query string is " + query_string);
+  
+  console.log("Query string is" + query_string);
 
   $( '#omni_search' ).select();
   $("#category_select").prop("selectedIndex", 0);
@@ -1104,6 +1126,10 @@ $( document ).ready(function() {
     searchData();
     $("#omni_search").focus();
     $("#category_select").prop('selectedIndex', category);
+  });
+
+  $("#date-search").on("change", function () {
+    searchData();
   });
 
   $("#holding_tank").on("drop", function (event) {
