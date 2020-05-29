@@ -132,6 +132,7 @@ function populateCategorySelect(){
 
 function searchData(){
   var category = $( "#category_select" ).val();
+  var title = $("#title-search").val();
   console.log('Using category ' + category);
   var value = $( '#omni_search' ).val().trim();
   console.log('Called with search string ' + value);
@@ -144,6 +145,10 @@ function searchData(){
   if (category != '*') {
     query_segments.push('category = ?');
     query_params.push(category);
+  }
+  if (title.length) {
+    query_segments.push('title = ?');
+    query_params.push(title);
   }
   if (value != '') {
     query_segments.push('(info LIKE ? OR title LIKE ? OR artist like ?)');
@@ -1164,6 +1169,8 @@ $( document ).ready(function() {
   $("#advanced_search_button").on("click", function () {
     if ($("#advanced-search").is(':visible')) {
       $("#advanced-search-icon").toggleClass('fa-plus fa-minus');
+      $("#title-search").hide();
+      $("#omni_search").show();
       animateCSS($('#advanced-search'), 'fadeOutUp').then(() => {
         $("#advanced-search").hide();
         scale_scrollable();
@@ -1171,6 +1178,8 @@ $( document ).ready(function() {
     } else {
       $("#advanced-search-icon").toggleClass('fa-plus fa-minus');
       $("#advanced-search").show();
+      $("#title-search").show();
+      $("#omni_search").hide();
       scale_scrollable();
       animateCSS($('#advanced-search'), 'fadeInDown').then(() => {
         
