@@ -134,10 +134,6 @@ function searchData(){
   var category = $( "#category_select" ).val();
   console.log('Using category ' + category);
   var omni = $( '#omni_search' ).val().trim();
-  var title = $("#title-search").val().trim();
-  var artist = $("#artist-search").val().trim();
-  var info = $("#info-search").val().trim();
-  var since = $('#date-search').val();
   $('#search_results tbody').find("tr").remove();
   $("#search_results thead").show();
   var search_term = '%' + omni + '%';
@@ -149,6 +145,10 @@ function searchData(){
     query_params.push(category);
   }
   if ($('#advanced-search').is(':visible')) {
+    var title = $("#title-search").val().trim();
+    var artist = $("#artist-search").val().trim();
+    var info = $("#info-search").val().trim();
+    var since = $('#date-search').val();
     if (title.length) {
       query_segments.push('title LIKE ?');
       query_params.push(`%${title}%`);
@@ -185,15 +185,15 @@ function searchData(){
   $("#category_select").prop("selectedIndex", 0);
 
   var stmt = db.prepare("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist');
-  for (const row of stmt.iterate(query_params)) {
-    //console.log('Found ' + row.title + ' by ' + row.artist);
-    $("#search_results").append(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${row.id}'><td class='hide-1'>${categories[row.category]}</td><td class='hide-2'>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
-  }
-
+  const rows = stmt.all(query_params);
+  var raw_html = [];
+  rows.forEach((row) => {
+    raw_html.push(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${row.id}'><td class='hide-1'>${categories[row.category]}</td><td class='hide-2'>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
+  });
+  $("#search_results").append(raw_html.join(''));
   scale_scrollable();
 
 }
-
 
 function setLabelFromSongId(song_id, element) {
   //console.log(element);
