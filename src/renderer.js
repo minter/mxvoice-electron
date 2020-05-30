@@ -1230,7 +1230,11 @@ $( document ).ready(function() {
   });
 
   $("#play_button").click(function (e) {
-    playSelected();
+    if (sound && sound.state() == "loaded") {
+      pausePlaying();
+    } else {
+      playSelected();
+    } 
   });
 
   $("#stop_button").click(function (e) {
