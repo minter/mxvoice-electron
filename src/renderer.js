@@ -140,7 +140,7 @@ function searchData(){
   var query_segments = [];
   var query_string = '';
   var category = $("#category_select").val();
-  
+
   if (category != '*') {
     query_segments.push('category = ?');
     query_params.push(category);
@@ -182,7 +182,7 @@ function searchData(){
       query_string = " WHERE " + query_segments.join(' AND ');
     }
   }
-  
+
   console.log("Query string is" + query_string);
 
   var stmt = db.prepare("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist');
@@ -191,9 +191,9 @@ function searchData(){
     raw_html.push(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${row.id}'><td class='hide-1'>${categories[row.category]}</td><td class='hide-2'>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
   });
   $("#search_results").append(raw_html.join(''));
-  
+
   scale_scrollable();
-  
+
   $('#omni_search').select();
   $("#category_select").prop("selectedIndex", 0);
 }
@@ -819,16 +819,16 @@ function populateCategoriesModal() {
 
     $("#categoryList").append(`<div class="form-group row">
 
-                    <div class="col-sm-8">
-                      <div catcode="${row.code}" class="category-description">${row.description}</div>
-                      <input style="display: none;" type="text" class="form-control categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
-                    </div>
-                    <div class="col-sm-4">
-                    <a href="#" onclick="editCategory('${row.code}')">Edit</a>&nbsp;
-                    <a class="delete_link" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
-                    </div>
+      <div class="col-sm-8">
+        <div catcode="${row.code}" class="category-description">${row.description}</div>
+        <input style="display: none;" type="text" class="form-control form-control-sm categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
+      </div>
+      <div class="col-sm-4">
+      <a href="#" class="btn btn-primary btn-xs" onclick="editCategory('${row.code}')">Edit</a>&nbsp;
+      <a class="delete_link btn btn-danger btn-xs" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
+      </div>
 
-                  `);
+    `);
   }
 
 }
@@ -1213,7 +1213,7 @@ $( document ).ready(function() {
       $("#omni_search").hide();
       scale_scrollable();
       animateCSS($('#advanced-search'), 'fadeInDown').then(() => {
-        
+
       });
     }
     return false;
@@ -1234,7 +1234,7 @@ $( document ).ready(function() {
       pausePlaying();
     } else {
       playSelected();
-    } 
+    }
   });
 
   $("#stop_button").click(function (e) {
