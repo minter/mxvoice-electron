@@ -819,16 +819,16 @@ function populateCategoriesModal() {
 
     $("#categoryList").append(`<div class="form-group row">
 
-                    <div class="col-sm-8">
-                      <div catcode="${row.code}" class="category-description">${row.description}</div>
-                      <input style="display: none;" type="text" class="form-control categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
-                    </div>
-                    <div class="col-sm-4">
-                    <a href="#" class="badge badge-info" onclick="editCategory('${row.code}')">Edit</a>&nbsp;
-                    <a class="delete_link badge badge-danger" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
-                    </div>
+      <div class="col-sm-8">
+        <div catcode="${row.code}" class="category-description">${row.description}</div>
+        <input style="display: none;" type="text" class="form-control form-control-sm categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
+      </div>
+      <div class="col-sm-4">
+      <a href="#" class="btn btn-primary btn-xs" onclick="editCategory('${row.code}')">Edit</a>&nbsp;
+      <a class="delete_link btn btn-danger btn-xs" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
+      </div>
 
-                  `);
+    `);
   }
 
 }
