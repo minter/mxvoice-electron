@@ -49,7 +49,7 @@
     "@electron-forge/maker-squirrel": "6.0.0-beta.51",
     "@electron-forge/maker-zip": "6.0.0-beta.51",
     "@electron-forge/publisher-github": "6.0.0-beta.51",
-    "electron": "8.2.3",
+    "electron": "8.2.4",
     "electron-rebuild": "^1.11.0",
     "electron-reload": "^1.5.0"
   }
