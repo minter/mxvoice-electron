@@ -541,6 +541,7 @@ function renameHotkeyTab() {
     value: $("#hotkey_tabs .nav-link.active").text(),
     type: "input",
     alwaysOnTop: true,
+    customStylesheet: 'src/stylesheets/colors.css'
   })
     .then((r) => {
       if (r === null) {
@@ -634,6 +635,7 @@ function renameHoldingTankTab() {
     value: $("#holding_tank_tabs .nav-link.active").text(),
     type: "input",
     alwaysOnTop: true,
+    customStylesheet: 'src/stylesheets/colors.css'
   })
     .then((r) => {
       if (r === null) {
