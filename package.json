@@ -36,6 +36,7 @@
     "howler": "^2.2.0",
     "jquery": "^3.5.1",
     "jquery-contextmenu": "^2.9.2",
+    "lodash": "^4.17.19",
     "mousetrap": "^1.6.5",
     "music-metadata": "^6.4.0",
     "n-readlines": "^1.0.0",
