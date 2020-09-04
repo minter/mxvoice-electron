@@ -9,7 +9,7 @@ Thus, 20 years later, this project to rewrite the software in a more modern way.
 
 ## Developing
 
-Mx. Voice 3 depends on node.js being available on your system, along with `npm` and `yarn`. We recommend node 13+.
+Mx. Voice 3 depends on node.js being available on your system, along with `npm` We recommend node 13+.
 
 Check out the [source code from Github](https://github.com/minter/mxvoice-electron/). Go into the `mxvoice-electron` folder.
 
