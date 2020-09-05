@@ -960,6 +960,12 @@ function loop_on(bool) {
   }
 }
 
+function pickDirectory(event, element) {
+  event.preventDefault();
+  let path = dialog.showOpenDialogSync({properties: ['openDirectory']});
+  $(element).val(path);
+}
+
 $( document ).ready(function() {
 
   scale_scrollable();

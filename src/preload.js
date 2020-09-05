@@ -5,6 +5,7 @@ const store = new Store();
 const path = require('path')
 const fs = require('fs')
 const log = require('electron-log');
+const { dialog } = require('electron').remote
 console.log = log.log;
 var dbName = 'mxvoice.db'
 console.log(`Looking for database in ${store.get('database_directory')}`)
@@ -102,7 +103,8 @@ process.once('loaded', () => {
   global.mm = mm,
   global.util = require('util'),
   global.fs = fs,
-  global.db = db
+  global.db = db,
+  global.dialog = dialog
 
   if (db.pragma('index_info(category_code_index)').length == 0) {
     console.log(`Creating unique index on category codes`)

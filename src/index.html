@@ -498,7 +498,7 @@
                     <input type="text" class="form-control" id="preferences-database-directory">
                   </div>
                   <div class="col-sm-3">
-                    <input id="file-input" type="file" name="name" />
+                    <button onclick='pickDirectory(event, "#preferences-database-directory")'>Select Location</button>
                   </div>
                 </div>
                 <div class="form-group row">
@@ -507,7 +507,7 @@
                     <input type="text" class="form-control" id="preferences-song-directory">
                   </div>
                   <div class="col-sm-3">
-                    <input id="file-input" type="file" name="name" />
+                    <button onclick='pickDirectory(event, "#preferences-song-directory")'>Select Location</button>
                   </div>
                 </div>
                 <div class="form-group row">
@@ -516,7 +516,7 @@
                     <input type="text" class="form-control" id="preferences-hotkey-directory">
                   </div>
                   <div class="col-sm-3">
-                    <input id="file-input" type="file" name="name" />
+                    <button onclick='pickDirectory(event, "#preferences-hotkey-directory")'>Select Location</button>
                   </div>
                 </div>
               </fieldset>
