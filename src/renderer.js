@@ -1330,6 +1330,13 @@ $( document ).ready(function() {
       }
     });
 
+    $("#preferencesModal").on("shown.bs.modal", function (e) {
+      $('#preferences-database-file').val(store.get('database_directory'));
+      $('#preferences-song-directory').val(store.get('music_directory'));
+      $('#preferences-hotkey-directory').val(store.get('hotkey_directory'));
+      $('#preferences-fadeout-seconds').val(store.get('fade_out_seconds'));
+    });
+
     $(window).on('resize', function() {
       this.scale_scrollable();
     });
