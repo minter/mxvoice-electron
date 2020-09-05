@@ -480,10 +480,10 @@
     <!-- Preferences modal -->
 
     <div class="modal fade" id="preferencesModal" tabindex="-1" role="dialog" >
-      <div class="modal-dialog" role="document">
+      <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h6 class="modal-title" id="preferencesModalTitle">Mx. Voice Preferences</h6>
+            <h6 class="modal-title" id="preferencesModalTitle">Preferences</h6>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -494,20 +494,32 @@
                 <legend>Data Locations</legend>
                 <div class="form-group row">
                   <label for="preferences-database-file" class="col-sm-3 col-form-label">Database File</label>
-                  <div class="col-sm-9">
+                  <div class="col-sm-6">
                     <input type="text" class="form-control" id="preferences-database-file" value="/tmp/mxvoice.db">
                   </div>
-                </div>
-                <div class="form-group row">
-                  <label for="preferences-song-directory" class="col-sm-3 col-form-label">MP3/Audio File Directory</label>
-                  <div class="col-sm-9">
-                    <input type="text" class="form-control" id="preferences-song-directory" value="/Users/minter/Library/Application Support/Mx. Voice/mp3">
+                  <div class="col-sm-3">
+                    <button class="btn btn-primary" onclick="document.getElementById('file-input').click();">Change</button>
+                    <input id="file-input" type="file" name="name" style="display: none;" />
                   </div>
                 </div>
                 <div class="form-group row">
-                  <label for="preferences-hotkey-directory" class="col-sm-3 col-form-label">Hotkey / Holding Tank Directory</label>
-                  <div class="col-sm-9">
+                  <label for="preferences-song-directory" class="col-sm-3 col-form-label">Audio Files</label>
+                  <div class="col-sm-6">
+                    <input type="text" class="form-control" id="preferences-song-directory" value="/Users/minter/Library/Application Support/Mx. Voice/mp3">
+                  </div>
+                  <div class="col-sm-3">
+                    <button class="btn btn-primary" onclick="document.getElementById('file-input').click();">Change</button>
+                    <input id="file-input" type="file" name="name" style="display: none;" />
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <label for="preferences-hotkey-directory" class="col-sm-3 col-form-label">Hotkeys / Holding Tank</label>
+                  <div class="col-sm-6">
                     <input type="text" class="form-control" id="preferences-hotkey-directory" value="/Users/minter/Library/Application Support/Mx. Voice/hotkeys">
+                  </div>
+                  <div class="col-sm-3">
+                    <button class="btn btn-primary" onclick="document.getElementById('file-input').click();">Change</button>
+                    <input id="file-input" type="file" name="name" style="display: none;" />
                   </div>
                 </div>
               </fieldset>
@@ -515,10 +527,11 @@
               <fieldset>
                 <legend>Audio Controls</legend>
                 <div class="form-group row">
-                  <label for="preferences-fadeout-seconds" class="col-sm-3 col-form-label">Fade Out (seconds)</label>
-                  <div class="col-sm-9">
+                  <label for="preferences-fadeout-seconds" class="col-sm-3 col-form-label">Fade (seconds)</label>
+                  <div class="col-sm-1">
                     <input type="text" class="form-control" id="preferences-fadeout-seconds" value="3">
                   </div>
+                  
                 </div>
               </fieldset>
 
