@@ -618,16 +618,6 @@ function saveNewSong(event) {
     }
   }
 
-  function savePreferences(event) {
-    console.log('Saving preferences');
-    event.preventDefault();
-    $(`#preferencesModal`).modal('hide');
-    store.set('database_directory', $('#preferences-database-directory').val());
-    store.set('music_directory', $('#preferences-song-directory').val());
-    store.set('hotkey_directory', $('#preferences-hotkey-directory').val());
-    store.set('fade_out_seconds', $('#preferences-fadeout-seconds').val());
-  }
-
   var duration = $('#song-form-duration').val();
   var uuid = uuidv4();
   var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/[^-.\w]/g, "");
@@ -641,6 +631,17 @@ function saveNewSong(event) {
   $("#omni_search").val(title);
   searchData();
 }
+
+function savePreferences(event) {
+  console.log('Saving preferences');
+  event.preventDefault();
+  $(`#preferencesModal`).modal('hide');
+  store.set('database_directory', $('#preferences-database-directory').val());
+  store.set('music_directory', $('#preferences-song-directory').val());
+  store.set('hotkey_directory', $('#preferences-hotkey-directory').val());
+  store.set('fade_out_seconds', $('#preferences-fadeout-seconds').val());
+}
+
 
 function renameHoldingTankTab() {
   prompt({
