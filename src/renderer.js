@@ -618,6 +618,16 @@ function saveNewSong(event) {
     }
   }
 
+  function savePreferences(event) {
+    console.log('Saving preferences');
+    event.preventDefault();
+    $(`#preferencesModal`).modal('hide');
+    store.set('database_directory', $('#preferences-database-directory').val());
+    store.set('music_directory', $('#preferences-song-directory').val());
+    store.set('hotkey_directory', $('#preferences-hotkey-directory').val());
+    store.set('fade_out_seconds', $('#preferences-fadeout-seconds').val());
+  }
+
   var duration = $('#song-form-duration').val();
   var uuid = uuidv4();
   var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/[^-.\w]/g, "");
@@ -1331,7 +1341,7 @@ $( document ).ready(function() {
     });
 
     $("#preferencesModal").on("shown.bs.modal", function (e) {
-      $('#preferences-database-file').val(store.get('database_directory'));
+      $('#preferences-database-directory').val(store.get('database_directory'));
       $('#preferences-song-directory').val(store.get('music_directory'));
       $('#preferences-hotkey-directory').val(store.get('hotkey_directory'));
       $('#preferences-fadeout-seconds').val(store.get('fade_out_seconds'));

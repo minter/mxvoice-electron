@@ -489,13 +489,13 @@
             </button>
           </div>
           <div class="modal-body">
-            <form>
+            <form onsubmit="savePreferences(event)">
               <fieldset>
                 <legend>Data Locations</legend>
                 <div class="form-group row">
-                  <label for="preferences-database-file" class="col-sm-3 col-form-label">Database File Location</label>
+                  <label for="preferences-database-directory" class="col-sm-3 col-form-label">Database File Location</label>
                   <div class="col-sm-6">
-                    <input type="text" class="form-control" id="preferences-database-file">
+                    <input type="text" class="form-control" id="preferences-database-directory">
                   </div>
                   <div class="col-sm-3">
                     <input id="file-input" type="file" name="name" />
