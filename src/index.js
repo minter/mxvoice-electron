@@ -5,7 +5,6 @@ const os = require('os');
 const fs = require('fs');
 const readlines = require('n-readlines');
 const Store = require('electron-store');
-const isDev = require('electron-is-dev');
 const log = require('electron-log');
 console.log = log.log;
 
@@ -26,7 +25,7 @@ const store = new Store({
 const server = 'https://mxvoice.now.sh'
 const feed = `${server}/update/${process.platform}/${app.getVersion()}`
 
-if (!isDev) {
+if (!is.development) {
   autoUpdater.setFeedURL(feed)
 
   setInterval(() => {
@@ -57,7 +56,7 @@ autoUpdater.on('error', message => {
 let mainWindow;
 
 // Enable live reload
-if (isDev) {
+if (is.development) {
   require("electron-reload")(__dirname);
 }
 

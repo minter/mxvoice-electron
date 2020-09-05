@@ -27,7 +27,6 @@
     "animate.css": "^4.1.0",
     "better-sqlite3": "^7.1.0",
     "bootstrap": "^4.5.2",
-    "electron-is-dev": "^1.2.0",
     "electron-log": "^4.2.2",
     "electron-prompt": "^1.6.0",
     "electron-squirrel-startup": "^1.0.0",
