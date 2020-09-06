@@ -255,3 +255,9 @@ h6 a {
   border-radius: .2rem;
   font-size: 10px !important;
 }
+
+legend {
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: bold;
+}

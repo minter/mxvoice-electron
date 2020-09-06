@@ -153,7 +153,6 @@ table td {
 /* Styling for prompt boxes */
 
 body {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     line-height: 1.5em;
     color: var(--card-text);
     background-color: var(--panel-color);
@@ -172,7 +171,13 @@ body {
     width: 100%;
 }
 
+#form input {
+  background-color: var(--header-color);
+  color: var(--card-text);
+}
+
 #label {
+    font-size: 13px;
     max-width: 100%;
     max-height: 100%;
     margin-bottom: .8em;
@@ -184,8 +189,8 @@ body {
 
 #data {
     border-radius: 2px;
-    background: var(--panel-color);
-    color: var(--card-text);
+    background: white;
+    color: black;
     width: 90%;
     padding: .4em .5em;
     border: 1px solid black;
@@ -208,7 +213,7 @@ select#data {
 
 #buttons > button,
 #buttons > input[type=submit] {
-    border-radius: 2px;
+    border-radius: 3px;
     border: 0;
     margin: 0 0 0 .5em;
     font-size: .8em;
@@ -217,11 +222,11 @@ select#data {
 }
 
 #ok {
-    background-color: #3879D9;
-    color: var(--inverse-card-text);
+    background-color: #28a745;
+    color: white;
 }
 
 #cancel {
-    background-color: var(--card-border);
-    color: var(--inverse-card-text);
+    background-color: #6c757d;
+    color: white;
 }

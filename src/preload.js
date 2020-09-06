@@ -1,22 +1,21 @@
 const { ipcRenderer, remote } = require('electron')
 const { Howl, Howler } = require('howler')
-const preferences = ipcRenderer.sendSync('getPreferences')
+const Store = require('electron-store');
+const store = new Store();
 const path = require('path')
 const fs = require('fs')
 const log = require('electron-log');
+const { dialog } = require('electron').remote
 console.log = log.log;
 var dbName = 'mxvoice.db'
-if (fs.existsSync(path.join(preferences.locations.database_directory, 'mrvoice.db'))) {
+console.log(`Looking for database in ${store.get('database_directory')}`)
+if (fs.existsSync(path.join(store.get('database_directory'), 'mrvoice.db'))) {
   dbName = 'mrvoice.db'
 }
-console.log(`Attempting to open database file ${path.join(preferences.locations.database_directory, dbName)}`)
-const db = require('better-sqlite3')(path.join(preferences.locations.database_directory, dbName));
+console.log(`Attempting to open database file ${path.join(store.get('database_directory'), dbName)}`)
+const db = require('better-sqlite3')(path.join(store.get('database_directory'), dbName));
 const { v4: uuidv4 } = require('uuid');
 const mm = require('music-metadata');
-
-ipcRenderer.on('preferencesUpdated', (e, newPreferences) => {
-    global.preferences = newPreferences
-});
 
 ipcRenderer.on('fkey_load', function(event, fkeys, title) {
   populateHotkeys(fkeys, title);
@@ -34,6 +33,10 @@ ipcRenderer.on('holding_tank_load', function(event, songIds) {
 
 ipcRenderer.on('start_hotkey_save', function(event, fkeys) {
   saveHotkeyFile();
+})
+
+ipcRenderer.on('show_preferences', function(event) {
+  openPreferencesModal();
 })
 
 ipcRenderer.on('bulk_add_dialog_load', function(event, dirname) {
@@ -92,7 +95,7 @@ process.once('loaded', () => {
   // Ensure that there is a unique index on category code
   global.homedir = require('os').homedir(),
   global.path = path,
-  global.preferences = preferences,
+  global.store = store,
   global.Mousetrap = require('mousetrap'),
   global.ipcRenderer = ipcRenderer,
   global.prompt = require('electron-prompt'),
@@ -100,7 +103,8 @@ process.once('loaded', () => {
   global.mm = mm,
   global.util = require('util'),
   global.fs = fs,
-  global.db = db
+  global.db = db,
+  global.dialog = dialog
 
   if (db.pragma('index_info(category_code_index)').length == 0) {
     console.log(`Creating unique index on category codes`)

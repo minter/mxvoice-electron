@@ -4,15 +4,28 @@ const { is } = require('electron-util');
 const os = require('os');
 const fs = require('fs');
 const readlines = require('n-readlines');
-const ElectronPreferences = require('electron-preferences');
-const isDev = require('electron-is-dev');
+const Store = require('electron-store');
 const log = require('electron-log');
 console.log = log.log;
+
+const defaults = {
+  browser_width: 1280,
+  browser_height: 1024,
+  music_directory: path.join(app.getPath('userData'), 'mp3'),
+  hotkey_directory: path.join(app.getPath('userData'), 'hotkeys'),
+  database_directory: app.getPath('userData'),
+  fade_out_seconds: 2,
+  first_run_completed: false
+}
+const store = new Store({
+  defaults: defaults
+});
+
 
 const server = 'https://mxvoice.now.sh'
 const feed = `${server}/update/${process.platform}/${app.getVersion()}`
 
-if (!isDev) {
+if (!is.development) {
   autoUpdater.setFeedURL(feed)
 
   setInterval(() => {
@@ -43,7 +56,7 @@ autoUpdater.on('error', message => {
 let mainWindow;
 
 // Enable live reload
-if (isDev) {
+if (is.development) {
   require("electron-reload")(__dirname);
 }
 
@@ -54,12 +67,14 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 
 const createWindow = () => {
 
+  migrateOldPreferences();
   checkFirstRun();
+
 
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: (preferences.value('config.browser_width') || 1280),
-    height: (preferences.value('config.browser_height') || 1024),
+    width: store.get('browser_width'),
+    height: store.get('browser_height'),
     minWidth: 1000,
     minHeight: 660,
     webPreferences: {
@@ -77,8 +92,8 @@ const createWindow = () => {
   // mainWindow.Bootstrap = require('bootstrap');
 
   mainWindow.on('will-resize', (_event, newBounds) => {
-    preferences.value('config.browser_width', newBounds.width);
-    preferences.value('config.browser_height', newBounds.height);
+    store.set('browser_width', newBounds.width);
+    store.set('browser_height', newBounds.height);
   });
 
 };
@@ -263,7 +278,8 @@ if (process.platform == 'darwin') {
       {
         label: 'Preferences',
         click: () => {
-          preferences.show();
+          mainWindow.webContents.send('show_preferences');
+          // preferences.show();
           }
       },
       {
@@ -307,7 +323,8 @@ if (process.platform == 'darwin') {
     {
       label: 'Preferences',
       click: () => {
-        preferences.show();
+        mainWindow.webContents.send('show_preferences');
+        //preferences.show();
       }
     }
   )
@@ -347,100 +364,6 @@ if (process.platform == 'darwin') {
 menu = Menu.buildFromTemplate(application_menu);
 Menu.setApplicationMenu(menu);
 
-
-// Preferences
-const preferences = new ElectronPreferences({
-  /**
-   * Where should preferences be saved?
-   */
-  'dataStore': path.resolve(app.getPath('userData'), 'preferences.json'),
-  /**
-   * Default values.
-   */
-  'defaults': {
-    'locations': {
-      'music_directory': path.join(app.getPath('userData'), 'mp3'),
-      'hotkey_directory': path.join(app.getPath('userData'), 'hotkeys'),
-      'database_directory': app.getPath('userData')
-    },
-    'config': {
-      'browser_width': 1280,
-      'browser_height': 1024
-    },
-    'audio': {
-      'fade_out_seconds': 2
-    }
-  },
-  'onLoad': (preferences) => {
-    return preferences;
-  },
-  'sections': [
-      {
-          'id': 'locations',
-          'label': 'Data Locations',
-          /**
-           * See the list of available icons below.
-           */
-          'icon': 'archive-2',
-          'form': {
-            'groups': [
-              {
-                /**
-                 * Group heading is optional.
-                 */
-                'fields': [
-                  {
-                    'label': 'Database Directory',
-                    'key': 'database_directory',
-                    'type': 'directory',
-                    'help': 'The location to store your mxvoice.db file'
-                  },
-
-                  {
-                      'label': 'Music File Directory',
-                      'key': 'music_directory',
-                      'type': 'directory',
-                      'help': 'The place to store the actual audio files'
-                  },
-                  {
-                      'label': 'Hotkey Directory',
-                      'key': 'hotkey_directory',
-                      'type': 'directory',
-                      'help': 'The place to store your saved hotkeys'
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        {
-          'id': 'audio',
-          'label': 'Sound Configuration',
-          /**
-           * See the list of available icons below.
-           */
-          'icon': 'bell-53',
-          'form': {
-            'groups': [
-              {
-                /**
-                * Group heading is optional.
-                */
-                'fields': [
-                  {
-                    'label': 'Fade Out Time (seconds)',
-                      'key': 'fade_out_seconds',
-                      'type': 'text',
-                      'help': 'How long (in seconds) to perform a fade-out'
-                  }
-                ]
-              }
-            ]
-          }
-        }
-      ]
-  });
-
    function loadHotkeysFile() {
      var fkey_mapping = [];
      console.log("Loading hotkeys file");
@@ -449,7 +372,7 @@ const preferences = new ElectronPreferences({
        filters: [
          { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
        ],
-       defaultPath: preferences.value('locations.hotkey_directory'),
+       defaultPath: store.get('hotkey_directory'),
        message: 'Select your Mx. Voice hotkey file',
        properties: ['openFile']
      }).then(result => {
@@ -486,7 +409,7 @@ const preferences = new ElectronPreferences({
        filters: [
          { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
        ],
-       defaultPath: preferences.value('locations.hotkey_directory'),
+       defaultPath: store.get('hotkey_directory'),
        message: 'Select your Mx. Voice holding tank file',
        properties: ['openFile']
      }).then(result => {
@@ -516,7 +439,7 @@ const preferences = new ElectronPreferences({
        filters: [
          { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
        ],
-       defaultPath: preferences.value('locations.hotkey_directory'),
+       defaultPath: store.get('hotkey_directory'),
        message: 'Save your Mx. Voice hotkey file'
      }).then(result => {
        if (result.canceled == true) {
@@ -549,7 +472,7 @@ const preferences = new ElectronPreferences({
          filters: [
            { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
          ],
-         defaultPath: preferences.value('locations.hotkey_directory'),
+         defaultPath: store.get('hotkey_directory'),
          message: 'Save your Mx. Voice holding tank file'
        }).then(result => {
          if (result.canceled == true) {
@@ -629,20 +552,38 @@ const preferences = new ElectronPreferences({
       mainWindow.webContents.send('manage_categories');
     }
 
+    function migrateOldPreferences() {
+      old_prefs_path = path.resolve(app.getPath('userData'), 'preferences.json');
+      if (fs.existsSync(old_prefs_path)) {
+        // There is an old preferences file we need to migrate
+        console.log('Migrating old preferences.json to new config.json file');
+        let rawdata = fs.readFileSync(old_prefs_path);
+        let old_prefs = JSON.parse(rawdata);
+        store.set('music_directory', old_prefs.locations.music_directory);
+        store.set('hotkey_directory', old_prefs.locations.hotkey_directory);
+        store.set('database_directory', old_prefs.locations.database_directory);
+        store.set('browser_width', old_prefs.config.browser_width);
+        store.set('browser_height', old_prefs.config.browser_height);
+        store.set('fade_out_seconds', old_prefs.audio.fade_out_seconds);
+        store.set('first_run_completed', old_prefs.system.first_run_completed);
+
+        fs.renameSync(old_prefs_path, `${old_prefs_path}.migrated`);
+      }
+    }
     // Handle first-time running
     function checkFirstRun() {
-      console.log(`First run preference returns ${preferences.value('system.first_run_completed')}`)
-      if (!preferences.value('system.first_run_completed')) {
+      console.log(`First run preference returns ${store.get('first_run_completed')}`)
+      if (!store.get('first_run_completed')) {
         var oldConfig = checkOldConfig();
         console.log(`Old config function returned ${oldConfig}`)
         if (oldConfig) {
           console.log("Migrated old config settings, checking no further")
         } else {
           console.log("Preparing for first-time setup")
-          fs.mkdirSync(preferences.value('locations.music_directory'))
-          fs.mkdirSync(preferences.value('locations.hotkey_directory'))
+          fs.mkdirSync(store.get('music_directory'))
+          fs.mkdirSync(store.get('hotkey_directory'))
 
-          const initDb = require('better-sqlite3')(path.join(preferences.value('locations.database_directory'), 'mxvoice.db'));
+          const initDb = require('better-sqlite3')(path.join(store.get('database_directory'), 'mxvoice.db'));
           initDb.exec(`CREATE TABLE IF NOT EXISTS 'categories' (   code varchar(8) NOT NULL,   description varchar(255) NOT NULL );
 CREATE TABLE mrvoice (   id INTEGER PRIMARY KEY,   title varchar(255) NOT NULL,   artist varchar(255),   category varchar(8) NOT NULL,   info varchar(255),   filename varchar(255) NOT NULL,   time varchar(10),   modtime timestamp(6),   publisher varchar(16),   md5 varchar(32) );
 CREATE UNIQUE INDEX 'category_code_index' ON categories(code);
@@ -650,10 +591,10 @@ CREATE UNIQUE INDEX 'category_description_index' ON categories(description);
 INSERT INTO categories VALUES('UNC', 'Uncategorized');
 INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('Rock Bumper', 'Patrick Short', 'UNC', 'PatrickShort-CSzRockBumper.mp3', '00:49', '${Math.floor(Date.now() / 1000)}');
 `)
-          fs.copyFileSync(path.join(__dirname, 'assets', 'music', 'CSz Rock Bumper.mp3'), path.join(preferences.value('locations.music_directory'), 'PatrickShort-CSzRockBumper.mp3'))
-          console.log(`mxvoice.db created at ${preferences.value('locations.database_directory')}`)
+          fs.copyFileSync(path.join(__dirname, 'assets', 'music', 'CSz Rock Bumper.mp3'), path.join(store.get('music_directory'), 'PatrickShort-CSzRockBumper.mp3'))
+          console.log(`mxvoice.db created at ${store.get('database_directory')}`)
           initDb.close()
-          preferences.value('system.first_run_completed', true)
+          store.set('first_run_completed', true)
         }
       }
     }
@@ -679,10 +620,10 @@ INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('
          [key, val] = line.toString().trim().split('::');
          old_settings[key] = val;
        }
-       preferences.value('locations.database_directory', path.dirname(old_settings['db_file']));
-       preferences.value('locations.music_directory', old_settings['filepath']);
-       preferences.value('locations.hotkey_directory', old_settings['savedir']);
-       preferences.value('system.first_run_completed', true)
+       store.set('database_directory', path.dirname(old_settings['db_file']));
+       store.set('music_directory', old_settings['filepath']);
+       store.set('hotkey_directory', old_settings['savedir']);
+       store.set('first_run_completed', true)
        return true
 
        // Save renaming the old config file for final releases

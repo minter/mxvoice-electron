@@ -118,6 +118,10 @@ function saveHoldingTankFile() {
   ipcRenderer.send('save-holding-tank-file', holdingTankArray);
 }
 
+function openPreferencesModal() {
+  $('#preferencesModal').modal();
+}
+
 function populateCategorySelect(){
   console.log("Populating categories");
   $('#category_select option').remove()
@@ -304,7 +308,7 @@ function playSongFromId(song_id){
     var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
     var row = stmt.get(song_id);
     var filename = row.filename;
-    var sound_path = [path.join(preferences.locations.music_directory, filename)];
+    var sound_path = [path.join(store.get('music_directory'), filename)];
     console.log("Inside get, Filename is " + filename);
     sound = new Howl({
       src: sound_path,
@@ -392,7 +396,7 @@ function stopPlaying(fadeOut = false){
       $(".now_playing").first().removeClass("now_playing");
     }
     if (fadeOut) {
-      var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000);
+      var fadeDuration = (store.get('fade_out_seconds') * 1000);
       sound.fade(sound.volume(),0,fadeDuration);
     } else {
       sound.unload();
@@ -412,7 +416,7 @@ function pausePlaying(fadeOut = false) {
       $("#progress_bar .progress-bar").removeClass("progress-bar-animated progress-bar-striped");
       if (fadeOut) {
         var old_volume = sound.volume();
-        var fadeDuration = ((preferences.audio.fade_out_seconds || 2) * 1000)
+        var fadeDuration = (store.get('fade_out_seconds') * 1000)
         sound.fade(sound.volume(), 0, fadeDuration);
       } else {
         sound.pause();
@@ -617,7 +621,7 @@ function saveNewSong(event) {
   var duration = $('#song-form-duration').val();
   var uuid = uuidv4();
   var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/[^-.\w]/g, "");
-  var newPath = path.join(preferences.locations.music_directory, newFilename );
+  var newPath = path.join(store.get('music_directory'), newFilename );
 
   const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)");
   stmt.run(title, artist, category, info, newFilename, duration, Math.floor(Date.now() / 1000));
@@ -627,6 +631,17 @@ function saveNewSong(event) {
   $("#omni_search").val(title);
   searchData();
 }
+
+function savePreferences(event) {
+  console.log('Saving preferences');
+  event.preventDefault();
+  $(`#preferencesModal`).modal('hide');
+  store.set('database_directory', $('#preferences-database-directory').val());
+  store.set('music_directory', $('#preferences-song-directory').val());
+  store.set('hotkey_directory', $('#preferences-hotkey-directory').val());
+  store.set('fade_out_seconds', $('#preferences-fadeout-seconds').val());
+}
+
 
 function renameHoldingTankTab() {
   prompt({
@@ -690,7 +705,7 @@ function deleteSelectedSong() {
       console.log("Proceeding with delete");
       const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?")
       if(deleteStmt.run(songId)) {
-        fs.unlinkSync(path.join(preferences.locations.music_directory, filename));
+        fs.unlinkSync(path.join(store.get('music_directory'), filename));
         // Remove song anywhere it appears
         $(`.holding_tank li[songid=${songId}]`).remove();
         $(`.hotkeys li span[songid=${songId}]`).remove();
@@ -730,7 +745,7 @@ function addSongsByPath(pathArray, category) {
       var artist = metadata.common.artist
       var uuid = uuidv4();
       var newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
-      var newPath = path.join(preferences.locations.music_directory, newFilename );
+      var newPath = path.join(store.get('music_directory'), newFilename );
       const stmt = db.prepare("INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)");
       const info = stmt.run(title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000));
       console.log(`Copying audio file ${songSourcePath} to ${newPath}`)
@@ -943,6 +958,15 @@ function loop_on(bool) {
     $("#loop_button").removeClass("btn-success");
     $("#loop_button").addClass("btn-secondary");
   }
+}
+
+function pickDirectory(event, element) {
+  event.preventDefault();
+  let path = dialog.showOpenDialogSync({
+    defaultPath: $(element).val(),
+    properties: ['openDirectory']
+  });
+  if (path) $(element).val(path);
 }
 
 $( document ).ready(function() {
@@ -1324,6 +1348,13 @@ $( document ).ready(function() {
       } else {
         $("#song-form-info").focus();
       }
+    });
+
+    $("#preferencesModal").on("shown.bs.modal", function (e) {
+      $('#preferences-database-directory').val(store.get('database_directory'));
+      $('#preferences-song-directory').val(store.get('music_directory'));
+      $('#preferences-hotkey-directory').val(store.get('hotkey_directory'));
+      $('#preferences-fadeout-seconds').val(store.get('fade_out_seconds'));
     });
 
     $(window).on('resize', function() {
