@@ -562,10 +562,10 @@ Menu.setApplicationMenu(menu);
         store.set('music_directory', old_prefs.locations.music_directory);
         store.set('hotkey_directory', old_prefs.locations.hotkey_directory);
         store.set('database_directory', old_prefs.locations.database_directory);
-        store.set('browser_width', old_prefs.config.browser_width);
-        store.set('browser_height', old_prefs.config.browser_height);
-        store.set('fade_out_seconds', old_prefs.audio.fade_out_seconds);
-        store.set('first_run_completed', old_prefs.system.first_run_completed);
+        store.set('browser_width', (old_prefs?.config?.browser_width || 1280));
+        store.set('browser_height', (old_prefs?.config?.browser_height || 1024));
+        store.set('fade_out_seconds', (old_prefs?.audio?.fade_out_seconds || 3));
+        store.set('first_run_completed', (old_prefs?.system?.first_run_completed || true));
 
         fs.renameSync(old_prefs_path, `${old_prefs_path}.migrated`);
       }
