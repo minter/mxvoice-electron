@@ -963,9 +963,7 @@ function loop_on(bool) {
 function pickDirectory(event, element) {
   event.preventDefault();
   let path = dialog.showOpenDialogSync({properties: ['openDirectory']});
-  if (path.length) {
-    $(element).val(path);
-  }
+  if (path) $(element).val(path);
 }
 
 $( document ).ready(function() {
