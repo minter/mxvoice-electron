@@ -171,6 +171,11 @@ body {
     width: 100%;
 }
 
+#form input {
+  background-color: var(--header-color);
+  color: var(--card-text);
+}
+
 #label {
     font-size: 13px;
     max-width: 100%;
