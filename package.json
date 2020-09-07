@@ -1,7 +1,7 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "Improv Audio Software",
   "repository": "https://github.com/minter/mxvoice-electron",
   "appBundleId": "app.mxvoice.mxvoice",
@@ -36,9 +36,11 @@
     "jquery": "^3.5.1",
     "jquery-contextmenu": "^2.9.2",
     "lodash": "^4.17.19",
+    "markdown-it": "^11.0.0",
     "mousetrap": "^1.6.5",
     "music-metadata": "^7.0.2",
     "n-readlines": "^1.0.0",
+    "@octokit/rest": "^18.0.5",
     "popper.js": "^1.14.4",
     "uuid": "^8.2.0",
     "wavesurfer.js": "^4.0.1"
