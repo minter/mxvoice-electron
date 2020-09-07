@@ -1,4 +1,4 @@
-const { ipcRenderer, remote, autoUpdater } = require('electron')
+const { ipcRenderer, remote } = require('electron')
 const { Howl, Howler } = require('howler')
 const Store = require('electron-store');
 const store = new Store();
@@ -109,7 +109,6 @@ process.once('loaded', () => {
   global.fs = fs,
   global.db = db,
   global.dialog = dialog
-  global.autoUpdater = autoUpdater
 
   if (db.pragma('index_info(category_code_index)').length == 0) {
     console.log(`Creating unique index on category codes`)
