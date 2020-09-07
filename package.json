@@ -27,7 +27,7 @@
     "animate.css": "^4.1.0",
     "better-sqlite3": "^7.1.0",
     "bootstrap": "^4.5.2",
-    "electron-log": "^4.2.2",
+    "electron-log": "^4.2.4",
     "electron-prompt": "^1.6.0",
     "electron-squirrel-startup": "^1.0.0",
     "electron-store": "^6.0.0",
@@ -35,14 +35,14 @@
     "howler": "^2.2.0",
     "jquery": "^3.5.1",
     "jquery-contextmenu": "^2.9.2",
-    "lodash": "^4.17.19",
+    "lodash": "^4.17.20",
     "markdown-it": "^11.0.0",
     "mousetrap": "^1.6.5",
     "music-metadata": "^7.0.2",
     "n-readlines": "^1.0.0",
     "@octokit/rest": "^18.0.5",
     "popper.js": "^1.14.4",
-    "uuid": "^8.2.0",
+    "uuid": "^8.3.0",
     "wavesurfer.js": "^4.0.1"
   },
   "devDependencies": {
@@ -51,9 +51,9 @@
     "@electron-forge/maker-squirrel": "6.0.0-beta.52",
     "@electron-forge/maker-zip": "6.0.0-beta.52",
     "@electron-forge/publisher-github": "6.0.0-beta.52",
-    "electron": "9.3.0",
+    "electron": "10.1.1",
     "electron-rebuild": "^2.0.1",
     "electron-reload": "^1.5.0",
-    "node-abi": "^2.18.0"
+    "node-abi": "^2.19.1"
   }
 }
