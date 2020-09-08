@@ -969,6 +969,10 @@ function pickDirectory(event, element) {
   if (path) $(element).val(path);
 }
 
+function installUpdate() {
+  ipcRenderer.send('restart-and-install-new-version');
+}
+
 $( document ).ready(function() {
 
   scale_scrollable();

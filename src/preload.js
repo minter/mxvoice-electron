@@ -85,10 +85,14 @@ ipcRenderer.on('delete_selected_song', function(event) {
 });
 
 ipcRenderer.on('edit_selected_song', function(event) {
-  console.log('Received edit_selected_song message')
   editSelectedSong();
 });
 
+ipcRenderer.on('display_release_notes', function(event, releaseName, releaseNotes) {
+  $('#newReleaseModal .modal-title').html(`Downloaded New Version: ${releaseName}`);
+  $('#newReleaseModal .modal-body').html(releaseNotes);
+  $('#newReleaseModal').modal();
+})
 
 process.once('loaded', () => {
 

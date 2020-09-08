@@ -6,6 +6,9 @@ const fs = require('fs');
 const readlines = require('n-readlines');
 const Store = require('electron-store');
 const log = require('electron-log');
+const { Octokit } = require("@octokit/rest");
+const octokit = new Octokit();
+var md = require('markdown-it')();
 console.log = log.log;
 
 const defaults = {
@@ -34,18 +37,20 @@ if (!is.development) {
 }
 
 autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
-  const dialogOpts = {
-    type: 'info',
-    buttons: ['Restart', 'Later'],
-    title: 'Application Update',
-    message: process.platform === 'win32' ? releaseNotes : releaseName,
-    detail: 'A new version has been downloaded. Restart the application to apply the updates.'
-  }
-
-  dialog.showMessageBox(dialogOpts).then((returnValue) => {
-    if (returnValue.response === 0) autoUpdater.quitAndInstall()
+  const owner = 'minter';
+  const repo = 'mxvoice-electron';
+  const tag = process.platform === 'win32' ? `v${releaseName}` : releaseName;
+  console.log(`Checking GitHub API for owner: ${owner}, repo: ${repo}, tag: ${tag}`);
+  octokit.repos.getReleaseByTag({
+    owner,
+    repo,
+    tag
+  }).then(function(release) {
+    mainWindow.webContents.send('display_release_notes', releaseName, md.render(`# Version ${releaseName}\n` + release.data.body));
+  }).catch(function(err) {
+    console.log(err)
   })
-})
+});
 
 autoUpdater.on('error', message => {
   console.error('There was a problem updating the application')
@@ -170,6 +175,9 @@ ipcMain.on('save-holding-tank-file', (event, arg) => {
   saveHoldingTankFile(arg);
 });
 
+ipcMain.on('restart-and-install-new-version', (event, arg) => {
+  autoUpdater.quitAndInstall();
+});
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
