@@ -158,12 +158,6 @@ h6 a {
   padding-right: 5px;
 }
 
-.nav-link.active {
-  position: relative !important;
-  top: -3px !important;
-  height: 36px;
-}
-
 .nav-item {
   font-size: 11px;
 }
