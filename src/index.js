@@ -151,6 +151,19 @@ if (process.platform == 'darwin') {
   })
 }
 
+ipcMain.handle('get-app-path', async (event) => {
+  const result = await app.getAppPath();
+  return result
+})
+
+ipcMain.handle('show-directory-picker', async (event, defaultPath) => {
+  let path = dialog.showOpenDialogSync({
+    defaultPath: defaultPath,
+    properties: ['openDirectory']
+  });
+  return path
+})
+
 ipcMain.on('open-hotkey-file', (event, arg) => {
   console.log("Main process starting hotkey open");
   loadHotkeysFile();
