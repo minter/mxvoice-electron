@@ -51,8 +51,12 @@ function playSongFromHotkey(hotkey) {
 function populateHotkeys(fkeys, title) {
   for (var key in fkeys) {
     if (fkeys[key]) {
-      $(`.hotkeys.active #${key}_hotkey`).attr('songid', fkeys[key]);
-      setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`))
+      try {
+        $(`.hotkeys.active #${key}_hotkey`).attr('songid', fkeys[key]);
+        setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`))
+      } catch(err) {
+        console.log(`Error loading fkey ${key} (DB ID: ${fkeys[key]})`)
+      }
     }
     else {
       $(`.hotkeys.active #${key}_hotkey`).removeAttr('songid');
