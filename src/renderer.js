@@ -51,8 +51,12 @@ function playSongFromHotkey(hotkey) {
 function populateHotkeys(fkeys, title) {
   for (var key in fkeys) {
     if (fkeys[key]) {
-      $(`.hotkeys.active #${key}_hotkey`).attr('songid', fkeys[key]);
-      setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`))
+      try {
+        $(`.hotkeys.active #${key}_hotkey`).attr('songid', fkeys[key]);
+        setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`))
+      } catch(err) {
+        console.log(`Error loading fkey ${key} (DB ID: ${fkeys[key]})`)
+      }
     }
     else {
       $(`.hotkeys.active #${key}_hotkey`).removeAttr('songid');
@@ -538,23 +542,25 @@ function switchToHotkeyTab(tab) {
 }
 
 function renameHotkeyTab() {
-
-  prompt({
-    title: "Rename Hotkey Tab",
-    label: "Rename this tab:",
-    value: $("#hotkey_tabs .nav-link.active").text(),
-    type: "input",
-    alwaysOnTop: true,
-    customStylesheet: 'src/stylesheets/colors.css'
-  })
-    .then((r) => {
-      if (r === null) {
-        console.log("user canceled");
-      } else {
-        $("#hotkey_tabs .nav-link.active").text(r);
-      }
+  ipcRenderer.invoke('get-app-path').then((result) => {
+    prompt({
+      title: "Rename Hotkey Tab",
+      label: "Rename this tab:",
+      value: $("#hotkey_tabs .nav-link.active").text(),
+      type: "input",
+      alwaysOnTop: true,
+      customStylesheet: path.join(result, 'src/stylesheets/colors.css')
     })
-    .catch(console.error);
+      .then((r) => {
+        if (r === null) {
+          console.log("user canceled");
+        } else {
+          $("#hotkey_tabs .nav-link.active").text(r);
+        }
+      })
+      .catch(console.error);
+
+  })
 }
 
 function saveEditedSong(event) {
@@ -644,22 +650,24 @@ function savePreferences(event) {
 
 
 function renameHoldingTankTab() {
-  prompt({
-    title: "Rename Holding Tank Tab",
-    label: "Rename this tab:",
-    value: $("#holding_tank_tabs .nav-link.active").text(),
-    type: "input",
-    alwaysOnTop: true,
-    customStylesheet: 'src/stylesheets/colors.css'
-  })
-    .then((r) => {
-      if (r === null) {
-        console.log("user canceled");
-      } else {
-        $("#holding_tank_tabs .nav-link.active").text(r);
-      }
+  ipcRenderer.invoke('get-app-path').then((result) => {
+    prompt({
+      title: "Rename Holding Tank Tab",
+      label: "Rename this tab:",
+      value: $("#holding_tank_tabs .nav-link.active").text(),
+      type: "input",
+      alwaysOnTop: true,
+      customStylesheet: path.join(result, 'src/stylesheets/colors.css')
     })
-    .catch(console.error);
+      .then((r) => {
+        if (r === null) {
+          console.log("user canceled");
+        } else {
+          $("#holding_tank_tabs .nav-link.active").text(r);
+        }
+      })
+      .catch(console.error);
+    });
 }
 
 function editSelectedSong() {
@@ -962,11 +970,10 @@ function loop_on(bool) {
 
 function pickDirectory(event, element) {
   event.preventDefault();
-  let path = dialog.showOpenDialogSync({
-    defaultPath: $(element).val(),
-    properties: ['openDirectory']
+  defaultPath = $(element).val();
+  ipcRenderer.invoke('show-directory-picker', defaultPath).then((result) => {
+    if (result) $(element).val(result);
   });
-  if (path) $(element).val(path);
 }
 
 function installUpdate() {
