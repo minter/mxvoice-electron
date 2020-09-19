@@ -82,8 +82,8 @@ const createWindow = () => {
     height: store.get('browser_height'),
     minWidth: 1000,
     minHeight: 660,
-    enableRemoteModule: true,
     webPreferences: {
+      enableRemoteModule: true,
       preload: path.join(app.getAppPath(), 'src/preload.js')
     }
   });

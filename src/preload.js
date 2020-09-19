@@ -1,4 +1,4 @@
-const { ipcRenderer, remote } = require('electron')
+const { ipcRenderer } = require('electron')
 const { Howl, Howler } = require('howler')
 const Store = require('electron-store');
 const store = new Store();
