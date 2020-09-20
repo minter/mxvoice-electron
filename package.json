@@ -24,8 +24,9 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.14.0",
-    "animate.css": "^4.1.0",
-    "better-sqlite3": "^7.1.0",
+    "@octokit/rest": "^18.0.6",
+    "animate.css": "^4.1.1",
+    "better-sqlite3": "^7.1.1",
     "bootstrap": "^4.5.2",
     "electron-log": "^4.2.4",
     "electron-prompt": "^1.6.0",
@@ -36,14 +37,13 @@
     "jquery": "^3.5.1",
     "jquery-contextmenu": "^2.9.2",
     "lodash": "^4.17.20",
-    "markdown-it": "^11.0.0",
+    "markdown-it": "^11.0.1",
     "mousetrap": "^1.6.5",
-    "music-metadata": "^7.0.2",
+    "music-metadata": "^7.4.0",
     "n-readlines": "^1.0.0",
-    "@octokit/rest": "^18.0.5",
     "popper.js": "^1.14.4",
     "uuid": "^8.3.0",
-    "wavesurfer.js": "^4.0.1"
+    "wavesurfer.js": "^4.1.0"
   },
   "devDependencies": {
     "@electron-forge/cli": "6.0.0-beta.52",
@@ -52,7 +52,7 @@
     "@electron-forge/maker-zip": "6.0.0-beta.52",
     "@electron-forge/publisher-github": "6.0.0-beta.52",
     "electron": "10.1.1",
-    "electron-rebuild": "^2.0.1",
+    "electron-rebuild": "^2.0.3",
     "electron-reload": "^1.5.0",
     "node-abi": "^2.19.1"
   }
