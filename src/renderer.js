@@ -1186,6 +1186,7 @@ $( document ).ready(function() {
     if (event.originalEvent.dataTransfer.getData("text").length) return;
     var original_column = $(`#${event.originalEvent.dataTransfer.getData("application/x-moz-node")}`);
     var target_column = $(event.target).closest('.col');
+    if (original_column.prop('id') == target_column.prop('id')) return;
     var columns = $('#top-row').children();
     if (columns.index(original_column) > columns.index(target_column)) {
       target_column.before(original_column.detach());
