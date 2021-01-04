@@ -39,7 +39,7 @@
     "lodash": "^4.17.20",
     "markdown-it": "^12.0.3",
     "mousetrap": "^1.6.5",
-    "music-metadata": "^7.5.3",
+    "music-metadata": "^7.6.1",
     "n-readlines": "^1.0.1",
     "popper.js": "^1.14.4",
     "uuid": "^8.3.2",
