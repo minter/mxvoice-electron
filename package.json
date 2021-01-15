@@ -23,7 +23,7 @@
     "forge": "./forge.config.js"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^5.15.1",
+    "@fortawesome/fontawesome-free": "^5.15.2",
     "@octokit/rest": "^18.0.12",
     "animate.css": "^4.1.1",
     "better-sqlite3": "^7.1.2",
