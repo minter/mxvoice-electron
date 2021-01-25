@@ -29,7 +29,7 @@
     "better-sqlite3": "^7.1.2",
     "bootstrap": "^4.6.0",
     "electron-log": "^4.3.1",
-    "electron-prompt": "^1.6.0",
+    "electron-prompt": "^1.6.1",
     "electron-squirrel-startup": "^1.0.0",
     "electron-store": "^6.0.1",
     "electron-util": "^0.14.2",
