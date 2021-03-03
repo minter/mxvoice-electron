@@ -34,7 +34,7 @@
     "electron-store": "^7.0.2",
     "electron-util": "^0.14.2",
     "howler": "^2.2.0",
-    "jquery": "^3.5.1",
+    "jquery": "^3.6.0",
     "jquery-contextmenu": "^2.9.2",
     "lodash": "^4.17.21",
     "markdown-it": "^12.0.3",
