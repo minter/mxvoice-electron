@@ -26,7 +26,7 @@
     "@fortawesome/fontawesome-free": "^5.15.3",
     "@octokit/rest": "^18.5.2",
     "animate.css": "^4.1.1",
-    "better-sqlite3": "^7.1.2",
+    "better-sqlite3": "^7.1.4",
     "bootstrap": "^4.6.0",
     "electron-log": "^4.3.2",
     "electron-prompt": "^1.6.2",
