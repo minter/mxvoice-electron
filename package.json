@@ -54,6 +54,6 @@
     "electron": "11.3.0",
     "electron-rebuild": "^2.3.5",
     "electron-reload": "^1.5.0",
-    "node-abi": "^2.21.0"
+    "node-abi": "^2.26.0"
   }
 }
