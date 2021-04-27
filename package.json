@@ -31,7 +31,7 @@
     "electron-log": "^4.3.4",
     "electron-prompt": "^1.6.2",
     "electron-squirrel-startup": "^1.0.0",
-    "electron-store": "^7.0.3",
+    "electron-store": "^8.0.0",
     "electron-util": "^0.15.1",
     "howler": "^2.2.0",
     "jquery": "^3.6.0",
