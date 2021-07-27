@@ -13,6 +13,7 @@ var wavesurfer = WaveSurfer.create({
   responsive: true,
   height: 100
 });
+var fontSize = 11;
 
 // Animate.css
 
@@ -196,7 +197,7 @@ function searchData(){
   var stmt = db.prepare("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist');
   const rows = stmt.all(query_params);
   rows.forEach((row) => {
-    raw_html.push(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${row.id}'><td class='hide-1'>${categories[row.category]}</td><td class='hide-2'>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
+    raw_html.push(`<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${row.id}'><td class='hide-1'>${categories[row.category]}</td><td class='hide-2'>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
   });
   $("#search_results").append(raw_html.join(''));
 
@@ -246,7 +247,7 @@ function addToHoldingTank(song_id, element) {
   if (existing_song.length) {
     var song_row = existing_song.detach();
   } else {
-    var song_row = `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
+    var song_row = `<li style='font-size: ${fontSize}px' class='song list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
   }
 
   if ($(element).is("li")) {
@@ -668,6 +669,14 @@ function renameHoldingTankTab() {
       })
       .catch(console.error);
     });
+}
+
+function increaseFontSize() {
+  $('.song').css('font-size', fontSize++ + "px");
+}
+
+function decreaseFontSize() {
+  $(".song").css("font-size", fontSize-- + "px");
 }
 
 function editSelectedSong() {

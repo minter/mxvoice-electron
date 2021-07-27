@@ -87,6 +87,14 @@ ipcRenderer.on('edit_selected_song', function(event) {
   editSelectedSong();
 });
 
+ipcRenderer.on("increase_font_size", function (event) {
+  increaseFontSize();
+});
+
+ipcRenderer.on("decrease_font_size", function (event) {
+  decreaseFontSize();
+});
+
 ipcRenderer.on('display_release_notes', function(event, releaseName, releaseNotes) {
   $('#newReleaseModal .modal-title').html(`Downloaded New Version: ${releaseName}`);
   $('#newReleaseModal .modal-body').html(releaseNotes);
