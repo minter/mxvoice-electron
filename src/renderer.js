@@ -989,6 +989,21 @@ function installUpdate() {
   ipcRenderer.send('restart-and-install-new-version');
 }
 
+function toggleWaveform() {
+  if ($("#waveform").hasClass("hidden")) {
+    $("#waveform").removeClass("hidden");
+    $(this).addClass("btn-primary");
+    $(this).removeClass("btn-secondary");
+    animateCSS($("#waveform"), "fadeInUp").then(() => {});
+  } else {
+    $(this).removeClass("btn-primary");
+    $(this).addClass("btn-secondary");
+    animateCSS($("#waveform"), "fadeOutDown").then(() => {
+      $("#waveform").addClass("hidden");
+    });
+  }
+}
+
 $( document ).ready(function() {
 
   scale_scrollable();
@@ -1329,21 +1344,8 @@ $( document ).ready(function() {
     loop_on(loop);
   });
 
-  $("#waveform_button").click(function () {
-    if ($('#waveform').hasClass('hidden')) {
-      $('#waveform').removeClass('hidden');
-      $(this).addClass('btn-primary');
-      $(this).removeClass('btn-secondary');
-      animateCSS($('#waveform'), 'fadeInUp').then(() => {
-
-      });
-    } else {
-      $(this).removeClass('btn-primary');
-      $(this).addClass('btn-secondary');
-       animateCSS($('#waveform'), 'fadeOutDown').then(() => {
-         $('#waveform').addClass('hidden');
-       });
-    }
+  $("#waveform_button").on('click', function () {
+    toggleWaveform();
   });
 
   $('.modal').on('show.bs.modal', function() {

@@ -234,10 +234,18 @@ var application_menu = [
         },
       },
       {
-        label: "Decreate Font Size",
+        label: "Decrease Font Size",
         accelerator: "CommandOrControl+-",
         click: () => {
           decreaseFontSize();
+        },
+      },
+      { type: "separator" },
+      {
+        label: "Toggle Waveform",
+        accelerator: "CommandOrControl+W",
+        click: () => {
+          toggleWaveform();
         },
       },
     ],
@@ -585,6 +593,11 @@ Menu.setApplicationMenu(menu);
     function decreaseFontSize(vl) {
       console.log("Decreasing font size");
       mainWindow.webContents.send("decrease_font_size");
+    }
+
+    function toggleWaveform(vl) {
+      console.log("Toggling waveform");
+      mainWindow.webContents.send("toggle_wave_form");
     }
 
     function sendDeleteSong() {
