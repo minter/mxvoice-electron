@@ -242,10 +242,17 @@ var application_menu = [
       },
       { type: "separator" },
       {
-        label: "Toggle Waveform",
+        label: "Show/Hide Waveform",
         accelerator: "CommandOrControl+W",
         click: () => {
           toggleWaveform();
+        },
+      },
+      {
+        label: "Show/Hide Advanced Search",
+        accelerator: "CommandOrControl+M",
+        click: () => {
+          toggleAdvancedSearch();
         },
       },
     ],
@@ -590,14 +597,19 @@ Menu.setApplicationMenu(menu);
       mainWindow.webContents.send("increase_font_size");
     }
 
-    function decreaseFontSize(vl) {
+    function decreaseFontSize() {
       console.log("Decreasing font size");
       mainWindow.webContents.send("decrease_font_size");
     }
 
-    function toggleWaveform(vl) {
+    function toggleWaveform() {
       console.log("Toggling waveform");
       mainWindow.webContents.send("toggle_wave_form");
+    }
+
+    function toggleAdvancedSearch() {
+      console.log("Toggling advanced search");
+      mainWindow.webContents.send("toggle_advanced_search");
     }
 
     function sendDeleteSong() {
