@@ -1127,6 +1127,14 @@ $( document ).ready(function() {
     return false;
   });
 
+  Mousetrap.bind("command+l", function () {
+    if ($('#omni_search').is(':visible')) {
+      $('#omni_search').trigger('focus');
+    } else {
+      $("#title-search").trigger('focus');
+    }
+  });
+
   // Set up hotkey and holding tank tabs
 
   for (var i = 2; i<=5; i++) {
