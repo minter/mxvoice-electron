@@ -672,11 +672,11 @@ function renameHoldingTankTab() {
 }
 
 function increaseFontSize() {
-  $('.song').css('font-size', fontSize++ + "px");
+  $('.song').css('font-size', ++fontSize + "px");
 }
 
 function decreaseFontSize() {
-  $(".song").css("font-size", fontSize-- + "px");
+  $(".song").css("font-size", --fontSize + "px");
 }
 
 function editSelectedSong() {

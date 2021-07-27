@@ -230,14 +230,14 @@ var application_menu = [
         label: "Increase Font Size",
         accelerator: "CommandOrControl+=",
         click: () => {
-          increaseFontSize(1);
+          increaseFontSize();
         },
       },
       {
         label: "Decreate Font Size",
         accelerator: "CommandOrControl+-",
         click: () => {
-          decreaseFontSize(-1);
+          decreaseFontSize();
         },
       },
     ],
