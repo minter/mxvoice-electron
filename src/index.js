@@ -142,7 +142,7 @@ if (process.platform == 'darwin') {
   app.setAboutPanelOptions({
     applicationName: app.name,
     applicationVersion: app.getVersion(),
-    copyright: 'Copyright 2020',
+    copyright: 'Copyright 2021',
     authors: [
       'Wade Minter',
       'Andrew Berkowitz'
@@ -199,91 +199,124 @@ ipcMain.on('restart-and-install-new-version', (event, arg) => {
 // Menus
 var application_menu = [
   {
-    label: 'Edit',
+    label: "Edit",
     submenu: [
       {
-        label: 'Cut',
-        role: 'cut'
+        label: "Cut",
+        role: "cut",
       },
       {
-        label: 'Copy',
-        role: 'copy'
+        label: "Copy",
+        role: "copy",
       },
       {
-        label: 'Paste',
-        role: 'paste'
+        label: "Paste",
+        role: "paste",
       },
       {
-        label: 'Paste And Match Style',
-        role: 'pasteAndMatchStyle'
+        label: "Paste And Match Style",
+        role: "pasteAndMatchStyle",
       },
       {
-        label: 'Select All',
-        role: 'selectAll'
-      }
-    ]
+        label: "Select All",
+        role: "selectAll",
+      },
+    ],
   },
   {
-    label: 'Songs',
+    label: "View",
     submenu: [
       {
-        label: 'Add Song',
+        label: "Increase Font Size",
+        accelerator: "CommandOrControl+=",
+        click: () => {
+          increaseFontSize();
+        },
+      },
+      {
+        label: "Decrease Font Size",
+        accelerator: "CommandOrControl+-",
+        click: () => {
+          decreaseFontSize();
+        },
+      },
+      { type: "separator" },
+      {
+        label: "Show/Hide Waveform",
+        accelerator: "CommandOrControl+W",
+        click: () => {
+          toggleWaveform();
+        },
+      },
+      {
+        label: "Show/Hide Advanced Search",
+        accelerator: "CommandOrControl+M",
+        click: () => {
+          toggleAdvancedSearch();
+        },
+      },
+    ],
+  },
+  {
+    label: "Songs",
+    submenu: [
+      {
+        label: "Add Song",
         click: () => {
           addFileDialog();
-        }
+        },
       },
       {
-        label: 'Add All Songs In Directory',
+        label: "Add All Songs In Directory",
         click: () => {
           addDirectoryDialog();
-        }
+        },
       },
       {
-        label: 'Edit Selected Song',
+        label: "Edit Selected Song",
         click: () => {
           sendEditSong();
-        }
+        },
       },
       {
-        label: 'Delete Selected Song',
+        label: "Delete Selected Song",
         click: () => {
           sendDeleteSong();
-        }
-      }
-    ]
+        },
+      },
+    ],
   },
   {
-    label: 'Hotkeys',
+    label: "Hotkeys",
     submenu: [
       {
-        label: 'Open Hotkeys File',
-        accelerator: 'CommandOrControl+O',
+        label: "Open Hotkeys File",
+        accelerator: "CommandOrControl+O",
         click: () => {
           loadHotkeysFile();
-        }
+        },
       },
       {
-        label: 'Save Hotkeys To File',
-        accelerator: 'CommandOrControl+S',
+        label: "Save Hotkeys To File",
+        accelerator: "CommandOrControl+S",
         click: () => {
-          mainWindow.webContents.send('start_hotkey_save');
-        }
-      }
-    ]
+          mainWindow.webContents.send("start_hotkey_save");
+        },
+      },
+    ],
   },
   {
-    label: 'Categories',
+    label: "Categories",
     submenu: [
       {
-        label: 'Manage Categories',
+        label: "Manage Categories",
         click: () => {
           manageCategories();
-        }
-      }
-    ]
-
-  }
-]
+        },
+      },
+    ],
+  },
+];
 
 if (process.platform == 'darwin') {
   const name = app.name;
@@ -558,6 +591,26 @@ Menu.setApplicationMenu(menu);
            console.log(err)
          })
        }
+
+    function increaseFontSize() {
+      console.log('Increasing font size');
+      mainWindow.webContents.send("increase_font_size");
+    }
+
+    function decreaseFontSize() {
+      console.log("Decreasing font size");
+      mainWindow.webContents.send("decrease_font_size");
+    }
+
+    function toggleWaveform() {
+      console.log("Toggling waveform");
+      mainWindow.webContents.send("toggle_wave_form");
+    }
+
+    function toggleAdvancedSearch() {
+      console.log("Toggling advanced search");
+      mainWindow.webContents.send("toggle_advanced_search");
+    }
 
     function sendDeleteSong() {
       console.log('Sending delete_selected_song message');

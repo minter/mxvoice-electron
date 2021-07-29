@@ -13,6 +13,7 @@ var wavesurfer = WaveSurfer.create({
   responsive: true,
   height: 100
 });
+var fontSize = 11;
 
 // Animate.css
 
@@ -196,7 +197,7 @@ function searchData(){
   var stmt = db.prepare("SELECT * from mrvoice" + query_string + ' ORDER BY category,info,title,artist');
   const rows = stmt.all(query_params);
   rows.forEach((row) => {
-    raw_html.push(`<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${row.id}'><td class='hide-1'>${categories[row.category]}</td><td class='hide-2'>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
+    raw_html.push(`<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${row.id}'><td class='hide-1'>${categories[row.category]}</td><td class='hide-2'>${row.info || ''}</td><td style='font-weight: bold'>${row.title || ''}</td><td style='font-weight:bold'>${row.artist || ''}</td><td>${row.time}</td></tr>`);
   });
   $("#search_results").append(raw_html.join(''));
 
@@ -246,7 +247,7 @@ function addToHoldingTank(song_id, element) {
   if (existing_song.length) {
     var song_row = existing_song.detach();
   } else {
-    var song_row = `<li class='list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
+    var song_row = `<li style='font-size: ${fontSize}px' class='song list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
   }
 
   if ($(element).is("li")) {
@@ -670,6 +671,18 @@ function renameHoldingTankTab() {
     });
 }
 
+function increaseFontSize() {
+  if (fontSize < 25) {
+    $(".song").css("font-size", ++fontSize + "px");
+  }
+}
+
+function decreaseFontSize() {
+  if (fontSize > 5) {
+    $(".song").css("font-size", --fontSize + "px");
+  }
+}
+
 function editSelectedSong() {
   var songId = $('#selected_row').attr('songid');
   const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
@@ -980,6 +993,44 @@ function installUpdate() {
   ipcRenderer.send('restart-and-install-new-version');
 }
 
+function toggleWaveform() {
+  if ($("#waveform").hasClass("hidden")) {
+    $("#waveform").removeClass("hidden");
+    $(this).addClass("btn-primary");
+    $(this).removeClass("btn-secondary");
+    animateCSS($("#waveform"), "fadeInUp").then(() => {});
+  } else {
+    $(this).removeClass("btn-primary");
+    $(this).addClass("btn-secondary");
+    animateCSS($("#waveform"), "fadeOutDown").then(() => {
+      $("#waveform").addClass("hidden");
+    });
+  }
+}
+
+function toggleAdvancedSearch() {
+  $("#search_form").trigger("reset");
+  if ($("#advanced-search").is(":visible")) {
+    $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
+    $("#title-search").hide();
+    $("#omni_search").show();
+    $("#omni_search").focus();
+    animateCSS($("#advanced-search"), "fadeOutUp").then(() => {
+      $("#advanced-search").hide();
+      scale_scrollable();
+    });
+  } else {
+    $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
+    $("#advanced-search").show();
+    $("#title-search").show();
+    $("#title-search").focus();
+    $("#omni_search").hide();
+    scale_scrollable();
+    animateCSS($("#advanced-search"), "fadeInDown").then(() => {});
+  }
+}
+
+
 $( document ).ready(function() {
 
   scale_scrollable();
@@ -1078,6 +1129,14 @@ $( document ).ready(function() {
   Mousetrap.bind(["backspace", "del"], function () {
     deleteSong();
     return false;
+  });
+
+  Mousetrap.bind("command+l", function () {
+    if ($('#omni_search').is(':visible')) {
+      $('#omni_search').trigger('focus');
+    } else {
+      $("#title-search").trigger('focus');
+    }
   });
 
   // Set up hotkey and holding tank tabs
@@ -1233,27 +1292,7 @@ $( document ).ready(function() {
   });
 
   $("#advanced_search_button").on("click", function () {
-    $("#search_form").trigger('reset');
-    if ($("#advanced-search").is(':visible')) {
-      $("#advanced-search-icon").toggleClass('fa-plus fa-minus');
-      $("#title-search").hide();
-      $("#omni_search").show();
-      $("#omni_search").focus();
-      animateCSS($('#advanced-search'), 'fadeOutUp').then(() => {
-        $("#advanced-search").hide();
-        scale_scrollable();
-      });
-    } else {
-      $("#advanced-search-icon").toggleClass('fa-plus fa-minus');
-      $("#advanced-search").show();
-      $("#title-search").show();
-      $("#title-search").focus();
-      $("#omni_search").hide();
-      scale_scrollable();
-      animateCSS($('#advanced-search'), 'fadeInDown').then(() => {
-
-      });
-    }
+    toggleAdvancedSearch();
     return false;
   });
 
@@ -1320,21 +1359,8 @@ $( document ).ready(function() {
     loop_on(loop);
   });
 
-  $("#waveform_button").click(function () {
-    if ($('#waveform').hasClass('hidden')) {
-      $('#waveform').removeClass('hidden');
-      $(this).addClass('btn-primary');
-      $(this).removeClass('btn-secondary');
-      animateCSS($('#waveform'), 'fadeInUp').then(() => {
-
-      });
-    } else {
-      $(this).removeClass('btn-primary');
-      $(this).addClass('btn-secondary');
-       animateCSS($('#waveform'), 'fadeOutDown').then(() => {
-         $('#waveform').addClass('hidden');
-       });
-    }
+  $("#waveform_button").on('click', function () {
+    toggleWaveform();
   });
 
   $('.modal').on('show.bs.modal', function() {
