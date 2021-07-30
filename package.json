@@ -14,6 +14,7 @@
   "scripts": {
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
+    "release": "electron-builder --publish always",
     "postinstall": "electron-builder install-app-deps",
     "start": "electron ."
   },
@@ -41,7 +42,14 @@
           "path": "/Applications"
         }
       ]
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "minter",
+        "repo": "mxvoice-electron"
+      }
+    ]
   },
   "license": "MIT",
   "dependencies": {

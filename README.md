@@ -36,7 +36,7 @@ To build packages for release, use the `yarn dist -- --x64` command. This will u
 
 Build output of `yarn dist -- --x64` will be available in the `dist/` subdirectory. Currently, this produces both a `.dmg` and a `.zip` file, with the `.dmg` being preferred.
 
-To publish the release to the official Mx. Voice GitHub Releases, use `npm run publish`. This requires a `GITHUB_TOKEN` environment variable to be set, with permissions to upload releases, as well as environment variables `APPLE_ID` and `APPLE_ID_PASSWORD`, set to a login and an app password with development rights to code-sign and notarize the app.
+To publish the release to the official Mx. Voice GitHub Releases, use `yarn release -- --x64`. This requires a `GITHUB_TOKEN` environment variable to be set, with permissions to upload releases, as well as environment variables `APPLE_ID` and `APPLE_ID_PASSWORD`, set to a login and an app password with development rights to code-sign and notarize the app.
 
 ### Windows
 
