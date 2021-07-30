@@ -22,6 +22,7 @@
     "appId": "app.mxvoice.mxvoice",
     "productName": "Mx. Voice",
     "copyright": "Copyright © 2021 Wade Minter and Andrew Berkowitz",
+    "afterSign": "electron-builder-notarize",
     "mac": {
       "category": "public.app-category.music",
       "icon": "src/assets/icons/mxvoice",
@@ -78,6 +79,7 @@
   "devDependencies": {
     "electron": "11.3.0",
     "electron-builder": "^22.11.7",
+    "electron-builder-notarize": "^1.2.0",
     "electron-reload": "^1.5.0"
   }
 }
