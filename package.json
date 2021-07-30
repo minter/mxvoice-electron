@@ -24,9 +24,7 @@
     "copyright": "Copyright © 2021 Wade Minter and Andrew Berkowitz",
     "afterSign": "electron-builder-notarize",
     "win": {
-      "icon": "src/assets/icons/mxvoice.ico",
-      "certificateFile": process.env.WINDOWS_CERTIFICATE_FILE,
-      "certificatePassword": process.env.WINDOWS_CERTIFICATE_PASSWORD
+      "icon": "src/assets/icons/mxvoice.ico"
     },
     "mac": {
       "category": "public.app-category.music",
