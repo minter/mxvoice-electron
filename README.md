@@ -32,11 +32,9 @@ That should launch the app onto your desktop!
 
 **UNDER RECONSTRUCTION**
 
-To build packages for release, use the `npm run make` command. This will use the makers defined in `package.json`, along with your current system architecture (e.g., `darwin`) and build any available targets.
+To build packages for release, use the `yarn dist -- --x64` command. This will use the makers defined in `package.json`, along with your current system architecture (e.g., `darwin`) and build any available targets. The `--x64` flag ensures Intel-compatible builds on M1/ARM64 systems.
 
-Build output of `npm run make` will be available in the `out/` subdirectory. Currently, this produces both a `.dmg` and a `.zip` file, with the `.dmg` being preferred.
-
-To enable debug output of the make command, set this environment variable: `DEBUG=electron-osx-sign*`
+Build output of `yarn dist -- --x64` will be available in the `dist/` subdirectory. Currently, this produces both a `.dmg` and a `.zip` file, with the `.dmg` being preferred.
 
 To publish the release to the official Mx. Voice GitHub Releases, use `npm run publish`. This requires a `GITHUB_TOKEN` environment variable to be set, with permissions to upload releases, as well as environment variables `APPLE_ID` and `APPLE_ID_PASSWORD`, set to a login and an app password with development rights to code-sign and notarize the app.
 

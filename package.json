@@ -17,6 +17,32 @@
     "postinstall": "electron-builder install-app-deps",
     "start": "electron ."
   },
+  "build": {
+    "appId": "app.mxvoice.mxvoice",
+    "productName": "Mx. Voice",
+    "copyright": "Copyright © 2021 Wade Minter and Andrew Berkowitz",
+    "mac": {
+      "category": "public.app-category.music",
+      "icon": "src/assets/icons/mxvoice",
+      "darkModeSupport": true
+    },
+    "dmg": {
+      "icon": "src/assets/icons/dmg-image.icns",
+      "background": "src/assets/images/dmg-background-image.png",
+      "contents": [
+        {
+          "x": 180,
+          "y": 340
+        },
+        {
+          "x": 450,
+          "y": 340,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
+  },
   "license": "MIT",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.3",
