@@ -15,6 +15,16 @@ var wavesurfer = WaveSurfer.create({
 });
 var fontSize = 11;
 
+// Load the last holding tank and hotkeys
+
+if (store.has('holding_tank')) {
+  $("#holding-tank-column").html(store.get("holding_tank"));
+}
+
+if (store.has("hotkeys")) {
+  $("#hotkeys-column").html(store.get("hotkeys"));
+}
+
 // Animate.css
 
 const animateCSS = (element, animation, speed = '', prefix = 'animate__') =>
@@ -35,6 +45,14 @@ const animateCSS = (element, animation, speed = '', prefix = 'animate__') =>
 
     node.on('animationend', handleAnimationEnd);
   });
+
+function saveHoldingTankToStore() {
+  store.set('holding_tank', $('#holding-tank-column').html());
+}
+
+function saveHotkeysToStore() {
+  store.set("hotkeys", $("#hotkeys-column").html());
+}
 
 function playSongFromHotkey(hotkey) {
   console.log ('Getting song ID from hotkey ' + hotkey);
@@ -234,6 +252,7 @@ function setLabelFromSongId(song_id, element) {
     $(element).find("span").html(`${title} by ${artist} (${time})`);
     $(element).find("span").attr("songid", song_id);
   }
+  saveHotkeysToStore();
 }
 
 function addToHoldingTank(song_id, element) {
@@ -258,6 +277,7 @@ function addToHoldingTank(song_id, element) {
   } else {
     $(element).append(song_row);
   }
+  saveHoldingTankToStore();
 }
 
 var howlerUtils = {
@@ -526,6 +546,8 @@ function deleteSong() {
     } else {
       $("#selected_row").remove();
     }
+      saveHoldingTankToStore();
+      saveHotkeysToStore();
   });
   return false;
 }
@@ -732,6 +754,8 @@ function deleteSelectedSong() {
         $(`.hotkeys li span[songid=${songId}]`).remove();
         $(`.hotkeys li [songid=${songId}]`).removeAttr('id');
         $(`#search_results tr[songid=${songId}]`).remove();
+        saveHoldingTankToStore();
+        saveHotkeysToStore();
       } else {
         console.log("Error deleting song from database")
       }
@@ -1030,6 +1054,13 @@ function toggleAdvancedSearch() {
   }
 }
 
+function closeAllTabs() {
+  if (confirm(`Are you sure you want to close all open Holding Tanks and Hotkeys?`)) {
+    store.delete('holding_tank');
+    store.delete('hotkeys');
+    location.reload();
+  }
+}
 
 $( document ).ready(function() {
 
