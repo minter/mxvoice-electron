@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.3",
-    "@octokit/rest": "^18.7.1",
+    "@octokit/rest": "^18.8.0",
     "animate.css": "^4.1.1",
     "better-sqlite3": "^7.4.3",
     "bootstrap": "^4.6.0",
