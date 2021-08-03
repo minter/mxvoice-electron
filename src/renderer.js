@@ -19,10 +19,16 @@ var fontSize = 11;
 
 if (store.has('holding_tank')) {
   $("#holding-tank-column").html(store.get("holding_tank"));
+  $("#selected_row").removeAttr("id");
+  $("#autoplay_button").replaceWith(
+    '<i title="AutoPlay" id="autoplay_button" onclick="toggleAutoPlay()" class="fas fa-md fa-play-circle"></i>');
+  autoplay = true;
+  toggleAutoPlay();
 }
 
 if (store.has("hotkeys")) {
   $("#hotkeys-column").html(store.get("hotkeys"));
+  $("#selected_row").removeAttr("id");
 }
 
 // Animate.css
