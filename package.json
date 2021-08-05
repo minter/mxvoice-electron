@@ -27,7 +27,7 @@
     "@octokit/rest": "^18.7.1",
     "animate.css": "^4.1.1",
     "better-sqlite3": "^7.4.3",
-    "bootstrap": "^4.6.0",
+    "bootstrap": "^5.1.0",
     "electron-log": "^4.4.0",
     "electron-prompt": "^1.6.2",
     "electron-squirrel-startup": "^1.0.0",
