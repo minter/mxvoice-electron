@@ -1417,6 +1417,14 @@ $( document ).ready(function() {
     $(".modal").modal("hide");
   })
 
+  $('#hotkey_tabs').on('dblclick', '.nav-link', function() {
+    renameHotkeyTab();
+  });
+
+  $("#holding_tank_tabs").on("dblclick", ".nav-link", function () {
+    renameHoldingTankTab();
+  });
+
   $("#search_results thead").hide();
 
   $('#songFormModal').on('hidden.bs.modal', function (e) {
