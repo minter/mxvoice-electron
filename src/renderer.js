@@ -591,6 +591,7 @@ function renameHotkeyTab() {
           console.log("user canceled");
         } else {
           $("#hotkey_tabs .nav-link.active").text(r);
+          saveHotkeysToStore();
         }
       })
       .catch(console.error);
@@ -699,6 +700,7 @@ function renameHoldingTankTab() {
           console.log("user canceled");
         } else {
           $("#holding_tank_tabs .nav-link.active").text(r);
+          saveHoldingTankToStore();
         }
       })
       .catch(console.error);
