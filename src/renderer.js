@@ -31,6 +31,12 @@ if (store.has("hotkeys")) {
   $("#selected_row").removeAttr("id");
 }
 
+if (store.has('column_order')) {
+  store.get('column_order').forEach(function(val) {
+    $("#top-row").append($("#top-row").children(`#${val}`).detach());
+  });
+}
+
 // Animate.css
 
 const animateCSS = (element, animation, speed = '', prefix = 'animate__') =>
@@ -1064,6 +1070,7 @@ function closeAllTabs() {
   if (confirm(`Are you sure you want to close all open Holding Tanks and Hotkeys?`)) {
     store.delete('holding_tank');
     store.delete('hotkeys');
+    store.delete("column_order");
     location.reload();
   }
 }
@@ -1290,6 +1297,10 @@ $( document ).ready(function() {
       target_column.after(original_column.detach());
     }
     original_column.addClass("animate__animated animate__jello");
+    var new_column_order = $("#top-row").children().map(function() {
+      return $(this).prop("id");
+    }).get();
+    store.set('column_order', new_column_order);
   });
 
   $("#holding_tank").on("dragover", function (event) {
