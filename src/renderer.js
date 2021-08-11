@@ -15,6 +15,33 @@ var wavesurfer = WaveSurfer.create({
 });
 var fontSize = 11;
 
+// Load the last holding tank and hotkeys
+
+if (store.has('holding_tank')) {
+  $("#holding-tank-column").html(store.get("holding_tank"));
+  $("#selected_row").removeAttr("id");
+  $("#autoplay_button").replaceWith(
+    '<i title="AutoPlay" id="autoplay_button" onclick="toggleAutoPlay()" class="fas fa-md fa-play-circle"></i>');
+  autoplay = true;
+  toggleAutoPlay();
+}
+
+if (store.has("hotkeys")) {
+  $("#hotkeys-column").html(store.get("hotkeys"));
+  $("#selected_row").removeAttr("id");
+}
+
+if (store.has('column_order')) {
+  store.get('column_order').forEach(function(val) {
+    $("#top-row").append($("#top-row").children(`#${val}`).detach());
+  });
+}
+
+if (store.has("font-size")) {
+  fontSize = store.get('font-size');
+  $(".song").css("font-size", fontSize + "px");
+}
+
 // Animate.css
 
 const animateCSS = (element, animation, speed = '', prefix = 'animate__') =>
@@ -35,6 +62,14 @@ const animateCSS = (element, animation, speed = '', prefix = 'animate__') =>
 
     node.on('animationend', handleAnimationEnd);
   });
+
+function saveHoldingTankToStore() {
+  store.set('holding_tank', $('#holding-tank-column').html());
+}
+
+function saveHotkeysToStore() {
+  store.set("hotkeys", $("#hotkeys-column").html());
+}
 
 function playSongFromHotkey(hotkey) {
   console.log ('Getting song ID from hotkey ' + hotkey);
@@ -234,6 +269,7 @@ function setLabelFromSongId(song_id, element) {
     $(element).find("span").html(`${title} by ${artist} (${time})`);
     $(element).find("span").attr("songid", song_id);
   }
+  saveHotkeysToStore();
 }
 
 function addToHoldingTank(song_id, element) {
@@ -258,6 +294,7 @@ function addToHoldingTank(song_id, element) {
   } else {
     $(element).append(song_row);
   }
+  saveHoldingTankToStore();
 }
 
 var howlerUtils = {
@@ -526,6 +563,8 @@ function deleteSong() {
     } else {
       $("#selected_row").remove();
     }
+      saveHoldingTankToStore();
+      saveHotkeysToStore();
   });
   return false;
 }
@@ -557,6 +596,7 @@ function renameHotkeyTab() {
           console.log("user canceled");
         } else {
           $("#hotkey_tabs .nav-link.active").text(r);
+          saveHotkeysToStore();
         }
       })
       .catch(console.error);
@@ -665,6 +705,7 @@ function renameHoldingTankTab() {
           console.log("user canceled");
         } else {
           $("#holding_tank_tabs .nav-link.active").text(r);
+          saveHoldingTankToStore();
         }
       })
       .catch(console.error);
@@ -674,12 +715,14 @@ function renameHoldingTankTab() {
 function increaseFontSize() {
   if (fontSize < 25) {
     $(".song").css("font-size", ++fontSize + "px");
+    store.set('font-size', fontSize);
   }
 }
 
 function decreaseFontSize() {
   if (fontSize > 5) {
     $(".song").css("font-size", --fontSize + "px");
+    store.set("font-size", fontSize);
   }
 }
 
@@ -732,6 +775,8 @@ function deleteSelectedSong() {
         $(`.hotkeys li span[songid=${songId}]`).remove();
         $(`.hotkeys li [songid=${songId}]`).removeAttr('id');
         $(`#search_results tr[songid=${songId}]`).remove();
+        saveHoldingTankToStore();
+        saveHotkeysToStore();
       } else {
         console.log("Error deleting song from database")
       }
@@ -1030,6 +1075,15 @@ function toggleAdvancedSearch() {
   }
 }
 
+function closeAllTabs() {
+  if (confirm(`Are you sure you want to close all open Holding Tanks and Hotkeys?`)) {
+    store.delete('holding_tank');
+    store.delete('hotkeys');
+    store.delete("column_order");
+    store.delete("font-size");
+    location.reload();
+  }
+}
 
 $( document ).ready(function() {
 
@@ -1253,6 +1307,10 @@ $( document ).ready(function() {
       target_column.after(original_column.detach());
     }
     original_column.addClass("animate__animated animate__jello");
+    var new_column_order = $("#top-row").children().map(function() {
+      return $(this).prop("id");
+    }).get();
+    store.set('column_order', new_column_order);
   });
 
   $("#holding_tank").on("dragover", function (event) {
@@ -1366,6 +1424,14 @@ $( document ).ready(function() {
   $('.modal').on('show.bs.modal', function() {
     $(".modal").modal("hide");
   })
+
+  $('#hotkey_tabs').on('dblclick', '.nav-link', function() {
+    renameHotkeyTab();
+  });
+
+  $("#holding_tank_tabs").on("dblclick", ".nav-link", function () {
+    renameHoldingTankTab();
+  });
 
   $("#search_results thead").hide();
 

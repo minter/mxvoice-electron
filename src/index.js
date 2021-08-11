@@ -24,6 +24,8 @@ const store = new Store({
   defaults: defaults
 });
 
+// Uncomment this to view contents of store
+//store.openInEditor();
 
 const server = 'https://mxvoice.now.sh'
 const feed = `${server}/update/${process.platform}/${app.getVersion()}`
@@ -253,6 +255,13 @@ var application_menu = [
         accelerator: "CommandOrControl+M",
         click: () => {
           toggleAdvancedSearch();
+        },
+      },
+      { type: "separator" },
+      {
+        label: "Start a New Session",
+        click: () => {
+          closeAllTabs();
         },
       },
     ],
@@ -610,6 +619,10 @@ Menu.setApplicationMenu(menu);
     function toggleAdvancedSearch() {
       console.log("Toggling advanced search");
       mainWindow.webContents.send("toggle_advanced_search");
+    }
+
+    function closeAllTabs() {
+      mainWindow.webContents.send("close_all_tabs");
     }
 
     function sendDeleteSong() {
