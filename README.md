@@ -30,27 +30,23 @@ That should launch the app onto your desktop!
 
 ### OS X
 
-**UNDER RECONSTRUCTION**
+To build packages for release, use the `yarn dist --x64` command. This will use the makers defined in `package.json`, along with your current system architecture (e.g., `darwin`) and build any available targets. The `--x64` flag ensures Intel-compatible builds on M1/ARM64 systems.
 
-To build packages for release, use the `yarn dist -- --x64` command. This will use the makers defined in `package.json`, along with your current system architecture (e.g., `darwin`) and build any available targets. The `--x64` flag ensures Intel-compatible builds on M1/ARM64 systems.
+Build output of `yarn dist --x64` will be available in the `dist/` subdirectory. Currently, this produces both a `.dmg` and a `.zip` file, with the `.dmg` being directly installable on the system.
 
-Build output of `yarn dist -- --x64` will be available in the `dist/` subdirectory. Currently, this produces both a `.dmg` and a `.zip` file, with the `.dmg` being preferred.
-
-To publish the release to the official Mx. Voice GitHub Releases, use `yarn release -- --x64`. This requires a `GITHUB_TOKEN` environment variable to be set, with permissions to upload releases, as well as environment variables `APPLE_ID` and `APPLE_ID_PASSWORD`, set to a login and an app password with development rights to code-sign and notarize the app.
+To publish the release to the official Mx. Voice GitHub Releases, use `yarn release --x64`. This requires a `GITHUB_TOKEN` environment variable to be set, with permissions to upload releases, as well as environment variables `APPLE_ID` and `APPLE_ID_PASSWORD`, set to a login and an app password with development rights to code-sign and notarize the app.
 
 ### Windows
-
-**UNDER RECONSTRUCTION**
 
 It is allegedly possible to build Windows binaries on the Mac, though getting that to work has proven challenging. So we're using an Azure-based Windows VM for builds.
 
 To build on a Windows system, run:
 
-* `npm run make -- --arch=ia32`
+* `yarn dist --ia32`
 
-This will build a 32-bit installer package, which can work on both 32-bit and 64-bit versions of Windows (whereas a 64-bit package would not work on 32-bit Windows). As with OS X, installer files will be the `out/` directory.
+This will build a 32-bit installer package, which can work on both 32-bit and 64-bit versions of Windows (whereas a 64-bit package would not work on 32-bit Windows). As with OS X, installer files will be the `dist/` directory.
 
-Publishing to the official Mx. Voice GitHub Releases is also done with `npm run publish -- --arch=ia32`. It requires the `GITHUB_TOKEN` environment variable with appropriate access, as well as en`WINDOWS_CERTIFICATE_FILE` (the path to the code signing certificate file) and `WINDOWS_CERTIFICATE_PASSWORD` (the password to unlock the cert)
+Publishing to the official Mx. Voice GitHub Releases is also done with `yarn release --ia32`. It requires the `GITHUB_TOKEN` environment variable with appropriate access, as well as en`WINDOWS_CERTIFICATE_FILE` (the path to the code signing certificate file) and `WINDOWS_CERTIFICATE_PASSWORD` (the password to unlock the cert)
 
 ## References and Utilities
 
