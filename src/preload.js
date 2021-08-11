@@ -103,6 +103,10 @@ ipcRenderer.on("toggle_advanced_search", function (event) {
   toggleAdvancedSearch();
 });
 
+ipcRenderer.on("close_all_tabs", function (event) {
+  closeAllTabs();
+});
+
 ipcRenderer.on('display_release_notes', function(event, releaseName, releaseNotes) {
   $('#newReleaseModal .modal-title').html(`Downloaded New Version: ${releaseName}`);
   $('#newReleaseModal .modal-body').html(releaseNotes);
