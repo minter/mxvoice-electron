@@ -37,6 +37,11 @@ if (store.has('column_order')) {
   });
 }
 
+if (store.has("font-size")) {
+  fontSize = store.get('font-size');
+  $(".song").css("font-size", fontSize + "px");
+}
+
 // Animate.css
 
 const animateCSS = (element, animation, speed = '', prefix = 'animate__') =>
@@ -710,12 +715,14 @@ function renameHoldingTankTab() {
 function increaseFontSize() {
   if (fontSize < 25) {
     $(".song").css("font-size", ++fontSize + "px");
+    store.set('font-size', fontSize);
   }
 }
 
 function decreaseFontSize() {
   if (fontSize > 5) {
     $(".song").css("font-size", --fontSize + "px");
+    store.set("font-size", fontSize);
   }
 }
 
@@ -1073,6 +1080,7 @@ function closeAllTabs() {
     store.delete('holding_tank');
     store.delete('hotkeys');
     store.delete("column_order");
+    store.delete("font-size");
     location.reload();
   }
 }
