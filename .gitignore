@@ -85,8 +85,8 @@ typings/
 # Webpack
 .webpack/
 
-# Electron-Forge
-out/
+# Electron-Builder
+dist/
 
 # VS Code Debug Configuration
 

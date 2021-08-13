@@ -1,27 +1,61 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "3.1.3",
+  "version": "3.1.4",
   "description": "Improv Audio Software",
   "repository": "https://github.com/minter/mxvoice-electron",
   "appBundleId": "app.mxvoice.mxvoice",
   "main": "src/index.js",
-  "scripts": {
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
-  },
   "keywords": [],
   "author": {
     "name": "H. Wade Minter",
     "email": "wade@wademinter.com"
   },
-  "license": "MIT",
-  "config": {
-    "forge": "./forge.config.js"
+  "scripts": {
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "release": "electron-builder --publish always",
+    "postinstall": "electron-builder install-app-deps",
+    "start": "electron ."
   },
+  "build": {
+    "appId": "app.mxvoice.mxvoice",
+    "productName": "Mx. Voice",
+    "copyright": "Copyright © 2021 Wade Minter and Andrew Berkowitz",
+    "afterSign": "electron-builder-notarize",
+    "win": {
+      "icon": "src/assets/icons/mxvoice.ico"
+    },
+    "mac": {
+      "category": "public.app-category.music",
+      "icon": "src/assets/icons/mxvoice",
+      "darkModeSupport": true
+    },
+    "dmg": {
+      "icon": "src/assets/icons/dmg-image.icns",
+      "background": "src/assets/images/dmg-background-image.png",
+      "contents": [
+        {
+          "x": 180,
+          "y": 340
+        },
+        {
+          "x": 450,
+          "y": 340,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "minter",
+        "repo": "mxvoice-electron"
+      }
+    ]
+  },
+  "license": "MIT",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.3",
     "@octokit/rest": "^18.7.1",
@@ -46,14 +80,9 @@
     "wavesurfer.js": "^5.1.0"
   },
   "devDependencies": {
-    "@electron-forge/cli": "6.0.0-beta.59",
-    "@electron-forge/maker-dmg": "6.0.0-beta.59",
-    "@electron-forge/maker-squirrel": "6.0.0-beta.59",
-    "@electron-forge/maker-zip": "6.0.0-beta.59",
-    "@electron-forge/publisher-github": "6.0.0-beta.59",
     "electron": "11.3.0",
-    "electron-rebuild": "^2.3.5",
-    "electron-reload": "^1.5.0",
-    "node-abi": "^2.30.0"
+    "electron-builder": "^22.11.7",
+    "electron-builder-notarize": "^1.2.0",
+    "electron-reload": "^1.5.0"
   }
 }
