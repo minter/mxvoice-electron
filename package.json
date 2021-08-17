@@ -77,7 +77,7 @@
     "n-readlines": "^1.0.1",
     "popper.js": "^1.14.4",
     "uuid": "^8.3.2",
-    "wavesurfer.js": "^5.1.0"
+    "wavesurfer.js": "^5.2.0"
   },
   "devDependencies": {
     "electron": "11.3.0",
