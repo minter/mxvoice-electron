@@ -337,6 +337,18 @@ if (process.platform == 'darwin') {
         role: 'about'
       },
       {
+        label: 'Release Notes For Version ' + app.getVersion(),
+        click: () => {
+          require('electron').shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/tag/v${app.getVersion()}`);
+        }
+      },
+      {
+        label: 'Release Notes For All Versions',
+        click: () => {
+          require('electron').shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+        }
+      },
+      {
         type: 'separator'
       },
       {
@@ -411,6 +423,18 @@ if (process.platform == 'darwin') {
       {
         label: 'About ' + name,
         role: 'about'
+      },
+      {
+        label: 'Release Notes For Version ' + app.getVersion(),
+        click: () => {
+          require('electron').shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/tag/v${app.getVersion()}`);
+        }
+      },
+      {
+        label: 'Release Notes For All Versions',
+        click: () => {
+          require('electron').shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+        }
       },
       {
         type: 'separator'
