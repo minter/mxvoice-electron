@@ -58,7 +58,7 @@
   "license": "MIT",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.4",
-    "@octokit/rest": "^18.9.0",
+    "@octokit/rest": "^18.9.1",
     "animate.css": "^4.1.1",
     "better-sqlite3": "^7.4.3",
     "bootstrap": "^4.6.0",
