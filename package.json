@@ -19,7 +19,7 @@
     "start": "electron ."
   },
   "build": {
-    "appId": "app.mxvoice.mxvoice",
+    "appId": "com.electron.mx.-voice",
     "productName": "Mx. Voice",
     "copyright": "Copyright © 2021 Wade Minter and Andrew Berkowitz",
     "afterSign": "electron-builder-notarize",
