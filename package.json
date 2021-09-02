@@ -4,7 +4,7 @@
   "version": "3.1.4",
   "description": "Improv Audio Software",
   "repository": "https://github.com/minter/mxvoice-electron",
-  "appBundleId": "com.electron.mx.voice",
+  "appBundleId": "com.electron.mx.-voice",
   "main": "src/index.js",
   "keywords": [],
   "author": {
