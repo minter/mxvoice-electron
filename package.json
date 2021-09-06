@@ -1,7 +1,7 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "3.1.4",
+  "version": "3.1.5",
   "description": "Improv Audio Software",
   "repository": "https://github.com/minter/mxvoice-electron",
   "main": "src/index.js",
@@ -65,6 +65,7 @@
     "electron-prompt": "^1.6.2",
     "electron-squirrel-startup": "^1.0.0",
     "electron-store": "^8.0.0",
+    "electron-updater": "^4.3.9",
     "electron-util": "^0.17.0",
     "howler": "^2.2.3",
     "jquery": "^3.6.0",

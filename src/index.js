@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, dialog, autoUpdater } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { is } = require('electron-util');
 const os = require('os');
@@ -27,38 +27,11 @@ const store = new Store({
 // Uncomment this to view contents of store
 //store.openInEditor();
 
-const server = 'https://mxvoice.now.sh'
-const feed = `${server}/update/${process.platform}/${app.getVersion()}`
-
-if (!is.development) {
-  autoUpdater.setFeedURL(feed)
-
-  setInterval(() => {
-    autoUpdater.checkForUpdates()
-  }, 60000)
-}
-
-autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
-  const owner = 'minter';
-  const repo = 'mxvoice-electron';
-  const tag = process.platform === 'win32' ? `v${releaseName}` : releaseName;
-  console.log(`Checking GitHub API for owner: ${owner}, repo: ${repo}, tag: ${tag}`);
-  octokit.repos.getReleaseByTag({
-    owner,
-    repo,
-    tag
-  }).then(function(release) {
-    mainWindow.webContents.send('display_release_notes', releaseName, md.render(`# Version ${releaseName}\n` + release.data.body));
-  }).catch(function(err) {
-    console.log(err)
-  })
-});
-
-autoUpdater.on('error', message => {
-  console.error('There was a problem updating the application')
-  console.error(message)
-})
-
+const { autoUpdater } = require("electron-updater")
+autoUpdater.logger = require("electron-log")
+autoUpdater.logger.transports.file.level = "info"
+// import { autoUpdater } from "electron-updater"
+autoUpdater.checkForUpdatesAndNotify()
 
 let mainWindow;
 
