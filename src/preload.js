@@ -108,6 +108,7 @@ ipcRenderer.on("close_all_tabs", function (event) {
 });
 
 ipcRenderer.on('display_release_notes', function(event, releaseName, releaseNotes) {
+  console.log(`Attempting to display #newReleaseModal for ${releaseName}`);
   $('#newReleaseModal .modal-title').html(`Downloaded New Version: ${releaseName}`);
   $('#newReleaseModal .modal-body').html(releaseNotes);
   $('#newReleaseModal').modal();

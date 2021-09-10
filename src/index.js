@@ -30,8 +30,6 @@ const store = new Store({
 const { autoUpdater } = require("electron-updater")
 autoUpdater.logger = require("electron-log")
 autoUpdater.logger.transports.file.level = "info"
-// import { autoUpdater } from "electron-updater"
-autoUpdater.checkForUpdatesAndNotify()
 
 let mainWindow;
 
@@ -77,7 +75,13 @@ const createWindow = () => {
     store.set('browser_height', newBounds.height);
   });
 
+  mainWindow.on('ready-to-show', () => {
+    autoUpdater.checkForUpdatesAndNotify();
+  });
+
 };
+
+
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -424,6 +428,13 @@ if (process.platform == 'darwin') {
 
 menu = Menu.buildFromTemplate(application_menu);
 Menu.setApplicationMenu(menu);
+
+autoUpdater.on('update-available', (updateInfo) => {
+  console.log(`Triggering update-available action with info ${updateInfo.releaseNotes}`);
+  mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + updateInfo.releaseNotes);
+  console.log(`display_release_notes call done`);
+});
+
 
    function loadHotkeysFile() {
      var fkey_mapping = [];
