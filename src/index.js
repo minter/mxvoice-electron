@@ -734,7 +734,6 @@ INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('
    };
 
    function triggerGoogleAnalytics() {
-     // GA
      const axios = require("axios");
      const { v4: uuidv4 } = require("uuid");
      if (!store.has('cid')) {
@@ -749,7 +748,6 @@ INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('
        dt: "Electron",
        ua: mainWindow.webContents.getUserAgent()
      }).toString();
-     console.log(payload);
      axios
        .post("https://www.google-analytics.com/collect", payload)
        .then((response) => {
