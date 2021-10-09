@@ -79,6 +79,8 @@ const createWindow = () => {
     autoUpdater.checkForUpdatesAndNotify();
   });
 
+  trackUser();
+
 };
 
 
@@ -730,3 +732,20 @@ INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('
        return false
      }
    };
+
+   function trackUser() {
+     const googleProperty = "UA-207795804-1";
+     const axios = require("axios");
+     const { v4: uuidv4 } = require("uuid");
+     if (!store.has('cid')) store.set('cid', uuidv4());
+     const payload = new URLSearchParams({
+       v: 1,
+       cid: store.get('cid'),
+       tid: googleProperty,
+       t: "pageview",
+       dp: "/mxvoice-main",
+       dt: "Electron",
+       ua: mainWindow.webContents.getUserAgent()
+     }).toString();
+     axios.post("https://www.google-analytics.com/collect", payload);
+   }
