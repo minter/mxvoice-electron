@@ -1075,10 +1075,10 @@ electron-is-dev@^1.1.0:
   resolved "https://registry.yarnpkg.com/electron-is-dev/-/electron-is-dev-1.2.0.tgz#2e5cea0a1b3ccf1c86f577cee77363ef55deb05e"
   integrity sha512-R1oD5gMBPS7PVU8gJwH6CtT0e6VSoD0+SzSnYpNm+dBkcijgA+K7VAMHDfnRq/lkKPZArpzplTW6jfiMYosdzw==
 
-electron-log@^4.4.1:
-  version "4.4.1"
-  resolved "https://registry.yarnpkg.com/electron-log/-/electron-log-4.4.1.tgz#28ebeb474eccba2ebf194a96c40d6328e5353e4d"
-  integrity sha512-nK/DwxPLtwWbggPCm27eMQhYHc3gzoZ+cokBK99diO4WsZJKrv5l44EUW8mRfWpmC8ZubnMyp6GTUIJyTc9AJA==
+electron-log@^4.4.3:
+  version "4.4.3"
+  resolved "https://registry.yarnpkg.com/electron-log/-/electron-log-4.4.3.tgz#01c7f776e0b424b4958662ca7a043344a5fa645f"
+  integrity sha512-IWxkiVLSpbI4if61kTSLMErYwz+Jq/gnHeTtQ8jcAjtlU8rgTIScWBgZJxk3fVnyvW6M+Ci3Bn9ogHgjgDSvNg==
 
 electron-notarize@^0.2.0:
   version "0.2.1"
