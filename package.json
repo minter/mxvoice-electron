@@ -72,7 +72,7 @@
     "jquery": "^3.6.0",
     "jquery-contextmenu": "^2.9.2",
     "lodash": "^4.17.21",
-    "markdown-it": "^12.2.0",
+    "markdown-it": "^13.0.0",
     "mousetrap": "^1.6.5",
     "music-metadata": "^7.11.3",
     "n-readlines": "^1.0.1",
