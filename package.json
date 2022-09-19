@@ -74,7 +74,7 @@
     "lodash": "^4.17.21",
     "markdown-it": "^12.2.0",
     "mousetrap": "^1.6.5",
-    "music-metadata": "^7.11.3",
+    "music-metadata": "^8.1.0",
     "n-readlines": "^1.0.1",
     "popper.js": "^1.14.4",
     "uuid": "^8.3.2",
