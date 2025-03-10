@@ -91,3 +91,9 @@ dist/
 # VS Code Debug Configuration
 
 .vscode/
+
+# Temporary files
+tmp/
+
+build/config.gypi
+build/node_gyp_bins

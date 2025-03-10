@@ -1,7 +1,7 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "3.1.5",
+  "version": "3.2.0",
   "description": "Improv Audio Software",
   "repository": "https://github.com/minter/mxvoice-electron",
   "main": "src/index.js",
@@ -11,24 +11,48 @@
     "email": "wade@wademinter.com"
   },
   "scripts": {
+    "start": "electron .",
+    "build:mac:arm64": "electron-builder --mac --arm64",
+    "build:mac:x64": "electron-builder --mac --x64",
+    "release": "electron-builder --mac --publish always",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "release": "electron-builder --publish always",
-    "postinstall": "electron-builder install-app-deps",
-    "start": "electron ."
+    "postinstall": "electron-builder install-app-deps"
   },
   "build": {
-    "appId": "com.electron.mx.-voice",
+    "appId": "app.mxvoice.mxvoice",
     "productName": "Mx. Voice",
-    "copyright": "Copyright © 2021 Wade Minter and Andrew Berkowitz",
-    "afterSign": "electron-builder-notarize",
-    "win": {
-      "icon": "src/assets/icons/mxvoice.ico"
-    },
+    "copyright": "Copyright © 2025 Wade Minter and Andrew Berkowitz",
+    "afterSign": "build/notarize.js",
+    "forceCodeSigning": true,
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
+    "buildDependenciesFromSource": true,
+    "electronDist": "node_modules/electron/dist",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "afterPack": "build/afterPack.js",
     "mac": {
+      "artifactName": "Mx. Voice-${version}-${arch}.${ext}",
       "category": "public.app-category.music",
       "icon": "src/assets/icons/mxvoice",
-      "darkModeSupport": true
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "identity": "E31B13B9566B95D1BC1F46F0C3B2FA6C739356CB",
+      "provisioningProfile": null,
+      "target": [
+        {
+          "target": "dmg"
+        },
+        {
+          "target": "zip"
+        }
+      ]
     },
     "dmg": {
       "icon": "src/assets/icons/dmg-image.icns",
@@ -44,7 +68,11 @@
           "type": "link",
           "path": "/Applications"
         }
-      ]
+      ],
+      "sign": false
+    },
+    "win": {
+      "icon": "src/assets/icons/mxvoice.ico"
     },
     "publish": [
       {
@@ -56,11 +84,12 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@electron/remote": "^2.1.2",
     "@fortawesome/fontawesome-free": "^5.15.4",
     "@octokit/rest": "^18.12.0",
     "animate.css": "^4.1.1",
     "axios": "^0.21.4",
-    "better-sqlite3": "^7.4.3",
+    "better-sqlite3": "^11.10.0",
     "bootstrap": "^4.6.0",
     "electron-log": "^4.4.1",
     "electron-prompt": "^1.7.0",
@@ -81,9 +110,13 @@
     "wavesurfer.js": "^5.2.0"
   },
   "devDependencies": {
-    "electron": "11.4.11",
-    "electron-builder": "^22.11.7",
+    "@electron/notarize": "^2.5.0",
+    "electron": "^22.3.27",
+    "electron-builder": "23.0.8",
     "electron-builder-notarize": "^1.2.0",
-    "electron-reload": "^1.5.0"
+    "electron-notarize": "^1.2.2",
+    "@electron/rebuild": "^3.7.2",
+    "electron-reload": "^1.5.0",
+    "node-abi": "3.75.0"
   }
 }

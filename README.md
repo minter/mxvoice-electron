@@ -1,5 +1,5 @@
 # Mx. Voice
-*Improv Audio Software, Version 3*
+*Improv Audio Software, Version 3.2.0*
 
 ## About
 
@@ -9,44 +9,100 @@ Thus, 20 years later, this project to rewrite the software in a more modern way.
 
 ## Developing
 
-Mx. Voice 3 depends on node.js being available on your system, along with `yarn` We recommend node 16+.
+Mx. Voice 3 depends on node.js being available on your system, along with `yarn`. We recommend node 16+.
 
 Check out the [source code from Github](https://github.com/minter/mxvoice-electron/). Go into the `mxvoice-electron` folder.
 
 The first time that you run the software in development mode, you will need to install the dependencies. Do that by running:
 
-`yarn install`
+```bash
+yarn install
+```
 
 This should install any required node modules in the `node_modules` subdirectory. Please report any problems installing dependencies.
 
 Once your node dependencies are installed, you can run the currently-checked-out code in development mode with:
 
-`yarn start`
+```bash
+yarn start
+```
 
 That should launch the app onto your desktop!
 
+## Building, Signing, and Releasing
 
-## Building
+### macOS (OS X)
 
-### OS X
+To build packages for release on macOS, use the following commands depending on your architecture:
 
-To build packages for release, use the `yarn dist --x64` command. This will use the makers defined in `package.json`, along with your current system architecture (e.g., `darwin`) and build any available targets. The `--x64` flag ensures Intel-compatible builds on M1/ARM64 systems.
+- For Intel (x64) builds:
 
-Build output of `yarn dist --x64` will be available in the `dist/` subdirectory. Currently, this produces both a `.dmg` and a `.zip` file, with the `.dmg` being directly installable on the system.
+```bash
+yarn build:mac:x64
+```
 
-To publish the release to the official Mx. Voice GitHub Releases, use `yarn release --x64`. This requires a `GITHUB_TOKEN` environment variable to be set, with permissions to upload releases, as well as environment variables `APPLE_ID` and `APPLE_ID_PASSWORD`, set to a login and an app password with development rights to code-sign and notarize the app.
+- For Apple Silicon (arm64) builds:
+
+```bash
+yarn build:mac:arm64
+```
+
+These commands use the makers defined in `package.json`, along with your current system architecture, and build the available targets.
+
+Build output will be available in the `dist/` subdirectory. Currently, this produces both a `.dmg` and a `.zip` file, with the `.dmg` being directly installable on the system.
+
+The build process includes code signing and notarization for macOS. The signing identity and entitlements are configured in the build scripts located in the `build/` directory (`afterPack.js`, `notarize.js`, and `entitlements.mac.plist`). To successfully sign and notarize the app, you need to set the following environment variables:
+
+- `APPLE_ID`: Your Apple developer Apple ID email.
+- `APPLE_ID_PASSWORD`: Your Apple app-specific password or Apple ID password.
+- `APPLE_TEAM_ID`: Your Apple developer team ID.
+- `GITHUB_TOKEN`: A GitHub token with permissions to upload releases.
+
+To publish the release to the official Mx. Voice GitHub Releases, use:
+
+```bash
+yarn release
+```
+
+This command requires the above environment variables to be set.
 
 ### Windows
 
-It is allegedly possible to build Windows binaries on the Mac, though getting that to work has proven challenging. So we're using an Azure-based Windows VM for builds.
+To build Windows installers, use the following commands with electron-builder:
 
-To build on a Windows system, run:
+- For 32-bit (ia32) Windows builds:
 
-* `yarn dist --ia32`
+```bash
+yarn dist --win --ia32
+```
 
-This will build a 32-bit installer package, which can work on both 32-bit and 64-bit versions of Windows (whereas a 64-bit package would not work on 32-bit Windows). As with OS X, installer files will be the `dist/` directory.
+- For 64-bit (x64) Windows builds (recommended for Windows 11 and modern systems):
 
-Publishing to the official Mx. Voice GitHub Releases is also done with `yarn release --ia32`. It requires the `GITHUB_TOKEN` environment variable with appropriate access, as well as en`WINDOWS_CERTIFICATE_FILE` (the path to the code signing certificate file) and `WINDOWS_CERTIFICATE_PASSWORD` (the password to unlock the cert)
+```bash
+yarn dist --win --x64
+```
+
+These commands build the respective Windows installer architectures.
+
+Signing Windows installers requires the following environment variables:
+
+- `WINDOWS_CERTIFICATE_FILE`: Path to the code signing certificate file.
+- `WINDOWS_CERTIFICATE_PASSWORD`: Password to unlock the certificate.
+- `GITHUB_TOKEN`: A GitHub token with permissions to upload releases.
+
+To publish Windows releases, use:
+
+```bash
+yarn release --win --ia32
+```
+
+or for 64-bit builds:
+
+```bash
+yarn release --win --x64
+```
+
+Ensure the appropriate environment variables are set for signing and publishing.
 
 ## References and Utilities
 
