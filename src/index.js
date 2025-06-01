@@ -166,7 +166,7 @@ if (process.platform == 'darwin') {
   app.setAboutPanelOptions({
     applicationName: app.name,
     applicationVersion: app.getVersion(),
-    copyright: 'Copyright 2021',
+    copyright: 'Copyright 2025',
     authors: [
       'Wade Minter',
       'Andrew Berkowitz'
