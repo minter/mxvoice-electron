@@ -1,0 +1,80 @@
+name: Build and Sign macOS x64 App
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build-macos-x64:
+    runs-on: macos-13
+    if: github.actor != 'dependabot[bot]'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Install Xcode Command Line Tools
+        run: |
+          xcode-select --install || true
+
+      - name: Install Python and tools
+        run: |
+          brew install python@3.11 || true
+          brew link --overwrite python@3.11
+          python3 -m ensurepip --upgrade
+          python3 -m pip install setuptools wheel
+
+      - name: Clean node_modules and caches
+        run: |
+          rm -rf node_modules
+          rm -rf ~/.npm/_prebuilds
+          rm -rf ~/.cache
+
+      - name: Install dependencies (force source build)
+        run: |
+          export npm_config_build_from_source=true
+          yarn install --frozen-lockfile
+        env:
+          PYTHON: /usr/local/bin/python3
+          npm_config_python: /usr/local/bin/python3
+
+      - name: Import signing certificate
+        run: |
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > certificate.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+      - name: Build, Sign, and Notarize x64 macOS App
+        env:
+          CSC_LINK: certificate.p12
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          DEBUG: electron-builder
+        run: |
+          npx electron-builder --mac --x64 --publish never
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-x64-signed-build
+          path: |
+            dist/*.dmg
+            dist/*.zip

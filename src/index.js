@@ -8,6 +8,8 @@ const Store = require('electron-store');
 const log = require('electron-log');
 const { Octokit } = require("@octokit/rest");
 const octokit = new Octokit();
+const remoteMain = require('@electron/remote/main');
+remoteMain.initialize();
 var md = require('markdown-it')();
 console.log = log.log;
 
@@ -30,6 +32,14 @@ const store = new Store({
 const { autoUpdater } = require("electron-updater")
 autoUpdater.logger = require("electron-log")
 autoUpdater.logger.transports.file.level = "info"
+
+// Set architecture-aware update feed URL for macOS
+if (process.platform === "darwin") {
+  const server = "https://download.mxvoice.app";
+  const arch = process.arch; // 'x64' or 'arm64'
+  const feed = `${server}/update/darwin/${arch}/${app.getVersion()}`;
+  autoUpdater.setFeedURL({ provider: "generic", url: feed });
+}
 
 let mainWindow;
 
@@ -57,12 +67,45 @@ const createWindow = () => {
     minHeight: 660,
     webPreferences: {
       enableRemoteModule: true,
+      contextIsolation: false, // Disable context isolation to maintain compatibility
+      nodeIntegration: true,   // Enable Node.js integration
       preload: path.join(app.getAppPath(), 'src/preload.js')
     }
   });
 
+  // Enable remote module for this window
+  remoteMain.enable(mainWindow.webContents);
+
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
+
+  // Show Apple Silicon warning if running x64 build on Apple Silicon Mac
+  if (
+    process.platform === 'darwin' &&
+    process.arch === 'x64'
+  ) {
+    try {
+      const cpuModel = os.cpus()[0].model || '';
+      if (cpuModel.includes('Apple')) {
+        dialog.showMessageBox(mainWindow, {
+          type: 'warning',
+          buttons: ['OK', 'Visit Website'],
+          defaultId: 1,
+          cancelId: 0,
+          title: 'Apple Silicon Version Recommended',
+          message: 'You are running the Intel (x64) version of Mx. Voice on an Apple Silicon Mac.',
+          detail: 'For best performance, please visit https://mxvoice.app/ and download the Apple Silicon version.',
+          noLink: true
+        }).then(result => {
+          if (result.response === 1) {
+            require('electron').shell.openExternal('https://mxvoice.app/');
+          }
+        });
+      }
+    } catch (e) {
+      // Fallback: do nothing if detection fails
+    }
+  }
 
   // Open the DevTools.
   //mainWindow.webContents.openDevTools();
@@ -90,7 +133,7 @@ const createWindow = () => {
 // Some APIs can only be used after this event occurs.
 app.on('ready', createWindow);
 
-app.on('closed', function() {
+app.on('closed', function () {
   // Dereference the window object, usually you would store windows
   // in an array if your app supports multi windows, this is the time
   // when you should delete the corresponding element.
@@ -335,7 +378,7 @@ if (process.platform == 'darwin') {
         click: () => {
           mainWindow.webContents.send('show_preferences');
           // preferences.show();
-          }
+        }
       },
       {
         type: 'separator'
@@ -358,7 +401,7 @@ if (process.platform == 'darwin') {
         label: 'Developer Tools',
         click: () => {
           mainWindow.openDevTools();
-          }
+        }
       },
       {
         type: 'separator'
@@ -438,314 +481,314 @@ autoUpdater.on('update-available', (updateInfo) => {
 });
 
 
-   function loadHotkeysFile() {
-     var fkey_mapping = [];
-     console.log("Loading hotkeys file");
-     dialog.showOpenDialog(mainWindow, {
-       buttonLabel: 'Open',
-       filters: [
-         { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
-       ],
-       defaultPath: store.get('hotkey_directory'),
-       message: 'Select your Mx. Voice hotkey file',
-       properties: ['openFile']
-     }).then(result => {
-       if (result.canceled == true) {
-         console.log('Silently exiting hotkey load');
-         return;
-       }
-       else {
-         var filename = result.filePaths[0];
-         console.log(`Processing file ${filename}`);
-         const line_reader = new readlines(filename);
-         var title
-
-         while (line = line_reader.next()) {
-           [key, val] = line.toString().trim().split('::');
-           if (/^\D\d+$/.test(key)) {
-             fkey_mapping[key] = val;
-           } else {
-             title = val.replace('_', ' ')
-           }
-         }
-         mainWindow.webContents.send('fkey_load', fkey_mapping, title);
-       }
-     }).catch(err => {
-       console.log(err)
-     })
-   }
-
-   function loadHoldingTankFile() {
-     var song_ids = [];
-     console.log("Loading holding tank file");
-     dialog.showOpenDialog(mainWindow, {
-       buttonLabel: 'Open',
-       filters: [
-         { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
-       ],
-       defaultPath: store.get('hotkey_directory'),
-       message: 'Select your Mx. Voice holding tank file',
-       properties: ['openFile']
-     }).then(result => {
-       if (result.canceled == true) {
-         console.log('Silently exiting holding tank load');
-         return;
-       }
-       else {
-         var filename = result.filePaths[0];
-         console.log(`Processing file ${filename}`);
-         const line_reader = new readlines(filename);
-
-         while (line = line_reader.next()) {
-           song_ids.push(line.toString().trim());
-         }
-         mainWindow.webContents.send('holding_tank_load', song_ids);
-       }
-     }).catch(err => {
-       console.log(err)
-     })
-   }
-
-
-   function saveHotkeysFile(hotkeyArray) {
-     dialog.showSaveDialog(mainWindow, {
-       buttonLabel: 'Save',
-       filters: [
-         { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
-       ],
-       defaultPath: store.get('hotkey_directory'),
-       message: 'Save your Mx. Voice hotkey file'
-     }).then(result => {
-       if (result.canceled == true) {
-         console.log('Silently exiting hotkey save');
-         return;
-       }
-       else {
-         var filename = result.filePath;
-         console.log(`Processing file ${filename}`);
-         var file = fs.createWriteStream(filename);
-         for(let i = 0; i < hotkeyArray.length; i++){
-           var keyId = `f${i + 1}`;
-           console.log(`Hotkey array ${i} is ${hotkeyArray[i]}`)
-           if (hotkeyArray[i] === undefined || /^\d+$/.test(hotkeyArray[i])) {
-             file.write([keyId, hotkeyArray[i]].join('::') + '\n');
-           } else {
-             file.write(['tab_name', hotkeyArray[i].replace(' ', '_')].join('::') + '\n')
-           }
-         }
-         file.end();
-       }
-      }).catch(err => {
-       console.log(err)
-      })
-     }
-
-     function saveHoldingTankFile(holdingTankArray) {
-       dialog.showSaveDialog(mainWindow, {
-         buttonLabel: 'Save',
-         filters: [
-           { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
-         ],
-         defaultPath: store.get('hotkey_directory'),
-         message: 'Save your Mx. Voice holding tank file'
-       }).then(result => {
-         if (result.canceled == true) {
-           console.log('Silently exiting holding tank save');
-           return;
-         }
-         else {
-           var filename = result.filePath;
-           console.log(`Processing file ${filename}`);
-           var file = fs.createWriteStream(filename);
-           for(let i = 0; i < holdingTankArray.length; i++){
-             file.write(holdingTankArray[i] + '\n');
-           }
-           file.end();
-         }
-        }).catch(err => {
-         console.log(err)
-        })
-       }
-
-       function addDirectoryDialog() {
-         console.log("Adding directory of songs");
-         dialog.showOpenDialog(mainWindow, {
-           buttonLabel: 'Add All',
-           message: 'Choose directory of music to add',
-           properties: ['openDirectory']
-         }).then(result => {
-           if (result.canceled == true) {
-             console.log('Silently exiting add file');
-             return;
-           } else {
-             var dirname = result.filePaths[0];
-             console.log(`Processing directory ${dirname}`);
-             mainWindow.webContents.send('bulk_add_dialog_load', dirname);
-           }
-         }).catch(err => {
-           console.log(err)
-         })
-       }
-
-       function addFileDialog() {
-         console.log("Adding new file");
-         dialog.showOpenDialog(mainWindow, {
-           buttonLabel: 'Add',
-           filters: [
-             { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav', 'ogg'] }
-           ],
-           message: 'Choose audio file to add to Mx. Voice',
-           properties: ['openFile']
-         }).then(result => {
-           if (result.canceled == true) {
-             console.log('Silently exiting add file');
-             return;
-           }
-           else {
-             var filename = result.filePaths[0];
-             console.log(`Processing file ${filename}`);
-             mainWindow.webContents.send('add_dialog_load', filename);
-           }
-         }).catch(err => {
-           console.log(err)
-         })
-       }
-
-    function increaseFontSize() {
-      console.log('Increasing font size');
-      mainWindow.webContents.send("increase_font_size");
+function loadHotkeysFile() {
+  var fkey_mapping = [];
+  console.log("Loading hotkeys file");
+  dialog.showOpenDialog(mainWindow, {
+    buttonLabel: 'Open',
+    filters: [
+      { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
+    ],
+    defaultPath: store.get('hotkey_directory'),
+    message: 'Select your Mx. Voice hotkey file',
+    properties: ['openFile']
+  }).then(result => {
+    if (result.canceled == true) {
+      console.log('Silently exiting hotkey load');
+      return;
     }
+    else {
+      var filename = result.filePaths[0];
+      console.log(`Processing file ${filename}`);
+      const line_reader = new readlines(filename);
+      var title
 
-    function decreaseFontSize() {
-      console.log("Decreasing font size");
-      mainWindow.webContents.send("decrease_font_size");
-    }
-
-    function toggleWaveform() {
-      console.log("Toggling waveform");
-      mainWindow.webContents.send("toggle_wave_form");
-    }
-
-    function toggleAdvancedSearch() {
-      console.log("Toggling advanced search");
-      mainWindow.webContents.send("toggle_advanced_search");
-    }
-
-    function closeAllTabs() {
-      mainWindow.webContents.send("close_all_tabs");
-    }
-
-    function sendDeleteSong() {
-      console.log('Sending delete_selected_song message');
-      mainWindow.webContents.send('delete_selected_song');
-    }
-
-    function sendEditSong() {
-      console.log('Sending edit_selected_song message');
-      mainWindow.webContents.send('edit_selected_song');
-    }
-
-    function manageCategories() {
-      console.log('Sending manage_categories message');
-      mainWindow.webContents.send('manage_categories');
-    }
-
-    function migrateOldPreferences() {
-      old_prefs_path = path.resolve(app.getPath('userData'), 'preferences.json');
-      if (fs.existsSync(old_prefs_path)) {
-        // There is an old preferences file we need to migrate
-        console.log('Migrating old preferences.json to new config.json file');
-        let rawdata = fs.readFileSync(old_prefs_path);
-        let old_prefs = JSON.parse(rawdata);
-        store.set('music_directory', old_prefs.locations.music_directory);
-        store.set('hotkey_directory', old_prefs.locations.hotkey_directory);
-        store.set('database_directory', old_prefs.locations.database_directory);
-        store.set('browser_width', (old_prefs?.config?.browser_width || 1280));
-        store.set('browser_height', (old_prefs?.config?.browser_height || 1024));
-        store.set('fade_out_seconds', (old_prefs?.audio?.fade_out_seconds || 3));
-        store.set('first_run_completed', (old_prefs?.system?.first_run_completed || true));
-
-        fs.renameSync(old_prefs_path, `${old_prefs_path}.migrated`);
-      }
-    }
-    // Handle first-time running
-    function checkFirstRun() {
-      console.log(`First run preference returns ${store.get('first_run_completed')}`)
-      if (!store.get('first_run_completed')) {
-        var oldConfig = checkOldConfig();
-        console.log(`Old config function returned ${oldConfig}`)
-        if (oldConfig) {
-          console.log("Migrated old config settings, checking no further")
+      while (line = line_reader.next()) {
+        [key, val] = line.toString().trim().split('::');
+        if (/^\D\d+$/.test(key)) {
+          fkey_mapping[key] = val;
         } else {
-          console.log("Preparing for first-time setup")
-          fs.mkdirSync(store.get('music_directory'))
-          fs.mkdirSync(store.get('hotkey_directory'))
+          title = val.replace('_', ' ')
+        }
+      }
+      mainWindow.webContents.send('fkey_load', fkey_mapping, title);
+    }
+  }).catch(err => {
+    console.log(err)
+  })
+}
 
-          const initDb = require('better-sqlite3')(path.join(store.get('database_directory'), 'mxvoice.db'));
-          initDb.exec(`CREATE TABLE IF NOT EXISTS 'categories' (   code varchar(8) NOT NULL,   description varchar(255) NOT NULL );
+function loadHoldingTankFile() {
+  var song_ids = [];
+  console.log("Loading holding tank file");
+  dialog.showOpenDialog(mainWindow, {
+    buttonLabel: 'Open',
+    filters: [
+      { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
+    ],
+    defaultPath: store.get('hotkey_directory'),
+    message: 'Select your Mx. Voice holding tank file',
+    properties: ['openFile']
+  }).then(result => {
+    if (result.canceled == true) {
+      console.log('Silently exiting holding tank load');
+      return;
+    }
+    else {
+      var filename = result.filePaths[0];
+      console.log(`Processing file ${filename}`);
+      const line_reader = new readlines(filename);
+
+      while (line = line_reader.next()) {
+        song_ids.push(line.toString().trim());
+      }
+      mainWindow.webContents.send('holding_tank_load', song_ids);
+    }
+  }).catch(err => {
+    console.log(err)
+  })
+}
+
+
+function saveHotkeysFile(hotkeyArray) {
+  dialog.showSaveDialog(mainWindow, {
+    buttonLabel: 'Save',
+    filters: [
+      { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
+    ],
+    defaultPath: store.get('hotkey_directory'),
+    message: 'Save your Mx. Voice hotkey file'
+  }).then(result => {
+    if (result.canceled == true) {
+      console.log('Silently exiting hotkey save');
+      return;
+    }
+    else {
+      var filename = result.filePath;
+      console.log(`Processing file ${filename}`);
+      var file = fs.createWriteStream(filename);
+      for (let i = 0; i < hotkeyArray.length; i++) {
+        var keyId = `f${i + 1}`;
+        console.log(`Hotkey array ${i} is ${hotkeyArray[i]}`)
+        if (hotkeyArray[i] === undefined || /^\d+$/.test(hotkeyArray[i])) {
+          file.write([keyId, hotkeyArray[i]].join('::') + '\n');
+        } else {
+          file.write(['tab_name', hotkeyArray[i].replace(' ', '_')].join('::') + '\n')
+        }
+      }
+      file.end();
+    }
+  }).catch(err => {
+    console.log(err)
+  })
+}
+
+function saveHoldingTankFile(holdingTankArray) {
+  dialog.showSaveDialog(mainWindow, {
+    buttonLabel: 'Save',
+    filters: [
+      { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
+    ],
+    defaultPath: store.get('hotkey_directory'),
+    message: 'Save your Mx. Voice holding tank file'
+  }).then(result => {
+    if (result.canceled == true) {
+      console.log('Silently exiting holding tank save');
+      return;
+    }
+    else {
+      var filename = result.filePath;
+      console.log(`Processing file ${filename}`);
+      var file = fs.createWriteStream(filename);
+      for (let i = 0; i < holdingTankArray.length; i++) {
+        file.write(holdingTankArray[i] + '\n');
+      }
+      file.end();
+    }
+  }).catch(err => {
+    console.log(err)
+  })
+}
+
+function addDirectoryDialog() {
+  console.log("Adding directory of songs");
+  dialog.showOpenDialog(mainWindow, {
+    buttonLabel: 'Add All',
+    message: 'Choose directory of music to add',
+    properties: ['openDirectory']
+  }).then(result => {
+    if (result.canceled == true) {
+      console.log('Silently exiting add file');
+      return;
+    } else {
+      var dirname = result.filePaths[0];
+      console.log(`Processing directory ${dirname}`);
+      mainWindow.webContents.send('bulk_add_dialog_load', dirname);
+    }
+  }).catch(err => {
+    console.log(err)
+  })
+}
+
+function addFileDialog() {
+  console.log("Adding new file");
+  dialog.showOpenDialog(mainWindow, {
+    buttonLabel: 'Add',
+    filters: [
+      { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav', 'ogg'] }
+    ],
+    message: 'Choose audio file to add to Mx. Voice',
+    properties: ['openFile']
+  }).then(result => {
+    if (result.canceled == true) {
+      console.log('Silently exiting add file');
+      return;
+    }
+    else {
+      var filename = result.filePaths[0];
+      console.log(`Processing file ${filename}`);
+      mainWindow.webContents.send('add_dialog_load', filename);
+    }
+  }).catch(err => {
+    console.log(err)
+  })
+}
+
+function increaseFontSize() {
+  console.log('Increasing font size');
+  mainWindow.webContents.send("increase_font_size");
+}
+
+function decreaseFontSize() {
+  console.log("Decreasing font size");
+  mainWindow.webContents.send("decrease_font_size");
+}
+
+function toggleWaveform() {
+  console.log("Toggling waveform");
+  mainWindow.webContents.send("toggle_wave_form");
+}
+
+function toggleAdvancedSearch() {
+  console.log("Toggling advanced search");
+  mainWindow.webContents.send("toggle_advanced_search");
+}
+
+function closeAllTabs() {
+  mainWindow.webContents.send("close_all_tabs");
+}
+
+function sendDeleteSong() {
+  console.log('Sending delete_selected_song message');
+  mainWindow.webContents.send('delete_selected_song');
+}
+
+function sendEditSong() {
+  console.log('Sending edit_selected_song message');
+  mainWindow.webContents.send('edit_selected_song');
+}
+
+function manageCategories() {
+  console.log('Sending manage_categories message');
+  mainWindow.webContents.send('manage_categories');
+}
+
+function migrateOldPreferences() {
+  old_prefs_path = path.resolve(app.getPath('userData'), 'preferences.json');
+  if (fs.existsSync(old_prefs_path)) {
+    // There is an old preferences file we need to migrate
+    console.log('Migrating old preferences.json to new config.json file');
+    let rawdata = fs.readFileSync(old_prefs_path);
+    let old_prefs = JSON.parse(rawdata);
+    store.set('music_directory', old_prefs.locations.music_directory);
+    store.set('hotkey_directory', old_prefs.locations.hotkey_directory);
+    store.set('database_directory', old_prefs.locations.database_directory);
+    store.set('browser_width', (old_prefs?.config?.browser_width || 1280));
+    store.set('browser_height', (old_prefs?.config?.browser_height || 1024));
+    store.set('fade_out_seconds', (old_prefs?.audio?.fade_out_seconds || 3));
+    store.set('first_run_completed', (old_prefs?.system?.first_run_completed || true));
+
+    fs.renameSync(old_prefs_path, `${old_prefs_path}.migrated`);
+  }
+}
+// Handle first-time running
+function checkFirstRun() {
+  console.log(`First run preference returns ${store.get('first_run_completed')}`)
+  if (!store.get('first_run_completed')) {
+    var oldConfig = checkOldConfig();
+    console.log(`Old config function returned ${oldConfig}`)
+    if (oldConfig) {
+      console.log("Migrated old config settings, checking no further")
+    } else {
+      console.log("Preparing for first-time setup")
+      fs.mkdirSync(store.get('music_directory'), { recursive: true })
+      fs.mkdirSync(store.get('hotkey_directory'), { recursive: true })
+
+      const initDb = require('better-sqlite3')(path.join(store.get('database_directory'), 'mxvoice.db'));
+      initDb.exec(`CREATE TABLE IF NOT EXISTS 'categories' (   code varchar(8) NOT NULL,   description varchar(255) NOT NULL );
 CREATE TABLE mrvoice (   id INTEGER PRIMARY KEY,   title varchar(255) NOT NULL,   artist varchar(255),   category varchar(8) NOT NULL,   info varchar(255),   filename varchar(255) NOT NULL,   time varchar(10),   modtime timestamp(6),   publisher varchar(16),   md5 varchar(32) );
 CREATE UNIQUE INDEX 'category_code_index' ON categories(code);
 CREATE UNIQUE INDEX 'category_description_index' ON categories(description);
 INSERT INTO categories VALUES('UNC', 'Uncategorized');
 INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('Rock Bumper', 'Patrick Short', 'UNC', 'PatrickShort-CSzRockBumper.mp3', '00:49', '${Math.floor(Date.now() / 1000)}');
 `)
-          fs.copyFileSync(path.join(__dirname, 'assets', 'music', 'CSz Rock Bumper.mp3'), path.join(store.get('music_directory'), 'PatrickShort-CSzRockBumper.mp3'))
-          console.log(`mxvoice.db created at ${store.get('database_directory')}`)
-          initDb.close()
-          store.set('first_run_completed', true)
-        }
-      }
+      fs.copyFileSync(path.join(__dirname, 'assets', 'music', 'CSz Rock Bumper.mp3'), path.join(store.get('music_directory'), 'PatrickShort-CSzRockBumper.mp3'))
+      console.log(`mxvoice.db created at ${store.get('database_directory')}`)
+      initDb.close()
+      store.set('first_run_completed', true)
     }
+  }
+}
 
-   // Config migration
-   function checkOldConfig() {
-     var config_path;
-     if (process.platform == 'darwin') {
-       config_path = path.join(app.getPath('home'), 'mrvoice.cfg');
-     }
-     else if (process.platform == 'win32') {
-       config_path = path.join('C:', 'mrvoice.cfg');
-     }
+// Config migration
+function checkOldConfig() {
+  var config_path;
+  if (process.platform == 'darwin') {
+    config_path = path.join(app.getPath('home'), 'mrvoice.cfg');
+  }
+  else if (process.platform == 'win32') {
+    config_path = path.join('C:', 'mrvoice.cfg');
+  }
 
-     if (fs.existsSync(config_path)) {
-       // An old config file exists, we need to load the preferences
-       console.log("Found old Mr. Voice 2 config file at " + config_path);
-       old_settings = [];
+  if (fs.existsSync(config_path)) {
+    // An old config file exists, we need to load the preferences
+    console.log("Found old Mr. Voice 2 config file at " + config_path);
+    old_settings = [];
 
-       const line_reader = new readlines(config_path);
+    const line_reader = new readlines(config_path);
 
-       while (line = line_reader.next()) {
-         [key, val] = line.toString().trim().split('::');
-         old_settings[key] = val;
-       }
-       store.set('database_directory', path.dirname(old_settings['db_file']));
-       store.set('music_directory', old_settings['filepath']);
-       store.set('hotkey_directory', old_settings['savedir']);
-       store.set('first_run_completed', true)
-       return true
+    while (line = line_reader.next()) {
+      [key, val] = line.toString().trim().split('::');
+      old_settings[key] = val;
+    }
+    store.set('database_directory', path.dirname(old_settings['db_file']));
+    store.set('music_directory', old_settings['filepath']);
+    store.set('hotkey_directory', old_settings['savedir']);
+    store.set('first_run_completed', true)
+    return true
 
-       // Save renaming the old config file for final releases
-       // fs.rename(config_path, config_path + '.converted', function(err) {
-       //   if ( err ) console.log('RENAME ERROR: ' + err);
-       // });
-     } else {
-       return false
-     }
-   };
+    // Save renaming the old config file for final releases
+    // fs.rename(config_path, config_path + '.converted', function(err) {
+    //   if ( err ) console.log('RENAME ERROR: ' + err);
+    // });
+  } else {
+    return false
+  }
+};
 
-   function trackUser() {
-     const googleProperty = "UA-207795804-1";
-     const axios = require("axios");
-     const { v4: uuidv4 } = require("uuid");
-     if (!store.has('cid')) store.set('cid', uuidv4());
-     const payload = new URLSearchParams({
-       v: 1,
-       cid: store.get('cid'),
-       tid: googleProperty,
-       t: "pageview",
-       dp: "/mxvoice-main",
-       dt: "Electron",
-       ua: mainWindow.webContents.getUserAgent()
-     }).toString();
-     axios.post("https://www.google-analytics.com/collect", payload);
-   }
+function trackUser() {
+  const googleProperty = "UA-207795804-1";
+  const axios = require("axios");
+  const { v4: uuidv4 } = require("uuid");
+  if (!store.has('cid')) store.set('cid', uuidv4());
+  const payload = new URLSearchParams({
+    v: 1,
+    cid: store.get('cid'),
+    tid: googleProperty,
+    t: "pageview",
+    dp: "/mxvoice-main",
+    dt: "Electron",
+    ua: mainWindow.webContents.getUserAgent()
+  }).toString();
+  axios.post("https://www.google-analytics.com/collect", payload);
+}
