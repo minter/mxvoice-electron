@@ -15,6 +15,7 @@
     "build:mac:arm64": "electron-builder --mac --arm64",
     "build:mac:x64": "electron-builder --mac --x64",
     "release": "electron-builder --mac --publish always",
+    "release:universal": "node build/release-universal.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "postinstall": "electron-builder install-app-deps"

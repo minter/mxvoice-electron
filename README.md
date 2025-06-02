@@ -66,6 +66,58 @@ yarn release
 
 This command requires the above environment variables to be set.
 
+#### Universal macOS Releases (ARM64 + x64)
+
+For creating universal macOS releases that support both Apple Silicon and Intel Macs, follow this workflow:
+
+**Prerequisites:**
+- Set up the required environment variables listed above
+- Ensure you have access to push tags to the repository
+
+**Release Process:**
+
+1. **Create and push a version tag** (this automatically triggers x64 build on GitHub Actions):
+   ```bash
+   git tag v3.2.0
+   git push origin v3.2.0
+   ```
+
+2. **Build ARM64 locally** while the GitHub Actions x64 build runs:
+   ```bash
+   yarn build:mac:arm64
+   ```
+
+3. **Download x64 artifacts** from the completed GitHub Actions run:
+   - Go to the Actions tab in your GitHub repository
+   - Find the workflow run triggered by your tag
+   - Download the `macos-x64-signed-build` artifact
+   - Extract the contents to your local `dist/` directory
+
+4. **Create the universal release**:
+   ```bash
+   export GITHUB_TOKEN=your_github_token_here
+   yarn release:universal
+   ```
+
+This process creates a draft GitHub release with:
+- ARM64 and x64 `.dmg` files
+- ARM64 and x64 `.zip` files
+- ARM64 and x64 `.blockmap` files (for efficient updates)
+- A universal `latest-mac.yml` file that supports both architectures
+
+The release will be created as a **draft** for you to review before publishing. The x64 architecture is set as the default download for backward compatibility with existing Intel Mac users, while Apple Silicon users will automatically receive the ARM64 version.
+
+**Expected files in dist/ before running `yarn release:universal`:**
+- `Mx. Voice-3.2.0-arm64.dmg`
+- `Mx. Voice-3.2.0-arm64.zip`
+- `Mx. Voice-3.2.0-arm64.dmg.blockmap`
+- `Mx. Voice-3.2.0-arm64.zip.blockmap`
+- `Mx. Voice-3.2.0-x64.dmg`
+- `Mx. Voice-3.2.0-x64.zip`
+- `Mx. Voice-3.2.0-x64.dmg.blockmap`
+- `Mx. Voice-3.2.0-x64.zip.blockmap`
+- `latest-mac.yml`
+
 ### Windows
 
 To build Windows installers, use the following commands with electron-builder:
