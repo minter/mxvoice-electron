@@ -87,7 +87,7 @@
   "license": "MIT",
   "dependencies": {
     "@electron/remote": "^2.1.2",
-    "@fortawesome/fontawesome-free": "^5.15.4",
+    "@fortawesome/fontawesome-free": "^6.7.2",
     "@octokit/rest": "^21.0.2",
     "animate.css": "^4.1.1",
     "axios": "^0.30.0",
