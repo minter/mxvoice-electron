@@ -15,7 +15,6 @@ if (fs.existsSync(path.join(store.get('database_directory'), 'mrvoice.db'))) {
 console.log(`Attempting to open database file ${path.join(store.get('database_directory'), dbName)}`)
 const db = require('better-sqlite3')(path.join(store.get('database_directory'), dbName));
 const { v4: uuidv4 } = require('uuid');
-const mm = require('music-metadata');
 
 ipcRenderer.on('fkey_load', function (event, fkeys, title) {
   populateHotkeys(fkeys, title);
@@ -46,7 +45,7 @@ ipcRenderer.on('bulk_add_dialog_load', function (event, dirname) {
 
 ipcRenderer.on('add_dialog_load', function (event, filename) {
   console.log(`Renderer received filename ${filename}`);
-  mm.parseFile(filename)
+  import('music-metadata').then(mm => mm.parseFile(filename))
     .then(metadata => {
       var pathData = path.parse(filename);
       var duration = metadata.format.duration
@@ -125,7 +124,6 @@ process.once('loaded', () => {
     global.ipcRenderer = ipcRenderer,
     global.prompt = require('electron-prompt'),
     global.uuidv4 = uuidv4,
-    global.mm = mm,
     global.util = require('util'),
     global.fs = fs,
     global.db = db,
