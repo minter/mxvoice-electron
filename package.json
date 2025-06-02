@@ -86,7 +86,7 @@
   "dependencies": {
     "@electron/remote": "^2.1.2",
     "@fortawesome/fontawesome-free": "^5.15.4",
-    "@octokit/rest": "^18.12.0",
+    "@octokit/rest": "^21.0.2",
     "animate.css": "^4.1.1",
     "axios": "^0.30.0",
     "better-sqlite3": "^11.10.0",
@@ -107,7 +107,8 @@
     "n-readlines": "^1.0.1",
     "popper.js": "^1.14.4",
     "uuid": "^8.3.2",
-    "wavesurfer.js": "^5.2.0"
+    "wavesurfer.js": "^5.2.0",
+    "yarn": "^1.22.22"
   },
   "devDependencies": {
     "@electron/notarize": "^2.5.0",

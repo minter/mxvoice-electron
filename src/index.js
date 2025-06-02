@@ -6,8 +6,14 @@ const fs = require('fs');
 const readlines = require('n-readlines');
 const Store = require('electron-store');
 const log = require('electron-log');
-const { Octokit } = require("@octokit/rest");
-const octokit = new Octokit();
+let octokit;
+import("@octokit/rest")
+  .then(({ Octokit }) => {
+    octokit = new Octokit();
+  })
+  .catch(err => {
+    console.error("Failed to load Octokit module:", err);
+  });
 const remoteMain = require('@electron/remote/main');
 remoteMain.initialize();
 var md = require('markdown-it')();
