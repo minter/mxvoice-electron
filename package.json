@@ -45,6 +45,7 @@
       "entitlementsInherit": "build/entitlements.mac.plist",
       "identity": "E31B13B9566B95D1BC1F46F0C3B2FA6C739356CB",
       "provisioningProfile": null,
+      "notarize": false,
       "target": [
         {
           "target": "dmg"
@@ -112,7 +113,6 @@
   },
   "devDependencies": {
     "@electron/notarize": "^2.5.0",
-    "@electron/rebuild": "^3.7.2",
     "electron": "^22.3.27",
     "electron-builder": "24.13.3",
     "electron-builder-notarize": "^1.2.0",
