@@ -120,41 +120,65 @@ The release will be created as a **draft** for you to review before publishing. 
 
 ### Windows
 
-To build Windows installers, use the following commands with electron-builder:
+#### Building and Signing
 
-- For 32-bit (ia32) Windows builds:
-
-```bash
-yarn dist --win --ia32
-```
-
-- For 64-bit (x64) Windows builds (recommended for Windows 11 and modern systems):
+To build and sign the Windows installer, use:
 
 ```bash
-yarn dist --win --x64
+yarn build:win
 ```
-
-These commands build the respective Windows installer architectures.
-
-Signing Windows installers requires the following environment variables:
-
-- `WINDOWS_CERTIFICATE_FILE`: Path to the code signing certificate file.
-- `WINDOWS_CERTIFICATE_PASSWORD`: Password to unlock the certificate.
-- `GITHUB_TOKEN`: A GitHub token with permissions to upload releases.
-
-To publish Windows releases, use:
-
+or
 ```bash
-yarn release --win --ia32
+npm run build:win
 ```
 
-or for 64-bit builds:
+This command will:
+- Build the Windows installer (`.exe`) in the `dist/` directory.
+- Automatically sign the installer using SSL.com's CodeSignTool.
 
-```bash
-yarn release --win --x64
+#### Required Environment Variables
+
+Before building, set the following environment variables (these are required for signing):
+
+- `SSL_USERNAME`: Your SSL.com RA username.
+- `SSL_CREDENTIAL_ID`: Your SSL.com credential ID.
+- `SSL_PASSWORD`: Your SSL.com RA password.
+- `SSL_TOTP_SECRET`: Your SSL.com TOTP secret (base64-encoded, for automated OTP).
+
+Example (PowerShell):
+
+```powershell
+$env:SSL_USERNAME="your_username"
+$env:SSL_CREDENTIAL_ID="your_credential_id"
+$env:SSL_PASSWORD="your_password"
+$env:SSL_TOTP_SECRET="your_base64_totp_secret"
 ```
 
-Ensure the appropriate environment variables are set for signing and publishing.
+#### How the Signing Works
+
+- The signing process is fully automated and runs after the installer is built.
+- The script locates the most recent `.exe` installer in the `dist/` directory and signs it in-place using SSL.com's CodeSignTool and your credentials.
+
+#### Verifying the Signature
+
+After building, you can verify the signature:
+
+**Using Windows Explorer:**
+- Right-click the installer in `dist/`
+- Select **Properties** > **Digital Signatures**
+- Select the signature and click **Details** to view certificate info
+
+**Using signtool.exe (if available):**
+```powershell
+signtool verify /pa "C:\Users\wade\mxvoice-electron\dist\Mx. Voice Setup 3.2.0.exe"
+```
+You should see "Successfully verified" if the signature is valid.
+
+#### Publishing
+
+To publish Windows releases, use your preferred workflow for uploading the signed installer to GitHub or your distribution platform.
+
+**Note:** The old certificate file-based signing is no longer used. All signing is handled via SSL.com credentials and the automated script.
 
 ## References and Utilities
 

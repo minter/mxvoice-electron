@@ -18,6 +18,7 @@
     "release:universal": "node build/release-universal.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
+    "build:win": "electron-builder --win",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
@@ -25,7 +26,6 @@
     "productName": "Mx. Voice",
     "copyright": "Copyright © 2025 Wade Minter and Andrew Berkowitz",
     "afterSign": "build/notarize.js",
-    "forceCodeSigning": true,
     "npmRebuild": false,
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": true,
@@ -35,7 +35,9 @@
       "node_modules/better-sqlite3/**/*"
     ],
     "afterPack": "build/afterPack.js",
+    "afterAllArtifactBuild": "build/windowsSign.js",
     "mac": {
+      "forceCodeSigning": true,
       "artifactName": "Mx. Voice-${version}-${arch}.${ext}",
       "category": "public.app-category.music",
       "icon": "src/assets/icons/mxvoice",
