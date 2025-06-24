@@ -2825,10 +2825,10 @@ verror@^1.10.0:
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
 
-wavesurfer.js@^5.2.0:
-  version "5.2.0"
-  resolved "https://registry.yarnpkg.com/wavesurfer.js/-/wavesurfer.js-5.2.0.tgz#efae107b5b561e9bfe3fffc50e6158136a17643e"
-  integrity sha512-SkPlTXfvKy+ZnEA7f7g7jn6iQg5/8mAvWpVV5vRbIS/FF9TB2ak9J7VayQfzfshOLW/CqccTiN6DDR/fZA902g==
+wavesurfer.js@^7.9.6:
+  version "7.9.6"
+  resolved "https://registry.yarnpkg.com/wavesurfer.js/-/wavesurfer.js-7.9.6.tgz#295808f4d91978bd71c7f78cb1957194f3f1b8ff"
+  integrity sha512-+O4pfZjMIcjGIaWAyfpmBsw0A22dwCKVEBcslpaJ+/33zTslndcq2AchOS9iwKjk01dfgh1VN1VLU723Cw+m3g==
 
 which@^2.0.1:
   version "2.0.2"
