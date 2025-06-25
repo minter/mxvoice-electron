@@ -111,7 +111,7 @@
     "n-readlines": "^1.0.1",
     "popper.js": "^1.14.4",
     "uuid": "^8.3.2",
-    "wavesurfer.js": "^5.2.0",
+    "wavesurfer.js": "^7.9.8",
     "yarn": "^1.22.22"
   },
   "devDependencies": {
