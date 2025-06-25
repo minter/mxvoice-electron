@@ -120,6 +120,6 @@
     "electron-builder": "24.13.3",
     "electron-builder-notarize": "^1.2.0",
     "electron-reload": "^1.5.0",
-    "node-abi": "3.75.0"
+    "node-abi": "4.10.0"
   }
 }
