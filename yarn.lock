@@ -2049,7 +2049,14 @@ new-github-issue-url@^0.2.1:
   resolved "https://registry.yarnpkg.com/new-github-issue-url/-/new-github-issue-url-0.2.1.tgz#e17be1f665a92de465926603e44b9f8685630c1d"
   integrity sha512-md4cGoxuT4T4d/HDOXbrUHkTKrp/vp+m3aOA7XXVYwNsUNMK49g3SQicTSeV5GIz/5QVGAeYRAOlyp9OvlgsYA==
 
-node-abi@3.75.0, node-abi@^3.3.0:
+node-abi@4.12.0:
+  version "4.12.0"
+  resolved "https://registry.yarnpkg.com/node-abi/-/node-abi-4.12.0.tgz#2e24da338f07a09beeb2d7ad840aa83d94345c3e"
+  integrity sha512-bPSN9a/qIEiURzVVO/I7P/8oPeYTSl+vnvVZBXM/8XerKOgA3dMAIUjl+a+lz9VwTowwSKS3EMsgz/vWDXOkuQ==
+  dependencies:
+    semver "^7.6.3"
+
+node-abi@^3.3.0:
   version "3.75.0"
   resolved "https://registry.yarnpkg.com/node-abi/-/node-abi-3.75.0.tgz#2f929a91a90a0d02b325c43731314802357ed764"
   integrity sha512-OhYaY5sDsIka7H7AtijtI9jwGYLyl29eQn/W623DiN/MIv5sUqc4g7BIDThX+gb7di9f6xK02nkp8sdfFWZLTg==
