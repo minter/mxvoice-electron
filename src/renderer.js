@@ -1430,9 +1430,7 @@ $(document).ready(function () {
     playSelected();
   });
 
-  $(".hotkeys").on("click", "li span", function (event) {
-    toggle_selected_row(this);
-  });
+  // Removed single-click selection for hotkeys - they should only be draggable and double-clickable
 
   $(".hotkeys").on("dblclick", "li", function (event) {
     $(".now_playing").first().removeClass("now_playing");

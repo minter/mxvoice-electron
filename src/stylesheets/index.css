@@ -223,15 +223,18 @@ input[type="text"]:focus {
 }
 
 .hotkeys li {
-  padding: 6px 8px;
-  margin: 2px 0;
+  padding: 10px 8px;
+  margin: 4px 0;
   overflow: hidden;
-  cursor: pointer;
+  cursor: default;
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   border: 1px solid #e9ecef;
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .hotkeys li:hover {
@@ -241,15 +244,16 @@ input[type="text"]:focus {
 }
 
 .hotkeys .badge {
-  width: 32px;
-  margin-right: 6px;
+  width: 34px;
+  margin-right: 8px;
   background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   border-radius: 4px;
   font-weight: 600;
   font-size: 11px;
-  padding: 3px 5px;
+  padding: 4px 6px;
   box-shadow: 0 1px 3px rgba(0, 123, 255, 0.2);
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .hotkeys li:hover .badge {
@@ -258,16 +262,18 @@ input[type="text"]:focus {
 }
 
 .hotkeys span {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   padding: 0;
   overflow: hidden;
   color: #495057;
-  line-height: 1.3;
+  line-height: 1.4;
   white-space: nowrap;
   text-overflow: ellipsis;
-  display: inline-block;
+  display: block;
   vertical-align: middle;
+  max-width: 100%;
+  width: 100%;
 }
 
 .hotkeys li:hover span {
