@@ -177,7 +177,7 @@ function saveHotkeyFile() {
 function saveHoldingTankFile() {
   console.log("Renderer starting saveHoldingTankFile");
   var holdingTankArray = [];
-  $(".holding_tank.active li").each(function () {
+  $(".holding_tank.active .list-group-item").each(function () {
     holdingTankArray.push($(this).attr("songid"));
   });
   ipcRenderer.send("save-holding-tank-file", holdingTankArray);
@@ -324,7 +324,9 @@ function addToHoldingTank(song_id, element) {
   var artist = row.artist || "[Unknown Artist]";
   var time = row.time || "[??:??]";
 
-  var existing_song = $(`.holding_tank.active li[songid=${song_id}]`);
+  var existing_song = $(
+    `.holding_tank.active .list-group-item[songid=${song_id}]`
+  );
   if (existing_song.length) {
     var song_row = existing_song.detach();
   } else {
@@ -635,7 +637,9 @@ function setHoldingTankMode(mode) {
 
     if (currentSongId && isCurrentlyPlaying) {
       // Find the track in the holding tank with this song ID and add the now_playing class
-      $(`#holding_tank li[songid="${currentSongId}"]`).addClass("now_playing");
+      $(`#holding_tank .list-group-item[songid="${currentSongId}"]`).addClass(
+        "now_playing"
+      );
     }
   }
 
@@ -898,7 +902,7 @@ function deleteSelectedSong() {
       if (deleteStmt.run(songId)) {
         fs.unlinkSync(path.join(store.get("music_directory"), filename));
         // Remove song anywhere it appears
-        $(`.holding_tank li[songid=${songId}]`).remove();
+        $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
         $(`.hotkeys li span[songid=${songId}]`).remove();
         $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
         $(`#search_results tr[songid=${songId}]`).remove();
@@ -1406,11 +1410,11 @@ $(document).ready(function () {
     },
   });
 
-  $(".holding_tank").on("click", "li", function (event) {
+  $(".holding_tank").on("click", ".list-group-item", function (event) {
     toggle_selected_row(this);
   });
 
-  $(".holding_tank").on("dblclick", "li", function (event) {
+  $(".holding_tank").on("dblclick", ".list-group-item", function (event) {
     $(".now_playing").first().removeClass("now_playing");
 
     // Set the clicked item as selected

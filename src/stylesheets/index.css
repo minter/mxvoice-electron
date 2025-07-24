@@ -223,22 +223,55 @@ input[type="text"]:focus {
 }
 
 .hotkeys li {
-  padding: 4px 0 7px 0;
+  padding: 6px 8px;
+  margin: 2px 0;
   overflow: hidden;
   cursor: pointer;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.hotkeys li:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-color: #dee2e6;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .hotkeys .badge {
-  width: 30px;
-  margin-right: 0;
+  width: 32px;
+  margin-right: 6px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 3px 5px;
+  box-shadow: 0 1px 3px rgba(0, 123, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.hotkeys li:hover .badge {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
 .hotkeys span {
   font-size: 12px;
-  font-weight: bold;
-  padding: 5px;
-  padding-left: 3px;
+  font-weight: 600;
+  padding: 0;
   overflow: hidden;
+  color: #495057;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.hotkeys li:hover span {
+  color: #212529;
 }
 
 .song_title {
@@ -266,9 +299,33 @@ input[type="text"]:focus {
 }
 
 .holding_tank .list-group-item {
-  border-radius: 0;
-  margin: 1px;
-  padding: 6px;
+  border-radius: 8px;
+  margin: 4px 0;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
+}
+
+.holding_tank .list-group-item:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-color: #dee2e6;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.holding_tank .list-group-item#selected_row {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+  border-color: #0056b3 !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3) !important;
+}
+
+.holding_tank .list-group-item#selected_row:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%) !important;
+  box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4) !important;
 }
 
 h6 {
@@ -299,6 +356,12 @@ h6 a {
   font-weight: 900;
   content: "\f028";
   padding-right: 5px;
+  color: #007bff;
+}
+
+/* Make speaker icon white when track is highlighted */
+.holding_tank .list-group-item#selected_row.now_playing::before {
+  color: white !important;
 }
 
 .nav-item {
