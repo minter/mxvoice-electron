@@ -1254,6 +1254,9 @@ $(document).ready(function () {
 
   populateCategorySelect();
 
+  // Initialize progress bar to 0% width
+  $("#audio_progress").width("0%");
+
   $("#search_results").on("click", "tbody tr", function (event) {
     toggle_selected_row(this);
   });
