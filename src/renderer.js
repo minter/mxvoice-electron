@@ -622,6 +622,15 @@ function setHoldingTankMode(mode) {
       .removeClass("holding-tank-storage-mode")
       .addClass("holding-tank-playlist-mode");
     autoplay = true;
+
+    // Only restore the speaker icon if there's a track currently playing AND it's actually playing
+    var currentSongId = $("#song_now_playing").attr("songid");
+    var isCurrentlyPlaying = sound && sound.playing && sound.playing();
+
+    if (currentSongId && isCurrentlyPlaying) {
+      // Find the track in the holding tank with this song ID and add the now_playing class
+      $(`#holding_tank li[songid="${currentSongId}"]`).addClass("now_playing");
+    }
   }
 
   // Save mode to store
