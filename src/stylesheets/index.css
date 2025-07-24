@@ -159,24 +159,37 @@ input[type="text"]:focus {
 
 #timer {
   width: 100px;
+  font-family: "JetBrains Mono", "SF Mono", "Monaco", "Consolas", "Courier New",
+    monospace;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 #duration {
   width: 100px;
   text-align: right;
+  font-family: "JetBrains Mono", "SF Mono", "Monaco", "Consolas", "Courier New",
+    monospace;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 #song_now_playing {
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 #now_playing_bar div {
   font-weight: bold;
   font-size: 16px;
   padding-bottom: 8px;
-  font-family: "Share Tech Mono", "Courier", sans-serif;
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
 }
 
 #play_column,
