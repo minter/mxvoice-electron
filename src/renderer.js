@@ -478,6 +478,12 @@ function playSelected() {
   var song_id = $("#selected_row").attr("songid");
   console.log("Got song ID " + song_id);
 
+  // Only clear the now_playing class if the selected row is from the search panel
+  // (not from the holding tank/playlist)
+  if (!$("#holding-tank-column").has($("#selected_row")).length) {
+    $(".now_playing").removeClass("now_playing");
+  }
+
   if (holdingTankMode === "storage") {
     // In storage mode, cancel autoplay and play just this song
     cancel_autoplay();
