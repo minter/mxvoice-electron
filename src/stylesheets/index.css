@@ -41,6 +41,7 @@ input[type="text"]:focus {
   font-weight: bold;
   cursor: default;
   transition: all 0.2s ease;
+  text-transform: none; /* Override the h6 uppercase transform */
 }
 
 .header-button:hover {
