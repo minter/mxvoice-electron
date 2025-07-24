@@ -1,27 +1,27 @@
 :root {
-  --highlight-color: rgb(145,183,216);
-  --header-color: rgb(236,236,236);
+  --highlight-color: rgb(145, 183, 216);
+  --header-color: rgb(236, 236, 236);
   --panel-color: white;
   --card-border: #e0e0e0;
-  --card-text: rgb(36,36,36);
+  --card-text: rgb(36, 36, 36);
   --inverse-card-text: white;
-  --autoplay: rgb(83,164,81);
+  --autoplay: rgb(83, 164, 81);
   --player: rgb(45, 45, 45);
-  --holding-tank-item: rgb(203,209,213);
+  --holding-tank-item: rgb(203, 209, 213);
   --context-menu-list: white;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --highlight-color: rgb(79,80,81);
+    --highlight-color: rgb(79, 80, 81);
     --header-color: rgb(45, 45, 45);
-    --panel-color: rgb(30,30,30);
+    --panel-color: rgb(30, 30, 30);
     --card-border: #505050;
-    --card-text: rgb(226,226,226);
+    --card-text: rgb(226, 226, 226);
     --inverse-card-text: black;
     --autoplay: rgb(83, 164, 81);
-    --holding-tank-item: rgb(50,50,50);
-    --context-menu-list: rgb(30,30,30);
+    --holding-tank-item: rgb(50, 50, 50);
+    --context-menu-list: rgb(30, 30, 30);
   }
 }
 
@@ -48,8 +48,19 @@ h6 a,
 }
 
 #selected_row {
-  color: var(--card-text);
-  background-color: var(--highlight-color) !important;
+  color: white !important;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3) !important;
+}
+
+/* Override table cell color for selected rows */
+table td#selected_row {
+  color: white !important;
+}
+
+/* Also handle cases where selected_row might be on a tr */
+tr#selected_row td {
+  color: white !important;
 }
 
 #player {
@@ -64,7 +75,7 @@ h6 a,
   background-color: #a9a9a9;
 }
 
-input[type=range]::-webkit-slider-runnable-track {
+input[type="range"]::-webkit-slider-runnable-track {
   background: #a9a9a9;
 }
 
@@ -74,12 +85,14 @@ input[type=range]::-webkit-slider-runnable-track {
   background-color: var(--panel-color);
 }
 
-.card-header, .modal-header {
+.card-header,
+.modal-header {
   background-color: var(--header-color);
   border-bottom: 0;
 }
 
-.icon-bar a:hover, h6 a:hover {
+.icon-bar a:hover,
+h6 a:hover {
   color: gray;
 }
 
@@ -117,7 +130,6 @@ table td {
   background: var(--context-menu-list);
   background-color: var(--context-menu-list);
   color: var(--card-text);
-
 }
 
 .holding_tank li {
@@ -153,22 +165,21 @@ table td {
 /* Styling for prompt boxes */
 
 body {
-    line-height: 1.5em;
-    color: var(--card-text);
-    background-color: var(--panel-color);
+  line-height: 1.5em;
+  color: var(--card-text);
+  background-color: var(--panel-color);
 }
 
 #container {
-    align-items: center;
-    justify-content: center;
-    display: flex;
-    height: 100%;
-    overflow: auto;
-
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  height: 100%;
+  overflow: auto;
 }
 
 #form {
-    width: 100%;
+  width: 100%;
 }
 
 #form input {
@@ -177,56 +188,56 @@ body {
 }
 
 #label {
-    font-size: 13px;
-    max-width: 100%;
-    max-height: 100%;
-    margin-bottom: .8em;
-    padding: 0 .5em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  font-size: 13px;
+  max-width: 100%;
+  max-height: 100%;
+  margin-bottom: 0.8em;
+  padding: 0 0.5em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #data {
-    border-radius: 2px;
-    background: white;
-    color: black;
-    width: 90%;
-    padding: .4em .5em;
-    border: 1px solid black;
-    min-height: 2em;
-    margin: 0 0 1.2em;
+  border-radius: 2px;
+  background: white;
+  color: black;
+  width: 90%;
+  padding: 0.4em 0.5em;
+  border: 1px solid black;
+  min-height: 2em;
+  margin: 0 0 1.2em;
 }
 
 select#data {
-    height: 2em;
+  height: 2em;
 }
 
 #data-container {
-    text-align: center;
+  text-align: center;
 }
 
 #buttons {
-    text-align: right;
-    padding: 0 .5em 0 0;
+  text-align: right;
+  padding: 0 0.5em 0 0;
 }
 
 #buttons > button,
-#buttons > input[type=submit] {
-    border-radius: 3px;
-    border: 0;
-    margin: 0 0 0 .5em;
-    font-size: .8em;
-    line-height: 1em;
-    padding: .6em 1em
+#buttons > input[type="submit"] {
+  border-radius: 3px;
+  border: 0;
+  margin: 0 0 0 0.5em;
+  font-size: 0.8em;
+  line-height: 1em;
+  padding: 0.6em 1em;
 }
 
 #ok {
-    background-color: #28a745;
-    color: white;
+  background-color: #28a745;
+  color: white;
 }
 
 #cancel {
-    background-color: #6c757d;
-    color: white;
+  background-color: #6c757d;
+  color: white;
 }

@@ -464,6 +464,7 @@ h6 a {
 
 #stop_button:hover {
   background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%) !important;
+  color: white !important;
 }
 
 /* Control buttons styling */
