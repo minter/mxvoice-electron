@@ -35,8 +35,19 @@ if (store.has("holding_tank_mode")) {
 setHoldingTankMode(holdingTankMode);
 
 if (store.has("hotkeys")) {
-  $("#hotkeys-column").html(store.get("hotkeys"));
-  $("#selected_row").removeAttr("id");
+  var storedHotkeysHtml = store.get("hotkeys");
+  // Check if the stored HTML contains the old plain text header
+  if (
+    storedHotkeysHtml.includes("Hotkeys") &&
+    !storedHotkeysHtml.includes("header-button")
+  ) {
+    // This is the old HTML format, clear it so the new HTML loads
+    store.delete("hotkeys");
+    console.log("Cleared old hotkeys HTML format");
+  } else {
+    $("#hotkeys-column").html(storedHotkeysHtml);
+    $("#selected_row").removeAttr("id");
+  }
 }
 
 if (store.has("column_order")) {
@@ -80,7 +91,11 @@ function saveHoldingTankToStore() {
 }
 
 function saveHotkeysToStore() {
-  store.set("hotkeys", $("#hotkeys-column").html());
+  // Only save if we have the new HTML format with header button
+  var currentHtml = $("#hotkeys-column").html();
+  if (currentHtml.includes("header-button")) {
+    store.set("hotkeys", currentHtml);
+  }
 }
 
 function playSongFromHotkey(hotkey) {

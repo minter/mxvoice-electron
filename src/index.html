@@ -112,12 +112,15 @@
         <div class="col col-6" id="search-column" draggable='true' ondragstart='columnDrag(event)'>
 
           <div class="card rounded-0 h-100">
-            <h6 class="card-header rounded-0">Search
+            <h6 class="card-header rounded-0">
+              <div class="header-button">
+                <i class="fas fa-search"></i> Search
+              </div>
               <div class="icon-bar">
                 <a href="#">
                   <!-- Icons could go here -->
                 </a>
-            </div>
+              </div>
             </h6>
             <div class="card-body">
               <form id="search_form" onsubmit="searchData();return false;">
@@ -191,8 +194,10 @@
 
           <div class="card h-100 rounded-0">
                 <h6 class="card-header rounded-0">
-                  Hotkeys
-                    <div class="icon-bar">
+                  <div class="header-button">
+                    <i class="fas fa-keyboard"></i> Hotkeys
+                  </div>
+                  <div class="icon-bar">
                       <a href="#">
                         <i title="Load Hotkey File" onclick="openHotkeyFile()" class="far fa-sm fa-folder-open"></i>
                       </a>
