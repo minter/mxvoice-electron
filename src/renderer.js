@@ -104,6 +104,9 @@ function playSongFromHotkey(hotkey) {
   console.log(`Found song ID ${song_id}`);
   if (song_id) {
     console.log(`Preparing to play song ${song_id}`);
+    // Unhighlight any selected tracks in holding tank or playlist
+    $(".now_playing").first().removeClass("now_playing");
+    $("#selected_row").removeAttr("id");
     // Hotkey playback should not affect holding tank mode
     // Just play the song without changing autoplay state
     playSongFromId(song_id);
