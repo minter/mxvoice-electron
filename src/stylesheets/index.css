@@ -29,23 +29,13 @@ input[type="text"]:focus {
   justify-content: space-between;
 }
 
-/* Header buttons for Search and Hotkeys - similar to mode toggle */
+/* Header labels for Search and Hotkeys - not clickable */
 .header-button {
   display: inline-block;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  padding: 2px 6px;
   font-size: 11px;
-  color: #6c757d;
+  color: #495057;
   font-weight: bold;
-  cursor: default;
-  transition: all 0.2s ease;
   text-transform: none; /* Override the h6 uppercase transform */
-}
-
-.header-button:hover {
-  background: #e9ecef;
 }
 
 .header-button i {
