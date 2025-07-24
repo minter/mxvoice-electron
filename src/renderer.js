@@ -457,9 +457,9 @@ function autoplay_next() {
       playSongFromId(next_song.attr("songid"));
       next_song.addClass("now_playing");
     } else {
-      // End of playlist - switch back to storage mode
+      // End of playlist - just remove the now_playing class and stay in playlist mode
       $("li.now_playing").first().removeClass("now_playing");
-      setHoldingTankMode("storage");
+      // Don't switch modes - stay in playlist mode
     }
   }
 }
