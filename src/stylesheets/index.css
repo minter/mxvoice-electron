@@ -409,15 +409,17 @@ h6 a {
 }
 
 #player {
-  background: transparent;
+  background: #f8f9fa;
   border: none;
   box-shadow: none;
   margin: 8px;
+  border-radius: 8px;
 }
 
 #player .card-body {
   padding: 12px 16px;
-  background: transparent;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 
 #now_playing_bar {
@@ -429,7 +431,7 @@ h6 a {
 #progress_bar {
   height: 8px !important;
   background-color: #6c757d !important;
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
   position: relative;
@@ -444,13 +446,13 @@ h6 a {
   transition: width 0.1s ease;
   height: 100%;
   min-width: 0;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 /* Ensure the progress container always shows the background */
 .progress {
   background-color: #6c757d !important;
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
   height: 8px !important;
   border: 1px solid #495057;
