@@ -459,11 +459,16 @@ function autoplay_next() {
       next_song.addClass("now_playing");
     }
     if (next_song.length) {
+      // Clear any existing highlighting and highlight the new playing track
+      $("#selected_row").removeAttr("id");
+      next_song.attr("id", "selected_row");
       playSongFromId(next_song.attr("songid"));
       next_song.addClass("now_playing");
     } else {
       // End of playlist - just remove the now_playing class and stay in playlist mode
       $("li.now_playing").first().removeClass("now_playing");
+      // Clear any highlighting at the end of playlist
+      $("#selected_row").removeAttr("id");
       // Don't switch modes - stay in playlist mode
     }
   }
