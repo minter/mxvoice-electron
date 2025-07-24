@@ -292,6 +292,13 @@
 
       </div>
 
+      <!-- Waveform container positioned above the player panel -->
+      <div id="waveform-container" class="row no-gutters flex-nowrap">
+        <div class="col-12">
+          <div id="waveform" class="hidden"></div>
+        </div>
+      </div>
+
       <div id="player-row" class="row no-gutters flex-nowrap">
 
         <!-- Begin Player -->
@@ -312,7 +319,6 @@
                     <div id="duration">0:00</div>
                   </div>
                   <div class="flex-row">
-                    <div id="waveform" class="hidden"></div>
                     <div id="progress_bar" class="progress" data-toggle="tooltip" data-placement="bottom" title="0:00" style="height: 8px;">
                       <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" id="audio_progress"
                         role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>

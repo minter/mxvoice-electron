@@ -117,6 +117,7 @@ input[type="text"]:focus {
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   display: flex;
   flex-direction: column;
+  position: relative; /* Create positioning context for absolute waveform */
 }
 
 .my-custom-scrollbar {
@@ -502,16 +503,25 @@ h6 a {
   cursor: pointer;
 }
 
-#waveform {
+#waveform-container {
   position: absolute;
-  top: -121px;
-  left: 12px;
+  bottom: 140px; /* Position higher above the player panel to avoid overlap */
+  left: 8px;
+  right: 8px;
+  z-index: 1000;
+  pointer-events: none; /* Allow clicks to pass through when hidden */
+}
+
+#waveform {
   height: 100px;
-  width: calc(100% - 24px);
-  z-index: 1;
-  border-radius: 10px 10px 0 0;
+  width: 100%;
+  border-radius: 8px;
   opacity: 0.95;
   cursor: pointer;
+  background: #ffffff;
+  border: 1px solid #e1e5e9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  pointer-events: auto; /* Re-enable clicks on the waveform itself */
 }
 
 .hidden {
