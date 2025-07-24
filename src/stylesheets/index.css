@@ -80,8 +80,8 @@ input[type="text"]:focus {
 
 .mode-btn:hover {
   background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  filter: brightness(1.05);
 }
 
 .mode-btn.active {
@@ -93,8 +93,8 @@ input[type="text"]:focus {
 
 .mode-btn.active:hover {
   background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 6px rgba(0, 123, 255, 0.4);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.5);
+  filter: brightness(1.05);
 }
 
 .mode-btn:first-child {
@@ -150,7 +150,8 @@ input[type="text"]:focus {
 .icon-bar a:hover {
   color: #007bff;
   background: rgba(0, 123, 255, 0.1);
-  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+  filter: brightness(1.1);
 }
 
 #search_form {
@@ -364,15 +365,15 @@ h6 a {
 #play_button:hover,
 #pause_button:hover,
 #stop_button:hover {
-  transform: translateY(-2px) !important;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25) !important;
+  filter: brightness(1.1) !important;
 }
 
 #play_button:active,
 #pause_button:active,
 #stop_button:active {
-  transform: translateY(0) !important;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+  filter: brightness(0.95) !important;
 }
 
 #play_button {
@@ -394,12 +395,12 @@ h6 a {
 }
 
 #stop_button {
-  background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%) !important;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
   color: white !important;
 }
 
 #stop_button:hover {
-  background: linear-gradient(135deg, #c82333 0%, #d63384 100%) !important;
+  background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%) !important;
 }
 
 /* Control buttons styling */
@@ -417,16 +418,16 @@ h6 a {
 #waveform_button:hover,
 #loop_button:hover,
 #mute_button:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25) !important;
   background: linear-gradient(135deg, #5a6268 0%, #343a40 100%) !important;
+  filter: brightness(1.1) !important;
 }
 
 #waveform_button:active,
 #loop_button:active,
 #mute_button:active {
-  transform: translateY(0) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  filter: brightness(0.95) !important;
 }
 
 /* Active states for toggle buttons */
