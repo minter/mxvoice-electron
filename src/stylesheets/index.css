@@ -1,5 +1,6 @@
 body {
-  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
 }
 
 input[type="text"]:focus {
@@ -10,11 +11,46 @@ input[type="text"]:focus {
   min-height: calc(100vh - 90px);
 }
 
-#autoplay_button {
-  position: absolute;
-  left: 117px;
-  top: 15px;
+/* Mode toggle buttons for holding tank */
+.mode-toggle {
+  display: inline-block;
+  margin-left: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #dee2e6;
+}
 
+.mode-btn {
+  background: #f8f9fa;
+  border: none;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6c757d;
+}
+
+.mode-btn:hover {
+  background: #e9ecef;
+}
+
+.mode-btn.active {
+  background: #007bff;
+  color: white;
+  font-weight: bold;
+}
+
+.mode-btn:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.mode-btn:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+/* Remove old autoplay button styles */
+#autoplay_button {
+  display: none;
 }
 
 .container-fluid {
@@ -24,14 +60,14 @@ input[type="text"]:focus {
 }
 
 .my-custom-scrollbar {
-position: relative;
-overflow-y: scroll;
+  position: relative;
+  overflow-y: scroll;
 }
 
 .table-wrapper-scroll-y {
-display: block;
-cursor: pointer;
-font-size: 11px;
+  display: block;
+  cursor: pointer;
+  font-size: 11px;
 }
 
 .icon-bar {
@@ -67,7 +103,7 @@ font-size: 11px;
   font-weight: bold;
   font-size: 16px;
   padding-bottom: 8px;
-  font-family: 'Share Tech Mono', 'Courier', sans-serif;
+  font-family: "Share Tech Mono", "Courier", sans-serif;
 }
 
 #play_column,
@@ -80,7 +116,9 @@ font-size: 11px;
   border-radius: 20px 0 0 20px;
 }
 
-#info-search, #artist-search, #date-search {
+#info-search,
+#artist-search,
+#date-search {
   border-radius: 20px;
 }
 
@@ -126,6 +164,18 @@ font-size: 11px;
   overflow: auto;
   cursor: pointer;
   user-select: none;
+  transition: all 0.3s ease;
+}
+
+/* Mode-specific styling for holding tank */
+.holding-tank-storage-mode {
+  background-color: #f8f9fa;
+  border-left: 3px solid #6c757d;
+}
+
+.holding-tank-playlist-mode {
+  background-color: #e8f5e8;
+  border-left: 3px solid #28a745;
 }
 
 .holding_tank .list-group-item {
@@ -158,7 +208,9 @@ h6 a {
 }
 
 .now_playing::before {
-  font-family: "Font Awesome 5 Free"; font-weight: 900; content: "\f028";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  content: "\f028";
   padding-right: 5px;
 }
 
@@ -180,7 +232,10 @@ h6 a {
   margin-left: 12px;
   margin: 1px !important;
 }
-.modal .close, .modal .btn, .modal input, .modal select {
+.modal .close,
+.modal .btn,
+.modal input,
+.modal select {
   font-size: 12px;
 }
 
@@ -192,11 +247,13 @@ h6 a {
   transition: none;
 }
 
-#play_button, #pause_button {
+#play_button,
+#pause_button {
   border-radius: 30px;
 }
 
-#controls_column input, #controls_column button {
+#controls_column input,
+#controls_column button {
   margin-right: 15px;
 }
 
@@ -209,15 +266,16 @@ h6 a {
 }
 
 @media screen and (max-width: 1045px) and (min-width: 935px) {
-  .hide-1{
-    display:none;
+  .hide-1 {
+    display: none;
   }
-  .hide-2{
-    display:none;
+  .hide-2 {
+    display: none;
   }
 }
 
-#holding-tank-column, #hotkeys-column {
+#holding-tank-column,
+#hotkeys-column {
   min-width: 300px;
 }
 
@@ -237,7 +295,7 @@ h6 a {
   width: calc(100% - 24px);
   z-index: 1;
   border-radius: 10px 10px 0 0;
-  opacity: .95;
+  opacity: 0.95;
   cursor: pointer;
 }
 
@@ -245,12 +303,12 @@ h6 a {
   visibility: hidden;
 }
 
-.btn-group-xs>.btn,
+.btn-group-xs > .btn,
 .btn-xs {
-  padding: .25rem .4rem;
-  font-size: .875rem;
-  line-height: .5;
-  border-radius: .2rem;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.875rem;
+  line-height: 0.5;
+  border-radius: 0.2rem;
   font-size: 10px !important;
 }
 
