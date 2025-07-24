@@ -402,7 +402,7 @@ function playSongFromId(song_id) {
       src: sound_path,
       html5: true,
       volume: $("#volume").val() / 100,
-      mute: $("#mute_button").hasClass("btn-danger"),
+      mute: $("#mute_button").hasClass("active"),
       onplay: function () {
         var time = Math.round(sound.duration());
         globalAnimation = requestAnimationFrame(
@@ -1193,11 +1193,9 @@ function toggle_selected_row(row) {
 
 function loop_on(bool) {
   if (bool == true) {
-    $("#loop_button").addClass("btn-success");
-    $("#loop_button").removeClass("btn-secondary");
+    $("#loop_button").addClass("active");
   } else {
-    $("#loop_button").removeClass("btn-success");
-    $("#loop_button").addClass("btn-secondary");
+    $("#loop_button").removeClass("active");
   }
 }
 
@@ -1216,12 +1214,10 @@ function installUpdate() {
 function toggleWaveform() {
   if ($("#waveform").hasClass("hidden")) {
     $("#waveform").removeClass("hidden");
-    $(this).addClass("btn-primary");
-    $(this).removeClass("btn-secondary");
+    $("#waveform_button").addClass("active");
     animateCSS($("#waveform"), "fadeInUp").then(() => {});
   } else {
-    $(this).removeClass("btn-primary");
-    $(this).addClass("btn-secondary");
+    $("#waveform_button").removeClass("active");
     animateCSS($("#waveform"), "fadeOutDown").then(() => {
       $("#waveform").addClass("hidden");
     });
@@ -1597,7 +1593,7 @@ $(document).ready(function () {
       sound.mute(!sound.mute());
       sound.volume($("#volume").val() / 100);
     }
-    $("#mute_button").toggleClass("btn-danger btn-secondary");
+    $("#mute_button").toggleClass("active");
     $("#song_now_playing").toggleClass("text-secondary");
   });
 

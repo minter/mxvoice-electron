@@ -333,18 +333,155 @@ h6 a {
   transition: none;
 }
 
+/* Snazzy Player Bar Buttons */
 #play_button,
+#pause_button,
+#stop_button,
+#waveform_button,
+#loop_button,
+#mute_button {
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  font-size: 12px !important;
+}
+
+#play_button,
+#pause_button,
+#stop_button {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+#play_button:hover,
+#pause_button:hover,
+#stop_button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25) !important;
+}
+
+#play_button:active,
+#pause_button:active,
+#stop_button:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+#play_button {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  color: white !important;
+}
+
+#play_button:hover {
+  background: linear-gradient(135deg, #218838 0%, #1ea085 100%) !important;
+}
+
 #pause_button {
-  border-radius: 30px;
+  background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+  color: white !important;
+}
+
+#pause_button:hover {
+  background: linear-gradient(135deg, #e0a800 0%, #e8590c 100%) !important;
+}
+
+#stop_button {
+  background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%) !important;
+  color: white !important;
+}
+
+#stop_button:hover {
+  background: linear-gradient(135deg, #c82333 0%, #d63384 100%) !important;
+}
+
+/* Control buttons styling */
+#waveform_button,
+#loop_button,
+#mute_button {
+  width: 40px !important;
+  height: 40px !important;
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+  color: white !important;
+  border-radius: 10px !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15) !important;
+}
+
+#waveform_button:hover,
+#loop_button:hover,
+#mute_button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
+  background: linear-gradient(135deg, #5a6268 0%, #343a40 100%) !important;
+}
+
+#waveform_button:active,
+#loop_button:active,
+#mute_button:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Active states for toggle buttons */
+#loop_button.active {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+  box-shadow: 0 3px 10px rgba(0, 123, 255, 0.3) !important;
+}
+
+#loop_button.active:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%) !important;
+}
+
+#mute_button.active {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+  box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3) !important;
+}
+
+#mute_button.active:hover {
+  background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%) !important;
+}
+
+#waveform_button.active {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+  box-shadow: 0 3px 10px rgba(23, 162, 184, 0.3) !important;
+}
+
+#waveform_button.active:hover {
+  background: linear-gradient(135deg, #138496 0%, #117a8b 100%) !important;
+}
+
+/* Button icons */
+#play_button i,
+#pause_button i,
+#stop_button i,
+#waveform_button img,
+#loop_button i,
+#mute_button i {
+  font-size: 14px !important;
+  filter: brightness(1.1) !important;
+}
+
+/* Disabled state styling */
+#play_button:disabled,
+#pause_button:disabled,
+#stop_button:disabled {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+  opacity: 0.6 !important;
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  cursor: not-allowed !important;
 }
 
 #controls_column input,
 #controls_column button {
-  margin-right: 15px;
-}
-
-#controls_column button {
-  width: 36px;
+  margin-right: 12px;
 }
 
 #controls_column #full_button {
@@ -500,20 +637,36 @@ h6 a {
 
 #volume {
   width: 80px;
-  height: 6px;
+  height: 8px;
   -webkit-appearance: none;
-  background: #e9ecef;
-  border-radius: 3px;
+  background: linear-gradient(90deg, #e9ecef 0%, #dee2e6 100%);
+  border-radius: 4px;
   outline: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ced4da;
 }
 
 #volume::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  background: #007bff;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   border-radius: 50%;
   cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3);
+  border: 2px solid #ffffff;
+  transition: all 0.2s ease;
+  transform: translateY(-2px);
+}
+
+#volume::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+}
+
+#volume::-webkit-slider-thumb:active {
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
 }
 
 #waveform-container {
