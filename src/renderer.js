@@ -1436,9 +1436,11 @@ $(document).ready(function () {
     $(".now_playing").first().removeClass("now_playing");
     $("#selected_row").removeAttr("id");
     if ($(this).find("span").text().length) {
-      $(this).find("span").attr("id", "selected_row");
+      var song_id = $(this).attr("songid");
+      if (song_id) {
+        playSongFromId(song_id);
+      }
     }
-    playSelected();
   });
 
   $(".hotkeys li").on("drop", function (event) {
