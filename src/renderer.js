@@ -333,7 +333,13 @@ function addToHoldingTank(song_id, element) {
   if (existing_song.length) {
     var song_row = existing_song.detach();
   } else {
-    var song_row = `<li style='font-size: ${fontSize}px' class='song list-group-item' draggable='true' ondragstart='songDrag(event)' songid='${song_id}'>${title} by ${artist} (${time})</li>`;
+    var song_row = document.createElement("li");
+    song_row.style.fontSize = `${fontSize}px`;
+    song_row.className = "song list-group-item";
+    song_row.setAttribute("draggable", "true");
+    song_row.setAttribute("ondragstart", "songDrag(event)");
+    song_row.setAttribute("songid", song_id);
+    song_row.textContent = `${title} by ${artist} (${time})`;
   }
 
   if ($(element).is("li")) {
