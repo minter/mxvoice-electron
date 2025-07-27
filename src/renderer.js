@@ -289,6 +289,55 @@ function searchData() {
   $("#category_select").prop("selectedIndex", 0);
 }
 
+// Live search function for real-time results as user types
+function performLiveSearch(searchTerm) {
+  if (!searchTerm || searchTerm.length < 2) {
+    // Clear results if search term is too short
+    $("#search_results tbody").find("tr").remove();
+    $("#search_results thead").hide();
+    return;
+  }
+
+  $("#search_results tbody").find("tr").remove();
+  $("#search_results thead").show();
+
+  var raw_html = [];
+  var search_term = "%" + searchTerm + "%";
+
+  // Fast, limited search for live results
+  var stmt = db.prepare(
+    "SELECT * from mrvoice WHERE (info LIKE ? OR title LIKE ? OR artist like ?) ORDER BY category,info,title,artist LIMIT 50"
+  );
+  const rows = stmt.all(search_term, search_term, search_term);
+
+  rows.forEach((row) => {
+    raw_html.push(
+      `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
+        row.id
+      }'><td class='hide-1'>${
+        categories[row.category]
+      }</td><td class='hide-2'>${
+        row.info || ""
+      }</td><td style='font-weight: bold'>${
+        row.title || ""
+      }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
+        row.time
+      }</td></tr>`
+    );
+  });
+
+  $("#search_results").append(raw_html.join(""));
+
+  // Show indicator if there are more results
+  if (rows.length === 50) {
+    $("#search_results").append(
+      `<tr><td colspan="5" class="text-center text-muted"><small>Showing first 50 results. Press Enter for complete search.</small></td></tr>`
+    );
+  }
+
+  scale_scrollable();
+}
+
 function setLabelFromSongId(song_id, element) {
   //console.log(element);
   var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
@@ -1528,9 +1577,28 @@ $(document).ready(function () {
 
   $("#search_form :input").on("keydown", function (e) {
     if (e.code == "Enter") {
+      // Clear any pending live search
+      clearTimeout(searchTimeout);
       $("#search_form").submit();
       return false;
     }
+  });
+
+  // Live search with debouncing
+  var searchTimeout;
+  $("#omni_search").on("input", function () {
+    clearTimeout(searchTimeout);
+    var searchTerm = $(this).val().trim();
+
+    searchTimeout = setTimeout(() => {
+      if (searchTerm.length >= 2) {
+        performLiveSearch(searchTerm);
+      } else if (searchTerm.length === 0) {
+        // Clear results when search is empty
+        $("#search_results tbody").find("tr").remove();
+        $("#search_results thead").hide();
+      }
+    }, 300); // 300ms debounce
   });
 
   $("#omni_search").on("keydown", function (e) {
@@ -1545,6 +1613,8 @@ $(document).ready(function () {
   });
 
   $("#reset_button").on("click", function () {
+    // Clear any pending live search
+    clearTimeout(searchTimeout);
     $("#search_form").trigger("reset");
     $("#omni_search").focus();
     $("#search_results tbody").find("tr").remove();
