@@ -5,6 +5,8 @@ body {
   padding: 0;
   overflow: hidden;
   height: 100vh;
+  background-color: var(--panel-color);
+  color: var(--card-text);
 }
 
 input[type="text"]:focus {
@@ -33,7 +35,7 @@ input[type="text"]:focus {
   margin-left: 0;
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #e1e5e9;
+  border: 1px solid var(--card-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -44,8 +46,8 @@ input[type="text"]:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-bottom: 1px solid #dee2e6;
+  background: var(--header-color);
+  border-bottom: 1px solid var(--card-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -53,13 +55,13 @@ input[type="text"]:focus {
 .header-button {
   display: inline-block;
   font-size: 11px;
-  color: #495057;
+  color: var(--card-text);
   font-weight: 600;
   text-transform: none; /* Override the h6 uppercase transform */
   padding: 4px 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--panel-color);
+  border: 1px solid var(--card-border);
 }
 
 .header-button i {
@@ -67,19 +69,19 @@ input[type="text"]:focus {
 }
 
 .mode-btn {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: var(--header-color);
   border: none;
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #495057;
+  color: var(--card-text);
   position: relative;
 }
 
 .mode-btn:hover {
-  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  background: var(--panel-color);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
   filter: brightness(1.05);
 }
@@ -114,7 +116,7 @@ input[type="text"]:focus {
   height: 100vh;
   overflow: hidden;
   padding: 0;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  background: var(--panel-color);
   display: flex;
   flex-direction: column;
   position: relative; /* Create positioning context for absolute waveform */
@@ -141,7 +143,7 @@ input[type="text"]:focus {
   margin-left: 7px;
   font-size: 16px;
   text-decoration: none;
-  color: #6c757d;
+  color: var(--card-text);
   transition: all 0.2s ease;
   padding: 4px;
   border-radius: 4px;
@@ -164,6 +166,7 @@ input[type="text"]:focus {
     monospace;
   font-size: 14px;
   font-weight: 600;
+  color: var(--card-text);
 }
 
 #duration {
@@ -173,6 +176,7 @@ input[type="text"]:focus {
     monospace;
   font-size: 14px;
   font-weight: 600;
+  color: var(--card-text);
 }
 
 #song_now_playing {
@@ -183,6 +187,7 @@ input[type="text"]:focus {
     Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   font-weight: 600;
+  color: var(--card-text);
 }
 
 #now_playing_bar div {
@@ -191,6 +196,7 @@ input[type="text"]:focus {
   padding-bottom: 8px;
   font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
+  color: var(--card-text);
 }
 
 #play_column,
@@ -227,8 +233,8 @@ input[type="text"]:focus {
   margin: 4px 0;
   overflow: hidden;
   cursor: default;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border: 1px solid #e9ecef;
+  background: var(--panel-color);
+  border: 1px solid var(--card-border);
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
@@ -238,15 +244,16 @@ input[type="text"]:focus {
 }
 
 .hotkeys li:hover {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-color: #dee2e6;
+  background: var(--header-color);
+  border-color: var(--card-border);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .hotkeys .badge {
   width: 34px;
   margin-right: 8px;
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: #007bff;
+  color: white;
   border-radius: 4px;
   font-weight: 600;
   font-size: 11px;
@@ -257,7 +264,7 @@ input[type="text"]:focus {
 }
 
 .hotkeys li:hover .badge {
-  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  background: #0056b3;
   box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
@@ -266,7 +273,7 @@ input[type="text"]:focus {
   font-weight: 600;
   padding: 0;
   overflow: hidden;
-  color: #495057;
+  color: var(--card-text);
   line-height: 1.4;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -277,7 +284,7 @@ input[type="text"]:focus {
 }
 
 .hotkeys li:hover span {
-  color: #212529;
+  color: var(--card-text);
 }
 
 .song_title {
@@ -295,12 +302,12 @@ input[type="text"]:focus {
 
 /* Mode-specific styling for holding tank */
 .holding-tank-storage-mode {
-  background-color: #f8f9fa;
+  background-color: var(--header-color);
   border-left: 3px solid #6c757d;
 }
 
 .holding-tank-playlist-mode {
-  background-color: #e8f5e8;
+  background-color: #1a3d1a;
   border-left: 3px solid #28a745;
 }
 
@@ -308,17 +315,18 @@ input[type="text"]:focus {
   border-radius: 8px;
   margin: 4px 0;
   padding: 10px 12px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border: 1px solid #e9ecef;
+  background: var(--panel-color);
+  border: 1px solid var(--card-border);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   cursor: pointer;
+  color: var(--card-text);
 }
 
 .holding_tank .list-group-item:hover {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-color: #dee2e6;
+  background: var(--header-color);
+  border-color: var(--card-border);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -339,10 +347,12 @@ h6 {
   text-transform: uppercase;
   white-space: nowrap;
   line-height: 17px;
+  color: var(--card-text);
 }
 
 h6 a {
   font-size: 14px;
+  color: var(--card-text);
 }
 
 .now_playing {
@@ -382,6 +392,7 @@ h6 a {
   font-weight: bold;
   text-align: right;
   padding-right: 0;
+  color: var(--card-text);
 }
 
 .category-description {
@@ -606,9 +617,9 @@ h6 a {
   min-width: 300px;
   max-width: 350px;
   flex: 0 0 auto;
-  border: 1px solid #e1e5e9;
+  border: 1px solid var(--card-border);
   border-radius: 8px;
-  background: white;
+  background: var(--panel-color);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   display: flex;
@@ -617,9 +628,9 @@ h6 a {
 
 #search-column {
   flex: 1 1 auto;
-  border: 1px solid #e1e5e9;
+  border: 1px solid var(--card-border);
   border-radius: 8px;
-  background: white;
+  background: var(--panel-color);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   display: flex;
@@ -638,8 +649,8 @@ h6 a {
 }
 
 #player-panel {
-  background: #ffffff;
-  border: 1px solid #e1e5e9;
+  background: var(--panel-color);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
@@ -648,14 +659,14 @@ h6 a {
 
 #player .card-body {
   padding: 12px 16px;
-  background: #ffffff;
+  background: var(--panel-color);
   border-radius: 8px;
 }
 
 #now_playing_bar {
   margin-bottom: 8px;
   font-size: 12px;
-  color: #495057;
+  color: var(--card-text);
 }
 
 #progress_bar {
@@ -755,8 +766,8 @@ h6 a {
   border-radius: 8px;
   opacity: 0.95;
   cursor: pointer;
-  background: #ffffff;
-  border: 1px solid #e1e5e9;
+  background: var(--panel-color);
+  border: 1px solid var(--card-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   pointer-events: auto; /* Re-enable clicks on the waveform itself */
 }
@@ -778,4 +789,5 @@ legend {
   font-size: 12px;
   text-transform: uppercase;
   font-weight: bold;
+  color: var(--card-text);
 }

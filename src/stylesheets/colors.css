@@ -9,6 +9,15 @@
   --player: rgb(45, 45, 45);
   --holding-tank-item: rgb(203, 209, 213);
   --context-menu-list: white;
+  --input-background: white;
+  --input-border: #ced4da;
+  --input-text: rgb(36, 36, 36);
+}
+
+/* Light mode playlist styling */
+.holding-tank-playlist-mode {
+  background-color: #e8f5e8 !important;
+  border-left-color: #28a745 !important;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,6 +31,93 @@
     --autoplay: rgb(83, 164, 81);
     --holding-tank-item: rgb(50, 50, 50);
     --context-menu-list: rgb(30, 30, 30);
+    --input-background: rgb(45, 45, 45);
+    --input-border: #505050;
+    --input-text: rgb(226, 226, 226);
+  }
+}
+
+/* Dark mode specific form styling */
+@media (prefers-color-scheme: dark) {
+  input[type="text"],
+  input[type="search"],
+  select,
+  textarea {
+    background-color: var(--input-background) !important;
+    color: var(--input-text) !important;
+    border-color: var(--input-border) !important;
+  }
+
+  input[type="text"]:focus,
+  input[type="search"]:focus,
+  select:focus,
+  textarea:focus {
+    background-color: var(--input-background) !important;
+    color: var(--input-text) !important;
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+  }
+
+  .form-control {
+    background-color: var(--input-background) !important;
+    color: var(--input-text) !important;
+    border-color: var(--input-border) !important;
+  }
+
+  .form-control:focus {
+    background-color: var(--input-background) !important;
+    color: var(--input-text) !important;
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+  }
+
+  /* Table styling for dark mode */
+  table {
+    background-color: var(--panel-color) !important;
+    color: var(--card-text) !important;
+  }
+
+  table td {
+    background-color: var(--panel-color) !important;
+    color: var(--card-text) !important;
+    border-color: var(--card-border) !important;
+  }
+
+  table th {
+    background-color: var(--header-color) !important;
+    color: var(--card-text) !important;
+    border-color: var(--card-border) !important;
+  }
+
+  /* Header button styling for dark mode */
+  .header-button {
+    background: var(--header-color) !important;
+    color: var(--card-text) !important;
+    border-color: var(--card-border) !important;
+  }
+
+  /* Playlist mode styling for dark mode */
+  .holding-tank-playlist-mode {
+    background-color: #1a3d1a !important;
+    border-left-color: #28a745 !important;
+  }
+
+  /* Scrollbar styling for dark mode */
+  ::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--panel-color);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--card-border);
+    border-radius: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--highlight-color);
   }
 }
 
