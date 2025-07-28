@@ -1,5 +1,12 @@
 body {
-  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100vh;
+  background-color: var(--panel-color);
+  color: var(--card-text);
 }
 
 input[type="text"]:focus {
@@ -7,31 +14,125 @@ input[type="text"]:focus {
 }
 
 #top-row {
-  min-height: calc(100vh - 90px);
+  height: calc(100vh - 140px);
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  padding: 8px;
+  overflow: hidden;
 }
 
-#autoplay_button {
-  position: absolute;
-  left: 117px;
-  top: 15px;
+#player-row {
+  display: flex;
+  flex-direction: row;
+  padding: 8px;
+  overflow: hidden;
+}
 
+/* Mode toggle buttons for holding tank */
+.mode-toggle {
+  display: inline-block;
+  margin-left: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure consistent header heights across all columns */
+.card-header {
+  padding: 0.75rem 1rem;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--header-color);
+  border-bottom: 1px solid var(--card-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Header labels for Search and Hotkeys - not clickable */
+.header-button {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--card-text);
+  font-weight: 600;
+  text-transform: none; /* Override the h6 uppercase transform */
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--panel-color);
+  border: 1px solid var(--card-border);
+}
+
+.header-button i {
+  margin-right: 4px;
+}
+
+.mode-btn {
+  background: var(--header-color);
+  border: none;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--card-text);
+  position: relative;
+}
+
+.mode-btn:hover {
+  background: var(--panel-color);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  filter: brightness(1.05);
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.mode-btn.active:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.5);
+  filter: brightness(1.05);
+}
+
+.mode-btn:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.mode-btn:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+/* Remove old autoplay button styles */
+#autoplay_button {
+  display: none;
 }
 
 .container-fluid {
-  min-height: 100vh;
-  overflow: auto;
+  height: 100vh;
+  overflow: hidden;
   padding: 0;
+  background: var(--panel-color);
+  display: flex;
+  flex-direction: column;
+  position: relative; /* Create positioning context for absolute waveform */
 }
 
 .my-custom-scrollbar {
-position: relative;
-overflow-y: scroll;
+  position: relative;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .table-wrapper-scroll-y {
-display: block;
-cursor: pointer;
-font-size: 11px;
+  display: block;
+  cursor: pointer;
+  font-size: 11px;
 }
 
 .icon-bar {
@@ -40,8 +141,19 @@ font-size: 11px;
 
 .icon-bar a {
   margin-left: 7px;
-  font-size: 18px;
+  font-size: 16px;
   text-decoration: none;
+  color: var(--card-text);
+  transition: all 0.2s ease;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.icon-bar a:hover {
+  color: #007bff;
+  background: rgba(0, 123, 255, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+  filter: brightness(1.1);
 }
 
 #search_form {
@@ -50,24 +162,41 @@ font-size: 11px;
 
 #timer {
   width: 100px;
+  font-family: "JetBrains Mono", "SF Mono", "Monaco", "Consolas", "Courier New",
+    monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--card-text);
 }
 
 #duration {
   width: 100px;
   text-align: right;
+  font-family: "JetBrains Mono", "SF Mono", "Monaco", "Consolas", "Courier New",
+    monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--card-text);
 }
 
 #song_now_playing {
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--card-text);
 }
 
 #now_playing_bar div {
   font-weight: bold;
   font-size: 16px;
   padding-bottom: 8px;
-  font-family: 'Share Tech Mono', 'Courier', sans-serif;
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  color: var(--card-text);
 }
 
 #play_column,
@@ -80,7 +209,9 @@ font-size: 11px;
   border-radius: 20px 0 0 20px;
 }
 
-#info-search, #artist-search, #date-search {
+#info-search,
+#artist-search,
+#date-search {
   border-radius: 20px;
 }
 
@@ -98,22 +229,62 @@ font-size: 11px;
 }
 
 .hotkeys li {
-  padding: 4px 0 7px 0;
+  padding: 10px 8px;
+  margin: 4px 0;
   overflow: hidden;
-  cursor: pointer;
+  cursor: default;
+  background: var(--panel-color);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.hotkeys li:hover {
+  background: var(--header-color);
+  border-color: var(--card-border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .hotkeys .badge {
-  width: 30px;
-  margin-right: 0;
+  width: 34px;
+  margin-right: 8px;
+  background: #007bff;
+  color: white;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 4px 6px;
+  box-shadow: 0 1px 3px rgba(0, 123, 255, 0.2);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.hotkeys li:hover .badge {
+  background: #0056b3;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
 .hotkeys span {
-  font-size: 12px;
-  font-weight: bold;
-  padding: 5px;
-  padding-left: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
   overflow: hidden;
+  color: var(--card-text);
+  line-height: 1.4;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: block;
+  vertical-align: middle;
+  max-width: 100%;
+  width: 100%;
+}
+
+.hotkeys li:hover span {
+  color: var(--card-text);
 }
 
 .song_title {
@@ -126,12 +297,49 @@ font-size: 11px;
   overflow: auto;
   cursor: pointer;
   user-select: none;
+  transition: all 0.3s ease;
+}
+
+/* Mode-specific styling for holding tank */
+.holding-tank-storage-mode {
+  background-color: var(--header-color);
+  border-left: 3px solid #6c757d;
+}
+
+.holding-tank-playlist-mode {
+  background-color: #1a3d1a;
+  border-left: 3px solid #28a745;
 }
 
 .holding_tank .list-group-item {
-  border-radius: 0;
-  margin: 1px;
-  padding: 6px;
+  border-radius: 8px;
+  margin: 4px 0;
+  padding: 10px 12px;
+  background: var(--panel-color);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  cursor: pointer;
+  color: var(--card-text);
+}
+
+.holding_tank .list-group-item:hover {
+  background: var(--header-color);
+  border-color: var(--card-border);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.holding_tank .list-group-item#selected_row {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+  border-color: #0056b3 !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3) !important;
+}
+
+.holding_tank .list-group-item#selected_row:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%) !important;
+  box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4) !important;
 }
 
 h6 {
@@ -139,10 +347,12 @@ h6 {
   text-transform: uppercase;
   white-space: nowrap;
   line-height: 17px;
+  color: var(--card-text);
 }
 
 h6 a {
   font-size: 14px;
+  color: var(--card-text);
 }
 
 .now_playing {
@@ -158,8 +368,16 @@ h6 a {
 }
 
 .now_playing::before {
-  font-family: "Font Awesome 5 Free"; font-weight: 900; content: "\f028";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  content: "\f028";
   padding-right: 5px;
+  color: #007bff;
+}
+
+/* Make speaker icon white when track is highlighted */
+.holding_tank .list-group-item#selected_row.now_playing::before {
+  color: white !important;
 }
 
 .nav-item {
@@ -174,13 +392,17 @@ h6 a {
   font-weight: bold;
   text-align: right;
   padding-right: 0;
+  color: var(--card-text);
 }
 
 .category-description {
   margin-left: 12px;
   margin: 1px !important;
 }
-.modal .close, .modal .btn, .modal input, .modal select {
+.modal .close,
+.modal .btn,
+.modal input,
+.modal select {
   font-size: 12px;
 }
 
@@ -192,65 +414,374 @@ h6 a {
   transition: none;
 }
 
-#play_button, #pause_button {
-  border-radius: 30px;
+/* Snazzy Player Bar Buttons */
+#play_button,
+#pause_button,
+#stop_button,
+#waveform_button,
+#loop_button,
+#mute_button {
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  font-size: 12px !important;
 }
 
-#controls_column input, #controls_column button {
-  margin-right: 15px;
+#play_button,
+#pause_button,
+#stop_button {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
 }
 
+#play_button:hover,
+#pause_button:hover,
+#stop_button:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25) !important;
+  filter: brightness(1.1) !important;
+}
+
+#play_button:active,
+#pause_button:active,
+#stop_button:active {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+  filter: brightness(0.95) !important;
+}
+
+#play_button {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  color: white !important;
+}
+
+#play_button:hover {
+  background: linear-gradient(135deg, #218838 0%, #1ea085 100%) !important;
+}
+
+#pause_button {
+  background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+  color: white !important;
+}
+
+#pause_button:hover {
+  background: linear-gradient(135deg, #e0a800 0%, #e8590c 100%) !important;
+}
+
+#stop_button {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+  color: white !important;
+}
+
+#stop_button:hover {
+  background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%) !important;
+  color: white !important;
+}
+
+/* Control buttons styling */
+#waveform_button,
+#loop_button,
+#mute_button {
+  width: 40px !important;
+  height: 40px !important;
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+  color: white !important;
+  border-radius: 10px !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15) !important;
+}
+
+#waveform_button:hover,
+#loop_button:hover,
+#mute_button:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25) !important;
+  background: linear-gradient(135deg, #5a6268 0%, #343a40 100%) !important;
+  filter: brightness(1.1) !important;
+}
+
+#waveform_button:active,
+#loop_button:active,
+#mute_button:active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  filter: brightness(0.95) !important;
+}
+
+/* Active states for toggle buttons */
+#loop_button.active {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+  box-shadow: 0 3px 10px rgba(0, 123, 255, 0.3) !important;
+}
+
+#loop_button.active:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%) !important;
+}
+
+#mute_button.active {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+  box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3) !important;
+}
+
+#mute_button.active:hover {
+  background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%) !important;
+}
+
+#waveform_button.active {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+  box-shadow: 0 3px 10px rgba(23, 162, 184, 0.3) !important;
+}
+
+#waveform_button.active:hover {
+  background: linear-gradient(135deg, #138496 0%, #117a8b 100%) !important;
+}
+
+/* Button icons */
+#play_button i,
+#pause_button i,
+#stop_button i,
+#waveform_button img,
+#loop_button i,
+#mute_button i {
+  font-size: 14px !important;
+  filter: brightness(1.1) !important;
+}
+
+/* Disabled state styling */
+#play_button:disabled,
+#pause_button:disabled,
+#stop_button:disabled {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+  opacity: 0.6 !important;
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  cursor: not-allowed !important;
+}
+
+#controls_column input,
 #controls_column button {
-  width: 36px;
+  margin-right: 12px;
 }
 
 #controls_column #full_button {
   margin-right: 0;
 }
 
-@media screen and (max-width: 1045px) and (min-width: 935px) {
-  .hide-1{
-    display:none;
-  }
-  .hide-2{
-    display:none;
+/* Responsive breakpoints */
+@media screen and (max-width: 1200px) {
+  #holding-tank-column,
+  #hotkeys-column {
+    min-width: 250px;
+    max-width: 300px;
   }
 }
 
-#holding-tank-column, #hotkeys-column {
+@media screen and (max-width: 1045px) and (min-width: 935px) {
+  .hide-1 {
+    display: none;
+  }
+  .hide-2 {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 934px) {
+  #top-row {
+    flex-direction: column;
+    height: calc(100vh - 160px);
+  }
+
+  #holding-tank-column,
+  #hotkeys-column,
+  #search-column {
+    min-width: auto;
+    max-width: none;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  #player {
+    margin: 4px;
+  }
+
+  #player .card-body {
+    padding: 8px 12px;
+  }
+}
+
+#holding-tank-column,
+#hotkeys-column {
   min-width: 300px;
+  max-width: 350px;
+  flex: 0 0 auto;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--panel-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 #search-column {
-  flex-grow: 1;
+  flex: 1 1 auto;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--panel-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 #player-col {
   position: relative;
+  height: auto;
+  flex-shrink: 0;
+  background: transparent;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#player-panel {
+  background: var(--panel-color);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin: 0;
+}
+
+#player .card-body {
+  padding: 12px 16px;
+  background: var(--panel-color);
+  border-radius: 8px;
+}
+
+#now_playing_bar {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--card-text);
+}
+
+#progress_bar {
+  height: 8px !important;
+  background-color: #6c757d !important;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  width: 100%;
+  display: block;
+  margin: 8px 0;
+  border: 1px solid #495057;
+}
+
+#audio_progress {
+  background-color: #007bff !important;
+  transition: width 0.1s ease;
+  height: 100%;
+  min-width: 0;
+  border-radius: 6px;
+}
+
+/* Ensure the progress container always shows the background */
+.progress {
+  background-color: #6c757d !important;
+  border-radius: 6px;
+  overflow: hidden;
+  height: 8px !important;
+  border: 1px solid #495057;
+}
+
+/* Override any Bootstrap progress bar defaults */
+.progress-bar {
+  background-color: #007bff !important;
+}
+
+#play_column,
+#stop_column {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#controls_column {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#volume {
+  width: 80px;
+  height: 8px;
+  -webkit-appearance: none;
+  background: linear-gradient(90deg, #e9ecef 0%, #dee2e6 100%);
+  border-radius: 4px;
+  outline: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ced4da;
+}
+
+#volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 123, 255, 0.3);
+  border: 2px solid #ffffff;
+  transition: all 0.2s ease;
+  transform: translateY(-2px);
+}
+
+#volume::-webkit-slider-thumb:hover {
+  transform: translateY(-2px) scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+}
+
+#volume::-webkit-slider-thumb:active {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+}
+
+#waveform-container {
+  position: absolute;
+  bottom: 140px; /* Position higher above the player panel to avoid overlap */
+  left: 8px;
+  right: 8px;
+  z-index: 1000;
+  pointer-events: none; /* Allow clicks to pass through when hidden */
 }
 
 #waveform {
-  position: absolute;
-  top: -121px;
-  left: 12px;
   height: 100px;
-  width: calc(100% - 24px);
-  z-index: 1;
-  border-radius: 10px 10px 0 0;
-  opacity: .95;
+  width: 100%;
+  border-radius: 8px;
+  opacity: 0.95;
   cursor: pointer;
+  background: var(--panel-color);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  pointer-events: auto; /* Re-enable clicks on the waveform itself */
 }
 
 .hidden {
   visibility: hidden;
 }
 
-.btn-group-xs>.btn,
+.btn-group-xs > .btn,
 .btn-xs {
-  padding: .25rem .4rem;
-  font-size: .875rem;
-  line-height: .5;
-  border-radius: .2rem;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.875rem;
+  line-height: 0.5;
+  border-radius: 0.2rem;
   font-size: 10px !important;
 }
 
@@ -258,4 +789,5 @@ legend {
   font-size: 12px;
   text-transform: uppercase;
   font-weight: bold;
+  color: var(--card-text);
 }
