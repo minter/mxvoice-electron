@@ -143,18 +143,18 @@ function populateHoldingTank(songIds) {
 }
 
 function clearHotkeys() {
-  if (confirm("Are you sure you want clear your hotkeys?")) {
+  customConfirm("Are you sure you want clear your hotkeys?", function() {
     for (let key = 1; key <= 12; key++) {
       $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
       $(`.hotkeys.active #f${key}_hotkey span`).html("");
     }
-  }
+  });
 }
 
 function clearHoldingTank() {
-  if (confirm("Are you sure you want clear your holding tank?")) {
+  customConfirm("Are you sure you want clear your holding tank?", function() {
     $(".holding_tank.active").empty();
-  }
+  });
 }
 
 function openHotkeyFile() {
@@ -671,18 +671,30 @@ function toggleAutoPlay() {
 }
 
 function deleteSong() {
-  animateCSS($("#selected_row"), "zoomOut", "animate__faster").then(() => {
-    if ($("#selected_row").is("span")) {
-      $("#selected_row").parent().removeAttr("songid");
-      $("#selected_row").empty();
-      $("#selected_row").removeAttr("id");
-    } else {
-      $("#selected_row").remove();
-    }
-    saveHoldingTankToStore();
-    saveHotkeysToStore();
-  });
-  return false;
+  var songId = $("#selected_row").attr("songid");
+  if (songId) {
+    console.log(`Preparing to delete song ${songId}`);
+    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
+    var songRow = songStmt.get(songId);
+    var filename = songRow.filename;
+    
+    customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`, function() {
+      console.log("Proceeding with delete");
+      const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
+      if (deleteStmt.run(songId)) {
+        fs.unlinkSync(path.join(store.get("music_directory"), filename));
+        // Remove song anywhere it appears
+        $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
+        $(`.hotkeys li span[songid=${songId}]`).remove();
+        $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
+        $(`#search_results tr[songid=${songId}]`).remove();
+        saveHoldingTankToStore();
+        saveHotkeysToStore();
+      } else {
+        console.log("Error deleting song from database");
+      }
+    });
+  }
 }
 
 function scale_scrollable() {
@@ -906,11 +918,8 @@ function deleteSelectedSong() {
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
     var songRow = songStmt.get(songId);
     var filename = songRow.filename;
-    if (
-      confirm(
-        `Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`
-      )
-    ) {
+    
+    customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`, function() {
       console.log("Proceeding with delete");
       const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
       if (deleteStmt.run(songId)) {
@@ -925,7 +934,7 @@ function deleteSelectedSong() {
       } else {
         console.log("Error deleting song from database");
       }
-    }
+    });
   }
 }
 
@@ -1110,11 +1119,7 @@ function openCategoriesModal() {
 
 function deleteCategory(event, code, description) {
   event.preventDefault();
-  if (
-    confirm(
-      `Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`
-    )
-  ) {
+  customConfirm(`Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`, function() {
     console.log(`Deleting category ${code}`);
 
     const uncategorizedCheckStmt = db.prepare(
@@ -1140,7 +1145,7 @@ function deleteCategory(event, code, description) {
     }
     populateCategorySelect();
     populateCategoriesModal();
-  }
+  });
 }
 
 function saveCategories(event) {
@@ -1265,17 +1270,39 @@ function toggleAdvancedSearch() {
 }
 
 function closeAllTabs() {
-  if (
-    confirm(
-      `Are you sure you want to close all open Holding Tanks and Hotkeys?`
-    )
-  ) {
+  customConfirm(`Are you sure you want to close all open Holding Tanks and Hotkeys?`, function() {
     store.delete("holding_tank");
     store.delete("hotkeys");
     store.delete("column_order");
     store.delete("font-size");
     location.reload();
-  }
+  });
+}
+
+// Custom confirmation function to replace native confirm() dialogs
+function customConfirm(message, callback) {
+  $("#confirmationMessage").text(message);
+  $("#confirmationModal").modal("show");
+  
+  // Store the callback to execute when confirmed
+  $("#confirmationConfirmBtn").off("click").on("click", function() {
+    $("#confirmationModal").modal("hide");
+    if (callback) {
+      callback();
+    }
+  });
+}
+
+// Focus restoration after modal dismissal
+function restoreFocusToSearch() {
+  // Small delay to ensure modal is fully closed
+  setTimeout(function() {
+    if ($("#omni_search").is(":visible")) {
+      $("#omni_search").focus();
+    } else if ($("#title-search").is(":visible")) {
+      $("#title-search").focus();
+    }
+  }, 100);
 }
 
 $(document).ready(function () {
@@ -1713,5 +1740,10 @@ $(document).ready(function () {
   $("#bulkAddModal").on("hidden.bs.modal", function (e) {
     $("#bulkSongFormNewCategory").hide();
     $("#bulk-song-form-new-category").val("");
+  });
+
+  // Handle focus restoration for confirmation modal
+  $("#confirmationModal").on("hidden.bs.modal", function (e) {
+    restoreFocusToSearch();
   });
 });
