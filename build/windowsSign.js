@@ -47,7 +47,8 @@ async function signWindowsInstaller() {
     .sort((a, b) => b.time - a.time);
 
   if (files.length === 0) {
-    throw new Error('No Windows installer (.exe) found in dist/.');
+    console.log('No Windows installer (.exe) found in dist/. Skipping Windows signing.');
+    return;
   }
 
   const installerName = files[0].name;
