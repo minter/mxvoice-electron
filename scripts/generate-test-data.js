@@ -3,6 +3,7 @@ const path = require("path");
 const Store = require("electron-store");
 const fs = require("fs");
 const os = require("os");
+const { v4: uuidv4 } = require("uuid");
 
 // Initialize store to get database path
 const store = new Store();
@@ -293,7 +294,7 @@ function generateDuration() {
 function generateFilename(artist, title) {
   const cleanArtist = artist.replace(/[^a-zA-Z0-9]/g, "").substring(0, 20);
   const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, "").substring(0, 30);
-  const uuid = Math.random().toString(36).substring(2, 15);
+  const uuid = uuidv4();
   return `${cleanArtist}-${cleanTitle}-${uuid}.mp3`;
 }
 
