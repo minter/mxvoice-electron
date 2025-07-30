@@ -918,11 +918,8 @@ function deleteSelectedSong() {
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
     var songRow = songStmt.get(songId);
     var filename = songRow.filename;
-    if (
-      confirm(
-        `Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`
-      )
-    ) {
+    
+    customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`, function() {
       console.log("Proceeding with delete");
       const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
       if (deleteStmt.run(songId)) {
@@ -937,7 +934,7 @@ function deleteSelectedSong() {
       } else {
         console.log("Error deleting song from database");
       }
-    }
+    });
   }
 }
 
