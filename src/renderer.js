@@ -279,19 +279,53 @@ function populateCategorySelect() {
   $("#category_select option").remove();
   $("#category_select").append(`<option value="*">All Categories</option>`);
   
-  // Safety check - ensure database is available
-  if (typeof db === 'undefined') {
-    console.warn("Database not available yet, skipping category population");
-    return;
-  }
-  
-  var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-  for (const row of stmt.iterate()) {
-    categories[row.code] = row.description;
-    $("#category_select").append(
-      `<option value="${row.code}">${row.description}</option>`
-    );
-    //console.log('Found ' + row.code + ' as ' + row.description);
+  // Use new database API for getting categories
+  if (window.electronAPI && window.electronAPI.database) {
+    window.electronAPI.database.getCategories().then(result => {
+      if (result.success) {
+        result.data.forEach(row => {
+          categories[row.code] = row.description;
+          $("#category_select").append(
+            `<option value="${row.code}">${row.description}</option>`
+          );
+        });
+      } else {
+        console.warn('❌ Failed to get categories:', result.error);
+        // Fallback to legacy database access
+        if (typeof db !== 'undefined') {
+          var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+          for (const row of stmt.iterate()) {
+            categories[row.code] = row.description;
+            $("#category_select").append(
+              `<option value="${row.code}">${row.description}</option>`
+            );
+          }
+        }
+      }
+    }).catch(error => {
+      console.warn('❌ Database API error:', error);
+      // Fallback to legacy database access
+      if (typeof db !== 'undefined') {
+        var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+        for (const row of stmt.iterate()) {
+          categories[row.code] = row.description;
+          $("#category_select").append(
+            `<option value="${row.code}">${row.description}</option>`
+          );
+        }
+      }
+    });
+  } else {
+    // Fallback to legacy database access
+    if (typeof db !== 'undefined') {
+      var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+      for (const row of stmt.iterate()) {
+        categories[row.code] = row.description;
+        $("#category_select").append(
+          `<option value="${row.code}">${row.description}</option>`
+        );
+      }
+    }
   }
 }
 
@@ -351,96 +385,393 @@ function searchData() {
 
   console.log("Query string is" + query_string);
 
-  var stmt = db.prepare(
-    "SELECT * from mrvoice" +
-      query_string +
-      " ORDER BY category,info,title,artist"
-  );
-  const rows = stmt.all(query_params);
-  rows.forEach((row) => {
-    raw_html.push(
-      `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
-        row.id
-      }'><td class='hide-1'>${
-        categories[row.category]
-      }</td><td class='hide-2'>${
-        row.info || ""
-      }</td><td style='font-weight: bold'>${
-        row.title || ""
-      }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
-        row.time
-      }</td></tr>`
-    );
-  });
-  $("#search_results").append(raw_html.join(""));
-
-  scale_scrollable();
-
-  $("#omni_search").select();
-  $("#category_select").prop("selectedIndex", 0);
+  // Use new database API for search query
+  if (window.electronAPI && window.electronAPI.database) {
+    const sql = "SELECT * from mrvoice" + query_string + " ORDER BY category,info,title,artist";
+    window.electronAPI.database.query(sql, query_params).then(result => {
+      if (result.success) {
+        result.data.forEach((row) => {
+          raw_html.push(
+            `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
+              row.id
+            }'><td class='hide-1'>${
+              categories[row.category]
+            }</td><td class='hide-2'>${
+              row.info || ""
+            }</td><td style='font-weight: bold'>${
+              row.title || ""
+            }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
+              row.time
+            }</td></tr>`
+          );
+        });
+        $("#search_results").append(raw_html.join(""));
+        scale_scrollable();
+        $("#omni_search").select();
+        $("#category_select").prop("selectedIndex", 0);
+      } else {
+        console.warn('❌ Failed to search songs:', result.error);
+        // Fallback to legacy database access
+        if (typeof db !== 'undefined') {
+          var stmt = db.prepare(
+            "SELECT * from mrvoice" +
+              query_string +
+              " ORDER BY category,info,title,artist"
+          );
+          const rows = stmt.all(query_params);
+          rows.forEach((row) => {
+            raw_html.push(
+              `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
+                row.id
+              }'><td class='hide-1'>${
+                categories[row.category]
+              }</td><td class='hide-2'>${
+                row.info || ""
+              }</td><td style='font-weight: bold'>${
+                row.title || ""
+              }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
+                row.time
+              }</td></tr>`
+            );
+          });
+          $("#search_results").append(raw_html.join(""));
+          scale_scrollable();
+          $("#omni_search").select();
+          $("#category_select").prop("selectedIndex", 0);
+        }
+      }
+    }).catch(error => {
+      console.warn('❌ Database API error:', error);
+      // Fallback to legacy database access
+      if (typeof db !== 'undefined') {
+        var stmt = db.prepare(
+          "SELECT * from mrvoice" +
+            query_string +
+            " ORDER BY category,info,title,artist"
+        );
+        const rows = stmt.all(query_params);
+        rows.forEach((row) => {
+          raw_html.push(
+            `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
+              row.id
+            }'><td class='hide-1'>${
+              categories[row.category]
+            }</td><td class='hide-2'>${
+              row.info || ""
+            }</td><td style='font-weight: bold'>${
+              row.title || ""
+            }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
+              row.time
+            }</td></tr>`
+          );
+        });
+        $("#search_results").append(raw_html.join(""));
+        scale_scrollable();
+        $("#omni_search").select();
+        $("#category_select").prop("selectedIndex", 0);
+      }
+    });
+  } else {
+    // Fallback to legacy database access
+    if (typeof db !== 'undefined') {
+      var stmt = db.prepare(
+        "SELECT * from mrvoice" +
+          query_string +
+          " ORDER BY category,info,title,artist"
+      );
+      const rows = stmt.all(query_params);
+      rows.forEach((row) => {
+        raw_html.push(
+          `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
+            row.id
+          }'><td class='hide-1'>${
+            categories[row.category]
+          }</td><td class='hide-2'>${
+            row.info || ""
+          }</td><td style='font-weight: bold'>${
+            row.title || ""
+          }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
+            row.time
+          }</td></tr>`
+        );
+      });
+      $("#search_results").append(raw_html.join(""));
+      scale_scrollable();
+      $("#omni_search").select();
+      $("#category_select").prop("selectedIndex", 0);
+    }
+  }
 }
 
 function setLabelFromSongId(song_id, element) {
   //console.log(element);
-  var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-  var row = stmt.get(song_id);
-  var title = row.title || "[Unknown Title]";
-  var artist = row.artist || "[Unknown Artist]";
-  var time = row.time || "[??:??]";
+  // Use new database API for getting song by ID
+  if (window.electronAPI && window.electronAPI.database) {
+    window.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
+      if (result.success && result.data.length > 0) {
+        var row = result.data[0];
+        var title = row.title || "[Unknown Title]";
+        var artist = row.artist || "[Unknown Artist]";
+        var time = row.time || "[??:??]";
+        
+        // Handle swapping
+        var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
+          element
+        );
+        console.log(original_song_node);
+        if (original_song_node.length) {
+          var old_song = original_song_node.find("span").detach();
+          var destination_song = $(element).find("span").detach();
+          original_song_node.append(destination_song);
+          if (destination_song.attr("songid")) {
+            original_song_node.attr("songid", destination_song.attr("songid"));
+          } else {
+            original_song_node.removeAttr("songid");
+          }
 
-  // Handle swapping
-  var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
-    element
-  );
-  console.log(original_song_node);
-  if (original_song_node.length) {
-    var old_song = original_song_node.find("span").detach();
-    var destination_song = $(element).find("span").detach();
-    original_song_node.append(destination_song);
-    if (destination_song.attr("songid")) {
-      original_song_node.attr("songid", destination_song.attr("songid"));
-    } else {
-      original_song_node.removeAttr("songid");
-    }
+          $(element).append(old_song);
+        } else {
+          $(element).find("span").html(`${title} by ${artist} (${time})`);
+          $(element).find("span").attr("songid", song_id);
+        }
+        saveHotkeysToStore();
+      } else {
+        console.warn('❌ Failed to get song by ID:', result.error);
+        // Fallback to legacy database access
+        if (typeof db !== 'undefined') {
+          var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+          var row = stmt.get(song_id);
+          var title = row.title || "[Unknown Title]";
+          var artist = row.artist || "[Unknown Artist]";
+          var time = row.time || "[??:??]";
 
-    $(element).append(old_song);
+          // Handle swapping
+          var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
+            element
+          );
+          console.log(original_song_node);
+          if (original_song_node.length) {
+            var old_song = original_song_node.find("span").detach();
+            var destination_song = $(element).find("span").detach();
+            original_song_node.append(destination_song);
+            if (destination_song.attr("songid")) {
+              original_song_node.attr("songid", destination_song.attr("songid"));
+            } else {
+              original_song_node.removeAttr("songid");
+            }
+
+            $(element).append(old_song);
+          } else {
+            $(element).find("span").html(`${title} by ${artist} (${time})`);
+            $(element).find("span").attr("songid", song_id);
+          }
+          saveHotkeysToStore();
+        }
+      }
+    }).catch(error => {
+      console.warn('❌ Database API error:', error);
+      // Fallback to legacy database access
+      if (typeof db !== 'undefined') {
+        var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+        var row = stmt.get(song_id);
+        var title = row.title || "[Unknown Title]";
+        var artist = row.artist || "[Unknown Artist]";
+        var time = row.time || "[??:??]";
+
+        // Handle swapping
+        var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
+          element
+        );
+        console.log(original_song_node);
+        if (original_song_node.length) {
+          var old_song = original_song_node.find("span").detach();
+          var destination_song = $(element).find("span").detach();
+          original_song_node.append(destination_song);
+          if (destination_song.attr("songid")) {
+            original_song_node.attr("songid", destination_song.attr("songid"));
+          } else {
+            original_song_node.removeAttr("songid");
+          }
+
+          $(element).append(old_song);
+        } else {
+          $(element).find("span").html(`${title} by ${artist} (${time})`);
+          $(element).find("span").attr("songid", song_id);
+        }
+        saveHotkeysToStore();
+      }
+    });
   } else {
-    $(element).find("span").html(`${title} by ${artist} (${time})`);
-    $(element).find("span").attr("songid", song_id);
+    // Fallback to legacy database access
+    if (typeof db !== 'undefined') {
+      var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+      var row = stmt.get(song_id);
+      var title = row.title || "[Unknown Title]";
+      var artist = row.artist || "[Unknown Artist]";
+      var time = row.time || "[??:??]";
+
+      // Handle swapping
+      var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
+        element
+      );
+      console.log(original_song_node);
+      if (original_song_node.length) {
+        var old_song = original_song_node.find("span").detach();
+        var destination_song = $(element).find("span").detach();
+        original_song_node.append(destination_song);
+        if (destination_song.attr("songid")) {
+          original_song_node.attr("songid", destination_song.attr("songid"));
+        } else {
+          original_song_node.removeAttr("songid");
+        }
+
+        $(element).append(old_song);
+      } else {
+        $(element).find("span").html(`${title} by ${artist} (${time})`);
+        $(element).find("span").attr("songid", song_id);
+      }
+      saveHotkeysToStore();
+    }
   }
-  saveHotkeysToStore();
 }
 
 function addToHoldingTank(song_id, element) {
-  var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-  var row = stmt.get(song_id);
-  var title = row.title || "[Unknown Title]";
-  var artist = row.artist || "[Unknown Artist]";
-  var time = row.time || "[??:??]";
+  // Use new database API for getting song by ID
+  if (window.electronAPI && window.electronAPI.database) {
+    window.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
+      if (result.success && result.data.length > 0) {
+        var row = result.data[0];
+        var title = row.title || "[Unknown Title]";
+        var artist = row.artist || "[Unknown Artist]";
+        var time = row.time || "[??:??]";
 
-  var existing_song = $(
-    `.holding_tank.active .list-group-item[songid=${song_id}]`
-  );
-  if (existing_song.length) {
-    var song_row = existing_song.detach();
-  } else {
-    var song_row = document.createElement("li");
-    song_row.style.fontSize = `${fontSize}px`;
-    song_row.className = "song list-group-item";
-    song_row.setAttribute("draggable", "true");
-    song_row.setAttribute("ondragstart", "songDrag(event)");
-    song_row.setAttribute("songid", song_id);
-    song_row.textContent = `${title} by ${artist} (${time})`;
-  }
+        var existing_song = $(
+          `.holding_tank.active .list-group-item[songid=${song_id}]`
+        );
+        if (existing_song.length) {
+          var song_row = existing_song.detach();
+        } else {
+          var song_row = document.createElement("li");
+          song_row.style.fontSize = `${fontSize}px`;
+          song_row.className = "song list-group-item";
+          song_row.setAttribute("draggable", "true");
+          song_row.setAttribute("ondragstart", "songDrag(event)");
+          song_row.setAttribute("songid", song_id);
+          song_row.textContent = `${title} by ${artist} (${time})`;
+        }
 
-  if ($(element).is("li")) {
-    $(element).after(song_row);
-  } else if ($(element).is("div")) {
-    $(element).find("ul.active").append(song_row);
+        if ($(element).is("li")) {
+          $(element).after(song_row);
+        } else if ($(element).is("div")) {
+          $(element).find("ul.active").append(song_row);
+        } else {
+          $(element).append(song_row);
+        }
+        saveHoldingTankToStore();
+      } else {
+        console.warn('❌ Failed to get song by ID:', result.error);
+        // Fallback to legacy database access
+        if (typeof db !== 'undefined') {
+          var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+          var row = stmt.get(song_id);
+          var title = row.title || "[Unknown Title]";
+          var artist = row.artist || "[Unknown Artist]";
+          var time = row.time || "[??:??]";
+
+          var existing_song = $(
+            `.holding_tank.active .list-group-item[songid=${song_id}]`
+          );
+          if (existing_song.length) {
+            var song_row = existing_song.detach();
+          } else {
+            var song_row = document.createElement("li");
+            song_row.style.fontSize = `${fontSize}px`;
+            song_row.className = "song list-group-item";
+            song_row.setAttribute("draggable", "true");
+            song_row.setAttribute("ondragstart", "songDrag(event)");
+            song_row.setAttribute("songid", song_id);
+            song_row.textContent = `${title} by ${artist} (${time})`;
+          }
+
+          if ($(element).is("li")) {
+            $(element).after(song_row);
+          } else if ($(element).is("div")) {
+            $(element).find("ul.active").append(song_row);
+          } else {
+            $(element).append(song_row);
+          }
+          saveHoldingTankToStore();
+        }
+      }
+    }).catch(error => {
+      console.warn('❌ Database API error:', error);
+      // Fallback to legacy database access
+      if (typeof db !== 'undefined') {
+        var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+        var row = stmt.get(song_id);
+        var title = row.title || "[Unknown Title]";
+        var artist = row.artist || "[Unknown Artist]";
+        var time = row.time || "[??:??]";
+
+        var existing_song = $(
+          `.holding_tank.active .list-group-item[songid=${song_id}]`
+        );
+        if (existing_song.length) {
+          var song_row = existing_song.detach();
+        } else {
+          var song_row = document.createElement("li");
+          song_row.style.fontSize = `${fontSize}px`;
+          song_row.className = "song list-group-item";
+          song_row.setAttribute("draggable", "true");
+          song_row.setAttribute("ondragstart", "songDrag(event)");
+          song_row.setAttribute("songid", song_id);
+          song_row.textContent = `${title} by ${artist} (${time})`;
+        }
+
+        if ($(element).is("li")) {
+          $(element).after(song_row);
+        } else if ($(element).is("div")) {
+          $(element).find("ul.active").append(song_row);
+        } else {
+          $(element).append(song_row);
+        }
+        saveHoldingTankToStore();
+      }
+    });
   } else {
-    $(element).append(song_row);
+    // Fallback to legacy database access
+    if (typeof db !== 'undefined') {
+      var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+      var row = stmt.get(song_id);
+      var title = row.title || "[Unknown Title]";
+      var artist = row.artist || "[Unknown Artist]";
+      var time = row.time || "[??:??]";
+
+      var existing_song = $(
+        `.holding_tank.active .list-group-item[songid=${song_id}]`
+      );
+      if (existing_song.length) {
+        var song_row = existing_song.detach();
+      } else {
+        var song_row = document.createElement("li");
+        song_row.style.fontSize = `${fontSize}px`;
+        song_row.className = "song list-group-item";
+        song_row.setAttribute("draggable", "true");
+        song_row.setAttribute("ondragstart", "songDrag(event)");
+        song_row.setAttribute("songid", song_id);
+        song_row.textContent = `${title} by ${artist} (${time})`;
+      }
+
+      if ($(element).is("li")) {
+        $(element).after(song_row);
+      } else if ($(element).is("div")) {
+        $(element).find("ul.active").append(song_row);
+      } else {
+        $(element).append(song_row);
+      }
+      saveHoldingTankToStore();
+    }
   }
-  saveHoldingTankToStore();
 }
 
 var howlerUtils = {
@@ -1815,10 +2146,44 @@ $(document).ready(function () {
 
   // Is there only one song in the db? Pop the first-run modal
 
-  var stmt = db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
-  var query = stmt.get();
-  if (query.count <= 1) {
-    $(`#firstRunModal`).modal("show");
+  // Use new database API for song count
+  if (window.electronAPI && window.electronAPI.database) {
+    window.electronAPI.database.query("SELECT count(*) as count from mrvoice WHERE 1").then(result => {
+      if (result.success && result.data.length > 0) {
+        if (result.data[0].count <= 1) {
+          $(`#firstRunModal`).modal("show");
+        }
+      } else {
+        console.warn('❌ Failed to get song count:', result.error);
+        // Fallback to legacy database access
+        if (typeof db !== 'undefined') {
+          var stmt = db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
+          var query = stmt.get();
+          if (query.count <= 1) {
+            $(`#firstRunModal`).modal("show");
+          }
+        }
+      }
+    }).catch(error => {
+      console.warn('❌ Database API error:', error);
+      // Fallback to legacy database access
+      if (typeof db !== 'undefined') {
+        var stmt = db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
+        var query = stmt.get();
+        if (query.count <= 1) {
+          $(`#firstRunModal`).modal("show");
+        }
+      }
+    });
+  } else {
+    // Fallback to legacy database access
+    if (typeof db !== 'undefined') {
+      var stmt = db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
+      var query = stmt.get();
+      if (query.count <= 1) {
+        $(`#firstRunModal`).modal("show");
+      }
+    }
   }
 
   $("#song-form-category")
