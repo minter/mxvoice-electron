@@ -832,40 +832,48 @@ function playSongFromId(song_id) {
     // Get music directory from store
     window.electronAPI.store.get("music_directory").then(musicDirectory => {
       if (musicDirectory.success) {
-        var sound_path = [path.join(musicDirectory.value, filename)];
-        console.log("Inside get, Filename is " + filename);
-        sound = new Howl({
-          src: sound_path,
-          html5: true,
-          volume: $("#volume").val() / 100,
-          mute: $("#mute_button").hasClass("active"),
-          onplay: function () {
-            var time = Math.round(sound.duration());
-            globalAnimation = requestAnimationFrame(
-              howlerUtils.updateTimeTracker.bind(this)
-            );
-            var title = row.title || "";
-            var artist = row.artist || "";
-            artist = artist.length ? "by " + artist : artist;
-            wavesurfer.load(sound_path);
-            $("#song_now_playing")
-              .html(
-                `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`
-              )
-              .fadeIn(100)
-              .attr("songid", song_id);
-            $("#play_button").addClass("d-none");
-            $("#pause_button").removeClass("d-none");
-            $("#stop_button").removeAttr("disabled");
-          },
-          onend: function () {
-            song_ended();
-            if (autoplay && holdingTankMode === "playlist") {
-              autoplay_next();
-            }
-          },
+        window.electronAPI.path.join(musicDirectory.value, filename).then(result => {
+          if (result.success) {
+            var sound_path = [result.data];
+            console.log("Inside get, Filename is " + filename);
+            sound = new Howl({
+              src: sound_path,
+              html5: true,
+              volume: $("#volume").val() / 100,
+              mute: $("#mute_button").hasClass("active"),
+              onplay: function () {
+                var time = Math.round(sound.duration());
+                globalAnimation = requestAnimationFrame(
+                  howlerUtils.updateTimeTracker.bind(this)
+                );
+                var title = row.title || "";
+                var artist = row.artist || "";
+                artist = artist.length ? "by " + artist : artist;
+                wavesurfer.load(sound_path);
+                $("#song_now_playing")
+                  .html(
+                    `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`
+                  )
+                  .fadeIn(100)
+                  .attr("songid", song_id);
+                $("#play_button").addClass("d-none");
+                $("#pause_button").removeClass("d-none");
+                $("#stop_button").removeAttr("disabled");
+              },
+              onend: function () {
+                song_ended();
+                if (autoplay && holdingTankMode === "playlist") {
+                  autoplay_next();
+                }
+              },
+            });
+            sound.play();
+          } else {
+            console.warn('❌ Failed to join path:', result.error);
+          }
+        }).catch(error => {
+          console.warn('❌ Path join error:', error);
         });
-        sound.play();
       } else {
         console.warn('❌ Could not get music directory from store');
       }
@@ -1106,15 +1114,23 @@ function deleteSong() {
       const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
       if (deleteStmt.run(songId)) {
         window.electronAPI.store.get("music_directory").then(musicDirectory => {
-          const filePath = path.join(musicDirectory.value, filename);
-          window.electronAPI.fileSystem.delete(filePath).then(result => {
-            if (result.success) {
-              console.log('✅ File deleted successfully');
+          window.electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
+            if (joinResult.success) {
+              const filePath = joinResult.data;
+              window.electronAPI.fileSystem.delete(filePath).then(result => {
+                if (result.success) {
+                  console.log('✅ File deleted successfully');
+                } else {
+                  console.warn('❌ Failed to delete file:', result.error);
+                }
+              }).catch(error => {
+                console.warn('❌ File deletion error:', error);
+              });
             } else {
-              console.warn('❌ Failed to delete file:', result.error);
+              console.warn('❌ Failed to join path:', joinResult.error);
             }
           }).catch(error => {
-            console.warn('❌ File deletion error:', error);
+            console.warn('❌ Path join error:', error);
           });
           // Remove song anywhere it appears
           $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
@@ -1178,8 +1194,10 @@ function saveNewSong(event) {
   $(`#songFormModal`).modal("hide");
   console.log("Starting save process");
   var filename = $("#song-form-filename").val();
-  var pathData = path.parse(filename);
-  var title = $("#song-form-title").val();
+  window.electronAPI.path.parse(filename).then(result => {
+    if (result.success) {
+      var pathData = result.data;
+      var title = $("#song-form-title").val();
   var artist = $("#song-form-artist").val();
   var info = $("#song-form-info").val();
   var category = $("#song-form-category").val();
@@ -1226,37 +1244,50 @@ function saveNewSong(event) {
 
   var duration = $("#song-form-duration").val();
   var uuid = uuidv4();
-  var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(
-    /[^-.\w]/g,
-    ""
-  );
-  var newPath = path.join(store.get("music_directory"), newFilename);
+      var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(
+        /[^-.\w]/g,
+        ""
+      );
+      window.electronAPI.path.join(store.get("music_directory"), newFilename).then(joinResult => {
+        if (joinResult.success) {
+          var newPath = joinResult.data;
+          const stmt = db.prepare(
+            "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
+          );
+          stmt.run(
+            title,
+            artist,
+            category,
+            info,
+            newFilename,
+            duration,
+            Math.floor(Date.now() / 1000)
+          );
+          window.electronAPI.fileSystem.copy(filename, newPath).then(result => {
+            if (result.success) {
+              console.log('✅ File copied successfully');
+            } else {
+              console.warn('❌ Failed to copy file:', result.error);
+            }
+          }).catch(error => {
+            console.warn('❌ File copy error:', error);
+          });
 
-  const stmt = db.prepare(
-    "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  );
-  stmt.run(
-    title,
-    artist,
-    category,
-    info,
-    newFilename,
-    duration,
-    Math.floor(Date.now() / 1000)
-  );
-  window.electronAPI.fileSystem.copy(filename, newPath).then(result => {
-    if (result.success) {
-      console.log('✅ File copied successfully');
+          // Song has been saved, now let's show item
+          $("#omni_search").val(title);
+          searchData();
+        } else {
+          console.warn('❌ Failed to join path:', joinResult.error);
+        }
+      }).catch(error => {
+        console.warn('❌ Path join error:', error);
+      });
     } else {
-      console.warn('❌ Failed to copy file:', result.error);
+      console.warn('❌ Failed to parse path:', result.error);
     }
   }).catch(error => {
-    console.warn('❌ File copy error:', error);
+    console.warn('❌ Path parse error:', error);
   });
-
-  // Song has been saved, now let's show item
-  $("#omni_search").val(title);
-  searchData();
 }
 
 function savePreferences(event) {
@@ -1340,15 +1371,23 @@ function deleteSelectedSong() {
       const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
       if (deleteStmt.run(songId)) {
         window.electronAPI.store.get("music_directory").then(musicDirectory => {
-          const filePath = path.join(musicDirectory.value, filename);
-          window.electronAPI.fileSystem.delete(filePath).then(result => {
-            if (result.success) {
-              console.log('✅ File deleted successfully');
+          window.electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
+            if (joinResult.success) {
+              const filePath = joinResult.data;
+              window.electronAPI.fileSystem.delete(filePath).then(result => {
+                if (result.success) {
+                  console.log('✅ File deleted successfully');
+                } else {
+                  console.warn('❌ Failed to delete file:', result.error);
+                }
+              }).catch(error => {
+                console.warn('❌ File deletion error:', error);
+              });
             } else {
-              console.warn('❌ Failed to delete file:', result.error);
+              console.warn('❌ Failed to join path:', joinResult.error);
             }
           }).catch(error => {
-            console.warn('❌ File deletion error:', error);
+            console.warn('❌ Path join error:', error);
           });
           // Remove song anywhere it appears
           $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
@@ -1402,7 +1441,7 @@ function addSongsByPath(pathArray, category) {
       var uuid = uuidv4();
       var newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
       window.electronAPI.store.get("music_directory").then(musicDirectory => {
-        var newPath = path.join(musicDirectory, newFilename);
+        var newPath = path.join(musicDirectory.value, newFilename);
         const stmt = db.prepare(
           "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)"
         );
@@ -1462,14 +1501,22 @@ function saveBulkUpload(event) {
                 results = results.concat(walk(file));
               } else {
                 /* Is a file */
-                var pathData = path.parse(file);
-                if (
-                  [".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(
-                    pathData.ext.toLowerCase()
-                  )
-                ) {
-                  results.push(file);
-                }
+                window.electronAPI.path.parse(file).then(parseResult => {
+                  if (parseResult.success) {
+                    var pathData = parseResult.data;
+                    if (
+                      [".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(
+                        pathData.ext.toLowerCase()
+                      )
+                    ) {
+                      results.push(file);
+                    }
+                  } else {
+                    console.warn('❌ Failed to parse path:', parseResult.error);
+                  }
+                }).catch(error => {
+                  console.warn('❌ Path parse error:', error);
+                });
               }
             } else {
               console.warn('❌ Failed to get file stats:', statResult.error);
@@ -2382,15 +2429,23 @@ function testFileSystemAPI() {
     // Test file read (try to read a config file)
     window.electronAPI.store.get('database_directory').then(dbResult => {
       if (dbResult.success) {
-        const configPath = path.join(dbResult.value, 'config.json');
-                window.electronAPI.fileSystem.read(configPath).then(result => {
-          if (result.success) {
-            console.log('✅ file read API works: Config file read successfully');
+        window.electronAPI.path.join(dbResult.value, 'config.json').then(joinResult => {
+          if (joinResult.success) {
+            const configPath = joinResult.data;
+            window.electronAPI.fileSystem.read(configPath).then(result => {
+              if (result.success) {
+                console.log('✅ file read API works: Config file read successfully');
+              } else {
+                console.log('✅ file read API works: Config file does not exist (expected)');
+              }
+            }).catch(error => {
+              console.warn('❌ file read API error:', error);
+            });
           } else {
-            console.log('✅ file read API works: Config file does not exist (expected)');
+            console.warn('❌ Failed to join path:', joinResult.error);
           }
         }).catch(error => {
-          console.warn('❌ file read API error:', error);
+          console.warn('❌ Path join error:', error);
         });
       } else {
         console.warn('❌ Could not get database directory from store');
@@ -2491,42 +2546,50 @@ function testAudioAPI() {
     // Test audio play (try to play a test file)
     window.electronAPI.store.get('music_directory').then(musicResult => {
       if (musicResult.success) {
-        const testAudioPath = path.join(musicResult.value, 'PatrickShort-CSzRockBumper.mp3');
-                window.electronAPI.audio.play(testAudioPath).then(result => {
-          if (result.success) {
-            console.log('✅ audio play API works, sound ID:', result.id);
-            
-            // Test pause after a short delay
-            setTimeout(() => {
-              window.electronAPI.audio.pause(result.id).then(pauseResult => {
-                if (pauseResult.success) {
-                  console.log('✅ audio pause API works');
-                  
-                  // Test stop after another short delay
-                  setTimeout(() => {
-                    window.electronAPI.audio.stop(result.id).then(stopResult => {
-                      if (stopResult.success) {
-                        console.log('✅ audio stop API works');
-                      } else {
-                        console.warn('❌ audio stop API failed:', stopResult.error);
-                      }
-                    }).catch(error => {
-                      console.warn('❌ audio stop API error:', error);
-                    });
-                  }, 1000);
-                } else {
-                  console.warn('❌ audio pause API failed:', pauseResult.error);
-                }
-              }).catch(error => {
-                console.warn('❌ audio pause API error:', error);
-              });
-            }, 2000);
-            
+        window.electronAPI.path.join(musicResult.value, 'PatrickShort-CSzRockBumper.mp3').then(joinResult => {
+          if (joinResult.success) {
+            const testAudioPath = joinResult.data;
+            window.electronAPI.audio.play(testAudioPath).then(result => {
+              if (result.success) {
+                console.log('✅ audio play API works, sound ID:', result.id);
+                
+                // Test pause after a short delay
+                setTimeout(() => {
+                  window.electronAPI.audio.pause(result.id).then(pauseResult => {
+                    if (pauseResult.success) {
+                      console.log('✅ audio pause API works');
+                      
+                      // Test stop after another short delay
+                      setTimeout(() => {
+                        window.electronAPI.audio.stop(result.id).then(stopResult => {
+                          if (stopResult.success) {
+                            console.log('✅ audio stop API works');
+                          } else {
+                            console.warn('❌ audio stop API failed:', stopResult.error);
+                          }
+                        }).catch(error => {
+                          console.warn('❌ audio stop API error:', error);
+                        });
+                      }, 1000);
+                    } else {
+                      console.warn('❌ audio pause API failed:', pauseResult.error);
+                    }
+                  }).catch(error => {
+                    console.warn('❌ audio pause API error:', error);
+                  });
+                }, 2000);
+                
+              } else {
+                console.log('✅ audio play API works: File does not exist (expected)');
+              }
+            }).catch(error => {
+              console.warn('❌ audio play API error:', error);
+            });
           } else {
-            console.log('✅ audio play API works: File does not exist (expected)');
+            console.warn('❌ Failed to join path:', joinResult.error);
           }
         }).catch(error => {
-          console.warn('❌ audio play API error:', error);
+          console.warn('❌ Path join error:', error);
         });
       } else {
         console.warn('❌ Could not get music directory from store');
