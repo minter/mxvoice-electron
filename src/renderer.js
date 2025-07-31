@@ -500,52 +500,46 @@ function playSongFromId(song_id) {
     var filename = row.filename;
     // Get music directory from store
     window.electronAPI.store.get("music_directory").then(musicDirectory => {
-      var sound_path = [path.join(musicDirectory, filename)];
-      console.log("Inside get, Filename is " + filename);
-      sound = new Howl({
-        src: sound_path,
-        html5: true,
-        volume: $("#volume").val() / 100,
-        mute: $("#mute_button").hasClass("active"),
-        onplay: function () {
-          var time = Math.round(sound.duration());
-          globalAnimation = requestAnimationFrame(
-            howlerUtils.updateTimeTracker.bind(this)
-          );
-          var title = row.title || "";
-          var artist = row.artist || "";
-          artist = artist.length ? "by " + artist : artist;
-          wavesurfer.load(sound_path);
-          $("#song_now_playing")
-            .html(
-              `<i id="song_spinner" title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
-            )
-            .fadeIn(100);
-          $("#song_now_playing").attr("songid", song_id);
-          $("#play_button").addClass("d-none");
-          $("#pause_button").removeClass("d-none");
-          $("#stop_button").removeAttr("disabled");
-          $("#play_button").removeAttr("disabled");
-          $("#progress_bar .progress-bar").addClass(
-            "progress-bar-animated progress-bar-striped"
-          );
-        },
-        onend: function () {
-          song_ended();
-          if (loop) {
-            sound.play();
-          } else {
-            sound.unload();
-            autoplay_next();
-          }
-        },
-        onstop: function () {
-          console.log("Stopped!");
-          song_ended();
-        },
-      });
-
-      sound.play();
+      if (musicDirectory.success) {
+        var sound_path = [path.join(musicDirectory.value, filename)];
+        console.log("Inside get, Filename is " + filename);
+        sound = new Howl({
+          src: sound_path,
+          html5: true,
+          volume: $("#volume").val() / 100,
+          mute: $("#mute_button").hasClass("active"),
+          onplay: function () {
+            var time = Math.round(sound.duration());
+            globalAnimation = requestAnimationFrame(
+              howlerUtils.updateTimeTracker.bind(this)
+            );
+            var title = row.title || "";
+            var artist = row.artist || "";
+            artist = artist.length ? "by " + artist : artist;
+            wavesurfer.load(sound_path);
+            $("#song_now_playing")
+              .html(
+                `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`
+              )
+              .fadeIn(100)
+              .attr("songid", song_id);
+            $("#play_button").addClass("d-none");
+            $("#pause_button").removeClass("d-none");
+            $("#stop_button").removeAttr("disabled");
+          },
+          onend: function () {
+            song_ended();
+            if (autoplay && holdingTankMode === "playlist") {
+              autoplay_next();
+            }
+          },
+        });
+        sound.play();
+      } else {
+        console.warn('❌ Could not get music directory from store');
+      }
+    }).catch(error => {
+      console.warn('❌ Store get API error:', error);
     });
   }
 }
@@ -915,6 +909,7 @@ function saveNewSong(event) {
   // Song has been saved, now let's show item
   $("#omni_search").val(title);
   searchData();
+
 }
 
 function savePreferences(event) {
@@ -1049,9 +1044,7 @@ function addSongsByPath(pathArray, category) {
       }
       var artist = metadata.common.artist;
       var uuid = uuidv4();
-      var newFilename = `${artist}-${title}-${uuid}${path.extname(
-        songSourcePath
-      )}`.replace(/[^-.\w]/g, "");
+      var newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
       window.electronAPI.store.get("music_directory").then(musicDirectory => {
         var newPath = path.join(musicDirectory, newFilename);
         const stmt = db.prepare(
@@ -1356,11 +1349,24 @@ function toggleAdvancedSearch() {
 
 function closeAllTabs() {
   customConfirm(`Are you sure you want to close all open Holding Tanks and Hotkeys?`, function() {
-    store.delete("holding_tank");
-    store.delete("hotkeys");
-    store.delete("column_order");
-    store.delete("font-size");
-    location.reload();
+    // Use new store API for cleanup operations
+    Promise.all([
+      window.electronAPI.store.delete("holding_tank"),
+      window.electronAPI.store.delete("hotkeys"),
+      window.electronAPI.store.delete("column_order"),
+      window.electronAPI.store.delete("font-size")
+    ]).then(() => {
+      console.log('✅ All tabs closed successfully');
+      location.reload();
+    }).catch(error => {
+      console.warn('❌ Failed to close tabs:', error);
+      // Fallback to legacy store access
+      store.delete("holding_tank");
+      store.delete("hotkeys");
+      store.delete("column_order");
+      store.delete("font-size");
+      location.reload();
+    });
   });
 }
 
@@ -1625,7 +1631,20 @@ $(document).ready(function () {
         return $(this).prop("id");
       })
       .get();
-    store.set("column_order", new_column_order);
+    // Use new store API for column order
+    window.electronAPI.store.set("column_order", new_column_order).then(result => {
+      if (result.success) {
+        console.log('✅ Column order saved successfully');
+      } else {
+        console.warn('❌ Failed to save column order:', result.error);
+        // Fallback to legacy store access
+        store.set("column_order", new_column_order);
+      }
+    }).catch(error => {
+      console.warn('❌ Column order save error:', error);
+      // Fallback to legacy store access
+      store.set("column_order", new_column_order);
+    });
   });
 
   $("#holding_tank").on("dragover", function (event) {
@@ -1770,10 +1789,25 @@ $(document).ready(function () {
   });
 
   $("#preferencesModal").on("shown.bs.modal", function (e) {
-    $("#preferences-database-directory").val(store.get("database_directory"));
-    $("#preferences-song-directory").val(store.get("music_directory"));
-    $("#preferences-hotkey-directory").val(store.get("hotkey_directory"));
-    $("#preferences-fadeout-seconds").val(store.get("fade_out_seconds"));
+    // Load preferences using new store API
+    Promise.all([
+      window.electronAPI.store.get("database_directory"),
+      window.electronAPI.store.get("music_directory"),
+      window.electronAPI.store.get("hotkey_directory"),
+      window.electronAPI.store.get("fade_out_seconds")
+    ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds]) => {
+      if (dbDir.success) $("#preferences-database-directory").val(dbDir.value);
+      if (musicDir.success) $("#preferences-song-directory").val(musicDir.value);
+      if (hotkeyDir.success) $("#preferences-hotkey-directory").val(hotkeyDir.value);
+      if (fadeSeconds.success) $("#preferences-fadeout-seconds").val(fadeSeconds.value);
+    }).catch(error => {
+      console.warn('Failed to load preferences:', error);
+      // Fallback to legacy store access
+      $("#preferences-database-directory").val(store.get("database_directory"));
+      $("#preferences-song-directory").val(store.get("music_directory"));
+      $("#preferences-hotkey-directory").val(store.get("hotkey_directory"));
+      $("#preferences-fadeout-seconds").val(store.get("fade_out_seconds"));
+    });
   });
 
   $(window).on("resize", function () {
@@ -1913,27 +1947,43 @@ function testFileSystemAPI() {
     console.log('✅ File System API available');
     
     // Test file exists
-    const testPath = store.get('database_directory');
-    window.electronAPI.fileSystem.exists(testPath).then(result => {
-      if (result.success) {
-        console.log('✅ file exists API works:', result.exists ? 'Directory exists' : 'Directory does not exist');
+    window.electronAPI.store.get('database_directory').then(dbResult => {
+      if (dbResult.success) {
+        const testPath = dbResult.value;
+                window.electronAPI.fileSystem.exists(testPath).then(result => {
+          if (result.success) {
+            console.log('✅ file exists API works:', result.exists ? 'Directory exists' : 'Directory does not exist');
+          } else {
+            console.warn('❌ file exists API failed:', result.error);
+          }
+        }).catch(error => {
+          console.warn('❌ file exists API error:', error);
+        });
       } else {
-        console.warn('❌ file exists API failed:', result.error);
+        console.warn('❌ Could not get database directory from store');
       }
     }).catch(error => {
-      console.warn('❌ file exists API error:', error);
+      console.warn('❌ store get API error:', error);
     });
     
     // Test file read (try to read a config file)
-    const configPath = path.join(store.get('database_directory'), 'config.json');
-    window.electronAPI.fileSystem.read(configPath).then(result => {
-      if (result.success) {
-        console.log('✅ file read API works: Config file read successfully');
+    window.electronAPI.store.get('database_directory').then(dbResult => {
+      if (dbResult.success) {
+        const configPath = path.join(dbResult.value, 'config.json');
+                window.electronAPI.fileSystem.read(configPath).then(result => {
+          if (result.success) {
+            console.log('✅ file read API works: Config file read successfully');
+          } else {
+            console.log('✅ file read API works: Config file does not exist (expected)');
+          }
+        }).catch(error => {
+          console.warn('❌ file read API error:', error);
+        });
       } else {
-        console.log('✅ file read API works: Config file does not exist (expected)');
+        console.warn('❌ Could not get database directory from store');
       }
     }).catch(error => {
-      console.warn('❌ file read API error:', error);
+      console.warn('❌ store get API error:', error);
     });
     
   } else {
@@ -2026,42 +2076,50 @@ function testAudioAPI() {
     });
     
     // Test audio play (try to play a test file)
-    const testAudioPath = path.join(store.get('music_directory'), 'PatrickShort-CSzRockBumper.mp3');
-    window.electronAPI.audio.play(testAudioPath).then(result => {
-      if (result.success) {
-        console.log('✅ audio play API works, sound ID:', result.id);
-        
-        // Test pause after a short delay
-        setTimeout(() => {
-          window.electronAPI.audio.pause(result.id).then(pauseResult => {
-            if (pauseResult.success) {
-              console.log('✅ audio pause API works');
-              
-              // Test stop after another short delay
-              setTimeout(() => {
-                window.electronAPI.audio.stop(result.id).then(stopResult => {
-                  if (stopResult.success) {
-                    console.log('✅ audio stop API works');
-                  } else {
-                    console.warn('❌ audio stop API failed:', stopResult.error);
-                  }
-                }).catch(error => {
-                  console.warn('❌ audio stop API error:', error);
-                });
-              }, 1000);
-            } else {
-              console.warn('❌ audio pause API failed:', pauseResult.error);
-            }
-          }).catch(error => {
-            console.warn('❌ audio pause API error:', error);
-          });
-        }, 2000);
-        
+    window.electronAPI.store.get('music_directory').then(musicResult => {
+      if (musicResult.success) {
+        const testAudioPath = path.join(musicResult.value, 'PatrickShort-CSzRockBumper.mp3');
+                window.electronAPI.audio.play(testAudioPath).then(result => {
+          if (result.success) {
+            console.log('✅ audio play API works, sound ID:', result.id);
+            
+            // Test pause after a short delay
+            setTimeout(() => {
+              window.electronAPI.audio.pause(result.id).then(pauseResult => {
+                if (pauseResult.success) {
+                  console.log('✅ audio pause API works');
+                  
+                  // Test stop after another short delay
+                  setTimeout(() => {
+                    window.electronAPI.audio.stop(result.id).then(stopResult => {
+                      if (stopResult.success) {
+                        console.log('✅ audio stop API works');
+                      } else {
+                        console.warn('❌ audio stop API failed:', stopResult.error);
+                      }
+                    }).catch(error => {
+                      console.warn('❌ audio stop API error:', error);
+                    });
+                  }, 1000);
+                } else {
+                  console.warn('❌ audio pause API failed:', pauseResult.error);
+                }
+              }).catch(error => {
+                console.warn('❌ audio pause API error:', error);
+              });
+            }, 2000);
+            
+          } else {
+            console.log('✅ audio play API works: File does not exist (expected)');
+          }
+        }).catch(error => {
+          console.warn('❌ audio play API error:', error);
+        });
       } else {
-        console.log('✅ audio play API works: File does not exist (expected)');
+        console.warn('❌ Could not get music directory from store');
       }
     }).catch(error => {
-      console.warn('❌ audio play API error:', error);
+      console.warn('❌ store get API error:', error);
     });
     
   } else {
