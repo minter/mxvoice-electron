@@ -826,14 +826,81 @@ function playSongFromId(song_id) {
       sound.off("fade");
       sound.unload();
     }
+    
     var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
     var row = stmt.get(song_id);
+    
+    if (!row) {
+      console.error('❌ No song found with ID:', song_id);
+      return;
+    }
+    
     var filename = row.filename;
+    
+    if (!filename) {
+      console.error('❌ No filename found for song ID:', song_id, 'Row data:', row);
+      return;
+    }
     // Get music directory from store
     window.electronAPI.store.get("music_directory").then(musicDirectory => {
+      console.log('🔍 Debug: musicDirectory response:', musicDirectory);
       if (musicDirectory.success) {
+        console.log('🔍 Debug: musicDirectory.value:', musicDirectory.value);
+        if (!musicDirectory.value) {
+          console.warn('❌ musicDirectory.value is undefined or empty, using default path');
+          // Use default path as fallback
+          const defaultPath = path.join(process.env.APPDATA || process.env.HOME || '', '.config', 'mxvoice', 'mp3');
+          window.electronAPI.path.join(defaultPath, filename).then(result => {
+            if (result.success) {
+              var sound_path = [result.data];
+              console.log("Inside get, Filename is " + filename);
+              sound = new Howl({
+                src: sound_path,
+                html5: true,
+                volume: $("#volume").val() / 100,
+                mute: $("#mute_button").hasClass("active"),
+                onplay: function () {
+                  var time = Math.round(sound.duration());
+                  globalAnimation = requestAnimationFrame(
+                    howlerUtils.updateTimeTracker.bind(this)
+                  );
+                  var title = row.title || "";
+                  var artist = row.artist || "";
+                  artist = artist.length ? "by " + artist : artist;
+                  wavesurfer.load(sound_path);
+                  $("#song_now_playing")
+                    .html(
+                      `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`
+                    )
+                    .fadeIn(100)
+                    .attr("songid", song_id);
+                  $("#play_button").addClass("d-none");
+                  $("#pause_button").removeClass("d-none");
+                  $("#stop_button").removeAttr("disabled");
+                },
+                onend: function () {
+                  song_ended();
+                  if (autoplay && holdingTankMode === "playlist") {
+                    autoplay_next();
+                  }
+                },
+              });
+              sound.play();
+            } else {
+              console.warn('❌ Failed to join path with default:', result.error);
+            }
+          }).catch(error => {
+            console.warn('❌ Path join error with default:', error);
+          });
+          return;
+        }
         window.electronAPI.path.join(musicDirectory.value, filename).then(result => {
+
           if (result.success) {
+            if (!result.data) {
+              console.warn('❌ result.data is undefined or empty');
+              return;
+            }
             var sound_path = [result.data];
             console.log("Inside get, Filename is " + filename);
             sound = new Howl({

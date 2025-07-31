@@ -524,7 +524,8 @@ ipcMain.handle('audio-fade', async (event, soundId, fromVolume, toVolume, durati
 // Additional IPC handlers for path and file system operations
 ipcMain.handle('path-join', async (event, ...paths) => {
   try {
-    return path.join(...paths);
+    const joinedPath = path.join(...paths);
+    return { success: true, data: joinedPath };
   } catch (error) {
     console.error('Path join error:', error);
     return { success: false, error: error.message };

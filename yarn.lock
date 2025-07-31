@@ -311,10 +311,12 @@
   dependencies:
     undici-types "~6.21.0"
 
-"@types/node@^16.11.26":
-  version "16.18.126"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-16.18.126.tgz#27875faa2926c0f475b39a8bb1e546c0176f8d4b"
-  integrity sha512-OTcgaiwfGFBKacvfwuHzzn1KLxH/er8mluiy8/uM3sGXHaRe73RrSIj01jow9t4kJEW633Ov+cOexXeiApTyAw==
+"@types/node@^22.7.7":
+  version "22.17.0"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-22.17.0.tgz#e8c9090e957bd4d9860efb323eb92d297347eac7"
+  integrity sha512-bbAKTCqX5aNVryi7qXVMi+OkB3w/OyblodicMbvE38blyAz7GxXf6XYhklokijuPwwVg9sDLKRxt0ZHXQwZVfQ==
+  dependencies:
+    undici-types "~6.21.0"
 
 "@types/normalize-package-data@^2.4.0":
   version "2.4.4"
@@ -1039,10 +1041,10 @@ electron-builder@24.13.3:
     simple-update-notifier "2.0.0"
     yargs "^17.6.2"
 
-electron-is-dev@^1.1.0:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/electron-is-dev/-/electron-is-dev-1.2.0.tgz#2e5cea0a1b3ccf1c86f577cee77363ef55deb05e"
-  integrity sha512-R1oD5gMBPS7PVU8gJwH6CtT0e6VSoD0+SzSnYpNm+dBkcijgA+K7VAMHDfnRq/lkKPZArpzplTW6jfiMYosdzw==
+electron-is-dev@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/electron-is-dev/-/electron-is-dev-3.0.1.tgz#1cbc79b1dd046787903acd357efdfab6549dc17a"
+  integrity sha512-8TjjAh8Ec51hUi3o4TaU0mD3GMTOESi866oRNavj9A3IQJ7pmv+MJVmdZBFGw4GFT36X7bkqnuDNYvkQgvyI8Q==
 
 electron-log@^5.4.0:
   version "5.4.0"
@@ -1106,21 +1108,21 @@ electron-updater@^6.6.2:
     semver "^7.6.3"
     tiny-typed-emitter "^2.1.0"
 
-electron-util@^0.17.0:
-  version "0.17.2"
-  resolved "https://registry.yarnpkg.com/electron-util/-/electron-util-0.17.2.tgz#6b0fe798ae0154585e7e0e96a707bfeae592be05"
-  integrity sha512-4Kg/aZxJ2BZklgyfH86px/D2GyROPyIcnAZar+7KiNmKI2I5l09pwQTP7V95zM3FVhgDQwV9iuJta5dyEvuWAw==
+electron-util@^0.18.1:
+  version "0.18.1"
+  resolved "https://registry.yarnpkg.com/electron-util/-/electron-util-0.18.1.tgz#389ebd2c5eafb7e5eed3c020e862c0e8545a4d0a"
+  integrity sha512-Ew1h+lDYUlGUnOQNDRo87dJDPW4R7MK2PTLbzb4nHnbFEMytTlPjxFgTfZieq1pGIdhSrDWINtXNhvp6lUEH1Q==
   dependencies:
-    electron-is-dev "^1.1.0"
-    new-github-issue-url "^0.2.1"
+    electron-is-dev "^3.0.1"
+    new-github-issue-url "^1.0.0"
 
-electron@^22.3.27:
-  version "22.3.27"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-22.3.27.tgz#b77451a53f0c502e7559cceac28ac58eb289eef8"
-  integrity sha512-7Rht21vHqj4ZFRnKuZdFqZFsvMBCmDqmjetiMqPtF+TmTBiGne1mnstVXOA/SRGhN2Qy5gY5bznJKpiqogjM8A==
+electron@^37.2.5:
+  version "37.2.5"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-37.2.5.tgz#29ce0154f763c03d70645063344da51af40c751c"
+  integrity sha512-719ZqEp43rj6xDJMICm4CIXl8keFFgvVNO9Ix6OtjNjrh9HtYlP/1WiYeRohnXj06aLyGx5NCzrHbG7j3BxO9w==
   dependencies:
     "@electron/get" "^2.0.0"
-    "@types/node" "^16.11.26"
+    "@types/node" "^22.7.7"
     extract-zip "^2.0.1"
 
 emoji-regex@^8.0.0:
@@ -2035,10 +2037,10 @@ napi-build-utils@^2.0.0:
   resolved "https://registry.yarnpkg.com/napi-build-utils/-/napi-build-utils-2.0.0.tgz#13c22c0187fcfccce1461844136372a47ddc027e"
   integrity sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA==
 
-new-github-issue-url@^0.2.1:
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/new-github-issue-url/-/new-github-issue-url-0.2.1.tgz#e17be1f665a92de465926603e44b9f8685630c1d"
-  integrity sha512-md4cGoxuT4T4d/HDOXbrUHkTKrp/vp+m3aOA7XXVYwNsUNMK49g3SQicTSeV5GIz/5QVGAeYRAOlyp9OvlgsYA==
+new-github-issue-url@^1.0.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/new-github-issue-url/-/new-github-issue-url-1.1.0.tgz#317333435991ae46e98831db5a237deffe4c8d33"
+  integrity sha512-R4r7f3Q/SzlI4Q/J/0KPRf+bwxYk7BiaYEy0zTVqpikA5F1CwCHgwVReKhpYRlG1besvLdtABQGQRhFy8CyT3g==
 
 node-abi@3.75.0, node-abi@^3.3.0:
   version "3.75.0"
@@ -2794,10 +2796,10 @@ util-deprecate@^1.0.1:
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
   integrity sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==
 
-uuid@^8.3.2:
-  version "8.3.2"
-  resolved "https://registry.yarnpkg.com/uuid/-/uuid-8.3.2.tgz#80d5b5ced271bb9af6c445f21a1a04c606cefbe2"
-  integrity sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==
+uuid@^11.1.0:
+  version "11.1.0"
+  resolved "https://registry.yarnpkg.com/uuid/-/uuid-11.1.0.tgz#9549028be1753bb934fc96e2bca09bb4105ae912"
+  integrity sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==
 
 validate-npm-package-license@^3.0.1:
   version "3.0.4"
