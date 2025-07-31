@@ -5,7 +5,6 @@ const store = new Store();
 const path = require('path')
 const fs = require('fs')
 const log = require('electron-log');
-const remote = require('@electron/remote');
 console.log = log.log;
 var dbName = 'mxvoice.db'
 console.log(`Looking for database in ${store.get('database_directory')}`)
@@ -16,6 +15,7 @@ console.log(`Attempting to open database file ${path.join(store.get('database_di
 const db = require('better-sqlite3')(path.join(store.get('database_directory'), dbName));
 const { v4: uuidv4 } = require('uuid');
 
+// Keep ALL existing IPC listeners (backward compatibility)
 ipcRenderer.on('fkey_load', function (event, fkeys, title) {
   populateHotkeys(fkeys, title);
 });
@@ -24,11 +24,9 @@ ipcRenderer.on('manage_categories', function (event) {
   openCategoriesModal();
 });
 
-
 ipcRenderer.on('holding_tank_load', function (event, songIds) {
   populateHoldingTank(songIds);
 });
-
 
 ipcRenderer.on('start_hotkey_save', function (event, fkeys) {
   saveHotkeyFile();
@@ -114,6 +112,7 @@ ipcRenderer.on('display_release_notes', function (event, releaseName, releaseNot
   $('#newReleaseModal').modal();
 })
 
+// Keep existing global exposure (backward compatibility)
 process.once('loaded', () => {
 
   // Ensure that there is a unique index on category code
@@ -122,12 +121,51 @@ process.once('loaded', () => {
     global.store = store,
     global.Mousetrap = require('mousetrap'),
     global.ipcRenderer = ipcRenderer,
-    global.prompt = require('electron-prompt'),
     global.uuidv4 = uuidv4,
     global.util = require('util'),
     global.fs = fs,
-    global.db = db,
-    global.remote = remote
+    global.db = db
+
+  // ADD NEW: Modern APIs through global exposure (works with contextIsolation: false)
+  global.electronAPI = {
+    // File operations
+    openHotkeyFile: () => ipcRenderer.invoke('open-hotkey-file'),
+    saveHotkeyFile: (hotkeyArray) => ipcRenderer.invoke('save-hotkey-file', hotkeyArray),
+    openHoldingTankFile: () => ipcRenderer.invoke('open-holding-tank-file'),
+    saveHoldingTankFile: (holdingTankArray) => ipcRenderer.invoke('save-holding-tank-file', holdingTankArray),
+    
+    // App operations
+    getAppPath: () => ipcRenderer.invoke('get-app-path'),
+    showDirectoryPicker: (defaultPath) => ipcRenderer.invoke('show-directory-picker', defaultPath),
+    restartAndInstall: () => ipcRenderer.invoke('restart-and-install-new-version'),
+    
+    // UI operations
+    increaseFontSize: () => ipcRenderer.invoke('increase-font-size'),
+    decreaseFontSize: () => ipcRenderer.invoke('decrease-font-size'),
+    toggleWaveform: () => ipcRenderer.invoke('toggle-waveform'),
+    toggleAdvancedSearch: () => ipcRenderer.invoke('toggle-advanced-search'),
+    closeAllTabs: () => ipcRenderer.invoke('close-all-tabs'),
+    
+    // Song operations
+    deleteSelectedSong: () => ipcRenderer.invoke('delete-selected-song'),
+    editSelectedSong: () => ipcRenderer.invoke('edit-selected-song'),
+    
+    // Category operations
+    manageCategories: () => ipcRenderer.invoke('manage-categories'),
+    
+    // Preferences
+    showPreferences: () => ipcRenderer.invoke('show-preferences'),
+    
+    // Listeners
+    onFkeyLoad: (callback) => ipcRenderer.on('fkey_load', callback),
+    onHoldingTankLoad: (callback) => ipcRenderer.on('holding_tank_load', callback),
+    onBulkAddDialogLoad: (callback) => ipcRenderer.on('bulk_add_dialog_load', callback),
+    onAddDialogLoad: (callback) => ipcRenderer.on('add_dialog_load', callback),
+    onDisplayReleaseNotes: (callback) => ipcRenderer.on('display_release_notes', callback),
+    
+    // Remove listeners
+    removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
+  };
 
   if (db.pragma('index_info(category_code_index)').length == 0) {
     console.log(`Creating unique index on category codes`)
@@ -141,5 +179,28 @@ process.once('loaded', () => {
     const info = stmt.run()
   }
 
+  // Add search indexes for better performance
+  if (db.pragma('index_info(idx_title)').length == 0) {
+    console.log(`Creating index on title column`)
+    const stmt = db.prepare("CREATE INDEX 'idx_title' ON mrvoice(title)")
+    const info = stmt.run()
+  }
 
+  if (db.pragma('index_info(idx_artist)').length == 0) {
+    console.log(`Creating index on artist column`)
+    const stmt = db.prepare("CREATE INDEX 'idx_artist' ON mrvoice(artist)")
+    const info = stmt.run()
+  }
+
+  if (db.pragma('index_info(idx_info)').length == 0) {
+    console.log(`Creating index on info column`)
+    const stmt = db.prepare("CREATE INDEX 'idx_info' ON mrvoice(info)")
+    const info = stmt.run()
+  }
+
+  if (db.pragma('index_info(idx_category)').length == 0) {
+    console.log(`Creating index on category column`)
+    const stmt = db.prepare("CREATE INDEX 'idx_category' ON mrvoice(category)")
+    const info = stmt.run()
+  }
 })

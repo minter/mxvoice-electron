@@ -161,6 +161,32 @@ function openHotkeyFile() {
   ipcRenderer.send("open-hotkey-file");
 }
 
+// Test function for hybrid approach
+function testHybridApproach() {
+  console.log('Testing hybrid approach...');
+  
+  // Test if new API is available
+  if (window.electronAPI) {
+    console.log('✅ New electronAPI is available');
+    
+    // Test new API
+    window.electronAPI.getAppPath().then(result => {
+      console.log('✅ New API works:', result);
+    }).catch(error => {
+      console.log('❌ New API failed:', error);
+    });
+    
+    // Test old API still works
+    console.log('✅ Old API still available via ipcRenderer');
+    
+  } else {
+    console.log('❌ New electronAPI not available');
+  }
+}
+
+// Make test function available globally
+window.testHybridApproach = testHybridApproach;
+
 function openHoldingTankFile() {
   ipcRenderer.send("open-holding-tank-file");
 }
@@ -194,6 +220,13 @@ function populateCategorySelect() {
   console.log("Populating categories");
   $("#category_select option").remove();
   $("#category_select").append(`<option value="*">All Categories</option>`);
+  
+  // Safety check - ensure database is available
+  if (typeof db === 'undefined') {
+    console.warn("Database not available yet, skipping category population");
+    return;
+  }
+  
   var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
   for (const row of stmt.iterate()) {
     categories[row.code] = row.description;
@@ -712,25 +745,12 @@ function switchToHotkeyTab(tab) {
 }
 
 function renameHotkeyTab() {
-  ipcRenderer.invoke("get-app-path").then((result) => {
-    prompt({
-      title: "Rename Hotkey Tab",
-      label: "Rename this tab:",
-      value: $("#hotkey_tabs .nav-link.active").text(),
-      type: "input",
-      alwaysOnTop: true,
-      customStylesheet: path.join(result, "src/stylesheets/colors.css"),
-    })
-      .then((r) => {
-        if (r === null) {
-          console.log("user canceled");
-        } else {
-          $("#hotkey_tabs .nav-link.active").text(r);
-          saveHotkeysToStore();
-        }
-      })
-      .catch(console.error);
-  });
+  const currentName = $("#hotkey_tabs .nav-link.active").text();
+  const newName = prompt("Rename this tab:", currentName);
+  if (newName !== null && newName.trim() !== "") {
+    $("#hotkey_tabs .nav-link.active").text(newName);
+    saveHotkeysToStore();
+  }
 }
 
 function saveEditedSong(event) {
@@ -841,25 +861,12 @@ function savePreferences(event) {
 }
 
 function renameHoldingTankTab() {
-  ipcRenderer.invoke("get-app-path").then((result) => {
-    prompt({
-      title: "Rename Holding Tank Tab",
-      label: "Rename this tab:",
-      value: $("#holding_tank_tabs .nav-link.active").text(),
-      type: "input",
-      alwaysOnTop: true,
-      customStylesheet: path.join(result, "src/stylesheets/colors.css"),
-    })
-      .then((r) => {
-        if (r === null) {
-          console.log("user canceled");
-        } else {
-          $("#holding_tank_tabs .nav-link.active").text(r);
-          saveHoldingTankToStore();
-        }
-      })
-      .catch(console.error);
-  });
+  const currentName = $("#holding_tank_tabs .nav-link.active").text();
+  const newName = prompt("Rename this tab:", currentName);
+  if (newName !== null && newName.trim() !== "") {
+    $("#holding_tank_tabs .nav-link.active").text(newName);
+    saveHoldingTankToStore();
+  }
 }
 
 function increaseFontSize() {

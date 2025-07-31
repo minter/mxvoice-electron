@@ -83,11 +83,6 @@
     minimist "^1.2.6"
     plist "^3.0.5"
 
-"@electron/remote@^2.1.2":
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/@electron/remote/-/remote-2.1.2.tgz#52a97c8faa5b769155b649ef262f2f8c851776e6"
-  integrity sha512-EPwNx+nhdrTBxyCqXt/pftoQg/ybtWDW3DUWHafejvnB1ZGGfMpv6e15D8KeempocjXe78T7WreyGGb3mlZxdA==
-
 "@electron/universal@1.5.1":
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/@electron/universal/-/universal-1.5.1.tgz#f338bc5bcefef88573cf0ab1d5920fac10d06ee5"
@@ -1061,11 +1056,6 @@ electron-notarize@^1.1.1:
   dependencies:
     debug "^4.1.1"
     fs-extra "^9.0.1"
-
-electron-prompt@^1.7.0:
-  version "1.7.0"
-  resolved "https://registry.yarnpkg.com/electron-prompt/-/electron-prompt-1.7.0.tgz#6f9dedb2dac1dd6bad2e6592ab81cb87c37f2a35"
-  integrity sha512-IfqJYEgcRO6NuyPROo8AtdkAiZ6N9I1lQEf4dJAkPuhV5YgOHdmLqZJf6OXumZJfzrjpzCM5jHeYOrhGdgbnEA==
 
 electron-publish@24.13.1:
   version "24.13.1"

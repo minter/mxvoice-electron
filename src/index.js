@@ -14,8 +14,6 @@ import("@octokit/rest")
   .catch(err => {
     console.error("Failed to load Octokit module:", err);
   });
-const remoteMain = require('@electron/remote/main');
-remoteMain.initialize();
 var md = require('markdown-it')();
 console.log = log.log;
 
@@ -72,7 +70,6 @@ const createWindow = () => {
     minWidth: 1000,
     minHeight: 660,
     webPreferences: {
-      enableRemoteModule: true,
       contextIsolation: false, // Disable context isolation to maintain compatibility
       nodeIntegration: true,   // Enable Node.js integration
       preload: path.join(app.getAppPath(), 'src/preload.js')
@@ -80,7 +77,7 @@ const createWindow = () => {
   });
 
   // Enable remote module for this window
-  remoteMain.enable(mainWindow.webContents);
+  // remoteMain.enable(mainWindow.webContents); // This line is removed
 
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
@@ -195,6 +192,68 @@ ipcMain.handle('show-directory-picker', async (event, defaultPath) => {
   return path
 })
 
+// Add new handlers for modern APIs alongside existing ones
+ipcMain.handle('open-hotkey-file', async () => {
+  return await loadHotkeysFile();
+});
+
+ipcMain.handle('save-hotkey-file', async (event, hotkeyArray) => {
+  return await saveHotkeysFile(hotkeyArray);
+});
+
+ipcMain.handle('open-holding-tank-file', async () => {
+  return await loadHoldingTankFile();
+});
+
+ipcMain.handle('save-holding-tank-file', async (event, holdingTankArray) => {
+  return await saveHoldingTankFile(holdingTankArray);
+});
+
+ipcMain.handle('restart-and-install-new-version', async () => {
+  autoUpdater.quitAndInstall();
+});
+
+// UI operations
+ipcMain.handle('increase-font-size', async () => {
+  mainWindow.webContents.send("increase_font_size");
+});
+
+ipcMain.handle('decrease-font-size', async () => {
+  mainWindow.webContents.send("decrease_font_size");
+});
+
+ipcMain.handle('toggle-waveform', async () => {
+  mainWindow.webContents.send("toggle_wave_form");
+});
+
+ipcMain.handle('toggle-advanced-search', async () => {
+  mainWindow.webContents.send("toggle_advanced_search");
+});
+
+ipcMain.handle('close-all-tabs', async () => {
+  mainWindow.webContents.send("close_all_tabs");
+});
+
+// Song operations
+ipcMain.handle('delete-selected-song', async () => {
+  mainWindow.webContents.send('delete_selected_song');
+});
+
+ipcMain.handle('edit-selected-song', async () => {
+  mainWindow.webContents.send('edit_selected_song');
+});
+
+// Category operations
+ipcMain.handle('manage-categories', async () => {
+  mainWindow.webContents.send('manage_categories');
+});
+
+// Preferences
+ipcMain.handle('show-preferences', async () => {
+  mainWindow.webContents.send('show_preferences');
+});
+
+// Keep existing handlers for backward compatibility
 ipcMain.on('open-hotkey-file', (event, arg) => {
   console.log("Main process starting hotkey open");
   loadHotkeysFile();
