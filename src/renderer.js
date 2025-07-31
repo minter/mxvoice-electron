@@ -294,8 +294,24 @@ function searchData() {
 function performLiveSearch(searchTerm) {
   console.log("performLiveSearch called with:", searchTerm);
 
-  if (!searchTerm || searchTerm.length < 2) {
-    // Clear results if search term is too short
+  // Check if we have either a search term or advanced search filters
+  var hasSearchTerm = searchTerm && searchTerm.length >= 2;
+  var hasAdvancedFilters = false;
+
+  if ($("#advanced-search").is(":visible")) {
+    var title = $("#title-search").val().trim();
+    var artist = $("#artist-search").val().trim();
+    var info = $("#info-search").val().trim();
+    var since = $("#date-search").val();
+    hasAdvancedFilters =
+      title.length > 0 ||
+      artist.length > 0 ||
+      info.length > 0 ||
+      since.length > 0;
+  }
+
+  if (!hasSearchTerm && !hasAdvancedFilters) {
+    // Clear results if no search term and no advanced filters
     $("#search_results tbody").find("tr").remove();
     $("#search_results thead").hide();
     return;
@@ -344,10 +360,12 @@ function performLiveSearch(searchTerm) {
     }
   }
 
-  // Add the live search term to the query
-  var search_term = "%" + searchTerm + "%";
-  query_segments.push("(info LIKE ? OR title LIKE ? OR artist like ?)");
-  query_params.push(search_term, search_term, search_term);
+  // Add the live search term to the query (only if we have a search term)
+  if (hasSearchTerm) {
+    var search_term = "%" + searchTerm + "%";
+    query_segments.push("(info LIKE ? OR title LIKE ? OR artist like ?)");
+    query_params.push(search_term, search_term, search_term);
+  }
 
   // Build the complete query string
   if (query_segments.length != 0) {
@@ -1722,10 +1740,26 @@ $(document).ready(function () {
     var searchTerm = $("#omni_search").val().trim();
 
     searchTimeout = setTimeout(() => {
-      if (searchTerm.length >= 2) {
+      // Check if we have either a search term or advanced search filters
+      var hasSearchTerm = searchTerm.length >= 2;
+      var hasAdvancedFilters = false;
+
+      if ($("#advanced-search").is(":visible")) {
+        var title = $("#title-search").val().trim();
+        var artist = $("#artist-search").val().trim();
+        var info = $("#info-search").val().trim();
+        var since = $("#date-search").val();
+        hasAdvancedFilters =
+          title.length > 0 ||
+          artist.length > 0 ||
+          info.length > 0 ||
+          since.length > 0;
+      }
+
+      if (hasSearchTerm || hasAdvancedFilters) {
         performLiveSearch(searchTerm);
-      } else if (searchTerm.length === 0) {
-        // Clear results when search is empty
+      } else {
+        // Clear results when no search term and no advanced filters
         $("#search_results tbody").find("tr").remove();
         $("#search_results thead").hide();
       }
@@ -1749,9 +1783,14 @@ $(document).ready(function () {
   $("#title-search, #artist-search, #info-search, #date-search").on(
     "input change",
     function () {
-      var searchTerm = $("#omni_search").val().trim();
-      if (searchTerm.length >= 2) {
+      // When advanced search is active, trigger live search even if omni_search is empty
+      if ($("#advanced-search").is(":visible")) {
         triggerLiveSearch();
+      } else {
+        var searchTerm = $("#omni_search").val().trim();
+        if (searchTerm.length >= 2) {
+          triggerLiveSearch();
+        }
       }
     }
   );
