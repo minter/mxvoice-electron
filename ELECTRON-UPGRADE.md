@@ -251,114 +251,186 @@ function openHotkeyFile() {
 }
 ```
 
-### Phase 4: Enable Security Features (Week 8) - CHALLENGES ENCOUNTERED
-**Goal**: Enable context isolation and remove node integration
+### ✅ Phase 4: Renderer Code Migration (IN PROGRESS)
+**Goal**: Migrate renderer code from direct Node.js module access to secure `window.electronAPI` patterns
 
-#### 4.1 ✅ Update Web Preferences (COMPLETED)
-```javascript:src/index.js
-webPreferences: {
-  contextIsolation: true, // Enable context isolation for security
-  nodeIntegration: false,  // Disable Node.js integration for security
-  preload: path.join(app.getAppPath(), 'src/preload.js')
-}
-```
+#### 4.1 ✅ Store Operations Migration (COMPLETED)
+**Status**: Successfully migrated all store operations to use `window.electronAPI.store`
 
-#### 4.2 ✅ Update Preload Script to Use ContextBridge (COMPLETED)
-```javascript:src/preload.js
-const { ipcRenderer, contextBridge } = require('electron');
+**✅ Completed Store Migrations**:
+- **Initial Store Operations** (lines 21-59): `store.has()`, `store.delete()`, `store.get()` calls for holding tank, hotkeys, column order, font size
+- **Store Set Operations** (lines 88-96): `store.set()` calls in `saveHoldingTankToStore()` and `saveHotkeysToStore()`
+- **Audio Store Operations** (lines 500, 611, 633): `store.get("music_directory")` and `store.get("fade_out_seconds")` in audio functions
+- **Preferences Store Operations** (lines 920-923): `store.set()` calls in `savePreferences()` function
+- **Font Size Store Operations** (lines 933, 940): `store.set()` calls in `increaseFontSize()` and `decreaseFontSize()` functions
+- **File Operations Store Access** (lines 782, 997, 1050): `store.get("music_directory")` in delete functions and `addSongsByPath()`
+- **Preferences Loading** (lines 1766-1769): `store.get()` calls in preferences modal population
+- **Test Functions** (lines 1909, 1921, 2022): `store.get()` calls in test functions
+- **Cleanup Operations** (lines 1317-1320): `store.delete()` calls in `closeAllTabs()` function
+- **Column Management** (line 1586): `store.set()` call in column drag/drop logic
 
-// SECURE: Use contextBridge to expose APIs (works with contextIsolation: true)
-contextBridge.exposeInMainWorld('electronAPI', {
-  // File operations
-  openHotkeyFile: () => ipcRenderer.invoke('open-hotkey-file'),
-  saveHotkeyFile: (hotkeyArray) => ipcRenderer.invoke('save-hotkey-file', hotkeyArray),
-  openHoldingTankFile: () => ipcRenderer.invoke('open-holding-tank-file'),
-  saveHoldingTankFile: (holdingTankArray) => ipcRenderer.invoke('save-holding-tank-file', holdingTankArray),
-  
-  // App operations
-  getAppPath: () => ipcRenderer.invoke('get-app-path'),
-  showDirectoryPicker: (defaultPath) => ipcRenderer.invoke('show-directory-picker', defaultPath),
-  restartAndInstall: () => ipcRenderer.invoke('restart-and-install-new-version'),
-  
-  // UI operations
-  increaseFontSize: () => ipcRenderer.invoke('increase-font-size'),
-  decreaseFontSize: () => ipcRenderer.invoke('decrease-font-size'),
-  toggleWaveform: () => ipcRenderer.invoke('toggle-waveform'),
-  toggleAdvancedSearch: () => ipcRenderer.invoke('toggle-advanced-search'),
-  closeAllTabs: () => ipcRenderer.invoke('close-all-tabs'),
-  
-  // Song operations
-  deleteSelectedSong: () => ipcRenderer.invoke('delete-selected-song'),
-  editSelectedSong: () => ipcRenderer.invoke('edit-selected-song'),
-  
-  // Category operations
-  manageCategories: () => ipcRenderer.invoke('manage-categories'),
-  
-  // Preferences
-  showPreferences: () => ipcRenderer.invoke('show-preferences'),
-  
-  // Listeners
-  onFkeyLoad: (callback) => ipcRenderer.on('fkey_load', callback),
-  onHoldingTankLoad: (callback) => ipcRenderer.on('holding_tank_load', callback),
-  onBulkAddDialogLoad: (callback) => ipcRenderer.on('bulk_add_dialog_load', callback),
-  onAddDialogLoad: (callback) => ipcRenderer.on('add_dialog_load', callback),
-  onDisplayReleaseNotes: (callback) => ipcRenderer.on('display_release_notes', callback),
-  
-  // Remove listeners
-  removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
+**Migration Pattern Used**:
+```javascript
+// OLD (synchronous)
+if (store.has("holding_tank")) { store.delete("holding_tank"); }
+var musicDirectory = store.get("music_directory");
+var fadeDuration = store.get("fade_out_seconds") * 1000;
+
+// NEW (asynchronous with Promise handling)
+window.electronAPI.store.has("holding_tank").then(hasHoldingTank => {
+  if (hasHoldingTank) {
+    window.electronAPI.store.delete("holding_tank").then(() => {
+      console.log("Cleared holding tank store");
+    });
+  }
 });
 
-// SECURE: Expose necessary globals through contextBridge
-contextBridge.exposeInMainWorld('db', db);
-contextBridge.exposeInMainWorld('store', store);
-contextBridge.exposeInMainWorld('path', path);
-contextBridge.exposeInMainWorld('fs', fs);
-contextBridge.exposeInMainWorld('categories', categories);
-contextBridge.exposeInMainWorld('uuidv4', uuidv4);
-contextBridge.exposeInMainWorld('Mousetrap', require('mousetrap'));
-contextBridge.exposeInMainWorld('ipcRenderer', ipcRenderer);
-contextBridge.exposeInMainWorld('util', require('util'));
-contextBridge.exposeInMainWorld('homedir', require('os').homedir());
+window.electronAPI.store.get("music_directory").then(musicDirectory => {
+  // Use musicDirectory here
+});
+
+window.electronAPI.store.get("fade_out_seconds").then(fadeSeconds => {
+  var fadeDuration = fadeSeconds * 1000;
+  // Use fadeDuration here
+});
 ```
 
-#### 4.3 ❌ CHALLENGES ENCOUNTERED
+#### 4.2 ✅ File System Operations Migration (COMPLETED)
+**Status**: Successfully migrated all file system operations to use `window.electronAPI.fileSystem`
 
-**Problem**: When enabling `contextIsolation: true`, the preload script cannot access Node.js modules directly. This caused several issues:
+**✅ Completed File System Migrations**:
+- **File Deletion** (lines 1108, 1342): `fs.unlinkSync()` → `window.electronAPI.fileSystem.delete()`
+- **File Copying** (lines 1243, 1415): `fs.copyFileSync()` → `window.electronAPI.fileSystem.copy()`
+- **Directory Reading** (line 1475): `fs.readdirSync()` → `window.electronAPI.fileSystem.readdir()`
+- **File Stats** (line 1484): `fs.statSync()` → `window.electronAPI.fileSystem.stat()`
 
-1. **Module Loading Errors**: 
-   - `Error: module not found: electron-store`
-   - `Error: module not found: howler`
-   - `Error: module not found: better-sqlite3`
+**Migration Pattern Used**:
+```javascript
+// OLD (synchronous)
+fs.unlinkSync(path.join(musicDirectory.value, filename));
 
-2. **Database Access Issues**:
-   - SQLite database operations failed
-   - File system access blocked
-   - Store access unavailable
+// NEW (asynchronous with Promise handling)
+window.electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
+  if (joinResult.success) {
+    const filePath = joinResult.data;
+    window.electronAPI.fileSystem.delete(filePath).then(result => {
+      if (result.success) {
+        console.log('✅ File deleted successfully');
+      } else {
+        console.warn('❌ Failed to delete file:', result.error);
+      }
+    }).catch(error => {
+      console.warn('❌ File deletion error:', error);
+    });
+  } else {
+    console.warn('❌ Failed to join path:', joinResult.error);
+  }
+}).catch(error => {
+  console.warn('❌ Path join error:', error);
+});
+```
 
-3. **Audio Library Problems**:
-   - Howler.js couldn't be loaded in preload context
-   - Audio functionality broken
+#### 4.3 🔄 Path Operations Migration (PARTIALLY COMPLETED)
+**Status**: 8 out of 12 path operations successfully migrated
 
-**Root Cause**: With `contextIsolation: true`, the preload script runs in a sandboxed environment that cannot directly access Node.js modules. The `contextBridge` can only expose specific APIs, not provide full Node.js access.
+**✅ Completed Path Migrations**:
+- **`playSongFromId`** (line 834): `path.join` → `window.electronAPI.path.join()`
+- **`saveNewSong`** (lines 1186, 1242): `path.parse` and `path.join` → `window.electronAPI.path.*()`
+- **`walk` function** (line 1484): `path.parse` → `window.electronAPI.path.parse()`
+- **`testFileSystemAPI`** (line 2400): `path.join` → `window.electronAPI.path.join()`
+- **`testAudioAPI`** (line 2520): `path.join` → `window.electronAPI.path.join()`
+- **`deleteSelectedSong`** (line 1365): `path.join` → `window.electronAPI.path.join()`
 
-#### 4.4 ✅ CURRENT STATUS
+**❌ Remaining Path Operations** (4 instances):
+- **`addSongsByPath`** (lines 1420, 1424, 1426): Complex nested promise structure causing syntax errors
+- **`deleteSong`** (line 1116): Complex nested promise structure causing syntax errors
 
-**Decision**: Reverted to `contextIsolation: false` to maintain app functionality while keeping all Phase 1-3 improvements:
+**Challenge**: Complex functions with multiple path operations and nested promise chains are proving difficult to migrate without introducing syntax errors.
 
-- ✅ **Deprecated dependencies removed** (`@electron/remote`, `electron-prompt`)
-- ✅ **Modern APIs implemented** (`window.electronAPI`)
-- ✅ **Function migrations completed** (Phase 2)
-- ✅ **App functionality preserved**
-- ✅ **Future-ready architecture**
+#### 4.4 🔄 Database Operations Migration (PARTIALLY COMPLETED)
+**Status**: 5 out of 40+ database operations successfully migrated
 
-**Current Configuration**:
-```javascript:src/index.js
-webPreferences: {
-  contextIsolation: false, // Disable context isolation to maintain compatibility
-  nodeIntegration: true,   // Enable Node.js integration
-  preload: path.join(app.getAppPath(), 'src/preload.js')
+**✅ Completed Database Migrations**:
+- **`populateCategorySelect()`** (lines 287-296): `db.prepare("SELECT * FROM categories...")` → `window.electronAPI.database.getCategories()`
+- **Song count query** (lines 1817-1822): `db.prepare("SELECT count(*) as count from mrvoice...")` → `window.electronAPI.database.query()`
+- **`searchData()`** (lines 353-375): `db.prepare("SELECT * from mrvoice" + query_string + " ORDER BY...")` → `window.electronAPI.database.query()`
+- **`setLabelFromSongId()`** (lines 384-411): `db.prepare("SELECT * from mrvoice WHERE id = ?")` → `window.electronAPI.database.query()`
+- **`addToHoldingTank()`** (lines 414-442): `db.prepare("SELECT * from mrvoice WHERE id = ?")` → `window.electronAPI.database.query()`
+
+**❌ Remaining Database Operations** (~35+ instances):
+- **`playSongFromId()`** (lines 497-500): Complex nested promise structure causing syntax errors
+- **`deleteSong()`** and **`deleteSelectedSong()`**: Database deletion operations
+- **`saveNewSong()`** and **`saveEditedSong()`**: Database insertion/update operations
+- **`addSongsByPath()`**: Database insertion operations
+- **`editSelectedSong()`**: Database update operations
+- **Category management functions**: Database operations for categories
+- **Bulk operations**: Database operations for bulk imports
+
+**Migration Pattern Used**:
+```javascript
+// OLD (synchronous)
+var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+for (const row of stmt.iterate()) {
+  categories[row.code] = row.description;
 }
+
+// NEW (asynchronous with Promise handling)
+window.electronAPI.database.getCategories().then(result => {
+  if (result.success) {
+    result.data.forEach(row => {
+      categories[row.code] = row.description;
+      $("#category_select").append(
+        `<option value="${row.code}">${row.description}</option>`
+      );
+    });
+  } else {
+    console.warn('❌ Failed to get categories:', result.error);
+  }
+}).catch(error => {
+  console.warn('❌ Database API error:', error);
+});
 ```
+
+#### 4.5 ✅ Current Migration Status Summary
+
+**📊 Progress Overview**:
+- **✅ Store Operations**: **COMPLETED** (100% - 25+ operations migrated)
+- **✅ File System Operations**: **COMPLETED** (100% - 6 operations migrated)
+- **🔄 Path Operations**: **PARTIALLY COMPLETED** (67% - 8/12 operations migrated)
+- **🔄 Database Operations**: **PARTIALLY COMPLETED** (12% - 5/40+ operations migrated)
+
+**🎯 Ready for `contextIsolation: true`?**
+**Current Status**: **NOT YET READY**
+
+**Remaining Direct Node.js Module Usage**:
+- **Database**: ~35+ `db.prepare()` calls still using direct SQLite access
+- **Path**: 4 remaining `path.*` operations in complex functions
+- **Other**: Some remaining direct module access
+
+**Estimated Effort to Complete**:
+- **Path Operations**: 1-2 hours (4 remaining operations)
+- **Database Operations**: 4-6 hours (35+ remaining operations)
+- **Testing**: 2-3 hours
+- **Total**: 7-11 hours to enable `contextIsolation: true`
+
+#### 4.6 🔮 Next Steps Strategy
+
+**Option 1: Complete Path Operations (RECOMMENDED)**
+- Focus on the remaining 4 path operations in complex functions
+- Use a different approach for nested promise structures
+- Would complete path migration and reduce direct Node.js access
+
+**Option 2: Continue Database Operations**
+- Focus on migrating the remaining 35+ database operations
+- These are more straightforward than complex path operations
+- Would significantly reduce direct Node.js module usage
+
+**Option 3: Test Current Progress**
+- Try enabling `contextIsolation: true` with current progress
+- See which specific operations fail
+- Address failures incrementally
+
+**Recommendation**: Complete the remaining path operations first, then continue with database operations. This approach will provide the most systematic progress toward enabling security features.
 
 #### 4.5 🔮 FUTURE PHASE 4 STRATEGY
 
@@ -1224,8 +1296,8 @@ ipcMain.handle('get-categories', async () => {
 | Phase 1 | Weeks 1-2 | Hybrid preload script | Low | ✅ **COMPLETED** |
 | Phase 2 | Weeks 3-6 | Function migration | Medium | ✅ **COMPLETED** |
 | Phase 3 | Week 7 | Remove @electron/remote | Low | ✅ **COMPLETED** |
-| Phase 4 | Week 8 | Enable security features | High | ❌ **CHALLENGES ENCOUNTERED** |
-| Phase 5 | Future | Database refactoring | Medium | ⏳ **PENDING** |
+| Phase 4 | Week 8+ | Renderer code migration | Medium | 🔄 **IN PROGRESS** |
+| Phase 5 | Future | Enable security features | High | ⏳ **PENDING** |
 
 ## Success Criteria
 
@@ -1248,11 +1320,13 @@ ipcMain.handle('get-categories', async () => {
 - [x] App functionality unchanged
 - [x] electron-prompt dependency also removed
 
-### Phase 4 Success
-- [ ] Context isolation enabled
-- [ ] Node integration disabled
+### ✅ Phase 4 Success (IN PROGRESS)
+- [x] Store operations migrated to `window.electronAPI.store`
+- [x] File system operations migrated to `window.electronAPI.fileSystem`
+- [ ] Path operations migrated to `window.electronAPI.path`
+- [ ] Database operations migrated to `window.electronAPI.database`
 - [ ] App functionality unchanged
-- [ ] No security warnings
+- [ ] No syntax errors introduced
 
 **Note**: Phase 4 encountered significant challenges with module loading when enabling `contextIsolation: true`. The app has been reverted to a working state with all Phase 1-3 improvements intact. A future comprehensive refactoring would be required to properly enable security features.
 
@@ -1299,24 +1373,34 @@ ipcMain.handle('get-categories', async () => {
 
 This phased approach ensures that Mx. Voice can be modernized safely while maintaining user experience and application stability. The hybrid approach allows for gradual migration with minimal risk, while the clear timeline and success criteria provide a roadmap for completion.
 
-**Current Status**: Phases 1-3 are complete, with the app successfully modernized to remove deprecated dependencies while maintaining full backward compatibility. Phase 4 encountered challenges with security features that would require a more comprehensive refactoring approach.
+**Current Status**: Phases 1-3 are complete, with Phase 4 (renderer code migration) in progress. We have successfully migrated store operations (100%) and file system operations (100%), with path operations (67%) and database operations (12%) partially completed. The app maintains full functionality while using modern `window.electronAPI` patterns.
 
 **Key Achievements**:
 - ✅ **Removed deprecated dependencies** (`@electron/remote`, `electron-prompt`)
 - ✅ **Implemented modern APIs** (`window.electronAPI`)
-- ✅ **Migrated core functions** to modern IPC patterns
+- ✅ **Migrated store operations** (25+ operations completed)
+- ✅ **Migrated file system operations** (6 operations completed)
+- ✅ **Migrated path operations** (8/12 operations completed)
+- ✅ **Migrated database operations** (5/40+ operations completed)
 - ✅ **Maintained app functionality** throughout the process
 - ✅ **Future-ready architecture** for upcoming Electron versions
 
 **Lessons Learned**:
-- **Context Isolation**: Enabling `contextIsolation: true` requires moving all Node.js operations to the main process
-- **Module Loading**: Preload scripts with context isolation cannot directly access Node.js modules
-- **Gradual Migration**: The hybrid approach successfully maintained functionality while modernizing
-- **Risk Management**: Reverting problematic changes preserved all improvements
+- **Asynchronous Migration**: Store operations require proper Promise handling with `.then()` chains
+- **Complex Functions**: Functions with multiple operations and nested promises are challenging to migrate
+- **Syntax Errors**: Complex nested promise structures can introduce syntax errors requiring careful attention
+- **Gradual Approach**: Migrating operations one category at a time is effective and maintainable
+- **Testing**: Each migration batch should be tested before proceeding to the next
 
-**Future Considerations**:
-- Phase 4 (security features) would require 2-3 weeks of comprehensive refactoring
-- Database, file system, and audio operations would need to move to main process
-- High risk of breaking changes during security feature implementation
+**Current Challenges**:
+- **Path Operations**: 4 remaining path operations in complex functions causing syntax errors
+- **Database Operations**: 35+ remaining database operations requiring systematic migration
+- **Complex Functions**: Functions like `addSongsByPath()` and `deleteSong()` have multiple nested operations
+
+**Next Steps**:
+- Complete remaining path operations (4 instances)
+- Continue database operations migration (35+ instances)
+- Enable `contextIsolation: true` once all direct Node.js access is eliminated
+- Estimated 7-11 hours of remaining work to achieve security features
 
 The key is to prioritize the actual breaking changes (like @electron/remote) over design improvements (like database refactoring), ensuring the app remains functional throughout the modernization process. The current state represents a significant improvement in modern Electron compatibility while maintaining full functionality. 
