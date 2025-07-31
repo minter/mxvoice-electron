@@ -521,6 +521,59 @@ ipcMain.handle('audio-fade', async (event, soundId, fromVolume, toVolume, durati
   }
 });
 
+// Additional IPC handlers for path and file system operations
+ipcMain.handle('path-join', async (event, ...paths) => {
+  try {
+    return path.join(...paths);
+  } catch (error) {
+    console.error('Path join error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('path-parse', async (event, filePath) => {
+  try {
+    return path.parse(filePath);
+  } catch (error) {
+    console.error('Path parse error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('path-extname', async (event, filePath) => {
+  try {
+    return path.extname(filePath);
+  } catch (error) {
+    console.error('Path extname error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('fs-readdir', async (event, dirPath) => {
+  try {
+    return fs.readdirSync(dirPath);
+  } catch (error) {
+    console.error('File system readdir error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('fs-stat', async (event, filePath) => {
+  try {
+    const stats = fs.statSync(filePath);
+    return {
+      isFile: stats.isFile(),
+      isDirectory: stats.isDirectory(),
+      size: stats.size,
+      mtime: stats.mtime,
+      ctime: stats.ctime
+    };
+  } catch (error) {
+    console.error('File system stat error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Keep existing handlers for backward compatibility
 ipcMain.on('open-hotkey-file', (event, arg) => {
   console.log("Main process starting hotkey open");

@@ -181,7 +181,16 @@ process.once('loaded', () => {
       exists: (filePath) => ipcRenderer.invoke('file-exists', filePath),
       delete: (filePath) => ipcRenderer.invoke('file-delete', filePath),
       copy: (sourcePath, destPath) => ipcRenderer.invoke('file-copy', sourcePath, destPath),
-      mkdir: (dirPath, options) => ipcRenderer.invoke('file-mkdir', dirPath, options)
+      mkdir: (dirPath, options) => ipcRenderer.invoke('file-mkdir', dirPath, options),
+      readdir: (dirPath) => ipcRenderer.invoke('fs-readdir', dirPath),
+      stat: (filePath) => ipcRenderer.invoke('fs-stat', filePath)
+    },
+    
+    // Path operations (new API for gradual migration)
+    path: {
+      join: (...paths) => ipcRenderer.invoke('path-join', ...paths),
+      parse: (filePath) => ipcRenderer.invoke('path-parse', filePath),
+      extname: (filePath) => ipcRenderer.invoke('path-extname', filePath)
     },
     
     // Store operations (new API for gradual migration)
@@ -202,42 +211,42 @@ process.once('loaded', () => {
       fade: (soundId, fromVolume, toVolume, duration) => ipcRenderer.invoke('audio-fade', soundId, fromVolume, toVolume, duration)
     }
   };
+});
 
-  // Database setup (moved outside of contextBridge since it's preload-only)
-  if (db.pragma('index_info(category_code_index)').length == 0) {
-    console.log(`Creating unique index on category codes`)
-    const stmt = db.prepare("CREATE UNIQUE INDEX 'category_code_index' ON categories(code)")
-    const info = stmt.run()
-  }
+// Database setup (preload-only operations)
+if (db.pragma('index_info(category_code_index)').length == 0) {
+  console.log(`Creating unique index on category codes`)
+  const stmt = db.prepare("CREATE UNIQUE INDEX 'category_code_index' ON categories(code)")
+  const info = stmt.run()
+}
 
-  if (db.pragma('index_info(category_description_index)').length == 0) {
-    console.log(`Creating unique index on category descriptions`)
-    const stmt = db.prepare("CREATE UNIQUE INDEX 'category_description_index' ON categories(description)")
-    const info = stmt.run()
-  }
+if (db.pragma('index_info(category_description_index)').length == 0) {
+  console.log(`Creating unique index on category descriptions`)
+  const stmt = db.prepare("CREATE UNIQUE INDEX 'category_description_index' ON categories(description)")
+  const info = stmt.run()
+}
 
-  // Add search indexes for better performance
-  if (db.pragma('index_info(idx_title)').length == 0) {
-    console.log(`Creating index on title column`)
-    const stmt = db.prepare("CREATE INDEX 'idx_title' ON mrvoice(title)")
-    const info = stmt.run()
-  }
+// Add search indexes for better performance
+if (db.pragma('index_info(idx_title)').length == 0) {
+  console.log(`Creating index on title column`)
+  const stmt = db.prepare("CREATE INDEX 'idx_title' ON mrvoice(title)")
+  const info = stmt.run()
+}
 
-  if (db.pragma('index_info(idx_artist)').length == 0) {
-    console.log(`Creating index on artist column`)
-    const stmt = db.prepare("CREATE INDEX 'idx_artist' ON mrvoice(artist)")
-    const info = stmt.run()
-  }
+if (db.pragma('index_info(idx_artist)').length == 0) {
+  console.log(`Creating index on artist column`)
+  const stmt = db.prepare("CREATE INDEX 'idx_artist' ON mrvoice(artist)")
+  const info = stmt.run()
+}
 
-  if (db.pragma('index_info(idx_info)').length == 0) {
-    console.log(`Creating index on info column`)
-    const stmt = db.prepare("CREATE INDEX 'idx_info' ON mrvoice(info)")
-    const info = stmt.run()
-  }
+if (db.pragma('index_info(idx_info)').length == 0) {
+  console.log(`Creating index on info column`)
+  const stmt = db.prepare("CREATE INDEX 'idx_info' ON mrvoice(info)")
+  const info = stmt.run()
+}
 
-  if (db.pragma('index_info(idx_category)').length == 0) {
-    console.log(`Creating index on category column`)
-    const stmt = db.prepare("CREATE INDEX 'idx_category' ON mrvoice(category)")
-    const info = stmt.run()
-  }
-})
+if (db.pragma('index_info(idx_category)').length == 0) {
+  console.log(`Creating index on category column`)
+  const stmt = db.prepare("CREATE INDEX 'idx_category' ON mrvoice(category)")
+  const info = stmt.run()
+}
