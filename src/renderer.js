@@ -909,7 +909,6 @@ function saveNewSong(event) {
   // Song has been saved, now let's show item
   $("#omni_search").val(title);
   searchData();
-
 }
 
 function savePreferences(event) {
