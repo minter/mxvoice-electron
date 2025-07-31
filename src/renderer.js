@@ -1106,7 +1106,16 @@ function deleteSong() {
       const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
       if (deleteStmt.run(songId)) {
         window.electronAPI.store.get("music_directory").then(musicDirectory => {
-          fs.unlinkSync(path.join(musicDirectory, filename));
+          const filePath = path.join(musicDirectory.value, filename);
+          window.electronAPI.fileSystem.delete(filePath).then(result => {
+            if (result.success) {
+              console.log('✅ File deleted successfully');
+            } else {
+              console.warn('❌ Failed to delete file:', result.error);
+            }
+          }).catch(error => {
+            console.warn('❌ File deletion error:', error);
+          });
           // Remove song anywhere it appears
           $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
           $(`.hotkeys li span[songid=${songId}]`).remove();
@@ -1235,7 +1244,15 @@ function saveNewSong(event) {
     duration,
     Math.floor(Date.now() / 1000)
   );
-  fs.copyFileSync(filename, newPath);
+  window.electronAPI.fileSystem.copy(filename, newPath).then(result => {
+    if (result.success) {
+      console.log('✅ File copied successfully');
+    } else {
+      console.warn('❌ Failed to copy file:', result.error);
+    }
+  }).catch(error => {
+    console.warn('❌ File copy error:', error);
+  });
 
   // Song has been saved, now let's show item
   $("#omni_search").val(title);
@@ -1323,7 +1340,16 @@ function deleteSelectedSong() {
       const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
       if (deleteStmt.run(songId)) {
         window.electronAPI.store.get("music_directory").then(musicDirectory => {
-          fs.unlinkSync(path.join(musicDirectory, filename));
+          const filePath = path.join(musicDirectory.value, filename);
+          window.electronAPI.fileSystem.delete(filePath).then(result => {
+            if (result.success) {
+              console.log('✅ File deleted successfully');
+            } else {
+              console.warn('❌ Failed to delete file:', result.error);
+            }
+          }).catch(error => {
+            console.warn('❌ File deletion error:', error);
+          });
           // Remove song anywhere it appears
           $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
           $(`.hotkeys li span[songid=${songId}]`).remove();
@@ -1389,7 +1415,15 @@ function addSongsByPath(pathArray, category) {
           Math.floor(Date.now() / 1000)
         );
         console.log(`Copying audio file ${songSourcePath} to ${newPath}`);
-        fs.copyFileSync(songSourcePath, newPath);
+        window.electronAPI.fileSystem.copy(songSourcePath, newPath).then(result => {
+          if (result.success) {
+            console.log('✅ File copied successfully');
+          } else {
+            console.warn('❌ Failed to copy file:', result.error);
+          }
+        }).catch(error => {
+          console.warn('❌ File copy error:', error);
+        });
               $("#search_results").append(
           `<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${
             info.lastInsertRowid
@@ -1416,24 +1450,39 @@ function saveBulkUpload(event) {
 
   var walk = function (dir) {
     var results = [];
-    var list = fs.readdirSync(dir);
-    list.forEach(function (file) {
-      file = dir + "/" + file;
-      var stat = fs.statSync(file);
-      if (stat && stat.isDirectory()) {
-        /* Recurse into a subdirectory */
-        results = results.concat(walk(file));
+    window.electronAPI.fileSystem.readdir(dir).then(result => {
+      if (result.success) {
+        result.data.forEach(function (file) {
+          file = dir + "/" + file;
+          window.electronAPI.fileSystem.stat(file).then(statResult => {
+            if (statResult.success) {
+              var stat = statResult.data;
+              if (stat && stat.isDirectory()) {
+                /* Recurse into a subdirectory */
+                results = results.concat(walk(file));
+              } else {
+                /* Is a file */
+                var pathData = path.parse(file);
+                if (
+                  [".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(
+                    pathData.ext.toLowerCase()
+                  )
+                ) {
+                  results.push(file);
+                }
+              }
+            } else {
+              console.warn('❌ Failed to get file stats:', statResult.error);
+            }
+          }).catch(error => {
+            console.warn('❌ File stat error:', error);
+          });
+        });
       } else {
-        /* Is a file */
-        var pathData = path.parse(file);
-        if (
-          [".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(
-            pathData.ext.toLowerCase()
-          )
-        ) {
-          results.push(file);
-        }
+        console.warn('❌ Failed to read directory:', result.error);
       }
+    }).catch(error => {
+      console.warn('❌ Directory read error:', error);
     });
     return results;
   };
