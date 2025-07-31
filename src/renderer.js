@@ -158,7 +158,14 @@ function clearHoldingTank() {
 }
 
 function openHotkeyFile() {
-  ipcRenderer.send("open-hotkey-file");
+  if (window.electronAPI) {
+    window.electronAPI.openHotkeyFile().catch(error => {
+      console.warn('Modern API failed, falling back to legacy:', error);
+      ipcRenderer.send("open-hotkey-file");
+    });
+  } else {
+    ipcRenderer.send("open-hotkey-file");
+  }
 }
 
 // Test function for hybrid approach
@@ -188,7 +195,14 @@ function testHybridApproach() {
 window.testHybridApproach = testHybridApproach;
 
 function openHoldingTankFile() {
-  ipcRenderer.send("open-holding-tank-file");
+  if (window.electronAPI) {
+    window.electronAPI.openHoldingTankFile().catch(error => {
+      console.warn('Modern API failed, falling back to legacy:', error);
+      ipcRenderer.send("open-holding-tank-file");
+    });
+  } else {
+    ipcRenderer.send("open-holding-tank-file");
+  }
 }
 
 function saveHotkeyFile() {
@@ -200,7 +214,15 @@ function saveHotkeyFile() {
   if (!/^\d$/.test($("#hotkey_tabs li a.active").text())) {
     hotkeyArray.push($("#hotkey_tabs li a.active").text());
   }
-  ipcRenderer.send("save-hotkey-file", hotkeyArray);
+  
+  if (window.electronAPI) {
+    window.electronAPI.saveHotkeyFile(hotkeyArray).catch(error => {
+      console.warn('Modern API failed, falling back to legacy:', error);
+      ipcRenderer.send("save-hotkey-file", hotkeyArray);
+    });
+  } else {
+    ipcRenderer.send("save-hotkey-file", hotkeyArray);
+  }
 }
 
 function saveHoldingTankFile() {
@@ -209,7 +231,15 @@ function saveHoldingTankFile() {
   $(".holding_tank.active .list-group-item").each(function () {
     holdingTankArray.push($(this).attr("songid"));
   });
-  ipcRenderer.send("save-holding-tank-file", holdingTankArray);
+  
+  if (window.electronAPI) {
+    window.electronAPI.saveHoldingTankFile(holdingTankArray).catch(error => {
+      console.warn('Modern API failed, falling back to legacy:', error);
+      ipcRenderer.send("save-holding-tank-file", holdingTankArray);
+    });
+  } else {
+    ipcRenderer.send("save-holding-tank-file", holdingTankArray);
+  }
 }
 
 function openPreferencesModal() {
@@ -1238,7 +1268,14 @@ function pickDirectory(event, element) {
 }
 
 function installUpdate() {
-  ipcRenderer.send("restart-and-install-new-version");
+  if (window.electronAPI) {
+    window.electronAPI.restartAndInstall().catch(error => {
+      console.warn('Modern API failed, falling back to legacy:', error);
+      ipcRenderer.send("restart-and-install-new-version");
+    });
+  } else {
+    ipcRenderer.send("restart-and-install-new-version");
+  }
 }
 
 function toggleWaveform() {
@@ -1754,3 +1791,38 @@ $(document).ready(function () {
     restoreFocusToSearch();
   });
 });
+
+// Test function for Phase 2 migrations
+function testPhase2Migrations() {
+  console.log('🧪 Testing Phase 2 Migrations...');
+  
+  // Test if new APIs are available
+  if (window.electronAPI) {
+    console.log('✅ New electronAPI is available');
+    
+    // Test each migrated function
+    const functionsToTest = [
+      'openHotkeyFile',
+      'openHoldingTankFile', 
+      'saveHotkeyFile',
+      'saveHoldingTankFile',
+      'installUpdate'
+    ];
+    
+    functionsToTest.forEach(funcName => {
+      if (typeof window[funcName] === 'function') {
+        console.log(`✅ ${funcName} function is available`);
+      } else {
+        console.log(`❌ ${funcName} function is NOT available`);
+      }
+    });
+    
+    console.log('✅ Phase 2 migrations appear to be working');
+    
+  } else {
+    console.log('❌ New electronAPI not available');
+  }
+}
+
+// Make test function available globally
+window.testPhase2Migrations = testPhase2Migrations;

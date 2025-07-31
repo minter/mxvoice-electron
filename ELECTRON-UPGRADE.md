@@ -205,11 +205,12 @@ function openHotkeyFile() {
 ```
 
 #### 2.2 Migration Priority List
-1. **High Priority** (Week 3)
-   - `openHotkeyFile()`
-   - `saveHotkeyFile()`
-   - `openHoldingTankFile()`
-   - `saveHoldingTankFile()`
+1. **High Priority** (Week 3) - ✅ **IN PROGRESS**
+   - ✅ `openHotkeyFile()` - **MIGRATED**
+   - ✅ `saveHotkeyFile()` - **MIGRATED**
+   - ✅ `openHoldingTankFile()` - **MIGRATED**
+   - ✅ `saveHoldingTankFile()` - **MIGRATED**
+   - ✅ `installUpdate()` - **MIGRATED**
 
 2. **Medium Priority** (Week 4)
    - `getAppPath()`
