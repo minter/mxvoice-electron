@@ -19,47 +19,75 @@ var fontSize = 11;
 // Load the last holding tank and hotkeys
 
 // Always clear the holding tank store to ensure we load the new HTML
-if (store.has("holding_tank")) {
-  store.delete("holding_tank");
-  console.log("Cleared holding tank store to load new HTML");
-}
+window.electronAPI.store.has("holding_tank").then(hasHoldingTank => {
+  if (hasHoldingTank) {
+    window.electronAPI.store.delete("holding_tank").then(() => {
+      console.log("Cleared holding tank store to load new HTML");
+    });
+  }
+});
 
 // Load saved mode or default to storage
-if (store.has("holding_tank_mode")) {
-  holdingTankMode = store.get("holding_tank_mode");
-} else {
-  holdingTankMode = "storage"; // Default to storage mode
-}
-
-// Initialize the mode UI
-setHoldingTankMode(holdingTankMode);
-
-if (store.has("hotkeys")) {
-  var storedHotkeysHtml = store.get("hotkeys");
-  // Check if the stored HTML contains the old plain text header
-  if (
-    storedHotkeysHtml.includes("Hotkeys") &&
-    !storedHotkeysHtml.includes("header-button")
-  ) {
-    // This is the old HTML format, clear it so the new HTML loads
-    store.delete("hotkeys");
-    console.log("Cleared old hotkeys HTML format");
+window.electronAPI.store.has("holding_tank_mode").then(hasMode => {
+  if (hasMode) {
+    window.electronAPI.store.get("holding_tank_mode").then(mode => {
+      holdingTankMode = mode;
+      // Initialize the mode UI
+      setHoldingTankMode(holdingTankMode);
+    });
   } else {
-    $("#hotkeys-column").html(storedHotkeysHtml);
-    $("#selected_row").removeAttr("id");
+    holdingTankMode = "storage"; // Default to storage mode
+    // Initialize the mode UI
+    setHoldingTankMode(holdingTankMode);
   }
-}
+});
 
-if (store.has("column_order")) {
-  store.get("column_order").forEach(function (val) {
-    $("#top-row").append($("#top-row").children(`#${val}`).detach());
-  });
-}
+// Load hotkeys
+window.electronAPI.store.has("hotkeys").then(hasHotkeys => {
+  if (hasHotkeys) {
+    window.electronAPI.store.get("hotkeys").then(storedHotkeysHtml => {
+      // Check if the stored HTML contains the old plain text header
+      if (
+        storedHotkeysHtml && typeof storedHotkeysHtml === 'string' &&
+        storedHotkeysHtml.includes("Hotkeys") &&
+        !storedHotkeysHtml.includes("header-button")
+      ) {
+        // This is the old HTML format, clear it so the new HTML loads
+        window.electronAPI.store.delete("hotkeys").then(() => {
+          console.log("Cleared old hotkeys HTML format");
+        });
+      } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
+        $("#hotkeys-column").html(storedHotkeysHtml);
+        $("#selected_row").removeAttr("id");
+      }
+    });
+  }
+});
 
-if (store.has("font-size")) {
-  fontSize = store.get("font-size");
-  $(".song").css("font-size", fontSize + "px");
-}
+// Load column order
+window.electronAPI.store.has("column_order").then(hasColumnOrder => {
+  if (hasColumnOrder) {
+    window.electronAPI.store.get("column_order").then(columnOrder => {
+      if (columnOrder && Array.isArray(columnOrder)) {
+        columnOrder.forEach(function (val) {
+          $("#top-row").append($("#top-row").children(`#${val}`).detach());
+        });
+      }
+    });
+  }
+});
+
+// Load font size
+window.electronAPI.store.has("font-size").then(hasFontSize => {
+  if (hasFontSize) {
+    window.electronAPI.store.get("font-size").then(size => {
+      if (size !== undefined && size !== null) {
+        fontSize = size;
+        $(".song").css("font-size", fontSize + "px");
+      }
+    });
+  }
+});
 
 // Animate.css
 
@@ -86,7 +114,7 @@ function saveHoldingTankToStore() {
   // Only save if we have the new HTML format with mode toggle
   var currentHtml = $("#holding-tank-column").html();
   if (currentHtml.includes("mode-toggle")) {
-    store.set("holding_tank", currentHtml);
+    window.electronAPI.store.set("holding_tank", currentHtml);
   }
 }
 
@@ -94,7 +122,7 @@ function saveHotkeysToStore() {
   // Only save if we have the new HTML format with header button
   var currentHtml = $("#hotkeys-column").html();
   if (currentHtml.includes("header-button")) {
-    store.set("hotkeys", currentHtml);
+    window.electronAPI.store.set("hotkeys", currentHtml);
   }
 }
 
@@ -470,52 +498,55 @@ function playSongFromId(song_id) {
     var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
     var row = stmt.get(song_id);
     var filename = row.filename;
-    var sound_path = [path.join(store.get("music_directory"), filename)];
-    console.log("Inside get, Filename is " + filename);
-    sound = new Howl({
-      src: sound_path,
-      html5: true,
-      volume: $("#volume").val() / 100,
-      mute: $("#mute_button").hasClass("active"),
-      onplay: function () {
-        var time = Math.round(sound.duration());
-        globalAnimation = requestAnimationFrame(
-          howlerUtils.updateTimeTracker.bind(this)
-        );
-        var title = row.title || "";
-        var artist = row.artist || "";
-        artist = artist.length ? "by " + artist : artist;
-        wavesurfer.load(sound_path);
-        $("#song_now_playing")
-          .html(
-            `<i id="song_spinner" title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
-          )
-          .fadeIn(100);
-        $("#song_now_playing").attr("songid", song_id);
-        $("#play_button").addClass("d-none");
-        $("#pause_button").removeClass("d-none");
-        $("#stop_button").removeAttr("disabled");
-        $("#play_button").removeAttr("disabled");
-        $("#progress_bar .progress-bar").addClass(
-          "progress-bar-animated progress-bar-striped"
-        );
-      },
-      onend: function () {
-        song_ended();
-        if (loop) {
-          sound.play();
-        } else {
-          sound.unload();
-          autoplay_next();
-        }
-      },
-      onstop: function () {
-        console.log("Stopped!");
-        song_ended();
-      },
-    });
+    // Get music directory from store
+    window.electronAPI.store.get("music_directory").then(musicDirectory => {
+      var sound_path = [path.join(musicDirectory, filename)];
+      console.log("Inside get, Filename is " + filename);
+      sound = new Howl({
+        src: sound_path,
+        html5: true,
+        volume: $("#volume").val() / 100,
+        mute: $("#mute_button").hasClass("active"),
+        onplay: function () {
+          var time = Math.round(sound.duration());
+          globalAnimation = requestAnimationFrame(
+            howlerUtils.updateTimeTracker.bind(this)
+          );
+          var title = row.title || "";
+          var artist = row.artist || "";
+          artist = artist.length ? "by " + artist : artist;
+          wavesurfer.load(sound_path);
+          $("#song_now_playing")
+            .html(
+              `<i id="song_spinner" title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
+            )
+            .fadeIn(100);
+          $("#song_now_playing").attr("songid", song_id);
+          $("#play_button").addClass("d-none");
+          $("#pause_button").removeClass("d-none");
+          $("#stop_button").removeAttr("disabled");
+          $("#play_button").removeAttr("disabled");
+          $("#progress_bar .progress-bar").addClass(
+            "progress-bar-animated progress-bar-striped"
+          );
+        },
+        onend: function () {
+          song_ended();
+          if (loop) {
+            sound.play();
+          } else {
+            sound.unload();
+            autoplay_next();
+          }
+        },
+        onstop: function () {
+          console.log("Stopped!");
+          song_ended();
+        },
+      });
 
-    sound.play();
+      sound.play();
+    });
   }
 }
 
@@ -581,8 +612,10 @@ function stopPlaying(fadeOut = false) {
       $(".now_playing").first().removeClass("now_playing");
     }
     if (fadeOut) {
-      var fadeDuration = store.get("fade_out_seconds") * 1000;
-      sound.fade(sound.volume(), 0, fadeDuration);
+      window.electronAPI.store.get("fade_out_seconds").then(fadeSeconds => {
+        var fadeDuration = fadeSeconds * 1000;
+        sound.fade(sound.volume(), 0, fadeDuration);
+      });
     } else {
       sound.unload();
     }
@@ -603,8 +636,10 @@ function pausePlaying(fadeOut = false) {
       );
       if (fadeOut) {
         var old_volume = sound.volume();
-        var fadeDuration = store.get("fade_out_seconds") * 1000;
-        sound.fade(sound.volume(), 0, fadeDuration);
+        window.electronAPI.store.get("fade_out_seconds").then(fadeSeconds => {
+          var fadeDuration = fadeSeconds * 1000;
+          sound.fade(sound.volume(), 0, fadeDuration);
+        });
       } else {
         sound.pause();
       }
@@ -745,14 +780,16 @@ function deleteSong() {
       console.log("Proceeding with delete");
       const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
       if (deleteStmt.run(songId)) {
-        fs.unlinkSync(path.join(store.get("music_directory"), filename));
-        // Remove song anywhere it appears
-        $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-        $(`.hotkeys li span[songid=${songId}]`).remove();
-        $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-        $(`#search_results tr[songid=${songId}]`).remove();
-        saveHoldingTankToStore();
-        saveHotkeysToStore();
+        window.electronAPI.store.get("music_directory").then(musicDirectory => {
+          fs.unlinkSync(path.join(musicDirectory, filename));
+          // Remove song anywhere it appears
+          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
+          $(`.hotkeys li span[songid=${songId}]`).remove();
+          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
+          $(`#search_results tr[songid=${songId}]`).remove();
+          saveHoldingTankToStore();
+          saveHotkeysToStore();
+        });
       } else {
         console.log("Error deleting song from database");
       }
@@ -884,10 +921,10 @@ function savePreferences(event) {
   console.log("Saving preferences");
   event.preventDefault();
   $(`#preferencesModal`).modal("hide");
-  store.set("database_directory", $("#preferences-database-directory").val());
-  store.set("music_directory", $("#preferences-song-directory").val());
-  store.set("hotkey_directory", $("#preferences-hotkey-directory").val());
-  store.set("fade_out_seconds", $("#preferences-fadeout-seconds").val());
+  window.electronAPI.store.set("database_directory", $("#preferences-database-directory").val());
+  window.electronAPI.store.set("music_directory", $("#preferences-song-directory").val());
+  window.electronAPI.store.set("hotkey_directory", $("#preferences-hotkey-directory").val());
+  window.electronAPI.store.set("fade_out_seconds", $("#preferences-fadeout-seconds").val());
 }
 
 function renameHoldingTankTab() {
@@ -902,14 +939,14 @@ function renameHoldingTankTab() {
 function increaseFontSize() {
   if (fontSize < 25) {
     $(".song").css("font-size", ++fontSize + "px");
-    store.set("font-size", fontSize);
+    window.electronAPI.store.set("font-size", fontSize);
   }
 }
 
 function decreaseFontSize() {
   if (fontSize > 5) {
     $(".song").css("font-size", --fontSize + "px");
-    store.set("font-size", fontSize);
+    window.electronAPI.store.set("font-size", fontSize);
   }
 }
 
@@ -960,14 +997,16 @@ function deleteSelectedSong() {
       console.log("Proceeding with delete");
       const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
       if (deleteStmt.run(songId)) {
-        fs.unlinkSync(path.join(store.get("music_directory"), filename));
-        // Remove song anywhere it appears
-        $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-        $(`.hotkeys li span[songid=${songId}]`).remove();
-        $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-        $(`#search_results tr[songid=${songId}]`).remove();
-        saveHoldingTankToStore();
-        saveHotkeysToStore();
+        window.electronAPI.store.get("music_directory").then(musicDirectory => {
+          fs.unlinkSync(path.join(musicDirectory, filename));
+          // Remove song anywhere it appears
+          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
+          $(`.hotkeys li span[songid=${songId}]`).remove();
+          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
+          $(`#search_results tr[songid=${songId}]`).remove();
+          saveHoldingTankToStore();
+          saveHotkeysToStore();
+        });
       } else {
         console.log("Error deleting song from database");
       }
@@ -1013,33 +1052,35 @@ function addSongsByPath(pathArray, category) {
       var newFilename = `${artist}-${title}-${uuid}${path.extname(
         songSourcePath
       )}`.replace(/[^-.\w]/g, "");
-      var newPath = path.join(store.get("music_directory"), newFilename);
-      const stmt = db.prepare(
-        "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)"
-      );
-      const info = stmt.run(
-        title,
-        artist,
-        category,
-        newFilename,
-        durationString,
-        Math.floor(Date.now() / 1000)
-      );
-      console.log(`Copying audio file ${songSourcePath} to ${newPath}`);
-      fs.copyFileSync(songSourcePath, newPath);
-      $("#search_results").append(
-        `<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${
-          info.lastInsertRowid
-        }'><td>${
-          categories[category]
-        }</td><td></td><td style='font-weight: bold'>${
-          title || ""
-        }</td><td style='font-weight:bold'>${
-          artist || ""
-        }</td><td>${durationString}</td></tr>`
-      );
+      window.electronAPI.store.get("music_directory").then(musicDirectory => {
+        var newPath = path.join(musicDirectory, newFilename);
+        const stmt = db.prepare(
+          "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        const info = stmt.run(
+          title,
+          artist,
+          category,
+          newFilename,
+          durationString,
+          Math.floor(Date.now() / 1000)
+        );
+        console.log(`Copying audio file ${songSourcePath} to ${newPath}`);
+        fs.copyFileSync(songSourcePath, newPath);
+              $("#search_results").append(
+          `<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${
+            info.lastInsertRowid
+          }'><td>${
+            categories[category]
+          }</td><td></td><td style='font-weight: bold'>${
+            title || ""
+          }</td><td style='font-weight:bold'>${
+            artist || ""
+          }</td><td>${durationString}</td></tr>`
+        );
 
-      return addSongsByPath(pathArray, category); // process rest of the files AFTER we are finished
+        return addSongsByPath(pathArray, category); // process rest of the files AFTER we are finished
+      });
     });
   }
   return Promise.resolve();
