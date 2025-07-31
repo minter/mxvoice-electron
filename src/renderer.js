@@ -4,6 +4,7 @@ var globalAnimation;
 var autoplay = false;
 var loop = false;
 var holdingTankMode = "storage"; // 'storage' or 'playlist'
+var searchTimeout; // Global variable for live search debouncing
 var wavesurfer = WaveSurfer.create({
   container: "#waveform",
   waveColor: "#e9ecef",
@@ -143,7 +144,7 @@ function populateHoldingTank(songIds) {
 }
 
 function clearHotkeys() {
-  customConfirm("Are you sure you want clear your hotkeys?", function() {
+  customConfirm("Are you sure you want clear your hotkeys?", function () {
     for (let key = 1; key <= 12; key++) {
       $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
       $(`.hotkeys.active #f${key}_hotkey span`).html("");
@@ -152,7 +153,7 @@ function clearHotkeys() {
 }
 
 function clearHoldingTank() {
-  customConfirm("Are you sure you want clear your holding tank?", function() {
+  customConfirm("Are you sure you want clear your holding tank?", function () {
     $(".holding_tank.active").empty();
   });
 }
@@ -291,6 +292,8 @@ function searchData() {
 
 // Live search function for real-time results as user types
 function performLiveSearch(searchTerm) {
+  console.log("performLiveSearch called with:", searchTerm);
+
   if (!searchTerm || searchTerm.length < 2) {
     // Clear results if search term is too short
     $("#search_results tbody").find("tr").remove();
@@ -302,13 +305,67 @@ function performLiveSearch(searchTerm) {
   $("#search_results thead").show();
 
   var raw_html = [];
-  var search_term = "%" + searchTerm + "%";
+  var query_params = [];
+  var query_segments = [];
+  var query_string = "";
+  var category = $("#category_select").val();
 
-  // Fast, limited search for live results
+  // Apply category filter if not "All Categories"
+  if (category != "*") {
+    query_segments.push("category = ?");
+    query_params.push(category);
+  }
+
+  // Apply advanced search filters if advanced search is visible
+  if ($("#advanced-search").is(":visible")) {
+    var title = $("#title-search").val().trim();
+    var artist = $("#artist-search").val().trim();
+    var info = $("#info-search").val().trim();
+    var since = $("#date-search").val();
+
+    if (title.length) {
+      query_segments.push("title LIKE ?");
+      query_params.push(`%${title}%`);
+    }
+    if (artist.length) {
+      query_segments.push("artist LIKE ?");
+      query_params.push(`%${artist}%`);
+    }
+    if (info.length) {
+      query_segments.push("info LIKE ?");
+      query_params.push(`%${info}%`);
+    }
+    if (since.length) {
+      query_segments.push("modtime > ?");
+      var today = new Date();
+      query_params.push(
+        Math.round(today.setDate(today.getDate() - since) / 1000)
+      );
+    }
+  }
+
+  // Add the live search term to the query
+  var search_term = "%" + searchTerm + "%";
+  query_segments.push("(info LIKE ? OR title LIKE ? OR artist like ?)");
+  query_params.push(search_term, search_term, search_term);
+
+  // Build the complete query string
+  if (query_segments.length != 0) {
+    query_string = " WHERE " + query_segments.join(" AND ");
+  }
+
+  console.log("Live search query:", query_string);
+  console.log("Live search params:", query_params);
+
+  // Fast, limited search for live results with filters applied
   var stmt = db.prepare(
-    "SELECT * from mrvoice WHERE (info LIKE ? OR title LIKE ? OR artist like ?) ORDER BY category,info,title,artist LIMIT 50"
+    "SELECT * from mrvoice" +
+      query_string +
+      " ORDER BY category,info,title,artist LIMIT 50"
   );
-  const rows = stmt.all(search_term, search_term, search_term);
+  const rows = stmt.all(query_params);
+
+  console.log("Live search results:", rows.length);
 
   rows.forEach((row) => {
     raw_html.push(
@@ -726,23 +783,26 @@ function deleteSong() {
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
     var songRow = songStmt.get(songId);
     var filename = songRow.filename;
-    
-    customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`, function() {
-      console.log("Proceeding with delete");
-      const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
-      if (deleteStmt.run(songId)) {
-        fs.unlinkSync(path.join(store.get("music_directory"), filename));
-        // Remove song anywhere it appears
-        $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-        $(`.hotkeys li span[songid=${songId}]`).remove();
-        $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-        $(`#search_results tr[songid=${songId}]`).remove();
-        saveHoldingTankToStore();
-        saveHotkeysToStore();
-      } else {
-        console.log("Error deleting song from database");
+
+    customConfirm(
+      `Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`,
+      function () {
+        console.log("Proceeding with delete");
+        const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
+        if (deleteStmt.run(songId)) {
+          fs.unlinkSync(path.join(store.get("music_directory"), filename));
+          // Remove song anywhere it appears
+          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
+          $(`.hotkeys li span[songid=${songId}]`).remove();
+          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
+          $(`#search_results tr[songid=${songId}]`).remove();
+          saveHoldingTankToStore();
+          saveHotkeysToStore();
+        } else {
+          console.log("Error deleting song from database");
+        }
       }
-    });
+    );
   }
 }
 
@@ -967,23 +1027,26 @@ function deleteSelectedSong() {
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
     var songRow = songStmt.get(songId);
     var filename = songRow.filename;
-    
-    customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`, function() {
-      console.log("Proceeding with delete");
-      const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
-      if (deleteStmt.run(songId)) {
-        fs.unlinkSync(path.join(store.get("music_directory"), filename));
-        // Remove song anywhere it appears
-        $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-        $(`.hotkeys li span[songid=${songId}]`).remove();
-        $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-        $(`#search_results tr[songid=${songId}]`).remove();
-        saveHoldingTankToStore();
-        saveHotkeysToStore();
-      } else {
-        console.log("Error deleting song from database");
+
+    customConfirm(
+      `Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`,
+      function () {
+        console.log("Proceeding with delete");
+        const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
+        if (deleteStmt.run(songId)) {
+          fs.unlinkSync(path.join(store.get("music_directory"), filename));
+          // Remove song anywhere it appears
+          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
+          $(`.hotkeys li span[songid=${songId}]`).remove();
+          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
+          $(`#search_results tr[songid=${songId}]`).remove();
+          saveHoldingTankToStore();
+          saveHotkeysToStore();
+        } else {
+          console.log("Error deleting song from database");
+        }
       }
-    });
+    );
   }
 }
 
@@ -1168,33 +1231,36 @@ function openCategoriesModal() {
 
 function deleteCategory(event, code, description) {
   event.preventDefault();
-  customConfirm(`Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`, function() {
-    console.log(`Deleting category ${code}`);
+  customConfirm(
+    `Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`,
+    function () {
+      console.log(`Deleting category ${code}`);
 
-    const uncategorizedCheckStmt = db.prepare(
-      "INSERT OR REPLACE INTO categories VALUES(?, ?);"
-    );
-    const uncategorizedCheckInfo = uncategorizedCheckStmt.run(
-      "UNC",
-      "Uncategorized"
-    );
-    if (uncategorizedCheckInfo.changes == 1) {
-      console.log(`Had to upsert Uncategorized table`);
-    }
-    const stmt = db.prepare(
-      "UPDATE mrvoice SET category = ? WHERE category = ?"
-    );
-    const info = stmt.run("UNC", code);
-    console.log(`Updated ${info.changes} rows to uncategorized`);
+      const uncategorizedCheckStmt = db.prepare(
+        "INSERT OR REPLACE INTO categories VALUES(?, ?);"
+      );
+      const uncategorizedCheckInfo = uncategorizedCheckStmt.run(
+        "UNC",
+        "Uncategorized"
+      );
+      if (uncategorizedCheckInfo.changes == 1) {
+        console.log(`Had to upsert Uncategorized table`);
+      }
+      const stmt = db.prepare(
+        "UPDATE mrvoice SET category = ? WHERE category = ?"
+      );
+      const info = stmt.run("UNC", code);
+      console.log(`Updated ${info.changes} rows to uncategorized`);
 
-    const deleteStmt = db.prepare("DELETE FROM categories WHERE code = ?");
-    const deleteInfo = deleteStmt.run(code);
-    if (deleteInfo.changes == 1) {
-      console.log(`Deleted category ${code}`);
+      const deleteStmt = db.prepare("DELETE FROM categories WHERE code = ?");
+      const deleteInfo = deleteStmt.run(code);
+      if (deleteInfo.changes == 1) {
+        console.log(`Deleted category ${code}`);
+      }
+      populateCategorySelect();
+      populateCategoriesModal();
     }
-    populateCategorySelect();
-    populateCategoriesModal();
-  });
+  );
 }
 
 function saveCategories(event) {
@@ -1297,55 +1363,92 @@ function toggleWaveform() {
 }
 
 function toggleAdvancedSearch() {
-  $("#search_form").trigger("reset");
-  if ($("#advanced-search").is(":visible")) {
-    $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
-    $("#title-search").hide();
-    $("#omni_search").show();
-    $("#omni_search").focus();
-    animateCSS($("#advanced-search"), "fadeOutUp").then(() => {
-      $("#advanced-search").hide();
+  try {
+    console.log("toggleAdvancedSearch called");
+
+    // Clear any pending live search
+    clearTimeout(searchTimeout);
+    console.log("Cleared timeout");
+
+    $("#search_form").trigger("reset");
+    console.log("Triggered form reset");
+
+    // Clear search results when toggling advanced search
+    $("#search_results tbody").find("tr").remove();
+    $("#search_results thead").hide();
+    console.log("Cleared search results");
+
+    console.log(
+      "Advanced search element exists:",
+      $("#advanced-search").length > 0
+    );
+    console.log(
+      "Advanced search visible:",
+      $("#advanced-search").is(":visible")
+    );
+    console.log(
+      "Advanced search display:",
+      $("#advanced-search").css("display")
+    );
+
+    if ($("#advanced-search").is(":visible")) {
+      console.log("Hiding advanced search");
+      $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
+      $("#title-search").hide();
+      $("#omni_search").show();
+      $("#omni_search").focus();
+      animateCSS($("#advanced-search"), "fadeOutUp").then(() => {
+        $("#advanced-search").hide();
+        scale_scrollable();
+      });
+    } else {
+      console.log("Showing advanced search");
+      $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
+      $("#advanced-search").show();
+      $("#title-search").show();
+      $("#title-search").focus();
+      $("#omni_search").hide();
       scale_scrollable();
-    });
-  } else {
-    $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
-    $("#advanced-search").show();
-    $("#title-search").show();
-    $("#title-search").focus();
-    $("#omni_search").hide();
-    scale_scrollable();
-    animateCSS($("#advanced-search"), "fadeInDown").then(() => {});
+      animateCSS($("#advanced-search"), "fadeInDown").then(() => {});
+    }
+  } catch (error) {
+    console.error("Error in toggleAdvancedSearch:", error);
   }
 }
 
 function closeAllTabs() {
-  customConfirm(`Are you sure you want to close all open Holding Tanks and Hotkeys?`, function() {
-    store.delete("holding_tank");
-    store.delete("hotkeys");
-    store.delete("column_order");
-    store.delete("font-size");
-    location.reload();
-  });
+  customConfirm(
+    `Are you sure you want to close all open Holding Tanks and Hotkeys?`,
+    function () {
+      store.delete("holding_tank");
+      store.delete("hotkeys");
+      store.delete("column_order");
+      store.delete("font-size");
+      location.reload();
+    }
+  );
 }
 
 // Custom confirmation function to replace native confirm() dialogs
 function customConfirm(message, callback) {
   $("#confirmationMessage").text(message);
   $("#confirmationModal").modal("show");
-  
+
   // Store the callback to execute when confirmed
-  $("#confirmationConfirmBtn").off("click").on("click", function() {
-    $("#confirmationModal").modal("hide");
-    if (callback) {
-      callback();
-    }
-  });
+  $("#confirmationConfirmBtn")
+    .off("click")
+    .on("click", function () {
+      $("#confirmationModal").modal("hide");
+      if (callback) {
+        callback();
+      }
+    });
 }
 
 // Focus restoration after modal dismissal
 function restoreFocusToSearch() {
   // Small delay to ensure modal is fully closed
-  setTimeout(function() {
+  setTimeout(function () {
     if ($("#omni_search").is(":visible")) {
       $("#omni_search").focus();
     } else if ($("#title-search").is(":visible")) {
@@ -1612,10 +1715,11 @@ $(document).ready(function () {
   });
 
   // Live search with debouncing
-  var searchTimeout;
-  $("#omni_search").on("input", function () {
+
+  // Function to trigger live search with current filters
+  function triggerLiveSearch() {
     clearTimeout(searchTimeout);
-    var searchTerm = $(this).val().trim();
+    var searchTerm = $("#omni_search").val().trim();
 
     searchTimeout = setTimeout(() => {
       if (searchTerm.length >= 2) {
@@ -1626,7 +1730,31 @@ $(document).ready(function () {
         $("#search_results thead").hide();
       }
     }, 300); // 300ms debounce
+  }
+
+  // Live search on search term input
+  $("#omni_search").on("input", function () {
+    triggerLiveSearch();
   });
+
+  // Live search when category filter changes
+  $("#category_select").on("change", function () {
+    var searchTerm = $("#omni_search").val().trim();
+    if (searchTerm.length >= 2) {
+      triggerLiveSearch();
+    }
+  });
+
+  // Live search when advanced search fields change
+  $("#title-search, #artist-search, #info-search, #date-search").on(
+    "input change",
+    function () {
+      var searchTerm = $("#omni_search").val().trim();
+      if (searchTerm.length >= 2) {
+        triggerLiveSearch();
+      }
+    }
+  );
 
   $("#omni_search").on("keydown", function (e) {
     if (e.code == "Tab") {
@@ -1650,6 +1778,7 @@ $(document).ready(function () {
   });
 
   $("#advanced_search_button").on("click", function () {
+    console.log("Advanced search button clicked");
     toggleAdvancedSearch();
     return false;
   });
