@@ -6,6 +6,8 @@ const fs = require('fs');
 const readlines = require('n-readlines');
 const Store = require('electron-store');
 const log = require('electron-log');
+const Database = require('better-sqlite3');
+const { Howl, Howler } = require('howler');
 let octokit;
 import("@octokit/rest")
   .then(({ Octokit }) => {
@@ -46,6 +48,8 @@ if (process.platform === "darwin") {
 }
 
 let mainWindow;
+let db; // Database connection for main process
+let audioInstances = new Map(); // Track audio instances in main process
 
 // Enable live reload
 if (is.development) {
@@ -61,6 +65,9 @@ const createWindow = () => {
 
   migrateOldPreferences();
   checkFirstRun();
+  
+  // Initialize database connection for main process
+  initializeDatabase();
 
 
   // Create the browser window.
@@ -70,8 +77,8 @@ const createWindow = () => {
     minWidth: 1000,
     minHeight: 660,
     webPreferences: {
-      contextIsolation: false, // Disable context isolation to maintain compatibility
-      nodeIntegration: true,   // Enable Node.js integration
+      contextIsolation: false, // Temporarily disable for testing
+      nodeIntegration: true,   // Temporarily enable for testing
       preload: path.join(app.getAppPath(), 'src/preload.js')
     }
   });
@@ -251,6 +258,267 @@ ipcMain.handle('manage-categories', async () => {
 // Preferences
 ipcMain.handle('show-preferences', async () => {
   mainWindow.webContents.send('show_preferences');
+});
+
+// Database API handlers for gradual migration
+ipcMain.handle('database-query', async (event, sql, params) => {
+  try {
+    if (!db) {
+      throw new Error('Database not initialized');
+    }
+    const stmt = db.prepare(sql);
+    return { success: true, data: stmt.all(params || []) };
+  } catch (error) {
+    console.error('Database query error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('database-execute', async (event, sql, params) => {
+  try {
+    if (!db) {
+      throw new Error('Database not initialized');
+    }
+    const stmt = db.prepare(sql);
+    return { success: true, data: stmt.run(params || []) };
+  } catch (error) {
+    console.error('Database execute error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-categories', async () => {
+  try {
+    if (!db) {
+      throw new Error('Database not initialized');
+    }
+    const stmt = db.prepare('SELECT * FROM categories ORDER BY description ASC');
+    return { success: true, data: stmt.all() };
+  } catch (error) {
+    console.error('Get categories error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('add-song', async (event, songData) => {
+  try {
+    if (!db) {
+      throw new Error('Database not initialized');
+    }
+    const stmt = db.prepare(`
+      INSERT INTO songs (title, artist, category_id, filename, duration, notes)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(songData.title, songData.artist, songData.category_id, 
+                           songData.filename, songData.duration, songData.notes);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Add song error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// File System API handlers for gradual migration
+ipcMain.handle('file-read', async (event, filePath) => {
+  try {
+    const data = fs.readFileSync(filePath, 'utf8');
+    return { success: true, data };
+  } catch (error) {
+    console.error('File read error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file-write', async (event, filePath, data) => {
+  try {
+    fs.writeFileSync(filePath, data, 'utf8');
+    return { success: true };
+  } catch (error) {
+    console.error('File write error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file-exists', async (event, filePath) => {
+  try {
+    return { success: true, exists: fs.existsSync(filePath) };
+  } catch (error) {
+    console.error('File exists error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file-delete', async (event, filePath) => {
+  try {
+    fs.unlinkSync(filePath);
+    return { success: true };
+  } catch (error) {
+    console.error('File delete error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file-copy', async (event, sourcePath, destPath) => {
+  try {
+    fs.copyFileSync(sourcePath, destPath);
+    return { success: true };
+  } catch (error) {
+    console.error('File copy error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file-mkdir', async (event, dirPath, options = {}) => {
+  try {
+    fs.mkdirSync(dirPath, { recursive: true, ...options });
+    return { success: true };
+  } catch (error) {
+    console.error('Directory creation error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Store API handlers for gradual migration
+ipcMain.handle('store-get', async (event, key) => {
+  try {
+    return { success: true, value: store.get(key) };
+  } catch (error) {
+    console.error('Store get error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('store-set', async (event, key, value) => {
+  try {
+    store.set(key, value);
+    return { success: true };
+  } catch (error) {
+    console.error('Store set error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('store-delete', async (event, key) => {
+  try {
+    store.delete(key);
+    return { success: true };
+  } catch (error) {
+    console.error('Store delete error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('store-has', async (event, key) => {
+  try {
+    return { success: true, has: store.has(key) };
+  } catch (error) {
+    console.error('Store has error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('store-keys', async () => {
+  try {
+    return { success: true, keys: store.store };
+  } catch (error) {
+    console.error('Store keys error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Audio API handlers for gradual migration
+ipcMain.handle('audio-play', async (event, filePath) => {
+  try {
+    // Stop any currently playing audio
+    Howler.stop();
+    
+    // Create new audio instance
+    const sound = new Howl({
+      src: [filePath],
+      html5: true,
+      volume: 1.0
+    });
+    
+    // Store the instance
+    const soundId = Date.now().toString();
+    audioInstances.set(soundId, sound);
+    
+    // Play the audio
+    sound.play();
+    
+    return { success: true, id: soundId };
+  } catch (error) {
+    console.error('Audio play error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('audio-stop', async (event, soundId) => {
+  try {
+    if (soundId) {
+      // Stop specific sound
+      const sound = audioInstances.get(soundId);
+      if (sound) {
+        sound.stop();
+        audioInstances.delete(soundId);
+      }
+    } else {
+      // Stop all sounds
+      Howler.stop();
+      audioInstances.clear();
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Audio stop error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('audio-pause', async (event, soundId) => {
+  try {
+    if (soundId) {
+      const sound = audioInstances.get(soundId);
+      if (sound) {
+        sound.pause();
+      }
+    } else {
+      Howler.stop();
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Audio pause error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('audio-volume', async (event, volume) => {
+  try {
+    Howler.volume(volume);
+    return { success: true };
+  } catch (error) {
+    console.error('Audio volume error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('audio-fade', async (event, soundId, fromVolume, toVolume, duration) => {
+  try {
+    if (soundId) {
+      const sound = audioInstances.get(soundId);
+      if (sound) {
+        sound.fade(fromVolume, toVolume, duration);
+      }
+    } else {
+      // Fade all sounds
+      audioInstances.forEach(sound => {
+        sound.fade(fromVolume, toVolume, duration);
+      });
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Audio fade error:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // Keep existing handlers for backward compatibility
@@ -856,4 +1124,25 @@ function trackUser() {
     ua: mainWindow.webContents.getUserAgent()
   }).toString();
   axios.post("https://www.google-analytics.com/collect", payload);
+}
+
+// Initialize database connection for main process
+function initializeDatabase() {
+  try {
+    console.log(`Initializing database connection in main process`);
+    console.log(`Looking for database in ${store.get('database_directory')}`);
+    
+    let dbName = 'mxvoice.db';
+    if (fs.existsSync(path.join(store.get('database_directory'), 'mrvoice.db'))) {
+      dbName = 'mrvoice.db';
+    }
+    
+    const dbPath = path.join(store.get('database_directory'), dbName);
+    console.log(`Attempting to open database file ${dbPath}`);
+    
+    db = new Database(dbPath);
+    console.log('Database connection established in main process');
+  } catch (error) {
+    console.error('Failed to initialize database in main process:', error);
+  }
 }

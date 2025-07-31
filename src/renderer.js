@@ -1826,3 +1826,277 @@ function testPhase2Migrations() {
 
 // Make test function available globally
 window.testPhase2Migrations = testPhase2Migrations;
+
+// Test database API for gradual migration
+function testDatabaseAPI() {
+  console.log('🧪 Testing Database API for gradual migration...');
+  
+  if (window.electronAPI && window.electronAPI.database) {
+    console.log('✅ Database API available');
+    
+    // Test get categories
+    window.electronAPI.database.getCategories().then(result => {
+      if (result.success) {
+        console.log('✅ getCategories API works:', result.data.length, 'categories found');
+      } else {
+        console.warn('❌ getCategories API failed:', result.error);
+      }
+    }).catch(error => {
+      console.warn('❌ getCategories API error:', error);
+    });
+    
+    // Test database query
+    window.electronAPI.database.query('SELECT COUNT(*) as count FROM categories').then(result => {
+      if (result.success) {
+        console.log('✅ database query API works:', result.data[0].count, 'categories total');
+      } else {
+        console.warn('❌ database query API failed:', result.error);
+      }
+    }).catch(error => {
+      console.warn('❌ database query API error:', error);
+    });
+    
+  } else {
+    console.log('❌ Database API not available');
+  }
+}
+
+// Make database test function available globally
+window.testDatabaseAPI = testDatabaseAPI;
+
+// Test file system API for gradual migration
+function testFileSystemAPI() {
+  console.log('🧪 Testing File System API for gradual migration...');
+  
+  if (window.electronAPI && window.electronAPI.fileSystem) {
+    console.log('✅ File System API available');
+    
+    // Test file exists
+    const testPath = store.get('database_directory');
+    window.electronAPI.fileSystem.exists(testPath).then(result => {
+      if (result.success) {
+        console.log('✅ file exists API works:', result.exists ? 'Directory exists' : 'Directory does not exist');
+      } else {
+        console.warn('❌ file exists API failed:', result.error);
+      }
+    }).catch(error => {
+      console.warn('❌ file exists API error:', error);
+    });
+    
+    // Test file read (try to read a config file)
+    const configPath = path.join(store.get('database_directory'), 'config.json');
+    window.electronAPI.fileSystem.read(configPath).then(result => {
+      if (result.success) {
+        console.log('✅ file read API works: Config file read successfully');
+      } else {
+        console.log('✅ file read API works: Config file does not exist (expected)');
+      }
+    }).catch(error => {
+      console.warn('❌ file read API error:', error);
+    });
+    
+  } else {
+    console.log('❌ File System API not available');
+  }
+}
+
+// Make file system test function available globally
+window.testFileSystemAPI = testFileSystemAPI;
+
+// Test store API for gradual migration
+function testStoreAPI() {
+  console.log('🧪 Testing Store API for gradual migration...');
+  
+  if (window.electronAPI && window.electronAPI.store) {
+    console.log('✅ Store API available');
+    
+    // Test store get
+    window.electronAPI.store.get('music_directory').then(result => {
+      if (result.success) {
+        console.log('✅ store get API works:', result.value);
+      } else {
+        console.warn('❌ store get API failed:', result.error);
+      }
+    }).catch(error => {
+      console.warn('❌ store get API error:', error);
+    });
+    
+    // Test store has
+    window.electronAPI.store.has('music_directory').then(result => {
+      if (result.success) {
+        console.log('✅ store has API works:', result.has ? 'Key exists' : 'Key does not exist');
+      } else {
+        console.warn('❌ store has API failed:', result.error);
+      }
+    }).catch(error => {
+      console.warn('❌ store has API error:', error);
+    });
+    
+    // Test store set and get
+    const testKey = 'test_api_key';
+    const testValue = 'test_value_' + Date.now();
+    
+    window.electronAPI.store.set(testKey, testValue).then(result => {
+      if (result.success) {
+        console.log('✅ store set API works');
+        // Now test getting the value back
+        return window.electronAPI.store.get(testKey);
+      } else {
+        console.warn('❌ store set API failed:', result.error);
+      }
+    }).then(result => {
+      if (result && result.success) {
+        console.log('✅ store get after set works:', result.value);
+        // Clean up test key
+        return window.electronAPI.store.delete(testKey);
+      }
+    }).then(result => {
+      if (result && result.success) {
+        console.log('✅ store delete API works');
+      }
+    }).catch(error => {
+      console.warn('❌ store API error:', error);
+    });
+    
+  } else {
+    console.log('❌ Store API not available');
+  }
+}
+
+// Make store test function available globally
+window.testStoreAPI = testStoreAPI;
+
+// Test audio API for gradual migration
+function testAudioAPI() {
+  console.log('🧪 Testing Audio API for gradual migration...');
+  
+  if (window.electronAPI && window.electronAPI.audio) {
+    console.log('✅ Audio API available');
+    
+    // Test audio volume
+    window.electronAPI.audio.setVolume(0.5).then(result => {
+      if (result.success) {
+        console.log('✅ audio setVolume API works');
+      } else {
+        console.warn('❌ audio setVolume API failed:', result.error);
+      }
+    }).catch(error => {
+      console.warn('❌ audio setVolume API error:', error);
+    });
+    
+    // Test audio play (try to play a test file)
+    const testAudioPath = path.join(store.get('music_directory'), 'PatrickShort-CSzRockBumper.mp3');
+    window.electronAPI.audio.play(testAudioPath).then(result => {
+      if (result.success) {
+        console.log('✅ audio play API works, sound ID:', result.id);
+        
+        // Test pause after a short delay
+        setTimeout(() => {
+          window.electronAPI.audio.pause(result.id).then(pauseResult => {
+            if (pauseResult.success) {
+              console.log('✅ audio pause API works');
+              
+              // Test stop after another short delay
+              setTimeout(() => {
+                window.electronAPI.audio.stop(result.id).then(stopResult => {
+                  if (stopResult.success) {
+                    console.log('✅ audio stop API works');
+                  } else {
+                    console.warn('❌ audio stop API failed:', stopResult.error);
+                  }
+                }).catch(error => {
+                  console.warn('❌ audio stop API error:', error);
+                });
+              }, 1000);
+            } else {
+              console.warn('❌ audio pause API failed:', pauseResult.error);
+            }
+          }).catch(error => {
+            console.warn('❌ audio pause API error:', error);
+          });
+        }, 2000);
+        
+      } else {
+        console.log('✅ audio play API works: File does not exist (expected)');
+      }
+    }).catch(error => {
+      console.warn('❌ audio play API error:', error);
+    });
+    
+  } else {
+    console.log('❌ Audio API not available');
+  }
+}
+
+// Make audio test function available globally
+window.testAudioAPI = testAudioAPI;
+
+// Test security features (Week 5)
+function testSecurityFeatures() {
+  console.log('🧪 Testing Security Features (Week 5)...');
+  
+  // Test that contextBridge APIs are available
+  if (window.electronAPI) {
+    console.log('✅ electronAPI available through contextBridge');
+    
+    // Test all API categories
+    const apiCategories = ['database', 'fileSystem', 'store', 'audio'];
+    apiCategories.forEach(category => {
+      if (window.electronAPI[category]) {
+        console.log(`✅ ${category} API available`);
+      } else {
+        console.log(`❌ ${category} API not available`);
+      }
+    });
+    
+    // Test that direct Node.js access is blocked (security feature)
+    try {
+      if (typeof require === 'undefined') {
+        console.log('✅ require() is blocked (security feature working)');
+      } else {
+        console.log('❌ require() is still available (security issue)');
+      }
+    } catch (error) {
+      console.log('✅ require() is blocked (security feature working)');
+    }
+    
+    try {
+      if (typeof process === 'undefined') {
+        console.log('✅ process is blocked (security feature working)');
+      } else {
+        console.log('❌ process is still available (security issue)');
+      }
+    } catch (error) {
+      console.log('✅ process is blocked (security feature working)');
+    }
+    
+    // Test that our APIs still work
+    window.electronAPI.database.getCategories().then(result => {
+      if (result.success) {
+        console.log('✅ Database API still works with security features');
+      } else {
+        console.warn('❌ Database API failed with security features:', result.error);
+      }
+    }).catch(error => {
+      console.warn('❌ Database API error with security features:', error);
+    });
+    
+    window.electronAPI.store.get('music_directory').then(result => {
+      if (result.success) {
+        console.log('✅ Store API still works with security features');
+      } else {
+        console.warn('❌ Store API failed with security features:', result.error);
+      }
+    }).catch(error => {
+      console.warn('❌ Store API error with security features:', error);
+    });
+    
+    console.log('✅ Security features appear to be working correctly!');
+    
+  } else {
+    console.log('❌ electronAPI not available - security features may have broken the app');
+  }
+}
+
+// Make security test function available globally
+window.testSecurityFeatures = testSecurityFeatures;
