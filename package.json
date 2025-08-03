@@ -88,7 +88,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^5.15.4",
+    "@fortawesome/fontawesome-free": "^7.0.0",
     "@octokit/rest": "^22.0.0",
     "animate.css": "^4.1.1",
     "axios": "^0.30.0",
