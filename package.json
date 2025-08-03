@@ -89,7 +89,7 @@
   "license": "MIT",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.4",
-    "@octokit/rest": "^21.0.2",
+    "@octokit/rest": "^22.0.0",
     "animate.css": "^4.1.1",
     "axios": "^0.30.0",
     "better-sqlite3": "^11.10.0",
@@ -113,10 +113,9 @@
     "yarn": "^1.22.22"
   },
   "devDependencies": {
-    "@electron/notarize": "^2.5.0",
+    "@electron/notarize": "^3.0.1",
     "electron": "^37.2.5",
-    "electron-builder": "24.13.3",
-    "electron-builder-notarize": "^1.2.0",
+    "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
     "node-abi": "3.75.0"
   }
