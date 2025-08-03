@@ -115,7 +115,7 @@
     "yarn": "^1.22.22"
   },
   "devDependencies": {
-    "@electron/notarize": "^2.5.0",
+    "@electron/notarize": "^3.0.1",
     "electron": "^22.3.27",
     "electron-builder": "24.13.3",
     "electron-builder-notarize": "^1.2.0",
