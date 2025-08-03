@@ -4,6 +4,7 @@ var globalAnimation;
 var autoplay = false;
 var loop = false;
 var holdingTankMode = "storage"; // 'storage' or 'playlist'
+var searchTimeout; // Global variable for live search debouncing
 var wavesurfer = WaveSurfer.create({
   container: "#waveform",
   waveColor: "#e9ecef",
@@ -171,7 +172,7 @@ function populateHoldingTank(songIds) {
 }
 
 function clearHotkeys() {
-  customConfirm("Are you sure you want clear your hotkeys?", function() {
+  customConfirm("Are you sure you want clear your hotkeys?", function () {
     for (let key = 1; key <= 12; key++) {
       $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
       $(`.hotkeys.active #f${key}_hotkey span`).html("");
@@ -180,7 +181,7 @@ function clearHotkeys() {
 }
 
 function clearHoldingTank() {
-  customConfirm("Are you sure you want clear your holding tank?", function() {
+  customConfirm("Are you sure you want clear your holding tank?", function () {
     $(".holding_tank.active").empty();
   });
 }
@@ -501,6 +502,129 @@ function searchData() {
       $("#category_select").prop("selectedIndex", 0);
     }
   }
+}
+
+// Live search function for real-time results as user types
+function performLiveSearch(searchTerm) {
+  console.log("performLiveSearch called with:", searchTerm);
+
+  // Check if we have either a search term or advanced search filters
+  var hasSearchTerm = searchTerm && searchTerm.length >= 2;
+  var hasAdvancedFilters = false;
+
+  if ($("#advanced-search").is(":visible")) {
+    var title = $("#title-search").val().trim();
+    var artist = $("#artist-search").val().trim();
+    var info = $("#info-search").val().trim();
+    var since = $("#date-search").val();
+    hasAdvancedFilters =
+      title.length > 0 ||
+      artist.length > 0 ||
+      info.length > 0 ||
+      since.length > 0;
+  }
+
+  if (!hasSearchTerm && !hasAdvancedFilters) {
+    // Clear results if no search term and no advanced filters
+    $("#search_results tbody").find("tr").remove();
+    $("#search_results thead").hide();
+    return;
+  }
+
+  $("#search_results tbody").find("tr").remove();
+  $("#search_results thead").show();
+
+  var raw_html = [];
+  var query_params = [];
+  var query_segments = [];
+  var query_string = "";
+  var category = $("#category_select").val();
+
+  // Apply category filter if not "All Categories"
+  if (category != "*") {
+    query_segments.push("category = ?");
+    query_params.push(category);
+  }
+
+  // Apply advanced search filters if advanced search is visible
+  if ($("#advanced-search").is(":visible")) {
+    var title = $("#title-search").val().trim();
+    var artist = $("#artist-search").val().trim();
+    var info = $("#info-search").val().trim();
+    var since = $("#date-search").val();
+
+    if (title.length) {
+      query_segments.push("title LIKE ?");
+      query_params.push(`%${title}%`);
+    }
+    if (artist.length) {
+      query_segments.push("artist LIKE ?");
+      query_params.push(`%${artist}%`);
+    }
+    if (info.length) {
+      query_segments.push("info LIKE ?");
+      query_params.push(`%${info}%`);
+    }
+    if (since.length) {
+      query_segments.push("modtime > ?");
+      var today = new Date();
+      query_params.push(
+        Math.round(today.setDate(today.getDate() - since) / 1000)
+      );
+    }
+  }
+
+  // Add the live search term to the query (only if we have a search term)
+  if (hasSearchTerm) {
+    var search_term = "%" + searchTerm + "%";
+    query_segments.push("(info LIKE ? OR title LIKE ? OR artist like ?)");
+    query_params.push(search_term, search_term, search_term);
+  }
+
+  // Build the complete query string
+  if (query_segments.length != 0) {
+    query_string = " WHERE " + query_segments.join(" AND ");
+  }
+
+  console.log("Live search query:", query_string);
+  console.log("Live search params:", query_params);
+
+  // Fast, limited search for live results with filters applied
+  var stmt = db.prepare(
+    "SELECT * from mrvoice" +
+      query_string +
+      " ORDER BY category,info,title,artist LIMIT 50"
+  );
+  const rows = stmt.all(query_params);
+
+  console.log("Live search results:", rows.length);
+
+  rows.forEach((row) => {
+    raw_html.push(
+      `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
+        row.id
+      }'><td class='hide-1'>${
+        categories[row.category]
+      }</td><td class='hide-2'>${
+        row.info || ""
+      }</td><td style='font-weight: bold'>${
+        row.title || ""
+      }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
+        row.time
+      }</td></tr>`
+    );
+  });
+
+  $("#search_results").append(raw_html.join(""));
+
+  // Show indicator if there are more results
+  if (rows.length === 50) {
+    $("#search_results").append(
+      `<tr><td colspan="5" class="text-center text-muted"><small>Showing first 50 results. Press Enter for complete search.</small></td></tr>`
+    );
+  }
+
+  scale_scrollable();
 }
 
 function setLabelFromSongId(song_id, element) {
@@ -1683,33 +1807,36 @@ function openCategoriesModal() {
 
 function deleteCategory(event, code, description) {
   event.preventDefault();
-  customConfirm(`Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`, function() {
-    console.log(`Deleting category ${code}`);
+  customConfirm(
+    `Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`,
+    function () {
+      console.log(`Deleting category ${code}`);
 
-    const uncategorizedCheckStmt = db.prepare(
-      "INSERT OR REPLACE INTO categories VALUES(?, ?);"
-    );
-    const uncategorizedCheckInfo = uncategorizedCheckStmt.run(
-      "UNC",
-      "Uncategorized"
-    );
-    if (uncategorizedCheckInfo.changes == 1) {
-      console.log(`Had to upsert Uncategorized table`);
-    }
-    const stmt = db.prepare(
-      "UPDATE mrvoice SET category = ? WHERE category = ?"
-    );
-    const info = stmt.run("UNC", code);
-    console.log(`Updated ${info.changes} rows to uncategorized`);
+      const uncategorizedCheckStmt = db.prepare(
+        "INSERT OR REPLACE INTO categories VALUES(?, ?);"
+      );
+      const uncategorizedCheckInfo = uncategorizedCheckStmt.run(
+        "UNC",
+        "Uncategorized"
+      );
+      if (uncategorizedCheckInfo.changes == 1) {
+        console.log(`Had to upsert Uncategorized table`);
+      }
+      const stmt = db.prepare(
+        "UPDATE mrvoice SET category = ? WHERE category = ?"
+      );
+      const info = stmt.run("UNC", code);
+      console.log(`Updated ${info.changes} rows to uncategorized`);
 
-    const deleteStmt = db.prepare("DELETE FROM categories WHERE code = ?");
-    const deleteInfo = deleteStmt.run(code);
-    if (deleteInfo.changes == 1) {
-      console.log(`Deleted category ${code}`);
+      const deleteStmt = db.prepare("DELETE FROM categories WHERE code = ?");
+      const deleteInfo = deleteStmt.run(code);
+      if (deleteInfo.changes == 1) {
+        console.log(`Deleted category ${code}`);
+      }
+      populateCategorySelect();
+      populateCategoriesModal();
     }
-    populateCategorySelect();
-    populateCategoriesModal();
-  });
+  );
 }
 
 function saveCategories(event) {
@@ -1819,24 +1946,56 @@ function toggleWaveform() {
 }
 
 function toggleAdvancedSearch() {
-  $("#search_form").trigger("reset");
-  if ($("#advanced-search").is(":visible")) {
-    $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
-    $("#title-search").hide();
-    $("#omni_search").show();
-    $("#omni_search").focus();
-    animateCSS($("#advanced-search"), "fadeOutUp").then(() => {
-      $("#advanced-search").hide();
+  try {
+    console.log("toggleAdvancedSearch called");
+
+    // Clear any pending live search
+    clearTimeout(searchTimeout);
+    console.log("Cleared timeout");
+
+    $("#search_form").trigger("reset");
+    console.log("Triggered form reset");
+
+    // Clear search results when toggling advanced search
+    $("#search_results tbody").find("tr").remove();
+    $("#search_results thead").hide();
+    console.log("Cleared search results");
+
+    console.log(
+      "Advanced search element exists:",
+      $("#advanced-search").length > 0
+    );
+    console.log(
+      "Advanced search visible:",
+      $("#advanced-search").is(":visible")
+    );
+    console.log(
+      "Advanced search display:",
+      $("#advanced-search").css("display")
+    );
+
+    if ($("#advanced-search").is(":visible")) {
+      console.log("Hiding advanced search");
+      $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
+      $("#title-search").hide();
+      $("#omni_search").show();
+      $("#omni_search").focus();
+      animateCSS($("#advanced-search"), "fadeOutUp").then(() => {
+        $("#advanced-search").hide();
+        scale_scrollable();
+      });
+    } else {
+      console.log("Showing advanced search");
+      $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
+      $("#advanced-search").show();
+      $("#title-search").show();
+      $("#title-search").focus();
+      $("#omni_search").hide();
       scale_scrollable();
-    });
-  } else {
-    $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
-    $("#advanced-search").show();
-    $("#title-search").show();
-    $("#title-search").focus();
-    $("#omni_search").hide();
-    scale_scrollable();
-    animateCSS($("#advanced-search"), "fadeInDown").then(() => {});
+      animateCSS($("#advanced-search"), "fadeInDown").then(() => {});
+    }
+  } catch (error) {
+    console.error("Error in toggleAdvancedSearch:", error);
   }
 }
 
@@ -1867,20 +2026,22 @@ function closeAllTabs() {
 function customConfirm(message, callback) {
   $("#confirmationMessage").text(message);
   $("#confirmationModal").modal("show");
-  
+
   // Store the callback to execute when confirmed
-  $("#confirmationConfirmBtn").off("click").on("click", function() {
-    $("#confirmationModal").modal("hide");
-    if (callback) {
-      callback();
-    }
-  });
+  $("#confirmationConfirmBtn")
+    .off("click")
+    .on("click", function () {
+      $("#confirmationModal").modal("hide");
+      if (callback) {
+        callback();
+      }
+    });
 }
 
 // Focus restoration after modal dismissal
 function restoreFocusToSearch() {
   // Small delay to ensure modal is fully closed
-  setTimeout(function() {
+  setTimeout(function () {
     if ($("#omni_search").is(":visible")) {
       $("#omni_search").focus();
     } else if ($("#title-search").is(":visible")) {
@@ -2152,10 +2313,75 @@ $(document).ready(function () {
 
   $("#search_form :input").on("keydown", function (e) {
     if (e.code == "Enter") {
+      // Clear any pending live search
+      clearTimeout(searchTimeout);
       $("#search_form").submit();
       return false;
     }
   });
+
+  // Live search with debouncing
+
+  // Function to trigger live search with current filters
+  function triggerLiveSearch() {
+    clearTimeout(searchTimeout);
+    var searchTerm = $("#omni_search").val().trim();
+
+    searchTimeout = setTimeout(() => {
+      // Check if we have either a search term or advanced search filters
+      var hasSearchTerm = searchTerm.length >= 2;
+      var hasAdvancedFilters = false;
+
+      if ($("#advanced-search").is(":visible")) {
+        var title = $("#title-search").val().trim();
+        var artist = $("#artist-search").val().trim();
+        var info = $("#info-search").val().trim();
+        var since = $("#date-search").val();
+        hasAdvancedFilters =
+          title.length > 0 ||
+          artist.length > 0 ||
+          info.length > 0 ||
+          since.length > 0;
+      }
+
+      if (hasSearchTerm || hasAdvancedFilters) {
+        performLiveSearch(searchTerm);
+      } else {
+        // Clear results when no search term and no advanced filters
+        $("#search_results tbody").find("tr").remove();
+        $("#search_results thead").hide();
+      }
+    }, 300); // 300ms debounce
+  }
+
+  // Live search on search term input
+  $("#omni_search").on("input", function () {
+    triggerLiveSearch();
+  });
+
+  // Live search when category filter changes
+  $("#category_select").on("change", function () {
+    var searchTerm = $("#omni_search").val().trim();
+    if (searchTerm.length >= 2) {
+      triggerLiveSearch();
+    }
+  });
+
+  // Live search when advanced search fields change
+  $("#title-search, #artist-search, #info-search, #date-search").on(
+    "input change",
+    function () {
+      // When advanced search is active, trigger live search even if omni_search is empty
+      if ($("#advanced-search").is(":visible")) {
+        triggerLiveSearch();
+      } else {
+        var searchTerm = $("#omni_search").val().trim();
+        if (searchTerm.length >= 2) {
+          triggerLiveSearch();
+        }
+      }
+    }
+  );
 
   $("#omni_search").on("keydown", function (e) {
     if (e.code == "Tab") {
@@ -2169,6 +2395,8 @@ $(document).ready(function () {
   });
 
   $("#reset_button").on("click", function () {
+    // Clear any pending live search
+    clearTimeout(searchTimeout);
     $("#search_form").trigger("reset");
     $("#omni_search").focus();
     $("#search_results tbody").find("tr").remove();
@@ -2177,6 +2405,7 @@ $(document).ready(function () {
   });
 
   $("#advanced_search_button").on("click", function () {
+    console.log("Advanced search button clicked");
     toggleAdvancedSearch();
     return false;
   });
