@@ -6,6 +6,10 @@
  * and displays results.
  */
 
+// Global variables
+let fontSize = 11;
+let categories = {};
+
 /**
  * Perform a search on the database
  * This is the main search function that handles both basic and advanced search

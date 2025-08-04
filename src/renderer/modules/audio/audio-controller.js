@@ -5,6 +5,11 @@
  * in the MxVoice Electron application.
  */
 
+// Global variables
+let holdingTankMode = "storage"; // 'storage' or 'playlist'
+let autoplay = false;
+let sound = null;
+
 /**
  * Stop audio playback
  * 

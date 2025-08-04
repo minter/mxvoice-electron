@@ -5,6 +5,9 @@
  * time formatting, loading state checks, and progress tracking.
  */
 
+// Import shared state
+import sharedState from '../shared-state.js';
+
 /**
  * Howler.js utility functions for audio operations
  * 
@@ -38,11 +41,20 @@ const howlerUtils = {
    * This function handles real-time audio progress updates
    */
   updateTimeTracker: function () {
-    if (!howlerUtils.isLoaded(sound)) {
-      cancelAnimationFrame(globalAnimation);
-      wavesurfer.empty();
+    const sound = sharedState.get('sound');
+    const globalAnimation = sharedState.get('globalAnimation');
+    const wavesurfer = sharedState.get('wavesurfer');
+    
+    if (!sound || !howlerUtils.isLoaded(sound)) {
+      if (globalAnimation) {
+        cancelAnimationFrame(globalAnimation);
+      }
+      if (wavesurfer) {
+        wavesurfer.empty();
+      }
       return;
     }
+    
     var self = this;
     var seek = sound.seek() || 0;
     var remaining = self.duration() - seek;
@@ -50,12 +62,16 @@ const howlerUtils = {
     var remainingTime = howlerUtils.formatTime(Math.round(remaining));
     var percent_elapsed = seek / self.duration();
     $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
-    if (!isNaN(percent_elapsed)) wavesurfer.seekTo(percent_elapsed);
+    if (!isNaN(percent_elapsed) && wavesurfer) {
+      wavesurfer.seekTo(percent_elapsed);
+    }
     $("#timer").text(currentTime);
     $("#duration").text(`-${remainingTime}`);
-    globalAnimation = requestAnimationFrame(
+    
+    const newAnimation = requestAnimationFrame(
       howlerUtils.updateTimeTracker.bind(self)
     );
+    sharedState.set('globalAnimation', newAnimation);
   },
 };
 

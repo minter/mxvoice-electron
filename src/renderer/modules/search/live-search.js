@@ -6,6 +6,10 @@
  * advanced filtering capabilities.
  */
 
+// Global variables
+let fontSize = 11;
+let categories = {};
+
 /**
  * Perform live search with real-time results
  * 
