@@ -206,7 +206,12 @@ function saveHotkeysToStore() {
       
       console.log('🔄 Hotkeys module instance created successfully');
       console.log('🔄 hotkeysInstance.populateHotkeys available:', typeof hotkeysInstance.populateHotkeys);
-      window.clearHotkeys = hotkeysInstance.clearHotkeys.bind(hotkeysInstance);
+      // Create a synchronous wrapper for clearHotkeys since it's called from HTML onclick
+      window.clearHotkeys = function() {
+        hotkeysInstance.clearHotkeys().catch(error => {
+          console.error('❌ Error in clearHotkeys:', error);
+        });
+      };
       window.renameHotkeyTab = hotkeysInstance.renameHotkeyTab.bind(hotkeysInstance);
       window.playSongFromHotkey = hotkeysInstance.playSongFromHotkey.bind(hotkeysInstance);
       window.switchToHotkeyTab = hotkeysInstance.switchToHotkeyTab.bind(hotkeysInstance);

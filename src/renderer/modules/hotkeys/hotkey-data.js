@@ -140,10 +140,11 @@ function fallbackSetLabelFromSongId(song_id, element, options = {}) {
  * 
  * @param {Object} options - Options object containing dependencies
  */
-function clearHotkeys(options = {}) {
+async function clearHotkeys(options = {}) {
   const { saveHotkeysToStore } = options;
   
-  customConfirm("Are you sure you want clear your hotkeys?", () => {
+  const confirmed = await customConfirm("Are you sure you want clear your hotkeys?");
+  if (confirmed) {
     for (let key = 1; key <= 12; key++) {
       $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
       $(`.hotkeys.active #f${key}_hotkey span`).html("");
@@ -151,7 +152,7 @@ function clearHotkeys(options = {}) {
     if (saveHotkeysToStore) {
       saveHotkeysToStore();
     }
-  });
+  }
 }
 
 /**

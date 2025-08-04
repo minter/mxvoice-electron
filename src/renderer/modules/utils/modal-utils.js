@@ -42,7 +42,24 @@ export function customConfirm(message, title = 'Confirm') {
     const cancelBtn = modal.querySelector('.btn-secondary');
 
     const cleanup = () => {
-      document.body.removeChild(modal);
+      // Hide the modal properly using Bootstrap
+      $(modal).modal('hide');
+      
+      // Remove the modal backdrop
+      const backdrop = document.querySelector('.modal-backdrop');
+      if (backdrop) {
+        backdrop.remove();
+      }
+      
+      // Remove modal-open class from body
+      document.body.classList.remove('modal-open');
+      
+      // Remove the modal element
+      setTimeout(() => {
+        if (document.body.contains(modal)) {
+          document.body.removeChild(modal);
+        }
+      }, 150); // Small delay to ensure Bootstrap animations complete
     };
 
     confirmBtn.addEventListener('click', () => {
@@ -106,7 +123,24 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
     const input = modal.querySelector('.prompt-input');
 
     const cleanup = () => {
-      document.body.removeChild(modal);
+      // Hide the modal properly using Bootstrap
+      $(modal).modal('hide');
+      
+      // Remove the modal backdrop
+      const backdrop = document.querySelector('.modal-backdrop');
+      if (backdrop) {
+        backdrop.remove();
+      }
+      
+      // Remove modal-open class from body
+      document.body.classList.remove('modal-open');
+      
+      // Remove the modal element
+      setTimeout(() => {
+        if (document.body.contains(modal)) {
+          document.body.removeChild(modal);
+        }
+      }, 150); // Small delay to ensure Bootstrap animations complete
     };
 
     confirmBtn.addEventListener('click', () => {
