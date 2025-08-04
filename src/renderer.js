@@ -777,7 +777,7 @@ function addToHoldingTank(song_id, element) {
         } else {
           var song_row = document.createElement("li");
           song_row.style.fontSize = `${fontSize}px`;
-          song_row.className = "song list-group-item";
+          song_row.className = "song list-group-item context-menu";
           song_row.setAttribute("draggable", "true");
           song_row.setAttribute("ondragstart", "songDrag(event)");
           song_row.setAttribute("songid", song_id);
@@ -810,7 +810,7 @@ function addToHoldingTank(song_id, element) {
           } else {
             var song_row = document.createElement("li");
             song_row.style.fontSize = `${fontSize}px`;
-            song_row.className = "song list-group-item";
+            song_row.className = "song list-group-item context-menu";
             song_row.setAttribute("draggable", "true");
             song_row.setAttribute("ondragstart", "songDrag(event)");
             song_row.setAttribute("songid", song_id);
@@ -845,7 +845,7 @@ function addToHoldingTank(song_id, element) {
         } else {
           var song_row = document.createElement("li");
           song_row.style.fontSize = `${fontSize}px`;
-          song_row.className = "song list-group-item";
+          song_row.className = "song list-group-item context-menu";
           song_row.setAttribute("draggable", "true");
           song_row.setAttribute("ondragstart", "songDrag(event)");
           song_row.setAttribute("songid", song_id);
@@ -879,7 +879,7 @@ function addToHoldingTank(song_id, element) {
       } else {
         var song_row = document.createElement("li");
         song_row.style.fontSize = `${fontSize}px`;
-        song_row.className = "song list-group-item";
+        song_row.className = "song list-group-item context-menu";
         song_row.setAttribute("draggable", "true");
         song_row.setAttribute("ondragstart", "songDrag(event)");
         song_row.setAttribute("songid", song_id);
@@ -1377,6 +1377,25 @@ function deleteSong() {
   }
 }
 
+function removeFromHoldingTank() {
+  var songId = $("#selected_row").attr("songid");
+  if (songId) {
+    console.log(`Preparing to remove song ${songId} from holding tank`);
+    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
+    var songRow = songStmt.get(songId);
+    
+    customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`, function() {
+      console.log("Proceeding with removal from holding tank");
+      // Remove the selected row from the holding tank
+      $("#selected_row").remove();
+      // Clear the selection
+      $("#selected_row").removeAttr("id");
+      // Save the updated holding tank to store
+      saveHoldingTankToStore();
+    });
+  }
+}
+
 function scale_scrollable() {
   var advanced_search_height = $("#advanced-search").is(":visible") ? 38 : 0;
   if ($("#advanced-search").is(":visible")) {
@@ -1589,48 +1608,13 @@ function editSelectedSong() {
   }
 }
 function deleteSelectedSong() {
-  var songId = $("#selected_row").attr("songid");
-  if (songId) {
-    console.log(`Preparing to delete song ${songId}`);
-    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    var songRow = songStmt.get(songId);
-    var filename = songRow.filename;
-    
-    customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`, function() {
-      console.log("Proceeding with delete");
-      const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
-      if (deleteStmt.run(songId)) {
-        window.electronAPI.store.get("music_directory").then(musicDirectory => {
-          window.electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
-            if (joinResult.success) {
-              const filePath = joinResult.data;
-              window.electronAPI.fileSystem.delete(filePath).then(result => {
-                if (result.success) {
-                  console.log('✅ File deleted successfully');
-                } else {
-                  console.warn('❌ Failed to delete file:', result.error);
-                }
-              }).catch(error => {
-                console.warn('❌ File deletion error:', error);
-              });
-            } else {
-              console.warn('❌ Failed to join path:', joinResult.error);
-            }
-          }).catch(error => {
-            console.warn('❌ Path join error:', error);
-          });
-          // Remove song anywhere it appears
-          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-          $(`.hotkeys li span[songid=${songId}]`).remove();
-          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-          $(`#search_results tr[songid=${songId}]`).remove();
-          saveHoldingTankToStore();
-          saveHotkeysToStore();
-        });
-      } else {
-        console.log("Error deleting song from database");
-      }
-    });
+  // Check if the selected row is in the holding tank
+  if ($("#holding-tank-column").has($("#selected_row")).length) {
+    // If in holding tank, remove from holding tank
+    removeFromHoldingTank();
+  } else {
+    // If not in holding tank, delete from database
+    deleteSong();
   }
 }
 
@@ -2182,7 +2166,14 @@ $(document).ready(function () {
   });
 
   Mousetrap.bind(["backspace", "del"], function () {
-    deleteSong();
+    // Check if the selected row is in the holding tank
+    if ($("#holding-tank-column").has($("#selected_row")).length) {
+      // If in holding tank, remove from holding tank
+      removeFromHoldingTank();
+    } else {
+      // If not in holding tank, delete from database
+      deleteSong();
+    }
     return false;
   });
 
@@ -2226,7 +2217,14 @@ $(document).ready(function () {
         },
       },
       delete: {
-        name: "Delete",
+        name: function() {
+          // Check if the selected row is in the holding tank
+          if ($("#holding-tank-column").has($("#selected_row")).length) {
+            return "Remove from Holding Tank";
+          } else {
+            return "Delete";
+          }
+        },
         icon: "fas fa-trash-alt",
         callback: function (key, opt) {
           deleteSelectedSong();
