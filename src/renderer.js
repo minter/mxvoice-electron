@@ -992,12 +992,15 @@ function playSongFromId(song_id) {
                   $("#pause_button").removeClass("d-none");
                   $("#stop_button").removeAttr("disabled");
                 },
-                onend: function () {
-                  song_ended();
-                  if (autoplay && holdingTankMode === "playlist") {
-                    autoplay_next();
-                  }
-                },
+              onend: function () {
+                song_ended();
+                if (loop) {
+                  // If loop mode is enabled, restart the current song
+                  playSongFromId(song_id);
+                } else if (autoplay && holdingTankMode === "playlist") {
+                  autoplay_next();
+                }
+              },
               });
               sound.play();
             } else {
@@ -1043,7 +1046,10 @@ function playSongFromId(song_id) {
               },
               onend: function () {
                 song_ended();
-                if (autoplay && holdingTankMode === "playlist") {
+                if (loop) {
+                  // If loop mode is enabled, restart the current song
+                  playSongFromId(song_id);
+                } else if (autoplay && holdingTankMode === "playlist") {
                   autoplay_next();
                 }
               },
