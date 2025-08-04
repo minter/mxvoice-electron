@@ -1,22 +1,29 @@
-// Modular Main Process
-// Coordinates all main process modules
+/**
+ * Main Process Entry Point
+ * 
+ * This is the main entry point for the MxVoice Electron application.
+ * It handles app initialization, IPC setup, and main process functionality.
+ */
 
-const { app, ipcMain } = require('electron');
-const path = require('path');
-const { is } = require('electron-util');
-const os = require('os');
-const fs = require('fs');
-const readlines = require('n-readlines');
-const Store = require('electron-store');
-const log = require('electron-log');
-const Database = require('better-sqlite3');
-const { Howl, Howler } = require('howler');
-const { autoUpdater } = require("electron-updater");
+import { app, ipcMain } from 'electron';
+import path from 'path';
+import { is } from 'electron-util';
+import os from 'os';
+import fs from 'fs';
+import readlines from 'n-readlines';
+import Store from 'electron-store';
+import log from 'electron-log';
+import Database from 'better-sqlite3';
+import { Howl, Howler } from 'howler';
+import { autoUpdater } from "electron-updater";
+import markdownIt from 'markdown-it';
+import electronReload from 'electron-reload';
+import electronSquirrelStartup from 'electron-squirrel-startup';
 
-// Import modules
-const appSetup = require('./modules/app-setup');
-const ipcHandlers = require('./modules/ipc-handlers');
-const fileOperations = require('./modules/file-operations');
+// Import main process modules
+import * as appSetup from './modules/app-setup.js';
+import * as ipcHandlers from './modules/ipc-handlers.js';
+import * as fileOperations from './modules/file-operations.js';
 
 console.log = log.log;
 
@@ -31,7 +38,7 @@ import("@octokit/rest")
   });
 
 // Initialize markdown parser
-var md = require('markdown-it')();
+var md = markdownIt();
 
 // Store configuration
 const defaults = {
@@ -49,8 +56,8 @@ const store = new Store({
 });
 
 // Auto-updater configuration
-autoUpdater.logger = require("electron-log")
-autoUpdater.logger.transports.file.level = "info"
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = "info";
 
 // Set architecture-aware update feed URL for macOS
 if (process.platform === "darwin") {
@@ -67,11 +74,11 @@ let audioInstances = new Map(); // Track audio instances in main process
 
 // Enable live reload
 if (is.development) {
-  require("electron-reload")(__dirname);
+  electronReload(__dirname);
 }
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
+if (electronSquirrelStartup) {
   app.quit();
 }
 
@@ -115,7 +122,7 @@ function checkFirstRun() {
       fs.mkdirSync(store.get('music_directory'), { recursive: true });
       fs.mkdirSync(store.get('hotkey_directory'), { recursive: true });
 
-      const initDb = require('better-sqlite3')(path.join(store.get('database_directory'), 'mxvoice.db'));
+      const initDb = Database(path.join(store.get('database_directory'), 'mxvoice.db'));
       initDb.exec(`CREATE TABLE IF NOT EXISTS 'categories' (   code varchar(8) NOT NULL,   description varchar(255) NOT NULL );
 CREATE TABLE IF NOT EXISTS mrvoice (   id INTEGER PRIMARY KEY,   title varchar(255) NOT NULL,   artist varchar(255),   category varchar(8) NOT NULL,   info varchar(255),   filename varchar(255) NOT NULL,   time varchar(10),   modtime timestamp(6),   publisher varchar(16),   md5 varchar(32) );
 CREATE UNIQUE INDEX IF NOT EXISTS 'category_code_index' ON categories(code);
@@ -254,7 +261,15 @@ function testModularMain() {
 setupApp();
 
 // Export for testing
-module.exports = {
+export {
+  appSetup,
+  ipcHandlers,
+  fileOperations,
+  testModularMain
+};
+
+// Default export for module loading
+export default {
   appSetup,
   ipcHandlers,
   fileOperations,

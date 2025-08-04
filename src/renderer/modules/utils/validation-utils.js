@@ -1,52 +1,71 @@
 /**
- * Validation Utilities Module
+ * Validation Utilities
  * 
- * This module contains utility functions for data validation
- * in the MxVoice Electron application.
+ * Provides validation functions for the MxVoice Electron application
  */
 
 /**
- * Validate if a value is a valid song ID
+ * Validate song ID format
  * 
- * @param {any} songId - The value to validate
- * @returns {boolean} - True if valid song ID, false otherwise
+ * @param {string} songId - The song ID to validate
+ * @returns {boolean} - True if valid, false otherwise
  */
-function isValidSongId(songId) {
-  return songId && typeof songId === 'string' && songId.trim().length > 0;
+export function isValidSongId(songId) {
+  if (!songId || typeof songId !== 'string') {
+    return false;
+  }
+  
+  // Song ID should be a non-empty string
+  return songId.trim().length > 0;
 }
 
 /**
- * Validate if a value is a valid category code
+ * Validate category code format
  * 
- * @param {any} categoryCode - The value to validate
- * @returns {boolean} - True if valid category code, false otherwise
+ * @param {string} categoryCode - The category code to validate
+ * @returns {boolean} - True if valid, false otherwise
  */
-function isValidCategoryCode(categoryCode) {
-  return categoryCode && typeof categoryCode === 'string' && categoryCode.trim().length > 0;
+export function isValidCategoryCode(categoryCode) {
+  if (!categoryCode || typeof categoryCode !== 'string') {
+    return false;
+  }
+  
+  // Category code should be a non-empty string
+  return categoryCode.trim().length > 0;
 }
 
 /**
- * Validate if a value is a valid file path
+ * Validate file path format
  * 
- * @param {any} filePath - The value to validate
- * @returns {boolean} - True if valid file path, false otherwise
+ * @param {string} filePath - The file path to validate
+ * @returns {boolean} - True if valid, false otherwise
  */
-function isValidFilePath(filePath) {
-  return filePath && typeof filePath === 'string' && filePath.trim().length > 0;
+export function isValidFilePath(filePath) {
+  if (!filePath || typeof filePath !== 'string') {
+    return false;
+  }
+  
+  // File path should be a non-empty string
+  return filePath.trim().length > 0;
 }
 
 /**
- * Validate if a value is a valid hotkey identifier
+ * Validate hotkey format
  * 
- * @param {any} hotkey - The value to validate
- * @returns {boolean} - True if valid hotkey, false otherwise
+ * @param {string} hotkey - The hotkey to validate
+ * @returns {boolean} - True if valid, false otherwise
  */
-function isValidHotkey(hotkey) {
-  return hotkey && typeof hotkey === 'string' && /^f\d+$/.test(hotkey);
+export function isValidHotkey(hotkey) {
+  if (!hotkey || typeof hotkey !== 'string') {
+    return false;
+  }
+  
+  // Hotkey should be a non-empty string
+  return hotkey.trim().length > 0;
 }
 
-// Export the validation utilities
-module.exports = {
+// Default export for module loading
+export default {
   isValidSongId,
   isValidCategoryCode,
   isValidFilePath,

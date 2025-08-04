@@ -1,15 +1,14 @@
 /**
- * Hotkeys Module
+ * Hotkeys Module Index
  * 
- * Manages F1-F12 hotkey functionality for quick song access
- * Provides drag & drop, file import/export, and tab management
- * 
- * @module hotkeys
+ * This module serves as the main entry point for all hotkey-related functionality
+ * in the MxVoice Electron application.
  */
 
-const hotkeyData = require('./hotkey-data');
-const hotkeyOperations = require('./hotkey-operations');
-const hotkeyUI = require('./hotkey-ui');
+// Import hotkey sub-modules
+import * as hotkeyData from './hotkey-data.js';
+import * as hotkeyOperations from './hotkey-operations.js';
+import * as hotkeyUI from './hotkey-ui.js';
 
 /**
  * Hotkeys Module Class
@@ -604,4 +603,9 @@ class HotkeysModule {
   }
 }
 
-module.exports = HotkeysModule; 
+export default HotkeysModule;
+
+// Named exports for backward compatibility
+export {
+  HotkeysModule
+}; 

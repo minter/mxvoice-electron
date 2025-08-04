@@ -342,16 +342,19 @@ function restoreHotkeyConfig(backup, options = {}) {
   importHotkeyConfig(backup.hotkeys, options);
 }
 
-module.exports = {
-  saveHotkeysToStore,
-  loadHotkeysFromStore,
-  openHotkeyFile,
-  saveHotkeyFile,
-  playSongFromHotkey,
-  sendToHotkeys,
-  removeFromHotkey,
+export {
   exportHotkeyConfig,
   importHotkeyConfig,
-  backupHotkeyConfig,
-  restoreHotkeyConfig
+  clearHotkeyConfig,
+  getHotkeyConfig,
+  setHotkeyConfig
+};
+
+// Default export for module loading
+export default {
+  exportHotkeyConfig,
+  importHotkeyConfig,
+  clearHotkeyConfig,
+  getHotkeyConfig,
+  setHotkeyConfig
 }; 

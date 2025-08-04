@@ -1,39 +1,35 @@
 /**
- * Animation Utilities Module
+ * Animation Utilities
  * 
- * This module contains utility functions for handling CSS animations
- * in the MxVoice Electron application.
+ * Provides CSS animation utilities for the MxVoice Electron application
  */
 
 /**
- * Animate an element using CSS animations
+ * Animate CSS class on an element
  * 
- * @param {jQuery|HTMLElement} element - The element to animate
- * @param {string} animation - The animation name (without prefix)
- * @param {string} speed - The animation speed (optional)
- * @param {string} prefix - The CSS class prefix (default: "animate__")
+ * @param {HTMLElement} element - The element to animate
+ * @param {string} animation - The CSS animation class name
+ * @param {string} prefix - The CSS prefix (default: 'animate__')
  * @returns {Promise} - Promise that resolves when animation completes
  */
-const animateCSS = (element, animation, speed = "", prefix = "animate__") =>
-  // We create a Promise and return it
-  new Promise((resolve, reject) => {
-    const animationName = `${prefix}${animation} ${speed}`;
+export function animateCSS(element, animation, prefix = 'animate__') {
+  return new Promise((resolve, reject) => {
+    const animationName = `${prefix}${animation}`;
     const node = element;
 
-    node.addClass(`${prefix}animated ${animationName}`);
+    node.classList.add(`${prefix}animated`, animationName);
 
-    // When the animation ends, we clean the classes and resolve the Promise
-    function handleAnimationEnd() {
-      node.removeClass(`${prefix}animated ${animationName}`);
-      node.off("animationend", handleAnimationEnd);
-
-      resolve("Animation ended");
+    function handleAnimationEnd(event) {
+      event.stopPropagation();
+      node.classList.remove(`${prefix}animated`, animationName);
+      resolve('Animation ended');
     }
 
-    node.on("animationend", handleAnimationEnd);
+    node.addEventListener('animationend', handleAnimationEnd, { once: true });
   });
+}
 
-// Export the animation utilities
-module.exports = {
+// Default export for module loading
+export default {
   animateCSS
 }; 

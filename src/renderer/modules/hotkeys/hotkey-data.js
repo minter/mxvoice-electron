@@ -236,13 +236,17 @@ function validateHotkeyData(hotkeyData) {
   return true;
 }
 
-module.exports = {
-  populateHotkeys,
-  setLabelFromSongId,
-  fallbackSetLabelFromSongId,
-  clearHotkeys,
+export {
   getHotkeyData,
-  getHotkeyTitle,
   setHotkeyData,
+  clearHotkeys,
+  validateHotkeyData
+};
+
+// Default export for module loading
+export default {
+  getHotkeyData,
+  setHotkeyData,
+  clearHotkeys,
   validateHotkeyData
 }; 

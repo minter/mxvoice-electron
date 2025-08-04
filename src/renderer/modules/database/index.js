@@ -7,10 +7,10 @@
  */
 
 // Import database sub-modules
-const dataPopulation = require('./data-population');
-const storeOperations = require('./store-operations');
-const uiOperations = require('./ui-operations');
-const databaseOperations = require('./database-operations');
+import * as dataPopulation from './data-population.js';
+import * as storeOperations from './store-operations.js';
+import * as uiOperations from './ui-operations.js';
+import * as databaseOperations from './database-operations.js';
 
 /**
  * Database Module Class
@@ -111,151 +111,151 @@ class DatabaseModule {
    */
   test() {
     const results = {
-      population: {},
-      store: {},
-      ui: {},
-      operations: {}
+      dataPopulation: {},
+      storeOperations: {},
+      uiOperations: {},
+      databaseOperations: {}
     };
 
     // Test data population functions
     try {
       if (typeof this.populateCategorySelect === 'function') {
-        results.population.populateCategorySelect = '✅ Function exists';
+        results.dataPopulation.populateCategorySelect = '✅ Function exists';
       } else {
-        results.population.populateCategorySelect = '❌ Function missing';
+        results.dataPopulation.populateCategorySelect = '❌ Function missing';
       }
 
       if (typeof this.setLabelFromSongId === 'function') {
-        results.population.setLabelFromSongId = '✅ Function exists';
+        results.dataPopulation.setLabelFromSongId = '✅ Function exists';
       } else {
-        results.population.setLabelFromSongId = '❌ Function missing';
+        results.dataPopulation.setLabelFromSongId = '❌ Function missing';
       }
 
       if (typeof this.addToHoldingTank === 'function') {
-        results.population.addToHoldingTank = '✅ Function exists';
+        results.dataPopulation.addToHoldingTank = '✅ Function exists';
       } else {
-        results.population.addToHoldingTank = '❌ Function missing';
+        results.dataPopulation.addToHoldingTank = '❌ Function missing';
       }
 
       if (typeof this.populateHotkeys === 'function') {
-        results.population.populateHotkeys = '✅ Function exists';
+        results.dataPopulation.populateHotkeys = '✅ Function exists';
       } else {
-        results.population.populateHotkeys = '❌ Function missing';
+        results.dataPopulation.populateHotkeys = '❌ Function missing';
       }
 
       if (typeof this.populateHoldingTank === 'function') {
-        results.population.populateHoldingTank = '✅ Function exists';
+        results.dataPopulation.populateHoldingTank = '✅ Function exists';
       } else {
-        results.population.populateHoldingTank = '❌ Function missing';
+        results.dataPopulation.populateHoldingTank = '❌ Function missing';
       }
 
       if (typeof this.populateCategoriesModal === 'function') {
-        results.population.populateCategoriesModal = '✅ Function exists';
+        results.dataPopulation.populateCategoriesModal = '✅ Function exists';
       } else {
-        results.population.populateCategoriesModal = '❌ Function missing';
+        results.dataPopulation.populateCategoriesModal = '❌ Function missing';
       }
     } catch (error) {
-      results.population.error = `❌ Error: ${error.message}`;
+      results.dataPopulation.error = `❌ Error: ${error.message}`;
     }
 
     // Test store operation functions
     try {
       if (typeof this.saveHoldingTankToStore === 'function') {
-        results.store.saveHoldingTankToStore = '✅ Function exists';
+        results.storeOperations.saveHoldingTankToStore = '✅ Function exists';
       } else {
-        results.store.saveHoldingTankToStore = '❌ Function missing';
+        results.storeOperations.saveHoldingTankToStore = '❌ Function missing';
       }
 
       if (typeof this.saveHotkeysToStore === 'function') {
-        results.store.saveHotkeysToStore = '✅ Function exists';
+        results.storeOperations.saveHotkeysToStore = '✅ Function exists';
       } else {
-        results.store.saveHotkeysToStore = '❌ Function missing';
+        results.storeOperations.saveHotkeysToStore = '❌ Function missing';
       }
     } catch (error) {
-      results.store.error = `❌ Error: ${error.message}`;
+      results.storeOperations.error = `❌ Error: ${error.message}`;
     }
 
     // Test UI operation functions
     try {
       if (typeof this.scaleScrollable === 'function') {
-        results.ui.scaleScrollable = '✅ Function exists';
+        results.uiOperations.scaleScrollable = '✅ Function exists';
       } else {
-        results.ui.scaleScrollable = '❌ Function missing';
+        results.uiOperations.scaleScrollable = '❌ Function missing';
       }
     } catch (error) {
-      results.ui.error = `❌ Error: ${error.message}`;
+      results.uiOperations.error = `❌ Error: ${error.message}`;
     }
 
     // Test database operation functions
     try {
       if (typeof this.editCategory === 'function') {
-        results.operations.editCategory = '✅ Function exists';
+        results.databaseOperations.editCategory = '✅ Function exists';
       } else {
-        results.operations.editCategory = '❌ Function missing';
+        results.databaseOperations.editCategory = '❌ Function missing';
       }
 
       if (typeof this.deleteCategory === 'function') {
-        results.operations.deleteCategory = '✅ Function exists';
+        results.databaseOperations.deleteCategory = '✅ Function exists';
       } else {
-        results.operations.deleteCategory = '❌ Function missing';
+        results.databaseOperations.deleteCategory = '❌ Function missing';
       }
 
       if (typeof this.addNewCategory === 'function') {
-        results.operations.addNewCategory = '✅ Function exists';
+        results.databaseOperations.addNewCategory = '✅ Function exists';
       } else {
-        results.operations.addNewCategory = '❌ Function missing';
+        results.databaseOperations.addNewCategory = '❌ Function missing';
       }
 
       if (typeof this.saveEditedSong === 'function') {
-        results.operations.saveEditedSong = '✅ Function exists';
+        results.databaseOperations.saveEditedSong = '✅ Function exists';
       } else {
-        results.operations.saveEditedSong = '❌ Function missing';
+        results.databaseOperations.saveEditedSong = '❌ Function missing';
       }
 
       if (typeof this.saveNewSong === 'function') {
-        results.operations.saveNewSong = '✅ Function exists';
+        results.databaseOperations.saveNewSong = '✅ Function exists';
       } else {
-        results.operations.saveNewSong = '❌ Function missing';
+        results.databaseOperations.saveNewSong = '❌ Function missing';
       }
 
       if (typeof this.deleteSong === 'function') {
-        results.operations.deleteSong = '✅ Function exists';
+        results.databaseOperations.deleteSong = '✅ Function exists';
       } else {
-        results.operations.deleteSong = '❌ Function missing';
+        results.databaseOperations.deleteSong = '❌ Function missing';
       }
 
       if (typeof this.getSongById === 'function') {
-        results.operations.getSongById = '✅ Function exists';
+        results.databaseOperations.getSongById = '✅ Function exists';
       } else {
-        results.operations.getSongById = '❌ Function missing';
+        results.databaseOperations.getSongById = '❌ Function missing';
       }
 
       if (typeof this.addSongsByPath === 'function') {
-        results.operations.addSongsByPath = '✅ Function exists';
+        results.databaseOperations.addSongsByPath = '✅ Function exists';
       } else {
-        results.operations.addSongsByPath = '❌ Function missing';
+        results.databaseOperations.addSongsByPath = '❌ Function missing';
       }
 
       if (typeof this.executeQuery === 'function') {
-        results.operations.executeQuery = '✅ Function exists';
+        results.databaseOperations.executeQuery = '✅ Function exists';
       } else {
-        results.operations.executeQuery = '❌ Function missing';
+        results.databaseOperations.executeQuery = '❌ Function missing';
       }
 
       if (typeof this.executeStatement === 'function') {
-        results.operations.executeStatement = '✅ Function exists';
+        results.databaseOperations.executeStatement = '✅ Function exists';
       } else {
-        results.operations.executeStatement = '❌ Function missing';
+        results.databaseOperations.executeStatement = '❌ Function missing';
       }
     } catch (error) {
-      results.operations.error = `❌ Error: ${error.message}`;
+      results.databaseOperations.error = `❌ Error: ${error.message}`;
     }
 
     return results;
   }
 
   /**
-   * Get database module information
+   * Get module information
    * 
    * @returns {Object} - Module information
    */
@@ -263,36 +263,8 @@ class DatabaseModule {
     return {
       name: 'Database Module',
       version: '1.0.0',
-      description: 'Handles database-related UI operations including data population, store persistence, and database operations',
-      functions: {
-        population: [
-          'populateCategorySelect',
-          'setLabelFromSongId',
-          'addToHoldingTank',
-          'populateHotkeys',
-          'populateHoldingTank',
-          'populateCategoriesModal'
-        ],
-        store: [
-          'saveHoldingTankToStore',
-          'saveHotkeysToStore'
-        ],
-        ui: [
-          'scaleScrollable'
-        ],
-        operations: [
-          'editCategory',
-          'deleteCategory',
-          'addNewCategory',
-          'saveEditedSong',
-          'saveNewSong',
-          'deleteSong',
-          'getSongById',
-          'addSongsByPath',
-          'executeQuery',
-          'executeStatement'
-        ]
-      }
+      description: 'Provides database-related UI operations and data persistence',
+      functions: this.getAllDatabaseFunctions()
     };
   }
 }
@@ -301,12 +273,37 @@ class DatabaseModule {
 const databaseModule = new DatabaseModule();
 
 // Export the module instance and individual functions for backward compatibility
-module.exports = {
+export {
   // Module instance
   DatabaseModule,
   database: databaseModule,
   
   // Individual functions (for direct access)
+  populateCategorySelect: databaseModule.populateCategorySelect,
+  setLabelFromSongId: databaseModule.setLabelFromSongId,
+  addToHoldingTank: databaseModule.addToHoldingTank,
+  populateHotkeys: databaseModule.populateHotkeys,
+  populateHoldingTank: databaseModule.populateHoldingTank,
+  populateCategoriesModal: databaseModule.populateCategoriesModal,
+  saveHoldingTankToStore: databaseModule.saveHoldingTankToStore,
+  saveHotkeysToStore: databaseModule.saveHotkeysToStore,
+  scaleScrollable: databaseModule.scaleScrollable,
+  editCategory: databaseModule.editCategory,
+  deleteCategory: databaseModule.deleteCategory,
+  addNewCategory: databaseModule.addNewCategory,
+  saveEditedSong: databaseModule.saveEditedSong,
+  saveNewSong: databaseModule.saveNewSong,
+  deleteSong: databaseModule.deleteSong,
+  getSongById: databaseModule.getSongById,
+  addSongsByPath: databaseModule.addSongsByPath,
+  executeQuery: databaseModule.executeQuery,
+  executeStatement: databaseModule.executeStatement
+};
+
+// Default export for module loading
+export default {
+  DatabaseModule,
+  database: databaseModule,
   populateCategorySelect: databaseModule.populateCategorySelect,
   setLabelFromSongId: databaseModule.setLabelFromSongId,
   addToHoldingTank: databaseModule.addToHoldingTank,

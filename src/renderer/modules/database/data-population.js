@@ -414,7 +414,17 @@ function populateCategoriesModal() {
   }
 }
 
-module.exports = {
+export {
+  populateCategorySelect,
+  setLabelFromSongId,
+  addToHoldingTank,
+  populateHotkeys,
+  populateHoldingTank,
+  populateCategoriesModal
+};
+
+// Default export for module loading
+export default {
   populateCategorySelect,
   setLabelFromSongId,
   addToHoldingTank,

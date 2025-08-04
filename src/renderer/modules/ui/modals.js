@@ -142,6 +142,17 @@ function initializeModals(options = {}) {
   };
 }
 
-module.exports = {
-  initialize: initializeModals
+export {
+  showModal,
+  hideModal,
+  setupModals,
+  validateModals
+};
+
+// Default export for module loading
+export default {
+  showModal,
+  hideModal,
+  setupModals,
+  validateModals
 }; 

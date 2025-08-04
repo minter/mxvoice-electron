@@ -1,10 +1,13 @@
-// File Operations Module
-// Contains all file and directory operations for the main process
+/**
+ * File Operations Module
+ * 
+ * Handles file system operations for the MxVoice Electron application.
+ */
 
-const { dialog } = require('electron');
-const fs = require('fs');
-const path = require('path');
-const readlines = require('n-readlines');
+import { dialog, app } from 'electron';
+import fs from 'fs';
+import path from 'path';
+import readlines from 'n-readlines';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -196,7 +199,6 @@ function addFileDialog() {
 
 // Migrate old preferences
 function migrateOldPreferences() {
-  const { app } = require('electron');
   old_prefs_path = path.resolve(app.getPath('userData'), 'preferences.json');
   if (fs.existsSync(old_prefs_path)) {
     // There is an old preferences file we need to migrate
@@ -222,7 +224,20 @@ function testFileOperations() {
   return true;
 }
 
-module.exports = {
+export {
+  initializeFileOperations,
+  loadHotkeysFile,
+  loadHoldingTankFile,
+  saveHotkeysFile,
+  saveHoldingTankFile,
+  addDirectoryDialog,
+  addFileDialog,
+  migrateOldPreferences,
+  testFileOperations
+};
+
+// Default export for module loading
+export default {
   initializeFileOperations,
   loadHotkeysFile,
   loadHoldingTankFile,

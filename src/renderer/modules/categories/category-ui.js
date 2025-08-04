@@ -1,13 +1,12 @@
 /**
  * Category UI Module
  * 
- * Handles all UI-related operations for categories including populating select dropdowns,
- * modal management, and user interface interactions. This module provides the UI-level
- * operations for categories.
+ * Handles UI operations for categories including rendering, event handling,
+ * and user interactions. This module provides the UI-level operations for categories.
  */
 
 // Import category operations for UI operations
-const categoryOperations = require('./category-operations');
+import * as categoryOperations from './category-operations.js';
 
 /**
  * Populate the category select dropdown

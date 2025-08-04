@@ -6,9 +6,9 @@
  */
 
 // Import all utility modules
-const animationUtils = require('./animation-utils');
-const modalUtils = require('./modal-utils');
-const validationUtils = require('./validation-utils');
+import * as animationUtils from './animation-utils.js';
+import * as modalUtils from './modal-utils.js';
+import * as validationUtils from './validation-utils.js';
 
 /**
  * Utils Module Class
@@ -141,18 +141,46 @@ class UtilsModule {
 
     return results;
   }
+
+  /**
+   * Get module information
+   * 
+   * @returns {Object} - Module information
+   */
+  getInfo() {
+    return {
+      name: 'Utils Module',
+      version: '1.0.0',
+      description: 'Provides utility functions for animation, modals, and validation',
+      functions: this.getAllUtils()
+    };
+  }
 }
 
 // Create and export a singleton instance
 const utilsModule = new UtilsModule();
 
 // Export the module instance and individual utilities for backward compatibility
-module.exports = {
+export {
   // Module instance
   UtilsModule,
   utils: utilsModule,
   
   // Individual utilities (for direct access)
+  animateCSS: utilsModule.animateCSS,
+  customConfirm: utilsModule.customConfirm,
+  customPrompt: utilsModule.customPrompt,
+  restoreFocusToSearch: utilsModule.restoreFocusToSearch,
+  isValidSongId: utilsModule.isValidSongId,
+  isValidCategoryCode: utilsModule.isValidCategoryCode,
+  isValidFilePath: utilsModule.isValidFilePath,
+  isValidHotkey: utilsModule.isValidHotkey
+};
+
+// Default export for module loading
+export default {
+  UtilsModule,
+  utils: utilsModule,
   animateCSS: utilsModule.animateCSS,
   customConfirm: utilsModule.customConfirm,
   customPrompt: utilsModule.customPrompt,

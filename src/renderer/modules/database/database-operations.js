@@ -573,7 +573,21 @@ function executeStatement(sql, params = []) {
   });
 }
 
-module.exports = {
+export {
+  editCategory,
+  deleteCategory,
+  addNewCategory,
+  saveEditedSong,
+  saveNewSong,
+  deleteSong,
+  getSongById,
+  addSongsByPath,
+  executeQuery,
+  executeStatement
+};
+
+// Default export for module loading
+export default {
   editCategory,
   deleteCategory,
   addNewCategory,

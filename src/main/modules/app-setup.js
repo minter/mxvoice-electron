@@ -1,9 +1,13 @@
-// App Setup Module
-// Contains window creation, menu setup, and app lifecycle management
+/**
+ * App Setup Module
+ * 
+ * Handles application setup, window creation, and lifecycle management
+ * for the MxVoice Electron application.
+ */
 
-const { app, BrowserWindow, Menu, dialog } = require('electron');
-const path = require('path');
-const os = require('os');
+import { app, BrowserWindow, Menu, dialog, shell } from 'electron';
+import path from 'path';
+import os from 'os';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -56,7 +60,7 @@ function createWindow() {
           noLink: true
         }).then(result => {
           if (result.response === 1) {
-            require('electron').shell.openExternal('https://mxvoice.app/');
+            shell.openExternal('https://mxvoice.app/');
           }
         });
       }
@@ -68,7 +72,7 @@ function createWindow() {
   // Open the DevTools.
   //mainWindow.webContents.openDevTools();
 
-  mainWindow.$ = mainWindow.jQuery = require('jquery');
+  // mainWindow.$ = mainWindow.jQuery = require('jquery');
   // mainWindow.Bootstrap = require('bootstrap');
 
   mainWindow.on('will-resize', (_event, newBounds) => {
@@ -235,13 +239,13 @@ function createApplicationMenu() {
         {
           label: 'Release Notes For Version ' + app.getVersion(),
           click: () => {
-            require('electron').shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/tag/v${app.getVersion()}`);
+            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/tag/v${app.getVersion()}`);
           }
         },
         {
           label: 'Release Notes For All Versions',
           click: () => {
-            require('electron').shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
           }
         },
         {
@@ -321,13 +325,13 @@ function createApplicationMenu() {
         {
           label: 'Release Notes For Version ' + app.getVersion(),
           click: () => {
-            require('electron').shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/tag/v${app.getVersion()}`);
+            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/tag/v${app.getVersion()}`);
           }
         },
         {
           label: 'Release Notes For All Versions',
           click: () => {
-            require('electron').shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
           }
         },
         {
@@ -455,7 +459,24 @@ function testAppSetup() {
   return true;
 }
 
-module.exports = {
+export {
+  initializeAppSetup,
+  createWindow,
+  createApplicationMenu,
+  setupAppLifecycle,
+  increaseFontSize,
+  decreaseFontSize,
+  toggleWaveform,
+  toggleAdvancedSearch,
+  closeAllTabs,
+  sendDeleteSong,
+  sendEditSong,
+  manageCategories,
+  testAppSetup
+};
+
+// Default export for module loading
+export default {
   initializeAppSetup,
   createWindow,
   createApplicationMenu,

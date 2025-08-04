@@ -305,6 +305,13 @@ function initializeUIManager(options = {}) {
   };
 }
 
-module.exports = {
-  initialize: initializeUIManager
+export {
+  UiManager,
+  uiManager: uiManagerInstance
+};
+
+// Default export for module loading
+export default {
+  UiManager,
+  uiManager: uiManagerInstance
 }; 

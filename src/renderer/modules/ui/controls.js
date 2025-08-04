@@ -168,6 +168,11 @@ function initializeControls(options = {}) {
   };
 }
 
-module.exports = {
-  initialize: initializeControls
+export {
+  initializeControls
+};
+
+// Default export for module loading
+export default {
+  initializeControls
 }; 

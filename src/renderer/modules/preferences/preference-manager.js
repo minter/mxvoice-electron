@@ -160,7 +160,7 @@ function initializePreferenceManager(options = {}) {
     }
   }
   
-  return {
+  const PreferenceManager = {
     openPreferencesModal,
     loadPreferences,
     getDatabaseDirectory,
@@ -168,8 +168,19 @@ function initializePreferenceManager(options = {}) {
     getHotkeyDirectory,
     getFadeOutSeconds
   };
+
+  const preferenceManagerInstance = PreferenceManager;
+
+  return PreferenceManager;
 }
 
-module.exports = {
-  initialize: initializePreferenceManager
+export {
+  PreferenceManager,
+  preferenceManager: preferenceManagerInstance
+};
+
+// Default export for module loading
+export default {
+  PreferenceManager,
+  preferenceManager: preferenceManagerInstance
 }; 

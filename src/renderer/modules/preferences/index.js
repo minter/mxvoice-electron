@@ -1,15 +1,13 @@
 /**
- * Preferences Module - Main Entry Point
+ * Preferences Module Index
  * 
- * This module provides all preferences and settings functionality for the MxVoice application.
- * It includes preference management, settings UI, and configuration persistence.
- * 
- * @module preferences
+ * This module serves as the main entry point for all preferences-related functionality
+ * in the MxVoice Electron application.
  */
 
-// Import all preferences sub-modules
-const preferenceManager = require('./preference-manager');
-const settingsController = require('./settings-controller');
+// Import preferences sub-modules
+import * as preferenceManager from './preference-manager.js';
+import * as settingsController from './settings-controller.js';
 
 /**
  * Initialize the Preferences module
@@ -48,6 +46,13 @@ function initializePreferences(options = {}) {
   };
 }
 
-module.exports = {
-  initialize: initializePreferences
+export {
+  PreferencesModule,
+  preferences: preferencesModule
+};
+
+// Default export for module loading
+export default {
+  PreferencesModule,
+  preferences: preferencesModule
 }; 

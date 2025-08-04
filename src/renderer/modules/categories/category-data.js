@@ -7,7 +7,7 @@
  */
 
 // Import category operations for data operations
-const categoryOperations = require('./category-operations');
+import * as categoryOperations from './category-operations.js';
 
 /**
  * Load categories into the module's internal state

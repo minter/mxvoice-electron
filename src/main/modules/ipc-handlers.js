@@ -1,10 +1,14 @@
-// IPC Handlers Module
-// Contains all IPC handlers for the main process
+/**
+ * IPC Handlers Module
+ * 
+ * Handles all IPC (Inter-Process Communication) between main and renderer processes
+ * for the MxVoice Electron application.
+ */
 
-const { ipcMain, dialog } = require('electron');
-const path = require('path');
-const fs = require('fs');
-const { Howl, Howler } = require('howler');
+import { ipcMain, dialog } from 'electron';
+import path from 'path';
+import fs from 'fs';
+import { Howl, Howler } from 'howler';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -26,10 +30,15 @@ function initializeIpcHandlers(dependencies) {
 
 // Register all IPC handlers
 function registerAllHandlers() {
-  // App operations
-  ipcMain.handle('get-app-path', async (event) => {
-    const result = await require('electron').app.getAppPath();
-    return result;
+  // Get app path handler
+  ipcMain.handle('get-app-path', async () => {
+    try {
+      const result = await app.getAppPath();
+      return { success: true, path: result };
+    } catch (error) {
+      console.error('Error getting app path:', error);
+      return { success: false, error: error.message };
+    }
   });
 
   ipcMain.handle('show-directory-picker', async (event, defaultPath) => {
@@ -500,7 +509,15 @@ function testIpcHandlers() {
   return true;
 }
 
-module.exports = {
+export {
+  initializeIpcHandlers,
+  registerAllHandlers,
+  removeAllHandlers,
+  testIpcHandlers
+};
+
+// Default export for module loading
+export default {
   initializeIpcHandlers,
   registerAllHandlers,
   removeAllHandlers,

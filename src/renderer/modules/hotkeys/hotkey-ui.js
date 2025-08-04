@@ -373,7 +373,35 @@ function getUnassignedHotkeys() {
   return unassigned;
 }
 
-module.exports = {
+export {
+  hotkeyDrop,
+  allowHotkeyDrop,
+  switchToHotkeyTab,
+  renameHotkeyTab,
+  setupHotkeyEventListeners,
+  initHotkeyTabs,
+  getActiveHotkeyTab,
+  setActiveHotkeyTab,
+  getHotkeyElement,
+  getAllHotkeyElements,
+  highlightHotkey,
+  clearHotkeyHighlighting,
+  updateHotkeyDisplay,
+  validateHotkeyElement,
+  createHotkeyElement,
+  removeHotkeyElement,
+  getHotkeySongId,
+  setHotkeySongId,
+  clearHotkeySongId,
+  getHotkeyLabel,
+  setHotkeyLabel,
+  isHotkeyAssigned,
+  getAssignedHotkeys,
+  getUnassignedHotkeys
+};
+
+// Default export for module loading
+export default {
   hotkeyDrop,
   allowHotkeyDrop,
   switchToHotkeyTab,

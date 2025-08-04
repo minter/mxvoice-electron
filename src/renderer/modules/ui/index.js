@@ -1,17 +1,15 @@
 /**
- * UI Module - Main Entry Point
+ * UI Module Index
  * 
- * This module provides all user interface functionality for the MxVoice application.
- * It includes UI management, controls, event handlers, and modal operations.
- * 
- * @module ui
+ * This module serves as the main entry point for all UI-related functionality
+ * in the MxVoice Electron application.
  */
 
-// Import all UI sub-modules
-const uiManager = require('./ui-manager');
-const eventHandlers = require('./event-handlers');
-const controls = require('./controls');
-const modals = require('./modals');
+// Import UI sub-modules
+import * as uiManager from './ui-manager.js';
+import * as eventHandlers from './event-handlers.js';
+import * as controls from './controls.js';
+import * as modals from './modals.js';
 
 /**
  * Initialize the UI module
@@ -63,6 +61,13 @@ function initializeUI(options = {}) {
   };
 }
 
-module.exports = {
-  initialize: initializeUI
+export {
+  UiModule,
+  ui: uiModule
+};
+
+// Default export for module loading
+export default {
+  UiModule,
+  ui: uiModule
 }; 

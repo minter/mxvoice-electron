@@ -146,6 +146,15 @@ function initializeSettingsController(options = {}) {
   };
 }
 
-module.exports = {
-  initialize: initializeSettingsController
+const settingsControllerInstance = initializeSettingsController();
+
+export {
+  SettingsController,
+  settingsController: settingsControllerInstance
+};
+
+// Default export for module loading
+export default {
+  SettingsController,
+  settingsController: settingsControllerInstance
 }; 

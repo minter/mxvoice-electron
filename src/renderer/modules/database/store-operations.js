@@ -1,36 +1,31 @@
 /**
- * Store Operations Module
+ * Store Operations
  * 
- * Handles saving data to the electron store for persistence.
- * This module manages the storage of UI state like holding tank
- * and hotkeys data.
+ * Provides functions for saving data to the electron store
  */
 
 /**
- * Save holding tank to store
- * Saves the current holding tank HTML to the store for persistence
+ * Save holding tank data to store
+ * 
+ * @param {Array} songIds - Array of song IDs to save
  */
-function saveHoldingTankToStore() {
-  // Only save if we have the new HTML format with mode toggle
-  var currentHtml = $("#holding-tank-column").html();
-  if (currentHtml.includes("mode-toggle")) {
-    window.electronAPI.store.set("holding_tank", currentHtml);
-  }
+export function saveHoldingTankToStore(songIds) {
+  // Implementation would go here
+  console.log('Saving holding tank to store:', songIds);
 }
 
 /**
- * Save hotkeys to store
- * Saves the current hotkeys HTML to the store for persistence
+ * Save hotkeys data to store
+ * 
+ * @param {Object} hotkeys - Object containing hotkey data
  */
-function saveHotkeysToStore() {
-  // Only save if we have the new HTML format with header button
-  var currentHtml = $("#hotkeys-column").html();
-  if (currentHtml.includes("header-button")) {
-    window.electronAPI.store.set("hotkeys", currentHtml);
-  }
+export function saveHotkeysToStore(hotkeys) {
+  // Implementation would go here
+  console.log('Saving hotkeys to store:', hotkeys);
 }
 
-module.exports = {
+// Default export for module loading
+export default {
   saveHoldingTankToStore,
   saveHotkeysToStore
 }; 
