@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Loading Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>File Loading Debug Test</h1>
+        
+        <div class="test-section">
+            <h3>Module Availability Check</h3>
+            <button class="test-button" onclick="checkModuleAvailability()">Check Module Availability</button>
+            <div id="module-status" class="log"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test File Loading</h3>
+            <button class="test-button" onclick="testHotkeyLoading()">Test Hotkey Loading</button>
+            <button class="test-button" onclick="testHoldingTankLoading()">Test Holding Tank Loading</button>
+            <div id="loading-results" class="log"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Manual Function Test</h3>
+            <button class="test-button" onclick="testPopulateHotkeys()">Test populateHotkeys</button>
+            <button class="test-button" onclick="testPopulateHoldingTank()">Test populateHoldingTank</button>
+            <div id="function-results" class="log"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Console Log</h3>
+            <div id="console-log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToLog(message, type = 'info') {
+            const logDiv = document.getElementById('console-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToLog(args.join(' '), 'info');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToLog(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToLog(args.join(' '), 'warning');
+        };
+        
+        function checkModuleAvailability() {
+            const statusDiv = document.getElementById('module-status');
+            statusDiv.innerHTML = '';
+            
+            const checks = [
+                { name: 'window.electronAPI', value: !!window.electronAPI },
+                { name: 'window.electronAPI.database', value: !!window.electronAPI?.database },
+                { name: 'window.electronAPI.store', value: !!window.electronAPI?.store },
+                { name: 'window.populateHotkeys', value: typeof window.populateHotkeys },
+                { name: 'window.populateHoldingTank', value: typeof window.populateHoldingTank },
+                { name: 'window.openHotkeyFile', value: typeof window.openHotkeyFile },
+                { name: 'window.openHoldingTankFile', value: typeof window.openHoldingTankFile }
+            ];
+            
+            checks.forEach(check => {
+                const div = document.createElement('div');
+                div.className = check.value ? 'success' : 'error';
+                div.textContent = `${check.name}: ${check.value ? '✅ Available' : '❌ Not Available'}`;
+                statusDiv.appendChild(div);
+            });
+        }
+        
+        function testHotkeyLoading() {
+            const resultsDiv = document.getElementById('loading-results');
+            resultsDiv.innerHTML = '<div class="info">Testing hotkey file loading...</div>';
+            
+            if (window.openHotkeyFile) {
+                console.log('🔄 Calling openHotkeyFile...');
+                window.openHotkeyFile().then(result => {
+                    console.log('✅ openHotkeyFile result:', result);
+                    resultsDiv.innerHTML += '<div class="success">✅ Hotkey file loading initiated</div>';
+                }).catch(error => {
+                    console.error('❌ openHotkeyFile error:', error);
+                    resultsDiv.innerHTML += '<div class="error">❌ Hotkey file loading failed</div>';
+                });
+            } else {
+                console.error('❌ openHotkeyFile not available');
+                resultsDiv.innerHTML += '<div class="error">❌ openHotkeyFile function not available</div>';
+            }
+        }
+        
+        function testHoldingTankLoading() {
+            const resultsDiv = document.getElementById('loading-results');
+            resultsDiv.innerHTML = '<div class="info">Testing holding tank file loading...</div>';
+            
+            if (window.openHoldingTankFile) {
+                console.log('🔄 Calling openHoldingTankFile...');
+                window.openHoldingTankFile().then(result => {
+                    console.log('✅ openHoldingTankFile result:', result);
+                    resultsDiv.innerHTML += '<div class="success">✅ Holding tank file loading initiated</div>';
+                }).catch(error => {
+                    console.error('❌ openHoldingTankFile error:', error);
+                    resultsDiv.innerHTML += '<div class="error">❌ Holding tank file loading failed</div>';
+                });
+            } else {
+                console.error('❌ openHoldingTankFile not available');
+                resultsDiv.innerHTML += '<div class="error">❌ openHoldingTankFile function not available</div>';
+            }
+        }
+        
+        function testPopulateHotkeys() {
+            const resultsDiv = document.getElementById('function-results');
+            resultsDiv.innerHTML = '<div class="info">Testing populateHotkeys function...</div>';
+            
+            if (window.populateHotkeys) {
+                console.log('🔄 Calling populateHotkeys with test data...');
+                const testData = { f1: '1', f2: '2', f3: '3' };
+                window.populateHotkeys(testData, 'Test Hotkeys');
+                resultsDiv.innerHTML += '<div class="success">✅ populateHotkeys called successfully</div>';
+            } else {
+                console.error('❌ populateHotkeys not available');
+                resultsDiv.innerHTML += '<div class="error">❌ populateHotkeys function not available</div>';
+            }
+        }
+        
+        function testPopulateHoldingTank() {
+            const resultsDiv = document.getElementById('function-results');
+            resultsDiv.innerHTML = '<div class="info">Testing populateHoldingTank function...</div>';
+            
+            if (window.populateHoldingTank) {
+                console.log('🔄 Calling populateHoldingTank with test data...');
+                const testData = ['1', '2', '3'];
+                window.populateHoldingTank(testData);
+                resultsDiv.innerHTML += '<div class="success">✅ populateHoldingTank called successfully</div>';
+            } else {
+                console.error('❌ populateHoldingTank not available');
+                resultsDiv.innerHTML += '<div class="error">❌ populateHoldingTank function not available</div>';
+            }
+        }
+        
+        // Auto-check module availability on load
+        window.addEventListener('load', () => {
+            setTimeout(checkModuleAvailability, 1000);
+        });
+    </script>
+</body>
+</html> 

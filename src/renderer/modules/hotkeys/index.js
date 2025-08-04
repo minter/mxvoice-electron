@@ -22,9 +22,12 @@ import * as hotkeyUI from './hotkey-ui.js';
  */
 class HotkeysModule {
   constructor(options = {}) {
+    console.log('🔄 HotkeysModule constructor called with options:', options);
     this.electronAPI = options.electronAPI;
     this.db = options.db;
     this.store = options.store;
+    console.log('🔄 this.electronAPI set:', !!this.electronAPI);
+    console.log('🔄 this.store set:', !!this.store);
     
     // Initialize sub-modules
     this.data = hotkeyData;
@@ -45,8 +48,10 @@ class HotkeysModule {
     try {
       this.saveHotkeysToStore = hotkeyOperations.saveHotkeysToStore.bind(this);
       this.loadHotkeysFromStore = hotkeyOperations.loadHotkeysFromStore.bind(this);
-      this.populateHotkeys = hotkeyData.populateHotkeys.bind(this);
-      this.setLabelFromSongId = hotkeyData.setLabelFromSongId.bind(this);
+      // Use the class's own populateHotkeys method instead of the hotkeyData one
+      // this.populateHotkeys = hotkeyData.populateHotkeys.bind(this);
+      // Use the class's own setLabelFromSongId method instead of the hotkeyData one
+      // this.setLabelFromSongId = hotkeyData.setLabelFromSongId.bind(this);
       this.clearHotkeys = hotkeyData.clearHotkeys.bind(this);
       this.openHotkeyFile = hotkeyOperations.openHotkeyFile.bind(this);
       this.saveHotkeyFile = hotkeyOperations.saveHotkeyFile.bind(this);
@@ -212,22 +217,63 @@ class HotkeysModule {
    * @param {string} title - Title for the hotkey tab
    */
   populateHotkeys(fkeys, title) {
+    console.log('🔄 ===== POPULATEHOTKEYS FUNCTION ENTERED =====');
+    console.log('🔄 populateHotkeys called with:', { fkeys, title });
+    console.log('🔄 electronAPI available:', !!window.electronAPI);
+    console.log('🔄 database API available:', !!window.electronAPI?.database);
+    console.log('🔄 this.electronAPI available:', !!this.electronAPI);
+    console.log('🔄 this.electronAPI.database available:', !!this.electronAPI?.database);
+    
+    // Check DOM structure
+    console.log('🔄 .hotkeys.active elements found:', $('.hotkeys.active').length);
+    console.log('🔄 .hotkeys.active li elements found:', $('.hotkeys.active li').length);
+    console.log('🔄 #f1_hotkey element found:', $('#f1_hotkey').length);
+    console.log('🔄 #f2_hotkey element found:', $('#f2_hotkey').length);
+    
+    // Test database connectivity with a sample song ID
+    if (this.electronAPI && this.electronAPI.database) {
+      console.log('🔄 Testing database connectivity...');
+      const testSongId = '800'; // From your hotkey file
+      this.electronAPI.database.query("SELECT COUNT(*) as count FROM mrvoice WHERE id = ?", [testSongId])
+        .then(result => {
+          console.log(`🔄 Database test result for song ${testSongId}:`, result);
+        })
+        .catch(error => {
+          console.error(`❌ Database test failed for song ${testSongId}:`, error);
+        });
+    }
+    
+    if (!fkeys || Object.keys(fkeys).length === 0) {
+      console.log('⚠️ No hotkey data provided to populateHotkeys');
+      return;
+    }
+    
     for (const key in fkeys) {
+      console.log(`🔄 Processing hotkey ${key} with value: ${fkeys[key]}`);
+      const hotkeyElement = $(`.hotkeys.active #${key}_hotkey`);
+      console.log(`🔄 Found hotkey element for ${key}:`, hotkeyElement.length > 0);
+      
       if (fkeys[key]) {
         try {
-          $(`.hotkeys.active #${key}_hotkey`).attr("songid", fkeys[key]);
-          this.setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`));
+          console.log(`🔄 Setting hotkey ${key} with song ID: ${fkeys[key]}`);
+          hotkeyElement.attr("songid", fkeys[key]);
+          console.log(`🔄 About to call setLabelFromSongId for ${key}...`);
+          this.setLabelFromSongId(fkeys[key], hotkeyElement);
+          console.log(`🔄 setLabelFromSongId called for ${key}`);
         } catch (err) {
-          console.log(`Error loading fkey ${key} (DB ID: ${fkeys[key]})`);
+          console.error(`❌ Error loading fkey ${key} (DB ID: ${fkeys[key]})`, err);
         }
       } else {
-        $(`.hotkeys.active #${key}_hotkey`).removeAttr("songid");
-        $(`.hotkeys.active #${key}_hotkey span`).html("");
+        console.log(`🔄 Clearing hotkey ${key}`);
+        hotkeyElement.removeAttr("songid");
+        hotkeyElement.find("span").html("");
       }
     }
     if (title) {
+      console.log(`🔄 Setting hotkey tab title to: ${title}`);
       $("#hotkey_tabs li a.active").text(title);
     }
+    console.log('✅ populateHotkeys completed successfully');
   }
 
   /**
@@ -238,14 +284,23 @@ class HotkeysModule {
    * @param {jQuery} element - Hotkey element to update
    */
   setLabelFromSongId(song_id, element) {
+    console.log(`🔄 setLabelFromSongId called with song_id: ${song_id}`);
+    console.log(`🔄 element found:`, element.length > 0);
+    
     // Use new database API for getting song by ID
     if (this.electronAPI && this.electronAPI.database) {
+      console.log(`🔄 Using database API to query song ${song_id}`);
+      console.log(`🔄 Database API available:`, !!this.electronAPI.database);
+      console.log(`🔄 Database query method available:`, typeof this.electronAPI.database.query);
+      
       this.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
+        console.log(`🔄 Database query result for song ${song_id}:`, result);
         if (result.success && result.data.length > 0) {
           const row = result.data[0];
           const title = row.title || "[Unknown Title]";
           const artist = row.artist || "[Unknown Artist]";
           const time = row.time || "[??:??]";
+          console.log(`🔄 Found song: ${title} by ${artist} (${time})`);
           
           // Handle swapping
           const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(element);

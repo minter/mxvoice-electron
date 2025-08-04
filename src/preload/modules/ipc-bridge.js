@@ -11,15 +11,51 @@ import { ipcRenderer } from 'electron';
 const ipcHandlers = {
   // Hotkey handlers
   fkey_load: function (event, fkeys, title) {
+    console.log('🔄 IPC: fkey_load received with:', { fkeys, title });
+    console.log('🔄 fkeys type:', typeof fkeys);
+    console.log('🔄 fkeys keys:', Object.keys(fkeys));
+    console.log('🔄 fkeys length:', fkeys.length);
+    console.log('🔄 fkeys content:', JSON.stringify(fkeys));
+    console.log('🔄 window.populateHotkeys available:', typeof window.populateHotkeys);
     // This will call functions from renderer modules
     if (window.populateHotkeys) {
+      console.log('✅ Calling window.populateHotkeys...');
       window.populateHotkeys(fkeys, title);
+      console.log('✅ window.populateHotkeys called successfully');
+    } else {
+      console.error('❌ window.populateHotkeys not available - will retry in 1 second');
+      // Retry after a short delay in case modules are still loading
+      setTimeout(() => {
+        if (window.populateHotkeys) {
+          console.log('✅ Retry successful - calling window.populateHotkeys...');
+          window.populateHotkeys(fkeys, title);
+          console.log('✅ window.populateHotkeys called successfully on retry');
+        } else {
+          console.error('❌ window.populateHotkeys still not available after retry');
+        }
+      }, 1000);
     }
   },
 
   holding_tank_load: function (event, songIds) {
+    console.log('🔄 IPC: holding_tank_load received with:', songIds);
+    console.log('🔄 window.populateHoldingTank available:', typeof window.populateHoldingTank);
     if (window.populateHoldingTank) {
+      console.log('✅ Calling window.populateHoldingTank...');
       window.populateHoldingTank(songIds);
+      console.log('✅ window.populateHoldingTank called successfully');
+    } else {
+      console.error('❌ window.populateHoldingTank not available - will retry in 1 second');
+      // Retry after a short delay in case modules are still loading
+      setTimeout(() => {
+        if (window.populateHoldingTank) {
+          console.log('✅ Retry successful - calling window.populateHoldingTank...');
+          window.populateHoldingTank(songIds);
+          console.log('✅ window.populateHoldingTank called successfully on retry');
+        } else {
+          console.error('❌ window.populateHoldingTank still not available after retry');
+        }
+      }, 1000);
     }
   },
 

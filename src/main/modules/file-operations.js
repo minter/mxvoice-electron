@@ -26,82 +26,103 @@ function initializeFileOperations(dependencies) {
 function loadHotkeysFile() {
   if (!mainWindow) {
     console.error('❌ mainWindow is not available');
-    return;
+    return Promise.reject(new Error('mainWindow not available'));
   }
   
-  var fkey_mapping = [];
-  console.log("Loading hotkeys file");
-  dialog.showOpenDialog(mainWindow, {
-    buttonLabel: 'Open',
-    filters: [
-      { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
-    ],
-    defaultPath: store.get('hotkey_directory'),
-    message: 'Select your Mx. Voice hotkey file',
-    properties: ['openFile']
-  }).then(result => {
-    if (result.canceled == true) {
-      console.log('Silently exiting hotkey load');
-      return;
-    }
-    else {
-      var filename = result.filePaths[0];
-      console.log(`Processing file ${filename}`);
-      const line_reader = new readlines(filename);
-      var title
-
-      let line;
-      while (line = line_reader.next()) {
-        let [key, val] = line.toString().trim().split('::');
-        if (/^\D\d+$/.test(key)) {
-          fkey_mapping[key] = val;
-        } else {
-          title = val.replace('_', ' ')
-        }
+  return new Promise((resolve, reject) => {
+    var fkey_mapping = {};
+    console.log("Loading hotkeys file");
+    dialog.showOpenDialog(mainWindow, {
+      buttonLabel: 'Open',
+      filters: [
+        { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
+      ],
+      defaultPath: store.get('hotkey_directory'),
+      message: 'Select your Mx. Voice hotkey file',
+      properties: ['openFile']
+    }).then(result => {
+      if (result.canceled == true) {
+        console.log('Silently exiting hotkey load');
+        resolve({ success: false, canceled: true });
+        return;
       }
-      mainWindow.webContents.send('fkey_load', fkey_mapping, title);
-    }
-  }).catch(err => {
-    console.log(err)
-  })
+      else {
+        var filename = result.filePaths[0];
+        console.log(`Processing file ${filename}`);
+        const line_reader = new readlines(filename);
+        var title
+
+        let line;
+        while (line = line_reader.next()) {
+          const lineStr = line.toString().trim();
+          console.log('📁 Reading line:', lineStr);
+          let [key, val] = lineStr.split('::');
+          console.log('📁 Parsed key:', key, 'value:', val);
+          if (/^\D\d+$/.test(key)) {
+            fkey_mapping[key] = val;
+            console.log('📁 Added to fkey_mapping:', key, '=', val);
+          } else {
+            title = val.replace('_', ' ')
+            console.log('📁 Set title to:', title);
+          }
+        }
+        console.log('📁 Main process: Sending fkey_load with:', { fkey_mapping, title });
+        console.log('📁 fkey_mapping type:', typeof fkey_mapping);
+        console.log('📁 fkey_mapping keys:', Object.keys(fkey_mapping));
+        console.log('📁 fkey_mapping length:', fkey_mapping.length);
+        console.log('📁 fkey_mapping content:', JSON.stringify(fkey_mapping));
+        mainWindow.webContents.send('fkey_load', fkey_mapping, title);
+        resolve({ success: true, fkey_mapping, title });
+      }
+    }).catch(err => {
+      console.log(err);
+      reject(err);
+    });
+  });
 }
 
 // Load holding tank file
 function loadHoldingTankFile() {
   if (!mainWindow) {
     console.error('❌ mainWindow is not available');
-    return;
+    return Promise.reject(new Error('mainWindow not available'));
   }
   
-  var song_ids = [];
-  console.log("Loading holding tank file");
-  dialog.showOpenDialog(mainWindow, {
-    buttonLabel: 'Open',
-    filters: [
-      { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
-    ],
-    defaultPath: store.get('hotkey_directory'),
-    message: 'Select your Mx. Voice holding tank file',
-    properties: ['openFile']
-  }).then(result => {
-    if (result.canceled == true) {
-      console.log('Silently exiting holding tank load');
-      return;
-    }
-    else {
-      var filename = result.filePaths[0];
-      console.log(`Processing file ${filename}`);
-      const line_reader = new readlines(filename);
-
-      let line;
-      while (line = line_reader.next()) {
-        song_ids.push(line.toString().trim());
+  return new Promise((resolve, reject) => {
+    var song_ids = [];
+    console.log("Loading holding tank file");
+    dialog.showOpenDialog(mainWindow, {
+      buttonLabel: 'Open',
+      filters: [
+        { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
+      ],
+      defaultPath: store.get('hotkey_directory'),
+      message: 'Select your Mx. Voice holding tank file',
+      properties: ['openFile']
+    }).then(result => {
+      if (result.canceled == true) {
+        console.log('Silently exiting holding tank load');
+        resolve({ success: false, canceled: true });
+        return;
       }
-      mainWindow.webContents.send('holding_tank_load', song_ids);
-    }
-  }).catch(err => {
-    console.log(err)
-  })
+      else {
+        var filename = result.filePaths[0];
+        console.log(`Processing file ${filename}`);
+        const line_reader = new readlines(filename);
+
+        let line;
+        while (line = line_reader.next()) {
+          song_ids.push(line.toString().trim());
+        }
+        console.log('📁 Main process: Sending holding_tank_load with:', song_ids);
+        mainWindow.webContents.send('holding_tank_load', song_ids);
+        resolve({ success: true, song_ids });
+      }
+    }).catch(err => {
+      console.log(err);
+      reject(err);
+    });
+  });
 }
 
 // Save hotkeys file

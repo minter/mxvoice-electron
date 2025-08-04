@@ -104,11 +104,24 @@ export function loadHoldingTankFromStore() {
  * Populate holding tank with song IDs
  */
 export function populateHoldingTank(songIds) {
+  console.log('🔄 populateHoldingTank called with:', songIds);
+  console.log('🔄 database API available:', !!window.electronAPI?.database);
+  
+  if (!songIds || songIds.length === 0) {
+    console.log('⚠️ No song IDs provided to populateHoldingTank');
+    return { success: false, error: 'No song IDs provided' };
+  }
+  
   $(".holding_tank.active").empty();
+  console.log('✅ Cleared active holding tank');
+  
   songIds.forEach((songId) => {
+    console.log('🔄 Adding song ID to holding tank:', songId);
     addToHoldingTank(songId, $(".holding_tank.active"));
   });
+  
   scale_scrollable();
+  console.log('✅ populateHoldingTank completed successfully');
   return { success: true, count: songIds.length };
 }
 

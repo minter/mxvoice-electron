@@ -194,18 +194,54 @@ function saveHotkeysToStore() {
       console.log('✅ hotkeys module loaded successfully');
       
       // Create hotkeys module instance and make functions globally available
-      const hotkeysInstance = new hotkeysModule.default();
+      console.log('🔄 Creating hotkeys module instance...');
+      console.log('🔄 window.electronAPI available:', !!window.electronAPI);
+      console.log('🔄 window.electronAPI.store available:', !!window.electronAPI?.store);
+      
+      const hotkeysInstance = new hotkeysModule.default({
+        electronAPI: window.electronAPI,
+        db: null, // Legacy database not used
+        store: window.electronAPI?.store
+      });
+      
+      console.log('🔄 Hotkeys module instance created successfully');
+      console.log('🔄 hotkeysInstance.populateHotkeys available:', typeof hotkeysInstance.populateHotkeys);
       window.clearHotkeys = hotkeysInstance.clearHotkeys.bind(hotkeysInstance);
       window.renameHotkeyTab = hotkeysInstance.renameHotkeyTab.bind(hotkeysInstance);
       window.playSongFromHotkey = hotkeysInstance.playSongFromHotkey.bind(hotkeysInstance);
       window.switchToHotkeyTab = hotkeysInstance.switchToHotkeyTab.bind(hotkeysInstance);
-      window.populateHotkeys = hotkeysInstance.populateHotkeys.bind(hotkeysInstance);
+      // Bind populateHotkeys with proper context
+      window.populateHotkeys = function(fkeys, title) {
+        console.log('🔄 window.populateHotkeys called with:', { fkeys, title });
+        console.log('🔄 hotkeysInstance type:', typeof hotkeysInstance);
+        console.log('🔄 hotkeysInstance.populateHotkeys type:', typeof hotkeysInstance.populateHotkeys);
+        console.log('🔄 hotkeysInstance.populateHotkeys.toString():', hotkeysInstance.populateHotkeys.toString().substring(0, 100));
+        
+        try {
+          console.log('🔄 About to call hotkeysInstance.populateHotkeys...');
+          const result = hotkeysInstance.populateHotkeys.call(hotkeysInstance, fkeys, title);
+          console.log('✅ populateHotkeys completed successfully');
+          return result;
+        } catch (error) {
+          console.error('❌ Error in populateHotkeys:', error);
+          console.error('❌ Error stack:', error.stack);
+          console.error('❌ Error message:', error.message);
+          throw error;
+        }
+      };
       window.setLabelFromSongId = hotkeysInstance.setLabelFromSongId.bind(hotkeysInstance);
       window.sendToHotkeys = hotkeysInstance.sendToHotkeys.bind(hotkeysInstance);
       window.hotkeyDrop = hotkeysInstance.hotkeyDrop.bind(hotkeysInstance);
       window.allowHotkeyDrop = hotkeysInstance.allowHotkeyDrop.bind(hotkeysInstance);
       window.removeFromHotkey = hotkeysInstance.removeFromHotkey.bind(hotkeysInstance);
       console.log('✅ Hotkeys module loaded successfully');
+      console.log('✅ populateHotkeys function is now available globally');
+      
+      // Test the hotkeys instance
+      console.log('🔄 Testing hotkeys instance...');
+      console.log('🔄 hotkeysInstance type:', typeof hotkeysInstance);
+      console.log('🔄 hotkeysInstance.populateHotkeys type:', typeof hotkeysInstance.populateHotkeys);
+      console.log('🔄 hotkeysInstance.electronAPI available:', !!hotkeysInstance.electronAPI);
     } catch (error) {
       console.warn('❌ Failed to load hotkeys module:', error);
       // Continue loading other modules even if hotkeys fails
@@ -447,8 +483,10 @@ function saveHotkeysToStore() {
       // Make functions globally available (no binding needed for simple functions)
       window.setLabelFromSongId = databaseInstance.setLabelFromSongId;
       window.addToHoldingTank = databaseInstance.addToHoldingTank;
+      window.populateHoldingTank = databaseInstance.populateHoldingTank;
       window.populateCategorySelect = databaseInstance.populateCategorySelect;
       console.log('✅ Database module loaded successfully');
+      console.log('✅ populateHoldingTank function is now available globally');
     } catch (error) {
       console.error('❌ Failed to load database module:', error);
       console.error('❌ Database module error stack:', error.stack);
