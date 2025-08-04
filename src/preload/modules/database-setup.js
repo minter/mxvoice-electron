@@ -1,9 +1,13 @@
-// Database Setup Module
-// Handles database initialization and setup
+/**
+ * Database Setup Module
+ * 
+ * Handles database initialization and setup for the MxVoice Electron application.
+ */
 
-const Store = require('electron-store');
-const path = require('path');
-const fs = require('fs');
+import Store from 'electron-store';
+import path from 'path';
+import fs from 'fs';
+import Database from 'better-sqlite3';
 
 const store = new Store();
 
@@ -26,7 +30,7 @@ function initializeDatabase() {
       const dbPath = path.join(defaultDbPath, dbName);
       console.log(`Using default database path: ${dbPath}`);
       
-      dbInstance = require("better-sqlite3")(dbPath);
+      dbInstance = new Database(dbPath);
       setupDatabaseIndexes(dbInstance);
       return dbInstance;
     }
@@ -42,7 +46,7 @@ function initializeDatabase() {
       )}`
     );
     
-    dbInstance = require("better-sqlite3")(
+    dbInstance = new Database(
       path.join(databaseDirectory, dbName)
     );
     
@@ -55,7 +59,7 @@ function initializeDatabase() {
     
     // Fallback: create a test database in memory
     console.log('Creating fallback in-memory database for testing');
-    dbInstance = require("better-sqlite3")(":memory:");
+    dbInstance = new Database(":memory:");
     
     // Create basic tables for testing
     dbInstance.exec(`
@@ -150,7 +154,15 @@ function testDatabaseSetup() {
   }
 }
 
-module.exports = {
+export {
+  initializeDatabase,
+  setupDatabaseIndexes,
+  getDatabase,
+  testDatabaseSetup
+};
+
+// Default export for module loading
+export default {
   initializeDatabase,
   setupDatabaseIndexes,
   getDatabase,

@@ -1,7 +1,11 @@
-// IPC Bridge Module
-// Handles all IPC communication between renderer and main process
+/**
+ * IPC Bridge Module
+ * 
+ * Handles IPC communication bridge between renderer and main processes
+ * for the MxVoice Electron application.
+ */
 
-const { ipcRenderer } = require('electron');
+import { ipcRenderer } from 'electron';
 
 // IPC Event Handlers - extracted from preload.js
 const ipcHandlers = {
@@ -143,7 +147,16 @@ function testIpcBridge() {
   return true;
 }
 
-module.exports = {
+export {
+  registerIpcHandlers,
+  removeIpcHandlers,
+  getIpcHandlers,
+  testIpcBridge,
+  ipcHandlers
+};
+
+// Default export for module loading
+export default {
   registerIpcHandlers,
   removeIpcHandlers,
   getIpcHandlers,

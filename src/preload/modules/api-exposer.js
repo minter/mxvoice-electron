@@ -1,7 +1,17 @@
-// API Exposer Module
-// Handles the context bridge and API exposure
+/**
+ * API Exposer Module
+ * 
+ * Handles exposing APIs to the renderer process for the MxVoice Electron application.
+ */
 
-const { ipcRenderer } = require('electron');
+import { ipcRenderer } from 'electron';
+import os from 'os';
+import path from 'path';
+import Store from 'electron-store';
+import Mousetrap from 'mousetrap';
+import { v4 as uuidv4 } from 'uuid';
+import util from 'util';
+import fs from 'fs';
 
 // Modern API structure - extracted from preload.js
 const electronAPI = {
@@ -91,14 +101,14 @@ const electronAPI = {
 
 // Legacy global exposure (backward compatibility)
 let legacyGlobals = {
-  homedir: require('os').homedir(),
-  path: require('path'),
-  store: require('electron-store'),
-  Mousetrap: require('mousetrap'),
+  homedir: os.homedir(),
+  path: path,
+  store: Store,
+  Mousetrap: Mousetrap,
   ipcRenderer: ipcRenderer,
-  uuidv4: require('uuid').v4,
-  util: require('util'),
-  fs: require('fs'),
+  uuidv4: uuidv4,
+  util: util,
+  fs: fs,
   db: null // Will be set after database initialization
 };
 
@@ -138,7 +148,16 @@ function testApiExposer() {
   return true;
 }
 
-module.exports = {
+export {
+  electronAPI,
+  legacyGlobals,
+  setupGlobalExposure,
+  setDatabaseInstance,
+  testApiExposer
+};
+
+// Default export for module loading
+export default {
   electronAPI,
   legacyGlobals,
   setupGlobalExposure,

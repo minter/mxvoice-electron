@@ -1,14 +1,18 @@
-// Modular Preload Script
-// Main entry point for preload functionality
+/**
+ * Preload Module Entry Point
+ * 
+ * This is the main entry point for the preload process in the MxVoice Electron application.
+ * It handles IPC bridge setup, API exposure, and database initialization.
+ */
 
-const { ipcRenderer, contextBridge } = require('electron');
-const { Howl, Howler } = require('howler');
-const log = require('electron-log');
+import { ipcRenderer, contextBridge } from 'electron';
+import { Howl, Howler } from 'howler';
+import log from 'electron-log';
 
-// Import modules
-const ipcBridge = require('./modules/ipc-bridge');
-const apiExposer = require('./modules/api-exposer');
-const databaseSetup = require('./modules/database-setup');
+// Import preload modules
+import * as ipcBridge from './modules/ipc-bridge.js';
+import * as apiExposer from './modules/api-exposer.js';
+import * as databaseSetup from './modules/database-setup.js';
 
 console.log = log.log;
 
