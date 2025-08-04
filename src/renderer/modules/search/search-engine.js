@@ -6,15 +6,67 @@
  * and displays results.
  */
 
+// Import shared state
+import sharedState from '../shared-state.js';
+
 // Global variables
 let fontSize = 11;
-let categories = {};
+
+/**
+ * Get categories from shared state or fallback to empty object
+ * 
+ * @returns {Object} - Categories object
+ */
+function getCategories() {
+  try {
+    // Try to get categories from shared state first
+    const categories = sharedState.get('categories');
+    if (categories && Object.keys(categories).length > 0) {
+      return categories;
+    }
+    
+    // Fallback to global categories if available
+    if (typeof window.categories !== 'undefined' && window.categories) {
+      return window.categories;
+    }
+    
+    // Return empty object as last resort
+    return {};
+  } catch (error) {
+    console.warn('❌ Error getting categories:', error);
+    return {};
+  }
+}
+
+/**
+ * Get category name by code
+ * 
+ * @param {string} categoryCode - The category code
+ * @returns {string} - Category name or code if not found
+ */
+function getCategoryName(categoryCode) {
+  if (!categoryCode) {
+    return '';
+  }
+  
+  const categories = getCategories();
+  const categoryName = categories[categoryCode];
+  
+  if (categoryName) {
+    return categoryName;
+  }
+  
+  // If category not found, return the code itself
+  console.warn(`❌ Category not found for code: ${categoryCode}`);
+  return categoryCode || '';
+}
 
 /**
  * Perform a search on the database
  * This is the main search function that handles both basic and advanced search
  */
 function searchData() {
+  console.log('🔍 searchData called');
   $("#search_results tbody").find("tr").remove();
   $("#search_results thead").show();
 
@@ -75,13 +127,15 @@ function searchData() {
     const sql = "SELECT * from mrvoice" + query_string + " ORDER BY category,info,title,artist";
     window.electronAPI.database.query(sql, query_params).then(result => {
       if (result.success) {
+        console.log(`🔍 Search returned ${result.data.length} results`);
         result.data.forEach((row) => {
+          const categoryName = getCategoryName(row.category);
+          console.log(`🔍 Row category: ${row.category} -> ${categoryName}`);
+          
           raw_html.push(
             `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
               row.id
-            }'><td class='hide-1'>${
-              categories[row.category]
-            }</td><td class='hide-2'>${
+            }'><td class='hide-1'>${categoryName}</td><td class='hide-2'>${
               row.info || ""
             }</td><td style='font-weight: bold'>${
               row.title || ""
@@ -105,12 +159,11 @@ function searchData() {
           );
           const rows = stmt.all(query_params);
           rows.forEach((row) => {
+            const categoryName = getCategoryName(row.category);
             raw_html.push(
               `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
                 row.id
-              }'><td class='hide-1'>${
-                categories[row.category]
-              }</td><td class='hide-2'>${
+              }'><td class='hide-1'>${categoryName}</td><td class='hide-2'>${
                 row.info || ""
               }</td><td style='font-weight: bold'>${
                 row.title || ""
@@ -136,12 +189,11 @@ function searchData() {
         );
         const rows = stmt.all(query_params);
         rows.forEach((row) => {
+          const categoryName = getCategoryName(row.category);
           raw_html.push(
             `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
               row.id
-            }'><td class='hide-1'>${
-              categories[row.category]
-            }</td><td class='hide-2'>${
+            }'><td class='hide-1'>${categoryName}</td><td class='hide-2'>${
               row.info || ""
             }</td><td style='font-weight: bold'>${
               row.title || ""
@@ -166,12 +218,11 @@ function searchData() {
       );
       const rows = stmt.all(query_params);
       rows.forEach((row) => {
+        const categoryName = getCategoryName(row.category);
         raw_html.push(
           `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
             row.id
-          }'><td class='hide-1'>${
-            categories[row.category]
-          }</td><td class='hide-2'>${
+          }'><td class='hide-1'>${categoryName}</td><td class='hide-2'>${
             row.info || ""
           }</td><td style='font-weight: bold'>${
             row.title || ""
@@ -226,11 +277,15 @@ function triggerLiveSearch() {
 // Export individual functions for direct access
 export {
   searchData,
-  triggerLiveSearch
+  triggerLiveSearch,
+  getCategories,
+  getCategoryName
 };
 
 // Default export for module loading
 export default {
   searchData,
-  triggerLiveSearch
+  triggerLiveSearch,
+  getCategories,
+  getCategoryName
 }; 

@@ -227,14 +227,14 @@ const createWindow = () => {
   // Initialize database connection for main process
   initializeDatabase();
 
-  // Initialize modules with dependencies
+  // Create the window
+  mainWindow = appSetup.createWindow();
+
+  // Initialize modules with dependencies AFTER mainWindow is created
   initializeModules();
 
   // Migrate old preferences after modules are initialized
   fileOperations.migrateOldPreferences();
-
-  // Create the window
-  mainWindow = appSetup.createWindow();
 
   // Create the menu
   appSetup.createApplicationMenu();

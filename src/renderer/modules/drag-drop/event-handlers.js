@@ -24,19 +24,22 @@ export function setupDragDropEventHandlers() {
     $(this).removeClass("drop_target");
   });
 
-  // Holding tank drop handlers
-  $("#holding_tank").on("drop", function (event) {
+  // Holding tank drop handlers - target the container and list items
+  $("#holding_tank, .holding_tank li").on("drop", function (event) {
+    console.log('🔍 Holding tank drop event triggered');
     $(event.originalEvent.target).removeClass("dropzone");
     if (!event.originalEvent.dataTransfer.getData("text").length) return;
     holdingTankDrop(event.originalEvent);
   });
 
-  $("#holding_tank").on("dragover", function (event) {
+  $("#holding_tank, .holding_tank li").on("dragover", function (event) {
+    console.log('🔍 Holding tank dragover event triggered');
     allowHotkeyDrop(event.originalEvent);
     $(event.originalEvent.target).addClass("dropzone");
   });
 
-  $("#holding_tank").on("dragleave", function (event) {
+  $("#holding_tank, .holding_tank li").on("dragleave", function (event) {
+    console.log('🔍 Holding tank dragleave event triggered');
     allowHotkeyDrop(event.originalEvent);
     $(event.originalEvent.target).removeClass("dropzone");
   });

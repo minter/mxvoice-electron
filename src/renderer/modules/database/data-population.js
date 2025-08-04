@@ -1,13 +1,38 @@
 /**
  * Data Population Module
  * 
- * Handles populating UI elements with data from the database.
- * This module uses the preload database API to fetch data and
- * populate various UI components.
+ * Handles populating UI elements with data from the database
  */
 
-// Global categories object
+// Import shared state
+import sharedState from '../shared-state.js';
+
+// Global variables
+let fontSize = 11;
 let categories = {};
+
+/**
+ * Get fontSize from shared state or use default
+ * 
+ * @returns {number} - Font size to use
+ */
+function getFontSize() {
+  try {
+    const sharedFontSize = sharedState.get('fontSize');
+    if (sharedFontSize !== undefined && sharedFontSize !== null) {
+      return sharedFontSize;
+    }
+  } catch (error) {
+    console.warn('❌ Error getting fontSize from shared state:', error);
+  }
+  
+  // Fallback to global fontSize if available
+  if (typeof window.fontSize !== 'undefined') {
+    return window.fontSize;
+  }
+  
+  return fontSize; // Default fallback
+}
 
 /**
  * Populate category select dropdown
@@ -245,6 +270,9 @@ function setLabelFromSongId(song_id, element) {
  * @param {jQuery} element - The element to add the song to
  */
 function addToHoldingTank(song_id, element) {
+  const currentFontSize = getFontSize();
+  console.log('🔍 addToHoldingTank called with song_id:', song_id, 'fontSize:', currentFontSize);
+  
   // Use new database API for getting song by ID
   if (window.electronAPI && window.electronAPI.database) {
     window.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
@@ -254,6 +282,8 @@ function addToHoldingTank(song_id, element) {
         var artist = row.artist || "[Unknown Artist]";
         var time = row.time || "[??:??]";
 
+        console.log('🔍 Song data retrieved:', { title, artist, time });
+
         var existing_song = $(
           `.holding_tank.active .list-group-item[songid=${song_id}]`
         );
@@ -261,7 +291,7 @@ function addToHoldingTank(song_id, element) {
           var song_row = existing_song.detach();
         } else {
           var song_row = document.createElement("li");
-          song_row.style.fontSize = `${fontSize}px`;
+          song_row.style.fontSize = `${currentFontSize}px`;
           song_row.className = "song list-group-item context-menu";
           song_row.setAttribute("draggable", "true");
           song_row.setAttribute("ondragstart", "songDrag(event)");
@@ -276,6 +306,8 @@ function addToHoldingTank(song_id, element) {
         } else {
           $(element).append(song_row);
         }
+        
+        console.log('🔍 Song added to holding tank successfully');
         saveHoldingTankToStore();
       } else {
         console.warn('❌ Failed to get song by ID:', result.error);
@@ -294,7 +326,7 @@ function addToHoldingTank(song_id, element) {
             var song_row = existing_song.detach();
           } else {
             var song_row = document.createElement("li");
-            song_row.style.fontSize = `${fontSize}px`;
+            song_row.style.fontSize = `${currentFontSize}px`;
             song_row.className = "song list-group-item context-menu";
             song_row.setAttribute("draggable", "true");
             song_row.setAttribute("ondragstart", "songDrag(event)");
@@ -329,7 +361,7 @@ function addToHoldingTank(song_id, element) {
           var song_row = existing_song.detach();
         } else {
           var song_row = document.createElement("li");
-          song_row.style.fontSize = `${fontSize}px`;
+          song_row.style.fontSize = `${currentFontSize}px`;
           song_row.className = "song list-group-item context-menu";
           song_row.setAttribute("draggable", "true");
           song_row.setAttribute("ondragstart", "songDrag(event)");
@@ -363,7 +395,7 @@ function addToHoldingTank(song_id, element) {
         var song_row = existing_song.detach();
       } else {
         var song_row = document.createElement("li");
-        song_row.style.fontSize = `${fontSize}px`;
+        song_row.style.fontSize = `${currentFontSize}px`;
         song_row.className = "song list-group-item context-menu";
         song_row.setAttribute("draggable", "true");
         song_row.setAttribute("ondragstart", "songDrag(event)");

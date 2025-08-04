@@ -8,6 +8,7 @@
 
 // Import category operations for data operations
 import * as categoryOperations from './category-operations.js';
+import sharedState from '../shared-state.js';
 
 /**
  * Load categories into the module's internal state
@@ -24,12 +25,15 @@ function loadCategories() {
           categoriesData[row.code] = row.description;
         });
         
+        // Store categories in shared state for other modules to access
+        sharedState.set('categories', categoriesData);
+        
         // Update global categories object if it exists
         if (typeof categories !== 'undefined') {
           Object.assign(categories, categoriesData);
         }
         
-        console.log('✅ Categories loaded successfully');
+        console.log('✅ Categories loaded successfully:', categoriesData);
         resolve({ success: true, data: categoriesData });
       } else {
         console.warn('❌ Failed to load categories:', result.error);

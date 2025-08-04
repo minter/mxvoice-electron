@@ -23,8 +23,28 @@ export function hotkeyDrop(event) {
  * @param {Event} event - The drop event
  */
 export function holdingTankDrop(event) {
+  console.log('🔍 holdingTankDrop called');
+  console.log('🔍 Event target:', event.target);
+  console.log('🔍 Event currentTarget:', event.currentTarget);
+  
   event.preventDefault();
-  addToHoldingTank(event.dataTransfer.getData("text"), $(event.target));
+  
+  const songId = event.dataTransfer.getData("text");
+  console.log('🔍 Song ID from data transfer:', songId);
+  
+  if (!songId) {
+    console.warn('❌ No song ID found in data transfer');
+    return;
+  }
+  
+  console.log('🔍 Calling addToHoldingTank with songId:', songId);
+  console.log('🔍 addToHoldingTank function available:', typeof window.addToHoldingTank);
+  
+  if (window.addToHoldingTank) {
+    addToHoldingTank(songId, $(event.target));
+  } else {
+    console.error('❌ addToHoldingTank function not available');
+  }
 }
 
 /**

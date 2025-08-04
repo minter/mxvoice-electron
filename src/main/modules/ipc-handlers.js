@@ -10,6 +10,9 @@ import path from 'path';
 import fs from 'fs';
 import { Howl, Howler } from 'howler';
 
+// Import file operations module
+import fileOperations from './file-operations.js';
+
 // Dependencies that will be injected
 let mainWindow;
 let db;
@@ -24,6 +27,9 @@ function initializeIpcHandlers(dependencies) {
   store = dependencies.store;
   audioInstances = dependencies.audioInstances;
   autoUpdater = dependencies.autoUpdater;
+  
+  // Initialize file operations module
+  fileOperations.initializeFileOperations(dependencies);
   
   registerAllHandlers();
 }
@@ -51,19 +57,19 @@ function registerAllHandlers() {
 
   // File operations
   ipcMain.handle('open-hotkey-file', async () => {
-    return await loadHotkeysFile();
+    return await fileOperations.loadHotkeysFile();
   });
 
   ipcMain.handle('save-hotkey-file', async (event, hotkeyArray) => {
-    return await saveHotkeysFile(hotkeyArray);
+    return await fileOperations.saveHotkeysFile(hotkeyArray);
   });
 
   ipcMain.handle('open-holding-tank-file', async () => {
-    return await loadHoldingTankFile();
+    return await fileOperations.loadHoldingTankFile();
   });
 
   ipcMain.handle('save-holding-tank-file', async (event, holdingTankArray) => {
-    return await saveHoldingTankFile(holdingTankArray);
+    return await fileOperations.saveHoldingTankFile(holdingTankArray);
   });
 
   // App operations
@@ -430,26 +436,26 @@ function registerAllHandlers() {
   // Legacy handlers for backward compatibility
   ipcMain.on('open-hotkey-file', (event, arg) => {
     console.log("Main process starting hotkey open");
-    loadHotkeysFile();
+    fileOperations.loadHotkeysFile();
   });
 
   ipcMain.on('save-hotkey-file', (event, arg) => {
     console.log("Main process starting hotkey save");
     console.log(`Arg is ${arg}`);
     console.log(`First element is ${arg[0]}`);
-    saveHotkeysFile(arg);
+    fileOperations.saveHotkeysFile(arg);
   });
 
   ipcMain.on('open-holding-tank-file', (event, arg) => {
     console.log("Main process starting holding tank open");
-    loadHoldingTankFile();
+    fileOperations.loadHoldingTankFile();
   });
 
   ipcMain.on('save-holding-tank-file', (event, arg) => {
     console.log("Main process starting holding tank save");
     console.log(`Arg is ${arg}`);
     console.log(`First element is ${arg[0]}`);
-    saveHoldingTankFile(arg);
+    fileOperations.saveHoldingTankFile(arg);
   });
 
   console.log('IPC handlers registered successfully');

@@ -15,12 +15,20 @@ let store;
 
 // Initialize the module with dependencies
 function initializeFileOperations(dependencies) {
+  console.log('🔍 Initializing file operations with dependencies:', dependencies);
   mainWindow = dependencies.mainWindow;
   store = dependencies.store;
+  console.log('🔍 mainWindow set:', !!mainWindow);
+  console.log('🔍 store set:', !!store);
 }
 
 // Load hotkeys file
 function loadHotkeysFile() {
+  if (!mainWindow) {
+    console.error('❌ mainWindow is not available');
+    return;
+  }
+  
   var fkey_mapping = [];
   console.log("Loading hotkeys file");
   dialog.showOpenDialog(mainWindow, {
@@ -42,8 +50,9 @@ function loadHotkeysFile() {
       const line_reader = new readlines(filename);
       var title
 
+      let line;
       while (line = line_reader.next()) {
-        [key, val] = line.toString().trim().split('::');
+        let [key, val] = line.toString().trim().split('::');
         if (/^\D\d+$/.test(key)) {
           fkey_mapping[key] = val;
         } else {
@@ -59,6 +68,11 @@ function loadHotkeysFile() {
 
 // Load holding tank file
 function loadHoldingTankFile() {
+  if (!mainWindow) {
+    console.error('❌ mainWindow is not available');
+    return;
+  }
+  
   var song_ids = [];
   console.log("Loading holding tank file");
   dialog.showOpenDialog(mainWindow, {
@@ -79,6 +93,7 @@ function loadHoldingTankFile() {
       console.log(`Processing file ${filename}`);
       const line_reader = new readlines(filename);
 
+      let line;
       while (line = line_reader.next()) {
         song_ids.push(line.toString().trim());
       }
