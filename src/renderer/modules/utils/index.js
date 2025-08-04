@@ -18,6 +18,14 @@ import validationUtils from './validation-utils.js';
 class UtilsModule {
   constructor() {
     // Initialize module state
+    this.animateCSS = animationUtils.animateCSS;
+    this.customConfirm = modalUtils.customConfirm;
+    this.customPrompt = modalUtils.customPrompt;
+    this.restoreFocusToSearch = modalUtils.restoreFocusToSearch;
+    this.isValidSongId = validationUtils.isValidSongId;
+    this.isValidCategoryCode = validationUtils.isValidCategoryCode;
+    this.isValidFilePath = validationUtils.isValidFilePath;
+    this.isValidHotkey = validationUtils.isValidHotkey;
   }
 
   /**
@@ -36,18 +44,18 @@ class UtilsModule {
   getAllUtils() {
     return {
       // Animation utilities
-      animateCSS: animationUtils.animateCSS,
+      animateCSS: this.animateCSS,
       
       // Modal utilities
-      customConfirm: modalUtils.customConfirm,
-      customPrompt: modalUtils.customPrompt,
-      restoreFocusToSearch: modalUtils.restoreFocusToSearch,
+      customConfirm: this.customConfirm,
+      customPrompt: this.customPrompt,
+      restoreFocusToSearch: this.restoreFocusToSearch,
       
       // Validation utilities
-      isValidSongId: validationUtils.isValidSongId,
-      isValidCategoryCode: validationUtils.isValidCategoryCode,
-      isValidFilePath: validationUtils.isValidFilePath,
-      isValidHotkey: validationUtils.isValidHotkey
+      isValidSongId: this.isValidSongId,
+      isValidCategoryCode: this.isValidCategoryCode,
+      isValidFilePath: this.isValidFilePath,
+      isValidHotkey: this.isValidHotkey
     };
   }
 
@@ -148,18 +156,15 @@ class UtilsModule {
 // Create and export a singleton instance
 const utilsModule = new UtilsModule();
 
-// Export the module instance and individual utilities for backward compatibility
-export {
-  // Individual utilities (for direct access)
-  animateCSS: utilsModule.animateCSS,
-  customConfirm: utilsModule.customConfirm,
-  customPrompt: utilsModule.customPrompt,
-  restoreFocusToSearch: utilsModule.restoreFocusToSearch,
-  isValidSongId: utilsModule.isValidSongId,
-  isValidCategoryCode: utilsModule.isValidCategoryCode,
-  isValidFilePath: utilsModule.isValidFilePath,
-  isValidHotkey: utilsModule.isValidHotkey
-};
+// Export individual utilities for backward compatibility
+export const animateCSS = utilsModule.animateCSS;
+export const customConfirm = utilsModule.customConfirm;
+export const customPrompt = utilsModule.customPrompt;
+export const restoreFocusToSearch = utilsModule.restoreFocusToSearch;
+export const isValidSongId = utilsModule.isValidSongId;
+export const isValidCategoryCode = utilsModule.isValidCategoryCode;
+export const isValidFilePath = utilsModule.isValidFilePath;
+export const isValidHotkey = utilsModule.isValidHotkey;
 
 // Default export for module loading
 export default utilsModule; 

@@ -405,29 +405,50 @@ function saveHotkeysToStore() {
     // Import database module and make functions globally available
     try {
       console.log('🔄 Loading database module...');
-      databaseModule = await import('./renderer/modules/database/index.js');
+      try {
+        databaseModule = await import('./renderer/modules/database/index.js');
+        console.log('✅ Database module import successful');
+      } catch (importError) {
+        console.error('❌ Database module import failed:', importError);
+        console.error('❌ Import error stack:', importError.stack);
+        console.error('❌ Import error message:', importError.message);
+        throw importError;
+      }
       console.log('✅ database module loaded successfully');
       
       // The database module exports a singleton instance, not a constructor
       const databaseInstance = databaseModule.default.database;
       
       // Initialize the database module
-      await databaseInstance.init();
+      databaseInstance.init();
       
-      window.performLiveSearch = databaseInstance.performLiveSearch.bind(databaseInstance);
-      window.setLabelFromSongId = databaseInstance.setLabelFromSongId.bind(databaseInstance);
-      window.addToHoldingTank = databaseInstance.addToHoldingTank.bind(databaseInstance);
-      window.populateCategorySelect = databaseInstance.populateCategorySelect.bind(databaseInstance);
+      // Make functions globally available (no binding needed for simple functions)
+      window.setLabelFromSongId = databaseInstance.setLabelFromSongId;
+      window.addToHoldingTank = databaseInstance.addToHoldingTank;
+      window.populateCategorySelect = databaseInstance.populateCategorySelect;
       console.log('✅ Database module loaded successfully');
     } catch (error) {
-      console.warn('❌ Failed to load database module:', error);
+      console.error('❌ Failed to load database module:', error);
+      console.error('❌ Database module error stack:', error.stack);
+      console.error('❌ Database module error message:', error.message);
+      console.error('❌ Database module error name:', error.name);
+      if (error.line) console.error('❌ Database module error line:', error.line);
+      if (error.column) console.error('❌ Database module error column:', error.column);
       // Continue loading other modules even if database fails
     }
 
     // Import utils module and make functions globally available
     try {
       console.log('🔄 Loading utils module...');
-      utilsModule = await import('./renderer/modules/utils/index.js');
+      try {
+        utilsModule = await import('./renderer/modules/utils/index.js');
+        console.log('✅ Utils module import successful');
+      } catch (importError) {
+        console.error('❌ Utils module import failed:', importError);
+        console.error('❌ Import error stack:', importError.stack);
+        console.error('❌ Import error message:', importError.message);
+        throw importError;
+      }
       console.log('✅ utils module loaded successfully');
       
       // The utils module exports a singleton instance, not a constructor
@@ -436,17 +457,23 @@ function saveHotkeysToStore() {
       // Initialize the utils module
       utilsInstance.init();
       
-      window.animateCSS = utilsInstance.animateCSS.bind(utilsInstance);
-      window.customConfirm = utilsInstance.customConfirm.bind(utilsInstance);
-      window.customPrompt = utilsInstance.customPrompt.bind(utilsInstance);
-      window.restoreFocusToSearch = utilsInstance.restoreFocusToSearch.bind(utilsInstance);
-      window.isValidSongId = utilsInstance.isValidSongId.bind(utilsInstance);
-      window.isValidCategoryCode = utilsInstance.isValidCategoryCode.bind(utilsInstance);
-      window.isValidFilePath = utilsInstance.isValidFilePath.bind(utilsInstance);
-      window.isValidHotkey = utilsInstance.isValidHotkey.bind(utilsInstance);
+      // Make functions globally available (no binding needed for simple functions)
+      window.animateCSS = utilsInstance.animateCSS;
+      window.customConfirm = utilsInstance.customConfirm;
+      window.customPrompt = utilsInstance.customPrompt;
+      window.restoreFocusToSearch = utilsInstance.restoreFocusToSearch;
+      window.isValidSongId = utilsInstance.isValidSongId;
+      window.isValidCategoryCode = utilsInstance.isValidCategoryCode;
+      window.isValidFilePath = utilsInstance.isValidFilePath;
+      window.isValidHotkey = utilsInstance.isValidHotkey;
       console.log('✅ Utils module loaded successfully');
     } catch (error) {
-      console.warn('❌ Failed to load utils module:', error);
+      console.error('❌ Failed to load utils module:', error);
+      console.error('❌ Utils module error stack:', error.stack);
+      console.error('❌ Utils module error message:', error.message);
+      console.error('❌ Utils module error name:', error.name);
+      if (error.line) console.error('❌ Utils module error line:', error.line);
+      if (error.column) console.error('❌ Utils module error column:', error.column);
       // Continue loading other modules even if utils fails
     }
 

@@ -6,6 +6,9 @@
  * populate various UI components.
  */
 
+// Global categories object
+let categories = {};
+
 /**
  * Populate category select dropdown
  * Fetches categories from database and populates the category select dropdown

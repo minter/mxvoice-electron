@@ -22,6 +22,30 @@ class DatabaseModule {
     // Initialize module state
     this.categories = {};
     this.fontSize = 11;
+    
+    // Bind all functions from sub-modules as methods
+    this.populateCategorySelect = dataPopulation.populateCategorySelect;
+    this.setLabelFromSongId = dataPopulation.setLabelFromSongId;
+    this.addToHoldingTank = dataPopulation.addToHoldingTank;
+    this.populateHotkeys = dataPopulation.populateHotkeys;
+    this.populateHoldingTank = dataPopulation.populateHoldingTank;
+    this.populateCategoriesModal = dataPopulation.populateCategoriesModal;
+    
+    this.saveHoldingTankToStore = storeOperations.saveHoldingTankToStore;
+    this.saveHotkeysToStore = storeOperations.saveHotkeysToStore;
+    
+    this.scaleScrollable = uiOperations.scaleScrollable;
+    
+    this.editCategory = databaseOperations.editCategory;
+    this.deleteCategory = databaseOperations.deleteCategory;
+    this.addNewCategory = databaseOperations.addNewCategory;
+    this.saveEditedSong = databaseOperations.saveEditedSong;
+    this.saveNewSong = databaseOperations.saveNewSong;
+    this.deleteSong = databaseOperations.deleteSong;
+    this.getSongById = databaseOperations.getSongById;
+    this.addSongsByPath = databaseOperations.addSongsByPath;
+    this.executeQuery = databaseOperations.executeQuery;
+    this.executeStatement = databaseOperations.executeStatement;
   }
 
   /**
@@ -49,31 +73,31 @@ class DatabaseModule {
   getAllDatabaseFunctions() {
     return {
       // Data population functions
-      populateCategorySelect: dataPopulation.populateCategorySelect,
-      setLabelFromSongId: dataPopulation.setLabelFromSongId,
-      addToHoldingTank: dataPopulation.addToHoldingTank,
-      populateHotkeys: dataPopulation.populateHotkeys,
-      populateHoldingTank: dataPopulation.populateHoldingTank,
-      populateCategoriesModal: dataPopulation.populateCategoriesModal,
+      populateCategorySelect: this.populateCategorySelect,
+      setLabelFromSongId: this.setLabelFromSongId,
+      addToHoldingTank: this.addToHoldingTank,
+      populateHotkeys: this.populateHotkeys,
+      populateHoldingTank: this.populateHoldingTank,
+      populateCategoriesModal: this.populateCategoriesModal,
       
       // Store operation functions
-      saveHoldingTankToStore: storeOperations.saveHoldingTankToStore,
-      saveHotkeysToStore: storeOperations.saveHotkeysToStore,
+      saveHoldingTankToStore: this.saveHoldingTankToStore,
+      saveHotkeysToStore: this.saveHotkeysToStore,
       
       // UI operation functions
-      scaleScrollable: uiOperations.scaleScrollable,
+      scaleScrollable: this.scaleScrollable,
       
       // Database operation functions
-      editCategory: databaseOperations.editCategory,
-      deleteCategory: databaseOperations.deleteCategory,
-      addNewCategory: databaseOperations.addNewCategory,
-      saveEditedSong: databaseOperations.saveEditedSong,
-      saveNewSong: databaseOperations.saveNewSong,
-      deleteSong: databaseOperations.deleteSong,
-      getSongById: databaseOperations.getSongById,
-      addSongsByPath: databaseOperations.addSongsByPath,
-      executeQuery: databaseOperations.executeQuery,
-      executeStatement: databaseOperations.executeStatement
+      editCategory: this.editCategory,
+      deleteCategory: this.deleteCategory,
+      addNewCategory: this.addNewCategory,
+      saveEditedSong: this.saveEditedSong,
+      saveNewSong: this.saveNewSong,
+      deleteSong: this.deleteSong,
+      getSongById: this.getSongById,
+      addSongsByPath: this.addSongsByPath,
+      executeQuery: this.executeQuery,
+      executeStatement: this.executeStatement
     };
   }
 
@@ -245,29 +269,26 @@ class DatabaseModule {
 // Create and export a singleton instance
 const databaseModule = new DatabaseModule();
 
-// Export the module instance and individual functions for backward compatibility
-export {
-  // Individual functions (for direct access)
-  populateCategorySelect: databaseModule.populateCategorySelect,
-  setLabelFromSongId: databaseModule.setLabelFromSongId,
-  addToHoldingTank: databaseModule.addToHoldingTank,
-  populateHotkeys: databaseModule.populateHotkeys,
-  populateHoldingTank: databaseModule.populateHoldingTank,
-  populateCategoriesModal: databaseModule.populateCategoriesModal,
-  saveHoldingTankToStore: databaseModule.saveHoldingTankToStore,
-  saveHotkeysToStore: databaseModule.saveHotkeysToStore,
-  scaleScrollable: databaseModule.scaleScrollable,
-  editCategory: databaseModule.editCategory,
-  deleteCategory: databaseModule.deleteCategory,
-  addNewCategory: databaseModule.addNewCategory,
-  saveEditedSong: databaseModule.saveEditedSong,
-  saveNewSong: databaseModule.saveNewSong,
-  deleteSong: databaseModule.deleteSong,
-  getSongById: databaseModule.getSongById,
-  addSongsByPath: databaseModule.addSongsByPath,
-  executeQuery: databaseModule.executeQuery,
-  executeStatement: databaseModule.executeStatement
-};
+// Export individual functions for backward compatibility
+export const populateCategorySelect = databaseModule.populateCategorySelect;
+export const setLabelFromSongId = databaseModule.setLabelFromSongId;
+export const addToHoldingTank = databaseModule.addToHoldingTank;
+export const populateHotkeys = databaseModule.populateHotkeys;
+export const populateHoldingTank = databaseModule.populateHoldingTank;
+export const populateCategoriesModal = databaseModule.populateCategoriesModal;
+export const saveHoldingTankToStore = databaseModule.saveHoldingTankToStore;
+export const saveHotkeysToStore = databaseModule.saveHotkeysToStore;
+export const scaleScrollable = databaseModule.scaleScrollable;
+export const editCategory = databaseModule.editCategory;
+export const deleteCategory = databaseModule.deleteCategory;
+export const addNewCategory = databaseModule.addNewCategory;
+export const saveEditedSong = databaseModule.saveEditedSong;
+export const saveNewSong = databaseModule.saveNewSong;
+export const deleteSong = databaseModule.deleteSong;
+export const getSongById = databaseModule.getSongById;
+export const addSongsByPath = databaseModule.addSongsByPath;
+export const executeQuery = databaseModule.executeQuery;
+export const executeStatement = databaseModule.executeStatement;
 
 // Default export for module loading
 export default {
