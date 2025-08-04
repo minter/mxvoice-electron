@@ -1,11 +1,10 @@
-const { ipcRenderer } = require("electron");
-const { Howl, Howler } = require("howler");
-const Store = require("electron-store");
+const { ipcRenderer, contextBridge } = require('electron')
+const { Howl, Howler } = require('howler')
+const Store = require('electron-store');
 const store = new Store();
-const path = require("path");
-const fs = require("fs");
-const log = require("electron-log");
-const remote = require("@electron/remote");
+const path = require('path')
+const fs = require('fs')
+const log = require('electron-log');
 console.log = log.log;
 var dbName = "mxvoice.db";
 console.log(`Looking for database in ${store.get("database_directory")}`);
@@ -23,7 +22,8 @@ const db = require("better-sqlite3")(
 );
 const { v4: uuidv4 } = require("uuid");
 
-ipcRenderer.on("fkey_load", function (event, fkeys, title) {
+// Keep ALL existing IPC listeners (backward compatibility)
+ipcRenderer.on('fkey_load', function (event, fkeys, title) {
   populateHotkeys(fkeys, title);
 });
 
@@ -31,11 +31,11 @@ ipcRenderer.on("manage_categories", function (event) {
   openCategoriesModal();
 });
 
-ipcRenderer.on("holding_tank_load", function (event, songIds) {
+ipcRenderer.on('holding_tank_load', function (event, songIds) {
   populateHoldingTank(songIds);
 });
 
-ipcRenderer.on("start_hotkey_save", function (event, fkeys) {
+ipcRenderer.on('start_hotkey_save', function (event, fkeys) {
   saveHotkeyFile();
 });
 
@@ -122,70 +122,146 @@ ipcRenderer.on("close_all_tabs", function (event) {
   closeAllTabs();
 });
 
-ipcRenderer.on(
-  "display_release_notes",
-  function (event, releaseName, releaseNotes) {
-    console.log(`Attempting to display #newReleaseModal for ${releaseName}`);
-    $("#newReleaseModal .modal-title").html(
-      `Downloaded New Version: ${releaseName}`
-    );
-    $("#newReleaseModal .modal-body").html(releaseNotes);
-    $("#newReleaseModal").modal();
-  }
-);
+ipcRenderer.on('display_release_notes', function (event, releaseName, releaseNotes) {
+  console.log(`Attempting to display #newReleaseModal for ${releaseName}`);
+  $('#newReleaseModal .modal-title').html(`Downloaded New Version: ${releaseName}`);
+  $('#newReleaseModal .modal-body').html(releaseNotes);
+  $('#newReleaseModal').modal();
+})
 
-process.once("loaded", () => {
-  // Ensure that there is a unique index on category code
-  (global.homedir = require("os").homedir()),
-    (global.path = path),
-    (global.store = store),
-    (global.Mousetrap = require("mousetrap")),
-    (global.ipcRenderer = ipcRenderer),
-    (global.prompt = require("electron-prompt")),
-    (global.uuidv4 = uuidv4),
-    (global.util = require("util")),
-    (global.fs = fs),
-    (global.db = db),
-    (global.remote = remote);
+// Keep existing global exposure (backward compatibility)
+process.once('loaded', () => {
+  global.homedir = require('os').homedir(),
+    global.path = path,
+    global.store = store,
+    global.Mousetrap = require('mousetrap'),
+    global.ipcRenderer = ipcRenderer,
+    global.uuidv4 = uuidv4,
+    global.util = require('util'),
+    global.fs = fs,
+    global.db = db
 
-  if (db.pragma("index_info(category_code_index)").length == 0) {
-    console.log(`Creating unique index on category codes`);
-    const stmt = db.prepare(
-      "CREATE UNIQUE INDEX 'category_code_index' ON categories(code)"
-    );
-    const info = stmt.run();
-  }
-
-  if (db.pragma("index_info(category_description_index)").length == 0) {
-    console.log(`Creating unique index on category descriptions`);
-    const stmt = db.prepare(
-      "CREATE UNIQUE INDEX 'category_description_index' ON categories(description)"
-    );
-    const info = stmt.run();
-  }
-
-  // Add search indexes for better performance
-  if (db.pragma("index_info(idx_title)").length == 0) {
-    console.log(`Creating index on title column`);
-    const stmt = db.prepare("CREATE INDEX 'idx_title' ON mrvoice(title)");
-    const info = stmt.run();
-  }
-
-  if (db.pragma("index_info(idx_artist)").length == 0) {
-    console.log(`Creating index on artist column`);
-    const stmt = db.prepare("CREATE INDEX 'idx_artist' ON mrvoice(artist)");
-    const info = stmt.run();
-  }
-
-  if (db.pragma("index_info(idx_info)").length == 0) {
-    console.log(`Creating index on info column`);
-    const stmt = db.prepare("CREATE INDEX 'idx_info' ON mrvoice(info)");
-    const info = stmt.run();
-  }
-
-  if (db.pragma("index_info(idx_category)").length == 0) {
-    console.log(`Creating index on category column`);
-    const stmt = db.prepare("CREATE INDEX 'idx_category' ON mrvoice(category)");
-    const info = stmt.run();
-  }
+  // ADD NEW: Modern APIs through global exposure (works with contextIsolation: false)
+  global.electronAPI = {
+    // File operations
+    openHotkeyFile: () => ipcRenderer.invoke('open-hotkey-file'),
+    saveHotkeyFile: (hotkeyArray) => ipcRenderer.invoke('save-hotkey-file', hotkeyArray),
+    openHoldingTankFile: () => ipcRenderer.invoke('open-holding-tank-file'),
+    saveHoldingTankFile: (holdingTankArray) => ipcRenderer.invoke('save-holding-tank-file', holdingTankArray),
+    
+    // App operations
+    getAppPath: () => ipcRenderer.invoke('get-app-path'),
+    showDirectoryPicker: (defaultPath) => ipcRenderer.invoke('show-directory-picker', defaultPath),
+    restartAndInstall: () => ipcRenderer.invoke('restart-and-install-new-version'),
+    
+    // UI operations
+    increaseFontSize: () => ipcRenderer.invoke('increase-font-size'),
+    decreaseFontSize: () => ipcRenderer.invoke('decrease-font-size'),
+    toggleWaveform: () => ipcRenderer.invoke('toggle-waveform'),
+    toggleAdvancedSearch: () => ipcRenderer.invoke('toggle-advanced-search'),
+    closeAllTabs: () => ipcRenderer.invoke('close-all-tabs'),
+    
+    // Song operations
+    deleteSelectedSong: () => ipcRenderer.invoke('delete-selected-song'),
+    editSelectedSong: () => ipcRenderer.invoke('edit-selected-song'),
+    
+    // Category operations
+    manageCategories: () => ipcRenderer.invoke('manage-categories'),
+    
+    // Preferences
+    showPreferences: () => ipcRenderer.invoke('show-preferences'),
+    
+    // Listeners
+    onFkeyLoad: (callback) => ipcRenderer.on('fkey_load', callback),
+    onHoldingTankLoad: (callback) => ipcRenderer.on('holding_tank_load', callback),
+    onBulkAddDialogLoad: (callback) => ipcRenderer.on('bulk_add_dialog_load', callback),
+    onAddDialogLoad: (callback) => ipcRenderer.on('add_dialog_load', callback),
+    onDisplayReleaseNotes: (callback) => ipcRenderer.on('display_release_notes', callback),
+    
+    // Remove listeners
+    removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
+    
+    // Database operations (new API for gradual migration)
+    database: {
+      query: (sql, params) => ipcRenderer.invoke('database-query', sql, params),
+      execute: (sql, params) => ipcRenderer.invoke('database-execute', sql, params),
+      getCategories: () => ipcRenderer.invoke('get-categories'),
+      addSong: (songData) => ipcRenderer.invoke('add-song', songData)
+    },
+    
+    // File system operations (new API for gradual migration)
+    fileSystem: {
+      read: (filePath) => ipcRenderer.invoke('file-read', filePath),
+      write: (filePath, data) => ipcRenderer.invoke('file-write', filePath, data),
+      exists: (filePath) => ipcRenderer.invoke('file-exists', filePath),
+      delete: (filePath) => ipcRenderer.invoke('file-delete', filePath),
+      copy: (sourcePath, destPath) => ipcRenderer.invoke('file-copy', sourcePath, destPath),
+      mkdir: (dirPath, options) => ipcRenderer.invoke('file-mkdir', dirPath, options),
+      readdir: (dirPath) => ipcRenderer.invoke('fs-readdir', dirPath),
+      stat: (filePath) => ipcRenderer.invoke('fs-stat', filePath)
+    },
+    
+    // Path operations (new API for gradual migration)
+    path: {
+      join: (...paths) => ipcRenderer.invoke('path-join', ...paths),
+      parse: (filePath) => ipcRenderer.invoke('path-parse', filePath),
+      extname: (filePath) => ipcRenderer.invoke('path-extname', filePath)
+    },
+    
+    // Store operations (new API for gradual migration)
+    store: {
+      get: (key) => ipcRenderer.invoke('store-get', key),
+      set: (key, value) => ipcRenderer.invoke('store-set', key, value),
+      delete: (key) => ipcRenderer.invoke('store-delete', key),
+      has: (key) => ipcRenderer.invoke('store-has', key),
+      keys: () => ipcRenderer.invoke('store-keys')
+    },
+    
+    // Audio operations (new API for gradual migration)
+    audio: {
+      play: (filePath) => ipcRenderer.invoke('audio-play', filePath),
+      stop: (soundId) => ipcRenderer.invoke('audio-stop', soundId),
+      pause: (soundId) => ipcRenderer.invoke('audio-pause', soundId),
+      setVolume: (volume) => ipcRenderer.invoke('audio-volume', volume),
+      fade: (soundId, fromVolume, toVolume, duration) => ipcRenderer.invoke('audio-fade', soundId, fromVolume, toVolume, duration)
+    }
+  };
 });
+
+// Database setup (preload-only operations)
+if (db.pragma('index_info(category_code_index)').length == 0) {
+  console.log(`Creating unique index on category codes`)
+  const stmt = db.prepare("CREATE UNIQUE INDEX 'category_code_index' ON categories(code)")
+  const info = stmt.run()
+}
+
+if (db.pragma('index_info(category_description_index)').length == 0) {
+  console.log(`Creating unique index on category descriptions`)
+  const stmt = db.prepare("CREATE UNIQUE INDEX 'category_description_index' ON categories(description)")
+  const info = stmt.run()
+}
+
+// Add search indexes for better performance
+if (db.pragma('index_info(idx_title)').length == 0) {
+  console.log(`Creating index on title column`)
+  const stmt = db.prepare("CREATE INDEX 'idx_title' ON mrvoice(title)")
+  const info = stmt.run()
+}
+
+if (db.pragma('index_info(idx_artist)').length == 0) {
+  console.log(`Creating index on artist column`)
+  const stmt = db.prepare("CREATE INDEX 'idx_artist' ON mrvoice(artist)")
+  const info = stmt.run()
+}
+
+if (db.pragma('index_info(idx_info)').length == 0) {
+  console.log(`Creating index on info column`)
+  const stmt = db.prepare("CREATE INDEX 'idx_info' ON mrvoice(info)")
+  const info = stmt.run()
+}
+
+if (db.pragma('index_info(idx_category)').length == 0) {
+  console.log(`Creating index on category column`)
+  const stmt = db.prepare("CREATE INDEX 'idx_category' ON mrvoice(category)")
+  const info = stmt.run()
+}

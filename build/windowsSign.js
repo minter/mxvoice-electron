@@ -98,7 +98,6 @@ async function signWindowsInstaller() {
   ].join(' ');
 
   console.log('Executing SSL.com CodeSignTool...');
-  console.log(`Command: ${command.replace(/-password="[^"]*"/, '-password="***"').replace(/-totp_secret="[^"]*"/, '-totp_secret="***"')}`);
 
   try {
     // Change to CodeSignTool directory and execute

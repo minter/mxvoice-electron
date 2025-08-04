@@ -88,19 +88,17 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@electron/remote": "^2.1.2",
-    "@fortawesome/fontawesome-free": "^5.15.4",
-    "@octokit/rest": "^21.0.2",
+    "@fortawesome/fontawesome-free": "^7.0.0",
+    "@octokit/rest": "^22.0.0",
     "animate.css": "^4.1.1",
     "axios": "^0.30.0",
     "better-sqlite3": "^11.10.0",
     "bootstrap": "^4.6.0",
     "electron-log": "^5.4.0",
-    "electron-prompt": "^1.7.0",
     "electron-squirrel-startup": "^1.0.0",
     "electron-store": "^8.0.1",
     "electron-updater": "^6.6.2",
-    "electron-util": "^0.17.0",
+    "electron-util": "^0.18.1",
     "howler": "^2.2.3",
     "jquery": "^3.6.0",
     "jquery-contextmenu": "^2.9.2",
@@ -110,16 +108,15 @@
     "music-metadata": "8.1.3",
     "n-readlines": "^1.0.1",
     "popper.js": "^1.14.4",
-    "uuid": "^8.3.2",
-    "wavesurfer.js": "^5.2.0",
+    "uuid": "^11.1.0",
+    "wavesurfer.js": "^7.10.1",
     "yarn": "^1.22.22"
   },
   "devDependencies": {
-    "@electron/notarize": "^2.5.0",
-    "electron": "^22.3.27",
-    "electron-builder": "24.13.3",
-    "electron-builder-notarize": "^1.2.0",
+    "@electron/notarize": "^3.0.1",
+    "electron": "^37.2.5",
+    "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
-    "node-abi": "3.75.0"
+    "node-abi": "4.12.0"
   }
 }
