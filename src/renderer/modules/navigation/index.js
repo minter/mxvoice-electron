@@ -36,4 +36,13 @@ export {
   sendToHoldingTank,
   selectNext,
   selectPrev
+};
+
+// Default export for module loading
+export default {
+  sendToHotkeys,
+  sendToHoldingTank,
+  selectNext,
+  selectPrev,
+  initializeNavigation
 }; 

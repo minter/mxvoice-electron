@@ -186,13 +186,22 @@ class AudioModule {
 // Create and export a singleton instance
 const audioModule = new AudioModule();
 
-// Export the module instance and individual functions for backward compatibility
-module.exports = {
-  // Module instance
-  AudioModule,
-  audio: audioModule,
-  
-  // Individual functions (for direct access)
+// Export individual functions for direct access
+export {
+  playSongFromId: audioModule.playSongFromId,
+  playSelected: audioModule.playSelected,
+  song_ended: audioModule.song_ended,
+  autoplay_next: audioModule.autoplay_next,
+  cancel_autoplay: audioModule.cancel_autoplay,
+  stopPlaying: audioModule.stopPlaying,
+  pausePlaying: audioModule.pausePlaying,
+  resetUIState: audioModule.resetUIState,
+  toggle_play_button: audioModule.toggle_play_button,
+  loop_on: audioModule.loop_on
+};
+
+// Default export for module loading
+export default {
   playSongFromId: audioModule.playSongFromId,
   playSelected: audioModule.playSelected,
   song_ended: audioModule.song_ended,

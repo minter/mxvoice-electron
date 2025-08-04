@@ -38,4 +38,14 @@ export {
   allowHotkeyDrop,
   songDrag,
   columnDrag
+};
+
+// Default export for module loading
+export default {
+  hotkeyDrop,
+  holdingTankDrop,
+  allowHotkeyDrop,
+  songDrag,
+  columnDrag,
+  initializeDragDrop
 }; 

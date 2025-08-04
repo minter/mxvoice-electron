@@ -102,111 +102,153 @@ function saveHotkeysToStore() {
 // openHotkeyFile(), openHoldingTankFile(), saveHotkeyFile(), saveHoldingTankFile()
 // pickDirectory(), installUpdate() - All moved to file-operations module
 
-// Import file operations module and make functions globally available
-import fileOperationsModule from './renderer/modules/file-operations/index.js';
+// Load modules dynamically and make functions globally available
+(async function loadModules() {
+  try {
+    // Import file operations module and make functions globally available
+    const fileOperationsModule = await import('./renderer/modules/file-operations/index.js');
+    
+    // Make file operations functions globally available
+    window.openHotkeyFile = fileOperationsModule.default.openHotkeyFile;
+    window.openHoldingTankFile = fileOperationsModule.default.openHoldingTankFile;
+    window.saveHotkeyFile = fileOperationsModule.default.saveHotkeyFile;
+    window.saveHoldingTankFile = fileOperationsModule.default.saveHoldingTankFile;
+    window.pickDirectory = fileOperationsModule.default.pickDirectory;
+    window.installUpdate = fileOperationsModule.default.installUpdate;
 
-// Make file operations functions globally available
-window.openHotkeyFile = fileOperationsModule.openHotkeyFile;
-window.openHoldingTankFile = fileOperationsModule.openHoldingTankFile;
-window.saveHotkeyFile = fileOperationsModule.saveHotkeyFile;
-window.saveHoldingTankFile = fileOperationsModule.saveHoldingTankFile;
-window.pickDirectory = fileOperationsModule.pickDirectory;
-window.installUpdate = fileOperationsModule.installUpdate;
+    // Import song management module and make functions globally available
+    const songManagementModule = await import('./renderer/modules/song-management/index.js');
+    
+    // Make song management functions globally available
+    window.saveEditedSong = songManagementModule.default.saveEditedSong;
+    window.saveNewSong = songManagementModule.default.saveNewSong;
+    window.editSelectedSong = songManagementModule.default.editSelectedSong;
+    window.deleteSelectedSong = songManagementModule.default.deleteSelectedSong;
+    window.deleteSong = songManagementModule.default.deleteSong;
+    window.removeFromHoldingTank = songManagementModule.default.removeFromHoldingTank;
+    window.removeFromHotkey = songManagementModule.default.removeFromHotkey;
 
-// Import song management module and make functions globally available
-import songManagementModule from './renderer/modules/song-management/index.js';
+    // Import holding tank module for additional functions
+    const holdingTankModule = await import('./renderer/modules/holding-tank/index.js');
+    
+    // Make holding tank functions globally available
+    window.clearHoldingTank = holdingTankModule.default.clearHoldingTank;
+    window.renameHoldingTankTab = holdingTankModule.default.renameHoldingTankTab;
+    window.scale_scrollable = holdingTankModule.default.scale_scrollable;
 
-// Make song management functions globally available
-window.saveEditedSong = songManagementModule.saveEditedSong;
-window.saveNewSong = songManagementModule.saveNewSong;
-window.editSelectedSong = songManagementModule.editSelectedSong;
-window.deleteSelectedSong = songManagementModule.deleteSelectedSong;
-window.deleteSong = songManagementModule.deleteSong;
-window.removeFromHoldingTank = songManagementModule.removeFromHoldingTank;
-window.removeFromHotkey = songManagementModule.removeFromHotkey;
+    // Note: Hotkeys module uses CommonJS exports and needs special handling
+    // For now, these functions will be undefined until we convert the module
+    window.clearHotkeys = function() {
+      console.warn('clearHotkeys function not available - hotkeys module needs conversion to ES6');
+    };
+    window.renameHotkeyTab = function() {
+      console.warn('renameHotkeyTab function not available - hotkeys module needs conversion to ES6');
+    };
 
-// Import bulk operations module and make functions globally available
-import bulkOperationsModule from './renderer/modules/bulk-operations/index.js';
+    // Import categories module and make functions globally available
+    const categoriesModule = await import('./renderer/modules/categories/index.js');
+    
+    // Make categories functions globally available
+    window.populateCategorySelect = categoriesModule.default.populateCategorySelect;
 
-// Make bulk operations functions globally available
-window.showBulkAddModal = bulkOperationsModule.showBulkAddModal;
-window.addSongsByPath = bulkOperationsModule.addSongsByPath;
-window.saveBulkUpload = bulkOperationsModule.saveBulkUpload;
+    // Import bulk operations module and make functions globally available
+    const bulkOperationsModule = await import('./renderer/modules/bulk-operations/index.js');
+    
+    // Make bulk operations functions globally available
+    window.showBulkAddModal = bulkOperationsModule.default.showBulkAddModal;
+    window.addSongsByPath = bulkOperationsModule.default.addSongsByPath;
+    window.saveBulkUpload = bulkOperationsModule.default.saveBulkUpload;
 
-// Import drag and drop module and make functions globally available
-import dragDropModule from './renderer/modules/drag-drop/index.js';
+    // Import drag and drop module and make functions globally available
+    const dragDropModule = await import('./renderer/modules/drag-drop/index.js');
+    
+    // Make drag and drop functions globally available
+    window.hotkeyDrop = dragDropModule.default.hotkeyDrop;
+    window.holdingTankDrop = dragDropModule.default.holdingTankDrop;
+    window.allowHotkeyDrop = dragDropModule.default.allowHotkeyDrop;
+    window.songDrag = dragDropModule.default.songDrag;
+    window.columnDrag = dragDropModule.default.columnDrag;
 
-// Make drag and drop functions globally available
-window.hotkeyDrop = dragDropModule.hotkeyDrop;
-window.holdingTankDrop = dragDropModule.holdingTankDrop;
-window.allowHotkeyDrop = dragDropModule.allowHotkeyDrop;
-window.songDrag = dragDropModule.songDrag;
-window.columnDrag = dragDropModule.columnDrag;
+    // Import navigation module and make functions globally available
+    const navigationModule = await import('./renderer/modules/navigation/index.js');
+    
+    // Make navigation functions globally available
+    window.sendToHotkeys = navigationModule.default.sendToHotkeys;
+    window.sendToHoldingTank = navigationModule.default.sendToHoldingTank;
+    window.selectNext = navigationModule.default.selectNext;
+    window.selectPrev = navigationModule.default.selectPrev;
 
-// Import navigation module and make functions globally available
-import navigationModule from './renderer/modules/navigation/index.js';
+    // Import mode management module and make functions globally available
+    const modeManagementModule = await import('./renderer/modules/mode-management/index.js');
+    
+    // Make mode management functions globally available
+    window.setHoldingTankMode = modeManagementModule.default.setHoldingTankMode;
+    window.getHoldingTankMode = modeManagementModule.default.getHoldingTankMode;
+    window.toggleAutoPlay = modeManagementModule.default.toggleAutoPlay;
+    window.getAutoPlayState = modeManagementModule.default.getAutoPlayState;
+    window.resetToDefaultMode = modeManagementModule.default.resetToDefaultMode;
 
-// Make navigation functions globally available
-window.sendToHotkeys = navigationModule.sendToHotkeys;
-window.sendToHoldingTank = navigationModule.sendToHoldingTank;
-window.selectNext = navigationModule.selectNext;
-window.selectPrev = navigationModule.selectPrev;
+    // Initialize mode management module
+    modeManagementModule.default.initModeManagement().then(result => {
+      if (result.success) {
+        console.log('✅ Mode management module initialized:', result.mode);
+      } else {
+        console.warn('❌ Failed to initialize mode management module:', result.error);
+      }
+    }).catch(error => {
+      console.error('❌ Mode management module initialization error:', error);
+    });
 
-// Import mode management module and make functions globally available
-import modeManagementModule from './renderer/modules/mode-management/index.js';
+    // Import test functions module and make functions globally available
+    const testUtilsModule = await import('./renderer/modules/test-utils/index.js');
+    
+    // Make test functions globally available
+    window.testPhase2Migrations = testUtilsModule.default.testPhase2Migrations;
+    window.testDatabaseAPI = testUtilsModule.default.testDatabaseAPI;
+    window.testFileSystemAPI = testUtilsModule.default.testFileSystemAPI;
+    window.testStoreAPI = testUtilsModule.default.testStoreAPI;
+    window.testAudioAPI = testUtilsModule.default.testAudioAPI;
+    window.testSecurityFeatures = testUtilsModule.default.testSecurityFeatures;
+    window.runAllTests = testUtilsModule.default.runAllTests;
 
-// Make mode management functions globally available
-window.setHoldingTankMode = modeManagementModule.setHoldingTankMode;
-window.getHoldingTankMode = modeManagementModule.getHoldingTankMode;
-window.toggleAutoPlay = modeManagementModule.toggleAutoPlay;
-window.getAutoPlayState = modeManagementModule.getAutoPlayState;
-window.resetToDefaultMode = modeManagementModule.resetToDefaultMode;
+    // Import search module and make functions globally available
+    const searchModule = await import('./renderer/modules/search/index.js');
+    
+    // Make search functions globally available
+    window.searchData = searchModule.default.searchData;
+    window.performLiveSearch = searchModule.default.performLiveSearch;
+    window.toggleAdvancedSearch = searchModule.default.toggleAdvancedSearch;
+    window.triggerLiveSearch = searchModule.default.triggerLiveSearch;
 
-// Initialize mode management module
-modeManagementModule.initModeManagement().then(result => {
-  if (result.success) {
-    console.log('✅ Mode management module initialized:', result.mode);
-  } else {
-    console.warn('❌ Failed to initialize mode management module:', result.error);
+    // Import audio module and make functions globally available
+    const audioModule = await import('./renderer/modules/audio/index.js');
+    
+    // Make audio functions globally available
+    window.playSongFromId = audioModule.default.playSongFromId;
+    window.stopPlaying = audioModule.default.stopPlaying;
+    window.pausePlaying = audioModule.default.pausePlaying;
+    window.resetUIState = audioModule.default.resetUIState;
+    window.autoplay_next = audioModule.default.autoplay_next;
+    window.cancel_autoplay = audioModule.default.cancel_autoplay;
+    window.playSelected = audioModule.default.playSelected;
+    window.loop_on = audioModule.default.loop_on;
+    window.howlerUtils = audioModule.default.howlerUtils;
+
+    console.log('✅ All modules loaded successfully!');
+
+    // Initialize modules after loading
+    try {
+      bulkOperationsModule.default.initializeBulkOperations();
+      dragDropModule.default.initializeDragDrop();
+      navigationModule.default.initializeNavigation();
+      console.log('✅ All modules initialized successfully!');
+    } catch (error) {
+      console.error('❌ Error initializing modules:', error);
+    }
+  } catch (error) {
+    console.error('❌ Error loading modules:', error);
   }
-}).catch(error => {
-  console.error('❌ Mode management module initialization error:', error);
-});
-
-// Import test functions module and make functions globally available
-import testUtilsModule from './renderer/modules/test-utils/index.js';
-
-// Make test functions globally available
-window.testPhase2Migrations = testUtilsModule.testPhase2Migrations;
-window.testDatabaseAPI = testUtilsModule.testDatabaseAPI;
-window.testFileSystemAPI = testUtilsModule.testFileSystemAPI;
-window.testStoreAPI = testUtilsModule.testStoreAPI;
-window.testAudioAPI = testUtilsModule.testAudioAPI;
-window.testSecurityFeatures = testUtilsModule.testSecurityFeatures;
-window.runAllTests = testUtilsModule.runAllTests;
-
-// Import search module and make functions globally available
-import searchModule from './renderer/modules/search/index.js';
-
-// Make search functions globally available
-window.searchData = searchModule.searchData;
-window.performLiveSearch = searchModule.performLiveSearch;
-window.toggleAdvancedSearch = searchModule.toggleAdvancedSearch;
-window.triggerLiveSearch = searchModule.triggerLiveSearch;
-
-// Import audio module and make functions globally available
-import audioModule from './renderer/modules/audio/index.js';
-
-// Make audio functions globally available
-window.playSongFromId = audioModule.playSongFromId;
-window.stopPlaying = audioModule.stopPlaying;
-window.pausePlaying = audioModule.pausePlaying;
-window.resetUIState = audioModule.resetUIState;
-window.autoplay_next = audioModule.autoplay_next;
-window.cancel_autoplay = audioModule.cancel_autoplay;
-window.playSelected = audioModule.playSelected;
-window.loop_on = audioModule.loop_on;
-window.howlerUtils = audioModule.howlerUtils;
+})();
 
 // Preferences and database functions moved to respective modules
 
@@ -294,14 +336,7 @@ $(document).ready(function () {
 
   populateCategorySelect();
 
-  // Initialize bulk operations module
-  bulkOperationsModule.initializeBulkOperations();
-
-  // Initialize drag and drop module
-  dragDropModule.initializeDragDrop();
-
-  // Initialize navigation module
-  navigationModule.initializeNavigation();
+  // Module initializations will be handled in the loadModules async function
 
   // Initialize progress bar to 0% width
   $("#audio_progress").width("0%");

@@ -287,13 +287,28 @@ class CategoriesModule {
 // Create and export a singleton instance
 const categoriesModule = new CategoriesModule();
 
-// Export the module instance and individual functions for backward compatibility
-module.exports = {
-  // Module instance
-  CategoriesModule,
-  categories: categoriesModule,
-  
-  // Individual functions (for direct access)
+// Export individual functions for direct access
+export {
+  editCategory: categoriesModule.editCategory,
+  deleteCategory: categoriesModule.deleteCategory,
+  addNewCategory: categoriesModule.addNewCategory,
+  getCategories: categoriesModule.getCategories,
+  getCategoryByCode: categoriesModule.getCategoryByCode,
+  updateCategory: categoriesModule.updateCategory,
+  populateCategorySelect: categoriesModule.populateCategorySelect,
+  populateCategoriesModal: categoriesModule.populateCategoriesModal,
+  editCategoryUI: categoriesModule.editCategoryUI,
+  openCategoriesModal: categoriesModule.openCategoriesModal,
+  saveCategories: categoriesModule.saveCategories,
+  addNewCategoryUI: categoriesModule.addNewCategoryUI,
+  loadCategories: categoriesModule.loadCategories,
+  refreshCategories: categoriesModule.refreshCategories,
+  validateCategoryCode: categoriesModule.validateCategoryCode,
+  generateCategoryCode: categoriesModule.generateCategoryCode
+};
+
+// Default export for module loading
+export default {
   editCategory: categoriesModule.editCategory,
   deleteCategory: categoriesModule.deleteCategory,
   addNewCategory: categoriesModule.addNewCategory,

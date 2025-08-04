@@ -335,5 +335,6 @@ export default {
   holdingTankDrop,
   sendToHoldingTank,
   renameHoldingTankTab,
-  cancel_autoplay
+  cancel_autoplay,
+  scale_scrollable
 }; 

@@ -233,13 +233,18 @@ class SearchModule {
 // Create and export a singleton instance
 const searchModule = new SearchModule();
 
-// Export the module instance and individual functions for backward compatibility
-module.exports = {
-  // Module instance
-  SearchModule,
-  search: searchModule,
-  
-  // Individual functions (for direct access)
+// Export individual functions for direct access
+export {
+  searchData: searchModule.searchData,
+  performLiveSearch: searchModule.performLiveSearch,
+  toggleAdvancedSearch: searchModule.toggleAdvancedSearch,
+  clearSearchResults: searchModule.clearSearchResults,
+  triggerLiveSearch: searchModule.triggerLiveSearch,
+  buildSearchQuery: searchModule.buildSearchQuery
+};
+
+// Default export for module loading
+export default {
   searchData: searchModule.searchData,
   performLiveSearch: searchModule.performLiveSearch,
   toggleAdvancedSearch: searchModule.toggleAdvancedSearch,

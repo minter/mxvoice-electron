@@ -34,4 +34,12 @@ export {
   showBulkAddModal,
   addSongsByPath,
   saveBulkUpload
+};
+
+// Default export for module loading
+export default {
+  showBulkAddModal,
+  addSongsByPath,
+  saveBulkUpload,
+  initializeBulkOperations
 }; 
