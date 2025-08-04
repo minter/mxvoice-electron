@@ -1447,11 +1447,12 @@ function switchToHotkeyTab(tab) {
 
 function renameHotkeyTab() {
   const currentName = $("#hotkey_tabs .nav-link.active").text();
-  const newName = prompt("Rename this tab:", currentName);
-  if (newName !== null && newName.trim() !== "") {
-    $("#hotkey_tabs .nav-link.active").text(newName);
-    saveHotkeysToStore();
-  }
+  customPrompt("Rename Hotkey Tab", "Enter a new name for this tab:", currentName, function(newName) {
+    if (newName && newName.trim() !== "") {
+      $("#hotkey_tabs .nav-link.active").text(newName);
+      saveHotkeysToStore();
+    }
+  });
 }
 
 function saveEditedSong(event) {
@@ -1586,11 +1587,12 @@ function savePreferences(event) {
 
 function renameHoldingTankTab() {
   const currentName = $("#holding_tank_tabs .nav-link.active").text();
-  const newName = prompt("Rename this tab:", currentName);
-  if (newName !== null && newName.trim() !== "") {
-    $("#holding_tank_tabs .nav-link.active").text(newName);
-    saveHoldingTankToStore();
-  }
+  customPrompt("Rename Holding Tank Tab", "Enter a new name for this tab:", currentName, function(newName) {
+    if (newName && newName.trim() !== "") {
+      $("#holding_tank_tabs .nav-link.active").text(newName);
+      saveHoldingTankToStore();
+    }
+  });
 }
 
 function increaseFontSize() {
@@ -2105,6 +2107,32 @@ function customConfirm(message, callback) {
         callback();
       }
     });
+}
+
+// Custom prompt function to replace native prompt() dialogs
+function customPrompt(title, message, defaultValue, callback) {
+  $("#inputModalTitle").text(title);
+  $("#inputModalMessage").text(message);
+  $("#inputModalField").val(defaultValue);
+  $("#inputModal").modal("show");
+  
+  // Focus on the input field
+  $("#inputModalField").focus();
+  
+  // Handle Enter key
+  $("#inputModalField").off("keypress").on("keypress", function(e) {
+    if (e.which === 13) { // Enter key
+      $("#inputModalConfirmBtn").click();
+    }
+  });
+  
+  $("#inputModalConfirmBtn").off("click").on("click", function () {
+    const value = $("#inputModalField").val();
+    $("#inputModal").modal("hide");
+    if (callback) {
+      callback(value);
+    }
+  });
 }
 
 // Focus restoration after modal dismissal

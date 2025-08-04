@@ -623,6 +623,28 @@
       </div>
     </div>
 
+    <!-- Custom Input Modal -->
+    <div class="modal fade" id="inputModal" role="dialog">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title" id="inputModalTitle">Input</h6>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p id="inputModalMessage"></p>
+            <input type="text" class="form-control" id="inputModalField" placeholder="Enter text...">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" id="inputModalConfirmBtn">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Include all compiled plugins (below), or include individual files as needed -->
 
   <script src="../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
