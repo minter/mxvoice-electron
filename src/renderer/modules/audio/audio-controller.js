@@ -138,8 +138,17 @@ function loop_on(bool) {
   }
 }
 
-// Export the audio controller functions
-module.exports = {
+// Export individual functions for direct access
+export {
+  stopPlaying,
+  pausePlaying,
+  resetUIState,
+  toggle_play_button,
+  loop_on
+};
+
+// Default export for module loading
+export default {
   stopPlaying,
   pausePlaying,
   resetUIState,

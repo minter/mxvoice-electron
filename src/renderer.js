@@ -144,6 +144,12 @@ function saveHotkeysToStore() {
     window.renameHotkeyTab = function() {
       console.warn('renameHotkeyTab function not available - hotkeys module needs conversion to ES6');
     };
+    window.playSongFromHotkey = function(hotkey) {
+      console.warn('playSongFromHotkey function not available - hotkeys module needs conversion to ES6');
+    };
+    window.switchToHotkeyTab = function(tab) {
+      console.warn('switchToHotkeyTab function not available - hotkeys module needs conversion to ES6');
+    };
 
     // Import categories module and make functions globally available
     const categoriesModule = await import('./renderer/modules/categories/index.js');
@@ -245,6 +251,27 @@ function saveHotkeysToStore() {
     } catch (error) {
       console.error('❌ Error initializing modules:', error);
     }
+
+    // Call functions that depend on loaded modules
+    try {
+      if (window.scale_scrollable) {
+        window.scale_scrollable();
+      }
+      if (window.populateCategorySelect) {
+        window.populateCategorySelect();
+      }
+      console.log('✅ Module-dependent functions called successfully!');
+    } catch (error) {
+      console.error('❌ Error calling module-dependent functions:', error);
+    }
+
+    // Set up keyboard shortcuts after modules are loaded
+    try {
+      setupKeyboardShortcuts();
+      console.log('✅ Keyboard shortcuts set up successfully!');
+    } catch (error) {
+      console.error('❌ Error setting up keyboard shortcuts:', error);
+    }
   } catch (error) {
     console.error('❌ Error loading modules:', error);
   }
@@ -331,57 +358,50 @@ function closeAllTabs() {
 
 // Utility functions moved to utils module
 
-$(document).ready(function () {
-  scale_scrollable();
-
-  populateCategorySelect();
-
-  // Module initializations will be handled in the loadModules async function
-
-  // Initialize progress bar to 0% width
-  $("#audio_progress").width("0%");
-
-  $("#search_results").on("click", "tbody tr", function (event) {
-    toggle_selected_row(this);
-  });
-
-  $("#search_results").on("contextmenu", "tbody tr", function (event) {
-    toggle_selected_row(this);
-  });
-
-  $("#search_results").on("dblclick", "tbody tr.song", function (event) {
-    playSelected();
-  });
-
-  // Set up fkeys
-
+/**
+ * Set up keyboard shortcuts after modules are loaded
+ */
+function setupKeyboardShortcuts() {
   var search_field = document.getElementById("omni_search");
 
+  // Set up fkeys
   for (let i = 1; i <= 12; i++) {
     Mousetrap.bind(`f${i}`, function () {
-      playSongFromHotkey(`f${i}`);
+      if (window.playSongFromHotkey) {
+        playSongFromHotkey(`f${i}`);
+      }
     });
 
     Mousetrap(search_field).bind(`f${i}`, function () {
-      playSongFromHotkey(`f${i}`);
+      if (window.playSongFromHotkey) {
+        playSongFromHotkey(`f${i}`);
+      }
     });
   }
 
   for (let i = 1; i <= 5; i++) {
     Mousetrap.bind(`command+${i}`, function () {
-      switchToHotkeyTab(i);
+      if (window.switchToHotkeyTab) {
+        switchToHotkeyTab(i);
+      }
     });
   }
 
   Mousetrap(search_field).bind("esc", function () {
-    stopPlaying();
+    if (window.stopPlaying) {
+      stopPlaying();
+    }
   });
 
   Mousetrap.bind("esc", function () {
-    stopPlaying();
+    if (window.stopPlaying) {
+      stopPlaying();
+    }
   });
   Mousetrap.bind("shift+esc", function () {
-    stopPlaying(true);
+    if (window.stopPlaying) {
+      stopPlaying(true);
+    }
   });
 
   Mousetrap.bind("command+l", function () {
@@ -389,17 +409,21 @@ $(document).ready(function () {
   });
 
   Mousetrap.bind("space", function () {
-    pausePlaying();
+    if (window.pausePlaying) {
+      pausePlaying();
+    }
     return false;
   });
 
   Mousetrap.bind("shift+space", function () {
-    pausePlaying(true);
+    if (window.pausePlaying) {
+      pausePlaying(true);
+    }
     return false;
   });
 
   Mousetrap.bind("return", function () {
-    if (!$("#songFormModal").hasClass("show")) {
+    if (!$("#songFormModal").hasClass("show") && window.playSelected) {
       playSelected();
     }
     return false;
@@ -415,15 +439,21 @@ $(document).ready(function () {
     if ($("#holding-tank-column").has($("#selected_row")).length) {
       console.log("Selected row is in holding tank");
       // If in holding tank, remove from holding tank
-      removeFromHoldingTank();
+      if (window.removeFromHoldingTank) {
+        removeFromHoldingTank();
+      }
     } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
       console.log("Selected row is in hotkey tab");
       // If in hotkey tab, remove from hotkey
-      removeFromHotkey();
+      if (window.removeFromHotkey) {
+        removeFromHotkey();
+      }
     } else {
       console.log("Selected row is in search results");
       // If not in holding tank or hotkey, delete from database
-      deleteSong();
+      if (window.deleteSong) {
+        deleteSong();
+      }
     }
     return false;
   });
@@ -435,6 +465,35 @@ $(document).ready(function () {
       $("#title-search").trigger("focus");
     }
   });
+}
+
+$(document).ready(function () {
+  // These functions will be called after modules are loaded
+  // scale_scrollable();
+  // populateCategorySelect();
+
+  // Module initializations will be handled in the loadModules async function
+
+  // Initialize progress bar to 0% width
+  $("#audio_progress").width("0%");
+
+  // Set up event handlers that don't depend on modules
+  $("#search_results").on("click", "tbody tr", function (event) {
+    toggle_selected_row(this);
+  });
+
+  $("#search_results").on("contextmenu", "tbody tr", function (event) {
+    toggle_selected_row(this);
+  });
+
+  $("#search_results").on("dblclick", "tbody tr.song", function (event) {
+    if (window.playSelected) {
+      playSelected();
+    }
+  });
+
+  // Keyboard shortcuts will be set up after modules are loaded
+  // setupKeyboardShortcuts();
 
   // Set up hotkey and holding tank tabs
 

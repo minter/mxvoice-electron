@@ -219,7 +219,14 @@ function triggerLiveSearch() {
   }, 300); // 300ms debounce
 }
 
-module.exports = {
+// Export individual functions for direct access
+export {
+  searchData,
+  triggerLiveSearch
+};
+
+// Default export for module loading
+export default {
   searchData,
   triggerLiveSearch
 }; 

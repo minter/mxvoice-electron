@@ -59,6 +59,12 @@ const howlerUtils = {
   },
 };
 
-module.exports = {
+// Export individual functions for direct access
+export {
+  howlerUtils
+};
+
+// Default export for module loading
+export default {
   howlerUtils
 }; 

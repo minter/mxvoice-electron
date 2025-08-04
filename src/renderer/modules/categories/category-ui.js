@@ -286,7 +286,19 @@ function deleteCategoryUI(event, code, description) {
   });
 }
 
-module.exports = {
+// Export individual functions for direct access
+export {
+  populateCategorySelect,
+  populateCategoriesModal,
+  editCategoryUI,
+  openCategoriesModal,
+  saveCategories,
+  addNewCategoryUI,
+  deleteCategoryUI
+};
+
+// Default export for module loading
+export default {
   populateCategorySelect,
   populateCategoriesModal,
   editCategoryUI,

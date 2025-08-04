@@ -6,9 +6,9 @@
  */
 
 // Import search sub-modules
-const searchEngine = require('./search-engine');
-const liveSearch = require('./live-search');
-const advancedSearch = require('./advanced-search');
+import * as searchEngine from './search-engine.js';
+import * as liveSearch from './live-search.js';
+import * as advancedSearch from './advanced-search.js';
 
 /**
  * Search Module Class
@@ -234,14 +234,12 @@ class SearchModule {
 const searchModule = new SearchModule();
 
 // Export individual functions for direct access
-export {
-  searchData: searchModule.searchData,
-  performLiveSearch: searchModule.performLiveSearch,
-  toggleAdvancedSearch: searchModule.toggleAdvancedSearch,
-  clearSearchResults: searchModule.clearSearchResults,
-  triggerLiveSearch: searchModule.triggerLiveSearch,
-  buildSearchQuery: searchModule.buildSearchQuery
-};
+export const searchData = searchModule.searchData.bind(searchModule);
+export const performLiveSearch = searchModule.performLiveSearch.bind(searchModule);
+export const toggleAdvancedSearch = searchModule.toggleAdvancedSearch.bind(searchModule);
+export const clearSearchResults = searchModule.clearSearchResults.bind(searchModule);
+export const triggerLiveSearch = searchModule.triggerLiveSearch.bind(searchModule);
+export const buildSearchQuery = searchModule.buildSearchQuery.bind(searchModule);
 
 // Default export for module loading
 export default {

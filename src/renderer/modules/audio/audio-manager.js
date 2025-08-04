@@ -217,8 +217,17 @@ function cancel_autoplay() {
   }
 }
 
-// Export the audio manager functions
-module.exports = {
+// Export individual functions for direct access
+export {
+  playSongFromId,
+  playSelected,
+  song_ended,
+  autoplay_next,
+  cancel_autoplay
+};
+
+// Default export for module loading
+export default {
   playSongFromId,
   playSelected,
   song_ended,

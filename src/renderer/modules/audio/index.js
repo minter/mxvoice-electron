@@ -6,9 +6,9 @@
  */
 
 // Import audio sub-modules
-const audioManager = require('./audio-manager');
-const audioController = require('./audio-controller');
-const audioUtils = require('./audio-utils');
+import * as audioManager from './audio-manager.js';
+import * as audioController from './audio-controller.js';
+import * as audioUtils from './audio-utils.js';
 
 /**
  * Audio Module Class
@@ -187,18 +187,16 @@ class AudioModule {
 const audioModule = new AudioModule();
 
 // Export individual functions for direct access
-export {
-  playSongFromId: audioModule.playSongFromId,
-  playSelected: audioModule.playSelected,
-  song_ended: audioModule.song_ended,
-  autoplay_next: audioModule.autoplay_next,
-  cancel_autoplay: audioModule.cancel_autoplay,
-  stopPlaying: audioModule.stopPlaying,
-  pausePlaying: audioModule.pausePlaying,
-  resetUIState: audioModule.resetUIState,
-  toggle_play_button: audioModule.toggle_play_button,
-  loop_on: audioModule.loop_on
-};
+export const playSongFromId = audioModule.playSongFromId.bind(audioModule);
+export const playSelected = audioModule.playSelected.bind(audioModule);
+export const song_ended = audioModule.song_ended.bind(audioModule);
+export const autoplay_next = audioModule.autoplay_next.bind(audioModule);
+export const cancel_autoplay = audioModule.cancel_autoplay.bind(audioModule);
+export const stopPlaying = audioModule.stopPlaying.bind(audioModule);
+export const pausePlaying = audioModule.pausePlaying.bind(audioModule);
+export const resetUIState = audioModule.resetUIState.bind(audioModule);
+export const toggle_play_button = audioModule.toggle_play_button.bind(audioModule);
+export const loop_on = audioModule.loop_on.bind(audioModule);
 
 // Default export for module loading
 export default {

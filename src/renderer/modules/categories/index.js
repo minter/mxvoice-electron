@@ -7,9 +7,9 @@
  */
 
 // Import category sub-modules
-const categoryOperations = require('./category-operations');
-const categoryUI = require('./category-ui');
-const categoryData = require('./category-data');
+import * as categoryOperations from './category-operations.js';
+import * as categoryUI from './category-ui.js';
+import * as categoryData from './category-data.js';
 
 /**
  * Categories Module Class
@@ -288,24 +288,22 @@ class CategoriesModule {
 const categoriesModule = new CategoriesModule();
 
 // Export individual functions for direct access
-export {
-  editCategory: categoriesModule.editCategory,
-  deleteCategory: categoriesModule.deleteCategory,
-  addNewCategory: categoriesModule.addNewCategory,
-  getCategories: categoriesModule.getCategories,
-  getCategoryByCode: categoriesModule.getCategoryByCode,
-  updateCategory: categoriesModule.updateCategory,
-  populateCategorySelect: categoriesModule.populateCategorySelect,
-  populateCategoriesModal: categoriesModule.populateCategoriesModal,
-  editCategoryUI: categoriesModule.editCategoryUI,
-  openCategoriesModal: categoriesModule.openCategoriesModal,
-  saveCategories: categoriesModule.saveCategories,
-  addNewCategoryUI: categoriesModule.addNewCategoryUI,
-  loadCategories: categoriesModule.loadCategories,
-  refreshCategories: categoriesModule.refreshCategories,
-  validateCategoryCode: categoriesModule.validateCategoryCode,
-  generateCategoryCode: categoriesModule.generateCategoryCode
-};
+export const editCategory = categoriesModule.editCategory.bind(categoriesModule);
+export const deleteCategory = categoriesModule.deleteCategory.bind(categoriesModule);
+export const addNewCategory = categoriesModule.addNewCategory.bind(categoriesModule);
+export const getCategories = categoriesModule.getCategories.bind(categoriesModule);
+export const getCategoryByCode = categoriesModule.getCategoryByCode.bind(categoriesModule);
+export const updateCategory = categoriesModule.updateCategory.bind(categoriesModule);
+export const populateCategorySelect = categoriesModule.populateCategorySelect.bind(categoriesModule);
+export const populateCategoriesModal = categoriesModule.populateCategoriesModal.bind(categoriesModule);
+export const editCategoryUI = categoriesModule.editCategoryUI.bind(categoriesModule);
+export const openCategoriesModal = categoriesModule.openCategoriesModal.bind(categoriesModule);
+export const saveCategories = categoriesModule.saveCategories.bind(categoriesModule);
+export const addNewCategoryUI = categoriesModule.addNewCategoryUI.bind(categoriesModule);
+export const loadCategories = categoriesModule.loadCategories.bind(categoriesModule);
+export const refreshCategories = categoriesModule.refreshCategories.bind(categoriesModule);
+export const validateCategoryCode = categoriesModule.validateCategoryCode.bind(categoriesModule);
+export const generateCategoryCode = categoriesModule.generateCategoryCode.bind(categoriesModule);
 
 // Default export for module loading
 export default {

@@ -63,6 +63,12 @@ function toggleAdvancedSearch() {
   }
 }
 
-module.exports = {
+// Export individual functions for direct access
+export {
+  toggleAdvancedSearch
+};
+
+// Default export for module loading
+export default {
   toggleAdvancedSearch
 }; 

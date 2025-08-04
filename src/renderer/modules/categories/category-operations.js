@@ -308,7 +308,18 @@ function addNewCategory(description) {
   });
 }
 
-module.exports = {
+// Export individual functions for direct access
+export {
+  getCategories,
+  getCategoryByCode,
+  editCategory,
+  updateCategory,
+  deleteCategory,
+  addNewCategory
+};
+
+// Default export for module loading
+export default {
   getCategories,
   getCategoryByCode,
   editCategory,

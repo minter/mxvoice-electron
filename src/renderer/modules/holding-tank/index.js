@@ -15,10 +15,11 @@
  * - Tab management
  */
 
-import { store } from '../../services/store';
-import { database } from '../../services/database';
-import { fileSystem } from '../../services/file-system';
-import { path } from '../../services/path';
+// Use global electronAPI instead of importing services
+const store = window.electronAPI.store;
+const database = window.electronAPI.database;
+const fileSystem = window.electronAPI.fileSystem;
+const path = window.electronAPI.path;
 
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'

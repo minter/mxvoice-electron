@@ -133,6 +133,12 @@ function performLiveSearch(searchTerm) {
   scale_scrollable();
 }
 
-module.exports = {
+// Export individual functions for direct access
+export {
+  performLiveSearch
+};
+
+// Default export for module loading
+export default {
   performLiveSearch
 }; 

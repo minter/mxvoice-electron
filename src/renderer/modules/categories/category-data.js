@@ -236,7 +236,24 @@ function filterCategories(filter) {
   });
 }
 
-module.exports = {
+// Export individual functions for direct access
+export {
+  loadCategories,
+  refreshCategories,
+  validateCategoryCode,
+  generateCategoryCode,
+  getCategoryDescription,
+  getCategoryCodes,
+  getCategoryDescriptions,
+  categoryExists,
+  getCategoryCount,
+  getCategoriesAsArray,
+  getSortedCategories,
+  filterCategories
+};
+
+// Default export for module loading
+export default {
   loadCategories,
   refreshCategories,
   validateCategoryCode,
