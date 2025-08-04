@@ -5,10 +5,8 @@
  * in the MxVoice Electron application.
  */
 
-// Global variables
-let holdingTankMode = "storage"; // 'storage' or 'playlist'
-let autoplay = false;
-let sound = null;
+// Import shared state
+import sharedState from '../shared-state.js';
 
 /**
  * Stop audio playback
@@ -16,7 +14,17 @@ let sound = null;
  * @param {boolean} fadeOut - Whether to fade out the audio
  */
 function stopPlaying(fadeOut = false) {
+  console.log('🔍 stopPlaying called with fadeOut:', fadeOut);
+  const sound = sharedState.get('sound');
+  const autoplay = sharedState.get('autoplay');
+  const holdingTankMode = sharedState.get('holdingTankMode');
+  
+  console.log('🔍 sound object:', sound);
+  console.log('🔍 autoplay:', autoplay);
+  console.log('🔍 holdingTankMode:', holdingTankMode);
+  
   if (sound) {
+    console.log('🔍 Sound exists, stopping...');
     if (autoplay && holdingTankMode === "playlist") {
       $(".now_playing").first().removeClass("now_playing");
     }
@@ -59,9 +67,12 @@ function stopPlaying(fadeOut = false) {
         resetUIState();
       });
     } else {
+      console.log('🔍 Unloading sound immediately');
       sound.unload();
       resetUIState();
     }
+  } else {
+    console.log('🔍 No sound object found in shared state');
   }
 }
 
@@ -71,9 +82,17 @@ function stopPlaying(fadeOut = false) {
  * @param {boolean} fadeOut - Whether to fade out the audio
  */
 function pausePlaying(fadeOut = false) {
+  console.log('🔍 pausePlaying called with fadeOut:', fadeOut);
+  const sound = sharedState.get('sound');
+  
+  console.log('🔍 sound object:', sound);
+  console.log('🔍 sound.playing():', sound ? sound.playing() : 'no sound');
+  
   if (sound) {
+    console.log('🔍 Sound exists, toggling play/pause...');
     toggle_play_button();
     if (sound.playing()) {
+      console.log('🔍 Sound is playing, pausing...');
       sound.on("fade", function () {
         sound.pause();
         sound.volume(old_volume);
@@ -92,12 +111,15 @@ function pausePlaying(fadeOut = false) {
         sound.pause();
       }
     } else {
+      console.log('🔍 Sound is paused, playing...');
       sound.play();
       $("#song_spinner").addClass("fa-spin");
       $("#progress_bar .progress-bar").addClass(
         "progress-bar-animated progress-bar-striped"
       );
     }
+  } else {
+    console.log('🔍 No sound object found in shared state');
   }
 }
 
@@ -105,6 +127,7 @@ function pausePlaying(fadeOut = false) {
  * Reset UI state after audio changes
  */
 function resetUIState() {
+  console.log('🔍 resetUIState called');
   $("#duration").html("0:00");
   $("#timer").html("0:00");
   $("#audio_progress").width("0%");
@@ -126,6 +149,7 @@ function resetUIState() {
  * Toggle play button state
  */
 function toggle_play_button() {
+  console.log('🔍 toggle_play_button called');
   $("#play_button").toggleClass("d-none");
   $("#pause_button").toggleClass("d-none");
 }
@@ -136,6 +160,7 @@ function toggle_play_button() {
  * @param {boolean} bool - Whether to enable loop mode
  */
 function loop_on(bool) {
+  console.log('🔍 loop_on called with bool:', bool);
   if (bool == true) {
     $("#loop_button").addClass("active");
   } else {

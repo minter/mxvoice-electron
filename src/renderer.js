@@ -17,6 +17,28 @@ var wavesurfer = WaveSurfer.create({
 });
 var fontSize = 11;
 
+// Initialize shared state with global variables
+(async function initializeSharedState() {
+  try {
+    const sharedStateModule = await import('./renderer/modules/shared-state.js');
+    const sharedState = sharedStateModule.default;
+    
+    // Initialize shared state with current global values
+    sharedState.set('sound', sound);
+    sharedState.set('globalAnimation', globalAnimation);
+    sharedState.set('wavesurfer', wavesurfer);
+    sharedState.set('autoplay', autoplay);
+    sharedState.set('loop', loop);
+    sharedState.set('holdingTankMode', holdingTankMode);
+    sharedState.set('fontSize', fontSize);
+    sharedState.set('categories', categories);
+    
+    console.log('✅ Shared state initialized with global variables');
+  } catch (error) {
+    console.warn('❌ Failed to initialize shared state:', error);
+  }
+})();
+
 // Load the last holding tank and hotkeys
 
 // Always clear the holding tank store to ensure we load the new HTML
@@ -976,66 +998,173 @@ $(document).ready(function () {
   });
 
   $("#pause_button").click(function (e) {
-    if (sound) {
+    console.log('🔍 Pause button clicked');
+    console.log('🔍 window.pausePlaying function:', typeof window.pausePlaying);
+    if (window.pausePlaying) {
       if (e.shiftKey) {
-        pausePlaying(true);
+        window.pausePlaying(true);
       } else {
-        pausePlaying();
+        window.pausePlaying();
       }
+    } else {
+      console.error('❌ pausePlaying function not available');
     }
   });
 
   $("#play_button").click(function (e) {
-    if (sound && sound.state() == "loaded") {
-      pausePlaying();
+    console.log('🔍 Play button clicked');
+    console.log('🔍 window.pausePlaying function:', typeof window.pausePlaying);
+    console.log('🔍 window.playSelected function:', typeof window.playSelected);
+    if (window.pausePlaying && window.playSelected) {
+      // Check if sound exists in shared state
+      if (window.electronAPI && window.electronAPI.store) {
+        // For now, just call playSelected since we can't easily check sound state
+        window.playSelected();
+      } else {
+        window.playSelected();
+      }
     } else {
-      playSelected();
+      console.error('❌ Required functions not available');
     }
   });
 
   $("#stop_button").click(function (e) {
-    if (sound) {
+    console.log('🔍 Stop button clicked');
+    console.log('🔍 window.stopPlaying function:', typeof window.stopPlaying);
+    if (window.stopPlaying) {
       if (e.shiftKey) {
-        stopPlaying(true);
+        window.stopPlaying(true);
       } else {
-        stopPlaying();
+        window.stopPlaying();
       }
+    } else {
+      console.error('❌ stopPlaying function not available');
     }
   });
 
   $("#progress_bar").click(function (e) {
+    console.log('🔍 Progress bar clicked');
     var percent = (e.clientX - $(this).offset().left) / $(this).width();
-    if (sound) {
-      sound.seek(sound.duration() * percent);
+    console.log('🔍 Progress bar click - percent:', percent);
+    
+    // Get sound from shared state
+    if (window.electronAPI && window.electronAPI.store) {
+      import('./renderer/modules/shared-state.js').then(sharedStateModule => {
+        const sharedState = sharedStateModule.default;
+        const sound = sharedState.get('sound');
+        if (sound) {
+          console.log('🔍 Seeking to position in sound');
+          sound.seek(sound.duration() * percent);
+        } else {
+          console.log('🔍 No sound object found in shared state');
+        }
+      }).catch(error => {
+        console.error('❌ Failed to import shared state:', error);
+      });
     }
   });
 
   $("#waveform").click(function (e) {
+    console.log('🔍 Waveform clicked');
     var percent = (e.clientX - $(this).offset().left) / $(this).width();
-    if (sound) {
-      sound.seek(sound.duration() * percent);
+    console.log('🔍 Waveform click - percent:', percent);
+    
+    // Get sound from shared state
+    if (window.electronAPI && window.electronAPI.store) {
+      import('./renderer/modules/shared-state.js').then(sharedStateModule => {
+        const sharedState = sharedStateModule.default;
+        const sound = sharedState.get('sound');
+        if (sound) {
+          console.log('🔍 Seeking to position in sound');
+          sound.seek(sound.duration() * percent);
+        } else {
+          console.log('🔍 No sound object found in shared state');
+        }
+      }).catch(error => {
+        console.error('❌ Failed to import shared state:', error);
+      });
     }
   });
 
   $("#volume").on("change", function () {
+    console.log('🔍 Volume changed');
     var volume = $(this).val() / 100;
-    if (sound) {
-      sound.volume(volume);
+    console.log('🔍 New volume:', volume);
+    
+    // Get sound from shared state
+    if (window.electronAPI && window.electronAPI.store) {
+      // Import shared state to get sound object
+      import('./renderer/modules/shared-state.js').then(sharedStateModule => {
+        const sharedState = sharedStateModule.default;
+        const sound = sharedState.get('sound');
+        if (sound) {
+          console.log('🔍 Setting volume on sound object');
+          sound.volume(volume);
+        } else {
+          console.log('🔍 No sound object found in shared state');
+        }
+      }).catch(error => {
+        console.error('❌ Failed to import shared state:', error);
+      });
     }
   });
 
   $("#mute_button").click(function () {
-    if (sound) {
-      sound.mute(!sound.mute());
-      sound.volume($("#volume").val() / 100);
+    console.log('🔍 Mute button clicked');
+    
+    // Get sound from shared state
+    if (window.electronAPI && window.electronAPI.store) {
+      import('./renderer/modules/shared-state.js').then(sharedStateModule => {
+        const sharedState = sharedStateModule.default;
+        const sound = sharedState.get('sound');
+        if (sound) {
+          console.log('🔍 Toggling mute on sound object');
+          sound.mute(!sound.mute());
+          sound.volume($("#volume").val() / 100);
+        } else {
+          console.log('🔍 No sound object found in shared state');
+        }
+      }).catch(error => {
+        console.error('❌ Failed to import shared state:', error);
+      });
     }
+    
+    // Toggle UI state
     $("#mute_button").toggleClass("active");
     $("#song_now_playing").toggleClass("text-secondary");
   });
 
   $("#loop_button").click(function () {
-    loop = !loop;
-    loop_on(loop);
+    console.log('🔍 Loop button clicked');
+    console.log('🔍 window.loop_on function:', typeof window.loop_on);
+    
+    if (window.loop_on) {
+      // Get current loop state from shared state
+      if (window.electronAPI && window.electronAPI.store) {
+        import('./renderer/modules/shared-state.js').then(sharedStateModule => {
+          const sharedState = sharedStateModule.default;
+          const currentLoop = sharedState.get('loop');
+          const newLoop = !currentLoop;
+          
+          console.log('🔍 Toggling loop state:', currentLoop, '->', newLoop);
+          sharedState.set('loop', newLoop);
+          window.loop_on(newLoop);
+        }).catch(error => {
+          console.error('❌ Failed to import shared state:', error);
+          // Fallback to simple toggle
+          const loopButton = $("#loop_button");
+          const isActive = loopButton.hasClass("active");
+          window.loop_on(!isActive);
+        });
+      } else {
+        // Fallback to simple toggle
+        const loopButton = $("#loop_button");
+        const isActive = loopButton.hasClass("active");
+        window.loop_on(!isActive);
+      }
+    } else {
+      console.error('❌ loop_on function not available');
+    }
   });
 
   $("#waveform_button").on("click", function () {

@@ -17,6 +17,8 @@ import { howlerUtils } from './audio-utils.js';
  * @param {string} song_id - The database ID of the song
  */
 function playSongWithFilename(filename, row, song_id) {
+  console.log('🔍 playSongWithFilename called with:', { filename, song_id });
+  
   // Get music directory from store
   window.electronAPI.store.get("music_directory").then(musicDirectory => {
     console.log('🔍 Debug: musicDirectory response:', musicDirectory);
@@ -36,6 +38,7 @@ function playSongWithFilename(filename, row, song_id) {
               volume: $("#volume").val() / 100,
               mute: $("#mute_button").hasClass("active"),
               onplay: function () {
+                console.log('🔍 Sound onplay event fired');
                 var time = Math.round(sound.duration());
                 sharedState.set('globalAnimation', requestAnimationFrame(
                   howlerUtils.updateTimeTracker.bind(this)
@@ -58,6 +61,7 @@ function playSongWithFilename(filename, row, song_id) {
                 $("#stop_button").removeAttr("disabled");
               },
               onend: function () {
+                console.log('🔍 Sound onend event fired');
                 song_ended();
                 const loop = sharedState.get('loop');
                 const autoplay = sharedState.get('autoplay');
@@ -70,7 +74,9 @@ function playSongWithFilename(filename, row, song_id) {
                 }
               },
             });
+            console.log('🔍 Setting sound in shared state:', sound);
             sharedState.set('sound', sound);
+            console.log('🔍 Sound set in shared state, now playing...');
             sound.play();
           } else {
             console.warn('❌ Failed to join path with default:', result.error);
@@ -95,6 +101,7 @@ function playSongWithFilename(filename, row, song_id) {
             volume: $("#volume").val() / 100,
             mute: $("#mute_button").hasClass("active"),
             onplay: function () {
+              console.log('🔍 Sound onplay event fired');
               var time = Math.round(sound.duration());
               sharedState.set('globalAnimation', requestAnimationFrame(
                 howlerUtils.updateTimeTracker.bind(this)
@@ -117,6 +124,7 @@ function playSongWithFilename(filename, row, song_id) {
               $("#stop_button").removeAttr("disabled");
             },
             onend: function () {
+              console.log('🔍 Sound onend event fired');
               song_ended();
               const loop = sharedState.get('loop');
               const autoplay = sharedState.get('autoplay');
@@ -128,12 +136,14 @@ function playSongWithFilename(filename, row, song_id) {
                 autoplay_next();
               }
             },
-                      });
-            sharedState.set('sound', sound);
-            sound.play();
-          } else {
-            console.warn('❌ Failed to join path:', result.error);
-          }
+          });
+          console.log('🔍 Setting sound in shared state:', sound);
+          sharedState.set('sound', sound);
+          console.log('🔍 Sound set in shared state, now playing...');
+          sound.play();
+        } else {
+          console.warn('❌ Failed to join path:', result.error);
+        }
       }).catch(error => {
         console.warn('❌ Path join error:', error);
       });
