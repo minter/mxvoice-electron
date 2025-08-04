@@ -1396,6 +1396,41 @@ function removeFromHoldingTank() {
   }
 }
 
+function removeFromHotkey() {
+  var songId = $("#selected_row").attr("songid");
+  console.log("removeFromHotkey called, songId:", songId);
+  console.log("selected_row element:", $("#selected_row"));
+  
+  if (songId) {
+    console.log(`Preparing to remove song ${songId} from hotkey`);
+    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
+    var songRow = songStmt.get(songId);
+    
+    if (songRow) {
+      customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`, function() {
+        console.log("Proceeding with removal from hotkey");
+        // Clear the hotkey slot
+        $("#selected_row").removeAttr("songid");
+        $("#selected_row span").html("");
+        // Clear the selection
+        $("#selected_row").removeAttr("id");
+        // Save the updated hotkeys to store
+        saveHotkeysToStore();
+        console.log("Hotkey cleared successfully");
+      });
+    } else {
+      console.error("Song not found in database for ID:", songId);
+      // Still clear the hotkey even if song not found
+      $("#selected_row").removeAttr("songid");
+      $("#selected_row span").html("");
+      $("#selected_row").removeAttr("id");
+      saveHotkeysToStore();
+    }
+  } else {
+    console.log("No songId found on selected row");
+  }
+}
+
 function scale_scrollable() {
   var advanced_search_height = $("#advanced-search").is(":visible") ? 38 : 0;
   if ($("#advanced-search").is(":visible")) {
@@ -1608,12 +1643,23 @@ function editSelectedSong() {
   }
 }
 function deleteSelectedSong() {
+  console.log("deleteSelectedSong called");
+  console.log("selected_row:", $("#selected_row"));
+  console.log("holding-tank-column has selected_row:", $("#holding-tank-column").has($("#selected_row")).length);
+  console.log("hotkey-tab-content has selected_row:", $("#hotkey-tab-content").has($("#selected_row")).length);
+  
   // Check if the selected row is in the holding tank
   if ($("#holding-tank-column").has($("#selected_row")).length) {
+    console.log("Selected row is in holding tank");
     // If in holding tank, remove from holding tank
     removeFromHoldingTank();
+  } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
+    console.log("Selected row is in hotkey tab");
+    // If in hotkey tab, remove from hotkey
+    removeFromHotkey();
   } else {
-    // If not in holding tank, delete from database
+    console.log("Selected row is in search results");
+    // If not in holding tank or hotkey, delete from database
     deleteSong();
   }
 }
@@ -2166,12 +2212,23 @@ $(document).ready(function () {
   });
 
   Mousetrap.bind(["backspace", "del"], function () {
+    console.log("Delete key pressed");
+    console.log("selected_row:", $("#selected_row"));
+    console.log("holding-tank-column has selected_row:", $("#holding-tank-column").has($("#selected_row")).length);
+    console.log("hotkey-tab-content has selected_row:", $("#hotkey-tab-content").has($("#selected_row")).length);
+    
     // Check if the selected row is in the holding tank
     if ($("#holding-tank-column").has($("#selected_row")).length) {
+      console.log("Selected row is in holding tank");
       // If in holding tank, remove from holding tank
       removeFromHoldingTank();
+    } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
+      console.log("Selected row is in hotkey tab");
+      // If in hotkey tab, remove from hotkey
+      removeFromHotkey();
     } else {
-      // If not in holding tank, delete from database
+      console.log("Selected row is in search results");
+      // If not in holding tank or hotkey, delete from database
       deleteSong();
     }
     return false;
@@ -2221,6 +2278,8 @@ $(document).ready(function () {
           // Check if the selected row is in the holding tank
           if ($("#holding-tank-column").has($("#selected_row")).length) {
             return "Remove from Holding Tank";
+          } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
+            return "Remove from Hotkey";
           } else {
             return "Delete";
           }
@@ -2253,7 +2312,14 @@ $(document).ready(function () {
     playSelected();
   });
 
-  // Removed single-click selection for hotkeys - they should only be draggable and double-clickable
+  // Add single-click selection for hotkeys
+  $(".hotkeys").on("click", "li", function (event) {
+    // Only select if the hotkey has a song assigned
+    if ($(this).attr("songid")) {
+      $("#selected_row").removeAttr("id");
+      $(this).attr("id", "selected_row");
+    }
+  });
 
   $(".hotkeys").on("dblclick", "li", function (event) {
     $(".now_playing").first().removeClass("now_playing");
