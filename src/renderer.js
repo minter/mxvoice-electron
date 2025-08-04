@@ -930,17 +930,7 @@ var howlerUtils = {
 };
 
 function song_ended() {
-  $("#duration").html("0:00");
-  $("#timer").html("0:00");
-  $("#audio_progress").width("0%");
-  $("#song_now_playing").fadeOut(100);
-  $("song_now_playing").removeAttr("songid");
-  $("#play_button").removeClass("d-none");
-  $("#pause_button").addClass("d-none");
-  if (!$("#selected_row").length) {
-    $("#play_button").attr("disabled", true);
-  }
-  $("#stop_button").attr("disabled", true);
+  resetUIState();
 }
 
 function playSongFromId(song_id) {
@@ -1129,21 +1119,70 @@ function playSelected() {
 
 function stopPlaying(fadeOut = false) {
   if (sound) {
-    sound.on("fade", function () {
-      sound.unload();
-    });
     if (autoplay && holdingTankMode === "playlist") {
       $(".now_playing").first().removeClass("now_playing");
     }
     if (fadeOut) {
+      console.log("Starting fade out...");
       window.electronAPI.store.get("fade_out_seconds").then(fadeSeconds => {
-        var fadeDuration = fadeSeconds * 1000;
-        sound.fade(sound.volume(), 0, fadeDuration);
+        console.log("Fade out seconds:", fadeSeconds);
+        
+        // Extract the numeric value from the response
+        var fadeSecondsValue = fadeSeconds.value || fadeSeconds;
+        var fadeDuration = parseFloat(fadeSecondsValue) * 1000;
+        console.log("Fade duration:", fadeDuration);
+        
+        // Check if sound is still valid
+        if (!sound || !sound.volume) {
+          console.log("Sound is no longer valid, stopping");
+          return;
+        }
+        
+        // Remove any existing fade listeners to avoid conflicts
+        sound.off("fade");
+        
+        // Set up fade completion handler
+        sound.on("fade", function () {
+          console.log("Fade event fired, unloading sound");
+          if (sound) {
+            sound.unload();
+            resetUIState();
+          }
+        });
+        
+        // Start the fade
+        var currentVolume = sound.volume();
+        sound.fade(currentVolume, 0, fadeDuration);
+        console.log("Fade started with volume:", currentVolume, "to 0 over", fadeDuration, "ms");
+      }).catch(error => {
+        console.error("Error getting fade_out_seconds:", error);
+        // Fallback to immediate stop
+        sound.unload();
+        resetUIState();
       });
     } else {
       sound.unload();
+      resetUIState();
     }
   }
+}
+
+function resetUIState() {
+  $("#duration").html("0:00");
+  $("#timer").html("0:00");
+  $("#audio_progress").width("0%");
+  $("#song_now_playing").fadeOut(100);
+  $("#song_now_playing").removeAttr("songid");
+  $("#play_button").removeClass("d-none");
+  $("#pause_button").addClass("d-none");
+  $("#song_spinner").removeClass("fa-spin");
+  $("#progress_bar .progress-bar").removeClass(
+    "progress-bar-animated progress-bar-striped"
+  );
+  if (!$("#selected_row").length) {
+    $("#play_button").attr("disabled", true);
+  }
+  $("#stop_button").attr("disabled", true);
 }
 
 function pausePlaying(fadeOut = false) {
@@ -2971,3 +3010,4 @@ function testSecurityFeatures() {
 
 // Make security test function available globally
 window.testSecurityFeatures = testSecurityFeatures;
+
