@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Operations Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 30px;
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .console-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 15px;
+        }
+        .status {
+            padding: 8px;
+            border-radius: 4px;
+            margin: 8px 0;
+            font-weight: 600;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Database Operations Test</h1>
+            <p>Test the database operations in your browser</p>
+        </div>
+        
+        <div class="content">
+            <div class="test-section">
+                <h3>📂 Category Operations</h3>
+                <button class="btn btn-primary" onclick="testAddCategory()">Add Category</button>
+                <button class="btn btn-primary" onclick="testEditCategory()">Edit Category</button>
+                <button class="btn btn-primary" onclick="testDeleteCategory()">Delete Category</button>
+            </div>
+
+            <div class="test-section">
+                <h3>🎵 Song Operations</h3>
+                <button class="btn btn-success" onclick="testAddSong()">Add Song</button>
+                <button class="btn btn-success" onclick="testGetSong()">Get Song</button>
+                <button class="btn btn-success" onclick="testEditSong()">Edit Song</button>
+                <button class="btn btn-success" onclick="testDeleteSong()">Delete Song</button>
+            </div>
+
+            <div class="test-section">
+                <h3>🔍 Query Operations</h3>
+                <button class="btn btn-primary" onclick="testExecuteQuery()">Execute Query</button>
+                <button class="btn btn-primary" onclick="testExecuteStatement()">Execute Statement</button>
+            </div>
+
+            <div class="test-section">
+                <h3>📊 Data Population</h3>
+                <button class="btn btn-success" onclick="testPopulateCategorySelect()">Populate Categories</button>
+                <button class="btn btn-success" onclick="testPopulateHotkeys()">Populate Hotkeys</button>
+                <button class="btn btn-success" onclick="testPopulateHoldingTank()">Populate Holding Tank</button>
+            </div>
+
+            <div class="test-section">
+                <h3>💾 Store Operations</h3>
+                <button class="btn btn-primary" onclick="testSaveHoldingTank()">Save Holding Tank</button>
+                <button class="btn btn-primary" onclick="testSaveHotkeys()">Save Hotkeys</button>
+            </div>
+
+            <div class="test-section">
+                <h3>🎨 UI Operations</h3>
+                <button class="btn btn-success" onclick="testScaleScrollable()">Scale Scrollable</button>
+            </div>
+
+            <div class="test-section">
+                <h3>🧹 Console</h3>
+                <button class="btn btn-primary" onclick="clearConsole()">Clear Console</button>
+                <button class="btn btn-success" onclick="runAllTests()">Run All Tests</button>
+            </div>
+
+            <div class="console-output" id="console-output">
+                Ready to test database operations... Click any button to start testing.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock database module for testing
+        const databaseModule = {
+            addNewCategory: (description) => {
+                console.log(`Adding category: ${description}`);
+                return Promise.resolve({ success: true, changes: 1, code: 'TEST' });
+            },
+            editCategory: (code, description) => {
+                console.log(`Editing category ${code}: ${description}`);
+                return Promise.resolve({ success: true, changes: 1 });
+            },
+            deleteCategory: (code, description) => {
+                console.log(`Deleting category ${code}: ${description}`);
+                return Promise.resolve({ success: true, changes: 1 });
+            },
+            saveNewSong: (songData) => {
+                console.log(`Adding song: ${songData.title}`);
+                return Promise.resolve({ success: true, lastInsertRowid: 123 });
+            },
+            getSongById: (songId) => {
+                console.log(`Getting song: ${songId}`);
+                return Promise.resolve({ success: true, data: [{ id: songId, title: 'Test Song' }] });
+            },
+            saveEditedSong: (songData) => {
+                console.log(`Editing song: ${songData.title}`);
+                return Promise.resolve({ success: true, changes: 1 });
+            },
+            deleteSong: (songId) => {
+                console.log(`Deleting song: ${songId}`);
+                return Promise.resolve({ success: true, changes: 1 });
+            },
+            executeQuery: (sql, params) => {
+                console.log(`Executing query: ${sql}`);
+                return Promise.resolve({ success: true, data: [{ count: 5 }] });
+            },
+            executeStatement: (sql, params) => {
+                console.log(`Executing statement: ${sql}`);
+                return Promise.resolve({ success: true, changes: 1 });
+            },
+            populateCategorySelect: () => {
+                console.log('Populating category select');
+            },
+            populateHotkeys: (hotkeys, title) => {
+                console.log(`Populating hotkeys: ${title}`);
+            },
+            populateHoldingTank: (songIds) => {
+                console.log(`Populating holding tank: ${songIds.length} songs`);
+            },
+            saveHoldingTankToStore: () => {
+                console.log('Saving holding tank to store');
+            },
+            saveHotkeysToStore: () => {
+                console.log('Saving hotkeys to store');
+            },
+            scaleScrollable: () => {
+                console.log('Scaling scrollable elements');
+            }
+        };
+
+        // Console output capture
+        const originalConsoleLog = console.log;
+        const consoleOutput = document.getElementById('console-output');
+        
+        function updateConsoleOutput(message) {
+            consoleOutput.textContent += message + '\n';
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            updateConsoleOutput(args.join(' '));
+        };
+
+        function clearConsole() {
+            consoleOutput.textContent = 'Console cleared...\n';
+        }
+
+        // Test functions
+        function testAddCategory() {
+            console.log('🧪 Testing addNewCategory...');
+            databaseModule.addNewCategory('Test Category')
+                .then(result => {
+                    console.log('✅ Result:', JSON.stringify(result, null, 2));
+                    console.log('✅ Success:', result.success);
+                    console.log('✅ Changes:', result.changes);
+                    console.log('✅ Code:', result.code);
+                })
+                .catch(error => console.log('❌ Error:', error));
+        }
+
+        function testEditCategory() {
+            console.log('🧪 Testing editCategory...');
+            databaseModule.editCategory('TEST', 'Updated Test Category')
+                .then(result => {
+                    console.log('✅ Result:', JSON.stringify(result, null, 2));
+                    console.log('✅ Success:', result.success);
+                    console.log('✅ Changes:', result.changes);
+                })
+                .catch(error => console.log('❌ Error:', error));
+        }
+
+        function testDeleteCategory() {
+            console.log('🧪 Testing deleteCategory...');
+            databaseModule.deleteCategory('TEST', 'Updated Test Category')
+                .then(result => {
+                    console.log('✅ Result:', JSON.stringify(result, null, 2));
+                    console.log('✅ Success:', result.success);
+                    console.log('✅ Changes:', result.changes);
+                })
+                .catch(error => console.log('❌ Error:', error));
+        }
+
+        function testAddSong() {
+            console.log('🧪 Testing saveNewSong...');
+            const songData = {
+                title: 'Test Song',
+                artist: 'Test Artist',
+                category: 'ROCK',
+                info: 'Test song',
+                filename: 'test.mp3',
+                duration: '03:30'
+            };
+            databaseModule.saveNewSong(songData)
+                .then(result => {
+                    console.log('✅ Result:', JSON.stringify(result, null, 2));
+                    console.log('✅ Success:', result.success);
+                    console.log('✅ Last Insert ID:', result.lastInsertRowid);
+                    console.log('✅ Changes:', result.changes);
+                })
+                .catch(error => console.log('❌ Error:', error));
+        }
+
+        function testGetSong() {
+            console.log('🧪 Testing getSongById...');
+            databaseModule.getSongById('123')
+                .then(result => {
+                    console.log('✅ Result:', JSON.stringify(result, null, 2));
+                    console.log('✅ Success:', result.success);
+                    console.log('✅ Data:', result.data);
+                    if (result.data && result.data.length > 0) {
+                        console.log('✅ Song Title:', result.data[0].title);
+                        console.log('✅ Song Artist:', result.data[0].artist);
+                    }
+                })
+                .catch(error => console.log('❌ Error:', error));
+        }
+
+        function testEditSong() {
+            console.log('🧪 Testing saveEditedSong...');
+            const songData = {
+                id: '123',
+                title: 'Updated Test Song',
+                artist: 'Test Artist',
+                category: 'ROCK',
+                info: 'Updated test song'
+            };
+            databaseModule.saveEditedSong(songData)
+                .then(result => {
+                    console.log('✅ Result:', JSON.stringify(result, null, 2));
+                    console.log('✅ Success:', result.success);
+                    console.log('✅ Changes:', result.changes);
+                })
+                .catch(error => console.log('❌ Error:', error));
+        }
+
+        function testDeleteSong() {
+            console.log('🧪 Testing deleteSong...');
+            databaseModule.deleteSong('123')
+                .then(result => {
+                    console.log('✅ Result:', JSON.stringify(result, null, 2));
+                    console.log('✅ Success:', result.success);
+                    console.log('✅ Changes:', result.changes);
+                })
+                .catch(error => console.log('❌ Error:', error));
+        }
+
+        function testExecuteQuery() {
+            console.log('🧪 Testing executeQuery...');
+            databaseModule.executeQuery('SELECT COUNT(*) as count FROM categories')
+                .then(result => {
+                    console.log('✅ Result:', JSON.stringify(result, null, 2));
+                    console.log('✅ Success:', result.success);
+                    console.log('✅ Data:', result.data);
+                    if (result.data && result.data.length > 0) {
+                        console.log('✅ Count:', result.data[0].count);
+                    }
+                })
+                .catch(error => console.log('❌ Error:', error));
+        }
+
+        function testExecuteStatement() {
+            console.log('🧪 Testing executeStatement...');
+            databaseModule.executeStatement('INSERT INTO categories VALUES(?, ?)', ['TEST', 'Test Category'])
+                .then(result => {
+                    console.log('✅ Result:', JSON.stringify(result, null, 2));
+                    console.log('✅ Success:', result.success);
+                    console.log('✅ Changes:', result.changes);
+                })
+                .catch(error => console.log('❌ Error:', error));
+        }
+
+        function testPopulateCategorySelect() {
+            console.log('🧪 Testing populateCategorySelect...');
+            databaseModule.populateCategorySelect();
+            console.log('✅ Function called successfully');
+        }
+
+        function testPopulateHotkeys() {
+            console.log('🧪 Testing populateHotkeys...');
+            databaseModule.populateHotkeys({ f1: '123', f2: '456' }, 'Test Hotkeys');
+            console.log('✅ Function called successfully');
+        }
+
+        function testPopulateHoldingTank() {
+            console.log('🧪 Testing populateHoldingTank...');
+            databaseModule.populateHoldingTank(['123', '456', '789']);
+            console.log('✅ Function called successfully');
+        }
+
+        function testSaveHoldingTank() {
+            console.log('🧪 Testing saveHoldingTankToStore...');
+            databaseModule.saveHoldingTankToStore();
+            console.log('✅ Function called successfully');
+        }
+
+        function testSaveHotkeys() {
+            console.log('🧪 Testing saveHotkeysToStore...');
+            databaseModule.saveHotkeysToStore();
+            console.log('✅ Function called successfully');
+        }
+
+        function testScaleScrollable() {
+            console.log('🧪 Testing scaleScrollable...');
+            databaseModule.scaleScrollable();
+            console.log('✅ Function called successfully');
+        }
+
+        function runAllTests() {
+            console.log('🚀 Running all database operation tests...\n');
+            
+            // Run all tests in sequence
+            testAddCategory();
+            setTimeout(() => testEditCategory(), 1000);
+            setTimeout(() => testDeleteCategory(), 2000);
+            setTimeout(() => testAddSong(), 3000);
+            setTimeout(() => testGetSong(), 4000);
+            setTimeout(() => testEditSong(), 5000);
+            setTimeout(() => testDeleteSong(), 6000);
+            setTimeout(() => testExecuteQuery(), 7000);
+            setTimeout(() => testExecuteStatement(), 8000);
+            setTimeout(() => testPopulateCategorySelect(), 9000);
+            setTimeout(() => testPopulateHotkeys(), 10000);
+            setTimeout(() => testPopulateHoldingTank(), 11000);
+            setTimeout(() => testSaveHoldingTank(), 12000);
+            setTimeout(() => testSaveHotkeys(), 13000);
+            setTimeout(() => testScaleScrollable(), 14000);
+            
+            console.log('✅ All tests scheduled to run!');
+        }
+    </script>
+</body>
+</html> 

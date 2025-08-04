@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utils Module Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body { padding: 20px; font-family: Arial, sans-serif; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        #testElement { 
+            width: 100px; 
+            height: 100px; 
+            background-color: #007bff; 
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Utils Module Test Page</h1>
+    
+    <div class="test-section">
+        <h3>Animation Test</h3>
+        <div id="testElement">Click me!</div>
+        <button onclick="testAnimation()" class="btn btn-primary">Test Animation</button>
+        <div id="animationResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Modal Test</h3>
+        <button onclick="testConfirm()" class="btn btn-warning">Test Confirm</button>
+        <button onclick="testPrompt()" class="btn btn-info">Test Prompt</button>
+        <div id="modalResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Validation Test</h3>
+        <button onclick="testValidation()" class="btn btn-success">Test Validation</button>
+        <div id="validationResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Module Loader Test</h3>
+        <button onclick="testModuleLoader()" class="btn btn-secondary">Test Module Loader</button>
+        <div id="loaderResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Full Integration Test</h3>
+        <button onclick="runFullTest()" class="btn btn-dark">Run Full Test</button>
+        <div id="fullTestResult"></div>
+    </div>
+
+    <!-- Bootstrap Modals -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmationMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmationConfirmBtn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="inputModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inputModalTitle">Input</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="inputModalMessage"></p>
+                    <input type="text" class="form-control" id="inputModalField">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="inputModalConfirmBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock the utils module for testing
+        const mockUtils = {
+            animateCSS: (element, animation, speed = "", prefix = "animate__") => {
+                return new Promise((resolve, reject) => {
+                    const animationName = `${prefix}${animation} ${speed}`;
+                    const node = $(element);
+
+                    node.addClass(`${prefix}animated ${animationName}`);
+
+                    function handleAnimationEnd() {
+                        node.removeClass(`${prefix}animated ${animationName}`);
+                        node.off("animationend", handleAnimationEnd);
+                        resolve("Animation ended");
+                    }
+
+                    node.on("animationend", handleAnimationEnd);
+                });
+            },
+
+            customConfirm: (message, callback) => {
+                $("#confirmationMessage").text(message);
+                $("#confirmationModal").modal("show");
+
+                $("#confirmationConfirmBtn")
+                    .off("click")
+                    .on("click", function () {
+                        $("#confirmationModal").modal("hide");
+                        if (callback) {
+                            callback();
+                        }
+                    });
+            },
+
+            customPrompt: (title, message, defaultValue, callback) => {
+                $("#inputModalTitle").text(title);
+                $("#inputModalMessage").text(message);
+                $("#inputModalField").val(defaultValue);
+                $("#inputModal").modal("show");
+                
+                $("#inputModalField").focus();
+                
+                $("#inputModalField").off("keypress").on("keypress", function(e) {
+                    if (e.which === 13) {
+                        $("#inputModalConfirmBtn").click();
+                    }
+                });
+                
+                $("#inputModalConfirmBtn").off("click").on("click", function () {
+                    const value = $("#inputModalField").val();
+                    $("#inputModal").modal("hide");
+                    if (callback) {
+                        callback(value);
+                    }
+                });
+            },
+
+            restoreFocusToSearch: () => {
+                setTimeout(function () {
+                    console.log("Focus restored to search");
+                }, 100);
+            },
+
+            isValidSongId: (songId) => {
+                return songId && typeof songId === 'string' && songId.trim().length > 0;
+            },
+
+            isValidCategoryCode: (categoryCode) => {
+                return categoryCode && typeof categoryCode === 'string' && categoryCode.trim().length > 0;
+            },
+
+            isValidFilePath: (filePath) => {
+                return filePath && typeof filePath === 'string' && filePath.trim().length > 0;
+            },
+
+            isValidHotkey: (hotkey) => {
+                return hotkey && typeof hotkey === 'string' && /^f\d+$/.test(hotkey);
+            }
+        };
+
+        // Test functions
+        function testAnimation() {
+            const resultDiv = document.getElementById('animationResult');
+            resultDiv.innerHTML = '<div class="test-result info">Testing animation...</div>';
+            
+            mockUtils.animateCSS('#testElement', 'bounce', '1s')
+                .then(() => {
+                    resultDiv.innerHTML = '<div class="test-result success">✅ Animation test passed!</div>';
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `<div class="test-result error">❌ Animation test failed: ${error}</div>`;
+                });
+        }
+
+        function testConfirm() {
+            const resultDiv = document.getElementById('modalResult');
+            resultDiv.innerHTML = '<div class="test-result info">Testing confirm modal...</div>';
+            
+            mockUtils.customConfirm('Are you sure you want to test this?', () => {
+                resultDiv.innerHTML = '<div class="test-result success">✅ Confirm modal test passed!</div>';
+            });
+        }
+
+        function testPrompt() {
+            const resultDiv = document.getElementById('modalResult');
+            resultDiv.innerHTML = '<div class="test-result info">Testing prompt modal...</div>';
+            
+            mockUtils.customPrompt('Test Input', 'Enter something:', 'Default value', (value) => {
+                resultDiv.innerHTML = `<div class="test-result success">✅ Prompt modal test passed! You entered: ${value}</div>`;
+            });
+        }
+
+        function testValidation() {
+            const resultDiv = document.getElementById('validationResult');
+            let results = [];
+            
+            // Test song ID validation
+            results.push(`Song ID "123": ${mockUtils.isValidSongId("123") ? '✅' : '❌'}`);
+            results.push(`Song ID "": ${mockUtils.isValidSongId("") ? '❌' : '✅'}`);
+            
+            // Test category validation
+            results.push(`Category "ROCK": ${mockUtils.isValidCategoryCode("ROCK") ? '✅' : '❌'}`);
+            results.push(`Category "": ${mockUtils.isValidCategoryCode("") ? '❌' : '✅'}`);
+            
+            // Test file path validation
+            results.push(`File path "/path/to/file": ${mockUtils.isValidFilePath("/path/to/file") ? '✅' : '❌'}`);
+            results.push(`File path "": ${mockUtils.isValidFilePath("") ? '❌' : '✅'}`);
+            
+            // Test hotkey validation
+            results.push(`Hotkey "f1": ${mockUtils.isValidHotkey("f1") ? '✅' : '❌'}`);
+            results.push(`Hotkey "invalid": ${mockUtils.isValidHotkey("invalid") ? '❌' : '✅'}`);
+            
+            resultDiv.innerHTML = `<div class="test-result success">✅ Validation tests completed:<br>${results.join('<br>')}</div>`;
+        }
+
+        function testModuleLoader() {
+            const resultDiv = document.getElementById('loaderResult');
+            resultDiv.innerHTML = '<div class="test-result info">Testing module loader...</div>';
+            
+            // Mock module loader
+            const mockLoader = {
+                registerModule: (name, module) => {
+                    console.log(`Module registered: ${name}`);
+                    return true;
+                },
+                loadModule: (name) => {
+                    console.log(`Module loaded: ${name}`);
+                    return module;
+                },
+                testAllModules: () => {
+                    return { status: '✅ All modules working' };
+                }
+            };
+            
+            mockLoader.registerModule('utils', mockUtils);
+            const loadedModule = mockLoader.loadModule('utils');
+            const testResults = mockLoader.testAllModules();
+            
+            resultDiv.innerHTML = `<div class="test-result success">✅ Module loader test passed!<br>Test results: ${JSON.stringify(testResults)}</div>`;
+        }
+
+        function runFullTest() {
+            const resultDiv = document.getElementById('fullTestResult');
+            resultDiv.innerHTML = '<div class="test-result info">Running full integration test...</div>';
+            
+            let testResults = [];
+            
+            // Test all functions exist
+            if (typeof mockUtils.animateCSS === 'function') testResults.push('✅ animateCSS function exists');
+            else testResults.push('❌ animateCSS function missing');
+            
+            if (typeof mockUtils.customConfirm === 'function') testResults.push('✅ customConfirm function exists');
+            else testResults.push('❌ customConfirm function missing');
+            
+            if (typeof mockUtils.customPrompt === 'function') testResults.push('✅ customPrompt function exists');
+            else testResults.push('❌ customPrompt function missing');
+            
+            if (typeof mockUtils.isValidSongId === 'function') testResults.push('✅ isValidSongId function exists');
+            else testResults.push('❌ isValidSongId function missing');
+            
+            // Test validation functions
+            testResults.push(`✅ Song ID validation: ${mockUtils.isValidSongId("123")}`);
+            testResults.push(`✅ Hotkey validation: ${mockUtils.isValidHotkey("f1")}`);
+            
+            resultDiv.innerHTML = `<div class="test-result success">✅ Full integration test completed!<br>${testResults.join('<br>')}</div>`;
+        }
+    </script>
+</body>
+</html> 

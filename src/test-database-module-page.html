@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Module Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        .btn-info:hover {
+            background: #138496;
+        }
+        .console-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .module-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .module-info h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .function-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .function-item {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border-left: 4px solid #667eea;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .database-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .database-preview h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .table-preview {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .table-header {
+            background: #e9ecef;
+            padding: 8px 12px;
+            font-weight: 600;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .table-row {
+            padding: 8px 12px;
+            border-bottom: 1px solid #dee2e6;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+        .table-row:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗄️ Database Module Test Suite</h1>
+            <p>Comprehensive testing for the MxVoice Database Module</p>
+        </div>
+        
+        <div class="content">
+            <div class="test-section">
+                <h3>📋 Test Overview</h3>
+                <p>This test suite validates the Database module functionality including:</p>
+                <ul>
+                    <li><strong>Database Setup:</strong> Initialization, index creation, and configuration</li>
+                    <li><strong>Database Operations:</strong> Query execution, data manipulation, and CRUD operations</li>
+                    <li><strong>IPC Integration:</strong> Main process communication and error handling</li>
+                    <li><strong>Mock Dependencies:</strong> SQLite, electron-store, and file system simulation</li>
+                </ul>
+            </div>
+
+            <div class="test-section">
+                <h3>🧪 Test Controls</h3>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="runAllDatabaseTests()">🚀 Run All Tests</button>
+                    <button class="btn btn-secondary" onclick="testDatabaseModule()">🗄️ Test Database Module</button>
+                    <button class="btn btn-secondary" onclick="testDatabaseFunctionality()">⚡ Test Database Functions</button>
+                    <button class="btn btn-secondary" onclick="testModuleLoader()">📦 Test Module Loader</button>
+                    <button class="btn btn-info" onclick="testDependencies()">🔧 Test Dependencies</button>
+                    <button class="btn btn-success" onclick="clearConsole()">🧹 Clear Console</button>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>📊 Module Information</h3>
+                <div class="module-info">
+                    <h4>Database Module Structure</h4>
+                    <div class="function-list">
+                        <div class="function-item">populateCategorySelect()</div>
+                        <div class="function-item">setLabelFromSongId()</div>
+                        <div class="function-item">addToHoldingTank()</div>
+                        <div class="function-item">populateHotkeys()</div>
+                        <div class="function-item">populateHoldingTank()</div>
+                        <div class="function-item">populateCategoriesModal()</div>
+                        <div class="function-item">saveHoldingTankToStore()</div>
+                        <div class="function-item">saveHotkeysToStore()</div>
+                        <div class="function-item">scaleScrollable()</div>
+                        <div class="function-item">editCategory()</div>
+                        <div class="function-item">deleteCategory()</div>
+                        <div class="function-item">addNewCategory()</div>
+                        <div class="function-item">saveEditedSong()</div>
+                        <div class="function-item">saveNewSong()</div>
+                        <div class="function-item">deleteSong()</div>
+                        <div class="function-item">getSongById()</div>
+                        <div class="function-item">addSongsByPath()</div>
+                        <div class="function-item">executeQuery()</div>
+                        <div class="function-item">executeStatement()</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>🗃️ Database Preview</h3>
+                <div class="database-preview">
+                    <h4>Mock Database Tables</h4>
+                    
+                    <div class="table-preview">
+                        <div class="table-header">Categories Table</div>
+                        <div class="table-row">
+                            <strong>Code</strong>
+                            <strong>Description</strong>
+                        </div>
+                        <div class="table-row">
+                            <span>ROCK</span>
+                            <span>Rock Music</span>
+                        </div>
+                        <div class="table-row">
+                            <span>JAZZ</span>
+                            <span>Jazz Music</span>
+                        </div>
+                        <div class="table-row">
+                            <span>CLASSICAL</span>
+                            <span>Classical Music</span>
+                        </div>
+                        <div class="table-row">
+                            <span>POP</span>
+                            <span>Pop Music</span>
+                        </div>
+                    </div>
+                    
+                    <div class="table-preview">
+                        <div class="table-header">MrVoice Table (Songs)</div>
+                        <div class="table-row">
+                            <strong>ID</strong>
+                            <strong>Title</strong>
+                            <strong>Artist</strong>
+                            <strong>Category</strong>
+                            <strong>Filename</strong>
+                        </div>
+                        <div class="table-row">
+                            <span>1</span>
+                            <span>Test Song 1</span>
+                            <span>Test Artist 1</span>
+                            <span>ROCK</span>
+                            <span>test1.mp3</span>
+                        </div>
+                        <div class="table-row">
+                            <span>2</span>
+                            <span>Test Song 2</span>
+                            <span>Test Artist 2</span>
+                            <span>JAZZ</span>
+                            <span>test2.mp3</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>📝 Test Instructions</h3>
+                <div class="status info">
+                    <strong>How to use:</strong>
+                    <ol>
+                        <li>Click "Run All Tests" to execute the complete test suite</li>
+                        <li>Or use individual test buttons to test specific components</li>
+                        <li>Check the console output below for detailed results</li>
+                        <li>Look for ✅ marks indicating successful tests</li>
+                        <li>Any ❌ marks indicate issues that need attention</li>
+                        <li>The database preview shows the mock data structure being tested</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>📺 Console Output</h3>
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="copyConsoleOutput()">📋 Copy Output</button>
+                    <button class="btn btn-secondary" onclick="downloadConsoleOutput()">💾 Download Log</button>
+                </div>
+                <div id="console-output" class="console-output">
+                    Ready to run database tests... Click "Run All Tests" to begin.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Override console.log to capture output
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const consoleOutput = document.getElementById('console-output');
+        
+        function updateConsoleOutput(message) {
+            consoleOutput.textContent += message + '\n';
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            updateConsoleOutput(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            updateConsoleOutput('❌ ERROR: ' + args.join(' '));
+        };
+        
+        function clearConsole() {
+            consoleOutput.textContent = 'Console cleared...\n';
+        }
+        
+        function copyConsoleOutput() {
+            navigator.clipboard.writeText(consoleOutput.textContent).then(() => {
+                alert('Console output copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+        
+        function downloadConsoleOutput() {
+            const blob = new Blob([consoleOutput.textContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'database-module-test-log.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+
+    <!-- Include the test script -->
+    <script src="test-database-module-browser.js"></script>
+</body>
+</html> 
