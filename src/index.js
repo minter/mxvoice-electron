@@ -79,7 +79,7 @@ const createWindow = () => {
     webPreferences: {
       contextIsolation: false, // Temporarily disable for testing
       nodeIntegration: true,   // Temporarily enable for testing
-      preload: path.join(app.getAppPath(), 'src/preload.js')
+      preload: path.join(app.getAppPath(), 'src/preload/preload-modular.js')
     }
   });
 
