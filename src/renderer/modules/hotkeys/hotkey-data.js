@@ -237,6 +237,8 @@ function validateHotkeyData(hotkeyData) {
 }
 
 export {
+  populateHotkeys,
+  setLabelFromSongId,
   getHotkeyData,
   setHotkeyData,
   clearHotkeys,
@@ -245,6 +247,8 @@ export {
 
 // Default export for module loading
 export default {
+  populateHotkeys,
+  setLabelFromSongId,
   getHotkeyData,
   setHotkeyData,
   clearHotkeys,

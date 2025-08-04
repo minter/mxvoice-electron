@@ -6,8 +6,8 @@
  */
 
 // Import preferences sub-modules
-import * as preferenceManager from './preference-manager.js';
-import * as settingsController from './settings-controller.js';
+import preferenceManager from './preference-manager.js';
+import settingsController from './settings-controller.js';
 
 /**
  * Initialize the Preferences module
@@ -21,8 +21,8 @@ function initializePreferences(options = {}) {
   const { electronAPI, db, store } = options;
   
   // Initialize sub-modules
-  const manager = preferenceManager.initialize({ electronAPI, db, store });
-  const controller = settingsController.initialize({ electronAPI, db, store });
+  const manager = preferenceManager({ electronAPI, db, store });
+  const controller = settingsController({ electronAPI, db, store });
   
   return {
     // Preference Manager functions

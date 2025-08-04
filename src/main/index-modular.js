@@ -7,7 +7,6 @@
 
 import { app, ipcMain } from 'electron';
 import path from 'path';
-import { is } from 'electron-util';
 import os from 'os';
 import fs from 'fs';
 import readlines from 'n-readlines';
@@ -15,10 +14,13 @@ import Store from 'electron-store';
 import log from 'electron-log';
 import Database from 'better-sqlite3';
 import { Howl, Howler } from 'howler';
-import { autoUpdater } from "electron-updater";
+import electronUpdater from 'electron-updater';
 import markdownIt from 'markdown-it';
-import electronReload from 'electron-reload';
-import electronSquirrelStartup from 'electron-squirrel-startup';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent for ES6 modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import main process modules
 import * as appSetup from './modules/app-setup.js';
@@ -56,6 +58,7 @@ const store = new Store({
 });
 
 // Auto-updater configuration
+const { autoUpdater } = electronUpdater;
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = "info";
 
@@ -72,15 +75,35 @@ let mainWindow;
 let db; // Database connection for main process
 let audioInstances = new Map(); // Track audio instances in main process
 
-// Enable live reload
-if (is.development) {
-  electronReload(__dirname);
-}
+// Enable live reload (only in development)
+// Use dynamic import for electron-util to avoid CommonJS module issues
+import('electron-util').then(electronUtil => {
+  if (electronUtil.is && electronUtil.is.development) {
+    // Use dynamic import for electron-reload to avoid ES6 module issues
+    import('electron-reload').then(electronReload => {
+      try {
+        electronReload.default(__dirname);
+        console.log('✅ Electron reload enabled for development');
+      } catch (error) {
+        console.warn('⚠️ Electron reload failed:', error.message);
+      }
+    }).catch(error => {
+      console.warn('⚠️ Could not load electron-reload:', error.message);
+    });
+  }
+}).catch(error => {
+  console.warn('⚠️ Could not load electron-util:', error.message);
+});
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (electronSquirrelStartup) {
-  app.quit();
-}
+// Use dynamic import for electron-squirrel-startup to avoid CommonJS issues
+import('electron-squirrel-startup').then(electronSquirrelStartup => {
+  if (electronSquirrelStartup.default) {
+    app.quit();
+  }
+}).catch(error => {
+  console.warn('⚠️ Could not load electron-squirrel-startup:', error.message);
+});
 
 // Initialize database
 function initializeDatabase() {

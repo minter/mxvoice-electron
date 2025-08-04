@@ -32,7 +32,7 @@ class AudioModule {
     this.loop_on = audioController.loop_on;
     
     // Initialize audio utilities
-    this.howlerUtils = audioUtils.howlerUtils;
+    // this.howlerUtils = audioUtils.howlerUtils; // Function not implemented yet
   }
 
   /**
@@ -65,7 +65,7 @@ class AudioModule {
       loop_on: this.loop_on,
       
       // Audio utilities
-      howlerUtils: this.howlerUtils
+      // howlerUtils: this.howlerUtils // Function not implemented yet
     };
   }
 
@@ -199,15 +199,4 @@ export const toggle_play_button = audioModule.toggle_play_button.bind(audioModul
 export const loop_on = audioModule.loop_on.bind(audioModule);
 
 // Default export for module loading
-export default {
-  playSongFromId: audioModule.playSongFromId,
-  playSelected: audioModule.playSelected,
-  song_ended: audioModule.song_ended,
-  autoplay_next: audioModule.autoplay_next,
-  cancel_autoplay: audioModule.cancel_autoplay,
-  stopPlaying: audioModule.stopPlaying,
-  pausePlaying: audioModule.pausePlaying,
-  resetUIState: audioModule.resetUIState,
-  toggle_play_button: audioModule.toggle_play_button,
-  loop_on: audioModule.loop_on
-}; 
+export default audioModule; 

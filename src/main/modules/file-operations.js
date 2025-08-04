@@ -199,7 +199,7 @@ function addFileDialog() {
 
 // Migrate old preferences
 function migrateOldPreferences() {
-  old_prefs_path = path.resolve(app.getPath('userData'), 'preferences.json');
+  const old_prefs_path = path.resolve(app.getPath('userData'), 'preferences.json');
   if (fs.existsSync(old_prefs_path)) {
     // There is an old preferences file we need to migrate
     console.log('Migrating old preferences.json to new config.json file');

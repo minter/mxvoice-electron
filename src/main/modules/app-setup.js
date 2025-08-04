@@ -8,6 +8,11 @@
 import { app, BrowserWindow, Menu, dialog, shell } from 'electron';
 import path from 'path';
 import os from 'os';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent for ES6 modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Dependencies that will be injected
 let mainWindow;

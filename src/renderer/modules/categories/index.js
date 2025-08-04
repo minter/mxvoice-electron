@@ -306,21 +306,4 @@ export const validateCategoryCode = categoriesModule.validateCategoryCode.bind(c
 export const generateCategoryCode = categoriesModule.generateCategoryCode.bind(categoriesModule);
 
 // Default export for module loading
-export default {
-  editCategory: categoriesModule.editCategory,
-  deleteCategory: categoriesModule.deleteCategory,
-  addNewCategory: categoriesModule.addNewCategory,
-  getCategories: categoriesModule.getCategories,
-  getCategoryByCode: categoriesModule.getCategoryByCode,
-  updateCategory: categoriesModule.updateCategory,
-  populateCategorySelect: categoriesModule.populateCategorySelect,
-  populateCategoriesModal: categoriesModule.populateCategoriesModal,
-  editCategoryUI: categoriesModule.editCategoryUI,
-  openCategoriesModal: categoriesModule.openCategoriesModal,
-  saveCategories: categoriesModule.saveCategories,
-  addNewCategoryUI: categoriesModule.addNewCategoryUI,
-  loadCategories: categoriesModule.loadCategories,
-  refreshCategories: categoriesModule.refreshCategories,
-  validateCategoryCode: categoriesModule.validateCategoryCode,
-  generateCategoryCode: categoriesModule.generateCategoryCode
-}; 
+export default categoriesModule; 

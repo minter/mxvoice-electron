@@ -12,7 +12,7 @@
  */
 export function pickDirectory(event, element) {
   event.preventDefault();
-  defaultPath = $(element).val();
+  const defaultPath = $(element).val();
   ipcRenderer.invoke("show-directory-picker", defaultPath).then((result) => {
     if (result) $(element).val(result);
   });

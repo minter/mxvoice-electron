@@ -242,11 +242,4 @@ export const triggerLiveSearch = searchModule.triggerLiveSearch.bind(searchModul
 export const buildSearchQuery = searchModule.buildSearchQuery.bind(searchModule);
 
 // Default export for module loading
-export default {
-  searchData: searchModule.searchData,
-  performLiveSearch: searchModule.performLiveSearch,
-  toggleAdvancedSearch: searchModule.toggleAdvancedSearch,
-  clearSearchResults: searchModule.clearSearchResults,
-  triggerLiveSearch: searchModule.triggerLiveSearch,
-  buildSearchQuery: searchModule.buildSearchQuery
-}; 
+export default searchModule; 

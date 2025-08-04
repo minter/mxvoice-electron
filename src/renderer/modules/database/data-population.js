@@ -15,20 +15,67 @@ function populateCategorySelect() {
   $("#category_select option").remove();
   $("#category_select").append(`<option value="*">All Categories</option>`);
   
-  // Use new database API for getting categories
-  if (window.electronAPI && window.electronAPI.database) {
-    window.electronAPI.database.getCategories().then(result => {
-      if (result.success) {
-        result.data.forEach(row => {
-          categories[row.code] = row.description;
-          $("#category_select").append(
-            `<option value="${row.code}">${row.description}</option>`
-          );
-        });
-      } else {
-        console.warn('❌ Failed to get categories:', result.error);
+  return new Promise((resolve, reject) => {
+    // Use new database API for getting categories
+    if (window.electronAPI && window.electronAPI.database) {
+      window.electronAPI.database.getCategories().then(result => {
+        if (result.success) {
+          result.data.forEach(row => {
+            categories[row.code] = row.description;
+            $("#category_select").append(
+              `<option value="${row.code}">${row.description}</option>`
+            );
+          });
+          console.log('✅ Categories populated successfully via API');
+          resolve();
+        } else {
+          console.warn('❌ Failed to get categories:', result.error);
+          // Fallback to legacy database access
+          if (typeof db !== 'undefined') {
+            try {
+              var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+              for (const row of stmt.iterate()) {
+                categories[row.code] = row.description;
+                $("#category_select").append(
+                  `<option value="${row.code}">${row.description}</option>`
+                );
+              }
+              console.log('✅ Categories populated successfully via legacy DB');
+              resolve();
+            } catch (error) {
+              console.error('❌ Legacy database error:', error);
+              reject(error);
+            }
+          } else {
+            reject(new Error('No database access available'));
+          }
+        }
+      }).catch(error => {
+        console.warn('❌ Database API error:', error);
         // Fallback to legacy database access
         if (typeof db !== 'undefined') {
+          try {
+            var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+            for (const row of stmt.iterate()) {
+              categories[row.code] = row.description;
+              $("#category_select").append(
+                `<option value="${row.code}">${row.description}</option>`
+              );
+            }
+            console.log('✅ Categories populated successfully via legacy DB (fallback)');
+            resolve();
+          } catch (dbError) {
+            console.error('❌ Legacy database error:', dbError);
+            reject(dbError);
+          }
+        } else {
+          reject(error);
+        }
+      });
+    } else {
+      // Fallback to legacy database access
+      if (typeof db !== 'undefined') {
+        try {
           var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
           for (const row of stmt.iterate()) {
             categories[row.code] = row.description;
@@ -36,33 +83,17 @@ function populateCategorySelect() {
               `<option value="${row.code}">${row.description}</option>`
             );
           }
+          console.log('✅ Categories populated successfully via legacy DB (no API)');
+          resolve();
+        } catch (error) {
+          console.error('❌ Legacy database error:', error);
+          reject(error);
         }
-      }
-    }).catch(error => {
-      console.warn('❌ Database API error:', error);
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-        for (const row of stmt.iterate()) {
-          categories[row.code] = row.description;
-          $("#category_select").append(
-            `<option value="${row.code}">${row.description}</option>`
-          );
-        }
-      }
-    });
-  } else {
-    // Fallback to legacy database access
-    if (typeof db !== 'undefined') {
-      var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-      for (const row of stmt.iterate()) {
-        categories[row.code] = row.description;
-        $("#category_select").append(
-          `<option value="${row.code}">${row.description}</option>`
-        );
+      } else {
+        reject(new Error('No database access available'));
       }
     }
-  }
+  });
 }
 
 /**

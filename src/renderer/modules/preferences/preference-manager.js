@@ -175,12 +175,8 @@ function initializePreferenceManager(options = {}) {
 }
 
 export {
-  PreferenceManager,
-  preferenceManager: preferenceManagerInstance
+  initializePreferenceManager
 };
 
 // Default export for module loading
-export default {
-  PreferenceManager,
-  preferenceManager: preferenceManagerInstance
-}; 
+export default initializePreferenceManager; 

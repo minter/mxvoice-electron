@@ -173,6 +173,4 @@ export {
 };
 
 // Default export for module loading
-export default {
-  initializeControls
-}; 
+export default initializeControls; 

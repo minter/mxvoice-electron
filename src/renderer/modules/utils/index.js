@@ -6,9 +6,9 @@
  */
 
 // Import all utility modules
-import * as animationUtils from './animation-utils.js';
-import * as modalUtils from './modal-utils.js';
-import * as validationUtils from './validation-utils.js';
+import animationUtils from './animation-utils.js';
+import modalUtils from './modal-utils.js';
+import validationUtils from './validation-utils.js';
 
 /**
  * Utils Module Class
@@ -17,19 +17,7 @@ import * as validationUtils from './validation-utils.js';
  */
 class UtilsModule {
   constructor() {
-    // Initialize animation utilities
-    this.animateCSS = animationUtils.animateCSS;
-    
-    // Initialize modal utilities
-    this.customConfirm = modalUtils.customConfirm;
-    this.customPrompt = modalUtils.customPrompt;
-    this.restoreFocusToSearch = modalUtils.restoreFocusToSearch;
-    
-    // Initialize validation utilities
-    this.isValidSongId = validationUtils.isValidSongId;
-    this.isValidCategoryCode = validationUtils.isValidCategoryCode;
-    this.isValidFilePath = validationUtils.isValidFilePath;
-    this.isValidHotkey = validationUtils.isValidHotkey;
+    // Initialize module state
   }
 
   /**
@@ -48,18 +36,18 @@ class UtilsModule {
   getAllUtils() {
     return {
       // Animation utilities
-      animateCSS: this.animateCSS,
+      animateCSS: animationUtils.animateCSS,
       
       // Modal utilities
-      customConfirm: this.customConfirm,
-      customPrompt: this.customPrompt,
-      restoreFocusToSearch: this.restoreFocusToSearch,
+      customConfirm: modalUtils.customConfirm,
+      customPrompt: modalUtils.customPrompt,
+      restoreFocusToSearch: modalUtils.restoreFocusToSearch,
       
       // Validation utilities
-      isValidSongId: this.isValidSongId,
-      isValidCategoryCode: this.isValidCategoryCode,
-      isValidFilePath: this.isValidFilePath,
-      isValidHotkey: this.isValidHotkey
+      isValidSongId: validationUtils.isValidSongId,
+      isValidCategoryCode: validationUtils.isValidCategoryCode,
+      isValidFilePath: validationUtils.isValidFilePath,
+      isValidHotkey: validationUtils.isValidHotkey
     };
   }
 
@@ -162,10 +150,6 @@ const utilsModule = new UtilsModule();
 
 // Export the module instance and individual utilities for backward compatibility
 export {
-  // Module instance
-  UtilsModule,
-  utils: utilsModule,
-  
   // Individual utilities (for direct access)
   animateCSS: utilsModule.animateCSS,
   customConfirm: utilsModule.customConfirm,
@@ -178,15 +162,4 @@ export {
 };
 
 // Default export for module loading
-export default {
-  UtilsModule,
-  utils: utilsModule,
-  animateCSS: utilsModule.animateCSS,
-  customConfirm: utilsModule.customConfirm,
-  customPrompt: utilsModule.customPrompt,
-  restoreFocusToSearch: utilsModule.restoreFocusToSearch,
-  isValidSongId: utilsModule.isValidSongId,
-  isValidCategoryCode: utilsModule.isValidCategoryCode,
-  isValidFilePath: utilsModule.isValidFilePath,
-  isValidHotkey: utilsModule.isValidHotkey
-}; 
+export default utilsModule; 

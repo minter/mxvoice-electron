@@ -105,8 +105,23 @@ function saveHotkeysToStore() {
 // Load modules dynamically and make functions globally available
 (async function loadModules() {
   try {
+    console.log('🔄 Starting module loading...');
+    
+    // Declare module variables
+    let fileOperationsModule, songManagementModule, holdingTankModule, hotkeysModule;
+    let categoriesModule, bulkOperationsModule, dragDropModule, navigationModule;
+    let modeManagementModule, testUtilsModule, searchModule, audioModule;
+    let uiModule, preferencesModule, databaseModule, utilsModule;
+    
     // Import file operations module and make functions globally available
-    const fileOperationsModule = await import('./renderer/modules/file-operations/index.js');
+    try {
+      console.log('🔄 Loading file-operations module...');
+      fileOperationsModule = await import('./renderer/modules/file-operations/index.js');
+      console.log('✅ file-operations module loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading file-operations module:', error);
+      throw error;
+    }
     
     // Make file operations functions globally available
     window.openHotkeyFile = fileOperationsModule.default.openHotkeyFile;
@@ -117,7 +132,14 @@ function saveHotkeysToStore() {
     window.installUpdate = fileOperationsModule.default.installUpdate;
 
     // Import song management module and make functions globally available
-    const songManagementModule = await import('./renderer/modules/song-management/index.js');
+    try {
+      console.log('🔄 Loading song-management module...');
+      songManagementModule = await import('./renderer/modules/song-management/index.js');
+      console.log('✅ song-management module loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading song-management module:', error);
+      throw error;
+    }
     
     // Make song management functions globally available
     window.saveEditedSong = songManagementModule.default.saveEditedSong;
@@ -129,7 +151,14 @@ function saveHotkeysToStore() {
     window.removeFromHotkey = songManagementModule.default.removeFromHotkey;
 
     // Import holding tank module for additional functions
-    const holdingTankModule = await import('./renderer/modules/holding-tank/index.js');
+    try {
+      console.log('🔄 Loading holding-tank module...');
+      holdingTankModule = await import('./renderer/modules/holding-tank/index.js');
+      console.log('✅ holding-tank module loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading holding-tank module:', error);
+      throw error;
+    }
     
     // Make holding tank functions globally available
     window.clearHoldingTank = holdingTankModule.default.clearHoldingTank;
@@ -137,29 +166,57 @@ function saveHotkeysToStore() {
     window.scale_scrollable = holdingTankModule.default.scale_scrollable;
 
     // Import hotkeys module and make functions globally available
-    const hotkeysModule = await import('./renderer/modules/hotkeys/index.js');
-    
-    // Create hotkeys module instance and make functions globally available
-    const hotkeysInstance = new hotkeysModule.default();
-    window.clearHotkeys = hotkeysInstance.clearHotkeys.bind(hotkeysInstance);
-    window.renameHotkeyTab = hotkeysInstance.renameHotkeyTab.bind(hotkeysInstance);
-    window.playSongFromHotkey = hotkeysInstance.playSongFromHotkey.bind(hotkeysInstance);
-    window.switchToHotkeyTab = hotkeysInstance.switchToHotkeyTab.bind(hotkeysInstance);
-    window.populateHotkeys = hotkeysInstance.populateHotkeys.bind(hotkeysInstance);
-    window.setLabelFromSongId = hotkeysInstance.setLabelFromSongId.bind(hotkeysInstance);
-    window.sendToHotkeys = hotkeysInstance.sendToHotkeys.bind(hotkeysInstance);
-    window.hotkeyDrop = hotkeysInstance.hotkeyDrop.bind(hotkeysInstance);
-    window.allowHotkeyDrop = hotkeysInstance.allowHotkeyDrop.bind(hotkeysInstance);
-    window.removeFromHotkey = hotkeysInstance.removeFromHotkey.bind(hotkeysInstance);
+    try {
+      console.log('🔄 Loading hotkeys module...');
+      hotkeysModule = await import('./renderer/modules/hotkeys/index.js');
+      console.log('✅ hotkeys module loaded successfully');
+      
+      // Create hotkeys module instance and make functions globally available
+      const hotkeysInstance = new hotkeysModule.default();
+      window.clearHotkeys = hotkeysInstance.clearHotkeys.bind(hotkeysInstance);
+      window.renameHotkeyTab = hotkeysInstance.renameHotkeyTab.bind(hotkeysInstance);
+      window.playSongFromHotkey = hotkeysInstance.playSongFromHotkey.bind(hotkeysInstance);
+      window.switchToHotkeyTab = hotkeysInstance.switchToHotkeyTab.bind(hotkeysInstance);
+      window.populateHotkeys = hotkeysInstance.populateHotkeys.bind(hotkeysInstance);
+      window.setLabelFromSongId = hotkeysInstance.setLabelFromSongId.bind(hotkeysInstance);
+      window.sendToHotkeys = hotkeysInstance.sendToHotkeys.bind(hotkeysInstance);
+      window.hotkeyDrop = hotkeysInstance.hotkeyDrop.bind(hotkeysInstance);
+      window.allowHotkeyDrop = hotkeysInstance.allowHotkeyDrop.bind(hotkeysInstance);
+      window.removeFromHotkey = hotkeysInstance.removeFromHotkey.bind(hotkeysInstance);
+      console.log('✅ Hotkeys module loaded successfully');
+    } catch (error) {
+      console.warn('❌ Failed to load hotkeys module:', error);
+      // Continue loading other modules even if hotkeys fails
+    }
 
     // Import categories module and make functions globally available
-    const categoriesModule = await import('./renderer/modules/categories/index.js');
-    
-    // Make categories functions globally available
-    window.populateCategorySelect = categoriesModule.default.populateCategorySelect;
+    try {
+      console.log('🔄 Loading categories module...');
+      categoriesModule = await import('./renderer/modules/categories/index.js');
+      console.log('✅ categories module loaded successfully');
+      
+      // The categories module exports a singleton instance, not a constructor
+      const categoriesInstance = categoriesModule.default;
+      
+      // Initialize the categories module
+      await categoriesInstance.init();
+      
+      window.populateCategorySelect = categoriesInstance.populateCategorySelect.bind(categoriesInstance);
+      console.log('✅ Categories module loaded successfully');
+    } catch (error) {
+      console.warn('❌ Failed to load categories module:', error);
+      // Continue loading other modules even if categories fails
+    }
 
     // Import bulk operations module and make functions globally available
-    const bulkOperationsModule = await import('./renderer/modules/bulk-operations/index.js');
+    try {
+      console.log('🔄 Loading bulk-operations module...');
+      bulkOperationsModule = await import('./renderer/modules/bulk-operations/index.js');
+      console.log('✅ bulk-operations module loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading bulk-operations module:', error);
+      throw error;
+    }
     
     // Make bulk operations functions globally available
     window.showBulkAddModal = bulkOperationsModule.default.showBulkAddModal;
@@ -167,7 +224,14 @@ function saveHotkeysToStore() {
     window.saveBulkUpload = bulkOperationsModule.default.saveBulkUpload;
 
     // Import drag and drop module and make functions globally available
-    const dragDropModule = await import('./renderer/modules/drag-drop/index.js');
+    try {
+      console.log('🔄 Loading drag-drop module...');
+      dragDropModule = await import('./renderer/modules/drag-drop/index.js');
+      console.log('✅ drag-drop module loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading drag-drop module:', error);
+      throw error;
+    }
     
     // Make drag and drop functions globally available
     window.hotkeyDrop = dragDropModule.default.hotkeyDrop;
@@ -177,7 +241,14 @@ function saveHotkeysToStore() {
     window.columnDrag = dragDropModule.default.columnDrag;
 
     // Import navigation module and make functions globally available
-    const navigationModule = await import('./renderer/modules/navigation/index.js');
+    try {
+      console.log('🔄 Loading navigation module...');
+      navigationModule = await import('./renderer/modules/navigation/index.js');
+      console.log('✅ navigation module loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading navigation module:', error);
+      throw error;
+    }
     
     // Make navigation functions globally available
     window.sendToHotkeys = navigationModule.default.sendToHotkeys;
@@ -186,7 +257,14 @@ function saveHotkeysToStore() {
     window.selectPrev = navigationModule.default.selectPrev;
 
     // Import mode management module and make functions globally available
-    const modeManagementModule = await import('./renderer/modules/mode-management/index.js');
+    try {
+      console.log('🔄 Loading mode-management module...');
+      modeManagementModule = await import('./renderer/modules/mode-management/index.js');
+      console.log('✅ mode-management module loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading mode-management module:', error);
+      throw error;
+    }
     
     // Make mode management functions globally available
     window.setHoldingTankMode = modeManagementModule.default.setHoldingTankMode;
@@ -207,7 +285,14 @@ function saveHotkeysToStore() {
     });
 
     // Import test functions module and make functions globally available
-    const testUtilsModule = await import('./renderer/modules/test-utils/index.js');
+    try {
+      console.log('🔄 Loading test-utils module...');
+      testUtilsModule = await import('./renderer/modules/test-utils/index.js');
+      console.log('✅ test-utils module loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading test-utils module:', error);
+      throw error;
+    }
     
     // Make test functions globally available
     window.testPhase2Migrations = testUtilsModule.default.testPhase2Migrations;
@@ -219,30 +304,64 @@ function saveHotkeysToStore() {
     window.runAllTests = testUtilsModule.default.runAllTests;
 
     // Import search module and make functions globally available
-    const searchModule = await import('./renderer/modules/search/index.js');
-    
-    // Make search functions globally available
-    window.searchData = searchModule.default.searchData;
-    window.performLiveSearch = searchModule.default.performLiveSearch;
-    window.toggleAdvancedSearch = searchModule.default.toggleAdvancedSearch;
-    window.triggerLiveSearch = searchModule.default.triggerLiveSearch;
+    try {
+      console.log('🔄 Loading search module...');
+      searchModule = await import('./renderer/modules/search/index.js');
+      console.log('✅ search module loaded successfully');
+      
+      // The search module exports a singleton instance, not a constructor
+      const searchInstance = searchModule.default;
+      
+      // Initialize the search module
+      searchInstance.init();
+      
+      window.searchData = searchInstance.searchData.bind(searchInstance);
+      window.performLiveSearch = searchInstance.performLiveSearch.bind(searchInstance);
+      window.toggleAdvancedSearch = searchInstance.toggleAdvancedSearch.bind(searchInstance);
+      window.triggerLiveSearch = searchInstance.triggerLiveSearch.bind(searchInstance);
+      window.clearSearchResults = searchInstance.clearSearchResults.bind(searchInstance);
+      console.log('✅ Search module loaded successfully');
+    } catch (error) {
+      console.warn('❌ Failed to load search module:', error);
+      // Continue loading other modules even if search fails
+    }
 
     // Import audio module and make functions globally available
-    const audioModule = await import('./renderer/modules/audio/index.js');
-    
-    // Make audio functions globally available
-    window.playSongFromId = audioModule.default.playSongFromId;
-    window.stopPlaying = audioModule.default.stopPlaying;
-    window.pausePlaying = audioModule.default.pausePlaying;
-    window.resetUIState = audioModule.default.resetUIState;
-    window.autoplay_next = audioModule.default.autoplay_next;
-    window.cancel_autoplay = audioModule.default.cancel_autoplay;
-    window.playSelected = audioModule.default.playSelected;
-    window.loop_on = audioModule.default.loop_on;
-    window.howlerUtils = audioModule.default.howlerUtils;
+    try {
+      console.log('🔄 Loading audio module...');
+      audioModule = await import('./renderer/modules/audio/index.js');
+      console.log('✅ audio module loaded successfully');
+      
+      // The audio module exports a singleton instance, not a constructor
+      const audioInstance = audioModule.default;
+      
+      // Initialize the audio module
+      audioInstance.init();
+      
+      window.playSongFromId = audioInstance.playSongFromId.bind(audioInstance);
+      window.stopPlaying = audioInstance.stopPlaying.bind(audioInstance);
+      window.pausePlaying = audioInstance.pausePlaying.bind(audioInstance);
+      window.resetUIState = audioInstance.resetUIState.bind(audioInstance);
+      window.autoplay_next = audioInstance.autoplay_next.bind(audioInstance);
+      window.cancel_autoplay = audioInstance.cancel_autoplay.bind(audioInstance);
+      window.playSelected = audioInstance.playSelected.bind(audioInstance);
+      window.loop_on = audioInstance.loop_on.bind(audioInstance);
+      // window.howlerUtils = audioInstance.howlerUtils.bind(audioInstance); // Function not implemented yet
+      console.log('✅ Audio module loaded successfully');
+    } catch (error) {
+      console.warn('❌ Failed to load audio module:', error);
+      // Continue loading other modules even if audio fails
+    }
 
     // Import UI module and make functions globally available
-    const uiModule = await import('./renderer/modules/ui/index.js');
+    try {
+      console.log('🔄 Loading ui module...');
+      uiModule = await import('./renderer/modules/ui/index.js');
+      console.log('✅ ui module loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading ui module:', error);
+      throw error;
+    }
     
     // Make UI functions globally available
     window.scaleScrollable = uiModule.default.scaleScrollable;
@@ -263,7 +382,14 @@ function saveHotkeysToStore() {
     window.setFontSize = uiModule.default.setFontSize;
 
     // Import preferences module and make functions globally available
-    const preferencesModule = await import('./renderer/modules/preferences/index.js');
+    try {
+      console.log('🔄 Loading preferences module...');
+      preferencesModule = await import('./renderer/modules/preferences/index.js');
+      console.log('✅ preferences module loaded successfully');
+    } catch (error) {
+      console.error('❌ Error loading preferences module:', error);
+      throw error;
+    }
     
     // Make preferences functions globally available
     window.openPreferencesModal = preferencesModule.default.openPreferencesModal;
@@ -277,28 +403,52 @@ function saveHotkeysToStore() {
     window.getFadeOutSeconds = preferencesModule.default.getFadeOutSeconds;
 
     // Import database module and make functions globally available
-    const databaseModule = await import('./renderer/modules/database/index.js');
-    
-    // Create database module instance and make functions globally available
-    const databaseInstance = new databaseModule.default();
-    window.searchData = databaseInstance.searchData.bind(databaseInstance);
-    window.performLiveSearch = databaseInstance.performLiveSearch.bind(databaseInstance);
-    window.setLabelFromSongId = databaseInstance.setLabelFromSongId.bind(databaseInstance);
-    window.addToHoldingTank = databaseInstance.addToHoldingTank.bind(databaseInstance);
-    window.populateCategorySelect = databaseInstance.populateCategorySelect.bind(databaseInstance);
+    try {
+      console.log('🔄 Loading database module...');
+      databaseModule = await import('./renderer/modules/database/index.js');
+      console.log('✅ database module loaded successfully');
+      
+      // The database module exports a singleton instance, not a constructor
+      const databaseInstance = databaseModule.default.database;
+      
+      // Initialize the database module
+      await databaseInstance.init();
+      
+      window.performLiveSearch = databaseInstance.performLiveSearch.bind(databaseInstance);
+      window.setLabelFromSongId = databaseInstance.setLabelFromSongId.bind(databaseInstance);
+      window.addToHoldingTank = databaseInstance.addToHoldingTank.bind(databaseInstance);
+      window.populateCategorySelect = databaseInstance.populateCategorySelect.bind(databaseInstance);
+      console.log('✅ Database module loaded successfully');
+    } catch (error) {
+      console.warn('❌ Failed to load database module:', error);
+      // Continue loading other modules even if database fails
+    }
 
     // Import utils module and make functions globally available
-    const utilsModule = await import('./renderer/modules/utils/index.js');
-    
-    // Make utils functions globally available
-    window.animateCSS = utilsModule.default.animateCSS;
-    window.customConfirm = utilsModule.default.customConfirm;
-    window.customPrompt = utilsModule.default.customPrompt;
-    window.restoreFocusToSearch = utilsModule.default.restoreFocusToSearch;
-    window.isValidSongId = utilsModule.default.isValidSongId;
-    window.isValidCategoryCode = utilsModule.default.isValidCategoryCode;
-    window.isValidFilePath = utilsModule.default.isValidFilePath;
-    window.isValidHotkey = utilsModule.default.isValidHotkey;
+    try {
+      console.log('🔄 Loading utils module...');
+      utilsModule = await import('./renderer/modules/utils/index.js');
+      console.log('✅ utils module loaded successfully');
+      
+      // The utils module exports a singleton instance, not a constructor
+      const utilsInstance = utilsModule.default;
+      
+      // Initialize the utils module
+      utilsInstance.init();
+      
+      window.animateCSS = utilsInstance.animateCSS.bind(utilsInstance);
+      window.customConfirm = utilsInstance.customConfirm.bind(utilsInstance);
+      window.customPrompt = utilsInstance.customPrompt.bind(utilsInstance);
+      window.restoreFocusToSearch = utilsInstance.restoreFocusToSearch.bind(utilsInstance);
+      window.isValidSongId = utilsInstance.isValidSongId.bind(utilsInstance);
+      window.isValidCategoryCode = utilsInstance.isValidCategoryCode.bind(utilsInstance);
+      window.isValidFilePath = utilsInstance.isValidFilePath.bind(utilsInstance);
+      window.isValidHotkey = utilsInstance.isValidHotkey.bind(utilsInstance);
+      console.log('✅ Utils module loaded successfully');
+    } catch (error) {
+      console.warn('❌ Failed to load utils module:', error);
+      // Continue loading other modules even if utils fails
+    }
 
     console.log('✅ All modules loaded successfully!');
 
@@ -317,8 +467,13 @@ function saveHotkeysToStore() {
       if (window.scale_scrollable) {
         window.scale_scrollable();
       }
+      // Ensure categories are populated after database module is loaded
       if (window.populateCategorySelect) {
-        window.populateCategorySelect();
+        console.log('🔄 Attempting to populate categories...');
+        await window.populateCategorySelect();
+        console.log('✅ Categories populated successfully');
+      } else {
+        console.warn('❌ populateCategorySelect function not available');
       }
       console.log('✅ Module-dependent functions called successfully!');
     } catch (error) {
@@ -334,6 +489,8 @@ function saveHotkeysToStore() {
     }
   } catch (error) {
     console.error('❌ Error loading modules:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error message:', error.message);
   }
 })();
 
@@ -649,13 +806,25 @@ $(document).ready(function () {
 
   $("#category_select").on("change", function () {
     var category = $("#category_select").prop("selectedIndex");
-    searchData();
+    console.log('🔄 Category select changed, calling searchData...');
+    if (window.searchData) {
+      window.searchData();
+      console.log('✅ searchData called successfully from category change');
+    } else {
+      console.warn('❌ searchData function not available');
+    }
     $("#omni_search").focus();
     $("#category_select").prop("selectedIndex", category);
   });
 
   $("#date-search").on("change", function () {
-    searchData();
+    console.log('🔄 Date search changed, calling searchData...');
+    if (window.searchData) {
+      window.searchData();
+      console.log('✅ searchData called successfully from date search change');
+    } else {
+      console.warn('❌ searchData function not available');
+    }
   });
 
 
@@ -664,9 +833,29 @@ $(document).ready(function () {
     if (e.code == "Enter") {
       // Clear any pending live search
       clearTimeout(searchTimeout);
-      $("#search_form").submit();
+      console.log('🔄 Search form submitted via Enter key, calling searchData...');
+      if (window.searchData) {
+        window.searchData();
+        console.log('✅ searchData called successfully');
+      } else {
+        console.warn('❌ searchData function not available');
+      }
       return false;
     }
+  });
+
+  // Add explicit submit handler for search form
+  $("#search_form").on("submit", function (e) {
+    e.preventDefault();
+    console.log('🔄 Search form submitted, calling searchData...');
+    if (window.searchData) {
+      window.searchData();
+      console.log('✅ searchData called successfully');
+    } else {
+      console.warn('❌ searchData function not available');
+    }
+    $("#omni_search").focus();
+    return false;
   });
 
   // Live search with debouncing
@@ -675,14 +864,26 @@ $(document).ready(function () {
 
   // Live search on search term input
   $("#omni_search").on("input", function () {
-    triggerLiveSearch();
+    console.log('🔄 Omni search input changed, triggering live search...');
+    if (window.triggerLiveSearch) {
+      window.triggerLiveSearch();
+      console.log('✅ triggerLiveSearch called successfully');
+    } else {
+      console.warn('❌ triggerLiveSearch function not available');
+    }
   });
 
   // Live search when category filter changes
   $("#category_select").on("change", function () {
     var searchTerm = $("#omni_search").val().trim();
+    console.log('🔄 Category select changed, search term:', searchTerm);
     if (searchTerm.length >= 2) {
-      triggerLiveSearch();
+      if (window.triggerLiveSearch) {
+        window.triggerLiveSearch();
+        console.log('✅ triggerLiveSearch called successfully from category change');
+      } else {
+        console.warn('❌ triggerLiveSearch function not available');
+      }
     }
   });
 
@@ -690,13 +891,24 @@ $(document).ready(function () {
   $("#title-search, #artist-search, #info-search, #date-search").on(
     "input change",
     function () {
+      console.log('🔄 Advanced search field changed');
       // When advanced search is active, trigger live search even if omni_search is empty
       if ($("#advanced-search").is(":visible")) {
-        triggerLiveSearch();
+        if (window.triggerLiveSearch) {
+          window.triggerLiveSearch();
+          console.log('✅ triggerLiveSearch called successfully from advanced search');
+        } else {
+          console.warn('❌ triggerLiveSearch function not available');
+        }
       } else {
         var searchTerm = $("#omni_search").val().trim();
         if (searchTerm.length >= 2) {
-          triggerLiveSearch();
+          if (window.triggerLiveSearch) {
+            window.triggerLiveSearch();
+            console.log('✅ triggerLiveSearch called successfully from advanced search (with term)');
+          } else {
+            console.warn('❌ triggerLiveSearch function not available');
+          }
         }
       }
     }
@@ -714,18 +926,25 @@ $(document).ready(function () {
   });
 
   $("#reset_button").on("click", function () {
+    console.log('🔄 Reset button clicked');
     // Clear any pending live search
     clearTimeout(searchTimeout);
     $("#search_form").trigger("reset");
     $("#omni_search").focus();
     $("#search_results tbody").find("tr").remove();
     $("#search_results thead").hide();
+    console.log('✅ Search results cleared');
     return false;
   });
 
   $("#advanced_search_button").on("click", function () {
-    console.log("Advanced search button clicked");
-    toggleAdvancedSearch();
+    console.log("🔄 Advanced search button clicked");
+    if (window.toggleAdvancedSearch) {
+      window.toggleAdvancedSearch();
+      console.log('✅ toggleAdvancedSearch called successfully');
+    } else {
+      console.warn('❌ toggleAdvancedSearch function not available');
+    }
     return false;
   });
 

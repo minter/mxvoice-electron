@@ -342,7 +342,60 @@ function restoreHotkeyConfig(backup, options = {}) {
   importHotkeyConfig(backup.hotkeys, options);
 }
 
+/**
+ * Clear hotkey configuration
+ * Removes all hotkey assignments
+ * 
+ * @param {Object} options - Options object containing dependencies
+ */
+function clearHotkeyConfig(options = {}) {
+  const { saveHotkeysToStore } = options;
+  
+  console.log('🧹 Clearing hotkey configuration...');
+  
+  // Clear all hotkey assignments
+  for (let key = 1; key <= 12; key++) {
+    $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
+    $(`.hotkeys.active #f${key}_hotkey span`).html("");
+  }
+  
+  // Save to store if saveHotkeysToStore is provided
+  if (saveHotkeysToStore) {
+    saveHotkeysToStore();
+  }
+  
+  console.log('✅ Hotkey configuration cleared');
+}
+
+/**
+ * Get hotkey configuration
+ * Returns the current hotkey configuration
+ * 
+ * @returns {Object} - Current hotkey configuration
+ */
+function getHotkeyConfig() {
+  return exportHotkeyConfig();
+}
+
+/**
+ * Set hotkey configuration
+ * Sets the hotkey configuration from a config object
+ * 
+ * @param {Object} config - Hotkey configuration object
+ * @param {Object} options - Options object containing dependencies
+ */
+function setHotkeyConfig(config, options = {}) {
+  importHotkeyConfig(config, options);
+}
+
 export {
+  saveHotkeysToStore,
+  loadHotkeysFromStore,
+  openHotkeyFile,
+  saveHotkeyFile,
+  playSongFromHotkey,
+  sendToHotkeys,
+  removeFromHotkey,
   exportHotkeyConfig,
   importHotkeyConfig,
   clearHotkeyConfig,
@@ -352,6 +405,13 @@ export {
 
 // Default export for module loading
 export default {
+  saveHotkeysToStore,
+  loadHotkeysFromStore,
+  openHotkeyFile,
+  saveHotkeyFile,
+  playSongFromHotkey,
+  sendToHotkeys,
+  removeFromHotkey,
   exportHotkeyConfig,
   importHotkeyConfig,
   clearHotkeyConfig,

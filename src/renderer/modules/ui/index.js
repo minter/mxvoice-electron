@@ -6,10 +6,10 @@
  */
 
 // Import UI sub-modules
-import * as uiManager from './ui-manager.js';
-import * as eventHandlers from './event-handlers.js';
-import * as controls from './controls.js';
-import * as modals from './modals.js';
+import uiManager from './ui-manager.js';
+import eventHandlers from './event-handlers.js';
+import controls from './controls.js';
+import modals from './modals.js';
 
 /**
  * Initialize the UI module
@@ -23,10 +23,10 @@ function initializeUI(options = {}) {
   const { electronAPI, db, store } = options;
   
   // Initialize sub-modules
-  const manager = uiManager.initialize({ electronAPI, db, store });
-  const handlers = eventHandlers.initialize({ electronAPI, db, store });
-  const uiControls = controls.initialize({ electronAPI, db, store });
-  const modalOps = modals.initialize({ electronAPI, db, store });
+  const manager = uiManager({ electronAPI, db, store });
+  const handlers = eventHandlers({ electronAPI, db, store });
+  const uiControls = controls({ electronAPI, db, store });
+  const modalOps = modals({ electronAPI, db, store });
   
   return {
     // UI Manager functions

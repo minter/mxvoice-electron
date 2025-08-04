@@ -31,22 +31,41 @@ class HotkeysModule {
     this.operations = hotkeyOperations;
     this.ui = hotkeyUI;
     
-    // Bind methods to maintain context
-    this.saveHotkeysToStore = this.saveHotkeysToStore.bind(this);
-    this.loadHotkeysFromStore = this.loadHotkeysFromStore.bind(this);
-    this.initHotkeys = this.initHotkeys.bind(this);
-    this.populateHotkeys = this.populateHotkeys.bind(this);
-    this.setLabelFromSongId = this.setLabelFromSongId.bind(this);
-    this.clearHotkeys = this.clearHotkeys.bind(this);
-    this.openHotkeyFile = this.openHotkeyFile.bind(this);
-    this.saveHotkeyFile = this.saveHotkeyFile.bind(this);
-    this.playSongFromHotkey = this.playSongFromHotkey.bind(this);
-    this.sendToHotkeys = this.sendToHotkeys.bind(this);
-    this.hotkeyDrop = this.hotkeyDrop.bind(this);
-    this.allowHotkeyDrop = this.allowHotkeyDrop.bind(this);
-    this.switchToHotkeyTab = this.switchToHotkeyTab.bind(this);
-    this.renameHotkeyTab = this.renameHotkeyTab.bind(this);
-    this.removeFromHotkey = this.removeFromHotkey.bind(this);
+    // Check if sub-modules are properly loaded
+    if (!hotkeyData || !hotkeyOperations || !hotkeyUI) {
+      console.error('❌ Hotkeys sub-modules not properly loaded:', {
+        hotkeyData: !!hotkeyData,
+        hotkeyOperations: !!hotkeyOperations,
+        hotkeyUI: !!hotkeyUI
+      });
+      throw new Error('Hotkeys sub-modules not properly loaded');
+    }
+    
+    // Delegate to sub-modules for functions with error handling
+    try {
+      this.saveHotkeysToStore = hotkeyOperations.saveHotkeysToStore.bind(this);
+      this.loadHotkeysFromStore = hotkeyOperations.loadHotkeysFromStore.bind(this);
+      this.populateHotkeys = hotkeyData.populateHotkeys.bind(this);
+      this.setLabelFromSongId = hotkeyData.setLabelFromSongId.bind(this);
+      this.clearHotkeys = hotkeyData.clearHotkeys.bind(this);
+      this.openHotkeyFile = hotkeyOperations.openHotkeyFile.bind(this);
+      this.saveHotkeyFile = hotkeyOperations.saveHotkeyFile.bind(this);
+      this.playSongFromHotkey = hotkeyOperations.playSongFromHotkey.bind(this);
+      this.sendToHotkeys = hotkeyOperations.sendToHotkeys.bind(this);
+      this.hotkeyDrop = hotkeyUI.hotkeyDrop.bind(this);
+      this.allowHotkeyDrop = hotkeyUI.allowHotkeyDrop.bind(this);
+      this.switchToHotkeyTab = hotkeyUI.switchToHotkeyTab.bind(this);
+      this.renameHotkeyTab = hotkeyUI.renameHotkeyTab.bind(this);
+      this.removeFromHotkey = hotkeyOperations.removeFromHotkey.bind(this);
+      this.exportHotkeyConfig = hotkeyOperations.exportHotkeyConfig.bind(this);
+      this.importHotkeyConfig = hotkeyOperations.importHotkeyConfig.bind(this);
+      this.clearHotkeyConfig = hotkeyOperations.clearHotkeyConfig.bind(this);
+      this.getHotkeyConfig = hotkeyOperations.getHotkeyConfig.bind(this);
+      this.setHotkeyConfig = hotkeyOperations.setHotkeyConfig.bind(this);
+    } catch (error) {
+      console.error('❌ Error binding hotkey functions:', error);
+      throw error;
+    }
     
     // Initialize the module
     this.initHotkeys();

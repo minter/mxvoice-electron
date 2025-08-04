@@ -3,6 +3,7 @@
   "productName": "Mx. Voice",
   "version": "3.2.0",
   "description": "Improv Audio Software",
+  "type": "module",
   "repository": "https://github.com/minter/mxvoice-electron",
   "main": "src/main/index-modular.js",
   "keywords": [],

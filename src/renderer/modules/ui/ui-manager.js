@@ -305,13 +305,8 @@ function initializeUIManager(options = {}) {
   };
 }
 
-export {
-  UiManager,
-  uiManager: uiManagerInstance
-};
+// Export the initialize function
+export { initializeUIManager };
 
 // Default export for module loading
-export default {
-  UiManager,
-  uiManager: uiManagerInstance
-}; 
+export default initializeUIManager; 

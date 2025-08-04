@@ -7,10 +7,10 @@
  */
 
 // Import database sub-modules
-import * as dataPopulation from './data-population.js';
-import * as storeOperations from './store-operations.js';
-import * as uiOperations from './ui-operations.js';
-import * as databaseOperations from './database-operations.js';
+import dataPopulation from './data-population.js';
+import storeOperations from './store-operations.js';
+import uiOperations from './ui-operations.js';
+import databaseOperations from './database-operations.js';
 
 /**
  * Database Module Class
@@ -19,33 +19,6 @@ import * as databaseOperations from './database-operations.js';
  */
 class DatabaseModule {
   constructor() {
-    // Initialize database operation functions
-    this.populateCategorySelect = dataPopulation.populateCategorySelect;
-    this.setLabelFromSongId = dataPopulation.setLabelFromSongId;
-    this.addToHoldingTank = dataPopulation.addToHoldingTank;
-    this.populateHotkeys = dataPopulation.populateHotkeys;
-    this.populateHoldingTank = dataPopulation.populateHoldingTank;
-    this.populateCategoriesModal = dataPopulation.populateCategoriesModal;
-    
-    // Initialize store operation functions
-    this.saveHoldingTankToStore = storeOperations.saveHoldingTankToStore;
-    this.saveHotkeysToStore = storeOperations.saveHotkeysToStore;
-    
-    // Initialize UI operation functions
-    this.scaleScrollable = uiOperations.scaleScrollable;
-    
-    // Initialize database operation functions
-    this.editCategory = databaseOperations.editCategory;
-    this.deleteCategory = databaseOperations.deleteCategory;
-    this.addNewCategory = databaseOperations.addNewCategory;
-    this.saveEditedSong = databaseOperations.saveEditedSong;
-    this.saveNewSong = databaseOperations.saveNewSong;
-    this.deleteSong = databaseOperations.deleteSong;
-    this.getSongById = databaseOperations.getSongById;
-    this.addSongsByPath = databaseOperations.addSongsByPath;
-    this.executeQuery = databaseOperations.executeQuery;
-    this.executeStatement = databaseOperations.executeStatement;
-    
     // Initialize module state
     this.categories = {};
     this.fontSize = 11;
@@ -76,31 +49,31 @@ class DatabaseModule {
   getAllDatabaseFunctions() {
     return {
       // Data population functions
-      populateCategorySelect: this.populateCategorySelect,
-      setLabelFromSongId: this.setLabelFromSongId,
-      addToHoldingTank: this.addToHoldingTank,
-      populateHotkeys: this.populateHotkeys,
-      populateHoldingTank: this.populateHoldingTank,
-      populateCategoriesModal: this.populateCategoriesModal,
+      populateCategorySelect: dataPopulation.populateCategorySelect,
+      setLabelFromSongId: dataPopulation.setLabelFromSongId,
+      addToHoldingTank: dataPopulation.addToHoldingTank,
+      populateHotkeys: dataPopulation.populateHotkeys,
+      populateHoldingTank: dataPopulation.populateHoldingTank,
+      populateCategoriesModal: dataPopulation.populateCategoriesModal,
       
       // Store operation functions
-      saveHoldingTankToStore: this.saveHoldingTankToStore,
-      saveHotkeysToStore: this.saveHotkeysToStore,
+      saveHoldingTankToStore: storeOperations.saveHoldingTankToStore,
+      saveHotkeysToStore: storeOperations.saveHotkeysToStore,
       
       // UI operation functions
-      scaleScrollable: this.scaleScrollable,
+      scaleScrollable: uiOperations.scaleScrollable,
       
       // Database operation functions
-      editCategory: this.editCategory,
-      deleteCategory: this.deleteCategory,
-      addNewCategory: this.addNewCategory,
-      saveEditedSong: this.saveEditedSong,
-      saveNewSong: this.saveNewSong,
-      deleteSong: this.deleteSong,
-      getSongById: this.getSongById,
-      addSongsByPath: this.addSongsByPath,
-      executeQuery: this.executeQuery,
-      executeStatement: this.executeStatement
+      editCategory: databaseOperations.editCategory,
+      deleteCategory: databaseOperations.deleteCategory,
+      addNewCategory: databaseOperations.addNewCategory,
+      saveEditedSong: databaseOperations.saveEditedSong,
+      saveNewSong: databaseOperations.saveNewSong,
+      deleteSong: databaseOperations.deleteSong,
+      getSongById: databaseOperations.getSongById,
+      addSongsByPath: databaseOperations.addSongsByPath,
+      executeQuery: databaseOperations.executeQuery,
+      executeStatement: databaseOperations.executeStatement
     };
   }
 
@@ -274,10 +247,6 @@ const databaseModule = new DatabaseModule();
 
 // Export the module instance and individual functions for backward compatibility
 export {
-  // Module instance
-  DatabaseModule,
-  database: databaseModule,
-  
   // Individual functions (for direct access)
   populateCategorySelect: databaseModule.populateCategorySelect,
   setLabelFromSongId: databaseModule.setLabelFromSongId,
@@ -302,25 +271,5 @@ export {
 
 // Default export for module loading
 export default {
-  DatabaseModule,
-  database: databaseModule,
-  populateCategorySelect: databaseModule.populateCategorySelect,
-  setLabelFromSongId: databaseModule.setLabelFromSongId,
-  addToHoldingTank: databaseModule.addToHoldingTank,
-  populateHotkeys: databaseModule.populateHotkeys,
-  populateHoldingTank: databaseModule.populateHoldingTank,
-  populateCategoriesModal: databaseModule.populateCategoriesModal,
-  saveHoldingTankToStore: databaseModule.saveHoldingTankToStore,
-  saveHotkeysToStore: databaseModule.saveHotkeysToStore,
-  scaleScrollable: databaseModule.scaleScrollable,
-  editCategory: databaseModule.editCategory,
-  deleteCategory: databaseModule.deleteCategory,
-  addNewCategory: databaseModule.addNewCategory,
-  saveEditedSong: databaseModule.saveEditedSong,
-  saveNewSong: databaseModule.saveNewSong,
-  deleteSong: databaseModule.deleteSong,
-  getSongById: databaseModule.getSongById,
-  addSongsByPath: databaseModule.addSongsByPath,
-  executeQuery: databaseModule.executeQuery,
-  executeStatement: databaseModule.executeStatement
+  database: databaseModule
 }; 

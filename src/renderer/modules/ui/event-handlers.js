@@ -103,16 +103,8 @@ function initializeEventHandlers(options = {}) {
 }
 
 export {
-  initializeEventHandlers,
-  setupEventHandlers,
-  removeEventHandlers,
-  handleUIEvents
+  initializeEventHandlers
 };
 
 // Default export for module loading
-export default {
-  initializeEventHandlers,
-  setupEventHandlers,
-  removeEventHandlers,
-  handleUIEvents
-}; 
+export default initializeEventHandlers; 
