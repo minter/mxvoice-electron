@@ -61,13 +61,26 @@ function initializeUI(options = {}) {
   };
 }
 
-export {
-  UiModule,
-  ui: uiModule
-};
+// Create and export a singleton instance
+const uiModule = initializeUI();
+
+// Export individual functions for direct access
+export const scaleScrollable = uiModule.scaleScrollable;
+export const editSelectedSong = uiModule.editSelectedSong;
+export const deleteSelectedSong = uiModule.deleteSelectedSong;
+export const closeAllTabs = uiModule.closeAllTabs;
+export const toggleSelectedRow = uiModule.toggleSelectedRow;
+export const switchToHotkeyTab = uiModule.switchToHotkeyTab;
+export const renameHotkeyTab = uiModule.renameHotkeyTab;
+export const renameHoldingTankTab = uiModule.renameHoldingTankTab;
+export const increaseFontSize = uiModule.increaseFontSize;
+export const decreaseFontSize = uiModule.decreaseFontSize;
+export const toggleWaveform = uiModule.toggleWaveform;
+export const toggleAdvancedSearch = uiModule.toggleAdvancedSearch;
+export const pickDirectory = uiModule.pickDirectory;
+export const installUpdate = uiModule.installUpdate;
+export const getFontSize = uiModule.getFontSize;
+export const setFontSize = uiModule.setFontSize;
 
 // Default export for module loading
-export default {
-  UiModule,
-  ui: uiModule
-}; 
+export default uiModule; 

@@ -136,20 +136,21 @@ function saveHotkeysToStore() {
     window.renameHoldingTankTab = holdingTankModule.default.renameHoldingTankTab;
     window.scale_scrollable = holdingTankModule.default.scale_scrollable;
 
-    // Note: Hotkeys module uses CommonJS exports and needs special handling
-    // For now, these functions will be undefined until we convert the module
-    window.clearHotkeys = function() {
-      console.warn('clearHotkeys function not available - hotkeys module needs conversion to ES6');
-    };
-    window.renameHotkeyTab = function() {
-      console.warn('renameHotkeyTab function not available - hotkeys module needs conversion to ES6');
-    };
-    window.playSongFromHotkey = function(hotkey) {
-      console.warn('playSongFromHotkey function not available - hotkeys module needs conversion to ES6');
-    };
-    window.switchToHotkeyTab = function(tab) {
-      console.warn('switchToHotkeyTab function not available - hotkeys module needs conversion to ES6');
-    };
+    // Import hotkeys module and make functions globally available
+    const hotkeysModule = await import('./renderer/modules/hotkeys/index.js');
+    
+    // Create hotkeys module instance and make functions globally available
+    const hotkeysInstance = new hotkeysModule.default();
+    window.clearHotkeys = hotkeysInstance.clearHotkeys.bind(hotkeysInstance);
+    window.renameHotkeyTab = hotkeysInstance.renameHotkeyTab.bind(hotkeysInstance);
+    window.playSongFromHotkey = hotkeysInstance.playSongFromHotkey.bind(hotkeysInstance);
+    window.switchToHotkeyTab = hotkeysInstance.switchToHotkeyTab.bind(hotkeysInstance);
+    window.populateHotkeys = hotkeysInstance.populateHotkeys.bind(hotkeysInstance);
+    window.setLabelFromSongId = hotkeysInstance.setLabelFromSongId.bind(hotkeysInstance);
+    window.sendToHotkeys = hotkeysInstance.sendToHotkeys.bind(hotkeysInstance);
+    window.hotkeyDrop = hotkeysInstance.hotkeyDrop.bind(hotkeysInstance);
+    window.allowHotkeyDrop = hotkeysInstance.allowHotkeyDrop.bind(hotkeysInstance);
+    window.removeFromHotkey = hotkeysInstance.removeFromHotkey.bind(hotkeysInstance);
 
     // Import categories module and make functions globally available
     const categoriesModule = await import('./renderer/modules/categories/index.js');
@@ -239,6 +240,65 @@ function saveHotkeysToStore() {
     window.playSelected = audioModule.default.playSelected;
     window.loop_on = audioModule.default.loop_on;
     window.howlerUtils = audioModule.default.howlerUtils;
+
+    // Import UI module and make functions globally available
+    const uiModule = await import('./renderer/modules/ui/index.js');
+    
+    // Make UI functions globally available
+    window.scaleScrollable = uiModule.default.scaleScrollable;
+    window.editSelectedSong = uiModule.default.editSelectedSong;
+    window.deleteSelectedSong = uiModule.default.deleteSelectedSong;
+    window.closeAllTabs = uiModule.default.closeAllTabs;
+    window.toggleSelectedRow = uiModule.default.toggleSelectedRow;
+    window.switchToHotkeyTab = uiModule.default.switchToHotkeyTab;
+    window.renameHotkeyTab = uiModule.default.renameHotkeyTab;
+    window.renameHoldingTankTab = uiModule.default.renameHoldingTankTab;
+    window.increaseFontSize = uiModule.default.increaseFontSize;
+    window.decreaseFontSize = uiModule.default.decreaseFontSize;
+    window.toggleWaveform = uiModule.default.toggleWaveform;
+    window.toggleAdvancedSearch = uiModule.default.toggleAdvancedSearch;
+    window.pickDirectory = uiModule.default.pickDirectory;
+    window.installUpdate = uiModule.default.installUpdate;
+    window.getFontSize = uiModule.default.getFontSize;
+    window.setFontSize = uiModule.default.setFontSize;
+
+    // Import preferences module and make functions globally available
+    const preferencesModule = await import('./renderer/modules/preferences/index.js');
+    
+    // Make preferences functions globally available
+    window.openPreferencesModal = preferencesModule.default.openPreferencesModal;
+    window.loadPreferences = preferencesModule.default.loadPreferences;
+    window.savePreferences = preferencesModule.default.savePreferences;
+    window.getPreference = preferencesModule.default.getPreference;
+    window.setPreference = preferencesModule.default.setPreference;
+    window.getDatabaseDirectory = preferencesModule.default.getDatabaseDirectory;
+    window.getMusicDirectory = preferencesModule.default.getMusicDirectory;
+    window.getHotkeyDirectory = preferencesModule.default.getHotkeyDirectory;
+    window.getFadeOutSeconds = preferencesModule.default.getFadeOutSeconds;
+
+    // Import database module and make functions globally available
+    const databaseModule = await import('./renderer/modules/database/index.js');
+    
+    // Create database module instance and make functions globally available
+    const databaseInstance = new databaseModule.default();
+    window.searchData = databaseInstance.searchData.bind(databaseInstance);
+    window.performLiveSearch = databaseInstance.performLiveSearch.bind(databaseInstance);
+    window.setLabelFromSongId = databaseInstance.setLabelFromSongId.bind(databaseInstance);
+    window.addToHoldingTank = databaseInstance.addToHoldingTank.bind(databaseInstance);
+    window.populateCategorySelect = databaseInstance.populateCategorySelect.bind(databaseInstance);
+
+    // Import utils module and make functions globally available
+    const utilsModule = await import('./renderer/modules/utils/index.js');
+    
+    // Make utils functions globally available
+    window.animateCSS = utilsModule.default.animateCSS;
+    window.customConfirm = utilsModule.default.customConfirm;
+    window.customPrompt = utilsModule.default.customPrompt;
+    window.restoreFocusToSearch = utilsModule.default.restoreFocusToSearch;
+    window.isValidSongId = utilsModule.default.isValidSongId;
+    window.isValidCategoryCode = utilsModule.default.isValidCategoryCode;
+    window.isValidFilePath = utilsModule.default.isValidFilePath;
+    window.isValidHotkey = utilsModule.default.isValidHotkey;
 
     console.log('✅ All modules loaded successfully!');
 

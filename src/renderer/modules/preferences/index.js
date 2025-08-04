@@ -46,13 +46,19 @@ function initializePreferences(options = {}) {
   };
 }
 
-export {
-  PreferencesModule,
-  preferences: preferencesModule
-};
+// Create and export a singleton instance
+const preferencesModule = initializePreferences();
+
+// Export individual functions for direct access
+export const openPreferencesModal = preferencesModule.openPreferencesModal;
+export const loadPreferences = preferencesModule.loadPreferences;
+export const savePreferences = preferencesModule.savePreferences;
+export const getPreference = preferencesModule.getPreference;
+export const setPreference = preferencesModule.setPreference;
+export const getDatabaseDirectory = preferencesModule.getDatabaseDirectory;
+export const getMusicDirectory = preferencesModule.getMusicDirectory;
+export const getHotkeyDirectory = preferencesModule.getHotkeyDirectory;
+export const getFadeOutSeconds = preferencesModule.getFadeOutSeconds;
 
 // Default export for module loading
-export default {
-  PreferencesModule,
-  preferences: preferencesModule
-}; 
+export default preferencesModule; 
