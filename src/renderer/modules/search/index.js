@@ -19,6 +19,7 @@ class SearchModule {
   constructor() {
     // Initialize search engine functions
     this.searchData = searchEngine.searchData;
+    this.triggerLiveSearch = searchEngine.triggerLiveSearch;
     this.performLiveSearch = liveSearch.performLiveSearch;
     this.toggleAdvancedSearch = advancedSearch.toggleAdvancedSearch;
     
@@ -72,41 +73,7 @@ class SearchModule {
     $("#search_results thead").hide();
   }
 
-  /**
-   * Trigger live search with debouncing
-   */
-  triggerLiveSearch() {
-    if (this.searchTimeout) {
-      clearTimeout(this.searchTimeout);
-    }
-    
-    const searchTerm = $("#omni_search").val().trim();
-    
-    this.searchTimeout = setTimeout(() => {
-      // Check if we have either a search term or advanced search filters
-      const hasSearchTerm = searchTerm.length >= 2;
-      let hasAdvancedFilters = false;
-
-      if ($("#advanced-search").is(":visible")) {
-        const title = $("#title-search").val().trim();
-        const artist = $("#artist-search").val().trim();
-        const info = $("#info-search").val().trim();
-        const since = $("#date-search").val();
-        hasAdvancedFilters =
-          title.length > 0 ||
-          artist.length > 0 ||
-          info.length > 0 ||
-          since.length > 0;
-      }
-
-      if (hasSearchTerm || hasAdvancedFilters) {
-        this.performLiveSearch(searchTerm);
-      } else {
-        // Clear results when no search term and no advanced filters
-        this.clearSearchResults();
-      }
-    }, 300); // 300ms debounce
-  }
+  // triggerLiveSearch function moved to search-engine module
 
   /**
    * Build search query string and parameters

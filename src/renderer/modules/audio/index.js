@@ -8,6 +8,7 @@
 // Import audio sub-modules
 const audioManager = require('./audio-manager');
 const audioController = require('./audio-controller');
+const audioUtils = require('./audio-utils');
 
 /**
  * Audio Module Class
@@ -29,6 +30,9 @@ class AudioModule {
     this.resetUIState = audioController.resetUIState;
     this.toggle_play_button = audioController.toggle_play_button;
     this.loop_on = audioController.loop_on;
+    
+    // Initialize audio utilities
+    this.howlerUtils = audioUtils.howlerUtils;
   }
 
   /**
@@ -58,7 +62,10 @@ class AudioModule {
       pausePlaying: this.pausePlaying,
       resetUIState: this.resetUIState,
       toggle_play_button: this.toggle_play_button,
-      loop_on: this.loop_on
+      loop_on: this.loop_on,
+      
+      // Audio utilities
+      howlerUtils: this.howlerUtils
     };
   }
 

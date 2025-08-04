@@ -184,6 +184,42 @@ function searchData() {
   }
 }
 
+/**
+ * Trigger live search with debouncing
+ * This function handles the debounced live search functionality
+ */
+function triggerLiveSearch() {
+  clearTimeout(searchTimeout);
+  var searchTerm = $("#omni_search").val().trim();
+
+  searchTimeout = setTimeout(() => {
+    // Check if we have either a search term or advanced search filters
+    var hasSearchTerm = searchTerm.length >= 2;
+    var hasAdvancedFilters = false;
+
+    if ($("#advanced-search").is(":visible")) {
+      var title = $("#title-search").val().trim();
+      var artist = $("#artist-search").val().trim();
+      var info = $("#info-search").val().trim();
+      var since = $("#date-search").val();
+      hasAdvancedFilters =
+        title.length > 0 ||
+        artist.length > 0 ||
+        info.length > 0 ||
+        since.length > 0;
+    }
+
+    if (hasSearchTerm || hasAdvancedFilters) {
+      performLiveSearch(searchTerm);
+    } else {
+      // Clear results when no search term and no advanced filters
+      $("#search_results tbody").find("tr").remove();
+      $("#search_results thead").hide();
+    }
+  }, 300); // 300ms debounce
+}
+
 module.exports = {
-  searchData
+  searchData,
+  triggerLiveSearch
 }; 
