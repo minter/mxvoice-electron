@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Operations Module Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .function-list {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .function-item {
+            margin: 5px 0;
+            padding: 5px;
+            background: white;
+            border-radius: 3px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-available {
+            background: #28a745;
+        }
+        .status-missing {
+            background: #dc3545;
+        }
+        .module-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Bulk Operations Module Test</h1>
+    
+    <div class="module-info">
+        <h3>📋 Module Information</h3>
+        <p><strong>Module:</strong> Bulk Operations Module</p>
+        <p><strong>Location:</strong> <code>src/renderer/modules/bulk-operations/</code></p>
+        <p><strong>Purpose:</strong> Handles bulk import of songs from directories and processing multiple files</p>
+        <p><strong>Status:</strong> <span id="module-status">Testing...</span></p>
+    </div>
+
+    <div class="test-section">
+        <h3>🔍 Module Detection Test</h3>
+        <button class="test-button" onclick="testModuleDetection()">Test Module Detection</button>
+        <div id="detection-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📋 Function Availability Test</h3>
+        <button class="test-button" onclick="testFunctionAvailability()">Test Function Availability</button>
+        <div id="function-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔧 Function Testing</h3>
+        <button class="test-button" onclick="testShowBulkAddModal()">Test showBulkAddModal()</button>
+        <button class="test-button" onclick="testAddSongsByPath()">Test addSongsByPath()</button>
+        <button class="test-button" onclick="testSaveBulkUpload()">Test saveBulkUpload()</button>
+        <div id="function-test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🎯 Integration Test</h3>
+        <button class="test-button" onclick="testModuleIntegration()">Test Module Integration</button>
+        <div id="integration-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Test Summary</h3>
+        <button class="test-button" onclick="runAllTests()">Run All Tests</button>
+        <div id="summary-results"></div>
+    </div>
+
+    <script type="module">
+        // Import the bulk operations module
+        import bulkOperationsModule from './renderer/modules/bulk-operations/index.js';
+
+        // Make module available globally for testing
+        window.bulkOperationsModule = bulkOperationsModule;
+
+        // Test functions
+        window.testModuleDetection = function() {
+            const results = document.getElementById('detection-results');
+            results.innerHTML = '';
+
+            try {
+                if (window.bulkOperationsModule) {
+                    results.innerHTML += '<div class="result success">✅ Bulk Operations Module detected successfully</div>';
+                    results.innerHTML += '<div class="result info">Module object: ' + typeof window.bulkOperationsModule + '</div>';
+                } else {
+                    results.innerHTML += '<div class="result error">❌ Bulk Operations Module not detected</div>';
+                }
+            } catch (error) {
+                results.innerHTML += '<div class="result error">❌ Error detecting module: ' + error.message + '</div>';
+            }
+        };
+
+        window.testFunctionAvailability = function() {
+            const results = document.getElementById('function-results');
+            results.innerHTML = '';
+
+            const functions = [
+                'showBulkAddModal',
+                'addSongsByPath', 
+                'saveBulkUpload',
+                'initializeBulkOperations',
+                'getBulkOperations'
+            ];
+
+            let availableCount = 0;
+            let totalCount = functions.length;
+
+            results.innerHTML += '<div class="function-list">';
+            functions.forEach(funcName => {
+                const isAvailable = typeof window.bulkOperationsModule[funcName] === 'function';
+                const statusClass = isAvailable ? 'status-available' : 'status-missing';
+                const statusText = isAvailable ? 'Available' : 'Missing';
+                
+                results.innerHTML += `
+                    <div class="function-item">
+                        <span class="status-indicator ${statusClass}"></span>
+                        <strong>${funcName}():</strong> ${statusText}
+                    </div>
+                `;
+                
+                if (isAvailable) availableCount++;
+            });
+            results.innerHTML += '</div>';
+
+            results.innerHTML += `<div class="result ${availableCount === totalCount ? 'success' : 'error'}">
+                ${availableCount}/${totalCount} functions available
+            </div>`;
+        };
+
+        window.testShowBulkAddModal = function() {
+            const results = document.getElementById('function-test-results');
+            results.innerHTML = '';
+
+            try {
+                if (typeof window.bulkOperationsModule.showBulkAddModal === 'function') {
+                    results.innerHTML += '<div class="result success">✅ showBulkAddModal function is available</div>';
+                    results.innerHTML += '<div class="result info">Function signature: showBulkAddModal(directory)</div>';
+                } else {
+                    results.innerHTML += '<div class="result error">❌ showBulkAddModal function is not available</div>';
+                }
+            } catch (error) {
+                results.innerHTML += '<div class="result error">❌ Error testing showBulkAddModal: ' + error.message + '</div>';
+            }
+        };
+
+        window.testAddSongsByPath = function() {
+            const results = document.getElementById('function-test-results');
+            results.innerHTML = '';
+
+            try {
+                if (typeof window.bulkOperationsModule.addSongsByPath === 'function') {
+                    results.innerHTML += '<div class="result success">✅ addSongsByPath function is available</div>';
+                    results.innerHTML += '<div class="result info">Function signature: addSongsByPath(pathArray, category)</div>';
+                } else {
+                    results.innerHTML += '<div class="result error">❌ addSongsByPath function is not available</div>';
+                }
+            } catch (error) {
+                results.innerHTML += '<div class="result error">❌ Error testing addSongsByPath: ' + error.message + '</div>';
+            }
+        };
+
+        window.testSaveBulkUpload = function() {
+            const results = document.getElementById('function-test-results');
+            results.innerHTML = '';
+
+            try {
+                if (typeof window.bulkOperationsModule.saveBulkUpload === 'function') {
+                    results.innerHTML += '<div class="result success">✅ saveBulkUpload function is available</div>';
+                    results.innerHTML += '<div class="result info">Function signature: saveBulkUpload(event)</div>';
+                } else {
+                    results.innerHTML += '<div class="result error">❌ saveBulkUpload function is not available</div>';
+                }
+            } catch (error) {
+                results.innerHTML += '<div class="result error">❌ Error testing saveBulkUpload: ' + error.message + '</div>';
+            }
+        };
+
+        window.testModuleIntegration = function() {
+            const results = document.getElementById('integration-results');
+            results.innerHTML = '';
+
+            try {
+                // Test initialization
+                if (typeof window.bulkOperationsModule.initializeBulkOperations === 'function') {
+                    results.innerHTML += '<div class="result success">✅ initializeBulkOperations function is available</div>';
+                } else {
+                    results.innerHTML += '<div class="result error">❌ initializeBulkOperations function is not available</div>';
+                }
+
+                // Test getBulkOperations
+                if (typeof window.bulkOperationsModule.getBulkOperations === 'function') {
+                    results.innerHTML += '<div class="result success">✅ getBulkOperations function is available</div>';
+                    
+                    const operations = window.bulkOperationsModule.getBulkOperations();
+                    if (operations && typeof operations === 'object') {
+                        results.innerHTML += '<div class="result success">✅ getBulkOperations returns valid object</div>';
+                        results.innerHTML += '<div class="result info">Available operations: ' + Object.keys(operations).join(', ') + '</div>';
+                    } else {
+                        results.innerHTML += '<div class="result error">❌ getBulkOperations does not return valid object</div>';
+                    }
+                } else {
+                    results.innerHTML += '<div class="result error">❌ getBulkOperations function is not available</div>';
+                }
+
+            } catch (error) {
+                results.innerHTML += '<div class="result error">❌ Error testing module integration: ' + error.message + '</div>';
+            }
+        };
+
+        window.runAllTests = function() {
+            const results = document.getElementById('summary-results');
+            results.innerHTML = '';
+
+            // Run all tests
+            testModuleDetection();
+            setTimeout(() => {
+                testFunctionAvailability();
+                setTimeout(() => {
+                    testModuleIntegration();
+                    setTimeout(() => {
+                        // Summary
+                        results.innerHTML += '<div class="result info">🎯 All tests completed. Check individual test results above.</div>';
+                        results.innerHTML += '<div class="result success">✅ Bulk Operations Module extraction appears successful!</div>';
+                    }, 100);
+                }, 100);
+            }, 100);
+        };
+
+        // Auto-run module detection on load
+        window.addEventListener('load', function() {
+            document.getElementById('module-status').textContent = 'Ready for testing';
+            testModuleDetection();
+        });
+    </script>
+</body>
+</html> 

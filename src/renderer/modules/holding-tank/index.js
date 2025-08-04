@@ -246,62 +246,7 @@ export function saveHoldingTankFile() {
   }
 }
 
-/**
- * Set the holding tank mode (storage or playlist)
- */
-export function setHoldingTankMode(mode) {
-  holdingTankMode = mode;
-
-  // Update button states
-  if (mode === "storage") {
-    $("#storage_mode_btn").addClass("active");
-    $("#playlist_mode_btn").removeClass("active");
-    $("#holding_tank")
-      .removeClass("holding-tank-playlist-mode")
-      .addClass("holding-tank-storage-mode");
-    autoplay = false;
-    $(".now_playing").removeClass("now_playing");
-    $("#holding_tank").removeClass("autoplaying");
-  } else if (mode === "playlist") {
-    $("#playlist_mode_btn").addClass("active");
-    $("#storage_mode_btn").removeClass("active");
-    $("#holding_tank")
-      .removeClass("holding-tank-storage-mode")
-      .addClass("holding-tank-playlist-mode");
-    autoplay = true;
-
-    // Only restore the speaker icon if there's a track currently playing AND it's actually playing
-    var currentSongId = $("#song_now_playing").attr("songid");
-    var isCurrentlyPlaying = sound && sound.playing && sound.playing();
-
-    if (currentSongId && isCurrentlyPlaying) {
-      // Find the track in the holding tank with this song ID and add the now_playing class
-      $(`#holding_tank .list-group-item[songid="${currentSongId}"]`).addClass(
-        "now_playing"
-      );
-    }
-  }
-
-  // Save mode to store
-  return store.set("holding_tank_mode", mode).then(result => {
-    if (result.success) {
-      console.log('✅ Holding tank mode saved:', mode);
-    } else {
-      console.warn('❌ Failed to save holding tank mode:', result.error);
-    }
-    return result;
-  }).catch(error => {
-    console.warn('❌ Store save error:', error);
-    return { success: false, error: error.message };
-  });
-}
-
-/**
- * Get the current holding tank mode
- */
-export function getHoldingTankMode() {
-  return holdingTankMode;
-}
+// Mode management functions moved to dedicated mode-management module
 
 /**
  * Handle drag and drop for holding tank
@@ -341,16 +286,7 @@ export function renameHoldingTankTab() {
   });
 }
 
-/**
- * Legacy function for backward compatibility
- */
-export function toggleAutoPlay() {
-  if (holdingTankMode === "storage") {
-    setHoldingTankMode("playlist");
-  } else {
-    setHoldingTankMode("storage");
-  }
-}
+// toggleAutoPlay function moved to mode-management module
 
 /**
  * Cancel autoplay
@@ -396,11 +332,8 @@ export default {
   clearHoldingTank,
   openHoldingTankFile,
   saveHoldingTankFile,
-  setHoldingTankMode,
-  getHoldingTankMode,
   holdingTankDrop,
   sendToHoldingTank,
   renameHoldingTankTab,
-  toggleAutoPlay,
   cancel_autoplay
 }; 

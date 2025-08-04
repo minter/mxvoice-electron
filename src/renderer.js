@@ -28,20 +28,8 @@ window.electronAPI.store.has("holding_tank").then(hasHoldingTank => {
   }
 });
 
-// Load saved mode or default to storage
-window.electronAPI.store.has("holding_tank_mode").then(hasMode => {
-  if (hasMode) {
-    window.electronAPI.store.get("holding_tank_mode").then(mode => {
-      holdingTankMode = mode;
-      // Initialize the mode UI
-      setHoldingTankMode(holdingTankMode);
-    });
-  } else {
-    holdingTankMode = "storage"; // Default to storage mode
-    // Initialize the mode UI
-    setHoldingTankMode(holdingTankMode);
-  }
-});
+// Mode initialization will be handled by the mode management module
+// The module will be initialized after all modules are loaded
 
 // Load hotkeys
 window.electronAPI.store.has("hotkeys").then(hasHotkeys => {
@@ -186,90 +174,92 @@ function clearHoldingTank() {
   });
 }
 
-function openHotkeyFile() {
-  if (window.electronAPI) {
-    window.electronAPI.openHotkeyFile().catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
-      ipcRenderer.send("open-hotkey-file");
-    });
-  } else {
-    ipcRenderer.send("open-hotkey-file");
-  }
-}
+// File Operations Module - Functions extracted to src/renderer/modules/file-operations/
+// openHotkeyFile(), openHoldingTankFile(), saveHotkeyFile(), saveHoldingTankFile()
+// pickDirectory(), installUpdate() - All moved to file-operations module
 
-// Test function for hybrid approach
-function testHybridApproach() {
-  console.log('Testing hybrid approach...');
-  
-  // Test if new API is available
-  if (window.electronAPI) {
-    console.log('✅ New electronAPI is available');
-    
-    // Test new API
-    window.electronAPI.getAppPath().then(result => {
-      console.log('✅ New API works:', result);
-    }).catch(error => {
-      console.log('❌ New API failed:', error);
-    });
-    
-    // Test old API still works
-    console.log('✅ Old API still available via ipcRenderer');
-    
-  } else {
-    console.log('❌ New electronAPI not available');
-  }
-}
+// Import file operations module and make functions globally available
+import fileOperationsModule from './renderer/modules/file-operations/index.js';
 
-// Make test function available globally
-window.testHybridApproach = testHybridApproach;
+// Make file operations functions globally available
+window.openHotkeyFile = fileOperationsModule.openHotkeyFile;
+window.openHoldingTankFile = fileOperationsModule.openHoldingTankFile;
+window.saveHotkeyFile = fileOperationsModule.saveHotkeyFile;
+window.saveHoldingTankFile = fileOperationsModule.saveHoldingTankFile;
+window.pickDirectory = fileOperationsModule.pickDirectory;
+window.installUpdate = fileOperationsModule.installUpdate;
 
-function openHoldingTankFile() {
-  if (window.electronAPI) {
-    window.electronAPI.openHoldingTankFile().catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
-      ipcRenderer.send("open-holding-tank-file");
-    });
-  } else {
-    ipcRenderer.send("open-holding-tank-file");
-  }
-}
+// Import song management module and make functions globally available
+import songManagementModule from './renderer/modules/song-management/index.js';
 
-function saveHotkeyFile() {
-  console.log("Renderer starting saveHotkeyFile");
-  var hotkeyArray = [];
-  for (let key = 1; key <= 12; key++) {
-    hotkeyArray.push($(`.hotkeys.active li#f${key}_hotkey`).attr("songid"));
-  }
-  if (!/^\d$/.test($("#hotkey_tabs li a.active").text())) {
-    hotkeyArray.push($("#hotkey_tabs li a.active").text());
-  }
-  
-  if (window.electronAPI) {
-    window.electronAPI.saveHotkeyFile(hotkeyArray).catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
-      ipcRenderer.send("save-hotkey-file", hotkeyArray);
-    });
-  } else {
-    ipcRenderer.send("save-hotkey-file", hotkeyArray);
-  }
-}
+// Make song management functions globally available
+window.saveEditedSong = songManagementModule.saveEditedSong;
+window.saveNewSong = songManagementModule.saveNewSong;
+window.editSelectedSong = songManagementModule.editSelectedSong;
+window.deleteSelectedSong = songManagementModule.deleteSelectedSong;
+window.deleteSong = songManagementModule.deleteSong;
+window.removeFromHoldingTank = songManagementModule.removeFromHoldingTank;
+window.removeFromHotkey = songManagementModule.removeFromHotkey;
 
-function saveHoldingTankFile() {
-  console.log("Renderer starting saveHoldingTankFile");
-  var holdingTankArray = [];
-  $(".holding_tank.active .list-group-item").each(function () {
-    holdingTankArray.push($(this).attr("songid"));
-  });
-  
-  if (window.electronAPI) {
-    window.electronAPI.saveHoldingTankFile(holdingTankArray).catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
-      ipcRenderer.send("save-holding-tank-file", holdingTankArray);
-    });
+// Import bulk operations module and make functions globally available
+import bulkOperationsModule from './renderer/modules/bulk-operations/index.js';
+
+// Make bulk operations functions globally available
+window.showBulkAddModal = bulkOperationsModule.showBulkAddModal;
+window.addSongsByPath = bulkOperationsModule.addSongsByPath;
+window.saveBulkUpload = bulkOperationsModule.saveBulkUpload;
+
+// Import drag and drop module and make functions globally available
+import dragDropModule from './renderer/modules/drag-drop/index.js';
+
+// Make drag and drop functions globally available
+window.hotkeyDrop = dragDropModule.hotkeyDrop;
+window.holdingTankDrop = dragDropModule.holdingTankDrop;
+window.allowHotkeyDrop = dragDropModule.allowHotkeyDrop;
+window.songDrag = dragDropModule.songDrag;
+window.columnDrag = dragDropModule.columnDrag;
+
+// Import navigation module and make functions globally available
+import navigationModule from './renderer/modules/navigation/index.js';
+
+// Make navigation functions globally available
+window.sendToHotkeys = navigationModule.sendToHotkeys;
+window.sendToHoldingTank = navigationModule.sendToHoldingTank;
+window.selectNext = navigationModule.selectNext;
+window.selectPrev = navigationModule.selectPrev;
+
+// Import mode management module and make functions globally available
+import modeManagementModule from './renderer/modules/mode-management/index.js';
+
+// Make mode management functions globally available
+window.setHoldingTankMode = modeManagementModule.setHoldingTankMode;
+window.getHoldingTankMode = modeManagementModule.getHoldingTankMode;
+window.toggleAutoPlay = modeManagementModule.toggleAutoPlay;
+window.getAutoPlayState = modeManagementModule.getAutoPlayState;
+window.resetToDefaultMode = modeManagementModule.resetToDefaultMode;
+
+// Initialize mode management module
+modeManagementModule.initModeManagement().then(result => {
+  if (result.success) {
+    console.log('✅ Mode management module initialized:', result.mode);
   } else {
-    ipcRenderer.send("save-holding-tank-file", holdingTankArray);
+    console.warn('❌ Failed to initialize mode management module:', result.error);
   }
-}
+}).catch(error => {
+  console.error('❌ Mode management module initialization error:', error);
+});
+
+// Import test functions module and make functions globally available
+import testUtilsModule from './renderer/modules/test-utils/index.js';
+
+// Make test functions globally available
+window.testPhase2Migrations = testUtilsModule.testPhase2Migrations;
+window.testDatabaseAPI = testUtilsModule.testDatabaseAPI;
+window.testFileSystemAPI = testUtilsModule.testFileSystemAPI;
+window.testStoreAPI = testUtilsModule.testStoreAPI;
+window.testAudioAPI = testUtilsModule.testAudioAPI;
+window.testSecurityFeatures = testUtilsModule.testSecurityFeatures;
+window.runAllTests = testUtilsModule.runAllTests;
 
 function openPreferencesModal() {
   $("#preferencesModal").modal();
@@ -1227,215 +1217,15 @@ function toggle_play_button() {
   $("#pause_button").toggleClass("d-none");
 }
 
-function hotkeyDrop(event) {
-  event.preventDefault();
-  var song_id = event.dataTransfer.getData("text");
-  var target = $(event.currentTarget);
-  target.attr("songid", song_id);
-  setLabelFromSongId(song_id, target);
-}
 
-function holdingTankDrop(event) {
-  event.preventDefault();
-  addToHoldingTank(event.dataTransfer.getData("text"), $(event.target));
-}
 
-function allowHotkeyDrop(event) {
-  event.preventDefault();
-}
 
-function songDrag(event) {
-  console.log("Starting drag for ID " + event.target.getAttribute("songid"));
-  event.dataTransfer.setData("text", event.target.getAttribute("songid"));
-}
 
-function columnDrag(event) {
-  console.log("Starting drag for column ID " + event.target.getAttribute("id"));
-  event.dataTransfer.setData(
-    "application/x-moz-node",
-    event.target.getAttribute("id")
-  );
-}
+// Mode Management Module - Functions extracted to src/renderer/modules/mode-management/
+// setHoldingTankMode(), toggleAutoPlay() - All moved to mode-management module
 
-function sendToHotkeys() {
-  if ($("#selected_row").is("span")) {
-    return;
-  }
-  target = $(".hotkeys.active li").not("[songid]").first();
-  song_id = $("#selected_row").attr("songid");
-  if ($(`.hotkeys.active li[songid=${song_id}]`).length) {
-    return;
-  }
-  if (target && song_id) {
-    target.attr("songid", song_id);
-    setLabelFromSongId(song_id, target);
-  }
-  return false;
-}
-
-function sendToHoldingTank() {
-  target = $(".holding_tank.active");
-  song_id = $("#selected_row").attr("songid");
-  if (song_id) {
-    addToHoldingTank(song_id, target);
-  }
-  return false;
-}
-
-function selectNext() {
-  $("#selected_row").removeAttr("id").next().attr("id", "selected_row");
-}
-
-function selectPrev() {
-  $("#selected_row").removeAttr("id").prev().attr("id", "selected_row");
-}
-
-// New mode management functions
-function setHoldingTankMode(mode) {
-  holdingTankMode = mode;
-
-  // Update button states
-  if (mode === "storage") {
-    $("#storage_mode_btn").addClass("active");
-    $("#playlist_mode_btn").removeClass("active");
-    $("#holding_tank")
-      .removeClass("holding-tank-playlist-mode")
-      .addClass("holding-tank-storage-mode");
-    autoplay = false;
-    $(".now_playing").removeClass("now_playing");
-    $("#holding_tank").removeClass("autoplaying");
-  } else if (mode === "playlist") {
-    $("#playlist_mode_btn").addClass("active");
-    $("#storage_mode_btn").removeClass("active");
-    $("#holding_tank")
-      .removeClass("holding-tank-storage-mode")
-      .addClass("holding-tank-playlist-mode");
-    autoplay = true;
-
-    // Only restore the speaker icon if there's a track currently playing AND it's actually playing
-    var currentSongId = $("#song_now_playing").attr("songid");
-    var isCurrentlyPlaying = sound && sound.playing && sound.playing();
-
-    if (currentSongId && isCurrentlyPlaying) {
-      // Find the track in the holding tank with this song ID and add the now_playing class
-      $(`#holding_tank .list-group-item[songid="${currentSongId}"]`).addClass(
-        "now_playing"
-      );
-    }
-  }
-
-  // Save mode to store
-  store.set("holding_tank_mode", mode);
-}
-
-// Legacy function for backward compatibility
-function toggleAutoPlay() {
-  if (holdingTankMode === "storage") {
-    setHoldingTankMode("playlist");
-  } else {
-    setHoldingTankMode("storage");
-  }
-}
-
-function deleteSong() {
-  var songId = $("#selected_row").attr("songid");
-  if (songId) {
-    console.log(`Preparing to delete song ${songId}`);
-    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    var songRow = songStmt.get(songId);
-    var filename = songRow.filename;
-    
-    customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`, function() {
-      console.log("Proceeding with delete");
-      const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
-      if (deleteStmt.run(songId)) {
-        window.electronAPI.store.get("music_directory").then(musicDirectory => {
-          window.electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
-            if (joinResult.success) {
-              const filePath = joinResult.data;
-              window.electronAPI.fileSystem.delete(filePath).then(result => {
-                if (result.success) {
-                  console.log('✅ File deleted successfully');
-                } else {
-                  console.warn('❌ Failed to delete file:', result.error);
-                }
-              }).catch(error => {
-                console.warn('❌ File deletion error:', error);
-              });
-            } else {
-              console.warn('❌ Failed to join path:', joinResult.error);
-            }
-          }).catch(error => {
-            console.warn('❌ Path join error:', error);
-          });
-          // Remove song anywhere it appears
-          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-          $(`.hotkeys li span[songid=${songId}]`).remove();
-          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-          $(`#search_results tr[songid=${songId}]`).remove();
-          saveHoldingTankToStore();
-          saveHotkeysToStore();
-        });
-      } else {
-        console.log("Error deleting song from database");
-      }
-    });
-  }
-}
-
-function removeFromHoldingTank() {
-  var songId = $("#selected_row").attr("songid");
-  if (songId) {
-    console.log(`Preparing to remove song ${songId} from holding tank`);
-    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    var songRow = songStmt.get(songId);
-    
-    customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`, function() {
-      console.log("Proceeding with removal from holding tank");
-      // Remove the selected row from the holding tank
-      $("#selected_row").remove();
-      // Clear the selection
-      $("#selected_row").removeAttr("id");
-      // Save the updated holding tank to store
-      saveHoldingTankToStore();
-    });
-  }
-}
-
-function removeFromHotkey() {
-  var songId = $("#selected_row").attr("songid");
-  console.log("removeFromHotkey called, songId:", songId);
-  console.log("selected_row element:", $("#selected_row"));
-  
-  if (songId) {
-    console.log(`Preparing to remove song ${songId} from hotkey`);
-    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    var songRow = songStmt.get(songId);
-    
-    if (songRow) {
-      customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`, function() {
-        console.log("Proceeding with removal from hotkey");
-        // Clear the hotkey slot
-        $("#selected_row").removeAttr("songid");
-        $("#selected_row span").html("");
-        // Clear the selection
-        $("#selected_row").removeAttr("id");
-        // Save the updated hotkeys to store
-        saveHotkeysToStore();
-        console.log("Hotkey cleared successfully");
-      });
-    } else {
-      console.error("Song not found in database for ID:", songId);
-      // Still clear the hotkey even if song not found
-      $("#selected_row").removeAttr("songid");
-      $("#selected_row span").html("");
-      $("#selected_row").removeAttr("id");
-      saveHotkeysToStore();
-    }
-  } else {
-    console.log("No songId found on selected row");
-  }
-}
+// Song Management Module - Functions extracted to src/renderer/modules/song-management/
+// deleteSong(), removeFromHoldingTank(), removeFromHotkey() - All moved to song-management module
 
 function scale_scrollable() {
   var advanced_search_height = $("#advanced-search").is(":visible") ? 38 : 0;
@@ -1461,125 +1251,8 @@ function renameHotkeyTab() {
   });
 }
 
-function saveEditedSong(event) {
-  event.preventDefault();
-  $(`#songFormModal`).modal("hide");
-  console.log("Starting edit process");
-  var songId = $("#song-form-songid").val();
-  var title = $("#song-form-title").val();
-  var artist = $("#song-form-artist").val();
-  var info = $("#song-form-info").val();
-  var category = $("#song-form-category").val();
-
-  const stmt = db.prepare(
-    "UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?"
-  );
-  stmt.run(title, artist, category, info, songId);
-
-  $("#omni_search").val(title);
-  searchData();
-}
-
-function saveNewSong(event) {
-  event.preventDefault();
-  $(`#songFormModal`).modal("hide");
-  console.log("Starting save process");
-  var filename = $("#song-form-filename").val();
-  window.electronAPI.path.parse(filename).then(result => {
-    if (result.success) {
-      var pathData = result.data;
-      var title = $("#song-form-title").val();
-  var artist = $("#song-form-artist").val();
-  var info = $("#song-form-info").val();
-  var category = $("#song-form-category").val();
-
-  if (category == "--NEW--") {
-    var description = $("#song-form-new-category").val();
-    var code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-    var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-    var loopCount = 1;
-    var newCode = code;
-    while ((row = codeCheckStmt.get(newCode))) {
-      console.log(`Found a code collision on ${code}`);
-      var newCode = `${code}${loopCount}`;
-      loopCount = loopCount + 1;
-      console.log(`NewCode is ${newCode}`);
-    }
-    console.log(`Out of loop, setting code to ${newCode}`);
-    code = newCode;
-    const categoryInsertStmt = db.prepare(
-      "INSERT INTO categories VALUES (?, ?)"
-    );
-    try {
-      const categoryInfo = categoryInsertStmt.run(
-        code,
-        $("#song-form-new-category").val()
-      );
-      if (categoryInfo.changes == 1) {
-        console.log(`Added new row into database`);
-        populateCategorySelect();
-        populateCategoriesModal();
-        category = code;
-      }
-    } catch (err) {
-      if (err.message.match(/UNIQUE constraint/)) {
-        var description = $("#song-form-new-category").val();
-        $("#song-form-new-category").val("");
-        alert(
-          `Couldn't add a category named "${description}" - apparently one already exists!`
-        );
-        return;
-      }
-    }
-  }
-
-  var duration = $("#song-form-duration").val();
-  var uuid = uuidv4();
-      var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(
-        /[^-.\w]/g,
-        ""
-      );
-      window.electronAPI.path.join(store.get("music_directory"), newFilename).then(joinResult => {
-        if (joinResult.success) {
-          var newPath = joinResult.data;
-          const stmt = db.prepare(
-            "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
-          );
-          stmt.run(
-            title,
-            artist,
-            category,
-            info,
-            newFilename,
-            duration,
-            Math.floor(Date.now() / 1000)
-          );
-          window.electronAPI.fileSystem.copy(filename, newPath).then(result => {
-            if (result.success) {
-              console.log('✅ File copied successfully');
-            } else {
-              console.warn('❌ Failed to copy file:', result.error);
-            }
-          }).catch(error => {
-            console.warn('❌ File copy error:', error);
-          });
-
-          // Song has been saved, now let's show item
-          $("#omni_search").val(title);
-          searchData();
-        } else {
-          console.warn('❌ Failed to join path:', joinResult.error);
-        }
-      }).catch(error => {
-        console.warn('❌ Path join error:', error);
-      });
-    } else {
-      console.warn('❌ Failed to parse path:', result.error);
-    }
-  }).catch(error => {
-    console.warn('❌ Path parse error:', error);
-  });
-}
+// Song Management Module - Functions extracted to src/renderer/modules/song-management/
+// saveEditedSong(), saveNewSong() - All moved to song-management module
 
 function savePreferences(event) {
   console.log("Saving preferences");
@@ -1615,239 +1288,11 @@ function decreaseFontSize() {
   }
 }
 
-function editSelectedSong() {
-  var songId = $("#selected_row").attr("songid");
-  const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
+// Song Management Module - Functions extracted to src/renderer/modules/song-management/
+// editSelectedSong(), deleteSelectedSong() - All moved to song-management module
 
-  if (songId) {
-    var songInfo = stmt.get(songId);
-
-    $("#song-form-songid").val(songId);
-    $("#song-form-category").empty();
-    const categoryStmt = db.prepare(
-      "SELECT * FROM categories ORDER BY description ASC"
-    );
-    for (const row of categoryStmt.iterate()) {
-      categories[row.code] = row.description;
-      if (row.code == songInfo.category) {
-        $("#song-form-category").append(
-          `<option selected="selected" value="${row.code}">${row.description}</option>`
-        );
-      } else {
-        $("#song-form-category").append(
-          `<option value="${row.code}">${row.description}</option>`
-        );
-      }
-    }
-
-    $("#song-form-title").val(songInfo.title);
-    $("#song-form-artist").val(songInfo.artist);
-    $("#song-form-info").val(songInfo.info);
-    $("#song-form-duration").val(songInfo.time);
-    $("#songFormModal form").attr("onsubmit", "saveEditedSong(event)");
-    $("#songFormModalTitle").html("Edit This Song");
-    $("#songFormSubmitButton").html("Save");
-    $("#songFormModal").modal();
-  }
-}
-function deleteSelectedSong() {
-  console.log("deleteSelectedSong called");
-  console.log("selected_row:", $("#selected_row"));
-  console.log("holding-tank-column has selected_row:", $("#holding-tank-column").has($("#selected_row")).length);
-  console.log("hotkey-tab-content has selected_row:", $("#hotkey-tab-content").has($("#selected_row")).length);
-  
-  // Check if the selected row is in the holding tank
-  if ($("#holding-tank-column").has($("#selected_row")).length) {
-    console.log("Selected row is in holding tank");
-    // If in holding tank, remove from holding tank
-    removeFromHoldingTank();
-  } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
-    console.log("Selected row is in hotkey tab");
-    // If in hotkey tab, remove from hotkey
-    removeFromHotkey();
-  } else {
-    console.log("Selected row is in search results");
-    // If not in holding tank or hotkey, delete from database
-    deleteSong();
-  }
-}
-
-function showBulkAddModal(directory) {
-  $("#bulk-add-path").val(directory);
-  $("#bulk-add-category").empty();
-  const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-  for (const row of stmt.iterate()) {
-    categories[row.code] = row.description;
-    $("#bulk-add-category").append(
-      `<option value="${row.code}">${row.description}</option>`
-    );
-  }
-  $("#bulk-add-category").append(
-    `<option value="" disabled>-----------------------</option>`
-  );
-  $("#bulk-add-category").append(
-    `<option value="--NEW--">ADD NEW CATEGORY...</option>`
-  );
-
-  $("#bulkAddModal").modal();
-}
-
-function addSongsByPath(pathArray, category) {
-  const songSourcePath = pathArray.shift();
-  if (songSourcePath) {
-    return mm.parseFile(songSourcePath).then((metadata) => {
-      var durationSeconds = metadata.format.duration.toFixed(0);
-      var durationString = new Date(durationSeconds * 1000)
-        .toISOString()
-        .substr(14, 5);
-
-      var title = metadata.common.title || path.parse(songSourcePath).name;
-      if (!title) {
-        return;
-      }
-      var artist = metadata.common.artist;
-      var uuid = uuidv4();
-      var newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
-      window.electronAPI.store.get("music_directory").then(musicDirectory => {
-        var newPath = path.join(musicDirectory.value, newFilename);
-        const stmt = db.prepare(
-          "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)"
-        );
-        const info = stmt.run(
-          title,
-          artist,
-          category,
-          newFilename,
-          durationString,
-          Math.floor(Date.now() / 1000)
-        );
-        console.log(`Copying audio file ${songSourcePath} to ${newPath}`);
-        window.electronAPI.fileSystem.copy(songSourcePath, newPath).then(result => {
-          if (result.success) {
-            console.log('✅ File copied successfully');
-          } else {
-            console.warn('❌ Failed to copy file:', result.error);
-          }
-        }).catch(error => {
-          console.warn('❌ File copy error:', error);
-        });
-              $("#search_results").append(
-          `<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${
-            info.lastInsertRowid
-          }'><td>${
-            categories[category]
-          }</td><td></td><td style='font-weight: bold'>${
-            title || ""
-          }</td><td style='font-weight:bold'>${
-            artist || ""
-          }</td><td>${durationString}</td></tr>`
-        );
-
-        return addSongsByPath(pathArray, category); // process rest of the files AFTER we are finished
-      });
-    });
-  }
-  return Promise.resolve();
-}
-
-function saveBulkUpload(event) {
-  event.preventDefault();
-  $("#bulkAddModal").modal("hide");
-  var dirname = $("#bulk-add-path").val();
-
-  var walk = function (dir) {
-    var results = [];
-    window.electronAPI.fileSystem.readdir(dir).then(result => {
-      if (result.success) {
-        result.data.forEach(function (file) {
-          file = dir + "/" + file;
-          window.electronAPI.fileSystem.stat(file).then(statResult => {
-            if (statResult.success) {
-              var stat = statResult.data;
-              if (stat && stat.isDirectory()) {
-                /* Recurse into a subdirectory */
-                results = results.concat(walk(file));
-              } else {
-                /* Is a file */
-                window.electronAPI.path.parse(file).then(parseResult => {
-                  if (parseResult.success) {
-                    var pathData = parseResult.data;
-                    if (
-                      [".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(
-                        pathData.ext.toLowerCase()
-                      )
-                    ) {
-                      results.push(file);
-                    }
-                  } else {
-                    console.warn('❌ Failed to parse path:', parseResult.error);
-                  }
-                }).catch(error => {
-                  console.warn('❌ Path parse error:', error);
-                });
-              }
-            } else {
-              console.warn('❌ Failed to get file stats:', statResult.error);
-            }
-          }).catch(error => {
-            console.warn('❌ File stat error:', error);
-          });
-        });
-      } else {
-        console.warn('❌ Failed to read directory:', result.error);
-      }
-    }).catch(error => {
-      console.warn('❌ Directory read error:', error);
-    });
-    return results;
-  };
-
-  var songs = walk(dirname);
-
-  $("#search_results tbody").find("tr").remove();
-  $("#search_results thead").show();
-
-  var category = $("#bulk-add-category").val();
-
-  if (category == "--NEW--") {
-    var description = $("#bulk-song-form-new-category").val();
-    var code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-    var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-    var loopCount = 1;
-    var newCode = code;
-    while ((row = codeCheckStmt.get(newCode))) {
-      console.log(`Found a code collision on ${code}`);
-      var newCode = `${code}${loopCount}`;
-      loopCount = loopCount + 1;
-      console.log(`NewCode is ${newCode}`);
-    }
-    console.log(`Out of loop, setting code to ${newCode}`);
-    code = newCode;
-    const categoryInsertStmt = db.prepare(
-      "INSERT INTO categories VALUES (?, ?)"
-    );
-    try {
-      const categoryInfo = categoryInsertStmt.run(code, description);
-      if (categoryInfo.changes == 1) {
-        console.log(`Added new row into database`);
-        populateCategorySelect();
-        populateCategoriesModal();
-        category = code;
-      }
-    } catch (err) {
-      if (err.message.match(/UNIQUE constraint/)) {
-        var description = $("#bulk-song-form-new-category").val();
-        $("#bulk-song-form-new-category").val("");
-        alert(
-          `Couldn't add a category named "${description}" - apparently one already exists!`
-        );
-        return;
-      }
-    }
-  }
-
-  addSongsByPath(songs, category);
-}
+// Song Management Module - Functions extracted to src/renderer/modules/song-management/
+// showBulkAddModal(), addSongsByPath(), saveBulkUpload() - All moved to bulk-operations module
 
 function populateCategoriesModal() {
   $("#categoryList").find("div.row").remove();
@@ -1990,24 +1435,7 @@ function loop_on(bool) {
   }
 }
 
-function pickDirectory(event, element) {
-  event.preventDefault();
-  defaultPath = $(element).val();
-  ipcRenderer.invoke("show-directory-picker", defaultPath).then((result) => {
-    if (result) $(element).val(result);
-  });
-}
-
-function installUpdate() {
-  if (window.electronAPI) {
-    window.electronAPI.restartAndInstall().catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
-      ipcRenderer.send("restart-and-install-new-version");
-    });
-  } else {
-    ipcRenderer.send("restart-and-install-new-version");
-  }
-}
+// pickDirectory() and installUpdate() functions moved to file-operations module
 
 function toggleWaveform() {
   if ($("#waveform").hasClass("hidden")) {
@@ -2158,6 +1586,15 @@ $(document).ready(function () {
 
   populateCategorySelect();
 
+  // Initialize bulk operations module
+  bulkOperationsModule.initializeBulkOperations();
+
+  // Initialize drag and drop module
+  dragDropModule.initializeDragDrop();
+
+  // Initialize navigation module
+  navigationModule.initializeNavigation();
+
   // Initialize progress bar to 0% width
   $("#audio_progress").width("0%");
 
@@ -2208,11 +1645,6 @@ $(document).ready(function () {
     $("#omni_search").focus().select();
   });
 
-  Mousetrap.bind("tab", function () {
-    sendToHotkeys();
-    return false;
-  });
-
   Mousetrap.bind("space", function () {
     pausePlaying();
     return false;
@@ -2223,25 +1655,10 @@ $(document).ready(function () {
     return false;
   });
 
-  Mousetrap.bind("shift+tab", function () {
-    sendToHoldingTank();
-    return false;
-  });
-
   Mousetrap.bind("return", function () {
     if (!$("#songFormModal").hasClass("show")) {
       playSelected();
     }
-    return false;
-  });
-
-  Mousetrap.bind("down", function () {
-    selectNext();
-    return false;
-  });
-
-  Mousetrap.bind("up", function () {
-    selectPrev();
     return false;
   });
 
@@ -2366,20 +1783,7 @@ $(document).ready(function () {
     }
   });
 
-  $(".hotkeys li").on("drop", function (event) {
-    $(this).removeClass("drop_target");
-    if (!event.originalEvent.dataTransfer.getData("text").length) return;
-    hotkeyDrop(event.originalEvent);
-  });
 
-  $(".hotkeys li").on("dragover", function (event) {
-    $(this).addClass("drop_target");
-    allowHotkeyDrop(event.originalEvent);
-  });
-
-  $(".hotkeys li").on("dragleave", function (event) {
-    $(this).removeClass("drop_target");
-  });
 
   $("#category_select").on("change", function () {
     var category = $("#category_select").prop("selectedIndex");
@@ -2392,61 +1796,7 @@ $(document).ready(function () {
     searchData();
   });
 
-  $("#holding_tank").on("drop", function (event) {
-    $(event.originalEvent.target).removeClass("dropzone");
-    if (!event.originalEvent.dataTransfer.getData("text").length) return;
-    holdingTankDrop(event.originalEvent);
-  });
 
-  $(".card-header").on("dragover", function (event) {
-    event.preventDefault();
-  });
-
-  $(".card-header").on("drop", function (event) {
-    if (event.originalEvent.dataTransfer.getData("text").length) return;
-    var original_column = $(
-      `#${event.originalEvent.dataTransfer.getData("application/x-moz-node")}`
-    );
-    var target_column = $(event.target).closest(".col");
-    if (original_column.prop("id") == target_column.prop("id")) return;
-    var columns = $("#top-row").children();
-    if (columns.index(original_column) > columns.index(target_column)) {
-      target_column.before(original_column.detach());
-    } else {
-      target_column.after(original_column.detach());
-    }
-    original_column.addClass("animate__animated animate__jello");
-    var new_column_order = $("#top-row")
-      .children()
-      .map(function () {
-        return $(this).prop("id");
-      })
-      .get();
-    // Use new store API for column order
-    window.electronAPI.store.set("column_order", new_column_order).then(result => {
-      if (result.success) {
-        console.log('✅ Column order saved successfully');
-      } else {
-        console.warn('❌ Failed to save column order:', result.error);
-        // Fallback to legacy store access
-        store.set("column_order", new_column_order);
-      }
-    }).catch(error => {
-      console.warn('❌ Column order save error:', error);
-      // Fallback to legacy store access
-      store.set("column_order", new_column_order);
-    });
-  });
-
-  $("#holding_tank").on("dragover", function (event) {
-    allowHotkeyDrop(event.originalEvent);
-    $(event.originalEvent.target).addClass("dropzone");
-  });
-
-  $("#holding_tank").on("dragleave", function (event) {
-    allowHotkeyDrop(event.originalEvent);
-    $(event.originalEvent.target).removeClass("dropzone");
-  });
 
   $("#search_form :input").on("keydown", function (e) {
     if (e.code == "Enter") {
@@ -2732,27 +2082,7 @@ $(document).ready(function () {
     })
     .change();
 
-  $("#bulk-add-category")
-    .change(function () {
-      $(this)
-        .find("option:selected")
-        .each(function () {
-          var optionValue = $(this).attr("value");
-          if (optionValue == "--NEW--") {
-            $("#bulkSongFormNewCategory").show();
-            $("#bulk-song-form-new-category").attr("required", "required");
-          } else {
-            $("#bulkSongFormNewCategory").hide();
-            $("#bulk-song-form-new-category").removeAttr("required");
-          }
-        });
-    })
-    .change();
 
-  $("#bulkAddModal").on("hidden.bs.modal", function (e) {
-    $("#bulkSongFormNewCategory").hide();
-    $("#bulk-song-form-new-category").val("");
-  });
 
   // Handle focus restoration for confirmation modal
   $("#confirmationModal").on("hidden.bs.modal", function (e) {
@@ -2760,352 +2090,6 @@ $(document).ready(function () {
   });
 });
 
-// Test function for Phase 2 migrations
-function testPhase2Migrations() {
-  console.log('🧪 Testing Phase 2 Migrations...');
-  
-  // Test if new APIs are available
-  if (window.electronAPI) {
-    console.log('✅ New electronAPI is available');
-    
-    // Test each migrated function
-    const functionsToTest = [
-      'openHotkeyFile',
-      'openHoldingTankFile', 
-      'saveHotkeyFile',
-      'saveHoldingTankFile',
-      'installUpdate'
-    ];
-    
-    functionsToTest.forEach(funcName => {
-      if (typeof window[funcName] === 'function') {
-        console.log(`✅ ${funcName} function is available`);
-      } else {
-        console.log(`❌ ${funcName} function is NOT available`);
-      }
-    });
-    
-    console.log('✅ Phase 2 migrations appear to be working');
-    
-  } else {
-    console.log('❌ New electronAPI not available');
-  }
-}
-
-// Make test function available globally
-window.testPhase2Migrations = testPhase2Migrations;
-
-// Test database API for gradual migration
-function testDatabaseAPI() {
-  console.log('🧪 Testing Database API for gradual migration...');
-  
-  if (window.electronAPI && window.electronAPI.database) {
-    console.log('✅ Database API available');
-    
-    // Test get categories
-    window.electronAPI.database.getCategories().then(result => {
-      if (result.success) {
-        console.log('✅ getCategories API works:', result.data.length, 'categories found');
-      } else {
-        console.warn('❌ getCategories API failed:', result.error);
-      }
-    }).catch(error => {
-      console.warn('❌ getCategories API error:', error);
-    });
-    
-    // Test database query
-    window.electronAPI.database.query('SELECT COUNT(*) as count FROM categories').then(result => {
-      if (result.success) {
-        console.log('✅ database query API works:', result.data[0].count, 'categories total');
-      } else {
-        console.warn('❌ database query API failed:', result.error);
-      }
-    }).catch(error => {
-      console.warn('❌ database query API error:', error);
-    });
-    
-  } else {
-    console.log('❌ Database API not available');
-  }
-}
-
-// Make database test function available globally
-window.testDatabaseAPI = testDatabaseAPI;
-
-// Test file system API for gradual migration
-function testFileSystemAPI() {
-  console.log('🧪 Testing File System API for gradual migration...');
-  
-  if (window.electronAPI && window.electronAPI.fileSystem) {
-    console.log('✅ File System API available');
-    
-    // Test file exists
-    window.electronAPI.store.get('database_directory').then(dbResult => {
-      if (dbResult.success) {
-        const testPath = dbResult.value;
-                window.electronAPI.fileSystem.exists(testPath).then(result => {
-          if (result.success) {
-            console.log('✅ file exists API works:', result.exists ? 'Directory exists' : 'Directory does not exist');
-          } else {
-            console.warn('❌ file exists API failed:', result.error);
-          }
-        }).catch(error => {
-          console.warn('❌ file exists API error:', error);
-        });
-      } else {
-        console.warn('❌ Could not get database directory from store');
-      }
-    }).catch(error => {
-      console.warn('❌ store get API error:', error);
-    });
-    
-    // Test file read (try to read a config file)
-    window.electronAPI.store.get('database_directory').then(dbResult => {
-      if (dbResult.success) {
-        window.electronAPI.path.join(dbResult.value, 'config.json').then(joinResult => {
-          if (joinResult.success) {
-            const configPath = joinResult.data;
-            window.electronAPI.fileSystem.read(configPath).then(result => {
-              if (result.success) {
-                console.log('✅ file read API works: Config file read successfully');
-              } else {
-                console.log('✅ file read API works: Config file does not exist (expected)');
-              }
-            }).catch(error => {
-              console.warn('❌ file read API error:', error);
-            });
-          } else {
-            console.warn('❌ Failed to join path:', joinResult.error);
-          }
-        }).catch(error => {
-          console.warn('❌ Path join error:', error);
-        });
-      } else {
-        console.warn('❌ Could not get database directory from store');
-      }
-    }).catch(error => {
-      console.warn('❌ store get API error:', error);
-    });
-    
-  } else {
-    console.log('❌ File System API not available');
-  }
-}
-
-// Make file system test function available globally
-window.testFileSystemAPI = testFileSystemAPI;
-
-// Test store API for gradual migration
-function testStoreAPI() {
-  console.log('🧪 Testing Store API for gradual migration...');
-  
-  if (window.electronAPI && window.electronAPI.store) {
-    console.log('✅ Store API available');
-    
-    // Test store get
-    window.electronAPI.store.get('music_directory').then(result => {
-      if (result.success) {
-        console.log('✅ store get API works:', result.value);
-      } else {
-        console.warn('❌ store get API failed:', result.error);
-      }
-    }).catch(error => {
-      console.warn('❌ store get API error:', error);
-    });
-    
-    // Test store has
-    window.electronAPI.store.has('music_directory').then(result => {
-      if (result.success) {
-        console.log('✅ store has API works:', result.has ? 'Key exists' : 'Key does not exist');
-      } else {
-        console.warn('❌ store has API failed:', result.error);
-      }
-    }).catch(error => {
-      console.warn('❌ store has API error:', error);
-    });
-    
-    // Test store set and get
-    const testKey = 'test_api_key';
-    const testValue = 'test_value_' + Date.now();
-    
-    window.electronAPI.store.set(testKey, testValue).then(result => {
-      if (result.success) {
-        console.log('✅ store set API works');
-        // Now test getting the value back
-        return window.electronAPI.store.get(testKey);
-      } else {
-        console.warn('❌ store set API failed:', result.error);
-      }
-    }).then(result => {
-      if (result && result.success) {
-        console.log('✅ store get after set works:', result.value);
-        // Clean up test key
-        return window.electronAPI.store.delete(testKey);
-      }
-    }).then(result => {
-      if (result && result.success) {
-        console.log('✅ store delete API works');
-      }
-    }).catch(error => {
-      console.warn('❌ store API error:', error);
-    });
-    
-  } else {
-    console.log('❌ Store API not available');
-  }
-}
-
-// Make store test function available globally
-window.testStoreAPI = testStoreAPI;
-
-// Test audio API for gradual migration
-function testAudioAPI() {
-  console.log('🧪 Testing Audio API for gradual migration...');
-  
-  if (window.electronAPI && window.electronAPI.audio) {
-    console.log('✅ Audio API available');
-    
-    // Test audio volume
-    window.electronAPI.audio.setVolume(0.5).then(result => {
-      if (result.success) {
-        console.log('✅ audio setVolume API works');
-      } else {
-        console.warn('❌ audio setVolume API failed:', result.error);
-      }
-    }).catch(error => {
-      console.warn('❌ audio setVolume API error:', error);
-    });
-    
-    // Test audio play (try to play a test file)
-    window.electronAPI.store.get('music_directory').then(musicResult => {
-      if (musicResult.success) {
-        window.electronAPI.path.join(musicResult.value, 'PatrickShort-CSzRockBumper.mp3').then(joinResult => {
-          if (joinResult.success) {
-            const testAudioPath = joinResult.data;
-            window.electronAPI.audio.play(testAudioPath).then(result => {
-              if (result.success) {
-                console.log('✅ audio play API works, sound ID:', result.id);
-                
-                // Test pause after a short delay
-                setTimeout(() => {
-                  window.electronAPI.audio.pause(result.id).then(pauseResult => {
-                    if (pauseResult.success) {
-                      console.log('✅ audio pause API works');
-                      
-                      // Test stop after another short delay
-                      setTimeout(() => {
-                        window.electronAPI.audio.stop(result.id).then(stopResult => {
-                          if (stopResult.success) {
-                            console.log('✅ audio stop API works');
-                          } else {
-                            console.warn('❌ audio stop API failed:', stopResult.error);
-                          }
-                        }).catch(error => {
-                          console.warn('❌ audio stop API error:', error);
-                        });
-                      }, 1000);
-                    } else {
-                      console.warn('❌ audio pause API failed:', pauseResult.error);
-                    }
-                  }).catch(error => {
-                    console.warn('❌ audio pause API error:', error);
-                  });
-                }, 2000);
-                
-              } else {
-                console.log('✅ audio play API works: File does not exist (expected)');
-              }
-            }).catch(error => {
-              console.warn('❌ audio play API error:', error);
-            });
-          } else {
-            console.warn('❌ Failed to join path:', joinResult.error);
-          }
-        }).catch(error => {
-          console.warn('❌ Path join error:', error);
-        });
-      } else {
-        console.warn('❌ Could not get music directory from store');
-      }
-    }).catch(error => {
-      console.warn('❌ store get API error:', error);
-    });
-    
-  } else {
-    console.log('❌ Audio API not available');
-  }
-}
-
-// Make audio test function available globally
-window.testAudioAPI = testAudioAPI;
-
-// Test security features (Week 5)
-function testSecurityFeatures() {
-  console.log('🧪 Testing Security Features (Week 5)...');
-  
-  // Test that contextBridge APIs are available
-  if (window.electronAPI) {
-    console.log('✅ electronAPI available through contextBridge');
-    
-    // Test all API categories
-    const apiCategories = ['database', 'fileSystem', 'store', 'audio'];
-    apiCategories.forEach(category => {
-      if (window.electronAPI[category]) {
-        console.log(`✅ ${category} API available`);
-      } else {
-        console.log(`❌ ${category} API not available`);
-      }
-    });
-    
-    // Test that direct Node.js access is blocked (security feature)
-    try {
-      if (typeof require === 'undefined') {
-        console.log('✅ require() is blocked (security feature working)');
-      } else {
-        console.log('❌ require() is still available (security issue)');
-      }
-    } catch (error) {
-      console.log('✅ require() is blocked (security feature working)');
-    }
-    
-    try {
-      if (typeof process === 'undefined') {
-        console.log('✅ process is blocked (security feature working)');
-      } else {
-        console.log('❌ process is still available (security issue)');
-      }
-    } catch (error) {
-      console.log('✅ process is blocked (security feature working)');
-    }
-    
-    // Test that our APIs still work
-    window.electronAPI.database.getCategories().then(result => {
-      if (result.success) {
-        console.log('✅ Database API still works with security features');
-      } else {
-        console.warn('❌ Database API failed with security features:', result.error);
-      }
-    }).catch(error => {
-      console.warn('❌ Database API error with security features:', error);
-    });
-    
-    window.electronAPI.store.get('music_directory').then(result => {
-      if (result.success) {
-        console.log('✅ Store API still works with security features');
-      } else {
-        console.warn('❌ Store API failed with security features:', result.error);
-      }
-    }).catch(error => {
-      console.warn('❌ Store API error with security features:', error);
-    });
-    
-    console.log('✅ Security features appear to be working correctly!');
-    
-  } else {
-    console.log('❌ electronAPI not available - security features may have broken the app');
-  }
-}
-
-// Make security test function available globally
-window.testSecurityFeatures = testSecurityFeatures;
+// Test Functions Module - Functions extracted to src/renderer/modules/test-utils/
+// testPhase2Migrations(), testDatabaseAPI(), testFileSystemAPI(), testStoreAPI(), testAudioAPI(), testSecurityFeatures() - All moved to test-utils module
 
