@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preferences Module Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        .btn-info:hover {
+            background: #138496;
+        }
+        .console-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .module-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .module-info h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .function-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .function-item {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border-left: 4px solid #667eea;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .preferences-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .preferences-preview h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .preference-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .preference-key {
+            font-weight: 600;
+            color: #495057;
+        }
+        .preference-value {
+            color: #6c757d;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Preferences Module Test Suite</h1>
+            <p>Comprehensive testing for the MxVoice Preferences Module</p>
+        </div>
+        
+        <div class="content">
+            <div class="test-section">
+                <h3>📋 Test Overview</h3>
+                <p>This test suite validates the Preferences module functionality including:</p>
+                <ul>
+                    <li><strong>Preference Management:</strong> Opening modals, loading preferences, and UI management</li>
+                    <li><strong>Settings Controller:</strong> Saving preferences, getting/setting individual preferences</li>
+                    <li><strong>Store Integration:</strong> Modern and legacy store API integration</li>
+                    <li><strong>Error Handling:</strong> Fallback mechanisms and graceful degradation</li>
+                </ul>
+            </div>
+
+            <div class="test-section">
+                <h3>🧪 Test Controls</h3>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="runAllPreferencesTests()">🚀 Run All Tests</button>
+                    <button class="btn btn-secondary" onclick="testPreferencesModule()">⚙️ Test Preferences Module</button>
+                    <button class="btn btn-secondary" onclick="testPreferencesFunctionality()">⚡ Test Preferences Functions</button>
+                    <button class="btn btn-secondary" onclick="testModuleLoader()">📦 Test Module Loader</button>
+                    <button class="btn btn-info" onclick="testDependencies()">🔧 Test Dependencies</button>
+                    <button class="btn btn-success" onclick="clearConsole()">🧹 Clear Console</button>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>📊 Module Information</h3>
+                <div class="module-info">
+                    <h4>Preferences Module Structure</h4>
+                    <div class="function-list">
+                        <div class="function-item">openPreferencesModal()</div>
+                        <div class="function-item">loadPreferences()</div>
+                        <div class="function-item">savePreferences(event)</div>
+                        <div class="function-item">getPreference(key)</div>
+                        <div class="function-item">setPreference(key, value)</div>
+                        <div class="function-item">getDatabaseDirectory()</div>
+                        <div class="function-item">getMusicDirectory()</div>
+                        <div class="function-item">getHotkeyDirectory()</div>
+                        <div class="function-item">getFadeOutSeconds()</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>⚙️ Preferences Preview</h3>
+                <div class="preferences-preview">
+                    <h4>Mock Preferences Data</h4>
+                    
+                    <div class="preference-item">
+                        <span class="preference-key">Database Directory</span>
+                        <span class="preference-value">/mock/database/path</span>
+                    </div>
+                    <div class="preference-item">
+                        <span class="preference-key">Music Directory</span>
+                        <span class="preference-value">/mock/music/path</span>
+                    </div>
+                    <div class="preference-item">
+                        <span class="preference-key">Hotkey Directory</span>
+                        <span class="preference-value">/mock/hotkey/path</span>
+                    </div>
+                    <div class="preference-item">
+                        <span class="preference-key">Fade Out Seconds</span>
+                        <span class="preference-value">5</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>📝 Test Instructions</h3>
+                <div class="status info">
+                    <strong>How to use:</strong>
+                    <ol>
+                        <li>Click "Run All Tests" to execute the complete test suite</li>
+                        <li>Or use individual test buttons to test specific components</li>
+                        <li>Check the console output below for detailed results</li>
+                        <li>Look for ✅ marks indicating successful tests</li>
+                        <li>Any ❌ marks indicate issues that need attention</li>
+                        <li>The preferences preview shows the mock data structure being tested</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>📺 Console Output</h3>
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="copyConsoleOutput()">📋 Copy Output</button>
+                    <button class="btn btn-secondary" onclick="downloadConsoleOutput()">💾 Download Log</button>
+                </div>
+                <div id="console-output" class="console-output">
+                    Ready to run preferences tests... Click "Run All Tests" to begin.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Override console.log to capture output
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const consoleOutput = document.getElementById('console-output');
+        
+        function updateConsoleOutput(message) {
+            consoleOutput.textContent += message + '\n';
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            updateConsoleOutput(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            updateConsoleOutput('❌ ERROR: ' + args.join(' '));
+        };
+        
+        function clearConsole() {
+            consoleOutput.textContent = 'Console cleared...\n';
+        }
+        
+        function copyConsoleOutput() {
+            navigator.clipboard.writeText(consoleOutput.textContent).then(() => {
+                alert('Console output copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+        
+        function downloadConsoleOutput() {
+            const blob = new Blob([consoleOutput.textContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'preferences-module-test-log.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Test functions
+        function testPreferencesModule() {
+            console.log('🧪 Testing Preferences Module...');
+            if (typeof runAllPreferencesTests === 'function') {
+                runAllPreferencesTests();
+            } else {
+                console.log('❌ Preferences test functions not loaded');
+            }
+        }
+        
+        function testPreferencesFunctionality() {
+            console.log('🧪 Testing Preferences Functionality...');
+            if (typeof testPreferencesFunctionExecution === 'function') {
+                testPreferencesFunctionExecution();
+            } else {
+                console.log('❌ Preferences functionality test not loaded');
+            }
+        }
+        
+        function testModuleLoader() {
+            console.log('🧪 Testing Module Loader...');
+            if (typeof testPreferencesModuleLoading === 'function') {
+                testPreferencesModuleLoading();
+            } else {
+                console.log('❌ Module loader test not loaded');
+            }
+        }
+        
+        function testDependencies() {
+            console.log('🧪 Testing Dependencies...');
+            if (typeof testPreferencesAPIIntegration === 'function') {
+                testPreferencesAPIIntegration();
+            } else {
+                console.log('❌ Dependencies test not loaded');
+            }
+        }
+    </script>
+
+    <!-- Include the test script -->
+    <script src="test-preferences-module-browser.js"></script>
+</body>
+</html> 

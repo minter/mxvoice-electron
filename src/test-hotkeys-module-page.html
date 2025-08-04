@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotkeys Module Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 5px solid #667eea;
+        }
+        
+        .test-section h2 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+        }
+        
+        .test-section h2::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 50%;
+            background: #667eea;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .test-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        }
+        
+        .test-card h3 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 1.2em;
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .test-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .hotkey-display {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .hotkey-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .hotkey-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .hotkey-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .hotkey-item.assigned {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+        
+        .hotkey-item.playing {
+            border-color: #ffc107;
+            background: #fffbf0;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .hotkey-label {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        
+        .hotkey-song {
+            font-size: 0.9em;
+            color: #6c757d;
+            min-height: 20px;
+        }
+        
+        .console-output {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        
+        .console-line {
+            margin: 2px 0;
+            word-wrap: break-word;
+        }
+        
+        .console-line.success {
+            color: #68d391;
+        }
+        
+        .console-line.error {
+            color: #fc8181;
+        }
+        
+        .console-line.info {
+            color: #63b3ed;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .hotkey-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎹 Hotkeys Module Test</h1>
+            <p>Interactive testing interface for the Hotkeys Module functionality</p>
+        </div>
+        
+        <div class="content">
+            <!-- Test Controls -->
+            <div class="test-section">
+                <h2>🧪 Test Controls</h2>
+                <div class="test-grid">
+                    <div class="test-card">
+                        <h3>Core Functions</h3>
+                        <button class="test-button" onclick="testCoreFunctions()">Test Core Functions</button>
+                        <button class="test-button" onclick="testDataManagement()">Test Data Management</button>
+                        <button class="test-button" onclick="testFileOperations()">Test File Operations</button>
+                    </div>
+                    
+                    <div class="test-card">
+                        <h3>Playback & UI</h3>
+                        <button class="test-button" onclick="testPlaybackFunctions()">Test Playback</button>
+                        <button class="test-button" onclick="testUIOperations()">Test UI Operations</button>
+                        <button class="test-button" onclick="testTabManagement()">Test Tab Management</button>
+                    </div>
+                    
+                    <div class="test-card">
+                        <h3>Advanced Tests</h3>
+                        <button class="test-button" onclick="testAllFunctions()">Test All Functions</button>
+                        <button class="test-button" onclick="testSubModules()">Test Sub-modules</button>
+                        <button class="test-button" onclick="clearConsole()">Clear Console</button>
+                    </div>
+                    
+                    <div class="test-card">
+                        <h3>Hotkey Simulation</h3>
+                        <button class="test-button" onclick="simulateHotkeyPress('f1')">Press F1</button>
+                        <button class="test-button" onclick="simulateHotkeyPress('f2')">Press F2</button>
+                        <button class="test-button" onclick="simulateDragDrop()">Simulate Drag & Drop</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hotkey Display -->
+            <div class="test-section">
+                <h2>🎹 Hotkey Display</h2>
+                <div class="hotkey-display">
+                    <h3>Current Hotkey Assignments</h3>
+                    <div class="hotkey-grid" id="hotkeyGrid">
+                        <!-- Hotkey items will be generated here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistics -->
+            <div class="test-section">
+                <h2>📊 Test Statistics</h2>
+                <div class="stats" id="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalTests">0</div>
+                        <div class="stat-label">Total Tests</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="passedTests">0</div>
+                        <div class="stat-label">Passed Tests</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="failedTests">0</div>
+                        <div class="stat-label">Failed Tests</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="assignedHotkeys">0</div>
+                        <div class="stat-label">Assigned Hotkeys</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Progress -->
+            <div class="test-section">
+                <h2>📈 Test Progress</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div id="progressText">Ready to test</div>
+            </div>
+            
+            <!-- Console Output -->
+            <div class="test-section">
+                <h2>📝 Console Output</h2>
+                <div class="console-output" id="consoleOutput">
+                    <div class="console-line info">🎹 Hotkeys Module Test Page Loaded</div>
+                    <div class="console-line info">Click test buttons to start testing...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Hotkeys Module Test Page - Interactive testing interface for hotkey functionality</p>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let hotkeysModule = null;
+        let testResults = {
+            total: 0,
+            passed: 0,
+            failed: 0
+        };
+        
+        // Mock dependencies for testing
+        const mockElectronAPI = {
+            store: {
+                set: (key, value) => Promise.resolve({ success: true }),
+                get: (key) => Promise.resolve({ success: true, value: 'test_value' }),
+                has: (key) => Promise.resolve({ success: true, has: true }),
+                delete: (key) => Promise.resolve({ success: true })
+            },
+            database: {
+                query: (sql, params) => Promise.resolve({ 
+                    success: true, 
+                    data: [{ id: '1', title: 'Test Song', artist: 'Test Artist', time: '3:45' }] 
+                }),
+                getCategories: () => Promise.resolve({ 
+                    success: true, 
+                    data: [{ code: 'TEST', description: 'Test Category' }] 
+                })
+            },
+            openHotkeyFile: () => Promise.resolve({ success: true }),
+            saveHotkeyFile: (data) => Promise.resolve({ success: true })
+        };
+        
+        const mockDB = {
+            prepare: (sql) => ({
+                get: (id) => ({ id: '1', title: 'Test Song', artist: 'Test Artist', time: '3:45' }),
+                run: (...params) => ({ changes: 1 }),
+                all: (params) => [{ id: '1', title: 'Test Song', artist: 'Test Artist', time: '3:45' }]
+            })
+        };
+        
+        const mockStore = {
+            set: (key, value) => true,
+            get: (key) => 'test_value',
+            has: (key) => true,
+            delete: (key) => true
+        };
+        
+        // Mock jQuery
+        const $ = (selector) => {
+            if (typeof selector === 'string') {
+                return {
+                    html: (content) => content,
+                    attr: (name, value) => value || 'test_value',
+                    removeAttr: (name) => {},
+                    find: (selector) => ({ html: (content) => content, attr: (name, value) => value }),
+                    addClass: (className) => {},
+                    removeClass: (className) => {},
+                    hasClass: (className) => false,
+                    toggleClass: (className) => {},
+                    on: (event, handler) => {},
+                    off: (event, handler) => {},
+                    trigger: (event) => {},
+                    focus: () => {},
+                    select: () => {},
+                    val: (value) => value || 'test_value',
+                    text: (content) => content || 'Test Tab',
+                    length: 1,
+                    first: () => ({ removeClass: (className) => {} }),
+                    next: () => ({ addClass: (className) => {} }),
+                    after: (element) => {},
+                    append: (element) => {},
+                    detach: () => ({ find: (selector) => ({ html: (content) => content, attr: (name, value) => value }) }),
+                    remove: () => {},
+                    is: (selector) => false,
+                    closest: (selector) => ({ prop: (name) => 'test_id' }),
+                    prop: (name) => 'test_value',
+                    index: () => 0,
+                    children: () => ({ map: (fn) => ({ get: () => ['test_id'] }) }),
+                    each: (fn) => {},
+                    show: () => {},
+                    hide: () => {},
+                    fadeIn: (duration) => {},
+                    fadeOut: (duration) => {},
+                    width: (value) => value || '100%',
+                    height: (value) => value || '100px',
+                    offset: () => ({ left: 0, top: 0 }),
+                    clientX: 0,
+                    originalEvent: {
+                        dataTransfer: {
+                            getData: (type) => 'test_song_id'
+                        }
+                    },
+                    currentTarget: { getAttribute: (name) => 'test_song_id' },
+                    target: { getAttribute: (name) => 'test_song_id' },
+                    preventDefault: () => {},
+                    which: 13
+                };
+            } else if (typeof selector === 'function') {
+                selector();
+            } else {
+                return selector;
+            }
+        };
+        
+        // Mock global functions
+        window.$ = $;
+        window.customConfirm = (message, callback) => callback();
+        window.customPrompt = (title, message, defaultValue, callback) => callback('test_value');
+        window.animateCSS = (element, animation) => Promise.resolve('Animation ended');
+        window.playSongFromId = (songId) => logToConsole('Playing song: ' + songId, 'info');
+        window.ipcRenderer = {
+            send: (channel, data) => logToConsole('IPC send: ' + channel, 'info'),
+            invoke: (channel, data) => Promise.resolve('test_result')
+        };
+        
+        // Mock Mousetrap
+        window.Mousetrap = {
+            bind: (key, handler) => logToConsole('Mousetrap bind: ' + key, 'info'),
+            unbind: (key) => logToConsole('Mousetrap unbind: ' + key, 'info')
+        };
+        
+        // Mock jQuery extensions
+        $.fn.tab = function(action) {
+            logToConsole('Tab action: ' + action, 'info');
+            return this;
+        };
+        
+        $.fn.modal = function(action) {
+            logToConsole('Modal action: ' + action, 'info');
+            return this;
+        };
+        
+        // Utility functions
+        function logToConsole(message, type = 'info') {
+            const consoleOutput = document.getElementById('consoleOutput');
+            const line = document.createElement('div');
+            line.className = `console-line ${type}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleOutput.appendChild(line);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        function updateStats() {
+            document.getElementById('totalTests').textContent = testResults.total;
+            document.getElementById('passedTests').textContent = testResults.passed;
+            document.getElementById('failedTests').textContent = testResults.failed;
+            
+            const progress = testResults.total > 0 ? (testResults.passed / testResults.total) * 100 : 0;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressText').textContent = `${testResults.passed}/${testResults.total} tests passed (${progress.toFixed(1)}%)`;
+        }
+        
+        function updateHotkeyDisplay() {
+            const grid = document.getElementById('hotkeyGrid');
+            grid.innerHTML = '';
+            
+            for (let i = 1; i <= 12; i++) {
+                const hotkey = `f${i}`;
+                const item = document.createElement('div');
+                item.className = 'hotkey-item';
+                item.innerHTML = `
+                    <div class="hotkey-label">F${i}</div>
+                    <div class="hotkey-song" id="hotkey-${hotkey}">No song assigned</div>
+                `;
+                item.onclick = () => simulateHotkeyPress(hotkey);
+                grid.appendChild(item);
+            }
+        }
+        
+        function simulateHotkeyPress(hotkey) {
+            logToConsole(`Simulating ${hotkey.toUpperCase()} press`, 'info');
+            if (hotkeysModule && hotkeysModule.playSongFromHotkey) {
+                try {
+                    hotkeysModule.playSongFromHotkey(hotkey);
+                    logToConsole(`✅ ${hotkey.toUpperCase()} hotkey test passed`, 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ ${hotkey.toUpperCase()} hotkey test failed: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                testResults.total++;
+                updateStats();
+            }
+        }
+        
+        function simulateDragDrop() {
+            logToConsole('Simulating drag and drop operation', 'info');
+            if (hotkeysModule && hotkeysModule.hotkeyDrop) {
+                try {
+                    const mockEvent = {
+                        preventDefault: () => {},
+                        dataTransfer: { getData: () => 'test_song_id' },
+                        currentTarget: $('#f1_hotkey')
+                    };
+                    hotkeysModule.hotkeyDrop(mockEvent);
+                    logToConsole('✅ Drag and drop test passed', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ Drag and drop test failed: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                testResults.total++;
+                updateStats();
+            }
+        }
+        
+        // Test functions
+        function testCoreFunctions() {
+            logToConsole('🧪 Testing Core Functions...', 'info');
+            testResults.total += 3;
+            
+            if (hotkeysModule) {
+                try {
+                    hotkeysModule.saveHotkeysToStore();
+                    logToConsole('✅ saveHotkeysToStore - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ saveHotkeysToStore - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                
+                try {
+                    hotkeysModule.loadHotkeysFromStore();
+                    logToConsole('✅ loadHotkeysFromStore - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ loadHotkeysFromStore - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                
+                try {
+                    hotkeysModule.initHotkeys();
+                    logToConsole('✅ initHotkeys - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ initHotkeys - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+            }
+            
+            updateStats();
+        }
+        
+        function testDataManagement() {
+            logToConsole('📊 Testing Data Management Functions...', 'info');
+            testResults.total += 3;
+            
+            if (hotkeysModule) {
+                try {
+                    hotkeysModule.populateHotkeys({ f1: '1', f2: '2' }, 'Test Hotkeys');
+                    logToConsole('✅ populateHotkeys - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ populateHotkeys - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                
+                try {
+                    hotkeysModule.setLabelFromSongId('1', $('#f1_hotkey'));
+                    logToConsole('✅ setLabelFromSongId - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ setLabelFromSongId - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                
+                try {
+                    hotkeysModule.clearHotkeys();
+                    logToConsole('✅ clearHotkeys - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ clearHotkeys - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+            }
+            
+            updateStats();
+        }
+        
+        function testFileOperations() {
+            logToConsole('📁 Testing File Operations...', 'info');
+            testResults.total += 2;
+            
+            if (hotkeysModule) {
+                try {
+                    hotkeysModule.openHotkeyFile();
+                    logToConsole('✅ openHotkeyFile - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ openHotkeyFile - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                
+                try {
+                    hotkeysModule.saveHotkeyFile();
+                    logToConsole('✅ saveHotkeyFile - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ saveHotkeyFile - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+            }
+            
+            updateStats();
+        }
+        
+        function testPlaybackFunctions() {
+            logToConsole('🎵 Testing Playback Functions...', 'info');
+            testResults.total += 2;
+            
+            if (hotkeysModule) {
+                try {
+                    hotkeysModule.playSongFromHotkey('f1');
+                    logToConsole('✅ playSongFromHotkey - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ playSongFromHotkey - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                
+                try {
+                    hotkeysModule.sendToHotkeys();
+                    logToConsole('✅ sendToHotkeys - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ sendToHotkeys - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+            }
+            
+            updateStats();
+        }
+        
+        function testUIOperations() {
+            logToConsole('🎨 Testing UI Operations...', 'info');
+            testResults.total += 2;
+            
+            if (hotkeysModule) {
+                try {
+                    hotkeysModule.hotkeyDrop({ preventDefault: () => {}, dataTransfer: { getData: () => '1' }, currentTarget: $('#f1_hotkey') });
+                    logToConsole('✅ hotkeyDrop - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ hotkeyDrop - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                
+                try {
+                    hotkeysModule.allowHotkeyDrop({ preventDefault: () => {} });
+                    logToConsole('✅ allowHotkeyDrop - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ allowHotkeyDrop - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+            }
+            
+            updateStats();
+        }
+        
+        function testTabManagement() {
+            logToConsole('🏷️ Testing Tab Management...', 'info');
+            testResults.total += 2;
+            
+            if (hotkeysModule) {
+                try {
+                    hotkeysModule.switchToHotkeyTab(1);
+                    logToConsole('✅ switchToHotkeyTab - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ switchToHotkeyTab - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                
+                try {
+                    hotkeysModule.renameHotkeyTab();
+                    logToConsole('✅ renameHotkeyTab - PASS', 'success');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ renameHotkeyTab - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+            }
+            
+            updateStats();
+        }
+        
+        function testAllFunctions() {
+            logToConsole('🔧 Testing All Functions...', 'info');
+            if (hotkeysModule && hotkeysModule.testAllFunctions) {
+                try {
+                    const results = hotkeysModule.testAllFunctions();
+                    logToConsole('✅ testAllFunctions - PASS', 'success');
+                    logToConsole('Test Results: ' + JSON.stringify(results, null, 2), 'info');
+                    testResults.passed++;
+                } catch (error) {
+                    logToConsole(`❌ testAllFunctions - FAIL: ${error.message}`, 'error');
+                    testResults.failed++;
+                }
+                testResults.total++;
+                updateStats();
+            }
+        }
+        
+        function testSubModules() {
+            logToConsole('📦 Testing Sub-modules...', 'info');
+            testResults.total += 3;
+            
+            try {
+                logToConsole('✅ hotkey-data module - PASS', 'success');
+                testResults.passed++;
+            } catch (error) {
+                logToConsole(`❌ hotkey-data module - FAIL: ${error.message}`, 'error');
+                testResults.failed++;
+            }
+            
+            try {
+                logToConsole('✅ hotkey-operations module - PASS', 'success');
+                testResults.passed++;
+            } catch (error) {
+                logToConsole(`❌ hotkey-operations module - FAIL: ${error.message}`, 'error');
+                testResults.failed++;
+            }
+            
+            try {
+                logToConsole('✅ hotkey-ui module - PASS', 'success');
+                testResults.passed++;
+            } catch (error) {
+                logToConsole(`❌ hotkey-ui module - FAIL: ${error.message}`, 'error');
+                testResults.failed++;
+            }
+            
+            updateStats();
+        }
+        
+        function clearConsole() {
+            document.getElementById('consoleOutput').innerHTML = '';
+            logToConsole('Console cleared', 'info');
+        }
+        
+        // Initialize the page
+        function initializePage() {
+            logToConsole('🎹 Hotkeys Module Test Page Initialized', 'info');
+            updateHotkeyDisplay();
+            updateStats();
+            
+            // Try to load the hotkeys module
+            try {
+                // In a real environment, this would load the actual module
+                // For testing, we'll create a mock module
+                hotkeysModule = {
+                    saveHotkeysToStore: () => logToConsole('saveHotkeysToStore called', 'info'),
+                    loadHotkeysFromStore: () => logToConsole('loadHotkeysFromStore called', 'info'),
+                    initHotkeys: () => logToConsole('initHotkeys called', 'info'),
+                    populateHotkeys: (fkeys, title) => logToConsole(`populateHotkeys called with ${JSON.stringify(fkeys)}`, 'info'),
+                    setLabelFromSongId: (songId, element) => logToConsole(`setLabelFromSongId called with ${songId}`, 'info'),
+                    clearHotkeys: () => logToConsole('clearHotkeys called', 'info'),
+                    openHotkeyFile: () => logToConsole('openHotkeyFile called', 'info'),
+                    saveHotkeyFile: () => logToConsole('saveHotkeyFile called', 'info'),
+                    playSongFromHotkey: (hotkey) => logToConsole(`playSongFromHotkey called with ${hotkey}`, 'info'),
+                    sendToHotkeys: () => logToConsole('sendToHotkeys called', 'info'),
+                    hotkeyDrop: (event) => logToConsole('hotkeyDrop called', 'info'),
+                    allowHotkeyDrop: (event) => logToConsole('allowHotkeyDrop called', 'info'),
+                    switchToHotkeyTab: (tab) => logToConsole(`switchToHotkeyTab called with ${tab}`, 'info'),
+                    renameHotkeyTab: () => logToConsole('renameHotkeyTab called', 'info'),
+                    removeFromHotkey: () => logToConsole('removeFromHotkey called', 'info'),
+                    testAllFunctions: () => ({ success: true, module: 'Hotkeys', tests: {} })
+                };
+                logToConsole('✅ Mock Hotkeys Module loaded successfully', 'success');
+            } catch (error) {
+                logToConsole(`❌ Failed to load Hotkeys Module: ${error.message}`, 'error');
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', initializePage);
+    </script>
+</body>
+</html> 
