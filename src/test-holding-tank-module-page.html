@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holding Tank Module Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .test-section h2 {
+            color: #555;
+            margin-top: 0;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background-color: #0056b3;
+        }
+        .test-button.success {
+            background-color: #28a745;
+        }
+        .test-button.error {
+            background-color: #dc3545;
+        }
+        .test-button.warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .result.info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.passed {
+            background-color: #28a745;
+            color: white;
+        }
+        .status.failed {
+            background-color: #dc3545;
+            color: white;
+        }
+        .status.running {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .mock-ui {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .mock-ui h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .mock-ui input, .mock-ui select {
+            margin: 5px;
+            padding: 5px;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+        }
+        .mock-ui button {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .mock-ui button:hover {
+            background-color: #545b62;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Holding Tank Module Test</h1>
+        
+        <div class="test-section">
+            <h2>📋 Test Controls</h2>
+            <button class="test-button" onclick="runAllTests()">Run All Tests</button>
+            <button class="test-button warning" onclick="clearResults()">Clear Results</button>
+            <button class="test-button" onclick="showMockUI()">Show Mock UI</button>
+            <div id="test-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Core Functions</h2>
+            <button class="test-button" onclick="testInitHoldingTank()">Test initHoldingTank</button>
+            <button class="test-button" onclick="testSaveHoldingTankToStore()">Test saveHoldingTankToStore</button>
+            <button class="test-button" onclick="testLoadHoldingTankFromStore()">Test loadHoldingTankFromStore</button>
+            <div id="core-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Data Management</h2>
+            <button class="test-button" onclick="testPopulateHoldingTank()">Test populateHoldingTank</button>
+            <button class="test-button" onclick="testAddToHoldingTank()">Test addToHoldingTank</button>
+            <button class="test-button" onclick="testRemoveFromHoldingTank()">Test removeFromHoldingTank</button>
+            <button class="test-button" onclick="testClearHoldingTank()">Test clearHoldingTank</button>
+            <div id="data-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📁 File Operations</h2>
+            <button class="test-button" onclick="testOpenHoldingTankFile()">Test openHoldingTankFile</button>
+            <button class="test-button" onclick="testSaveHoldingTankFile()">Test saveHoldingTankFile</button>
+            <div id="file-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>⚙️ Mode Management</h2>
+            <button class="test-button" onclick="testSetHoldingTankMode()">Test setHoldingTankMode</button>
+            <button class="test-button" onclick="testGetHoldingTankMode()">Test getHoldingTankMode</button>
+            <button class="test-button" onclick="testToggleAutoPlay()">Test toggleAutoPlay</button>
+            <button class="test-button" onclick="testCancelAutoplay()">Test cancel_autoplay</button>
+            <div id="mode-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 UI Operations</h2>
+            <button class="test-button" onclick="testHoldingTankDrop()">Test holdingTankDrop</button>
+            <button class="test-button" onclick="testSendToHoldingTank()">Test sendToHoldingTank</button>
+            <button class="test-button" onclick="testRenameHoldingTankTab()">Test renameHoldingTankTab</button>
+            <div id="ui-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎮 Mock UI</h2>
+            <div class="mock-ui" id="mock-ui" style="display: none;">
+                <h3>Mock Holding Tank Interface</h3>
+                <div>
+                    <label>Mode:</label>
+                    <select id="mock-mode">
+                        <option value="storage">Storage</option>
+                        <option value="playlist">Playlist</option>
+                    </select>
+                    <button onclick="updateMockMode()">Update Mode</button>
+                </div>
+                <div>
+                    <label>Song ID:</label>
+                    <input type="text" id="mock-song-id" value="123" placeholder="Enter song ID">
+                    <button onclick="addMockSong()">Add Song</button>
+                </div>
+                <div>
+                    <label>Tab Name:</label>
+                    <input type="text" id="mock-tab-name" value="Test Tab" placeholder="Enter tab name">
+                    <button onclick="renameMockTab()">Rename Tab</button>
+                </div>
+                <div>
+                    <button onclick="clearMockTank()">Clear Tank</button>
+                    <button onclick="saveMockTank()">Save Tank</button>
+                    <button onclick="loadMockTank()">Load Tank</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="test-holding-tank-module-browser.js"></script>
+    <script>
+        // Test runner functions
+        async function runAllTests() {
+            console.log('🚀 Running all holding tank tests...');
+            await runHoldingTankTests();
+        }
+
+        function clearResults() {
+            document.querySelectorAll('.result').forEach(el => el.remove());
+            console.log('🧹 Cleared all test results');
+        }
+
+        function showMockUI() {
+            const mockUI = document.getElementById('mock-ui');
+            mockUI.style.display = mockUI.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Individual test functions
+        async function testInitHoldingTank() {
+            const result = await holdingTankModule.initHoldingTank();
+            displayResult('core-results', 'initHoldingTank', result);
+        }
+
+        async function testSaveHoldingTankToStore() {
+            const result = await holdingTankModule.saveHoldingTankToStore();
+            displayResult('core-results', 'saveHoldingTankToStore', result);
+        }
+
+        async function testLoadHoldingTankFromStore() {
+            const result = await holdingTankModule.loadHoldingTankFromStore();
+            displayResult('core-results', 'loadHoldingTankFromStore', result);
+        }
+
+        async function testPopulateHoldingTank() {
+            const result = await holdingTankModule.populateHoldingTank(['123', '456', '789']);
+            displayResult('data-results', 'populateHoldingTank', result);
+        }
+
+        async function testAddToHoldingTank() {
+            const result = await holdingTankModule.addToHoldingTank('123', document.createElement('div'));
+            displayResult('data-results', 'addToHoldingTank', result);
+        }
+
+        async function testRemoveFromHoldingTank() {
+            const result = await holdingTankModule.removeFromHoldingTank();
+            displayResult('data-results', 'removeFromHoldingTank', result);
+        }
+
+        async function testClearHoldingTank() {
+            const result = await holdingTankModule.clearHoldingTank();
+            displayResult('data-results', 'clearHoldingTank', result);
+        }
+
+        async function testOpenHoldingTankFile() {
+            const result = await holdingTankModule.openHoldingTankFile();
+            displayResult('file-results', 'openHoldingTankFile', result);
+        }
+
+        async function testSaveHoldingTankFile() {
+            const result = await holdingTankModule.saveHoldingTankFile();
+            displayResult('file-results', 'saveHoldingTankFile', result);
+        }
+
+        async function testSetHoldingTankMode() {
+            const result = await holdingTankModule.setHoldingTankMode('playlist');
+            displayResult('mode-results', 'setHoldingTankMode', result);
+        }
+
+        function testGetHoldingTankMode() {
+            const result = holdingTankModule.getHoldingTankMode();
+            displayResult('mode-results', 'getHoldingTankMode', { success: true, mode: result });
+        }
+
+        function testToggleAutoPlay() {
+            holdingTankModule.toggleAutoPlay();
+            displayResult('mode-results', 'toggleAutoPlay', { success: true });
+        }
+
+        function testCancelAutoplay() {
+            holdingTankModule.cancel_autoplay();
+            displayResult('mode-results', 'cancel_autoplay', { success: true });
+        }
+
+        function testHoldingTankDrop() {
+            holdingTankModule.holdingTankDrop({ preventDefault: () => {} });
+            displayResult('ui-results', 'holdingTankDrop', { success: true });
+        }
+
+        function testSendToHoldingTank() {
+            const result = holdingTankModule.sendToHoldingTank();
+            displayResult('ui-results', 'sendToHoldingTank', { success: true, returned: result });
+        }
+
+        async function testRenameHoldingTankTab() {
+            const result = await holdingTankModule.renameHoldingTankTab();
+            displayResult('ui-results', 'renameHoldingTankTab', result);
+        }
+
+        // Mock UI functions
+        function updateMockMode() {
+            const mode = document.getElementById('mock-mode').value;
+            console.log('Mock UI: Mode changed to', mode);
+            displayResult('mock-ui', 'updateMockMode', { success: true, mode: mode });
+        }
+
+        function addMockSong() {
+            const songId = document.getElementById('mock-song-id').value;
+            console.log('Mock UI: Adding song', songId);
+            displayResult('mock-ui', 'addMockSong', { success: true, songId: songId });
+        }
+
+        function renameMockTab() {
+            const tabName = document.getElementById('mock-tab-name').value;
+            console.log('Mock UI: Renaming tab to', tabName);
+            displayResult('mock-ui', 'renameMockTab', { success: true, tabName: tabName });
+        }
+
+        function clearMockTank() {
+            console.log('Mock UI: Clearing tank');
+            displayResult('mock-ui', 'clearMockTank', { success: true });
+        }
+
+        function saveMockTank() {
+            console.log('Mock UI: Saving tank');
+            displayResult('mock-ui', 'saveMockTank', { success: true });
+        }
+
+        function loadMockTank() {
+            console.log('Mock UI: Loading tank');
+            displayResult('mock-ui', 'loadMockTank', { success: true });
+        }
+
+        // Helper function to display test results
+        function displayResult(containerId, testName, result) {
+            const container = document.getElementById(containerId);
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${result.success ? 'success' : 'error'}`;
+            
+            const status = document.createElement('span');
+            status.className = `status ${result.success ? 'passed' : 'failed'}`;
+            status.textContent = result.success ? 'PASSED' : 'FAILED';
+            
+            resultDiv.innerHTML = `
+                <strong>${testName}</strong> ${status.outerHTML}
+                <pre>${JSON.stringify(result, null, 2)}</pre>
+            `;
+            
+            container.appendChild(resultDiv);
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 Holding Tank Module Test Page loaded!');
+            console.log('Use the buttons above to test individual functions or run all tests.');
+        });
+    </script>
+</body>
+</html> 
