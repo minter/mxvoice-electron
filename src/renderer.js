@@ -534,13 +534,14 @@ function saveHotkeysToStore() {
     }
 
     // Import UI module and store in registry
+    let uiInstance = null;
     try {
       console.log('🔄 Loading ui module...');
       uiModule = await import('./renderer/modules/ui/index.js');
       console.log('✅ ui module loaded successfully');
       
       // Re-initialize UI module with proper dependencies
-      const uiInstance = uiModule.default.reinitializeUI({
+      uiInstance = uiModule.default.reinitializeUI({
         electronAPI: window.electronAPI,
         db: window.db,
         store: null // Legacy store not available, will use electronAPI.store
@@ -548,39 +549,40 @@ function saveHotkeysToStore() {
       
       // Store in registry
       moduleRegistry.ui = uiInstance;
-      
-      // Update the module exports with the properly initialized instance
-      Object.assign(uiModule.default, uiInstance);
     } catch (error) {
       console.error('❌ Error loading ui module:', error);
       throw error;
     }
     
-    // Only assign functions called from HTML
-    window.scaleScrollable = uiModule.default.scaleScrollable;
-    window.editSelectedSong = uiModule.default.editSelectedSong;
-    window.deleteSelectedSong = uiModule.default.deleteSelectedSong;
-    window.closeAllTabs = uiModule.default.closeAllTabs;
-    window.toggleSelectedRow = uiModule.default.toggleSelectedRow;
-    window.switchToHotkeyTab = uiModule.default.switchToHotkeyTab;
-    window.renameHotkeyTab = function() {
-      uiModule.default.renameHotkeyTab().catch(error => {
-        console.error('❌ Error in renameHotkeyTab:', error);
-      });
-    };
-    window.renameHoldingTankTab = function() {
-      uiModule.default.renameHoldingTankTab().catch(error => {
-        console.error('❌ Error in renameHoldingTankTab:', error);
-      });
-    };
-    window.increaseFontSize = uiModule.default.increaseFontSize;
-    window.decreaseFontSize = uiModule.default.decreaseFontSize;
-    window.toggleWaveform = uiModule.default.toggleWaveform;
-    // toggleAdvancedSearch is handled by the search module
-    window.pickDirectory = uiModule.default.pickDirectory;
-    window.installUpdate = uiModule.default.installUpdate;
-    window.getFontSize = uiModule.default.getFontSize;
-    window.setFontSize = uiModule.default.setFontSize;
+    // Only assign functions called from HTML - use the reinitialized instance
+    if (uiInstance) {
+      window.scaleScrollable = uiInstance.scaleScrollable;
+      window.editSelectedSong = uiInstance.editSelectedSong;
+      window.deleteSelectedSong = uiInstance.deleteSelectedSong;
+      window.closeAllTabs = uiInstance.closeAllTabs;
+      window.toggleSelectedRow = uiInstance.toggleSelectedRow;
+      window.switchToHotkeyTab = uiInstance.switchToHotkeyTab;
+      window.renameHotkeyTab = function() {
+        uiInstance.renameHotkeyTab().catch(error => {
+          console.error('❌ Error in renameHotkeyTab:', error);
+        });
+      };
+      window.renameHoldingTankTab = function() {
+        uiInstance.renameHoldingTankTab().catch(error => {
+          console.error('❌ Error in renameHoldingTankTab:', error);
+        });
+      };
+      window.increaseFontSize = uiInstance.increaseFontSize;
+      window.decreaseFontSize = uiInstance.decreaseFontSize;
+      window.toggleWaveform = uiInstance.toggleWaveform;
+      // toggleAdvancedSearch is handled by the search module
+      window.pickDirectory = uiInstance.pickDirectory;
+      window.installUpdate = uiInstance.installUpdate;
+      window.getFontSize = uiInstance.getFontSize;
+      window.setFontSize = uiInstance.setFontSize;
+    } else {
+      console.error('❌ UI instance not available, skipping UI function assignments');
+    }
 
     // Import preferences module and store in registry
     try {
