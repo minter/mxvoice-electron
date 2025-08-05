@@ -35,6 +35,12 @@ class SearchModule {
    */
   init() {
     console.log('Search module initialized');
+    
+    // Initialize advanced search state
+    if (typeof advancedSearch.initializeAdvancedSearch === 'function') {
+      advancedSearch.initializeAdvancedSearch();
+    }
+    
     this.setupEventListeners();
   }
 

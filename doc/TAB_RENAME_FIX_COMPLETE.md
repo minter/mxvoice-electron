@@ -1,10 +1,12 @@
-# Tab Rename and Delete Modal Fix Complete
+# Tab Rename, Delete Modal, and Advanced Search Fix Complete
 
 ## Issue Description
 
 The tab name edit function for both holding tank and hotkeys had incorrect parameter order when calling the `customPrompt` function. The title and data were swapped, causing the modal to display incorrectly.
 
 Additionally, the delete confirmation modals for songs (when pressing delete key) were using the old callback-based `customConfirm` function instead of the Promise-based version, causing similar issues.
+
+The advanced search toggle functionality was broken due to conflicting function assignments between the search module and UI module.
 
 ## Root Cause
 
@@ -20,6 +22,8 @@ Similarly, there were two different `customConfirm` implementations:
 2. **UI module** (`modals.js`): `customConfirm(message, callback)` - Callback-based
 
 The delete confirmation modals were using the old callback-based version instead of the Promise-based version.
+
+The advanced search toggle had conflicting function assignments where the UI module was overwriting the search module's assignment, causing the function to be unavailable.
 
 ## Changes Made
 
@@ -289,6 +293,62 @@ return customConfirm(`Are you sure you want to remove ${songRow.title} from the 
 });
 ```
 
+### 7. Fixed Advanced Search Toggle Function Assignment
+
+**Renderer Module** (`src/renderer.js`):
+
+**Before:**
+```javascript
+window.toggleAdvancedSearch = searchInstance.toggleAdvancedSearch.bind(searchInstance);
+// ... later in the file ...
+window.toggleAdvancedSearch = uiModule.default.toggleAdvancedSearch; // This overwrote the search module assignment
+```
+
+**After:**
+```javascript
+window.toggleAdvancedSearch = searchInstance.toggleAdvancedSearch.bind(searchInstance);
+// ... later in the file ...
+// toggleAdvancedSearch is handled by the search module
+```
+
+**Advanced Search Module** (`src/renderer/modules/search/advanced-search.js`):
+
+**Before:**
+```javascript
+// Clear any pending live search
+clearTimeout(searchTimeout);
+// ... later in the file ...
+if ($("#advanced-search").is(":visible")) {
+  // Hide logic
+}
+// ... later in the file ...
+scale_scrollable();
+```
+
+**After:**
+```javascript
+// Track the advanced search state
+let isAdvancedSearchOpen = false;
+
+// Clear any pending live search - use global searchTimeout if available
+if (typeof searchTimeout !== 'undefined') {
+  clearTimeout(searchTimeout);
+}
+// ... later in the file ...
+// Use state variable instead of DOM queries for reliable toggling
+if (isAdvancedSearchOpen) {
+  // Hide logic
+  isAdvancedSearchOpen = false;
+} else {
+  // Show logic
+  isAdvancedSearchOpen = true;
+}
+// ... later in the file ...
+if (typeof scale_scrollable === 'function') {
+  scale_scrollable();
+}
+```
+
 ## Correct Parameter Order
 
 The `customPrompt` function now uses the correct parameter order:
@@ -323,5 +383,11 @@ The delete confirmation modals now work correctly for all song deletion operatio
 - **Database Deletion**: "Are you sure you want to delete [Song Title] from Mx. Voice permanently?"
 
 All modals now use the Promise-based `customConfirm` and `customPrompt` functions with proper parameter order and return values for better error handling and user experience.
+
+The advanced search toggle now works correctly:
+- **Function Assignment**: Properly assigned from search module instead of being overwritten by UI module
+- **Dependency Handling**: Safely handles missing dependencies like `searchTimeout` and `scale_scrollable`
+- **UI State Management**: Correctly toggles between simple and advanced search modes
+- **Icon Updates**: Properly switches between plus and minus icons
 
 This matches the expected behavior shown in the user's screenshot and provides a better user experience by allowing immediate typing without having to manually select the text. 

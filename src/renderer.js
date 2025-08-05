@@ -459,7 +459,7 @@ function saveHotkeysToStore() {
     window.increaseFontSize = uiModule.default.increaseFontSize;
     window.decreaseFontSize = uiModule.default.decreaseFontSize;
     window.toggleWaveform = uiModule.default.toggleWaveform;
-    window.toggleAdvancedSearch = uiModule.default.toggleAdvancedSearch;
+    // toggleAdvancedSearch is handled by the search module
     window.pickDirectory = uiModule.default.pickDirectory;
     window.installUpdate = uiModule.default.installUpdate;
     window.getFontSize = uiModule.default.getFontSize;
