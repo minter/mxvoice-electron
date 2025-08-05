@@ -308,7 +308,11 @@ function addToHoldingTank(song_id, element) {
         }
         
         console.log('🔍 Song added to holding tank successfully');
-        saveHoldingTankToStore();
+        if (typeof window.saveHoldingTankToStore === 'function') {
+          window.saveHoldingTankToStore();
+        } else {
+          console.warn('❌ saveHoldingTankToStore function not available');
+        }
       } else {
         console.warn('❌ Failed to get song by ID:', result.error);
         // Fallback to legacy database access
@@ -341,7 +345,11 @@ function addToHoldingTank(song_id, element) {
           } else {
             $(element).append(song_row);
           }
-          saveHoldingTankToStore();
+          if (typeof window.saveHoldingTankToStore === 'function') {
+            window.saveHoldingTankToStore();
+          } else {
+            console.warn('❌ saveHoldingTankToStore function not available');
+          }
         }
       }
     }).catch(error => {
@@ -376,7 +384,11 @@ function addToHoldingTank(song_id, element) {
         } else {
           $(element).append(song_row);
         }
-        saveHoldingTankToStore();
+        if (typeof window.saveHoldingTankToStore === 'function') {
+          window.saveHoldingTankToStore();
+        } else {
+          console.warn('❌ saveHoldingTankToStore function not available');
+        }
       }
     });
   } else {
@@ -410,7 +422,11 @@ function addToHoldingTank(song_id, element) {
       } else {
         $(element).append(song_row);
       }
-      saveHoldingTankToStore();
+      if (typeof window.saveHoldingTankToStore === 'function') {
+        window.saveHoldingTankToStore();
+      } else {
+        console.warn('❌ saveHoldingTankToStore function not available');
+      }
     }
   }
 }

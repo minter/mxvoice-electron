@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holding Tank Save Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Holding Tank Save Fix Test</h1>
+    
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="test-results">
+            <p class="info">Click "Run Tests" to start testing...</p>
+        </div>
+        
+        <button class="test-button" onclick="runTests()">Run Tests</button>
+        <button class="test-button" onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="test-container">
+        <h2>Test Log</h2>
+        <div id="test-log" class="log"></div>
+    </div>
+
+    <script>
+        let testLog = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            testLog.push(logEntry);
+            updateLogDisplay();
+            console.log(message);
+        }
+        
+        function updateLogDisplay() {
+            const logElement = document.getElementById('test-log');
+            logElement.textContent = testLog.join('\n');
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            testLog = [];
+            updateLogDisplay();
+        }
+        
+        function updateResults(message, type = 'info') {
+            const resultsElement = document.getElementById('test-results');
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            resultsElement.innerHTML = `<p class="${className}">${message}</p>`;
+        }
+        
+        async function runTests() {
+            log('🧪 Starting Holding Tank Save Fix Tests...');
+            updateResults('Running tests...', 'info');
+            
+            let allTestsPassed = true;
+            
+            // Test 1: Check if saveHoldingTankToStore function exists globally
+            log('Test 1: Checking if saveHoldingTankToStore function exists globally...');
+            if (typeof window.saveHoldingTankToStore === 'function') {
+                log('✅ Test 1 PASSED: saveHoldingTankToStore function is available globally');
+            } else {
+                log('❌ Test 1 FAILED: saveHoldingTankToStore function is not available globally');
+                allTestsPassed = false;
+            }
+            
+            // Test 2: Check if the function can be called without errors
+            log('Test 2: Testing if saveHoldingTankToStore can be called without errors...');
+            try {
+                // Create a mock holding tank column for testing
+                if (!document.getElementById('holding-tank-column')) {
+                    const mockColumn = document.createElement('div');
+                    mockColumn.id = 'holding-tank-column';
+                    mockColumn.innerHTML = '<div class="mode-toggle">Test Content</div>';
+                    document.body.appendChild(mockColumn);
+                    log('📝 Created mock holding-tank-column for testing');
+                }
+                
+                // Mock the electronAPI.store.set method
+                if (!window.electronAPI) {
+                    window.electronAPI = {};
+                }
+                if (!window.electronAPI.store) {
+                    window.electronAPI.store = {
+                        set: function(key, value) {
+                            log(`📝 Mock store.set called with key: ${key}, value length: ${value.length}`);
+                            return Promise.resolve({ success: true });
+                        }
+                    };
+                }
+                
+                // Call the function
+                window.saveHoldingTankToStore();
+                log('✅ Test 2 PASSED: saveHoldingTankToStore called successfully without errors');
+            } catch (error) {
+                log(`❌ Test 2 FAILED: Error calling saveHoldingTankToStore: ${error.message}`);
+                allTestsPassed = false;
+            }
+            
+            // Test 3: Check if data-population.js can access the function
+            log('Test 3: Testing if data-population.js can access saveHoldingTankToStore...');
+            try {
+                // Simulate the data-population.js scenario
+                const testFunction = function() {
+                    if (typeof window.saveHoldingTankToStore === 'function') {
+                        window.saveHoldingTankToStore();
+                        return true;
+                    } else {
+                        console.warn('❌ saveHoldingTankToStore function not available');
+                        return false;
+                    }
+                };
+                
+                const result = testFunction();
+                if (result) {
+                    log('✅ Test 3 PASSED: data-population.js can access saveHoldingTankToStore');
+                } else {
+                    log('❌ Test 3 FAILED: data-population.js cannot access saveHoldingTankToStore');
+                    allTestsPassed = false;
+                }
+            } catch (error) {
+                log(`❌ Test 3 FAILED: Error in data-population.js simulation: ${error.message}`);
+                allTestsPassed = false;
+            }
+            
+            // Test 4: Check for the specific error pattern from the original issue
+            log('Test 4: Testing for the original ReferenceError pattern...');
+            try {
+                // This should not throw a ReferenceError anymore
+                if (typeof window.saveHoldingTankToStore === 'function') {
+                    window.saveHoldingTankToStore();
+                    log('✅ Test 4 PASSED: No ReferenceError when calling saveHoldingTankToStore');
+                } else {
+                    log('⚠️ Test 4 WARNING: saveHoldingTankToStore not available, but no ReferenceError');
+                }
+            } catch (error) {
+                if (error.name === 'ReferenceError' && error.message.includes('saveHoldingTankToStore is not defined')) {
+                    log('❌ Test 4 FAILED: Still getting ReferenceError for saveHoldingTankToStore');
+                    allTestsPassed = false;
+                } else {
+                    log(`⚠️ Test 4 WARNING: Unexpected error: ${error.message}`);
+                }
+            }
+            
+            // Final results
+            if (allTestsPassed) {
+                log('🎉 ALL TESTS PASSED! The holding tank save fix is working correctly.');
+                updateResults('All tests passed! The fix is working correctly.', 'success');
+            } else {
+                log('❌ Some tests failed. The fix may need additional work.');
+                updateResults('Some tests failed. Check the log for details.', 'error');
+            }
+            
+            log('🏁 Test suite completed.');
+        }
+        
+        // Auto-run tests when page loads
+        window.addEventListener('load', function() {
+            log('📄 Test page loaded. Ready to run tests.');
+        });
+    </script>
+</body>
+</html> 

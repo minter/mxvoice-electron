@@ -195,6 +195,7 @@ function saveHotkeysToStore() {
       });
     };
     window.scale_scrollable = holdingTankModule.default.scale_scrollable;
+    window.saveHoldingTankToStore = saveHoldingTankToStore;
 
     // Import hotkeys module and make functions globally available
     try {
