@@ -491,6 +491,16 @@ function saveHotkeysToStore() {
       console.log('🔄 Loading ui module...');
       uiModule = await import('./renderer/modules/ui/index.js');
       console.log('✅ ui module loaded successfully');
+      
+      // Re-initialize UI module with proper dependencies
+      const uiInstance = uiModule.default.reinitializeUI({
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: null // Legacy store not available, will use electronAPI.store
+      });
+      
+      // Update the module exports with the properly initialized instance
+      Object.assign(uiModule.default, uiInstance);
     } catch (error) {
       console.error('❌ Error loading ui module:', error);
       throw error;

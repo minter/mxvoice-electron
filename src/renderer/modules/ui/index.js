@@ -62,7 +62,13 @@ function initializeUI(options = {}) {
 }
 
 // Create and export a singleton instance
-const uiModule = initializeUI();
+let uiModule = initializeUI();
+
+// Add reinitialize function
+function reinitializeUI(options = {}) {
+  uiModule = initializeUI(options);
+  return uiModule;
+}
 
 // Export individual functions for direct access
 export const scaleScrollable = uiModule.scaleScrollable;
@@ -81,6 +87,9 @@ export const pickDirectory = uiModule.pickDirectory;
 export const installUpdate = uiModule.installUpdate;
 export const getFontSize = uiModule.getFontSize;
 export const setFontSize = uiModule.setFontSize;
+
+// Add reinitialize function to exports
+uiModule.reinitializeUI = reinitializeUI;
 
 // Default export for module loading
 export default uiModule; 

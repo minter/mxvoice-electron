@@ -246,36 +246,59 @@ function initializeUIManager(options = {}) {
    * Close all tabs and clear stored data
    */
   function closeAllTabs() {
-    customConfirm(`Are you sure you want to close all open Holding Tanks and Hotkeys?`, function() {
-      // Use new store API for cleanup operations
-      if (electronAPI && electronAPI.store) {
-        Promise.all([
-          electronAPI.store.delete("holding_tank"),
-          electronAPI.store.delete("hotkeys"),
-          electronAPI.store.delete("column_order"),
-          electronAPI.store.delete("font-size")
-        ]).then(() => {
-          console.log('✅ All tabs closed successfully');
-          location.reload();
-        }).catch(error => {
-          console.warn('❌ Failed to close tabs:', error);
+    console.log('🔍 closeAllTabs called');
+    customConfirm(`Are you sure you want to close all open Holding Tanks and Hotkeys?`, 'Confirm').then(confirmed => {
+      console.log('🔍 User confirmed:', confirmed);
+      if (confirmed) {
+        console.log('🔍 Starting cleanup operations...');
+        console.log('🔍 electronAPI available:', !!electronAPI);
+        console.log('🔍 electronAPI.store available:', !!(electronAPI && electronAPI.store));
+        console.log('🔍 legacy store available:', !!store);
+        
+        // Use new store API for cleanup operations
+        if (electronAPI && electronAPI.store) {
+          console.log('🔍 Using modern store API');
+          Promise.all([
+            electronAPI.store.delete("holding_tank"),
+            electronAPI.store.delete("hotkeys"),
+            electronAPI.store.delete("column_order"),
+            electronAPI.store.delete("font-size")
+          ]).then(() => {
+            console.log('✅ All tabs closed successfully');
+            console.log('🔄 Reloading page...');
+            location.reload();
+          }).catch(error => {
+            console.warn('❌ Failed to close tabs:', error);
+            // Fallback to legacy store access
+            if (store) {
+              console.log('🔍 Falling back to legacy store');
+              store.delete("holding_tank");
+              store.delete("hotkeys");
+              store.delete("column_order");
+              store.delete("font-size");
+            }
+            console.log('🔄 Reloading page after fallback...');
+            location.reload();
+          });
+        } else if (store) {
           // Fallback to legacy store access
-          if (store) {
-            store.delete("holding_tank");
-            store.delete("hotkeys");
-            store.delete("column_order");
-            store.delete("font-size");
-          }
+          console.log('🔍 Using legacy store API');
+          store.delete("holding_tank");
+          store.delete("hotkeys");
+          store.delete("column_order");
+          store.delete("font-size");
+          console.log('🔄 Reloading page...');
           location.reload();
-        });
-      } else if (store) {
-        // Fallback to legacy store access
-        store.delete("holding_tank");
-        store.delete("hotkeys");
-        store.delete("column_order");
-        store.delete("font-size");
-        location.reload();
+        } else {
+          console.warn('❌ No store API available');
+          console.log('🔄 Reloading page anyway...');
+          location.reload();
+        }
+      } else {
+        console.log('🔍 User cancelled the operation');
       }
+    }).catch(error => {
+      console.error('❌ Error in closeAllTabs:', error);
     });
   }
   
