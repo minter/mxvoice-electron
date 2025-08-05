@@ -18,10 +18,17 @@ function stopPlaying(fadeOut = false) {
   const sound = sharedState.get('sound');
   const autoplay = sharedState.get('autoplay');
   const holdingTankMode = sharedState.get('holdingTankMode');
+  const globalAnimation = sharedState.get('globalAnimation');
   
   console.log('🔍 sound object:', sound);
   console.log('🔍 autoplay:', autoplay);
   console.log('🔍 holdingTankMode:', holdingTankMode);
+  
+  // Cancel any ongoing animation frame to prevent memory leaks
+  if (globalAnimation) {
+    cancelAnimationFrame(globalAnimation);
+    sharedState.set('globalAnimation', null);
+  }
   
   if (sound) {
     console.log('🔍 Sound exists, stopping...');
@@ -41,6 +48,7 @@ function stopPlaying(fadeOut = false) {
         // Check if sound is still valid
         if (!sound || !sound.volume) {
           console.log("Sound is no longer valid, stopping");
+          resetUIState();
           return;
         }
         
@@ -73,6 +81,7 @@ function stopPlaying(fadeOut = false) {
     }
   } else {
     console.log('🔍 No sound object found in shared state');
+    resetUIState();
   }
 }
 
@@ -84,6 +93,7 @@ function stopPlaying(fadeOut = false) {
 function pausePlaying(fadeOut = false) {
   console.log('🔍 pausePlaying called with fadeOut:', fadeOut);
   const sound = sharedState.get('sound');
+  const globalAnimation = sharedState.get('globalAnimation');
   
   console.log('🔍 sound object:', sound);
   console.log('🔍 sound.playing():', sound ? sound.playing() : 'no sound');
@@ -93,6 +103,13 @@ function pausePlaying(fadeOut = false) {
     toggle_play_button();
     if (sound.playing()) {
       console.log('🔍 Sound is playing, pausing...');
+      
+      // Cancel animation frame to prevent memory leaks
+      if (globalAnimation) {
+        cancelAnimationFrame(globalAnimation);
+        sharedState.set('globalAnimation', null);
+      }
+      
       sound.on("fade", function () {
         sound.pause();
         sound.volume(old_volume);
@@ -128,6 +145,14 @@ function pausePlaying(fadeOut = false) {
  */
 function resetUIState() {
   console.log('🔍 resetUIState called');
+  
+  // Cancel any ongoing animation frame to prevent memory leaks
+  const globalAnimation = sharedState.get('globalAnimation');
+  if (globalAnimation) {
+    cancelAnimationFrame(globalAnimation);
+    sharedState.set('globalAnimation', null);
+  }
+  
   $("#duration").html("0:00");
   $("#timer").html("0:00");
   $("#audio_progress").width("0%");

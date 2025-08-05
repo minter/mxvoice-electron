@@ -13,7 +13,7 @@ import sharedState from '../shared-state.js';
  * 
  * @type {Object}
  */
-const howlerUtils = {
+export const howlerUtils = {
   /**
    * Format seconds into MM:SS format
    * 
@@ -48,6 +48,7 @@ const howlerUtils = {
     if (!sound || !howlerUtils.isLoaded(sound)) {
       if (globalAnimation) {
         cancelAnimationFrame(globalAnimation);
+        sharedState.set('globalAnimation', null);
       }
       if (wavesurfer) {
         wavesurfer.empty();
@@ -73,11 +74,6 @@ const howlerUtils = {
     );
     sharedState.set('globalAnimation', newAnimation);
   },
-};
-
-// Export individual functions for direct access
-export {
-  howlerUtils
 };
 
 // Default export for module loading

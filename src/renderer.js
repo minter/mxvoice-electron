@@ -10,16 +10,24 @@
     // Initialize shared state with default values
     sharedState.set('sound', null);
     sharedState.set('globalAnimation', null);
-    sharedState.set('wavesurfer', WaveSurfer.create({
-      container: "#waveform",
-      waveColor: "#e9ecef",
-      backgroundColor: "#343a40",
-      progressColor: "#007bff",
-      cursorColor: "white",
-      cursorWidth: 0,
-      responsive: true,
-      height: 100,
-    }));
+    
+    // Only create WaveSurfer if the element exists and WaveSurfer is available
+    const waveformElement = document.getElementById('waveform');
+    if (waveformElement && typeof WaveSurfer !== 'undefined') {
+      sharedState.set('wavesurfer', WaveSurfer.create({
+        container: "#waveform",
+        waveColor: "#e9ecef",
+        backgroundColor: "#343a40",
+        progressColor: "#007bff",
+        cursorColor: "white",
+        cursorWidth: 0,
+        responsive: true,
+        height: 100,
+      }));
+    } else {
+      sharedState.set('wavesurfer', null);
+    }
+    
     sharedState.set('autoplay', false);
     sharedState.set('loop', false);
     sharedState.set('holdingTankMode', "storage"); // 'storage' or 'playlist'
@@ -537,7 +545,9 @@ function saveHotkeysToStore() {
       // window.howlerUtils = audioInstance.howlerUtils.bind(audioInstance); // Function not implemented yet
       console.log('✅ Audio module loaded successfully');
     } catch (error) {
-      console.warn('❌ Failed to load audio module:', error);
+      console.error('❌ Failed to load audio module:', error);
+      console.error('❌ Audio module error stack:', error.stack);
+      console.error('❌ Audio module error message:', error.message);
       // Continue loading other modules even if audio fails
     }
 
@@ -727,6 +737,29 @@ function saveHotkeysToStore() {
 
     // Make module registry available for debugging and development
     window.moduleRegistry = moduleRegistry;
+    
+    // Verify critical functions are available
+    function verifyCriticalFunctions() {
+      const criticalFunctions = [
+        'playSongFromId',
+        'stopPlaying', 
+        'pausePlaying',
+        'searchData',
+        'populateCategorySelect'
+      ];
+      
+      const missingFunctions = criticalFunctions.filter(func => !window[func]);
+      
+      if (missingFunctions.length > 0) {
+        console.warn('⚠️ Missing critical functions:', missingFunctions);
+        console.warn('⚠️ This may cause runtime errors');
+      } else {
+        console.log('✅ All critical functions are available');
+      }
+    }
+    
+    // Call verification after module loading
+    verifyCriticalFunctions();
     
     // Legacy functions moved to modules - keeping only HTML-compatible functions
     // All other functions are now available through moduleRegistry
