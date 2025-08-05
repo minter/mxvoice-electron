@@ -1,10 +1,10 @@
-const path = require('path');
-const fs = require('fs');
+import path from 'path';
+import fs from 'fs';
 
 // Import platform-specific signing modules
-const macNotarize = require('./notarize.js');
+import macNotarize from './notarize.js';
 
-module.exports = async function afterSign(context) {
+export default async function afterSign(context) {
   const { electronPlatformName } = context;
 
   console.log(`Running afterSign hook for platform: ${electronPlatformName}`);
