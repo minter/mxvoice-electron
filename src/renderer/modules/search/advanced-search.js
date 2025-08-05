@@ -35,8 +35,8 @@ function toggleAdvancedSearch() {
     console.log("toggleAdvancedSearch called");
 
     // Clear any pending live search - use global searchTimeout if available
-    if (typeof searchTimeout !== 'undefined') {
-      clearTimeout(searchTimeout);
+    if (window.searchTimeout) {
+      clearTimeout(window.searchTimeout);
       console.log("Cleared timeout");
     }
 

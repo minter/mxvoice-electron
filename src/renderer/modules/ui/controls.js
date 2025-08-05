@@ -76,8 +76,10 @@ function initializeControls(options = {}) {
     try {
       console.log("toggleAdvancedSearch called");
 
-      // Clear any pending live search
-      clearTimeout(searchTimeout);
+      // Clear any pending live search using global searchTimeout
+      if (window.searchTimeout) {
+        clearTimeout(window.searchTimeout);
+      }
       console.log("Cleared timeout");
 
       $("#search_form").trigger("reset");

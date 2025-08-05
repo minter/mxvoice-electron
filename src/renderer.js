@@ -1,43 +1,43 @@
-var sound;
-var categories = [];
-var globalAnimation;
-var autoplay = false;
-var loop = false;
-var holdingTankMode = "storage"; // 'storage' or 'playlist'
-var searchTimeout; // Global variable for live search debouncing
-var wavesurfer = WaveSurfer.create({
-  container: "#waveform",
-  waveColor: "#e9ecef",
-  backgroundColor: "#343a40",
-  progressColor: "#007bff",
-  cursorColor: "white",
-  cursorWidth: 0,
-  responsive: true,
-  height: 100,
-});
-var fontSize = 11;
+// Remove legacy global variables and use shared state instead
+// Legacy globals moved to shared state module
 
-// Initialize shared state with global variables
+// Initialize shared state first
 (async function initializeSharedState() {
   try {
     const sharedStateModule = await import('./renderer/modules/shared-state.js');
     const sharedState = sharedStateModule.default;
     
-    // Initialize shared state with current global values
-    sharedState.set('sound', sound);
-    sharedState.set('globalAnimation', globalAnimation);
-    sharedState.set('wavesurfer', wavesurfer);
-    sharedState.set('autoplay', autoplay);
-    sharedState.set('loop', loop);
-    sharedState.set('holdingTankMode', holdingTankMode);
-    sharedState.set('fontSize', fontSize);
-    sharedState.set('categories', categories);
+    // Initialize shared state with default values
+    sharedState.set('sound', null);
+    sharedState.set('globalAnimation', null);
+    sharedState.set('wavesurfer', WaveSurfer.create({
+      container: "#waveform",
+      waveColor: "#e9ecef",
+      backgroundColor: "#343a40",
+      progressColor: "#007bff",
+      cursorColor: "white",
+      cursorWidth: 0,
+      responsive: true,
+      height: 100,
+    }));
+    sharedState.set('autoplay', false);
+    sharedState.set('loop', false);
+    sharedState.set('holdingTankMode', "storage"); // 'storage' or 'playlist'
+    sharedState.set('fontSize', 11);
+    sharedState.set('categories', {}); // Changed from [] to {} for proper category lookup
+    sharedState.set('searchTimeout', null);
     
-    console.log('✅ Shared state initialized with global variables');
+    // Make searchTimeout available globally for backward compatibility
+    window.searchTimeout = null;
+    
+    console.log('✅ Shared state initialized with default values');
   } catch (error) {
     console.warn('❌ Failed to initialize shared state:', error);
   }
 })();
+
+// Module registry to avoid window pollution
+const moduleRegistry = {};
 
 // Load the last holding tank and hotkeys
 
@@ -93,8 +93,8 @@ window.electronAPI.store.has("font-size").then(hasFontSize => {
   if (hasFontSize) {
     window.electronAPI.store.get("font-size").then(size => {
       if (size !== undefined && size !== null) {
-        fontSize = size;
-        $(".song").css("font-size", fontSize + "px");
+        // This global variable is now managed by shared state
+        // moduleRegistry.fontSize = size;
       }
     });
   }
@@ -145,7 +145,11 @@ function saveHotkeysToStore() {
       throw error;
     }
     
-    // Make file operations functions globally available
+    // Store modules in registry instead of window pollution
+    moduleRegistry.fileOperations = fileOperationsModule.default;
+    
+    // Create minimal window assignments for HTML onclick compatibility
+    // Only assign functions that are called directly from HTML
     window.openHotkeyFile = fileOperationsModule.default.openHotkeyFile;
     window.openHoldingTankFile = fileOperationsModule.default.openHoldingTankFile;
     window.saveHotkeyFile = fileOperationsModule.default.saveHotkeyFile;
@@ -153,7 +157,7 @@ function saveHotkeysToStore() {
     window.pickDirectory = fileOperationsModule.default.pickDirectory;
     window.installUpdate = fileOperationsModule.default.installUpdate;
 
-    // Import song management module and make functions globally available
+    // Import song management module and store in registry
     try {
       console.log('🔄 Loading song-management module...');
       songManagementModule = await import('./renderer/modules/song-management/index.js');
@@ -163,7 +167,10 @@ function saveHotkeysToStore() {
       throw error;
     }
     
-    // Make song management functions globally available
+    // Store in registry and create minimal window assignments
+    moduleRegistry.songManagement = songManagementModule.default;
+    
+    // Only assign functions called from HTML
     window.saveEditedSong = songManagementModule.default.saveEditedSong;
     window.saveNewSong = songManagementModule.default.saveNewSong;
     window.editSelectedSong = songManagementModule.default.editSelectedSong;
@@ -172,7 +179,7 @@ function saveHotkeysToStore() {
     window.removeFromHoldingTank = songManagementModule.default.removeFromHoldingTank;
     window.removeFromHotkey = songManagementModule.default.removeFromHotkey;
 
-    // Import holding tank module for additional functions
+    // Import holding tank module and store in registry
     try {
       console.log('🔄 Loading holding-tank module...');
       holdingTankModule = await import('./renderer/modules/holding-tank/index.js');
@@ -182,7 +189,9 @@ function saveHotkeysToStore() {
       throw error;
     }
     
-    // Make holding tank functions globally available
+    // Store in registry and create minimal window assignments
+    moduleRegistry.holdingTank = holdingTankModule.default;
+    
     // Create synchronous wrappers for async functions since they're called from HTML onclick
     window.clearHoldingTank = function() {
       holdingTankModule.default.clearHoldingTank().catch(error => {
@@ -197,13 +206,13 @@ function saveHotkeysToStore() {
     window.scale_scrollable = holdingTankModule.default.scale_scrollable;
     window.saveHoldingTankToStore = saveHoldingTankToStore;
 
-    // Import hotkeys module and make functions globally available
+    // Import hotkeys module and store in registry
     try {
       console.log('🔄 Loading hotkeys module...');
       hotkeysModule = await import('./renderer/modules/hotkeys/index.js');
       console.log('✅ hotkeys module loaded successfully');
       
-      // Create hotkeys module instance and make functions globally available
+      // Create hotkeys module instance and store in registry
       console.log('🔄 Creating hotkeys module instance...');
       console.log('🔄 window.electronAPI available:', !!window.electronAPI);
       console.log('🔄 window.electronAPI.store available:', !!window.electronAPI?.store);
@@ -214,9 +223,13 @@ function saveHotkeysToStore() {
         store: window.electronAPI?.store
       });
       
+      // Store in registry
+      moduleRegistry.hotkeys = hotkeysInstance;
+      
       console.log('🔄 Hotkeys module instance created successfully');
       console.log('🔄 hotkeysInstance.populateHotkeys available:', typeof hotkeysInstance.populateHotkeys);
-      // Create a synchronous wrapper for clearHotkeys since it's called from HTML onclick
+      
+      // Create minimal window assignments for HTML compatibility
       window.clearHotkeys = function() {
         hotkeysInstance.clearHotkeys().catch(error => {
           console.error('❌ Error in clearHotkeys:', error);
@@ -229,6 +242,7 @@ function saveHotkeysToStore() {
       };
       window.playSongFromHotkey = hotkeysInstance.playSongFromHotkey.bind(hotkeysInstance);
       window.switchToHotkeyTab = hotkeysInstance.switchToHotkeyTab.bind(hotkeysInstance);
+      
       // Bind populateHotkeys with proper context
       window.populateHotkeys = function(fkeys, title) {
         console.log('🔄 window.populateHotkeys called with:', { fkeys, title });
@@ -317,9 +331,21 @@ function saveHotkeysToStore() {
       // Initialize the categories module
       await categoriesInstance.init();
       
+      // Load categories into shared state for other modules to use
+      try {
+        await categoriesInstance.loadCategories();
+        console.log('✅ Categories loaded into shared state');
+      } catch (error) {
+        console.warn('❌ Failed to load categories into shared state:', error);
+      }
+      
       console.log('✅ Categories module initialized');
       console.log('✅ deleteCategoryUI available:', typeof categoriesInstance.deleteCategoryUI);
       
+      // Store in registry and create minimal window assignments
+      moduleRegistry.categories = categoriesInstance;
+      
+      // Only assign functions called from HTML
       window.populateCategorySelect = categoriesInstance.populateCategorySelect.bind(categoriesInstance);
       window.openCategoriesModal = categoriesInstance.openCategoriesModal.bind(categoriesInstance);
       window.addNewCategory = categoriesInstance.addNewCategoryUI.bind(categoriesInstance);
@@ -342,102 +368,114 @@ function saveHotkeysToStore() {
       // Continue loading other modules even if categories fails
     }
 
-    // Import bulk operations module and make functions globally available
+    // Import bulk operations module and store in registry
     try {
       console.log('🔄 Loading bulk-operations module...');
       bulkOperationsModule = await import('./renderer/modules/bulk-operations/index.js');
       console.log('✅ bulk-operations module loaded successfully');
+      
+      // Store in registry and create minimal window assignments
+      moduleRegistry.bulkOperations = bulkOperationsModule.default;
+      
+      // Only assign functions called from HTML
+      window.showBulkAddModal = bulkOperationsModule.default.showBulkAddModal;
+      window.addSongsByPath = bulkOperationsModule.default.addSongsByPath;
+      window.saveBulkUpload = bulkOperationsModule.default.saveBulkUpload;
     } catch (error) {
       console.error('❌ Error loading bulk-operations module:', error);
-      throw error;
+      // Continue loading other modules even if bulk operations fails
     }
-    
-    // Make bulk operations functions globally available
-    window.showBulkAddModal = bulkOperationsModule.default.showBulkAddModal;
-    window.addSongsByPath = bulkOperationsModule.default.addSongsByPath;
-    window.saveBulkUpload = bulkOperationsModule.default.saveBulkUpload;
 
-    // Import drag and drop module and make functions globally available
+    // Import drag-drop module and store in registry
     try {
       console.log('🔄 Loading drag-drop module...');
       dragDropModule = await import('./renderer/modules/drag-drop/index.js');
       console.log('✅ drag-drop module loaded successfully');
+      
+      // Store in registry and create minimal window assignments
+      moduleRegistry.dragDrop = dragDropModule.default;
+      
+      // Only assign functions called from HTML
+      window.hotkeyDrop = dragDropModule.default.hotkeyDrop;
+      window.holdingTankDrop = dragDropModule.default.holdingTankDrop;
+      window.allowHotkeyDrop = dragDropModule.default.allowHotkeyDrop;
+      window.songDrag = dragDropModule.default.songDrag;
+      window.columnDrag = dragDropModule.default.columnDrag;
     } catch (error) {
       console.error('❌ Error loading drag-drop module:', error);
-      throw error;
+      // Continue loading other modules even if drag-drop fails
     }
-    
-    // Make drag and drop functions globally available
-    window.hotkeyDrop = dragDropModule.default.hotkeyDrop;
-    window.holdingTankDrop = dragDropModule.default.holdingTankDrop;
-    window.allowHotkeyDrop = dragDropModule.default.allowHotkeyDrop;
-    window.songDrag = dragDropModule.default.songDrag;
-    window.columnDrag = dragDropModule.default.columnDrag;
 
-    // Import navigation module and make functions globally available
+    // Import navigation module and store in registry
     try {
       console.log('🔄 Loading navigation module...');
       navigationModule = await import('./renderer/modules/navigation/index.js');
       console.log('✅ navigation module loaded successfully');
+      
+      // Store in registry and create minimal window assignments
+      moduleRegistry.navigation = navigationModule.default;
+      
+      // Only assign functions called from HTML
+      window.sendToHotkeys = navigationModule.default.sendToHotkeys;
+      window.sendToHoldingTank = navigationModule.default.sendToHoldingTank;
+      window.selectNext = navigationModule.default.selectNext;
+      window.selectPrev = navigationModule.default.selectPrev;
     } catch (error) {
       console.error('❌ Error loading navigation module:', error);
-      throw error;
+      // Continue loading other modules even if navigation fails
     }
-    
-    // Make navigation functions globally available
-    window.sendToHotkeys = navigationModule.default.sendToHotkeys;
-    window.sendToHoldingTank = navigationModule.default.sendToHoldingTank;
-    window.selectNext = navigationModule.default.selectNext;
-    window.selectPrev = navigationModule.default.selectPrev;
 
-    // Import mode management module and make functions globally available
+    // Import mode management module and store in registry
     try {
       console.log('🔄 Loading mode-management module...');
       modeManagementModule = await import('./renderer/modules/mode-management/index.js');
       console.log('✅ mode-management module loaded successfully');
+      
+      // Store in registry and create minimal window assignments
+      moduleRegistry.modeManagement = modeManagementModule.default;
+      
+      // Only assign functions called from HTML
+      window.setHoldingTankMode = modeManagementModule.default.setHoldingTankMode;
+      window.getHoldingTankMode = modeManagementModule.default.getHoldingTankMode;
+      window.toggleAutoPlay = modeManagementModule.default.toggleAutoPlay;
+      window.getAutoPlayState = modeManagementModule.default.getAutoPlayState;
+      window.resetToDefaultMode = modeManagementModule.default.resetToDefaultMode;
+      
+      // Initialize mode management module
+      const result = await modeManagementModule.default.initModeManagement();
+      if (result.error) {
+        console.warn('❌ Failed to initialize mode management module:', result.error);
+      } else {
+        console.log('✅ Mode management module initialized successfully');
+      }
     } catch (error) {
       console.error('❌ Error loading mode-management module:', error);
-      throw error;
+      // Continue loading other modules even if mode management fails
     }
-    
-    // Make mode management functions globally available
-    window.setHoldingTankMode = modeManagementModule.default.setHoldingTankMode;
-    window.getHoldingTankMode = modeManagementModule.default.getHoldingTankMode;
-    window.toggleAutoPlay = modeManagementModule.default.toggleAutoPlay;
-    window.getAutoPlayState = modeManagementModule.default.getAutoPlayState;
-    window.resetToDefaultMode = modeManagementModule.default.resetToDefaultMode;
 
-    // Initialize mode management module
-    modeManagementModule.default.initModeManagement().then(result => {
-      if (result.success) {
-        console.log('✅ Mode management module initialized:', result.mode);
-      } else {
-        console.warn('❌ Failed to initialize mode management module:', result.error);
-      }
-    }).catch(error => {
-      console.error('❌ Mode management module initialization error:', error);
-    });
-
-    // Import test functions module and make functions globally available
+    // Import test utils module and store in registry
     try {
       console.log('🔄 Loading test-utils module...');
       testUtilsModule = await import('./renderer/modules/test-utils/index.js');
       console.log('✅ test-utils module loaded successfully');
+      
+      // Store in registry and create minimal window assignments
+      moduleRegistry.testUtils = testUtilsModule.default;
+      
+      // Only assign functions called from HTML
+      window.testPhase2Migrations = testUtilsModule.default.testPhase2Migrations;
+      window.testDatabaseAPI = testUtilsModule.default.testDatabaseAPI;
+      window.testFileSystemAPI = testUtilsModule.default.testFileSystemAPI;
+      window.testStoreAPI = testUtilsModule.default.testStoreAPI;
+      window.testAudioAPI = testUtilsModule.default.testAudioAPI;
+      window.testSecurityFeatures = testUtilsModule.default.testSecurityFeatures;
+      window.runAllTests = testUtilsModule.default.runAllTests;
     } catch (error) {
       console.error('❌ Error loading test-utils module:', error);
-      throw error;
+      // Continue loading other modules even if test utils fails
     }
-    
-    // Make test functions globally available
-    window.testPhase2Migrations = testUtilsModule.default.testPhase2Migrations;
-    window.testDatabaseAPI = testUtilsModule.default.testDatabaseAPI;
-    window.testFileSystemAPI = testUtilsModule.default.testFileSystemAPI;
-    window.testStoreAPI = testUtilsModule.default.testStoreAPI;
-    window.testAudioAPI = testUtilsModule.default.testAudioAPI;
-    window.testSecurityFeatures = testUtilsModule.default.testSecurityFeatures;
-    window.runAllTests = testUtilsModule.default.runAllTests;
 
-    // Import search module and make functions globally available
+    // Import search module and store in registry
     try {
       console.log('🔄 Loading search module...');
       searchModule = await import('./renderer/modules/search/index.js');
@@ -446,9 +484,13 @@ function saveHotkeysToStore() {
       // The search module exports a singleton instance, not a constructor
       const searchInstance = searchModule.default;
       
+      // Store in registry
+      moduleRegistry.search = searchInstance;
+      
       // Initialize the search module
       searchInstance.init();
       
+      // Only assign functions called from HTML
       window.searchData = searchInstance.searchData.bind(searchInstance);
       window.performLiveSearch = searchInstance.performLiveSearch.bind(searchInstance);
       window.toggleAdvancedSearch = searchInstance.toggleAdvancedSearch.bind(searchInstance);
@@ -460,7 +502,7 @@ function saveHotkeysToStore() {
       // Continue loading other modules even if search fails
     }
 
-    // Import audio module and make functions globally available
+    // Import audio module and store in registry
     try {
       console.log('🔄 Loading audio module...');
       audioModule = await import('./renderer/modules/audio/index.js');
@@ -469,9 +511,13 @@ function saveHotkeysToStore() {
       // The audio module exports a singleton instance, not a constructor
       const audioInstance = audioModule.default;
       
+      // Store in registry
+      moduleRegistry.audio = audioInstance;
+      
       // Initialize the audio module
       audioInstance.init();
       
+      // Only assign functions called from HTML
       window.playSongFromId = audioInstance.playSongFromId.bind(audioInstance);
       window.stopPlaying = audioInstance.stopPlaying.bind(audioInstance);
       window.pausePlaying = audioInstance.pausePlaying.bind(audioInstance);
@@ -487,7 +533,7 @@ function saveHotkeysToStore() {
       // Continue loading other modules even if audio fails
     }
 
-    // Import UI module and make functions globally available
+    // Import UI module and store in registry
     try {
       console.log('🔄 Loading ui module...');
       uiModule = await import('./renderer/modules/ui/index.js');
@@ -500,6 +546,9 @@ function saveHotkeysToStore() {
         store: null // Legacy store not available, will use electronAPI.store
       });
       
+      // Store in registry
+      moduleRegistry.ui = uiInstance;
+      
       // Update the module exports with the properly initialized instance
       Object.assign(uiModule.default, uiInstance);
     } catch (error) {
@@ -507,7 +556,7 @@ function saveHotkeysToStore() {
       throw error;
     }
     
-    // Make UI functions globally available
+    // Only assign functions called from HTML
     window.scaleScrollable = uiModule.default.scaleScrollable;
     window.editSelectedSong = uiModule.default.editSelectedSong;
     window.deleteSelectedSong = uiModule.default.deleteSelectedSong;
@@ -533,7 +582,7 @@ function saveHotkeysToStore() {
     window.getFontSize = uiModule.default.getFontSize;
     window.setFontSize = uiModule.default.setFontSize;
 
-    // Import preferences module and make functions globally available
+    // Import preferences module and store in registry
     try {
       console.log('🔄 Loading preferences module...');
       preferencesModule = await import('./renderer/modules/preferences/index.js');
@@ -546,7 +595,10 @@ function saveHotkeysToStore() {
         store: null // Legacy store not available, will use electronAPI.store
       });
       
-      // Make preferences functions globally available
+      // Store in registry
+      moduleRegistry.preferences = preferencesInstance;
+      
+      // Only assign functions called from HTML
       window.openPreferencesModal = preferencesInstance.openPreferencesModal;
       window.loadPreferences = preferencesInstance.loadPreferences;
       window.savePreferences = preferencesInstance.savePreferences;
@@ -561,7 +613,7 @@ function saveHotkeysToStore() {
       throw error;
     }
 
-    // Import database module and make functions globally available
+    // Import database module and store in registry
     try {
       console.log('🔄 Loading database module...');
       try {
@@ -578,10 +630,13 @@ function saveHotkeysToStore() {
       // The database module exports a singleton instance, not a constructor
       const databaseInstance = databaseModule.default.database;
       
+      // Store in registry
+      moduleRegistry.database = databaseInstance;
+      
       // Initialize the database module
       databaseInstance.init();
       
-      // Make functions globally available (no binding needed for simple functions)
+      // Only assign functions called from HTML
       window.setLabelFromSongId = databaseInstance.setLabelFromSongId;
       window.addToHoldingTank = databaseInstance.addToHoldingTank;
       window.populateHoldingTank = databaseInstance.populateHoldingTank;
@@ -598,7 +653,7 @@ function saveHotkeysToStore() {
       // Continue loading other modules even if database fails
     }
 
-    // Import utils module and make functions globally available
+    // Import utils module and store in registry
     try {
       console.log('🔄 Loading utils module...');
       try {
@@ -615,10 +670,13 @@ function saveHotkeysToStore() {
       // The utils module exports a singleton instance, not a constructor
       const utilsInstance = utilsModule.default;
       
+      // Store in registry
+      moduleRegistry.utils = utilsInstance;
+      
       // Initialize the utils module
       utilsInstance.init();
       
-      // Make functions globally available (no binding needed for simple functions)
+      // Only assign functions called from HTML
       window.animateCSS = utilsInstance.animateCSS;
       window.customConfirm = utilsInstance.customConfirm;
       window.customPrompt = utilsInstance.customPrompt;
@@ -639,6 +697,30 @@ function saveHotkeysToStore() {
     }
 
     console.log('✅ All modules loaded successfully!');
+    console.log('📋 Module Registry Summary:');
+    console.log('   - File Operations:', !!moduleRegistry.fileOperations);
+    console.log('   - Song Management:', !!moduleRegistry.songManagement);
+    console.log('   - Holding Tank:', !!moduleRegistry.holdingTank);
+    console.log('   - Hotkeys:', !!moduleRegistry.hotkeys);
+    console.log('   - Categories:', !!moduleRegistry.categories);
+    console.log('   - Bulk Operations:', !!moduleRegistry.bulkOperations);
+    console.log('   - Drag Drop:', !!moduleRegistry.dragDrop);
+    console.log('   - Navigation:', !!moduleRegistry.navigation);
+    console.log('   - Mode Management:', !!moduleRegistry.modeManagement);
+    console.log('   - Test Utils:', !!moduleRegistry.testUtils);
+    console.log('   - Search:', !!moduleRegistry.search);
+    console.log('   - Audio:', !!moduleRegistry.audio);
+    console.log('   - UI:', !!moduleRegistry.ui);
+    console.log('   - Preferences:', !!moduleRegistry.preferences);
+    console.log('   - Database:', !!moduleRegistry.database);
+    console.log('   - Utils:', !!moduleRegistry.utils);
+
+    // Make module registry available for debugging and development
+    window.moduleRegistry = moduleRegistry;
+    
+    // Legacy functions moved to modules - keeping only HTML-compatible functions
+    // All other functions are now available through moduleRegistry
+    // Example: moduleRegistry.fileOperations.openHotkeyFile() instead of window.openHotkeyFile
 
     // Initialize modules after loading
     try {
@@ -716,52 +798,14 @@ function saveHotkeysToStore() {
 
 // Categories functions moved to categories module
 
-function toggle_selected_row(row) {
-  // if ($(row).attr('id') == "selected_row") {
-  //   $(row).removeAttr("id");
-  // } else {
-  $("#selected_row").removeAttr("id");
-  $(row).attr("id", "selected_row");
-  $("#play_button").removeAttr("disabled");
-  // }
-}
+// All functions have been moved to their respective modules
+// Use moduleRegistry to access module functions
+// Example: moduleRegistry.ui.toggleSelectedRow(row) instead of toggle_selected_row(row)
 
-function loop_on(bool) {
-  if (bool == true) {
-    $("#loop_button").addClass("active");
-  } else {
-    $("#loop_button").removeClass("active");
-  }
-}
-
-// pickDirectory() and installUpdate() functions moved to file-operations module
-
-// UI and search functions moved to respective modules
-
-function closeAllTabs() {
-  customConfirm(`Are you sure you want to close all open Holding Tanks and Hotkeys?`, function() {
-    // Use new store API for cleanup operations
-    Promise.all([
-      window.electronAPI.store.delete("holding_tank"),
-      window.electronAPI.store.delete("hotkeys"),
-      window.electronAPI.store.delete("column_order"),
-      window.electronAPI.store.delete("font-size")
-    ]).then(() => {
-      console.log('✅ All tabs closed successfully');
-      location.reload();
-    }).catch(error => {
-      console.warn('❌ Failed to close tabs:', error);
-      // Fallback to legacy store access
-      store.delete("holding_tank");
-      store.delete("hotkeys");
-      store.delete("column_order");
-      store.delete("font-size");
-      location.reload();
-    });
-  });
-}
-
-// Utility functions moved to utils module
+// Legacy functions removed - now handled by modules:
+// - toggle_selected_row() -> moduleRegistry.ui.toggleSelectedRow()
+// - loop_on() -> moduleRegistry.audio.loop_on()
+// - closeAllTabs() -> moduleRegistry.ui.closeAllTabs()
 
 /**
  * Set up keyboard shortcuts after modules are loaded
@@ -884,11 +928,11 @@ $(document).ready(function () {
 
   // Set up event handlers that don't depend on modules
   $("#search_results").on("click", "tbody tr", function (event) {
-    toggle_selected_row(this);
+    toggleSelectedRow(this);
   });
 
   $("#search_results").on("contextmenu", "tbody tr", function (event) {
-    toggle_selected_row(this);
+    toggleSelectedRow(this);
   });
 
   $("#search_results").on("dblclick", "tbody tr.song", function (event) {
@@ -951,7 +995,7 @@ $(document).ready(function () {
   });
 
   $(".holding_tank").on("click", ".list-group-item", function (event) {
-    toggle_selected_row(this);
+    toggleSelectedRow(this);
   });
 
   $(".holding_tank").on("dblclick", ".list-group-item", function (event) {
@@ -961,7 +1005,7 @@ $(document).ready(function () {
     $("#selected_row").removeAttr("id");
     $(this).attr("id", "selected_row");
 
-    if (holdingTankMode === "playlist") {
+    if (window.getHoldingTankMode() === "playlist") {
       // In playlist mode, mark this song as now playing and start autoplay
       $(this).addClass("now_playing");
       autoplay = true;
@@ -1019,8 +1063,11 @@ $(document).ready(function () {
 
   $("#search_form :input").on("keydown", function (e) {
     if (e.code == "Enter") {
-      // Clear any pending live search
-      clearTimeout(searchTimeout);
+      // Clear any pending live search using shared state
+      const searchTimeout = window.searchTimeout;
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
       console.log('🔄 Search form submitted via Enter key, calling searchData...');
       if (window.searchData) {
         window.searchData();
@@ -1116,7 +1163,10 @@ $(document).ready(function () {
   $("#reset_button").on("click", function () {
     console.log('🔄 Reset button clicked');
     // Clear any pending live search
-    clearTimeout(searchTimeout);
+    const searchTimeout = window.searchTimeout;
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
     $("#search_form").trigger("reset");
     $("#omni_search").focus();
     $("#search_results tbody").find("tr").remove();

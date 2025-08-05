@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Hotkey Song ID Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .hotkeys {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .list-group-item {
+            padding: 8px;
+            margin: 2px 0;
+            background: white;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .list-group-item:hover {
+            background: #f0f0f0;
+        }
+        .list-group-item.selected {
+            background: #007bff;
+            color: white;
+        }
+        .badge {
+            background: #28a745;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: 8px;
+        }
+        .search-results {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .song-row {
+            padding: 5px;
+            margin: 2px 0;
+            background: white;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .song-row:hover {
+            background: #f0f0f0;
+        }
+        .song-row.selected {
+            background: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Hotkey Song ID Fix</h1>
+    
+    <div class="test-container">
+        <h2>Search Results (Select a song to assign to hotkey)</h2>
+        <div class="search-results">
+            <div class="song-row" songid="1">Test Song 1 by Test Artist 1 (3:45)</div>
+            <div class="song-row" songid="2">Test Song 2 by Test Artist 2 (4:12)</div>
+            <div class="song-row" songid="3">Test Song 3 by Test Artist 3 (2:58)</div>
+        </div>
+        <button class="test-button" onclick="selectSong()">Select First Song</button>
+        <button class="test-button" onclick="clearSelection()">Clear Selection</button>
+        <div id="selection-results"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Hotkey Elements</h2>
+        <div class="hotkeys active">
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item text-nowrap unselectable context-menu" id="f1_hotkey">
+                    <div class="badge">F1</div>
+                    <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
+                </li>
+                <li class="list-group-item text-nowrap unselectable context-menu" id="f2_hotkey">
+                    <div class="badge">F2</div>
+                    <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
+                </li>
+                <li class="list-group-item text-nowrap unselectable context-menu" id="f3_hotkey">
+                    <div class="badge">F3</div>
+                    <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Functions</h2>
+        <button class="test-button" onclick="testSendToHotkeys()">Test sendToHotkeys</button>
+        <button class="test-button" onclick="testPlaySongFromHotkey()">Test playSongFromHotkey (F1)</button>
+        <button class="test-button" onclick="testPlaySongFromHotkeyF2()">Test playSongFromHotkey (F2)</button>
+        <button class="test-button" onclick="testClearHotkeys()">Clear All Hotkeys</button>
+        <div id="function-results"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Debug Information</h2>
+        <div id="debug-info"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Mock functions
+        window.playSongFromId = function(songId) {
+            console.log('✅ playSongFromId called with:', songId);
+            return true;
+        };
+
+        window.animateCSS = function(element, animation) {
+            console.log('✅ animateCSS called with:', element, animation);
+            return true;
+        };
+
+        // Mock hotkey functions
+        window.sendToHotkeys = function() {
+            console.log('🔄 sendToHotkeys called');
+            
+            if ($("#selected_row").is("span")) {
+                console.log('❌ selected_row is span, returning');
+                return;
+            }
+            
+            const target = $(".hotkeys.active li").not("[songid]").first();
+            const song_id = $("#selected_row").attr("songid");
+            
+            console.log('🔄 target element:', target.length > 0);
+            console.log('🔄 song_id from selected_row:', song_id);
+            
+            if ($(`.hotkeys.active li[songid=${song_id}]`).length) {
+                console.log('❌ Song already assigned to another hotkey');
+                return;
+            }
+            
+            if (target && song_id) {
+                console.log('✅ Assigning song to hotkey');
+                target.attr("songid", song_id);
+                
+                // Mock setLabelFromSongId
+                const songTitle = $("#selected_row").text();
+                target.find("span").html(songTitle);
+                
+                console.log('✅ Song assigned successfully');
+                updateDebugInfo();
+            } else {
+                console.log('❌ No target or song_id available');
+            }
+            
+            return false;
+        };
+
+        window.playSongFromHotkey = function(hotkey) {
+            console.log("Getting song ID from hotkey " + hotkey);
+            const song_id = $(`.hotkeys.active #${hotkey}_hotkey`).attr("songid");
+            console.log(`Found song ID ${song_id}`);
+            
+            if (song_id) {
+                console.log(`Preparing to play song ${song_id}`);
+                // Unhighlight any selected tracks in holding tank or playlist
+                $(".now_playing").first().removeClass("now_playing");
+                $("#selected_row").removeAttr("id");
+                // Hotkey playback should not affect holding tank mode
+                // Just play the song without changing autoplay state
+                if (typeof playSongFromId === 'function') {
+                    playSongFromId(song_id);
+                }
+                animateCSS($(`.hotkeys.active #${hotkey}_hotkey`), "flipInX");
+                
+                const results = document.getElementById('function-results');
+                results.innerHTML = `<div class="success">✅ playSongFromHotkey executed successfully for song ID: ${song_id}</div>`;
+            } else {
+                const results = document.getElementById('function-results');
+                results.innerHTML = `<div class="error">❌ No song ID found for hotkey ${hotkey}</div>`;
+            }
+        };
+
+        window.clearHotkeys = function() {
+            console.log('🧹 Clearing hotkeys...');
+            for (let key = 1; key <= 3; key++) {
+                $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
+                $(`.hotkeys.active #f${key}_hotkey span`).html("");
+            }
+            console.log('✅ Hotkeys cleared');
+            updateDebugInfo();
+        };
+
+        // Test functions
+        function selectSong() {
+            $("#selected_row").removeAttr("id");
+            $(".song-row").first().attr("id", "selected_row");
+            $(".song-row").removeClass("selected");
+            $(".song-row").first().addClass("selected");
+            
+            const results = document.getElementById('selection-results');
+            results.innerHTML = `<div class="success">✅ First song selected</div>`;
+        }
+
+        function clearSelection() {
+            $("#selected_row").removeAttr("id");
+            $(".song-row").removeClass("selected");
+            
+            const results = document.getElementById('selection-results');
+            results.innerHTML = `<div class="info">ℹ️ Selection cleared</div>`;
+        }
+
+        function testSendToHotkeys() {
+            const results = document.getElementById('function-results');
+            
+            if (!$("#selected_row").length) {
+                results.innerHTML = `<div class="error">❌ No song selected. Please select a song first.</div>`;
+                return;
+            }
+            
+            try {
+                window.sendToHotkeys();
+                results.innerHTML = `<div class="success">✅ sendToHotkeys executed successfully</div>`;
+            } catch (error) {
+                results.innerHTML = `<div class="error">❌ Error in sendToHotkeys: ${error.message}</div>`;
+            }
+        }
+
+        function testPlaySongFromHotkey() {
+            window.playSongFromHotkey('f1');
+        }
+
+        function testPlaySongFromHotkeyF2() {
+            window.playSongFromHotkey('f2');
+        }
+
+        function testClearHotkeys() {
+            window.clearHotkeys();
+            const results = document.getElementById('function-results');
+            results.innerHTML = `<div class="success">✅ Hotkeys cleared successfully</div>`;
+        }
+
+        function updateDebugInfo() {
+            const debugInfo = document.getElementById('debug-info');
+            let info = '';
+
+            // Check selected row
+            const selectedRow = $("#selected_row");
+            info += `Selected row: ${selectedRow.length > 0 ? 'Yes' : 'No'}<br>`;
+            if (selectedRow.length > 0) {
+                info += `Selected row songid: ${selectedRow.attr('songid')}<br>`;
+                info += `Selected row text: ${selectedRow.text()}<br>`;
+            }
+
+            // Check all hotkey elements
+            info += '<br><strong>Hotkey Elements:</strong><br>';
+            for (let i = 1; i <= 3; i++) {
+                const element = $(`#f${i}_hotkey`);
+                const songId = element.attr('songid');
+                const spanText = element.find('span').text();
+                
+                info += `F${i}: songid="${songId}", span="${spanText}"<br>`;
+            }
+
+            // Check active selector
+            const activeElements = $('.hotkeys.active li[id$="_hotkey"]');
+            info += `<br>Active hotkey elements: ${activeElements.length}<br>`;
+
+            // Check elements with songid
+            const elementsWithSongId = $('.hotkeys.active li[songid]');
+            info += `Elements with songid: ${elementsWithSongId.length}<br>`;
+
+            debugInfo.innerHTML = `<div class="info">${info}</div>`;
+        }
+
+        // Initialize debug info
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDebugInfo();
+        });
+    </script>
+</body>
+</html> 

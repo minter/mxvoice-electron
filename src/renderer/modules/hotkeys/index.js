@@ -317,7 +317,7 @@ class HotkeysModule {
             $(element).append(old_song);
           } else {
             $(element).find("span").html(`${title} by ${artist} (${time})`);
-            $(element).find("span").attr("songid", song_id);
+            $(element).attr("songid", song_id);
           }
           this.saveHotkeysToStore();
         } else {
@@ -363,7 +363,7 @@ class HotkeysModule {
         $(element).append(old_song);
       } else {
         $(element).find("span").html(`${title} by ${artist} (${time})`);
-        $(element).find("span").attr("songid", song_id);
+        $(element).attr("songid", song_id);
       }
       this.saveHotkeysToStore();
     }

@@ -50,9 +50,13 @@ function getCategoryName(categoryCode) {
   }
   
   const categories = getCategories();
+  console.log('🔍 getCategoryName called with:', categoryCode);
+  console.log('🔍 Available categories:', categories);
+  
   const categoryName = categories[categoryCode];
   
   if (categoryName) {
+    console.log('🔍 Found category name:', categoryName);
     return categoryName;
   }
   
