@@ -1,0 +1,8 @@
+---
+description: Ensure all documentation files are placed in the doc/ directory
+globs: ["doc/**"]
+alwaysApply: true
+---
+- All generated documentation (including READMEs, guides, and usage docs) must be placed inside the `doc/` directory.
+- When creating or updating documentation, do not place it elsewhere in the project.
+- Use clear file names like `doc/SETUP.md`, `doc/USAGE.md`, etc.
