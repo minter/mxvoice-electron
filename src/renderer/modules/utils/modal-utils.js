@@ -159,9 +159,12 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
       resolve(null);
     });
 
-    // Focus input and show modal
+    // Focus input, select text, and show modal
     $(modal).modal('show');
-    setTimeout(() => input.focus(), 500);
+    setTimeout(() => {
+      input.focus();
+      input.select(); // Select all text so user can type over it
+    }, 500);
   });
 }
 

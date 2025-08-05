@@ -100,8 +100,9 @@ function initializeModals(options = {}) {
     $("#inputModalField").val(defaultValue);
     $("#inputModal").modal("show");
     
-    // Focus on the input field
+    // Focus on the input field and select text
     $("#inputModalField").focus();
+    $("#inputModalField").select(); // Select all text so user can type over it
     
     // Handle Enter key
     $("#inputModalField").off("keypress").on("keypress", function(e) {

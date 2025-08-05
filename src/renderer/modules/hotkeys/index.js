@@ -508,14 +508,16 @@ class HotkeysModule {
    * Rename hotkey tab
    * Allows user to rename the current hotkey tab
    */
-  renameHotkeyTab() {
+  async renameHotkeyTab() {
     const currentName = $("#hotkey_tabs .nav-link.active").text();
-    customPrompt("Rename Hotkey Tab", "Enter a new name for this tab:", currentName, (newName) => {
-      if (newName && newName.trim() !== "") {
-        $("#hotkey_tabs .nav-link.active").text(newName);
-        this.saveHotkeysToStore();
-      }
-    });
+    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
+    if (newName && newName.trim() !== "") {
+      $("#hotkey_tabs .nav-link.active").text(newName);
+      this.saveHotkeysToStore();
+      return { success: true, newName: newName };
+    } else {
+      return { success: false, error: 'Invalid name' };
+    }
   }
 
   /**

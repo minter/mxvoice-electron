@@ -39,27 +39,31 @@ function initializeEventHandlers(options = {}) {
   /**
    * Rename the currently active hotkey tab
    */
-  function renameHotkeyTab() {
+  async function renameHotkeyTab() {
     const currentName = $("#hotkey_tabs .nav-link.active").text();
-    customPrompt("Rename Hotkey Tab", "Enter a new name for this tab:", currentName, function(newName) {
-      if (newName && newName.trim() !== "") {
-        $("#hotkey_tabs .nav-link.active").text(newName);
-        saveHotkeysToStore();
-      }
-    });
+    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
+    if (newName && newName.trim() !== "") {
+      $("#hotkey_tabs .nav-link.active").text(newName);
+      saveHotkeysToStore();
+      return { success: true, newName: newName };
+    } else {
+      return { success: false, error: 'Invalid name' };
+    }
   }
   
   /**
    * Rename the currently active holding tank tab
    */
-  function renameHoldingTankTab() {
+  async function renameHoldingTankTab() {
     const currentName = $("#holding_tank_tabs .nav-link.active").text();
-    customPrompt("Rename Holding Tank Tab", "Enter a new name for this tab:", currentName, function(newName) {
-      if (newName && newName.trim() !== "") {
-        $("#holding_tank_tabs .nav-link.active").text(newName);
-        saveHoldingTankToStore();
-      }
-    });
+    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Holding Tank Tab");
+    if (newName && newName.trim() !== "") {
+      $("#holding_tank_tabs .nav-link.active").text(newName);
+      saveHoldingTankToStore();
+      return { success: true, newName: newName };
+    } else {
+      return { success: false, error: 'Invalid name' };
+    }
   }
   
   /**

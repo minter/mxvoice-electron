@@ -221,7 +221,11 @@ function saveHotkeysToStore() {
           console.error('❌ Error in clearHotkeys:', error);
         });
       };
-      window.renameHotkeyTab = hotkeysInstance.renameHotkeyTab.bind(hotkeysInstance);
+      window.renameHotkeyTab = function() {
+        hotkeysInstance.renameHotkeyTab().catch(error => {
+          console.error('❌ Error in renameHotkeyTab:', error);
+        });
+      };
       window.playSongFromHotkey = hotkeysInstance.playSongFromHotkey.bind(hotkeysInstance);
       window.switchToHotkeyTab = hotkeysInstance.switchToHotkeyTab.bind(hotkeysInstance);
       // Bind populateHotkeys with proper context
@@ -442,8 +446,16 @@ function saveHotkeysToStore() {
     window.closeAllTabs = uiModule.default.closeAllTabs;
     window.toggleSelectedRow = uiModule.default.toggleSelectedRow;
     window.switchToHotkeyTab = uiModule.default.switchToHotkeyTab;
-    window.renameHotkeyTab = uiModule.default.renameHotkeyTab;
-    window.renameHoldingTankTab = uiModule.default.renameHoldingTankTab;
+    window.renameHotkeyTab = function() {
+      uiModule.default.renameHotkeyTab().catch(error => {
+        console.error('❌ Error in renameHotkeyTab:', error);
+      });
+    };
+    window.renameHoldingTankTab = function() {
+      uiModule.default.renameHoldingTankTab().catch(error => {
+        console.error('❌ Error in renameHoldingTankTab:', error);
+      });
+    };
     window.increaseFontSize = uiModule.default.increaseFontSize;
     window.decreaseFontSize = uiModule.default.decreaseFontSize;
     window.toggleWaveform = uiModule.default.toggleWaveform;
