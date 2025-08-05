@@ -210,7 +210,8 @@ function initializeModules() {
     db,
     store,
     audioInstances,
-    autoUpdater
+    autoUpdater,
+    fileOperations
   };
 
   // Initialize each module
