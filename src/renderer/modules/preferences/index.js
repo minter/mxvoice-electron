@@ -47,7 +47,14 @@ function initializePreferences(options = {}) {
 }
 
 // Create and export a singleton instance
-const preferencesModule = initializePreferences();
+// Note: This will be re-initialized with proper dependencies when the module is loaded
+let preferencesModule = initializePreferences();
+
+// Function to re-initialize with proper dependencies
+function reinitializePreferences(options = {}) {
+  preferencesModule = initializePreferences(options);
+  return preferencesModule;
+}
 
 // Export individual functions for direct access
 export const openPreferencesModal = preferencesModule.openPreferencesModal;
@@ -59,6 +66,10 @@ export const getDatabaseDirectory = preferencesModule.getDatabaseDirectory;
 export const getMusicDirectory = preferencesModule.getMusicDirectory;
 export const getHotkeyDirectory = preferencesModule.getHotkeyDirectory;
 export const getFadeOutSeconds = preferencesModule.getFadeOutSeconds;
+export { reinitializePreferences };
+
+// Add reinitialize function to the default export
+preferencesModule.reinitializePreferences = reinitializePreferences;
 
 // Default export for module loading
 export default preferencesModule; 

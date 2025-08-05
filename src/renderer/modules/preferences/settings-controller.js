@@ -72,11 +72,30 @@ function initializeSettingsController(options = {}) {
    */
   function savePreferencesLegacy(preferences) {
     try {
-      store.set("database_directory", preferences.database_directory);
-      store.set("music_directory", preferences.music_directory);
-      store.set("hotkey_directory", preferences.hotkey_directory);
-      store.set("fade_out_seconds", preferences.fade_out_seconds);
-      console.log('✅ Preferences saved using legacy method');
+      if (store) {
+        store.set("database_directory", preferences.database_directory);
+        store.set("music_directory", preferences.music_directory);
+        store.set("hotkey_directory", preferences.hotkey_directory);
+        store.set("fade_out_seconds", preferences.fade_out_seconds);
+        console.log('✅ Preferences saved using legacy method');
+      } else {
+        // Legacy store not available, use electronAPI.store
+        Promise.all([
+          electronAPI.store.set("database_directory", preferences.database_directory),
+          electronAPI.store.set("music_directory", preferences.music_directory),
+          electronAPI.store.set("hotkey_directory", preferences.hotkey_directory),
+          electronAPI.store.set("fade_out_seconds", preferences.fade_out_seconds)
+        ]).then(results => {
+          const successCount = results.filter(result => result.success).length;
+          if (successCount === 4) {
+            console.log('✅ All preferences saved successfully using electronAPI.store');
+          } else {
+            console.warn('⚠️ Some preferences failed to save:', results);
+          }
+        }).catch(error => {
+          console.warn('❌ Failed to save preferences using electronAPI.store:', error);
+        });
+      }
     } catch (error) {
       console.warn('❌ Legacy preference saving failed:', error);
     }
@@ -100,9 +119,13 @@ function initializeSettingsController(options = {}) {
         console.warn(`❌ Preference get error for ${key}:`, error);
         return null;
       });
-    } else {
+    } else if (store) {
       // Fallback to legacy store access
       return Promise.resolve(store.get(key));
+    } else {
+      // No store available
+      console.warn(`❌ No store available for preference ${key}`);
+      return Promise.resolve(null);
     }
   }
   

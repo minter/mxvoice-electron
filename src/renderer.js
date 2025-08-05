@@ -527,21 +527,28 @@ function saveHotkeysToStore() {
       console.log('🔄 Loading preferences module...');
       preferencesModule = await import('./renderer/modules/preferences/index.js');
       console.log('✅ preferences module loaded successfully');
+      
+      // Re-initialize preferences module with proper dependencies
+      const preferencesInstance = preferencesModule.default.reinitializePreferences({
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: null // Legacy store not available, will use electronAPI.store
+      });
+      
+      // Make preferences functions globally available
+      window.openPreferencesModal = preferencesInstance.openPreferencesModal;
+      window.loadPreferences = preferencesInstance.loadPreferences;
+      window.savePreferences = preferencesInstance.savePreferences;
+      window.getPreference = preferencesInstance.getPreference;
+      window.setPreference = preferencesInstance.setPreference;
+      window.getDatabaseDirectory = preferencesInstance.getDatabaseDirectory;
+      window.getMusicDirectory = preferencesInstance.getMusicDirectory;
+      window.getHotkeyDirectory = preferencesInstance.getHotkeyDirectory;
+      window.getFadeOutSeconds = preferencesInstance.getFadeOutSeconds;
     } catch (error) {
       console.error('❌ Error loading preferences module:', error);
       throw error;
     }
-    
-    // Make preferences functions globally available
-    window.openPreferencesModal = preferencesModule.default.openPreferencesModal;
-    window.loadPreferences = preferencesModule.default.loadPreferences;
-    window.savePreferences = preferencesModule.default.savePreferences;
-    window.getPreference = preferencesModule.default.getPreference;
-    window.setPreference = preferencesModule.default.setPreference;
-    window.getDatabaseDirectory = preferencesModule.default.getDatabaseDirectory;
-    window.getMusicDirectory = preferencesModule.default.getMusicDirectory;
-    window.getHotkeyDirectory = preferencesModule.default.getHotkeyDirectory;
-    window.getFadeOutSeconds = preferencesModule.default.getFadeOutSeconds;
 
     // Import database module and make functions globally available
     try {
