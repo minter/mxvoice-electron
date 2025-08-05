@@ -1,20 +1,62 @@
 // Remove legacy global variables and use shared state instead
 // Legacy globals moved to shared state module
 
-// Initialize shared state first
-(async function initializeSharedState() {
+// Global shared state instance
+let sharedStateInstance = null;
+let sharedStateInitialized = false;
+
+// Helper function to get shared state with fallback
+function getSharedState() {
+  if (sharedStateInstance && sharedStateInitialized) {
+    return sharedStateInstance;
+  }
+  
+  // Fallback: create a minimal shared state if not initialized
+  console.warn('⚠️ Shared state not initialized, using fallback');
+  return {
+    get: (key) => {
+      console.warn(`⚠️ Shared state fallback get(${key})`);
+      return null;
+    },
+    set: (key, value) => {
+      console.warn(`⚠️ Shared state fallback set(${key}, ${value})`);
+    },
+    subscribe: (key, callback) => {
+      console.warn(`⚠️ Shared state fallback subscribe(${key})`);
+      return () => {};
+    }
+  };
+}
+
+// Function to check shared state health
+function checkSharedStateHealth() {
+  const health = {
+    initialized: sharedStateInitialized,
+    instance: !!sharedStateInstance,
+    windowSharedState: !!window.sharedState,
+    windowGetSharedState: !!window.getSharedState
+  };
+  
+  console.log('🔍 Shared State Health Check:', health);
+  return health;
+}
+
+// Initialize shared state first with proper error handling and state management
+async function initializeSharedState() {
   try {
+    console.log('🔄 Initializing shared state...');
+    
     const sharedStateModule = await import('./renderer/modules/shared-state.js');
-    const sharedState = sharedStateModule.default;
+    sharedStateInstance = sharedStateModule.default;
     
     // Initialize shared state with default values
-    sharedState.set('sound', null);
-    sharedState.set('globalAnimation', null);
+    sharedStateInstance.set('sound', null);
+    sharedStateInstance.set('globalAnimation', null);
     
     // Only create WaveSurfer if the element exists and WaveSurfer is available
     const waveformElement = document.getElementById('waveform');
     if (waveformElement && typeof WaveSurfer !== 'undefined') {
-      sharedState.set('wavesurfer', WaveSurfer.create({
+      sharedStateInstance.set('wavesurfer', WaveSurfer.create({
         container: "#waveform",
         waveColor: "#e9ecef",
         backgroundColor: "#343a40",
@@ -25,24 +67,33 @@
         height: 100,
       }));
     } else {
-      sharedState.set('wavesurfer', null);
+      sharedStateInstance.set('wavesurfer', null);
     }
     
-    sharedState.set('autoplay', false);
-    sharedState.set('loop', false);
-    sharedState.set('holdingTankMode', "storage"); // 'storage' or 'playlist'
-    sharedState.set('fontSize', 11);
-    sharedState.set('categories', {}); // Changed from [] to {} for proper category lookup
-    sharedState.set('searchTimeout', null);
+    sharedStateInstance.set('autoplay', false);
+    sharedStateInstance.set('loop', false);
+    sharedStateInstance.set('holdingTankMode', "storage"); // 'storage' or 'playlist'
+    sharedStateInstance.set('fontSize', 11);
+    sharedStateInstance.set('categories', {}); // Changed from [] to {} for proper category lookup
+    sharedStateInstance.set('searchTimeout', null);
     
     // Make searchTimeout available globally for backward compatibility
     window.searchTimeout = null;
     
+    // Make shared state available globally for modules
+    window.sharedState = sharedStateInstance;
+    window.getSharedState = getSharedState;
+    window.checkSharedStateHealth = checkSharedStateHealth;
+    
+    sharedStateInitialized = true;
     console.log('✅ Shared state initialized with default values');
+    return true;
   } catch (error) {
-    console.warn('❌ Failed to initialize shared state:', error);
+    console.error('❌ Failed to initialize shared state:', error);
+    sharedStateInitialized = false;
+    return false;
   }
-})();
+}
 
 // Module registry to avoid window pollution
 const moduleRegistry = {};
@@ -132,10 +183,33 @@ function saveHotkeysToStore() {
 // openHotkeyFile(), openHoldingTankFile(), saveHotkeyFile(), saveHoldingTankFile()
 // pickDirectory(), installUpdate() - All moved to file-operations module
 
+// Initialize shared state when DOM is ready
+$(document).ready(async function() {
+  try {
+    console.log('🔄 DOM ready, initializing shared state...');
+    if (!sharedStateInitialized) {
+      await initializeSharedState();
+    }
+  } catch (error) {
+    console.error('❌ Error initializing shared state on DOM ready:', error);
+  }
+});
+
 // Load modules dynamically and make functions globally available
 (async function loadModules() {
   try {
     console.log('🔄 Starting module loading...');
+    
+    // Ensure shared state is initialized before loading modules
+    if (!sharedStateInitialized) {
+      console.log('🔄 Waiting for shared state initialization...');
+      const sharedStateResult = await initializeSharedState();
+      if (!sharedStateResult) {
+        throw new Error('Failed to initialize shared state');
+      }
+    }
+    
+    console.log('✅ Shared state is ready, proceeding with module loading...');
     
     // Declare module variables
     let fileOperationsModule, songManagementModule, holdingTankModule, hotkeysModule;
@@ -150,21 +224,33 @@ function saveHotkeysToStore() {
       console.log('✅ file-operations module loaded successfully');
     } catch (error) {
       console.error('❌ Error loading file-operations module:', error);
-      throw error;
+      console.warn('⚠️ Continuing with other modules despite file-operations failure');
+      fileOperationsModule = null;
     }
     
     // Store modules in registry instead of window pollution
-    const fileOperationsInstance = fileOperationsModule.default;
-    moduleRegistry.fileOperations = fileOperationsInstance;
-    
-    // Create minimal window assignments for HTML onclick compatibility
-    // Only assign functions that are called directly from HTML
-    window.openHotkeyFile = fileOperationsInstance.openHotkeyFile;
-    window.openHoldingTankFile = fileOperationsInstance.openHoldingTankFile;
-    window.saveHotkeyFile = fileOperationsInstance.saveHotkeyFile;
-    window.saveHoldingTankFile = fileOperationsInstance.saveHoldingTankFile;
-    window.pickDirectory = fileOperationsInstance.pickDirectory;
-    window.installUpdate = fileOperationsInstance.installUpdate;
+    if (fileOperationsModule) {
+      const fileOperationsInstance = fileOperationsModule.default;
+      moduleRegistry.fileOperations = fileOperationsInstance;
+      
+      // Create minimal window assignments for HTML onclick compatibility
+      // Only assign functions that are called directly from HTML
+      window.openHotkeyFile = fileOperationsInstance.openHotkeyFile;
+      window.openHoldingTankFile = fileOperationsInstance.openHoldingTankFile;
+      window.saveHotkeyFile = fileOperationsInstance.saveHotkeyFile;
+      window.saveHoldingTankFile = fileOperationsInstance.saveHoldingTankFile;
+      window.pickDirectory = fileOperationsInstance.pickDirectory;
+      window.installUpdate = fileOperationsInstance.installUpdate;
+    } else {
+      console.warn('⚠️ File operations module not available, creating fallback functions');
+      // Create fallback functions to prevent errors
+      window.openHotkeyFile = () => console.warn('⚠️ File operations not available');
+      window.openHoldingTankFile = () => console.warn('⚠️ File operations not available');
+      window.saveHotkeyFile = () => console.warn('⚠️ File operations not available');
+      window.saveHoldingTankFile = () => console.warn('⚠️ File operations not available');
+      window.pickDirectory = () => console.warn('⚠️ File operations not available');
+      window.installUpdate = () => console.warn('⚠️ File operations not available');
+    }
 
     // Import song management module and store in registry
     try {
@@ -173,21 +259,34 @@ function saveHotkeysToStore() {
       console.log('✅ song-management module loaded successfully');
     } catch (error) {
       console.error('❌ Error loading song-management module:', error);
-      throw error;
+      console.warn('⚠️ Continuing with other modules despite song-management failure');
+      songManagementModule = null;
     }
     
     // Store in registry and create minimal window assignments
-    const songManagementInstance = songManagementModule.default;
-    moduleRegistry.songManagement = songManagementInstance;
-    
-    // Only assign functions called from HTML
-    window.saveEditedSong = songManagementInstance.saveEditedSong;
-    window.saveNewSong = songManagementInstance.saveNewSong;
-    window.editSelectedSong = songManagementInstance.editSelectedSong;
-    window.deleteSelectedSong = songManagementInstance.deleteSelectedSong;
-    window.deleteSong = songManagementInstance.deleteSong;
-    window.removeFromHoldingTank = songManagementInstance.removeFromHoldingTank;
-    window.removeFromHotkey = songManagementInstance.removeFromHotkey;
+    if (songManagementModule) {
+      const songManagementInstance = songManagementModule.default;
+      moduleRegistry.songManagement = songManagementInstance;
+      
+      // Only assign functions called from HTML
+      window.saveEditedSong = songManagementInstance.saveEditedSong;
+      window.saveNewSong = songManagementInstance.saveNewSong;
+      window.editSelectedSong = songManagementInstance.editSelectedSong;
+      window.deleteSelectedSong = songManagementInstance.deleteSelectedSong;
+      window.deleteSong = songManagementInstance.deleteSong;
+      window.removeFromHoldingTank = songManagementInstance.removeFromHoldingTank;
+      window.removeFromHotkey = songManagementInstance.removeFromHotkey;
+    } else {
+      console.warn('⚠️ Song management module not available, creating fallback functions');
+      // Create fallback functions to prevent errors
+      window.saveEditedSong = () => console.warn('⚠️ Song management not available');
+      window.saveNewSong = () => console.warn('⚠️ Song management not available');
+      window.editSelectedSong = () => console.warn('⚠️ Song management not available');
+      window.deleteSelectedSong = () => console.warn('⚠️ Song management not available');
+      window.deleteSong = () => console.warn('⚠️ Song management not available');
+      window.removeFromHoldingTank = () => console.warn('⚠️ Song management not available');
+      window.removeFromHotkey = () => console.warn('⚠️ Song management not available');
+    }
 
     // Import holding tank module and store in registry
     try {
