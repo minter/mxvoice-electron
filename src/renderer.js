@@ -146,16 +146,17 @@ function saveHotkeysToStore() {
     }
     
     // Store modules in registry instead of window pollution
-    moduleRegistry.fileOperations = fileOperationsModule.default;
+    const fileOperationsInstance = fileOperationsModule.default;
+    moduleRegistry.fileOperations = fileOperationsInstance;
     
     // Create minimal window assignments for HTML onclick compatibility
     // Only assign functions that are called directly from HTML
-    window.openHotkeyFile = fileOperationsModule.default.openHotkeyFile;
-    window.openHoldingTankFile = fileOperationsModule.default.openHoldingTankFile;
-    window.saveHotkeyFile = fileOperationsModule.default.saveHotkeyFile;
-    window.saveHoldingTankFile = fileOperationsModule.default.saveHoldingTankFile;
-    window.pickDirectory = fileOperationsModule.default.pickDirectory;
-    window.installUpdate = fileOperationsModule.default.installUpdate;
+    window.openHotkeyFile = fileOperationsInstance.openHotkeyFile;
+    window.openHoldingTankFile = fileOperationsInstance.openHoldingTankFile;
+    window.saveHotkeyFile = fileOperationsInstance.saveHotkeyFile;
+    window.saveHoldingTankFile = fileOperationsInstance.saveHoldingTankFile;
+    window.pickDirectory = fileOperationsInstance.pickDirectory;
+    window.installUpdate = fileOperationsInstance.installUpdate;
 
     // Import song management module and store in registry
     try {
@@ -168,16 +169,17 @@ function saveHotkeysToStore() {
     }
     
     // Store in registry and create minimal window assignments
-    moduleRegistry.songManagement = songManagementModule.default;
+    const songManagementInstance = songManagementModule.default;
+    moduleRegistry.songManagement = songManagementInstance;
     
     // Only assign functions called from HTML
-    window.saveEditedSong = songManagementModule.default.saveEditedSong;
-    window.saveNewSong = songManagementModule.default.saveNewSong;
-    window.editSelectedSong = songManagementModule.default.editSelectedSong;
-    window.deleteSelectedSong = songManagementModule.default.deleteSelectedSong;
-    window.deleteSong = songManagementModule.default.deleteSong;
-    window.removeFromHoldingTank = songManagementModule.default.removeFromHoldingTank;
-    window.removeFromHotkey = songManagementModule.default.removeFromHotkey;
+    window.saveEditedSong = songManagementInstance.saveEditedSong;
+    window.saveNewSong = songManagementInstance.saveNewSong;
+    window.editSelectedSong = songManagementInstance.editSelectedSong;
+    window.deleteSelectedSong = songManagementInstance.deleteSelectedSong;
+    window.deleteSong = songManagementInstance.deleteSong;
+    window.removeFromHoldingTank = songManagementInstance.removeFromHoldingTank;
+    window.removeFromHotkey = songManagementInstance.removeFromHotkey;
 
     // Import holding tank module and store in registry
     try {
@@ -190,20 +192,21 @@ function saveHotkeysToStore() {
     }
     
     // Store in registry and create minimal window assignments
-    moduleRegistry.holdingTank = holdingTankModule.default;
+    const holdingTankInstance = holdingTankModule.default;
+    moduleRegistry.holdingTank = holdingTankInstance;
     
     // Create synchronous wrappers for async functions since they're called from HTML onclick
     window.clearHoldingTank = function() {
-      holdingTankModule.default.clearHoldingTank().catch(error => {
+      holdingTankInstance.clearHoldingTank().catch(error => {
         console.error('❌ Error in clearHoldingTank:', error);
       });
     };
     window.renameHoldingTankTab = function() {
-      holdingTankModule.default.renameHoldingTankTab().catch(error => {
+      holdingTankInstance.renameHoldingTankTab().catch(error => {
         console.error('❌ Error in renameHoldingTankTab:', error);
       });
     };
-    window.scale_scrollable = holdingTankModule.default.scale_scrollable;
+    window.scale_scrollable = holdingTankInstance.scale_scrollable;
     window.saveHoldingTankToStore = saveHoldingTankToStore;
 
     // Import hotkeys module and store in registry
@@ -375,12 +378,13 @@ function saveHotkeysToStore() {
       console.log('✅ bulk-operations module loaded successfully');
       
       // Store in registry and create minimal window assignments
-      moduleRegistry.bulkOperations = bulkOperationsModule.default;
+      const bulkOperationsInstance = bulkOperationsModule.default;
+      moduleRegistry.bulkOperations = bulkOperationsInstance;
       
       // Only assign functions called from HTML
-      window.showBulkAddModal = bulkOperationsModule.default.showBulkAddModal;
-      window.addSongsByPath = bulkOperationsModule.default.addSongsByPath;
-      window.saveBulkUpload = bulkOperationsModule.default.saveBulkUpload;
+      window.showBulkAddModal = bulkOperationsInstance.showBulkAddModal;
+      window.addSongsByPath = bulkOperationsInstance.addSongsByPath;
+      window.saveBulkUpload = bulkOperationsInstance.saveBulkUpload;
     } catch (error) {
       console.error('❌ Error loading bulk-operations module:', error);
       // Continue loading other modules even if bulk operations fails
@@ -393,14 +397,15 @@ function saveHotkeysToStore() {
       console.log('✅ drag-drop module loaded successfully');
       
       // Store in registry and create minimal window assignments
-      moduleRegistry.dragDrop = dragDropModule.default;
+      const dragDropInstance = dragDropModule.default;
+      moduleRegistry.dragDrop = dragDropInstance;
       
       // Only assign functions called from HTML
-      window.hotkeyDrop = dragDropModule.default.hotkeyDrop;
-      window.holdingTankDrop = dragDropModule.default.holdingTankDrop;
-      window.allowHotkeyDrop = dragDropModule.default.allowHotkeyDrop;
-      window.songDrag = dragDropModule.default.songDrag;
-      window.columnDrag = dragDropModule.default.columnDrag;
+      window.hotkeyDrop = dragDropInstance.hotkeyDrop;
+      window.holdingTankDrop = dragDropInstance.holdingTankDrop;
+      window.allowHotkeyDrop = dragDropInstance.allowHotkeyDrop;
+      window.songDrag = dragDropInstance.songDrag;
+      window.columnDrag = dragDropInstance.columnDrag;
     } catch (error) {
       console.error('❌ Error loading drag-drop module:', error);
       // Continue loading other modules even if drag-drop fails
@@ -413,13 +418,14 @@ function saveHotkeysToStore() {
       console.log('✅ navigation module loaded successfully');
       
       // Store in registry and create minimal window assignments
-      moduleRegistry.navigation = navigationModule.default;
+      const navigationInstance = navigationModule.default;
+      moduleRegistry.navigation = navigationInstance;
       
       // Only assign functions called from HTML
-      window.sendToHotkeys = navigationModule.default.sendToHotkeys;
-      window.sendToHoldingTank = navigationModule.default.sendToHoldingTank;
-      window.selectNext = navigationModule.default.selectNext;
-      window.selectPrev = navigationModule.default.selectPrev;
+      window.sendToHotkeys = navigationInstance.sendToHotkeys;
+      window.sendToHoldingTank = navigationInstance.sendToHoldingTank;
+      window.selectNext = navigationInstance.selectNext;
+      window.selectPrev = navigationInstance.selectPrev;
     } catch (error) {
       console.error('❌ Error loading navigation module:', error);
       // Continue loading other modules even if navigation fails
@@ -432,17 +438,18 @@ function saveHotkeysToStore() {
       console.log('✅ mode-management module loaded successfully');
       
       // Store in registry and create minimal window assignments
-      moduleRegistry.modeManagement = modeManagementModule.default;
+      const modeManagementInstance = modeManagementModule.default;
+      moduleRegistry.modeManagement = modeManagementInstance;
       
       // Only assign functions called from HTML
-      window.setHoldingTankMode = modeManagementModule.default.setHoldingTankMode;
-      window.getHoldingTankMode = modeManagementModule.default.getHoldingTankMode;
-      window.toggleAutoPlay = modeManagementModule.default.toggleAutoPlay;
-      window.getAutoPlayState = modeManagementModule.default.getAutoPlayState;
-      window.resetToDefaultMode = modeManagementModule.default.resetToDefaultMode;
+      window.setHoldingTankMode = modeManagementInstance.setHoldingTankMode;
+      window.getHoldingTankMode = modeManagementInstance.getHoldingTankMode;
+      window.toggleAutoPlay = modeManagementInstance.toggleAutoPlay;
+      window.getAutoPlayState = modeManagementInstance.getAutoPlayState;
+      window.resetToDefaultMode = modeManagementInstance.resetToDefaultMode;
       
       // Initialize mode management module
-      const result = await modeManagementModule.default.initModeManagement();
+      const result = await modeManagementInstance.initModeManagement();
       if (result.error) {
         console.warn('❌ Failed to initialize mode management module:', result.error);
       } else {
@@ -460,16 +467,17 @@ function saveHotkeysToStore() {
       console.log('✅ test-utils module loaded successfully');
       
       // Store in registry and create minimal window assignments
-      moduleRegistry.testUtils = testUtilsModule.default;
+      const testUtilsInstance = testUtilsModule.default;
+      moduleRegistry.testUtils = testUtilsInstance;
       
       // Only assign functions called from HTML
-      window.testPhase2Migrations = testUtilsModule.default.testPhase2Migrations;
-      window.testDatabaseAPI = testUtilsModule.default.testDatabaseAPI;
-      window.testFileSystemAPI = testUtilsModule.default.testFileSystemAPI;
-      window.testStoreAPI = testUtilsModule.default.testStoreAPI;
-      window.testAudioAPI = testUtilsModule.default.testAudioAPI;
-      window.testSecurityFeatures = testUtilsModule.default.testSecurityFeatures;
-      window.runAllTests = testUtilsModule.default.runAllTests;
+      window.testPhase2Migrations = testUtilsInstance.testPhase2Migrations;
+      window.testDatabaseAPI = testUtilsInstance.testDatabaseAPI;
+      window.testFileSystemAPI = testUtilsInstance.testFileSystemAPI;
+      window.testStoreAPI = testUtilsInstance.testStoreAPI;
+      window.testAudioAPI = testUtilsInstance.testAudioAPI;
+      window.testSecurityFeatures = testUtilsInstance.testSecurityFeatures;
+      window.runAllTests = testUtilsInstance.runAllTests;
     } catch (error) {
       console.error('❌ Error loading test-utils module:', error);
       // Continue loading other modules even if test utils fails
@@ -726,9 +734,15 @@ function saveHotkeysToStore() {
 
     // Initialize modules after loading
     try {
-      bulkOperationsModule.default.initializeBulkOperations();
-      dragDropModule.default.initializeDragDrop();
-      navigationModule.default.initializeNavigation();
+      if (moduleRegistry.bulkOperations && moduleRegistry.bulkOperations.initializeBulkOperations) {
+        moduleRegistry.bulkOperations.initializeBulkOperations();
+      }
+      if (moduleRegistry.dragDrop && moduleRegistry.dragDrop.initializeDragDrop) {
+        moduleRegistry.dragDrop.initializeDragDrop();
+      }
+      if (moduleRegistry.navigation && moduleRegistry.navigation.initializeNavigation) {
+        moduleRegistry.navigation.initializeNavigation();
+      }
       console.log('✅ All modules initialized successfully!');
     } catch (error) {
       console.error('❌ Error initializing modules:', error);
@@ -1418,7 +1432,9 @@ $(document).ready(function () {
   });
 
   $(window).on("resize", function () {
-    this.scale_scrollable();
+    if (window.scaleScrollable) {
+      window.scaleScrollable();
+    }
   });
 
   // Is there only one song in the db? Pop the first-run modal

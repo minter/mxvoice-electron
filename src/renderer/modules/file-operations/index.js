@@ -13,22 +13,91 @@
 import { openHotkeyFile, openHoldingTankFile, saveHotkeyFile, saveHoldingTankFile } from './file-operations.js';
 import { pickDirectory, installUpdate } from './system-operations.js';
 
-// Export all file operations
-export {
-  openHotkeyFile,
-  openHoldingTankFile,
-  saveHotkeyFile,
-  saveHoldingTankFile,
-  pickDirectory,
-  installUpdate
-};
+/**
+ * File Operations Singleton
+ * 
+ * Provides a unified interface for all file I/O operations
+ */
+class FileOperationsModule {
+  constructor() {
+    // Bind all functions as methods
+    this.openHotkeyFile = openHotkeyFile;
+    this.openHoldingTankFile = openHoldingTankFile;
+    this.saveHotkeyFile = saveHotkeyFile;
+    this.saveHoldingTankFile = saveHoldingTankFile;
+    this.pickDirectory = pickDirectory;
+    this.installUpdate = installUpdate;
+  }
+
+  /**
+   * Initialize the file operations module
+   */
+  init() {
+    console.log('File operations module initialized');
+  }
+
+  /**
+   * Get all available file operations functions
+   * 
+   * @returns {Object} - Object containing all file operations functions
+   */
+  getAllFileOperations() {
+    return {
+      openHotkeyFile: this.openHotkeyFile,
+      openHoldingTankFile: this.openHoldingTankFile,
+      saveHotkeyFile: this.saveHotkeyFile,
+      saveHoldingTankFile: this.saveHoldingTankFile,
+      pickDirectory: this.pickDirectory,
+      installUpdate: this.installUpdate
+    };
+  }
+
+  /**
+   * Test all file operations functions
+   * 
+   * @returns {Object} - Test results
+   */
+  test() {
+    const results = {};
+
+    // Test each function
+    const functions = [
+      'openHotkeyFile',
+      'openHoldingTankFile',
+      'saveHotkeyFile',
+      'saveHoldingTankFile',
+      'pickDirectory',
+      'installUpdate'
+    ];
+
+    for (const funcName of functions) {
+      if (typeof this[funcName] === 'function') {
+        results[funcName] = '✅ Function exists';
+      } else {
+        results[funcName] = '❌ Function missing';
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Get module information
+   * 
+   * @returns {Object} - Module information
+   */
+  getInfo() {
+    return {
+      name: 'File Operations Module',
+      version: '1.0.0',
+      description: 'Provides file I/O operations for the application',
+      functions: this.getAllFileOperations()
+    };
+  }
+}
+
+// Create and export a singleton instance
+const fileOperationsModule = new FileOperationsModule();
 
 // Default export for module loading
-export default {
-  openHotkeyFile,
-  openHoldingTankFile,
-  saveHotkeyFile,
-  saveHoldingTankFile,
-  pickDirectory,
-  installUpdate
-}; 
+export default fileOperationsModule; 
