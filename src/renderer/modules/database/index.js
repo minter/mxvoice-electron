@@ -290,7 +290,5 @@ export const addSongsByPath = databaseModule.addSongsByPath;
 export const executeQuery = databaseModule.executeQuery;
 export const executeStatement = databaseModule.executeStatement;
 
-// Default export for module loading
-export default {
-  database: databaseModule
-}; 
+// Default export for module loading - export the instance directly
+export default databaseModule; 

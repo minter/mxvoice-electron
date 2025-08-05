@@ -627,8 +627,8 @@ function saveHotkeysToStore() {
       }
       console.log('✅ database module loaded successfully');
       
-      // The database module exports a singleton instance, not a constructor
-      const databaseInstance = databaseModule.default.database;
+      // The database module exports a singleton instance directly
+      const databaseInstance = databaseModule.default;
       
       // Store in registry
       moduleRegistry.database = databaseInstance;
