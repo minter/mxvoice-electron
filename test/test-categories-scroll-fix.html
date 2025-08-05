@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categories Scroll Fix Test</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body { padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 3px; font-family: monospace; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        
+        /* Ensure modal body has proper scrolling */
+        .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Categories Scroll Fix Test</h1>
+        <p>This test verifies that the category modal scrolling works correctly after deleting a category.</p>
+
+        <div class="test-section">
+            <h3>Test 1: Modal Scroll Behavior</h3>
+            <p>Testing that the modal body has proper scrolling:</p>
+            <button id="testModalScroll" class="btn btn-primary">Test Modal Scroll</button>
+            <div id="modalScrollResult" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 2: Scroll Position Preservation</h3>
+            <p>Testing that scroll position is preserved after re-population:</p>
+            <button id="testScrollPreservation" class="btn btn-success">Test Scroll Preservation</button>
+            <div id="scrollPreservationResult" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 3: Mock Categories Modal</h3>
+            <p>Testing the complete flow with scroll preservation:</p>
+            <button id="testMockModal" class="btn btn-info">Test Mock Modal</button>
+            <div id="mockModalResult" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test Results</h3>
+            <div id="testResults" class="log"></div>
+        </div>
+    </div>
+
+    <!-- Modal for testing -->
+    <div class="modal fade" id="testModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Test Modal</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="testCategoryList">
+                        <!-- Categories will be populated here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <script>
+        // Mock category operations
+        const mockCategoryOperations = {
+            getCategories: function() {
+                return Promise.resolve({
+                    success: true,
+                    data: [
+                        { code: 'CAT1', description: 'Category 1' },
+                        { code: 'CAT2', description: 'Category 2' },
+                        { code: 'CAT3', description: 'Category 3' },
+                        { code: 'CAT4', description: 'Category 4' },
+                        { code: 'CAT5', description: 'Category 5' },
+                        { code: 'CAT6', description: 'Category 6' },
+                        { code: 'CAT7', description: 'Category 7' },
+                        { code: 'CAT8', description: 'Category 8' },
+                        { code: 'CAT9', description: 'Category 9' },
+                        { code: 'CAT10', description: 'Category 10' },
+                        { code: 'CAT11', description: 'Category 11' },
+                        { code: 'CAT12', description: 'Category 12' },
+                        { code: 'CAT13', description: 'Category 13' },
+                        { code: 'CAT14', description: 'Category 14' },
+                        { code: 'CAT15', description: 'Category 15' }
+                    ]
+                });
+            },
+            deleteCategory: function(code, description) {
+                return Promise.resolve({ success: true });
+            }
+        };
+
+        // Mock populateCategoriesModal function with scroll preservation
+        function mockPopulateCategoriesModal(preserveScroll = false) {
+            // Store current scroll position if preserving
+            let scrollPosition = 0;
+            if (preserveScroll) {
+                const modalBody = document.querySelector('#testModal .modal-body');
+                if (modalBody) {
+                    scrollPosition = modalBody.scrollTop;
+                }
+            }
+
+            // Clear existing content
+            $("#testCategoryList").empty();
+
+            // Populate with mock data
+            return mockCategoryOperations.getCategories().then(result => {
+                if (result.success) {
+                    result.data.forEach(row => {
+                        $("#testCategoryList").append(`
+                            <div class="form-group row">
+                                <div class="col-sm-8">
+                                    <div class="category-description">${row.description}</div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <button class="btn btn-danger btn-xs delete-btn" data-code="${row.code}">Delete</button>
+                                </div>
+                            </div>
+                        `);
+                    });
+
+                    // Restore scroll position if preserving
+                    if (preserveScroll && scrollPosition > 0) {
+                        setTimeout(() => {
+                            const modalBody = document.querySelector('#testModal .modal-body');
+                            if (modalBody) {
+                                modalBody.scrollTop = scrollPosition;
+                            }
+                        }, 10);
+                    }
+
+                    return result;
+                }
+            });
+        }
+
+        // Test functions
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            element.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+        }
+
+        // Test 1: Modal scroll behavior
+        document.getElementById('testModalScroll').addEventListener('click', () => {
+            const resultElement = document.getElementById('modalScrollResult');
+            resultElement.innerHTML = '';
+            
+            log('modalScrollResult', 'Testing modal scroll behavior...', 'info');
+            
+            // Show modal and populate
+            $('#testModal').modal('show');
+            mockPopulateCategoriesModal().then(() => {
+                const modalBody = document.querySelector('#testModal .modal-body');
+                if (modalBody) {
+                    const hasScroll = modalBody.scrollHeight > modalBody.clientHeight;
+                    log('modalScrollResult', `Modal body has scroll: ${hasScroll}`, hasScroll ? 'success' : 'error');
+                    log('modalScrollResult', `Scroll height: ${modalBody.scrollHeight}, Client height: ${modalBody.clientHeight}`, 'info');
+                    
+                    if (hasScroll) {
+                        log('modalScrollResult', '✅ Modal scroll behavior is working correctly', 'success');
+                    } else {
+                        log('modalScrollResult', '❌ Modal scroll behavior is not working', 'error');
+                    }
+                }
+            });
+        });
+
+        // Test 2: Scroll position preservation
+        document.getElementById('testScrollPreservation').addEventListener('click', () => {
+            const resultElement = document.getElementById('scrollPreservationResult');
+            resultElement.innerHTML = '';
+            
+            log('scrollPreservationResult', 'Testing scroll position preservation...', 'info');
+            
+            // Show modal and populate
+            $('#testModal').modal('show');
+            mockPopulateCategoriesModal().then(() => {
+                const modalBody = document.querySelector('#testModal .modal-body');
+                if (modalBody) {
+                    // Scroll to middle
+                    modalBody.scrollTop = modalBody.scrollHeight / 2;
+                    const originalScrollTop = modalBody.scrollTop;
+                    
+                    log('scrollPreservationResult', `Original scroll position: ${originalScrollTop}`, 'info');
+                    
+                    // Re-populate with scroll preservation
+                    setTimeout(() => {
+                        mockPopulateCategoriesModal(true).then(() => {
+                            const newScrollTop = modalBody.scrollTop;
+                            log('scrollPreservationResult', `New scroll position: ${newScrollTop}`, 'info');
+                            
+                            const scrollPreserved = Math.abs(newScrollTop - originalScrollTop) < 10;
+                            if (scrollPreserved) {
+                                log('scrollPreservationResult', '✅ Scroll position preserved correctly', 'success');
+                            } else {
+                                log('scrollPreservationResult', '❌ Scroll position not preserved', 'error');
+                            }
+                        });
+                    }, 100);
+                }
+            });
+        });
+
+        // Test 3: Mock modal with delete simulation
+        document.getElementById('testMockModal').addEventListener('click', () => {
+            const resultElement = document.getElementById('mockModalResult');
+            resultElement.innerHTML = '';
+            
+            log('mockModalResult', 'Testing complete mock modal flow...', 'info');
+            
+            // Show modal and populate
+            $('#testModal').modal('show');
+            mockPopulateCategoriesModal().then(() => {
+                const modalBody = document.querySelector('#testModal .modal-body');
+                if (modalBody) {
+                    // Scroll to a specific position
+                    modalBody.scrollTop = 200;
+                    const originalScrollTop = modalBody.scrollTop;
+                    
+                    log('mockModalResult', `Initial scroll position: ${originalScrollTop}`, 'info');
+                    
+                    // Simulate deleting a category
+                    setTimeout(() => {
+                        log('mockModalResult', 'Simulating category deletion...', 'info');
+                        
+                        // Re-populate with scroll preservation
+                        mockPopulateCategoriesModal(true).then(() => {
+                            const newScrollTop = modalBody.scrollTop;
+                            log('mockModalResult', `Scroll position after deletion: ${newScrollTop}`, 'info');
+                            
+                            const scrollPreserved = Math.abs(newScrollTop - originalScrollTop) < 10;
+                            if (scrollPreserved) {
+                                log('mockModalResult', '✅ Complete flow works correctly - scroll preserved', 'success');
+                            } else {
+                                log('mockModalResult', '❌ Complete flow failed - scroll not preserved', 'error');
+                            }
+                        });
+                    }, 100);
+                }
+            });
+        });
+
+        // Run all tests on page load
+        window.addEventListener('load', () => {
+            const resultsElement = document.getElementById('testResults');
+            resultsElement.innerHTML = '';
+            
+            log('testResults', '📝 Categories Scroll Fix Test', 'info');
+            log('testResults', 'This test verifies that the category modal scrolling works correctly after deleting a category.', 'info');
+            log('testResults', 'The main issue was that after deleting a category, the modal would lose its scroll position.', 'info');
+            log('testResults', '', 'info');
+            log('testResults', '✅ Fix applied: Added preserveScroll parameter to populateCategoriesModal', 'success');
+            log('testResults', '✅ Fix applied: Store and restore scroll position when preserveScroll is true', 'success');
+            log('testResults', '✅ Fix applied: Added CSS for proper modal body scrolling', 'success');
+            log('testResults', '', 'info');
+            log('testResults', '📝 Expected behavior:', 'info');
+            log('testResults', '- Modal should have proper scrolling when content exceeds height', 'info');
+            log('testResults', '- Scroll position should be preserved after deleting a category', 'info');
+            log('testResults', '- Modal should remain functional after category deletion', 'info');
+        });
+    </script>
+</body>
+</html> 

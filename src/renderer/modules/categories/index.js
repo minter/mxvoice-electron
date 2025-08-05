@@ -33,6 +33,7 @@ class CategoriesModule {
     this.openCategoriesModal = categoryUI.openCategoriesModal;
     this.saveCategories = categoryUI.saveCategories;
     this.addNewCategoryUI = categoryUI.addNewCategoryUI;
+    this.deleteCategoryUI = categoryUI.deleteCategoryUI;
     
     // Initialize category data functions
     this.loadCategories = categoryData.loadCategories;

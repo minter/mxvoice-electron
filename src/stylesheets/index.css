@@ -388,6 +388,12 @@ h6 a {
   font-size: 12px;
 }
 
+/* Ensure modal body has proper scrolling */
+.modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
 .modal label {
   font-weight: bold;
   text-align: right;

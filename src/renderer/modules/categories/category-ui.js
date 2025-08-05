@@ -61,14 +61,27 @@ function populateCategorySelect() {
  * Populate the categories management modal
  * Loads categories and populates the modal with edit/delete options
  * 
+ * @param {boolean} preserveScroll - Whether to preserve scroll position (default: false)
  * @returns {Promise<void>}
  */
-function populateCategoriesModal() {
+function populateCategoriesModal(preserveScroll = false) {
+  // Store current scroll position if preserving
+  let scrollPosition = 0;
+  if (preserveScroll) {
+    const modalBody = document.querySelector('#categoryManagementModal .modal-body');
+    if (modalBody) {
+      scrollPosition = modalBody.scrollTop;
+    }
+  }
+
   $("#categoryList").find("div.row").remove();
 
   return categoryOperations.getCategories().then(result => {
     if (result.success) {
+      console.log('Categories data:', result.data);
       result.data.forEach(row => {
+        console.log('Category row:', row);
+        console.log('Code:', row.code, 'Description:', row.description);
         $("#categoryList").append(`<div class="form-group row">
 
           <div class="col-sm-8">
@@ -83,6 +96,16 @@ function populateCategoriesModal() {
         </div>`);
       });
       console.log('✅ Categories modal populated successfully');
+      
+      // Restore scroll position if preserving
+      if (preserveScroll && scrollPosition > 0) {
+        setTimeout(() => {
+          const modalBody = document.querySelector('#categoryManagementModal .modal-body');
+          if (modalBody) {
+            modalBody.scrollTop = scrollPosition;
+          }
+        }, 10);
+      }
     } else {
       console.warn('❌ Failed to populate categories modal:', result.error);
       throw new Error(result.error);
@@ -108,6 +131,16 @@ function populateCategoriesModal() {
           </div>`);
         }
         console.log('✅ Categories modal populated successfully (legacy)');
+        
+        // Restore scroll position if preserving
+        if (preserveScroll && scrollPosition > 0) {
+          setTimeout(() => {
+            const modalBody = document.querySelector('#categoryManagementModal .modal-body');
+            if (modalBody) {
+              modalBody.scrollTop = scrollPosition;
+            }
+          }, 10);
+        }
       } catch (dbError) {
         console.error('❌ Legacy database error:', dbError);
       }
@@ -234,55 +267,54 @@ function addNewCategoryUI(event) {
  * @param {string} description - Category description for confirmation
  * @returns {Promise<void>}
  */
-function deleteCategoryUI(event, code, description) {
+async function deleteCategoryUI(event, code, description) {
   event.preventDefault();
   
-  return new Promise((resolve, reject) => {
+  try {
     // Use custom confirmation dialog
     if (typeof customConfirm === 'function') {
-      customConfirm(
+      const confirmed = await customConfirm(
         `Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`,
-        function () {
-          console.log(`Deleting category ${code}`);
-          
-          categoryOperations.deleteCategory(code, description).then(result => {
-            if (result.success) {
-              console.log(`✅ Category ${code} deleted successfully`);
-              populateCategorySelect();
-              populateCategoriesModal();
-              resolve(result);
-            } else {
-              reject(new Error('Failed to delete category'));
-            }
-          }).catch(error => {
-            console.error('❌ Error deleting category:', error);
-            reject(error);
-          });
-        }
+        'Delete Category'
       );
+      
+      if (confirmed) {
+        console.log(`Deleting category ${code}`);
+        
+        const result = await categoryOperations.deleteCategory(code, description);
+        if (result.success) {
+          console.log(`✅ Category ${code} deleted successfully`);
+          await populateCategorySelect();
+          await populateCategoriesModal(true); // Preserve scroll position
+          return result;
+        } else {
+          throw new Error('Failed to delete category');
+        }
+      }
+      // User cancelled
+      return;
     } else {
       // Fallback to native confirm
       if (confirm(`Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`)) {
         console.log(`Deleting category ${code}`);
         
-        categoryOperations.deleteCategory(code, description).then(result => {
-          if (result.success) {
-            console.log(`✅ Category ${code} deleted successfully`);
-            populateCategorySelect();
-            populateCategoriesModal();
-            resolve(result);
-          } else {
-            reject(new Error('Failed to delete category'));
-          }
-        }).catch(error => {
-          console.error('❌ Error deleting category:', error);
-          reject(error);
-        });
-      } else {
-        resolve(); // User cancelled
+        const result = await categoryOperations.deleteCategory(code, description);
+        if (result.success) {
+          console.log(`✅ Category ${code} deleted successfully`);
+          await populateCategorySelect();
+          await populateCategoriesModal(true); // Preserve scroll position
+          return result;
+        } else {
+          throw new Error('Failed to delete category');
+        }
       }
+      // User cancelled
+      return;
     }
-  });
+  } catch (error) {
+    console.error('❌ Error deleting category:', error);
+    throw error;
+  }
 }
 
 // Export individual functions for direct access

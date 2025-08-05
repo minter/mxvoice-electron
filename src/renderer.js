@@ -265,22 +265,79 @@ function saveHotkeysToStore() {
       // Continue loading other modules even if hotkeys fails
     }
 
+    console.log('🔄 REACHED: After hotkeys module, before categories module...');
     // Import categories module and make functions globally available
+    console.log('🔄 REACHED: About to start categories module loading...');
     try {
       console.log('🔄 Loading categories module...');
-      categoriesModule = await import('./renderer/modules/categories/index.js');
+      console.log('🔄 About to import categories module...');
+      
+      // Create a temporary deleteCategory function to prevent errors
+      window.deleteCategory = function(event, code, description) {
+        console.log('deleteCategory called with:', { event, code, description });
+        
+        // Simple fallback implementation
+        if (confirm(`Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`)) {
+          console.log(`Deleting category ${code}`);
+          // For now, just show a message that the module isn't loaded
+          alert('Category deletion requires the categories module to be loaded. Please try again.');
+        }
+        
+        // Also try the deferred approach
+        setTimeout(() => {
+          console.log('Checking for deleteCategoryUI...');
+          console.log('window.deleteCategoryUI:', typeof window.deleteCategoryUI);
+          console.log('window.deleteCategory:', typeof window.deleteCategory);
+          if (window.deleteCategoryUI) {
+            console.log('Calling deleteCategoryUI...');
+            window.deleteCategoryUI(event, code, description);
+          } else {
+            console.error('deleteCategoryUI not available');
+            console.log('Available window functions:', Object.keys(window).filter(key => key.includes('delete')));
+          }
+        }, 100);
+      };
+      
+      console.log('🔄 Starting import of categories module...');
+      try {
+        categoriesModule = await import('./renderer/modules/categories/index.js');
+        console.log('✅ categories module import successful');
+      } catch (importError) {
+        console.error('❌ Categories module import failed:', importError);
+        throw importError;
+      }
       console.log('✅ categories module loaded successfully');
       
       // The categories module exports a singleton instance, not a constructor
       const categoriesInstance = categoriesModule.default;
+      console.log('✅ categoriesInstance created:', typeof categoriesInstance);
+      console.log('✅ categoriesInstance.deleteCategoryUI:', typeof categoriesInstance.deleteCategoryUI);
       
       // Initialize the categories module
       await categoriesInstance.init();
       
+      console.log('✅ Categories module initialized');
+      console.log('✅ deleteCategoryUI available:', typeof categoriesInstance.deleteCategoryUI);
+      
       window.populateCategorySelect = categoriesInstance.populateCategorySelect.bind(categoriesInstance);
+      window.openCategoriesModal = categoriesInstance.openCategoriesModal.bind(categoriesInstance);
+      window.addNewCategory = categoriesInstance.addNewCategoryUI.bind(categoriesInstance);
+      window.saveCategories = categoriesInstance.saveCategories.bind(categoriesInstance);
+      window.editCategoryUI = categoriesInstance.editCategoryUI.bind(categoriesInstance);
+      window.deleteCategoryUI = categoriesInstance.deleteCategoryUI.bind(categoriesInstance);
+      
+      // Update the wrapper function for the HTML onclick compatibility
+      window.deleteCategory = function(event, code, description) {
+        console.log('deleteCategory wrapper called with:', { event, code, description });
+        console.log('deleteCategory parameters - code:', code, 'description:', description);
+        return categoriesInstance.deleteCategoryUI(event, code, description);
+      };
+      
       console.log('✅ Categories module loaded successfully');
+      console.log('✅ deleteCategory function available:', typeof window.deleteCategory);
     } catch (error) {
       console.warn('❌ Failed to load categories module:', error);
+      console.error('❌ Categories module error details:', error);
       // Continue loading other modules even if categories fails
     }
 
