@@ -183,8 +183,8 @@ export function removeFromHoldingTank() {
       if (result.success && result.data.length > 0) {
         var songRow = result.data[0];
         
-        return new Promise((resolve) => {
-          customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`, function() {
+        return customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`).then(confirmed => {
+          if (confirmed) {
             console.log("Proceeding with removal from holding tank");
             // Remove the selected row from the holding tank
             $("#selected_row").remove();
@@ -192,8 +192,10 @@ export function removeFromHoldingTank() {
             $("#selected_row").removeAttr("id");
             // Save the updated holding tank to store
             saveHoldingTankToStore();
-            resolve({ success: true, songId: songId, title: songRow.title });
-          });
+            return { success: true, songId: songId, title: songRow.title };
+          } else {
+            return { success: false, error: 'User cancelled' };
+          }
         });
       } else {
         console.error("Song not found in database for ID:", songId);

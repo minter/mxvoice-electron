@@ -127,11 +127,16 @@ function initializeUIManager(options = {}) {
       return;
     }
     
-    customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`, function() {
-      console.log("Proceeding with removal from holding tank");
-      $("#selected_row").remove();
-      $("#selected_row").removeAttr("id");
-      saveHoldingTankToStore();
+    return customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`).then(confirmed => {
+      if (confirmed) {
+        console.log("Proceeding with removal from holding tank");
+        $("#selected_row").remove();
+        $("#selected_row").removeAttr("id");
+        saveHoldingTankToStore();
+        return { success: true, songId: songId, title: songRow.title };
+      } else {
+        return { success: false, error: 'User cancelled' };
+      }
     });
   }
   
@@ -151,13 +156,18 @@ function initializeUIManager(options = {}) {
     const songRow = songStmt.get(songId);
     
     if (songRow) {
-      customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`, function() {
-        console.log("Proceeding with removal from hotkey");
-        $("#selected_row").removeAttr("songid");
-        $("#selected_row span").html("");
-        $("#selected_row").removeAttr("id");
-        saveHotkeysToStore();
-        console.log("Hotkey cleared successfully");
+      return customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`).then(confirmed => {
+        if (confirmed) {
+          console.log("Proceeding with removal from hotkey");
+          $("#selected_row").removeAttr("songid");
+          $("#selected_row span").html("");
+          $("#selected_row").removeAttr("id");
+          saveHotkeysToStore();
+          console.log("Hotkey cleared successfully");
+          return { success: true, songId: songId, title: songRow.title };
+        } else {
+          return { success: false, error: 'User cancelled' };
+        }
       });
     } else {
       console.error("Song not found in database for ID:", songId);
@@ -181,47 +191,53 @@ function initializeUIManager(options = {}) {
     const songRow = songStmt.get(songId);
     const filename = songRow.filename;
     
-    customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`, function() {
-      console.log("Proceeding with delete");
-      const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
-      if (deleteStmt.run(songId)) {
-        // Delete file if electronAPI is available
-        if (electronAPI && electronAPI.store) {
-          electronAPI.store.get("music_directory").then(musicDirectory => {
-            if (musicDirectory.success && musicDirectory.value) {
-              electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
-                if (joinResult.success) {
-                  const filePath = joinResult.data;
-                  electronAPI.fileSystem.delete(filePath).then(result => {
-                    if (result.success) {
-                      console.log('✅ File deleted successfully');
-                    } else {
-                      console.warn('❌ Failed to delete file:', result.error);
-                    }
-                  }).catch(error => {
-                    console.warn('❌ File deletion error:', error);
-                  });
-                } else {
-                  console.warn('❌ Failed to join path:', joinResult.error);
-                }
-              }).catch(error => {
-                console.warn('❌ Path join error:', error);
-              });
-            }
-          }).catch(error => {
-            console.warn('❌ Store get API error:', error);
-          });
+    return customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`).then(confirmed => {
+      if (confirmed) {
+        console.log("Proceeding with delete");
+        const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
+        if (deleteStmt.run(songId)) {
+          // Delete file if electronAPI is available
+          if (electronAPI && electronAPI.store) {
+            electronAPI.store.get("music_directory").then(musicDirectory => {
+              if (musicDirectory.success && musicDirectory.value) {
+                electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
+                  if (joinResult.success) {
+                    const filePath = joinResult.data;
+                    electronAPI.fileSystem.delete(filePath).then(result => {
+                      if (result.success) {
+                        console.log('✅ File deleted successfully');
+                      } else {
+                        console.warn('❌ Failed to delete file:', result.error);
+                      }
+                    }).catch(error => {
+                      console.warn('❌ File deletion error:', error);
+                    });
+                  } else {
+                    console.warn('❌ Failed to join path:', joinResult.error);
+                  }
+                }).catch(error => {
+                  console.warn('❌ Path join error:', error);
+                });
+              }
+            }).catch(error => {
+              console.warn('❌ Store get API error:', error);
+            });
+          }
+          
+          // Remove song from UI elements
+          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
+          $(`.hotkeys li span[songid=${songId}]`).remove();
+          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
+          $(`#search_results tr[songid=${songId}]`).remove();
+          saveHoldingTankToStore();
+          saveHotkeysToStore();
+          return { success: true, songId: songId, title: songRow.title };
+        } else {
+          console.log("Error deleting song from database");
+          return { success: false, error: 'Database deletion failed' };
         }
-        
-        // Remove song from UI elements
-        $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-        $(`.hotkeys li span[songid=${songId}]`).remove();
-        $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-        $(`#search_results tr[songid=${songId}]`).remove();
-        saveHoldingTankToStore();
-        saveHotkeysToStore();
       } else {
-        console.log("Error deleting song from database");
+        return { success: false, error: 'User cancelled' };
       }
     });
   }

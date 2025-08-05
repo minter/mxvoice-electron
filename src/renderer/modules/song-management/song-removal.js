@@ -17,39 +17,45 @@ export function deleteSong() {
     var songRow = songStmt.get(songId);
     var filename = songRow.filename;
     
-    customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`, function() {
-      console.log("Proceeding with delete");
-      const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
-      if (deleteStmt.run(songId)) {
-        window.electronAPI.store.get("music_directory").then(musicDirectory => {
-          window.electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
-            if (joinResult.success) {
-              const filePath = joinResult.data;
-              window.electronAPI.fileSystem.delete(filePath).then(result => {
-                if (result.success) {
-                  console.log('✅ File deleted successfully');
-                } else {
-                  console.warn('❌ Failed to delete file:', result.error);
-                }
-              }).catch(error => {
-                console.warn('❌ File deletion error:', error);
-              });
-            } else {
-              console.warn('❌ Failed to join path:', joinResult.error);
-            }
-          }).catch(error => {
-            console.warn('❌ Path join error:', error);
+    return customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`).then(confirmed => {
+      if (confirmed) {
+        console.log("Proceeding with delete");
+        const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
+        if (deleteStmt.run(songId)) {
+          window.electronAPI.store.get("music_directory").then(musicDirectory => {
+            window.electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
+              if (joinResult.success) {
+                const filePath = joinResult.data;
+                window.electronAPI.fileSystem.delete(filePath).then(result => {
+                  if (result.success) {
+                    console.log('✅ File deleted successfully');
+                  } else {
+                    console.warn('❌ Failed to delete file:', result.error);
+                  }
+                }).catch(error => {
+                  console.warn('❌ File deletion error:', error);
+                });
+              } else {
+                console.warn('❌ Failed to join path:', joinResult.error);
+              }
+            }).catch(error => {
+              console.warn('❌ Path join error:', error);
+            });
+            // Remove song anywhere it appears
+            $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
+            $(`.hotkeys li span[songid=${songId}]`).remove();
+            $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
+            $(`#search_results tr[songid=${songId}]`).remove();
+            saveHoldingTankToStore();
+            saveHotkeysToStore();
           });
-          // Remove song anywhere it appears
-          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-          $(`.hotkeys li span[songid=${songId}]`).remove();
-          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-          $(`#search_results tr[songid=${songId}]`).remove();
-          saveHoldingTankToStore();
-          saveHotkeysToStore();
-        });
+          return { success: true, songId: songId, title: songRow.title };
+        } else {
+          console.log("Error deleting song from database");
+          return { success: false, error: 'Database deletion failed' };
+        }
       } else {
-        console.log("Error deleting song from database");
+        return { success: false, error: 'User cancelled' };
       }
     });
   }
@@ -66,14 +72,19 @@ export function removeFromHoldingTank() {
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
     var songRow = songStmt.get(songId);
     
-    customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`, function() {
-      console.log("Proceeding with removal from holding tank");
-      // Remove the selected row from the holding tank
-      $("#selected_row").remove();
-      // Clear the selection
-      $("#selected_row").removeAttr("id");
-      // Save the updated holding tank to store
-      saveHoldingTankToStore();
+    return customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`).then(confirmed => {
+      if (confirmed) {
+        console.log("Proceeding with removal from holding tank");
+        // Remove the selected row from the holding tank
+        $("#selected_row").remove();
+        // Clear the selection
+        $("#selected_row").removeAttr("id");
+        // Save the updated holding tank to store
+        saveHoldingTankToStore();
+        return { success: true, songId: songId, title: songRow.title };
+      } else {
+        return { success: false, error: 'User cancelled' };
+      }
     });
   }
 }
@@ -93,16 +104,21 @@ export function removeFromHotkey() {
     var songRow = songStmt.get(songId);
     
     if (songRow) {
-      customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`, function() {
-        console.log("Proceeding with removal from hotkey");
-        // Clear the hotkey slot
-        $("#selected_row").removeAttr("songid");
-        $("#selected_row span").html("");
-        // Clear the selection
-        $("#selected_row").removeAttr("id");
-        // Save the updated hotkeys to store
-        saveHotkeysToStore();
-        console.log("Hotkey cleared successfully");
+      return customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`).then(confirmed => {
+        if (confirmed) {
+          console.log("Proceeding with removal from hotkey");
+          // Clear the hotkey slot
+          $("#selected_row").removeAttr("songid");
+          $("#selected_row span").html("");
+          // Clear the selection
+          $("#selected_row").removeAttr("id");
+          // Save the updated hotkeys to store
+          saveHotkeysToStore();
+          console.log("Hotkey cleared successfully");
+          return { success: true, songId: songId, title: songRow.title };
+        } else {
+          return { success: false, error: 'User cancelled' };
+        }
       });
     } else {
       console.error("Song not found in database for ID:", songId);
