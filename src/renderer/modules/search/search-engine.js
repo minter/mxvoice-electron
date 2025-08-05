@@ -1,64 +1,96 @@
 /**
  * Search Engine Module
  * 
- * Handles the main search functionality for the MxVoice application.
- * This module contains the core search logic that queries the database
- * and displays results.
+ * Handles search functionality including live search, debouncing,
+ * and database queries for the MxVoice Electron application.
  */
 
-// Import shared state
-import sharedState from '../shared-state.js';
+// Import dependencies
+import * as liveSearch from './live-search.js';
 
-// Global variables
-let fontSize = 11;
+// Module-level variables
+let searchTimeout = null;
+let fontSize = 11; // Default font size
 
 /**
- * Get categories from shared state or fallback to empty object
+ * Get all available categories from the database
  * 
- * @returns {Object} - Categories object
+ * @returns {Array} Array of category objects
  */
 function getCategories() {
-  try {
-    // Try to get categories from shared state first
-    const categories = sharedState.get('categories');
-    if (categories && Object.keys(categories).length > 0) {
-      return categories;
+  const categories = [];
+  
+  // Try to use the new database API first
+  if (window.electronAPI && window.electronAPI.store) {
+    try {
+      window.electronAPI.store.getCategories().then((result) => {
+        if (result && result.length > 0) {
+          result.forEach((category) => {
+            categories.push({
+              code: category.code,
+              description: category.description
+            });
+          });
+        }
+      }).catch(error => {
+        console.warn('Failed to get categories from store:', error);
+      });
+    } catch (error) {
+      console.warn('Error accessing store for categories:', error);
     }
-    
-    // Fallback to global categories if available
-    if (typeof window.categories !== 'undefined' && window.categories) {
-      return window.categories;
-    }
-    
-    // Return empty object as last resort
-    return {};
-  } catch (error) {
-    console.warn('❌ Error getting categories:', error);
-    return {};
   }
+  
+  // Fallback to legacy database access
+  if (typeof db !== 'undefined') {
+    try {
+      const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+      for (const row of stmt.iterate()) {
+        categories.push({
+          code: row.code,
+          description: row.description
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to get categories from legacy database:', error);
+    }
+  }
+  
+  return categories;
 }
 
 /**
  * Get category name by code
  * 
  * @param {string} categoryCode - The category code
- * @returns {string} - Category name or code if not found
+ * @returns {string} The category description
  */
 function getCategoryName(categoryCode) {
-  if (!categoryCode) {
-    return '';
+  if (!categoryCode) return "Unknown";
+  
+  // Try to use the new database API first
+  if (window.electronAPI && window.electronAPI.store) {
+    try {
+      // For now, return the code as fallback
+      // In a full implementation, you'd query the store for the category name
+      return categoryCode;
+    } catch (error) {
+      console.warn('Failed to get category name from store:', error);
+    }
   }
   
-  const categories = getCategories();
-  const categoryName = categories[categoryCode];
-  
-  if (categoryName) {
-    return categoryName;
+  // Fallback to legacy database access
+  if (typeof db !== 'undefined') {
+    try {
+      const stmt = db.prepare("SELECT description FROM categories WHERE code = ?");
+      const result = stmt.get(categoryCode);
+      return result ? result.description : categoryCode;
+    } catch (error) {
+      console.warn('Failed to get category name from legacy database:', error);
+      return categoryCode;
+    }
   }
   
-  // If category not found, return the code itself
-  console.warn(`❌ Category not found for code: ${categoryCode}`);
-  return categoryCode || '';
+  return categoryCode;
 }
 
 /**
@@ -144,9 +176,11 @@ function searchData() {
             }</td></tr>`
           );
         });
-        $("#search_results").append(raw_html.join(""));
-        scale_scrollable();
-        $("#omni_search").select();
+              $("#search_results").append(raw_html.join(""));
+      if (typeof scaleScrollable === 'function') {
+        scaleScrollable();
+      }
+      $("#omni_search").select();
         $("#category_select").prop("selectedIndex", 0);
       } else {
         console.warn('❌ Failed to search songs:', result.error);
@@ -172,9 +206,11 @@ function searchData() {
               }</td></tr>`
             );
           });
-          $("#search_results").append(raw_html.join(""));
-          scale_scrollable();
-          $("#omni_search").select();
+                  $("#search_results").append(raw_html.join(""));
+        if (typeof scaleScrollable === 'function') {
+          scaleScrollable();
+        }
+        $("#omni_search").select();
           $("#category_select").prop("selectedIndex", 0);
         }
       }
@@ -203,7 +239,9 @@ function searchData() {
           );
         });
         $("#search_results").append(raw_html.join(""));
-        scale_scrollable();
+        if (typeof scaleScrollable === 'function') {
+          scaleScrollable();
+        }
         $("#omni_search").select();
         $("#category_select").prop("selectedIndex", 0);
       }
@@ -232,7 +270,9 @@ function searchData() {
         );
       });
       $("#search_results").append(raw_html.join(""));
-      scale_scrollable();
+      if (typeof scaleScrollable === 'function') {
+        scaleScrollable();
+      }
       $("#omni_search").select();
       $("#category_select").prop("selectedIndex", 0);
     }
@@ -265,7 +305,11 @@ function triggerLiveSearch() {
     }
 
     if (hasSearchTerm || hasAdvancedFilters) {
-      performLiveSearch(searchTerm);
+      if (typeof liveSearch.performLiveSearch === 'function') {
+        liveSearch.performLiveSearch(searchTerm);
+      } else {
+        console.warn('performLiveSearch function not available');
+      }
     } else {
       // Clear results when no search term and no advanced filters
       $("#search_results tbody").find("tr").remove();
