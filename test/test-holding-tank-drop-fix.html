@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holding Tank Drop Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .holding-tank {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 100px;
+            background: #f9f9f9;
+        }
+        .holding-tank.dropzone {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        .songs {
+            margin: 20px 0;
+        }
+        .song {
+            padding: 10px;
+            margin: 5px 0;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: grab;
+            user-select: none;
+        }
+        .song:hover {
+            background: #f0f0f0;
+        }
+        .song:active {
+            cursor: grabbing;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .test-results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Holding Tank Drop Fix Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Setup</h2>
+        <p>This test verifies that holding tank drop functionality is working after the fix.</p>
+        <button onclick="runTests()">Run Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Function Availability Test</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Drag & Drop Test</h2>
+        <p>Try dragging songs into the holding tank below:</p>
+        
+        <div class="songs">
+            <div class="song" draggable="true" songid="1">Song 1 - Test Song</div>
+            <div class="song" draggable="true" songid="2">Song 2 - Another Test</div>
+            <div class="song" draggable="true" songid="3">Song 3 - Third Test</div>
+        </div>
+
+        <h3>Holding Tank</h3>
+        <div id="holding_tank" class="holding-tank">
+            <p>Drop songs here...</p>
+        </div>
+    </div>
+
+    <script>
+        // Mock functions for testing
+        window.electronAPI = {
+            store: {
+                set: async (key, value) => ({ success: true }),
+                get: async (key) => null,
+                has: async (key) => false
+            }
+        };
+
+        window.$ = function(selector) {
+            if (typeof selector === 'string') {
+                return {
+                    on: function(event, handler) {
+                        console.log(`Setting up ${event} handler for ${selector}`);
+                        if (event === 'drop') {
+                            // Simulate drop event
+                            setTimeout(() => {
+                                const elements = document.querySelectorAll(selector);
+                                elements.forEach(el => {
+                                    el.addEventListener('drop', handler);
+                                });
+                            }, 100);
+                        }
+                    },
+                    removeClass: function(className) {
+                        const elements = document.querySelectorAll(selector);
+                        elements.forEach(el => el.classList.remove(className));
+                        return this;
+                    },
+                    addClass: function(className) {
+                        const elements = document.querySelectorAll(selector);
+                        elements.forEach(el => el.classList.add(className));
+                        return this;
+                    },
+                    attr: function(name, value) {
+                        const elements = document.querySelectorAll(selector);
+                        if (value !== undefined) {
+                            elements.forEach(el => el.setAttribute(name, value));
+                            return this;
+                        } else {
+                            return elements[0]?.getAttribute(name);
+                        }
+                    },
+                    find: function(subSelector) {
+                        const elements = document.querySelectorAll(selector);
+                        const found = [];
+                        elements.forEach(el => {
+                            found.push(...el.querySelectorAll(subSelector));
+                        });
+                        return {
+                            text: function() {
+                                return found.map(el => el.textContent).join('');
+                            }
+                        };
+                    },
+                    text: function(newText) {
+                        const elements = document.querySelectorAll(selector);
+                        if (newText !== undefined) {
+                            elements.forEach(el => el.textContent = newText);
+                            return this;
+                        } else {
+                            return elements[0]?.textContent || '';
+                        }
+                    },
+                    removeAttr: function(name) {
+                        const elements = document.querySelectorAll(selector);
+                        elements.forEach(el => el.removeAttribute(name));
+                        return this;
+                    },
+                    first: function() {
+                        return this;
+                    },
+                    tab: function(action) {
+                        console.log(`Tab action: ${action}`);
+                        return this;
+                    }
+                };
+            } else {
+                return {
+                    on: function(event, handler) {
+                        console.log(`Setting up ${event} handler for element`);
+                    },
+                    removeClass: function(className) {
+                        selector.classList.remove(className);
+                        return this;
+                    },
+                    addClass: function(className) {
+                        selector.classList.add(className);
+                        return this;
+                    },
+                    attr: function(name, value) {
+                        if (value !== undefined) {
+                            selector.setAttribute(name, value);
+                            return this;
+                        } else {
+                            return selector.getAttribute(name);
+                        }
+                    },
+                    find: function(subSelector) {
+                        const found = selector.querySelectorAll(subSelector);
+                        return {
+                            text: function() {
+                                return found.map(el => el.textContent).join('');
+                            }
+                        };
+                    },
+                    text: function(newText) {
+                        if (newText !== undefined) {
+                            selector.textContent = newText;
+                            return this;
+                        } else {
+                            return selector.textContent || '';
+                        }
+                    },
+                    removeAttr: function(name) {
+                        selector.removeAttribute(name);
+                        return this;
+                    },
+                    first: function() {
+                        return this;
+                    },
+                    tab: function(action) {
+                        console.log(`Tab action: ${action}`);
+                        return this;
+                    }
+                };
+            }
+        };
+
+        // Mock addToHoldingTank function
+        window.addToHoldingTank = function(songId, element) {
+            console.log('addToHoldingTank called with:', songId, element);
+            const holdingTank = document.getElementById('holding_tank');
+            const songElement = document.createElement('div');
+            songElement.className = 'song';
+            songElement.setAttribute('songid', songId);
+            songElement.textContent = `Song ${songId} - Added to holding tank`;
+            holdingTank.appendChild(songElement);
+        };
+
+        // Test results
+        let testResults = [];
+
+        function addResult(test, status, message) {
+            testResults.push({ test, status, message, timestamp: new Date() });
+            updateResultsDisplay();
+        }
+
+        function updateResultsDisplay() {
+            const container = document.getElementById('test-results');
+            container.innerHTML = testResults.map(result => 
+                `<div class="status ${result.status}">
+                    <strong>${result.test}:</strong> ${result.message}
+                    <small>(${result.timestamp.toLocaleTimeString()})</small>
+                </div>`
+            ).join('');
+        }
+
+        function clearResults() {
+            testResults = [];
+            updateResultsDisplay();
+        }
+
+        async function runTests() {
+            clearResults();
+            addResult('Test Start', 'info', 'Starting holding tank drop tests...');
+
+            try {
+                // Test 1: Check if holdingTankDrop function exists
+                if (typeof window.holdingTankDrop === 'function') {
+                    addResult('holdingTankDrop Function', 'success', 'holdingTankDrop function is available');
+                } else {
+                    addResult('holdingTankDrop Function', 'error', 'holdingTankDrop function is missing');
+                }
+
+                // Test 2: Check if addToHoldingTank function exists
+                if (typeof window.addToHoldingTank === 'function') {
+                    addResult('addToHoldingTank Function', 'success', 'addToHoldingTank function is available');
+                } else {
+                    addResult('addToHoldingTank Function', 'error', 'addToHoldingTank function is missing');
+                }
+
+                // Test 3: Simulate holding tank drop
+                const testEvent = {
+                    preventDefault: () => {},
+                    dataTransfer: {
+                        getData: () => '1'
+                    },
+                    target: document.getElementById('holding_tank')
+                };
+
+                try {
+                    window.holdingTankDrop(testEvent);
+                    addResult('Holding Tank Drop Simulation', 'success', 'holdingTankDrop executed without errors');
+                } catch (error) {
+                    addResult('Holding Tank Drop Simulation', 'error', `holdingTankDrop failed: ${error.message}`);
+                }
+
+                // Test 4: Check module loading
+                try {
+                    const holdingTankModule = await import('../src/renderer/modules/holding-tank/index.js');
+                    addResult('Module Loading', 'success', 'Holding tank module loaded successfully');
+                } catch (error) {
+                    addResult('Module Loading', 'error', `Failed to load holding tank module: ${error.message}`);
+                }
+
+                addResult('Test Complete', 'info', 'All tests completed');
+
+            } catch (error) {
+                addResult('Test Error', 'error', `Unexpected error: ${error.message}`);
+            }
+        }
+
+        // Initialize test environment
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up drag and drop for test songs
+            document.querySelectorAll('.song').forEach(song => {
+                song.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('text', this.getAttribute('songid'));
+                    console.log('Drag started for song:', this.getAttribute('songid'));
+                });
+            });
+
+            // Set up drop zone for holding tank
+            const holdingTank = document.getElementById('holding_tank');
+            holdingTank.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dropzone');
+            });
+
+            holdingTank.addEventListener('dragleave', function(e) {
+                this.classList.remove('dropzone');
+            });
+
+            holdingTank.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dropzone');
+                
+                const songId = e.dataTransfer.getData('text');
+                if (songId) {
+                    addResult('Manual Drop Test', 'success', `Dropped song ${songId} into holding tank`);
+                    if (window.holdingTankDrop) {
+                        window.holdingTankDrop(e);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

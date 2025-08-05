@@ -315,6 +315,7 @@ $(document).ready(async function() {
     };
     window.scale_scrollable = holdingTankInstance.scale_scrollable;
     window.saveHoldingTankToStore = saveHoldingTankToStore;
+    window.holdingTankDrop = holdingTankInstance.holdingTankDrop.bind(holdingTankInstance);
 
     // Import hotkeys module and store in registry
     try {
@@ -507,12 +508,10 @@ $(document).ready(async function() {
       const dragDropInstance = dragDropModule.default;
       moduleRegistry.dragDrop = dragDropInstance;
       
-      // Only assign functions called from HTML
-      window.hotkeyDrop = dragDropInstance.hotkeyDrop;
-      window.holdingTankDrop = dragDropInstance.holdingTankDrop;
-      window.allowHotkeyDrop = dragDropInstance.allowHotkeyDrop;
-      window.songDrag = dragDropInstance.songDrag;
-      window.columnDrag = dragDropInstance.columnDrag;
+      // Import functions directly from the functions file to avoid conflicts
+      const { songDrag, columnDrag } = await import('./renderer/modules/drag-drop/drag-drop-functions.js');
+      window.songDrag = songDrag;
+      window.columnDrag = columnDrag;
     } catch (error) {
       console.error('❌ Error loading drag-drop module:', error);
       // Continue loading other modules even if drag-drop fails

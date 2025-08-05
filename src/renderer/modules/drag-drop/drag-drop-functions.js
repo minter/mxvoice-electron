@@ -9,7 +9,7 @@
  * 
  * @param {Event} event - The drop event
  */
-export function hotkeyDrop(event) {
+function hotkeyDrop(event) {
   event.preventDefault();
   var song_id = event.dataTransfer.getData("text");
   var target = $(event.currentTarget);
@@ -52,7 +52,7 @@ export function holdingTankDrop(event) {
  * 
  * @param {Event} event - The dragover event
  */
-export function allowHotkeyDrop(event) {
+function allowHotkeyDrop(event) {
   event.preventDefault();
 }
 

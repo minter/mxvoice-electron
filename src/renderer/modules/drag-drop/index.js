@@ -5,7 +5,7 @@
  * and rearranging UI elements
  */
 
-import { hotkeyDrop, holdingTankDrop, allowHotkeyDrop, songDrag, columnDrag } from './drag-drop-functions.js';
+import { songDrag, columnDrag } from './drag-drop-functions.js';
 import { setupDragDropEventHandlers } from './event-handlers.js';
 
 /**
@@ -15,10 +15,7 @@ import { setupDragDropEventHandlers } from './event-handlers.js';
  */
 class DragDropModule {
   constructor() {
-    // Bind all functions as methods
-    this.hotkeyDrop = hotkeyDrop;
-    this.holdingTankDrop = holdingTankDrop;
-    this.allowHotkeyDrop = allowHotkeyDrop;
+    // Bind all functions as methods (excluding hotkeyDrop, allowHotkeyDrop, and holdingTankDrop which are handled by their respective modules)
     this.songDrag = songDrag;
     this.columnDrag = columnDrag;
   }
@@ -47,9 +44,6 @@ class DragDropModule {
    */
   getAllDragDropFunctions() {
     return {
-      hotkeyDrop: this.hotkeyDrop,
-      holdingTankDrop: this.holdingTankDrop,
-      allowHotkeyDrop: this.allowHotkeyDrop,
       songDrag: this.songDrag,
       columnDrag: this.columnDrag
     };
@@ -65,9 +59,6 @@ class DragDropModule {
 
     // Test each function
     const functions = [
-      'hotkeyDrop',
-      'holdingTankDrop',
-      'allowHotkeyDrop',
       'songDrag',
       'columnDrag'
     ];
@@ -101,12 +92,7 @@ class DragDropModule {
 // Create and export a singleton instance
 const dragDropModule = new DragDropModule();
 
-// Export individual functions for backward compatibility
-export const hotkeyDrop = dragDropModule.hotkeyDrop;
-export const holdingTankDrop = dragDropModule.holdingTankDrop;
-export const allowHotkeyDrop = dragDropModule.allowHotkeyDrop;
-export const songDrag = dragDropModule.songDrag;
-export const columnDrag = dragDropModule.columnDrag;
+// Export individual functions for backward compatibility (excluding hotkeyDrop, allowHotkeyDrop, and holdingTankDrop which are handled by their respective modules)
 export const initializeDragDrop = dragDropModule.initializeDragDrop.bind(dragDropModule);
 
 // Default export for module loading

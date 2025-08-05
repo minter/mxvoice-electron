@@ -121,7 +121,7 @@ class HotkeysModule {
     $(".hotkeys li").on("drop", (event) => {
       $(event.currentTarget).removeClass("drop_target");
       if (!event.originalEvent.dataTransfer.getData("text").length) return;
-      this.hotkeyDrop(event.originalEvent);
+      this.hotkeyDrop(event.originalEvent, { setLabelFromSongId: this.setLabelFromSongId.bind(this) });
     });
 
     $(".hotkeys li").on("dragover", (event) => {
@@ -476,13 +476,7 @@ class HotkeysModule {
    * 
    * @param {Event} event - Drop event
    */
-  hotkeyDrop(event) {
-    event.preventDefault();
-    const song_id = event.dataTransfer.getData("text");
-    const target = $(event.currentTarget);
-    target.attr("songid", song_id);
-    this.setLabelFromSongId(song_id, target);
-  }
+  // hotkeyDrop method removed - using hotkeyUI.hotkeyDrop instead
 
   /**
    * Allow hotkey drop event
@@ -490,9 +484,7 @@ class HotkeysModule {
    * 
    * @param {Event} event - Drag over event
    */
-  allowHotkeyDrop(event) {
-    event.preventDefault();
-  }
+  // allowHotkeyDrop method removed - using hotkeyUI.allowHotkeyDrop instead
 
   /**
    * Switch to hotkey tab
@@ -593,9 +585,9 @@ class HotkeysModule {
       playSongFromHotkey: this.playSongFromHotkey,
       sendToHotkeys: this.sendToHotkeys,
       
-      // UI operations
-      hotkeyDrop: this.hotkeyDrop,
-      allowHotkeyDrop: this.allowHotkeyDrop,
+      // UI operations (using hotkeyUI functions)
+      hotkeyDrop: this.hotkeyDrop, // This is now the bound hotkeyUI.hotkeyDrop
+      allowHotkeyDrop: this.allowHotkeyDrop, // This is now the bound hotkeyUI.allowHotkeyDrop
       
       // Tab management
       switchToHotkeyTab: this.switchToHotkeyTab,
@@ -658,7 +650,7 @@ class HotkeysModule {
       testResults.tests.saveHotkeyFile = { status: 'FAIL', message: error.message };
     }
 
-    // Test UI operations
+    // Test UI operations (using hotkeyUI functions)
     try {
       this.allowHotkeyDrop({ preventDefault: () => {} });
       testResults.tests.allowHotkeyDrop = { status: 'PASS', message: 'Function executed successfully' };
