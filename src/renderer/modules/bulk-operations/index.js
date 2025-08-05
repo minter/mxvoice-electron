@@ -95,11 +95,5 @@ class BulkOperationsModule {
 // Create and export a singleton instance
 const bulkOperationsModule = new BulkOperationsModule();
 
-// Export individual functions for backward compatibility
-export const showBulkAddModal = bulkOperationsModule.showBulkAddModal;
-export const addSongsByPath = bulkOperationsModule.addSongsByPath;
-export const saveBulkUpload = bulkOperationsModule.saveBulkUpload;
-export const initializeBulkOperations = bulkOperationsModule.initializeBulkOperations.bind(bulkOperationsModule);
-
 // Default export for module loading
 export default bulkOperationsModule; 

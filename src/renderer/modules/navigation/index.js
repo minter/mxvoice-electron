@@ -98,12 +98,5 @@ class NavigationModule {
 // Create and export a singleton instance
 const navigationModule = new NavigationModule();
 
-// Export individual functions for backward compatibility
-export const sendToHotkeys = navigationModule.sendToHotkeys;
-export const sendToHoldingTank = navigationModule.sendToHoldingTank;
-export const selectNext = navigationModule.selectNext;
-export const selectPrev = navigationModule.selectPrev;
-export const initializeNavigation = navigationModule.initializeNavigation.bind(navigationModule);
-
 // Default export for module loading
 export default navigationModule; 

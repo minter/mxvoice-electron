@@ -98,6 +98,15 @@ async function initializeSharedState() {
 // Module registry to avoid window pollution
 const moduleRegistry = {};
 
+// Import function registry for centralized function management
+import FunctionRegistry from './renderer/function-registry.js';
+import EventManager from './renderer/event-manager.js';
+import FunctionMonitor from './renderer/function-monitor.js';
+
+const functionRegistry = new FunctionRegistry();
+const eventManager = new EventManager(functionRegistry);
+const functionMonitor = new FunctionMonitor(functionRegistry);
+
 // Load the last holding tank and hotkeys
 
 // Always clear the holding tank store to ensure we load the new HTML
@@ -835,6 +844,37 @@ $(document).ready(async function() {
 
     // Make module registry available for debugging and development
     window.moduleRegistry = moduleRegistry;
+    window.functionMonitor = functionMonitor;
+    
+    // Initialize function registry with loaded modules
+    console.log('🔄 Initializing function registry...');
+    functionRegistry.setModuleRegistry(moduleRegistry);
+    await functionRegistry.registerAllFunctions();
+    
+    // Validate critical functions are available
+    if (!functionRegistry.validateFunctions()) {
+      console.warn('⚠️ Some critical functions are missing, but continuing...');
+    }
+    
+    // Log function registry statistics
+    const stats = functionRegistry.getStats();
+    console.log('📊 Function Registry Statistics:', stats);
+    
+    // Initialize event manager to replace onclick attributes
+    console.log('🔄 Initializing event manager...');
+    eventManager.initialize();
+    
+    // Log event manager statistics
+    const eventStats = eventManager.getStats();
+    console.log('📊 Event Manager Statistics:', eventStats);
+    
+    // Initialize function monitor for real-time health checking
+    console.log('🔄 Initializing function monitor...');
+    functionMonitor.startMonitoring();
+    
+    // Log function monitor statistics
+    const monitorStats = functionMonitor.getStats();
+    console.log('📊 Function Monitor Statistics:', monitorStats);
     
     // Verify critical functions are available
     function verifyCriticalFunctions() {
