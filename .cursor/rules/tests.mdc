@@ -3,6 +3,7 @@ description: All test files belong in the test/ directory
 globs: ["test/**"]
 alwaysApply: true
 ---
+- - You do not need to write tests for every task, but when you do, follow these rules
 - All test code must be placed in the `test/` directory; do not place tests next to source files.
 - When generating tests for new components or functions, create or update corresponding files in `test/`.
 - Suggested naming: `test/<component_or_module>_test.js` or similar.
