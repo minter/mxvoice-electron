@@ -183,8 +183,17 @@ function saveHotkeysToStore() {
     }
     
     // Make holding tank functions globally available
-    window.clearHoldingTank = holdingTankModule.default.clearHoldingTank;
-    window.renameHoldingTankTab = holdingTankModule.default.renameHoldingTankTab;
+    // Create synchronous wrappers for async functions since they're called from HTML onclick
+    window.clearHoldingTank = function() {
+      holdingTankModule.default.clearHoldingTank().catch(error => {
+        console.error('❌ Error in clearHoldingTank:', error);
+      });
+    };
+    window.renameHoldingTankTab = function() {
+      holdingTankModule.default.renameHoldingTankTab().catch(error => {
+        console.error('❌ Error in renameHoldingTankTab:', error);
+      });
+    };
     window.scale_scrollable = holdingTankModule.default.scale_scrollable;
 
     // Import hotkeys module and make functions globally available

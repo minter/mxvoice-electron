@@ -212,14 +212,15 @@ export function removeFromHoldingTank() {
 /**
  * Clear all songs from the holding tank
  */
-export function clearHoldingTank() {
-  return new Promise((resolve) => {
-    customConfirm("Are you sure you want clear your holding tank?", function() {
-      $(".holding_tank.active").empty();
-      saveHoldingTankToStore();
-      resolve({ success: true });
-    });
-  });
+export async function clearHoldingTank() {
+  const confirmed = await customConfirm("Are you sure you want clear your holding tank?");
+  if (confirmed) {
+    $(".holding_tank.active").empty();
+    saveHoldingTankToStore();
+    return { success: true };
+  } else {
+    return { success: false, error: 'User cancelled' };
+  }
 }
 
 /**
@@ -285,19 +286,16 @@ export function sendToHoldingTank() {
 /**
  * Rename holding tank tab
  */
-export function renameHoldingTankTab() {
+export async function renameHoldingTankTab() {
   const currentName = $("#holding_tank_tabs .nav-link.active").text();
-  return new Promise((resolve) => {
-    customPrompt("Rename Holding Tank Tab", "Enter a new name for this tab:", currentName, function(newName) {
-      if (newName && newName.trim() !== "") {
-        $("#holding_tank_tabs .nav-link.active").text(newName);
-        saveHoldingTankToStore();
-        resolve({ success: true, newName: newName });
-      } else {
-        resolve({ success: false, error: 'Invalid name' });
-      }
-    });
-  });
+  const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Holding Tank Tab");
+  if (newName && newName.trim() !== "") {
+    $("#holding_tank_tabs .nav-link.active").text(newName);
+    saveHoldingTankToStore();
+    return { success: true, newName: newName };
+  } else {
+    return { success: false, error: 'Invalid name' };
+  }
 }
 
 // toggleAutoPlay function moved to mode-management module

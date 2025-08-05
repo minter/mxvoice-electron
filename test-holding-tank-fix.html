@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holding Tank Fix Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Holding Tank Fix Test</h1>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <h3>Test Holding Tank</h3>
+                <div class="holding_tank active">
+                    <ul class="list-group">
+                        <li class="list-group-item" songid="123">
+                            Test Song 1
+                        </li>
+                        <li class="list-group-item" songid="456">
+                            Test Song 2
+                        </li>
+                        <li class="list-group-item" songid="789">
+                            Test Song 3
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="mt-3">
+                    <button id="clearBtn" class="btn btn-danger me-2">
+                        Clear Holding Tank
+                    </button>
+                    <button id="renameBtn" class="btn btn-warning">
+                        Rename Tab
+                    </button>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <h3>Console Output</h3>
+                <div id="console" style="background: #f8f9fa; padding: 10px; height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock the Promise-based customConfirm function
+        window.customConfirm = function(message, title = 'Confirm') {
+            return new Promise((resolve) => {
+                const modal = document.createElement('div');
+                modal.className = 'modal fade';
+                modal.innerHTML = `
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${title}</h5>
+                                <button type="button" class="close" data-dismiss="modal">
+                                    <span>&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <p>${message}</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary confirm-btn">Confirm</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                const confirmBtn = modal.querySelector('.confirm-btn');
+                const closeBtn = modal.querySelector('.close');
+                const cancelBtn = modal.querySelector('.btn-secondary');
+
+                const cleanup = () => {
+                    // Hide the modal properly using Bootstrap
+                    $(modal).modal('hide');
+                    
+                    // Remove the modal backdrop
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                    
+                    // Remove modal-open class from body
+                    document.body.classList.remove('modal-open');
+                    
+                    // Remove the modal element
+                    setTimeout(() => {
+                        if (document.body.contains(modal)) {
+                            document.body.removeChild(modal);
+                        }
+                    }, 150); // Small delay to ensure Bootstrap animations complete
+                };
+
+                confirmBtn.addEventListener('click', () => {
+                    cleanup();
+                    resolve(true);
+                });
+
+                closeBtn.addEventListener('click', () => {
+                    cleanup();
+                    resolve(false);
+                });
+
+                cancelBtn.addEventListener('click', () => {
+                    cleanup();
+                    resolve(false);
+                });
+
+                // Show modal
+                $(modal).modal('show');
+            });
+        };
+
+        // Mock the Promise-based customPrompt function
+        window.customPrompt = function(message, defaultValue = '', title = 'Input') {
+            return new Promise((resolve) => {
+                const modal = document.createElement('div');
+                modal.className = 'modal fade';
+                modal.innerHTML = `
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${title}</h5>
+                                <button type="button" class="close" data-dismiss="modal">
+                                    <span>&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <p>${message}</p>
+                                <input type="text" class="form-control prompt-input" value="${defaultValue}">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary confirm-btn">OK</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                const confirmBtn = modal.querySelector('.confirm-btn');
+                const closeBtn = modal.querySelector('.close');
+                const cancelBtn = modal.querySelector('.btn-secondary');
+                const input = modal.querySelector('.prompt-input');
+
+                const cleanup = () => {
+                    // Hide the modal properly using Bootstrap
+                    $(modal).modal('hide');
+                    
+                    // Remove the modal backdrop
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                    
+                    // Remove modal-open class from body
+                    document.body.classList.remove('modal-open');
+                    
+                    // Remove the modal element
+                    setTimeout(() => {
+                        if (document.body.contains(modal)) {
+                            document.body.removeChild(modal);
+                        }
+                    }, 150); // Small delay to ensure Bootstrap animations complete
+                };
+
+                confirmBtn.addEventListener('click', () => {
+                    const value = input.value.trim();
+                    cleanup();
+                    resolve(value || null);
+                });
+
+                closeBtn.addEventListener('click', () => {
+                    cleanup();
+                    resolve(null);
+                });
+
+                cancelBtn.addEventListener('click', () => {
+                    cleanup();
+                    resolve(null);
+                });
+
+                // Focus input and show modal
+                $(modal).modal('show');
+                setTimeout(() => input.focus(), 500);
+            });
+        };
+
+        // Mock saveHoldingTankToStore function
+        function saveHoldingTankToStore() {
+            log('✅ Holding tank saved to store');
+        }
+
+        // Console logging function
+        function log(message) {
+            const console = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            console.innerHTML += `[${timestamp}] ${message}\n`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // Fixed clearHoldingTank function (async version)
+        async function clearHoldingTank() {
+            log('🔄 Starting clearHoldingTank...');
+            
+            const confirmed = await customConfirm("Are you sure you want clear your holding tank?");
+            if (confirmed) {
+                log('✅ User confirmed, clearing holding tank...');
+                $(".holding_tank.active").empty();
+                saveHoldingTankToStore();
+                log('✅ Holding tank cleared successfully!');
+                return { success: true };
+            } else {
+                log('❌ User cancelled holding tank clearing');
+                return { success: false, error: 'User cancelled' };
+            }
+        }
+
+        // Fixed renameHoldingTankTab function (async version)
+        async function renameHoldingTankTab() {
+            log('🔄 Starting renameHoldingTankTab...');
+            
+            const currentName = "Test Tab"; // Mock current name
+            const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Holding Tank Tab");
+            if (newName && newName.trim() !== "") {
+                log(`✅ User confirmed, renaming tab to: ${newName}`);
+                // In real app: $("#holding_tank_tabs .nav-link.active").text(newName);
+                saveHoldingTankToStore();
+                log('✅ Tab renamed successfully!');
+                return { success: true, newName: newName };
+            } else {
+                log('❌ User cancelled or provided invalid name');
+                return { success: false, error: 'Invalid name' };
+            }
+        }
+
+        // Synchronous wrappers for HTML onclick
+        window.clearHoldingTank = function() {
+            log('🔄 Clear Holding Tank button clicked (synchronous wrapper)');
+            clearHoldingTank().catch(error => {
+                log(`❌ Error: ${error.message}`);
+            });
+        };
+
+        window.renameHoldingTankTab = function() {
+            log('🔄 Rename Tab button clicked (synchronous wrapper)');
+            renameHoldingTankTab().catch(error => {
+                log(`❌ Error: ${error.message}`);
+            });
+        };
+
+        // Set up button click handlers
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            log('🔄 Clear Holding Tank button clicked');
+            window.clearHoldingTank();
+        });
+
+        document.getElementById('renameBtn').addEventListener('click', () => {
+            log('🔄 Rename Tab button clicked');
+            window.renameHoldingTankTab();
+        });
+
+        // Initial log
+        log('🚀 Test page loaded. Click "Clear Holding Tank" or "Rename Tab" to test the fixes.');
+        log('📝 This test verifies that the Promise-based customConfirm and customPrompt work correctly.');
+    </script>
+</body>
+</html> 
