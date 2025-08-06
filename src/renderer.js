@@ -735,6 +735,7 @@ $(document).ready(async function() {
       window.getMusicDirectory = preferencesInstance.getMusicDirectory;
       window.getHotkeyDirectory = preferencesInstance.getHotkeyDirectory;
       window.getFadeOutSeconds = preferencesInstance.getFadeOutSeconds;
+      window.getDebugLogEnabled = preferencesInstance.getDebugLogEnabled;
     } catch (error) {
       console.error('❌ Error loading preferences module:', error);
       throw error;
@@ -1586,12 +1587,14 @@ $(document).ready(function () {
       window.electronAPI.store.get("database_directory"),
       window.electronAPI.store.get("music_directory"),
       window.electronAPI.store.get("hotkey_directory"),
-      window.electronAPI.store.get("fade_out_seconds")
-    ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds]) => {
+      window.electronAPI.store.get("fade_out_seconds"),
+      window.electronAPI.store.get("debug_log_enabled")
+    ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds, debugLog]) => {
       if (dbDir.success) $("#preferences-database-directory").val(dbDir.value);
       if (musicDir.success) $("#preferences-song-directory").val(musicDir.value);
       if (hotkeyDir.success) $("#preferences-hotkey-directory").val(hotkeyDir.value);
       if (fadeSeconds.success) $("#preferences-fadeout-seconds").val(fadeSeconds.value);
+      if (debugLog.success) $("#preferences-debug-log-enabled").prop("checked", debugLog.value);
     }).catch(error => {
       console.warn('Failed to load preferences:', error);
       // Fallback to legacy store access
@@ -1599,6 +1602,7 @@ $(document).ready(function () {
       $("#preferences-song-directory").val(store.get("music_directory"));
       $("#preferences-hotkey-directory").val(store.get("hotkey_directory"));
       $("#preferences-fadeout-seconds").val(store.get("fade_out_seconds"));
+      $("#preferences-debug-log-enabled").prop("checked", store.get("debug_log_enabled") || false);
     });
   });
 

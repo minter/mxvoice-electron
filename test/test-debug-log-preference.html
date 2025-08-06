@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Log Preference Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            margin: 5px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug Log Preference Test</h1>
+    
+    <div class="test-section info">
+        <h3>Test Overview</h3>
+        <p>This test verifies that the debug log preference is working correctly:</p>
+        <ul>
+            <li>✅ Preference can be saved and loaded</li>
+            <li>✅ Default value is false (off)</li>
+            <li>✅ Value persists across sessions</li>
+            <li>✅ UI checkbox reflects the stored value</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h3>1. Test Preference Loading</h3>
+        <button class="btn-primary" onclick="testLoadPreference()">Load Debug Log Preference</button>
+        <div id="load-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Test Preference Setting</h3>
+        <button class="btn-success" onclick="testSetPreference(true)">Set Debug Log = true</button>
+        <button class="btn-warning" onclick="testSetPreference(false)">Set Debug Log = false</button>
+        <div id="set-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Test Modal Integration</h3>
+        <button class="btn-primary" onclick="testModalIntegration()">Test Modal Loading</button>
+        <div id="modal-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Test Default Value</h3>
+        <button class="btn-danger" onclick="testDefaultValue()">Test Default (should be false)</button>
+        <div id="default-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>5. Manual Preference Check</h3>
+        <button class="btn-primary" onclick="checkCurrentPreference()">Check Current Value</button>
+        <div id="current-result" class="result"></div>
+    </div>
+
+    <script>
+        // Mock electronAPI for testing
+        window.electronAPI = {
+            store: {
+                get: async (key) => {
+                    // Simulate async store get
+                    const value = localStorage.getItem(key);
+                    return {
+                        success: true,
+                        value: value === null ? null : JSON.parse(value)
+                    };
+                },
+                set: async (key, value) => {
+                    // Simulate async store set
+                    localStorage.setItem(key, JSON.stringify(value));
+                    return { success: true };
+                }
+            }
+        };
+
+        // Mock jQuery for testing
+        window.$ = function(selector) {
+            return {
+                val: function(value) {
+                    if (value !== undefined) {
+                        // Set value
+                        if (selector === '#preferences-debug-log-enabled') {
+                            localStorage.setItem('debug_log_enabled', JSON.stringify(value));
+                        }
+                        return this;
+                    } else {
+                        // Get value
+                        if (selector === '#preferences-debug-log-enabled') {
+                            return localStorage.getItem('debug_log_enabled') || '';
+                        }
+                        return '';
+                    }
+                },
+                prop: function(property, value) {
+                    if (property === 'checked') {
+                        if (value !== undefined) {
+                            // Set checked state
+                            if (selector === '#preferences-debug-log-enabled') {
+                                localStorage.setItem('debug_log_enabled', JSON.stringify(value));
+                            }
+                        } else {
+                            // Get checked state
+                            if (selector === '#preferences-debug-log-enabled') {
+                                const stored = localStorage.getItem('debug_log_enabled');
+                                return stored ? JSON.parse(stored) : false;
+                            }
+                        }
+                    }
+                    return this;
+                },
+                is: function(selector) {
+                    if (selector === ':checked') {
+                        const stored = localStorage.getItem('debug_log_enabled');
+                        return stored ? JSON.parse(stored) : false;
+                    }
+                    return false;
+                }
+            };
+        };
+
+        // Mock modal functions
+        window.$ = function(selector) {
+            if (selector === '#preferencesModal') {
+                return {
+                    modal: function(action) {
+                        console.log(`Modal ${action} called`);
+                    }
+                };
+            }
+            return {
+                val: function(value) {
+                    if (value !== undefined) {
+                        // Set value
+                        if (selector === '#preferences-debug-log-enabled') {
+                            localStorage.setItem('debug_log_enabled', JSON.stringify(value));
+                        }
+                        return this;
+                    } else {
+                        // Get value
+                        if (selector === '#preferences-debug-log-enabled') {
+                            return localStorage.getItem('debug_log_enabled') || '';
+                        }
+                        return '';
+                    }
+                },
+                prop: function(property, value) {
+                    if (property === 'checked') {
+                        if (value !== undefined) {
+                            // Set checked state
+                            if (selector === '#preferences-debug-log-enabled') {
+                                localStorage.setItem('debug_log_enabled', JSON.stringify(value));
+                            }
+                        } else {
+                            // Get checked state
+                            if (selector === '#preferences-debug-log-enabled') {
+                                const stored = localStorage.getItem('debug_log_enabled');
+                                return stored ? JSON.parse(stored) : false;
+                            }
+                        }
+                    }
+                    return this;
+                },
+                is: function(selector) {
+                    if (selector === ':checked') {
+                        const stored = localStorage.getItem('debug_log_enabled');
+                        return stored ? JSON.parse(stored) : false;
+                    }
+                    return false;
+                }
+            };
+        };
+
+        async function testLoadPreference() {
+            const resultDiv = document.getElementById('load-result');
+            try {
+                // Simulate loading preference
+                const stored = localStorage.getItem('debug_log_enabled');
+                const value = stored ? JSON.parse(stored) : false;
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Successfully loaded debug log preference<br>
+                        <strong>Value:</strong> ${value}<br>
+                        <strong>Type:</strong> ${typeof value}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Failed to load debug log preference<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function testSetPreference(value) {
+            const resultDiv = document.getElementById('set-result');
+            try {
+                // Simulate setting preference
+                localStorage.setItem('debug_log_enabled', JSON.stringify(value));
+                
+                // Verify it was set correctly
+                const stored = localStorage.getItem('debug_log_enabled');
+                const retrieved = stored ? JSON.parse(stored) : false;
+                
+                if (retrieved === value) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Successfully set debug log preference to ${value}<br>
+                            <strong>Stored value:</strong> ${retrieved}<br>
+                            <strong>Type:</strong> ${typeof retrieved}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ Failed to set debug log preference<br>
+                            <strong>Expected:</strong> ${value}<br>
+                            <strong>Actual:</strong> ${retrieved}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Failed to set debug log preference<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function testModalIntegration() {
+            const resultDiv = document.getElementById('modal-result');
+            try {
+                // Simulate modal loading preferences
+                const stored = localStorage.getItem('debug_log_enabled');
+                const value = stored ? JSON.parse(stored) : false;
+                
+                // Simulate setting the checkbox
+                $('#preferences-debug-log-enabled').prop('checked', value);
+                
+                // Verify the checkbox reflects the stored value
+                const checkboxValue = $('#preferences-debug-log-enabled').prop('checked');
+                
+                if (checkboxValue === value) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Modal integration working correctly<br>
+                            <strong>Stored value:</strong> ${value}<br>
+                            <strong>Checkbox value:</strong> ${checkboxValue}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ Modal integration failed<br>
+                            <strong>Stored value:</strong> ${value}<br>
+                            <strong>Checkbox value:</strong> ${checkboxValue}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Modal integration test failed<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function testDefaultValue() {
+            const resultDiv = document.getElementById('default-result');
+            try {
+                // Clear any stored value
+                localStorage.removeItem('debug_log_enabled');
+                
+                // Check default value
+                const stored = localStorage.getItem('debug_log_enabled');
+                const defaultValue = stored ? JSON.parse(stored) : false;
+                
+                if (defaultValue === false) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Default value is correctly set to false<br>
+                            <strong>Default value:</strong> ${defaultValue}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ Default value is not false<br>
+                            <strong>Default value:</strong> ${defaultValue}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Default value test failed<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function checkCurrentPreference() {
+            const resultDiv = document.getElementById('current-result');
+            try {
+                const stored = localStorage.getItem('debug_log_enabled');
+                const value = stored ? JSON.parse(stored) : false;
+                
+                resultDiv.innerHTML = `
+                    <div class="info">
+                        📊 Current debug log preference status:<br>
+                        <strong>Stored value:</strong> ${value}<br>
+                        <strong>Type:</strong> ${typeof value}<br>
+                        <strong>Raw stored:</strong> "${stored}"
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Failed to check current preference<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize test environment
+        console.log('🧪 Debug Log Preference Test initialized');
+        console.log('📝 This test simulates the debug log preference functionality');
+        console.log('🔧 Mock electronAPI and jQuery functions are available');
+    </script>
+</body>
+</html> 

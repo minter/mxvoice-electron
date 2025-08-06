@@ -39,6 +39,7 @@ function initializePreferences(options = {}) {
     getMusicDirectory: manager.getMusicDirectory,
     getHotkeyDirectory: manager.getHotkeyDirectory,
     getFadeOutSeconds: manager.getFadeOutSeconds,
+    getDebugLogEnabled: manager.getDebugLogEnabled,
     
     // Module info
     version: '1.0.0',
@@ -66,6 +67,7 @@ export const getDatabaseDirectory = preferencesModule.getDatabaseDirectory;
 export const getMusicDirectory = preferencesModule.getMusicDirectory;
 export const getHotkeyDirectory = preferencesModule.getHotkeyDirectory;
 export const getFadeOutSeconds = preferencesModule.getFadeOutSeconds;
+export const getDebugLogEnabled = preferencesModule.getDebugLogEnabled;
 export { reinitializePreferences };
 
 // Add reinitialize function to the default export

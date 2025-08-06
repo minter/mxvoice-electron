@@ -36,12 +36,14 @@ function initializePreferenceManager(options = {}) {
         electronAPI.store.get("database_directory"),
         electronAPI.store.get("music_directory"),
         electronAPI.store.get("hotkey_directory"),
-        electronAPI.store.get("fade_out_seconds")
-      ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds]) => {
+        electronAPI.store.get("fade_out_seconds"),
+        electronAPI.store.get("debug_log_enabled")
+      ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds, debugLog]) => {
         if (dbDir.success) $("#preferences-database-directory").val(dbDir.value);
         if (musicDir.success) $("#preferences-song-directory").val(musicDir.value);
         if (hotkeyDir.success) $("#preferences-hotkey-directory").val(hotkeyDir.value);
         if (fadeSeconds.success) $("#preferences-fadeout-seconds").val(fadeSeconds.value);
+        if (debugLog.success) $("#preferences-debug-log-enabled").prop("checked", debugLog.value);
       }).catch(error => {
         console.warn('❌ Failed to load preferences:', error);
         // Fallback to legacy store access
@@ -63,6 +65,7 @@ function initializePreferenceManager(options = {}) {
       $("#preferences-song-directory").val(store.get("music_directory"));
       $("#preferences-hotkey-directory").val(store.get("hotkey_directory"));
       $("#preferences-fadeout-seconds").val(store.get("fade_out_seconds"));
+      $("#preferences-debug-log-enabled").prop("checked", store.get("debug_log_enabled") || false);
     } catch (error) {
       console.warn('❌ Legacy preference loading failed:', error);
     }
@@ -160,13 +163,37 @@ function initializePreferenceManager(options = {}) {
     }
   }
   
+  /**
+   * Get debug log enabled preference
+   * @returns {Promise<boolean>} Debug log enabled status
+   */
+  function getDebugLogEnabled() {
+    if (electronAPI && electronAPI.store) {
+      return electronAPI.store.get("debug_log_enabled").then(result => {
+        if (result.success) {
+          return result.value || false;
+        } else {
+          console.warn('❌ Failed to get debug log enabled:', result.error);
+          return false;
+        }
+      }).catch(error => {
+        console.warn('❌ Debug log enabled get error:', error);
+        return false;
+      });
+    } else {
+      // Fallback to legacy store access
+      return Promise.resolve(store.get("debug_log_enabled") || false);
+    }
+  }
+  
   const PreferenceManager = {
     openPreferencesModal,
     loadPreferences,
     getDatabaseDirectory,
     getMusicDirectory,
     getHotkeyDirectory,
-    getFadeOutSeconds
+    getFadeOutSeconds,
+    getDebugLogEnabled
   };
 
   const preferenceManagerInstance = PreferenceManager;

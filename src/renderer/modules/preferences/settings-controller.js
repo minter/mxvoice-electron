@@ -32,7 +32,8 @@ function initializeSettingsController(options = {}) {
         database_directory: $("#preferences-database-directory").val(),
         music_directory: $("#preferences-song-directory").val(),
         hotkey_directory: $("#preferences-hotkey-directory").val(),
-        fade_out_seconds: $("#preferences-fadeout-seconds").val()
+        fade_out_seconds: $("#preferences-fadeout-seconds").val(),
+        debug_log_enabled: $("#preferences-debug-log-enabled").is(":checked")
       };
       
       // Save all preferences
@@ -40,10 +41,11 @@ function initializeSettingsController(options = {}) {
         electronAPI.store.set("database_directory", preferences.database_directory),
         electronAPI.store.set("music_directory", preferences.music_directory),
         electronAPI.store.set("hotkey_directory", preferences.hotkey_directory),
-        electronAPI.store.set("fade_out_seconds", preferences.fade_out_seconds)
+        electronAPI.store.set("fade_out_seconds", preferences.fade_out_seconds),
+        electronAPI.store.set("debug_log_enabled", preferences.debug_log_enabled)
       ]).then(results => {
         const successCount = results.filter(result => result.success).length;
-        if (successCount === 4) {
+        if (successCount === 5) {
           console.log('✅ All preferences saved successfully');
         } else {
           console.warn('⚠️ Some preferences failed to save:', results);
@@ -59,7 +61,8 @@ function initializeSettingsController(options = {}) {
         database_directory: $("#preferences-database-directory").val(),
         music_directory: $("#preferences-song-directory").val(),
         hotkey_directory: $("#preferences-hotkey-directory").val(),
-        fade_out_seconds: $("#preferences-fadeout-seconds").val()
+        fade_out_seconds: $("#preferences-fadeout-seconds").val(),
+        debug_log_enabled: $("#preferences-debug-log-enabled").is(":checked")
       };
       savePreferencesLegacy(preferences);
     }
@@ -77,6 +80,7 @@ function initializeSettingsController(options = {}) {
         store.set("music_directory", preferences.music_directory);
         store.set("hotkey_directory", preferences.hotkey_directory);
         store.set("fade_out_seconds", preferences.fade_out_seconds);
+        store.set("debug_log_enabled", preferences.debug_log_enabled);
         console.log('✅ Preferences saved using legacy method');
       } else {
         // Legacy store not available, use electronAPI.store
@@ -84,10 +88,11 @@ function initializeSettingsController(options = {}) {
           electronAPI.store.set("database_directory", preferences.database_directory),
           electronAPI.store.set("music_directory", preferences.music_directory),
           electronAPI.store.set("hotkey_directory", preferences.hotkey_directory),
-          electronAPI.store.set("fade_out_seconds", preferences.fade_out_seconds)
+          electronAPI.store.set("fade_out_seconds", preferences.fade_out_seconds),
+          electronAPI.store.set("debug_log_enabled", preferences.debug_log_enabled)
         ]).then(results => {
           const successCount = results.filter(result => result.success).length;
-          if (successCount === 4) {
+          if (successCount === 5) {
             console.log('✅ All preferences saved successfully using electronAPI.store');
           } else {
             console.warn('⚠️ Some preferences failed to save:', results);
