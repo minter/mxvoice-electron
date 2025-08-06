@@ -153,11 +153,18 @@ class ModuleLoader {
   }
 }
 
-// Create and export a singleton instance
+// Create singleton instance
 const moduleLoader = new ModuleLoader();
 
-// Export the module loader
-module.exports = {
-  ModuleLoader,
-  loader: moduleLoader
-}; 
+// Export individual functions for direct access
+export const loadModule = moduleLoader.loadModule.bind(moduleLoader);
+export const loadModules = moduleLoader.loadModules.bind(moduleLoader);
+export const getModule = moduleLoader.getModule.bind(moduleLoader);
+export const isModuleLoaded = moduleLoader.isModuleLoaded.bind(moduleLoader);
+export const getLoadedModules = moduleLoader.getLoadedModules.bind(moduleLoader);
+export const clearCache = moduleLoader.clearCache.bind(moduleLoader);
+export const getInfo = moduleLoader.getInfo.bind(moduleLoader);
+export { ModuleLoader };
+
+// Default export for module loading
+export default moduleLoader; 
