@@ -6,12 +6,7 @@
  */
 
 // Import DebugLog for consistent logging
-const debugLog = window.debugLog || {
-  info: console.log,
-  warn: console.warn,
-  error: console.error,
-  debug: console.log
-};
+const debugLog = window.debugLog;
 
 class FunctionRegistry {
   constructor() {

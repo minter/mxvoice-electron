@@ -5,6 +5,9 @@
  * for the MxVoice Electron application.
  */
 
+// Import DebugLog for consistent logging
+const debugLog = window.debugLog;
+
 class FunctionMonitor {
   constructor(functionRegistry) {
     this.functionRegistry = functionRegistry;
@@ -22,11 +25,11 @@ class FunctionMonitor {
    */
   startMonitoring() {
     if (this.monitoring) {
-      console.log('⚠️ Function monitoring already active');
+      debugLog.warn('Function monitoring already active', { function: "startMonitoring" });
       return;
     }
 
-    console.log('🔄 Starting function availability monitoring...');
+    debugLog.info('Starting function availability monitoring...', { function: "startMonitoring" });
     this.monitoring = true;
 
     // Initial health check
@@ -40,7 +43,7 @@ class FunctionMonitor {
     // Monitor for function changes
     this.setupFunctionChangeMonitoring();
 
-    console.log('✅ Function monitoring started');
+    debugLog.info('Function monitoring started', { function: "startMonitoring" });
   }
 
   /**
@@ -48,11 +51,11 @@ class FunctionMonitor {
    */
   stopMonitoring() {
     if (!this.monitoring) {
-      console.log('⚠️ Function monitoring not active');
+      debugLog.warn('Function monitoring not active', { function: "stopMonitoring" });
       return;
     }
 
-    console.log('🔄 Stopping function availability monitoring...');
+    debugLog.info('Stopping function availability monitoring...', { function: "stopMonitoring" });
     this.monitoring = false;
 
     if (this.healthCheckInterval) {
@@ -60,7 +63,7 @@ class FunctionMonitor {
       this.healthCheckInterval = null;
     }
 
-    console.log('✅ Function monitoring stopped');
+    debugLog.info('Function monitoring stopped', { function: "stopMonitoring" });
   }
 
   /**
@@ -145,24 +148,35 @@ class FunctionMonitor {
    */
   logHealthReport(report) {
     const status = report.overallHealth === 'healthy' ? '✅' : '⚠️';
-    console.log(`${status} Function Health Check - ${report.overallHealth.toUpperCase()}`);
+    debugLog.info(`${status} Function Health Check - ${report.overallHealth.toUpperCase()}`, { 
+      function: "logHealthReport",
+      data: { overallHealth: report.overallHealth }
+    });
 
     if (report.issues.length > 0) {
-      console.warn('⚠️ Issues detected:');
-      report.issues.forEach(issue => console.warn(`  - ${issue}`));
+      debugLog.warn('Issues detected:', { 
+        function: "logHealthReport",
+        data: { issues: report.issues }
+      });
     }
 
     // Log critical function status
     const criticalStatus = Object.entries(report.criticalFunctions)
       .map(([func, status]) => `${func}: ${status.available ? '✅' : '❌'}`)
       .join(', ');
-    console.log(`🔍 Critical Functions: ${criticalStatus}`);
+    debugLog.info(`Critical Functions: ${criticalStatus}`, { 
+      function: "logHealthReport",
+      data: { criticalFunctions: report.criticalFunctions }
+    });
 
     // Log module health summary
     const moduleSummary = Object.entries(report.moduleFunctions)
       .map(([module, status]) => `${module}: ${status.available ? '✅' : '❌'} (${status.functionCount} functions)`)
       .join(', ');
-    console.log(`📦 Module Health: ${moduleSummary}`);
+    debugLog.info(`Module Health: ${moduleSummary}`, { 
+      function: "logHealthReport",
+      data: { moduleFunctions: report.moduleFunctions }
+    });
   }
 
   /**
@@ -180,11 +194,17 @@ class FunctionMonitor {
       const removedFunctions = originalFunctions.filter(fn => !currentFunctions.includes(fn));
       
       if (newFunctions.length > 0) {
-        console.log('🆕 New functions detected:', newFunctions);
+        debugLog.info('New functions detected:', { 
+          function: "setupFunctionChangeMonitoring",
+          data: { newFunctions }
+        });
       }
       
       if (removedFunctions.length > 0) {
-        console.warn('⚠️ Functions removed:', removedFunctions);
+        debugLog.warn('Functions removed:', { 
+          function: "setupFunctionChangeMonitoring",
+          data: { removedFunctions }
+        });
       }
     }, 10000); // Check every 10 seconds
   }

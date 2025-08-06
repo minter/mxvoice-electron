@@ -6,17 +6,7 @@
  */
 
 // Import DebugLog for consistent logging
-let debugLog;
-try {
-  debugLog = window.debugLog;
-} catch (error) {
-  debugLog = {
-    info: console.log,
-    warn: console.warn,
-    error: console.error,
-    debug: console.log
-  };
-}
+const debugLog = window.debugLog;
 
 /**
  * Module Loader Class

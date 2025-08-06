@@ -5,6 +5,9 @@
  * to reduce window pollution and improve architecture
  */
 
+// Import DebugLog for consistent logging
+const debugLog = window.debugLog;
+
 class EventManager {
   constructor(functionRegistry) {
     this.functionRegistry = functionRegistry;
@@ -17,11 +20,11 @@ class EventManager {
    */
   initialize() {
     if (this.initialized) {
-      console.log('⚠️ Event manager already initialized');
+      debugLog.warn('Event manager already initialized', { function: "initialize" });
       return;
     }
 
-    console.log('🔄 Initializing event manager...');
+    debugLog.info('Initializing event manager...', { function: "initialize" });
     
     // Wait for DOM to be ready
     if (document.readyState === 'loading') {
@@ -33,7 +36,7 @@ class EventManager {
     }
 
     this.initialized = true;
-    console.log('✅ Event manager initialized');
+    debugLog.info('Event manager initialized', { function: "initialize" });
   }
 
   /**
@@ -48,7 +51,7 @@ class EventManager {
     this.setupUpdateOperations();
     this.setupDynamicElements();
     
-    console.log('✅ All event listeners set up');
+    debugLog.info('All event listeners set up', { function: "setupEventListeners" });
   }
 
   /**
@@ -67,7 +70,7 @@ class EventManager {
         }
       });
       storageBtn.removeAttribute('onclick');
-      console.log('✅ Storage mode button event listener set up');
+      debugLog.info('Storage mode button event listener set up', { function: "setupModeButtons" });
     }
     
     if (playlistBtn) {
@@ -75,11 +78,11 @@ class EventManager {
         if (window.setHoldingTankMode) {
           window.setHoldingTankMode('playlist');
         } else {
-          console.warn('⚠️ setHoldingTankMode function not available');
+          debugLog.warn('setHoldingTankMode function not available', { function: "setupModeButtons" });
         }
       });
       playlistBtn.removeAttribute('onclick');
-      console.log('✅ Playlist mode button event listener set up');
+      debugLog.info('Playlist mode button event listener set up', { function: "setupModeButtons" });
     }
   }
 
@@ -94,7 +97,7 @@ class EventManager {
         if (window.openHoldingTankFile) {
           window.openHoldingTankFile();
         } else {
-          console.warn('⚠️ openHoldingTankFile function not available');
+          debugLog.warn('openHoldingTankFile function not available', { function: "setupFileOperations" });
         }
       });
       openHoldingTankBtn.removeAttribute('onclick');
@@ -106,7 +109,7 @@ class EventManager {
         if (window.saveHoldingTankFile) {
           window.saveHoldingTankFile();
         } else {
-          console.warn('⚠️ saveHoldingTankFile function not available');
+          debugLog.warn('saveHoldingTankFile function not available', { function: "setupFileOperations" });
         }
       });
       saveHoldingTankBtn.removeAttribute('onclick');
@@ -119,7 +122,7 @@ class EventManager {
         if (window.openHotkeyFile) {
           window.openHotkeyFile();
         } else {
-          console.warn('⚠️ openHotkeyFile function not available');
+          debugLog.warn('openHotkeyFile function not available', { function: "setupFileOperations" });
         }
       });
       openHotkeyBtn.removeAttribute('onclick');
@@ -131,13 +134,13 @@ class EventManager {
         if (window.saveHotkeyFile) {
           window.saveHotkeyFile();
         } else {
-          console.warn('⚠️ saveHotkeyFile function not available');
+          debugLog.warn('saveHotkeyFile function not available', { function: "setupFileOperations" });
         }
       });
       saveHotkeyBtn.removeAttribute('onclick');
     }
 
-    console.log('✅ File operation event listeners set up');
+    debugLog.info('File operation event listeners set up', { function: "setupFileOperations" });
   }
 
   /**
@@ -150,7 +153,7 @@ class EventManager {
         if (window.renameHoldingTankTab) {
           window.renameHoldingTankTab();
         } else {
-          console.warn('⚠️ renameHoldingTankTab function not available');
+          debugLog.warn('renameHoldingTankTab function not available', { function: "setupHoldingTankOperations" });
         }
       });
       renameHoldingTankBtn.removeAttribute('onclick');
@@ -162,13 +165,13 @@ class EventManager {
         if (window.clearHoldingTank) {
           window.clearHoldingTank();
         } else {
-          console.warn('⚠️ clearHoldingTank function not available');
+          debugLog.warn('clearHoldingTank function not available', { function: "setupHoldingTankOperations" });
         }
       });
       clearHoldingTankBtn.removeAttribute('onclick');
     }
 
-    console.log('✅ Holding tank operation event listeners set up');
+    debugLog.info('Holding tank operation event listeners set up', { function: "setupHoldingTankOperations" });
   }
 
   /**
@@ -181,7 +184,7 @@ class EventManager {
         if (window.renameHotkeyTab) {
           window.renameHotkeyTab();
         } else {
-          console.warn('⚠️ renameHotkeyTab function not available');
+          debugLog.warn('renameHotkeyTab function not available', { function: "setupHotkeyOperations" });
         }
       });
       renameHotkeyBtn.removeAttribute('onclick');
@@ -193,13 +196,13 @@ class EventManager {
         if (window.clearHotkeys) {
           window.clearHotkeys();
         } else {
-          console.warn('⚠️ clearHotkeys function not available');
+          debugLog.warn('clearHotkeys function not available', { function: "setupHotkeyOperations" });
         }
       });
       clearHotkeysBtn.removeAttribute('onclick');
     }
 
-    console.log('✅ Hotkey operation event listeners set up');
+    debugLog.info('Hotkey operation event listeners set up', { function: "setupHotkeyOperations" });
   }
 
   /**
@@ -218,14 +221,14 @@ class EventManager {
           if (window.pickDirectory) {
             window.pickDirectory(event, selector);
           } else {
-            console.warn('⚠️ pickDirectory function not available');
+            debugLog.warn('pickDirectory function not available', { function: "setupPreferencesOperations" });
           }
         });
         button.removeAttribute('onclick');
       }
     });
 
-    console.log('✅ Preferences operation event listeners set up');
+    debugLog.info('Preferences operation event listeners set up', { function: "setupPreferencesOperations" });
   }
 
   /**
@@ -238,13 +241,13 @@ class EventManager {
         if (window.installUpdate) {
           window.installUpdate();
         } else {
-          console.warn('⚠️ installUpdate function not available');
+          debugLog.warn('installUpdate function not available', { function: "setupUpdateOperations" });
         }
       });
       installUpdateBtn.removeAttribute('onclick');
     }
 
-    console.log('✅ Update operation event listeners set up');
+    debugLog.info('Update operation event listeners set up', { function: "setupUpdateOperations" });
   }
 
   /**
@@ -267,7 +270,7 @@ class EventManager {
       subtree: true
     });
 
-    console.log('✅ Dynamic element observer set up');
+    debugLog.info('Dynamic element observer set up', { function: "setupDynamicElements" });
   }
 
   /**
@@ -286,7 +289,7 @@ class EventManager {
           if (window.editCategoryUI) {
             window.editCategoryUI(categoryCode);
           } else {
-            console.warn('⚠️ editCategoryUI function not available');
+            debugLog.warn('editCategoryUI function not available', { function: "setupDynamicElement" });
           }
         });
         button.removeAttribute('onclick');
@@ -307,7 +310,7 @@ class EventManager {
           if (window.deleteCategory) {
             window.deleteCategory(event, categoryCode, categoryDescription);
           } else {
-            console.warn('⚠️ deleteCategory function not available');
+            debugLog.warn('deleteCategory function not available', { function: "setupDynamicElement" });
           }
         });
         button.removeAttribute('onclick');
