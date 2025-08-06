@@ -22,7 +22,7 @@ function initializeSettingsController(options = {}) {
    * @param {Event} event - The form submission event
    */
   function savePreferences(event) {
-    console.log("Saving preferences");
+    debugLog.info("Saving preferences", { function: "savePreferences" });
     event.preventDefault();
     $(`#preferencesModal`).modal("hide");
     
@@ -46,12 +46,21 @@ function initializeSettingsController(options = {}) {
       ]).then(results => {
         const successCount = results.filter(result => result.success).length;
         if (successCount === 5) {
-          console.log('✅ All preferences saved successfully');
+          debugLog.info('All preferences saved successfully', { 
+            function: "savePreferences",
+            data: { successCount, totalPreferences: 5 }
+          });
         } else {
-          console.warn('⚠️ Some preferences failed to save:', results);
+          debugLog.warn('Some preferences failed to save', { 
+            function: "savePreferences",
+            data: { successCount, totalPreferences: 5, results }
+          });
         }
       }).catch(error => {
-        console.warn('❌ Failed to save preferences:', error);
+        debugLog.error('Failed to save preferences', { 
+          function: "savePreferences",
+          error: error
+        });
         // Fallback to legacy store access
         savePreferencesLegacy(preferences);
       });
@@ -81,7 +90,10 @@ function initializeSettingsController(options = {}) {
         store.set("hotkey_directory", preferences.hotkey_directory);
         store.set("fade_out_seconds", preferences.fade_out_seconds);
         store.set("debug_log_enabled", preferences.debug_log_enabled);
-        console.log('✅ Preferences saved using legacy method');
+        debugLog.info('Preferences saved using legacy method', { 
+          function: "savePreferencesLegacy",
+          data: { preferences }
+        });
       } else {
         // Legacy store not available, use electronAPI.store
         Promise.all([
@@ -93,16 +105,28 @@ function initializeSettingsController(options = {}) {
         ]).then(results => {
           const successCount = results.filter(result => result.success).length;
           if (successCount === 5) {
-            console.log('✅ All preferences saved successfully using electronAPI.store');
+            debugLog.info('All preferences saved successfully using electronAPI.store', { 
+              function: "savePreferencesLegacy",
+              data: { successCount, totalPreferences: 5 }
+            });
           } else {
-            console.warn('⚠️ Some preferences failed to save:', results);
+            debugLog.warn('Some preferences failed to save', { 
+              function: "savePreferencesLegacy",
+              data: { successCount, totalPreferences: 5, results }
+            });
           }
         }).catch(error => {
-          console.warn('❌ Failed to save preferences using electronAPI.store:', error);
+          debugLog.error('Failed to save preferences using electronAPI.store', { 
+            function: "savePreferencesLegacy",
+            error: error
+          });
         });
       }
     } catch (error) {
-      console.warn('❌ Legacy preference saving failed:', error);
+      debugLog.error('Legacy preference saving failed', { 
+        function: "savePreferencesLegacy",
+        error: error
+      });
     }
   }
   
@@ -117,11 +141,18 @@ function initializeSettingsController(options = {}) {
         if (result.success) {
           return result.value;
         } else {
-          console.warn(`❌ Failed to get preference ${key}:`, result.error);
+          debugLog.warn(`Failed to get preference ${key}`, { 
+            function: "getPreference",
+            data: { key, error: result.error }
+          });
           return null;
         }
       }).catch(error => {
-        console.warn(`❌ Preference get error for ${key}:`, error);
+        debugLog.error(`Preference get error for ${key}`, { 
+          function: "getPreference",
+          data: { key },
+          error: error
+        });
         return null;
       });
     } else if (store) {
@@ -129,7 +160,10 @@ function initializeSettingsController(options = {}) {
       return Promise.resolve(store.get(key));
     } else {
       // No store available
-      console.warn(`❌ No store available for preference ${key}`);
+      debugLog.warn(`No store available for preference ${key}`, { 
+        function: "getPreference",
+        data: { key }
+      });
       return Promise.resolve(null);
     }
   }
@@ -144,24 +178,41 @@ function initializeSettingsController(options = {}) {
     if (electronAPI && electronAPI.store) {
       return electronAPI.store.set(key, value).then(result => {
         if (result.success) {
-          console.log(`✅ Preference ${key} saved successfully`);
+          debugLog.info(`Preference ${key} saved successfully`, { 
+            function: "setPreference",
+            data: { key, value }
+          });
           return true;
         } else {
-          console.warn(`❌ Failed to save preference ${key}:`, result.error);
+          debugLog.warn(`Failed to save preference ${key}`, { 
+            function: "setPreference",
+            data: { key, value, error: result.error }
+          });
           return false;
         }
       }).catch(error => {
-        console.warn(`❌ Preference set error for ${key}:`, error);
+        debugLog.error(`Preference set error for ${key}`, { 
+          function: "setPreference",
+          data: { key, value },
+          error: error
+        });
         return false;
       });
     } else {
       // Fallback to legacy store access
       try {
         store.set(key, value);
-        console.log(`✅ Preference ${key} saved using legacy method`);
+        debugLog.info(`Preference ${key} saved using legacy method`, { 
+          function: "setPreference",
+          data: { key, value }
+        });
         return Promise.resolve(true);
       } catch (error) {
-        console.warn(`❌ Legacy preference saving failed for ${key}:`, error);
+        debugLog.error(`Legacy preference saving failed for ${key}`, { 
+          function: "setPreference",
+          data: { key, value },
+          error: error
+        });
         return Promise.resolve(false);
       }
     }

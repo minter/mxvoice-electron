@@ -38,14 +38,17 @@ function initializePreferenceManager(options = {}) {
         electronAPI.store.get("hotkey_directory"),
         electronAPI.store.get("fade_out_seconds"),
         electronAPI.store.get("debug_log_enabled")
-      ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds, debugLog]) => {
+      ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds, debugLogPref]) => {
         if (dbDir.success) $("#preferences-database-directory").val(dbDir.value);
         if (musicDir.success) $("#preferences-song-directory").val(musicDir.value);
         if (hotkeyDir.success) $("#preferences-hotkey-directory").val(hotkeyDir.value);
         if (fadeSeconds.success) $("#preferences-fadeout-seconds").val(fadeSeconds.value);
-        if (debugLog.success) $("#preferences-debug-log-enabled").prop("checked", debugLog.value);
+        if (debugLogPref.success) $("#preferences-debug-log-enabled").prop("checked", debugLogPref.value);
       }).catch(error => {
-        console.warn('❌ Failed to load preferences:', error);
+        debugLog.error('Failed to load preferences', { 
+          function: "loadPreferences",
+          error: error
+        });
         // Fallback to legacy store access
         loadPreferencesLegacy();
       });
@@ -67,7 +70,10 @@ function initializePreferenceManager(options = {}) {
       $("#preferences-fadeout-seconds").val(store.get("fade_out_seconds"));
       $("#preferences-debug-log-enabled").prop("checked", store.get("debug_log_enabled") || false);
     } catch (error) {
-      console.warn('❌ Legacy preference loading failed:', error);
+      debugLog.error('Legacy preference loading failed', { 
+        function: "loadPreferencesLegacy",
+        error: error
+      });
     }
   }
   
@@ -81,11 +87,17 @@ function initializePreferenceManager(options = {}) {
         if (result.success) {
           return result.value;
         } else {
-          console.warn('❌ Failed to get database directory:', result.error);
+          debugLog.warn('Failed to get database directory', { 
+            function: "getDatabaseDirectory",
+            error: result.error
+          });
           return null;
         }
       }).catch(error => {
-        console.warn('❌ Database directory get error:', error);
+        debugLog.error('Database directory get error', { 
+          function: "getDatabaseDirectory",
+          error: error
+        });
         return null;
       });
     } else {
@@ -104,11 +116,17 @@ function initializePreferenceManager(options = {}) {
         if (result.success) {
           return result.value;
         } else {
-          console.warn('❌ Failed to get music directory:', result.error);
+          debugLog.warn('Failed to get music directory', { 
+            function: "getMusicDirectory",
+            error: result.error
+          });
           return null;
         }
       }).catch(error => {
-        console.warn('❌ Music directory get error:', error);
+        debugLog.error('Music directory get error', { 
+          function: "getMusicDirectory",
+          error: error
+        });
         return null;
       });
     } else {
@@ -127,11 +145,17 @@ function initializePreferenceManager(options = {}) {
         if (result.success) {
           return result.value;
         } else {
-          console.warn('❌ Failed to get hotkey directory:', result.error);
+          debugLog.warn('Failed to get hotkey directory', { 
+            function: "getHotkeyDirectory",
+            error: result.error
+          });
           return null;
         }
       }).catch(error => {
-        console.warn('❌ Hotkey directory get error:', error);
+        debugLog.error('Hotkey directory get error', { 
+          function: "getHotkeyDirectory",
+          error: error
+        });
         return null;
       });
     } else {
@@ -150,11 +174,17 @@ function initializePreferenceManager(options = {}) {
         if (result.success) {
           return result.value;
         } else {
-          console.warn('❌ Failed to get fade out seconds:', result.error);
+          debugLog.warn('Failed to get fade out seconds', { 
+            function: "getFadeOutSeconds",
+            error: result.error
+          });
           return null;
         }
       }).catch(error => {
-        console.warn('❌ Fade out seconds get error:', error);
+        debugLog.error('Fade out seconds get error', { 
+          function: "getFadeOutSeconds",
+          error: error
+        });
         return null;
       });
     } else {
@@ -173,11 +203,17 @@ function initializePreferenceManager(options = {}) {
         if (result.success) {
           return result.value || false;
         } else {
-          console.warn('❌ Failed to get debug log enabled:', result.error);
+          debugLog.warn('Failed to get debug log enabled', { 
+            function: "getDebugLogEnabled",
+            error: result.error
+          });
           return false;
         }
       }).catch(error => {
-        console.warn('❌ Debug log enabled get error:', error);
+        debugLog.error('Debug log enabled get error', { 
+          function: "getDebugLogEnabled",
+          error: error
+        });
         return false;
       });
     } else {
