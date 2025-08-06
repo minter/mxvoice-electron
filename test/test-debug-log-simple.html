@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple DebugLog Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            margin: 5px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-error { color: #dc3545; }
+        .log-warn { color: #ffc107; }
+        .log-info { color: #17a2b8; }
+        .log-debug { color: #6c757d; }
+    </style>
+</head>
+<body>
+    <h1>Simple DebugLog Test</h1>
+    
+    <div class="test-section info">
+        <h3>Test Overview</h3>
+        <p>This is a simplified test that doesn't rely on ES6 imports:</p>
+        <ul>
+            <li>✅ Basic logging functionality</li>
+            <li>✅ Context support</li>
+            <li>✅ Debug preference integration</li>
+            <li>✅ Performance optimization</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h3>1. Basic Logging Tests</h3>
+        <button class="btn-primary" onclick="testBasicLogging()">Test Basic Logging</button>
+        <button class="btn-success" onclick="testContextLogging()">Test Context Logging</button>
+        <button class="btn-warning" onclick="testDebugPreference()">Test Debug Preference</button>
+        <div id="basic-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Advanced Tests</h3>
+        <button class="btn-primary" onclick="testPerformance()">Test Performance</button>
+        <button class="btn-success" onclick="testErrorHandling()">Test Error Handling</button>
+        <button class="btn-danger" onclick="testInvalidInputs()">Test Invalid Inputs</button>
+        <div id="advanced-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Live Log Output</h3>
+        <button class="btn-primary" onclick="clearLogOutput()">Clear Output</button>
+        <button class="btn-success" onclick="exportLogs()">Export Logs</button>
+        <div id="log-output" class="log-output"></div>
+    </div>
+
+    <script>
+        // Mock electronAPI for testing
+        window.electronAPI = {
+            store: {
+                get: async (key) => {
+                    // Simulate async store get
+                    const value = localStorage.getItem(key);
+                    return {
+                        success: true,
+                        value: value === null ? null : JSON.parse(value)
+                    };
+                },
+                set: async (key, value) => {
+                    // Simulate async store set
+                    localStorage.setItem(key, JSON.stringify(value));
+                    return { success: true };
+                }
+            }
+        };
+
+        // Mock console methods to capture output
+        const originalConsole = {
+            log: console.log,
+            warn: console.warn,
+            error: console.error,
+            info: console.info
+        };
+
+        const logOutput = [];
+
+        function captureLog(level, ...args) {
+            const timestamp = new Date().toISOString();
+            const message = args.join(' ');
+            logOutput.push({ level, message, timestamp });
+            
+            // Call original console method
+            originalConsole[level](...args);
+            
+            // Update display
+            updateLogDisplay();
+        }
+
+        console.log = (...args) => captureLog('log', ...args);
+        console.warn = (...args) => captureLog('warn', ...args);
+        console.error = (...args) => captureLog('error', ...args);
+        console.info = (...args) => captureLog('info', ...args);
+
+        function updateLogDisplay() {
+            const outputDiv = document.getElementById('log-output');
+            outputDiv.innerHTML = logOutput.map(entry => {
+                const levelClass = `log-${entry.level}`;
+                return `<div class="log-entry ${levelClass}">[${entry.timestamp}] ${entry.message}</div>`;
+            }).join('');
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+
+        function clearLogOutput() {
+            logOutput.length = 0;
+            updateLogDisplay();
+        }
+
+        function exportLogs() {
+            const logText = logOutput.map(entry => 
+                `[${entry.timestamp}] [${entry.level.toUpperCase()}] ${entry.message}`
+            ).join('\n');
+            
+            const blob = new Blob([logText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `debug-log-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Create a simple DebugLog implementation
+        function createDebugLog() {
+            // Log levels
+            const LOG_LEVELS = {
+                ERROR: 0,
+                WARN: 1,
+                INFO: 2,
+                DEBUG: 3
+            };
+            
+            let currentLogLevel = LOG_LEVELS.INFO;
+            let debugEnabledCache = false;
+            let debugEnabledCacheTime = 0;
+            const CACHE_DURATION = 5000; // 5 seconds
+            
+            function formatLogMessage(level, message, context = null) {
+                const timestamp = new Date().toISOString();
+                const levelIcon = {
+                    'ERROR': '❌',
+                    'WARN': '⚠️',
+                    'INFO': 'ℹ️',
+                    'DEBUG': '🐛'
+                }[level] || '📝';
+                
+                let formattedMessage = `${levelIcon} [${timestamp}] [${level}] ${message}`;
+                
+                if (context) {
+                    if (typeof context === 'object') {
+                        formattedMessage += ` | Context: ${JSON.stringify(context)}`;
+                    } else {
+                        formattedMessage += ` | Context: ${context}`;
+                    }
+                }
+                
+                return formattedMessage;
+            }
+            
+            async function isDebugEnabled() {
+                const now = Date.now();
+                
+                // Return cached value if still valid
+                if (now - debugEnabledCacheTime < CACHE_DURATION) {
+                    return debugEnabledCache;
+                }
+                
+                try {
+                    if (window.electronAPI && window.electronAPI.store) {
+                        const result = await window.electronAPI.store.get("debug_log_enabled");
+                        if (result.success) {
+                            debugEnabledCache = result.value || false;
+                        } else {
+                            debugEnabledCache = false;
+                        }
+                    } else {
+                        debugEnabledCache = false;
+                    }
+                } catch (error) {
+                    console.warn('❌ Failed to get debug log preference:', error);
+                    debugEnabledCache = false;
+                }
+                
+                debugEnabledCacheTime = now;
+                return debugEnabledCache;
+            }
+            
+            async function setDebugEnabled(enabled) {
+                try {
+                    if (window.electronAPI && window.electronAPI.store) {
+                        const result = await window.electronAPI.store.set("debug_log_enabled", enabled);
+                        if (result.success) {
+                            debugEnabledCache = enabled;
+                            debugEnabledCacheTime = Date.now();
+                            return true;
+                        } else {
+                            console.warn('❌ Failed to set debug log preference:', result.error);
+                            return false;
+                        }
+                    } else {
+                        console.warn('❌ No store available for debug log preference');
+                        return false;
+                    }
+                } catch (error) {
+                    console.warn('❌ Failed to set debug log preference:', error);
+                    return false;
+                }
+            }
+            
+            function setLogLevel(level) {
+                if (Object.values(LOG_LEVELS).includes(level)) {
+                    currentLogLevel = level;
+                } else {
+                    console.warn('❌ Invalid log level:', level);
+                }
+            }
+            
+            function log(message, context = null) {
+                if (currentLogLevel >= LOG_LEVELS.INFO) {
+                    const formattedMessage = formatLogMessage('INFO', message, context);
+                    console.log(formattedMessage);
+                }
+            }
+            
+            function info(message, context = null) {
+                if (currentLogLevel >= LOG_LEVELS.INFO) {
+                    const formattedMessage = formatLogMessage('INFO', message, context);
+                    console.info(formattedMessage);
+                }
+            }
+            
+            function warn(message, context = null) {
+                if (currentLogLevel >= LOG_LEVELS.WARN) {
+                    const formattedMessage = formatLogMessage('WARN', message, context);
+                    console.warn(formattedMessage);
+                }
+            }
+            
+            function error(message, context = null) {
+                if (currentLogLevel >= LOG_LEVELS.ERROR) {
+                    const formattedMessage = formatLogMessage('ERROR', message, context);
+                    console.error(formattedMessage);
+                }
+            }
+            
+            async function debug(message, context = null) {
+                if (currentLogLevel >= LOG_LEVELS.DEBUG) {
+                    const debugEnabled = await isDebugEnabled();
+                    if (debugEnabled) {
+                        const formattedMessage = formatLogMessage('DEBUG', message, context);
+                        console.log(formattedMessage);
+                    }
+                }
+            }
+            
+            return {
+                log,
+                warn,
+                error,
+                info,
+                debug,
+                isDebugEnabled,
+                setDebugEnabled,
+                setLogLevel
+            };
+        }
+
+        // Create debug log instance
+        const debugLog = createDebugLog();
+
+        // Test functions
+        window.testBasicLogging = async function() {
+            const resultDiv = document.getElementById('basic-result');
+            try {
+                debugLog.log("Basic log message");
+                debugLog.info("Info message");
+                debugLog.warn("Warning message");
+                debugLog.error("Error message");
+                await debugLog.debug("Debug message");
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Basic logging tests completed successfully<br>
+                        <strong>Messages logged:</strong> 5<br>
+                        <strong>Check the log output above for results</strong>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Basic logging test failed<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        window.testContextLogging = async function() {
+            const resultDiv = document.getElementById('basic-result');
+            try {
+                debugLog.info("User action", { 
+                    function: "handleClick", 
+                    data: { buttonId: "play", userId: "123" } 
+                });
+
+                debugLog.warn("API call failed", { 
+                    module: "database", 
+                    error: "Connection timeout" 
+                });
+
+                await debugLog.debug("Processing data", { 
+                    data: { items: 50, processed: 45 },
+                    function: "processItems" 
+                });
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Context logging tests completed successfully<br>
+                        <strong>Context types tested:</strong> Function, Module, Data<br>
+                        <strong>Check the log output above for results</strong>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Context logging test failed<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        window.testDebugPreference = async function() {
+            const resultDiv = document.getElementById('basic-result');
+            try {
+                const enabled = await debugLog.isDebugEnabled();
+                
+                await debugLog.debug("Debug message 1");
+                
+                await debugLog.setDebugEnabled(!enabled);
+                await debugLog.debug("Debug message 2");
+                
+                await debugLog.setDebugEnabled(enabled);
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Debug preference tests completed successfully<br>
+                        <strong>Initial debug state:</strong> ${enabled}<br>
+                        <strong>Toggled state:</strong> ${!enabled}<br>
+                        <strong>Check the log output above for results</strong>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Debug preference test failed<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        window.testPerformance = async function() {
+            const resultDiv = document.getElementById('advanced-result');
+            try {
+                const iterations = 100;
+                const startTime = Date.now();
+
+                for (let i = 0; i < iterations; i++) {
+                    debugLog.info(`Performance test message ${i}`);
+                }
+
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                const avgTime = duration / iterations;
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Performance tests completed successfully<br>
+                        <strong>Iterations:</strong> ${iterations}<br>
+                        <strong>Total time:</strong> ${duration}ms<br>
+                        <strong>Average time:</strong> ${avgTime.toFixed(2)}ms per log
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Performance test failed<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        window.testErrorHandling = async function() {
+            const resultDiv = document.getElementById('advanced-result');
+            try {
+                debugLog.error("Test error message", { 
+                    error: new Error("Test error"),
+                    function: "testErrorHandling"
+                });
+
+                debugLog.setLogLevel(999); // Invalid level
+                debugLog.log("This should still work");
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Error handling tests completed successfully<br>
+                        <strong>Error logging:</strong> Working<br>
+                        <strong>Invalid log level:</strong> Handled gracefully<br>
+                        <strong>Check the log output above for results</strong>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Error handling test failed<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        window.testInvalidInputs = async function() {
+            const resultDiv = document.getElementById('advanced-result');
+            try {
+                debugLog.log(null);
+                debugLog.log(undefined);
+                debugLog.log("");
+                debugLog.log(123);
+                debugLog.log({});
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Invalid input tests completed successfully<br>
+                        <strong>Null input:</strong> Handled<br>
+                        <strong>Undefined input:</strong> Handled<br>
+                        <strong>Empty string:</strong> Handled<br>
+                        <strong>Number input:</strong> Handled<br>
+                        <strong>Object input:</strong> Handled<br>
+                        <strong>Check the log output above for results</strong>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Invalid input test failed<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        // Make functions globally available
+        window.clearLogOutput = clearLogOutput;
+        window.exportLogs = exportLogs;
+
+        // Initialize test environment
+        console.log('🧪 Simple DebugLog Test initialized');
+        console.log('📝 This test uses a simplified implementation without ES6 imports');
+        console.log('🔧 Mock electronAPI and console capture are available');
+    </script>
+</body>
+</html> 
