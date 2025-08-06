@@ -157,13 +157,7 @@ class ModuleLoader {
 const moduleLoader = new ModuleLoader();
 
 // Export the module loader
-export {
-  ModuleLoader,
-  loader: moduleLoader
-};
-
-// Default export for module loading
-export default {
+module.exports = {
   ModuleLoader,
   loader: moduleLoader
 }; 
