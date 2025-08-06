@@ -1139,10 +1139,10 @@ electron-is-dev@^3.0.1:
   resolved "https://registry.yarnpkg.com/electron-is-dev/-/electron-is-dev-3.0.1.tgz#1cbc79b1dd046787903acd357efdfab6549dc17a"
   integrity sha512-8TjjAh8Ec51hUi3o4TaU0mD3GMTOESi866oRNavj9A3IQJ7pmv+MJVmdZBFGw4GFT36X7bkqnuDNYvkQgvyI8Q==
 
-electron-log@^5.4.0:
-  version "5.4.0"
-  resolved "https://registry.yarnpkg.com/electron-log/-/electron-log-5.4.0.tgz#3180bf5194b2e2efacb62ec1392f8150faf4de6b"
-  integrity sha512-AXI5OVppskrWxEAmCxuv8ovX+s2Br39CpCAgkGMNHQtjYT3IiVbSQTncEjFVGPgoH35ZygRm/mvUMBDWwhRxgg==
+electron-log@^5.4.2:
+  version "5.4.2"
+  resolved "https://registry.yarnpkg.com/electron-log/-/electron-log-5.4.2.tgz#ac52eacd5f85049471795b801dc7c2dcea1fc648"
+  integrity sha512-L55kJzbVVoBY6kyJ3A+cjPchL1aXLdV2/Q8SvIj4sE5VmOcwZa6KXaFICZE+Z+RMXhAIFta79kSaXBqn+0XXMA==
 
 electron-publish@26.0.11:
   version "26.0.11"
@@ -1202,10 +1202,10 @@ electron-util@^0.18.1:
     electron-is-dev "^3.0.1"
     new-github-issue-url "^1.0.0"
 
-electron@^37.2.5:
-  version "37.2.5"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-37.2.5.tgz#29ce0154f763c03d70645063344da51af40c751c"
-  integrity sha512-719ZqEp43rj6xDJMICm4CIXl8keFFgvVNO9Ix6OtjNjrh9HtYlP/1WiYeRohnXj06aLyGx5NCzrHbG7j3BxO9w==
+electron@^37.2.6:
+  version "37.2.6"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-37.2.6.tgz#bc299eb21daf5bd8242f9b3a6119e19b4ef226cd"
+  integrity sha512-Ns6xyxE+hIK5UlujtRlw7w4e2Ju/ImCWXf1Q/PoOhc0N3/6SN6YW7+ujCarsHbxWnolbW+1RlkHtdklUJpjbPA==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^22.7.7"
