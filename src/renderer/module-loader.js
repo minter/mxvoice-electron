@@ -5,6 +5,19 @@
  * all modules in the MxVoice Electron application.
  */
 
+// Import DebugLog for consistent logging
+let debugLog;
+try {
+  debugLog = window.debugLog;
+} catch (error) {
+  debugLog = {
+    info: console.log,
+    warn: console.warn,
+    error: console.error,
+    debug: console.log
+  };
+}
+
 /**
  * Module Loader Class
  * 
@@ -28,7 +41,10 @@ class ModuleLoader {
     try {
       // Check if module is already loaded
       if (this.moduleCache.has(modulePath)) {
-        console.log(`✅ Module already loaded: ${modulePath}`);
+        debugLog.info(`Module already loaded: ${modulePath}`, { 
+          function: "loadModule",
+          data: { modulePath }
+        });
         return this.moduleCache.get(modulePath);
       }
 
@@ -39,10 +55,17 @@ class ModuleLoader {
       this.moduleCache.set(modulePath, module);
       this.loadedModules.add(modulePath);
       
-      console.log(`✅ Module loaded successfully: ${modulePath}`);
+      debugLog.info(`Module loaded successfully: ${modulePath}`, { 
+        function: "loadModule",
+        data: { modulePath }
+      });
       return module;
     } catch (error) {
-      console.error(`❌ Failed to load module: ${modulePath}`, error);
+      debugLog.error(`Failed to load module: ${modulePath}`, { 
+        function: "loadModule",
+        data: { modulePath },
+        error: error.message
+      });
       throw error;
     }
   }
@@ -62,7 +85,11 @@ class ModuleLoader {
         const module = await this.loadModule(modulePath, options);
         results[modulePath] = module;
       } catch (error) {
-        console.error(`❌ Failed to load module: ${modulePath}`, error);
+        debugLog.error(`Failed to load module: ${modulePath}`, { 
+          function: "loadModules",
+          data: { modulePath },
+          error: error.message
+        });
         results[modulePath] = { error: error.message };
       }
     }
@@ -105,7 +132,9 @@ class ModuleLoader {
   clearCache() {
     this.moduleCache.clear();
     this.loadedModules.clear();
-    console.log('✅ Module cache cleared');
+    debugLog.info('Module cache cleared', { 
+      function: "clearCache" 
+    });
   }
 
   /**
