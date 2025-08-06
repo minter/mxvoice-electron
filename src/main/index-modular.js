@@ -26,8 +26,7 @@ const __dirname = path.dirname(__filename);
 import * as appSetup from './modules/app-setup.js';
 import * as ipcHandlers from './modules/ipc-handlers.js';
 import * as fileOperations from './modules/file-operations.js';
-
-console.log = log.log;
+import initializeMainDebugLog from './modules/debug-log.js';
 
 // Initialize Octokit for GitHub API
 let octokit;
@@ -36,7 +35,10 @@ import("@octokit/rest")
     octokit = new Octokit();
   })
   .catch(err => {
-    console.error("Failed to load Octokit module:", err);
+    debugLog.error("Failed to load Octokit module", { 
+      function: "Octokit initialization",
+      error: err.message 
+    });
   });
 
 // Initialize markdown parser
@@ -56,6 +58,9 @@ const defaults = {
 const store = new Store({
   defaults: defaults
 });
+
+// Initialize main process DebugLog
+const debugLog = initializeMainDebugLog({ store });
 
 // Auto-updater configuration
 const { autoUpdater } = electronUpdater;
@@ -83,16 +88,27 @@ import('electron-util').then(electronUtil => {
     import('electron-reload').then(electronReload => {
       try {
         electronReload.default(__dirname);
-        console.log('✅ Electron reload enabled for development');
+        debugLog.info('Electron reload enabled for development', { 
+          function: "electron-reload setup" 
+        });
       } catch (error) {
-        console.warn('⚠️ Electron reload failed:', error.message);
+        debugLog.warn('Electron reload failed', { 
+          function: "electron-reload setup",
+          error: error.message 
+        });
       }
     }).catch(error => {
-      console.warn('⚠️ Could not load electron-reload:', error.message);
+      debugLog.warn('Could not load electron-reload', { 
+        function: "electron-reload import",
+        error: error.message 
+      });
     });
   }
 }).catch(error => {
-  console.warn('⚠️ Could not load electron-util:', error.message);
+  debugLog.warn('Could not load electron-util', { 
+    function: "electron-util import",
+    error: error.message 
+  });
 });
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -102,7 +118,10 @@ import('electron-squirrel-startup').then(electronSquirrelStartup => {
     app.quit();
   }
 }).catch(error => {
-  console.warn('⚠️ Could not load electron-squirrel-startup:', error.message);
+  debugLog.warn('Could not load electron-squirrel-startup', { 
+    function: "electron-squirrel-startup import",
+    error: error.message 
+  });
 });
 
 // Initialize database
@@ -110,12 +129,16 @@ function initializeDatabase() {
   try {
     var dbName = "mxvoice.db";
     const dbDir = store.get("database_directory");
-    console.log(`Looking for database in ${dbDir}`);
+    debugLog.info(`Looking for database in ${dbDir}`, { 
+      function: "initializeDatabase" 
+    });
     
     // Handle undefined database directory
     if (!dbDir) {
       const defaultDbPath = path.join(__dirname, '..', '..', 'data', 'mxvoice.db');
-      console.log(`Using default database path: ${defaultDbPath}`);
+      debugLog.info(`Using default database path: ${defaultDbPath}`, { 
+        function: "initializeDatabase" 
+      });
       db = Database(defaultDbPath);
       return;
     }
@@ -123,25 +146,36 @@ function initializeDatabase() {
     if (fs.existsSync(path.join(dbDir, "mrvoice.db"))) {
       dbName = "mrvoice.db";
     }
-    console.log(
-      `Attempting to open database file ${path.join(dbDir, dbName)}`
-    );
+    debugLog.info(`Attempting to open database file ${path.join(dbDir, dbName)}`, { 
+      function: "initializeDatabase" 
+    });
     db = Database(path.join(dbDir, dbName));
   } catch (error) {
-    console.error('Error initializing database:', error);
+    debugLog.error('Error initializing database', { 
+      function: "initializeDatabase",
+      error: error.message 
+    });
   }
 }
 
 // Check first run
 function checkFirstRun() {
-  console.log(`First run preference returns ${store.get('first_run_completed')}`);
+  debugLog.info(`First run preference returns ${store.get('first_run_completed')}`, { 
+    function: "checkFirstRun" 
+  });
   if (!store.get('first_run_completed')) {
     var oldConfig = checkOldConfig();
-    console.log(`Old config function returned ${oldConfig}`);
+    debugLog.info(`Old config function returned ${oldConfig}`, { 
+      function: "checkFirstRun" 
+    });
     if (oldConfig) {
-      console.log("Migrated old config settings, checking no further");
+      debugLog.info("Migrated old config settings, checking no further", { 
+        function: "checkFirstRun" 
+      });
     } else {
-      console.log("Preparing for first-time setup");
+      debugLog.info("Preparing for first-time setup", { 
+        function: "checkFirstRun" 
+      });
       fs.mkdirSync(store.get('music_directory'), { recursive: true });
       fs.mkdirSync(store.get('hotkey_directory'), { recursive: true });
 
@@ -154,7 +188,9 @@ INSERT OR IGNORE INTO categories VALUES('UNC', 'Uncategorized');
 INSERT OR IGNORE INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('Rock Bumper', 'Patrick Short', 'UNC', 'PatrickShort-CSzRockBumper.mp3', '00:49', '${Math.floor(Date.now() / 1000)}');
 `);
       fs.copyFileSync(path.join(__dirname, '..', 'assets', 'music', 'CSz Rock Bumper.mp3'), path.join(store.get('music_directory'), 'PatrickShort-CSzRockBumper.mp3'));
-      console.log(`mxvoice.db created at ${store.get('database_directory')}`);
+      debugLog.info(`mxvoice.db created at ${store.get('database_directory')}`, { 
+        function: "checkFirstRun" 
+      });
       initDb.close();
       store.set('first_run_completed', true);
     }
@@ -173,7 +209,9 @@ function checkOldConfig() {
 
   if (fs.existsSync(config_path)) {
     // An old config file exists, we need to load the preferences
-    console.log("Found old Mr. Voice 2 config file at " + config_path);
+    debugLog.info(`Found old Mr. Voice 2 config file at ${config_path}`, { 
+      function: "checkOldConfig" 
+    });
     old_settings = [];
 
     const line_reader = new readlines(config_path);
@@ -200,7 +238,9 @@ function checkOldConfig() {
 // Track user (analytics placeholder)
 function trackUser() {
   // Placeholder for user tracking/analytics
-  console.log('User tracking initialized');
+  debugLog.info('User tracking initialized', { 
+    function: "trackUser" 
+  });
 }
 
 // Initialize all modules with dependencies
@@ -257,15 +297,21 @@ function setupApp() {
 
   // Setup auto-updater events
   autoUpdater.on('update-available', (updateInfo) => {
-    console.log(`Triggering update-available action with info ${updateInfo.releaseNotes}`);
+    debugLog.info(`Triggering update-available action with info ${updateInfo.releaseNotes}`, { 
+      function: "autoUpdater update-available" 
+    });
     mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + updateInfo.releaseNotes);
-    console.log(`display_release_notes call done`);
+    debugLog.info('display_release_notes call done', { 
+      function: "autoUpdater update-available" 
+    });
   });
 }
 
 // Test function to verify modular main process is working
 function testModularMain() {
-  console.log('🧪 Testing Modular Main Process...');
+  debugLog.info('Testing Modular Main Process...', { 
+    function: "testModularMain" 
+  });
   
   // Test each module
   const appSetupTest = appSetup.testAppSetup();
@@ -273,10 +319,14 @@ function testModularMain() {
   const fileOperationsTest = fileOperations.testFileOperations();
   
   if (appSetupTest && ipcHandlersTest && fileOperationsTest) {
-    console.log('✅ Modular main process is working correctly!');
+    debugLog.info('Modular main process is working correctly!', { 
+      function: "testModularMain" 
+    });
     return true;
   } else {
-    console.log('❌ Modular main process has issues');
+    debugLog.warn('Modular main process has issues', { 
+      function: "testModularMain" 
+    });
     return false;
   }
 }
