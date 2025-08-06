@@ -179,14 +179,17 @@ function initializeDebugLogger(options = {}) {
   
   /**
    * Log an info message
-   * Always logged regardless of debug preference
+   * Only logged if debug logging is enabled
    * @param {string} message - Info message
    * @param {Object} context - Additional context (optional)
    */
-  function info(message, context = null) {
+  async function info(message, context = null) {
     if (currentLogLevel >= LOG_LEVELS.INFO) {
-      const formattedMessage = formatLogMessage('INFO', message, context);
-      console.info(formattedMessage);
+      const debugEnabled = await isDebugEnabled();
+      if (debugEnabled) {
+        const formattedMessage = formatLogMessage('INFO', message, context);
+        console.info(formattedMessage);
+      }
     }
   }
   

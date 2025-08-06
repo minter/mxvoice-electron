@@ -29,32 +29,34 @@ function initializePreferenceManager(options = {}) {
    * Load preferences into the UI
    * Loads all stored preferences and populates the preferences modal
    */
-  function loadPreferences() {
+  async function loadPreferences() {
     // Use new store API for loading preferences
     if (electronAPI && electronAPI.store) {
-      Promise.all([
-        electronAPI.store.get("database_directory"),
-        electronAPI.store.get("music_directory"),
-        electronAPI.store.get("hotkey_directory"),
-        electronAPI.store.get("fade_out_seconds"),
-        electronAPI.store.get("debug_log_enabled")
-      ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds, debugLogPref]) => {
+      try {
+        const [dbDir, musicDir, hotkeyDir, fadeSeconds, debugLogPref] = await Promise.all([
+          electronAPI.store.get("database_directory"),
+          electronAPI.store.get("music_directory"),
+          electronAPI.store.get("hotkey_directory"),
+          electronAPI.store.get("fade_out_seconds"),
+          electronAPI.store.get("debug_log_enabled")
+        ]);
+        
         if (dbDir.success) $("#preferences-database-directory").val(dbDir.value);
         if (musicDir.success) $("#preferences-song-directory").val(musicDir.value);
         if (hotkeyDir.success) $("#preferences-hotkey-directory").val(hotkeyDir.value);
         if (fadeSeconds.success) $("#preferences-fadeout-seconds").val(fadeSeconds.value);
         if (debugLogPref.success) $("#preferences-debug-log-enabled").prop("checked", debugLogPref.value);
-      }).catch(error => {
-        debugLog.error('Failed to load preferences', { 
+      } catch (error) {
+        await debugLog.error('Failed to load preferences', { 
           function: "loadPreferences",
           error: error
         });
         // Fallback to legacy store access
-        loadPreferencesLegacy();
-      });
+        await loadPreferencesLegacy();
+      }
     } else {
       // Fallback to legacy store access
-      loadPreferencesLegacy();
+      await loadPreferencesLegacy();
     }
   }
   
@@ -62,7 +64,7 @@ function initializePreferenceManager(options = {}) {
    * Load preferences using legacy store access
    * Fallback method when new API is not available
    */
-  function loadPreferencesLegacy() {
+  async function loadPreferencesLegacy() {
     try {
       $("#preferences-database-directory").val(store.get("database_directory"));
       $("#preferences-song-directory").val(store.get("music_directory"));
@@ -70,7 +72,7 @@ function initializePreferenceManager(options = {}) {
       $("#preferences-fadeout-seconds").val(store.get("fade_out_seconds"));
       $("#preferences-debug-log-enabled").prop("checked", store.get("debug_log_enabled") || false);
     } catch (error) {
-      debugLog.error('Legacy preference loading failed', { 
+      await debugLog.error('Legacy preference loading failed', { 
         function: "loadPreferencesLegacy",
         error: error
       });
@@ -81,25 +83,26 @@ function initializePreferenceManager(options = {}) {
    * Get database directory preference
    * @returns {Promise<string>} Database directory path
    */
-  function getDatabaseDirectory() {
+  async function getDatabaseDirectory() {
     if (electronAPI && electronAPI.store) {
-      return electronAPI.store.get("database_directory").then(result => {
+      try {
+        const result = await electronAPI.store.get("database_directory");
         if (result.success) {
           return result.value;
         } else {
-          debugLog.warn('Failed to get database directory', { 
+          await debugLog.warn('Failed to get database directory', { 
             function: "getDatabaseDirectory",
             error: result.error
           });
           return null;
         }
-      }).catch(error => {
-        debugLog.error('Database directory get error', { 
+      } catch (error) {
+        await debugLog.error('Database directory get error', { 
           function: "getDatabaseDirectory",
           error: error
         });
         return null;
-      });
+      }
     } else {
       // Fallback to legacy store access
       return Promise.resolve(store.get("database_directory"));
@@ -110,25 +113,26 @@ function initializePreferenceManager(options = {}) {
    * Get music directory preference
    * @returns {Promise<string>} Music directory path
    */
-  function getMusicDirectory() {
+  async function getMusicDirectory() {
     if (electronAPI && electronAPI.store) {
-      return electronAPI.store.get("music_directory").then(result => {
+      try {
+        const result = await electronAPI.store.get("music_directory");
         if (result.success) {
           return result.value;
         } else {
-          debugLog.warn('Failed to get music directory', { 
+          await debugLog.warn('Failed to get music directory', { 
             function: "getMusicDirectory",
             error: result.error
           });
           return null;
         }
-      }).catch(error => {
-        debugLog.error('Music directory get error', { 
+      } catch (error) {
+        await debugLog.error('Music directory get error', { 
           function: "getMusicDirectory",
           error: error
         });
         return null;
-      });
+      }
     } else {
       // Fallback to legacy store access
       return Promise.resolve(store.get("music_directory"));
@@ -139,25 +143,26 @@ function initializePreferenceManager(options = {}) {
    * Get hotkey directory preference
    * @returns {Promise<string>} Hotkey directory path
    */
-  function getHotkeyDirectory() {
+  async function getHotkeyDirectory() {
     if (electronAPI && electronAPI.store) {
-      return electronAPI.store.get("hotkey_directory").then(result => {
+      try {
+        const result = await electronAPI.store.get("hotkey_directory");
         if (result.success) {
           return result.value;
         } else {
-          debugLog.warn('Failed to get hotkey directory', { 
+          await debugLog.warn('Failed to get hotkey directory', { 
             function: "getHotkeyDirectory",
             error: result.error
           });
           return null;
         }
-      }).catch(error => {
-        debugLog.error('Hotkey directory get error', { 
+      } catch (error) {
+        await debugLog.error('Hotkey directory get error', { 
           function: "getHotkeyDirectory",
           error: error
         });
         return null;
-      });
+      }
     } else {
       // Fallback to legacy store access
       return Promise.resolve(store.get("hotkey_directory"));
@@ -168,25 +173,26 @@ function initializePreferenceManager(options = {}) {
    * Get fade out seconds preference
    * @returns {Promise<number>} Fade out duration in seconds
    */
-  function getFadeOutSeconds() {
+  async function getFadeOutSeconds() {
     if (electronAPI && electronAPI.store) {
-      return electronAPI.store.get("fade_out_seconds").then(result => {
+      try {
+        const result = await electronAPI.store.get("fade_out_seconds");
         if (result.success) {
           return result.value;
         } else {
-          debugLog.warn('Failed to get fade out seconds', { 
+          await debugLog.warn('Failed to get fade out seconds', { 
             function: "getFadeOutSeconds",
             error: result.error
           });
           return null;
         }
-      }).catch(error => {
-        debugLog.error('Fade out seconds get error', { 
+      } catch (error) {
+        await debugLog.error('Fade out seconds get error', { 
           function: "getFadeOutSeconds",
           error: error
         });
         return null;
-      });
+      }
     } else {
       // Fallback to legacy store access
       return Promise.resolve(store.get("fade_out_seconds"));
@@ -197,25 +203,26 @@ function initializePreferenceManager(options = {}) {
    * Get debug log enabled preference
    * @returns {Promise<boolean>} Debug log enabled status
    */
-  function getDebugLogEnabled() {
+  async function getDebugLogEnabled() {
     if (electronAPI && electronAPI.store) {
-      return electronAPI.store.get("debug_log_enabled").then(result => {
+      try {
+        const result = await electronAPI.store.get("debug_log_enabled");
         if (result.success) {
           return result.value || false;
         } else {
-          debugLog.warn('Failed to get debug log enabled', { 
+          await debugLog.warn('Failed to get debug log enabled', { 
             function: "getDebugLogEnabled",
             error: result.error
           });
           return false;
         }
-      }).catch(error => {
-        debugLog.error('Debug log enabled get error', { 
+      } catch (error) {
+        await debugLog.error('Debug log enabled get error', { 
           function: "getDebugLogEnabled",
           error: error
         });
         return false;
-      });
+      }
     } else {
       // Fallback to legacy store access
       return Promise.resolve(store.get("debug_log_enabled") || false);
