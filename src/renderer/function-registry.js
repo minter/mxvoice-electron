@@ -5,6 +5,9 @@
  * and provide consistent error handling.
  */
 
+// Import DebugLog for consistent logging
+const debugLog = window.debugLog;
+
 class FunctionRegistry {
   constructor() {
     this.registry = new Map();
@@ -29,18 +32,30 @@ class FunctionRegistry {
     // Only assign to window if not already present
     if (!window[name]) {
       window[name] = fn;
-      console.log(`✅ Registered function: ${name}`);
+      debugLog.info(`Registered function: ${name}`, { 
+        function: "register",
+        data: { functionName: name }
+      });
     } else {
-      console.log(`⚠️ Function ${name} already exists on window, skipping`);
+      debugLog.warn(`Function ${name} already exists on window, skipping`, { 
+        function: "register",
+        data: { functionName: name }
+      });
     }
   }
 
   // Register multiple functions from a module
   registerModule(moduleName, functions) {
-    console.log(`🔄 Registering functions for module: ${moduleName}`);
+    debugLog.info(`Registering functions for module: ${moduleName}`, { 
+      function: "registerModule",
+      data: { moduleName, functionCount: Object.keys(functions).length }
+    });
     
     if (!this.moduleRegistry || !this.moduleRegistry[moduleName]) {
-      console.warn(`⚠️ Module ${moduleName} not available, using fallbacks`);
+      debugLog.warn(`Module ${moduleName} not available, using fallbacks`, { 
+        function: "registerModule",
+        data: { moduleName }
+      });
       Object.entries(functions).forEach(([name, fallback]) => {
         if (typeof fallback === 'function') {
           this.register(name, fallback, fallback);
@@ -70,7 +85,10 @@ class FunctionRegistry {
       if (fn) {
         this.register(name, fn, fallback);
       } else {
-        console.warn(`⚠️ Function ${fnPath} not found in module ${moduleName}`);
+        debugLog.warn(`Function ${fnPath} not found in module ${moduleName}`, { 
+          function: "registerModule",
+          data: { moduleName, functionPath: fnPath, functionName: name }
+        });
         if (fallback) {
           this.register(name, fallback, fallback);
         }
@@ -80,7 +98,10 @@ class FunctionRegistry {
 
   // Register functions from a module-specific registry
   async registerModuleFromRegistry(moduleName, registryName) {
-    console.log(`🔄 Registering functions for module: ${moduleName} using registry: ${registryName}`);
+    debugLog.info(`Registering functions for module: ${moduleName} using registry: ${registryName}`, { 
+      function: "registerModuleFromRegistry",
+      data: { moduleName, registryName }
+    });
     
     try {
       // Import the module-specific registry
@@ -93,10 +114,17 @@ class FunctionRegistry {
       if (functions) {
         this.registerModule(moduleName, functions);
       } else {
-        console.warn(`⚠️ Registry ${registryName} not found for module ${moduleName}`);
+        debugLog.warn(`Registry ${registryName} not found for module ${moduleName}`, { 
+          function: "registerModuleFromRegistry",
+          data: { moduleName, registryName }
+        });
       }
     } catch (error) {
-      console.warn(`⚠️ Failed to load registry for module ${moduleName}:`, error);
+      debugLog.warn(`Failed to load registry for module ${moduleName}`, { 
+        function: "registerModuleFromRegistry",
+        data: { moduleName, registryName },
+        error: error.message
+      });
       // Fall back to inline registration if registry fails to load
       this.registerModuleInline(moduleName);
     }
@@ -104,7 +132,10 @@ class FunctionRegistry {
 
   // Fallback inline registration for modules without specific registries
   registerModuleInline(moduleName) {
-    console.log(`🔄 Using inline registration for module: ${moduleName}`);
+    debugLog.info(`Using inline registration for module: ${moduleName}`, { 
+      function: "registerModuleInline",
+      data: { moduleName }
+    });
     
     // Define inline function mappings for modules without specific registries
     const inlineMappings = {
@@ -115,12 +146,12 @@ class FunctionRegistry {
         saveHoldingTankFile: 'saveHoldingTankFile',
         pickDirectory: 'pickDirectory',
         installUpdate: 'installUpdate',
-        openHotkeyFileFallback: () => console.warn('⚠️ File operations not available'),
-        openHoldingTankFileFallback: () => console.warn('⚠️ File operations not available'),
-        saveHotkeyFileFallback: () => console.warn('⚠️ File operations not available'),
-        saveHoldingTankFileFallback: () => console.warn('⚠️ File operations not available'),
-        pickDirectoryFallback: () => console.warn('⚠️ File operations not available'),
-        installUpdateFallback: () => console.warn('⚠️ File operations not available')
+        openHotkeyFileFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+        openHoldingTankFileFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+        saveHotkeyFileFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+        saveHoldingTankFileFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+        pickDirectoryFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+        installUpdateFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' })
       },
       audio: {
         playSongFromId: 'playSongFromId',
@@ -151,7 +182,10 @@ class FunctionRegistry {
     if (mapping) {
       this.registerModule(moduleName, mapping);
     } else {
-      console.warn(`⚠️ No inline mapping available for module: ${moduleName}`);
+      debugLog.warn(`No inline mapping available for module: ${moduleName}`, { 
+        function: "registerModuleInline",
+        data: { moduleName }
+      });
     }
   }
 
@@ -164,7 +198,9 @@ class FunctionRegistry {
 
   // Register all HTML-compatible functions
   async registerAllFunctions() {
-    console.log('🔄 Starting function registration...');
+    debugLog.info('Starting function registration...', { 
+      function: "registerAllFunctions" 
+    });
     
     // Import module-specific function registries
     await this.registerModuleFromRegistry('fileOperations', 'fileOperationsFunctions');
@@ -180,13 +216,13 @@ class FunctionRegistry {
       deleteSong: 'deleteSong',
       removeFromHoldingTank: 'removeFromHoldingTank',
       removeFromHotkey: 'removeFromHotkey',
-      saveEditedSongFallback: () => console.warn('⚠️ Song management not available'),
-      saveNewSongFallback: () => console.warn('⚠️ Song management not available'),
-      editSelectedSongFallback: () => console.warn('⚠️ Song management not available'),
-      deleteSelectedSongFallback: () => console.warn('⚠️ Song management not available'),
-      deleteSongFallback: () => console.warn('⚠️ Song management not available'),
-      removeFromHoldingTankFallback: () => console.warn('⚠️ Song management not available'),
-      removeFromHotkeyFallback: () => console.warn('⚠️ Song management not available')
+      saveEditedSongFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      saveNewSongFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      editSelectedSongFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      deleteSelectedSongFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      deleteSongFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      removeFromHoldingTankFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      removeFromHotkeyFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' })
     });
 
     // Search Functions
@@ -291,7 +327,9 @@ class FunctionRegistry {
       columnDrag: 'columnDrag'
     });
 
-    console.log('✅ Function registration completed');
+    debugLog.info('Function registration completed', { 
+      function: "registerAllFunctions" 
+    });
   }
 
   // Validate all required functions are available
@@ -303,11 +341,17 @@ class FunctionRegistry {
 
     const missing = requiredFunctions.filter(fn => !window[fn]);
     if (missing.length > 0) {
-      console.warn('⚠️ Missing required functions:', missing);
+      debugLog.warn('Missing required functions', { 
+        function: "validateFunctions",
+        data: { missingFunctions: missing }
+      });
       return false;
     }
     
-    console.log('✅ All required functions are available');
+    debugLog.info('All required functions are available', { 
+      function: "validateFunctions",
+      data: { requiredFunctions }
+    });
     return true;
   }
 
