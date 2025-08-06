@@ -224,7 +224,7 @@ $(document).ready(async function() {
     let fileOperationsModule, songManagementModule, holdingTankModule, hotkeysModule;
     let categoriesModule, bulkOperationsModule, dragDropModule, navigationModule;
     let modeManagementModule, testUtilsModule, searchModule, audioModule;
-    let uiModule, preferencesModule, databaseModule, utilsModule;
+    let uiModule, preferencesModule, databaseModule, utilsModule, debugLogModule;
     
     // Import file operations module and make functions globally available
     try {
@@ -739,6 +739,30 @@ $(document).ready(async function() {
     } catch (error) {
       console.error('❌ Error loading preferences module:', error);
       throw error;
+    }
+
+    // Import DebugLog module and store in registry
+    try {
+      console.log('🔄 Loading DebugLog module...');
+      debugLogModule = await import('./renderer/modules/debug-log/index.js');
+      console.log('✅ DebugLog module loaded successfully');
+      
+      // Re-initialize DebugLog module with proper dependencies
+      const debugLogInstance = debugLogModule.default.reinitializeDebugLog({
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: null // Legacy store not available, will use electronAPI.store
+      });
+      
+      // Store in registry
+      moduleRegistry.debugLog = debugLogInstance;
+      
+      // Make DebugLog available globally for other modules
+      window.debugLog = debugLogInstance;
+      console.log('✅ DebugLog module initialized and available globally');
+    } catch (error) {
+      console.error('❌ Error loading DebugLog module:', error);
+      // Don't throw error, continue loading other modules
     }
 
     // Import database module and store in registry
