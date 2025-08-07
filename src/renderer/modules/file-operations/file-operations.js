@@ -5,13 +5,28 @@
  * with fallback support for both modern electronAPI and legacy ipcRenderer
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Opens a hotkey file using the modern electronAPI with fallback to legacy ipcRenderer
  */
 export function openHotkeyFile() {
   if (window.electronAPI) {
     window.electronAPI.openHotkeyFile().catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
+      debugLog?.warn('Modern API failed, falling back to legacy', { 
+        module: 'file-operations',
+        function: 'openHotkeyFile',
+        error: error.message
+      });
       ipcRenderer.send("open-hotkey-file");
     });
   } else {
@@ -25,7 +40,11 @@ export function openHotkeyFile() {
 export function openHoldingTankFile() {
   if (window.electronAPI) {
     window.electronAPI.openHoldingTankFile().catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
+      debugLog?.warn('Modern API failed, falling back to legacy', { 
+        module: 'file-operations',
+        function: 'openHoldingTankFile',
+        error: error.message
+      });
       ipcRenderer.send("open-holding-tank-file");
     });
   } else {
@@ -38,7 +57,10 @@ export function openHoldingTankFile() {
  * Collects song IDs from all active hotkey elements and saves them
  */
 export function saveHotkeyFile() {
-  console.log("Renderer starting saveHotkeyFile");
+  debugLog?.info('Renderer starting saveHotkeyFile', { 
+    module: 'file-operations',
+    function: 'saveHotkeyFile'
+  });
   var hotkeyArray = [];
   
   // Collect song IDs from all hotkey elements (F1-F12)
@@ -54,7 +76,11 @@ export function saveHotkeyFile() {
   // Save using modern API with fallback
   if (window.electronAPI) {
     window.electronAPI.saveHotkeyFile(hotkeyArray).catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
+      debugLog?.warn('Modern API failed, falling back to legacy', { 
+        module: 'file-operations',
+        function: 'saveHotkeyFile',
+        error: error.message
+      });
       ipcRenderer.send("save-hotkey-file", hotkeyArray);
     });
   } else {
@@ -67,7 +93,10 @@ export function saveHotkeyFile() {
  * Collects song IDs from all active holding tank elements and saves them
  */
 export function saveHoldingTankFile() {
-  console.log("Renderer starting saveHoldingTankFile");
+  debugLog?.info('Renderer starting saveHoldingTankFile', { 
+    module: 'file-operations',
+    function: 'saveHoldingTankFile'
+  });
   var holdingTankArray = [];
   
   // Collect song IDs from all active holding tank items
@@ -78,7 +107,11 @@ export function saveHoldingTankFile() {
   // Save using modern API with fallback
   if (window.electronAPI) {
     window.electronAPI.saveHoldingTankFile(holdingTankArray).catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
+      debugLog?.warn('Modern API failed, falling back to legacy', { 
+        module: 'file-operations',
+        function: 'saveHoldingTankFile',
+        error: error.message
+      });
       ipcRenderer.send("save-holding-tank-file", holdingTankArray);
     });
   } else {

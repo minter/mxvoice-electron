@@ -10,6 +10,17 @@
  * @module file-operations
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 import { openHotkeyFile, openHoldingTankFile, saveHotkeyFile, saveHoldingTankFile } from './file-operations.js';
 import { pickDirectory, installUpdate } from './system-operations.js';
 
@@ -33,7 +44,10 @@ class FileOperationsModule {
    * Initialize the file operations module
    */
   init() {
-    console.log('File operations module initialized');
+    debugLog?.info('File operations module initialized', { 
+      module: 'file-operations',
+      function: 'init'
+    });
   }
 
   /**

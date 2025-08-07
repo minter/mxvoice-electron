@@ -8,6 +8,17 @@
 import { songDrag, columnDrag } from './drag-drop-functions.js';
 import { setupDragDropEventHandlers } from './event-handlers.js';
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Drag & Drop Singleton
  * 
@@ -27,7 +38,10 @@ class DragDropModule {
     // Setup event handlers for drag and drop
     setupDragDropEventHandlers();
     
-    console.log('✅ Drag & Drop Module initialized');
+    debugLog?.info('Drag & Drop Module initialized', { 
+      module: 'drag-drop',
+      function: 'initializeDragDrop'
+    });
   }
 
   /**

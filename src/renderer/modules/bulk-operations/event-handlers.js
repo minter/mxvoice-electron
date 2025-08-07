@@ -4,6 +4,17 @@
  * Handles UI event handlers for bulk operations functionality
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Setup all bulk operations event handlers
  */
@@ -32,5 +43,8 @@ export function setupBulkEventHandlers() {
     $("#bulk-song-form-new-category").val("");
   });
 
-  console.log('✅ Bulk Operations Event Handlers initialized');
+  debugLog?.info('Bulk Operations Event Handlers initialized', { 
+    module: 'bulk-operations-event-handlers',
+    function: 'setupBulkEventHandlers'
+  });
 } 

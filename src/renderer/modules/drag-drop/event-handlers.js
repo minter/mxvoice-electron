@@ -4,6 +4,17 @@
  * Handles UI event handlers for drag and drop functionality
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Setup all drag and drop event handlers
  */
@@ -26,20 +37,29 @@ export function setupDragDropEventHandlers() {
 
   // Holding tank drop handlers - target the container and list items
   $("#holding_tank, .holding_tank li").on("drop", function (event) {
-    console.log('🔍 Holding tank drop event triggered');
+    debugLog?.info('Holding tank drop event triggered', { 
+      module: 'drag-drop-event-handlers',
+      function: 'setupDragDropEventHandlers'
+    });
     $(event.originalEvent.target).removeClass("dropzone");
     if (!event.originalEvent.dataTransfer.getData("text").length) return;
     holdingTankDrop(event.originalEvent);
   });
 
   $("#holding_tank, .holding_tank li").on("dragover", function (event) {
-    console.log('🔍 Holding tank dragover event triggered');
+    debugLog?.info('Holding tank dragover event triggered', { 
+      module: 'drag-drop-event-handlers',
+      function: 'setupDragDropEventHandlers'
+    });
     allowHotkeyDrop(event.originalEvent);
     $(event.originalEvent.target).addClass("dropzone");
   });
 
   $("#holding_tank, .holding_tank li").on("dragleave", function (event) {
-    console.log('🔍 Holding tank dragleave event triggered');
+    debugLog?.info('Holding tank dragleave event triggered', { 
+      module: 'drag-drop-event-handlers',
+      function: 'setupDragDropEventHandlers'
+    });
     allowHotkeyDrop(event.originalEvent);
     $(event.originalEvent.target).removeClass("dropzone");
   });
@@ -72,18 +92,32 @@ export function setupDragDropEventHandlers() {
     // Use new store API for column order
     window.electronAPI.store.set("column_order", new_column_order).then(result => {
       if (result.success) {
-        console.log('✅ Column order saved successfully');
+        debugLog?.info('Column order saved successfully', { 
+          module: 'drag-drop-event-handlers',
+          function: 'setupDragDropEventHandlers'
+        });
       } else {
-        console.warn('❌ Failed to save column order:', result.error);
+        debugLog?.warn('Failed to save column order', { 
+          module: 'drag-drop-event-handlers',
+          function: 'setupDragDropEventHandlers',
+          error: result.error
+        });
         // Fallback to legacy store access
         store.set("column_order", new_column_order);
       }
     }).catch(error => {
-      console.warn('❌ Column order save error:', error);
+      debugLog?.warn('Column order save error', { 
+        module: 'drag-drop-event-handlers',
+        function: 'setupDragDropEventHandlers',
+        error: error
+      });
       // Fallback to legacy store access
       store.set("column_order", new_column_order);
     });
   });
 
-  console.log('✅ Drag & Drop Event Handlers initialized');
+  debugLog?.info('Drag & Drop Event Handlers initialized', { 
+    module: 'drag-drop-event-handlers',
+    function: 'setupDragDropEventHandlers'
+  });
 } 

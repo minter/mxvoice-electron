@@ -15,6 +15,17 @@
  * - Tab management
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 // Use global electronAPI instead of importing services
 const store = window.electronAPI.store;
 const database = window.electronAPI.database;
@@ -30,7 +41,10 @@ let loop = false;
  * Initialize the holding tank module
  */
 export function initHoldingTank() {
-  console.log('Initializing Holding Tank module...');
+  debugLog?.info('Initializing Holding Tank module', { 
+    module: 'holding-tank',
+    function: 'initHoldingTank'
+  });
   
   // Load saved mode or default to storage
   return store.has("holding_tank_mode").then(hasMode => {
@@ -46,7 +60,11 @@ export function initHoldingTank() {
       return { success: true, mode: holdingTankMode };
     }
   }).catch(error => {
-    console.warn('Failed to initialize holding tank:', error);
+    debugLog?.warn('Failed to initialize holding tank', { 
+      module: 'holding-tank',
+      function: 'initHoldingTank',
+      error: error.message
+    });
     return { success: false, error: error.message };
   });
 }
@@ -60,13 +78,24 @@ export function saveHoldingTankToStore() {
   if (currentHtml.includes("mode-toggle")) {
     return store.set("holding_tank", currentHtml).then(result => {
       if (result.success) {
-        console.log('✅ Holding tank saved to store');
+        debugLog?.info('Holding tank saved to store', { 
+          module: 'holding-tank',
+          function: 'saveHoldingTankToStore'
+        });
       } else {
-        console.warn('❌ Failed to save holding tank:', result.error);
+        debugLog?.warn('Failed to save holding tank', { 
+          module: 'holding-tank',
+          function: 'saveHoldingTankToStore',
+          error: result.error
+        });
       }
       return result;
     }).catch(error => {
-      console.warn('❌ Store save error:', error);
+      debugLog?.warn('Store save error', { 
+        module: 'holding-tank',
+        function: 'saveHoldingTankToStore',
+        error: error.message
+      });
       return { success: false, error: error.message };
     });
   }
@@ -83,19 +112,32 @@ export function loadHoldingTankFromStore() {
         if (storedHtml && typeof storedHtml === 'string') {
           $("#holding-tank-column").html(storedHtml);
           $("#selected_row").removeAttr("id");
-          console.log('✅ Holding tank loaded from store');
+          debugLog?.info('Holding tank loaded from store', { 
+            module: 'holding-tank',
+            function: 'loadHoldingTankFromStore'
+          });
           return { success: true, data: storedHtml };
         } else {
-          console.warn('❌ Invalid holding tank data in store');
+          debugLog?.warn('Invalid holding tank data in store', { 
+            module: 'holding-tank',
+            function: 'loadHoldingTankFromStore'
+          });
           return { success: false, error: 'Invalid data format' };
         }
       });
     } else {
-      console.log('No holding tank data in store');
+      debugLog?.info('No holding tank data in store', { 
+        module: 'holding-tank',
+        function: 'loadHoldingTankFromStore'
+      });
       return { success: true, data: null };
     }
   }).catch(error => {
-    console.warn('❌ Store load error:', error);
+    debugLog?.warn('Store load error', { 
+      module: 'holding-tank',
+      function: 'loadHoldingTankFromStore',
+      error: error.message
+    });
     return { success: false, error: error.message };
   });
 }
@@ -104,24 +146,42 @@ export function loadHoldingTankFromStore() {
  * Populate holding tank with song IDs
  */
 export function populateHoldingTank(songIds) {
-  console.log('🔄 populateHoldingTank called with:', songIds);
-  console.log('🔄 database API available:', !!window.electronAPI?.database);
+  debugLog?.info('populateHoldingTank called with song IDs', { 
+    module: 'holding-tank',
+    function: 'populateHoldingTank',
+    songIds: songIds,
+    databaseAvailable: !!window.electronAPI?.database
+  });
   
   if (!songIds || songIds.length === 0) {
-    console.log('⚠️ No song IDs provided to populateHoldingTank');
+    debugLog?.warn('No song IDs provided to populateHoldingTank', { 
+      module: 'holding-tank',
+      function: 'populateHoldingTank'
+    });
     return { success: false, error: 'No song IDs provided' };
   }
   
   $(".holding_tank.active").empty();
-  console.log('✅ Cleared active holding tank');
+  debugLog?.info('Cleared active holding tank', { 
+    module: 'holding-tank',
+    function: 'populateHoldingTank'
+  });
   
   songIds.forEach((songId) => {
-    console.log('🔄 Adding song ID to holding tank:', songId);
+    debugLog?.info('Adding song ID to holding tank', { 
+      module: 'holding-tank',
+      function: 'populateHoldingTank',
+      songId: songId
+    });
     addToHoldingTank(songId, $(".holding_tank.active"));
   });
   
   scale_scrollable();
-  console.log('✅ populateHoldingTank completed successfully');
+  debugLog?.info('populateHoldingTank completed successfully', { 
+    module: 'holding-tank',
+    function: 'populateHoldingTank',
+    count: songIds.length
+  });
   return { success: true, count: songIds.length };
 }
 
@@ -162,11 +222,21 @@ export function addToHoldingTank(song_id, element) {
       saveHoldingTankToStore();
       return { success: true, songId: song_id, title: title };
     } else {
-      console.warn('❌ Failed to get song by ID:', result.error);
+      debugLog?.warn('Failed to get song by ID', { 
+        module: 'holding-tank',
+        function: 'addToHoldingTank',
+        songId: song_id,
+        error: result.error
+      });
       return { success: false, error: 'Song not found' };
     }
   }).catch(error => {
-    console.warn('❌ Database API error:', error);
+    debugLog?.warn('Database API error', { 
+      module: 'holding-tank',
+      function: 'addToHoldingTank',
+      songId: song_id,
+      error: error.message
+    });
     return { success: false, error: error.message };
   });
 }
@@ -177,7 +247,11 @@ export function addToHoldingTank(song_id, element) {
 export function removeFromHoldingTank() {
   var songId = $("#selected_row").attr("songid");
   if (songId) {
-    console.log(`Preparing to remove song ${songId} from holding tank`);
+    debugLog?.info('Preparing to remove song from holding tank', { 
+      module: 'holding-tank',
+      function: 'removeFromHoldingTank',
+      songId: songId
+    });
     
     return database.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(result => {
       if (result.success && result.data.length > 0) {
@@ -185,7 +259,11 @@ export function removeFromHoldingTank() {
         
         return customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`).then(confirmed => {
           if (confirmed) {
-            console.log("Proceeding with removal from holding tank");
+            debugLog?.info('Proceeding with removal from holding tank', { 
+              module: 'holding-tank',
+              function: 'removeFromHoldingTank',
+              songId: songId
+            });
             // Remove the selected row from the holding tank
             $("#selected_row").remove();
             // Clear the selection
@@ -198,15 +276,27 @@ export function removeFromHoldingTank() {
           }
         });
       } else {
-        console.error("Song not found in database for ID:", songId);
+        debugLog?.error('Song not found in database for ID', { 
+          module: 'holding-tank',
+          function: 'removeFromHoldingTank',
+          songId: songId
+        });
         return { success: false, error: 'Song not found' };
       }
     }).catch(error => {
-      console.warn('❌ Database API error:', error);
+      debugLog?.warn('Database API error', { 
+        module: 'holding-tank',
+        function: 'removeFromHoldingTank',
+        songId: songId,
+        error: error.message
+      });
       return { success: false, error: error.message };
     });
   } else {
-    console.log("No songId found on selected row");
+    debugLog?.info('No songId found on selected row', { 
+      module: 'holding-tank',
+      function: 'removeFromHoldingTank'
+    });
     return Promise.resolve({ success: false, error: 'No song selected' });
   }
 }
@@ -231,7 +321,11 @@ export async function clearHoldingTank() {
 export function openHoldingTankFile() {
   if (window.electronAPI) {
     return window.electronAPI.openHoldingTankFile().catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
+      debugLog?.warn('Modern API failed, falling back to legacy', { 
+        module: 'holding-tank',
+        function: 'openHoldingTankFile',
+        error: error.message
+      });
       ipcRenderer.send("open-holding-tank-file");
       return { success: false, error: error.message };
     });
@@ -245,7 +339,10 @@ export function openHoldingTankFile() {
  * Save holding tank to file
  */
 export function saveHoldingTankFile() {
-  console.log("Renderer starting saveHoldingTankFile");
+  debugLog?.info('Renderer starting saveHoldingTankFile', { 
+    module: 'holding-tank',
+    function: 'saveHoldingTankFile'
+  });
   var holdingTankArray = [];
   $(".holding_tank.active .list-group-item").each(function () {
     holdingTankArray.push($(this).attr("songid"));
@@ -253,7 +350,11 @@ export function saveHoldingTankFile() {
   
   if (window.electronAPI) {
     return window.electronAPI.saveHoldingTankFile(holdingTankArray).catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
+      debugLog?.warn('Modern API failed, falling back to legacy', { 
+        module: 'holding-tank',
+        function: 'saveHoldingTankFile',
+        error: error.message
+      });
       ipcRenderer.send("save-holding-tank-file", holdingTankArray);
       return { success: false, error: error.message };
     });

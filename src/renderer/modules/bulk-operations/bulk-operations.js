@@ -4,6 +4,17 @@
  * Core functions for handling bulk import of songs from directories
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Shows the bulk add modal with directory and category selection
  * 
@@ -66,15 +77,37 @@ export function addSongsByPath(pathArray, category) {
           durationString,
           Math.floor(Date.now() / 1000)
         );
-        console.log(`Copying audio file ${songSourcePath} to ${newPath}`);
+        debugLog?.info('Copying audio file', { 
+          module: 'bulk-operations',
+          function: 'addSongsByPath',
+          songSourcePath: songSourcePath,
+          newPath: newPath
+        });
         window.electronAPI.fileSystem.copy(songSourcePath, newPath).then(result => {
           if (result.success) {
-            console.log('✅ File copied successfully');
+            debugLog?.info('File copied successfully', { 
+              module: 'bulk-operations',
+              function: 'addSongsByPath',
+              songSourcePath: songSourcePath,
+              newPath: newPath
+            });
           } else {
-            console.warn('❌ Failed to copy file:', result.error);
+            debugLog?.warn('Failed to copy file', { 
+              module: 'bulk-operations',
+              function: 'addSongsByPath',
+              songSourcePath: songSourcePath,
+              newPath: newPath,
+              error: result.error
+            });
           }
         }).catch(error => {
-          console.warn('❌ File copy error:', error);
+          debugLog?.warn('File copy error', { 
+            module: 'bulk-operations',
+            function: 'addSongsByPath',
+            songSourcePath: songSourcePath,
+            newPath: newPath,
+            error: error
+          });
         });
         $("#search_results").append(
           `<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${
@@ -131,24 +164,54 @@ export function saveBulkUpload(event) {
                       results.push(file);
                     }
                   } else {
-                    console.warn('❌ Failed to parse path:', parseResult.error);
+                    debugLog?.warn('Failed to parse path', { 
+                      module: 'bulk-operations',
+                      function: 'saveBulkUpload',
+                      file: file,
+                      error: parseResult.error
+                    });
                   }
                 }).catch(error => {
-                  console.warn('❌ Path parse error:', error);
+                  debugLog?.warn('Path parse error', { 
+                    module: 'bulk-operations',
+                    function: 'saveBulkUpload',
+                    file: file,
+                    error: error
+                  });
                 });
               }
             } else {
-              console.warn('❌ Failed to get file stats:', statResult.error);
+              debugLog?.warn('Failed to get file stats', { 
+                module: 'bulk-operations',
+                function: 'saveBulkUpload',
+                file: file,
+                error: statResult.error
+              });
             }
           }).catch(error => {
-            console.warn('❌ File stat error:', error);
+            debugLog?.warn('File stat error', { 
+              module: 'bulk-operations',
+              function: 'saveBulkUpload',
+              file: file,
+              error: error
+            });
           });
         });
       } else {
-        console.warn('❌ Failed to read directory:', result.error);
+        debugLog?.warn('Failed to read directory', { 
+          module: 'bulk-operations',
+          function: 'saveBulkUpload',
+          dir: dir,
+          error: result.error
+        });
       }
     }).catch(error => {
-      console.warn('❌ Directory read error:', error);
+      debugLog?.warn('Directory read error', { 
+        module: 'bulk-operations',
+        function: 'saveBulkUpload',
+        dir: dir,
+        error: error
+      });
     });
     return results;
   };
@@ -167,12 +230,25 @@ export function saveBulkUpload(event) {
     var loopCount = 1;
     var newCode = code;
     while ((row = codeCheckStmt.get(newCode))) {
-      console.log(`Found a code collision on ${code}`);
+      debugLog?.info('Found a code collision', { 
+        module: 'bulk-operations',
+        function: 'saveBulkUpload',
+        code: code,
+        loopCount: loopCount
+      });
       var newCode = `${code}${loopCount}`;
       loopCount = loopCount + 1;
-      console.log(`NewCode is ${newCode}`);
+      debugLog?.info('NewCode generated', { 
+        module: 'bulk-operations',
+        function: 'saveBulkUpload',
+        newCode: newCode
+      });
     }
-    console.log(`Out of loop, setting code to ${newCode}`);
+    debugLog?.info('Out of loop, setting code', { 
+      module: 'bulk-operations',
+      function: 'saveBulkUpload',
+      finalCode: newCode
+    });
     code = newCode;
     const categoryInsertStmt = db.prepare(
       "INSERT INTO categories VALUES (?, ?)"
@@ -180,7 +256,12 @@ export function saveBulkUpload(event) {
     try {
       const categoryInfo = categoryInsertStmt.run(code, description);
       if (categoryInfo.changes == 1) {
-        console.log(`Added new row into database`);
+        debugLog?.info('Added new row into database', { 
+          module: 'bulk-operations',
+          function: 'saveBulkUpload',
+          code: code,
+          description: description
+        });
         populateCategorySelect();
         populateCategoriesModal();
         category = code;

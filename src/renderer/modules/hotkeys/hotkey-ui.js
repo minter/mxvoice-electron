@@ -1,46 +1,49 @@
 /**
- * Hotkey UI Management
+ * Hotkey UI Functions
  * 
- * Handles UI operations for hotkeys including:
- * - Drag and drop functionality
+ * Handles all UI-related functionality for hotkeys including:
+ * - Event listeners and handlers
  * - Tab management
- * - UI event handling
- * 
- * @module hotkey-ui
+ * - Visual updates and highlighting
+ * - Element manipulation
  */
 
-/**
- * Handle hotkey drop event
- * Processes drag and drop for hotkey assignment
- * 
- * @param {Event} event - Drop event
- * @param {Object} options - Options object containing dependencies
- */
-function hotkeyDrop(event, options = {}) {
-  const { setLabelFromSongId } = options;
-  
-  event.preventDefault();
-  const song_id = event.dataTransfer.getData("text");
-  const target = $(event.currentTarget);
-  target.attr("songid", song_id);
-  if (setLabelFromSongId) {
-    setLabelFromSongId(song_id, target);
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
   }
+} catch (error) {
+  // Debug logger not available
 }
 
 /**
- * Allow hotkey drop event
- * Enables drop functionality for hotkeys
+ * Handle dropping songs into hotkey containers
  * 
- * @param {Event} event - Drag over event
+ * @param {Event} event - The drop event
+ * @param {Object} options - Additional options
+ */
+function hotkeyDrop(event, options = {}) {
+  event.preventDefault();
+  var song_id = event.dataTransfer.getData("text");
+  var target = $(event.currentTarget);
+  target.attr("songid", song_id);
+  setLabelFromSongId(song_id, target);
+}
+
+/**
+ * Allow dropping into hotkey containers
+ * 
+ * @param {Event} event - The dragover event
  */
 function allowHotkeyDrop(event) {
   event.preventDefault();
 }
 
 /**
- * Switch to hotkey tab
- * Changes the active hotkey tab
+ * Switch to a specific hotkey tab
  * 
  * @param {number} tab - Tab number to switch to
  */
@@ -49,21 +52,15 @@ function switchToHotkeyTab(tab) {
 }
 
 /**
- * Rename hotkey tab
- * Allows user to rename the current hotkey tab
+ * Rename the active hotkey tab
  * 
- * @param {Object} options - Options object containing dependencies
+ * @param {Object} options - Additional options
  */
 async function renameHotkeyTab(options = {}) {
-  const { saveHotkeysToStore } = options;
-  
   const currentName = $("#hotkey_tabs .nav-link.active").text();
   const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
   if (newName && newName.trim() !== "") {
     $("#hotkey_tabs .nav-link.active").text(newName);
-    if (saveHotkeysToStore) {
-      saveHotkeysToStore();
-    }
     return { success: true, newName: newName };
   } else {
     return { success: false, error: 'Invalid name' };
@@ -71,52 +68,24 @@ async function renameHotkeyTab(options = {}) {
 }
 
 /**
- * Set up hotkey event listeners
- * Configures all event listeners for hotkey functionality
+ * Setup all hotkey event listeners
  * 
- * @param {Object} options - Options object containing dependencies
+ * @param {Object} options - Additional options
  */
 function setupHotkeyEventListeners(options = {}) {
-  const { playSongFromHotkey, hotkeyDrop, allowHotkeyDrop, renameHotkeyTab } = options;
-  
-  // Hotkey click events
-  $(".hotkeys").on("click", "li", (event) => {
-    // Only select if the hotkey has a song assigned
-    if ($(event.currentTarget).attr("songid")) {
-      $("#selected_row").removeAttr("id");
-      $(event.currentTarget).attr("id", "selected_row");
-    }
-  });
-
-  // Hotkey double-click events
-  $(".hotkeys").on("dblclick", "li", (event) => {
-    $(".now_playing").first().removeClass("now_playing");
-    $("#selected_row").removeAttr("id");
-    if ($(event.currentTarget).find("span").text().length) {
-      const song_id = $(event.currentTarget).attr("songid");
-      if (song_id && playSongFromHotkey) {
-        playSongFromHotkey(song_id);
-      }
-    }
-  });
-
-  // Hotkey drag and drop events
-  $(".hotkeys li").on("drop", (event) => {
-    $(event.currentTarget).removeClass("drop_target");
+  // Hotkey drop handlers
+  $(".hotkeys li").on("drop", function (event) {
+    $(this).removeClass("drop_target");
     if (!event.originalEvent.dataTransfer.getData("text").length) return;
-    if (hotkeyDrop) {
-      hotkeyDrop(event.originalEvent, options);
-    }
+    hotkeyDrop(event.originalEvent, options);
   });
 
-  $(".hotkeys li").on("dragover", (event) => {
-    $(event.currentTarget).addClass("drop_target");
-    if (allowHotkeyDrop) {
-      allowHotkeyDrop(event.originalEvent);
-    }
+  $(".hotkeys li").on("dragover", function (event) {
+    $(this).addClass("drop_target");
+    allowHotkeyDrop(event.originalEvent);
   });
 
-  $(".hotkeys li").on("dragleave", (event) => {
+  $(".hotkeys li").on("dragleave", function (event) {
     $(event.currentTarget).removeClass("drop_target");
   });
 
@@ -127,7 +96,10 @@ function setupHotkeyEventListeners(options = {}) {
     }
   });
 
-  console.log('✅ Hotkeys event listeners set up');
+  debugLog?.info('Hotkeys event listeners set up', { 
+    module: 'hotkey-ui',
+    function: 'setupHotkeyEventListeners'
+  });
 }
 
 /**
@@ -217,19 +189,16 @@ function clearHotkeyHighlighting() {
  * Update hotkey display
  * Updates the visual display of hotkeys
  * 
- * @param {Object} options - Options object containing dependencies
+ * @param {Object} options - Additional options
  */
 function updateHotkeyDisplay(options = {}) {
-  const { setLabelFromSongId } = options;
-  
-  // Update all hotkey labels
-  for (let key = 1; key <= 12; key++) {
-    const element = getHotkeyElement(`f${key}`);
-    const songId = element.attr("songid");
-    if (songId && setLabelFromSongId) {
-      setLabelFromSongId(songId, element, options);
+  // Update hotkey labels and styling
+  $(".hotkeys.active li").each(function() {
+    const songId = $(this).attr("songid");
+    if (songId) {
+      setLabelFromSongId(songId, $(this));
     }
-  }
+  });
 }
 
 /**
@@ -237,7 +206,7 @@ function updateHotkeyDisplay(options = {}) {
  * Checks if a hotkey element is valid
  * 
  * @param {jQuery} element - Hotkey element to validate
- * @returns {boolean} - True if element is valid
+ * @returns {boolean} - Whether the element is valid
  */
 function validateHotkeyElement(element) {
   return element && element.length > 0 && element.hasClass('hotkey');
@@ -248,73 +217,65 @@ function validateHotkeyElement(element) {
  * Creates a new hotkey element
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
- * @returns {jQuery} - New hotkey element
+ * @returns {jQuery} - Created hotkey element
  */
 function createHotkeyElement(hotkey) {
-  const element = $(`<li id="${hotkey}_hotkey" class="hotkey list-group-item"></li>`);
-  element.append('<span></span>');
+  const element = $(`<li id="${hotkey}_hotkey" class="hotkey" draggable="true" ondragstart="songDrag(event)"></li>`);
   return element;
 }
 
 /**
  * Remove hotkey element
- * Removes a hotkey element from the DOM
+ * Removes a hotkey element
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  */
 function removeHotkeyElement(hotkey) {
-  const element = getHotkeyElement(hotkey);
-  if (element.length > 0) {
-    element.remove();
-  }
+  $(`#${hotkey}_hotkey`).remove();
 }
 
 /**
  * Get hotkey song ID
- * Gets the song ID assigned to a hotkey
+ * Returns the song ID assigned to a hotkey
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  * @returns {string} - Song ID or null
  */
 function getHotkeySongId(hotkey) {
-  const element = getHotkeyElement(hotkey);
-  return element.attr("songid") || null;
+  return $(`#${hotkey}_hotkey`).attr("songid") || null;
 }
 
 /**
  * Set hotkey song ID
- * Sets the song ID for a hotkey
+ * Assigns a song ID to a hotkey
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  * @param {string} songId - Song ID to assign
  */
 function setHotkeySongId(hotkey, songId) {
-  const element = getHotkeyElement(hotkey);
-  element.attr("songid", songId);
+  $(`#${hotkey}_hotkey`).attr("songid", songId);
 }
 
 /**
  * Clear hotkey song ID
- * Removes the song ID from a hotkey
+ * Removes the song ID assignment from a hotkey
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  */
 function clearHotkeySongId(hotkey) {
-  const element = getHotkeyElement(hotkey);
-  element.removeAttr("songid");
-  element.find("span").html("");
+  $(`#${hotkey}_hotkey`).removeAttr("songid");
+  $(`#${hotkey}_hotkey`).text("");
 }
 
 /**
  * Get hotkey label
- * Gets the display label for a hotkey
+ * Returns the display label for a hotkey
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  * @returns {string} - Hotkey label
  */
 function getHotkeyLabel(hotkey) {
-  const element = getHotkeyElement(hotkey);
-  return element.find("span").text();
+  return $(`#${hotkey}_hotkey`).text() || "";
 }
 
 /**
@@ -322,23 +283,22 @@ function getHotkeyLabel(hotkey) {
  * Sets the display label for a hotkey
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
- * @param {string} label - Label text
+ * @param {string} label - Label to set
  */
 function setHotkeyLabel(hotkey, label) {
-  const element = getHotkeyElement(hotkey);
-  element.find("span").html(label);
+  $(`#${hotkey}_hotkey`).text(label);
 }
 
 /**
  * Check if hotkey is assigned
- * Checks if a hotkey has a song assigned
+ * Returns whether a hotkey has a song assigned
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
- * @returns {boolean} - True if hotkey is assigned
+ * @returns {boolean} - Whether the hotkey is assigned
  */
 function isHotkeyAssigned(hotkey) {
   const songId = getHotkeySongId(hotkey);
-  return songId !== null && songId !== undefined;
+  return songId && songId.trim() !== "";
 }
 
 /**
@@ -349,8 +309,8 @@ function isHotkeyAssigned(hotkey) {
  */
 function getAssignedHotkeys() {
   const assigned = [];
-  for (let key = 1; key <= 12; key++) {
-    const hotkey = `f${key}`;
+  for (let i = 1; i <= 12; i++) {
+    const hotkey = `f${i}`;
     if (isHotkeyAssigned(hotkey)) {
       assigned.push(hotkey);
     }
@@ -366,8 +326,8 @@ function getAssignedHotkeys() {
  */
 function getUnassignedHotkeys() {
   const unassigned = [];
-  for (let key = 1; key <= 12; key++) {
-    const hotkey = `f${key}`;
+  for (let i = 1; i <= 12; i++) {
+    const hotkey = `f${i}`;
     if (!isHotkeyAssigned(hotkey)) {
       unassigned.push(hotkey);
     }
@@ -375,6 +335,7 @@ function getUnassignedHotkeys() {
   return unassigned;
 }
 
+// Export all functions
 export {
   hotkeyDrop,
   allowHotkeyDrop,

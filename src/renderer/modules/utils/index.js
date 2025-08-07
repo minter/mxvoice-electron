@@ -5,6 +5,17 @@
  * in the MxVoice Electron application.
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 // Import all utility modules
 import animationUtils from './animation-utils.js';
 import modalUtils from './modal-utils.js';
@@ -33,7 +44,10 @@ class UtilsModule {
    * This method can be called to set up any initialization logic
    */
   init() {
-    console.log('Utils module initialized');
+    debugLog?.info('Utils module initialized', { 
+      module: 'utils',
+      function: 'init'
+    });
   }
 
   /**

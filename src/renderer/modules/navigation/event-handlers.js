@@ -4,6 +4,17 @@
  * Handles UI event handlers for navigation functionality
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Setup all navigation event handlers
  */
@@ -32,5 +43,8 @@ export function setupNavigationEventHandlers() {
     return false;
   });
 
-  console.log('✅ Navigation Event Handlers initialized');
+  debugLog?.info('Navigation Event Handlers initialized', { 
+    module: 'navigation-event-handlers',
+    function: 'setupNavigationEventHandlers'
+  });
 } 

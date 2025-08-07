@@ -4,6 +4,17 @@
  * Core functions for handling drag and drop operations
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Handles dropping songs into hotkey containers
  * 
@@ -23,27 +34,44 @@ function hotkeyDrop(event) {
  * @param {Event} event - The drop event
  */
 export function holdingTankDrop(event) {
-  console.log('🔍 holdingTankDrop called');
-  console.log('🔍 Event target:', event.target);
-  console.log('🔍 Event currentTarget:', event.currentTarget);
+  debugLog?.info('holdingTankDrop called', { 
+    module: 'drag-drop-functions',
+    function: 'holdingTankDrop',
+    target: event.target,
+    currentTarget: event.currentTarget
+  });
   
   event.preventDefault();
   
   const songId = event.dataTransfer.getData("text");
-  console.log('🔍 Song ID from data transfer:', songId);
+  debugLog?.info('Song ID from data transfer', { 
+    module: 'drag-drop-functions',
+    function: 'holdingTankDrop',
+    songId: songId
+  });
   
   if (!songId) {
-    console.warn('❌ No song ID found in data transfer');
+    debugLog?.warn('No song ID found in data transfer', { 
+      module: 'drag-drop-functions',
+      function: 'holdingTankDrop'
+    });
     return;
   }
   
-  console.log('🔍 Calling addToHoldingTank with songId:', songId);
-  console.log('🔍 addToHoldingTank function available:', typeof window.addToHoldingTank);
+  debugLog?.info('Calling addToHoldingTank with songId', { 
+    module: 'drag-drop-functions',
+    function: 'holdingTankDrop',
+    songId: songId,
+    functionAvailable: typeof window.addToHoldingTank
+  });
   
   if (window.addToHoldingTank) {
     addToHoldingTank(songId, $(event.target));
   } else {
-    console.error('❌ addToHoldingTank function not available');
+    debugLog?.error('addToHoldingTank function not available', { 
+      module: 'drag-drop-functions',
+      function: 'holdingTankDrop'
+    });
   }
 }
 
@@ -62,7 +90,11 @@ function allowHotkeyDrop(event) {
  * @param {Event} event - The dragstart event
  */
 export function songDrag(event) {
-  console.log("Starting drag for ID " + event.target.getAttribute("songid"));
+  debugLog?.info('Starting drag for song ID', { 
+    module: 'drag-drop-functions',
+    function: 'songDrag',
+    songId: event.target.getAttribute("songid")
+  });
   event.dataTransfer.setData("text", event.target.getAttribute("songid"));
 }
 
@@ -72,7 +104,11 @@ export function songDrag(event) {
  * @param {Event} event - The dragstart event
  */
 export function columnDrag(event) {
-  console.log("Starting drag for column ID " + event.target.getAttribute("id"));
+  debugLog?.info('Starting drag for column ID', { 
+    module: 'drag-drop-functions',
+    function: 'columnDrag',
+    columnId: event.target.getAttribute("id")
+  });
   event.dataTransfer.setData(
     "application/x-moz-node",
     event.target.getAttribute("id")

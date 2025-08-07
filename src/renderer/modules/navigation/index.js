@@ -8,6 +8,17 @@
 import { sendToHotkeys, sendToHoldingTank, selectNext, selectPrev } from './navigation-functions.js';
 import { setupNavigationEventHandlers } from './event-handlers.js';
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Navigation Singleton
  * 
@@ -29,7 +40,10 @@ class NavigationModule {
     // Setup event handlers for navigation
     setupNavigationEventHandlers();
     
-    console.log('✅ Navigation Module initialized');
+    debugLog?.info('Navigation Module initialized', { 
+      module: 'navigation',
+      function: 'initializeNavigation'
+    });
   }
 
   /**

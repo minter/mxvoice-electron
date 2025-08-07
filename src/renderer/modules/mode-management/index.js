@@ -5,6 +5,17 @@
  * It manages the holding tank mode (storage vs playlist) and autoplay functionality.
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Mode Management Singleton
  * 
@@ -22,7 +33,10 @@ class ModeManagementModule {
    * Initialize the mode management module
    */
   async initModeManagement() {
-    console.log('🎛️ Initializing Mode Management Module');
+    debugLog?.info('Initializing Mode Management Module', { 
+      module: 'mode-management',
+      function: 'initModeManagement'
+    });
     
     // Load saved mode or default to storage
     try {
@@ -40,7 +54,11 @@ class ModeManagementModule {
         return { success: true, mode: this.holdingTankMode };
       }
     } catch (error) {
-      console.error('❌ Failed to initialize mode management:', error);
+      debugLog?.error('Failed to initialize mode management', { 
+        module: 'mode-management',
+        function: 'initModeManagement',
+        error: error.message
+      });
       return { success: false, error: error.message };
     }
   }
@@ -51,7 +69,11 @@ class ModeManagementModule {
    * @returns {Promise<Object>} - Result of the operation
    */
   async setHoldingTankMode(mode) {
-    console.log('🎛️ Setting holding tank mode:', mode);
+    debugLog?.info('Setting holding tank mode', { 
+      module: 'mode-management',
+      function: 'setHoldingTankMode',
+      mode: mode
+    });
     
     this.holdingTankMode = mode;
 
@@ -89,13 +111,27 @@ class ModeManagementModule {
     try {
       const result = await window.electronAPI.store.set("holding_tank_mode", mode);
       if (result.success) {
-        console.log('✅ Holding tank mode saved:', mode);
+        debugLog?.info('Holding tank mode saved', { 
+          module: 'mode-management',
+          function: 'setHoldingTankMode',
+          mode: mode
+        });
       } else {
-        console.warn('❌ Failed to save holding tank mode:', result.error);
+        debugLog?.warn('Failed to save holding tank mode', { 
+          module: 'mode-management',
+          function: 'setHoldingTankMode',
+          mode: mode,
+          error: result.error
+        });
       }
       return result;
     } catch (error) {
-      console.warn('❌ Store save error:', error);
+      debugLog?.warn('Store save error', { 
+        module: 'mode-management',
+        function: 'setHoldingTankMode',
+        mode: mode,
+        error: error.message
+      });
       return { success: false, error: error.message };
     }
   }
@@ -113,7 +149,10 @@ class ModeManagementModule {
    * @returns {Promise<Object>} - Result of the operation
    */
   async toggleAutoPlay() {
-    console.log('🎛️ Toggling autoplay mode');
+    debugLog?.info('Toggling autoplay mode', { 
+      module: 'mode-management',
+      function: 'toggleAutoPlay'
+    });
     
     if (this.holdingTankMode === "storage") {
       return this.setHoldingTankMode("playlist");
@@ -136,7 +175,10 @@ class ModeManagementModule {
    */
   setAudioContext(audioContext) {
     this.sound = audioContext;
-    console.log('🎛️ Audio context set in mode management');
+    debugLog?.info('Audio context set in mode management', { 
+      module: 'mode-management',
+      function: 'setAudioContext'
+    });
   }
 
   /**
@@ -144,7 +186,10 @@ class ModeManagementModule {
    * @returns {Promise<Object>} - Result of the operation
    */
   async resetToDefaultMode() {
-    console.log('🎛️ Resetting to default mode');
+    debugLog?.info('Resetting to default mode', { 
+      module: 'mode-management',
+      function: 'resetToDefaultMode'
+    });
     return this.setHoldingTankMode("storage");
   }
 
