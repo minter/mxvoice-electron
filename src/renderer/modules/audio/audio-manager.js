@@ -46,10 +46,13 @@ function playSongWithFilename(filename, row, song_id) {
                 var title = row.title || "";
                 var artist = row.artist || "";
                 artist = artist.length ? "by " + artist : artist;
-                const wavesurfer = sharedState.get('wavesurfer');
-                if (wavesurfer) {
-                  wavesurfer.load(sound_path);
-                }
+                              let wavesurfer = sharedState.get('wavesurfer');
+              if (!wavesurfer && sharedState.get('createWaveSurfer')) {
+                wavesurfer = sharedState.get('createWaveSurfer')();
+              }
+              if (wavesurfer) {
+                wavesurfer.load(sound_path);
+              }
                 $("#song_now_playing")
                   .html(
                     `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`
@@ -109,7 +112,10 @@ function playSongWithFilename(filename, row, song_id) {
               var title = row.title || "";
               var artist = row.artist || "";
               artist = artist.length ? "by " + artist : artist;
-              const wavesurfer = sharedState.get('wavesurfer');
+              let wavesurfer = sharedState.get('wavesurfer');
+              if (!wavesurfer && sharedState.get('createWaveSurfer')) {
+                wavesurfer = sharedState.get('createWaveSurfer')();
+              }
               if (wavesurfer) {
                 wavesurfer.load(sound_path);
               }

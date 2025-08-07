@@ -60,7 +60,12 @@ function initializeControls(options = {}) {
     if ($("#waveform").hasClass("hidden")) {
       $("#waveform").removeClass("hidden");
       $("#waveform_button").addClass("active");
-      animateCSS($("#waveform"), "fadeInUp").then(() => {});
+      animateCSS($("#waveform"), "fadeInUp").then(() => {
+        // Create WaveSurfer when waveform becomes visible
+        if (window.sharedState && window.sharedState.get('createWaveSurfer')) {
+          window.sharedState.get('createWaveSurfer')();
+        }
+      });
     } else {
       $("#waveform_button").removeClass("active");
       animateCSS($("#waveform"), "fadeOutDown").then(() => {

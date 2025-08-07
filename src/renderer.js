@@ -53,22 +53,30 @@ async function initializeSharedState() {
     sharedStateInstance.set('sound', null);
     sharedStateInstance.set('globalAnimation', null);
     
-    // Only create WaveSurfer if the element exists and WaveSurfer is available
-    const waveformElement = document.getElementById('waveform');
-    if (waveformElement && typeof WaveSurfer !== 'undefined') {
-      sharedStateInstance.set('wavesurfer', WaveSurfer.create({
-        container: "#waveform",
-        waveColor: "#e9ecef",
-        backgroundColor: "#343a40",
-        progressColor: "#007bff",
-        cursorColor: "white",
-        cursorWidth: 0,
-        responsive: true,
-        height: 100,
-      }));
-    } else {
-      sharedStateInstance.set('wavesurfer', null);
-    }
+    // Don't create WaveSurfer immediately since the element is hidden
+    // It will be created when the waveform is first shown
+    sharedStateInstance.set('wavesurfer', null);
+    
+    // Add a method to create WaveSurfer when needed
+    sharedStateInstance.set('createWaveSurfer', () => {
+      const waveformElement = document.getElementById('waveform');
+      if (waveformElement && typeof WaveSurfer !== 'undefined' && !sharedStateInstance.get('wavesurfer')) {
+        console.log('🔄 Creating WaveSurfer instance...');
+        const wavesurfer = WaveSurfer.create({
+          container: "#waveform",
+          waveColor: "#e9ecef",
+          backgroundColor: "#343a40",
+          progressColor: "#007bff",
+          cursorColor: "white",
+          cursorWidth: 0,
+          responsive: true,
+          height: 100,
+        });
+        sharedStateInstance.set('wavesurfer', wavesurfer);
+        return wavesurfer;
+      }
+      return sharedStateInstance.get('wavesurfer');
+    });
     
     sharedStateInstance.set('autoplay', false);
     sharedStateInstance.set('loop', false);

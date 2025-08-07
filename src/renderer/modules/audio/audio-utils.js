@@ -43,7 +43,7 @@ export const howlerUtils = {
   updateTimeTracker: function () {
     const sound = sharedState.get('sound');
     const globalAnimation = sharedState.get('globalAnimation');
-    const wavesurfer = sharedState.get('wavesurfer');
+    let wavesurfer = sharedState.get('wavesurfer');
     
     if (!sound || !howlerUtils.isLoaded(sound)) {
       if (globalAnimation) {
