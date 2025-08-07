@@ -5,19 +5,35 @@
  * all modules in the MxVoice Electron application.
  */
 
-// Import DebugLog for consistent logging
-const debugLog = window.debugLog;
-
 /**
  * Module Loader Class
  * 
  * Handles dynamic loading and management of application modules
  */
 class ModuleLoader {
-  constructor() {
+  constructor(debugLogger = null) {
     this.modules = new Map();
     this.loadedModules = new Set();
     this.moduleCache = new Map();
+    this.debugLog = debugLogger;
+  }
+
+  // Set debug logger after initialization
+  setDebugLogger(debugLogger) {
+    if (!debugLogger) {
+      throw new Error('ModuleLoader requires a valid debug logger');
+    }
+    this.debugLog = debugLogger;
+    this.debugLog.info('ModuleLoader debug logger set', { 
+      function: "setDebugLogger" 
+    });
+  }
+
+  // Ensure debug logger is available before use
+  ensureDebugLogger() {
+    if (!this.debugLog) {
+      throw new Error('DebugLogger not initialized. ModuleLoader requires DebugLogger to be available.');
+    }
   }
 
   /**
@@ -28,10 +44,12 @@ class ModuleLoader {
    * @returns {Promise<Object>} - The loaded module
    */
   async loadModule(modulePath, options = {}) {
+    this.ensureDebugLogger();
+    
     try {
       // Check if module is already loaded
       if (this.moduleCache.has(modulePath)) {
-        debugLog.info(`Module already loaded: ${modulePath}`, { 
+        this.debugLog.info(`Module already loaded: ${modulePath}`, { 
           function: "loadModule",
           data: { modulePath }
         });
@@ -45,13 +63,13 @@ class ModuleLoader {
       this.moduleCache.set(modulePath, module);
       this.loadedModules.add(modulePath);
       
-      debugLog.info(`Module loaded successfully: ${modulePath}`, { 
+      this.debugLog.info(`Module loaded successfully: ${modulePath}`, { 
         function: "loadModule",
         data: { modulePath }
       });
       return module;
     } catch (error) {
-      debugLog.error(`Failed to load module: ${modulePath}`, { 
+      this.debugLog.error(`Failed to load module: ${modulePath}`, { 
         function: "loadModule",
         data: { modulePath },
         error: error.message
@@ -75,7 +93,7 @@ class ModuleLoader {
         const module = await this.loadModule(modulePath, options);
         results[modulePath] = module;
       } catch (error) {
-        debugLog.error(`Failed to load module: ${modulePath}`, { 
+        this.debugLog.error(`Failed to load module: ${modulePath}`, { 
           function: "loadModules",
           data: { modulePath },
           error: error.message
@@ -122,7 +140,7 @@ class ModuleLoader {
   clearCache() {
     this.moduleCache.clear();
     this.loadedModules.clear();
-    debugLog.info('Module cache cleared', { 
+    this.debugLog.info('Module cache cleared', { 
       function: "clearCache" 
     });
   }

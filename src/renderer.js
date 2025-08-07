@@ -103,9 +103,10 @@ import FunctionRegistry from './renderer/function-registry.js';
 import EventManager from './renderer/event-manager.js';
 import FunctionMonitor from './renderer/function-monitor.js';
 
-const functionRegistry = new FunctionRegistry();
-const eventManager = new EventManager(functionRegistry);
-const functionMonitor = new FunctionMonitor(functionRegistry);
+// These will be initialized after the debug logger is available
+let functionRegistry = null;
+let eventManager = null;
+let functionMonitor = null;
 
 // Load the last holding tank and hotkeys
 
@@ -760,6 +761,13 @@ $(document).ready(async function() {
       // Make DebugLog available globally for other modules
       window.debugLog = debugLogInstance;
       console.log('✅ DebugLog module initialized and available globally');
+      
+      // Initialize dependent classes with the debug logger
+      functionRegistry = new FunctionRegistry(debugLogInstance);
+      eventManager = new EventManager(functionRegistry, debugLogInstance);
+      functionMonitor = new FunctionMonitor(functionRegistry, debugLogInstance);
+      
+      console.log('✅ Dependent classes initialized with debug logger');
     } catch (error) {
       console.error('❌ Error loading DebugLog module:', error);
       // Don't throw error, continue loading other modules

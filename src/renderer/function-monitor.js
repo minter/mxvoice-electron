@@ -5,12 +5,10 @@
  * for the MxVoice Electron application.
  */
 
-// Import DebugLog for consistent logging
-const debugLog = window.debugLog;
-
 class FunctionMonitor {
-  constructor(functionRegistry) {
+  constructor(functionRegistry, debugLogger = null) {
     this.functionRegistry = functionRegistry;
+    this.debugLog = debugLogger;
     this.monitoring = false;
     this.healthChecks = new Map();
     this.availabilityHistory = new Map();
@@ -20,16 +18,36 @@ class FunctionMonitor {
     ];
   }
 
+  // Set debug logger after initialization
+  setDebugLogger(debugLogger) {
+    if (!debugLogger) {
+      throw new Error('FunctionMonitor requires a valid debug logger');
+    }
+    this.debugLog = debugLogger;
+    this.debugLog.info('FunctionMonitor debug logger set', { 
+      function: "setDebugLogger" 
+    });
+  }
+
+  // Ensure debug logger is available before use
+  ensureDebugLogger() {
+    if (!this.debugLog) {
+      throw new Error('DebugLogger not initialized. FunctionMonitor requires DebugLogger to be available.');
+    }
+  }
+
   /**
    * Start monitoring function availability
    */
   startMonitoring() {
+    this.ensureDebugLogger();
+    
     if (this.monitoring) {
-      debugLog.warn('Function monitoring already active', { function: "startMonitoring" });
+      this.debugLog.warn('Function monitoring already active', { function: "startMonitoring" });
       return;
     }
 
-    debugLog.info('Starting function availability monitoring...', { function: "startMonitoring" });
+    this.debugLog.info('Starting function availability monitoring...', { function: "startMonitoring" });
     this.monitoring = true;
 
     // Initial health check

@@ -1,0 +1,120 @@
+# DebugLogger Integration Rules
+
+## Core Principle
+**Use proper dependency injection instead of fallbacks or global access.** The DebugLogger must be injected as a dependency rather than accessed globally to avoid timing issues.
+
+## Correct Pattern
+
+### 1. Constructor Pattern
+```javascript
+// ✅ CORRECT - Use dependency injection
+class MyModule {
+  constructor(debugLogger = null) {
+    this.debugLog = debugLogger;
+    // ... other initialization
+  }
+
+  // Set debug logger after initialization
+  setDebugLogger(debugLogger) {
+    if (!debugLogger) {
+      throw new Error('MyModule requires a valid debug logger');
+    }
+    this.debugLog = debugLogger;
+    this.debugLog.info('MyModule debug logger set', { 
+      function: "setDebugLogger" 
+    });
+  }
+
+  // Ensure debug logger is available before use
+  ensureDebugLogger() {
+    if (!this.debugLog) {
+      throw new Error('DebugLogger not initialized. MyModule requires DebugLogger to be available.');
+    }
+  }
+}
+```
+
+### 2. Method Usage Pattern
+```javascript
+// ✅ CORRECT - Always ensure debug logger before use
+async someMethod() {
+  this.ensureDebugLogger();
+  
+  this.debugLog.info('Starting operation...', { 
+    function: "someMethod" 
+  });
+  
+  // ... method logic
+}
+```
+
+### 3. Initialization Pattern (in renderer.js)
+```javascript
+// ✅ CORRECT - Initialize after debug logger is available
+// In renderer.js, after debug logger initialization:
+functionRegistry = new FunctionRegistry(debugLogInstance);
+eventManager = new EventManager(functionRegistry, debugLogInstance);
+functionMonitor = new FunctionMonitor(functionRegistry, debugLogInstance);
+```
+
+## What NOT to Do
+
+### ❌ INCORRECT - Global access
+```javascript
+// ❌ DON'T - Access window.debugLog directly
+class MyModule {
+  constructor() {
+    this.debugLog = window.debugLog; // Timing issue!
+  }
+}
+```
+
+### ❌ INCORRECT - Fallback to console.log
+```javascript
+// ❌ DON'T - Use fallbacks that mask the real issue
+this.debugLog = window.debugLog || {
+  info: (msg) => console.info(`[FALLBACK] ${msg}`),
+  warn: (msg) => console.warn(`[FALLBACK] ${msg}`)
+};
+```
+
+### ❌ INCORRECT - Early instantiation
+```javascript
+// ❌ DON'T - Instantiate before debug logger is ready
+const myModule = new MyModule(); // Will fail if debug logger not ready
+```
+
+## Integration Steps for New Modules
+
+1. **Update Constructor**: Accept debugLogger parameter
+2. **Add setDebugLogger()**: Method to set logger after initialization
+3. **Add ensureDebugLogger()**: Method to validate logger before use
+4. **Update Methods**: Call ensureDebugLogger() before any debug logging
+5. **Update Initialization**: Initialize after debug logger is available in renderer.js
+
+## Error Handling
+- **Fail Fast**: Throw clear errors if debug logger isn't available
+- **Clear Messages**: Include class name and context in error messages
+- **No Silent Fallbacks**: Don't fall back to console.log
+
+## Testing Pattern
+```javascript
+// Test that module fails properly without debug logger
+const module = new MyModule();
+expect(() => module.someMethod()).toThrow('DebugLogger not initialized');
+```
+
+## Migration Checklist
+When migrating a module to use DebugLogger:
+- [ ] Update constructor to accept debugLogger parameter
+- [ ] Add setDebugLogger() method
+- [ ] Add ensureDebugLogger() method  
+- [ ] Update all methods to call ensureDebugLogger() before logging
+- [ ] Update renderer.js to initialize after debug logger
+- [ ] Remove any global window.debugLog access
+- [ ] Remove any console.log fallbacks
+- [ ] Test that module fails properly without debug logger
+description:
+globs:
+alwaysApply: false
+---

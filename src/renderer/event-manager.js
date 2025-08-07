@@ -5,26 +5,44 @@
  * to reduce window pollution and improve architecture
  */
 
-// Import DebugLog for consistent logging
-const debugLog = window.debugLog;
-
 class EventManager {
-  constructor(functionRegistry) {
+  constructor(functionRegistry, debugLogger = null) {
     this.functionRegistry = functionRegistry;
+    this.debugLog = debugLogger;
     this.eventHandlers = new Map();
     this.initialized = false;
+  }
+
+  // Set debug logger after initialization
+  setDebugLogger(debugLogger) {
+    if (!debugLogger) {
+      throw new Error('EventManager requires a valid debug logger');
+    }
+    this.debugLog = debugLogger;
+    this.debugLog.info('EventManager debug logger set', { 
+      function: "setDebugLogger" 
+    });
+  }
+
+  // Ensure debug logger is available before use
+  ensureDebugLogger() {
+    if (!this.debugLog) {
+      throw new Error('DebugLogger not initialized. EventManager requires DebugLogger to be available.');
+    }
   }
 
   /**
    * Initialize the event manager
    */
   initialize() {
+    this.ensureDebugLogger();
+    
     if (this.initialized) {
-      debugLog.warn('Event manager already initialized', { function: "initialize" });
+      this.debugLog.warn('Event manager already initialized', { function: "initialize" });
       return;
     }
 
-    debugLog.info('Initializing event manager...', { function: "initialize" });
+    this.debugLog.info('Initializing event manager...', { function: "initialize" });
     
     // Wait for DOM to be ready
     if (document.readyState === 'loading') {
@@ -51,7 +69,7 @@ class EventManager {
     this.setupUpdateOperations();
     this.setupDynamicElements();
     
-    debugLog.info('All event listeners set up', { function: "setupEventListeners" });
+    this.debugLog.info('All event listeners set up', { function: "setupEventListeners" });
   }
 
   /**

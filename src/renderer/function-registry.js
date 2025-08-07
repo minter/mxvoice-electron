@@ -5,15 +5,33 @@
  * and provide consistent error handling.
  */
 
-// Import DebugLog for consistent logging
-const debugLog = window.debugLog;
+// DebugLog will be accessed when needed
 
 class FunctionRegistry {
-  constructor() {
+  constructor(debugLogger = null) {
     this.registry = new Map();
     this.fallbacks = new Map();
     this.moduleRegistry = null;
     this.registeredFunctions = new Set();
+    this.debugLog = debugLogger;
+  }
+
+  // Set debug logger after initialization
+  setDebugLogger(debugLogger) {
+    if (!debugLogger) {
+      throw new Error('FunctionRegistry requires a valid debug logger');
+    }
+    this.debugLog = debugLogger;
+    this.debugLog.info('FunctionRegistry debug logger set', { 
+      function: "setDebugLogger" 
+    });
+  }
+
+  // Ensure debug logger is available before use
+  ensureDebugLogger() {
+    if (!this.debugLog) {
+      throw new Error('DebugLogger not initialized. FunctionRegistry requires DebugLogger to be available.');
+    }
   }
 
   setModuleRegistry(moduleRegistry) {
@@ -22,6 +40,8 @@ class FunctionRegistry {
 
   // Register a function with optional fallback
   register(name, fn, fallback = null) {
+    this.ensureDebugLogger();
+    
     this.registry.set(name, fn);
     this.registeredFunctions.add(name);
     
@@ -32,12 +52,12 @@ class FunctionRegistry {
     // Only assign to window if not already present
     if (!window[name]) {
       window[name] = fn;
-      debugLog.info(`Registered function: ${name}`, { 
+      this.debugLog.info(`Registered function: ${name}`, { 
         function: "register",
         data: { functionName: name }
       });
     } else {
-      debugLog.warn(`Function ${name} already exists on window, skipping`, { 
+      this.debugLog.warn(`Function ${name} already exists on window, skipping`, { 
         function: "register",
         data: { functionName: name }
       });
@@ -46,13 +66,15 @@ class FunctionRegistry {
 
   // Register multiple functions from a module
   registerModule(moduleName, functions) {
-    debugLog.info(`Registering functions for module: ${moduleName}`, { 
+    this.ensureDebugLogger();
+    
+    this.debugLog.info(`Registering functions for module: ${moduleName}`, { 
       function: "registerModule",
       data: { moduleName, functionCount: Object.keys(functions).length }
     });
     
     if (!this.moduleRegistry || !this.moduleRegistry[moduleName]) {
-      debugLog.warn(`Module ${moduleName} not available, using fallbacks`, { 
+      this.debugLog.warn(`Module ${moduleName} not available, using fallbacks`, { 
         function: "registerModule",
         data: { moduleName }
       });
@@ -85,7 +107,7 @@ class FunctionRegistry {
       if (fn) {
         this.register(name, fn, fallback);
       } else {
-        debugLog.warn(`Function ${fnPath} not found in module ${moduleName}`, { 
+        this.debugLog.warn(`Function ${fnPath} not found in module ${moduleName}`, { 
           function: "registerModule",
           data: { moduleName, functionPath: fnPath, functionName: name }
         });
@@ -98,7 +120,7 @@ class FunctionRegistry {
 
   // Register functions from a module-specific registry
   async registerModuleFromRegistry(moduleName, registryName) {
-    debugLog.info(`Registering functions for module: ${moduleName} using registry: ${registryName}`, { 
+    this.debugLog.info(`Registering functions for module: ${moduleName} using registry: ${registryName}`, { 
       function: "registerModuleFromRegistry",
       data: { moduleName, registryName }
     });
@@ -114,13 +136,13 @@ class FunctionRegistry {
       if (functions) {
         this.registerModule(moduleName, functions);
       } else {
-        debugLog.warn(`Registry ${registryName} not found for module ${moduleName}`, { 
+        this.debugLog.warn(`Registry ${registryName} not found for module ${moduleName}`, { 
           function: "registerModuleFromRegistry",
           data: { moduleName, registryName }
         });
       }
     } catch (error) {
-      debugLog.warn(`Failed to load registry for module ${moduleName}`, { 
+      this.debugLog.warn(`Failed to load registry for module ${moduleName}`, { 
         function: "registerModuleFromRegistry",
         data: { moduleName, registryName },
         error: error.message
@@ -132,7 +154,7 @@ class FunctionRegistry {
 
   // Fallback inline registration for modules without specific registries
   registerModuleInline(moduleName) {
-    debugLog.info(`Using inline registration for module: ${moduleName}`, { 
+    this.debugLog.info(`Using inline registration for module: ${moduleName}`, { 
       function: "registerModuleInline",
       data: { moduleName }
     });
@@ -146,12 +168,12 @@ class FunctionRegistry {
         saveHoldingTankFile: 'saveHoldingTankFile',
         pickDirectory: 'pickDirectory',
         installUpdate: 'installUpdate',
-        openHotkeyFileFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-        openHoldingTankFileFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-        saveHotkeyFileFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-        saveHoldingTankFileFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-        pickDirectoryFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-        installUpdateFallback: () => debugLog.warn('File operations not available', { function: 'fileOperationsFallback' })
+              openHotkeyFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+      openHoldingTankFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+      saveHotkeyFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+      saveHoldingTankFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+      pickDirectoryFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+      installUpdateFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' })
       },
       audio: {
         playSongFromId: 'playSongFromId',
@@ -182,7 +204,7 @@ class FunctionRegistry {
     if (mapping) {
       this.registerModule(moduleName, mapping);
     } else {
-      debugLog.warn(`No inline mapping available for module: ${moduleName}`, { 
+            this.debugLog.warn(`No inline mapping available for module: ${moduleName}`, {
         function: "registerModuleInline",
         data: { moduleName }
       });
@@ -198,7 +220,9 @@ class FunctionRegistry {
 
   // Register all HTML-compatible functions
   async registerAllFunctions() {
-    debugLog.info('Starting function registration...', { 
+    this.ensureDebugLogger();
+    
+    this.debugLog.info('Starting function registration...', { 
       function: "registerAllFunctions" 
     });
     
@@ -216,13 +240,13 @@ class FunctionRegistry {
       deleteSong: 'deleteSong',
       removeFromHoldingTank: 'removeFromHoldingTank',
       removeFromHotkey: 'removeFromHotkey',
-      saveEditedSongFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
-      saveNewSongFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
-      editSelectedSongFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
-      deleteSelectedSongFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
-      deleteSongFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
-      removeFromHoldingTankFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
-      removeFromHotkeyFallback: () => debugLog.warn('Song management not available', { function: 'songManagementFallback' })
+      saveEditedSongFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      saveNewSongFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      editSelectedSongFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      deleteSelectedSongFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      deleteSongFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      removeFromHoldingTankFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
+      removeFromHotkeyFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' })
     });
 
     // Search Functions
@@ -327,7 +351,7 @@ class FunctionRegistry {
       columnDrag: 'columnDrag'
     });
 
-    debugLog.info('Function registration completed', { 
+    this.debugLog.info('Function registration completed', { 
       function: "registerAllFunctions" 
     });
   }
@@ -341,14 +365,14 @@ class FunctionRegistry {
 
     const missing = requiredFunctions.filter(fn => !window[fn]);
     if (missing.length > 0) {
-      debugLog.warn('Missing required functions', { 
+      this.debugLog.warn('Missing required functions', { 
         function: "validateFunctions",
         data: { missingFunctions: missing }
       });
       return false;
     }
     
-    debugLog.info('All required functions are available', { 
+    this.debugLog.info('All required functions are available', { 
       function: "validateFunctions",
       data: { requiredFunctions }
     });
