@@ -110,16 +110,19 @@ function pausePlaying(fadeOut = false) {
         sharedState.set('globalAnimation', null);
       }
       
-      sound.on("fade", function () {
-        sound.pause();
-        sound.volume(old_volume);
-      });
+      // Clear any existing fade event handlers to prevent conflicts
+      sound.off("fade");
+      
       $("#song_spinner").removeClass("fa-spin");
       $("#progress_bar .progress-bar").removeClass(
         "progress-bar-animated progress-bar-striped"
       );
       if (fadeOut) {
         var old_volume = sound.volume();
+        sound.on("fade", function () {
+          sound.pause();
+          sound.volume(old_volume);
+        });
         window.electronAPI.store.get("fade_out_seconds").then(fadeSeconds => {
           var fadeDuration = fadeSeconds * 1000;
           sound.fade(sound.volume(), 0, fadeDuration);

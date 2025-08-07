@@ -1433,13 +1433,25 @@ $(document).ready(function () {
     console.log('🔍 window.pausePlaying function:', typeof window.pausePlaying);
     console.log('🔍 window.playSelected function:', typeof window.playSelected);
     if (window.pausePlaying && window.playSelected) {
-      // Check if sound exists in shared state
-      if (window.electronAPI && window.electronAPI.store) {
-        // For now, just call playSelected since we can't easily check sound state
+      // Check if there's already a sound loaded and paused
+      import('./renderer/modules/shared-state.js').then(sharedStateModule => {
+        const sharedState = sharedStateModule.default;
+        const sound = sharedState.get('sound');
+        
+        if (sound && sound.state() === 'loaded' && !sound.playing()) {
+          // Sound is loaded but not playing - resume it
+          console.log('🔍 Resuming paused sound');
+          window.pausePlaying();
+        } else {
+          // No sound or sound is playing - play selected song
+          console.log('🔍 Playing selected song');
+          window.playSelected();
+        }
+      }).catch(error => {
+        console.error('❌ Failed to import shared state:', error);
+        // Fallback to playSelected
         window.playSelected();
-      } else {
-        window.playSelected();
-      }
+      });
     } else {
       console.error('❌ Required functions not available');
     }
