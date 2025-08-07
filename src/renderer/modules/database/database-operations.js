@@ -6,6 +6,17 @@
  * database operations that were in the original renderer.js file.
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Edit category in the database
  * Updates the category description in the database
@@ -22,14 +33,29 @@ function editCategory(code, description) {
         [description, code]
       ).then(result => {
         if (result.success) {
-          console.log(`✅ Category ${code} updated successfully`);
+          debugLog?.info(`Category ${code} updated successfully`, { 
+            module: 'database-operations',
+            function: 'editCategory',
+            code: code,
+            description: description
+          });
           resolve(result);
         } else {
-          console.warn('❌ Failed to update category:', result.error);
+          debugLog?.warn('Failed to update category', { 
+            module: 'database-operations',
+            function: 'editCategory',
+            code: code,
+            error: result.error
+          });
           reject(new Error(result.error));
         }
       }).catch(error => {
-        console.warn('❌ Database API error:', error);
+        debugLog?.warn('Database API error', { 
+          module: 'database-operations',
+          function: 'editCategory',
+          code: code,
+          error: error
+        });
         reject(error);
       });
     } else {
@@ -39,7 +65,12 @@ function editCategory(code, description) {
           const stmt = db.prepare("UPDATE categories SET description = ? WHERE code = ?");
           const info = stmt.run(description, code);
           if (info.changes > 0) {
-            console.log(`✅ Category ${code} updated successfully`);
+            debugLog?.info(`Category ${code} updated successfully`, { 
+              module: 'database-operations',
+              function: 'editCategory',
+              code: code,
+              description: description
+            });
             resolve({ success: true, changes: info.changes });
           } else {
             reject(new Error('No changes made to category'));
@@ -83,14 +114,29 @@ function deleteCategory(code, description) {
         );
       }).then(result => {
         if (result.success) {
-          console.log(`✅ Category ${code} deleted successfully`);
+          debugLog?.info(`Category ${code} deleted successfully`, { 
+            module: 'database-operations',
+            function: 'deleteCategory',
+            code: code,
+            description: description
+          });
           resolve(result);
         } else {
-          console.warn('❌ Failed to delete category:', result.error);
+          debugLog?.warn('Failed to delete category', { 
+            module: 'database-operations',
+            function: 'deleteCategory',
+            code: code,
+            error: result.error
+          });
           reject(new Error(result.error));
         }
       }).catch(error => {
-        console.warn('❌ Database API error:', error);
+        debugLog?.warn('Database API error', { 
+          module: 'database-operations',
+          function: 'deleteCategory',
+          code: code,
+          error: error
+        });
         reject(error);
       });
     } else {
@@ -111,13 +157,23 @@ function deleteCategory(code, description) {
             "UPDATE mrvoice SET category = ? WHERE category = ?"
           );
           const info = stmt.run("UNC", code);
-          console.log(`Updated ${info.changes} rows to uncategorized`);
+          debugLog?.info(`Updated ${info.changes} rows to uncategorized`, { 
+            module: 'database-operations',
+            function: 'deleteCategory',
+            code: code,
+            changes: info.changes
+          });
 
           // Delete the category
           const deleteStmt = db.prepare("DELETE FROM categories WHERE code = ?");
           const deleteInfo = deleteStmt.run(code);
           if (deleteInfo.changes == 1) {
-            console.log(`✅ Category ${code} deleted successfully`);
+            debugLog?.info(`Category ${code} deleted successfully`, { 
+              module: 'database-operations',
+              function: 'deleteCategory',
+              code: code,
+              description: description
+            });
             resolve({ success: true, changes: deleteInfo.changes });
           } else {
             reject(new Error('No category deleted'));
@@ -167,14 +223,29 @@ function addNewCategory(description) {
         );
       }).then(result => {
         if (result.success) {
-          console.log(`✅ New category ${code} added successfully`);
+          debugLog?.info(`New category ${code} added successfully`, { 
+            module: 'database-operations',
+            function: 'addNewCategory',
+            code: code,
+            description: description
+          });
           resolve(result);
         } else {
-          console.warn('❌ Failed to add category:', result.error);
+          debugLog?.warn('Failed to add category', { 
+            module: 'database-operations',
+            function: 'addNewCategory',
+            description: description,
+            error: result.error
+          });
           reject(new Error(result.error));
         }
       }).catch(error => {
-        console.warn('❌ Database API error:', error);
+        debugLog?.warn('Database API error', { 
+          module: 'database-operations',
+          function: 'addNewCategory',
+          description: description,
+          error: error
+        });
         reject(error);
       });
     } else {
@@ -187,18 +258,33 @@ function addNewCategory(description) {
           let newCode = code;
           
           while (codeCheckStmt.get(newCode)) {
-            console.log(`Found a code collision on ${code}`);
+            debugLog?.info(`Found a code collision on ${code}`, { 
+              module: 'database-operations',
+              function: 'addNewCategory',
+              code: code,
+              loopCount: loopCount
+            });
             newCode = `${code}${loopCount}`;
             loopCount = loopCount + 1;
           }
           
           code = newCode;
-          console.log(`Adding ${code} :: ${description}`);
+          debugLog?.info(`Adding ${code} :: ${description}`, { 
+            module: 'database-operations',
+            function: 'addNewCategory',
+            code: code,
+            description: description
+          });
           
           const stmt = db.prepare("INSERT INTO categories VALUES (?, ?)");
           const info = stmt.run(code, description);
           if (info.changes == 1) {
-            console.log(`✅ New category ${code} added successfully`);
+            debugLog?.info(`New category ${code} added successfully`, { 
+              module: 'database-operations',
+              function: 'addNewCategory',
+              code: code,
+              description: description
+            });
             resolve({ success: true, changes: info.changes, code: code });
           } else {
             reject(new Error('Failed to add category'));
@@ -232,14 +318,29 @@ function saveEditedSong(songData) {
         [songData.title, songData.artist, songData.category, songData.info, songData.id]
       ).then(result => {
         if (result.success) {
-          console.log(`✅ Song ${songData.id} updated successfully`);
+          debugLog?.info(`Song ${songData.id} updated successfully`, { 
+            module: 'database-operations',
+            function: 'saveEditedSong',
+            songId: songData.id,
+            title: songData.title
+          });
           resolve(result);
         } else {
-          console.warn('❌ Failed to update song:', result.error);
+          debugLog?.warn('Failed to update song', { 
+            module: 'database-operations',
+            function: 'saveEditedSong',
+            songId: songData.id,
+            error: result.error
+          });
           reject(new Error(result.error));
         }
       }).catch(error => {
-        console.warn('❌ Database API error:', error);
+        debugLog?.warn('Database API error', { 
+          module: 'database-operations',
+          function: 'saveEditedSong',
+          songId: songData.id,
+          error: error
+        });
         reject(error);
       });
     } else {
@@ -256,7 +357,12 @@ function saveEditedSong(songData) {
             songData.info, 
             songData.id
           );
-          console.log(`✅ Song ${songData.id} updated successfully`);
+          debugLog?.info(`Song ${songData.id} updated successfully`, { 
+            module: 'database-operations',
+            function: 'saveEditedSong',
+            songId: songData.id,
+            title: songData.title
+          });
           resolve({ success: true, changes: info.changes });
         } catch (error) {
           reject(error);
@@ -291,14 +397,29 @@ function saveNewSong(songData) {
         ]
       ).then(result => {
         if (result.success) {
-          console.log(`✅ New song added successfully`);
+          debugLog?.info('New song added successfully', { 
+            module: 'database-operations',
+            function: 'saveNewSong',
+            title: songData.title,
+            artist: songData.artist
+          });
           resolve(result);
         } else {
-          console.warn('❌ Failed to add song:', result.error);
+          debugLog?.warn('Failed to add song', { 
+            module: 'database-operations',
+            function: 'saveNewSong',
+            title: songData.title,
+            error: result.error
+          });
           reject(new Error(result.error));
         }
       }).catch(error => {
-        console.warn('❌ Database API error:', error);
+        debugLog?.warn('Database API error', { 
+          module: 'database-operations',
+          function: 'saveNewSong',
+          title: songData.title,
+          error: error
+        });
         reject(error);
       });
     } else {
@@ -317,7 +438,12 @@ function saveNewSong(songData) {
             songData.duration,
             Math.floor(Date.now() / 1000)
           );
-          console.log(`✅ New song added successfully`);
+          debugLog?.info('New song added successfully', { 
+            module: 'database-operations',
+            function: 'saveNewSong',
+            title: songData.title,
+            artist: songData.artist
+          });
           resolve({ success: true, changes: info.changes, lastInsertRowid: info.lastInsertRowid });
         } catch (error) {
           reject(error);
@@ -344,14 +470,28 @@ function deleteSong(songId) {
         [songId]
       ).then(result => {
         if (result.success) {
-          console.log(`✅ Song ${songId} deleted successfully`);
+          debugLog?.info(`Song ${songId} deleted successfully`, { 
+            module: 'database-operations',
+            function: 'deleteSong',
+            songId: songId
+          });
           resolve(result);
         } else {
-          console.warn('❌ Failed to delete song:', result.error);
+          debugLog?.warn('Failed to delete song', { 
+            module: 'database-operations',
+            function: 'deleteSong',
+            songId: songId,
+            error: result.error
+          });
           reject(new Error(result.error));
         }
       }).catch(error => {
-        console.warn('❌ Database API error:', error);
+        debugLog?.warn('Database API error', { 
+          module: 'database-operations',
+          function: 'deleteSong',
+          songId: songId,
+          error: error
+        });
         reject(error);
       });
     } else {
@@ -361,7 +501,11 @@ function deleteSong(songId) {
           const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
           const info = deleteStmt.run(songId);
           if (info.changes > 0) {
-            console.log(`✅ Song ${songId} deleted successfully`);
+            debugLog?.info(`Song ${songId} deleted successfully`, { 
+              module: 'database-operations',
+              function: 'deleteSong',
+              songId: songId
+            });
             resolve({ success: true, changes: info.changes });
           } else {
             reject(new Error('No song deleted'));
@@ -392,17 +536,31 @@ function getSongById(songId) {
       ).then(result => {
         if (result.success) {
           if (result.data.length > 0) {
-            console.log(`✅ Song ${songId} retrieved successfully`);
+            debugLog?.info(`Song ${songId} retrieved successfully`, { 
+              module: 'database-operations',
+              function: 'getSongById',
+              songId: songId
+            });
             resolve(result);
           } else {
             reject(new Error('Song not found'));
           }
         } else {
-          console.warn('❌ Failed to get song:', result.error);
+          debugLog?.warn('Failed to get song', { 
+            module: 'database-operations',
+            function: 'getSongById',
+            songId: songId,
+            error: result.error
+          });
           reject(new Error(result.error));
         }
       }).catch(error => {
-        console.warn('❌ Database API error:', error);
+        debugLog?.warn('Database API error', { 
+          module: 'database-operations',
+          function: 'getSongById',
+          songId: songId,
+          error: error
+        });
         reject(error);
       });
     } else {
@@ -412,7 +570,11 @@ function getSongById(songId) {
           const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
           const row = stmt.get(songId);
           if (row) {
-            console.log(`✅ Song ${songId} retrieved successfully`);
+            debugLog?.info(`Song ${songId} retrieved successfully`, { 
+              module: 'database-operations',
+              function: 'getSongById',
+              songId: songId
+            });
             resolve({ success: true, data: [row] });
           } else {
             reject(new Error('Song not found'));
@@ -446,7 +608,12 @@ function addSongsByPath(pathArray, category) {
     
     // This would need to be integrated with the music-metadata library
     // For now, we'll create a placeholder implementation
-    console.log(`Processing song: ${songSourcePath}`);
+    debugLog?.info(`Processing song: ${songSourcePath}`, { 
+      module: 'database-operations',
+      function: 'addSongsByPath',
+      songSourcePath: songSourcePath,
+      category: category
+    });
     
     // Mock metadata for testing
     const mockMetadata = {
@@ -478,14 +645,24 @@ function addSongsByPath(pathArray, category) {
       filename: newFilename,
       duration: durationString
     }).then(result => {
-      console.log(`✅ Song added to database: ${title}`);
+      debugLog?.info(`Song added to database: ${title}`, { 
+        module: 'database-operations',
+        function: 'addSongsByPath',
+        title: title,
+        artist: artist
+      });
       
       // Process remaining files
       return addSongsByPath(pathArray, category);
     }).then(result => {
       resolve({ success: true, processed: result.processed + 1 });
     }).catch(error => {
-      console.warn('❌ Failed to add song:', error);
+      debugLog?.warn('Failed to add song', { 
+        module: 'database-operations',
+        function: 'addSongsByPath',
+        songSourcePath: songSourcePath,
+        error: error
+      });
       reject(error);
     });
   });
@@ -504,14 +681,28 @@ function executeQuery(sql, params = []) {
     if (window.electronAPI && window.electronAPI.database) {
       window.electronAPI.database.query(sql, params).then(result => {
         if (result.success) {
-          console.log(`✅ Query executed successfully`);
+          debugLog?.info('Query executed successfully', { 
+            module: 'database-operations',
+            function: 'executeQuery',
+            sql: sql
+          });
           resolve(result);
         } else {
-          console.warn('❌ Query failed:', result.error);
+          debugLog?.warn('Query failed', { 
+            module: 'database-operations',
+            function: 'executeQuery',
+            sql: sql,
+            error: result.error
+          });
           reject(new Error(result.error));
         }
       }).catch(error => {
-        console.warn('❌ Database API error:', error);
+        debugLog?.warn('Database API error', { 
+          module: 'database-operations',
+          function: 'executeQuery',
+          sql: sql,
+          error: error
+        });
         reject(error);
       });
     } else {
@@ -520,7 +711,11 @@ function executeQuery(sql, params = []) {
         try {
           const stmt = db.prepare(sql);
           const data = stmt.all(params);
-          console.log(`✅ Query executed successfully`);
+          debugLog?.info('Query executed successfully', { 
+            module: 'database-operations',
+            function: 'executeQuery',
+            sql: sql
+          });
           resolve({ success: true, data: data });
         } catch (error) {
           reject(error);
@@ -545,14 +740,28 @@ function executeStatement(sql, params = []) {
     if (window.electronAPI && window.electronAPI.database) {
       window.electronAPI.database.execute(sql, params).then(result => {
         if (result.success) {
-          console.log(`✅ Statement executed successfully`);
+          debugLog?.info('Statement executed successfully', { 
+            module: 'database-operations',
+            function: 'executeStatement',
+            sql: sql
+          });
           resolve(result);
         } else {
-          console.warn('❌ Statement failed:', result.error);
+          debugLog?.warn('Statement failed', { 
+            module: 'database-operations',
+            function: 'executeStatement',
+            sql: sql,
+            error: result.error
+          });
           reject(new Error(result.error));
         }
       }).catch(error => {
-        console.warn('❌ Database API error:', error);
+        debugLog?.warn('Database API error', { 
+          module: 'database-operations',
+          function: 'executeStatement',
+          sql: sql,
+          error: error
+        });
         reject(error);
       });
     } else {
@@ -561,7 +770,11 @@ function executeStatement(sql, params = []) {
         try {
           const stmt = db.prepare(sql);
           const info = stmt.run(params);
-          console.log(`✅ Statement executed successfully`);
+          debugLog?.info('Statement executed successfully', { 
+            module: 'database-operations',
+            function: 'executeStatement',
+            sql: sql
+          });
           resolve({ success: true, changes: info.changes, lastInsertRowid: info.lastInsertRowid });
         } catch (error) {
           reject(error);

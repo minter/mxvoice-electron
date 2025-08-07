@@ -7,6 +7,17 @@
  * @module event-handlers
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Initialize the Event Handlers module
  * @param {Object} options - Configuration options
@@ -74,7 +85,11 @@ function initializeEventHandlers(options = {}) {
     if (currentHtml.includes("header-button")) {
       if (electronAPI && electronAPI.store) {
         electronAPI.store.set("hotkeys", currentHtml).catch(error => {
-          console.warn('❌ Failed to save hotkeys:', error);
+          debugLog?.warn('Failed to save hotkeys', { 
+            module: 'ui-event-handlers',
+            function: 'saveHotkeysToStore',
+            error: error
+          });
         });
       } else if (store) {
         store.set("hotkeys", currentHtml);
@@ -90,7 +105,11 @@ function initializeEventHandlers(options = {}) {
     if (currentHtml.includes("mode-toggle")) {
       if (electronAPI && electronAPI.store) {
         electronAPI.store.set("holding_tank", currentHtml).catch(error => {
-          console.warn('❌ Failed to save holding tank:', error);
+          debugLog?.warn('Failed to save holding tank', { 
+            module: 'ui-event-handlers',
+            function: 'saveHoldingTankToStore',
+            error: error
+          });
         });
       } else if (store) {
         store.set("holding_tank", currentHtml);

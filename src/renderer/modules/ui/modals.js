@@ -6,6 +6,17 @@
  * @module modals
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Initialize the Modals module
  * @param {Object} options - Configuration options
@@ -35,7 +46,11 @@ function initializeModals(options = {}) {
           $(element).val(result.filePaths[0]);
         }
       }).catch(error => {
-        console.warn('❌ Directory picker failed:', error);
+        debugLog?.warn('Directory picker failed', { 
+          module: 'ui-modals',
+          function: 'pickDirectory',
+          error: error
+        });
         // Fallback to legacy IPC
         if (typeof ipcRenderer !== 'undefined') {
           ipcRenderer.invoke("show-directory-picker", defaultPath).then((result) => {
@@ -57,7 +72,11 @@ function initializeModals(options = {}) {
   function installUpdate() {
     if (electronAPI && electronAPI.app) {
       electronAPI.app.restartAndInstall().catch(error => {
-        console.warn('❌ Modern API failed, falling back to legacy:', error);
+        debugLog?.warn('Modern API failed, falling back to legacy', { 
+          module: 'ui-modals',
+          function: 'installUpdate',
+          error: error
+        });
         if (typeof ipcRenderer !== 'undefined') {
           ipcRenderer.send("restart-and-install-new-version");
         }

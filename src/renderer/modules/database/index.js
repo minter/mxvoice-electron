@@ -6,6 +6,17 @@
  * and database interactions through the preload API.
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 // Import database sub-modules
 import dataPopulation from './data-population.js';
 import storeOperations from './store-operations.js';
@@ -53,7 +64,10 @@ class DatabaseModule {
    * This method can be called to set up any initialization logic
    */
   init() {
-    console.log('Database module initialized');
+    debugLog?.info('Database module initialized', { 
+      module: 'database-index',
+      function: 'init'
+    });
     this.setupEventListeners();
   }
 

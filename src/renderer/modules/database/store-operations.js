@@ -4,6 +4,17 @@
  * Provides functions for saving data to the electron store
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Save holding tank data to store
  * 
@@ -11,7 +22,11 @@
  */
 export function saveHoldingTankToStore(songIds) {
   // Implementation would go here
-  console.log('Saving holding tank to store:', songIds);
+  debugLog?.info('Saving holding tank to store', { 
+    module: 'database-store-operations',
+    function: 'saveHoldingTankToStore',
+    songIds: songIds
+  });
 }
 
 /**
@@ -21,7 +36,11 @@ export function saveHoldingTankToStore(songIds) {
  */
 export function saveHotkeysToStore(hotkeys) {
   // Implementation would go here
-  console.log('Saving hotkeys to store:', hotkeys);
+  debugLog?.info('Saving hotkeys to store', { 
+    module: 'database-store-operations',
+    function: 'saveHotkeysToStore',
+    hotkeys: hotkeys
+  });
 }
 
 // Default export for module loading

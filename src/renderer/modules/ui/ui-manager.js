@@ -7,6 +7,17 @@
  * @module ui-manager
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Initialize the UI Manager module
  * @param {Object} options - Configuration options
@@ -45,7 +56,11 @@ function initializeUIManager(options = {}) {
     $(".song").css("font-size", fontSize + "px");
     if (electronAPI && electronAPI.store) {
       electronAPI.store.set("font-size", fontSize).catch(error => {
-        console.warn('❌ Failed to save font size:', error);
+        debugLog?.warn('Failed to save font size', { 
+          module: 'ui-manager',
+          function: 'setFontSize',
+          error: error
+        });
       });
     }
   }
@@ -61,7 +76,11 @@ function initializeUIManager(options = {}) {
     const songInfo = stmt.get(songId);
     
     if (!songInfo) {
-      console.warn('❌ Song not found for ID:', songId);
+      debugLog?.warn('Song not found for ID', { 
+        module: 'ui-manager',
+        function: 'editSelectedSong',
+        songId: songId
+      });
       return;
     }
     
@@ -94,19 +113,31 @@ function initializeUIManager(options = {}) {
    * Delete the currently selected song
    */
   function deleteSelectedSong() {
-    console.log("deleteSelectedSong called");
+    debugLog?.info("deleteSelectedSong called", { 
+      module: 'ui-manager',
+      function: 'deleteSelectedSong'
+    });
     
     // Check if the selected row is in the holding tank
     if ($("#holding-tank-column").has($("#selected_row")).length) {
-      console.log("Selected row is in holding tank");
+      debugLog?.info("Selected row is in holding tank", { 
+        module: 'ui-manager',
+        function: 'deleteSelectedSong'
+      });
       // If in holding tank, remove from holding tank
       removeFromHoldingTank();
     } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
-      console.log("Selected row is in hotkey tab");
+      debugLog?.info("Selected row is in hotkey tab", { 
+        module: 'ui-manager',
+        function: 'deleteSelectedSong'
+      });
       // If in hotkey tab, remove from hotkey
       removeFromHotkey();
     } else {
-      console.log("Selected row is in search results");
+      debugLog?.info("Selected row is in search results", { 
+        module: 'ui-manager',
+        function: 'deleteSelectedSong'
+      });
       // If not in holding tank or hotkey, delete from database
       deleteSong();
     }
@@ -123,13 +154,22 @@ function initializeUIManager(options = {}) {
     const songRow = songStmt.get(songId);
     
     if (!songRow) {
-      console.warn('❌ Song not found for ID:', songId);
+      debugLog?.warn('Song not found for ID', { 
+        module: 'ui-manager',
+        function: 'removeFromHoldingTank',
+        songId: songId
+      });
       return;
     }
     
     return customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`).then(confirmed => {
       if (confirmed) {
-        console.log("Proceeding with removal from holding tank");
+        debugLog?.info("Proceeding with removal from holding tank", { 
+          module: 'ui-manager',
+          function: 'removeFromHoldingTank',
+          songId: songId,
+          title: songRow.title
+        });
         $("#selected_row").remove();
         $("#selected_row").removeAttr("id");
         saveHoldingTankToStore();
@@ -145,10 +185,17 @@ function initializeUIManager(options = {}) {
    */
   function removeFromHotkey() {
     const songId = $("#selected_row").attr("songid");
-    console.log("removeFromHotkey called, songId:", songId);
+    debugLog?.info("removeFromHotkey called", { 
+      module: 'ui-manager',
+      function: 'removeFromHotkey',
+      songId: songId
+    });
     
     if (!songId) {
-      console.log("No songId found on selected row");
+      debugLog?.info("No songId found on selected row", { 
+        module: 'ui-manager',
+        function: 'removeFromHotkey'
+      });
       return;
     }
     
@@ -158,19 +205,32 @@ function initializeUIManager(options = {}) {
     if (songRow) {
       return customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`).then(confirmed => {
         if (confirmed) {
-          console.log("Proceeding with removal from hotkey");
+          debugLog?.info("Proceeding with removal from hotkey", { 
+            module: 'ui-manager',
+            function: 'removeFromHotkey',
+            songId: songId,
+            title: songRow.title
+          });
           $("#selected_row").removeAttr("songid");
           $("#selected_row span").html("");
           $("#selected_row").removeAttr("id");
           saveHotkeysToStore();
-          console.log("Hotkey cleared successfully");
+          debugLog?.info("Hotkey cleared successfully", { 
+            module: 'ui-manager',
+            function: 'removeFromHotkey',
+            songId: songId
+          });
           return { success: true, songId: songId, title: songRow.title };
         } else {
           return { success: false, error: 'User cancelled' };
         }
       });
     } else {
-      console.error("Song not found in database for ID:", songId);
+      debugLog?.error("Song not found in database for ID", { 
+        module: 'ui-manager',
+        function: 'removeFromHotkey',
+        songId: songId
+      });
       // Still clear the hotkey even if song not found
       $("#selected_row").removeAttr("songid");
       $("#selected_row span").html("");
@@ -186,14 +246,23 @@ function initializeUIManager(options = {}) {
     const songId = $("#selected_row").attr("songid");
     if (!songId) return;
     
-    console.log(`Preparing to delete song ${songId}`);
+    debugLog?.info(`Preparing to delete song ${songId}`, { 
+      module: 'ui-manager',
+      function: 'deleteSong',
+      songId: songId
+    });
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
     const songRow = songStmt.get(songId);
     const filename = songRow.filename;
     
     return customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`).then(confirmed => {
       if (confirmed) {
-        console.log("Proceeding with delete");
+        debugLog?.info("Proceeding with delete", { 
+          module: 'ui-manager',
+          function: 'deleteSong',
+          songId: songId,
+          title: songRow.title
+        });
         const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
         if (deleteStmt.run(songId)) {
           // Delete file if electronAPI is available
@@ -205,22 +274,52 @@ function initializeUIManager(options = {}) {
                     const filePath = joinResult.data;
                     electronAPI.fileSystem.delete(filePath).then(result => {
                       if (result.success) {
-                        console.log('✅ File deleted successfully');
+                        debugLog?.info('File deleted successfully', { 
+                          module: 'ui-manager',
+                          function: 'deleteSong',
+                          filePath: filePath
+                        });
                       } else {
-                        console.warn('❌ Failed to delete file:', result.error);
+                        debugLog?.warn('Failed to delete file', { 
+                          module: 'ui-manager',
+                          function: 'deleteSong',
+                          filePath: filePath,
+                          error: result.error
+                        });
                       }
                     }).catch(error => {
-                      console.warn('❌ File deletion error:', error);
+                      debugLog?.warn('File deletion error', { 
+                        module: 'ui-manager',
+                        function: 'deleteSong',
+                        filePath: filePath,
+                        error: error
+                      });
                     });
                   } else {
-                    console.warn('❌ Failed to join path:', joinResult.error);
+                    debugLog?.warn('Failed to join path', { 
+                      module: 'ui-manager',
+                      function: 'deleteSong',
+                      musicDirectory: musicDirectory.value,
+                      filename: filename,
+                      error: joinResult.error
+                    });
                   }
                 }).catch(error => {
-                  console.warn('❌ Path join error:', error);
+                  debugLog?.warn('Path join error', { 
+                    module: 'ui-manager',
+                    function: 'deleteSong',
+                    musicDirectory: musicDirectory.value,
+                    filename: filename,
+                    error: error
+                  });
                 });
               }
             }).catch(error => {
-              console.warn('❌ Store get API error:', error);
+              debugLog?.warn('Store get API error', { 
+                module: 'ui-manager',
+                function: 'deleteSong',
+                error: error
+              });
             });
           }
           
@@ -233,7 +332,11 @@ function initializeUIManager(options = {}) {
           saveHotkeysToStore();
           return { success: true, songId: songId, title: songRow.title };
         } else {
-          console.log("Error deleting song from database");
+          debugLog?.info("Error deleting song from database", { 
+            module: 'ui-manager',
+            function: 'deleteSong',
+            songId: songId
+          });
           return { success: false, error: 'Database deletion failed' };
         }
       } else {
@@ -246,59 +349,116 @@ function initializeUIManager(options = {}) {
    * Close all tabs and clear stored data
    */
   function closeAllTabs() {
-    console.log('🔍 closeAllTabs called');
+    debugLog?.info('closeAllTabs called', { 
+      module: 'ui-manager',
+      function: 'closeAllTabs'
+    });
     customConfirm(`Are you sure you want to close all open Holding Tanks and Hotkeys?`, 'Confirm').then(confirmed => {
-      console.log('🔍 User confirmed:', confirmed);
+      debugLog?.info('User confirmed', { 
+        module: 'ui-manager',
+        function: 'closeAllTabs',
+        confirmed: confirmed
+      });
       if (confirmed) {
-        console.log('🔍 Starting cleanup operations...');
-        console.log('🔍 electronAPI available:', !!electronAPI);
-        console.log('🔍 electronAPI.store available:', !!(electronAPI && electronAPI.store));
-        console.log('🔍 legacy store available:', !!store);
+        debugLog?.info('Starting cleanup operations', { 
+          module: 'ui-manager',
+          function: 'closeAllTabs'
+        });
+        debugLog?.info('electronAPI available: ' + !!electronAPI, { 
+          module: 'ui-manager',
+          function: 'closeAllTabs'
+        });
+        debugLog?.info('electronAPI.store available: ' + !!(electronAPI && electronAPI.store), { 
+          module: 'ui-manager',
+          function: 'closeAllTabs'
+        });
+        debugLog?.info('legacy store available: ' + !!store, { 
+          module: 'ui-manager',
+          function: 'closeAllTabs'
+        });
         
         // Use new store API for cleanup operations
         if (electronAPI && electronAPI.store) {
-          console.log('🔍 Using modern store API');
+          debugLog?.info('Using modern store API', { 
+            module: 'ui-manager',
+            function: 'closeAllTabs'
+          });
           Promise.all([
             electronAPI.store.delete("holding_tank"),
             electronAPI.store.delete("hotkeys"),
             electronAPI.store.delete("column_order"),
             electronAPI.store.delete("font-size")
           ]).then(() => {
-            console.log('✅ All tabs closed successfully');
-            console.log('🔄 Reloading page...');
+            debugLog?.info('All tabs closed successfully', { 
+              module: 'ui-manager',
+              function: 'closeAllTabs'
+            });
+            debugLog?.info('Reloading page', { 
+              module: 'ui-manager',
+              function: 'closeAllTabs'
+            });
             location.reload();
           }).catch(error => {
-            console.warn('❌ Failed to close tabs:', error);
+            debugLog?.warn('Failed to close tabs', { 
+              module: 'ui-manager',
+              function: 'closeAllTabs',
+              error: error
+            });
             // Fallback to legacy store access
             if (store) {
-              console.log('🔍 Falling back to legacy store');
+              debugLog?.info('Falling back to legacy store', { 
+                module: 'ui-manager',
+                function: 'closeAllTabs'
+              });
               store.delete("holding_tank");
               store.delete("hotkeys");
               store.delete("column_order");
               store.delete("font-size");
             }
-            console.log('🔄 Reloading page after fallback...');
+            debugLog?.info('Reloading page after fallback', { 
+              module: 'ui-manager',
+              function: 'closeAllTabs'
+            });
             location.reload();
           });
         } else if (store) {
           // Fallback to legacy store access
-          console.log('🔍 Using legacy store API');
+          debugLog?.info('Using legacy store API', { 
+            module: 'ui-manager',
+            function: 'closeAllTabs'
+          });
           store.delete("holding_tank");
           store.delete("hotkeys");
           store.delete("column_order");
           store.delete("font-size");
-          console.log('🔄 Reloading page...');
+          debugLog?.info('Reloading page', { 
+            module: 'ui-manager',
+            function: 'closeAllTabs'
+          });
           location.reload();
         } else {
-          console.warn('❌ No store API available');
-          console.log('🔄 Reloading page anyway...');
+          debugLog?.warn('No store API available', { 
+            module: 'ui-manager',
+            function: 'closeAllTabs'
+          });
+          debugLog?.info('Reloading page anyway', { 
+            module: 'ui-manager',
+            function: 'closeAllTabs'
+          });
           location.reload();
         }
       } else {
-        console.log('🔍 User cancelled the operation');
+        debugLog?.info('User cancelled the operation', { 
+          module: 'ui-manager',
+          function: 'closeAllTabs'
+        });
       }
     }).catch(error => {
-      console.error('❌ Error in closeAllTabs:', error);
+      debugLog?.error('Error in closeAllTabs', { 
+        module: 'ui-manager',
+        function: 'closeAllTabs',
+        error: error
+      });
     });
   }
   
@@ -310,7 +470,11 @@ function initializeUIManager(options = {}) {
     if (currentHtml.includes("mode-toggle")) {
       if (electronAPI && electronAPI.store) {
         electronAPI.store.set("holding_tank", currentHtml).catch(error => {
-          console.warn('❌ Failed to save holding tank:', error);
+          debugLog?.warn('Failed to save holding tank', { 
+            module: 'ui-manager',
+            function: 'saveHoldingTankToStore',
+            error: error
+          });
         });
       } else if (store) {
         store.set("holding_tank", currentHtml);
@@ -326,7 +490,11 @@ function initializeUIManager(options = {}) {
     if (currentHtml.includes("header-button")) {
       if (electronAPI && electronAPI.store) {
         electronAPI.store.set("hotkeys", currentHtml).catch(error => {
-          console.warn('❌ Failed to save hotkeys:', error);
+          debugLog?.warn('Failed to save hotkeys', { 
+            module: 'ui-manager',
+            function: 'saveHotkeysToStore',
+            error: error
+          });
         });
       } else if (store) {
         store.set("hotkeys", currentHtml);
