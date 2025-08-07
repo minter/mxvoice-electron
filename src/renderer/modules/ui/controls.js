@@ -7,6 +7,17 @@
  * @module controls
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Initialize the Controls module
  * @param {Object} options - Configuration options
@@ -28,7 +39,11 @@ function initializeControls(options = {}) {
       $(".song").css("font-size", fontSize + "px");
       if (electronAPI && electronAPI.store) {
         electronAPI.store.set("font-size", fontSize).catch(error => {
-          console.warn('❌ Failed to save font size:', error);
+          debugLog?.warn('Failed to save font size', { 
+            module: 'ui-controls',
+            function: 'increaseFontSize',
+            error: error
+          });
         });
       } else if (store) {
         store.set("font-size", fontSize);
@@ -45,7 +60,11 @@ function initializeControls(options = {}) {
       $(".song").css("font-size", fontSize + "px");
       if (electronAPI && electronAPI.store) {
         electronAPI.store.set("font-size", fontSize).catch(error => {
-          console.warn('❌ Failed to save font size:', error);
+          debugLog?.warn('Failed to save font size', { 
+            module: 'ui-controls',
+            function: 'decreaseFontSize',
+            error: error
+          });
         });
       } else if (store) {
         store.set("font-size", fontSize);
@@ -79,37 +98,52 @@ function initializeControls(options = {}) {
    */
   function toggleAdvancedSearch() {
     try {
-      console.log("toggleAdvancedSearch called");
+      debugLog?.info("toggleAdvancedSearch called", { 
+        module: 'ui-controls',
+        function: 'toggleAdvancedSearch'
+      });
 
       // Clear any pending live search using global searchTimeout
       if (window.searchTimeout) {
         clearTimeout(window.searchTimeout);
       }
-      console.log("Cleared timeout");
+      debugLog?.info("Cleared timeout", { 
+        module: 'ui-controls',
+        function: 'toggleAdvancedSearch'
+      });
 
       $("#search_form").trigger("reset");
-      console.log("Triggered form reset");
+      debugLog?.info("Triggered form reset", { 
+        module: 'ui-controls',
+        function: 'toggleAdvancedSearch'
+      });
 
       // Clear search results when toggling advanced search
       $("#search_results tbody").find("tr").remove();
       $("#search_results thead").hide();
-      console.log("Cleared search results");
+      debugLog?.info("Cleared search results", { 
+        module: 'ui-controls',
+        function: 'toggleAdvancedSearch'
+      });
 
-      console.log(
-        "Advanced search element exists:",
-        $("#advanced-search").length > 0
-      );
-      console.log(
-        "Advanced search visible:",
-        $("#advanced-search").is(":visible")
-      );
-      console.log(
-        "Advanced search display:",
-        $("#advanced-search").css("display")
-      );
+      debugLog?.info("Advanced search element exists: " + $("#advanced-search").length > 0, { 
+        module: 'ui-controls',
+        function: 'toggleAdvancedSearch'
+      });
+      debugLog?.info("Advanced search visible: " + $("#advanced-search").is(":visible"), { 
+        module: 'ui-controls',
+        function: 'toggleAdvancedSearch'
+      });
+      debugLog?.info("Advanced search display: " + $("#advanced-search").css("display"), { 
+        module: 'ui-controls',
+        function: 'toggleAdvancedSearch'
+      });
 
       if ($("#advanced-search").is(":visible")) {
-        console.log("Hiding advanced search");
+        debugLog?.info("Hiding advanced search", { 
+          module: 'ui-controls',
+          function: 'toggleAdvancedSearch'
+        });
         $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
         $("#title-search").hide();
         $("#omni_search").show();
@@ -119,7 +153,10 @@ function initializeControls(options = {}) {
           scale_scrollable();
         });
       } else {
-        console.log("Showing advanced search");
+        debugLog?.info("Showing advanced search", { 
+          module: 'ui-controls',
+          function: 'toggleAdvancedSearch'
+        });
         $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
         $("#advanced-search").show();
         $("#title-search").show();
@@ -129,7 +166,11 @@ function initializeControls(options = {}) {
         animateCSS($("#advanced-search"), "fadeInDown").then(() => {});
       }
     } catch (error) {
-      console.error("Error in toggleAdvancedSearch:", error);
+      debugLog?.error("Error in toggleAdvancedSearch", { 
+        module: 'ui-controls',
+        function: 'toggleAdvancedSearch',
+        error: error
+      });
     }
   }
   

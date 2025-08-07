@@ -54,7 +54,7 @@ class EventManager {
     }
 
     this.initialized = true;
-    debugLog.info('Event manager initialized', { function: "initialize" });
+    this.debugLog.info('Event manager initialized', { function: "initialize" });
   }
 
   /**
@@ -84,11 +84,11 @@ class EventManager {
         if (window.setHoldingTankMode) {
           window.setHoldingTankMode('storage');
         } else {
-          console.warn('⚠️ setHoldingTankMode function not available');
+          this.debugLog.warn('setHoldingTankMode function not available', { function: "setupModeButtons" });
         }
       });
       storageBtn.removeAttribute('onclick');
-      debugLog.info('Storage mode button event listener set up', { function: "setupModeButtons" });
+      this.debugLog.info('Storage mode button event listener set up', { function: "setupModeButtons" });
     }
     
     if (playlistBtn) {
@@ -96,11 +96,11 @@ class EventManager {
         if (window.setHoldingTankMode) {
           window.setHoldingTankMode('playlist');
         } else {
-          debugLog.warn('setHoldingTankMode function not available', { function: "setupModeButtons" });
+          this.debugLog.warn('setHoldingTankMode function not available', { function: "setupModeButtons" });
         }
       });
       playlistBtn.removeAttribute('onclick');
-      debugLog.info('Playlist mode button event listener set up', { function: "setupModeButtons" });
+      this.debugLog.info('Playlist mode button event listener set up', { function: "setupModeButtons" });
     }
   }
 
@@ -115,7 +115,7 @@ class EventManager {
         if (window.openHoldingTankFile) {
           window.openHoldingTankFile();
         } else {
-          debugLog.warn('openHoldingTankFile function not available', { function: "setupFileOperations" });
+          this.debugLog.warn('openHoldingTankFile function not available', { function: "setupFileOperations" });
         }
       });
       openHoldingTankBtn.removeAttribute('onclick');
@@ -127,7 +127,7 @@ class EventManager {
         if (window.saveHoldingTankFile) {
           window.saveHoldingTankFile();
         } else {
-          debugLog.warn('saveHoldingTankFile function not available', { function: "setupFileOperations" });
+          this.debugLog.warn('saveHoldingTankFile function not available', { function: "setupFileOperations" });
         }
       });
       saveHoldingTankBtn.removeAttribute('onclick');
@@ -140,7 +140,7 @@ class EventManager {
         if (window.openHotkeyFile) {
           window.openHotkeyFile();
         } else {
-          debugLog.warn('openHotkeyFile function not available', { function: "setupFileOperations" });
+          this.debugLog.warn('openHotkeyFile function not available', { function: "setupFileOperations" });
         }
       });
       openHotkeyBtn.removeAttribute('onclick');
@@ -152,13 +152,13 @@ class EventManager {
         if (window.saveHotkeyFile) {
           window.saveHotkeyFile();
         } else {
-          debugLog.warn('saveHotkeyFile function not available', { function: "setupFileOperations" });
+          this.debugLog.warn('saveHotkeyFile function not available', { function: "setupFileOperations" });
         }
       });
       saveHotkeyBtn.removeAttribute('onclick');
     }
 
-    debugLog.info('File operation event listeners set up', { function: "setupFileOperations" });
+    this.debugLog.info('File operation event listeners set up', { function: "setupFileOperations" });
   }
 
   /**
@@ -171,7 +171,7 @@ class EventManager {
         if (window.renameHoldingTankTab) {
           window.renameHoldingTankTab();
         } else {
-          debugLog.warn('renameHoldingTankTab function not available', { function: "setupHoldingTankOperations" });
+          this.debugLog.warn('renameHoldingTankTab function not available', { function: "setupHoldingTankOperations" });
         }
       });
       renameHoldingTankBtn.removeAttribute('onclick');
@@ -183,13 +183,13 @@ class EventManager {
         if (window.clearHoldingTank) {
           window.clearHoldingTank();
         } else {
-          debugLog.warn('clearHoldingTank function not available', { function: "setupHoldingTankOperations" });
+          this.debugLog.warn('clearHoldingTank function not available', { function: "setupHoldingTankOperations" });
         }
       });
       clearHoldingTankBtn.removeAttribute('onclick');
     }
 
-    debugLog.info('Holding tank operation event listeners set up', { function: "setupHoldingTankOperations" });
+    this.debugLog.info('Holding tank operation event listeners set up', { function: "setupHoldingTankOperations" });
   }
 
   /**
@@ -202,7 +202,7 @@ class EventManager {
         if (window.renameHotkeyTab) {
           window.renameHotkeyTab();
         } else {
-          debugLog.warn('renameHotkeyTab function not available', { function: "setupHotkeyOperations" });
+          this.debugLog.warn('renameHotkeyTab function not available', { function: "setupHotkeyOperations" });
         }
       });
       renameHotkeyBtn.removeAttribute('onclick');
@@ -214,13 +214,13 @@ class EventManager {
         if (window.clearHotkeys) {
           window.clearHotkeys();
         } else {
-          debugLog.warn('clearHotkeys function not available', { function: "setupHotkeyOperations" });
+          this.debugLog.warn('clearHotkeys function not available', { function: "setupHotkeyOperations" });
         }
       });
       clearHotkeysBtn.removeAttribute('onclick');
     }
 
-    debugLog.info('Hotkey operation event listeners set up', { function: "setupHotkeyOperations" });
+    this.debugLog.info('Hotkey operation event listeners set up', { function: "setupHotkeyOperations" });
   }
 
   /**
@@ -239,14 +239,14 @@ class EventManager {
           if (window.pickDirectory) {
             window.pickDirectory(event, selector);
           } else {
-            debugLog.warn('pickDirectory function not available', { function: "setupPreferencesOperations" });
+            this.debugLog.warn('pickDirectory function not available', { function: "setupPreferencesOperations" });
           }
         });
         button.removeAttribute('onclick');
       }
     });
 
-    debugLog.info('Preferences operation event listeners set up', { function: "setupPreferencesOperations" });
+    this.debugLog.info('Preferences operation event listeners set up', { function: "setupPreferencesOperations" });
   }
 
   /**
@@ -259,13 +259,13 @@ class EventManager {
         if (window.installUpdate) {
           window.installUpdate();
         } else {
-          debugLog.warn('installUpdate function not available', { function: "setupUpdateOperations" });
+          this.debugLog.warn('installUpdate function not available', { function: "setupUpdateOperations" });
         }
       });
       installUpdateBtn.removeAttribute('onclick');
     }
 
-    debugLog.info('Update operation event listeners set up', { function: "setupUpdateOperations" });
+    this.debugLog.info('Update operation event listeners set up', { function: "setupUpdateOperations" });
   }
 
   /**
@@ -288,7 +288,7 @@ class EventManager {
       subtree: true
     });
 
-    debugLog.info('Dynamic element observer set up', { function: "setupDynamicElements" });
+    this.debugLog.info('Dynamic element observer set up', { function: "setupDynamicElements" });
   }
 
   /**
@@ -307,7 +307,7 @@ class EventManager {
           if (window.editCategoryUI) {
             window.editCategoryUI(categoryCode);
           } else {
-            debugLog.warn('editCategoryUI function not available', { function: "setupDynamicElement" });
+            this.debugLog.warn('editCategoryUI function not available', { function: "setupDynamicElement" });
           }
         });
         button.removeAttribute('onclick');
@@ -328,7 +328,7 @@ class EventManager {
           if (window.deleteCategory) {
             window.deleteCategory(event, categoryCode, categoryDescription);
           } else {
-            debugLog.warn('deleteCategory function not available', { function: "setupDynamicElement" });
+            this.debugLog.warn('deleteCategory function not available', { function: "setupDynamicElement" });
           }
         });
         button.removeAttribute('onclick');
