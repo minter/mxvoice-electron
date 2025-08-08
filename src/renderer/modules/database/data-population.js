@@ -4,6 +4,17 @@
  * Handles populating UI elements with data from the database
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 // Import shared state
 import sharedState from '../shared-state.js';
 
@@ -23,7 +34,11 @@ function getFontSize() {
       return sharedFontSize;
     }
   } catch (error) {
-    console.warn('❌ Error getting fontSize from shared state:', error);
+    debugLog?.warn('Error getting fontSize from shared state', { 
+      module: 'data-population',
+      function: 'getFontSize',
+      error: error.message
+    });
   }
   
   // Fallback to global fontSize if available
@@ -39,7 +54,10 @@ function getFontSize() {
  * Fetches categories from database and populates the category select dropdown
  */
 function populateCategorySelect() {
-  console.log("Populating categories");
+  debugLog?.info('Populating categories', { 
+    module: 'data-population',
+    function: 'populateCategorySelect'
+  });
   $("#category_select option").remove();
   $("#category_select").append(`<option value="*">All Categories</option>`);
   
@@ -54,10 +72,17 @@ function populateCategorySelect() {
               `<option value="${row.code}">${row.description}</option>`
             );
           });
-          console.log('✅ Categories populated successfully via API');
+          debugLog?.info('Categories populated successfully via API', { 
+            module: 'data-population',
+            function: 'populateCategorySelect'
+          });
           resolve();
         } else {
-          console.warn('❌ Failed to get categories:', result.error);
+          debugLog?.warn('Failed to get categories', { 
+            module: 'data-population',
+            function: 'populateCategorySelect',
+            error: result.error
+          });
           // Fallback to legacy database access
           if (typeof db !== 'undefined') {
             try {
@@ -68,10 +93,17 @@ function populateCategorySelect() {
                   `<option value="${row.code}">${row.description}</option>`
                 );
               }
-              console.log('✅ Categories populated successfully via legacy DB');
+              debugLog?.info('Categories populated successfully via legacy DB', { 
+                module: 'data-population',
+                function: 'populateCategorySelect'
+              });
               resolve();
             } catch (error) {
-              console.error('❌ Legacy database error:', error);
+              debugLog?.error('Legacy database error', { 
+                module: 'data-population',
+                function: 'populateCategorySelect',
+                error: error.message
+              });
               reject(error);
             }
           } else {
@@ -79,7 +111,11 @@ function populateCategorySelect() {
           }
         }
       }).catch(error => {
-        console.warn('❌ Database API error:', error);
+        debugLog?.warn('Database API error', { 
+          module: 'data-population',
+          function: 'populateCategorySelect',
+          error: error.message
+        });
         // Fallback to legacy database access
         if (typeof db !== 'undefined') {
           try {
@@ -90,10 +126,17 @@ function populateCategorySelect() {
                 `<option value="${row.code}">${row.description}</option>`
               );
             }
-            console.log('✅ Categories populated successfully via legacy DB (fallback)');
+            debugLog?.info('Categories populated successfully via legacy DB (fallback)', { 
+              module: 'data-population',
+              function: 'populateCategorySelect'
+            });
             resolve();
           } catch (dbError) {
-            console.error('❌ Legacy database error:', dbError);
+            debugLog?.error('Legacy database error', { 
+              module: 'data-population',
+              function: 'populateCategorySelect',
+              error: dbError.message
+            });
             reject(dbError);
           }
         } else {
@@ -111,10 +154,17 @@ function populateCategorySelect() {
               `<option value="${row.code}">${row.description}</option>`
             );
           }
-          console.log('✅ Categories populated successfully via legacy DB (no API)');
+          debugLog?.info('Categories populated successfully via legacy DB (no API)', { 
+            module: 'data-population',
+            function: 'populateCategorySelect'
+          });
           resolve();
         } catch (error) {
-          console.error('❌ Legacy database error:', error);
+          debugLog?.error('Legacy database error', { 
+            module: 'data-population',
+            function: 'populateCategorySelect',
+            error: error.message
+          });
           reject(error);
         }
       } else {
@@ -145,7 +195,12 @@ function setLabelFromSongId(song_id, element) {
         var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
           element
         );
-        console.log(original_song_node);
+        debugLog?.info('Original song node found', { 
+          module: 'data-population',
+          function: 'setLabelFromSongId',
+          songId: song_id,
+          originalNode: original_song_node.length
+        });
         if (original_song_node.length) {
           var old_song = original_song_node.find("span").detach();
           var destination_song = $(element).find("span").detach();
@@ -163,7 +218,12 @@ function setLabelFromSongId(song_id, element) {
         }
         saveHotkeysToStore();
       } else {
-        console.warn('❌ Failed to get song by ID:', result.error);
+        debugLog?.warn('Failed to get song by ID', { 
+          module: 'data-population',
+          function: 'setLabelFromSongId',
+          songId: song_id,
+          error: result.error
+        });
         // Fallback to legacy database access
         if (typeof db !== 'undefined') {
           var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
@@ -176,7 +236,12 @@ function setLabelFromSongId(song_id, element) {
           var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
             element
           );
-          console.log(original_song_node);
+          debugLog?.info('Original song node found (legacy)', { 
+            module: 'data-population',
+            function: 'setLabelFromSongId',
+            songId: song_id,
+            originalNode: original_song_node.length
+          });
           if (original_song_node.length) {
             var old_song = original_song_node.find("span").detach();
             var destination_song = $(element).find("span").detach();
@@ -196,7 +261,12 @@ function setLabelFromSongId(song_id, element) {
         }
       }
     }).catch(error => {
-      console.warn('❌ Database API error:', error);
+      debugLog?.warn('Database API error', { 
+        module: 'data-population',
+        function: 'setLabelFromSongId',
+        songId: song_id,
+        error: error.message
+      });
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
         var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
@@ -209,7 +279,12 @@ function setLabelFromSongId(song_id, element) {
         var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
           element
         );
-        console.log(original_song_node);
+        debugLog?.info('Original song node found (legacy fallback)', { 
+          module: 'data-population',
+          function: 'setLabelFromSongId',
+          songId: song_id,
+          originalNode: original_song_node.length
+        });
         if (original_song_node.length) {
           var old_song = original_song_node.find("span").detach();
           var destination_song = $(element).find("span").detach();
@@ -241,7 +316,12 @@ function setLabelFromSongId(song_id, element) {
       var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
         element
       );
-      console.log(original_song_node);
+      debugLog?.info('Original song node found (legacy no API)', { 
+        module: 'data-population',
+        function: 'setLabelFromSongId',
+        songId: song_id,
+        originalNode: original_song_node.length
+      });
       if (original_song_node.length) {
         var old_song = original_song_node.find("span").detach();
         var destination_song = $(element).find("span").detach();
@@ -271,7 +351,12 @@ function setLabelFromSongId(song_id, element) {
  */
 function addToHoldingTank(song_id, element) {
   const currentFontSize = getFontSize();
-  console.log('🔍 addToHoldingTank called with song_id:', song_id, 'fontSize:', currentFontSize);
+  debugLog?.info('addToHoldingTank called with song_id', { 
+    module: 'data-population',
+    function: 'addToHoldingTank',
+    songId: song_id,
+    fontSize: currentFontSize
+  });
   
   // Use new database API for getting song by ID
   if (window.electronAPI && window.electronAPI.database) {
@@ -282,7 +367,14 @@ function addToHoldingTank(song_id, element) {
         var artist = row.artist || "[Unknown Artist]";
         var time = row.time || "[??:??]";
 
-        console.log('🔍 Song data retrieved:', { title, artist, time });
+        debugLog?.info('Song data retrieved', { 
+          module: 'data-population',
+          function: 'addToHoldingTank',
+          songId: song_id,
+          title: title,
+          artist: artist,
+          time: time
+        });
 
         var existing_song = $(
           `.holding_tank.active .list-group-item[songid=${song_id}]`
@@ -307,14 +399,26 @@ function addToHoldingTank(song_id, element) {
           $(element).append(song_row);
         }
         
-        console.log('🔍 Song added to holding tank successfully');
+        debugLog?.info('Song added to holding tank successfully', { 
+          module: 'data-population',
+          function: 'addToHoldingTank',
+          songId: song_id
+        });
         if (typeof window.saveHoldingTankToStore === 'function') {
           window.saveHoldingTankToStore();
         } else {
-          console.warn('❌ saveHoldingTankToStore function not available');
+          debugLog?.warn('saveHoldingTankToStore function not available', { 
+            module: 'data-population',
+            function: 'addToHoldingTank'
+          });
         }
       } else {
-        console.warn('❌ Failed to get song by ID:', result.error);
+        debugLog?.warn('Failed to get song by ID', { 
+          module: 'data-population',
+          function: 'addToHoldingTank',
+          songId: song_id,
+          error: result.error
+        });
         // Fallback to legacy database access
         if (typeof db !== 'undefined') {
           var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
@@ -348,12 +452,20 @@ function addToHoldingTank(song_id, element) {
           if (typeof window.saveHoldingTankToStore === 'function') {
             window.saveHoldingTankToStore();
           } else {
-            console.warn('❌ saveHoldingTankToStore function not available');
+            debugLog?.warn('saveHoldingTankToStore function not available', { 
+              module: 'data-population',
+              function: 'addToHoldingTank'
+            });
           }
         }
       }
     }).catch(error => {
-      console.warn('❌ Database API error:', error);
+      debugLog?.warn('Database API error', { 
+        module: 'data-population',
+        function: 'addToHoldingTank',
+        songId: song_id,
+        error: error.message
+      });
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
         var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
@@ -387,7 +499,10 @@ function addToHoldingTank(song_id, element) {
         if (typeof window.saveHoldingTankToStore === 'function') {
           window.saveHoldingTankToStore();
         } else {
-          console.warn('❌ saveHoldingTankToStore function not available');
+          debugLog?.warn('saveHoldingTankToStore function not available', { 
+            module: 'data-population',
+            function: 'addToHoldingTank'
+          });
         }
       }
     });
@@ -425,7 +540,10 @@ function addToHoldingTank(song_id, element) {
       if (typeof window.saveHoldingTankToStore === 'function') {
         window.saveHoldingTankToStore();
       } else {
-        console.warn('❌ saveHoldingTankToStore function not available');
+        debugLog?.warn('saveHoldingTankToStore function not available', { 
+          module: 'data-population',
+          function: 'addToHoldingTank'
+        });
       }
     }
   }
@@ -445,7 +563,13 @@ function populateHotkeys(fkeys, title) {
         $(`.hotkeys.active #${key}_hotkey`).attr("songid", fkeys[key]);
         setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`));
       } catch (err) {
-        console.log(`Error loading fkey ${key} (DB ID: ${fkeys[key]})`);
+        debugLog?.warn('Error loading fkey', { 
+          module: 'data-population',
+          function: 'populateHotkeys',
+          key: key,
+          dbId: fkeys[key],
+          error: err.message
+        });
       }
     } else {
       $(`.hotkeys.active #${key}_hotkey`).removeAttr("songid");
