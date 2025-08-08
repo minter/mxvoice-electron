@@ -1,24 +1,8 @@
 /* Local Font Definitions */
 
 @font-face {
-  font-family: "Open Sans";
-  src: url("./OpenSans-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Open Sans";
-  src: url("./OpenSans-SemiBold.ttf") format("truetype");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
   font-family: "JetBrains Mono";
-  src: url("./JetBrainsMono-Regular.ttf") format("truetype");
+  src: url("../assets/fonts/JetBrainsMono-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -26,15 +10,15 @@
 
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("./JetBrainsMono-SemiBold.ttf") format("truetype");
+  src: url("../assets/fonts/JetBrainsMono-SemiBold.ttf") format("truetype");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 
-/* Force font loading and provide fallbacks */
+/* Use system fonts as fallbacks since Open Sans is not available */
 body {
-  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif !important;
 }
 
