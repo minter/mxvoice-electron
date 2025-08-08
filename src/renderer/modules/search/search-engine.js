@@ -8,6 +8,17 @@
 // Import shared state
 import sharedState from '../shared-state.js';
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 // Import live search functionality
 import * as liveSearch from './live-search.js';
 
@@ -18,11 +29,19 @@ function getCategories() {
       if (result.success) {
         return result.data.map(row => row.category);
       } else {
-        console.warn('❌ Failed to get categories:', result.error);
+        debugLog?.warn('❌ Failed to get categories:', { 
+          module: 'search-engine',
+          function: 'getCategories',
+          error: result.error
+        });
         return [];
       }
     }).catch(error => {
-      console.warn('❌ Database API error:', error);
+      debugLog?.warn('❌ Database API error:', { 
+        module: 'search-engine',
+        function: 'getCategories',
+        error: error.message
+      });
       return [];
     });
   } else {
@@ -45,7 +64,11 @@ function getCategoryName(categoryCode) {
         return categoryCode;
       }
     }).catch(error => {
-      console.warn('❌ Failed to get category name:', error);
+      debugLog?.warn('❌ Failed to get category name:', { 
+        module: 'search-engine',
+        function: 'getCategoryName',
+        error: error.message
+      });
       return categoryCode;
     });
   } else {
@@ -67,7 +90,11 @@ function getCategoryNameSync(categoryCode) {
       var row = stmt.get(categoryCode);
       return row ? row.description : categoryCode;
     } catch (error) {
-      console.warn('❌ Failed to get category name synchronously:', error);
+      debugLog?.warn('❌ Failed to get category name synchronously:', { 
+        module: 'search-engine',
+        function: 'getCategoryNameSync',
+        error: error.message
+      });
       return categoryCode;
     }
   }
@@ -79,13 +106,21 @@ function getCategoryNameSync(categoryCode) {
  * This function handles the main search functionality
  */
 function searchData() {
-  console.log('🔍 Search data function called');
+  debugLog?.info('🔍 Search data function called', { 
+    module: 'search-engine',
+    function: 'searchData'
+  });
   
   // Get search term and category
   var searchTerm = $("#omni_search").val().trim();
   var category = $("#category_select").val();
   
-  console.log('🔍 Search parameters:', { searchTerm, category });
+  debugLog?.info('🔍 Search parameters:', { 
+    module: 'search-engine',
+    function: 'searchData',
+    searchTerm: searchTerm,
+    category: category
+  });
   
   // Build query string and parameters
   const queryParams = [];
@@ -136,8 +171,16 @@ function searchData() {
     queryString = " WHERE " + querySegments.join(" AND ");
   }
 
-  console.log('🔍 Query string:', queryString);
-  console.log('🔍 Query parameters:', queryParams);
+  debugLog?.info('🔍 Query string:', { 
+    module: 'search-engine',
+    function: 'searchData',
+    queryString: queryString
+  });
+  debugLog?.info('🔍 Query parameters:', { 
+    module: 'search-engine',
+    function: 'searchData',
+    queryParams: queryParams
+  });
 
   // Clear previous results
   $("#search_results tbody").find("tr").remove();
@@ -172,10 +215,18 @@ function searchData() {
         $("#omni_search").select();
         $("#category_select").prop("selectedIndex", 0);
       } else {
-        console.warn('❌ Search query failed:', result.error);
+        debugLog?.warn('❌ Search query failed:', { 
+          module: 'search-engine',
+          function: 'searchData',
+          error: result.error
+        });
       }
     }).catch(error => {
-      console.warn('❌ Database API error:', error);
+      debugLog?.warn('❌ Database API error:', { 
+        module: 'search-engine',
+        function: 'searchData',
+        error: error.message
+      });
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
         var stmt = db.prepare(
@@ -276,7 +327,10 @@ function triggerLiveSearch() {
       if (typeof liveSearch.performLiveSearch === 'function') {
         liveSearch.performLiveSearch(searchTerm);
       } else {
-        console.warn('performLiveSearch function not available');
+        debugLog?.warn('performLiveSearch function not available', { 
+          module: 'search-engine',
+          function: 'triggerLiveSearch'
+        });
       }
     } else {
       // Clear results when no search term and no advanced filters

@@ -9,6 +9,17 @@
 // Import shared state
 import sharedState from '../shared-state.js';
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 // Global variables
 let fontSize = 11;
 
@@ -33,7 +44,11 @@ function getCategories() {
     // Return empty object as last resort
     return {};
   } catch (error) {
-    console.warn('❌ Error getting categories:', error);
+    debugLog?.warn('❌ Error getting categories:', { 
+      module: 'live-search',
+      function: 'getCategories',
+      error: error.message
+    });
     return {};
   }
 }
@@ -50,18 +65,34 @@ function getCategoryName(categoryCode) {
   }
   
   const categories = getCategories();
-  console.log('🔍 getCategoryName called with:', categoryCode);
-  console.log('🔍 Available categories:', categories);
+  debugLog?.info('🔍 getCategoryName called with:', { 
+    module: 'live-search',
+    function: 'getCategoryName',
+    categoryCode: categoryCode
+  });
+  debugLog?.info('🔍 Available categories:', { 
+    module: 'live-search',
+    function: 'getCategoryName',
+    categories: categories
+  });
   
   const categoryName = categories[categoryCode];
   
   if (categoryName) {
-    console.log('🔍 Found category name:', categoryName);
+    debugLog?.info('🔍 Found category name:', { 
+      module: 'live-search',
+      function: 'getCategoryName',
+      categoryName: categoryName
+    });
     return categoryName;
   }
   
   // If category not found, return the code itself
-  console.warn(`❌ Category not found for code: ${categoryCode}`);
+  debugLog?.warn(`❌ Category not found for code: ${categoryCode}`, { 
+    module: 'live-search',
+    function: 'getCategoryName',
+    categoryCode: categoryCode
+  });
   return categoryCode || '';
 }
 
@@ -71,7 +102,11 @@ function getCategoryName(categoryCode) {
  * @param {string} searchTerm - The search term to search for
  */
 function performLiveSearch(searchTerm) {
-  console.log("performLiveSearch called with:", searchTerm);
+  debugLog?.info("performLiveSearch called with:", { 
+    module: 'live-search',
+    function: 'performLiveSearch',
+    searchTerm: searchTerm
+  });
 
   // Check if we have either a search term or advanced search filters
   var hasSearchTerm = searchTerm && searchTerm.length >= 2;
@@ -155,10 +190,19 @@ function performLiveSearch(searchTerm) {
     const sql = "SELECT * from mrvoice" + query_string + " ORDER BY category,info,title,artist LIMIT 50";
     window.electronAPI.database.query(sql, query_params).then(result => {
       if (result.success) {
-        console.log(`🔍 Live search returned ${result.data.length} results`);
+        debugLog?.info(`🔍 Live search returned ${result.data.length} results`, { 
+          module: 'live-search',
+          function: 'performLiveSearch',
+          resultCount: result.data.length
+        });
         result.data.forEach((row) => {
           const categoryName = getCategoryName(row.category);
-          console.log(`🔍 Row category: ${row.category} -> ${categoryName}`);
+          debugLog?.info(`🔍 Row category: ${row.category} -> ${categoryName}`, { 
+            module: 'live-search',
+            function: 'performLiveSearch',
+            categoryCode: row.category,
+            categoryName: categoryName
+          });
           
           raw_html.push(
             `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
@@ -183,10 +227,18 @@ function performLiveSearch(searchTerm) {
 
         scale_scrollable();
       } else {
-        console.warn('❌ Live search failed:', result.error);
+        debugLog?.warn('❌ Live search failed:', { 
+          module: 'live-search',
+          function: 'performLiveSearch',
+          error: result.error
+        });
       }
     }).catch(error => {
-      console.warn('❌ Live search database error:', error);
+      debugLog?.warn('❌ Live search database error:', { 
+        module: 'live-search',
+        function: 'performLiveSearch',
+        error: error.message
+      });
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
         var stmt = db.prepare(
@@ -196,7 +248,11 @@ function performLiveSearch(searchTerm) {
         );
         const rows = stmt.all(query_params);
 
-        console.log("Live search results:", rows.length);
+        debugLog?.info("Live search results:", { 
+          module: 'live-search',
+          function: 'performLiveSearch',
+          resultCount: rows.length
+        });
 
         rows.forEach((row) => {
           const categoryName = getCategoryName(row.category);
@@ -235,7 +291,11 @@ function performLiveSearch(searchTerm) {
       );
       const rows = stmt.all(query_params);
 
-      console.log("Live search results:", rows.length);
+      debugLog?.info("Live search results:", { 
+        module: 'live-search',
+        function: 'performLiveSearch',
+        resultCount: rows.length
+      });
 
       rows.forEach((row) => {
         const categoryName = getCategoryName(row.category);

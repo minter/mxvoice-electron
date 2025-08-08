@@ -5,6 +5,17 @@
  * showing/hiding advanced search options and managing the UI state.
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Initialize the advanced search state
  * Ensures the advanced search starts in the correct hidden state
@@ -14,7 +25,10 @@ function initializeAdvancedSearch() {
   const advancedSearchElement = document.getElementById('advanced-search');
   if (advancedSearchElement) {
     advancedSearchElement.style.display = 'none';
-    console.log("Advanced search initialized as hidden");
+    debugLog?.info("Advanced search initialized as hidden", { 
+      module: 'advanced-search',
+      function: 'initializeAdvancedSearch'
+    });
   }
   
   // Ensure icon starts in plus state
@@ -22,7 +36,10 @@ function initializeAdvancedSearch() {
   if (icon) {
     icon.classList.remove('fa-minus');
     icon.classList.add('fa-plus');
-    console.log("Advanced search icon initialized as plus");
+    debugLog?.info("Advanced search icon initialized as plus", { 
+      module: 'advanced-search',
+      function: 'initializeAdvancedSearch'
+    });
   }
 }
 
@@ -32,33 +49,57 @@ function initializeAdvancedSearch() {
  */
 function toggleAdvancedSearch() {
   try {
-    console.log("toggleAdvancedSearch called");
+    debugLog?.info("toggleAdvancedSearch called", { 
+      module: 'advanced-search',
+      function: 'toggleAdvancedSearch'
+    });
 
     // Clear any pending live search - use global searchTimeout if available
     if (window.searchTimeout) {
       clearTimeout(window.searchTimeout);
-      console.log("Cleared timeout");
+      debugLog?.info("Cleared timeout", { 
+        module: 'advanced-search',
+        function: 'toggleAdvancedSearch'
+      });
     }
 
     $("#search_form").trigger("reset");
-    console.log("Triggered form reset");
+    debugLog?.info("Triggered form reset", { 
+      module: 'advanced-search',
+      function: 'toggleAdvancedSearch'
+    });
 
     // Clear search results when toggling advanced search
     $("#search_results tbody").find("tr").remove();
     $("#search_results thead").hide();
-    console.log("Cleared search results");
+    debugLog?.info("Cleared search results", { 
+      module: 'advanced-search',
+      function: 'toggleAdvancedSearch'
+    });
 
-    console.log(
+    debugLog?.info(
       "Advanced search element exists:",
-      $("#advanced-search").length > 0
+      { 
+        module: 'advanced-search',
+        function: 'toggleAdvancedSearch',
+        exists: $("#advanced-search").length > 0
+      }
     );
-    console.log(
+    debugLog?.info(
       "Advanced search visible:",
-      $("#advanced-search").is(":visible")
+      { 
+        module: 'advanced-search',
+        function: 'toggleAdvancedSearch',
+        visible: $("#advanced-search").is(":visible")
+      }
     );
-    console.log(
+    debugLog?.info(
       "Advanced search display:",
-      $("#advanced-search").css("display")
+      { 
+        module: 'advanced-search',
+        function: 'toggleAdvancedSearch',
+        display: $("#advanced-search").css("display")
+      }
     );
 
     // Check current state by looking at the icon and visibility
@@ -67,12 +108,27 @@ function toggleAdvancedSearch() {
     const isVisible = $("#advanced-search").is(":visible");
     const isCurrentlyOpen = isIconMinus || isVisible;
     
-    console.log("Icon indicates advanced search is open:", isIconMinus);
-    console.log("Advanced search is visible:", isVisible);
-    console.log("Determined advanced search is currently open:", isCurrentlyOpen);
+    debugLog?.info("Icon indicates advanced search is open:", { 
+      module: 'advanced-search',
+      function: 'toggleAdvancedSearch',
+      isIconMinus: isIconMinus
+    });
+    debugLog?.info("Advanced search is visible:", { 
+      module: 'advanced-search',
+      function: 'toggleAdvancedSearch',
+      isVisible: isVisible
+    });
+    debugLog?.info("Determined advanced search is currently open:", { 
+      module: 'advanced-search',
+      function: 'toggleAdvancedSearch',
+      isCurrentlyOpen: isCurrentlyOpen
+    });
 
     if (isCurrentlyOpen) {
-      console.log("Hiding advanced search");
+      debugLog?.info("Hiding advanced search", { 
+        module: 'advanced-search',
+        function: 'toggleAdvancedSearch'
+      });
       $("#advanced-search-icon").removeClass("fa-minus").addClass("fa-plus");
       $("#title-search").hide();
       $("#omni_search").show();
@@ -86,14 +142,24 @@ function toggleAdvancedSearch() {
           if (typeof scaleScrollable === 'function') {
             scaleScrollable();
           }
-          console.log("Advanced search hidden successfully");
+          debugLog?.info("Advanced search hidden successfully", { 
+            module: 'advanced-search',
+            function: 'toggleAdvancedSearch'
+          });
         }).catch(error => {
-          console.warn("Animation failed, hiding without animation:", error);
+          debugLog?.warn("Animation failed, hiding without animation:", { 
+            module: 'advanced-search',
+            function: 'toggleAdvancedSearch',
+            error: error.message
+          });
           $("#advanced-search").hide();
           if (typeof scaleScrollable === 'function') {
             scaleScrollable();
           }
-          console.log("Advanced search hidden successfully (fallback)");
+          debugLog?.info("Advanced search hidden successfully (fallback)", { 
+            module: 'advanced-search',
+            function: 'toggleAdvancedSearch'
+          });
         });
       } else {
         // Fallback if animateCSS is not available
@@ -101,10 +167,16 @@ function toggleAdvancedSearch() {
         if (typeof scaleScrollable === 'function') {
           scaleScrollable();
         }
-        console.log("Advanced search hidden successfully (no animation)");
+        debugLog?.info("Advanced search hidden successfully (no animation)", { 
+          module: 'advanced-search',
+          function: 'toggleAdvancedSearch'
+        });
       }
     } else {
-      console.log("Showing advanced search");
+      debugLog?.info("Showing advanced search", { 
+        module: 'advanced-search',
+        function: 'toggleAdvancedSearch'
+      });
       $("#advanced-search-icon").removeClass("fa-plus").addClass("fa-minus");
       $("#advanced-search").show();
       $("#title-search").show();
@@ -118,17 +190,34 @@ function toggleAdvancedSearch() {
       const advancedSearchElement = document.getElementById('advanced-search');
       if (advancedSearchElement && typeof animateCSS === 'function') {
         animateCSS(advancedSearchElement, "fadeInDown").then(() => {
-          console.log("Advanced search shown successfully");
+          debugLog?.info("Advanced search shown successfully", { 
+            module: 'advanced-search',
+            function: 'toggleAdvancedSearch'
+          });
         }).catch(error => {
-          console.warn("Animation failed, but search is shown:", error);
-          console.log("Advanced search shown successfully (fallback)");
+          debugLog?.warn("Animation failed, but search is shown:", { 
+            module: 'advanced-search',
+            function: 'toggleAdvancedSearch',
+            error: error.message
+          });
+          debugLog?.info("Advanced search shown successfully (fallback)", { 
+            module: 'advanced-search',
+            function: 'toggleAdvancedSearch'
+          });
         });
       } else {
-        console.log("Advanced search shown successfully (no animation)");
+        debugLog?.info("Advanced search shown successfully (no animation)", { 
+          module: 'advanced-search',
+          function: 'toggleAdvancedSearch'
+        });
       }
     }
   } catch (error) {
-    console.error("Error in toggleAdvancedSearch:", error);
+    debugLog?.error("Error in toggleAdvancedSearch:", { 
+      module: 'advanced-search',
+      function: 'toggleAdvancedSearch',
+      error: error.message
+    });
   }
 }
 

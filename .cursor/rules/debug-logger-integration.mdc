@@ -29,13 +29,20 @@ When migrating console logging statements to debug logging:
    - Use the actual module name and function name
    - Keep the original message exactly as it was
 
-4. **DO NOT:**
+4. **CRITICAL: DO NOT USE ES6 MODULE IMPORTS FOR DEBUG LOGGER**
+   - ❌ WRONG: `import { debugLogger } from '../debug-log/index.js';`
+   - ✅ CORRECT: Use global access pattern shown above
+   - The debug logger is available as `window.debugLog`, not as a module export
+   - Always use the global access pattern with try-catch fallback
+
+5. **DO NOT:**
    - Remove emojis from messages
    - Change message content
    - Add complex patterns
    - Use Class-Based Module Pattern unless explicitly requested
    - Overcomplicate the conversion
    - Make dozens of individual line edits - do comprehensive edits instead
+   - Use ES6 imports for debug logger - it's a global object
 
 ## Simple Module Pattern (Recommended)
 - For simple modules like function registries, use direct global access with optional chaining
@@ -61,6 +68,7 @@ When migrating console logging statements to debug logging:
 - Test that module fails properly without debug logger
 - Include rich context information in all debug messages
 - Use appropriate log levels: warn for fallbacks, error for failures, info for operations, debug for details
+- **NEVER use ES6 imports for debug logger - it's a global object, not a module export**
 
 - Test that module fails properly without debug logger
 - When migrating a module: update constructor, add setDebugLogger(), add ensureDebugLogger(), update all methods, update renderer.js initialization

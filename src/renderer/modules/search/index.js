@@ -10,6 +10,17 @@ import * as searchEngine from './search-engine.js';
 import * as liveSearch from './live-search.js';
 import * as advancedSearch from './advanced-search.js';
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Search Module Class
  * 
@@ -34,7 +45,10 @@ class SearchModule {
    * This method can be called to set up any initialization logic
    */
   init() {
-    console.log('Search module initialized');
+    debugLog?.info('Search module initialized', { 
+      module: 'search',
+      function: 'init'
+    });
     
     // Initialize advanced search state
     if (typeof advancedSearch.initializeAdvancedSearch === 'function') {

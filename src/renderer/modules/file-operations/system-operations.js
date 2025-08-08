@@ -4,6 +4,17 @@
  * Handles system-level file operations like directory picking and update installation
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Opens a directory picker dialog and updates the specified element with the selected path
  * 
@@ -25,7 +36,11 @@ export function pickDirectory(event, element) {
 export function installUpdate() {
   if (window.electronAPI) {
     window.electronAPI.restartAndInstall().catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
+      debugLog?.warn('Modern API failed, falling back to legacy:', { 
+        module: 'system-operations',
+        function: 'installUpdate',
+        error: error.message
+      });
       ipcRenderer.send("restart-and-install-new-version");
     });
   } else {
