@@ -228,7 +228,10 @@ function checkOldConfig() {
 
     // Save renaming the old config file for final releases
     // fs.rename(config_path, config_path + '.converted', function(err) {
-    //   if ( err ) console.log('RENAME ERROR: ' + err);
+    //   if ( err ) debugLog.error('RENAME ERROR', { 
+    //     function: "checkOldConfig",
+    //     error: err.message 
+    //   });
     // });
   } else {
     return false;
@@ -251,7 +254,8 @@ function initializeModules() {
     store,
     audioInstances,
     autoUpdater,
-    fileOperations
+    fileOperations,
+    debugLog
   };
 
   // Initialize each module

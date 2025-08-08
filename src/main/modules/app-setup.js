@@ -19,6 +19,7 @@ let mainWindow;
 let store;
 let autoUpdater;
 let fileOperations;
+let debugLog;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -26,6 +27,7 @@ function initializeAppSetup(dependencies) {
   store = dependencies.store;
   autoUpdater = dependencies.autoUpdater;
   fileOperations = dependencies.fileOperations;
+  debugLog = dependencies.debugLog;
 }
 
 // Create the main window
@@ -358,28 +360,28 @@ function createApplicationMenu() {
 
 // UI operation functions
 function increaseFontSize() {
-  console.log('Increasing font size');
+  debugLog?.info('Increasing font size', { module: 'app-setup', function: 'increaseFontSize' });
   if (mainWindow) {
     mainWindow.webContents.send("increase_font_size");
   }
 }
 
 function decreaseFontSize() {
-  console.log("Decreasing font size");
+  debugLog?.info("Decreasing font size", { module: 'app-setup', function: 'decreaseFontSize' });
   if (mainWindow) {
     mainWindow.webContents.send("decrease_font_size");
   }
 }
 
 function toggleWaveform() {
-  console.log("Toggling waveform");
+  debugLog?.info("Toggling waveform", { module: 'app-setup', function: 'toggleWaveform' });
   if (mainWindow) {
     mainWindow.webContents.send("toggle_wave_form");
   }
 }
 
 function toggleAdvancedSearch() {
-  console.log("Toggling advanced search");
+  debugLog?.info("Toggling advanced search", { module: 'app-setup', function: 'toggleAdvancedSearch' });
   if (mainWindow) {
     mainWindow.webContents.send("toggle_advanced_search");
   }
@@ -392,21 +394,21 @@ function closeAllTabs() {
 }
 
 function sendDeleteSong() {
-  console.log('Sending delete_selected_song message');
+  debugLog?.info('Sending delete_selected_song message', { module: 'app-setup', function: 'sendDeleteSong' });
   if (mainWindow) {
     mainWindow.webContents.send('delete_selected_song');
   }
 }
 
 function sendEditSong() {
-  console.log('Sending edit_selected_song message');
+  debugLog?.info('Sending edit_selected_song message', { module: 'app-setup', function: 'sendEditSong' });
   if (mainWindow) {
     mainWindow.webContents.send('edit_selected_song');
   }
 }
 
 function manageCategories() {
-  console.log('Sending manage_categories message');
+  debugLog?.info('Sending manage_categories message', { module: 'app-setup', function: 'manageCategories' });
   if (mainWindow) {
     mainWindow.webContents.send('manage_categories');
   }
@@ -459,8 +461,8 @@ function setupAppLifecycle() {
 
 // Test function
 function testAppSetup() {
-  console.log('Testing App Setup...');
-  console.log('✅ App setup module loaded');
+  debugLog?.info('Testing App Setup...', { module: 'app-setup', function: 'testAppSetup' });
+  debugLog?.info('✅ App setup module loaded', { module: 'app-setup', function: 'testAppSetup' });
   return true;
 }
 

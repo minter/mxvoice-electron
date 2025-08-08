@@ -12,26 +12,29 @@ import readlines from 'n-readlines';
 // Dependencies that will be injected
 let mainWindow;
 let store;
+let debugLog;
 
 // Initialize the module with dependencies
 function initializeFileOperations(dependencies) {
-  console.log('🔍 Initializing file operations with dependencies:', dependencies);
   mainWindow = dependencies.mainWindow;
   store = dependencies.store;
-  console.log('🔍 mainWindow set:', !!mainWindow);
-  console.log('🔍 store set:', !!store);
+  debugLog = dependencies.debugLog;
+  
+  debugLog?.info('🔍 Initializing file operations with dependencies:', { module: 'file-operations', function: 'initializeFileOperations', dependencies: dependencies });
+  debugLog?.info('🔍 mainWindow set:', { module: 'file-operations', function: 'initializeFileOperations', mainWindowSet: !!mainWindow });
+  debugLog?.info('🔍 store set:', { module: 'file-operations', function: 'initializeFileOperations', storeSet: !!store });
 }
 
 // Load hotkeys file
 function loadHotkeysFile() {
   if (!mainWindow) {
-    console.error('❌ mainWindow is not available');
+    debugLog?.error('❌ mainWindow is not available', { module: 'file-operations', function: 'loadHotkeysFile' });
     return Promise.reject(new Error('mainWindow not available'));
   }
   
   return new Promise((resolve, reject) => {
     var fkey_mapping = {};
-    console.log("Loading hotkeys file");
+    debugLog?.info("Loading hotkeys file", { module: 'file-operations', function: 'loadHotkeysFile' });
     dialog.showOpenDialog(mainWindow, {
       buttonLabel: 'Open',
       filters: [
@@ -42,40 +45,40 @@ function loadHotkeysFile() {
       properties: ['openFile']
     }).then(result => {
       if (result.canceled == true) {
-        console.log('Silently exiting hotkey load');
+        debugLog?.info('Silently exiting hotkey load', { module: 'file-operations', function: 'loadHotkeysFile' });
         resolve({ success: false, canceled: true });
         return;
       }
       else {
         var filename = result.filePaths[0];
-        console.log(`Processing file ${filename}`);
+        debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'loadHotkeysFile', filename: filename });
         const line_reader = new readlines(filename);
         var title
 
         let line;
         while (line = line_reader.next()) {
           const lineStr = line.toString().trim();
-          console.log('📁 Reading line:', lineStr);
+          debugLog?.info('📁 Reading line:', { module: 'file-operations', function: 'loadHotkeysFile', line: lineStr });
           let [key, val] = lineStr.split('::');
-          console.log('📁 Parsed key:', key, 'value:', val);
+          debugLog?.info('📁 Parsed key:', { module: 'file-operations', function: 'loadHotkeysFile', key: key, value: val });
           if (/^\D\d+$/.test(key)) {
             fkey_mapping[key] = val;
-            console.log('📁 Added to fkey_mapping:', key, '=', val);
+            debugLog?.info('📁 Added to fkey_mapping:', { module: 'file-operations', function: 'loadHotkeysFile', key: key, value: val });
           } else {
             title = val.replace('_', ' ')
-            console.log('📁 Set title to:', title);
+            debugLog?.info('📁 Set title to:', { module: 'file-operations', function: 'loadHotkeysFile', title: title });
           }
         }
-        console.log('📁 Main process: Sending fkey_load with:', { fkey_mapping, title });
-        console.log('📁 fkey_mapping type:', typeof fkey_mapping);
-        console.log('📁 fkey_mapping keys:', Object.keys(fkey_mapping));
-        console.log('📁 fkey_mapping length:', fkey_mapping.length);
-        console.log('📁 fkey_mapping content:', JSON.stringify(fkey_mapping));
+        debugLog?.info('📁 Main process: Sending fkey_load with:', { module: 'file-operations', function: 'loadHotkeysFile', fkey_mapping: fkey_mapping, title: title });
+        debugLog?.info('📁 fkey_mapping type:', { module: 'file-operations', function: 'loadHotkeysFile', type: typeof fkey_mapping });
+        debugLog?.info('📁 fkey_mapping keys:', { module: 'file-operations', function: 'loadHotkeysFile', keys: Object.keys(fkey_mapping) });
+        debugLog?.info('📁 fkey_mapping length:', { module: 'file-operations', function: 'loadHotkeysFile', length: fkey_mapping.length });
+        debugLog?.info('📁 fkey_mapping content:', { module: 'file-operations', function: 'loadHotkeysFile', content: JSON.stringify(fkey_mapping) });
         mainWindow.webContents.send('fkey_load', fkey_mapping, title);
         resolve({ success: true, fkey_mapping, title });
       }
     }).catch(err => {
-      console.log(err);
+      debugLog?.error('Error loading hotkeys file:', { module: 'file-operations', function: 'loadHotkeysFile', error: err });
       reject(err);
     });
   });
@@ -84,13 +87,13 @@ function loadHotkeysFile() {
 // Load holding tank file
 function loadHoldingTankFile() {
   if (!mainWindow) {
-    console.error('❌ mainWindow is not available');
+    debugLog?.error('❌ mainWindow is not available', { module: 'file-operations', function: 'loadHoldingTankFile' });
     return Promise.reject(new Error('mainWindow not available'));
   }
   
   return new Promise((resolve, reject) => {
     var song_ids = [];
-    console.log("Loading holding tank file");
+    debugLog?.info("Loading holding tank file", { module: 'file-operations', function: 'loadHoldingTankFile' });
     dialog.showOpenDialog(mainWindow, {
       buttonLabel: 'Open',
       filters: [
@@ -101,25 +104,25 @@ function loadHoldingTankFile() {
       properties: ['openFile']
     }).then(result => {
       if (result.canceled == true) {
-        console.log('Silently exiting holding tank load');
+        debugLog?.info('Silently exiting holding tank load', { module: 'file-operations', function: 'loadHoldingTankFile' });
         resolve({ success: false, canceled: true });
         return;
       }
       else {
         var filename = result.filePaths[0];
-        console.log(`Processing file ${filename}`);
+        debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'loadHoldingTankFile', filename: filename });
         const line_reader = new readlines(filename);
 
         let line;
         while (line = line_reader.next()) {
           song_ids.push(line.toString().trim());
         }
-        console.log('📁 Main process: Sending holding_tank_load with:', song_ids);
+        debugLog?.info('📁 Main process: Sending holding_tank_load with:', { module: 'file-operations', function: 'loadHoldingTankFile', song_ids: song_ids });
         mainWindow.webContents.send('holding_tank_load', song_ids);
         resolve({ success: true, song_ids });
       }
     }).catch(err => {
-      console.log(err);
+      debugLog?.error('Error loading holding tank file:', { module: 'file-operations', function: 'loadHoldingTankFile', error: err });
       reject(err);
     });
   });
@@ -136,16 +139,16 @@ function saveHotkeysFile(hotkeyArray) {
     message: 'Save your Mx. Voice hotkey file'
   }).then(result => {
     if (result.canceled == true) {
-      console.log('Silently exiting hotkey save');
+      debugLog?.info('Silently exiting hotkey save', { module: 'file-operations', function: 'saveHotkeysFile' });
       return;
     }
     else {
       var filename = result.filePath;
-      console.log(`Processing file ${filename}`);
+      debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'saveHotkeysFile', filename: filename });
       var file = fs.createWriteStream(filename);
       for (let i = 0; i < hotkeyArray.length; i++) {
         var keyId = `f${i + 1}`;
-        console.log(`Hotkey array ${i} is ${hotkeyArray[i]}`)
+        debugLog?.info(`Hotkey array ${i} is ${hotkeyArray[i]}`, { module: 'file-operations', function: 'saveHotkeysFile', index: i, value: hotkeyArray[i] });
         if (hotkeyArray[i] === undefined || /^\d+$/.test(hotkeyArray[i])) {
           file.write([keyId, hotkeyArray[i]].join('::') + '\n');
         } else {
@@ -155,7 +158,7 @@ function saveHotkeysFile(hotkeyArray) {
       file.end();
     }
   }).catch(err => {
-    console.log(err)
+    debugLog?.error('Error saving hotkeys file:', { module: 'file-operations', function: 'saveHotkeysFile', error: err });
   })
 }
 
@@ -170,12 +173,12 @@ function saveHoldingTankFile(holdingTankArray) {
     message: 'Save your Mx. Voice holding tank file'
   }).then(result => {
     if (result.canceled == true) {
-      console.log('Silently exiting holding tank save');
+      debugLog?.info('Silently exiting holding tank save', { module: 'file-operations', function: 'saveHoldingTankFile' });
       return;
     }
     else {
       var filename = result.filePath;
-      console.log(`Processing file ${filename}`);
+      debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'saveHoldingTankFile', filename: filename });
       var file = fs.createWriteStream(filename);
       for (let i = 0; i < holdingTankArray.length; i++) {
         file.write(holdingTankArray[i] + '\n');
@@ -183,34 +186,34 @@ function saveHoldingTankFile(holdingTankArray) {
       file.end();
     }
   }).catch(err => {
-    console.log(err)
+    debugLog?.error('Error saving holding tank file:', { module: 'file-operations', function: 'saveHoldingTankFile', error: err });
   })
 }
 
 // Add directory dialog
 function addDirectoryDialog() {
-  console.log("Adding directory of songs");
+  debugLog?.info("Adding directory of songs", { module: 'file-operations', function: 'addDirectoryDialog' });
   dialog.showOpenDialog(mainWindow, {
     buttonLabel: 'Add All',
     message: 'Choose directory of music to add',
     properties: ['openDirectory']
   }).then(result => {
     if (result.canceled == true) {
-      console.log('Silently exiting add file');
+      debugLog?.info('Silently exiting add file', { module: 'file-operations', function: 'addDirectoryDialog' });
       return;
     } else {
       var dirname = result.filePaths[0];
-      console.log(`Processing directory ${dirname}`);
+      debugLog?.info(`Processing directory ${dirname}`, { module: 'file-operations', function: 'addDirectoryDialog', dirname: dirname });
       mainWindow.webContents.send('bulk_add_dialog_load', dirname);
     }
   }).catch(err => {
-    console.log(err)
+    debugLog?.error('Error adding directory:', { module: 'file-operations', function: 'addDirectoryDialog', error: err });
   })
 }
 
 // Add file dialog
 function addFileDialog() {
-  console.log("Adding new file");
+  debugLog?.info("Adding new file", { module: 'file-operations', function: 'addFileDialog' });
   dialog.showOpenDialog(mainWindow, {
     buttonLabel: 'Add',
     filters: [
@@ -220,16 +223,16 @@ function addFileDialog() {
     properties: ['openFile']
   }).then(result => {
     if (result.canceled == true) {
-      console.log('Silently exiting add file');
+      debugLog?.info('Silently exiting add file', { module: 'file-operations', function: 'addFileDialog' });
       return;
     }
     else {
       var filename = result.filePaths[0];
-      console.log(`Processing file ${filename}`);
+      debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'addFileDialog', filename: filename });
       mainWindow.webContents.send('add_dialog_load', filename);
     }
   }).catch(err => {
-    console.log(err)
+    debugLog?.error('Error adding file:', { module: 'file-operations', function: 'addFileDialog', error: err });
   })
 }
 
@@ -238,7 +241,7 @@ function migrateOldPreferences() {
   const old_prefs_path = path.resolve(app.getPath('userData'), 'preferences.json');
   if (fs.existsSync(old_prefs_path)) {
     // There is an old preferences file we need to migrate
-    console.log('Migrating old preferences.json to new config.json file');
+    debugLog?.info('Migrating old preferences.json to new config.json file', { module: 'file-operations', function: 'migrateOldPreferences' });
     let rawdata = fs.readFileSync(old_prefs_path);
     let old_prefs = JSON.parse(rawdata);
     store.set('music_directory', old_prefs.locations.music_directory);
@@ -255,8 +258,8 @@ function migrateOldPreferences() {
 
 // Test function
 function testFileOperations() {
-  console.log('Testing File Operations...');
-  console.log('✅ File operations module loaded');
+  debugLog?.info('Testing File Operations...', { module: 'file-operations', function: 'testFileOperations' });
+  debugLog?.info('✅ File operations module loaded', { module: 'file-operations', function: 'testFileOperations' });
   return true;
 }
 

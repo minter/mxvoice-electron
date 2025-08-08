@@ -19,6 +19,7 @@ let db;
 let store;
 let audioInstances;
 let autoUpdater;
+let debugLog;
 
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
@@ -27,6 +28,7 @@ function initializeIpcHandlers(dependencies) {
   store = dependencies.store;
   audioInstances = dependencies.audioInstances;
   autoUpdater = dependencies.autoUpdater;
+  debugLog = dependencies.debugLog;
   
   // Initialize file operations module
   fileOperations.initializeFileOperations(dependencies);
@@ -42,7 +44,7 @@ function registerAllHandlers() {
       const result = await app.getAppPath();
       return { success: true, path: result };
     } catch (error) {
-      console.error('Error getting app path:', error);
+      debugLog?.error('Error getting app path:', { module: 'ipc-handlers', function: 'get-app-path', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -126,7 +128,7 @@ function registerAllHandlers() {
       const stmt = db.prepare(sql);
       return { success: true, data: stmt.all(params || []) };
     } catch (error) {
-      console.error('Database query error:', error);
+      debugLog?.error('Database query error:', { module: 'ipc-handlers', function: 'database-query', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -139,7 +141,7 @@ function registerAllHandlers() {
       const stmt = db.prepare(sql);
       return { success: true, data: stmt.run(params || []) };
     } catch (error) {
-      console.error('Database execute error:', error);
+      debugLog?.error('Database execute error:', { module: 'ipc-handlers', function: 'database-execute', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -152,7 +154,7 @@ function registerAllHandlers() {
       const stmt = db.prepare('SELECT * FROM categories ORDER BY description ASC');
       return { success: true, data: stmt.all() };
     } catch (error) {
-      console.error('Get categories error:', error);
+      debugLog?.error('Get categories error:', { module: 'ipc-handlers', function: 'get-categories', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -170,7 +172,7 @@ function registerAllHandlers() {
                              songData.filename, songData.duration, songData.notes);
       return { success: true, data: result };
     } catch (error) {
-      console.error('Add song error:', error);
+      debugLog?.error('Add song error:', { module: 'ipc-handlers', function: 'add-song', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -181,7 +183,7 @@ function registerAllHandlers() {
       const data = fs.readFileSync(filePath, 'utf8');
       return { success: true, data };
     } catch (error) {
-      console.error('File read error:', error);
+      debugLog?.error('File read error:', { module: 'ipc-handlers', function: 'file-read', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -191,7 +193,7 @@ function registerAllHandlers() {
       fs.writeFileSync(filePath, data, 'utf8');
       return { success: true };
     } catch (error) {
-      console.error('File write error:', error);
+      debugLog?.error('File write error:', { module: 'ipc-handlers', function: 'file-write', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -200,7 +202,7 @@ function registerAllHandlers() {
     try {
       return { success: true, exists: fs.existsSync(filePath) };
     } catch (error) {
-      console.error('File exists error:', error);
+      debugLog?.error('File exists error:', { module: 'ipc-handlers', function: 'file-exists', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -210,7 +212,7 @@ function registerAllHandlers() {
       fs.unlinkSync(filePath);
       return { success: true };
     } catch (error) {
-      console.error('File delete error:', error);
+      debugLog?.error('File delete error:', { module: 'ipc-handlers', function: 'file-delete', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -220,7 +222,7 @@ function registerAllHandlers() {
       fs.copyFileSync(sourcePath, destPath);
       return { success: true };
     } catch (error) {
-      console.error('File copy error:', error);
+      debugLog?.error('File copy error:', { module: 'ipc-handlers', function: 'file-copy', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -230,7 +232,7 @@ function registerAllHandlers() {
       fs.mkdirSync(dirPath, { recursive: true, ...options });
       return { success: true };
     } catch (error) {
-      console.error('Directory creation error:', error);
+      debugLog?.error('Directory creation error:', { module: 'ipc-handlers', function: 'file-mkdir', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -240,7 +242,7 @@ function registerAllHandlers() {
     try {
       return { success: true, value: store.get(key) };
     } catch (error) {
-      console.error('Store get error:', error);
+      debugLog?.error('Store get error:', { module: 'ipc-handlers', function: 'store-get', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -250,7 +252,7 @@ function registerAllHandlers() {
       store.set(key, value);
       return { success: true };
     } catch (error) {
-      console.error('Store set error:', error);
+      debugLog?.error('Store set error:', { module: 'ipc-handlers', function: 'store-set', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -260,7 +262,7 @@ function registerAllHandlers() {
       store.delete(key);
       return { success: true };
     } catch (error) {
-      console.error('Store delete error:', error);
+      debugLog?.error('Store delete error:', { module: 'ipc-handlers', function: 'store-delete', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -269,7 +271,7 @@ function registerAllHandlers() {
     try {
       return { success: true, has: store.has(key) };
     } catch (error) {
-      console.error('Store has error:', error);
+      debugLog?.error('Store has error:', { module: 'ipc-handlers', function: 'store-has', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -278,7 +280,7 @@ function registerAllHandlers() {
     try {
       return { success: true, keys: store.store };
     } catch (error) {
-      console.error('Store keys error:', error);
+      debugLog?.error('Store keys error:', { module: 'ipc-handlers', function: 'store-keys', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -305,7 +307,7 @@ function registerAllHandlers() {
       
       return { success: true, id: soundId };
     } catch (error) {
-      console.error('Audio play error:', error);
+      debugLog?.error('Audio play error:', { module: 'ipc-handlers', function: 'audio-play', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -326,7 +328,7 @@ function registerAllHandlers() {
       }
       return { success: true };
     } catch (error) {
-      console.error('Audio stop error:', error);
+      debugLog?.error('Audio stop error:', { module: 'ipc-handlers', function: 'audio-stop', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -343,7 +345,7 @@ function registerAllHandlers() {
       }
       return { success: true };
     } catch (error) {
-      console.error('Audio pause error:', error);
+      debugLog?.error('Audio pause error:', { module: 'ipc-handlers', function: 'audio-pause', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -353,7 +355,7 @@ function registerAllHandlers() {
       Howler.volume(volume);
       return { success: true };
     } catch (error) {
-      console.error('Audio volume error:', error);
+      debugLog?.error('Audio volume error:', { module: 'ipc-handlers', function: 'audio-volume', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -373,7 +375,7 @@ function registerAllHandlers() {
       }
       return { success: true };
     } catch (error) {
-      console.error('Audio fade error:', error);
+      debugLog?.error('Audio fade error:', { module: 'ipc-handlers', function: 'audio-fade', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -384,7 +386,7 @@ function registerAllHandlers() {
       const joinedPath = path.join(...paths);
       return { success: true, data: joinedPath };
     } catch (error) {
-      console.error('Path join error:', error);
+      debugLog?.error('Path join error:', { module: 'ipc-handlers', function: 'path-join', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -393,7 +395,7 @@ function registerAllHandlers() {
     try {
       return path.parse(filePath);
     } catch (error) {
-      console.error('Path parse error:', error);
+      debugLog?.error('Path parse error:', { module: 'ipc-handlers', function: 'path-parse', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -402,7 +404,7 @@ function registerAllHandlers() {
     try {
       return path.extname(filePath);
     } catch (error) {
-      console.error('Path extname error:', error);
+      debugLog?.error('Path extname error:', { module: 'ipc-handlers', function: 'path-extname', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -412,7 +414,7 @@ function registerAllHandlers() {
     try {
       return fs.readdirSync(dirPath);
     } catch (error) {
-      console.error('File system readdir error:', error);
+      debugLog?.error('File system readdir error:', { module: 'ipc-handlers', function: 'fs-readdir', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -428,37 +430,37 @@ function registerAllHandlers() {
         ctime: stats.ctime
       };
     } catch (error) {
-      console.error('File system stat error:', error);
+      debugLog?.error('File system stat error:', { module: 'ipc-handlers', function: 'fs-stat', error: error.message });
       return { success: false, error: error.message };
     }
   });
 
   // Legacy handlers for backward compatibility
   ipcMain.on('open-hotkey-file', (event, arg) => {
-    console.log("Main process starting hotkey open");
+    debugLog?.info("Main process starting hotkey open", { module: 'ipc-handlers', function: 'open-hotkey-file' });
     fileOperations.loadHotkeysFile();
   });
 
   ipcMain.on('save-hotkey-file', (event, arg) => {
-    console.log("Main process starting hotkey save");
-    console.log(`Arg is ${arg}`);
-    console.log(`First element is ${arg[0]}`);
+    debugLog?.info("Main process starting hotkey save", { module: 'ipc-handlers', function: 'save-hotkey-file' });
+    debugLog?.info(`Arg is ${arg}`, { module: 'ipc-handlers', function: 'save-hotkey-file', arg: arg });
+    debugLog?.info(`First element is ${arg[0]}`, { module: 'ipc-handlers', function: 'save-hotkey-file', firstElement: arg[0] });
     fileOperations.saveHotkeysFile(arg);
   });
 
   ipcMain.on('open-holding-tank-file', (event, arg) => {
-    console.log("Main process starting holding tank open");
+    debugLog?.info("Main process starting holding tank open", { module: 'ipc-handlers', function: 'open-holding-tank-file' });
     fileOperations.loadHoldingTankFile();
   });
 
   ipcMain.on('save-holding-tank-file', (event, arg) => {
-    console.log("Main process starting holding tank save");
-    console.log(`Arg is ${arg}`);
-    console.log(`First element is ${arg[0]}`);
+    debugLog?.info("Main process starting holding tank save", { module: 'ipc-handlers', function: 'save-holding-tank-file' });
+    debugLog?.info(`Arg is ${arg}`, { module: 'ipc-handlers', function: 'save-holding-tank-file', arg: arg });
+    debugLog?.info(`First element is ${arg[0]}`, { module: 'ipc-handlers', function: 'save-holding-tank-file', firstElement: arg[0] });
     fileOperations.saveHoldingTankFile(arg);
   });
 
-  console.log('IPC handlers registered successfully');
+  debugLog?.info('IPC handlers registered successfully', { module: 'ipc-handlers', function: 'registerAllHandlers' });
 }
 
 // Remove all handlers (for cleanup)
@@ -505,13 +507,13 @@ function removeAllHandlers() {
   ipcMain.removeHandler('fs-readdir');
   ipcMain.removeHandler('fs-stat');
   
-  console.log('IPC handlers removed successfully');
+  debugLog?.info('IPC handlers removed successfully', { module: 'ipc-handlers', function: 'removeAllHandlers' });
 }
 
 // Test function
 function testIpcHandlers() {
-  console.log('Testing IPC Handlers...');
-  console.log('✅ IPC handlers module loaded');
+  debugLog?.info('Testing IPC Handlers...', { module: 'ipc-handlers', function: 'testIpcHandlers' });
+  debugLog?.info('✅ IPC handlers module loaded', { module: 'ipc-handlers', function: 'testIpcHandlers' });
   return true;
 }
 

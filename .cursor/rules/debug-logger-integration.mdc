@@ -1,6 +1,48 @@
 
 # Debug Logger Integration Patterns
 
+## PATTERN CONSISTENCY - CRITICAL REQUIREMENT
+When converting console.log statements to debug logger:
+
+**ALWAYS use the established codebase pattern:**
+- ✅ CORRECT: `debugLog?.info(message, { module: 'module-name', function: 'function-name' })`
+- ❌ WRONG: `if (debugLog) { debugLog.info(message, { context }) }`
+
+**Before making any conversions:**
+1. Examine existing debug logger usage in the codebase
+2. Identify the established pattern being used
+3. Use that exact pattern throughout all conversions
+4. Do NOT introduce new patterns or defensive programming approaches
+
+**Pattern Recognition Priority:**
+- The existing codebase pattern takes precedence over any personal coding preferences
+- If you see `debugLog?.info(...)` in the codebase, use that exact pattern
+- If you see `if (debugLog) { ... }` in the codebase, use that exact pattern
+- Never mix patterns within the same codebase
+
+## PATTERN ANALYSIS - REQUIRED FIRST STEP
+Before converting any console.log statements:
+
+1. **Search for existing debug logger usage:**
+   ```bash
+   grep -r "debugLog\?" src/
+   grep -r "if (debugLog)" src/
+   ```
+
+2. **Identify the established pattern:**
+   - If you see `debugLog?.info(...)` → Use optional chaining pattern
+   - If you see `if (debugLog) { ... }` → Use explicit check pattern
+   - If you see both → Ask for clarification on which pattern to use
+
+3. **Document the pattern you're following:**
+   - Note the exact syntax being used
+   - Note the context object structure
+   - Note any specific conventions (like function names, module names)
+
+4. **Apply consistently:**
+   - Use the exact same pattern throughout all conversions
+   - Do not deviate from the established pattern
+
 ## MIGRATION CRITERIA - ALWAYS USE THIS PATTERN
 When migrating console logging statements to debug logging:
 
@@ -43,6 +85,36 @@ When migrating console logging statements to debug logging:
    - Overcomplicate the conversion
    - Make dozens of individual line edits - do comprehensive edits instead
    - Use ES6 imports for debug logger - it's a global object
+
+## VALIDATION CHECKLIST
+Before completing any debug logger conversion:
+
+□ Did I examine existing debug logger usage in the codebase first?
+□ Am I using the exact same pattern as the existing codebase?
+□ Have I used the same pattern consistently across all files?
+□ Did I avoid introducing defensive programming patterns (`if (debugLog) { ... }`) when the codebase uses optional chaining?
+□ Did I maintain the same context object structure as the existing codebase?
+□ Did I validate consistency across all converted files?
+
+**If any answer is "no", fix the inconsistency before completing.**
+
+## COMMON MISTAKES TO AVOID
+
+❌ **Defensive Programming Over Pattern Consistency:**
+- Wrong: `if (debugLog) { debugLog.info(...) }` when codebase uses `debugLog?.info(...)`
+- Wrong: Adding explicit checks when the codebase assumes debug logger is always available
+
+❌ **Pattern Mixing:**
+- Wrong: Using `debugLog?.info(...)` in some files and `if (debugLog) { ... }` in others
+- Wrong: Following different patterns in different modules
+
+❌ **Overthinking the Problem:**
+- Wrong: Trying to be "more defensive" than the established codebase patterns
+- Wrong: Introducing new patterns instead of following existing ones
+
+❌ **Inconsistent Application:**
+- Wrong: Using correct pattern in one file but wrong pattern in others
+- Wrong: Not validating consistency across all converted files
 
 ## Simple Module Pattern (Recommended)
 - For simple modules like function registries, use direct global access with optional chaining
