@@ -321,28 +321,13 @@ $(document).ready(async function() {
       fileOperationsModule = null;
     }
     
-    // Store modules in registry instead of window pollution
+    // Store modules in registry for Function Registry to manage
     if (fileOperationsModule) {
       const fileOperationsInstance = fileOperationsModule.default;
       moduleRegistry.fileOperations = fileOperationsInstance;
-      
-      // Create minimal window assignments for HTML onclick compatibility
-      // Only assign functions that are called directly from HTML
-      window.openHotkeyFile = fileOperationsInstance.openHotkeyFile;
-      window.openHoldingTankFile = fileOperationsInstance.openHoldingTankFile;
-      window.saveHotkeyFile = fileOperationsInstance.saveHotkeyFile;
-      window.saveHoldingTankFile = fileOperationsInstance.saveHoldingTankFile;
-      window.pickDirectory = fileOperationsInstance.pickDirectory;
-      window.installUpdate = fileOperationsInstance.installUpdate;
+      logInfo('File operations module stored in registry');
     } else {
-      logWarn('File operations module not available, creating fallback functions');
-      // Create fallback functions to prevent errors
-      window.openHotkeyFile = () => logWarn('File operations not available');
-      window.openHoldingTankFile = () => logWarn('File operations not available');
-      window.saveHotkeyFile = () => logWarn('File operations not available');
-      window.saveHoldingTankFile = () => logWarn('File operations not available');
-      window.pickDirectory = () => logWarn('File operations not available');
-      window.installUpdate = () => logWarn('File operations not available');
+      logWarn('File operations module not available, Function Registry will provide fallbacks');
     }
 
     // Import song management module and store in registry
@@ -356,29 +341,13 @@ $(document).ready(async function() {
       songManagementModule = null;
     }
     
-    // Store in registry and create minimal window assignments
+    // Store in registry for Function Registry to manage
     if (songManagementModule) {
       const songManagementInstance = songManagementModule.default;
       moduleRegistry.songManagement = songManagementInstance;
-      
-      // Only assign functions called from HTML
-      window.saveEditedSong = songManagementInstance.saveEditedSong;
-      window.saveNewSong = songManagementInstance.saveNewSong;
-      window.editSelectedSong = songManagementInstance.editSelectedSong;
-      window.deleteSelectedSong = songManagementInstance.deleteSelectedSong;
-      window.deleteSong = songManagementInstance.deleteSong;
-      window.removeFromHoldingTank = songManagementInstance.removeFromHoldingTank;
-      window.removeFromHotkey = songManagementInstance.removeFromHotkey;
+      logInfo('Song management module stored in registry');
     } else {
-      logWarn('Song management module not available, creating fallback functions');
-      // Create fallback functions to prevent errors
-      window.saveEditedSong = () => logWarn('Song management not available');
-      window.saveNewSong = () => logWarn('Song management not available');
-      window.editSelectedSong = () => logWarn('Song management not available');
-      window.deleteSelectedSong = () => logWarn('Song management not available');
-      window.deleteSong = () => logWarn('Song management not available');
-      window.removeFromHoldingTank = () => logWarn('Song management not available');
-      window.removeFromHotkey = () => logWarn('Song management not available');
+      logWarn('Song management module not available, Function Registry will provide fallbacks');
     }
 
     // Import holding tank module and store in registry
@@ -391,24 +360,39 @@ $(document).ready(async function() {
       throw error;
     }
     
-    // Store in registry and create minimal window assignments
+    // Store in registry for Function Registry to manage
     const holdingTankInstance = holdingTankModule.default;
     moduleRegistry.holdingTank = holdingTankInstance;
     
-    // Create synchronous wrappers for async functions since they're called from HTML onclick
-    window.clearHoldingTank = function() {
+    // Create synchronous wrappers for async functions for Function Registry access
+    const clearHoldingTankWrapper = function() {
       holdingTankInstance.clearHoldingTank().catch(error => {
         logError('Error in clearHoldingTank', error);
       });
     };
-    window.renameHoldingTankTab = function() {
+    const renameHoldingTankTabWrapper = function() {
       holdingTankInstance.renameHoldingTankTab().catch(error => {
         logError('Error in renameHoldingTankTab', error);
       });
     };
-    window.scale_scrollable = holdingTankInstance.scale_scrollable;
-    window.saveHoldingTankToStore = saveHoldingTankToStore;
-    window.holdingTankDrop = holdingTankInstance.holdingTankDrop.bind(holdingTankInstance);
+    
+    // Create a wrapper for saveHoldingTankToStore that includes state updates
+    const saveHoldingTankToStoreWrapper = () => {
+      logInfo('Saving holding tank to store and refreshing display');
+      holdingTankInstance.saveHoldingTankToStore().then(() => {
+        logInfo('Holding tank saved successfully, refreshing display');
+        // Refresh the display after saving
+        window.populateHoldingTank();
+      }).catch(error => {
+        logError('Error saving holding tank to store', error);
+      });
+    };
+    
+    // Store wrapper functions on instance for Function Registry access
+    holdingTankInstance.clearHoldingTankWrapper = clearHoldingTankWrapper;
+    holdingTankInstance.renameHoldingTankTabWrapper = renameHoldingTankTabWrapper;
+    holdingTankInstance.saveHoldingTankToStoreWrapper = saveHoldingTankToStoreWrapper;
+    logInfo('Holding tank module stored in registry');
 
     // Import hotkeys module and store in registry
     try {
@@ -433,27 +417,19 @@ $(document).ready(async function() {
       logInfo('Hotkeys module instance created successfully');
       logDebug('hotkeysInstance.populateHotkeys available', typeof hotkeysInstance.populateHotkeys);
       
-      // Create minimal window assignments for HTML compatibility
-      window.clearHotkeys = function() {
+      // Create wrapper functions for Function Registry access
+      const clearHotkeysWrapper = function() {
         hotkeysInstance.clearHotkeys().catch(error => {
           logError('Error in clearHotkeys', error);
         });
       };
-      window.renameHotkeyTab = function() {
+      const renameHotkeyTabWrapper = function() {
         hotkeysInstance.renameHotkeyTab().catch(error => {
           logError('Error in renameHotkeyTab', error);
         });
       };
-      window.playSongFromHotkey = hotkeysInstance.playSongFromHotkey.bind(hotkeysInstance);
-      window.switchToHotkeyTab = hotkeysInstance.switchToHotkeyTab.bind(hotkeysInstance);
-      
-      // Bind populateHotkeys with proper context
-      window.populateHotkeys = function(fkeys, title) {
-        logDebug('window.populateHotkeys called with', { fkeys, title });
-        logDebug('hotkeysInstance type', typeof hotkeysInstance);
-        logDebug('hotkeysInstance.populateHotkeys type', typeof hotkeysInstance.populateHotkeys);
-        logDebug('hotkeysInstance.populateHotkeys.toString()', hotkeysInstance.populateHotkeys.toString().substring(0, 100));
-        
+      const populateHotkeysWrapper = function(fkeys, title) {
+        logDebug('populateHotkeysWrapper called with', { fkeys, title });
         try {
           logInfo('About to call hotkeysInstance.populateHotkeys...');
           const result = hotkeysInstance.populateHotkeys.call(hotkeysInstance, fkeys, title);
@@ -461,16 +437,14 @@ $(document).ready(async function() {
           return result;
         } catch (error) {
           logError('Error in populateHotkeys', error);
-          logError('Error stack', error.stack);
-          logError('Error message', error.message);
           throw error;
         }
       };
-      window.setLabelFromSongId = hotkeysInstance.setLabelFromSongId.bind(hotkeysInstance);
-      window.sendToHotkeys = hotkeysInstance.sendToHotkeys.bind(hotkeysInstance);
-      window.hotkeyDrop = hotkeysInstance.hotkeyDrop.bind(hotkeysInstance);
-      window.allowHotkeyDrop = hotkeysInstance.allowHotkeyDrop.bind(hotkeysInstance);
-      window.removeFromHotkey = hotkeysInstance.removeFromHotkey.bind(hotkeysInstance);
+      
+      // Store wrapper functions on instance for Function Registry access
+      hotkeysInstance.clearHotkeysWrapper = clearHotkeysWrapper;
+      hotkeysInstance.renameHotkeyTabWrapper = renameHotkeyTabWrapper;
+      hotkeysInstance.populateHotkeysWrapper = populateHotkeysWrapper;
       logInfo('Hotkeys module loaded successfully');
       logInfo('populateHotkeys function is now available globally');
       
@@ -549,13 +523,8 @@ $(document).ready(async function() {
       // Store in registry and create minimal window assignments
       moduleRegistry.categories = categoriesInstance;
       
-      // Only assign functions called from HTML
-      window.populateCategorySelect = categoriesInstance.populateCategorySelect.bind(categoriesInstance);
-      window.openCategoriesModal = categoriesInstance.openCategoriesModal.bind(categoriesInstance);
-      window.addNewCategory = categoriesInstance.addNewCategoryUI.bind(categoriesInstance);
-      window.saveCategories = categoriesInstance.saveCategories.bind(categoriesInstance);
-      window.editCategoryUI = categoriesInstance.editCategoryUI.bind(categoriesInstance);
-      window.deleteCategoryUI = categoriesInstance.deleteCategoryUI.bind(categoriesInstance);
+      // Store in registry for Function Registry to manage
+      logInfo('Categories module stored in registry');
       
       // Update the wrapper function for the HTML onclick compatibility
       window.deleteCategory = function(event, code, description) {
@@ -583,10 +552,8 @@ $(document).ready(async function() {
       const bulkOperationsInstance = bulkOperationsModule.default;
       moduleRegistry.bulkOperations = bulkOperationsInstance;
       
-      // Only assign functions called from HTML
-      window.showBulkAddModal = bulkOperationsInstance.showBulkAddModal;
-      window.addSongsByPath = bulkOperationsInstance.addSongsByPath;
-      window.saveBulkUpload = bulkOperationsInstance.saveBulkUpload;
+      // Store in registry for Function Registry to manage
+      logInfo('Bulk operations module stored in registry');
     } catch (error) {
       logError('Error loading bulk-operations module', error);
       // Continue loading other modules even if bulk operations fails
@@ -598,14 +565,16 @@ $(document).ready(async function() {
       dragDropModule = await import('./renderer/modules/drag-drop/index.js');
       logInfo('drag-drop module loaded successfully');
       
-      // Store in registry and create minimal window assignments
+      // Store in registry for Function Registry to manage
       const dragDropInstance = dragDropModule.default;
-      moduleRegistry.dragDrop = dragDropInstance;
       
-      // Import functions directly from the functions file to avoid conflicts
+      // Import functions and add them to the instance
       const { songDrag, columnDrag } = await import('./renderer/modules/drag-drop/drag-drop-functions.js');
-      window.songDrag = songDrag;
-      window.columnDrag = columnDrag;
+      dragDropInstance.songDrag = songDrag;
+      dragDropInstance.columnDrag = columnDrag;
+      
+      moduleRegistry.dragDrop = dragDropInstance;
+      logInfo('Drag drop module stored in registry');
     } catch (error) {
       logError('Error loading drag-drop module', error);
       // Continue loading other modules even if drag-drop fails
@@ -621,11 +590,8 @@ $(document).ready(async function() {
       const navigationInstance = navigationModule.default;
       moduleRegistry.navigation = navigationInstance;
       
-      // Only assign functions called from HTML
-      window.sendToHotkeys = navigationInstance.sendToHotkeys;
-      window.sendToHoldingTank = navigationInstance.sendToHoldingTank;
-      window.selectNext = navigationInstance.selectNext;
-      window.selectPrev = navigationInstance.selectPrev;
+      // Store in registry for Function Registry to manage
+      logInfo('Navigation module stored in registry');
     } catch (error) {
       logError('Error loading navigation module', error);
       // Continue loading other modules even if navigation fails
@@ -641,12 +607,8 @@ $(document).ready(async function() {
       const modeManagementInstance = modeManagementModule.default;
       moduleRegistry.modeManagement = modeManagementInstance;
       
-      // Only assign functions called from HTML
-      window.setHoldingTankMode = modeManagementInstance.setHoldingTankMode;
-      window.getHoldingTankMode = modeManagementInstance.getHoldingTankMode;
-      window.toggleAutoPlay = modeManagementInstance.toggleAutoPlay;
-      window.getAutoPlayState = modeManagementInstance.getAutoPlayState;
-      window.resetToDefaultMode = modeManagementInstance.resetToDefaultMode;
+      // Store in registry for Function Registry to manage
+      logInfo('Mode management module stored in registry');
       
       // Initialize mode management module
       const result = await modeManagementInstance.initModeManagement();
@@ -671,13 +633,8 @@ $(document).ready(async function() {
       moduleRegistry.testUtils = testUtilsInstance;
       
       // Only assign functions called from HTML
-      window.testPhase2Migrations = testUtilsInstance.testPhase2Migrations;
-      window.testDatabaseAPI = testUtilsInstance.testDatabaseAPI;
-      window.testFileSystemAPI = testUtilsInstance.testFileSystemAPI;
-      window.testStoreAPI = testUtilsInstance.testStoreAPI;
-      window.testAudioAPI = testUtilsInstance.testAudioAPI;
-      window.testSecurityFeatures = testUtilsInstance.testSecurityFeatures;
-      window.runAllTests = testUtilsInstance.runAllTests;
+      // Store in registry for Function Registry to manage
+      logInfo('Test utils module stored in registry');
     } catch (error) {
       logError('Error loading test-utils module', error);
       // Continue loading other modules even if test utils fails
@@ -698,12 +655,8 @@ $(document).ready(async function() {
       // Initialize the search module
       searchInstance.init();
       
-      // Only assign functions called from HTML
-      window.searchData = searchInstance.searchData.bind(searchInstance);
-      window.performLiveSearch = searchInstance.performLiveSearch.bind(searchInstance);
-      window.toggleAdvancedSearch = searchInstance.toggleAdvancedSearch.bind(searchInstance);
-      window.triggerLiveSearch = searchInstance.triggerLiveSearch.bind(searchInstance);
-      window.clearSearchResults = searchInstance.clearSearchResults.bind(searchInstance);
+      // Store in registry for Function Registry to manage
+      logInfo('Search module stored in registry');
       logInfo('Search module loaded successfully');
     } catch (error) {
       logWarn('Failed to load search module', error);
@@ -725,15 +678,8 @@ $(document).ready(async function() {
       // Initialize the audio module
       audioInstance.init();
       
-      // Only assign functions called from HTML
-      window.playSongFromId = audioInstance.playSongFromId.bind(audioInstance);
-      window.stopPlaying = audioInstance.stopPlaying.bind(audioInstance);
-      window.pausePlaying = audioInstance.pausePlaying.bind(audioInstance);
-      window.resetUIState = audioInstance.resetUIState.bind(audioInstance);
-      window.autoplay_next = audioInstance.autoplay_next.bind(audioInstance);
-      window.cancel_autoplay = audioInstance.cancel_autoplay.bind(audioInstance);
-      window.playSelected = audioInstance.playSelected.bind(audioInstance);
-      window.loop_on = audioInstance.loop_on.bind(audioInstance);
+      // Store in registry for Function Registry to manage
+      logInfo('Audio module stored in registry');
       // window.howlerUtils = audioInstance.howlerUtils.bind(audioInstance); // Function not implemented yet
       logInfo('Audio module loaded successfully');
     } catch (error) {
@@ -764,32 +710,23 @@ $(document).ready(async function() {
       throw error;
     }
     
-    // Only assign functions called from HTML - use the reinitialized instance
+    // Store wrapper functions for async methods
     if (uiInstance) {
-      window.scaleScrollable = uiInstance.scaleScrollable;
-      window.editSelectedSong = uiInstance.editSelectedSong;
-      window.deleteSelectedSong = uiInstance.deleteSelectedSong;
-      window.closeAllTabs = uiInstance.closeAllTabs;
-      window.toggleSelectedRow = uiInstance.toggleSelectedRow;
-      window.switchToHotkeyTab = uiInstance.switchToHotkeyTab;
-      window.renameHotkeyTab = function() {
+      const renameHotkeyTabWrapper = function() {
         uiInstance.renameHotkeyTab().catch(error => {
           logError('Error in renameHotkeyTab', error);
         });
       };
-      window.renameHoldingTankTab = function() {
+      const renameHoldingTankTabUIWrapper = function() {
         uiInstance.renameHoldingTankTab().catch(error => {
           logError('Error in renameHoldingTankTab', error);
         });
       };
-      window.increaseFontSize = uiInstance.increaseFontSize;
-      window.decreaseFontSize = uiInstance.decreaseFontSize;
-      window.toggleWaveform = uiInstance.toggleWaveform;
-      // toggleAdvancedSearch is handled by the search module
-      window.pickDirectory = uiInstance.pickDirectory;
-      window.installUpdate = uiInstance.installUpdate;
-      window.getFontSize = uiInstance.getFontSize;
-      window.setFontSize = uiInstance.setFontSize;
+      
+      // Store wrapper functions on instance for Function Registry access
+      uiInstance.renameHotkeyTabWrapper = renameHotkeyTabWrapper;
+      uiInstance.renameHoldingTankTabUIWrapper = renameHoldingTankTabUIWrapper;
+      logInfo('UI module stored in registry');
     } else {
       logError('UI instance not available, skipping UI function assignments');
     }
@@ -810,17 +747,8 @@ $(document).ready(async function() {
       // Store in registry
       moduleRegistry.preferences = preferencesInstance;
       
-      // Only assign functions called from HTML
-      window.openPreferencesModal = preferencesInstance.openPreferencesModal;
-      window.loadPreferences = preferencesInstance.loadPreferences;
-      window.savePreferences = preferencesInstance.savePreferences;
-      window.getPreference = preferencesInstance.getPreference;
-      window.setPreference = preferencesInstance.setPreference;
-      window.getDatabaseDirectory = preferencesInstance.getDatabaseDirectory;
-      window.getMusicDirectory = preferencesInstance.getMusicDirectory;
-      window.getHotkeyDirectory = preferencesInstance.getHotkeyDirectory;
-      window.getFadeOutSeconds = preferencesInstance.getFadeOutSeconds;
-      window.getDebugLogEnabled = preferencesInstance.getDebugLogEnabled;
+      // Store in registry for Function Registry to manage
+      logInfo('Preferences module stored in registry');
     } catch (error) {
       logError('Error loading preferences module', error);
       throw error;
@@ -880,11 +808,8 @@ $(document).ready(async function() {
       // Initialize the database module
       databaseInstance.init();
       
-      // Only assign functions called from HTML
-      window.setLabelFromSongId = databaseInstance.setLabelFromSongId;
-      window.addToHoldingTank = databaseInstance.addToHoldingTank;
-      window.populateHoldingTank = databaseInstance.populateHoldingTank;
-      window.populateCategorySelect = databaseInstance.populateCategorySelect;
+      // Store in registry for Function Registry to manage
+      logInfo('Database module stored in registry');
       logInfo('Database module loaded successfully');
       logInfo('populateHoldingTank function is now available globally');
     } catch (error) {
@@ -920,15 +845,8 @@ $(document).ready(async function() {
       // Initialize the utils module
       utilsInstance.init();
       
-      // Only assign functions called from HTML
-      window.animateCSS = utilsInstance.animateCSS;
-      window.customConfirm = utilsInstance.customConfirm;
-      window.customPrompt = utilsInstance.customPrompt;
-      window.restoreFocusToSearch = utilsInstance.restoreFocusToSearch;
-      window.isValidSongId = utilsInstance.isValidSongId;
-      window.isValidCategoryCode = utilsInstance.isValidCategoryCode;
-      window.isValidFilePath = utilsInstance.isValidFilePath;
-      window.isValidHotkey = utilsInstance.isValidHotkey;
+      // Store in registry for Function Registry to manage
+      logInfo('Utils module stored in registry');
       logInfo('Utils module loaded successfully');
     } catch (error) {
       logError('Failed to load utils module', error);

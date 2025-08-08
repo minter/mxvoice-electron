@@ -19,14 +19,9 @@ export const uiFunctions = {
   // UI scaling and layout functions
   scaleScrollable: 'scaleScrollable',
   
-  // Song management UI functions
-  editSelectedSong: 'editSelectedSong',
-  deleteSelectedSong: 'deleteSelectedSong',
-  
-  // Tab management functions
+  // Tab management functions (note: editSelectedSong, deleteSelectedSong moved to song management)
   closeAllTabs: 'closeAllTabs',
   toggleSelectedRow: 'toggleSelectedRow',
-  switchToHotkeyTab: 'switchToHotkeyTab',
   
   // Font and display functions
   increaseFontSize: 'increaseFontSize',
@@ -40,14 +35,6 @@ export const uiFunctions = {
     module: 'ui-function-registry',
     function: 'scaleScrollableFallback'
   }),
-  editSelectedSongFallback: () => debugLog?.warn('UI module not available - editSelectedSong', { 
-    module: 'ui-function-registry',
-    function: 'editSelectedSongFallback'
-  }),
-  deleteSelectedSongFallback: () => debugLog?.warn('UI module not available - deleteSelectedSong', { 
-    module: 'ui-function-registry',
-    function: 'deleteSelectedSongFallback'
-  }),
   closeAllTabsFallback: () => debugLog?.warn('UI module not available - closeAllTabs', { 
     module: 'ui-function-registry',
     function: 'closeAllTabsFallback'
@@ -55,10 +42,6 @@ export const uiFunctions = {
   toggleSelectedRowFallback: () => debugLog?.warn('UI module not available - toggleSelectedRow', { 
     module: 'ui-function-registry',
     function: 'toggleSelectedRowFallback'
-  }),
-  switchToHotkeyTabFallback: () => debugLog?.warn('UI module not available - switchToHotkeyTab', { 
-    module: 'ui-function-registry',
-    function: 'switchToHotkeyTabFallback'
   }),
   increaseFontSizeFallback: () => debugLog?.warn('UI module not available - increaseFontSize', { 
     module: 'ui-function-registry',

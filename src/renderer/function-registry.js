@@ -187,14 +187,15 @@ class FunctionRegistry {
       },
       ui: {
         scaleScrollable: 'scaleScrollable',
-        editSelectedSong: 'editSelectedSong',
-        deleteSelectedSong: 'deleteSelectedSong',
         closeAllTabs: 'closeAllTabs',
         toggleSelectedRow: 'toggleSelectedRow',
-        switchToHotkeyTab: 'switchToHotkeyTab',
+        renameHotkeyTab: 'renameHotkeyTabWrapper',
+        renameHoldingTankTab: 'renameHoldingTankTabUIWrapper',
         increaseFontSize: 'increaseFontSize',
         decreaseFontSize: 'decreaseFontSize',
         toggleWaveform: 'toggleWaveform',
+        pickDirectory: 'pickDirectory',
+        installUpdate: 'installUpdate',
         getFontSize: 'getFontSize',
         setFontSize: 'setFontSize'
       }
@@ -239,14 +240,12 @@ class FunctionRegistry {
       deleteSelectedSong: 'deleteSelectedSong',
       deleteSong: 'deleteSong',
       removeFromHoldingTank: 'removeFromHoldingTank',
-      removeFromHotkey: 'removeFromHotkey',
       saveEditedSongFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
       saveNewSongFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
       editSelectedSongFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
       deleteSelectedSongFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
       deleteSongFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
-      removeFromHoldingTankFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' }),
-      removeFromHotkeyFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' })
+      removeFromHoldingTankFallback: () => this.debugLog.warn('Song management not available', { function: 'songManagementFallback' })
     });
 
     // Search Functions
@@ -260,10 +259,8 @@ class FunctionRegistry {
 
     // Database Functions
     this.registerModule('database', {
-      setLabelFromSongId: 'setLabelFromSongId',
       addToHoldingTank: 'addToHoldingTank',
-      populateHoldingTank: 'populateHoldingTank',
-      populateCategorySelect: 'populateCategorySelect'
+      populateHoldingTank: 'populateHoldingTank'
     });
 
     // Utils Functions
@@ -301,7 +298,6 @@ class FunctionRegistry {
 
     // Navigation Functions
     this.registerModule('navigation', {
-      sendToHotkeys: 'sendToHotkeys',
       sendToHoldingTank: 'sendToHoldingTank',
       selectNext: 'selectNext',
       selectPrev: 'selectPrev'
@@ -328,7 +324,9 @@ class FunctionRegistry {
     this.registerModule('hotkeys', {
       playSongFromHotkey: 'playSongFromHotkey',
       switchToHotkeyTab: 'switchToHotkeyTab',
-      populateHotkeys: 'populateHotkeys',
+      populateHotkeys: 'populateHotkeysWrapper',
+      clearHotkeys: 'clearHotkeysWrapper',
+      renameHotkeyTab: 'renameHotkeyTabWrapper',
       setLabelFromSongId: 'setLabelFromSongId',
       sendToHotkeys: 'sendToHotkeys',
       hotkeyDrop: 'hotkeyDrop',
@@ -338,10 +336,10 @@ class FunctionRegistry {
 
     // Holding Tank Functions
     this.registerModule('holdingTank', {
-      clearHoldingTank: 'clearHoldingTank',
-      renameHoldingTankTab: 'renameHoldingTankTab',
+      clearHoldingTank: 'clearHoldingTankWrapper',
+      renameHoldingTankTab: 'renameHoldingTankTabWrapper',
       scale_scrollable: 'scale_scrollable',
-      saveHoldingTankToStore: 'saveHoldingTankToStore',
+      saveHoldingTankToStore: 'saveHoldingTankToStoreWrapper',
       holdingTankDrop: 'holdingTankDrop'
     });
 
