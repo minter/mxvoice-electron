@@ -28,7 +28,7 @@ class BulkOperationsModule {
     // Setup event handlers for bulk operations
     setupBulkEventHandlers();
     
-    console.log('✅ Bulk Operations Module initialized');
+    window.debugLog?.info('✅ Bulk Operations Module initialized', { module: 'bulk-operations', function: 'initializeBulkOperations' });
   }
 
   /**

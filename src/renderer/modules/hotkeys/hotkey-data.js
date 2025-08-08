@@ -28,7 +28,7 @@ function populateHotkeys(fkeys, title, options = {}) {
           setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`));
         }
       } catch (err) {
-        console.log(`Error loading fkey ${key} (DB ID: ${fkeys[key]})`);
+        window.debugLog?.info(`Error loading fkey ${key} (DB ID: ${fkeys[key]})`, { module: 'hotkey-data', function: 'populateHotkeys' });
       }
     } else {
       $(`.hotkeys.active #${key}_hotkey`).removeAttr("songid");
@@ -81,11 +81,11 @@ function setLabelFromSongId(song_id, element, options = {}) {
           saveHotkeysToStore();
         }
       } else {
-        console.warn('❌ Failed to get song by ID:', result.error);
+        window.debugLog?.warn('❌ Failed to get song by ID:', result.error, { module: 'hotkey-data', function: 'setLabelFromSongId' });
         fallbackSetLabelFromSongId(song_id, element, options);
       }
     }).catch(error => {
-      console.warn('❌ Database API error:', error);
+      window.debugLog?.warn('❌ Database API error:', error, { module: 'hotkey-data', function: 'setLabelFromSongId' });
       fallbackSetLabelFromSongId(song_id, element, options);
     });
   } else {

@@ -85,7 +85,7 @@ class SharedState {
         try {
           callback(value);
         } catch (error) {
-          console.error(`Error in state listener for ${key}:`, error);
+          window.debugLog?.error(`Error in state listener for ${key}:`, error, { module: 'shared-state', function: 'notifyListeners' });
         }
       });
     }

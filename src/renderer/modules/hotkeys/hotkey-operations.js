@@ -23,12 +23,12 @@ function saveHotkeysToStore(options = {}) {
     if (electronAPI && electronAPI.store) {
       electronAPI.store.set("hotkeys", currentHtml).then(result => {
         if (result.success) {
-          console.log('✅ Hotkeys saved to store successfully');
+          window.debugLog?.info('✅ Hotkeys saved to store successfully', { module: 'hotkey-operations', function: 'saveHotkeysToStore' });
         } else {
-          console.warn('❌ Failed to save hotkeys to store:', result.error);
+          window.debugLog?.warn('❌ Failed to save hotkeys to store:', result.error, { module: 'hotkey-operations', function: 'saveHotkeysToStore' });
         }
       }).catch(error => {
-        console.warn('❌ Store save error:', error);
+        window.debugLog?.warn('❌ Store save error:', error, { module: 'hotkey-operations', function: 'saveHotkeysToStore' });
       });
     } else if (store) {
       store.set("hotkeys", currentHtml);
@@ -57,7 +57,7 @@ function loadHotkeysFromStore(options = {}) {
           ) {
             // This is the old HTML format, clear it so the new HTML loads
             electronAPI.store.delete("hotkeys").then(() => {
-              console.log("Cleared old hotkeys HTML format");
+              window.debugLog?.info("Cleared old hotkeys HTML format", { module: 'hotkey-operations', function: 'loadHotkeysFromStore' });
             });
           } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
             $("#hotkeys-column").html(storedHotkeysHtml);
@@ -76,7 +76,7 @@ function loadHotkeysFromStore(options = {}) {
         !storedHotkeysHtml.includes("header-button")
       ) {
         store.delete("hotkeys");
-        console.log("Cleared old hotkeys HTML format");
+        window.debugLog?.info("Cleared old hotkeys HTML format", { module: 'hotkey-operations', function: 'loadHotkeysFromStore' });
       } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
         $("#hotkeys-column").html(storedHotkeysHtml);
         $("#selected_row").removeAttr("id");
@@ -96,7 +96,7 @@ function openHotkeyFile(options = {}) {
   
   if (electronAPI) {
     electronAPI.openHotkeyFile().catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
+      window.debugLog?.warn('Modern API failed, falling back to legacy:', error, { module: 'hotkey-operations', function: 'openHotkeyFile' });
       if (typeof ipcRenderer !== 'undefined') {
         ipcRenderer.send("open-hotkey-file");
       }
@@ -115,7 +115,7 @@ function openHotkeyFile(options = {}) {
 function saveHotkeyFile(options = {}) {
   const { electronAPI } = options;
   
-  console.log("Renderer starting saveHotkeyFile");
+  window.debugLog?.info("Renderer starting saveHotkeyFile", { module: 'hotkey-operations', function: 'saveHotkeyFile' });
   const hotkeyArray = [];
   for (let key = 1; key <= 12; key++) {
     hotkeyArray.push($(`.hotkeys.active li#f${key}_hotkey`).attr("songid"));
@@ -126,7 +126,7 @@ function saveHotkeyFile(options = {}) {
   
   if (electronAPI) {
     electronAPI.saveHotkeyFile(hotkeyArray).catch(error => {
-      console.warn('Modern API failed, falling back to legacy:', error);
+      window.debugLog?.warn('Modern API failed, falling back to legacy:', error, { module: 'hotkey-operations', function: 'saveHotkeyFile' });
       if (typeof ipcRenderer !== 'undefined') {
         ipcRenderer.send("save-hotkey-file", hotkeyArray);
       }
@@ -144,11 +144,11 @@ function saveHotkeyFile(options = {}) {
  * @param {Object} options - Options object containing dependencies
  */
 function playSongFromHotkey(hotkey, options = {}) {
-  console.log("Getting song ID from hotkey " + hotkey);
+  window.debugLog?.info("Getting song ID from hotkey " + hotkey, { module: 'hotkey-operations', function: 'playSongFromHotkey' });
   const song_id = $(`.hotkeys.active #${hotkey}_hotkey`).attr("songid");
-  console.log(`Found song ID ${song_id}`);
+  window.debugLog?.info(`Found song ID ${song_id}`, { module: 'hotkey-operations', function: 'playSongFromHotkey' });
   if (song_id) {
-    console.log(`Preparing to play song ${song_id}`);
+    window.debugLog?.info(`Preparing to play song ${song_id}`, { module: 'hotkey-operations', function: 'playSongFromHotkey' });
     // Unhighlight any selected tracks in holding tank or playlist
     $(".now_playing").first().removeClass("now_playing");
     $("#selected_row").removeAttr("id");
@@ -200,18 +200,18 @@ function removeFromHotkey(options = {}) {
   const { db, saveHotkeysToStore } = options;
   
   const songId = $("#selected_row").attr("songid");
-  console.log("removeFromHotkey called, songId:", songId);
-  console.log("selected_row element:", $("#selected_row"));
+  window.debugLog?.info("removeFromHotkey called, songId:", songId, { module: 'hotkey-operations', function: 'removeFromHotkey' });
+  window.debugLog?.info("selected_row element:", $("#selected_row"), { module: 'hotkey-operations', function: 'removeFromHotkey' });
   
   if (songId) {
-    console.log(`Preparing to remove song ${songId} from hotkey`);
+    window.debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'hotkey-operations', function: 'removeFromHotkey' });
     if (db) {
       const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
       const songRow = songStmt.get(songId);
       
       if (songRow) {
         customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`, () => {
-          console.log("Proceeding with removal from hotkey");
+          window.debugLog?.info("Proceeding with removal from hotkey", { module: 'hotkey-operations', function: 'removeFromHotkey' });
           // Clear the hotkey slot
           $("#selected_row").removeAttr("songid");
           $("#selected_row span").html("");
@@ -221,10 +221,10 @@ function removeFromHotkey(options = {}) {
           if (saveHotkeysToStore) {
             saveHotkeysToStore();
           }
-          console.log("Hotkey cleared successfully");
+          window.debugLog?.info("Hotkey cleared successfully", { module: 'hotkey-operations', function: 'removeFromHotkey' });
         });
       } else {
-        console.error("Song not found in database for ID:", songId);
+        window.debugLog?.error("Song not found in database for ID:", songId, { module: 'hotkey-operations', function: 'removeFromHotkey' });
         // Still clear the hotkey even if song not found
         $("#selected_row").removeAttr("songid");
         $("#selected_row span").html("");
@@ -243,7 +243,7 @@ function removeFromHotkey(options = {}) {
       }
     }
   } else {
-    console.log("No songId found on selected row");
+    window.debugLog?.info("No songId found on selected row", { module: 'hotkey-operations', function: 'removeFromHotkey' });
   }
 }
 
@@ -281,7 +281,7 @@ function importHotkeyConfig(config, options = {}) {
   const { setLabelFromSongId, saveHotkeysToStore } = options;
   
   if (!config || !config.hotkeys) {
-    console.warn('❌ Invalid hotkey configuration');
+    window.debugLog?.warn('❌ Invalid hotkey configuration', { module: 'hotkey-operations', function: 'importHotkeyConfig' });
     return;
   }
   
@@ -335,7 +335,7 @@ function backupHotkeyConfig() {
  */
 function restoreHotkeyConfig(backup, options = {}) {
   if (!backup || !backup.hotkeys) {
-    console.warn('❌ Invalid backup configuration');
+    window.debugLog?.warn('❌ Invalid backup configuration', { module: 'hotkey-operations', function: 'restoreHotkeyConfig' });
     return;
   }
   
@@ -351,7 +351,7 @@ function restoreHotkeyConfig(backup, options = {}) {
 function clearHotkeyConfig(options = {}) {
   const { saveHotkeysToStore } = options;
   
-  console.log('🧹 Clearing hotkey configuration...');
+  window.debugLog?.info('🧹 Clearing hotkey configuration...', { module: 'hotkey-operations', function: 'clearHotkeyConfig' });
   
   // Clear all hotkey assignments
   for (let key = 1; key <= 12; key++) {
@@ -364,7 +364,7 @@ function clearHotkeyConfig(options = {}) {
     saveHotkeysToStore();
   }
   
-  console.log('✅ Hotkey configuration cleared');
+  window.debugLog?.info('✅ Hotkey configuration cleared', { module: 'hotkey-operations', function: 'clearHotkeyConfig' });
 }
 
 /**
