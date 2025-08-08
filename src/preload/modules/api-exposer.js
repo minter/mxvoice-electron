@@ -12,6 +12,11 @@ import Mousetrap from 'mousetrap';
 import { v4 as uuidv4 } from 'uuid';
 import util from 'util';
 import fs from 'fs';
+import { initializeMainDebugLog } from '../../main/modules/debug-log.js';
+
+// Initialize debug logger
+const store = new Store();
+const debugLog = initializeMainDebugLog({ store });
 
 // Modern API structure - extracted from preload.js
 const electronAPI = {
@@ -128,7 +133,7 @@ function setupGlobalExposure(dbInstance = null) {
     // Modern API
     global.electronAPI = electronAPI;
     
-    console.log('Global exposure setup completed');
+    debugLog.info('Global exposure setup completed');
   });
 }
 
@@ -142,9 +147,9 @@ function setDatabaseInstance(dbInstance) {
 
 // Test function to verify API exposer is working
 function testApiExposer() {
-  console.log('Testing API Exposer...');
-  console.log('ElectronAPI methods:', Object.keys(electronAPI));
-  console.log('Legacy globals:', Object.keys(legacyGlobals));
+  debugLog.debug('Testing API Exposer...');
+  debugLog.debug('ElectronAPI methods:', Object.keys(electronAPI));
+  debugLog.debug('Legacy globals:', Object.keys(legacyGlobals));
   return true;
 }
 

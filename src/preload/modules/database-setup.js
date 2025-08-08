@@ -8,8 +8,10 @@ import Store from 'electron-store';
 import path from 'path';
 import fs from 'fs';
 import Database from 'better-sqlite3';
+import { initializeMainDebugLog } from '../../main/modules/debug-log.js';
 
 const store = new Store();
+const debugLog = initializeMainDebugLog({ store });
 
 let dbInstance = null;
 
@@ -18,17 +20,17 @@ function initializeDatabase() {
     var dbName = "mxvoice.db";
     const databaseDirectory = store.get("database_directory");
     
-    console.log(`Looking for database in ${databaseDirectory}`);
+    debugLog.info(`Looking for database in ${databaseDirectory}`);
     
     // Handle case where database directory is not set
     if (!databaseDirectory) {
-      console.warn('Database directory not set, using default');
+      debugLog.warn('Database directory not set, using default');
       const defaultDbPath = path.join(process.cwd(), 'data');
       if (!fs.existsSync(defaultDbPath)) {
         fs.mkdirSync(defaultDbPath, { recursive: true });
       }
       const dbPath = path.join(defaultDbPath, dbName);
-      console.log(`Using default database path: ${dbPath}`);
+      debugLog.info(`Using default database path: ${dbPath}`);
       
       dbInstance = new Database(dbPath);
       setupDatabaseIndexes(dbInstance);
@@ -39,7 +41,7 @@ function initializeDatabase() {
       dbName = "mrvoice.db";
     }
     
-    console.log(
+    debugLog.info(
       `Attempting to open database file ${path.join(
         databaseDirectory,
         dbName
@@ -55,10 +57,10 @@ function initializeDatabase() {
     
     return dbInstance;
   } catch (error) {
-    console.error('Error initializing database:', error);
+    debugLog.error('Error initializing database:', error);
     
     // Fallback: create a test database in memory
-    console.log('Creating fallback in-memory database for testing');
+    debugLog.info('Creating fallback in-memory database for testing');
     dbInstance = new Database(":memory:");
     
     // Create basic tables for testing
@@ -87,43 +89,43 @@ function setupDatabaseIndexes(db) {
   try {
     // Category indexes
     if (db.pragma('index_info(category_code_index)').length == 0) {
-      console.log(`Creating unique index on category codes`);
+      debugLog.info(`Creating unique index on category codes`);
       const stmt = db.prepare("CREATE UNIQUE INDEX 'category_code_index' ON categories(code)");
       stmt.run();
     }
 
     if (db.pragma('index_info(category_description_index)').length == 0) {
-      console.log(`Creating unique index on category descriptions`);
+      debugLog.info(`Creating unique index on category descriptions`);
       const stmt = db.prepare("CREATE UNIQUE INDEX 'category_description_index' ON categories(description)");
       stmt.run();
     }
 
     // Search indexes for better performance
     if (db.pragma('index_info(idx_title)').length == 0) {
-      console.log(`Creating index on title column`);
+      debugLog.info(`Creating index on title column`);
       const stmt = db.prepare("CREATE INDEX 'idx_title' ON mrvoice(title)");
       stmt.run();
     }
 
     if (db.pragma('index_info(idx_artist)').length == 0) {
-      console.log(`Creating index on artist column`);
+      debugLog.info(`Creating index on artist column`);
       const stmt = db.prepare("CREATE INDEX 'idx_artist' ON mrvoice(artist)");
       stmt.run();
     }
 
     if (db.pragma('index_info(idx_info)').length == 0) {
-      console.log(`Creating index on info column`);
+      debugLog.info(`Creating index on info column`);
       const stmt = db.prepare("CREATE INDEX 'idx_info' ON mrvoice(info)");
       stmt.run();
     }
 
     if (db.pragma('index_info(idx_category)').length == 0) {
-      console.log(`Creating index on category column`);
+      debugLog.info(`Creating index on category column`);
       const stmt = db.prepare("CREATE INDEX 'idx_category' ON mrvoice(category)");
       stmt.run();
     }
   } catch (error) {
-    console.warn('Error setting up database indexes:', error);
+    debugLog.warn('Error setting up database indexes:', error);
   }
 }
 
@@ -134,22 +136,22 @@ function getDatabase() {
 
 // Test function to verify database setup is working
 function testDatabaseSetup() {
-  console.log('Testing Database Setup...');
+  debugLog.debug('Testing Database Setup...');
   
   try {
     if (!dbInstance) {
       dbInstance = initializeDatabase();
     }
-    console.log('✅ Database initialized successfully');
+    debugLog.info('✅ Database initialized successfully');
     
     // Test basic database operations
     const stmt = dbInstance.prepare("SELECT COUNT(*) as count FROM categories");
     const result = stmt.get();
-    console.log(`✅ Database query successful: ${result.count} categories found`);
+    debugLog.info(`✅ Database query successful: ${result.count} categories found`);
     
     return true;
   } catch (error) {
-    console.error('❌ Database setup failed:', error);
+    debugLog.error('❌ Database setup failed:', error);
     return false;
   }
 }

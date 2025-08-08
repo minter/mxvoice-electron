@@ -8,11 +8,17 @@
 import { ipcRenderer, contextBridge } from 'electron';
 import { Howl, Howler } from 'howler';
 import log from 'electron-log';
+import { initializeMainDebugLog } from '../main/modules/debug-log.js';
+import Store from 'electron-store';
 
 // Import preload modules
 import * as ipcBridge from './modules/ipc-bridge.js';
 import * as apiExposer from './modules/api-exposer.js';
 import * as databaseSetup from './modules/database-setup.js';
+
+// Initialize debug logger
+const store = new Store();
+const debugLog = initializeMainDebugLog({ store });
 
 console.log = log.log;
 
@@ -30,7 +36,7 @@ apiExposer.setDatabaseInstance(db);
 
 // Test function to verify modular preload is working
 function testModularPreload() {
-  console.log('🧪 Testing Modular Preload...');
+  debugLog.debug('🧪 Testing Modular Preload...');
   
   // Test database setup
   const dbTest = databaseSetup.testDatabaseSetup();
@@ -42,10 +48,10 @@ function testModularPreload() {
   const ipcTest = ipcBridge.testIpcBridge();
   
   if (dbTest && apiTest && ipcTest) {
-    console.log('✅ Modular preload is working correctly!');
+    debugLog.info('✅ Modular preload is working correctly!');
     return true;
   } else {
-    console.log('❌ Modular preload has issues');
+    debugLog.error('❌ Modular preload has issues');
     return false;
   }
 }
@@ -55,4 +61,4 @@ if (typeof window !== 'undefined') {
   window.testModularPreload = testModularPreload;
 }
 
-console.log('Modular preload initialized successfully'); 
+debugLog.info('Modular preload initialized successfully'); 
