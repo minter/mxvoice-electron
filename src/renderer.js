@@ -116,7 +116,11 @@ function checkSharedStateHealth() {
 // Initialize shared state first with proper error handling and state management
 async function initializeSharedState() {
   try {
-    logInfo('Initializing shared state...');
+    if (debugLogger) {
+      debugLogger.info('Initializing shared state...');
+    } else {
+      console.log('🔧 Initializing shared state...');
+    }
     
     const sharedStateModule = await import('./renderer/modules/shared-state.js');
     sharedStateInstance = sharedStateModule.default;
@@ -276,10 +280,13 @@ function saveHotkeysToStore() {
 // Initialize shared state when DOM is ready
 $(document).ready(async function() {
   try {
-    logInfo('DOM ready, initializing debug logger...');
+    // Use console directly before debug logger is initialized
+    console.log('🔧 DOM ready, initializing debug logger...');
     await initializeDebugLoggerInstance();
     
-    logInfo('DOM ready, initializing shared state...');
+    // Now we can use the debug logger
+    debugLogger.info('Debug logger initialized, DOM ready');
+    debugLogger.info('DOM ready, initializing shared state...');
     if (!sharedStateInitialized) {
       await initializeSharedState();
     }
@@ -291,11 +298,19 @@ $(document).ready(async function() {
 // Load modules dynamically and make functions globally available
 (async function loadModules() {
   try {
-    logInfo('Starting module loading...');
+    if (debugLogger) {
+      debugLogger.info('Starting module loading...');
+    } else {
+      console.log('🔧 Starting module loading...');
+    }
     
     // Ensure shared state is initialized before loading modules
     if (!sharedStateInitialized) {
-      logInfo('Waiting for shared state initialization...');
+      if (debugLogger) {
+        debugLogger.info('Waiting for shared state initialization...');
+      } else {
+        console.log('🔧 Waiting for shared state initialization...');
+      }
       const sharedStateResult = await initializeSharedState();
       if (!sharedStateResult) {
         throw new Error('Failed to initialize shared state');

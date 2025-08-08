@@ -20,9 +20,14 @@ function initializeFileOperations(dependencies) {
   store = dependencies.store;
   debugLog = dependencies.debugLog;
   
-  debugLog?.info('🔍 Initializing file operations with dependencies:', { module: 'file-operations', function: 'initializeFileOperations', dependencies: dependencies });
-  debugLog?.info('🔍 mainWindow set:', { module: 'file-operations', function: 'initializeFileOperations', mainWindowSet: !!mainWindow });
-  debugLog?.info('🔍 store set:', { module: 'file-operations', function: 'initializeFileOperations', storeSet: !!store });
+  debugLog?.info('🔍 Initializing file operations with dependencies:', { 
+    module: 'file-operations', 
+    function: 'initializeFileOperations', 
+    mainWindowSet: !!dependencies.mainWindow,
+    storeSet: !!dependencies.store,
+    autoUpdaterSet: !!dependencies.autoUpdater,
+    debugLogSet: !!dependencies.debugLog
+  });
 }
 
 // Load hotkeys file

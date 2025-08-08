@@ -116,7 +116,28 @@ function initializeMainDebugLog(options = {}) {
     
     if (context) {
       if (typeof context === 'object') {
-        formattedMessage += ` | Context: ${JSON.stringify(context)}`;
+        try {
+          // Handle circular references safely
+          const seen = new WeakSet();
+          const contextString = JSON.stringify(context, (key, value) => {
+            if (typeof value === 'object' && value !== null) {
+              // Handle circular references
+              if (seen.has(value)) {
+                return '[Circular Reference]';
+              }
+              seen.add(value);
+              
+              // Replace complex objects with their constructor name
+              if (value.constructor && value.constructor.name !== 'Object') {
+                return `[${value.constructor.name}]`;
+              }
+            }
+            return value;
+          });
+          formattedMessage += ` | Context: ${contextString}`;
+        } catch (error) {
+          formattedMessage += ` | Context: [Object - unable to serialize: ${error.message}]`;
+        }
       } else {
         formattedMessage += ` | Context: ${context}`;
       }

@@ -64,8 +64,15 @@ const debugLog = initializeMainDebugLog({ store });
 
 // Auto-updater configuration
 const { autoUpdater } = electronUpdater;
-autoUpdater.logger = log;
-autoUpdater.logger.transports.file.level = "info";
+
+// Configure auto-updater to use our debug logger instead of electron-log
+autoUpdater.logger = {
+  info: (message) => debugLog.info(`[AutoUpdater] ${message}`, { module: 'auto-updater' }),
+  warn: (message) => debugLog.warn(`[AutoUpdater] ${message}`, { module: 'auto-updater' }),
+  error: (message) => debugLog.error(`[AutoUpdater] ${message}`, { module: 'auto-updater' }),
+  debug: (message) => debugLog.debug(`[AutoUpdater] ${message}`, { module: 'auto-updater' }),
+  log: (message) => debugLog.info(`[AutoUpdater] ${message}`, { module: 'auto-updater' })
+};
 
 // Set architecture-aware update feed URL for macOS
 if (process.platform === "darwin") {
