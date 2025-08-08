@@ -1,9 +1,81 @@
 // Remove legacy global variables and use shared state instead
 // Legacy globals moved to shared state module
 
+// Import debug logger for centralized logging
+import initializeDebugLogger from './renderer/modules/debug-log/debug-logger.js';
+
 // Global shared state instance
 let sharedStateInstance = null;
 let sharedStateInitialized = false;
+
+// Global debug logger instance
+let debugLogger = null;
+
+// Initialize debug logger with fallback
+async function initializeDebugLoggerInstance() {
+  try {
+    debugLogger = initializeDebugLogger({
+      electronAPI: window.electronAPI,
+      db: window.db,
+      store: null // Will use electronAPI.store
+    });
+    await debugLogger.info('Debug logger initialized');
+    return debugLogger;
+  } catch (error) {
+    console.error('Failed to initialize debug logger:', error);
+    // Create fallback logger
+    return {
+      log: console.log,
+      warn: console.warn,
+      error: console.error,
+      info: console.info,
+      debug: console.log,
+      isDebugEnabled: () => Promise.resolve(false),
+      setDebugEnabled: () => Promise.resolve(false),
+      getLogLevel: () => 2,
+      setLogLevel: () => {}
+    };
+  }
+}
+
+// Synchronous wrapper for common logging patterns
+function logInfo(message, context = null) {
+  if (debugLogger) {
+    debugLogger.info(message, context).catch(() => {
+      // Fallback to console if debug logger fails
+      console.log(`ℹ️ ${message}`, context);
+    });
+  } else {
+    console.log(`ℹ️ ${message}`, context);
+  }
+}
+
+function logDebug(message, context = null) {
+  if (debugLogger) {
+    debugLogger.debug(message, context).catch(() => {
+      // Fallback to console if debug logger fails
+      console.log(`🐛 ${message}`, context);
+    });
+  } else {
+    console.log(`🐛 ${message}`, context);
+  }
+}
+
+function logWarn(message, context = null) {
+  if (debugLogger) {
+    debugLogger.warn(message, context);
+  } else {
+    console.warn(`⚠️ ${message}`, context);
+  }
+}
+
+function logError(message, context = null) {
+  if (debugLogger) {
+    debugLogger.error(message, context);
+  } else {
+    console.error(`❌ ${message}`, context);
+  }
+}
 
 // Helper function to get shared state with fallback
 function getSharedState() {
@@ -12,17 +84,17 @@ function getSharedState() {
   }
   
   // Fallback: create a minimal shared state if not initialized
-  console.warn('⚠️ Shared state not initialized, using fallback');
+  logWarn('Shared state not initialized, using fallback');
   return {
     get: (key) => {
-      console.warn(`⚠️ Shared state fallback get(${key})`);
+      logWarn(`Shared state fallback get(${key})`);
       return null;
     },
     set: (key, value) => {
-      console.warn(`⚠️ Shared state fallback set(${key}, ${value})`);
+      logWarn(`Shared state fallback set(${key}, ${value})`);
     },
     subscribe: (key, callback) => {
-      console.warn(`⚠️ Shared state fallback subscribe(${key})`);
+      logWarn(`Shared state fallback subscribe(${key})`);
       return () => {};
     }
   };
@@ -37,14 +109,14 @@ function checkSharedStateHealth() {
     windowGetSharedState: !!window.getSharedState
   };
   
-  console.log('🔍 Shared State Health Check:', health);
+  logDebug('Shared State Health Check', health);
   return health;
 }
 
 // Initialize shared state first with proper error handling and state management
 async function initializeSharedState() {
   try {
-    console.log('🔄 Initializing shared state...');
+    logInfo('Initializing shared state...');
     
     const sharedStateModule = await import('./renderer/modules/shared-state.js');
     sharedStateInstance = sharedStateModule.default;
@@ -61,7 +133,7 @@ async function initializeSharedState() {
     sharedStateInstance.set('createWaveSurfer', () => {
       const waveformElement = document.getElementById('waveform');
       if (waveformElement && typeof WaveSurfer !== 'undefined' && !sharedStateInstance.get('wavesurfer')) {
-        console.log('🔄 Creating WaveSurfer instance...');
+        logInfo('Creating WaveSurfer instance...');
         const wavesurfer = WaveSurfer.create({
           container: "#waveform",
           waveColor: "#e9ecef",
@@ -94,10 +166,10 @@ async function initializeSharedState() {
     window.checkSharedStateHealth = checkSharedStateHealth;
     
     sharedStateInitialized = true;
-    console.log('✅ Shared state initialized with default values');
+    logInfo('Shared state initialized with default values');
     return true;
   } catch (error) {
-    console.error('❌ Failed to initialize shared state:', error);
+    logError('Failed to initialize shared state', error);
     sharedStateInitialized = false;
     return false;
   }
@@ -122,7 +194,7 @@ let functionMonitor = null;
 window.electronAPI.store.has("holding_tank").then(hasHoldingTank => {
   if (hasHoldingTank) {
     window.electronAPI.store.delete("holding_tank").then(() => {
-      console.log("Cleared holding tank store to load new HTML");
+      logInfo("Cleared holding tank store to load new HTML");
     });
   }
 });
@@ -142,7 +214,7 @@ window.electronAPI.store.has("hotkeys").then(hasHotkeys => {
       ) {
         // This is the old HTML format, clear it so the new HTML loads
         window.electronAPI.store.delete("hotkeys").then(() => {
-          console.log("Cleared old hotkeys HTML format");
+          logInfo("Cleared old hotkeys HTML format");
         });
       } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
         $("#hotkeys-column").html(storedHotkeysHtml);
@@ -204,30 +276,33 @@ function saveHotkeysToStore() {
 // Initialize shared state when DOM is ready
 $(document).ready(async function() {
   try {
-    console.log('🔄 DOM ready, initializing shared state...');
+    logInfo('DOM ready, initializing debug logger...');
+    await initializeDebugLoggerInstance();
+    
+    logInfo('DOM ready, initializing shared state...');
     if (!sharedStateInitialized) {
       await initializeSharedState();
     }
   } catch (error) {
-    console.error('❌ Error initializing shared state on DOM ready:', error);
+    logError('Error initializing shared state on DOM ready', error);
   }
 });
 
 // Load modules dynamically and make functions globally available
 (async function loadModules() {
   try {
-    console.log('🔄 Starting module loading...');
+    logInfo('Starting module loading...');
     
     // Ensure shared state is initialized before loading modules
     if (!sharedStateInitialized) {
-      console.log('🔄 Waiting for shared state initialization...');
+      logInfo('Waiting for shared state initialization...');
       const sharedStateResult = await initializeSharedState();
       if (!sharedStateResult) {
         throw new Error('Failed to initialize shared state');
       }
     }
     
-    console.log('✅ Shared state is ready, proceeding with module loading...');
+    logInfo('Shared state is ready, proceeding with module loading...');
     
     // Declare module variables
     let fileOperationsModule, songManagementModule, holdingTankModule, hotkeysModule;
@@ -237,12 +312,12 @@ $(document).ready(async function() {
     
     // Import file operations module and make functions globally available
     try {
-      console.log('🔄 Loading file-operations module...');
+      logInfo('Loading file-operations module...');
       fileOperationsModule = await import('./renderer/modules/file-operations/index.js');
-      console.log('✅ file-operations module loaded successfully');
+      logInfo('file-operations module loaded successfully');
     } catch (error) {
-      console.error('❌ Error loading file-operations module:', error);
-      console.warn('⚠️ Continuing with other modules despite file-operations failure');
+      logError('Error loading file-operations module', error);
+      logWarn('Continuing with other modules despite file-operations failure');
       fileOperationsModule = null;
     }
     
@@ -260,24 +335,24 @@ $(document).ready(async function() {
       window.pickDirectory = fileOperationsInstance.pickDirectory;
       window.installUpdate = fileOperationsInstance.installUpdate;
     } else {
-      console.warn('⚠️ File operations module not available, creating fallback functions');
+      logWarn('File operations module not available, creating fallback functions');
       // Create fallback functions to prevent errors
-      window.openHotkeyFile = () => console.warn('⚠️ File operations not available');
-      window.openHoldingTankFile = () => console.warn('⚠️ File operations not available');
-      window.saveHotkeyFile = () => console.warn('⚠️ File operations not available');
-      window.saveHoldingTankFile = () => console.warn('⚠️ File operations not available');
-      window.pickDirectory = () => console.warn('⚠️ File operations not available');
-      window.installUpdate = () => console.warn('⚠️ File operations not available');
+      window.openHotkeyFile = () => logWarn('File operations not available');
+      window.openHoldingTankFile = () => logWarn('File operations not available');
+      window.saveHotkeyFile = () => logWarn('File operations not available');
+      window.saveHoldingTankFile = () => logWarn('File operations not available');
+      window.pickDirectory = () => logWarn('File operations not available');
+      window.installUpdate = () => logWarn('File operations not available');
     }
 
     // Import song management module and store in registry
     try {
-      console.log('🔄 Loading song-management module...');
+      logInfo('Loading song-management module...');
       songManagementModule = await import('./renderer/modules/song-management/index.js');
-      console.log('✅ song-management module loaded successfully');
+      logInfo('song-management module loaded successfully');
     } catch (error) {
-      console.error('❌ Error loading song-management module:', error);
-      console.warn('⚠️ Continuing with other modules despite song-management failure');
+      logError('Error loading song-management module', error);
+      logWarn('Continuing with other modules despite song-management failure');
       songManagementModule = null;
     }
     
@@ -295,24 +370,24 @@ $(document).ready(async function() {
       window.removeFromHoldingTank = songManagementInstance.removeFromHoldingTank;
       window.removeFromHotkey = songManagementInstance.removeFromHotkey;
     } else {
-      console.warn('⚠️ Song management module not available, creating fallback functions');
+      logWarn('Song management module not available, creating fallback functions');
       // Create fallback functions to prevent errors
-      window.saveEditedSong = () => console.warn('⚠️ Song management not available');
-      window.saveNewSong = () => console.warn('⚠️ Song management not available');
-      window.editSelectedSong = () => console.warn('⚠️ Song management not available');
-      window.deleteSelectedSong = () => console.warn('⚠️ Song management not available');
-      window.deleteSong = () => console.warn('⚠️ Song management not available');
-      window.removeFromHoldingTank = () => console.warn('⚠️ Song management not available');
-      window.removeFromHotkey = () => console.warn('⚠️ Song management not available');
+      window.saveEditedSong = () => logWarn('Song management not available');
+      window.saveNewSong = () => logWarn('Song management not available');
+      window.editSelectedSong = () => logWarn('Song management not available');
+      window.deleteSelectedSong = () => logWarn('Song management not available');
+      window.deleteSong = () => logWarn('Song management not available');
+      window.removeFromHoldingTank = () => logWarn('Song management not available');
+      window.removeFromHotkey = () => logWarn('Song management not available');
     }
 
     // Import holding tank module and store in registry
     try {
-      console.log('🔄 Loading holding-tank module...');
+      logInfo('Loading holding-tank module...');
       holdingTankModule = await import('./renderer/modules/holding-tank/index.js');
-      console.log('✅ holding-tank module loaded successfully');
+      logInfo('holding-tank module loaded successfully');
     } catch (error) {
-      console.error('❌ Error loading holding-tank module:', error);
+      logError('Error loading holding-tank module', error);
       throw error;
     }
     
@@ -323,12 +398,12 @@ $(document).ready(async function() {
     // Create synchronous wrappers for async functions since they're called from HTML onclick
     window.clearHoldingTank = function() {
       holdingTankInstance.clearHoldingTank().catch(error => {
-        console.error('❌ Error in clearHoldingTank:', error);
+        logError('Error in clearHoldingTank', error);
       });
     };
     window.renameHoldingTankTab = function() {
       holdingTankInstance.renameHoldingTankTab().catch(error => {
-        console.error('❌ Error in renameHoldingTankTab:', error);
+        logError('Error in renameHoldingTankTab', error);
       });
     };
     window.scale_scrollable = holdingTankInstance.scale_scrollable;
@@ -337,14 +412,14 @@ $(document).ready(async function() {
 
     // Import hotkeys module and store in registry
     try {
-      console.log('🔄 Loading hotkeys module...');
+      logInfo('Loading hotkeys module...');
       hotkeysModule = await import('./renderer/modules/hotkeys/index.js');
-      console.log('✅ hotkeys module loaded successfully');
+      logInfo('hotkeys module loaded successfully');
       
       // Create hotkeys module instance and store in registry
-      console.log('🔄 Creating hotkeys module instance...');
-      console.log('🔄 window.electronAPI available:', !!window.electronAPI);
-      console.log('🔄 window.electronAPI.store available:', !!window.electronAPI?.store);
+      logInfo('Creating hotkeys module instance...');
+      logDebug('window.electronAPI available', !!window.electronAPI);
+      logDebug('window.electronAPI.store available', !!window.electronAPI?.store);
       
       const hotkeysInstance = new hotkeysModule.default({
         electronAPI: window.electronAPI,
@@ -355,18 +430,18 @@ $(document).ready(async function() {
       // Store in registry
       moduleRegistry.hotkeys = hotkeysInstance;
       
-      console.log('🔄 Hotkeys module instance created successfully');
-      console.log('🔄 hotkeysInstance.populateHotkeys available:', typeof hotkeysInstance.populateHotkeys);
+      logInfo('Hotkeys module instance created successfully');
+      logDebug('hotkeysInstance.populateHotkeys available', typeof hotkeysInstance.populateHotkeys);
       
       // Create minimal window assignments for HTML compatibility
       window.clearHotkeys = function() {
         hotkeysInstance.clearHotkeys().catch(error => {
-          console.error('❌ Error in clearHotkeys:', error);
+          logError('Error in clearHotkeys', error);
         });
       };
       window.renameHotkeyTab = function() {
         hotkeysInstance.renameHotkeyTab().catch(error => {
-          console.error('❌ Error in renameHotkeyTab:', error);
+          logError('Error in renameHotkeyTab', error);
         });
       };
       window.playSongFromHotkey = hotkeysInstance.playSongFromHotkey.bind(hotkeysInstance);
@@ -374,20 +449,20 @@ $(document).ready(async function() {
       
       // Bind populateHotkeys with proper context
       window.populateHotkeys = function(fkeys, title) {
-        console.log('🔄 window.populateHotkeys called with:', { fkeys, title });
-        console.log('🔄 hotkeysInstance type:', typeof hotkeysInstance);
-        console.log('🔄 hotkeysInstance.populateHotkeys type:', typeof hotkeysInstance.populateHotkeys);
-        console.log('🔄 hotkeysInstance.populateHotkeys.toString():', hotkeysInstance.populateHotkeys.toString().substring(0, 100));
+        logDebug('window.populateHotkeys called with', { fkeys, title });
+        logDebug('hotkeysInstance type', typeof hotkeysInstance);
+        logDebug('hotkeysInstance.populateHotkeys type', typeof hotkeysInstance.populateHotkeys);
+        logDebug('hotkeysInstance.populateHotkeys.toString()', hotkeysInstance.populateHotkeys.toString().substring(0, 100));
         
         try {
-          console.log('🔄 About to call hotkeysInstance.populateHotkeys...');
+          logInfo('About to call hotkeysInstance.populateHotkeys...');
           const result = hotkeysInstance.populateHotkeys.call(hotkeysInstance, fkeys, title);
-          console.log('✅ populateHotkeys completed successfully');
+          logInfo('populateHotkeys completed successfully');
           return result;
         } catch (error) {
-          console.error('❌ Error in populateHotkeys:', error);
-          console.error('❌ Error stack:', error.stack);
-          console.error('❌ Error message:', error.message);
+          logError('Error in populateHotkeys', error);
+          logError('Error stack', error.stack);
+          logError('Error message', error.message);
           throw error;
         }
       };
@@ -396,66 +471,66 @@ $(document).ready(async function() {
       window.hotkeyDrop = hotkeysInstance.hotkeyDrop.bind(hotkeysInstance);
       window.allowHotkeyDrop = hotkeysInstance.allowHotkeyDrop.bind(hotkeysInstance);
       window.removeFromHotkey = hotkeysInstance.removeFromHotkey.bind(hotkeysInstance);
-      console.log('✅ Hotkeys module loaded successfully');
-      console.log('✅ populateHotkeys function is now available globally');
+      logInfo('Hotkeys module loaded successfully');
+      logInfo('populateHotkeys function is now available globally');
       
       // Test the hotkeys instance
-      console.log('🔄 Testing hotkeys instance...');
-      console.log('🔄 hotkeysInstance type:', typeof hotkeysInstance);
-      console.log('🔄 hotkeysInstance.populateHotkeys type:', typeof hotkeysInstance.populateHotkeys);
-      console.log('🔄 hotkeysInstance.electronAPI available:', !!hotkeysInstance.electronAPI);
-    } catch (error) {
-      console.warn('❌ Failed to load hotkeys module:', error);
-      // Continue loading other modules even if hotkeys fails
-    }
+      logDebug('Testing hotkeys instance...');
+      logDebug('hotkeysInstance type', typeof hotkeysInstance);
+      logDebug('hotkeysInstance.populateHotkeys type', typeof hotkeysInstance.populateHotkeys);
+      logDebug('hotkeysInstance.electronAPI available', !!hotkeysInstance.electronAPI);
+          } catch (error) {
+        logWarn('Failed to load hotkeys module', error);
+        // Continue loading other modules even if hotkeys fails
+      }
 
-    console.log('🔄 REACHED: After hotkeys module, before categories module...');
+    logDebug('REACHED: After hotkeys module, before categories module...');
     // Import categories module and make functions globally available
-    console.log('🔄 REACHED: About to start categories module loading...');
+    logDebug('REACHED: About to start categories module loading...');
     try {
-      console.log('🔄 Loading categories module...');
-      console.log('🔄 About to import categories module...');
+      logInfo('Loading categories module...');
+      logDebug('About to import categories module...');
       
       // Create a temporary deleteCategory function to prevent errors
       window.deleteCategory = function(event, code, description) {
-        console.log('deleteCategory called with:', { event, code, description });
+        logDebug('deleteCategory called with', { event, code, description });
         
         // Simple fallback implementation
         if (confirm(`Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`)) {
-          console.log(`Deleting category ${code}`);
+          logInfo(`Deleting category ${code}`);
           // For now, just show a message that the module isn't loaded
           alert('Category deletion requires the categories module to be loaded. Please try again.');
         }
         
         // Also try the deferred approach
         setTimeout(() => {
-          console.log('Checking for deleteCategoryUI...');
-          console.log('window.deleteCategoryUI:', typeof window.deleteCategoryUI);
-          console.log('window.deleteCategory:', typeof window.deleteCategory);
+          logDebug('Checking for deleteCategoryUI...');
+          logDebug('window.deleteCategoryUI', typeof window.deleteCategoryUI);
+          logDebug('window.deleteCategory', typeof window.deleteCategory);
           if (window.deleteCategoryUI) {
-            console.log('Calling deleteCategoryUI...');
+            logInfo('Calling deleteCategoryUI...');
             window.deleteCategoryUI(event, code, description);
           } else {
-            console.error('deleteCategoryUI not available');
-            console.log('Available window functions:', Object.keys(window).filter(key => key.includes('delete')));
+            logError('deleteCategoryUI not available');
+            logDebug('Available window functions', Object.keys(window).filter(key => key.includes('delete')));
           }
         }, 100);
       };
       
-      console.log('🔄 Starting import of categories module...');
+      logInfo('Starting import of categories module...');
       try {
         categoriesModule = await import('./renderer/modules/categories/index.js');
-        console.log('✅ categories module import successful');
+        logInfo('categories module import successful');
       } catch (importError) {
-        console.error('❌ Categories module import failed:', importError);
+        logError('Categories module import failed', importError);
         throw importError;
       }
-      console.log('✅ categories module loaded successfully');
+      logInfo('categories module loaded successfully');
       
       // The categories module exports a singleton instance, not a constructor
       const categoriesInstance = categoriesModule.default;
-      console.log('✅ categoriesInstance created:', typeof categoriesInstance);
-      console.log('✅ categoriesInstance.deleteCategoryUI:', typeof categoriesInstance.deleteCategoryUI);
+      logDebug('categoriesInstance created', typeof categoriesInstance);
+      logDebug('categoriesInstance.deleteCategoryUI', typeof categoriesInstance.deleteCategoryUI);
       
       // Initialize the categories module
       await categoriesInstance.init();
@@ -463,13 +538,13 @@ $(document).ready(async function() {
       // Load categories into shared state for other modules to use
       try {
         await categoriesInstance.loadCategories();
-        console.log('✅ Categories loaded into shared state');
+        logInfo('Categories loaded into shared state');
       } catch (error) {
-        console.warn('❌ Failed to load categories into shared state:', error);
+        logWarn('Failed to load categories into shared state', error);
       }
       
-      console.log('✅ Categories module initialized');
-      console.log('✅ deleteCategoryUI available:', typeof categoriesInstance.deleteCategoryUI);
+      logInfo('Categories module initialized');
+      logDebug('deleteCategoryUI available', typeof categoriesInstance.deleteCategoryUI);
       
       // Store in registry and create minimal window assignments
       moduleRegistry.categories = categoriesInstance;
@@ -484,24 +559,25 @@ $(document).ready(async function() {
       
       // Update the wrapper function for the HTML onclick compatibility
       window.deleteCategory = function(event, code, description) {
-        console.log('deleteCategory wrapper called with:', { event, code, description });
-        console.log('deleteCategory parameters - code:', code, 'description:', description);
+        logDebug('deleteCategory wrapper called with', { event, code, description });
+        logDebug('deleteCategory parameters - code', code);
+        logDebug('deleteCategory parameters - description', description);
         return categoriesInstance.deleteCategoryUI(event, code, description);
       };
       
-      console.log('✅ Categories module loaded successfully');
-      console.log('✅ deleteCategory function available:', typeof window.deleteCategory);
+      logInfo('Categories module loaded successfully');
+      logDebug('deleteCategory function available', typeof window.deleteCategory);
     } catch (error) {
-      console.warn('❌ Failed to load categories module:', error);
-      console.error('❌ Categories module error details:', error);
+      logWarn('Failed to load categories module', error);
+      logError('Categories module error details', error);
       // Continue loading other modules even if categories fails
     }
 
     // Import bulk operations module and store in registry
     try {
-      console.log('🔄 Loading bulk-operations module...');
+      logInfo('Loading bulk-operations module...');
       bulkOperationsModule = await import('./renderer/modules/bulk-operations/index.js');
-      console.log('✅ bulk-operations module loaded successfully');
+      logInfo('bulk-operations module loaded successfully');
       
       // Store in registry and create minimal window assignments
       const bulkOperationsInstance = bulkOperationsModule.default;
@@ -512,15 +588,15 @@ $(document).ready(async function() {
       window.addSongsByPath = bulkOperationsInstance.addSongsByPath;
       window.saveBulkUpload = bulkOperationsInstance.saveBulkUpload;
     } catch (error) {
-      console.error('❌ Error loading bulk-operations module:', error);
+      logError('Error loading bulk-operations module', error);
       // Continue loading other modules even if bulk operations fails
     }
 
     // Import drag-drop module and store in registry
     try {
-      console.log('🔄 Loading drag-drop module...');
+      logInfo('Loading drag-drop module...');
       dragDropModule = await import('./renderer/modules/drag-drop/index.js');
-      console.log('✅ drag-drop module loaded successfully');
+      logInfo('drag-drop module loaded successfully');
       
       // Store in registry and create minimal window assignments
       const dragDropInstance = dragDropModule.default;
@@ -531,15 +607,15 @@ $(document).ready(async function() {
       window.songDrag = songDrag;
       window.columnDrag = columnDrag;
     } catch (error) {
-      console.error('❌ Error loading drag-drop module:', error);
+      logError('Error loading drag-drop module', error);
       // Continue loading other modules even if drag-drop fails
     }
 
     // Import navigation module and store in registry
     try {
-      console.log('🔄 Loading navigation module...');
+      logInfo('Loading navigation module...');
       navigationModule = await import('./renderer/modules/navigation/index.js');
-      console.log('✅ navigation module loaded successfully');
+      logInfo('navigation module loaded successfully');
       
       // Store in registry and create minimal window assignments
       const navigationInstance = navigationModule.default;
@@ -551,15 +627,15 @@ $(document).ready(async function() {
       window.selectNext = navigationInstance.selectNext;
       window.selectPrev = navigationInstance.selectPrev;
     } catch (error) {
-      console.error('❌ Error loading navigation module:', error);
+      logError('Error loading navigation module', error);
       // Continue loading other modules even if navigation fails
     }
 
     // Import mode management module and store in registry
     try {
-      console.log('🔄 Loading mode-management module...');
+      logInfo('Loading mode-management module...');
       modeManagementModule = await import('./renderer/modules/mode-management/index.js');
-      console.log('✅ mode-management module loaded successfully');
+      logInfo('mode-management module loaded successfully');
       
       // Store in registry and create minimal window assignments
       const modeManagementInstance = modeManagementModule.default;
@@ -575,20 +651,20 @@ $(document).ready(async function() {
       // Initialize mode management module
       const result = await modeManagementInstance.initModeManagement();
       if (result.error) {
-        console.warn('❌ Failed to initialize mode management module:', result.error);
+        logWarn('Failed to initialize mode management module', result.error);
       } else {
-        console.log('✅ Mode management module initialized successfully');
+        logInfo('Mode management module initialized successfully');
       }
     } catch (error) {
-      console.error('❌ Error loading mode-management module:', error);
+      logError('Error loading mode-management module', error);
       // Continue loading other modules even if mode management fails
     }
 
     // Import test utils module and store in registry
     try {
-      console.log('🔄 Loading test-utils module...');
+      logInfo('Loading test-utils module...');
       testUtilsModule = await import('./renderer/modules/test-utils/index.js');
-      console.log('✅ test-utils module loaded successfully');
+      logInfo('test-utils module loaded successfully');
       
       // Store in registry and create minimal window assignments
       const testUtilsInstance = testUtilsModule.default;
@@ -603,15 +679,15 @@ $(document).ready(async function() {
       window.testSecurityFeatures = testUtilsInstance.testSecurityFeatures;
       window.runAllTests = testUtilsInstance.runAllTests;
     } catch (error) {
-      console.error('❌ Error loading test-utils module:', error);
+      logError('Error loading test-utils module', error);
       // Continue loading other modules even if test utils fails
     }
 
     // Import search module and store in registry
     try {
-      console.log('🔄 Loading search module...');
+      logInfo('Loading search module...');
       searchModule = await import('./renderer/modules/search/index.js');
-      console.log('✅ search module loaded successfully');
+      logInfo('search module loaded successfully');
       
       // The search module exports a singleton instance, not a constructor
       const searchInstance = searchModule.default;
@@ -628,17 +704,17 @@ $(document).ready(async function() {
       window.toggleAdvancedSearch = searchInstance.toggleAdvancedSearch.bind(searchInstance);
       window.triggerLiveSearch = searchInstance.triggerLiveSearch.bind(searchInstance);
       window.clearSearchResults = searchInstance.clearSearchResults.bind(searchInstance);
-      console.log('✅ Search module loaded successfully');
+      logInfo('Search module loaded successfully');
     } catch (error) {
-      console.warn('❌ Failed to load search module:', error);
+      logWarn('Failed to load search module', error);
       // Continue loading other modules even if search fails
     }
 
     // Import audio module and store in registry
     try {
-      console.log('🔄 Loading audio module...');
+      logInfo('Loading audio module...');
       audioModule = await import('./renderer/modules/audio/index.js');
-      console.log('✅ audio module loaded successfully');
+      logInfo('audio module loaded successfully');
       
       // The audio module exports a singleton instance, not a constructor
       const audioInstance = audioModule.default;
@@ -659,20 +735,20 @@ $(document).ready(async function() {
       window.playSelected = audioInstance.playSelected.bind(audioInstance);
       window.loop_on = audioInstance.loop_on.bind(audioInstance);
       // window.howlerUtils = audioInstance.howlerUtils.bind(audioInstance); // Function not implemented yet
-      console.log('✅ Audio module loaded successfully');
+      logInfo('Audio module loaded successfully');
     } catch (error) {
-      console.error('❌ Failed to load audio module:', error);
-      console.error('❌ Audio module error stack:', error.stack);
-      console.error('❌ Audio module error message:', error.message);
+      logError('Failed to load audio module', error);
+      logError('Audio module error stack', error.stack);
+      logError('Audio module error message', error.message);
       // Continue loading other modules even if audio fails
     }
 
     // Import UI module and store in registry
     let uiInstance = null;
     try {
-      console.log('🔄 Loading ui module...');
+      logInfo('Loading ui module...');
       uiModule = await import('./renderer/modules/ui/index.js');
-      console.log('✅ ui module loaded successfully');
+      logInfo('ui module loaded successfully');
       
       // Re-initialize UI module with proper dependencies
       uiInstance = uiModule.default.reinitializeUI({
@@ -684,7 +760,7 @@ $(document).ready(async function() {
       // Store in registry
       moduleRegistry.ui = uiInstance;
     } catch (error) {
-      console.error('❌ Error loading ui module:', error);
+      logError('Error loading ui module', error);
       throw error;
     }
     
@@ -698,12 +774,12 @@ $(document).ready(async function() {
       window.switchToHotkeyTab = uiInstance.switchToHotkeyTab;
       window.renameHotkeyTab = function() {
         uiInstance.renameHotkeyTab().catch(error => {
-          console.error('❌ Error in renameHotkeyTab:', error);
+          logError('Error in renameHotkeyTab', error);
         });
       };
       window.renameHoldingTankTab = function() {
         uiInstance.renameHoldingTankTab().catch(error => {
-          console.error('❌ Error in renameHoldingTankTab:', error);
+          logError('Error in renameHoldingTankTab', error);
         });
       };
       window.increaseFontSize = uiInstance.increaseFontSize;
@@ -715,14 +791,14 @@ $(document).ready(async function() {
       window.getFontSize = uiInstance.getFontSize;
       window.setFontSize = uiInstance.setFontSize;
     } else {
-      console.error('❌ UI instance not available, skipping UI function assignments');
+      logError('UI instance not available, skipping UI function assignments');
     }
 
     // Import preferences module and store in registry
     try {
-      console.log('🔄 Loading preferences module...');
+      logInfo('Loading preferences module...');
       preferencesModule = await import('./renderer/modules/preferences/index.js');
-      console.log('✅ preferences module loaded successfully');
+      logInfo('preferences module loaded successfully');
       
       // Re-initialize preferences module with proper dependencies
       const preferencesInstance = preferencesModule.default.reinitializePreferences({
@@ -746,15 +822,15 @@ $(document).ready(async function() {
       window.getFadeOutSeconds = preferencesInstance.getFadeOutSeconds;
       window.getDebugLogEnabled = preferencesInstance.getDebugLogEnabled;
     } catch (error) {
-      console.error('❌ Error loading preferences module:', error);
+      logError('Error loading preferences module', error);
       throw error;
     }
 
     // Import DebugLog module and store in registry
     try {
-      console.log('🔄 Loading DebugLog module...');
+      logInfo('Loading DebugLog module...');
       debugLogModule = await import('./renderer/modules/debug-log/index.js');
-      console.log('✅ DebugLog module loaded successfully');
+      logInfo('DebugLog module loaded successfully');
       
       // Re-initialize DebugLog module with proper dependencies
       const debugLogInstance = debugLogModule.default.reinitializeDebugLog({
@@ -768,32 +844,32 @@ $(document).ready(async function() {
       
       // Make DebugLog available globally for other modules
       window.debugLog = debugLogInstance;
-      console.log('✅ DebugLog module initialized and available globally');
+      logInfo('DebugLog module initialized and available globally');
       
       // Initialize dependent classes with the debug logger
       functionRegistry = new FunctionRegistry(debugLogInstance);
       eventManager = new EventManager(functionRegistry, debugLogInstance);
       functionMonitor = new FunctionMonitor(functionRegistry, debugLogInstance);
       
-      console.log('✅ Dependent classes initialized with debug logger');
+      logInfo('Dependent classes initialized with debug logger');
     } catch (error) {
-      console.error('❌ Error loading DebugLog module:', error);
+      logError('Error loading DebugLog module', error);
       // Don't throw error, continue loading other modules
     }
 
     // Import database module and store in registry
     try {
-      console.log('🔄 Loading database module...');
+      logInfo('Loading database module...');
       try {
         databaseModule = await import('./renderer/modules/database/index.js');
-        console.log('✅ Database module import successful');
+        logInfo('Database module import successful');
       } catch (importError) {
-        console.error('❌ Database module import failed:', importError);
-        console.error('❌ Import error stack:', importError.stack);
-        console.error('❌ Import error message:', importError.message);
+        logError('Database module import failed', importError);
+        logError('Import error stack', importError.stack);
+        logError('Import error message', importError.message);
         throw importError;
       }
-      console.log('✅ database module loaded successfully');
+      logInfo('database module loaded successfully');
       
       // The database module exports a singleton instance directly
       const databaseInstance = databaseModule.default;
@@ -809,31 +885,31 @@ $(document).ready(async function() {
       window.addToHoldingTank = databaseInstance.addToHoldingTank;
       window.populateHoldingTank = databaseInstance.populateHoldingTank;
       window.populateCategorySelect = databaseInstance.populateCategorySelect;
-      console.log('✅ Database module loaded successfully');
-      console.log('✅ populateHoldingTank function is now available globally');
+      logInfo('Database module loaded successfully');
+      logInfo('populateHoldingTank function is now available globally');
     } catch (error) {
-      console.error('❌ Failed to load database module:', error);
-      console.error('❌ Database module error stack:', error.stack);
-      console.error('❌ Database module error message:', error.message);
-      console.error('❌ Database module error name:', error.name);
-      if (error.line) console.error('❌ Database module error line:', error.line);
-      if (error.column) console.error('❌ Database module error column:', error.column);
+      logError('Failed to load database module', error);
+      logError('Database module error stack', error.stack);
+      logError('Database module error message', error.message);
+      logError('Database module error name', error.name);
+      if (error.line) logError('Database module error line', error.line);
+      if (error.column) logError('Database module error column', error.column);
       // Continue loading other modules even if database fails
     }
 
     // Import utils module and store in registry
     try {
-      console.log('🔄 Loading utils module...');
+      logInfo('Loading utils module...');
       try {
         utilsModule = await import('./renderer/modules/utils/index.js');
-        console.log('✅ Utils module import successful');
+        logInfo('Utils module import successful');
       } catch (importError) {
-        console.error('❌ Utils module import failed:', importError);
-        console.error('❌ Import error stack:', importError.stack);
-        console.error('❌ Import error message:', importError.message);
+        logError('Utils module import failed', importError);
+        logError('Import error stack', importError.stack);
+        logError('Import error message', importError.message);
         throw importError;
       }
-      console.log('✅ utils module loaded successfully');
+      logInfo('utils module loaded successfully');
       
       // The utils module exports a singleton instance, not a constructor
       const utilsInstance = utilsModule.default;
@@ -853,69 +929,69 @@ $(document).ready(async function() {
       window.isValidCategoryCode = utilsInstance.isValidCategoryCode;
       window.isValidFilePath = utilsInstance.isValidFilePath;
       window.isValidHotkey = utilsInstance.isValidHotkey;
-      console.log('✅ Utils module loaded successfully');
+      logInfo('Utils module loaded successfully');
     } catch (error) {
-      console.error('❌ Failed to load utils module:', error);
-      console.error('❌ Utils module error stack:', error.stack);
-      console.error('❌ Utils module error message:', error.message);
-      console.error('❌ Utils module error name:', error.name);
-      if (error.line) console.error('❌ Utils module error line:', error.line);
-      if (error.column) console.error('❌ Utils module error column:', error.column);
+      logError('Failed to load utils module', error);
+      logError('Utils module error stack', error.stack);
+      logError('Utils module error message', error.message);
+      logError('Utils module error name', error.name);
+      if (error.line) logError('Utils module error line', error.line);
+      if (error.column) logError('Utils module error column', error.column);
       // Continue loading other modules even if utils fails
     }
 
-    console.log('✅ All modules loaded successfully!');
-    console.log('📋 Module Registry Summary:');
-    console.log('   - File Operations:', !!moduleRegistry.fileOperations);
-    console.log('   - Song Management:', !!moduleRegistry.songManagement);
-    console.log('   - Holding Tank:', !!moduleRegistry.holdingTank);
-    console.log('   - Hotkeys:', !!moduleRegistry.hotkeys);
-    console.log('   - Categories:', !!moduleRegistry.categories);
-    console.log('   - Bulk Operations:', !!moduleRegistry.bulkOperations);
-    console.log('   - Drag Drop:', !!moduleRegistry.dragDrop);
-    console.log('   - Navigation:', !!moduleRegistry.navigation);
-    console.log('   - Mode Management:', !!moduleRegistry.modeManagement);
-    console.log('   - Test Utils:', !!moduleRegistry.testUtils);
-    console.log('   - Search:', !!moduleRegistry.search);
-    console.log('   - Audio:', !!moduleRegistry.audio);
-    console.log('   - UI:', !!moduleRegistry.ui);
-    console.log('   - Preferences:', !!moduleRegistry.preferences);
-    console.log('   - Database:', !!moduleRegistry.database);
-    console.log('   - Utils:', !!moduleRegistry.utils);
+    logInfo('All modules loaded successfully!');
+    logInfo('Module Registry Summary:');
+    logDebug('File Operations', !!moduleRegistry.fileOperations);
+    logDebug('Song Management', !!moduleRegistry.songManagement);
+    logDebug('Holding Tank', !!moduleRegistry.holdingTank);
+    logDebug('Hotkeys', !!moduleRegistry.hotkeys);
+    logDebug('Categories', !!moduleRegistry.categories);
+    logDebug('Bulk Operations', !!moduleRegistry.bulkOperations);
+    logDebug('Drag Drop', !!moduleRegistry.dragDrop);
+    logDebug('Navigation', !!moduleRegistry.navigation);
+    logDebug('Mode Management', !!moduleRegistry.modeManagement);
+    logDebug('Test Utils', !!moduleRegistry.testUtils);
+    logDebug('Search', !!moduleRegistry.search);
+    logDebug('Audio', !!moduleRegistry.audio);
+    logDebug('UI', !!moduleRegistry.ui);
+    logDebug('Preferences', !!moduleRegistry.preferences);
+    logDebug('Database', !!moduleRegistry.database);
+    logDebug('Utils', !!moduleRegistry.utils);
 
     // Make module registry available for debugging and development
     window.moduleRegistry = moduleRegistry;
     window.functionMonitor = functionMonitor;
     
     // Initialize function registry with loaded modules
-    console.log('🔄 Initializing function registry...');
+    logInfo('Initializing function registry...');
     functionRegistry.setModuleRegistry(moduleRegistry);
     await functionRegistry.registerAllFunctions();
     
     // Validate critical functions are available
     if (!functionRegistry.validateFunctions()) {
-      console.warn('⚠️ Some critical functions are missing, but continuing...');
+      logWarn('Some critical functions are missing, but continuing...');
     }
     
     // Log function registry statistics
     const stats = functionRegistry.getStats();
-    console.log('📊 Function Registry Statistics:', stats);
+    logInfo('Function Registry Statistics', stats);
     
     // Initialize event manager to replace onclick attributes
-    console.log('🔄 Initializing event manager...');
+    logInfo('Initializing event manager...');
     eventManager.initialize();
     
     // Log event manager statistics
     const eventStats = eventManager.getStats();
-    console.log('📊 Event Manager Statistics:', eventStats);
+    logInfo('Event Manager Statistics', eventStats);
     
     // Initialize function monitor for real-time health checking
-    console.log('🔄 Initializing function monitor...');
+    logInfo('Initializing function monitor...');
     functionMonitor.startMonitoring();
     
     // Log function monitor statistics
     const monitorStats = functionMonitor.getStats();
-    console.log('📊 Function Monitor Statistics:', monitorStats);
+    logInfo('Function Monitor Statistics', monitorStats);
     
     // Verify critical functions are available
     function verifyCriticalFunctions() {
@@ -930,10 +1006,10 @@ $(document).ready(async function() {
       const missingFunctions = criticalFunctions.filter(func => !window[func]);
       
       if (missingFunctions.length > 0) {
-        console.warn('⚠️ Missing critical functions:', missingFunctions);
-        console.warn('⚠️ This may cause runtime errors');
+        logWarn('Missing critical functions', missingFunctions);
+        logWarn('This may cause runtime errors');
       } else {
-        console.log('✅ All critical functions are available');
+        logInfo('All critical functions are available');
       }
     }
     
@@ -955,9 +1031,9 @@ $(document).ready(async function() {
       if (moduleRegistry.navigation && moduleRegistry.navigation.initializeNavigation) {
         moduleRegistry.navigation.initializeNavigation();
       }
-      console.log('✅ All modules initialized successfully!');
+      logInfo('All modules initialized successfully!');
     } catch (error) {
-      console.error('❌ Error initializing modules:', error);
+      logError('Error initializing modules', error);
     }
 
     // Call functions that depend on loaded modules
@@ -967,28 +1043,28 @@ $(document).ready(async function() {
       }
       // Ensure categories are populated after database module is loaded
       if (window.populateCategorySelect) {
-        console.log('🔄 Attempting to populate categories...');
+        logInfo('Attempting to populate categories...');
         await window.populateCategorySelect();
-        console.log('✅ Categories populated successfully');
+        logInfo('Categories populated successfully');
       } else {
-        console.warn('❌ populateCategorySelect function not available');
+        logWarn('populateCategorySelect function not available');
       }
-      console.log('✅ Module-dependent functions called successfully!');
+      logInfo('Module-dependent functions called successfully!');
     } catch (error) {
-      console.error('❌ Error calling module-dependent functions:', error);
+      logError('Error calling module-dependent functions', error);
     }
 
     // Set up keyboard shortcuts after modules are loaded
     try {
       setupKeyboardShortcuts();
-      console.log('✅ Keyboard shortcuts set up successfully!');
+      logInfo('Keyboard shortcuts set up successfully!');
     } catch (error) {
-      console.error('❌ Error setting up keyboard shortcuts:', error);
+      logError('Error setting up keyboard shortcuts', error);
     }
   } catch (error) {
-    console.error('❌ Error loading modules:', error);
-    console.error('❌ Error stack:', error.stack);
-    console.error('❌ Error message:', error.message);
+    logError('Error loading modules', error);
+    logError('Error stack', error.stack);
+    logError('Error message', error.message);
   }
 })();
 
@@ -1107,26 +1183,26 @@ function setupKeyboardShortcuts() {
   });
 
   Mousetrap.bind(["backspace", "del"], function () {
-    console.log("Delete key pressed");
-    console.log("selected_row:", $("#selected_row"));
-    console.log("holding-tank-column has selected_row:", $("#holding-tank-column").has($("#selected_row")).length);
-    console.log("hotkey-tab-content has selected_row:", $("#hotkey-tab-content").has($("#selected_row")).length);
+    logDebug("Delete key pressed");
+    logDebug("selected_row", $("#selected_row"));
+    logDebug("holding-tank-column has selected_row", $("#holding-tank-column").has($("#selected_row")).length);
+    logDebug("hotkey-tab-content has selected_row", $("#hotkey-tab-content").has($("#selected_row")).length);
     
     // Check if the selected row is in the holding tank
     if ($("#holding-tank-column").has($("#selected_row")).length) {
-      console.log("Selected row is in holding tank");
+      logDebug("Selected row is in holding tank");
       // If in holding tank, remove from holding tank
       if (window.removeFromHoldingTank) {
         removeFromHoldingTank();
       }
     } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
-      console.log("Selected row is in hotkey tab");
+      logDebug("Selected row is in hotkey tab");
       // If in hotkey tab, remove from hotkey
       if (window.removeFromHotkey) {
         removeFromHotkey();
       }
     } else {
-      console.log("Selected row is in search results");
+      logDebug("Selected row is in search results");
       // If not in holding tank or hotkey, delete from database
       if (window.deleteSong) {
         deleteSong();
@@ -1266,24 +1342,24 @@ $(document).ready(function () {
 
   $("#category_select").on("change", function () {
     var category = $("#category_select").prop("selectedIndex");
-    console.log('🔄 Category select changed, calling searchData...');
+    logDebug('Category select changed, calling searchData...');
     if (window.searchData) {
       window.searchData();
-      console.log('✅ searchData called successfully from category change');
+      logInfo('searchData called successfully from category change');
     } else {
-      console.warn('❌ searchData function not available');
+      logWarn('searchData function not available');
     }
     $("#omni_search").focus();
     $("#category_select").prop("selectedIndex", category);
   });
 
   $("#date-search").on("change", function () {
-    console.log('🔄 Date search changed, calling searchData...');
+    logDebug('Date search changed, calling searchData...');
     if (window.searchData) {
       window.searchData();
-      console.log('✅ searchData called successfully from date search change');
+      logInfo('searchData called successfully from date search change');
     } else {
-      console.warn('❌ searchData function not available');
+      logWarn('searchData function not available');
     }
   });
 
@@ -1296,12 +1372,12 @@ $(document).ready(function () {
       if (searchTimeout) {
         clearTimeout(searchTimeout);
       }
-      console.log('🔄 Search form submitted via Enter key, calling searchData...');
+      logDebug('Search form submitted via Enter key, calling searchData...');
       if (window.searchData) {
         window.searchData();
-        console.log('✅ searchData called successfully');
+        logInfo('searchData called successfully');
       } else {
-        console.warn('❌ searchData function not available');
+        logWarn('searchData function not available');
       }
       return false;
     }
@@ -1310,12 +1386,12 @@ $(document).ready(function () {
   // Add explicit submit handler for search form
   $("#search_form").on("submit", function (e) {
     e.preventDefault();
-    console.log('🔄 Search form submitted, calling searchData...');
+    logDebug('Search form submitted, calling searchData...');
     if (window.searchData) {
       window.searchData();
-      console.log('✅ searchData called successfully');
+      logInfo('searchData called successfully');
     } else {
-      console.warn('❌ searchData function not available');
+      logWarn('searchData function not available');
     }
     $("#omni_search").focus();
     return false;
@@ -1327,25 +1403,25 @@ $(document).ready(function () {
 
   // Live search on search term input
   $("#omni_search").on("input", function () {
-    console.log('🔄 Omni search input changed, triggering live search...');
+    logDebug('Omni search input changed, triggering live search...');
     if (window.triggerLiveSearch) {
       window.triggerLiveSearch();
-      console.log('✅ triggerLiveSearch called successfully');
+      logInfo('triggerLiveSearch called successfully');
     } else {
-      console.warn('❌ triggerLiveSearch function not available');
+      logWarn('triggerLiveSearch function not available');
     }
   });
 
   // Live search when category filter changes
   $("#category_select").on("change", function () {
     var searchTerm = $("#omni_search").val().trim();
-    console.log('🔄 Category select changed, search term:', searchTerm);
+    logDebug('Category select changed, search term', searchTerm);
     if (searchTerm.length >= 2) {
       if (window.triggerLiveSearch) {
         window.triggerLiveSearch();
-        console.log('✅ triggerLiveSearch called successfully from category change');
+        logInfo('triggerLiveSearch called successfully from category change');
       } else {
-        console.warn('❌ triggerLiveSearch function not available');
+        logWarn('triggerLiveSearch function not available');
       }
     }
   });
@@ -1354,23 +1430,23 @@ $(document).ready(function () {
   $("#title-search, #artist-search, #info-search, #date-search").on(
     "input change",
     function () {
-      console.log('🔄 Advanced search field changed');
+      logDebug('Advanced search field changed');
       // When advanced search is active, trigger live search even if omni_search is empty
       if ($("#advanced-search").is(":visible")) {
         if (window.triggerLiveSearch) {
           window.triggerLiveSearch();
-          console.log('✅ triggerLiveSearch called successfully from advanced search');
+          logInfo('triggerLiveSearch called successfully from advanced search');
         } else {
-          console.warn('❌ triggerLiveSearch function not available');
+          logWarn('triggerLiveSearch function not available');
         }
       } else {
         var searchTerm = $("#omni_search").val().trim();
         if (searchTerm.length >= 2) {
           if (window.triggerLiveSearch) {
             window.triggerLiveSearch();
-            console.log('✅ triggerLiveSearch called successfully from advanced search (with term)');
+            logInfo('triggerLiveSearch called successfully from advanced search (with term)');
           } else {
-            console.warn('❌ triggerLiveSearch function not available');
+            logWarn('triggerLiveSearch function not available');
           }
         }
       }
@@ -1389,7 +1465,7 @@ $(document).ready(function () {
   });
 
   $("#reset_button").on("click", function () {
-    console.log('🔄 Reset button clicked');
+    logDebug('Reset button clicked');
     // Clear any pending live search
     const searchTimeout = window.searchTimeout;
     if (searchTimeout) {
@@ -1399,24 +1475,24 @@ $(document).ready(function () {
     $("#omni_search").focus();
     $("#search_results tbody").find("tr").remove();
     $("#search_results thead").hide();
-    console.log('✅ Search results cleared');
+    logInfo('Search results cleared');
     return false;
   });
 
   $("#advanced_search_button").on("click", function () {
-    console.log("🔄 Advanced search button clicked");
+    logDebug("Advanced search button clicked");
     if (window.toggleAdvancedSearch) {
       window.toggleAdvancedSearch();
-      console.log('✅ toggleAdvancedSearch called successfully');
+      logInfo('toggleAdvancedSearch called successfully');
     } else {
-      console.warn('❌ toggleAdvancedSearch function not available');
+      logWarn('toggleAdvancedSearch function not available');
     }
     return false;
   });
 
   $("#pause_button").click(function (e) {
-    console.log('🔍 Pause button clicked');
-    console.log('🔍 window.pausePlaying function:', typeof window.pausePlaying);
+    logDebug('Pause button clicked');
+    logDebug('window.pausePlaying function', typeof window.pausePlaying);
     if (window.pausePlaying) {
       if (e.shiftKey) {
         window.pausePlaying(true);
@@ -1424,14 +1500,14 @@ $(document).ready(function () {
         window.pausePlaying();
       }
     } else {
-      console.error('❌ pausePlaying function not available');
+      logError('pausePlaying function not available');
     }
   });
 
   $("#play_button").click(function (e) {
-    console.log('🔍 Play button clicked');
-    console.log('🔍 window.pausePlaying function:', typeof window.pausePlaying);
-    console.log('🔍 window.playSelected function:', typeof window.playSelected);
+    logDebug('Play button clicked');
+    logDebug('window.pausePlaying function', typeof window.pausePlaying);
+    logDebug('window.playSelected function', typeof window.playSelected);
     if (window.pausePlaying && window.playSelected) {
       // Check if there's already a sound loaded and paused
       import('./renderer/modules/shared-state.js').then(sharedStateModule => {
@@ -1440,26 +1516,26 @@ $(document).ready(function () {
         
         if (sound && sound.state() === 'loaded' && !sound.playing()) {
           // Sound is loaded but not playing - resume it
-          console.log('🔍 Resuming paused sound');
+          logDebug('Resuming paused sound');
           window.pausePlaying();
         } else {
           // No sound or sound is playing - play selected song
-          console.log('🔍 Playing selected song');
+          logDebug('Playing selected song');
           window.playSelected();
         }
       }).catch(error => {
-        console.error('❌ Failed to import shared state:', error);
+        logError('Failed to import shared state', error);
         // Fallback to playSelected
         window.playSelected();
       });
     } else {
-      console.error('❌ Required functions not available');
+      logError('Required functions not available');
     }
   });
 
   $("#stop_button").click(function (e) {
-    console.log('🔍 Stop button clicked');
-    console.log('🔍 window.stopPlaying function:', typeof window.stopPlaying);
+    logDebug('Stop button clicked');
+    logDebug('window.stopPlaying function', typeof window.stopPlaying);
     if (window.stopPlaying) {
       if (e.shiftKey) {
         window.stopPlaying(true);
@@ -1467,14 +1543,14 @@ $(document).ready(function () {
         window.stopPlaying();
       }
     } else {
-      console.error('❌ stopPlaying function not available');
+      logError('stopPlaying function not available');
     }
   });
 
   $("#progress_bar").click(function (e) {
-    console.log('🔍 Progress bar clicked');
+    logDebug('Progress bar clicked');
     var percent = (e.clientX - $(this).offset().left) / $(this).width();
-    console.log('🔍 Progress bar click - percent:', percent);
+    logDebug('Progress bar click - percent', percent);
     
     // Get sound from shared state
     if (window.electronAPI && window.electronAPI.store) {
@@ -1482,21 +1558,21 @@ $(document).ready(function () {
         const sharedState = sharedStateModule.default;
         const sound = sharedState.get('sound');
         if (sound) {
-          console.log('🔍 Seeking to position in sound');
+          logDebug('Seeking to position in sound');
           sound.seek(sound.duration() * percent);
         } else {
-          console.log('🔍 No sound object found in shared state');
+          logDebug('No sound object found in shared state');
         }
       }).catch(error => {
-        console.error('❌ Failed to import shared state:', error);
+        logError('Failed to import shared state', error);
       });
     }
   });
 
   $("#waveform").click(function (e) {
-    console.log('🔍 Waveform clicked');
+    logDebug('Waveform clicked');
     var percent = (e.clientX - $(this).offset().left) / $(this).width();
-    console.log('🔍 Waveform click - percent:', percent);
+    logDebug('Waveform click - percent', percent);
     
     // Get sound from shared state
     if (window.electronAPI && window.electronAPI.store) {
@@ -1504,21 +1580,21 @@ $(document).ready(function () {
         const sharedState = sharedStateModule.default;
         const sound = sharedState.get('sound');
         if (sound) {
-          console.log('🔍 Seeking to position in sound');
+          logDebug('Seeking to position in sound');
           sound.seek(sound.duration() * percent);
         } else {
-          console.log('🔍 No sound object found in shared state');
+          logDebug('No sound object found in shared state');
         }
       }).catch(error => {
-        console.error('❌ Failed to import shared state:', error);
+        logError('Failed to import shared state', error);
       });
     }
   });
 
   $("#volume").on("change", function () {
-    console.log('🔍 Volume changed');
+    logDebug('Volume changed');
     var volume = $(this).val() / 100;
-    console.log('🔍 New volume:', volume);
+    logDebug('New volume', volume);
     
     // Get sound from shared state
     if (window.electronAPI && window.electronAPI.store) {
@@ -1527,19 +1603,19 @@ $(document).ready(function () {
         const sharedState = sharedStateModule.default;
         const sound = sharedState.get('sound');
         if (sound) {
-          console.log('🔍 Setting volume on sound object');
+          logDebug('Setting volume on sound object');
           sound.volume(volume);
         } else {
-          console.log('🔍 No sound object found in shared state');
+          logDebug('No sound object found in shared state');
         }
       }).catch(error => {
-        console.error('❌ Failed to import shared state:', error);
+        logError('Failed to import shared state', error);
       });
     }
   });
 
   $("#mute_button").click(function () {
-    console.log('🔍 Mute button clicked');
+    logDebug('Mute button clicked');
     
     // Get sound from shared state
     if (window.electronAPI && window.electronAPI.store) {
@@ -1547,14 +1623,14 @@ $(document).ready(function () {
         const sharedState = sharedStateModule.default;
         const sound = sharedState.get('sound');
         if (sound) {
-          console.log('🔍 Toggling mute on sound object');
+          logDebug('Toggling mute on sound object');
           sound.mute(!sound.mute());
           sound.volume($("#volume").val() / 100);
         } else {
-          console.log('🔍 No sound object found in shared state');
+          logDebug('No sound object found in shared state');
         }
       }).catch(error => {
-        console.error('❌ Failed to import shared state:', error);
+        logError('Failed to import shared state', error);
       });
     }
     
@@ -1564,8 +1640,8 @@ $(document).ready(function () {
   });
 
   $("#loop_button").click(function () {
-    console.log('🔍 Loop button clicked');
-    console.log('🔍 window.loop_on function:', typeof window.loop_on);
+    logDebug('Loop button clicked');
+    logDebug('window.loop_on function', typeof window.loop_on);
     
     if (window.loop_on) {
       // Get current loop state from shared state
@@ -1575,11 +1651,11 @@ $(document).ready(function () {
           const currentLoop = sharedState.get('loop');
           const newLoop = !currentLoop;
           
-          console.log('🔍 Toggling loop state:', currentLoop, '->', newLoop);
+          logDebug('Toggling loop state', { currentLoop, newLoop });
           sharedState.set('loop', newLoop);
           window.loop_on(newLoop);
         }).catch(error => {
-          console.error('❌ Failed to import shared state:', error);
+          logError('Failed to import shared state', error);
           // Fallback to simple toggle
           const loopButton = $("#loop_button");
           const isActive = loopButton.hasClass("active");
@@ -1592,7 +1668,7 @@ $(document).ready(function () {
         window.loop_on(!isActive);
       }
     } else {
-      console.error('❌ loop_on function not available');
+      logError('loop_on function not available');
     }
   });
 
@@ -1648,7 +1724,7 @@ $(document).ready(function () {
       if (fadeSeconds.success) $("#preferences-fadeout-seconds").val(fadeSeconds.value);
       if (debugLog.success) $("#preferences-debug-log-enabled").prop("checked", debugLog.value);
     }).catch(error => {
-      console.warn('Failed to load preferences:', error);
+      logWarn('Failed to load preferences', error);
       // Fallback to legacy store access
       $("#preferences-database-directory").val(store.get("database_directory"));
       $("#preferences-song-directory").val(store.get("music_directory"));
@@ -1674,7 +1750,7 @@ $(document).ready(function () {
           $(`#firstRunModal`).modal("show");
         }
       } else {
-        console.warn('❌ Failed to get song count:', result.error);
+        logWarn('Failed to get song count', result.error);
         // Fallback to legacy database access
         if (typeof db !== 'undefined') {
           var stmt = db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
@@ -1685,7 +1761,7 @@ $(document).ready(function () {
         }
       }
     }).catch(error => {
-      console.warn('❌ Database API error:', error);
+      logWarn('Database API error', error);
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
         var stmt = db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
