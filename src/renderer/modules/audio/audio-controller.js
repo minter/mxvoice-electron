@@ -8,21 +8,48 @@
 // Import shared state
 import sharedState from '../shared-state.js';
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Stop audio playback
  * 
  * @param {boolean} fadeOut - Whether to fade out the audio
  */
 function stopPlaying(fadeOut = false) {
-  console.log('🔍 stopPlaying called with fadeOut:', fadeOut);
+  debugLog?.info('🔍 stopPlaying called with fadeOut:', { 
+    module: 'audio-controller',
+    function: 'stopPlaying',
+    fadeOut: fadeOut
+  });
   const sound = sharedState.get('sound');
   const autoplay = sharedState.get('autoplay');
   const holdingTankMode = sharedState.get('holdingTankMode');
   const globalAnimation = sharedState.get('globalAnimation');
   
-  console.log('🔍 sound object:', sound);
-  console.log('🔍 autoplay:', autoplay);
-  console.log('🔍 holdingTankMode:', holdingTankMode);
+  debugLog?.info('🔍 sound object:', { 
+    module: 'audio-controller',
+    function: 'stopPlaying',
+    sound: sound
+  });
+  debugLog?.info('🔍 autoplay:', { 
+    module: 'audio-controller',
+    function: 'stopPlaying',
+    autoplay: autoplay
+  });
+  debugLog?.info('🔍 holdingTankMode:', { 
+    module: 'audio-controller',
+    function: 'stopPlaying',
+    holdingTankMode: holdingTankMode
+  });
   
   // Cancel any ongoing animation frame to prevent memory leaks
   if (globalAnimation) {
@@ -31,23 +58,40 @@ function stopPlaying(fadeOut = false) {
   }
   
   if (sound) {
-    console.log('🔍 Sound exists, stopping...');
+    debugLog?.info('🔍 Sound exists, stopping...', { 
+      module: 'audio-controller',
+      function: 'stopPlaying'
+    });
     if (autoplay && holdingTankMode === "playlist") {
       $(".now_playing").first().removeClass("now_playing");
     }
     if (fadeOut) {
-      console.log("Starting fade out...");
+      debugLog?.info("Starting fade out...", { 
+        module: 'audio-controller',
+        function: 'stopPlaying'
+      });
       window.electronAPI.store.get("fade_out_seconds").then(fadeSeconds => {
-        console.log("Fade out seconds:", fadeSeconds);
+        debugLog?.info("Fade out seconds:", { 
+          module: 'audio-controller',
+          function: 'stopPlaying',
+          fadeSeconds: fadeSeconds
+        });
         
         // Extract the numeric value from the response
         var fadeSecondsValue = fadeSeconds.value || fadeSeconds;
         var fadeDuration = parseFloat(fadeSecondsValue) * 1000;
-        console.log("Fade duration:", fadeDuration);
+        debugLog?.info("Fade duration:", { 
+          module: 'audio-controller',
+          function: 'stopPlaying',
+          fadeDuration: fadeDuration
+        });
         
         // Check if sound is still valid
         if (!sound || !sound.volume) {
-          console.log("Sound is no longer valid, stopping");
+          debugLog?.info("Sound is no longer valid, stopping", { 
+            module: 'audio-controller',
+            function: 'stopPlaying'
+          });
           resetUIState();
           return;
         }
@@ -57,7 +101,10 @@ function stopPlaying(fadeOut = false) {
         
         // Set up fade completion handler
         sound.on("fade", function () {
-          console.log("Fade event fired, unloading sound");
+          debugLog?.info("Fade event fired, unloading sound", { 
+            module: 'audio-controller',
+            function: 'stopPlaying'
+          });
           if (sound) {
             sound.unload();
             resetUIState();
@@ -67,20 +114,35 @@ function stopPlaying(fadeOut = false) {
         // Start the fade
         var currentVolume = sound.volume();
         sound.fade(currentVolume, 0, fadeDuration);
-        console.log("Fade started with volume:", currentVolume, "to 0 over", fadeDuration, "ms");
+        debugLog?.info("Fade started with volume:", { 
+          module: 'audio-controller',
+          function: 'stopPlaying',
+          currentVolume: currentVolume,
+          fadeDuration: fadeDuration
+        });
       }).catch(error => {
-        console.error("Error getting fade_out_seconds:", error);
+        debugLog?.error("Error getting fade_out_seconds:", { 
+          module: 'audio-controller',
+          function: 'stopPlaying',
+          error: error.message
+        });
         // Fallback to immediate stop
         sound.unload();
         resetUIState();
       });
     } else {
-      console.log('🔍 Unloading sound immediately');
+      debugLog?.info('🔍 Unloading sound immediately', { 
+        module: 'audio-controller',
+        function: 'stopPlaying'
+      });
       sound.unload();
       resetUIState();
     }
   } else {
-    console.log('🔍 No sound object found in shared state');
+    debugLog?.info('🔍 No sound object found in shared state', { 
+      module: 'audio-controller',
+      function: 'stopPlaying'
+    });
     resetUIState();
   }
 }
@@ -91,18 +153,36 @@ function stopPlaying(fadeOut = false) {
  * @param {boolean} fadeOut - Whether to fade out the audio
  */
 function pausePlaying(fadeOut = false) {
-  console.log('🔍 pausePlaying called with fadeOut:', fadeOut);
+  debugLog?.info('🔍 pausePlaying called with fadeOut:', { 
+    module: 'audio-controller',
+    function: 'pausePlaying',
+    fadeOut: fadeOut
+  });
   const sound = sharedState.get('sound');
   const globalAnimation = sharedState.get('globalAnimation');
   
-  console.log('🔍 sound object:', sound);
-  console.log('🔍 sound.playing():', sound ? sound.playing() : 'no sound');
+  debugLog?.info('🔍 sound object:', { 
+    module: 'audio-controller',
+    function: 'pausePlaying',
+    sound: sound
+  });
+  debugLog?.info('🔍 sound.playing():', { 
+    module: 'audio-controller',
+    function: 'pausePlaying',
+    playing: sound ? sound.playing() : 'no sound'
+  });
   
   if (sound) {
-    console.log('🔍 Sound exists, toggling play/pause...');
+    debugLog?.info('🔍 Sound exists, toggling play/pause...', { 
+      module: 'audio-controller',
+      function: 'pausePlaying'
+    });
     toggle_play_button();
     if (sound.playing()) {
-      console.log('🔍 Sound is playing, pausing...');
+      debugLog?.info('🔍 Sound is playing, pausing...', { 
+        module: 'audio-controller',
+        function: 'pausePlaying'
+      });
       
       // Cancel animation frame to prevent memory leaks
       if (globalAnimation) {
@@ -131,7 +211,10 @@ function pausePlaying(fadeOut = false) {
         sound.pause();
       }
     } else {
-      console.log('🔍 Sound is paused, playing...');
+      debugLog?.info('🔍 Sound is paused, playing...', { 
+        module: 'audio-controller',
+        function: 'pausePlaying'
+      });
       sound.play();
       $("#song_spinner").addClass("fa-spin");
       $("#progress_bar .progress-bar").addClass(
@@ -139,7 +222,10 @@ function pausePlaying(fadeOut = false) {
       );
     }
   } else {
-    console.log('🔍 No sound object found in shared state');
+    debugLog?.info('🔍 No sound object found in shared state', { 
+      module: 'audio-controller',
+      function: 'pausePlaying'
+    });
   }
 }
 
@@ -147,7 +233,10 @@ function pausePlaying(fadeOut = false) {
  * Reset UI state after audio changes
  */
 function resetUIState() {
-  console.log('🔍 resetUIState called');
+  debugLog?.info('🔍 resetUIState called', { 
+    module: 'audio-controller',
+    function: 'resetUIState'
+  });
   
   // Cancel any ongoing animation frame to prevent memory leaks
   const globalAnimation = sharedState.get('globalAnimation');
@@ -177,7 +266,10 @@ function resetUIState() {
  * Toggle play button state
  */
 function toggle_play_button() {
-  console.log('🔍 toggle_play_button called');
+  debugLog?.info('🔍 toggle_play_button called', { 
+    module: 'audio-controller',
+    function: 'toggle_play_button'
+  });
   $("#play_button").toggleClass("d-none");
   $("#pause_button").toggleClass("d-none");
 }
@@ -188,7 +280,11 @@ function toggle_play_button() {
  * @param {boolean} bool - Whether to enable loop mode
  */
 function loop_on(bool) {
-  console.log('🔍 loop_on called with bool:', bool);
+  debugLog?.info('🔍 loop_on called with bool:', { 
+    module: 'audio-controller',
+    function: 'loop_on',
+    bool: bool
+  });
   if (bool == true) {
     $("#loop_button").addClass("active");
   } else {

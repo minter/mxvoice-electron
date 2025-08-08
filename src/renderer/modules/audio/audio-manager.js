@@ -9,6 +9,17 @@
 import sharedState from '../shared-state.js';
 import { howlerUtils } from './audio-utils.js';
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Play a song with the given filename and row data
  * 
@@ -17,28 +28,51 @@ import { howlerUtils } from './audio-utils.js';
  * @param {string} song_id - The database ID of the song
  */
 function playSongWithFilename(filename, row, song_id) {
-  console.log('🔍 playSongWithFilename called with:', { filename, song_id });
+  debugLog?.info('🔍 playSongWithFilename called with:', { 
+    module: 'audio-manager',
+    function: 'playSongWithFilename',
+    filename: filename,
+    song_id: song_id
+  });
   
   // Get music directory from store
   window.electronAPI.store.get("music_directory").then(musicDirectory => {
-    console.log('🔍 Debug: musicDirectory response:', musicDirectory);
+    debugLog?.info('🔍 Debug: musicDirectory response:', { 
+      module: 'audio-manager',
+      function: 'playSongWithFilename',
+      musicDirectory: musicDirectory
+    });
     if (musicDirectory.success) {
-      console.log('🔍 Debug: musicDirectory.value:', musicDirectory.value);
+      debugLog?.info('🔍 Debug: musicDirectory.value:', { 
+        module: 'audio-manager',
+        function: 'playSongWithFilename',
+        musicDirectoryValue: musicDirectory.value
+      });
       if (!musicDirectory.value) {
-        console.warn('❌ musicDirectory.value is undefined or empty, using default path');
+        debugLog?.warn('❌ musicDirectory.value is undefined or empty, using default path', { 
+          module: 'audio-manager',
+          function: 'playSongWithFilename'
+        });
         // Use default path as fallback
         const defaultPath = path.join(process.env.APPDATA || process.env.HOME || '', '.config', 'mxvoice', 'mp3');
         window.electronAPI.path.join(defaultPath, filename).then(result => {
           if (result.success) {
             var sound_path = [result.data];
-            console.log("Inside get, Filename is " + filename);
+            debugLog?.info("Inside get, Filename is " + filename, { 
+              module: 'audio-manager',
+              function: 'playSongWithFilename',
+              filename: filename
+            });
             const sound = new Howl({
               src: sound_path,
               html5: true,
               volume: $("#volume").val() / 100,
               mute: $("#mute_button").hasClass("active"),
               onplay: function () {
-                console.log('🔍 Sound onplay event fired');
+                debugLog?.info('🔍 Sound onplay event fired', { 
+                  module: 'audio-manager',
+                  function: 'playSongWithFilename'
+                });
                 var time = Math.round(sound.duration());
                 sharedState.set('globalAnimation', requestAnimationFrame(
                   howlerUtils.updateTimeTracker.bind(this)
@@ -64,7 +98,10 @@ function playSongWithFilename(filename, row, song_id) {
                 $("#stop_button").removeAttr("disabled");
               },
               onend: function () {
-                console.log('🔍 Sound onend event fired');
+                debugLog?.info('🔍 Sound onend event fired', { 
+                  module: 'audio-manager',
+                  function: 'playSongWithFilename'
+                });
                 song_ended();
                 const loop = sharedState.get('loop');
                 const autoplay = sharedState.get('autoplay');
@@ -77,15 +114,30 @@ function playSongWithFilename(filename, row, song_id) {
                 }
               },
             });
-            console.log('🔍 Setting sound in shared state:', sound);
+            debugLog?.info('🔍 Setting sound in shared state:', { 
+              module: 'audio-manager',
+              function: 'playSongWithFilename',
+              sound: sound
+            });
             sharedState.set('sound', sound);
-            console.log('🔍 Sound set in shared state, now playing...');
+            debugLog?.info('🔍 Sound set in shared state, now playing...', { 
+              module: 'audio-manager',
+              function: 'playSongWithFilename'
+            });
             sound.play();
           } else {
-            console.warn('❌ Failed to join path with default:', result.error);
+            debugLog?.warn('❌ Failed to join path with default:', { 
+              module: 'audio-manager',
+              function: 'playSongWithFilename',
+              error: result.error
+            });
           }
         }).catch(error => {
-          console.warn('❌ Path join error with default:', error);
+          debugLog?.warn('❌ Path join error with default:', { 
+            module: 'audio-manager',
+            function: 'playSongWithFilename',
+            error: error.message
+          });
         });
         return;
       }
@@ -93,18 +145,28 @@ function playSongWithFilename(filename, row, song_id) {
       window.electronAPI.path.join(musicDirectory.value, filename).then(result => {
         if (result.success) {
           if (!result.data) {
-            console.warn('❌ result.data is undefined or empty');
+            debugLog?.warn('❌ result.data is undefined or empty', { 
+              module: 'audio-manager',
+              function: 'playSongWithFilename'
+            });
             return;
           }
           var sound_path = [result.data];
-          console.log("Inside get, Filename is " + filename);
+          debugLog?.info("Inside get, Filename is " + filename, { 
+            module: 'audio-manager',
+            function: 'playSongWithFilename',
+            filename: filename
+          });
           const sound = new Howl({
             src: sound_path,
             html5: true,
             volume: $("#volume").val() / 100,
             mute: $("#mute_button").hasClass("active"),
             onplay: function () {
-              console.log('🔍 Sound onplay event fired');
+              debugLog?.info('🔍 Sound onplay event fired', { 
+                module: 'audio-manager',
+                function: 'playSongWithFilename'
+              });
               var time = Math.round(sound.duration());
               sharedState.set('globalAnimation', requestAnimationFrame(
                 howlerUtils.updateTimeTracker.bind(this)
@@ -130,7 +192,10 @@ function playSongWithFilename(filename, row, song_id) {
               $("#stop_button").removeAttr("disabled");
             },
             onend: function () {
-              console.log('🔍 Sound onend event fired');
+              debugLog?.info('🔍 Sound onend event fired', { 
+                module: 'audio-manager',
+                function: 'playSongWithFilename'
+              });
               song_ended();
               const loop = sharedState.get('loop');
               const autoplay = sharedState.get('autoplay');
@@ -143,21 +208,43 @@ function playSongWithFilename(filename, row, song_id) {
               }
             },
           });
-          console.log('🔍 Setting sound in shared state:', sound);
+          debugLog?.info('🔍 Setting sound in shared state:', { 
+            module: 'audio-manager',
+            function: 'playSongWithFilename',
+            sound: sound
+          });
           sharedState.set('sound', sound);
-          console.log('🔍 Sound set in shared state, now playing...');
+          debugLog?.info('🔍 Sound set in shared state, now playing...', { 
+            module: 'audio-manager',
+            function: 'playSongWithFilename'
+          });
           sound.play();
         } else {
-          console.warn('❌ Failed to join path:', result.error);
+          debugLog?.warn('❌ Failed to join path:', { 
+            module: 'audio-manager',
+            function: 'playSongWithFilename',
+            error: result.error
+          });
         }
       }).catch(error => {
-        console.warn('❌ Path join error:', error);
+        debugLog?.warn('❌ Path join error:', { 
+          module: 'audio-manager',
+          function: 'playSongWithFilename',
+          error: error.message
+        });
       });
     } else {
-      console.warn('❌ Could not get music directory from store');
+      debugLog?.warn('❌ Could not get music directory from store', { 
+        module: 'audio-manager',
+        function: 'playSongWithFilename'
+      });
     }
   }).catch(error => {
-    console.warn('❌ Store get API error:', error);
+    debugLog?.warn('❌ Store get API error:', { 
+      module: 'audio-manager',
+      function: 'playSongWithFilename',
+      error: error.message
+    });
   });
 }
 
@@ -167,7 +254,11 @@ function playSongWithFilename(filename, row, song_id) {
  * @param {string} song_id - The database ID of the song to play
  */
 function playSongFromId(song_id) {
-  console.log("Playing song from song ID " + song_id);
+  debugLog?.info("Playing song from song ID " + song_id, { 
+    module: 'audio-manager',
+    function: 'playSongFromId',
+    song_id: song_id
+  });
   if (song_id) {
     const sound = sharedState.get('sound');
     if (sound) {
@@ -183,17 +274,30 @@ function playSongFromId(song_id) {
           var filename = row.filename;
           
           if (!filename) {
-            console.error('❌ No filename found for song ID:', song_id, 'Row data:', row);
+            debugLog?.error('❌ No filename found for song ID:', { 
+              module: 'audio-manager',
+              function: 'playSongFromId',
+              song_id: song_id,
+              rowData: row
+            });
             return;
           }
           
           // Continue with the rest of the function...
           playSongWithFilename(filename, row, song_id);
         } else {
-          console.error('❌ No song found with ID:', song_id);
+          debugLog?.error('❌ No song found with ID:', { 
+            module: 'audio-manager',
+            function: 'playSongFromId',
+            song_id: song_id
+          });
         }
       }).catch(error => {
-        console.error('❌ Database query error:', error);
+        debugLog?.error('❌ Database query error:', { 
+          module: 'audio-manager',
+          function: 'playSongFromId',
+          error: error.message
+        });
         // Fallback to legacy database access
         const db = sharedState.get('db');
         if (db) {
@@ -202,23 +306,39 @@ function playSongFromId(song_id) {
             var row = stmt.get(song_id);
             
             if (!row) {
-              console.error('❌ No song found with ID:', song_id);
+              debugLog?.error('❌ No song found with ID:', { 
+                module: 'audio-manager',
+                function: 'playSongFromId',
+                song_id: song_id
+              });
               return;
             }
             
             var filename = row.filename;
             
             if (!filename) {
-              console.error('❌ No filename found for song ID:', song_id, 'Row data:', row);
+              debugLog?.error('❌ No filename found for song ID:', { 
+                module: 'audio-manager',
+                function: 'playSongFromId',
+                song_id: song_id,
+                rowData: row
+              });
               return;
             }
             
             playSongWithFilename(filename, row, song_id);
           } catch (dbError) {
-            console.error('❌ Legacy database error:', dbError);
+            debugLog?.error('❌ Legacy database error:', { 
+              module: 'audio-manager',
+              function: 'playSongFromId',
+              error: dbError.message
+            });
           }
         } else {
-          console.error('❌ No database access available');
+          debugLog?.error('❌ No database access available', { 
+            module: 'audio-manager',
+            function: 'playSongFromId'
+          });
         }
       });
     } else {
@@ -230,23 +350,39 @@ function playSongFromId(song_id) {
           var row = stmt.get(song_id);
           
           if (!row) {
-            console.error('❌ No song found with ID:', song_id);
+            debugLog?.error('❌ No song found with ID:', { 
+              module: 'audio-manager',
+              function: 'playSongFromId',
+              song_id: song_id
+            });
             return;
           }
           
           var filename = row.filename;
           
           if (!filename) {
-            console.error('❌ No filename found for song ID:', song_id, 'Row data:', row);
+            debugLog?.error('❌ No filename found for song ID:', { 
+              module: 'audio-manager',
+              function: 'playSongFromId',
+              song_id: song_id,
+              rowData: row
+            });
             return;
           }
           
           playSongWithFilename(filename, row, song_id);
         } catch (dbError) {
-          console.error('❌ Legacy database error:', dbError);
+          debugLog?.error('❌ Legacy database error:', { 
+            module: 'audio-manager',
+            function: 'playSongFromId',
+            error: dbError.message
+          });
         }
       } else {
-        console.error('❌ No database access available');
+        debugLog?.error('❌ No database access available', { 
+          module: 'audio-manager',
+          function: 'playSongFromId'
+        });
       }
     }
     
@@ -259,7 +395,11 @@ function playSongFromId(song_id) {
  */
 function playSelected() {
   var song_id = $("#selected_row").attr("songid");
-  console.log("Got song ID " + song_id);
+  debugLog?.info("Got song ID " + song_id, { 
+    module: 'audio-manager',
+    function: 'playSelected',
+    song_id: song_id
+  });
 
   // Only clear the now_playing class if the selected row is from the search panel
   // (not from the holding tank/playlist)

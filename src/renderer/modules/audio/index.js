@@ -10,6 +10,17 @@ import * as audioManager from './audio-manager.js';
 import * as audioController from './audio-controller.js';
 import * as audioUtils from './audio-utils.js';
 
+// Import debug logger
+let debugLog = null;
+try {
+  // Try to get debug logger from global scope
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Audio Module Class
  * 
@@ -40,7 +51,10 @@ class AudioModule {
    * This method can be called to set up any initialization logic
    */
   init() {
-    console.log('Audio module initialized');
+    debugLog?.info('Audio module initialized', { 
+      module: 'audio',
+      function: 'init'
+    });
   }
 
   /**
