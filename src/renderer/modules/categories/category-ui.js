@@ -5,6 +5,16 @@
  * and user interactions. This module provides the UI-level operations for categories.
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 // Import category operations for UI operations
 import * as categoryOperations from './category-operations.js';
 
@@ -15,7 +25,7 @@ import * as categoryOperations from './category-operations.js';
  * @returns {Promise<void>}
  */
 function populateCategorySelect() {
-  console.log("Populating categories");
+  debugLog?.info("Populating categories", { module: 'categories', function: 'populateCategorySelect' });
   $("#category_select option").remove();
   $("#category_select").append(`<option value="*">All Categories</option>`);
   
@@ -30,13 +40,13 @@ function populateCategorySelect() {
           `<option value="${row.code}">${row.description}</option>`
         );
       });
-      console.log('✅ Category select populated successfully');
+      debugLog?.info('✅ Category select populated successfully', { module: 'categories', function: 'populateCategorySelect' });
     } else {
-      console.warn('❌ Failed to populate category select:', result.error);
+      debugLog?.warn('❌ Failed to populate category select:', { module: 'categories', function: 'populateCategorySelect', error: result.error });
       throw new Error(result.error);
     }
   }).catch(error => {
-    console.warn('❌ Error populating category select:', error);
+    debugLog?.warn('❌ Error populating category select:', { module: 'categories', function: 'populateCategorySelect', error: error });
     // Fallback to legacy database access
     if (typeof db !== 'undefined') {
       try {
@@ -49,9 +59,9 @@ function populateCategorySelect() {
             `<option value="${row.code}">${row.description}</option>`
           );
         }
-        console.log('✅ Category select populated successfully (legacy)');
+        debugLog?.info('✅ Category select populated successfully (legacy)', { module: 'categories', function: 'populateCategorySelect' });
       } catch (dbError) {
-        console.error('❌ Legacy database error:', dbError);
+        debugLog?.error('❌ Legacy database error:', { module: 'categories', function: 'populateCategorySelect', error: dbError });
       }
     }
   });
@@ -78,10 +88,10 @@ function populateCategoriesModal(preserveScroll = false) {
 
   return categoryOperations.getCategories().then(result => {
     if (result.success) {
-      console.log('Categories data:', result.data);
+      debugLog?.info('Categories data:', { module: 'categories', function: 'populateCategoriesModal', data: result.data });
       result.data.forEach(row => {
-        console.log('Category row:', row);
-        console.log('Code:', row.code, 'Description:', row.description);
+        debugLog?.info('Category row:', { module: 'categories', function: 'populateCategoriesModal', row: row });
+        debugLog?.info('Code:', { module: 'categories', function: 'populateCategoriesModal', code: row.code, description: row.description });
         $("#categoryList").append(`<div class="form-group row">
 
           <div class="col-sm-8">
@@ -95,7 +105,7 @@ function populateCategoriesModal(preserveScroll = false) {
 
         </div>`);
       });
-      console.log('✅ Categories modal populated successfully');
+      debugLog?.info('✅ Categories modal populated successfully', { module: 'categories', function: 'populateCategoriesModal' });
       
       // Restore scroll position if preserving
       if (preserveScroll && scrollPosition > 0) {
@@ -107,11 +117,11 @@ function populateCategoriesModal(preserveScroll = false) {
         }, 10);
       }
     } else {
-      console.warn('❌ Failed to populate categories modal:', result.error);
+      debugLog?.warn('❌ Failed to populate categories modal:', { module: 'categories', function: 'populateCategoriesModal', error: result.error });
       throw new Error(result.error);
     }
   }).catch(error => {
-    console.warn('❌ Error populating categories modal:', error);
+    debugLog?.warn('❌ Error populating categories modal:', { module: 'categories', function: 'populateCategoriesModal', error: error });
     // Fallback to legacy database access
     if (typeof db !== 'undefined') {
       try {
@@ -130,7 +140,7 @@ function populateCategoriesModal(preserveScroll = false) {
 
           </div>`);
         }
-        console.log('✅ Categories modal populated successfully (legacy)');
+        debugLog?.info('✅ Categories modal populated successfully (legacy)', { module: 'categories', function: 'populateCategoriesModal' });
         
         // Restore scroll position if preserving
         if (preserveScroll && scrollPosition > 0) {
@@ -142,7 +152,7 @@ function populateCategoriesModal(preserveScroll = false) {
           }, 10);
         }
       } catch (dbError) {
-        console.error('❌ Legacy database error:', dbError);
+        debugLog?.error('❌ Legacy database error:', { module: 'categories', function: 'populateCategoriesModal', error: dbError });
       }
     }
   });
@@ -168,7 +178,7 @@ function openCategoriesModal() {
   populateCategoriesModal().then(() => {
     $("#categoryManagementModal").modal();
   }).catch(error => {
-    console.error('❌ Failed to open categories modal:', error);
+    debugLog?.error('❌ Failed to open categories modal:', { module: 'categories', function: 'openCategoriesModal', error: error });
     // Still open the modal even if population fails
     $("#categoryManagementModal").modal();
   });
@@ -191,15 +201,15 @@ function saveCategories(event) {
     const description = $(this).find(".categoryDescription").val();
     
     if (code && description) {
-      console.log(`Checking code ${code}`);
+      debugLog?.info(`Checking code ${code}`, { module: 'categories', function: 'saveCategories', code: code });
       promises.push(
         categoryOperations.editCategory(code, description).then(result => {
           if (result.success) {
-            console.log(`Saving changes to ${code} - new description is ${description}`);
+            debugLog?.info(`Saving changes to ${code} - new description is ${description}`, { module: 'categories', function: 'saveCategories', code: code, description: description });
           }
           return result;
         }).catch(error => {
-          console.error(`❌ Failed to save category ${code}:`, error);
+          debugLog?.error(`❌ Failed to save category ${code}:`, { module: 'categories', function: 'saveCategories', code: code, error: error });
           throw error;
         })
       );
@@ -210,9 +220,9 @@ function saveCategories(event) {
     // Refresh the UI after saving
     populateCategorySelect();
     populateCategoriesModal();
-    console.log('✅ All categories saved successfully');
+    debugLog?.info('✅ All categories saved successfully', { module: 'categories', function: 'saveCategories' });
   }).catch(error => {
-    console.error('❌ Error saving categories:', error);
+    debugLog?.error('❌ Error saving categories:', { module: 'categories', function: 'saveCategories', error: error });
     // Still refresh UI even if some saves failed
     populateCategorySelect();
     populateCategoriesModal();
@@ -227,7 +237,7 @@ function saveCategories(event) {
  */
 function addNewCategoryUI(event) {
   event.preventDefault();
-  console.log(`Adding new category`);
+  debugLog?.info(`Adding new category`, { module: 'categories', function: 'addNewCategoryUI' });
   
   const description = $("#newCategoryDescription").val();
   
@@ -238,17 +248,17 @@ function addNewCategoryUI(event) {
   
   return categoryOperations.addNewCategory(description).then(result => {
     if (result.success) {
-      console.log(`Added new row into database`);
+      debugLog?.info(`Added new row into database`, { module: 'categories', function: 'addNewCategoryUI' });
       $("#newCategoryCode").val("");
       $("#newCategoryDescription").val("");
       populateCategorySelect();
       populateCategoriesModal();
-      console.log('✅ New category added successfully');
+      debugLog?.info('✅ New category added successfully', { module: 'categories', function: 'addNewCategoryUI' });
     } else {
       throw new Error('Failed to add category');
     }
   }).catch(error => {
-    console.error('❌ Error adding new category:', error);
+    debugLog?.error('❌ Error adding new category:', { module: 'categories', function: 'addNewCategoryUI', error: error });
     if (error.message.includes('already exists')) {
       $("#newCategoryDescription").val("");
       alert(`Couldn't add a category named "${description}" - apparently one already exists!`);
@@ -279,11 +289,11 @@ async function deleteCategoryUI(event, code, description) {
       );
       
       if (confirmed) {
-        console.log(`Deleting category ${code}`);
+        debugLog?.info(`Deleting category ${code}`, { module: 'categories', function: 'deleteCategoryUI', code: code });
         
         const result = await categoryOperations.deleteCategory(code, description);
         if (result.success) {
-          console.log(`✅ Category ${code} deleted successfully`);
+          debugLog?.info(`✅ Category ${code} deleted successfully`, { module: 'categories', function: 'deleteCategoryUI', code: code });
           await populateCategorySelect();
           await populateCategoriesModal(true); // Preserve scroll position
           return result;
@@ -296,11 +306,11 @@ async function deleteCategoryUI(event, code, description) {
     } else {
       // Fallback to native confirm
       if (confirm(`Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`)) {
-        console.log(`Deleting category ${code}`);
+        debugLog?.info(`Deleting category ${code}`, { module: 'categories', function: 'deleteCategoryUI', code: code });
         
         const result = await categoryOperations.deleteCategory(code, description);
         if (result.success) {
-          console.log(`✅ Category ${code} deleted successfully`);
+          debugLog?.info(`✅ Category ${code} deleted successfully`, { module: 'categories', function: 'deleteCategoryUI', code: code });
           await populateCategorySelect();
           await populateCategoriesModal(true); // Preserve scroll position
           return result;
@@ -312,7 +322,7 @@ async function deleteCategoryUI(event, code, description) {
       return;
     }
   } catch (error) {
-    console.error('❌ Error deleting category:', error);
+    debugLog?.error('❌ Error deleting category:', { module: 'categories', function: 'deleteCategoryUI', error: error });
     throw error;
   }
 }

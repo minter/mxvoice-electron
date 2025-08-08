@@ -6,6 +6,16 @@
  * operations for categories.
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 // Import category operations for data operations
 import * as categoryOperations from './category-operations.js';
 import sharedState from '../shared-state.js';
@@ -33,14 +43,14 @@ function loadCategories() {
           Object.assign(categories, categoriesData);
         }
         
-        console.log('✅ Categories loaded successfully:', categoriesData);
+        debugLog?.info('✅ Categories loaded successfully:', { module: 'categories', function: 'loadCategories', categoriesData: categoriesData });
         resolve({ success: true, data: categoriesData });
       } else {
-        console.warn('❌ Failed to load categories:', result.error);
+        debugLog?.warn('❌ Failed to load categories:', { module: 'categories', function: 'loadCategories', error: result.error });
         reject(new Error(result.error));
       }
     }).catch(error => {
-      console.warn('❌ Error loading categories:', error);
+      debugLog?.warn('❌ Error loading categories:', { module: 'categories', function: 'loadCategories', error: error });
       reject(error);
     });
   });
@@ -53,12 +63,12 @@ function loadCategories() {
  * @returns {Promise<Object>} - Refreshed categories data
  */
 function refreshCategories() {
-  console.log('Refreshing categories...');
+  debugLog?.info('Refreshing categories...', { module: 'categories', function: 'refreshCategories' });
   return loadCategories().then(result => {
-    console.log('✅ Categories refreshed successfully');
+    debugLog?.info('✅ Categories refreshed successfully', { module: 'categories', function: 'refreshCategories' });
     return result;
   }).catch(error => {
-    console.error('❌ Error refreshing categories:', error);
+    debugLog?.error('❌ Error refreshing categories:', { module: 'categories', function: 'refreshCategories', error: error });
     throw error;
   });
 }
@@ -126,10 +136,10 @@ function generateCategoryCode(description) {
     };
     
     checkCode(baseCode).then(finalCode => {
-      console.log(`✅ Generated unique category code: ${finalCode}`);
+      debugLog?.info(`✅ Generated unique category code: ${finalCode}`, { module: 'categories', function: 'generateCategoryCode', finalCode: finalCode });
       resolve(finalCode);
     }).catch(error => {
-      console.error('❌ Error generating category code:', error);
+      debugLog?.error('❌ Error generating category code:', { module: 'categories', function: 'generateCategoryCode', error: error });
       reject(error);
     });
   });

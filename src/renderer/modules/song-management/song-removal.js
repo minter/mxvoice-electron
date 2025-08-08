@@ -5,6 +5,16 @@
  * holding tank and hotkey collections
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Deletes a song from the database and removes the associated file
  * Also removes the song from all UI elements (holding tank, hotkeys, search results)
@@ -12,14 +22,14 @@
 export function deleteSong() {
   var songId = $("#selected_row").attr("songid");
   if (songId) {
-    console.log(`Preparing to delete song ${songId}`);
+    debugLog?.info(`Preparing to delete song ${songId}`, { module: 'song-management', function: 'deleteSong' });
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
     var songRow = songStmt.get(songId);
     var filename = songRow.filename;
     
     return customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`).then(confirmed => {
       if (confirmed) {
-        console.log("Proceeding with delete");
+        debugLog?.info("Proceeding with delete", { module: 'song-management', function: 'deleteSong' });
         const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
         if (deleteStmt.run(songId)) {
           window.electronAPI.store.get("music_directory").then(musicDirectory => {
@@ -28,18 +38,18 @@ export function deleteSong() {
                 const filePath = joinResult.data;
                 window.electronAPI.fileSystem.delete(filePath).then(result => {
                   if (result.success) {
-                    console.log('✅ File deleted successfully');
+                    debugLog?.info('✅ File deleted successfully', { module: 'song-management', function: 'deleteSong' });
                   } else {
-                    console.warn('❌ Failed to delete file:', result.error);
+                    debugLog?.warn('❌ Failed to delete file:', { module: 'song-management', function: 'deleteSong', error: result.error });
                   }
                 }).catch(error => {
-                  console.warn('❌ File deletion error:', error);
+                  debugLog?.warn('❌ File deletion error:', { module: 'song-management', function: 'deleteSong', error: error });
                 });
               } else {
-                console.warn('❌ Failed to join path:', joinResult.error);
+                debugLog?.warn('❌ Failed to join path:', { module: 'song-management', function: 'deleteSong', error: joinResult.error });
               }
             }).catch(error => {
-              console.warn('❌ Path join error:', error);
+              debugLog?.warn('❌ Path join error:', { module: 'song-management', function: 'deleteSong', error: error });
             });
             // Remove song anywhere it appears
             $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
@@ -51,7 +61,7 @@ export function deleteSong() {
           });
           return { success: true, songId: songId, title: songRow.title };
         } else {
-          console.log("Error deleting song from database");
+          debugLog?.info("Error deleting song from database", { module: 'song-management', function: 'deleteSong' });
           return { success: false, error: 'Database deletion failed' };
         }
       } else {
@@ -68,13 +78,13 @@ export function deleteSong() {
 export function removeFromHoldingTank() {
   var songId = $("#selected_row").attr("songid");
   if (songId) {
-    console.log(`Preparing to remove song ${songId} from holding tank`);
+    debugLog?.info(`Preparing to remove song ${songId} from holding tank`, { module: 'song-management', function: 'removeFromHoldingTank' });
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
     var songRow = songStmt.get(songId);
     
     return customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`).then(confirmed => {
       if (confirmed) {
-        console.log("Proceeding with removal from holding tank");
+        debugLog?.info("Proceeding with removal from holding tank", { module: 'song-management', function: 'removeFromHoldingTank' });
         // Remove the selected row from the holding tank
         $("#selected_row").remove();
         // Clear the selection
@@ -95,18 +105,18 @@ export function removeFromHoldingTank() {
  */
 export function removeFromHotkey() {
   var songId = $("#selected_row").attr("songid");
-  console.log("removeFromHotkey called, songId:", songId);
-  console.log("selected_row element:", $("#selected_row"));
+  debugLog?.info("removeFromHotkey called, songId:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
+  debugLog?.info("selected_row element:", { module: 'song-management', function: 'removeFromHotkey', selectedRow: $("#selected_row") });
   
   if (songId) {
-    console.log(`Preparing to remove song ${songId} from hotkey`);
+    debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'song-management', function: 'removeFromHotkey' });
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
     var songRow = songStmt.get(songId);
     
     if (songRow) {
       return customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`).then(confirmed => {
         if (confirmed) {
-          console.log("Proceeding with removal from hotkey");
+          debugLog?.info("Proceeding with removal from hotkey", { module: 'song-management', function: 'removeFromHotkey' });
           // Clear the hotkey slot
           $("#selected_row").removeAttr("songid");
           $("#selected_row span").html("");
@@ -114,14 +124,14 @@ export function removeFromHotkey() {
           $("#selected_row").removeAttr("id");
           // Save the updated hotkeys to store
           saveHotkeysToStore();
-          console.log("Hotkey cleared successfully");
+          debugLog?.info("Hotkey cleared successfully", { module: 'song-management', function: 'removeFromHotkey' });
           return { success: true, songId: songId, title: songRow.title };
         } else {
           return { success: false, error: 'User cancelled' };
         }
       });
     } else {
-      console.error("Song not found in database for ID:", songId);
+      debugLog?.error("Song not found in database for ID:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
       // Still clear the hotkey even if song not found
       $("#selected_row").removeAttr("songid");
       $("#selected_row span").html("");
@@ -129,6 +139,6 @@ export function removeFromHotkey() {
       saveHotkeysToStore();
     }
   } else {
-    console.log("No songId found on selected row");
+    debugLog?.info("No songId found on selected row", { module: 'song-management', function: 'removeFromHotkey' });
   }
 } 

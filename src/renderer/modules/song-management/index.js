@@ -11,6 +11,16 @@
  * @module song-management
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 import { saveEditedSong, saveNewSong, editSelectedSong, deleteSelectedSong } from './song-crud.js';
 import { deleteSong, removeFromHoldingTank, removeFromHotkey } from './song-removal.js';
 
@@ -35,7 +45,7 @@ class SongManagementModule {
    * Initialize the song management module
    */
   init() {
-    console.log('Song management module initialized');
+    debugLog?.info('Song management module initialized', { module: 'song-management', function: 'init' });
   }
 
   /**

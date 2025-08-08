@@ -5,6 +5,16 @@
  * and managing the song form modal interface
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 /**
  * Saves an edited song to the database
  * Updates song information and refreshes the search results
@@ -14,7 +24,7 @@
 export function saveEditedSong(event) {
   event.preventDefault();
   $(`#songFormModal`).modal("hide");
-  console.log("Starting edit process");
+  debugLog?.info("Starting edit process", { module: 'song-management', function: 'saveEditedSong' });
   var songId = $("#song-form-songid").val();
   var title = $("#song-form-title").val();
   var artist = $("#song-form-artist").val();
@@ -39,7 +49,7 @@ export function saveEditedSong(event) {
 export function saveNewSong(event) {
   event.preventDefault();
   $(`#songFormModal`).modal("hide");
-  console.log("Starting save process");
+  debugLog?.info("Starting save process", { module: 'song-management', function: 'saveNewSong' });
   var filename = $("#song-form-filename").val();
   window.electronAPI.path.parse(filename).then(result => {
     if (result.success) {
@@ -56,12 +66,12 @@ export function saveNewSong(event) {
         var loopCount = 1;
         var newCode = code;
         while ((row = codeCheckStmt.get(newCode))) {
-          console.log(`Found a code collision on ${code}`);
+          debugLog?.info(`Found a code collision on ${code}`, { module: 'song-management', function: 'saveNewSong' });
           var newCode = `${code}${loopCount}`;
           loopCount = loopCount + 1;
-          console.log(`NewCode is ${newCode}`);
+          debugLog?.info(`NewCode is ${newCode}`, { module: 'song-management', function: 'saveNewSong' });
         }
-        console.log(`Out of loop, setting code to ${newCode}`);
+        debugLog?.info(`Out of loop, setting code to ${newCode}`, { module: 'song-management', function: 'saveNewSong' });
         code = newCode;
         const categoryInsertStmt = db.prepare(
           "INSERT INTO categories VALUES (?, ?)"
@@ -72,7 +82,7 @@ export function saveNewSong(event) {
             $("#song-form-new-category").val()
           );
           if (categoryInfo.changes == 1) {
-            console.log(`Added new row into database`);
+            debugLog?.info(`Added new row into database`, { module: 'song-management', function: 'saveNewSong' });
             populateCategorySelect();
             populateCategoriesModal();
             category = code;
@@ -112,28 +122,28 @@ export function saveNewSong(event) {
           );
           window.electronAPI.fileSystem.copy(filename, newPath).then(result => {
             if (result.success) {
-              console.log('✅ File copied successfully');
+              debugLog?.info('✅ File copied successfully', { module: 'song-management', function: 'saveNewSong' });
             } else {
-              console.warn('❌ Failed to copy file:', result.error);
+              debugLog?.warn('❌ Failed to copy file:', { module: 'song-management', function: 'saveNewSong', error: result.error });
             }
           }).catch(error => {
-            console.warn('❌ File copy error:', error);
+            debugLog?.warn('❌ File copy error:', { module: 'song-management', function: 'saveNewSong', error: error });
           });
 
           // Song has been saved, now let's show item
           $("#omni_search").val(title);
           searchData();
         } else {
-          console.warn('❌ Failed to join path:', joinResult.error);
+          debugLog?.warn('❌ Failed to join path:', { module: 'song-management', function: 'saveNewSong', error: joinResult.error });
         }
       }).catch(error => {
-        console.warn('❌ Path join error:', error);
+        debugLog?.warn('❌ Path join error:', { module: 'song-management', function: 'saveNewSong', error: error });
       });
     } else {
-      console.warn('❌ Failed to parse path:', result.error);
+      debugLog?.warn('❌ Failed to parse path:', { module: 'song-management', function: 'saveNewSong', error: result.error });
     }
   }).catch(error => {
-    console.warn('❌ Path parse error:', error);
+    debugLog?.warn('❌ Path parse error:', { module: 'song-management', function: 'saveNewSong', error: error });
   });
 }
 
@@ -182,22 +192,22 @@ export function editSelectedSong() {
  * Handles deletion from holding tank, hotkeys, or database
  */
 export function deleteSelectedSong() {
-  console.log("deleteSelectedSong called");
-  console.log("selected_row:", $("#selected_row"));
-  console.log("holding-tank-column has selected_row:", $("#holding-tank-column").has($("#selected_row")).length);
-  console.log("hotkey-tab-content has selected_row:", $("#hotkey-tab-content").has($("#selected_row")).length);
+  debugLog?.info("deleteSelectedSong called", { module: 'song-management', function: 'deleteSelectedSong' });
+  debugLog?.info("selected_row:", { module: 'song-management', function: 'deleteSelectedSong', selectedRow: $("#selected_row") });
+  debugLog?.info("holding-tank-column has selected_row:", { module: 'song-management', function: 'deleteSelectedSong', hasSelectedRow: $("#holding-tank-column").has($("#selected_row")).length });
+  debugLog?.info("hotkey-tab-content has selected_row:", { module: 'song-management', function: 'deleteSelectedSong', hasSelectedRow: $("#hotkey-tab-content").has($("#selected_row")).length });
   
   // Check if the selected row is in the holding tank
   if ($("#holding-tank-column").has($("#selected_row")).length) {
-    console.log("Selected row is in holding tank");
+    debugLog?.info("Selected row is in holding tank", { module: 'song-management', function: 'deleteSelectedSong' });
     // If in holding tank, remove from holding tank
     removeFromHoldingTank();
   } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
-    console.log("Selected row is in hotkey tab");
+    debugLog?.info("Selected row is in hotkey tab", { module: 'song-management', function: 'deleteSelectedSong' });
     // If in hotkey tab, remove from hotkey
     removeFromHotkey();
   } else {
-    console.log("Selected row is in search results");
+    debugLog?.info("Selected row is in search results", { module: 'song-management', function: 'deleteSelectedSong' });
     // If not in holding tank or hotkey, delete from database
     deleteSong();
   }

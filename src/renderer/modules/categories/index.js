@@ -6,6 +6,16 @@
  * and database interactions for categories.
  */
 
+// Import debug logger
+let debugLog = null;
+try {
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (error) {
+  // Debug logger not available
+}
+
 // Import category sub-modules
 import * as categoryOperations from './category-operations.js';
 import * as categoryUI from './category-ui.js';
@@ -51,15 +61,15 @@ class CategoriesModule {
    * This method can be called to set up any initialization logic
    */
   async init() {
-    console.log('Categories module initializing...');
+    debugLog?.info('Categories module initializing...', { module: 'categories', function: 'init' });
     
     try {
       // Load initial categories
       await this.loadCategories();
       this.isInitialized = true;
-      console.log('Categories module initialized successfully');
+      debugLog?.info('Categories module initialized successfully', { module: 'categories', function: 'init' });
     } catch (error) {
-      console.error('Failed to initialize categories module:', error);
+      debugLog?.error('Failed to initialize categories module:', { module: 'categories', function: 'init', error: error });
       throw error;
     }
   }
