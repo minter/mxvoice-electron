@@ -1,7 +1,7 @@
-const { notarize } = require('@electron/notarize');
-const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
+import { notarize } from '@electron/notarize';
+import { execSync } from 'child_process';
+import path from 'path';
+import fs from 'fs';
 
 async function signBinary(binaryPath, identity, entitlements) {
   try {
@@ -23,7 +23,6 @@ function isMachOBinary(filePath) {
     return true;
   }
   try {
-    const { execSync } = require('child_process');
     const output = execSync(`file -b "${filePath}"`).toString();
     if (
       output.includes('Mach-O') &&
@@ -94,7 +93,7 @@ async function signAppBinaries(appPath, identity, entitlements) {
   }
 }
 
-exports.default = async function notarizing(context) {
+export default async function notarizing(context) {
   const { electronPlatformName, appOutDir, packager, buildMetadata } = context;
   if (electronPlatformName !== 'darwin') {
     return;
@@ -102,10 +101,6 @@ exports.default = async function notarizing(context) {
 
   const appName = packager.appInfo.productFilename;
   const appPath = path.join(appOutDir, `${appName}.app`);
-
-  // Notarization only in afterSign hook
-  // So skip signing here to avoid conflicts with electron-builder signing process
-  // Just perform notarization
 
   // Check for environment variables for notarization
   const appleId = process.env.APPLE_ID;
@@ -123,6 +118,9 @@ exports.default = async function notarizing(context) {
   console.log(`Notarizing ${appName} with Apple ID: ${appleId}, Team ID: ${teamId}`);
 
   try {
+    // Skip signing since electron-builder has already signed the app
+    // Just perform notarization
+    console.log('Notarizing app...');
     await notarize({
       tool: 'notarytool',
       appPath: appPath,
@@ -130,9 +128,10 @@ exports.default = async function notarizing(context) {
       appleIdPassword: appleIdPassword,
       teamId: teamId,
     });
+
     console.log('Notarization completed successfully');
   } catch (error) {
     console.error('Notarization failed:', error);
     // Don't throw the error to allow the build to continue
   }
-};
+}

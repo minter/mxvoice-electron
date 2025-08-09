@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 // Read package.json to get version and repository info
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -74,7 +74,7 @@ function generateUniversalLatestMac() {
 
   // Read existing latest-mac.yml (contains ARM64 data)
   const existingLatestMac = fs.readFileSync('dist/latest-mac.yml', 'utf8');
-  const existingData = require('js-yaml').load ? require('js-yaml').load(existingLatestMac) : parseYaml(existingLatestMac);
+  const existingData = parseYaml(existingLatestMac);
 
   // Calculate x64 file metadata
   const x64DmgPath = path.join('dist', `Mx. Voice-${version}-x64.dmg`);
@@ -99,73 +99,81 @@ function generateUniversalLatestMac() {
     }
   ];
 
-  // Merge with existing ARM64 files
+  // Merge ARM64 and x64 files
+  const universalFiles = [...existingData.files, ...x64Files];
+
+  // Create universal latest-mac.yml
   const universalData = {
-    version: version,
-    files: [...existingData.files, ...x64Files],
-    path: `Mx. Voice-${version}-x64.zip`, // Use x64 as default for backward compatibility
-    sha512: x64ZipMeta.sha512, // Use x64 SHA512 as default
-    releaseDate: new Date().toISOString()
+    ...existingData,
+    files: universalFiles
   };
 
-  // Write universal latest-mac.yml
-  const yamlContent = generateYaml(universalData);
-  fs.writeFileSync('dist/latest-mac-universal.yml', yamlContent);
+  const universalYaml = generateYaml(universalData);
+  fs.writeFileSync('dist/latest-mac-universal.yml', universalYaml);
 
   console.log('✅ Universal latest-mac.yml generated');
-  return universalData;
 }
 
-// Simple YAML parser for latest-mac.yml format
+// Simple YAML parser for basic key-value pairs
 function parseYaml(yamlString) {
   const lines = yamlString.split('\n');
-  const result = { files: [] };
-  let currentFile = null;
+  const result = {};
+  let currentKey = null;
+  let currentArray = null;
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed.startsWith('version:')) {
-      result.version = trimmed.split(':')[1].trim();
-    } else if (trimmed.startsWith('path:')) {
-      result.path = trimmed.split(':')[1].trim();
-    } else if (trimmed.startsWith('sha512:') && !currentFile) {
-      result.sha512 = trimmed.split(':')[1].trim();
-    } else if (trimmed.startsWith('releaseDate:')) {
-      result.releaseDate = trimmed.split(':')[1].trim().replace(/'/g, '');
-    } else if (trimmed.startsWith('- url:')) {
-      if (currentFile) result.files.push(currentFile);
-      currentFile = { url: trimmed.split(':')[1].trim() };
-    } else if (currentFile && trimmed.startsWith('sha512:')) {
-      currentFile.sha512 = trimmed.split(':')[1].trim();
-    } else if (currentFile && trimmed.startsWith('size:')) {
-      currentFile.size = parseInt(trimmed.split(':')[1].trim());
-    } else if (currentFile && trimmed.startsWith('blockMapSize:')) {
-      currentFile.blockMapSize = parseInt(trimmed.split(':')[1].trim());
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    if (trimmed.startsWith('- ')) {
+      // Array item
+      if (currentArray) {
+        currentArray.push(trimmed.substring(2));
+      }
+    } else if (trimmed.includes(':')) {
+      // Key-value pair
+      const colonIndex = trimmed.indexOf(':');
+      const key = trimmed.substring(0, colonIndex).trim();
+      const value = trimmed.substring(colonIndex + 1).trim();
+
+      if (value === '') {
+        // Start of object or array
+        currentKey = key;
+        if (key === 'files') {
+          result[key] = [];
+          currentArray = result[key];
+        } else {
+          result[key] = {};
+        }
+      } else {
+        // Simple key-value
+        result[key] = value;
+      }
     }
   }
 
-  if (currentFile) result.files.push(currentFile);
   return result;
 }
 
-// Simple YAML generator for latest-mac.yml format
 function generateYaml(data) {
-  let yaml = `version: ${data.version}\n`;
-  yaml += `files:\n`;
-
-  for (const file of data.files) {
-    yaml += `  - url: ${file.url}\n`;
-    yaml += `    sha512: ${file.sha512}\n`;
-    yaml += `    size: ${file.size}\n`;
-    if (file.blockMapSize) {
-      yaml += `    blockMapSize: ${file.blockMapSize}\n`;
+  let yaml = '';
+  
+  for (const [key, value] of Object.entries(data)) {
+    if (Array.isArray(value)) {
+      yaml += `${key}:\n`;
+      for (const item of value) {
+        yaml += `  - ${JSON.stringify(item)}\n`;
+      }
+    } else if (typeof value === 'object') {
+      yaml += `${key}:\n`;
+      for (const [subKey, subValue] of Object.entries(value)) {
+        yaml += `  ${subKey}: ${subValue}\n`;
+      }
+    } else {
+      yaml += `${key}: ${value}\n`;
     }
   }
-
-  yaml += `path: ${data.path}\n`;
-  yaml += `sha512: ${data.sha512}\n`;
-  yaml += `releaseDate: '${data.releaseDate}'\n`;
-
+  
   return yaml;
 }
 
@@ -173,21 +181,6 @@ async function createGitHubRelease() {
   console.log('🏷️  Creating GitHub release...');
 
   try {
-    // Check if release already exists
-    try {
-      const existingRelease = await octokit.rest.repos.getReleaseByTag({
-        owner: repoOwner,
-        repo: repoName,
-        tag: tagName,
-      });
-
-      console.log(`⚠️  Release ${tagName} already exists. Updating...`);
-      return existingRelease.data;
-    } catch (error) {
-      if (error.status !== 404) throw error;
-    }
-
-    // Create new release
     const release = await octokit.rest.repos.createRelease({
       owner: repoOwner,
       repo: repoName,
@@ -284,6 +277,7 @@ async function main() {
   }
 }
 
-if (require.main === module) {
+// Check if this file is being run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }

@@ -1,0 +1,16 @@
+---
+alwaysApply: true
+---
+
+- Use ES6 module syntax for files in `src/renderer/` and `src/preload/`
+- Use CommonJS syntax for files in `src/main/`
+- For renderer/preload modules: use `export { ModuleLoader, loader: moduleLoader }` and `export default { ModuleLoader, loader: moduleLoader }`
+- For main process modules: use `module.exports = { ModuleLoader, loader: moduleLoader }`
+- Use `.js` file extensions for all modules
+- When importing named exports: `import { ModuleLoader, loader } from './module-loader.js'`
+- When importing default exports: `import ModuleLoader from './module-loader.js'`
+- For mixed exports: export both named and default from the same module
+- Validate syntax with `node -c filename.js` for syntax validation
+- Check file location before choosing module syntax (renderer/preload vs main)
+- Ensure consistent import/export patterns within each context
+- Renderer modules may show false positives in Node.js context due to ES6 syntax

@@ -1,6 +1,6 @@
-const path = require('path');
-const { execSync } = require('child_process');
-const fs = require('fs');
+import path from 'path';
+import { execSync } from 'child_process';
+import fs from 'fs';
 
 async function signBinary(binaryPath, identity, entitlements) {
   try {
@@ -59,7 +59,7 @@ async function signUnpackedBinaries(appPath, identity, entitlements) {
   }
 }
 
-module.exports = async function afterPack(context) {
+export default async function afterPack(context) {
   const { appOutDir, packager } = context;
 
   const appName = packager.appInfo.productFilename;
