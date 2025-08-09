@@ -27,15 +27,11 @@ window.logError = window.logError || function(message, context) {
 // Module registry to avoid window pollution
 const moduleRegistry = {};
 
-// Import function registry for centralized function management
-import FunctionRegistry from './renderer/function-registry.js';
-import EventManager from './renderer/event-manager.js';
-import FunctionMonitor from './renderer/function-monitor.js';
+// Import function coordination module for centralized function management
+import FunctionCoordination from './renderer/modules/function-coordination/index.js';
 
-// These will be initialized after the debug logger is available
-let functionRegistry = null;
-let eventManager = null;
-let functionMonitor = null;
+// Function coordination instance - initialized after debug logger is available
+let functionCoordination = null;
 
 // Data loading and initialization now handled by app-initialization module
 
@@ -79,10 +75,50 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     
     // Update logging functions to use the debug logger (fallbacks already set above)
     if (debugLogger) {
-      window.logInfo = (msg, ctx) => debugLogger.info(msg, ctx).catch(() => console.log(`ℹ️ ${msg}`, ctx));
-      window.logDebug = (msg, ctx) => debugLogger.debug(msg, ctx).catch(() => console.log(`🐛 ${msg}`, ctx));
-      window.logWarn = (msg, ctx) => debugLogger.warn(msg, ctx).catch(() => console.warn(`⚠️ ${msg}`, ctx));
-      window.logError = (msg, ctx) => debugLogger.error(msg, ctx).catch(() => console.error(`❌ ${msg}`, ctx));
+      window.logInfo = (msg, ctx) => {
+        try {
+          const result = debugLogger.info(msg, ctx);
+          if (result && typeof result.catch === 'function') {
+            return result.catch(() => console.log(`ℹ️ ${msg}`, ctx));
+          }
+          return result;
+        } catch (error) {
+          console.log(`ℹ️ ${msg}`, ctx);
+        }
+      };
+      window.logDebug = (msg, ctx) => {
+        try {
+          const result = debugLogger.debug(msg, ctx);
+          if (result && typeof result.catch === 'function') {
+            return result.catch(() => console.log(`🐛 ${msg}`, ctx));
+          }
+          return result;
+        } catch (error) {
+          console.log(`🐛 ${msg}`, ctx);
+        }
+      };
+      window.logWarn = (msg, ctx) => {
+        try {
+          const result = debugLogger.warn(msg, ctx);
+          if (result && typeof result.catch === 'function') {
+            return result.catch(() => console.warn(`⚠️ ${msg}`, ctx));
+          }
+          return result;
+        } catch (error) {
+          console.warn(`⚠️ ${msg}`, ctx);
+        }
+      };
+      window.logError = (msg, ctx) => {
+        try {
+          const result = debugLogger.error(msg, ctx);
+          if (result && typeof result.catch === 'function') {
+            return result.catch(() => console.error(`❌ ${msg}`, ctx));
+          }
+          return result;
+        } catch (error) {
+          console.error(`❌ ${msg}`, ctx);
+        }
+      };
     }
     
     window.logInfo('Application initialization completed, proceeding with module loading...');
@@ -143,74 +179,52 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
 
     // Make module registry available for debugging and development
     window.moduleRegistry = moduleRegistry;
-    window.functionMonitor = functionMonitor;
     
-    // Ensure window.debugLog is available for FunctionMonitor
+    // Ensure window.debugLog is available for modules
     if (moduleRegistry.debugLog && !window.debugLog) {
       window.debugLog = moduleRegistry.debugLog;
       window.logInfo('Global debugLog made available');
     }
     
-    // Initialize dependent classes with the debug logger
-    if (!functionRegistry) {
-      functionRegistry = new FunctionRegistry(window.debugLog || debugLogger);
-      eventManager = new EventManager(functionRegistry, window.debugLog || debugLogger);
-      functionMonitor = new FunctionMonitor(functionRegistry, window.debugLog || debugLogger);
-      window.logInfo('Dependent classes initialized with debug logger');
-    }
+    // Initialize function coordination system
+    window.logInfo('Initializing function coordination system...');
+    functionCoordination = new FunctionCoordination({
+      debugLog: window.debugLog || debugLogger,
+      electronAPI: window.electronAPI,
+      db: window.db,
+      store: window.store
+    });
     
-    // Initialize function registry with loaded modules
-    window.logInfo('Initializing function registry...');
-    functionRegistry.setModuleRegistry(moduleRegistry);
-    await functionRegistry.registerAllFunctions();
+    // Initialize all function coordination components
+    const coordinationSuccess = await functionCoordination.initialize(
+      window.debugLog || debugLogger, 
+      moduleRegistry
+    );
     
-    // Validate critical functions are available
-    if (!functionRegistry.validateFunctions()) {
-      window.logWarn('Some critical functions are missing, but continuing...');
-    }
-    
-    // Log function registry statistics
-    const stats = functionRegistry.getStats();
-    window.logInfo('Function Registry Statistics', stats);
-    
-    // Initialize event manager to replace onclick attributes
-    window.logInfo('Initializing event manager...');
-    eventManager.initialize();
-    
-    // Log event manager statistics
-    const eventStats = eventManager.getStats();
-    window.logInfo('Event Manager Statistics', eventStats);
-    
-    // Initialize function monitor for real-time health checking
-    window.logInfo('Initializing function monitor...');
-    functionMonitor.startMonitoring();
-    
-    // Log function monitor statistics
-    const monitorStats = functionMonitor.getStats();
-    window.logInfo('Function Monitor Statistics', monitorStats);
-    
-    // Verify critical functions are available
-    function verifyCriticalFunctions() {
-      const criticalFunctions = [
-        'playSongFromId',
-        'stopPlaying', 
-        'pausePlaying',
-        'searchData',
-        'populateCategorySelect'
-      ];
+    if (!coordinationSuccess) {
+      window.logError('Function coordination initialization failed, but continuing...');
+    } else {
+      window.logInfo('Function coordination system initialized successfully');
       
-      const missingFunctions = criticalFunctions.filter(func => !window[func]);
+      // Get comprehensive statistics
+      const comprehensiveStats = functionCoordination.getComprehensiveStats();
+      window.logInfo('Function Coordination Statistics', comprehensiveStats);
       
-      if (missingFunctions.length > 0) {
-        window.logWarn('Missing critical functions', missingFunctions);
-        window.logWarn('This may cause runtime errors');
-      } else {
-        window.logInfo('All critical functions are available');
-      }
+      // Perform health check
+      const healthCheck = functionCoordination.performHealthCheck(moduleRegistry);
+      window.logInfo('Function Coordination Health Check', healthCheck);
     }
     
-    // Call verification after module loading
-    verifyCriticalFunctions();
+    // Make function coordination available for debugging and access to components
+    window.functionCoordination = functionCoordination;
+    
+    // Maintain backward compatibility by exposing individual components
+    if (functionCoordination) {
+      const components = functionCoordination.getComponents();
+      window.functionRegistry = components.functionRegistry;
+      window.eventManager = components.eventManager;
+      window.functionMonitor = components.functionMonitor;
+    }
     
     // Legacy functions moved to modules - keeping only HTML-compatible functions
     // All other functions are now available through moduleRegistry
