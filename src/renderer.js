@@ -9,19 +9,28 @@ let debugLogger = null;
 let sharedStateInstance = null;
 let sharedStateInitialized = false;
 
-// Set up immediate fallback logging functions to prevent "not a function" errors
-// These will be replaced by proper logging functions after app-initialization completes
-window.logInfo = window.logInfo || function(message, context) {
-  console.log(`ℹ️ ${message}`, context || '');
+// Initialize debug logger early with basic configuration
+debugLogger = initializeDebugLogger({
+  electronAPI: window.electronAPI,
+  db: window.db,
+  store: window.store
+});
+
+// Set up logging functions using the debug logger (assuming always available)
+window.logInfo = async (message, context) => {
+  await debugLogger.info(message, context);
 };
-window.logDebug = window.logDebug || function(message, context) {
-  console.log(`🐛 ${message}`, context || '');
+
+window.logDebug = async (message, context) => {
+  await debugLogger.debug(message, context);
 };
-window.logWarn = window.logWarn || function(message, context) {
-  console.warn(`⚠️ ${message}`, context || '');
+
+window.logWarn = async (message, context) => {
+  await debugLogger.warn(message, context);
 };
-window.logError = window.logError || function(message, context) {
-  console.error(`❌ ${message}`, context || '');
+
+window.logError = async (message, context) => {
+  await debugLogger.error(message, context);
 };
 
 // Module registry to avoid window pollution
@@ -54,10 +63,10 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
 // Load modules dynamically and make functions globally available
 (async function loadModules() {
   try {
-    console.log('🔧 Starting module loading...');
+    window.logInfo('🔧 Starting module loading...');
     
     // Initialize the application using the app-initialization module
-    console.log('🚀 Initializing application components...');
+    window.logInfo('🚀 Initializing application components...');
     const initSuccess = await AppInitialization.initialize({
       debug: {
         electronAPI: window.electronAPI,
@@ -74,58 +83,11 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       throw new Error('Application initialization failed');
     }
     
-    // Get initialized instances for backward compatibility
-    debugLogger = AppInitialization.getDebugLogger();
+    // Get initialized instances for backward compatibility  
     sharedStateInstance = AppInitialization.getSharedState();
     sharedStateInitialized = AppInitialization.isInitialized();
     
-    // Update logging functions to use the debug logger (fallbacks already set above)
-    if (debugLogger) {
-      window.logInfo = (msg, ctx) => {
-        try {
-          const result = debugLogger.info(msg, ctx);
-          if (result && typeof result.catch === 'function') {
-            return result.catch(() => console.log(`ℹ️ ${msg}`, ctx));
-          }
-          return result;
-        } catch (error) {
-          console.log(`ℹ️ ${msg}`, ctx);
-        }
-      };
-      window.logDebug = (msg, ctx) => {
-        try {
-          const result = debugLogger.debug(msg, ctx);
-          if (result && typeof result.catch === 'function') {
-            return result.catch(() => console.log(`🐛 ${msg}`, ctx));
-          }
-          return result;
-        } catch (error) {
-          console.log(`🐛 ${msg}`, ctx);
-        }
-      };
-      window.logWarn = (msg, ctx) => {
-        try {
-          const result = debugLogger.warn(msg, ctx);
-          if (result && typeof result.catch === 'function') {
-            return result.catch(() => console.warn(`⚠️ ${msg}`, ctx));
-          }
-          return result;
-        } catch (error) {
-          console.warn(`⚠️ ${msg}`, ctx);
-        }
-      };
-      window.logError = (msg, ctx) => {
-        try {
-          const result = debugLogger.error(msg, ctx);
-          if (result && typeof result.catch === 'function') {
-            return result.catch(() => console.error(`❌ ${msg}`, ctx));
-          }
-          return result;
-        } catch (error) {
-          console.error(`❌ ${msg}`, ctx);
-        }
-      };
-    }
+    // Debug logger already initialized early, no need to reinitialize
     
     window.logInfo('Application initialization completed, proceeding with module loading...');
     
@@ -310,19 +272,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
   }
 })();
 
-// Preferences and database functions moved to respective modules
-
-// Search functions moved to search module
-
-// Live search functions moved to search module
-
-// Database functions moved to database module
-
-// Database functions moved to database module
-
-// howlerUtils moved to audio module
-
-// Audio functions moved to audio module
+// Legacy functions moved to respective modules (preferences, search, database, audio, etc.)
 
 
 

@@ -154,7 +154,7 @@ export default class UIInteractionEvents {
     // Song form modal shown event
     const songFormModalShownHandler = (event) => {
       try {
-        console.log($("#song-form-title").val().length);
+        this.debugLog?.debug('Song form title length:', $("#song-form-title").val().length);
         if (!$("#song-form-title").val().length) {
           $("#song-form-title").focus();
         } else {

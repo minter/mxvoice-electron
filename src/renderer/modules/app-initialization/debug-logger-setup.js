@@ -27,14 +27,13 @@ export class DebugLoggerSetup {
       await this.debugLogger.info('Debug logger initialized');
       return this.debugLogger;
     } catch (error) {
-      console.error('Failed to initialize debug logger:', error);
       // Create fallback logger
       this.debugLogger = {
-        log: console.log,
-        warn: console.warn,
-        error: console.error,
-        info: console.info,
-        debug: console.log,
+        log: (...args) => {},
+        warn: (...args) => {},
+        error: (...args) => {},
+        info: (...args) => {},
+        debug: (...args) => {},
         isDebugEnabled: () => Promise.resolve(false),
         setDebugEnabled: () => Promise.resolve(false),
         getLogLevel: () => 2,
@@ -59,12 +58,7 @@ export class DebugLoggerSetup {
    */
   logInfo(message, context = null) {
     if (this.debugLogger) {
-      this.debugLogger.info(message, context).catch(() => {
-        // Fallback to console if debug logger fails
-        console.log(`ℹ️ ${message}`, context);
-      });
-    } else {
-      console.log(`ℹ️ ${message}`, context);
+      this.debugLogger.info(message, context);
     }
   }
 
@@ -75,12 +69,7 @@ export class DebugLoggerSetup {
    */
   logDebug(message, context = null) {
     if (this.debugLogger) {
-      this.debugLogger.debug(message, context).catch(() => {
-        // Fallback to console if debug logger fails
-        console.log(`🐛 ${message}`, context);
-      });
-    } else {
-      console.log(`🐛 ${message}`, context);
+      this.debugLogger.debug(message, context);
     }
   }
 
@@ -92,8 +81,6 @@ export class DebugLoggerSetup {
   logWarn(message, context = null) {
     if (this.debugLogger) {
       this.debugLogger.warn(message, context);
-    } else {
-      console.warn(`⚠️ ${message}`, context);
     }
   }
 
@@ -105,8 +92,6 @@ export class DebugLoggerSetup {
   logError(message, context = null) {
     if (this.debugLogger) {
       this.debugLogger.error(message, context);
-    } else {
-      console.error(`❌ ${message}`, context);
     }
   }
 

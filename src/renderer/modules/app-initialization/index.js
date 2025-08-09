@@ -27,10 +27,10 @@ export class AppInitialization {
    */
   async initialize(config = {}) {
     try {
-      console.log('🚀 Starting application initialization...');
-      
       // Step 1: Initialize debug logger
       await this.initializeDebugLogger(config.debug || {});
+      
+      this.logInfo('🚀 Starting application initialization...');
       
       // Step 2: Initialize environment
       await this.initializeEnvironment(config.environment || {});
@@ -54,7 +54,7 @@ export class AppInitialization {
       
       return true;
     } catch (error) {
-      console.error('❌ Application initialization failed:', error);
+      this.logError('❌ Application initialization failed:', error);
       this.initialized = false;
       return false;
     }
@@ -67,8 +67,6 @@ export class AppInitialization {
    */
   async initializeDebugLogger(config = {}) {
     try {
-      console.log('🔧 Initializing debug logger...');
-      
       this.debugLoggerSetup = new DebugLoggerSetup();
       
       const context = {
@@ -83,10 +81,12 @@ export class AppInitialization {
       this.debugLoggerSetup.createGlobalLoggers();
       
       this.addInitializationStep('Debug Logger', true);
+      this.logInfo('🔧 Initializing debug logger...');
       this.logInfo('Debug logger initialization completed');
       return true;
     } catch (error) {
-      console.error('Failed to initialize debug logger:', error);
+      // At this point debugLoggerSetup exists but may have fallback logger
+      this.logError('Failed to initialize debug logger:', error);
       this.addInitializationStep('Debug Logger', false, error.message);
       return false;
     }
@@ -264,32 +264,32 @@ export class AppInitialization {
   logInfo(message, context = null) {
     if (this.debugLoggerSetup) {
       this.debugLoggerSetup.logInfo(message, context);
-    } else {
-      console.log(`ℹ️ ${message}`, context);
+    } else if (typeof window?.logInfo === 'function') {
+      window.logInfo(message, context);
     }
   }
 
   logDebug(message, context = null) {
     if (this.debugLoggerSetup) {
       this.debugLoggerSetup.logDebug(message, context);
-    } else {
-      console.log(`🐛 ${message}`, context);
+    } else if (typeof window?.logDebug === 'function') {
+      window.logDebug(message, context);
     }
   }
 
   logWarn(message, context = null) {
     if (this.debugLoggerSetup) {
       this.debugLoggerSetup.logWarn(message, context);
-    } else {
-      console.warn(`⚠️ ${message}`, context);
+    } else if (typeof window?.logWarn === 'function') {
+      window.logWarn(message, context);
     }
   }
 
   logError(message, context = null) {
     if (this.debugLoggerSetup) {
       this.debugLoggerSetup.logError(message, context);
-    } else {
-      console.error(`❌ ${message}`, context);
+    } else if (typeof window?.logError === 'function') {
+      window.logError(message, context);
     }
   }
 }

@@ -440,18 +440,9 @@ export class NavigationShortcuts {
    */
   logInfo(message, context) {
     if (typeof this.logger?.info === 'function') {
-      try {
-        const result = this.logger.info(message, context);
-        if (result && typeof result.catch === 'function') {
-          result.catch(() => console.log(`ℹ️ ${message}`, context));
-        }
-      } catch (error) {
-        console.log(`ℹ️ ${message}`, context);
-      }
+      this.logger.info(message, context);
     } else if (typeof window?.logInfo === 'function') {
       window.logInfo(message, context);
-    } else {
-      console.log(`ℹ️ ${message}`, context || '');
     }
   }
 
@@ -462,18 +453,9 @@ export class NavigationShortcuts {
    */
   logDebug(message, context) {
     if (typeof this.logger?.debug === 'function') {
-      try {
-        const result = this.logger.debug(message, context);
-        if (result && typeof result.catch === 'function') {
-          result.catch(() => console.log(`🐛 ${message}`, context));
-        }
-      } catch (error) {
-        console.log(`🐛 ${message}`, context);
-      }
+      this.logger.debug(message, context);
     } else if (typeof window?.logDebug === 'function') {
       window.logDebug(message, context);
-    } else {
-      console.log(`🐛 ${message}`, context || '');
     }
   }
 
@@ -484,18 +466,9 @@ export class NavigationShortcuts {
    */
   logError(message, context) {
     if (typeof this.logger?.error === 'function') {
-      try {
-        const result = this.logger.error(message, context);
-        if (result && typeof result.catch === 'function') {
-          result.catch(() => console.error(`❌ ${message}`, context));
-        }
-      } catch (error) {
-        console.error(`❌ ${message}`, context);
-      }
+      this.logger.error(message, context);
     } else if (typeof window?.logError === 'function') {
       window.logError(message, context);
-    } else {
-      console.error(`❌ ${message}`, context || '');
     }
   }
 
@@ -506,18 +479,9 @@ export class NavigationShortcuts {
    */
   logWarn(message, context) {
     if (typeof this.logger?.warn === 'function') {
-      try {
-        const result = this.logger.warn(message, context);
-        if (result && typeof result.catch === 'function') {
-          result.catch(() => console.warn(`⚠️ ${message}`, context));
-        }
-      } catch (error) {
-        console.warn(`⚠️ ${message}`, context);
-      }
+      this.logger.warn(message, context);
     } else if (typeof window?.logWarn === 'function') {
       window.logWarn(message, context);
-    } else {
-      console.warn(`⚠️ ${message}`, context || '');
     }
   }
 }

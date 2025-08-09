@@ -236,32 +236,32 @@ export class EnvironmentSetup {
   logInfo(message, context = null) {
     if (this.debugLoggerSetup) {
       this.debugLoggerSetup.logInfo(message, context);
-    } else {
-      console.log(`ℹ️ ${message}`, context);
+    } else if (typeof window?.logInfo === 'function') {
+      window.logInfo(message, context);
     }
   }
 
   logDebug(message, context = null) {
     if (this.debugLoggerSetup) {
       this.debugLoggerSetup.logDebug(message, context);
-    } else {
-      console.log(`🐛 ${message}`, context);
+    } else if (typeof window?.logDebug === 'function') {
+      window.logDebug(message, context);
     }
   }
 
   logWarn(message, context = null) {
     if (this.debugLoggerSetup) {
       this.debugLoggerSetup.logWarn(message, context);
-    } else {
-      console.warn(`⚠️ ${message}`, context);
+    } else if (typeof window?.logWarn === 'function') {
+      window.logWarn(message, context);
     }
   }
 
   logError(message, context = null) {
     if (this.debugLoggerSetup) {
       this.debugLoggerSetup.logError(message, context);
-    } else {
-      console.error(`❌ ${message}`, context);
+    } else if (typeof window?.logError === 'function') {
+      window.logError(message, context);
     }
   }
 }
