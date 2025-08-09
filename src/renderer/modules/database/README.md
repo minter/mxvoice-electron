@@ -67,7 +67,7 @@ Core database CRUD operations for songs and categories:
 ### Basic Module Usage
 
 ```javascript
-const databaseModule = require('./renderer/modules/database');
+import databaseModule from './renderer/modules/database/index.js';
 
 // Initialize the module
 databaseModule.database.init();

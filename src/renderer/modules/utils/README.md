@@ -24,7 +24,7 @@ Provides CSS animation functionality.
 
 **Usage:**
 ```javascript
-const { animateCSS } = require('./utils');
+import { animateCSS } from './utils/index.js';
 animateCSS($('#element'), 'fadeIn', '1s');
 ```
 
@@ -39,7 +39,7 @@ Provides custom modal dialog functionality to replace native browser dialogs.
 
 **Usage:**
 ```javascript
-const { customConfirm, customPrompt } = require('./utils');
+import { customConfirm, customPrompt } from './utils/index.js';
 
 customConfirm('Are you sure?', () => {
   console.log('User confirmed');
@@ -62,7 +62,7 @@ Provides data validation functions for common data types.
 
 **Usage:**
 ```javascript
-const { isValidSongId, isValidHotkey } = require('./utils');
+import { isValidSongId, isValidHotkey } from './utils/index.js';
 
 if (isValidSongId('123')) {
   console.log('Valid song ID');
@@ -78,7 +78,7 @@ if (isValidHotkey('f1')) {
 The main module provides a unified interface for all utilities:
 
 ```javascript
-const utils = require('./utils');
+import utils from './utils/index.js';
 
 // Access individual utilities
 utils.animateCSS(element, 'fadeIn');
@@ -95,7 +95,7 @@ utilsModule.animateCSS(element, 'fadeIn');
 The module includes built-in testing functionality:
 
 ```javascript
-const utils = require('./utils');
+import utils from './utils/index.js';
 
 // Test all utilities
 const testResults = utils.utils.test();
@@ -107,8 +107,8 @@ console.log(testResults);
 The Utils module can be integrated with the Module Loader:
 
 ```javascript
-const utils = require('./utils');
-const { loader } = require('../module-loader');
+import utils from './utils/index.js';
+import { loader } from '../module-loader.js';
 
 // Register the utils module
 loader.registerModule('utils', utils.utils);

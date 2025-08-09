@@ -27,7 +27,7 @@ Handles the main audio playback functionality.
 
 **Usage:**
 ```javascript
-const { playSongFromId, playSelected } = require('./audio');
+import { playSongFromId, playSelected } from './audio/index.js';
 
 // Play a specific song
 playSongFromId('123');
@@ -49,7 +49,7 @@ Handles audio control and UI state management.
 
 **Usage:**
 ```javascript
-const { stopPlaying, pausePlaying, resetUIState } = require('./audio');
+import { stopPlaying, pausePlaying, resetUIState } from './audio/index.js';
 
 // Stop audio with fade out
 stopPlaying(true);
@@ -66,7 +66,7 @@ resetUIState();
 The main module provides a unified interface for all audio functionality:
 
 ```javascript
-const audio = require('./audio');
+import audio from './audio/index.js';
 
 // Access individual functions
 audio.playSongFromId('123');
@@ -90,7 +90,7 @@ audioModule.playSongFromId('123');
 The module includes built-in testing functionality:
 
 ```javascript
-const audio = require('./audio');
+import audio from './audio/index.js';
 
 // Test all audio functions
 const testResults = audio.audio.test();
@@ -106,8 +106,8 @@ console.log(info);
 The Audio module can be integrated with the Module Loader:
 
 ```javascript
-const audio = require('./audio');
-const { loader } = require('../module-loader');
+import audio from './audio/index.js';
+import { loader } from '../module-loader.js';
 
 // Register the audio module
 loader.registerModule('audio', audio.audio);

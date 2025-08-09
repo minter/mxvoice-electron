@@ -48,7 +48,7 @@ categories/
 
 ```javascript
 // Load the categories module
-const categoriesModule = require('./modules/categories');
+import categoriesModule from './modules/categories/index.js';
 
 // Initialize the module
 await categoriesModule.categories.init();

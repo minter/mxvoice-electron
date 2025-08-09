@@ -36,7 +36,7 @@ The search module is organized into several sub-modules:
 ### Loading the Module
 
 ```javascript
-const searchModule = require('./renderer/modules/search');
+import searchModule from './renderer/modules/search/index.js';
 
 // Access individual functions
 const { searchData, performLiveSearch, toggleAdvancedSearch } = searchModule;

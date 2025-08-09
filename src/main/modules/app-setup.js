@@ -79,9 +79,6 @@ function createWindow() {
   // Open the DevTools.
   //mainWindow.webContents.openDevTools();
 
-  // mainWindow.$ = mainWindow.jQuery = require('jquery');
-  // mainWindow.Bootstrap = require('bootstrap');
-
   mainWindow.on('will-resize', (_event, newBounds) => {
     if (store) {
       store.set('browser_width', newBounds.width);

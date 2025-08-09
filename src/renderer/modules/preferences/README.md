@@ -32,7 +32,7 @@ preferences/
 ### Initialization
 
 ```javascript
-const preferencesModule = require('./modules/preferences');
+import preferencesModule from './modules/preferences/index.js';
 
 // Initialize with dependencies
 const preferences = preferencesModule.initialize({

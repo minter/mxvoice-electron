@@ -48,7 +48,7 @@ ui/
 ### Initialization
 
 ```javascript
-const uiModule = require('./modules/ui');
+import uiModule from './modules/ui/index.js';
 
 // Initialize with dependencies
 const ui = uiModule.initialize({

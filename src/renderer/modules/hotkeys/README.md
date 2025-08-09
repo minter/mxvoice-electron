@@ -75,7 +75,7 @@ hotkeys/
 ### Basic Initialization
 
 ```javascript
-const HotkeysModule = require('./modules/hotkeys');
+import HotkeysModule from './modules/hotkeys/index.js';
 
 const hotkeys = new HotkeysModule({
   electronAPI: window.electronAPI,
