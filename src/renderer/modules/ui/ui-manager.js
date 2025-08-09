@@ -18,6 +18,9 @@ try {
   // Debug logger not available
 }
 
+// Import secure adapters
+import { secureFileSystem } from '../adapters/secure-adapter.js';
+
 /**
  * Initialize the UI Manager module
  * @param {Object} options - Configuration options
@@ -272,7 +275,7 @@ function initializeUIManager(options = {}) {
                 electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
                   if (joinResult.success) {
                     const filePath = joinResult.data;
-                    electronAPI.fileSystem.delete(filePath).then(result => {
+                    secureFileSystem.delete(filePath).then(result => {
                       if (result.success) {
                         debugLog?.info('File deleted successfully', { 
                           module: 'ui-manager',

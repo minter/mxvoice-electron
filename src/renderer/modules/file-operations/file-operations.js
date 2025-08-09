@@ -2,7 +2,7 @@
  * File Operations - Core File I/O Functions
  * 
  * Handles opening and saving of hotkey and holding tank files
- * with fallback support for both modern electronAPI and legacy ipcRenderer
+ * with secure adapter support and fallback compatibility
  */
 
 // Import debug logger
@@ -15,6 +15,9 @@ try {
 } catch (error) {
   // Debug logger not available
 }
+
+// Import secure adapters
+import { secureFileSystem } from '../adapters/secure-adapter.js';
 
 /**
  * Opens a hotkey file using the modern electronAPI with fallback to legacy ipcRenderer

@@ -16,6 +16,9 @@ try {
   // Debug logger not available
 }
 
+// Import secure adapters
+import { secureFileSystem } from '../adapters/secure-adapter.js';
+
 /**
  * Test function for Phase 2 migrations
  * Tests if new APIs are available and working
@@ -175,7 +178,7 @@ export function testFileSystemAPI() {
     return window.electronAPI.store.get('database_directory').then(dbResult => {
       if (dbResult.success) {
         const testPath = dbResult.value;
-        return window.electronAPI.fileSystem.exists(testPath).then(result => {
+        return secureFileSystem.exists(testPath).then(result => {
           if (result.success) {
             debugLog?.info('file exists API works', { 
               module: 'test-utils',
@@ -208,7 +211,7 @@ export function testFileSystemAPI() {
         return window.electronAPI.path.join(dbResult.value, 'config.json').then(joinResult => {
           if (joinResult.success) {
             const configPath = joinResult.data;
-            return window.electronAPI.fileSystem.read(configPath).then(result => {
+            return secureFileSystem.read(configPath).then(result => {
               if (result.success) {
                 debugLog?.info('file read API works: Config file read successfully', { 
                   module: 'test-utils',

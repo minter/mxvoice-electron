@@ -15,6 +15,9 @@ try {
   // Debug logger not available
 }
 
+// Import secure adapters
+import { secureFileSystem, secureDatabase, securePath } from '../adapters/secure-adapter.js';
+
 /**
  * Shows the bulk add modal with directory and category selection
  * 
@@ -83,7 +86,7 @@ export function addSongsByPath(pathArray, category) {
           songSourcePath: songSourcePath,
           newPath: newPath
         });
-        window.electronAPI.fileSystem.copy(songSourcePath, newPath).then(result => {
+        secureFileSystem.copy(songSourcePath, newPath).then(result => {
           if (result.success) {
             debugLog?.info('File copied successfully', { 
               module: 'bulk-operations',
@@ -141,11 +144,11 @@ export function saveBulkUpload(event) {
 
   const walk = function (dir) {
     const results = [];
-    window.electronAPI.fileSystem.readdir(dir).then(result => {
+    secureFileSystem.readdir(dir).then(result => {
       if (result.success) {
         result.data.forEach(function (file) {
           file = dir + "/" + file;
-          window.electronAPI.fileSystem.stat(file).then(statResult => {
+          secureFileSystem.stat(file).then(statResult => {
             if (statResult.success) {
               const stat = statResult.data;
               if (stat && stat.isDirectory()) {

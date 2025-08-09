@@ -15,6 +15,9 @@ try {
   // Debug logger not available
 }
 
+// Import secure adapters
+import { secureFileSystem, secureDatabase } from '../adapters/secure-adapter.js';
+
 /**
  * Deletes a song from the database and removes the associated file
  * Also removes the song from all UI elements (holding tank, hotkeys, search results)
@@ -36,7 +39,7 @@ export function deleteSong() {
             window.electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
               if (joinResult.success) {
                 const filePath = joinResult.data;
-                window.electronAPI.fileSystem.delete(filePath).then(result => {
+                secureFileSystem.delete(filePath).then(result => {
                   if (result.success) {
                     debugLog?.info('✅ File deleted successfully', { module: 'song-management', function: 'deleteSong' });
                   } else {

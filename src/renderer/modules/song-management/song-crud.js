@@ -15,6 +15,9 @@ try {
   // Debug logger not available
 }
 
+// Import secure adapters
+import { secureFileSystem, secureDatabase } from '../adapters/secure-adapter.js';
+
 /**
  * Saves an edited song to the database
  * Updates song information and refreshes the search results
@@ -120,7 +123,7 @@ export function saveNewSong(event) {
             duration,
             Math.floor(Date.now() / 1000)
           );
-          window.electronAPI.fileSystem.copy(filename, newPath).then(result => {
+          secureFileSystem.copy(filename, newPath).then(result => {
             if (result.success) {
               debugLog?.info('✅ File copied successfully', { module: 'song-management', function: 'saveNewSong' });
             } else {

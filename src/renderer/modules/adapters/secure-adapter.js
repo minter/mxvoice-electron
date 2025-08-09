@@ -282,6 +282,179 @@ export const secureFileSystem = {
       });
       throw error;
     }
+  },
+
+  /**
+   * Copy a file
+   * @param {string} sourcePath - Source file path
+   * @param {string} destPath - Destination file path
+   * @returns {Promise<Object>} Copy result
+   */
+  async copy(sourcePath, destPath) {
+    try {
+      if (window.secureElectronAPI) {
+        debugLog?.debug('Using secure file API for copy', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.copy' 
+        });
+        return await window.secureElectronAPI.fileSystem.copy(sourcePath, destPath);
+      } else if (window.electronAPI?.fileSystem) {
+        debugLog?.debug('Using modern file API for copy', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.copy' 
+        });
+        return await window.electronAPI.fileSystem.copy(sourcePath, destPath);
+      } else if (window.fs) {
+        debugLog?.debug('Using legacy file API for copy', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.copy' 
+        });
+        try {
+          window.fs.copyFileSync(sourcePath, destPath);
+          return { success: true };
+        } catch (error) {
+          throw new Error(`File copy failed: ${error.message}`);
+        }
+      } else {
+        throw new Error('No file system API available');
+      }
+    } catch (error) {
+      debugLog?.error('File copy error:', { 
+        module: 'secure-adapter',
+        function: 'secureFileSystem.copy',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Read directory contents
+   * @param {string} dirPath - Directory path
+   * @returns {Promise<Object>} Directory listing result
+   */
+  async readdir(dirPath) {
+    try {
+      if (window.secureElectronAPI) {
+        debugLog?.debug('Using secure file API for readdir', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.readdir' 
+        });
+        return await window.secureElectronAPI.fileSystem.readdir(dirPath);
+      } else if (window.electronAPI?.fileSystem) {
+        debugLog?.debug('Using modern file API for readdir', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.readdir' 
+        });
+        return await window.electronAPI.fileSystem.readdir(dirPath);
+      } else if (window.fs) {
+        debugLog?.debug('Using legacy file API for readdir', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.readdir' 
+        });
+        try {
+          const data = window.fs.readdirSync(dirPath);
+          return { success: true, data };
+        } catch (error) {
+          throw new Error(`Directory read failed: ${error.message}`);
+        }
+      } else {
+        throw new Error('No file system API available');
+      }
+    } catch (error) {
+      debugLog?.error('Directory read error:', { 
+        module: 'secure-adapter',
+        function: 'secureFileSystem.readdir',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Get file/directory stats
+   * @param {string} filePath - File or directory path
+   * @returns {Promise<Object>} File stat result
+   */
+  async stat(filePath) {
+    try {
+      if (window.secureElectronAPI) {
+        debugLog?.debug('Using secure file API for stat', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.stat' 
+        });
+        return await window.secureElectronAPI.fileSystem.stat(filePath);
+      } else if (window.electronAPI?.fileSystem) {
+        debugLog?.debug('Using modern file API for stat', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.stat' 
+        });
+        return await window.electronAPI.fileSystem.stat(filePath);
+      } else if (window.fs) {
+        debugLog?.debug('Using legacy file API for stat', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.stat' 
+        });
+        try {
+          const data = window.fs.statSync(filePath);
+          return { success: true, data };
+        } catch (error) {
+          throw new Error(`File stat failed: ${error.message}`);
+        }
+      } else {
+        throw new Error('No file system API available');
+      }
+    } catch (error) {
+      debugLog?.error('File stat error:', { 
+        module: 'secure-adapter',
+        function: 'secureFileSystem.stat',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a file
+   * @param {string} filePath - File path to delete
+   * @returns {Promise<Object>} Delete result
+   */
+  async delete(filePath) {
+    try {
+      if (window.secureElectronAPI) {
+        debugLog?.debug('Using secure file API for delete', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.delete' 
+        });
+        return await window.secureElectronAPI.fileSystem.delete(filePath);
+      } else if (window.electronAPI?.fileSystem) {
+        debugLog?.debug('Using modern file API for delete', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.delete' 
+        });
+        return await window.electronAPI.fileSystem.delete(filePath);
+      } else if (window.fs) {
+        debugLog?.debug('Using legacy file API for delete', { 
+          module: 'secure-adapter',
+          function: 'secureFileSystem.delete' 
+        });
+        try {
+          window.fs.unlinkSync(filePath);
+          return { success: true };
+        } catch (error) {
+          throw new Error(`File delete failed: ${error.message}`);
+        }
+      } else {
+        throw new Error('No file system API available');
+      }
+    } catch (error) {
+      debugLog?.error('File delete error:', { 
+        module: 'secure-adapter',
+        function: 'secureFileSystem.delete',
+        error: error.message 
+      });
+      throw error;
+    }
   }
 };
 
