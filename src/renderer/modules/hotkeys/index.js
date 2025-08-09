@@ -227,7 +227,7 @@ class HotkeysModule {
    * @param {Object} fkeys - Object containing hotkey data
    * @param {string} title - Title for the hotkey tab
    */
-  populateHotkeys(fkeys, title) {
+  _populateHotkeysImpl(fkeys, title) {
     debugLog?.info('🔄 ===== POPULATEHOTKEYS FUNCTION ENTERED =====', { module: 'hotkeys', function: 'populateHotkeys' });
     debugLog?.info('🔄 populateHotkeys called with:', { fkeys, title }, { module: 'hotkeys', function: 'populateHotkeys' });
     debugLog?.info('🔄 electronAPI available:', !!window.electronAPI, { module: 'hotkeys', function: 'populateHotkeys' });
@@ -285,6 +285,13 @@ class HotkeysModule {
       $("#hotkey_tabs li a.active").text(title);
     }
     debugLog?.info('✅ populateHotkeys completed successfully', { module: 'hotkeys', function: 'populateHotkeys' });
+  }
+
+  /**
+   * Public populateHotkeys method - calls the implementation
+   */
+  populateHotkeys(fkeys, title) {
+    return this._populateHotkeysImpl(fkeys, title);
   }
 
   /**
@@ -621,9 +628,18 @@ class HotkeysModule {
     debugLog?.debug('populateHotkeysWrapper called', { fkeys, title });
     try {
       debugLog?.info('About to call populateHotkeys...');
-      const result = this.populateHotkeys(fkeys, title);
+      // Call the working implementation from hotkey-data.js
+      hotkeyData.populateHotkeys(fkeys, title, {
+        electronAPI: window.electronAPI,
+        db: this.db || window.db,
+        setLabelFromSongId: (songId, element) => {
+          if (window.setLabelFromSongId) {
+            window.setLabelFromSongId(songId, element);
+          }
+        }
+      });
       debugLog?.info('populateHotkeys completed successfully');
-      return result;
+      return true;
     } catch (error) {
       debugLog?.error('Error in populateHotkeys', error);
       throw error;

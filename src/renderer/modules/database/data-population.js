@@ -470,6 +470,14 @@ function addToHoldingTank(song_id, element) {
       if (typeof db !== 'undefined') {
         var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
         var row = stmt.get(song_id);
+        if (!row) {
+          debugLog?.warn('Song not found in database', { 
+            module: 'data-population',
+            function: 'addToHoldingTank',
+            songId: song_id
+          });
+          return;
+        }
         var title = row.title || "[Unknown Title]";
         var artist = row.artist || "[Unknown Artist]";
         var time = row.time || "[??:??]";
@@ -588,9 +596,36 @@ function populateHotkeys(fkeys, title) {
  * @param {Array} songIds - Array of song IDs to add
  */
 function populateHoldingTank(songIds) {
+  debugLog?.info('populateHoldingTank called with song IDs', { 
+    module: 'data-population',
+    function: 'populateHoldingTank',
+    songIds: songIds
+  });
+  
+  if (!songIds || songIds.length === 0) {
+    debugLog?.warn('No song IDs provided to populateHoldingTank', { 
+      module: 'data-population',
+      function: 'populateHoldingTank'
+    });
+    return false;
+  }
+  
   $(".holding_tank.active").empty();
   songIds.forEach((songId) => {
-    addToHoldingTank(songId, $(".holding_tank.active"));
+    if (songId && songId.trim()) {
+      debugLog?.info('Adding song ID to holding tank', { 
+        module: 'data-population',
+        function: 'populateHoldingTank',
+        songId: songId
+      });
+      addToHoldingTank(songId.trim(), $(".holding_tank.active"));
+    } else {
+      debugLog?.warn('Skipping empty or invalid song ID', { 
+        module: 'data-population',
+        function: 'populateHoldingTank',
+        songId: songId
+      });
+    }
   });
   scale_scrollable();
   return false;
