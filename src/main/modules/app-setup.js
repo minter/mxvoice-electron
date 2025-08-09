@@ -100,7 +100,7 @@ function createWindow() {
 
 // Create application menu
 function createApplicationMenu() {
-  var application_menu = [
+  const application_menu = [
     {
       label: "Edit",
       submenu: [

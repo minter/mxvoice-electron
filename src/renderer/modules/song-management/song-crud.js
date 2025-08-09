@@ -25,11 +25,11 @@ export function saveEditedSong(event) {
   event.preventDefault();
   $(`#songFormModal`).modal("hide");
   debugLog?.info("Starting edit process", { module: 'song-management', function: 'saveEditedSong' });
-  var songId = $("#song-form-songid").val();
-  var title = $("#song-form-title").val();
-  var artist = $("#song-form-artist").val();
-  var info = $("#song-form-info").val();
-  var category = $("#song-form-category").val();
+  const songId = $("#song-form-songid").val();
+  const title = $("#song-form-title").val();
+  const artist = $("#song-form-artist").val();
+  const info = $("#song-form-info").val();
+  const category = $("#song-form-category").val();
 
   const stmt = db.prepare(
     "UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?"
@@ -50,24 +50,24 @@ export function saveNewSong(event) {
   event.preventDefault();
   $(`#songFormModal`).modal("hide");
   debugLog?.info("Starting save process", { module: 'song-management', function: 'saveNewSong' });
-  var filename = $("#song-form-filename").val();
+  const filename = $("#song-form-filename").val();
   window.electronAPI.path.parse(filename).then(result => {
     if (result.success) {
-      var pathData = result.data;
-      var title = $("#song-form-title").val();
-      var artist = $("#song-form-artist").val();
-      var info = $("#song-form-info").val();
-      var category = $("#song-form-category").val();
+      const pathData = result.data;
+      const title = $("#song-form-title").val();
+      const artist = $("#song-form-artist").val();
+      const info = $("#song-form-info").val();
+      const category = $("#song-form-category").val();
 
       if (category == "--NEW--") {
-        var description = $("#song-form-new-category").val();
-        var code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-        var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-        var loopCount = 1;
-        var newCode = code;
+        const description = $("#song-form-new-category").val();
+        let code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
+        const codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
+        let loopCount = 1;
+        let newCode = code;
         while ((row = codeCheckStmt.get(newCode))) {
           debugLog?.info(`Found a code collision on ${code}`, { module: 'song-management', function: 'saveNewSong' });
-          var newCode = `${code}${loopCount}`;
+          newCode = `${code}${loopCount}`;
           loopCount = loopCount + 1;
           debugLog?.info(`NewCode is ${newCode}`, { module: 'song-management', function: 'saveNewSong' });
         }
@@ -89,7 +89,7 @@ export function saveNewSong(event) {
           }
         } catch (err) {
           if (err.message.match(/UNIQUE constraint/)) {
-            var description = $("#song-form-new-category").val();
+            const description = $("#song-form-new-category").val();
             $("#song-form-new-category").val("");
             alert(
               `Couldn't add a category named "${description}" - apparently one already exists!`
@@ -99,15 +99,15 @@ export function saveNewSong(event) {
         }
       }
 
-      var duration = $("#song-form-duration").val();
-      var uuid = uuidv4();
-      var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(
+      const duration = $("#song-form-duration").val();
+      const uuid = uuidv4();
+      const newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(
         /[^-.\w]/g,
         ""
       );
       window.electronAPI.path.join(store.get("music_directory"), newFilename).then(joinResult => {
         if (joinResult.success) {
-          var newPath = joinResult.data;
+          const newPath = joinResult.data;
           const stmt = db.prepare(
             "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
           );
@@ -152,11 +152,11 @@ export function saveNewSong(event) {
  * Populates the form with the song's current information
  */
 export function editSelectedSong() {
-  var songId = $("#selected_row").attr("songid");
+  const songId = $("#selected_row").attr("songid");
   const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
 
   if (songId) {
-    var songInfo = stmt.get(songId);
+    const songInfo = stmt.get(songId);
 
     $("#song-form-songid").val(songId);
     $("#song-form-category").empty();

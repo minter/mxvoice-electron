@@ -66,15 +66,15 @@ export default class DOMInitialization {
   setupTabStructure() {
     try {
       // Set up hotkey and holding tank tabs for tabs 2-5
-      for (var i = 2; i <= 5; i++) {
+      for (let i = 2; i <= 5; i++) {
         // Clone hotkey tab
-        var hotkey_node = $("#hotkeys_list_1").clone();
+        const hotkey_node = $("#hotkeys_list_1").clone();
         hotkey_node.attr("id", `hotkeys_list_${i}`);
         hotkey_node.removeClass("show active");
         $("#hotkey-tab-content").append(hotkey_node);
 
         // Clone holding tank tab
-        var holding_tank_node = $("#holding_tank_1").clone();
+        const holding_tank_node = $("#holding_tank_1").clone();
         holding_tank_node.attr("id", `holding_tank_${i}`);
         holding_tank_node.removeClass("show active");
         $("#holding-tank-tab-content").append(holding_tank_node);
@@ -186,8 +186,8 @@ export default class DOMInitialization {
   async setupFirstRunModalFallback() {
     try {
       if (typeof this.db !== 'undefined') {
-        var stmt = this.db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
-        var query = stmt.get();
+        const stmt = this.db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
+        const query = stmt.get();
         if (query.count <= 1) {
           $(`#firstRunModal`).modal("show");
           this.debugLog?.info('First run modal shown - legacy database has <= 1 songs');

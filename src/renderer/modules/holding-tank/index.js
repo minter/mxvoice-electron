@@ -74,7 +74,7 @@ export function initHoldingTank() {
  */
 export function saveHoldingTankToStore() {
   // Only save if we have the new HTML format with mode toggle
-  var currentHtml = $("#holding-tank-column").html();
+  const currentHtml = $("#holding-tank-column").html();
   if (currentHtml.includes("mode-toggle")) {
     return store.set("holding_tank", currentHtml).then(result => {
       if (result.success) {
@@ -191,18 +191,18 @@ export function populateHoldingTank(songIds) {
 export function addToHoldingTank(song_id, element) {
   return database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
     if (result.success && result.data.length > 0) {
-      var row = result.data[0];
-      var title = row.title || "[Unknown Title]";
-      var artist = row.artist || "[Unknown Artist]";
-      var time = row.time || "[??:??]";
+      const row = result.data[0];
+      const title = row.title || "[Unknown Title]";
+      const artist = row.artist || "[Unknown Artist]";
+      const time = row.time || "[??:??]";
 
-      var existing_song = $(
+      const existing_song = $(
         `.holding_tank.active .list-group-item[songid=${song_id}]`
       );
       if (existing_song.length) {
-        var song_row = existing_song.detach();
+        const song_row = existing_song.detach();
       } else {
-        var song_row = document.createElement("li");
+        const song_row = document.createElement("li");
         song_row.style.fontSize = `${getFontSize()}px`;
         song_row.className = "song list-group-item context-menu";
         song_row.setAttribute("draggable", "true");
@@ -245,7 +245,7 @@ export function addToHoldingTank(song_id, element) {
  * Remove a song from the holding tank
  */
 export function removeFromHoldingTank() {
-  var songId = $("#selected_row").attr("songid");
+  const songId = $("#selected_row").attr("songid");
   if (songId) {
     debugLog?.info('Preparing to remove song from holding tank', { 
       module: 'holding-tank',
@@ -255,7 +255,7 @@ export function removeFromHoldingTank() {
     
     return database.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(result => {
       if (result.success && result.data.length > 0) {
-        var songRow = result.data[0];
+        const songRow = result.data[0];
         
         return customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`).then(confirmed => {
           if (confirmed) {
@@ -343,7 +343,7 @@ export function saveHoldingTankFile() {
     module: 'holding-tank',
     function: 'saveHoldingTankFile'
   });
-  var holdingTankArray = [];
+  const holdingTankArray = [];
   $(".holding_tank.active .list-group-item").each(function () {
     holdingTankArray.push($(this).attr("songid"));
   });
@@ -427,7 +427,7 @@ function getFontSize() {
  * Scale scrollable elements
  */
 function scale_scrollable() {
-  var advanced_search_height = $("#advanced-search").is(":visible") ? 38 : 0;
+  const advanced_search_height = $("#advanced-search").is(":visible") ? 38 : 0;
   if ($("#advanced-search").is(":visible")) {
     advanced_search_height = 38;
   }

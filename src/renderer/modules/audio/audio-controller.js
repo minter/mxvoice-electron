@@ -78,8 +78,8 @@ function stopPlaying(fadeOut = false) {
         });
         
         // Extract the numeric value from the response
-        var fadeSecondsValue = fadeSeconds.value || fadeSeconds;
-        var fadeDuration = parseFloat(fadeSecondsValue) * 1000;
+        const fadeSecondsValue = fadeSeconds.value || fadeSeconds;
+        const fadeDuration = parseFloat(fadeSecondsValue) * 1000;
         debugLog?.info("Fade duration:", { 
           module: 'audio-controller',
           function: 'stopPlaying',
@@ -112,7 +112,7 @@ function stopPlaying(fadeOut = false) {
         });
         
         // Start the fade
-        var currentVolume = sound.volume();
+        const currentVolume = sound.volume();
         sound.fade(currentVolume, 0, fadeDuration);
         debugLog?.info("Fade started with volume:", { 
           module: 'audio-controller',
@@ -198,13 +198,13 @@ function pausePlaying(fadeOut = false) {
         "progress-bar-animated progress-bar-striped"
       );
       if (fadeOut) {
-        var old_volume = sound.volume();
+        const old_volume = sound.volume();
         sound.on("fade", function () {
           sound.pause();
           sound.volume(old_volume);
         });
         window.electronAPI.store.get("fade_out_seconds").then(fadeSeconds => {
-          var fadeDuration = fadeSeconds * 1000;
+          const fadeDuration = fadeSeconds * 1000;
           sound.fade(sound.volume(), 0, fadeDuration);
         });
       } else {

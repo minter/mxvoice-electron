@@ -17,7 +17,7 @@ let dbInstance = null;
 
 function initializeDatabase() {
   try {
-    var dbName = "mxvoice.db";
+    let dbName = "mxvoice.db";
     const databaseDirectory = store.get("database_directory");
     
     debugLog.info(`Looking for database in ${databaseDirectory}`);

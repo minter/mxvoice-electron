@@ -25,7 +25,7 @@ export function setupBulkEventHandlers() {
       $(this)
         .find("option:selected")
         .each(function () {
-          var optionValue = $(this).attr("value");
+          const optionValue = $(this).attr("value");
           if (optionValue == "--NEW--") {
             $("#bulkSongFormNewCategory").show();
             $("#bulk-song-form-new-category").attr("required", "required");

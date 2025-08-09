@@ -64,7 +64,7 @@ export default class SearchEvents {
   attachCategorySelectEvents() {
     const categorySelectHandler = (event) => {
       try {
-        var category = $("#category_select").prop("selectedIndex");
+        const category = $("#category_select").prop("selectedIndex");
         this.debugLog?.debug('Category select changed, calling searchData...');
         
         if (window.searchData) {
@@ -194,7 +194,7 @@ export default class SearchEvents {
     // Category select change for live search
     const categoryLiveSearchHandler = (event) => {
       try {
-        var searchTerm = $("#omni_search").val().trim();
+        const searchTerm = $("#omni_search").val().trim();
         this.debugLog?.debug('Category select changed, search term', searchTerm);
         
         if (searchTerm.length >= 2) {
@@ -224,7 +224,7 @@ export default class SearchEvents {
             this.debugLog?.warn('triggerLiveSearch function not available');
           }
         } else {
-          var searchTerm = $("#omni_search").val().trim();
+          const searchTerm = $("#omni_search").val().trim();
           if (searchTerm.length >= 2) {
             if (window.triggerLiveSearch) {
               window.triggerLiveSearch();

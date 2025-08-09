@@ -27,8 +27,8 @@ try {
  */
 function hotkeyDrop(event, options = {}) {
   event.preventDefault();
-  var song_id = event.dataTransfer.getData("text");
-  var target = $(event.currentTarget);
+  const song_id = event.dataTransfer.getData("text");
+  const target = $(event.currentTarget);
   target.attr("songid", song_id);
   
   // Use the module instance's setLabelFromSongId method if available (when bound to HotkeysModule)

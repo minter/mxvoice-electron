@@ -109,14 +109,14 @@ function performLiveSearch(searchTerm) {
   });
 
   // Check if we have either a search term or advanced search filters
-  var hasSearchTerm = searchTerm && searchTerm.length >= 2;
-  var hasAdvancedFilters = false;
+  const hasSearchTerm = searchTerm && searchTerm.length >= 2;
+  const hasAdvancedFilters = false;
 
   if ($("#advanced-search").is(":visible")) {
-    var title = $("#title-search").val().trim();
-    var artist = $("#artist-search").val().trim();
-    var info = $("#info-search").val().trim();
-    var since = $("#date-search").val();
+    const title = $("#title-search").val().trim();
+    const artist = $("#artist-search").val().trim();
+    const info = $("#info-search").val().trim();
+    const since = $("#date-search").val();
     hasAdvancedFilters =
       title.length > 0 ||
       artist.length > 0 ||
@@ -134,11 +134,11 @@ function performLiveSearch(searchTerm) {
   $("#search_results tbody").find("tr").remove();
   $("#search_results thead").show();
 
-  var raw_html = [];
-  var query_params = [];
-  var query_segments = [];
-  var query_string = "";
-  var category = $("#category_select").val();
+  const raw_html = [];
+  const query_params = [];
+  const query_segments = [];
+  const query_string = "";
+  const category = $("#category_select").val();
 
   // Apply category filter if not "All Categories"
   if (category != "*") {
@@ -148,10 +148,10 @@ function performLiveSearch(searchTerm) {
 
   // Apply advanced search filters if advanced search is visible
   if ($("#advanced-search").is(":visible")) {
-    var title = $("#title-search").val().trim();
-    var artist = $("#artist-search").val().trim();
-    var info = $("#info-search").val().trim();
-    var since = $("#date-search").val();
+    const title = $("#title-search").val().trim();
+    const artist = $("#artist-search").val().trim();
+    const info = $("#info-search").val().trim();
+    const since = $("#date-search").val();
 
     if (title.length) {
       query_segments.push("title LIKE ?");
@@ -167,7 +167,7 @@ function performLiveSearch(searchTerm) {
     }
     if (since.length) {
       query_segments.push("modtime > ?");
-      var today = new Date();
+      const today = new Date();
       query_params.push(
         Math.round(today.setDate(today.getDate() - since) / 1000)
       );
@@ -176,7 +176,7 @@ function performLiveSearch(searchTerm) {
     // Apply omni search filter
     if (searchTerm && searchTerm.length >= 2) {
       query_segments.push("(info LIKE ? OR title LIKE ? OR artist LIKE ?)");
-      var search_term = "%" + searchTerm + "%";
+      const search_term = "%" + searchTerm + "%";
       query_params.push(search_term, search_term, search_term);
     }
   }
@@ -241,7 +241,7 @@ function performLiveSearch(searchTerm) {
       });
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
-        var stmt = db.prepare(
+        const stmt = db.prepare(
           "SELECT * from mrvoice" +
             query_string +
             " ORDER BY category,info,title,artist LIMIT 50"
@@ -284,7 +284,7 @@ function performLiveSearch(searchTerm) {
   } else {
     // Fallback to legacy database access
     if (typeof db !== 'undefined') {
-      var stmt = db.prepare(
+      const stmt = db.prepare(
         "SELECT * from mrvoice" +
           query_string +
           " ORDER BY category,info,title,artist LIMIT 50"

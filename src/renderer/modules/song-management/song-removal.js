@@ -20,12 +20,12 @@ try {
  * Also removes the song from all UI elements (holding tank, hotkeys, search results)
  */
 export function deleteSong() {
-  var songId = $("#selected_row").attr("songid");
+  const songId = $("#selected_row").attr("songid");
   if (songId) {
     debugLog?.info(`Preparing to delete song ${songId}`, { module: 'song-management', function: 'deleteSong' });
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    var songRow = songStmt.get(songId);
-    var filename = songRow.filename;
+    const songRow = songStmt.get(songId);
+    const filename = songRow.filename;
     
     return customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`).then(confirmed => {
       if (confirmed) {
@@ -76,11 +76,11 @@ export function deleteSong() {
  * Prompts for confirmation and updates the store after removal
  */
 export function removeFromHoldingTank() {
-  var songId = $("#selected_row").attr("songid");
+  const songId = $("#selected_row").attr("songid");
   if (songId) {
     debugLog?.info(`Preparing to remove song ${songId} from holding tank`, { module: 'song-management', function: 'removeFromHoldingTank' });
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    var songRow = songStmt.get(songId);
+    const songRow = songStmt.get(songId);
     
     return customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`).then(confirmed => {
       if (confirmed) {
@@ -104,14 +104,14 @@ export function removeFromHoldingTank() {
  * Clears the hotkey slot and updates the store
  */
 export function removeFromHotkey() {
-  var songId = $("#selected_row").attr("songid");
+  const songId = $("#selected_row").attr("songid");
   debugLog?.info("removeFromHotkey called, songId:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
   debugLog?.info("selected_row element:", { module: 'song-management', function: 'removeFromHotkey', selectedRow: $("#selected_row") });
   
   if (songId) {
     debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'song-management', function: 'removeFromHotkey' });
     const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    var songRow = songStmt.get(songId);
+    const songRow = songStmt.get(songId);
     
     if (songRow) {
       return customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`).then(confirmed => {

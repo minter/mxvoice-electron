@@ -47,7 +47,7 @@ function getCategories() {
   } else {
     // Fallback to legacy database access
     if (typeof db !== 'undefined') {
-      var stmt = db.prepare("SELECT DISTINCT category FROM mrvoice ORDER BY category");
+      const stmt = db.prepare("SELECT DISTINCT category FROM mrvoice ORDER BY category");
       return stmt.all().map(row => row.category);
     }
     return [];
@@ -74,8 +74,8 @@ function getCategoryName(categoryCode) {
   } else {
     // Fallback to legacy database access
     if (typeof db !== 'undefined') {
-      var stmt = db.prepare("SELECT description FROM categories WHERE code = ?");
-      var row = stmt.get(categoryCode);
+      const stmt = db.prepare("SELECT description FROM categories WHERE code = ?");
+      const row = stmt.get(categoryCode);
       return row ? row.description : categoryCode;
     }
     return categoryCode;
@@ -86,8 +86,8 @@ function getCategoryName(categoryCode) {
 function getCategoryNameSync(categoryCode) {
   if (typeof db !== 'undefined') {
     try {
-      var stmt = db.prepare("SELECT description FROM categories WHERE code = ?");
-      var row = stmt.get(categoryCode);
+      const stmt = db.prepare("SELECT description FROM categories WHERE code = ?");
+      const row = stmt.get(categoryCode);
       return row ? row.description : categoryCode;
     } catch (error) {
       debugLog?.warn('❌ Failed to get category name synchronously:', { 
@@ -112,8 +112,8 @@ function searchData() {
   });
   
   // Get search term and category
-  var searchTerm = $("#omni_search").val().trim();
-  var category = $("#category_select").val();
+  const searchTerm = $("#omni_search").val().trim();
+  const category = $("#category_select").val();
   
   debugLog?.info('🔍 Search parameters:', { 
     module: 'search-engine',
@@ -229,7 +229,7 @@ function searchData() {
       });
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
-        var stmt = db.prepare(
+        const stmt = db.prepare(
           "SELECT * from mrvoice" +
             queryString +
             " ORDER BY category,info,title,artist"
@@ -260,7 +260,7 @@ function searchData() {
   } else {
     // Fallback to legacy database access
     if (typeof db !== 'undefined') {
-      var stmt = db.prepare(
+      const stmt = db.prepare(
         "SELECT * from mrvoice" +
           queryString +
           " ORDER BY category,info,title,artist"
@@ -303,19 +303,19 @@ function triggerLiveSearch() {
     clearTimeout(searchTimeout);
   }
   
-  var searchTerm = $("#omni_search").val().trim();
+  const searchTerm = $("#omni_search").val().trim();
 
   // Set new timeout and store in shared state and global
   const newTimeout = setTimeout(() => {
     // Check if we have either a search term or advanced search filters
-    var hasSearchTerm = searchTerm.length >= 2;
-    var hasAdvancedFilters = false;
+    const hasSearchTerm = searchTerm.length >= 2;
+    const hasAdvancedFilters = false;
 
     if ($("#advanced-search").is(":visible")) {
-      var title = $("#title-search").val().trim();
-      var artist = $("#artist-search").val().trim();
-      var info = $("#info-search").val().trim();
-      var since = $("#date-search").val();
+      const title = $("#title-search").val().trim();
+      const artist = $("#artist-search").val().trim();
+      const info = $("#info-search").val().trim();
+      const since = $("#date-search").val();
       hasAdvancedFilters =
         title.length > 0 ||
         artist.length > 0 ||

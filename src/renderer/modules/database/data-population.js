@@ -86,7 +86,7 @@ function populateCategorySelect() {
           // Fallback to legacy database access
           if (typeof db !== 'undefined') {
             try {
-              var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+              const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
               for (const row of stmt.iterate()) {
                 categories[row.code] = row.description;
                 $("#category_select").append(
@@ -119,7 +119,7 @@ function populateCategorySelect() {
         // Fallback to legacy database access
         if (typeof db !== 'undefined') {
           try {
-            var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+            const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
             for (const row of stmt.iterate()) {
               categories[row.code] = row.description;
               $("#category_select").append(
@@ -147,7 +147,7 @@ function populateCategorySelect() {
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
         try {
-          var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
+          const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
           for (const row of stmt.iterate()) {
             categories[row.code] = row.description;
             $("#category_select").append(
@@ -186,13 +186,13 @@ function setLabelFromSongId(song_id, element) {
   if (window.electronAPI && window.electronAPI.database) {
     window.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
       if (result.success && result.data.length > 0) {
-        var row = result.data[0];
-        var title = row.title || "[Unknown Title]";
-        var artist = row.artist || "[Unknown Artist]";
-        var time = row.time || "[??:??]";
+        const row = result.data[0];
+        const title = row.title || "[Unknown Title]";
+        const artist = row.artist || "[Unknown Artist]";
+        const time = row.time || "[??:??]";
         
         // Handle swapping
-        var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
+        const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
           element
         );
         debugLog?.info('Original song node found', { 
@@ -202,8 +202,8 @@ function setLabelFromSongId(song_id, element) {
           originalNode: original_song_node.length
         });
         if (original_song_node.length) {
-          var old_song = original_song_node.find("span").detach();
-          var destination_song = $(element).find("span").detach();
+          const old_song = original_song_node.find("span").detach();
+          const destination_song = $(element).find("span").detach();
           original_song_node.append(destination_song);
           if (destination_song.attr("songid")) {
             original_song_node.attr("songid", destination_song.attr("songid"));
@@ -226,14 +226,14 @@ function setLabelFromSongId(song_id, element) {
         });
         // Fallback to legacy database access
         if (typeof db !== 'undefined') {
-          var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-          var row = stmt.get(song_id);
-          var title = row.title || "[Unknown Title]";
-          var artist = row.artist || "[Unknown Artist]";
-          var time = row.time || "[??:??]";
+          const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+          const row = stmt.get(song_id);
+          const title = row.title || "[Unknown Title]";
+          const artist = row.artist || "[Unknown Artist]";
+          const time = row.time || "[??:??]";
 
           // Handle swapping
-          var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
+          const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
             element
           );
           debugLog?.info('Original song node found (legacy)', { 
@@ -243,8 +243,8 @@ function setLabelFromSongId(song_id, element) {
             originalNode: original_song_node.length
           });
           if (original_song_node.length) {
-            var old_song = original_song_node.find("span").detach();
-            var destination_song = $(element).find("span").detach();
+            const old_song = original_song_node.find("span").detach();
+            const destination_song = $(element).find("span").detach();
             original_song_node.append(destination_song);
             if (destination_song.attr("songid")) {
               original_song_node.attr("songid", destination_song.attr("songid"));
@@ -269,14 +269,14 @@ function setLabelFromSongId(song_id, element) {
       });
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
-        var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-        var row = stmt.get(song_id);
-        var title = row.title || "[Unknown Title]";
-        var artist = row.artist || "[Unknown Artist]";
-        var time = row.time || "[??:??]";
+        const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+        const row = stmt.get(song_id);
+        const title = row.title || "[Unknown Title]";
+        const artist = row.artist || "[Unknown Artist]";
+        const time = row.time || "[??:??]";
 
         // Handle swapping
-        var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
+        const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
           element
         );
         debugLog?.info('Original song node found (legacy fallback)', { 
@@ -286,8 +286,8 @@ function setLabelFromSongId(song_id, element) {
           originalNode: original_song_node.length
         });
         if (original_song_node.length) {
-          var old_song = original_song_node.find("span").detach();
-          var destination_song = $(element).find("span").detach();
+          const old_song = original_song_node.find("span").detach();
+          const destination_song = $(element).find("span").detach();
           original_song_node.append(destination_song);
           if (destination_song.attr("songid")) {
             original_song_node.attr("songid", destination_song.attr("songid"));
@@ -306,14 +306,14 @@ function setLabelFromSongId(song_id, element) {
   } else {
     // Fallback to legacy database access
     if (typeof db !== 'undefined') {
-      var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-      var row = stmt.get(song_id);
-      var title = row.title || "[Unknown Title]";
-      var artist = row.artist || "[Unknown Artist]";
-      var time = row.time || "[??:??]";
+      const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+      const row = stmt.get(song_id);
+      const title = row.title || "[Unknown Title]";
+      const artist = row.artist || "[Unknown Artist]";
+      const time = row.time || "[??:??]";
 
       // Handle swapping
-      var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
+      const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
         element
       );
       debugLog?.info('Original song node found (legacy no API)', { 
@@ -323,8 +323,8 @@ function setLabelFromSongId(song_id, element) {
         originalNode: original_song_node.length
       });
       if (original_song_node.length) {
-        var old_song = original_song_node.find("span").detach();
-        var destination_song = $(element).find("span").detach();
+        const old_song = original_song_node.find("span").detach();
+        const destination_song = $(element).find("span").detach();
         original_song_node.append(destination_song);
         if (destination_song.attr("songid")) {
           original_song_node.attr("songid", destination_song.attr("songid"));
@@ -362,10 +362,10 @@ function addToHoldingTank(song_id, element) {
   if (window.electronAPI && window.electronAPI.database) {
     window.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
       if (result.success && result.data.length > 0) {
-        var row = result.data[0];
-        var title = row.title || "[Unknown Title]";
-        var artist = row.artist || "[Unknown Artist]";
-        var time = row.time || "[??:??]";
+        const row = result.data[0];
+        const title = row.title || "[Unknown Title]";
+        const artist = row.artist || "[Unknown Artist]";
+        const time = row.time || "[??:??]";
 
         debugLog?.info('Song data retrieved', { 
           module: 'data-population',
@@ -376,13 +376,13 @@ function addToHoldingTank(song_id, element) {
           time: time
         });
 
-        var existing_song = $(
+        const existing_song = $(
           `.holding_tank.active .list-group-item[songid=${song_id}]`
         );
         if (existing_song.length) {
-          var song_row = existing_song.detach();
+          const song_row = existing_song.detach();
         } else {
-          var song_row = document.createElement("li");
+          const song_row = document.createElement("li");
           song_row.style.fontSize = `${currentFontSize}px`;
           song_row.className = "song list-group-item context-menu";
           song_row.setAttribute("draggable", "true");
@@ -421,19 +421,19 @@ function addToHoldingTank(song_id, element) {
         });
         // Fallback to legacy database access
         if (typeof db !== 'undefined') {
-          var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-          var row = stmt.get(song_id);
-          var title = row.title || "[Unknown Title]";
-          var artist = row.artist || "[Unknown Artist]";
-          var time = row.time || "[??:??]";
+          const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+          const row = stmt.get(song_id);
+          const title = row.title || "[Unknown Title]";
+          const artist = row.artist || "[Unknown Artist]";
+          const time = row.time || "[??:??]";
 
-          var existing_song = $(
+          const existing_song = $(
             `.holding_tank.active .list-group-item[songid=${song_id}]`
           );
           if (existing_song.length) {
-            var song_row = existing_song.detach();
+            const song_row = existing_song.detach();
           } else {
-            var song_row = document.createElement("li");
+            const song_row = document.createElement("li");
             song_row.style.fontSize = `${currentFontSize}px`;
             song_row.className = "song list-group-item context-menu";
             song_row.setAttribute("draggable", "true");
@@ -468,8 +468,8 @@ function addToHoldingTank(song_id, element) {
       });
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
-        var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-        var row = stmt.get(song_id);
+        const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+        const row = stmt.get(song_id);
         if (!row) {
           debugLog?.warn('Song not found in database', { 
             module: 'data-population',
@@ -478,17 +478,17 @@ function addToHoldingTank(song_id, element) {
           });
           return;
         }
-        var title = row.title || "[Unknown Title]";
-        var artist = row.artist || "[Unknown Artist]";
-        var time = row.time || "[??:??]";
+        const title = row.title || "[Unknown Title]";
+        const artist = row.artist || "[Unknown Artist]";
+        const time = row.time || "[??:??]";
 
-        var existing_song = $(
+        const existing_song = $(
           `.holding_tank.active .list-group-item[songid=${song_id}]`
         );
         if (existing_song.length) {
-          var song_row = existing_song.detach();
+          const song_row = existing_song.detach();
         } else {
-          var song_row = document.createElement("li");
+          const song_row = document.createElement("li");
           song_row.style.fontSize = `${currentFontSize}px`;
           song_row.className = "song list-group-item context-menu";
           song_row.setAttribute("draggable", "true");
@@ -517,19 +517,19 @@ function addToHoldingTank(song_id, element) {
   } else {
     // Fallback to legacy database access
     if (typeof db !== 'undefined') {
-      var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-      var row = stmt.get(song_id);
-      var title = row.title || "[Unknown Title]";
-      var artist = row.artist || "[Unknown Artist]";
-      var time = row.time || "[??:??]";
+      const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+      const row = stmt.get(song_id);
+      const title = row.title || "[Unknown Title]";
+      const artist = row.artist || "[Unknown Artist]";
+      const time = row.time || "[??:??]";
 
-      var existing_song = $(
+      const existing_song = $(
         `.holding_tank.active .list-group-item[songid=${song_id}]`
       );
       if (existing_song.length) {
-        var song_row = existing_song.detach();
+        const song_row = existing_song.detach();
       } else {
-        var song_row = document.createElement("li");
+        const song_row = document.createElement("li");
         song_row.style.fontSize = `${currentFontSize}px`;
         song_row.className = "song list-group-item context-menu";
         song_row.setAttribute("draggable", "true");
@@ -565,7 +565,7 @@ function addToHoldingTank(song_id, element) {
  * @param {string} title - Title for the hotkey tab
  */
 function populateHotkeys(fkeys, title) {
-  for (var key in fkeys) {
+  for (const key in fkeys) {
     if (fkeys[key]) {
       try {
         $(`.hotkeys.active #${key}_hotkey`).attr("songid", fkeys[key]);

@@ -42,7 +42,7 @@ import("@octokit/rest")
   });
 
 // Initialize markdown parser
-var md = markdownIt();
+const md = markdownIt();
 
 // Store configuration
 const defaults = {
@@ -134,7 +134,7 @@ import('electron-squirrel-startup').then(electronSquirrelStartup => {
 // Initialize database
 function initializeDatabase() {
   try {
-    var dbName = "mxvoice.db";
+    let dbName = "mxvoice.db";
     const dbDir = store.get("database_directory");
     debugLog.info(`Looking for database in ${dbDir}`, { 
       function: "initializeDatabase" 
@@ -171,7 +171,7 @@ function checkFirstRun() {
     function: "checkFirstRun" 
   });
   if (!store.get('first_run_completed')) {
-    var oldConfig = checkOldConfig();
+    const oldConfig = checkOldConfig();
     debugLog.info(`Old config function returned ${oldConfig}`, { 
       function: "checkFirstRun" 
     });
@@ -206,7 +206,7 @@ INSERT OR IGNORE INTO mrvoice (title, artist, category, filename, time, modtime)
 
 // Check old config
 function checkOldConfig() {
-  var config_path;
+  let config_path;
   if (process.platform == 'darwin') {
     config_path = path.join(app.getPath('home'), 'mrvoice.cfg');
   }

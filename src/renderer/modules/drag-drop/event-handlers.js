@@ -71,19 +71,19 @@ export function setupDragDropEventHandlers() {
 
   $(".card-header").on("drop", function (event) {
     if (event.originalEvent.dataTransfer.getData("text").length) return;
-    var original_column = $(
+    const original_column = $(
       `#${event.originalEvent.dataTransfer.getData("application/x-moz-node")}`
     );
-    var target_column = $(event.target).closest(".col");
+    const target_column = $(event.target).closest(".col");
     if (original_column.prop("id") == target_column.prop("id")) return;
-    var columns = $("#top-row").children();
+    const columns = $("#top-row").children();
     if (columns.index(original_column) > columns.index(target_column)) {
       target_column.before(original_column.detach());
     } else {
       target_column.after(original_column.detach());
     }
     original_column.addClass("animate__animated animate__jello");
-    var new_column_order = $("#top-row")
+    const new_column_order = $("#top-row")
       .children()
       .map(function () {
         return $(this).prop("id");

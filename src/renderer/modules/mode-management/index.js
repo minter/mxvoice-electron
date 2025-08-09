@@ -96,8 +96,8 @@ class ModeManagementModule {
       this.autoplay = true;
 
       // Only restore the speaker icon if there's a track currently playing AND it's actually playing
-      var currentSongId = $("#song_now_playing").attr("songid");
-      var isCurrentlyPlaying = window.sound && window.sound.playing && window.sound.playing();
+      let currentSongId = $("#song_now_playing").attr("songid");
+      let isCurrentlyPlaying = window.sound && window.sound.playing && window.sound.playing();
 
       if (currentSongId && isCurrentlyPlaying) {
         // Find the track in the holding tank with this song ID and add the now_playing class

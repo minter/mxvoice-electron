@@ -38,7 +38,7 @@ function loadHotkeysFile() {
   }
   
   return new Promise((resolve, reject) => {
-    var fkey_mapping = {};
+    const fkey_mapping = {};
     debugLog?.info("Loading hotkeys file", { module: 'file-operations', function: 'loadHotkeysFile' });
     dialog.showOpenDialog(mainWindow, {
       buttonLabel: 'Open',
@@ -55,10 +55,10 @@ function loadHotkeysFile() {
         return;
       }
       else {
-        var filename = result.filePaths[0];
+        const filename = result.filePaths[0];
         debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'loadHotkeysFile', filename: filename });
         const line_reader = new readlines(filename);
-        var title
+        let title;
 
         let line;
         while (line = line_reader.next()) {
@@ -97,7 +97,7 @@ function loadHoldingTankFile() {
   }
   
   return new Promise((resolve, reject) => {
-    var song_ids = [];
+    const song_ids = [];
     debugLog?.info("Loading holding tank file", { module: 'file-operations', function: 'loadHoldingTankFile' });
     dialog.showOpenDialog(mainWindow, {
       buttonLabel: 'Open',
@@ -114,7 +114,7 @@ function loadHoldingTankFile() {
         return;
       }
       else {
-        var filename = result.filePaths[0];
+        const filename = result.filePaths[0];
         debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'loadHoldingTankFile', filename: filename });
         const line_reader = new readlines(filename);
 
@@ -148,11 +148,11 @@ function saveHotkeysFile(hotkeyArray) {
       return;
     }
     else {
-      var filename = result.filePath;
+      const filename = result.filePath;
       debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'saveHotkeysFile', filename: filename });
-      var file = fs.createWriteStream(filename);
+      const file = fs.createWriteStream(filename);
       for (let i = 0; i < hotkeyArray.length; i++) {
-        var keyId = `f${i + 1}`;
+        const keyId = `f${i + 1}`;
         debugLog?.info(`Hotkey array ${i} is ${hotkeyArray[i]}`, { module: 'file-operations', function: 'saveHotkeysFile', index: i, value: hotkeyArray[i] });
         if (hotkeyArray[i] === undefined || /^\d+$/.test(hotkeyArray[i])) {
           file.write([keyId, hotkeyArray[i]].join('::') + '\n');
@@ -182,9 +182,9 @@ function saveHoldingTankFile(holdingTankArray) {
       return;
     }
     else {
-      var filename = result.filePath;
+      const filename = result.filePath;
       debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'saveHoldingTankFile', filename: filename });
-      var file = fs.createWriteStream(filename);
+      const file = fs.createWriteStream(filename);
       for (let i = 0; i < holdingTankArray.length; i++) {
         file.write(holdingTankArray[i] + '\n');
       }
@@ -207,7 +207,7 @@ function addDirectoryDialog() {
       debugLog?.info('Silently exiting add file', { module: 'file-operations', function: 'addDirectoryDialog' });
       return;
     } else {
-      var dirname = result.filePaths[0];
+      const dirname = result.filePaths[0];
       debugLog?.info(`Processing directory ${dirname}`, { module: 'file-operations', function: 'addDirectoryDialog', dirname: dirname });
       mainWindow.webContents.send('bulk_add_dialog_load', dirname);
     }
@@ -232,7 +232,7 @@ function addFileDialog() {
       return;
     }
     else {
-      var filename = result.filePaths[0];
+      const filename = result.filePaths[0];
       debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'addFileDialog', filename: filename });
       mainWindow.webContents.send('add_dialog_load', filename);
     }

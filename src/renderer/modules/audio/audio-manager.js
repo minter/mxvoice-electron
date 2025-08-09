@@ -57,7 +57,7 @@ function playSongWithFilename(filename, row, song_id) {
         const defaultPath = path.join(process.env.APPDATA || process.env.HOME || '', '.config', 'mxvoice', 'mp3');
         window.electronAPI.path.join(defaultPath, filename).then(result => {
           if (result.success) {
-            var sound_path = [result.data];
+            const sound_path = [result.data];
             debugLog?.info("Inside get, Filename is " + filename, { 
               module: 'audio-manager',
               function: 'playSongWithFilename',
@@ -73,12 +73,12 @@ function playSongWithFilename(filename, row, song_id) {
                   module: 'audio-manager',
                   function: 'playSongWithFilename'
                 });
-                var time = Math.round(sound.duration());
+                const time = Math.round(sound.duration());
                 sharedState.set('globalAnimation', requestAnimationFrame(
                   howlerUtils.updateTimeTracker.bind(this)
                 ));
-                var title = row.title || "";
-                var artist = row.artist || "";
+                const title = row.title || "";
+                const artist = row.artist || "";
                 artist = artist.length ? "by " + artist : artist;
                               let wavesurfer = sharedState.get('wavesurfer');
               if (!wavesurfer && sharedState.get('createWaveSurfer')) {
@@ -151,7 +151,7 @@ function playSongWithFilename(filename, row, song_id) {
             });
             return;
           }
-          var sound_path = [result.data];
+          const sound_path = [result.data];
           debugLog?.info("Inside get, Filename is " + filename, { 
             module: 'audio-manager',
             function: 'playSongWithFilename',
@@ -167,12 +167,12 @@ function playSongWithFilename(filename, row, song_id) {
                 module: 'audio-manager',
                 function: 'playSongWithFilename'
               });
-              var time = Math.round(sound.duration());
+              const time = Math.round(sound.duration());
               sharedState.set('globalAnimation', requestAnimationFrame(
                 howlerUtils.updateTimeTracker.bind(this)
               ));
-              var title = row.title || "";
-              var artist = row.artist || "";
+              const title = row.title || "";
+              const artist = row.artist || "";
               artist = artist.length ? "by " + artist : artist;
               let wavesurfer = sharedState.get('wavesurfer');
               if (!wavesurfer && sharedState.get('createWaveSurfer')) {
@@ -270,8 +270,8 @@ function playSongFromId(song_id) {
     if (window.electronAPI && window.electronAPI.database) {
       window.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
         if (result.success && result.data.length > 0) {
-          var row = result.data[0];
-          var filename = row.filename;
+          const row = result.data[0];
+          const filename = row.filename;
           
           if (!filename) {
             debugLog?.error('❌ No filename found for song ID:', { 
@@ -302,8 +302,8 @@ function playSongFromId(song_id) {
         const db = sharedState.get('db');
         if (db) {
           try {
-            var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-            var row = stmt.get(song_id);
+            const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+            const row = stmt.get(song_id);
             
             if (!row) {
               debugLog?.error('❌ No song found with ID:', { 
@@ -314,7 +314,7 @@ function playSongFromId(song_id) {
               return;
             }
             
-            var filename = row.filename;
+            const filename = row.filename;
             
             if (!filename) {
               debugLog?.error('❌ No filename found for song ID:', { 
@@ -346,8 +346,8 @@ function playSongFromId(song_id) {
       const db = sharedState.get('db');
       if (db) {
         try {
-          var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-          var row = stmt.get(song_id);
+          const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
+          const row = stmt.get(song_id);
           
           if (!row) {
             debugLog?.error('❌ No song found with ID:', { 
@@ -358,7 +358,7 @@ function playSongFromId(song_id) {
             return;
           }
           
-          var filename = row.filename;
+          const filename = row.filename;
           
           if (!filename) {
             debugLog?.error('❌ No filename found for song ID:', { 
@@ -394,7 +394,7 @@ function playSongFromId(song_id) {
  * Play the currently selected song
  */
 function playSelected() {
-  var song_id = $("#selected_row").attr("songid");
+  const song_id = $("#selected_row").attr("songid");
   debugLog?.info("Got song ID " + song_id, { 
     module: 'audio-manager',
     function: 'playSelected',
@@ -431,7 +431,7 @@ function autoplay_next() {
   const autoplay = sharedState.get('autoplay');
   const holdingTankMode = sharedState.get('holdingTankMode');
   if (autoplay && holdingTankMode === "playlist") {
-    var now_playing = $(".now_playing").first();
+    const now_playing = $(".now_playing").first();
     if (now_playing.length) {
       now_playing.removeClass("now_playing");
       next_song = now_playing.next();

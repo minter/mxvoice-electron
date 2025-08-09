@@ -61,7 +61,7 @@ export function saveHotkeyFile() {
     module: 'file-operations',
     function: 'saveHotkeyFile'
   });
-  var hotkeyArray = [];
+  const hotkeyArray = [];
   
   // Collect song IDs from all hotkey elements (F1-F12)
   for (let key = 1; key <= 12; key++) {
@@ -97,7 +97,7 @@ export function saveHoldingTankFile() {
     module: 'file-operations',
     function: 'saveHoldingTankFile'
   });
-  var holdingTankArray = [];
+  const holdingTankArray = [];
   
   // Collect song IDs from all active holding tank items
   $(".holding_tank.active .list-group-item").each(function () {

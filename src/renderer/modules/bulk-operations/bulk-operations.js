@@ -52,20 +52,20 @@ export function addSongsByPath(pathArray, category) {
   const songSourcePath = pathArray.shift();
   if (songSourcePath) {
     return mm.parseFile(songSourcePath).then((metadata) => {
-      var durationSeconds = metadata.format.duration.toFixed(0);
-      var durationString = new Date(durationSeconds * 1000)
+      const durationSeconds = metadata.format.duration.toFixed(0);
+      const durationString = new Date(durationSeconds * 1000)
         .toISOString()
         .substr(14, 5);
 
-      var title = metadata.common.title || path.parse(songSourcePath).name;
+      const title = metadata.common.title || path.parse(songSourcePath).name;
       if (!title) {
         return;
       }
-      var artist = metadata.common.artist;
-      var uuid = uuidv4();
-      var newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
+      const artist = metadata.common.artist;
+      const uuid = uuidv4();
+      const newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
       window.electronAPI.store.get("music_directory").then(musicDirectory => {
-        var newPath = path.join(musicDirectory.value, newFilename);
+        const newPath = path.join(musicDirectory.value, newFilename);
         const stmt = db.prepare(
           "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)"
         );
@@ -137,17 +137,17 @@ export function addSongsByPath(pathArray, category) {
 export function saveBulkUpload(event) {
   event.preventDefault();
   $("#bulkAddModal").modal("hide");
-  var dirname = $("#bulk-add-path").val();
+  const dirname = $("#bulk-add-path").val();
 
-  var walk = function (dir) {
-    var results = [];
+  const walk = function (dir) {
+    const results = [];
     window.electronAPI.fileSystem.readdir(dir).then(result => {
       if (result.success) {
         result.data.forEach(function (file) {
           file = dir + "/" + file;
           window.electronAPI.fileSystem.stat(file).then(statResult => {
             if (statResult.success) {
-              var stat = statResult.data;
+              const stat = statResult.data;
               if (stat && stat.isDirectory()) {
                 /* Recurse into a subdirectory */
                 results = results.concat(walk(file));
@@ -155,7 +155,7 @@ export function saveBulkUpload(event) {
                 /* Is a file */
                 window.electronAPI.path.parse(file).then(parseResult => {
                   if (parseResult.success) {
-                    var pathData = parseResult.data;
+                    const pathData = parseResult.data;
                     if (
                       [".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(
                         pathData.ext.toLowerCase()
@@ -216,19 +216,19 @@ export function saveBulkUpload(event) {
     return results;
   };
 
-  var songs = walk(dirname);
+  const songs = walk(dirname);
 
   $("#search_results tbody").find("tr").remove();
   $("#search_results thead").show();
 
-  var category = $("#bulk-add-category").val();
+  const category = $("#bulk-add-category").val();
 
   if (category == "--NEW--") {
-    var description = $("#bulk-song-form-new-category").val();
-    var code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-    var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-    var loopCount = 1;
-    var newCode = code;
+    const description = $("#bulk-song-form-new-category").val();
+    const code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
+    const codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
+    const loopCount = 1;
+    const newCode = code;
     while ((row = codeCheckStmt.get(newCode))) {
       debugLog?.info('Found a code collision', { 
         module: 'bulk-operations',
@@ -236,7 +236,7 @@ export function saveBulkUpload(event) {
         code: code,
         loopCount: loopCount
       });
-      var newCode = `${code}${loopCount}`;
+      const newCode = `${code}${loopCount}`;
       loopCount = loopCount + 1;
       debugLog?.info('NewCode generated', { 
         module: 'bulk-operations',
@@ -268,7 +268,7 @@ export function saveBulkUpload(event) {
       }
     } catch (err) {
       if (err.message.match(/UNIQUE constraint/)) {
-        var description = $("#bulk-song-form-new-category").val();
+        const description = $("#bulk-song-form-new-category").val();
         $("#bulk-song-form-new-category").val("");
         alert(
           `Couldn't add a category named "${description}" - apparently one already exists!`

@@ -150,7 +150,7 @@ export default class AudioControlEvents {
     const volumeChangeHandler = (event) => {
       try {
         this.debugLog?.debug('Volume changed');
-        var volume = $(event.target).val() / 100;
+        const volume = $(event.target).val() / 100;
         this.debugLog?.debug('New volume', volume);
         
         // Get sound from shared state
@@ -221,7 +221,7 @@ export default class AudioControlEvents {
     const progressBarClickHandler = (event) => {
       try {
         this.debugLog?.debug('Progress bar clicked');
-        var percent = (event.clientX - $(event.target).offset().left) / $(event.target).width();
+        const percent = (event.clientX - $(event.target).offset().left) / $(event.target).width();
         this.debugLog?.debug('Progress bar click - percent', percent);
         
         // Get sound from shared state
@@ -248,7 +248,7 @@ export default class AudioControlEvents {
     const waveformClickHandler = (event) => {
       try {
         this.debugLog?.debug('Waveform clicked');
-        var percent = (event.clientX - $(event.target).offset().left) / $(event.target).width();
+        const percent = (event.clientX - $(event.target).offset().left) / $(event.target).width();
         this.debugLog?.debug('Waveform click - percent', percent);
         
         // Get sound from shared state

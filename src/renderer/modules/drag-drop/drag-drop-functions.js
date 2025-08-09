@@ -22,8 +22,8 @@ try {
  */
 function hotkeyDrop(event) {
   event.preventDefault();
-  var song_id = event.dataTransfer.getData("text");
-  var target = $(event.currentTarget);
+  const song_id = event.dataTransfer.getData("text");
+  const target = $(event.currentTarget);
   target.attr("songid", song_id);
   setLabelFromSongId(song_id, target);
 }

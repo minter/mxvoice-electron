@@ -21,8 +21,8 @@ export const howlerUtils = {
    * @returns {string} - Formatted time string
    */
   formatTime: function (secs) {
-    var minutes = Math.floor(secs / 60) || 0;
-    var seconds = secs - minutes * 60 || 0;
+    const minutes = Math.floor(secs / 60) || 0;
+    const seconds = secs - minutes * 60 || 0;
     return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
   },
 
@@ -56,12 +56,12 @@ export const howlerUtils = {
       return;
     }
     
-    var self = this;
-    var seek = sound.seek() || 0;
-    var remaining = self.duration() - seek;
-    var currentTime = howlerUtils.formatTime(Math.round(seek));
-    var remainingTime = howlerUtils.formatTime(Math.round(remaining));
-    var percent_elapsed = seek / self.duration();
+    const self = this;
+    const seek = sound.seek() || 0;
+    const remaining = self.duration() - seek;
+    const currentTime = howlerUtils.formatTime(Math.round(seek));
+    const remainingTime = howlerUtils.formatTime(Math.round(remaining));
+    const percent_elapsed = seek / self.duration();
     $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
     if (!isNaN(percent_elapsed) && wavesurfer) {
       wavesurfer.seekTo(percent_elapsed);

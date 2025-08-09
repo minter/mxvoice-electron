@@ -202,7 +202,7 @@ export default class UIInteractionEvents {
       try {
         const target = $(event.target);
         target.find("option:selected").each(function () {
-          var optionValue = $(this).attr("value");
+          const optionValue = $(this).attr("value");
           if (optionValue == "--NEW--") {
             $("#SongFormNewCategory").show();
             $("#song-form-new-category").attr("required", "required");
