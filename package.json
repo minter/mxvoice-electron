@@ -86,12 +86,6 @@
       "icon": "src/assets/icons/mxvoice.png",
       "synopsis": "Improv Audio Software",
       "description": "Professional audio software for improvisation and live performance",
-      "desktop": {
-        "Name": "Mx. Voice",
-        "Comment": "Improv Audio Software",
-        "Keywords": "audio;music;improv;performance;sound",
-        "StartupWMClass": "mxvoice"
-      },
       "target": [
         {
           "target": "AppImage",
