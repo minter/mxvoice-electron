@@ -214,9 +214,16 @@ class FunctionRegistry {
 
   // Get function from dot notation path (e.g., "audio.playSongFromId")
   getFunctionFromPath(obj, path) {
-    return path.split('.').reduce((current, key) => {
+    const fn = path.split('.').reduce((current, key) => {
       return current && current[key];
     }, obj);
+    
+    // If the function exists and the object is a class instance, bind it
+    if (fn && typeof fn === 'function' && obj && typeof obj === 'object') {
+      return fn.bind(obj);
+    }
+    
+    return fn;
   }
 
   // Register all HTML-compatible functions

@@ -49,7 +49,7 @@ function populateHotkeys(fkeys, title, options = {}) {
  * @param {Object} options - Options object containing dependencies
  */
 function setLabelFromSongId(song_id, element, options = {}) {
-  const { electronAPI, db, saveHotkeysToStore } = options;
+  const { electronAPI, db, saveHotkeysToStore, fallbackSetLabelFromSongId } = options;
   
   // Use new database API for getting song by ID
   if (electronAPI && electronAPI.database) {

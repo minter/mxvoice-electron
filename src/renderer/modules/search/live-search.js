@@ -137,7 +137,7 @@ function performLiveSearch(searchTerm) {
   const raw_html = [];
   const query_params = [];
   const query_segments = [];
-  const query_string = "";
+  let query_string = "";
   const category = $("#category_select").val();
 
   // Apply category filter if not "All Categories"

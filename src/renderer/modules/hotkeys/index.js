@@ -311,7 +311,7 @@ class HotkeysModule {
       debugLog?.info(`🔄 Database API available:`, !!this.electronAPI.database, { module: 'hotkeys', function: 'setLabelFromSongId' });
       debugLog?.info(`🔄 Database query method available:`, typeof this.electronAPI.database.query, { module: 'hotkeys', function: 'setLabelFromSongId' });
       
-      this.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
+      this.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then((result) => {
         debugLog?.info(`🔄 Database query result for song ${song_id}:`, result, { module: 'hotkeys', function: 'setLabelFromSongId' });
         if (result.success && result.data.length > 0) {
           const row = result.data[0];
@@ -342,7 +342,7 @@ class HotkeysModule {
           debugLog?.warn('❌ Failed to get song by ID:', result.error, { module: 'hotkeys', function: 'setLabelFromSongId' });
           this.fallbackSetLabelFromSongId(song_id, element);
         }
-      }).catch(error => {
+      }).catch((error) => {
         debugLog?.warn('❌ Database API error:', error, { module: 'hotkeys', function: 'setLabelFromSongId' });
         this.fallbackSetLabelFromSongId(song_id, element);
       });
@@ -636,7 +636,8 @@ class HotkeysModule {
           if (window.setLabelFromSongId) {
             window.setLabelFromSongId(songId, element);
           }
-        }
+        },
+        fallbackSetLabelFromSongId: this.fallbackSetLabelFromSongId.bind(this)
       });
       debugLog?.info('populateHotkeys completed successfully');
       return true;
