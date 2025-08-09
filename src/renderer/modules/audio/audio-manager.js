@@ -172,7 +172,7 @@ function playSongWithFilename(filename, row, song_id) {
                 howlerUtils.updateTimeTracker.bind(this)
               ));
               const title = row.title || "";
-              const artist = row.artist || "";
+              let artist = row.artist || "";
               artist = artist.length ? "by " + artist : artist;
               let wavesurfer = sharedState.get('wavesurfer');
               if (!wavesurfer && sharedState.get('createWaveSurfer')) {

@@ -38,9 +38,14 @@ class DragDropModule {
     // Setup event handlers for drag and drop
     setupDragDropEventHandlers();
     
+    // Make drag functions globally available for HTML inline handlers
+    window.songDrag = this.songDrag;
+    window.columnDrag = this.columnDrag;
+    
     debugLog?.info('Drag & Drop Module initialized', { 
       module: 'drag-drop',
-      function: 'initializeDragDrop'
+      function: 'initializeDragDrop',
+      globalFunctions: ['songDrag', 'columnDrag']
     });
   }
 

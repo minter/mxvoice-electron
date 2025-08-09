@@ -2,7 +2,12 @@
  * Data Population Module
  * 
  * Handles populating UI elements with data from the database
+ * 
+ * PHASE 2 SECURITY MIGRATION: Now uses secure adapters for all database operations
  */
+
+// Import secure adapters for Phase 2 migration
+import { secureDatabase, secureStore } from '../adapters/secure-adapter.js';
 
 // Import debug logger
 let debugLog = null;
@@ -53,125 +58,47 @@ function getFontSize() {
  * Populate category select dropdown
  * Fetches categories from database and populates the category select dropdown
  */
-function populateCategorySelect() {
-  debugLog?.info('Populating categories', { 
-    module: 'data-population',
-    function: 'populateCategorySelect'
-  });
-  $("#category_select option").remove();
-  $("#category_select").append(`<option value="*">All Categories</option>`);
-  
-  return new Promise((resolve, reject) => {
-    // Use new database API for getting categories
-    if (window.electronAPI && window.electronAPI.database) {
-      window.electronAPI.database.getCategories().then(result => {
-        if (result.success) {
-          result.data.forEach(row => {
-            categories[row.code] = row.description;
-            $("#category_select").append(
-              `<option value="${row.code}">${row.description}</option>`
-            );
-          });
-          debugLog?.info('Categories populated successfully via API', { 
-            module: 'data-population',
-            function: 'populateCategorySelect'
-          });
-          resolve();
-        } else {
-          debugLog?.warn('Failed to get categories', { 
-            module: 'data-population',
-            function: 'populateCategorySelect',
-            error: result.error
-          });
-          // Fallback to legacy database access
-          if (typeof db !== 'undefined') {
-            try {
-              const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-              for (const row of stmt.iterate()) {
-                categories[row.code] = row.description;
-                $("#category_select").append(
-                  `<option value="${row.code}">${row.description}</option>`
-                );
-              }
-              debugLog?.info('Categories populated successfully via legacy DB', { 
-                module: 'data-population',
-                function: 'populateCategorySelect'
-              });
-              resolve();
-            } catch (error) {
-              debugLog?.error('Legacy database error', { 
-                module: 'data-population',
-                function: 'populateCategorySelect',
-                error: error.message
-              });
-              reject(error);
-            }
-          } else {
-            reject(new Error('No database access available'));
-          }
-        }
-      }).catch(error => {
-        debugLog?.warn('Database API error', { 
-          module: 'data-population',
-          function: 'populateCategorySelect',
-          error: error.message
-        });
-        // Fallback to legacy database access
-        if (typeof db !== 'undefined') {
-          try {
-            const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-            for (const row of stmt.iterate()) {
-              categories[row.code] = row.description;
-              $("#category_select").append(
-                `<option value="${row.code}">${row.description}</option>`
-              );
-            }
-            debugLog?.info('Categories populated successfully via legacy DB (fallback)', { 
-              module: 'data-population',
-              function: 'populateCategorySelect'
-            });
-            resolve();
-          } catch (dbError) {
-            debugLog?.error('Legacy database error', { 
-              module: 'data-population',
-              function: 'populateCategorySelect',
-              error: dbError.message
-            });
-            reject(dbError);
-          }
-        } else {
-          reject(error);
-        }
+async function populateCategorySelect() {
+  try {
+    debugLog?.info('Populating categories', { 
+      module: 'data-population',
+      function: 'populateCategorySelect'
+    });
+    
+    $("#category_select option").remove();
+    $("#category_select").append(`<option value="*">All Categories</option>`);
+    
+    const result = await secureDatabase.getCategories();
+    const data = result.data || result;
+    
+    if (data && Array.isArray(data)) {
+      data.forEach(row => {
+        categories[row.code] = row.description;
+        $("#category_select").append(
+          `<option value="${row.code}">${row.description}</option>`
+        );
+      });
+      
+      debugLog?.info('Categories populated successfully', { 
+        module: 'data-population',
+        function: 'populateCategorySelect',
+        count: data.length
       });
     } else {
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        try {
-          const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-          for (const row of stmt.iterate()) {
-            categories[row.code] = row.description;
-            $("#category_select").append(
-              `<option value="${row.code}">${row.description}</option>`
-            );
-          }
-          debugLog?.info('Categories populated successfully via legacy DB (no API)', { 
-            module: 'data-population',
-            function: 'populateCategorySelect'
-          });
-          resolve();
-        } catch (error) {
-          debugLog?.error('Legacy database error', { 
-            module: 'data-population',
-            function: 'populateCategorySelect',
-            error: error.message
-          });
-          reject(error);
-        }
-      } else {
-        reject(new Error('No database access available'));
-      }
+      debugLog?.warn('No categories found or invalid data format', { 
+        module: 'data-population',
+        function: 'populateCategorySelect',
+        result: result
+      });
     }
-  });
+  } catch (error) {
+    debugLog?.error('Failed to populate categories', { 
+      module: 'data-population',
+      function: 'populateCategorySelect',
+      error: error.message
+    });
+    throw error;
+  }
 }
 
 /**
@@ -349,187 +276,42 @@ function setLabelFromSongId(song_id, element) {
  * @param {string} song_id - The song ID to add
  * @param {jQuery} element - The element to add the song to
  */
-function addToHoldingTank(song_id, element) {
-  const currentFontSize = getFontSize();
-  debugLog?.info('addToHoldingTank called with song_id', { 
-    module: 'data-population',
-    function: 'addToHoldingTank',
-    songId: song_id,
-    fontSize: currentFontSize
-  });
-  
-  // Use new database API for getting song by ID
-  if (window.electronAPI && window.electronAPI.database) {
-    window.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
-      if (result.success && result.data.length > 0) {
-        const row = result.data[0];
-        const title = row.title || "[Unknown Title]";
-        const artist = row.artist || "[Unknown Artist]";
-        const time = row.time || "[??:??]";
-
-        debugLog?.info('Song data retrieved', { 
-          module: 'data-population',
-          function: 'addToHoldingTank',
-          songId: song_id,
-          title: title,
-          artist: artist,
-          time: time
-        });
-
-        const existing_song = $(
-          `.holding_tank.active .list-group-item[songid=${song_id}]`
-        );
-        if (existing_song.length) {
-          const song_row = existing_song.detach();
-        } else {
-          const song_row = document.createElement("li");
-          song_row.style.fontSize = `${currentFontSize}px`;
-          song_row.className = "song list-group-item context-menu";
-          song_row.setAttribute("draggable", "true");
-          song_row.setAttribute("ondragstart", "songDrag(event)");
-          song_row.setAttribute("songid", song_id);
-          song_row.textContent = `${title} by ${artist} (${time})`;
-        }
-
-        if ($(element).is("li")) {
-          $(element).after(song_row);
-        } else if ($(element).is("div")) {
-          $(element).find("ul.active").append(song_row);
-        } else {
-          $(element).append(song_row);
-        }
-        
-        debugLog?.info('Song added to holding tank successfully', { 
-          module: 'data-population',
-          function: 'addToHoldingTank',
-          songId: song_id
-        });
-        if (typeof window.saveHoldingTankToStore === 'function') {
-          window.saveHoldingTankToStore();
-        } else {
-          debugLog?.warn('saveHoldingTankToStore function not available', { 
-            module: 'data-population',
-            function: 'addToHoldingTank'
-          });
-        }
-      } else {
-        debugLog?.warn('Failed to get song by ID', { 
-          module: 'data-population',
-          function: 'addToHoldingTank',
-          songId: song_id,
-          error: result.error
-        });
-        // Fallback to legacy database access
-        if (typeof db !== 'undefined') {
-          const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-          const row = stmt.get(song_id);
-          const title = row.title || "[Unknown Title]";
-          const artist = row.artist || "[Unknown Artist]";
-          const time = row.time || "[??:??]";
-
-          const existing_song = $(
-            `.holding_tank.active .list-group-item[songid=${song_id}]`
-          );
-          if (existing_song.length) {
-            const song_row = existing_song.detach();
-          } else {
-            const song_row = document.createElement("li");
-            song_row.style.fontSize = `${currentFontSize}px`;
-            song_row.className = "song list-group-item context-menu";
-            song_row.setAttribute("draggable", "true");
-            song_row.setAttribute("ondragstart", "songDrag(event)");
-            song_row.setAttribute("songid", song_id);
-            song_row.textContent = `${title} by ${artist} (${time})`;
-          }
-
-          if ($(element).is("li")) {
-            $(element).after(song_row);
-          } else if ($(element).is("div")) {
-            $(element).find("ul.active").append(song_row);
-          } else {
-            $(element).append(song_row);
-          }
-          if (typeof window.saveHoldingTankToStore === 'function') {
-            window.saveHoldingTankToStore();
-          } else {
-            debugLog?.warn('saveHoldingTankToStore function not available', { 
-              module: 'data-population',
-              function: 'addToHoldingTank'
-            });
-          }
-        }
-      }
-    }).catch(error => {
-      debugLog?.warn('Database API error', { 
-        module: 'data-population',
-        function: 'addToHoldingTank',
-        songId: song_id,
-        error: error.message
-      });
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-        const row = stmt.get(song_id);
-        if (!row) {
-          debugLog?.warn('Song not found in database', { 
-            module: 'data-population',
-            function: 'addToHoldingTank',
-            songId: song_id
-          });
-          return;
-        }
-        const title = row.title || "[Unknown Title]";
-        const artist = row.artist || "[Unknown Artist]";
-        const time = row.time || "[??:??]";
-
-        const existing_song = $(
-          `.holding_tank.active .list-group-item[songid=${song_id}]`
-        );
-        if (existing_song.length) {
-          const song_row = existing_song.detach();
-        } else {
-          const song_row = document.createElement("li");
-          song_row.style.fontSize = `${currentFontSize}px`;
-          song_row.className = "song list-group-item context-menu";
-          song_row.setAttribute("draggable", "true");
-          song_row.setAttribute("ondragstart", "songDrag(event)");
-          song_row.setAttribute("songid", song_id);
-          song_row.textContent = `${title} by ${artist} (${time})`;
-        }
-
-        if ($(element).is("li")) {
-          $(element).after(song_row);
-        } else if ($(element).is("div")) {
-          $(element).find("ul.active").append(song_row);
-        } else {
-          $(element).append(song_row);
-        }
-        if (typeof window.saveHoldingTankToStore === 'function') {
-          window.saveHoldingTankToStore();
-        } else {
-          debugLog?.warn('saveHoldingTankToStore function not available', { 
-            module: 'data-population',
-            function: 'addToHoldingTank'
-          });
-        }
-      }
+async function addToHoldingTank(song_id, element) {
+  try {
+    const currentFontSize = getFontSize();
+    debugLog?.info('addToHoldingTank called with song_id', { 
+      module: 'data-population',
+      function: 'addToHoldingTank',
+      songId: song_id,
+      fontSize: currentFontSize
     });
-  } else {
-    // Fallback to legacy database access
-    if (typeof db !== 'undefined') {
-      const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-      const row = stmt.get(song_id);
+    
+    const result = await secureDatabase.query("SELECT * from mrvoice WHERE id = ?", [song_id]);
+    const data = result.data || result;
+    
+    if (data && data.length > 0) {
+      const row = data[0];
       const title = row.title || "[Unknown Title]";
       const artist = row.artist || "[Unknown Artist]";
       const time = row.time || "[??:??]";
 
+      debugLog?.info('Song data retrieved', { 
+        module: 'data-population',
+        function: 'addToHoldingTank',
+        songId: song_id,
+        title: title,
+        artist: artist,
+        time: time
+      });
+
       const existing_song = $(
         `.holding_tank.active .list-group-item[songid=${song_id}]`
       );
+      let song_row;
       if (existing_song.length) {
-        const song_row = existing_song.detach();
+        song_row = existing_song.detach();
       } else {
-        const song_row = document.createElement("li");
+        song_row = document.createElement("li");
         song_row.style.fontSize = `${currentFontSize}px`;
         song_row.className = "song list-group-item context-menu";
         song_row.setAttribute("draggable", "true");
@@ -545,6 +327,7 @@ function addToHoldingTank(song_id, element) {
       } else {
         $(element).append(song_row);
       }
+      
       if (typeof window.saveHoldingTankToStore === 'function') {
         window.saveHoldingTankToStore();
       } else {
@@ -553,7 +336,30 @@ function addToHoldingTank(song_id, element) {
           function: 'addToHoldingTank'
         });
       }
+      
+      debugLog?.info('Song added to holding tank successfully', { 
+        module: 'data-population',
+        function: 'addToHoldingTank',
+        songId: song_id
+      });
+      
+      return { success: true, songId: song_id, title: title };
+    } else {
+      debugLog?.warn('No song data found', { 
+        module: 'data-population',
+        function: 'addToHoldingTank',
+        songId: song_id
+      });
+      return { success: false, error: 'Song not found' };
     }
+  } catch (error) {
+    debugLog?.error('Error in addToHoldingTank', { 
+      module: 'data-population',
+      function: 'addToHoldingTank',
+      songId: song_id,
+      error: error.message
+    });
+    return { success: false, error: error.message };
   }
 }
 

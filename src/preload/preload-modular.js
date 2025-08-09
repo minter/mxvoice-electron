@@ -15,6 +15,7 @@ import Store from 'electron-store';
 import * as ipcBridge from './modules/ipc-bridge.js';
 import * as apiExposer from './modules/api-exposer.js';
 import * as databaseSetup from './modules/database-setup.js';
+import * as secureApiExposer from './modules/secure-api-exposer.js';
 
 // Initialize debug logger
 const store = new Store();
@@ -34,6 +35,22 @@ ipcBridge.registerIpcHandlers();
 // Set the database in the legacy globals
 apiExposer.setDatabaseInstance(db);
 
+// Initialize secure API exposer (for Phase 1 testing)
+try {
+  const secureAPIExposed = secureApiExposer.exposeSecureAPI();
+  if (secureAPIExposed) {
+    debugLog.info('✅ Secure API exposed for Phase 1 testing');
+  } else {
+    debugLog.info('ℹ️ Secure API infrastructure ready but not exposed (context isolation disabled - expected in Phase 1)');
+  }
+} catch (error) {
+  if (error.message.includes('contextIsolation')) {
+    debugLog.info('ℹ️ Secure API infrastructure ready (context isolation disabled - expected in Phase 1)');
+  } else {
+    debugLog.warn('⚠️ Secure API exposure failed:', error.message);
+  }
+}
+
 // Test function to verify modular preload is working
 function testModularPreload() {
   debugLog.debug('🧪 Testing Modular Preload...');
@@ -47,8 +64,12 @@ function testModularPreload() {
   // Test IPC bridge
   const ipcTest = ipcBridge.testIpcBridge();
   
+  // Test secure API exposer
+  const secureAPITest = secureApiExposer.testSecureAPI();
+  
   if (dbTest && apiTest && ipcTest) {
     debugLog.info('✅ Modular preload is working correctly!');
+    debugLog.info('📊 Secure API test result:', secureAPITest);
     return true;
   } else {
     debugLog.error('❌ Modular preload has issues');

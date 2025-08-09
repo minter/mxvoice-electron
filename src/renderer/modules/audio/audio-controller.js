@@ -3,7 +3,12 @@
  * 
  * This module handles audio control functionality
  * in the MxVoice Electron application.
+ * 
+ * PHASE 2 SECURITY MIGRATION: Now uses secure adapters for store operations
  */
+
+// Import secure adapters for Phase 2 migration
+import { secureStore } from '../adapters/secure-adapter.js';
 
 // Import shared state
 import sharedState from '../shared-state.js';
@@ -25,10 +30,12 @@ try {
  * @param {boolean} fadeOut - Whether to fade out the audio
  */
 function stopPlaying(fadeOut = false) {
-  debugLog?.info('🔍 stopPlaying called with fadeOut:', { 
+  debugLog?.info('stopPlaying called with parameters', { 
     module: 'audio-controller',
     function: 'stopPlaying',
-    fadeOut: fadeOut
+    fadeOut: fadeOut,
+    typeof_fadeOut: typeof fadeOut,
+    argumentsLength: arguments.length
   });
   const sound = sharedState.get('sound');
   const autoplay = sharedState.get('autoplay');
@@ -66,20 +73,20 @@ function stopPlaying(fadeOut = false) {
       $(".now_playing").first().removeClass("now_playing");
     }
     if (fadeOut) {
-      debugLog?.info("Starting fade out...", { 
+      debugLog?.info("Taking fade out path", { 
         module: 'audio-controller',
-        function: 'stopPlaying'
+        function: 'stopPlaying',
+        fadeOut: fadeOut
       });
-      window.electronAPI.store.get("fade_out_seconds").then(fadeSeconds => {
+      secureStore.get("fade_out_seconds").then(fadeSeconds => {
         debugLog?.info("Fade out seconds:", { 
           module: 'audio-controller',
           function: 'stopPlaying',
           fadeSeconds: fadeSeconds
         });
         
-        // Extract the numeric value from the response
-        const fadeSecondsValue = fadeSeconds.value || fadeSeconds;
-        const fadeDuration = parseFloat(fadeSecondsValue) * 1000;
+        // Extract the numeric value from the response  
+        const fadeDuration = parseFloat(fadeSeconds) * 1000;
         debugLog?.info("Fade duration:", { 
           module: 'audio-controller',
           function: 'stopPlaying',
@@ -131,9 +138,10 @@ function stopPlaying(fadeOut = false) {
         resetUIState();
       });
     } else {
-      debugLog?.info('🔍 Unloading sound immediately', { 
+      debugLog?.info('Taking immediate stop path', { 
         module: 'audio-controller',
-        function: 'stopPlaying'
+        function: 'stopPlaying',
+        fadeOut: fadeOut
       });
       sound.unload();
       resetUIState();
@@ -203,7 +211,7 @@ function pausePlaying(fadeOut = false) {
           sound.pause();
           sound.volume(old_volume);
         });
-        window.electronAPI.store.get("fade_out_seconds").then(fadeSeconds => {
+        secureStore.get("fade_out_seconds").then(fadeSeconds => {
           const fadeDuration = fadeSeconds * 1000;
           sound.fade(sound.volume(), 0, fadeDuration);
         });

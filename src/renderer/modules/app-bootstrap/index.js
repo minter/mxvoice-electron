@@ -47,6 +47,20 @@ export async function loadBasicModules(config, moduleRegistry, logInfo, logError
           moduleInstance = module.default;
         }
         
+        // Call init() method if it exists
+        if (moduleInstance && typeof moduleInstance.init === 'function') {
+          logInfo(`Calling init() method for ${moduleConf.name} module`);
+          try {
+            await moduleInstance.init();
+            logInfo(`${moduleConf.name} module initialized successfully`);
+          } catch (initError) {
+            logError(`Error initializing ${moduleConf.name} module`, initError);
+            if (moduleConf.required) {
+              throw initError;
+            }
+          }
+        }
+        
         moduleRegistry[moduleConf.name] = moduleInstance;
         logInfo(`${moduleConf.name} module instantiated and stored in registry`);
       } else {

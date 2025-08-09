@@ -4,6 +4,9 @@
  * Core functions for handling drag and drop operations
  */
 
+// Database functions will be loaded dynamically to avoid import failures
+let addToHoldingTank, setLabelFromSongId;
+
 // Import debug logger
 let debugLog = null;
 try {
@@ -20,12 +23,23 @@ try {
  * 
  * @param {Event} event - The drop event
  */
-function hotkeyDrop(event) {
+export function hotkeyDrop(event) {
   event.preventDefault();
   const song_id = event.dataTransfer.getData("text");
   const target = $(event.currentTarget);
   target.attr("songid", song_id);
-  setLabelFromSongId(song_id, target);
+  
+  // Try to use setLabelFromSongId if available, otherwise fallback
+  if (typeof setLabelFromSongId === 'function') {
+    setLabelFromSongId(song_id, target);
+  } else if (typeof window.setLabelFromSongId === 'function') {
+    window.setLabelFromSongId(song_id, target);
+  } else {
+    debugLog?.warn('setLabelFromSongId function not available', { 
+      module: 'drag-drop-functions',
+      function: 'hotkeyDrop'
+    });
+  }
 }
 
 /**
@@ -61,12 +75,37 @@ export function holdingTankDrop(event) {
   debugLog?.info('Calling addToHoldingTank with songId', { 
     module: 'drag-drop-functions',
     function: 'holdingTankDrop',
-    songId: songId,
-    functionAvailable: typeof window.addToHoldingTank
+    songId: songId
   });
   
-  if (window.addToHoldingTank) {
-    addToHoldingTank(songId, $(event.target));
+  // Try to use addToHoldingTank if available, otherwise fallback
+  if (typeof addToHoldingTank === 'function') {
+    addToHoldingTank(songId, $(event.target)).then(result => {
+      if (result && result.success) {
+        debugLog?.info('Successfully added song to holding tank', { 
+          module: 'drag-drop-functions',
+          function: 'holdingTankDrop',
+          songId: songId,
+          title: result.title
+        });
+      } else {
+        debugLog?.error('Failed to add song to holding tank', { 
+          module: 'drag-drop-functions',
+          function: 'holdingTankDrop',
+          songId: songId,
+          error: result ? result.error : 'Unknown error'
+        });
+      }
+    }).catch(error => {
+      debugLog?.error('Error adding song to holding tank', { 
+        module: 'drag-drop-functions',
+        function: 'holdingTankDrop',
+        songId: songId,
+        error: error.message
+      });
+    });
+  } else if (typeof window.addToHoldingTank === 'function') {
+    window.addToHoldingTank(songId, $(event.target));
   } else {
     debugLog?.error('addToHoldingTank function not available', { 
       module: 'drag-drop-functions',
@@ -80,7 +119,7 @@ export function holdingTankDrop(event) {
  * 
  * @param {Event} event - The dragover event
  */
-function allowHotkeyDrop(event) {
+export function allowHotkeyDrop(event) {
   event.preventDefault();
 }
 

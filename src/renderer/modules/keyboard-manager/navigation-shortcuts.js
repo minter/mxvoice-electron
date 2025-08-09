@@ -108,68 +108,40 @@ export class NavigationShortcuts {
    */
   setupAudioControls() {
     try {
-      // ESC to stop playing
-      Mousetrap.bind("esc", () => {
-        this.handleStopPlaying();
-      });
+      // Register shortcuts only in the bindings registry (avoid double registration)
+      // The keyboard manager will handle the actual Mousetrap bindings
       
-      if (this.searchField) {
-        Mousetrap(this.searchField).bind("esc", () => {
-          this.handleStopPlaying();
-        });
-      }
-      
-      // Shift+ESC to stop all
-      Mousetrap.bind("shift+esc", () => {
-        this.handleStopPlaying(true);
-      });
-      
-      // Space for pause/play
-      Mousetrap.bind("space", () => {
-        return this.handlePausePlaying();
-      });
-      
-      // Shift+Space for pause all
-      Mousetrap.bind("shift+space", () => {
-        return this.handlePausePlaying(true);
-      });
-      
-      // Enter to play selected
-      Mousetrap.bind("return", () => {
-        return this.handlePlaySelected();
-      });
-
       this.bindings.set("esc", {
         key: "esc",
-        handler: 'handleStopPlaying',
+        handler: (event) => this.handleStopPlaying(false), // Explicitly pass false for fadeOut
         context: 'global+search',
         description: 'Stop playing audio'
       });
 
       this.bindings.set("shift+esc", {
         key: "shift+esc",
-        handler: 'handleStopPlaying',
+        handler: (event) => this.handleStopPlaying(true), // Explicitly pass true for fadeOut
         context: 'global',
         description: 'Stop all audio'
       });
 
       this.bindings.set("space", {
         key: "space",
-        handler: 'handlePausePlaying',
+        handler: (event) => this.handlePausePlaying(false), // Explicitly pass false for pauseAll
         context: 'global',
         description: 'Pause/resume audio'
       });
 
       this.bindings.set("shift+space", {
         key: "shift+space",
-        handler: 'handlePausePlaying',
+        handler: (event) => this.handlePausePlaying(true), // Explicitly pass true for pauseAll
         context: 'global',
         description: 'Pause all audio'
       });
 
       this.bindings.set("return", {
         key: "return",
-        handler: 'handlePlaySelected',
+        handler: (event) => this.handlePlaySelected(), // No arguments needed
         context: 'global',
         description: 'Play selected song'
       });
@@ -252,14 +224,17 @@ export class NavigationShortcuts {
 
   /**
    * Handle stop playing
-   * @param {boolean} stopAll - Whether to stop all audio
+   * @param {boolean} fadeOut - Whether to fade out the audio
    */
-  handleStopPlaying(stopAll = false) {
+  handleStopPlaying(fadeOut = false) {
     try {
-      this.logDebug(`Stop playing requested (stopAll: ${stopAll})`);
+      this.logDebug('Stop playing requested', {
+        fadeOut: fadeOut,
+        argumentsLength: arguments.length
+      });
       
       if (window.stopPlaying && typeof window.stopPlaying === 'function') {
-        window.stopPlaying(stopAll);
+        window.stopPlaying(fadeOut);
       } else {
         this.logWarn('stopPlaying function not available');
       }

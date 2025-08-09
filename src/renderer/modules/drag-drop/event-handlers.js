@@ -4,6 +4,9 @@
  * Handles UI event handlers for drag and drop functionality
  */
 
+// Import drag and drop functions
+import { hotkeyDrop, holdingTankDrop, allowHotkeyDrop } from './drag-drop-functions.js';
+
 // Import debug logger
 let debugLog = null;
 try {
