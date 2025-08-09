@@ -295,6 +295,9 @@ $(document).ready(async function() {
   }
 });
 
+// Import bootstrap module for module loading
+import AppBootstrap from './renderer/modules/app-bootstrap/index.js';
+
 // Load modules dynamically and make functions globally available
 (async function loadModules() {
   try {
@@ -319,51 +322,40 @@ $(document).ready(async function() {
     
     logInfo('Shared state is ready, proceeding with module loading...');
     
-    // Declare module variables
+    // Load basic modules using the bootstrap module
+    logInfo('Loading modules using bootstrap configuration...');
+    await AppBootstrap.loadBasicModules(
+      AppBootstrap.moduleConfig, 
+      moduleRegistry, 
+      logInfo, 
+      logError, 
+      logWarn,
+      {
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: window.store,
+        debugLog: window.debugLog
+      }
+    );
+    logInfo('Basic module loading completed');
+    
+    // TODO: The complex module instantiation logic will be moved to bootstrap module in next step
+    // For now, we'll keep the complex logic below until the next incremental step
+    
+    // Declare module variables for complex instantiation (temporary)
     let fileOperationsModule, songManagementModule, holdingTankModule, hotkeysModule;
     let categoriesModule, bulkOperationsModule, dragDropModule, navigationModule;
     let modeManagementModule, testUtilsModule, searchModule, audioModule;
     let uiModule, preferencesModule, databaseModule, utilsModule, debugLogModule;
     
-    // Import file operations module and make functions globally available
-    try {
-      logInfo('Loading file-operations module...');
-      fileOperationsModule = await import('./renderer/modules/file-operations/index.js');
-      logInfo('file-operations module loaded successfully');
-    } catch (error) {
-      logError('Error loading file-operations module', error);
-      logWarn('Continuing with other modules despite file-operations failure');
-      fileOperationsModule = null;
-    }
+    // NOTE: Basic module loading is now handled by bootstrap module above
+    // The complex instantiation logic below will be moved to bootstrap in the next incremental step
     
-    // Store modules in registry for Function Registry to manage
-    if (fileOperationsModule) {
-      const fileOperationsInstance = fileOperationsModule.default;
-      moduleRegistry.fileOperations = fileOperationsInstance;
-      logInfo('File operations module stored in registry');
-    } else {
-      logWarn('File operations module not available, Function Registry will provide fallbacks');
-    }
-
-    // Import song management module and store in registry
-    try {
-      logInfo('Loading song-management module...');
-      songManagementModule = await import('./renderer/modules/song-management/index.js');
-      logInfo('song-management module loaded successfully');
-    } catch (error) {
-      logError('Error loading song-management module', error);
-      logWarn('Continuing with other modules despite song-management failure');
-      songManagementModule = null;
-    }
+    // TODO: Remove these redundant imports - they are now handled by AppBootstrap.loadBasicModules()
+    // Keeping temporarily to prevent breaking changes during incremental extraction
     
-    // Store in registry for Function Registry to manage
-    if (songManagementModule) {
-      const songManagementInstance = songManagementModule.default;
-      moduleRegistry.songManagement = songManagementInstance;
-      logInfo('Song management module stored in registry');
-    } else {
-      logWarn('Song management module not available, Function Registry will provide fallbacks');
-    }
+    // Simple modules like fileOperations and songManagement are now loaded by bootstrap
+    // but we can still access them from moduleRegistry for complex instantiation below
 
     // Import holding tank module and store in registry
     try {

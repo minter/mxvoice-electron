@@ -578,34 +578,34 @@ class HotkeysModule {
    */
   getAllHotkeyFunctions() {
     return {
-      // Core functions
-      saveHotkeysToStore: this.saveHotkeysToStore,
-      loadHotkeysFromStore: this.loadHotkeysFromStore,
-      initHotkeys: this.initHotkeys,
+      // Core functions - properly bound to maintain context
+      saveHotkeysToStore: this.saveHotkeysToStore.bind(this),
+      loadHotkeysFromStore: this.loadHotkeysFromStore.bind(this),
+      initHotkeys: this.initHotkeys.bind(this),
       
-      // Data management
-      populateHotkeys: this.populateHotkeys,
-      setLabelFromSongId: this.setLabelFromSongId,
-      clearHotkeys: this.clearHotkeys,
+      // Data management - properly bound to maintain context
+      populateHotkeys: this.populateHotkeys.bind(this),
+      setLabelFromSongId: this.setLabelFromSongId.bind(this),
+      clearHotkeys: this.clearHotkeys.bind(this),
       
-      // File operations
-      openHotkeyFile: this.openHotkeyFile,
-      saveHotkeyFile: this.saveHotkeyFile,
+      // File operations - properly bound to maintain context
+      openHotkeyFile: this.openHotkeyFile.bind(this),
+      saveHotkeyFile: this.saveHotkeyFile.bind(this),
       
-      // Playback functions
-      playSongFromHotkey: this.playSongFromHotkey,
-      sendToHotkeys: this.sendToHotkeys,
+      // Playback functions - properly bound to maintain context
+      playSongFromHotkey: this.playSongFromHotkey.bind(this),
+      sendToHotkeys: this.sendToHotkeys.bind(this),
       
-      // UI operations (using hotkeyUI functions)
-      hotkeyDrop: this.hotkeyDrop, // This is now the bound hotkeyUI.hotkeyDrop
-      allowHotkeyDrop: this.allowHotkeyDrop, // This is now the bound hotkeyUI.allowHotkeyDrop
+      // UI operations - properly bound to maintain context
+      hotkeyDrop: this.hotkeyDrop.bind(this),
+      allowHotkeyDrop: this.allowHotkeyDrop.bind(this),
       
-      // Tab management
-      switchToHotkeyTab: this.switchToHotkeyTab,
-      renameHotkeyTab: this.renameHotkeyTab,
+      // Tab management - properly bound to maintain context
+      switchToHotkeyTab: this.switchToHotkeyTab.bind(this),
+      renameHotkeyTab: this.renameHotkeyTab.bind(this),
       
-      // Removal function
-      removeFromHotkey: this.removeFromHotkey
+      // Removal function - properly bound to maintain context
+      removeFromHotkey: this.removeFromHotkey.bind(this)
     };
   }
 

@@ -30,7 +30,22 @@ function hotkeyDrop(event, options = {}) {
   var song_id = event.dataTransfer.getData("text");
   var target = $(event.currentTarget);
   target.attr("songid", song_id);
-  setLabelFromSongId(song_id, target);
+  
+  // Use the module instance's setLabelFromSongId method if available (when bound to HotkeysModule)
+  // Otherwise fall back to global function
+  if (this && this.setLabelFromSongId) {
+    this.setLabelFromSongId(song_id, target);
+  } else if (window.setLabelFromSongId) {
+    window.setLabelFromSongId(song_id, target);
+  } else {
+    debugLog?.error('❌ setLabelFromSongId not available', { 
+      module: 'hotkey-ui', 
+      function: 'hotkeyDrop',
+      hasThis: !!this,
+      hasThisMethod: !!(this && this.setLabelFromSongId),
+      hasGlobal: !!window.setLabelFromSongId
+    });
+  }
 }
 
 /**
