@@ -156,9 +156,7 @@ export function saveBulkUpload(event) {
                 results = results.concat(walk(file));
               } else {
                 /* Is a file */
-                window.electronAPI.path.parse(file).then(parseResult => {
-                  if (parseResult.success) {
-                    const pathData = parseResult.data;
+                securePath.parse(file).then(pathData => {
                     if (
                       [".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(
                         pathData.ext.toLowerCase()
@@ -166,14 +164,6 @@ export function saveBulkUpload(event) {
                     ) {
                       results.push(file);
                     }
-                  } else {
-                    debugLog?.warn('Failed to parse path', { 
-                      module: 'bulk-operations',
-                      function: 'saveBulkUpload',
-                      file: file,
-                      error: parseResult.error
-                    });
-                  }
                 }).catch(error => {
                   debugLog?.warn('Path parse error', { 
                     module: 'bulk-operations',

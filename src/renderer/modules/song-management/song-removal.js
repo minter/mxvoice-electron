@@ -16,7 +16,7 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem, secureDatabase, secureStore } from '../adapters/secure-adapter.js';
+import { secureFileSystem, secureDatabase, secureStore, securePath } from '../adapters/secure-adapter.js';
 
 /**
  * Deletes a song from the database and removes the associated file
@@ -36,9 +36,7 @@ export function deleteSong() {
         const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
         if (deleteStmt.run(songId)) {
           secureStore.get("music_directory").then(musicDirectory => {
-            window.electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
-              if (joinResult.success) {
-                const filePath = joinResult.data;
+            securePath.join(musicDirectory, filename).then(filePath => {
                 secureFileSystem.delete(filePath).then(result => {
                   if (result.success) {
                     debugLog?.info('✅ File deleted successfully', { module: 'song-management', function: 'deleteSong' });
@@ -48,9 +46,6 @@ export function deleteSong() {
                 }).catch(error => {
                   debugLog?.warn('❌ File deletion error:', { module: 'song-management', function: 'deleteSong', error: error });
                 });
-              } else {
-                debugLog?.warn('❌ Failed to join path:', { module: 'song-management', function: 'deleteSong', error: joinResult.error });
-              }
             }).catch(error => {
               debugLog?.warn('❌ Path join error:', { module: 'song-management', function: 'deleteSong', error: error });
             });

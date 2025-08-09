@@ -34,7 +34,8 @@ const database = window.electronAPI.database;
 // Import secure adapters
 import { secureFileSystem } from '../adapters/secure-adapter.js';
 const fileSystem = secureFileSystem;
-const path = window.electronAPI.path;
+import { securePath } from '../adapters/secure-adapter.js';
+const path = securePath;
 
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'

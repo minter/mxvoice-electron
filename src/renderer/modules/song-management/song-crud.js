@@ -16,7 +16,7 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem, secureDatabase } from '../adapters/secure-adapter.js';
+import { secureFileSystem, secureDatabase, securePath } from '../adapters/secure-adapter.js';
 
 /**
  * Saves an edited song to the database
@@ -54,9 +54,7 @@ export function saveNewSong(event) {
   $(`#songFormModal`).modal("hide");
   debugLog?.info("Starting save process", { module: 'song-management', function: 'saveNewSong' });
   const filename = $("#song-form-filename").val();
-  window.electronAPI.path.parse(filename).then(result => {
-    if (result.success) {
-      const pathData = result.data;
+  securePath.parse(filename).then(pathData => {
       const title = $("#song-form-title").val();
       const artist = $("#song-form-artist").val();
       const info = $("#song-form-info").val();
@@ -108,9 +106,7 @@ export function saveNewSong(event) {
         /[^-.\w]/g,
         ""
       );
-      window.electronAPI.path.join(store.get("music_directory"), newFilename).then(joinResult => {
-        if (joinResult.success) {
-          const newPath = joinResult.data;
+      securePath.join(store.get("music_directory"), newFilename).then(newPath => {
           const stmt = db.prepare(
             "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
           );
@@ -136,15 +132,9 @@ export function saveNewSong(event) {
           // Song has been saved, now let's show item
           $("#omni_search").val(title);
           searchData();
-        } else {
-          debugLog?.warn('❌ Failed to join path:', { module: 'song-management', function: 'saveNewSong', error: joinResult.error });
-        }
       }).catch(error => {
         debugLog?.warn('❌ Path join error:', { module: 'song-management', function: 'saveNewSong', error: error });
       });
-    } else {
-      debugLog?.warn('❌ Failed to parse path:', { module: 'song-management', function: 'saveNewSong', error: result.error });
-    }
   }).catch(error => {
     debugLog?.warn('❌ Path parse error:', { module: 'song-management', function: 'saveNewSong', error: error });
   });

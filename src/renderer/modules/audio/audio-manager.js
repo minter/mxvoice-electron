@@ -15,7 +15,7 @@ function getDebugLog() {
 }
 
 // Import secure adapters
-import { secureStore, secureDatabase } from '../adapters/secure-adapter.js';
+import { secureStore, secureDatabase, securePath } from '../adapters/secure-adapter.js';
 
 /**
  * Play a song with the given filename and row data
@@ -65,9 +65,8 @@ function playSongWithFilename(filename, row, song_id) {
         });
         // Use default path as fallback
         const defaultPath = path.join(process.env.APPDATA || process.env.HOME || '', '.config', 'mxvoice', 'mp3');
-        window.electronAPI.path.join(defaultPath, filename).then(result => {
-          if (result.success) {
-            const sound_path = [result.data];
+        securePath.join(defaultPath, filename).then(joinedPath => {
+          const sound_path = [joinedPath];
             getDebugLog()?.info("Inside get, Filename is " + filename, { 
               module: 'audio-manager',
               function: 'playSongWithFilename',
@@ -135,33 +134,27 @@ function playSongWithFilename(filename, row, song_id) {
               function: 'playSongWithFilename'
             });
             sound.play();
-          } else {
-            getDebugLog()?.warn('❌ Failed to join path with default:', { 
-              module: 'audio-manager',
-              function: 'playSongWithFilename',
-              error: result.error
-            });
-          }
         }).catch(error => {
           getDebugLog()?.warn('❌ Path join error with default:', { 
             module: 'audio-manager',
             function: 'playSongWithFilename',
-            error: error.message
+            error: error.message,
+            defaultPath: defaultPath,
+            filename: filename
           });
         });
         return;
       }
       
-                window.electronAPI.path.join(musicDirectory, filename).then(result => {
-        if (result.success) {
-          if (!result.data) {
-            getDebugLog()?.warn('❌ result.data is undefined or empty', { 
+        securePath.join(musicDirectory, filename).then(joinedPath => {
+          if (!joinedPath) {
+            getDebugLog()?.warn('❌ joinedPath is undefined or empty', { 
               module: 'audio-manager',
               function: 'playSongWithFilename'
             });
             return;
           }
-          const sound_path = [result.data];
+          const sound_path = [joinedPath];
           getDebugLog()?.info("Inside get, Filename is " + filename, { 
             module: 'audio-manager',
             function: 'playSongWithFilename',
@@ -229,20 +222,15 @@ function playSongWithFilename(filename, row, song_id) {
             function: 'playSongWithFilename'
           });
           sound.play();
-        } else {
-          getDebugLog()?.warn('❌ Failed to join path:', { 
+        }).catch(error => {
+          getDebugLog()?.warn('❌ Path join error:', { 
             module: 'audio-manager',
             function: 'playSongWithFilename',
-            error: result.error
+            error: error.message,
+            musicDirectory: musicDirectory,
+            filename: filename
           });
-        }
-      }).catch(error => {
-        getDebugLog()?.warn('❌ Path join error:', { 
-          module: 'audio-manager',
-          function: 'playSongWithFilename',
-          error: error.message
         });
-      });
     } else {
       getDebugLog()?.warn('❌ Could not get music directory from store', { 
         module: 'audio-manager',

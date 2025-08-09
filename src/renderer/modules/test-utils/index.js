@@ -208,9 +208,7 @@ export function testFileSystemAPI() {
       }
     }).then(dbResult => {
       if (dbResult.success) {
-        return window.electronAPI.path.join(dbResult.value, 'config.json').then(joinResult => {
-          if (joinResult.success) {
-            const configPath = joinResult.data;
+        return securePath.join(dbResult.value, 'config.json').then(configPath => {
             return secureFileSystem.read(configPath).then(result => {
               if (result.success) {
                 debugLog?.info('file read API works: Config file read successfully', { 
@@ -235,15 +233,6 @@ export function testFileSystemAPI() {
               results.tests.push({ name: 'fileRead', success: false, error: error.message });
               return results;
             });
-          } else {
-            debugLog?.warn('Failed to join path', { 
-              module: 'test-utils',
-              function: 'testFileSystemAPI',
-              error: joinResult.error
-            });
-            results.tests.push({ name: 'fileRead', success: false, error: joinResult.error });
-            return results;
-          }
         }).catch(error => {
           debugLog?.warn('Path join error', { 
             module: 'test-utils',
@@ -442,7 +431,7 @@ export function testAudioAPI() {
       return secureStore.get('music_directory');
     }).then(musicResult => {
       if (musicResult.success) {
-        return window.electronAPI.path.join(musicResult.value, 'PatrickShort-CSzRockBumper.mp3');
+        return securePath.join(musicResult.value, 'PatrickShort-CSzRockBumper.mp3');
       } else {
         debugLog?.warn('Could not get music directory from store', { 
           module: 'test-utils',

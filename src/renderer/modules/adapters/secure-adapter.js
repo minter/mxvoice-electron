@@ -545,6 +545,91 @@ export const securePath = {
       });
       throw error;
     }
+  },
+
+  /**
+   * Parse a file path into components
+   * @param {string} filePath - File path to parse
+   * @returns {Promise<Object>} Path components (dir, name, ext, base, root)
+   */
+  async parse(filePath) {
+    try {
+      if (window.secureElectronAPI) {
+        const result = await window.secureElectronAPI.path.parse(filePath);
+        return result.data || result;
+      } else if (window.electronAPI?.path) {
+        const result = await window.electronAPI.path.parse(filePath);
+        return result.data || result;
+      } else if (window.path) {
+        return window.path.parse(filePath);
+      } else {
+        throw new Error('No path API available');
+      }
+    } catch (error) {
+      debugLog?.error('Path parse error:', { 
+        module: 'secure-adapter',
+        function: 'securePath.parse',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Get the basename of a path
+   * @param {string} filePath - File path
+   * @param {string} [ext] - Optional extension to remove
+   * @returns {Promise<string>} Base name
+   */
+  async basename(filePath, ext) {
+    try {
+      if (window.secureElectronAPI) {
+        const result = await window.secureElectronAPI.path.basename(filePath, ext);
+        return result.data || result;
+      } else if (window.electronAPI?.path) {
+        const result = await window.electronAPI.path.basename(filePath, ext);
+        return result.data || result;
+      } else if (window.path) {
+        return window.path.basename(filePath, ext);
+      } else {
+        throw new Error('No path API available');
+      }
+    } catch (error) {
+      debugLog?.error('Path basename error:', { 
+        module: 'secure-adapter',
+        function: 'securePath.basename',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Resolve path segments into an absolute path
+   * @param {...string} paths - Path segments to resolve
+   * @returns {Promise<string>} Resolved absolute path
+   */
+  async resolve(...paths) {
+    try {
+      if (window.secureElectronAPI) {
+        const result = await window.secureElectronAPI.path.resolve(...paths);
+        return result.data || result;
+      } else if (window.electronAPI?.path) {
+        const result = await window.electronAPI.path.resolve(...paths);
+        return result.data || result;
+      } else if (window.path) {
+        return window.path.resolve(...paths);
+      } else {
+        throw new Error('No path API available');
+      }
+    } catch (error) {
+      debugLog?.error('Path resolve error:', { 
+        module: 'secure-adapter',
+        function: 'securePath.resolve',
+        error: error.message 
+      });
+      throw error;
+    }
   }
 };
 
