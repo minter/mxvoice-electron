@@ -76,6 +76,11 @@ class ModeManagementModule {
     });
     
     this.holdingTankMode = mode;
+    
+    // Update shared state for audio manager to read
+    if (window.sharedState) {
+      window.sharedState.set('holdingTankMode', mode);
+    }
 
     // Update button states
     if (mode === "storage") {
@@ -84,7 +89,13 @@ class ModeManagementModule {
       $("#holding_tank")
         .removeClass("holding-tank-playlist-mode")
         .addClass("holding-tank-storage-mode");
+      
       this.autoplay = false;
+      // Update shared state for autoplay
+      if (window.sharedState) {
+        window.sharedState.set('autoplay', false);
+      }
+      
       $(".now_playing").removeClass("now_playing");
       $("#holding_tank").removeClass("autoplaying");
     } else if (mode === "playlist") {
@@ -93,7 +104,12 @@ class ModeManagementModule {
       $("#holding_tank")
         .removeClass("holding-tank-storage-mode")
         .addClass("holding-tank-playlist-mode");
+      
       this.autoplay = true;
+      // Update shared state for autoplay
+      if (window.sharedState) {
+        window.sharedState.set('autoplay', true);
+      }
 
       // Only restore the speaker icon if there's a track currently playing AND it's actually playing
       let currentSongId = $("#song_now_playing").attr("songid");

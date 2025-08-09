@@ -430,26 +430,61 @@ function song_ended() {
 function autoplay_next() {
   const autoplay = sharedState.get('autoplay');
   const holdingTankMode = sharedState.get('holdingTankMode');
+  
+  debugLog?.info('autoplay_next called', {
+    module: 'audio-manager',
+    function: 'autoplay_next',
+    autoplay: autoplay,
+    holdingTankMode: holdingTankMode
+  });
+  
   if (autoplay && holdingTankMode === "playlist") {
     const now_playing = $(".now_playing").first();
+    let next_song = $(); // Initialize as empty jQuery object
+    
     if (now_playing.length) {
+      debugLog?.info('Found currently playing song, finding next', {
+        module: 'audio-manager',
+        function: 'autoplay_next',
+        currentSongId: now_playing.attr("songid")
+      });
+      
       now_playing.removeClass("now_playing");
       next_song = now_playing.next();
       next_song.addClass("now_playing");
     }
+    
     if (next_song.length) {
+      debugLog?.info('Playing next song in playlist', {
+        module: 'audio-manager',
+        function: 'autoplay_next',
+        nextSongId: next_song.attr("songid")
+      });
+      
       // Clear any existing highlighting and highlight the new playing track
       $("#selected_row").removeAttr("id");
       next_song.attr("id", "selected_row");
       playSongFromId(next_song.attr("songid"));
       next_song.addClass("now_playing");
     } else {
+      debugLog?.info('End of playlist reached', {
+        module: 'audio-manager',
+        function: 'autoplay_next'
+      });
+      
       // End of playlist - just remove the now_playing class and stay in playlist mode
       $("li.now_playing").first().removeClass("now_playing");
       // Clear any highlighting at the end of playlist
       $("#selected_row").removeAttr("id");
       // Don't switch modes - stay in playlist mode
     }
+  } else {
+    debugLog?.info('Autoplay conditions not met', {
+      module: 'audio-manager',
+      function: 'autoplay_next',
+      autoplay: autoplay,
+      holdingTankMode: holdingTankMode
+    });
   }
 }
 
