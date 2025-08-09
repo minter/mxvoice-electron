@@ -19,7 +19,7 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem } from '../adapters/secure-adapter.js';
+import { secureFileSystem, secureStore } from '../adapters/secure-adapter.js';
 
 /**
  * Initialize the UI Manager module
@@ -58,7 +58,7 @@ function initializeUIManager(options = {}) {
     fontSize = size;
     $(".song").css("font-size", fontSize + "px");
     if (electronAPI && electronAPI.store) {
-      electronAPI.store.set("font-size", fontSize).catch(error => {
+      secureStore.set("font-size", fontSize).catch(error => {
         debugLog?.warn('Failed to save font size', { 
           module: 'ui-manager',
           function: 'setFontSize',
@@ -270,7 +270,7 @@ function initializeUIManager(options = {}) {
         if (deleteStmt.run(songId)) {
           // Delete file if electronAPI is available
           if (electronAPI && electronAPI.store) {
-            electronAPI.store.get("music_directory").then(musicDirectory => {
+            secureStore.get("music_directory").then(musicDirectory => {
               if (musicDirectory.success && musicDirectory.value) {
                 electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
                   if (joinResult.success) {
@@ -387,10 +387,10 @@ function initializeUIManager(options = {}) {
             function: 'closeAllTabs'
           });
           Promise.all([
-            electronAPI.store.delete("holding_tank"),
-            electronAPI.store.delete("hotkeys"),
-            electronAPI.store.delete("column_order"),
-            electronAPI.store.delete("font-size")
+            secureStore.delete("holding_tank"),
+            secureStore.delete("hotkeys"),
+            secureStore.delete("column_order"),
+            secureStore.delete("font-size")
           ]).then(() => {
             debugLog?.info('All tabs closed successfully', { 
               module: 'ui-manager',
@@ -472,7 +472,7 @@ function initializeUIManager(options = {}) {
     const currentHtml = $("#holding-tank-column").html();
     if (currentHtml.includes("mode-toggle")) {
       if (electronAPI && electronAPI.store) {
-        electronAPI.store.set("holding_tank", currentHtml).catch(error => {
+        secureStore.set("holding_tank", currentHtml).catch(error => {
           debugLog?.warn('Failed to save holding tank', { 
             module: 'ui-manager',
             function: 'saveHoldingTankToStore',
@@ -492,7 +492,7 @@ function initializeUIManager(options = {}) {
     const currentHtml = $("#hotkeys-column").html();
     if (currentHtml.includes("header-button")) {
       if (electronAPI && electronAPI.store) {
-        electronAPI.store.set("hotkeys", currentHtml).catch(error => {
+        secureStore.set("hotkeys", currentHtml).catch(error => {
           debugLog?.warn('Failed to save hotkeys', { 
             module: 'ui-manager',
             function: 'saveHotkeysToStore',

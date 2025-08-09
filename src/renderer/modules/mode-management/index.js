@@ -16,6 +16,9 @@ try {
   // Debug logger not available
 }
 
+// Import secure adapters
+import { secureStore } from '../adapters/secure-adapter.js';
+
 /**
  * Mode Management Singleton
  * 
@@ -40,9 +43,9 @@ class ModeManagementModule {
     
     // Load saved mode or default to storage
     try {
-      const hasMode = await window.electronAPI.store.has("holding_tank_mode");
+      const hasMode = await secureStore.has("holding_tank_mode");
       if (hasMode) {
-        const mode = await window.electronAPI.store.get("holding_tank_mode");
+        const mode = await secureStore.get("holding_tank_mode");
         this.holdingTankMode = mode;
         // Initialize the mode UI
         this.setHoldingTankMode(this.holdingTankMode);
@@ -125,7 +128,7 @@ class ModeManagementModule {
 
     // Save mode to store
     try {
-      const result = await window.electronAPI.store.set("holding_tank_mode", mode);
+      const result = await secureStore.set("holding_tank_mode", mode);
       if (result.success) {
         debugLog?.info('Holding tank mode saved', { 
           module: 'mode-management',

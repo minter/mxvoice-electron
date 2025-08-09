@@ -1,10 +1,13 @@
 /**
  * Store Service
  * 
- * Provides access to the Electron store API for persistent data storage
+ * Provides secure access to store operations using secure adapters
  */
 
-// Export the store API from the global electronAPI
+// Import secure adapters
+import { secureStore } from '../modules/adapters/secure-adapter.js';
+
+// Export the secure store API
 export const store = {
   /**
    * Check if a key exists in the store
@@ -12,7 +15,7 @@ export const store = {
    * @returns {Promise<boolean>} - Whether the key exists
    */
   has: (key) => {
-    return window.electronAPI.store.has(key);
+    return secureStore.has(key);
   },
 
   /**
@@ -21,7 +24,7 @@ export const store = {
    * @returns {Promise<any>} - The stored value
    */
   get: (key) => {
-    return window.electronAPI.store.get(key);
+    return secureStore.get(key);
   },
 
   /**
@@ -31,7 +34,7 @@ export const store = {
    * @returns {Promise<Object>} - Result of the operation
    */
   set: (key, value) => {
-    return window.electronAPI.store.set(key, value);
+    return secureStore.set(key, value);
   },
 
   /**
@@ -40,6 +43,6 @@ export const store = {
    * @returns {Promise<Object>} - Result of the operation
    */
   delete: (key) => {
-    return window.electronAPI.store.delete(key);
+    return secureStore.delete(key);
   }
 }; 

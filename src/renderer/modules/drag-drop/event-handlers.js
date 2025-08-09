@@ -18,6 +18,9 @@ try {
   // Debug logger not available
 }
 
+// Import secure adapters
+import { secureStore } from '../adapters/secure-adapter.js';
+
 /**
  * Setup all drag and drop event handlers
  */
@@ -93,7 +96,7 @@ export function setupDragDropEventHandlers() {
       })
       .get();
     // Use new store API for column order
-    window.electronAPI.store.set("column_order", new_column_order).then(result => {
+    secureStore.set("column_order", new_column_order).then(result => {
       if (result.success) {
         debugLog?.info('Column order saved successfully', { 
           module: 'drag-drop-event-handlers',

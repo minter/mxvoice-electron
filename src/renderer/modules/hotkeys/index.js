@@ -461,10 +461,33 @@ class HotkeysModule {
       $("#selected_row").removeAttr("id");
       // Hotkey playback should not affect holding tank mode
       // Just play the song without changing autoplay state
+      debugLog?.info("🔍 HOTKEY PLAYBACK: Checking if playSongFromId is available", { 
+        module: 'hotkeys', 
+        function: 'playSongFromHotkey',
+        song_id: song_id,
+        playSongFromId_type: typeof playSongFromId,
+        playSongFromId_available: typeof playSongFromId === 'function'
+      });
+      
       if (typeof playSongFromId === 'function') {
+        debugLog?.info("🎵 HOTKEY PLAYBACK: Calling playSongFromId", { 
+          module: 'hotkeys', 
+          function: 'playSongFromHotkey',
+          song_id: song_id
+        });
         playSongFromId(song_id);
+      } else {
+        debugLog?.error("❌ HOTKEY PLAYBACK FAIL: playSongFromId not available", { 
+          module: 'hotkeys', 
+          function: 'playSongFromHotkey',
+          song_id: song_id,
+          playSongFromId_type: typeof playSongFromId
+        });
       }
-      animateCSS($(`.hotkeys.active #${hotkey}_hotkey`), "flipInX");
+      const hotkeyElement = $(`.hotkeys.active #${hotkey}_hotkey`)[0];
+      if (hotkeyElement) {
+        animateCSS(hotkeyElement, "flipInX");
+      }
     }
   }
 

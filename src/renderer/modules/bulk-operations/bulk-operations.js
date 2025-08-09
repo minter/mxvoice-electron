@@ -16,7 +16,7 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem, secureDatabase, securePath } from '../adapters/secure-adapter.js';
+import { secureFileSystem, secureDatabase, securePath, secureStore } from '../adapters/secure-adapter.js';
 
 /**
  * Shows the bulk add modal with directory and category selection
@@ -67,7 +67,7 @@ export function addSongsByPath(pathArray, category) {
       const artist = metadata.common.artist;
       const uuid = uuidv4();
       const newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
-      window.electronAPI.store.get("music_directory").then(musicDirectory => {
+      secureStore.get("music_directory").then(musicDirectory => {
         const newPath = path.join(musicDirectory.value, newFilename);
         const stmt = db.prepare(
           "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)"

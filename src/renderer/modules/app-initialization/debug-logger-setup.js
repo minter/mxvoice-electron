@@ -105,6 +105,9 @@ export class DebugLoggerSetup {
     window.logDebug = this.logDebug.bind(this);
     window.logWarn = this.logWarn.bind(this);
     window.logError = this.logError.bind(this);
+    
+    // CRITICAL: Set window.debugLog for modules that expect it
+    window.debugLog = this.debugLogger;
   }
 }
 

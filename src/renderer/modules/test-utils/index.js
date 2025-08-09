@@ -17,7 +17,7 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem } from '../adapters/secure-adapter.js';
+import { secureFileSystem, secureStore } from '../adapters/secure-adapter.js';
 
 /**
  * Test function for Phase 2 migrations
@@ -175,7 +175,7 @@ export function testFileSystemAPI() {
     };
     
     // Test file exists
-    return window.electronAPI.store.get('database_directory').then(dbResult => {
+    return secureStore.get('database_directory').then(dbResult => {
       if (dbResult.success) {
         const testPath = dbResult.value;
         return secureFileSystem.exists(testPath).then(result => {
@@ -196,7 +196,7 @@ export function testFileSystemAPI() {
           }
           
           // Test file read (try to read a config file)
-          return window.electronAPI.store.get('database_directory');
+          return secureStore.get('database_directory');
         });
       } else {
         debugLog?.warn('Could not get database directory from store', { 
@@ -297,7 +297,7 @@ export function testStoreAPI() {
     };
     
     // Test store get
-    return window.electronAPI.store.get('music_directory').then(result => {
+    return secureStore.get('music_directory').then(result => {
       if (result.success) {
         debugLog?.info('store get API works', { 
           module: 'test-utils',
@@ -315,7 +315,7 @@ export function testStoreAPI() {
       }
       
       // Test store has
-      return window.electronAPI.store.has('music_directory');
+      return secureStore.has('music_directory');
     }).then(result => {
       if (result.success) {
         debugLog?.info('store has API works', { 
@@ -337,7 +337,7 @@ export function testStoreAPI() {
       const testKey = 'test_api_key';
       const testValue = 'test_value_' + Date.now();
       
-      return window.electronAPI.store.set(testKey, testValue);
+      return secureStore.set(testKey, testValue);
     }).then(result => {
       if (result.success) {
         debugLog?.info('store set API works', { 
@@ -346,7 +346,7 @@ export function testStoreAPI() {
         });
         results.tests.push({ name: 'storeSet', success: true });
         // Now test getting the value back
-        return window.electronAPI.store.get(testKey);
+        return secureStore.get(testKey);
       } else {
         debugLog?.warn('store set API failed', { 
           module: 'test-utils',
@@ -365,7 +365,7 @@ export function testStoreAPI() {
         });
         results.tests.push({ name: 'storeGetAfterSet', success: true, data: result.value });
         // Clean up test key
-        return window.electronAPI.store.delete(testKey);
+        return secureStore.delete(testKey);
       } else {
         results.tests.push({ name: 'storeGetAfterSet', success: false, error: 'Failed to get after set' });
         return Promise.resolve({ success: false });
@@ -439,7 +439,7 @@ export function testAudioAPI() {
       }
       
       // Test audio play (try to play a test file)
-      return window.electronAPI.store.get('music_directory');
+      return secureStore.get('music_directory');
     }).then(musicResult => {
       if (musicResult.success) {
         return window.electronAPI.path.join(musicResult.value, 'PatrickShort-CSzRockBumper.mp3');
@@ -659,7 +659,7 @@ export function testSecurityFeatures() {
         results.tests.push({ name: 'databaseWithSecurity', success: false, error: result.error });
       }
       
-      return window.electronAPI.store.get('music_directory');
+      return secureStore.get('music_directory');
     }).then(result => {
       if (result.success) {
         debugLog?.info('Store API still works with security features', { 

@@ -1,6 +1,9 @@
 // Data Preloader Module
 // Extracted from renderer.js lines 195-296 for app-initialization module
 
+// Import secure adapters
+import { secureStore } from '../adapters/secure-adapter.js';
+
 /**
  * Data Preloader class for loading initial application data
  * Handles loading data from electron store, HTML initialization, and legacy compatibility
@@ -44,9 +47,9 @@ export class DataPreloader {
    */
   async clearHoldingTankStore() {
     try {
-      const hasHoldingTank = await window.electronAPI.store.has("holding_tank");
+      const hasHoldingTank = await secureStore.has("holding_tank");
       if (hasHoldingTank) {
-        await window.electronAPI.store.delete("holding_tank");
+        await secureStore.delete("holding_tank");
         this.logInfo("Cleared holding tank store to load new HTML");
       }
     } catch (error) {
@@ -60,9 +63,9 @@ export class DataPreloader {
    */
   async loadHotkeys() {
     try {
-      const hasHotkeys = await window.electronAPI.store.has("hotkeys");
+      const hasHotkeys = await secureStore.has("hotkeys");
       if (hasHotkeys) {
-        const storedHotkeysHtml = await window.electronAPI.store.get("hotkeys");
+        const storedHotkeysHtml = await secureStore.get("hotkeys");
         
         // Check if the stored HTML contains the old plain text header
         if (
@@ -71,7 +74,7 @@ export class DataPreloader {
           !storedHotkeysHtml.includes("header-button")
         ) {
           // This is the old HTML format, clear it so the new HTML loads
-          await window.electronAPI.store.delete("hotkeys");
+          await secureStore.delete("hotkeys");
           this.logInfo("Cleared old hotkeys HTML format");
         } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
           // Check if jQuery is available and DOM is ready
@@ -95,9 +98,9 @@ export class DataPreloader {
    */
   async loadColumnOrder() {
     try {
-      const hasColumnOrder = await window.electronAPI.store.has("column_order");
+      const hasColumnOrder = await secureStore.has("column_order");
       if (hasColumnOrder) {
-        const columnOrder = await window.electronAPI.store.get("column_order");
+        const columnOrder = await secureStore.get("column_order");
         if (columnOrder && Array.isArray(columnOrder)) {
           // Check if jQuery and DOM elements are available
           if (typeof $ !== 'undefined' && document.getElementById('top-row')) {
@@ -121,9 +124,9 @@ export class DataPreloader {
    */
   async loadFontSize() {
     try {
-      const hasFontSize = await window.electronAPI.store.has("font-size");
+      const hasFontSize = await secureStore.has("font-size");
       if (hasFontSize) {
-        const size = await window.electronAPI.store.get("font-size");
+        const size = await secureStore.get("font-size");
         if (size !== undefined && size !== null) {
           // Font size is now managed by shared state
           // This is kept for backward compatibility but doesn't set moduleRegistry.fontSize
@@ -145,7 +148,7 @@ export class DataPreloader {
       if (typeof $ !== 'undefined' && document.getElementById('holding-tank-column')) {
         const currentHtml = $("#holding-tank-column").html();
         if (currentHtml && currentHtml.includes("mode-toggle")) {
-          window.electronAPI.store.set("holding_tank", currentHtml);
+          secureStore.set("holding_tank", currentHtml);
           this.logInfo("Saved holding tank to store");
         }
       }
@@ -164,7 +167,7 @@ export class DataPreloader {
       if (typeof $ !== 'undefined' && document.getElementById('hotkeys-column')) {
         const currentHtml = $("#hotkeys-column").html();
         if (currentHtml && currentHtml.includes("header-button")) {
-          window.electronAPI.store.set("hotkeys", currentHtml);
+          secureStore.set("hotkeys", currentHtml);
           this.logInfo("Saved hotkeys to store");
         }
       }

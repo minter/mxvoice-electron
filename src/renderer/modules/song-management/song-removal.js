@@ -16,7 +16,7 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem, secureDatabase } from '../adapters/secure-adapter.js';
+import { secureFileSystem, secureDatabase, secureStore } from '../adapters/secure-adapter.js';
 
 /**
  * Deletes a song from the database and removes the associated file
@@ -35,7 +35,7 @@ export function deleteSong() {
         debugLog?.info("Proceeding with delete", { module: 'song-management', function: 'deleteSong' });
         const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
         if (deleteStmt.run(songId)) {
-          window.electronAPI.store.get("music_directory").then(musicDirectory => {
+          secureStore.get("music_directory").then(musicDirectory => {
             window.electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
               if (joinResult.success) {
                 const filePath = joinResult.data;

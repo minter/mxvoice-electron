@@ -9,16 +9,13 @@
 import sharedState from '../shared-state.js';
 import { howlerUtils } from './audio-utils.js';
 
-// Import debug logger
-let debugLog = null;
-try {
-  // Try to get debug logger from global scope
-  if (window.debugLog) {
-    debugLog = window.debugLog;
-  }
-} catch (error) {
-  // Debug logger not available
+// Import debug logger - use lazy getter for proper initialization timing
+function getDebugLog() {
+  return window.debugLog || null;
 }
+
+// Import secure adapters
+import { secureStore, secureDatabase } from '../adapters/secure-adapter.js';
 
 /**
  * Play a song with the given filename and row data
@@ -28,28 +25,44 @@ try {
  * @param {string} song_id - The database ID of the song
  */
 function playSongWithFilename(filename, row, song_id) {
-  debugLog?.info('🔍 playSongWithFilename called with:', { 
+  console.log("🔥 DEBUG: playSongWithFilename called with filename:", filename);
+  getDebugLog()?.info('🎵 PLAYBACK STEP 6: playSongWithFilename called', { 
+    module: 'audio-manager',
+    function: 'playSongWithFilename',
+    filename: filename,
+    song_id: song_id,
+    row_title: row?.title,
+    row_artist: row?.artist,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Get music directory from store
+  getDebugLog()?.info('🔍 PLAYBACK STEP 7: Getting music directory from store', { 
     module: 'audio-manager',
     function: 'playSongWithFilename',
     filename: filename,
     song_id: song_id
   });
   
-  // Get music directory from store
-  window.electronAPI.store.get("music_directory").then(musicDirectory => {
-    debugLog?.info('🔍 Debug: musicDirectory response:', { 
+  console.log("🔥 DEBUG: About to get music directory from store");
+  secureStore.get("music_directory").then(musicDirectory => {
+    console.log("🔥 DEBUG: Music directory result:", musicDirectory);
+    getDebugLog()?.info('🔍 PLAYBACK STEP 8: Music directory retrieved', { 
       module: 'audio-manager',
       function: 'playSongWithFilename',
-      musicDirectory: musicDirectory
+      musicDirectory: musicDirectory,
+      musicDirectory_type: typeof musicDirectory,
+      filename: filename,
+      song_id: song_id
     });
-    if (musicDirectory.success) {
-      debugLog?.info('🔍 Debug: musicDirectory.value:', { 
+    if (musicDirectory) {
+      getDebugLog()?.info('🔍 Debug: musicDirectory:', { 
         module: 'audio-manager',
         function: 'playSongWithFilename',
-        musicDirectoryValue: musicDirectory.value
+        musicDirectoryValue: musicDirectory
       });
-      if (!musicDirectory.value) {
-        debugLog?.warn('❌ musicDirectory.value is undefined or empty, using default path', { 
+      if (!musicDirectory) {
+        getDebugLog()?.warn('❌ musicDirectory is undefined or empty, using default path', { 
           module: 'audio-manager',
           function: 'playSongWithFilename'
         });
@@ -58,7 +71,7 @@ function playSongWithFilename(filename, row, song_id) {
         window.electronAPI.path.join(defaultPath, filename).then(result => {
           if (result.success) {
             const sound_path = [result.data];
-            debugLog?.info("Inside get, Filename is " + filename, { 
+            getDebugLog()?.info("Inside get, Filename is " + filename, { 
               module: 'audio-manager',
               function: 'playSongWithFilename',
               filename: filename
@@ -69,7 +82,7 @@ function playSongWithFilename(filename, row, song_id) {
               volume: $("#volume").val() / 100,
               mute: $("#mute_button").hasClass("active"),
               onplay: function () {
-                debugLog?.info('🔍 Sound onplay event fired', { 
+                getDebugLog()?.info('🔍 Sound onplay event fired', { 
                   module: 'audio-manager',
                   function: 'playSongWithFilename'
                 });
@@ -98,7 +111,7 @@ function playSongWithFilename(filename, row, song_id) {
                 $("#stop_button").removeAttr("disabled");
               },
               onend: function () {
-                debugLog?.info('🔍 Sound onend event fired', { 
+                getDebugLog()?.info('🔍 Sound onend event fired', { 
                   module: 'audio-manager',
                   function: 'playSongWithFilename'
                 });
@@ -114,26 +127,26 @@ function playSongWithFilename(filename, row, song_id) {
                 }
               },
             });
-            debugLog?.info('🔍 Setting sound in shared state:', { 
+            getDebugLog()?.info('🔍 Setting sound in shared state:', { 
               module: 'audio-manager',
               function: 'playSongWithFilename',
               sound: sound
             });
             sharedState.set('sound', sound);
-            debugLog?.info('🔍 Sound set in shared state, now playing...', { 
+            getDebugLog()?.info('🔍 Sound set in shared state, now playing...', { 
               module: 'audio-manager',
               function: 'playSongWithFilename'
             });
             sound.play();
           } else {
-            debugLog?.warn('❌ Failed to join path with default:', { 
+            getDebugLog()?.warn('❌ Failed to join path with default:', { 
               module: 'audio-manager',
               function: 'playSongWithFilename',
               error: result.error
             });
           }
         }).catch(error => {
-          debugLog?.warn('❌ Path join error with default:', { 
+          getDebugLog()?.warn('❌ Path join error with default:', { 
             module: 'audio-manager',
             function: 'playSongWithFilename',
             error: error.message
@@ -142,17 +155,17 @@ function playSongWithFilename(filename, row, song_id) {
         return;
       }
       
-      window.electronAPI.path.join(musicDirectory.value, filename).then(result => {
+                window.electronAPI.path.join(musicDirectory, filename).then(result => {
         if (result.success) {
           if (!result.data) {
-            debugLog?.warn('❌ result.data is undefined or empty', { 
+            getDebugLog()?.warn('❌ result.data is undefined or empty', { 
               module: 'audio-manager',
               function: 'playSongWithFilename'
             });
             return;
           }
           const sound_path = [result.data];
-          debugLog?.info("Inside get, Filename is " + filename, { 
+          getDebugLog()?.info("Inside get, Filename is " + filename, { 
             module: 'audio-manager',
             function: 'playSongWithFilename',
             filename: filename
@@ -163,7 +176,7 @@ function playSongWithFilename(filename, row, song_id) {
             volume: $("#volume").val() / 100,
             mute: $("#mute_button").hasClass("active"),
             onplay: function () {
-              debugLog?.info('🔍 Sound onplay event fired', { 
+              getDebugLog()?.info('🔍 Sound onplay event fired', { 
                 module: 'audio-manager',
                 function: 'playSongWithFilename'
               });
@@ -192,7 +205,7 @@ function playSongWithFilename(filename, row, song_id) {
               $("#stop_button").removeAttr("disabled");
             },
             onend: function () {
-              debugLog?.info('🔍 Sound onend event fired', { 
+              getDebugLog()?.info('🔍 Sound onend event fired', { 
                 module: 'audio-manager',
                 function: 'playSongWithFilename'
               });
@@ -208,39 +221,40 @@ function playSongWithFilename(filename, row, song_id) {
               }
             },
           });
-          debugLog?.info('🔍 Setting sound in shared state:', { 
+          getDebugLog()?.info('🔍 Setting sound in shared state:', { 
             module: 'audio-manager',
             function: 'playSongWithFilename',
             sound: sound
           });
           sharedState.set('sound', sound);
-          debugLog?.info('🔍 Sound set in shared state, now playing...', { 
+          getDebugLog()?.info('🔍 Sound set in shared state, now playing...', { 
             module: 'audio-manager',
             function: 'playSongWithFilename'
           });
           sound.play();
         } else {
-          debugLog?.warn('❌ Failed to join path:', { 
+          getDebugLog()?.warn('❌ Failed to join path:', { 
             module: 'audio-manager',
             function: 'playSongWithFilename',
             error: result.error
           });
         }
       }).catch(error => {
-        debugLog?.warn('❌ Path join error:', { 
+        getDebugLog()?.warn('❌ Path join error:', { 
           module: 'audio-manager',
           function: 'playSongWithFilename',
           error: error.message
         });
       });
     } else {
-      debugLog?.warn('❌ Could not get music directory from store', { 
+      getDebugLog()?.warn('❌ Could not get music directory from store', { 
         module: 'audio-manager',
-        function: 'playSongWithFilename'
+        function: 'playSongWithFilename',
+        musicDirectory: musicDirectory
       });
     }
   }).catch(error => {
-    debugLog?.warn('❌ Store get API error:', { 
+    getDebugLog()?.warn('❌ Store get API error:', { 
       module: 'audio-manager',
       function: 'playSongWithFilename',
       error: error.message
@@ -254,27 +268,74 @@ function playSongWithFilename(filename, row, song_id) {
  * @param {string} song_id - The database ID of the song to play
  */
 function playSongFromId(song_id) {
-  debugLog?.info("Playing song from song ID " + song_id, { 
+  console.log("🔥 URGENT DEBUG: playSongFromId function called with song_id:", song_id);
+  getDebugLog()?.info("🎵 PLAYBACK START: Playing song from song ID " + song_id, { 
+    module: 'audio-manager',
+    function: 'playSongFromId',
+    song_id: song_id,
+    song_id_type: typeof song_id,
+    timestamp: new Date().toISOString()
+  });
+  
+  if (!song_id) {
+    getDebugLog()?.error("❌ PLAYBACK FAIL: No song_id provided", { 
+      module: 'audio-manager',
+      function: 'playSongFromId',
+      song_id: song_id
+    });
+    return;
+  }
+  
+  getDebugLog()?.info("🔍 PLAYBACK STEP 1: Stopping current sound and querying database", { 
     module: 'audio-manager',
     function: 'playSongFromId',
     song_id: song_id
   });
-  if (song_id) {
-    const sound = sharedState.get('sound');
-    if (sound) {
-      sound.off("fade");
-      sound.unload();
-    }
-    
-    // Use new database API to get song data
-    if (window.electronAPI && window.electronAPI.database) {
-      window.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
-        if (result.success && result.data.length > 0) {
-          const row = result.data[0];
-          const filename = row.filename;
+  
+  const sound = sharedState.get('sound');
+  if (sound) {
+    sound.off("fade");
+    sound.unload();
+  }
+  
+  // Use secure database adapter to get song data
+    getDebugLog()?.info("🔍 PLAYBACK STEP 2: Executing database query", { 
+      module: 'audio-manager',
+      function: 'playSongFromId',
+      song_id: song_id,
+      query: "SELECT * from mrvoice WHERE id = ?",
+      params: [song_id]
+  });
+  
+  console.log("🔥 DEBUG: About to execute database query for song_id:", song_id);
+  secureDatabase.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
+    console.log("🔥 DEBUG: Database query result:", result);
+        getDebugLog()?.info("🔍 PLAYBACK STEP 3: Database query completed", { 
+          module: 'audio-manager',
+          function: 'playSongFromId',
+          song_id: song_id,
+          result_success: result?.success,
+          result_data_length: result?.data?.length,
+          full_result: result
+    });
+    if (result.success && result.data.length > 0) {
+      console.log("🔥 DEBUG: Database query successful, song found");
+      const row = result.data[0];
+      const filename = row.filename;
+      console.log("🔥 DEBUG: Song filename:", filename, "| Title:", row.title);
+          
+          getDebugLog()?.info("🔍 PLAYBACK STEP 4: Song data retrieved", { 
+            module: 'audio-manager',
+            function: 'playSongFromId',
+            song_id: song_id,
+            filename: filename,
+            row_title: row.title,
+            row_artist: row.artist,
+            full_row: row
+          });
           
           if (!filename) {
-            debugLog?.error('❌ No filename found for song ID:', { 
+            getDebugLog()?.error('❌ PLAYBACK FAIL: No filename found for song ID:', { 
               module: 'audio-manager',
               function: 'playSongFromId',
               song_id: song_id,
@@ -283,30 +344,46 @@ function playSongFromId(song_id) {
             return;
           }
           
-          // Continue with the rest of the function...
-          playSongWithFilename(filename, row, song_id);
-        } else {
-          debugLog?.error('❌ No song found with ID:', { 
+          getDebugLog()?.info("🎵 PLAYBACK STEP 5: Calling playSongWithFilename", { 
             module: 'audio-manager',
             function: 'playSongFromId',
-            song_id: song_id
+            song_id: song_id,
+            filename: filename
+        });
+        
+        // Continue with the rest of the function...
+        console.log("🔥 DEBUG: About to call playSongWithFilename");
+        playSongWithFilename(filename, row, song_id);
+      } else {
+        console.log("🔥 DEBUG: Database query failed or no song found:", result);
+        getDebugLog()?.error('❌ PLAYBACK FAIL: No song found with ID or query failed:', { 
+            module: 'audio-manager',
+            function: 'playSongFromId',
+            song_id: song_id,
+            result_success: result?.success,
+            result_data: result?.data,
+            result_error: result?.error
           });
         }
       }).catch(error => {
-        debugLog?.error('❌ Database query error:', { 
+    console.log("🔥 DEBUG: Database query error:", error);
+    getDebugLog()?.error('❌ PLAYBACK FAIL: Database query error:', { 
           module: 'audio-manager',
           function: 'playSongFromId',
-          error: error.message
-        });
-        // Fallback to legacy database access
-        const db = sharedState.get('db');
-        if (db) {
+          song_id: song_id,
+          error: error.message,
+          error_stack: error.stack,
+          error_full: error
+    });
+    // Fallback to legacy database access
+    const db = sharedState.get('db');
+    if (db) {
           try {
             const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
             const row = stmt.get(song_id);
             
             if (!row) {
-              debugLog?.error('❌ No song found with ID:', { 
+              getDebugLog()?.error('❌ No song found with ID:', { 
                 module: 'audio-manager',
                 function: 'playSongFromId',
                 song_id: song_id
@@ -317,7 +394,7 @@ function playSongFromId(song_id) {
             const filename = row.filename;
             
             if (!filename) {
-              debugLog?.error('❌ No filename found for song ID:', { 
+              getDebugLog()?.error('❌ No filename found for song ID:', { 
                 module: 'audio-manager',
                 function: 'playSongFromId',
                 song_id: song_id,
@@ -328,77 +405,43 @@ function playSongFromId(song_id) {
             
             playSongWithFilename(filename, row, song_id);
           } catch (dbError) {
-            debugLog?.error('❌ Legacy database error:', { 
+            getDebugLog()?.error('❌ Legacy database error:', { 
               module: 'audio-manager',
               function: 'playSongFromId',
               error: dbError.message
             });
           }
-        } else {
-          debugLog?.error('❌ No database access available', { 
-            module: 'audio-manager',
-            function: 'playSongFromId'
-          });
-        }
-      });
     } else {
-      // Fallback to legacy database access
-      const db = sharedState.get('db');
-      if (db) {
-        try {
-          const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-          const row = stmt.get(song_id);
-          
-          if (!row) {
-            debugLog?.error('❌ No song found with ID:', { 
-              module: 'audio-manager',
-              function: 'playSongFromId',
-              song_id: song_id
-            });
-            return;
-          }
-          
-          const filename = row.filename;
-          
-          if (!filename) {
-            debugLog?.error('❌ No filename found for song ID:', { 
-              module: 'audio-manager',
-              function: 'playSongFromId',
-              song_id: song_id,
-              rowData: row
-            });
-            return;
-          }
-          
-          playSongWithFilename(filename, row, song_id);
-        } catch (dbError) {
-          debugLog?.error('❌ Legacy database error:', { 
-            module: 'audio-manager',
-            function: 'playSongFromId',
-            error: dbError.message
-          });
-        }
-      } else {
-        debugLog?.error('❌ No database access available', { 
-          module: 'audio-manager',
-          function: 'playSongFromId'
-        });
-      }
+      getDebugLog()?.error('❌ No database access available', { 
+        module: 'audio-manager',
+        function: 'playSongFromId'
+      });
     }
-    
-    return; // Exit early since we're handling the rest in playSongWithFilename
-  }
+  });
+  
+  return; // Exit early since we're handling the rest in playSongWithFilename
 }
 
 /**
  * Play the currently selected song
  */
 function playSelected() {
-  const song_id = $("#selected_row").attr("songid");
-  debugLog?.info("Got song ID " + song_id, { 
+  console.log("🔥 URGENT DEBUG: playSelected function called!!!");
+  console.log("🔥 DEBUG: debugLog available?", !!debugLog, typeof debugLog);
+  getDebugLog()?.info("🎵 PLAYBACK TRIGGER: playSelected called", { 
     module: 'audio-manager',
     function: 'playSelected',
-    song_id: song_id
+    timestamp: new Date().toISOString(),
+    selected_row_exists: $("#selected_row").length > 0
+  });
+  
+  const song_id = $("#selected_row").attr("songid");
+  getDebugLog()?.info("🔍 PLAYBACK STEP: Got song ID from selected row", { 
+    module: 'audio-manager',
+    function: 'playSelected',
+    song_id: song_id,
+    song_id_type: typeof song_id,
+    selected_row_element: $("#selected_row")[0]
   });
 
   // Only clear the now_playing class if the selected row is from the search panel
@@ -414,6 +457,12 @@ function playSelected() {
   }
   // In playlist mode, autoplay is already set up by the double-click handler
 
+  getDebugLog()?.info("🎵 PLAYBACK STEP: Calling playSongFromId from playSelected", { 
+    module: 'audio-manager',
+    function: 'playSelected',
+    song_id: song_id
+  });
+  
   playSongFromId(song_id);
 }
 
@@ -431,7 +480,7 @@ function autoplay_next() {
   const autoplay = sharedState.get('autoplay');
   const holdingTankMode = sharedState.get('holdingTankMode');
   
-  debugLog?.info('autoplay_next called', {
+  getDebugLog()?.info('autoplay_next called', {
     module: 'audio-manager',
     function: 'autoplay_next',
     autoplay: autoplay,
@@ -443,7 +492,7 @@ function autoplay_next() {
     let next_song = $(); // Initialize as empty jQuery object
     
     if (now_playing.length) {
-      debugLog?.info('Found currently playing song, finding next', {
+      getDebugLog()?.info('Found currently playing song, finding next', {
         module: 'audio-manager',
         function: 'autoplay_next',
         currentSongId: now_playing.attr("songid")
@@ -455,7 +504,7 @@ function autoplay_next() {
     }
     
     if (next_song.length) {
-      debugLog?.info('Playing next song in playlist', {
+      getDebugLog()?.info('Playing next song in playlist', {
         module: 'audio-manager',
         function: 'autoplay_next',
         nextSongId: next_song.attr("songid")
@@ -467,7 +516,7 @@ function autoplay_next() {
       playSongFromId(next_song.attr("songid"));
       next_song.addClass("now_playing");
     } else {
-      debugLog?.info('End of playlist reached', {
+      getDebugLog()?.info('End of playlist reached', {
         module: 'audio-manager',
         function: 'autoplay_next'
       });
@@ -479,7 +528,7 @@ function autoplay_next() {
       // Don't switch modes - stay in playlist mode
     }
   } else {
-    debugLog?.info('Autoplay conditions not met', {
+    getDebugLog()?.info('Autoplay conditions not met', {
       module: 'audio-manager',
       function: 'autoplay_next',
       autoplay: autoplay,

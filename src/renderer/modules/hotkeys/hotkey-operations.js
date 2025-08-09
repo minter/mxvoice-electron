@@ -158,7 +158,10 @@ function playSongFromHotkey(hotkey, options = {}) {
       playSongFromId(song_id);
     }
     if (typeof animateCSS === 'function') {
-      animateCSS($(`.hotkeys.active #${hotkey}_hotkey`), "flipInX");
+      const hotkeyElement = $(`.hotkeys.active #${hotkey}_hotkey`)[0];
+      if (hotkeyElement) {
+        animateCSS(hotkeyElement, "flipInX");
+      }
     }
   }
 }
