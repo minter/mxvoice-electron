@@ -605,8 +605,47 @@ class HotkeysModule {
       renameHotkeyTab: this.renameHotkeyTab.bind(this),
       
       // Removal function - properly bound to maintain context
-      removeFromHotkey: this.removeFromHotkey.bind(this)
+      removeFromHotkey: this.removeFromHotkey.bind(this),
+      
+      // Wrapper functions for Function Registry HTML compatibility
+      populateHotkeysWrapper: this.populateHotkeysWrapper.bind(this),
+      clearHotkeysWrapper: this.clearHotkeysWrapper.bind(this),
+      renameHotkeyTabWrapper: this.renameHotkeyTabWrapper.bind(this)
     };
+  }
+
+  /**
+   * Wrapper for populateHotkeys - handles async operations for Function Registry
+   */
+  populateHotkeysWrapper(fkeys, title) {
+    debugLog?.debug('populateHotkeysWrapper called', { fkeys, title });
+    try {
+      debugLog?.info('About to call populateHotkeys...');
+      const result = this.populateHotkeys(fkeys, title);
+      debugLog?.info('populateHotkeys completed successfully');
+      return result;
+    } catch (error) {
+      debugLog?.error('Error in populateHotkeys', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Wrapper for clearHotkeys - handles async operations for Function Registry
+   */
+  clearHotkeysWrapper() {
+    this.clearHotkeys().catch(error => {
+      debugLog?.error('Error in clearHotkeys', error);
+    });
+  }
+
+  /**
+   * Wrapper for renameHotkeyTab - handles async operations for Function Registry
+   */
+  renameHotkeyTabWrapper() {
+    this.renameHotkeyTab().catch(error => {
+      debugLog?.error('Error in renameHotkeyTab', error);
+    });
   }
 
   /**

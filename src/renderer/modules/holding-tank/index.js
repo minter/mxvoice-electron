@@ -436,6 +436,40 @@ function scale_scrollable() {
   );
 }
 
+/**
+ * Wrapper for clearHoldingTank - handles async operations for Function Registry
+ */
+function clearHoldingTankWrapper() {
+  clearHoldingTank().catch(error => {
+    debugLog?.error('Error in clearHoldingTank', error);
+  });
+}
+
+/**
+ * Wrapper for renameHoldingTankTab - handles async operations for Function Registry  
+ */
+function renameHoldingTankTabWrapper() {
+  renameHoldingTankTab().catch(error => {
+    debugLog?.error('Error in renameHoldingTankTab', error);
+  });
+}
+
+/**
+ * Wrapper for saveHoldingTankToStore - includes state updates for Function Registry
+ */
+function saveHoldingTankToStoreWrapper() {
+  debugLog?.info('Saving holding tank to store and refreshing display');
+  saveHoldingTankToStore().then(() => {
+    debugLog?.info('Holding tank saved successfully, refreshing display');
+    // Refresh the display after saving
+    if (window.populateHoldingTank) {
+      window.populateHoldingTank();
+    }
+  }).catch(error => {
+    debugLog?.error('Error saving holding tank to store', error);
+  });
+}
+
 // Export all functions
 export default {
   initHoldingTank,
@@ -451,5 +485,9 @@ export default {
   sendToHoldingTank,
   renameHoldingTankTab,
   cancel_autoplay,
-  scale_scrollable
+  scale_scrollable,
+  // Wrapper functions for Function Registry HTML compatibility
+  clearHoldingTankWrapper,
+  renameHoldingTankTabWrapper,
+  saveHoldingTankToStoreWrapper
 }; 
