@@ -25,7 +25,6 @@ import { secureStore, secureDatabase } from '../adapters/secure-adapter.js';
  * @param {string} song_id - The database ID of the song
  */
 function playSongWithFilename(filename, row, song_id) {
-  console.log("🔥 DEBUG: playSongWithFilename called with filename:", filename);
   getDebugLog()?.info('🎵 PLAYBACK STEP 6: playSongWithFilename called', { 
     module: 'audio-manager',
     function: 'playSongWithFilename',
@@ -44,9 +43,7 @@ function playSongWithFilename(filename, row, song_id) {
     song_id: song_id
   });
   
-  console.log("🔥 DEBUG: About to get music directory from store");
   secureStore.get("music_directory").then(musicDirectory => {
-    console.log("🔥 DEBUG: Music directory result:", musicDirectory);
     getDebugLog()?.info('🔍 PLAYBACK STEP 8: Music directory retrieved', { 
       module: 'audio-manager',
       function: 'playSongWithFilename',
@@ -268,7 +265,6 @@ function playSongWithFilename(filename, row, song_id) {
  * @param {string} song_id - The database ID of the song to play
  */
 function playSongFromId(song_id) {
-  console.log("🔥 URGENT DEBUG: playSongFromId function called with song_id:", song_id);
   getDebugLog()?.info("🎵 PLAYBACK START: Playing song from song ID " + song_id, { 
     module: 'audio-manager',
     function: 'playSongFromId',
@@ -307,9 +303,7 @@ function playSongFromId(song_id) {
       params: [song_id]
   });
   
-  console.log("🔥 DEBUG: About to execute database query for song_id:", song_id);
   secureDatabase.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
-    console.log("🔥 DEBUG: Database query result:", result);
         getDebugLog()?.info("🔍 PLAYBACK STEP 3: Database query completed", { 
           module: 'audio-manager',
           function: 'playSongFromId',
@@ -319,10 +313,8 @@ function playSongFromId(song_id) {
           full_result: result
     });
     if (result.success && result.data.length > 0) {
-      console.log("🔥 DEBUG: Database query successful, song found");
       const row = result.data[0];
       const filename = row.filename;
-      console.log("🔥 DEBUG: Song filename:", filename, "| Title:", row.title);
           
           getDebugLog()?.info("🔍 PLAYBACK STEP 4: Song data retrieved", { 
             module: 'audio-manager',
@@ -352,10 +344,8 @@ function playSongFromId(song_id) {
         });
         
         // Continue with the rest of the function...
-        console.log("🔥 DEBUG: About to call playSongWithFilename");
         playSongWithFilename(filename, row, song_id);
       } else {
-        console.log("🔥 DEBUG: Database query failed or no song found:", result);
         getDebugLog()?.error('❌ PLAYBACK FAIL: No song found with ID or query failed:', { 
             module: 'audio-manager',
             function: 'playSongFromId',
@@ -366,7 +356,6 @@ function playSongFromId(song_id) {
           });
         }
       }).catch(error => {
-    console.log("🔥 DEBUG: Database query error:", error);
     getDebugLog()?.error('❌ PLAYBACK FAIL: Database query error:', { 
           module: 'audio-manager',
           function: 'playSongFromId',
@@ -426,8 +415,7 @@ function playSongFromId(song_id) {
  * Play the currently selected song
  */
 function playSelected() {
-  console.log("🔥 URGENT DEBUG: playSelected function called!!!");
-  console.log("🔥 DEBUG: debugLog available?", !!debugLog, typeof debugLog);
+
   getDebugLog()?.info("🎵 PLAYBACK TRIGGER: playSelected called", { 
     module: 'audio-manager',
     function: 'playSelected',
