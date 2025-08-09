@@ -30,8 +30,14 @@ const moduleRegistry = {};
 // Import function coordination module for centralized function management
 import FunctionCoordination from './renderer/modules/function-coordination/index.js';
 
+// Import keyboard manager for centralized keyboard shortcut management
+import KeyboardManager from './renderer/modules/keyboard-manager/index.js';
+
 // Function coordination instance - initialized after debug logger is available
 let functionCoordination = null;
+
+// Global keyboard manager instance
+let keyboardManager = null;
 
 // Data loading and initialization now handled by app-initialization module
 
@@ -264,10 +270,36 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logError('Error calling module-dependent functions', error);
     }
 
-    // Set up keyboard shortcuts after modules are loaded
+    // Set up keyboard shortcuts using the keyboard manager module
     try {
-      setupKeyboardShortcuts();
-      window.logInfo('Keyboard shortcuts set up successfully!');
+      window.logInfo('Initializing keyboard manager...');
+      keyboardManager = new KeyboardManager({
+        debugLog: window.debugLog || debugLogger,
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: window.store
+      });
+      
+      // Initialize and set up keyboard shortcuts
+      const keyboardSuccess = await keyboardManager.setupKeyboardShortcuts();
+      
+      if (keyboardSuccess) {
+        window.logInfo('Keyboard shortcuts set up successfully!');
+        
+        // Get keyboard manager statistics
+        const keyboardStats = keyboardManager.getComprehensiveStats();
+        window.logInfo('Keyboard Manager Statistics', keyboardStats);
+        
+        // Perform health check
+        const keyboardHealth = keyboardManager.performHealthCheck();
+        window.logInfo('Keyboard Manager Health Check', keyboardHealth);
+      } else {
+        window.logError('Failed to set up keyboard shortcuts, but continuing...');
+      }
+      
+      // Make keyboard manager available for debugging
+      window.keyboardManager = keyboardManager;
+      
     } catch (error) {
       window.logError('Error setting up keyboard shortcuts', error);
     }
@@ -321,114 +353,8 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
 // - loop_on() -> moduleRegistry.audio.loop_on()
 // - closeAllTabs() -> moduleRegistry.ui.closeAllTabs()
 
-/**
- * Set up keyboard shortcuts after modules are loaded
- */
-function setupKeyboardShortcuts() {
-  var search_field = document.getElementById("omni_search");
-
-  // Set up fkeys
-  for (let i = 1; i <= 12; i++) {
-    Mousetrap.bind(`f${i}`, function () {
-      if (window.playSongFromHotkey) {
-        playSongFromHotkey(`f${i}`);
-      }
-    });
-
-    Mousetrap(search_field).bind(`f${i}`, function () {
-      if (window.playSongFromHotkey) {
-        playSongFromHotkey(`f${i}`);
-      }
-    });
-  }
-
-  for (let i = 1; i <= 5; i++) {
-    Mousetrap.bind(`command+${i}`, function () {
-      if (window.switchToHotkeyTab) {
-        switchToHotkeyTab(i);
-      }
-    });
-  }
-
-  Mousetrap(search_field).bind("esc", function () {
-    if (window.stopPlaying) {
-      stopPlaying();
-    }
-  });
-
-  Mousetrap.bind("esc", function () {
-    if (window.stopPlaying) {
-      stopPlaying();
-    }
-  });
-  Mousetrap.bind("shift+esc", function () {
-    if (window.stopPlaying) {
-      stopPlaying(true);
-    }
-  });
-
-  Mousetrap.bind("command+l", function () {
-    $("#omni_search").focus().select();
-  });
-
-  Mousetrap.bind("space", function () {
-    if (window.pausePlaying) {
-      pausePlaying();
-    }
-    return false;
-  });
-
-  Mousetrap.bind("shift+space", function () {
-    if (window.pausePlaying) {
-      pausePlaying(true);
-    }
-    return false;
-  });
-
-  Mousetrap.bind("return", function () {
-    if (!$("#songFormModal").hasClass("show") && window.playSelected) {
-      playSelected();
-    }
-    return false;
-  });
-
-  Mousetrap.bind(["backspace", "del"], function () {
-    window.logDebug("Delete key pressed");
-    window.logDebug("selected_row", $("#selected_row"));
-    window.logDebug("holding-tank-column has selected_row", $("#holding-tank-column").has($("#selected_row")).length);
-    window.logDebug("hotkey-tab-content has selected_row", $("#hotkey-tab-content").has($("#selected_row")).length);
-    
-    // Check if the selected row is in the holding tank
-    if ($("#holding-tank-column").has($("#selected_row")).length) {
-      window.logDebug("Selected row is in holding tank");
-      // If in holding tank, remove from holding tank
-      if (window.removeFromHoldingTank) {
-        removeFromHoldingTank();
-      }
-    } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
-      window.logDebug("Selected row is in hotkey tab");
-      // If in hotkey tab, remove from hotkey
-      if (window.removeFromHotkey) {
-        removeFromHotkey();
-      }
-    } else {
-      window.logDebug("Selected row is in search results");
-      // If not in holding tank or hotkey, delete from database
-      if (window.deleteSong) {
-        deleteSong();
-      }
-    }
-    return false;
-  });
-
-  Mousetrap.bind("command+l", function () {
-    if ($("#omni_search").is(":visible")) {
-      $("#omni_search").trigger("focus");
-    } else {
-      $("#title-search").trigger("focus");
-    }
-  });
-}
+// Keyboard shortcuts now handled by the keyboard-manager module
+// This function is kept for backward compatibility but now uses the KeyboardManager
 
 // Import event coordination module for centralized event handling
 import EventCoordination from './renderer/modules/event-coordination/index.js';
