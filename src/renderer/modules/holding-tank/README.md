@@ -140,7 +140,7 @@ Renames the current holding tank tab.
 ### Basic Initialization
 
 ```javascript
-import holdingTank from './modules/holding-tank';
+import holdingTank from './modules/holding-tank/index.js';
 
 // Initialize the module
 holdingTank.initHoldingTank().then(result => {

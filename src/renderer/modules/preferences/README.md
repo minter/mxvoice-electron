@@ -29,32 +29,25 @@ preferences/
 
 ## Usage
 
-### Initialization
+The module exports a pre-initialized singleton. To reinitialize with dependencies (as done during bootstrap), call `reinitializePreferences`.
 
 ```javascript
-import preferencesModule from './modules/preferences/index.js';
+import preferences from './modules/preferences/index.js';
 
-// Initialize with dependencies
-const preferences = preferencesModule.initialize({
+// Reinitialize with dependencies
+preferences.reinitializePreferences({
   electronAPI: window.electronAPI,
-  db: database,
-  store: store
+  db: window.db,
+  store: window.store
 });
 
-// Use preference functions
+// Use functions
 preferences.openPreferencesModal();
-preferences.savePreferences(event);
+await preferences.savePreferences(event);
 ```
 
-### Backward Compatibility
-
-The module maintains backward compatibility with the existing `renderer.js` functions:
-
-```javascript
-// Legacy function calls still work
-openPreferencesModal();
-savePreferences(event);
-```
+### Backward compatibility
+Named bindings are also exported for direct imports if needed.
 
 ## API Reference
 

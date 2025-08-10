@@ -36,13 +36,10 @@ The search module is organized into several sub-modules:
 ### Loading the Module
 
 ```javascript
-import searchModule from './renderer/modules/search/index.js';
+import search from './modules/search/index.js';
 
-// Access individual functions
-const { searchData, performLiveSearch, toggleAdvancedSearch } = searchModule;
-
-// Or use the module instance
-const search = searchModule.search;
+// Named bindings also exported
+import { searchData, performLiveSearch, toggleAdvancedSearch } from './modules/search/index.js';
 ```
 
 ### Basic Search
@@ -62,7 +59,7 @@ searchModule.clearSearchResults();
 performLiveSearch('search term');
 
 // Trigger live search with debouncing
-searchModule.triggerLiveSearch();
+search.triggerLiveSearch();
 ```
 
 ### Advanced Search
@@ -76,7 +73,7 @@ toggleAdvancedSearch();
 
 ```javascript
 // Build a search query
-const query = searchModule.buildSearchQuery('search term', true);
+const query = search.buildSearchQuery('search term', true);
 console.log(query.queryString);
 console.log(query.queryParams);
 ```

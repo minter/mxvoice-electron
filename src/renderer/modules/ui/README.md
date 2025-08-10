@@ -45,41 +45,24 @@ ui/
 
 ## Usage
 
-### Initialization
+The module exports a pre-initialized singleton. To reinitialize with dependencies (as done during bootstrap), call `reinitializeUI`.
 
 ```javascript
-import uiModule from './modules/ui/index.js';
+import ui from './modules/ui/index.js';
 
-// Initialize with dependencies
-const ui = uiModule.initialize({
+ui.reinitializeUI({
   electronAPI: window.electronAPI,
-  db: database,
-  store: store
+  db: window.db,
+  store: window.store
 });
 
-// Use UI functions
 ui.scaleScrollable();
 ui.increaseFontSize();
 ui.toggleWaveform();
 ```
 
-### Backward Compatibility
-
-The module maintains backward compatibility with the existing `renderer.js` functions:
-
-```javascript
-// Legacy function calls still work
-scale_scrollable();
-editSelectedSong();
-deleteSelectedSong();
-toggle_selected_row();
-increaseFontSize();
-decreaseFontSize();
-toggleWaveform();
-toggleAdvancedSearch();
-pickDirectory();
-installUpdate();
-```
+### Backward compatibility
+Named bindings are exported for direct imports if needed.
 
 ## API Reference
 

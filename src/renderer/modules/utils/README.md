@@ -75,19 +75,13 @@ if (isValidHotkey('f1')) {
 
 ## Module Interface
 
-The main module provides a unified interface for all utilities:
+Default export is a singleton with bound methods. Named bindings are also exported for direct import.
 
 ```javascript
-import utils from './utils/index.js';
+import utils, { animateCSS, customConfirm } from './modules/utils/index.js';
 
-// Access individual utilities
-utils.animateCSS(element, 'fadeIn');
-utils.customConfirm('Are you sure?', callback);
-utils.isValidSongId('123');
-
-// Or use the module instance
-const utilsModule = utils.utils;
-utilsModule.animateCSS(element, 'fadeIn');
+animateCSS(element, 'fadeIn');
+utils.customPrompt('Enter', 'Name', 'Default', (v) => console.log(v));
 ```
 
 ## Testing
@@ -102,23 +96,8 @@ const testResults = utils.utils.test();
 console.log(testResults);
 ```
 
-## Integration with Module Loader
-
-The Utils module can be integrated with the Module Loader:
-
-```javascript
-import utils from './utils/index.js';
-import { loader } from '../module-loader.js';
-
-// Register the utils module
-loader.registerModule('utils', utils.utils);
-
-// Load the utils module
-const loadedUtils = loader.loadModule('utils');
-
-// Use the loaded utils
-loadedUtils.animateCSS(element, 'fadeIn');
-```
+## Integration
+Loaded via App Bootstrap per `module-config.js` and stored in the module registry as `utils`.
 
 ## Dependencies
 

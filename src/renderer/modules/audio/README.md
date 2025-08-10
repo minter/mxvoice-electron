@@ -1,178 +1,103 @@
-# Audio Module
+## Audio Module
 
-The Audio module provides audio playback and control functionality for the MxVoice Electron application. This module handles all audio-related operations including playing, pausing, stopping, and managing audio state.
+The Audio module provides playback and control for the MxVoice application. It encapsulates the end‑to‑end flow: querying the database for a track, resolving the on‑disk path, creating and managing the Howler sound instance, tracking progress, and coordinating UI state.
 
-## Structure
-
+### Structure
 ```
 audio/
-├── audio-manager.js    # Main audio playback functionality
-├── audio-controller.js # Audio control functions
-├── index.js           # Main module entry point
-└── README.md          # This file
+├── audio-manager.js     # Playback pipeline: DB → path → Howl → UI updates
+├── audio-controller.js  # Controls: stop, pause, loop, UI resets
+├── audio-utils.js       # Utilities for time/progress tracking
+├── function-registry.js # Function names and fallbacks for global registry
+├── index.js             # Module entry; exports singleton + named bindings
+└── README.md
 ```
 
-## Components
+## Exports and interface
 
-### Audio Manager (`audio-manager.js`)
+- Default export: a singleton instance of the Audio module (class with methods below)
+- Named exports: bound function references for direct import
 
-Handles the main audio playback functionality.
+Available methods/functions:
+- Playback: `playSongFromId(songId)`, `playSongWithFilename(filename, row, songId)`, `playSelected()`
+- Autoplay: `autoplay_next()`, `cancel_autoplay()`
+- Controls: `stopPlaying(fadeOut = false)`, `pausePlaying(fadeOut = false)`
+- UI helpers: `resetUIState()`, `toggle_play_button()`, `loop_on(bool)`
+- Diagnostics: `test()`, `getInfo()`
 
-**Functions:**
-- `playSongFromId(song_id)` - Play a song from its database ID
-- `playSelected()` - Play the currently selected song
-- `song_ended()` - Handle song end event
-- `autoplay_next()` - Autoplay next song in playlist
-- `cancel_autoplay()` - Cancel autoplay functionality
+## Usage
 
-**Usage:**
-```javascript
-import { playSongFromId, playSelected } from './audio/index.js';
-
-// Play a specific song
-playSongFromId('123');
-
-// Play the selected song
-playSelected();
-```
-
-### Audio Controller (`audio-controller.js`)
-
-Handles audio control and UI state management.
-
-**Functions:**
-- `stopPlaying(fadeOut)` - Stop audio playback with optional fade out
-- `pausePlaying(fadeOut)` - Pause audio playback with optional fade out
-- `resetUIState()` - Reset UI state after audio changes
-- `toggle_play_button()` - Toggle play button state
-- `loop_on(bool)` - Toggle loop mode
-
-**Usage:**
-```javascript
-import { stopPlaying, pausePlaying, resetUIState } from './audio/index.js';
-
-// Stop audio with fade out
-stopPlaying(true);
-
-// Pause audio
-pausePlaying();
-
-// Reset UI state
-resetUIState();
-```
-
-## Module Interface
-
-The main module provides a unified interface for all audio functionality:
-
+### Option A: Use the singleton instance (default export)
 ```javascript
 import audio from './audio/index.js';
 
-// Access individual functions
 audio.playSongFromId('123');
 audio.stopPlaying(true);
 audio.resetUIState();
 
-// Or use the module instance
-const audioModule = audio.audio;
-audioModule.playSongFromId('123');
+// Diagnostics
+const testResults = audio.test();
+const info = audio.getInfo();
+```
+
+### Option B: Import named functions
+```javascript
+import { playSongFromId, stopPlaying, pausePlaying } from './audio/index.js';
+
+playSongFromId('123');
+stopPlaying(true);
+pausePlaying();
+```
+
+## Integration with App Bootstrap
+
+The Audio module is included in `module-config.js` and loaded by the App Bootstrap system. Because the default export is an object instance, it is used directly and its `init()` method (if present) is called automatically.
+
+Example access after bootstrap:
+```javascript
+// After AppBootstrap.loadBasicModules(...)
+const audioModule = moduleRegistry.audio; // singleton instance
+audioModule.playSelected();
 ```
 
 ## Dependencies
 
-- **Howler.js**: Required for audio playback
-- **jQuery**: Required for DOM manipulation
-- **WaveSurfer**: Required for waveform visualization
-- **Electron API**: Required for file system access
+- Howler.js: audio playback (uses global `Howl` instance)
+- jQuery: UI updates (`$` selectors/classes)
+- WaveSurfer (optional): waveform visualization via `sharedState` (`wavesurfer`)
+- Secure adapters: `secureStore`, `secureDatabase`, `securePath` from `../adapters/secure-adapter.js`
+- Shared state: central state via `../shared-state.js`
 
-## Testing
+## Audio state management
 
-The module includes built-in testing functionality:
+Managed via `sharedState`:
+- `sound`: current Howler sound instance
+- `autoplay`: whether autoplay is enabled
+- `loop`: loop mode
+- `holdingTankMode`: 'storage' or 'playlist'
+- `globalAnimation`: requestAnimationFrame handle for progress updates
+- `wavesurfer`: optional waveform instance
 
-```javascript
-import audio from './audio/index.js';
+## Error handling
 
-// Test all audio functions
-const testResults = audio.audio.test();
-console.log(testResults);
+- Robust logging via the centralized DebugLog system
+- Database/query, path resolution, and playback errors are handled and logged
+- Guards against missing IDs, invalid paths, and unavailable preferences
 
-// Get module information
-const info = audio.audio.getInfo();
-console.log(info);
-```
+## Performance considerations
 
-## Integration with Module Loader
-
-The Audio module can be integrated with the Module Loader:
-
-```javascript
-import audio from './audio/index.js';
-import { loader } from '../module-loader.js';
-
-// Register the audio module
-loader.registerModule('audio', audio.audio);
-
-// Load the audio module
-const loadedAudio = loader.loadModule('audio');
-
-// Use the loaded audio functions
-loadedAudio.playSongFromId('123');
-```
+- On‑demand file loading and cleanup of Howler instances
+- Progress tracking runs only while playing; animation handles are cleared
+- Expensive operations gated behind preferences when applicable
 
 ## Migration from renderer.js
 
-The following functions were extracted from `renderer.js`:
-
-- `playSongFromId()` → `audio-manager.js`
-- `playSelected()` → `audio-manager.js`
-- `song_ended()` → `audio-manager.js`
-- `autoplay_next()` → `audio-manager.js`
-- `cancel_autoplay()` → `audio-manager.js`
-- `stopPlaying()` → `audio-controller.js`
-- `pausePlaying()` → `audio-controller.js`
-- `resetUIState()` → `audio-controller.js`
-- `toggle_play_button()` → `audio-controller.js`
-- `loop_on()` → `audio-controller.js`
-
-## Audio State Management
-
-The module manages several global audio states:
-
-- `sound`: The current Howl audio instance
-- `autoplay`: Whether autoplay is enabled
-- `loop`: Whether loop mode is enabled
-- `holdingTankMode`: Current holding tank mode ('storage' or 'playlist')
-- `globalAnimation`: Animation frame for time tracking
-
-## Error Handling
-
-The module includes comprehensive error handling:
-
-- Database query failures
-- File system access errors
-- Audio loading failures
-- Network errors for remote files
-- Invalid song IDs
-
-## Performance Considerations
-
-- Audio files are loaded on-demand
-- Unused audio instances are properly unloaded
-- Animation frames are managed efficiently
-- Memory leaks are prevented through proper cleanup
-
-## Future Enhancements
-
-- Add audio format support (MP3, WAV, OGG, etc.)
-- Add audio effects and filters
-- Add playlist management features
-- Add audio visualization options
-- Add streaming audio support
+Extracted mappings:
+- `playSongFromId`, `playSelected`, `song_ended`, `autoplay_next`, `cancel_autoplay` → `audio-manager.js`
+- `stopPlaying`, `pausePlaying`, `resetUIState`, `toggle_play_button`, `loop_on` → `audio-controller.js`
 
 ## Notes
 
-- All functions maintain the same interface as the original renderer.js functions
-- The module is designed to be backward compatible
-- Functions are exported both individually and as part of the module instance
-- The module includes comprehensive error handling and logging
-- Audio state is managed globally to maintain consistency 
+- The default export is the ready‑to‑use audio singleton; no manual construction required
+- Named exports are bound to the singleton for convenient direct import
+- If loaded via App Bootstrap, `init()` is invoked automatically

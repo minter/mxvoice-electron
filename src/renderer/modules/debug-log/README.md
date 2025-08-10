@@ -140,12 +140,12 @@ debugLog.info("Custom event", {
 
 ## Log Levels
 
-| Level | Value | Description | Always Logged |
-|-------|-------|-------------|---------------|
-| ERROR | 0 | Error messages | ✅ Yes |
-| WARN | 1 | Warning messages | ✅ Yes |
-| INFO | 2 | Informational messages | ✅ Yes |
-| DEBUG | 3 | Debug messages | ❌ Only if debug enabled |
+| Level | Value | Description | Emitted When |
+|-------|-------|-------------|--------------|
+| ERROR | 0 | Error messages | Always (level >= ERROR) |
+| WARN | 1 | Warning messages | Always (level >= WARN) |
+| INFO | 2 | Informational messages | Only if debug enabled and level >= INFO |
+| DEBUG | 3 | Debug messages | Only if debug enabled and level >= DEBUG |
 
 ## Usage Examples
 
@@ -156,10 +156,10 @@ debugLog.info("Custom event", {
 import debugLog from './modules/debug-log/index.js';
 
 // Simple logging
-debugLog.info("Application started");
-debugLog.warn("Deprecated feature used");
-debugLog.error("Critical error occurred");
-debugLog.debug("Debug information");
+await debugLog.info('Application started');
+debugLog.warn('Deprecated feature used');
+debugLog.error('Critical error occurred');
+await debugLog.debug('Debug information');
 ```
 
 ### Context-Aware Logging
@@ -292,25 +292,25 @@ debugLog.debug("Debug info", { data: data });
 
 ## Configuration
 
-### Log Level Configuration
-
+### Reinitialize with dependencies (during bootstrap)
 ```javascript
-// Set log level
-debugLog.setLogLevel(LOG_LEVELS.DEBUG);
+import debugLog from './modules/debug-log/index.js';
 
-// Get current level
-const level = debugLog.getLogLevel();
+debugLog.reinitializeDebugLog({
+  electronAPI: window.electronAPI,
+  db: window.db,
+  store: window.store
+});
 ```
 
-### Debug Preference Integration
-
-The module automatically integrates with the debug log preference:
-
+### Log level and preference
 ```javascript
-// Check if debug is enabled
-const enabled = await debugLog.isDebugEnabled();
+// Set/get level
+debugLog.setLogLevel(3); // DEBUG
+const level = debugLog.getLogLevel();
 
-// Enable/disable debug logging
+// Check or change preference
+const enabled = await debugLog.isDebugEnabled();
 await debugLog.setDebugEnabled(true);
 ```
 

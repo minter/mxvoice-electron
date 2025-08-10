@@ -1,61 +1,49 @@
-# Bulk Operations Module
+## Bulk Operations Module
 
-## Overview
+Handles bulk import of songs from directories and batch processing. Provides UI handlers and helpers to scan paths, extract metadata, and persist to the database.
 
-The Bulk Operations Module handles bulk import of songs from directories and processing multiple files. It provides functionality for importing large numbers of audio files at once with category assignment and metadata extraction.
+### Structure
+```
+bulk-operations/
+├── bulk-operations.js   # Core operations: add/process/save
+├── event-handlers.js    # DOM event hookups for bulk UI
+├── index.js             # Module entry; singleton instance with methods
+└── README.md
+```
 
-## Functions
+## Exports and interface
 
-### Core Functions
+- Default export: singleton instance with methods
+- Methods:
+  - `showBulkAddModal(directory)`
+  - `addSongsByPath(pathArray, category)`
+  - `saveBulkUpload(event)`
+  - `init()` (alias of internal `initializeBulkOperations()`)
 
-- **`showBulkAddModal(directory)`** - Shows the bulk add modal with directory and category selection
-- **`addSongsByPath(pathArray, category)`** - Processes songs from a path array and adds them to the database
-- **`saveBulkUpload(event)`** - Handles bulk upload of songs from a directory
-
-### Event Handlers
-
-- **`setupBulkEventHandlers()`** - Sets up all bulk operations event handlers
-
-## Features
-
-- **Directory Recursion** - Recursively walks through directories to find audio files
-- **Metadata Extraction** - Extracts title, artist, and duration from audio files
-- **File Copying** - Copies audio files to the music directory with unique names
-- **Category Assignment** - Allows assignment of songs to categories during bulk import
-- **New Category Creation** - Supports creating new categories during bulk import
-- **UI Integration** - Integrates with the bulk add modal and form handling
-
-## Supported Audio Formats
-
-- MP3 (.mp3)
-- MP4 (.mp4)
-- M4A (.m4a)
-- WAV (.wav)
-- OGG (.ogg)
+Event handlers are wired internally via `init()` using `setupBulkEventHandlers()`.
 
 ## Usage
 
 ```javascript
-// Initialize the bulk operations module
-import { initializeBulkOperations } from './bulk-operations/index.js';
-initializeBulkOperations();
+import bulk from './modules/bulk-operations/index.js';
 
-// Show bulk add modal
-import { showBulkAddModal } from './bulk-operations/index.js';
-showBulkAddModal('/path/to/directory');
+// Initialize (attaches event handlers)
+bulk.init();
 
-// Process songs from paths
-import { addSongsByPath } from './bulk-operations/index.js';
-addSongsByPath(['/path/to/song1.mp3', '/path/to/song2.mp3'], 'ROCK');
+// Show modal
+bulk.showBulkAddModal('/path/to/directory');
 
-// Handle bulk upload form submission
-import { saveBulkUpload } from './bulk-operations/index.js';
-saveBulkUpload(event);
+// Process paths
+bulk.addSongsByPath(['/path/a.mp3', '/path/b.mp3'], 'ROCK');
+
+// Submit handler
+$('#bulk_upload_form').on('submit', (e) => bulk.saveBulkUpload(e));
 ```
 
-## Dependencies
+## Features
+- Directory recursion, metadata extraction, file copying
+- Category assignment and creation
+- UI integration via modal and handlers
 
-- Database module for song and category storage
-- File system API for directory operations
-- Audio metadata parsing library
-- jQuery for UI manipulation 
+## Dependencies
+- Electron APIs (secure adapters), database module, jQuery
