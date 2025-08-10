@@ -10,6 +10,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { Howl, Howler } from 'howler';
+import { parseFile as parseAudioFile } from 'music-metadata';
 import { v4 as uuidv4 } from 'uuid';
 
 // Import file operations module
@@ -599,8 +600,46 @@ function registerAllHandlers() {
 
   ipcMain.handle('audio-get-duration', async (event, filePath) => {
     try {
-      // This is a placeholder - actual implementation would require audio metadata reading
-      return { success: true, duration: 0 };
+      if (!filePath || typeof filePath !== 'string') {
+        throw new Error('Invalid file path');
+      }
+      // First attempt: music-metadata
+      let durationSec = 0;
+      try {
+        const metadata = await parseAudioFile(filePath);
+        durationSec = metadata?.format?.duration ? Number(metadata.format.duration) : 0;
+      } catch (e) {
+        debugLog?.warn('music-metadata parse failed for duration', { module: 'ipc-handlers', function: 'audio-get-duration', error: e?.message, filePath });
+      }
+
+      // Fallback: Howler (loads audio to get accurate duration)
+      if (!(durationSec > 0.5)) {
+        await new Promise((resolve) => setImmediate(resolve));
+        durationSec = await new Promise((resolve, reject) => {
+          const sound = new Howl({ src: [filePath], html5: true, preload: true });
+          const cleanup = () => {
+            try { sound.unload(); } catch (_) {}
+          };
+          sound.once('load', () => {
+            try {
+              const d = Number(sound.duration());
+              cleanup();
+              resolve(isFinite(d) ? d : 0);
+            } catch (err) {
+              cleanup();
+              resolve(0);
+            }
+          });
+          sound.once('loaderror', (_id, err) => {
+            cleanup();
+            debugLog?.warn('Howler loaderror while getting duration', { module: 'ipc-handlers', function: 'audio-get-duration', error: err, filePath });
+            resolve(0);
+          });
+        });
+      }
+
+      debugLog?.info('audio-get-duration result', { module: 'ipc-handlers', function: 'audio-get-duration', filePath, durationSec });
+      return { success: true, duration: isFinite(durationSec) ? durationSec : 0 };
     } catch (error) {
       debugLog?.error('Audio get duration error:', { module: 'ipc-handlers', function: 'audio-get-duration', error: error.message });
       return { success: false, error: error.message };

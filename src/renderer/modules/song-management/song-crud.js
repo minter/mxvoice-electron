@@ -186,6 +186,146 @@ export async function editSelectedSong() {
 }
 
 /**
+ * Open the Add New Song modal and prefill fields
+ * @param {string} filename - Full path to the selected audio file
+ * @param {object} [metadata] - Optional metadata object
+ */
+export async function startAddNewSong(filename, metadata = null) {
+  try {
+    debugLog?.info('startAddNewSong invoked', {
+      module: 'song-management',
+      function: 'startAddNewSong',
+      filename: filename || null,
+      hasMetadata: !!metadata,
+      metaDuration: metadata?.format?.duration || null,
+      metaTitle: metadata?.common?.title || null,
+      metaArtist: metadata?.common?.artist || null
+    });
+    // Reset any previous values
+    $("#song-form-songid").val("");
+    if (filename) {
+      $("#song-form-filename").val(filename);
+    }
+
+    // Prefill from metadata if available
+    const title = metadata?.common?.title || '';
+    const artist = metadata?.common?.artist || '';
+    let durationSeconds = (metadata?.format?.duration && !Number.isNaN(metadata.format.duration))
+      ? Math.round(Number(metadata.format.duration))
+      : 0;
+    const toTimeString = (secs) => {
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      return `${m.toString().padStart(1, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    if (title) $("#song-form-title").val(title);
+    if (artist) $("#song-form-artist").val(artist);
+    // Always try secure audio.getDuration for more accuracy
+    if (filename) {
+      try {
+        debugLog?.info('Attempting to fetch duration via audio API', {
+          module: 'song-management',
+          function: 'startAddNewSong',
+          filename
+        });
+        if (window.secureElectronAPI?.audio?.getDuration) {
+          const res = await window.secureElectronAPI.audio.getDuration(filename);
+          if (res?.success) {
+            const sec = Math.round(res.duration ?? res.data ?? 0);
+            if (sec > 0) durationSeconds = Math.max(durationSeconds, sec);
+            debugLog?.info('Duration fetched via secure audio API', {
+              module: 'song-management',
+              function: 'startAddNewSong',
+              durationSeconds
+            });
+          }
+        } else if (window.electronAPI?.audio?.getDuration) {
+          const res = await window.electronAPI.audio.getDuration(filename);
+          if (res?.success) {
+            const sec = Math.round(res.duration ?? res.data ?? 0);
+            if (sec > 0) durationSeconds = Math.max(durationSeconds, sec);
+            debugLog?.info('Duration fetched via legacy audio API', {
+              module: 'song-management',
+              function: 'startAddNewSong',
+              durationSeconds
+            });
+          }
+        }
+      } catch (err) {
+        debugLog?.warn('Failed to fetch duration via audio API', { module: 'song-management', function: 'startAddNewSong', error: err?.message });
+      }
+    }
+
+    if (typeof durationSeconds === 'number' && durationSeconds > 0) {
+      if (window.secureElectronAPI?.utils?.formatDuration) {
+        try {
+          const fmt = await window.secureElectronAPI.utils.formatDuration(durationSeconds);
+          const formatted = fmt?.data || fmt?.formatted || (typeof fmt === 'string' ? fmt : null);
+          $("#song-form-duration").val(formatted || toTimeString(durationSeconds));
+          debugLog?.info('Duration field set', {
+            module: 'song-management',
+            function: 'startAddNewSong',
+            durationSeconds,
+            formatted: formatted || toTimeString(durationSeconds)
+          });
+        } catch {
+          $("#song-form-duration").val(toTimeString(durationSeconds));
+          debugLog?.info('Duration field set (fallback formatter)', {
+            module: 'song-management',
+            function: 'startAddNewSong',
+            durationSeconds
+          });
+        }
+      } else {
+        $("#song-form-duration").val(toTimeString(durationSeconds));
+        debugLog?.info('Duration field set (local formatter)', {
+          module: 'song-management',
+          function: 'startAddNewSong',
+          durationSeconds
+        });
+      }
+    } else {
+      // Ensure field not left blank if all else fails
+      $("#song-form-duration").val("");
+      debugLog?.warn('Duration unavailable after attempts', {
+        module: 'song-management',
+        function: 'startAddNewSong',
+        filename
+      });
+    }
+
+    // Prepare and show modal for adding
+    $("#songFormModal form").attr("onsubmit", "saveNewSong(event)");
+    $("#songFormModalTitle").html("Add New Song");
+    $("#songFormSubmitButton").html("Add");
+    // Populate categories for the add flow
+    try {
+      $("#song-form-category").empty();
+      if (window.secureElectronAPI?.database?.query) {
+        const catResult = await window.secureElectronAPI.database.query("SELECT * FROM categories ORDER BY description ASC");
+        const rows = (catResult?.data || catResult) || [];
+        if (Array.isArray(rows)) {
+          rows.forEach(row => {
+            $("#song-form-category").append(`<option value="${row.code}">${row.description}</option>`);
+          });
+        }
+      }
+      // Add new category option separator and entry
+      $("#song-form-category").append(`<option value="" disabled>-----------------------</option>`);
+      $("#song-form-category").append(`<option value="--NEW--">ADD NEW CATEGORY...</option>`);
+      // Trigger change to set up UI for new category input if needed
+      $("#song-form-category").change();
+    } catch (err) {
+      debugLog?.warn('Failed to populate categories for add modal', { module: 'song-management', function: 'startAddNewSong', error: err?.message });
+    }
+    $("#songFormModal").modal();
+  } catch (error) {
+    debugLog?.error('Failed to open add new song modal', { module: 'song-management', function: 'startAddNewSong', error: error?.message });
+  }
+}
+
+/**
  * Determines the appropriate delete action based on the selected row's location
  * Handles deletion from holding tank, hotkeys, or database
  */

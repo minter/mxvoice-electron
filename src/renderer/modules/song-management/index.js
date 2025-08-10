@@ -21,7 +21,7 @@ try {
   // Debug logger not available
 }
 
-import { saveEditedSong, saveNewSong, editSelectedSong, deleteSelectedSong } from './song-crud.js';
+import { saveEditedSong, saveNewSong, editSelectedSong, deleteSelectedSong, startAddNewSong } from './song-crud.js';
 import { deleteSong, removeFromHoldingTank, removeFromHotkey } from './song-removal.js';
 
 /**
@@ -36,6 +36,7 @@ class SongManagementModule {
     this.saveNewSong = saveNewSong;
     this.editSelectedSong = editSelectedSong;
     this.deleteSelectedSong = deleteSelectedSong;
+    this.startAddNewSong = startAddNewSong;
     this.deleteSong = deleteSong;
     this.removeFromHoldingTank = removeFromHoldingTank;
     this.removeFromHotkey = removeFromHotkey;
@@ -59,6 +60,7 @@ class SongManagementModule {
       saveNewSong: this.saveNewSong,
       editSelectedSong: this.editSelectedSong,
       deleteSelectedSong: this.deleteSelectedSong,
+      startAddNewSong: this.startAddNewSong,
       deleteSong: this.deleteSong,
       removeFromHoldingTank: this.removeFromHoldingTank,
       removeFromHotkey: this.removeFromHotkey

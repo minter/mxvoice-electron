@@ -64,7 +64,8 @@ const secureElectronAPI = {
     dirname: (filePath) => ipcRenderer.invoke('path-dirname', filePath),
     basename: (filePath, ext) => ipcRenderer.invoke('path-basename', filePath, ext),
     resolve: (...paths) => ipcRenderer.invoke('path-resolve', ...paths),
-    normalize: (filePath) => ipcRenderer.invoke('path-normalize', filePath)
+    normalize: (filePath) => ipcRenderer.invoke('path-normalize', filePath),
+    parse: (filePath) => ipcRenderer.invoke('path-parse', filePath)
   },
   
   // OS operations - secure system information
@@ -145,7 +146,19 @@ const secureElectronAPI = {
     },
     
     onAddDialogLoad: (callback) => {
-      const handler = (_event, ...args) => callback(...args);
+      const handler = async (_event, filename) => {
+        try {
+          const mm = await import('music-metadata');
+          const metadata = await mm.parseFile(filename);
+          callback(filename, metadata);
+        } catch (err) {
+          // Fallback: provide filename without metadata
+          if (debugLog && typeof debugLog.warn === 'function') {
+            debugLog.warn('Failed to parse metadata for file', { module: 'secure-api-exposer', function: 'onAddDialogLoad', error: err?.message, filename });
+          }
+          callback(filename);
+        }
+      };
       ipcRenderer.on('add_dialog_load', handler);
       return () => ipcRenderer.removeListener('add_dialog_load', handler);
     },

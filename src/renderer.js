@@ -199,6 +199,19 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
             });
           }
 
+          // Add file dialog → startAddNewSong
+          if (typeof window.secureElectronAPI.events.onAddDialogLoad === 'function') {
+            window.secureElectronAPI.events.onAddDialogLoad((filename, metadata) => {
+              if (typeof window.startAddNewSong === 'function') {
+                window.startAddNewSong(filename, metadata);
+              } else if (window.moduleRegistry?.songManagement?.startAddNewSong) {
+                window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
+              } else {
+                window.logWarn('startAddNewSong not available when add_dialog_load fired');
+              }
+            });
+          }
+
           // Manage categories → openCategoriesModal
           if (typeof window.secureElectronAPI.events.onManageCategories === 'function') {
             window.secureElectronAPI.events.onManageCategories(() => {

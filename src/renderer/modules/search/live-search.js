@@ -110,7 +110,7 @@ function performLiveSearch(searchTerm) {
 
   // Check if we have either a search term or advanced search filters
   const hasSearchTerm = searchTerm && searchTerm.length >= 2;
-  const hasAdvancedFilters = false;
+  let hasAdvancedFilters = false;
 
   if ($("#advanced-search").is(":visible")) {
     const title = $("#title-search").val().trim();
