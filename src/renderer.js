@@ -198,6 +198,28 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               }
             });
           }
+
+          // Manage categories → openCategoriesModal
+          if (typeof window.secureElectronAPI.events.onManageCategories === 'function') {
+            window.secureElectronAPI.events.onManageCategories(() => {
+              if (typeof window.openCategoriesModal === 'function') {
+                window.openCategoriesModal();
+              } else {
+                window.logWarn('openCategoriesModal not yet available when manage_categories fired');
+              }
+            });
+          }
+          
+          // Preferences → openPreferencesModal (if available)
+          if (typeof window.secureElectronAPI.events.onShowPreferences === 'function') {
+            window.secureElectronAPI.events.onShowPreferences(() => {
+              if (typeof window.openPreferencesModal === 'function') {
+                window.openPreferencesModal();
+              } else {
+                window.logWarn('openPreferencesModal not yet available when show_preferences fired');
+              }
+            });
+          }
         }
       } catch (bridgeError) {
         window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });

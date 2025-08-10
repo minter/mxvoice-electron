@@ -154,6 +154,19 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('display_release_notes', handler);
     },
     
+    // Additional UI events
+    onManageCategories: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('manage_categories', handler);
+      return () => ipcRenderer.removeListener('manage_categories', handler);
+    },
+    
+    onShowPreferences: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('show_preferences', handler);
+      return () => ipcRenderer.removeListener('show_preferences', handler);
+    },
+    
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
   },
   
