@@ -156,6 +156,18 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('display_release_notes', handler);
     },
     
+    // Font size events
+    onIncreaseFontSize: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('increase_font_size', handler);
+      return () => ipcRenderer.removeListener('increase_font_size', handler);
+    },
+    onDecreaseFontSize: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('decrease_font_size', handler);
+      return () => ipcRenderer.removeListener('decrease_font_size', handler);
+    },
+    
     // Additional UI events
     onManageCategories: (callback) => {
       const handler = (_event, ...args) => callback(...args);

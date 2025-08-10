@@ -250,6 +250,30 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               }
             });
           }
+
+          // Font size events → UI controls
+          if (typeof window.secureElectronAPI.events.onIncreaseFontSize === 'function') {
+            window.secureElectronAPI.events.onIncreaseFontSize(() => {
+              if (typeof window.increaseFontSize === 'function') {
+                window.increaseFontSize();
+              } else if (window.moduleRegistry?.ui?.increaseFontSize) {
+                window.moduleRegistry.ui.increaseFontSize();
+              } else {
+                window.logWarn('increaseFontSize not available when increase_font_size fired');
+              }
+            });
+          }
+          if (typeof window.secureElectronAPI.events.onDecreaseFontSize === 'function') {
+            window.secureElectronAPI.events.onDecreaseFontSize(() => {
+              if (typeof window.decreaseFontSize === 'function') {
+                window.decreaseFontSize();
+              } else if (window.moduleRegistry?.ui?.decreaseFontSize) {
+                window.moduleRegistry.ui.decreaseFontSize();
+              } else {
+                window.logWarn('decreaseFontSize not available when decrease_font_size fired');
+              }
+            });
+          }
         }
       } catch (bridgeError) {
         window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });
