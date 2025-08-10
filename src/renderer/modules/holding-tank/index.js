@@ -431,12 +431,10 @@ function getFontSize() {
  * Scale scrollable elements
  */
 function scale_scrollable() {
-  const advanced_search_height = $("#advanced-search").is(":visible") ? 38 : 0;
-  if ($("#advanced-search").is(":visible")) {
-    advanced_search_height = 38;
-  }
+  const isAdvancedVisible = $("#advanced-search").is(":visible");
+  const advancedHeight = isAdvancedVisible ? 38 : 0;
   $(".table-wrapper-scroll-y").height(
-    $(window).height() - 240 - advanced_search_height + "px"
+    $(window).height() - 240 - advancedHeight + "px"
   );
 }
 
