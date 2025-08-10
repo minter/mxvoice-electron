@@ -18,6 +18,9 @@ try {
 // Import secure adapters
 import { secureFileSystem, secureDatabase, securePath, secureStore } from '../adapters/secure-adapter.js';
 
+// Supported audio file extensions (lowercase)
+const SUPPORTED_AUDIO_EXTS = new Set([".mp3", ".mp4", ".m4a", ".wav", ".ogg", ".flac", ".aac"]);
+
 /**
  * Shows the bulk add modal with directory and category selection
  * 
@@ -160,6 +163,10 @@ export async function saveBulkUpload(event) {
         return results;
       }
       for (const fileEntry of entries) {
+        // Skip hidden/system entries like .DS_Store
+        if (typeof fileEntry === 'string' && fileEntry.startsWith('.')) {
+          continue;
+        }
         const fullPath = `${dir}/${fileEntry}`;
         try {
           const statResult = await secureFileSystem.stat(fullPath);
@@ -171,12 +178,9 @@ export async function saveBulkUpload(event) {
               results = results.concat(await walk(fullPath));
             } else if (isFile) {
               const parseRes = await securePath.parse(fullPath);
-              if (!parseRes.success || !parseRes.data) {
-                debugLog?.warn('Path parse failed', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, result: parseRes });
-                continue;
-              }
+              if (!parseRes.success || !parseRes.data) continue;
               const pathData = parseRes.data;
-              if ([".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(pathData.ext.toLowerCase())) {
+              if (SUPPORTED_AUDIO_EXTS.has(pathData.ext.toLowerCase())) {
                 results.push(fullPath);
               }
             } else {
