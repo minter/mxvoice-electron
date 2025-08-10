@@ -19,7 +19,7 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem, secureStore, securePath } from '../adapters/secure-adapter.js';
+import { secureFileSystem, secureStore, securePath, secureDatabase } from '../adapters/secure-adapter.js';
 
 /**
  * Initialize the UI Manager module
@@ -71,12 +71,14 @@ function initializeUIManager(options = {}) {
   /**
    * Edit the currently selected song
    */
-  function editSelectedSong() {
+  async function editSelectedSong() {
     const songId = $("#selected_row").attr("songid");
     if (!songId) return;
     
-    const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
-    const songInfo = stmt.get(songId);
+    // Fetch via secure database
+    const songResult = await secureDatabase.query("SELECT * FROM mrvoice WHERE id = ?", [songId]);
+    const rows = songResult?.data || songResult;
+    const songInfo = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
     
     if (!songInfo) {
       debugLog?.warn('Song not found for ID', { 
@@ -91,19 +93,22 @@ function initializeUIManager(options = {}) {
     $("#song-form-songid").val(songId);
     $("#song-form-category").empty();
     
-    // Populate categories
-    const categoryStmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-    for (const row of categoryStmt.iterate()) {
-      const selected = row.code === songInfo.category ? 'selected="selected"' : '';
-      $("#song-form-category").append(
-        `<option ${selected} value="${row.code}">${row.description}</option>`
-      );
+    // Populate categories securely
+    const catResult = await secureDatabase.query("SELECT * FROM categories ORDER BY description ASC");
+    const categories = (catResult?.data || catResult) || [];
+    if (Array.isArray(categories)) {
+      categories.forEach(row => {
+        const selected = row.code === songInfo.category ? 'selected="selected"' : '';
+        $("#song-form-category").append(
+          `<option ${selected} value="${row.code}">${row.description}</option>`
+        );
+      });
     }
     
-    $("#song-form-title").val(songInfo.title);
-    $("#song-form-artist").val(songInfo.artist);
-    $("#song-form-info").val(songInfo.info);
-    $("#song-form-duration").val(songInfo.time);
+    $("#song-form-title").val(songInfo.title || '');
+    $("#song-form-artist").val(songInfo.artist || '');
+    $("#song-form-info").val(songInfo.info || '');
+    $("#song-form-duration").val(songInfo.time || '');
     
     // Set up form for editing
     $("#songFormModal form").attr("onsubmit", "saveEditedSong(event)");

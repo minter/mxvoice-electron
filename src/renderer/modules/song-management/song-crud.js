@@ -24,7 +24,7 @@ import { secureFileSystem, secureDatabase, securePath } from '../adapters/secure
  * 
  * @param {Event} event - The form submission event
  */
-export function saveEditedSong(event) {
+export async function saveEditedSong(event) {
   event.preventDefault();
   $(`#songFormModal`).modal("hide");
   debugLog?.info("Starting edit process", { module: 'song-management', function: 'saveEditedSong' });
@@ -34,13 +34,22 @@ export function saveEditedSong(event) {
   const info = $("#song-form-info").val();
   const category = $("#song-form-category").val();
 
-  const stmt = db.prepare(
-    "UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?"
-  );
-  stmt.run(title, artist, category, info, songId);
+  try {
+    const result = await secureDatabase.execute(
+      "UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?",
+      [title, artist, category, info, songId]
+    );
+    if (!result?.success) {
+      debugLog?.warn('Edit update failed', { module: 'song-management', function: 'saveEditedSong', error: result?.error });
+    }
+  } catch (error) {
+    debugLog?.error('Edit update error', { module: 'song-management', function: 'saveEditedSong', error: error?.message });
+  }
 
   $("#omni_search").val(title);
-  searchData();
+  if (typeof searchData === 'function') {
+    searchData();
+  }
 }
 
 /**
@@ -154,39 +163,48 @@ export function saveNewSong(event) {
  * Opens the song edit modal for the selected song
  * Populates the form with the song's current information
  */
-export function editSelectedSong() {
-  const songId = $("#selected_row").attr("songid");
-  const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
-
-  if (songId) {
-    const songInfo = stmt.get(songId);
-
-    $("#song-form-songid").val(songId);
-    $("#song-form-category").empty();
-    const categoryStmt = db.prepare(
-      "SELECT * FROM categories ORDER BY description ASC"
-    );
-    for (const row of categoryStmt.iterate()) {
-      categories[row.code] = row.description;
-      if (row.code == songInfo.category) {
-        $("#song-form-category").append(
-          `<option selected="selected" value="${row.code}">${row.description}</option>`
-        );
-      } else {
-        $("#song-form-category").append(
-          `<option value="${row.code}">${row.description}</option>`
-        );
-      }
+export async function editSelectedSong() {
+  try {
+    const songId = $("#selected_row").attr("songid");
+    if (!songId) {
+      debugLog?.warn('No selected song to edit', { module: 'song-management', function: 'editSelectedSong' });
+      return;
     }
 
-    $("#song-form-title").val(songInfo.title);
-    $("#song-form-artist").val(songInfo.artist);
-    $("#song-form-info").val(songInfo.info);
-    $("#song-form-duration").val(songInfo.time);
+    // Fetch song info using secure database adapter
+    const songResult = await secureDatabase.query("SELECT * FROM mrvoice WHERE id = ?", [songId]);
+    const songRows = songResult?.data || songResult;
+    const songInfo = Array.isArray(songRows) && songRows.length > 0 ? songRows[0] : null;
+    if (!songInfo) {
+      debugLog?.warn('Song not found for ID', { module: 'song-management', function: 'editSelectedSong', songId });
+      return;
+    }
+
+    // Populate basic fields
+    $("#song-form-songid").val(songId);
+    $("#song-form-title").val(songInfo.title || '');
+    $("#song-form-artist").val(songInfo.artist || '');
+    $("#song-form-info").val(songInfo.info || '');
+    $("#song-form-duration").val(songInfo.time || '');
+
+    // Load categories securely and populate select
+    $("#song-form-category").empty();
+    const catResult = await secureDatabase.query("SELECT * FROM categories ORDER BY description ASC");
+    const categories = (catResult?.data || catResult) || [];
+    if (Array.isArray(categories)) {
+      categories.forEach(row => {
+        const selected = row.code === songInfo.category ? 'selected="selected"' : '';
+        $("#song-form-category").append(`<option ${selected} value="${row.code}">${row.description}</option>`);
+      });
+    }
+
+    // Prepare and show modal
     $("#songFormModal form").attr("onsubmit", "saveEditedSong(event)");
     $("#songFormModalTitle").html("Edit This Song");
     $("#songFormSubmitButton").html("Save");
     $("#songFormModal").modal();
+  } catch (error) {
+    debugLog?.error('Failed to open edit song modal', { module: 'song-management', function: 'editSelectedSong', error: error?.message });
   }
 }
 

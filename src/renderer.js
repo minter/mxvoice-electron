@@ -220,6 +220,36 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               }
             });
           }
+
+          // Edit selected song → editSelectedSong
+          if (typeof window.secureElectronAPI.events.onEditSelectedSong === 'function') {
+            window.secureElectronAPI.events.onEditSelectedSong(() => {
+              if (typeof window.editSelectedSong === 'function') {
+                window.editSelectedSong();
+              } else if (window.moduleRegistry?.ui?.editSelectedSong) {
+                window.moduleRegistry.ui.editSelectedSong();
+              } else if (window.moduleRegistry?.songManagement?.editSelectedSong) {
+                window.moduleRegistry.songManagement.editSelectedSong();
+              } else {
+                window.logWarn('editSelectedSong not available when edit_selected_song fired');
+              }
+            });
+          }
+
+          // Delete selected song → deleteSelectedSong
+          if (typeof window.secureElectronAPI.events.onDeleteSelectedSong === 'function') {
+            window.secureElectronAPI.events.onDeleteSelectedSong(() => {
+              if (typeof window.deleteSelectedSong === 'function') {
+                window.deleteSelectedSong();
+              } else if (window.moduleRegistry?.ui?.deleteSelectedSong) {
+                window.moduleRegistry.ui.deleteSelectedSong();
+              } else if (window.moduleRegistry?.songManagement?.deleteSelectedSong) {
+                window.moduleRegistry.songManagement.deleteSelectedSong();
+              } else {
+                window.logWarn('deleteSelectedSong not available when delete_selected_song fired');
+              }
+            });
+          }
         }
       } catch (bridgeError) {
         window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });

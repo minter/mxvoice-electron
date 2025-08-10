@@ -119,7 +119,9 @@ const secureElectronAPI = {
     toggleAdvancedSearch: () => ipcRenderer.invoke('toggle-advanced-search'),
     closeAllTabs: () => ipcRenderer.invoke('close-all-tabs'),
     showPreferences: () => ipcRenderer.invoke('show-preferences'),
-    manageCategories: () => ipcRenderer.invoke('manage-categories')
+    manageCategories: () => ipcRenderer.invoke('manage-categories'),
+    editSelectedSong: () => ipcRenderer.invoke('edit-selected-song'),
+    deleteSelectedSong: () => ipcRenderer.invoke('delete-selected-song')
   },
   
   // Event listeners - secure event handling (limited and safe)
@@ -165,6 +167,18 @@ const secureElectronAPI = {
       const handler = (_event, ...args) => callback(...args);
       ipcRenderer.on('show_preferences', handler);
       return () => ipcRenderer.removeListener('show_preferences', handler);
+    },
+
+    onEditSelectedSong: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('edit_selected_song', handler);
+      return () => ipcRenderer.removeListener('edit_selected_song', handler);
+    },
+
+    onDeleteSelectedSong: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('delete_selected_song', handler);
+      return () => ipcRenderer.removeListener('delete_selected_song', handler);
     },
     
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
