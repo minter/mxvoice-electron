@@ -25,7 +25,7 @@ function initializeDatabase() {
     // Handle case where database directory is not set
     if (!databaseDirectory) {
       debugLog.warn('Database directory not set, using default');
-      const defaultDbPath = path.join(process.cwd(), 'data');
+      const defaultDbPath = 'data';
       if (!fs.existsSync(defaultDbPath)) {
         fs.mkdirSync(defaultDbPath, { recursive: true });
       }

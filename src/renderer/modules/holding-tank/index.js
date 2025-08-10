@@ -28,9 +28,9 @@ try {
 
 // Use global electronAPI instead of importing services
 // Import secure adapters
-import { secureStore } from '../adapters/secure-adapter.js';
+import { secureStore, secureDatabase } from '../adapters/secure-adapter.js';
 const store = secureStore;
-const database = window.electronAPI.database;
+const database = secureDatabase;
 // Import secure adapters
 import { secureFileSystem, securePath, secureFileDialog } from '../adapters/secure-adapter.js';
 const fileSystem = secureFileSystem;

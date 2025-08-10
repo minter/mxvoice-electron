@@ -5,17 +5,6 @@
  * in the MxVoice Electron application.
  */
 
-// Import debug logger
-let debugLog = null;
-try {
-  // Try to get debug logger from global scope
-  if (window.debugLog) {
-    debugLog = window.debugLog;
-  }
-} catch (error) {
-  // Debug logger not available
-}
-
 // Import all utility modules
 import animationUtils from './animation-utils.js';
 import modalUtils from './modal-utils.js';
@@ -37,17 +26,38 @@ class UtilsModule {
     this.isValidCategoryCode = validationUtils.isValidCategoryCode;
     this.isValidFilePath = validationUtils.isValidFilePath;
     this.isValidHotkey = validationUtils.isValidHotkey;
+    
+    // Track initialization state
+    this.isInitialized = false;
   }
 
   /**
    * Initialize the utils module
    * This method can be called to set up any initialization logic
    */
-  init() {
-    debugLog?.info('Utils module initialized', { 
-      module: 'utils',
-      function: 'init'
-    });
+  async init() {
+    try {
+      // Safe debug logging - only if available
+      if (typeof window !== 'undefined' && window.debugLog && typeof window.debugLog.info === 'function') {
+        window.debugLog.info('Utils module initialized', { 
+          module: 'utils',
+          function: 'init'
+        });
+      }
+      
+      this.isInitialized = true;
+      return true;
+    } catch (error) {
+      // Log error if debug logger is available
+      if (typeof window !== 'undefined' && window.debugLog && typeof window.debugLog.error === 'function') {
+        window.debugLog.error('Utils module initialization failed', { 
+          module: 'utils',
+          function: 'init',
+          error: error.message
+        });
+      }
+      return false;
+    }
   }
 
   /**

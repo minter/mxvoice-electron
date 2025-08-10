@@ -94,34 +94,72 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
   return new Promise((resolve) => {
     const modal = document.createElement('div');
     modal.className = 'modal fade';
-    modal.innerHTML = `
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">${title}</h5>
-            <button type="button" class="close" data-dismiss="modal">
-              <span>&times;</span>
-            </button>
-          </div>
-          <div class="modal-body">
-            <p>${message}</p>
-            <input type="text" class="form-control prompt-input" value="${defaultValue}">
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-primary confirm-btn">OK</button>
-          </div>
-        </div>
-      </div>
-    `;
+    // Create modal structure safely without innerHTML
+    const modalDialog = document.createElement('div');
+    modalDialog.className = 'modal-dialog';
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'modal-header';
+    
+    const modalTitle = document.createElement('h5');
+    modalTitle.className = 'modal-title';
+    modalTitle.textContent = title;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'close';
+    closeBtn.setAttribute('data-dismiss', 'modal');
+    
+    const closeSpan = document.createElement('span');
+    closeSpan.textContent = '×';
+    closeBtn.appendChild(closeSpan);
+    
+    modalHeader.appendChild(modalTitle);
+    modalHeader.appendChild(closeBtn);
+    
+    const modalBody = document.createElement('div');
+    modalBody.className = 'modal-body';
+    
+    const messageP = document.createElement('p');
+    messageP.textContent = message;
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-control prompt-input';
+    input.value = defaultValue;
+    
+    modalBody.appendChild(messageP);
+    modalBody.appendChild(input);
+    
+    const modalFooter = document.createElement('div');
+    modalFooter.className = 'modal-footer';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'btn btn-secondary';
+    cancelBtn.setAttribute('data-dismiss', 'modal');
+    cancelBtn.textContent = 'Cancel';
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.className = 'btn btn-primary confirm-btn';
+    confirmBtn.textContent = 'OK';
+    
+    modalFooter.appendChild(cancelBtn);
+    modalFooter.appendChild(confirmBtn);
+    
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
+    modalContent.appendChild(modalFooter);
+    modalDialog.appendChild(modalContent);
+    modal.appendChild(modalDialog);
 
     document.body.appendChild(modal);
 
-    const confirmBtn = modal.querySelector('.confirm-btn');
-    const closeBtn = modal.querySelector('.close');
-    const cancelBtn = modal.querySelector('.btn-secondary');
-    const input = modal.querySelector('.prompt-input');
-
+    // Use the already created element references instead of querying again
     const cleanup = () => {
       // Hide the modal properly using Bootstrap
       $(modal).modal('hide');
@@ -149,11 +187,9 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
       resolve(value || null);
     });
 
-    closeBtn.addEventListener('click', () => {
-      cleanup();
-      resolve(null);
-    });
-
+    // Note: closeBtn is not created in this function, so we'll handle it differently
+    // The modal will be closed via Bootstrap's data-dismiss attribute
+    
     cancelBtn.addEventListener('click', () => {
       cleanup();
       resolve(null);

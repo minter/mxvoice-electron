@@ -63,8 +63,8 @@ function playSongWithFilename(filename, row, song_id) {
           module: 'audio-manager',
           function: 'playSongWithFilename'
         });
-        // Use default path as fallback
-        const defaultPath = path.join(process.env.APPDATA || process.env.HOME || '', '.config', 'mxvoice', 'mp3');
+        // Use default path as fallback - get through secure API
+        const defaultPath = '.config/mxvoice/mp3';
         securePath.join(defaultPath, filename).then(joinedPath => {
           const sound_path = [joinedPath];
             getDebugLog()?.info("Inside get, Filename is " + filename, { 

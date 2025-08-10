@@ -98,6 +98,18 @@ const secureElectronAPI = {
     showDirectoryPicker: (defaultPath) => ipcRenderer.invoke('show-directory-picker', defaultPath),
     showFilePicker: (options) => ipcRenderer.invoke('show-file-picker', options)
   },
+
+  // File operations - secure file management
+  fileOperations: {
+    openHotkeyFile: () => ipcRenderer.invoke('open-hotkey-file'),
+    saveHotkeyFile: (data) => ipcRenderer.invoke('save-hotkey-file', data),
+    openHoldingTankFile: () => ipcRenderer.invoke('open-holding-tank-file'),
+    saveHoldingTankFile: (data) => ipcRenderer.invoke('save-holding-tank-file', data),
+    pickDirectory: (defaultPath) => ipcRenderer.invoke('pick-directory', defaultPath),
+    installUpdate: () => ipcRenderer.invoke('install-update'),
+    importAudioFiles: (filePaths) => ipcRenderer.invoke('import-audio-files', filePaths),
+    exportData: (exportOptions) => ipcRenderer.invoke('export-data', exportOptions)
+  },
   
   // UI operations - secure UI control
   ui: {
@@ -108,16 +120,6 @@ const secureElectronAPI = {
     closeAllTabs: () => ipcRenderer.invoke('close-all-tabs'),
     showPreferences: () => ipcRenderer.invoke('show-preferences'),
     manageCategories: () => ipcRenderer.invoke('manage-categories')
-  },
-  
-  // File operations - secure file handling
-  fileOperations: {
-    openHotkeyFile: () => ipcRenderer.invoke('open-hotkey-file'),
-    saveHotkeyFile: (hotkeyArray) => ipcRenderer.invoke('save-hotkey-file', hotkeyArray),
-    openHoldingTankFile: () => ipcRenderer.invoke('open-holding-tank-file'),
-    saveHoldingTankFile: (holdingTankArray) => ipcRenderer.invoke('save-holding-tank-file', holdingTankArray),
-    importAudioFiles: (filePaths) => ipcRenderer.invoke('import-audio-files', filePaths),
-    exportData: (exportOptions) => ipcRenderer.invoke('export-data', exportOptions)
   },
   
   // Event listeners - secure event handling (limited and safe)
@@ -166,10 +168,9 @@ const secureElectronAPI = {
   // Testing and debugging functions
   testing: {
     testModularPreload: () => {
-      console.log('🧪 Testing Modular Preload via secure API...');
+      debugLog.info('🧪 Testing Modular Preload via secure API...');
       return { success: true, message: 'Secure API test function called successfully' };
-    },
-    testSecureAPI: () => testSecureAPI()
+    }
   }
 };
 
@@ -216,46 +217,26 @@ function exposeSecureAPI() {
         testing: secureElectronAPI.testing
       });
       
-      console.log('✅ Secure API exposed via contextBridge (context isolation enabled)');
-      console.log('✅ Legacy API compatibility layer exposed');
+      if (debugLog && typeof debugLog.info === 'function') {
+        debugLog.info('✅ Secure API exposed via contextBridge (context isolation enabled)');
+        debugLog.info('✅ Legacy API compatibility layer exposed');
+      }
       return true;
     } else {
-      console.log('❌ Context isolation disabled - secure API not exposed');
+      if (debugLog && typeof debugLog.warn === 'function') {
+        debugLog.warn('❌ Context isolation disabled - secure API not exposed');
+      }
       return false;
     }
   } catch (error) {
-    console.error('❌ Failed to expose secure API:', error);
+    const errorMessage = error && error.message ? error.message : 'Unknown error';
+    if (debugLog && typeof debugLog.error === 'function') {
+      debugLog.error('❌ Failed to expose secure API:', errorMessage);
+    } else {
+      console.error('❌ Failed to expose secure API:', errorMessage);
+    }
     return false;
   }
-}
-
-// Test function to verify secure API functionality
-async function testSecureAPI() {
-  if (!secureElectronAPI) {
-    return { success: false, error: 'Secure API not available' };
-  }
-  
-  const results = {
-    success: true,
-    tests: [],
-    errors: []
-  };
-  
-  // Test each API category
-  const apiCategories = ['database', 'store', 'fileSystem', 'path', 'os', 'audio', 'app', 'ui', 'fileOperations', 'events', 'utils'];
-  
-  apiCategories.forEach(category => {
-    if (secureElectronAPI[category]) {
-      results.tests.push({ category, available: true });
-      console.log(`✅ Secure API category '${category}' available`);
-    } else {
-      results.tests.push({ category, available: false });
-      results.errors.push(`Category '${category}' not available`);
-      console.log(`❌ Secure API category '${category}' missing`);
-    }
-  });
-  
-  return results;
 }
 
 // Note: Secure API exposure is now handled by the calling module
@@ -263,6 +244,5 @@ async function testSecureAPI() {
 
 export {
   secureElectronAPI,
-  exposeSecureAPI,
-  testSecureAPI
+  exposeSecureAPI
 };

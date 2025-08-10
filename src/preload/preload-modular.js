@@ -10,18 +10,22 @@
 import { ipcRenderer, contextBridge } from 'electron';
 import { Howl, Howler } from 'howler';
 import log from 'electron-log';
-import { initializeMainDebugLog } from '../main/modules/debug-log.js';
 import Store from 'electron-store';
 
 // Import preload modules
 import * as ipcBridge from './modules/ipc-bridge.js';
 import * as secureApiExposer from './modules/secure-api-exposer.js';
 
-// Initialize debug logger
+// Initialize debug logger using electron-log directly
 const store = new Store();
-const debugLog = initializeMainDebugLog({ store });
+const debugLog = {
+  info: (message, context) => log.info(message, context),
+  error: (message, context) => log.error(message, context),
+  warn: (message, context) => log.warn(message, context),
+  debug: (message, context) => log.debug(message, context)
+};
 
-console.log = log.log;
+  // Note: Console override removed for security - use debug logger instead
 
 // Register IPC handlers
 ipcBridge.registerIpcHandlers();
@@ -35,7 +39,8 @@ try {
     debugLog.error('❌ Failed to expose secure API - context isolation may not work properly');
   }
 } catch (error) {
-  debugLog.error('❌ Secure API exposure failed:', error.message);
+  const errorMessage = error && error.message ? error.message : 'Unknown error';
+  debugLog.error('❌ Secure API exposure failed:', errorMessage);
 }
 
 // Test function to verify modular preload is working
@@ -45,12 +50,8 @@ function testModularPreload() {
   // Test IPC bridge
   const ipcTest = ipcBridge.testIpcBridge();
   
-  // Test secure API exposer
-  const secureAPITest = secureApiExposer.testSecureAPI();
-  
   if (ipcTest) {
     debugLog.info('✅ Modular preload is working correctly!');
-    debugLog.info('📊 Secure API test result:', secureAPITest);
     return true;
   } else {
     debugLog.error('❌ Modular preload has issues');

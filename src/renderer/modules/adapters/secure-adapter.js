@@ -977,24 +977,24 @@ export function testSecureAdapter() {
     warnings: []
   };
 
-  console.log('🧪 Testing Secure Adapter...');
+  debugLog?.info('🧪 Testing Secure Adapter...');
 
   // Test API availability detection
   try {
     if (window.secureElectronAPI) {
-      console.log('✅ Secure API detected');
+      debugLog?.info('✅ Secure API detected');
       results.passed++;
       results.tests.push({ name: 'secureAPIDetected', success: true });
     } else if (window.electronAPI) {
-      console.log('✅ Modern API detected');
+      debugLog?.info('✅ Modern API detected');
       results.passed++;
       results.tests.push({ name: 'modernAPIDetected', success: true });
     } else {
-      console.log('⚠️ No modern APIs detected');
+      debugLog?.warn('⚠️ No modern APIs detected');
       results.warnings.push('No modern APIs available');
     }
   } catch (error) {
-    console.log('❌ API detection failed:', error);
+    debugLog?.error('❌ API detection failed:', error);
     results.failed++;
     results.tests.push({ name: 'apiDetection', success: false, error: error.message });
   }
@@ -1022,7 +1022,7 @@ export function testSecureAdapter() {
     });
   });
 
-  console.log(`📊 Secure Adapter Test Results: ${results.passed} passed, ${results.failed} failed`);
+  debugLog?.info(`📊 Secure Adapter Test Results: ${results.passed} passed, ${results.failed} failed`);
   return results;
 }
 
