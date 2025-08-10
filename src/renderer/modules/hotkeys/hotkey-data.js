@@ -102,35 +102,32 @@ function setLabelFromSongId(song_id, element, options = {}) {
  * @param {Object} options - Options object containing dependencies
  */
 function fallbackSetLabelFromSongId(song_id, element, options = {}) {
-  const { db, saveHotkeysToStore } = options;
-  
-  if (db) {
-    const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-    const row = stmt.get(song_id);
-    const title = row.title || "[Unknown Title]";
-    const artist = row.artist || "[Unknown Artist]";
-    const time = row.time || "[??:??]";
-
-    // Handle swapping
-    const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(element);
-    if (original_song_node.length) {
-      const old_song = original_song_node.find("span").detach();
-      const destination_song = $(element).find("span").detach();
-      original_song_node.append(destination_song);
-      if (destination_song.attr("songid")) {
-        original_song_node.attr("songid", destination_song.attr("songid"));
-      } else {
-        original_song_node.removeAttr("songid");
+  const { electronAPI, saveHotkeysToStore } = options;
+  if (electronAPI && electronAPI.database) {
+    electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
+      if (result.success && result.data.length > 0) {
+        const row = result.data[0];
+        const title = row.title || "[Unknown Title]";
+        const artist = row.artist || "[Unknown Artist]";
+        const time = row.time || "[??:??]";
+        const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(element);
+        if (original_song_node.length) {
+          const old_song = original_song_node.find("span").detach();
+          const destination_song = $(element).find("span").detach();
+          original_song_node.append(destination_song);
+          if (destination_song.attr("songid")) {
+            original_song_node.attr("songid", destination_song.attr("songid"));
+          } else {
+            original_song_node.removeAttr("songid");
+          }
+          $(element).append(old_song);
+        } else {
+          $(element).find("span").html(`${title} by ${artist} (${time})`);
+          $(element).attr("songid", song_id);
+        }
+        if (saveHotkeysToStore) saveHotkeysToStore();
       }
-
-      $(element).append(old_song);
-    } else {
-      $(element).find("span").html(`${title} by ${artist} (${time})`);
-      $(element).attr("songid", song_id);
-    }
-    if (saveHotkeysToStore) {
-      saveHotkeysToStore();
-    }
+    }).catch(() => {/* ignore */});
   }
 }
 

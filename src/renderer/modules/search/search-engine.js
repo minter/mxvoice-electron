@@ -45,11 +45,6 @@ function getCategories() {
       return [];
     });
   } else {
-    // Fallback to legacy database access
-    if (typeof db !== 'undefined') {
-      const stmt = db.prepare("SELECT DISTINCT category FROM mrvoice ORDER BY category");
-      return stmt.all().map(row => row.category);
-    }
     return [];
   }
 }
@@ -72,32 +67,12 @@ function getCategoryName(categoryCode) {
       return categoryCode;
     });
   } else {
-    // Fallback to legacy database access
-    if (typeof db !== 'undefined') {
-      const stmt = db.prepare("SELECT description FROM categories WHERE code = ?");
-      const row = stmt.get(categoryCode);
-      return row ? row.description : categoryCode;
-    }
     return categoryCode;
   }
 }
 
 // Synchronous version for immediate use
 function getCategoryNameSync(categoryCode) {
-  if (typeof db !== 'undefined') {
-    try {
-      const stmt = db.prepare("SELECT description FROM categories WHERE code = ?");
-      const row = stmt.get(categoryCode);
-      return row ? row.description : categoryCode;
-    } catch (error) {
-      debugLog?.warn('❌ Failed to get category name synchronously:', { 
-        module: 'search-engine',
-        function: 'getCategoryNameSync',
-        error: error.message
-      });
-      return categoryCode;
-    }
-  }
   return categoryCode;
 }
 

@@ -283,32 +283,7 @@ function saveEditedSong(songData) {
         reject(error);
       });
     } else {
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        try {
-          const stmt = db.prepare(
-            "UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?"
-          );
-          const info = stmt.run(
-            songData.title, 
-            songData.artist, 
-            songData.category, 
-            songData.info, 
-            songData.id
-          );
-          debugLog?.info(`Song ${songData.id} updated successfully`, { 
-            module: 'database-operations',
-            function: 'saveEditedSong',
-            songId: songData.id,
-            title: songData.title
-          });
-          resolve({ success: true, changes: info.changes });
-        } catch (error) {
-          reject(error);
-        }
-      } else {
-        reject(new Error('Database not available'));
-      }
+      reject(new Error('Database not available'));
     }
   });
 }
@@ -362,34 +337,7 @@ function saveNewSong(songData) {
         reject(error);
       });
     } else {
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        try {
-          const stmt = db.prepare(
-            "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
-          );
-          const info = stmt.run(
-            songData.title,
-            songData.artist,
-            songData.category,
-            songData.info,
-            songData.filename,
-            songData.duration,
-            Math.floor(Date.now() / 1000)
-          );
-          debugLog?.info('New song added successfully', { 
-            module: 'database-operations',
-            function: 'saveNewSong',
-            title: songData.title,
-            artist: songData.artist
-          });
-          resolve({ success: true, changes: info.changes, lastInsertRowid: info.lastInsertRowid });
-        } catch (error) {
-          reject(error);
-        }
-      } else {
-        reject(new Error('Database not available'));
-      }
+      reject(new Error('Database not available'));
     }
   });
 }
@@ -434,27 +382,7 @@ function deleteSong(songId) {
         reject(error);
       });
     } else {
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        try {
-          const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
-          const info = deleteStmt.run(songId);
-          if (info.changes > 0) {
-            debugLog?.info(`Song ${songId} deleted successfully`, { 
-              module: 'database-operations',
-              function: 'deleteSong',
-              songId: songId
-            });
-            resolve({ success: true, changes: info.changes });
-          } else {
-            reject(new Error('No song deleted'));
-          }
-        } catch (error) {
-          reject(error);
-        }
-      } else {
-        reject(new Error('Database not available'));
-      }
+      reject(new Error('Database not available'));
     }
   });
 }
@@ -503,27 +431,7 @@ function getSongById(songId) {
         reject(error);
       });
     } else {
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        try {
-          const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
-          const row = stmt.get(songId);
-          if (row) {
-            debugLog?.info(`Song ${songId} retrieved successfully`, { 
-              module: 'database-operations',
-              function: 'getSongById',
-              songId: songId
-            });
-            resolve({ success: true, data: [row] });
-          } else {
-            reject(new Error('Song not found'));
-          }
-        } catch (error) {
-          reject(error);
-        }
-      } else {
-        reject(new Error('Database not available'));
-      }
+      reject(new Error('Database not available'));
     }
   });
 }

@@ -26,13 +26,17 @@ import { secureFileSystem, secureDatabase, securePath, secureStore } from '../ad
 export function showBulkAddModal(directory) {
   $("#bulk-add-path").val(directory);
   $("#bulk-add-category").empty();
-  const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-  for (const row of stmt.iterate()) {
-    categories[row.code] = row.description;
-    $("#bulk-add-category").append(
-      `<option value="${row.code}">${row.description}</option>`
-    );
-  }
+  secureDatabase.query("SELECT * FROM categories ORDER BY description ASC").then(result => {
+    const rows = result?.data || result || [];
+    if (Array.isArray(rows)) {
+      rows.forEach(row => {
+        categories[row.code] = row.description;
+        $("#bulk-add-category").append(
+          `<option value="${row.code}">${row.description}</option>`
+        );
+      });
+    }
+  }).catch(() => {/* ignore for modal open */});
   $("#bulk-add-category").append(
     `<option value="" disabled>-----------------------</option>`
   );
@@ -60,13 +64,20 @@ export function addSongsByPath(pathArray, category) {
         .toISOString()
         .substr(14, 5);
 
-      const title = metadata.common.title || path.parse(songSourcePath).name;
+      return securePath.parse(songSourcePath).then(parseRes => {
+        const parsed = parseRes?.data || {};
+        const title = metadata.common.title || parsed.name;
       if (!title) {
         return;
       }
       const artist = metadata.common.artist;
-      const uuid = uuidv4();
-      const newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
+      const uuidPromise = (window.secureElectronAPI?.utils?.generateId)
+        ? window.secureElectronAPI.utils.generateId()
+        : Promise.resolve(Date.now().toString());
+      return uuidPromise.then(uuid => {
+        return securePath.extname(songSourcePath).then(extRes => {
+          const ext = extRes?.data || extRes || '';
+          const newFilename = `${artist}-${title}-${uuid}${ext}`.replace(/[^-.\w]/g, "");
       secureStore.get("music_directory").then(result => {
         if (!result.success || !result.value) {
           debugLog?.warn('Failed to get music directory:', { 
@@ -77,18 +88,13 @@ export function addSongsByPath(pathArray, category) {
           return;
         }
         const musicDirectory = result.value;
-        const newPath = path.join(musicDirectory, newFilename);
-        const stmt = db.prepare(
-          "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)"
-        );
-        const info = stmt.run(
-          title,
-          artist,
-          category,
-          newFilename,
-          durationString,
-          Math.floor(Date.now() / 1000)
-        );
+        securePath.join(musicDirectory, newFilename).then(joinRes => {
+          const newPath = joinRes?.data || joinRes;
+          secureDatabase.execute(
+            "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)",
+            [title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000)]
+          ).then(insRes => {
+            const lastId = insRes?.data?.lastInsertRowid;
         debugLog?.info('Copying audio file', { 
           module: 'bulk-operations',
           function: 'addSongsByPath',
@@ -123,7 +129,7 @@ export function addSongsByPath(pathArray, category) {
         });
         $("#search_results").append(
           `<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${
-            info.lastInsertRowid
+            lastId || ''
           }'><td>${
             categories[category]
           }</td><td></td><td style='font-weight: bold'>${
@@ -134,6 +140,10 @@ export function addSongsByPath(pathArray, category) {
         );
 
         return addSongsByPath(pathArray, category); // process rest of the files AFTER we are finished
+          });
+        });
+      });
+      });
       });
     });
   }
@@ -152,7 +162,7 @@ export function saveBulkUpload(event) {
   const dirname = $("#bulk-add-path").val();
 
   const walk = function (dir) {
-    const results = [];
+    let results = [];
     secureFileSystem.readdir(dir).then(result => {
       if (result.success) {
         result.data.forEach(function (file) {
@@ -237,57 +247,28 @@ export function saveBulkUpload(event) {
 
   if (category == "--NEW--") {
     const description = $("#bulk-song-form-new-category").val();
-    const code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-    const codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-    const loopCount = 1;
-    const newCode = code;
-    while ((row = codeCheckStmt.get(newCode))) {
-      debugLog?.info('Found a code collision', { 
-        module: 'bulk-operations',
-        function: 'saveBulkUpload',
-        code: code,
-        loopCount: loopCount
-      });
-      const newCode = `${code}${loopCount}`;
-      loopCount = loopCount + 1;
-      debugLog?.info('NewCode generated', { 
-        module: 'bulk-operations',
-        function: 'saveBulkUpload',
-        newCode: newCode
-      });
-    }
-    debugLog?.info('Out of loop, setting code', { 
-      module: 'bulk-operations',
-      function: 'saveBulkUpload',
-      finalCode: newCode
-    });
-    code = newCode;
-    const categoryInsertStmt = db.prepare(
-      "INSERT INTO categories VALUES (?, ?)"
-    );
-    try {
-      const categoryInfo = categoryInsertStmt.run(code, description);
-      if (categoryInfo.changes == 1) {
-        debugLog?.info('Added new row into database', { 
-          module: 'bulk-operations',
-          function: 'saveBulkUpload',
-          code: code,
-          description: description
-        });
-        populateCategorySelect();
-        populateCategoriesModal();
-        category = code;
-      }
-    } catch (err) {
-      if (err.message.match(/UNIQUE constraint/)) {
-        const description = $("#bulk-song-form-new-category").val();
+    let baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
+    const findUnique = async (base, i = 1) => {
+      const test = i === 1 ? base : `${base}${i}`;
+      const existsRes = await secureDatabase.query("SELECT 1 FROM categories WHERE code = ?", [test]);
+      const exists = Array.isArray(existsRes?.data || existsRes) && (existsRes.data || existsRes).length > 0;
+      return exists ? findUnique(base, i + 1) : test;
+    };
+    (async () => {
+      const finalCode = await findUnique(baseCode);
+      const ins = await secureDatabase.execute("INSERT INTO categories VALUES (?, ?)", [finalCode, description]);
+      if (ins?.success) {
+        debugLog?.info('Added new row into database', { module: 'bulk-operations', function: 'saveBulkUpload', code: finalCode, description });
+        if (typeof populateCategorySelect === 'function') populateCategorySelect();
+        if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
+        category = finalCode;
+      } else {
+        const desc = $("#bulk-song-form-new-category").val();
         $("#bulk-song-form-new-category").val("");
-        alert(
-          `Couldn't add a category named "${description}" - apparently one already exists!`
-        );
+        alert(`Couldn't add a category named "${desc}" - apparently one already exists!`);
         return;
       }
-    }
+    })();
   }
 
   addSongsByPath(songs, category);
