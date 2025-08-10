@@ -27,7 +27,7 @@ try {
  * @returns {Object} Controls interface
  */
 function initializeControls(options = {}) {
-  const { electronAPI, db, store } = options;
+  const { electronAPI } = options;
   let fontSize = 11; // Default font size
   
   /**
@@ -45,8 +45,6 @@ function initializeControls(options = {}) {
             error: error
           });
         });
-      } else if (store) {
-        store.set("font-size", fontSize);
       }
     }
   }
@@ -66,8 +64,6 @@ function initializeControls(options = {}) {
             error: error
           });
         });
-      } else if (store) {
-        store.set("font-size", fontSize);
       }
     }
   }

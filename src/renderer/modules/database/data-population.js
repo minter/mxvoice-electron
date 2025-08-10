@@ -160,42 +160,6 @@ function setLabelFromSongId(song_id, element) {
         error: error.message
       });
     });
-  } else {
-    // Fallback to legacy database access
-    if (typeof db !== 'undefined') {
-      const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-      const row = stmt.get(song_id);
-      const title = row.title || "[Unknown Title]";
-      const artist = row.artist || "[Unknown Artist]";
-      const time = row.time || "[??:??]";
-
-      // Handle swapping
-      const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
-        element
-      );
-      debugLog?.info('Original song node found (legacy no API)', { 
-        module: 'data-population',
-        function: 'setLabelFromSongId',
-        songId: song_id,
-        originalNode: original_song_node.length
-      });
-      if (original_song_node.length) {
-        const old_song = original_song_node.find("span").detach();
-        const destination_song = $(element).find("span").detach();
-        original_song_node.append(destination_song);
-        if (destination_song.attr("songid")) {
-          original_song_node.attr("songid", destination_song.attr("songid"));
-        } else {
-          original_song_node.removeAttr("songid");
-        }
-
-        $(element).append(old_song);
-      } else {
-        $(element).find("span").html(`${title} by ${artist} (${time})`);
-        $(element).find("span").attr("songid", song_id);
-      }
-      saveHotkeysToStore();
-    }
   }
 }
 

@@ -24,14 +24,7 @@ import { secureFileSystem, secureFileDialog } from '../adapters/secure-adapter.j
  */
 export function openHotkeyFile() {
   debugLog?.info("Opening hotkey file", { module: 'file-operations', function: 'openHotkeyFile' });
-  return secureFileDialog.openHotkeyFile().catch(error => {
-    debugLog?.warn('Secure file dialog failed, falling back to legacy', { 
-      module: 'file-operations',
-      function: 'openHotkeyFile',
-      error: error.message
-    });
-    ipcRenderer.send("open-hotkey-file");
-  });
+  return secureFileDialog.openHotkeyFile();
 }
 
 /**
@@ -39,14 +32,7 @@ export function openHotkeyFile() {
  */
 export function openHoldingTankFile() {
   debugLog?.info("Opening holding tank file", { module: 'file-operations', function: 'openHoldingTankFile' });
-  return secureFileDialog.openHoldingTankFile().catch(error => {
-    debugLog?.warn('Secure file dialog failed, falling back to legacy', { 
-      module: 'file-operations',
-      function: 'openHoldingTankFile',
-      error: error.message
-    });
-    ipcRenderer.send("open-holding-tank-file");
-  });
+  return secureFileDialog.openHoldingTankFile();
 }
 
 /**
@@ -71,14 +57,7 @@ export function saveHotkeyFile() {
   }
   
   // Save using modern API with fallback
-  return secureFileDialog.saveHotkeyFile(hotkeyArray).catch(error => {
-    debugLog?.warn('Secure file dialog failed, falling back to legacy', { 
-      module: 'file-operations',
-      function: 'saveHotkeyFile',
-      error: error.message
-    });
-    ipcRenderer.send("save-hotkey-file", hotkeyArray);
-  });
+  return secureFileDialog.saveHotkeyFile(hotkeyArray);
 }
 
 /**
@@ -98,12 +77,5 @@ export function saveHoldingTankFile() {
   });
   
   // Save using modern API with fallback
-  return secureFileDialog.saveHoldingTankFile(holdingTankArray).catch(error => {
-    debugLog?.warn('Secure file dialog failed, falling back to legacy', { 
-      module: 'file-operations',
-      function: 'saveHoldingTankFile',
-      error: error.message
-    });
-    ipcRenderer.send("save-holding-tank-file", holdingTankArray);
-  });
+  return secureFileDialog.saveHoldingTankFile(holdingTankArray);
 } 

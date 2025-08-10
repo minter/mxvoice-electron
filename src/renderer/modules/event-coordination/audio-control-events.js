@@ -8,8 +8,8 @@
 export default class AudioControlEvents {
   constructor(dependencies = {}) {
     this.electronAPI = dependencies.electronAPI || window.electronAPI;
-    this.db = dependencies.db || window.db;
-    this.store = dependencies.store || window.store;
+    this.db = null;
+    this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
     this.moduleRegistry = dependencies.moduleRegistry || window.moduleRegistry;
     

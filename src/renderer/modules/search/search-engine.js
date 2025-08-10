@@ -246,36 +246,6 @@ function searchData() {
         $("#category_select").prop("selectedIndex", 0);
       }
     });
-  } else {
-    // Fallback to legacy database access
-    if (typeof db !== 'undefined') {
-      const stmt = db.prepare(
-        "SELECT * from mrvoice" +
-          queryString +
-          " ORDER BY category,info,title,artist"
-      );
-      const rows = stmt.all(queryParams);
-      rows.forEach((row) => {
-        const categoryName = getCategoryNameSync(row.category);
-        raw_html.push(
-          `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
-            row.id
-          }'><td class='hide-1'>${categoryName}</td><td class='hide-2'>${
-            row.info || ""
-          }</td><td style='font-weight: bold'>${
-            row.title || ""
-          }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
-            row.time
-          }</td></tr>`
-        );
-      });
-      $("#search_results").append(raw_html.join(""));
-      if (typeof scaleScrollable === 'function') {
-        scaleScrollable();
-      }
-      $("#omni_search").select();
-      $("#category_select").prop("selectedIndex", 0);
-    }
   }
 }
 

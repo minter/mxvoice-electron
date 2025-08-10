@@ -91,8 +91,6 @@ function initializeEventHandlers(options = {}) {
             error: error
           });
         });
-      } else if (store) {
-        store.set("hotkeys", currentHtml);
       }
     }
   }
@@ -111,8 +109,6 @@ function initializeEventHandlers(options = {}) {
             error: error
           });
         });
-      } else if (store) {
-        store.set("holding_tank", currentHtml);
       }
     }
   }

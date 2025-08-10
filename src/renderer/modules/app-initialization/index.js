@@ -70,9 +70,7 @@ export class AppInitialization {
       this.debugLoggerSetup = new DebugLoggerSetup();
       
       const context = {
-        electronAPI: config.electronAPI || window.electronAPI,
-        db: config.db || window.db,
-        store: config.store || window.store
+        electronAPI: config.electronAPI || window.electronAPI
       };
       
       await this.debugLoggerSetup.initializeDebugLoggerInstance(context);

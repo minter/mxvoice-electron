@@ -323,20 +323,7 @@ export async function clearHoldingTank() {
  * Open holding tank file
  */
 export function openHoldingTankFile() {
-  if (window.electronAPI) {
-    return secureFileDialog.openHoldingTankFile().catch(error => {
-      debugLog?.warn('Modern API failed, falling back to legacy', { 
-        module: 'holding-tank',
-        function: 'openHoldingTankFile',
-        error: error.message
-      });
-      ipcRenderer.send("open-holding-tank-file");
-      return { success: false, error: error.message };
-    });
-  } else {
-    ipcRenderer.send("open-holding-tank-file");
-    return Promise.resolve({ success: true });
-  }
+  return secureFileDialog.openHoldingTankFile();
 }
 
 /**
@@ -351,21 +338,7 @@ export function saveHoldingTankFile() {
   $(".holding_tank.active .list-group-item").each(function () {
     holdingTankArray.push($(this).attr("songid"));
   });
-  
-  if (window.electronAPI) {
-    return secureFileDialog.saveHoldingTankFile(holdingTankArray).catch(error => {
-      debugLog?.warn('Modern API failed, falling back to legacy', { 
-        module: 'holding-tank',
-        function: 'saveHoldingTankFile',
-        error: error.message
-      });
-      ipcRenderer.send("save-holding-tank-file", holdingTankArray);
-      return { success: false, error: error.message };
-    });
-  } else {
-    ipcRenderer.send("save-holding-tank-file", holdingTankArray);
-    return Promise.resolve({ success: true });
-  }
+  return secureFileDialog.saveHoldingTankFile(holdingTankArray);
 }
 
 // Mode management functions moved to dedicated mode-management module

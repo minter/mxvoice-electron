@@ -17,7 +17,7 @@ import { safeStringify } from './utils.js';
  * @returns {Object} Debug logger interface
  */
 function initializeDebugLogger(options = {}) {
-  const { electronAPI, db, store } = options;
+  const { electronAPI } = options;
   
   // Log levels
   const LOG_LEVELS = {
@@ -56,9 +56,6 @@ function initializeDebugLogger(options = {}) {
         } else {
           debugEnabledCache = false;
         }
-      } else if (store) {
-        // Fallback to legacy store access
-        debugEnabledCache = store.get("debug_log_enabled") || false;
       } else {
         debugEnabledCache = false;
       }
@@ -88,12 +85,6 @@ function initializeDebugLogger(options = {}) {
           console.warn('❌ Failed to set debug log preference:', result.error);
           return false;
         }
-      } else if (store) {
-        // Fallback to legacy store access
-        store.set("debug_log_enabled", enabled);
-        debugEnabledCache = enabled;
-        debugEnabledCacheTime = Date.now();
-        return true;
       } else {
         console.warn('❌ No store available for debug log preference');
         return false;

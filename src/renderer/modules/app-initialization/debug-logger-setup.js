@@ -20,9 +20,7 @@ export class DebugLoggerSetup {
   async initializeDebugLoggerInstance(context = {}) {
     try {
       this.debugLogger = initializeDebugLogger({
-        electronAPI: context.electronAPI || window.electronAPI,
-        db: context.db || window.db,
-        store: context.store || null // Will use electronAPI.store
+        electronAPI: context.electronAPI || window.electronAPI
       });
       await this.debugLogger.info('Debug logger initialized');
       return this.debugLogger;

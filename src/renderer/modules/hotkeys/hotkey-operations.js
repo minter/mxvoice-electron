@@ -84,12 +84,7 @@ function openHotkeyFile(options = {}) {
   const { electronAPI } = options;
   
   if (electronAPI) {
-    secureFileDialog.openHotkeyFile().catch(error => {
-      window.debugLog?.warn('Modern API failed, falling back to legacy:', error, { module: 'hotkey-operations', function: 'openHotkeyFile' });
-      if (typeof ipcRenderer !== 'undefined') {
-        ipcRenderer.send("open-hotkey-file");
-      }
-    });
+    secureFileDialog.openHotkeyFile();
   }
 }
 
@@ -112,12 +107,7 @@ function saveHotkeyFile(options = {}) {
   }
   
   if (electronAPI) {
-    secureFileDialog.saveHotkeyFile(hotkeyArray).catch(error => {
-      window.debugLog?.warn('Modern API failed, falling back to legacy:', error, { module: 'hotkey-operations', function: 'saveHotkeyFile' });
-      if (typeof ipcRenderer !== 'undefined') {
-        ipcRenderer.send("save-hotkey-file", hotkeyArray);
-      }
-    });
+    secureFileDialog.saveHotkeyFile(hotkeyArray);
   }
 }
 

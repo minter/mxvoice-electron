@@ -108,8 +108,6 @@ export function setupDragDropEventHandlers() {
           function: 'setupDragDropEventHandlers',
           error: result.error
         });
-        // Fallback to legacy store access
-        store.set("column_order", new_column_order);
       }
     }).catch(error => {
       debugLog?.warn('Column order save error', { 
@@ -117,8 +115,6 @@ export function setupDragDropEventHandlers() {
         function: 'setupDragDropEventHandlers',
         error: error
       });
-      // Fallback to legacy store access
-      store.set("column_order", new_column_order);
     });
   });
 

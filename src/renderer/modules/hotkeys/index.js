@@ -411,14 +411,7 @@ class HotkeysModule {
    */
   openHotkeyFile() {
     if (this.electronAPI) {
-      secureFileDialog.openHotkeyFile().catch(error => {
-        debugLog?.warn('Modern API failed, falling back to legacy:', error, { module: 'hotkeys', function: 'openHotkeyFile' });
-        if (typeof ipcRenderer !== 'undefined') {
-          ipcRenderer.send("open-hotkey-file");
-        }
-      });
-    } else if (typeof ipcRenderer !== 'undefined') {
-      ipcRenderer.send("open-hotkey-file");
+      secureFileDialog.openHotkeyFile();
     }
   }
 
@@ -437,14 +430,7 @@ class HotkeysModule {
     }
     
     if (this.electronAPI) {
-      secureFileDialog.saveHotkeyFile(hotkeyArray).catch(error => {
-        debugLog?.warn('Modern API failed, falling back to legacy:', error, { module: 'hotkeys', function: 'saveHotkeyFile' });
-        if (typeof ipcRenderer !== 'undefined') {
-          ipcRenderer.send("save-hotkey-file", hotkeyArray);
-        }
-      });
-    } else if (typeof ipcRenderer !== 'undefined') {
-      ipcRenderer.send("save-hotkey-file", hotkeyArray);
+      secureFileDialog.saveHotkeyFile(hotkeyArray);
     }
   }
 
@@ -658,7 +644,6 @@ class HotkeysModule {
       // Call the working implementation from hotkey-data.js
       hotkeyData.populateHotkeys(fkeys, title, {
         electronAPI: window.electronAPI,
-        db: this.db || window.db,
         setLabelFromSongId: (songId, element) => {
           if (window.setLabelFromSongId) {
             window.setLabelFromSongId(songId, element);

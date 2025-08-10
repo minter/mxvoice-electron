@@ -105,39 +105,6 @@ function populateCategoriesModal(preserveScroll = false) {
     }
   }).catch(error => {
     debugLog?.warn('❌ Error populating categories modal:', { module: 'categories', function: 'populateCategoriesModal', error: error });
-    // Fallback to legacy database access
-    if (typeof db !== 'undefined') {
-      try {
-        const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-        for (const row of stmt.iterate()) {
-          $("#categoryList").append(`<div class="form-group row">
-
-            <div class="col-sm-8">
-              <div catcode="${row.code}" class="category-description">${row.description}</div>
-              <input style="display: none;" type="text" class="form-control form-control-sm categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
-            </div>
-            <div class="col-sm-4">
-            <a href="#" class="btn btn-primary btn-xs" onclick="editCategoryUI('${row.code}')">Edit</a>&nbsp;
-            <a class="delete_link btn btn-danger btn-xs" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
-            </div>
-
-          </div>`);
-        }
-        debugLog?.info('✅ Categories modal populated successfully (legacy)', { module: 'categories', function: 'populateCategoriesModal' });
-        
-        // Restore scroll position if preserving
-        if (preserveScroll && scrollPosition > 0) {
-          setTimeout(() => {
-            const modalBody = document.querySelector('#categoryManagementModal .modal-body');
-            if (modalBody) {
-              modalBody.scrollTop = scrollPosition;
-            }
-          }, 10);
-        }
-      } catch (dbError) {
-        debugLog?.error('❌ Legacy database error:', { module: 'categories', function: 'populateCategoriesModal', error: dbError });
-      }
-    }
   });
 }
 

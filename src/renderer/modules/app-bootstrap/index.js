@@ -15,8 +15,6 @@ export async function loadBasicModules(config, moduleRegistry, logInfo, logError
   // Default dependencies
   const defaultDependencies = {
     electronAPI: window.electronAPI,
-    db: window.db,
-    store: window.store,
     debugLog: window.debugLog,
     ...dependencies
   };
