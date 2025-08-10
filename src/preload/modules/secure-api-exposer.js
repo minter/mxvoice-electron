@@ -161,6 +161,15 @@ const secureElectronAPI = {
     formatDuration: (seconds) => ipcRenderer.invoke('format-duration', seconds),
     validateAudioFile: (filePath) => ipcRenderer.invoke('validate-audio-file', filePath),
     sanitizeFilename: (filename) => ipcRenderer.invoke('sanitize-filename', filename)
+  },
+  
+  // Testing and debugging functions
+  testing: {
+    testModularPreload: () => {
+      console.log('🧪 Testing Modular Preload via secure API...');
+      return { success: true, message: 'Secure API test function called successfully' };
+    },
+    testSecureAPI: () => testSecureAPI()
   }
 };
 
@@ -169,19 +178,53 @@ function exposeSecureAPI() {
   try {
     // Check if context isolation is enabled
     if (typeof contextBridge !== 'undefined') {
+      // Expose the secure API via contextBridge
       contextBridge.exposeInMainWorld('secureElectronAPI', secureElectronAPI);
+      
+      // Also expose a legacy compatibility layer for existing code
+      contextBridge.exposeInMainWorld('electronAPI', {
+        // Legacy API compatibility
+        openHotkeyFile: secureElectronAPI.fileOperations.openHotkeyFile,
+        saveHotkeyFile: secureElectronAPI.fileOperations.saveHotkeyFile,
+        openHoldingTankFile: secureElectronAPI.fileOperations.openHoldingTankFile,
+        saveHoldingTankFile: secureElectronAPI.fileOperations.saveHoldingTankFile,
+        getAppPath: secureElectronAPI.app.getPath,
+        showDirectoryPicker: secureElectronAPI.app.showDirectoryPicker,
+        restartAndInstall: () => ipcRenderer.invoke('restart-and-install-new-version'),
+        increaseFontSize: secureElectronAPI.ui.increaseFontSize,
+        decreaseFontSize: secureElectronAPI.ui.decreaseFontSize,
+        toggleWaveform: secureElectronAPI.ui.toggleWaveform,
+        toggleAdvancedSearch: secureElectronAPI.ui.toggleAdvancedSearch,
+        closeAllTabs: secureElectronAPI.ui.closeAllTabs,
+        deleteSelectedSong: () => ipcRenderer.invoke('delete-selected-song'),
+        editSelectedSong: () => ipcRenderer.invoke('edit-selected-song'),
+        manageCategories: secureElectronAPI.ui.manageCategories,
+        showPreferences: secureElectronAPI.ui.showPreferences,
+        onFkeyLoad: secureElectronAPI.events.onFkeyLoad,
+        onHoldingTankLoad: secureElectronAPI.events.onHoldingTankLoad,
+        onBulkAddDialogLoad: secureElectronAPI.events.onBulkAddDialogLoad,
+        onAddDialogLoad: secureElectronAPI.events.onAddDialogLoad,
+        onDisplayReleaseNotes: secureElectronAPI.events.onDisplayReleaseNotes,
+        removeAllListeners: secureElectronAPI.events.removeAllListeners,
+        database: secureElectronAPI.database,
+        fileSystem: secureElectronAPI.fileSystem,
+        path: secureElectronAPI.path,
+        store: secureElectronAPI.store,
+        audio: secureElectronAPI.audio,
+        os: secureElectronAPI.os,
+        utils: secureElectronAPI.utils,
+        testing: secureElectronAPI.testing
+      });
+      
       console.log('✅ Secure API exposed via contextBridge (context isolation enabled)');
+      console.log('✅ Legacy API compatibility layer exposed');
       return true;
     } else {
-      console.log('ℹ️ Context isolation disabled - secure API not exposed (this is expected in Phase 1)');
+      console.log('❌ Context isolation disabled - secure API not exposed');
       return false;
     }
   } catch (error) {
-    if (error.message.includes('contextIsolation is enabled')) {
-      console.log('ℹ️ Context isolation disabled - secure API not exposed (this is expected in Phase 1)');
-    } else {
-      console.error('❌ Failed to expose secure API:', error);
-    }
+    console.error('❌ Failed to expose secure API:', error);
     return false;
   }
 }
@@ -215,12 +258,11 @@ async function testSecureAPI() {
   return results;
 }
 
-// Initialize secure API exposure
-const apiExposed = exposeSecureAPI();
+// Note: Secure API exposure is now handled by the calling module
+// to avoid duplicate exposure conflicts
 
 export {
   secureElectronAPI,
   exposeSecureAPI,
-  testSecureAPI,
-  apiExposed
+  testSecureAPI
 };

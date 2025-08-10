@@ -33,15 +33,23 @@ function initializeAppSetup(dependencies) {
 // Create the main window
 function createWindow() {
   // Create the browser window.
-  mainWindow = new BrowserWindow({
-    width: store ? store.get('browser_width') : 1280,
-    height: store ? store.get('browser_height') : 1024,
-    minWidth: 1000,
-    minHeight: 660,
+  const mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
     webPreferences: {
-      contextIsolation: false, // Temporarily disable for testing
-      nodeIntegration: true,   // Temporarily enable for testing
-      preload: path.join(__dirname, '../../preload/preload-modular.js')
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
+      preload: path.join(__dirname, '../../preload/preload-modular.js'),
+      sandbox: false, // Keep false for now as we're using preload scripts
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      // Enhanced security settings
+      experimentalFeatures: false,
+      webgl: false, // Disable WebGL for security (can be enabled if needed)
+      plugins: false, // Disable plugins for security
+      // Content Security Policy
+      contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"
     }
   });
 

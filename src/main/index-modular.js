@@ -3,6 +3,9 @@
  * 
  * This is the main entry point for the MxVoice Electron application.
  * It handles app initialization, IPC setup, and main process functionality.
+ * 
+ * CONTEXT ISOLATION ENABLED - This version uses secure IPC communication
+ * and preload scripts for enhanced security.
  */
 
 import { app, ipcMain } from 'electron';

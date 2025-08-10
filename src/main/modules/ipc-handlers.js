@@ -77,9 +77,7 @@ function registerAllHandlers() {
   });
 
   // App operations
-  ipcMain.handle('restart-and-install-new-version', async () => {
-    autoUpdater.quitAndInstall();
-  });
+  // Note: restart-and-install-new-version handler is defined later with enhanced error handling
 
   // UI operations
   ipcMain.handle('increase-font-size', async () => {
@@ -103,13 +101,7 @@ function registerAllHandlers() {
   });
 
   // Song operations
-  ipcMain.handle('delete-selected-song', async () => {
-    mainWindow.webContents.send('delete_selected_song');
-  });
-
-  ipcMain.handle('edit-selected-song', async () => {
-    mainWindow.webContents.send('edit_selected_song');
-  });
+  // Note: delete-selected-song and edit-selected-song handlers are defined later with enhanced error handling
 
   // Category operations
   ipcMain.handle('manage-categories', async () => {
@@ -692,6 +684,20 @@ function registerAllHandlers() {
     }
   });
 
+  ipcMain.handle('restart-and-install-new-version', async () => {
+    try {
+      if (autoUpdater) {
+        autoUpdater.quitAndInstall();
+        return { success: true };
+      } else {
+        throw new Error('Auto updater not available');
+      }
+    } catch (error) {
+      debugLog?.error('Restart and install error:', { module: 'ipc-handlers', function: 'restart-and-install-new-version', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('show-file-picker', async (event, options = {}) => {
     try {
       const result = await dialog.showOpenDialog(mainWindow, options);
@@ -733,6 +739,30 @@ function registerAllHandlers() {
       return { success: true, data: result };
     } catch (error) {
       debugLog?.error('Delete song error:', { module: 'ipc-handlers', function: 'delete-song', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('delete-selected-song', async () => {
+    try {
+      // This handler sends a message to the renderer to trigger deletion
+      // The actual deletion logic is handled in the renderer
+      mainWindow.webContents.send('delete_selected_song');
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Delete selected song error:', { module: 'ipc-handlers', function: 'delete-selected-song', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('edit-selected-song', async () => {
+    try {
+      // This handler sends a message to the renderer to trigger editing
+      // The actual editing logic is handled in the renderer
+      mainWindow.webContents.send('edit_selected_song');
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Edit selected song error:', { module: 'ipc-handlers', function: 'edit-selected-song', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -906,39 +936,19 @@ function registerAllHandlers() {
   debugLog?.info('✅ Secure IPC handlers registered successfully', { 
     module: 'ipc-handlers', 
     function: 'registerAllHandlers',
-    secureHandlersCount: 25
+    secureHandlersCount: 50
   });
 
-  // Legacy handlers for backward compatibility
-  ipcMain.on('open-hotkey-file', (event, arg) => {
-    debugLog?.info("Main process starting hotkey open", { module: 'ipc-handlers', function: 'open-hotkey-file' });
-    fileOperations.loadHotkeysFile();
+  debugLog?.info('✅ All IPC handlers registered successfully (context isolation ready)', { 
+    module: 'ipc-handlers', 
+    function: 'registerAllHandlers',
+    note: 'Using secure handlers only - legacy handlers removed for security'
   });
-
-  ipcMain.on('save-hotkey-file', (event, arg) => {
-    debugLog?.info("Main process starting hotkey save", { module: 'ipc-handlers', function: 'save-hotkey-file' });
-    debugLog?.info(`Arg is ${arg}`, { module: 'ipc-handlers', function: 'save-hotkey-file', arg: arg });
-    debugLog?.info(`First element is ${arg[0]}`, { module: 'ipc-handlers', function: 'save-hotkey-file', firstElement: arg[0] });
-    fileOperations.saveHotkeysFile(arg);
-  });
-
-  ipcMain.on('open-holding-tank-file', (event, arg) => {
-    debugLog?.info("Main process starting holding tank open", { module: 'ipc-handlers', function: 'open-holding-tank-file' });
-    fileOperations.loadHoldingTankFile();
-  });
-
-  ipcMain.on('save-holding-tank-file', (event, arg) => {
-    debugLog?.info("Main process starting holding tank save", { module: 'ipc-handlers', function: 'save-holding-tank-file' });
-    debugLog?.info(`Arg is ${arg}`, { module: 'ipc-handlers', function: 'save-holding-tank-file', arg: arg });
-    debugLog?.info(`First element is ${arg[0]}`, { module: 'ipc-handlers', function: 'save-holding-tank-file', firstElement: arg[0] });
-    fileOperations.saveHoldingTankFile(arg);
-  });
-
-  debugLog?.info('IPC handlers registered successfully', { module: 'ipc-handlers', function: 'registerAllHandlers' });
 }
 
-// Remove all handlers (for cleanup)
+  // Remove all handlers (for cleanup)
 function removeAllHandlers() {
+  // Legacy handlers
   ipcMain.removeHandler('get-app-path');
   ipcMain.removeHandler('show-directory-picker');
   ipcMain.removeHandler('open-hotkey-file');
@@ -959,7 +969,7 @@ function removeAllHandlers() {
   ipcMain.removeHandler('database-execute');
   ipcMain.removeHandler('get-categories');
   ipcMain.removeHandler('add-song');
-  ipcMain.removeHandler('file-read');
+  ipcMain.removeHandler('file-read-legacy');
   ipcMain.removeHandler('file-write');
   ipcMain.removeHandler('file-exists');
   ipcMain.removeHandler('file-delete');
@@ -980,6 +990,47 @@ function removeAllHandlers() {
   ipcMain.removeHandler('path-extname');
   ipcMain.removeHandler('fs-readdir');
   ipcMain.removeHandler('fs-stat');
+  
+  // Secure API handlers
+  ipcMain.removeHandler('file-read');
+  ipcMain.removeHandler('get-song-by-id');
+  ipcMain.removeHandler('delete-song');
+  ipcMain.removeHandler('update-song');
+  ipcMain.removeHandler('add-category');
+  ipcMain.removeHandler('update-category');
+  ipcMain.removeHandler('delete-category');
+  ipcMain.removeHandler('path-dirname');
+  ipcMain.removeHandler('path-basename');
+  ipcMain.removeHandler('path-resolve');
+  ipcMain.removeHandler('path-normalize');
+  ipcMain.removeHandler('os-homedir');
+  ipcMain.removeHandler('os-platform');
+  ipcMain.removeHandler('os-arch');
+  ipcMain.removeHandler('os-tmpdir');
+  ipcMain.removeHandler('audio-resume');
+  ipcMain.removeHandler('audio-set-volume');
+  ipcMain.removeHandler('audio-get-duration');
+  ipcMain.removeHandler('audio-get-position');
+  ipcMain.removeHandler('audio-set-position');
+  ipcMain.removeHandler('app-get-path');
+  ipcMain.removeHandler('app-get-version');
+  ipcMain.removeHandler('app-get-name');
+  ipcMain.removeHandler('app-quit');
+  ipcMain.removeHandler('app-restart');
+  ipcMain.removeHandler('show-file-picker');
+  ipcMain.removeHandler('store-clear');
+  ipcMain.removeHandler('import-audio-files');
+  ipcMain.removeHandler('export-data');
+  ipcMain.removeHandler('generate-id');
+  ipcMain.removeHandler('format-duration');
+  ipcMain.removeHandler('validate-audio-file');
+  ipcMain.removeHandler('sanitize-filename');
+  
+  // Remove legacy event listeners
+  ipcMain.removeAllListeners('open-hotkey-file');
+  ipcMain.removeAllListeners('save-hotkey-file');
+  ipcMain.removeAllListeners('open-holding-tank-file');
+  ipcMain.removeAllListeners('save-holding-tank-file');
   
   debugLog?.info('IPC handlers removed successfully', { module: 'ipc-handlers', function: 'removeAllHandlers' });
 }

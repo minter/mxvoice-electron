@@ -1,9 +1,11 @@
 /**
- * Secure Adapter Layer
+ * Secure Adapter Module
  * 
- * Provides a unified interface that works in both insecure (current) and secure 
- * (context isolation) modes. This allows for gradual migration without breaking 
- * existing functionality.
+ * Provides a unified interface for accessing Electron APIs that works in both
+ * secure (context isolation enabled) and insecure (context isolation disabled) modes.
+ * 
+ * This adapter automatically detects the available APIs and routes calls appropriately,
+ * ensuring compatibility across different security configurations.
  */
 
 // Import debug logger safely
@@ -13,1091 +15,1024 @@ try {
     debugLog = window.debugLog;
   }
 } catch (error) {
-  // Debug logger not available
+  // Debug logger not available in secure context
 }
 
 /**
- * Secure Database Adapter
- * Provides database operations that work in both insecure and secure modes
+ * Database Operations Adapter
+ * Provides secure database access through IPC calls
  */
 export const secureDatabase = {
   /**
-   * Execute a database query
+   * Execute a database query and return results
    * @param {string} sql - SQL query string
    * @param {Array} params - Query parameters
-   * @returns {Promise<Object>} Query result
+   * @returns {Promise<Object>} Query results
    */
-  async query(sql, params = []) {
+  query: async (sql, params = []) => {
     try {
-      if (window.secureElectronAPI) {
-        // Secure mode - use contextBridge API
-        debugLog?.debug('Using secure database API for query', { 
-          module: 'secure-adapter',
-          function: 'secureDatabase.query',
-          sql: sql.substring(0, 50) + '...'
-        });
-        return await window.secureElectronAPI.database.query(sql, params);
-      } else if (window.electronAPI?.database) {
-        // Modern API fallback
-        debugLog?.debug('Using modern database API for query', { 
-          module: 'secure-adapter',
-          function: 'secureDatabase.query' 
-        });
-        return await window.electronAPI.database.query(sql, params);
-      } else if (window.db) {
-        // Legacy direct access (current insecure mode)
-        debugLog?.debug('Using legacy database API for query', { 
-          module: 'secure-adapter',
-          function: 'secureDatabase.query' 
-        });
-        try {
-          const result = window.db.prepare(sql).all(params);
-          return { success: true, data: result };
-        } catch (error) {
-          throw new Error(`Database query failed: ${error.message}`);
-        }
-      } else {
-        throw new Error('No database API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.database?.query) {
+        const result = await window.secureElectronAPI.database.query(sql, params);
+        return result;
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.database?.query) {
+        const result = await window.electronAPI.database.query(sql, params);
+        return result;
+      }
+      
+      // Fallback to legacy API
+      if (window.electronAPI?.database?.query) {
+        const result = await window.electronAPI.database.query(sql, params);
+        return result;
+      }
+      
+      throw new Error('No database API available');
     } catch (error) {
-      debugLog?.error('Database query error:', { 
-        module: 'secure-adapter',
-        function: 'secureDatabase.query',
+      debugLog?.error('Database query failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureDatabase.query', 
+        sql, 
+        params, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
-  
+
   /**
    * Execute a database statement (INSERT, UPDATE, DELETE)
    * @param {string} sql - SQL statement string
    * @param {Array} params - Statement parameters
    * @returns {Promise<Object>} Execution result
    */
-  async execute(sql, params = []) {
+  execute: async (sql, params = []) => {
     try {
-      if (window.secureElectronAPI) {
-        debugLog?.debug('Using secure database API for execute', { 
-          module: 'secure-adapter',
-          function: 'secureDatabase.execute' 
-        });
-        return await window.secureElectronAPI.database.execute(sql, params);
-      } else if (window.electronAPI?.database) {
-        debugLog?.debug('Using modern database API for execute', { 
-          module: 'secure-adapter',
-          function: 'secureDatabase.execute' 
-        });
-        return await window.electronAPI.database.execute(sql, params);
-      } else if (window.db) {
-        debugLog?.debug('Using legacy database API for execute', { 
-          module: 'secure-adapter',
-          function: 'secureDatabase.execute' 
-        });
-        try {
-          const result = window.db.prepare(sql).run(params);
-          return { 
-            success: true, 
-            data: result,
-            changes: result.changes, 
-            lastInsertRowid: result.lastInsertRowid 
-          };
-        } catch (error) {
-          throw new Error(`Database execute failed: ${error.message}`);
-        }
-      } else {
-        throw new Error('No database API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.database?.execute) {
+        const result = await window.secureElectronAPI.database.execute(sql, params);
+        return result;
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.database?.execute) {
+        const result = await window.electronAPI.database.execute(sql, params);
+        return result;
+      }
+      
+      // Fallback to legacy API
+      if (window.electronAPI?.database?.execute) {
+        const result = await window.electronAPI.database.execute(sql, params);
+        return result;
+      }
+      
+      throw new Error('No database API available');
     } catch (error) {
-      debugLog?.error('Database execute error:', { 
-        module: 'secure-adapter',
-        function: 'secureDatabase.execute',
+      debugLog?.error('Database execute failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureDatabase.execute', 
+        sql, 
+        params, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Get all categories
-   * @returns {Promise<Object>} Categories result
+   * Get all categories from the database
+   * @returns {Promise<Object>} Categories data
    */
-  async getCategories() {
+  getCategories: async () => {
     try {
-      if (window.secureElectronAPI) {
+      // Try secure API first
+      if (window.secureElectronAPI?.database?.getCategories) {
         return await window.secureElectronAPI.database.getCategories();
-      } else if (window.electronAPI?.database) {
-        return await window.electronAPI.database.getCategories();
-      } else {
-        return await this.query('SELECT * FROM categories ORDER BY description ASC');
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.database?.getCategories) {
+        return await window.electronAPI.database.getCategories();
+      }
+      
+      throw new Error('No database API available');
     } catch (error) {
-      debugLog?.error('Get categories error:', { 
-        module: 'secure-adapter',
-        function: 'secureDatabase.getCategories',
+      debugLog?.error('Get categories failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureDatabase.getCategories', 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Add a new song
-   * @param {Object} songData - Song data
+   * Add a new song to the database
+   * @param {Object} songData - Song data object
    * @returns {Promise<Object>} Add result
    */
-  async addSong(songData) {
+  addSong: async (songData) => {
     try {
-      if (window.secureElectronAPI) {
+      // Try secure API first
+      if (window.secureElectronAPI?.database?.addSong) {
         return await window.secureElectronAPI.database.addSong(songData);
-      } else if (window.electronAPI?.database) {
-        return await window.electronAPI.database.addSong(songData);
-      } else {
-        const sql = `
-          INSERT INTO mrvoice (title, artist, category, info, filename, duration)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `;
-        return await this.execute(sql, [
-          songData.title, songData.artist, songData.category,
-          songData.info, songData.filename, songData.duration
-        ]);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.database?.addSong) {
+        return await window.electronAPI.database.addSong(songData);
+      }
+      
+      throw new Error('No database API available');
     } catch (error) {
-      debugLog?.error('Add song error:', { 
-        module: 'secure-adapter',
-        function: 'secureDatabase.addSong',
+      debugLog?.error('Add song failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureDatabase.addSong', 
+        songData, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   }
 };
 
 /**
- * Secure File System Adapter
- * Provides file operations that work in both insecure and secure modes
+ * File System Operations Adapter
+ * Provides secure file system access through IPC calls
  */
 export const secureFileSystem = {
   /**
-   * Read a file
-   * @param {string} filePath - Path to file
-   * @returns {Promise<Object>} File content result
+   * Read a file and return its contents
+   * @param {string} filePath - Path to the file
+   * @returns {Promise<Object>} File contents
    */
-  async read(filePath) {
+  read: async (filePath) => {
     try {
-      if (window.secureElectronAPI) {
-        debugLog?.debug('Using secure file API for read', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.read' 
-        });
+      // Try secure API first
+      if (window.secureElectronAPI?.fileSystem?.read) {
         return await window.secureElectronAPI.fileSystem.read(filePath);
-      } else if (window.electronAPI?.fileSystem) {
-        debugLog?.debug('Using modern file API for read', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.read' 
-        });
-        return await window.electronAPI.fileSystem.read(filePath);
-      } else if (window.fs) {
-        debugLog?.debug('Using legacy file API for read', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.read' 
-        });
-        try {
-          const data = window.fs.readFileSync(filePath, 'utf8');
-          return { success: true, data };
-        } catch (error) {
-          throw new Error(`File read failed: ${error.message}`);
-        }
-      } else {
-        throw new Error('No file system API available');
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.fileSystem?.read) {
+        return await window.electronAPI.fileSystem.read(filePath);
+      }
+      
+      throw new Error('No file system API available');
     } catch (error) {
-      debugLog?.error('File read error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileSystem.read',
+      debugLog?.error('File read failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileSystem.read', 
+        filePath, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Write a file
-   * @param {string} filePath - Path to file
-   * @param {string} data - File content
+   * Write data to a file
+   * @param {string} filePath - Path to the file
+   * @param {string} data - Data to write
    * @returns {Promise<Object>} Write result
    */
-  async write(filePath, data) {
+  write: async (filePath, data) => {
     try {
-      if (window.secureElectronAPI) {
+      // Try secure API first
+      if (window.secureElectronAPI?.fileSystem?.write) {
         return await window.secureElectronAPI.fileSystem.write(filePath, data);
-      } else if (window.electronAPI?.fileSystem) {
+      }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.fileSystem?.write) {
         return await window.electronAPI.fileSystem.write(filePath, data);
-      } else if (window.fs) {
-        try {
-          window.fs.writeFileSync(filePath, data, 'utf8');
-          return { success: true };
-        } catch (error) {
-          throw new Error(`File write failed: ${error.message}`);
-        }
-      } else {
-        throw new Error('No file system API available');
       }
+      
+      throw new Error('No file system API available');
     } catch (error) {
-      debugLog?.error('File write error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileSystem.write',
+      debugLog?.error('File write failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileSystem.write', 
+        filePath, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Check if file exists
-   * @param {string} filePath - Path to file
-   * @returns {Promise<Object>} Exists result
+   * Check if a file exists
+   * @param {string} filePath - Path to the file
+   * @returns {Promise<Object>} Existence check result
    */
-  async exists(filePath) {
+  exists: async (filePath) => {
     try {
-      if (window.secureElectronAPI) {
+      // Try secure API first
+      if (window.secureElectronAPI?.fileSystem?.exists) {
         return await window.secureElectronAPI.fileSystem.exists(filePath);
-      } else if (window.electronAPI?.fileSystem) {
-        return await window.electronAPI.fileSystem.exists(filePath);
-      } else if (window.fs) {
-        try {
-          const exists = window.fs.existsSync(filePath);
-          return { success: true, exists };
-        } catch (error) {
-          throw new Error(`File exists check failed: ${error.message}`);
-        }
-      } else {
-        throw new Error('No file system API available');
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.fileSystem?.exists) {
+        return await window.electronAPI.fileSystem.exists(filePath);
+      }
+      
+      throw new Error('No file system API available');
     } catch (error) {
-      debugLog?.error('File exists error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileSystem.exists',
+      debugLog?.error('File exists check failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileSystem.exists', 
+        filePath, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Copy a file
+   * Copy a file from source to destination
    * @param {string} sourcePath - Source file path
    * @param {string} destPath - Destination file path
    * @returns {Promise<Object>} Copy result
    */
-  async copy(sourcePath, destPath) {
+  copy: async (sourcePath, destPath) => {
     try {
-      if (window.secureElectronAPI) {
-        debugLog?.debug('Using secure file API for copy', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.copy' 
-        });
+      // Try secure API first
+      if (window.secureElectronAPI?.fileSystem?.copy) {
         return await window.secureElectronAPI.fileSystem.copy(sourcePath, destPath);
-      } else if (window.electronAPI?.fileSystem) {
-        debugLog?.debug('Using modern file API for copy', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.copy' 
-        });
-        return await window.electronAPI.fileSystem.copy(sourcePath, destPath);
-      } else if (window.fs) {
-        debugLog?.debug('Using legacy file API for copy', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.copy' 
-        });
-        try {
-          window.fs.copyFileSync(sourcePath, destPath);
-          return { success: true };
-        } catch (error) {
-          throw new Error(`File copy failed: ${error.message}`);
-        }
-      } else {
-        throw new Error('No file system API available');
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.fileSystem?.copy) {
+        return await window.electronAPI.fileSystem.copy(sourcePath, destPath);
+      }
+      
+      throw new Error('No file system API available');
     } catch (error) {
-      debugLog?.error('File copy error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileSystem.copy',
+      debugLog?.error('File copy failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileSystem.copy', 
+        sourcePath, 
+        destPath, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Create a directory
+   * @param {string} dirPath - Directory path to create
+   * @param {Object} options - Creation options
+   * @returns {Promise<Object>} Creation result
+   */
+  mkdir: async (dirPath, options = {}) => {
+    try {
+      // Try secure API first
+      if (window.secureElectronAPI?.fileSystem?.mkdir) {
+        return await window.secureElectronAPI.fileSystem.mkdir(dirPath, options);
+      }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.fileSystem?.mkdir) {
+        return await window.electronAPI.fileSystem.mkdir(dirPath, options);
+      }
+      
+      throw new Error('No file system API available');
+    } catch (error) {
+      debugLog?.error('Directory creation failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileSystem.mkdir', 
+        dirPath, 
+        options, 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
     }
   },
 
   /**
    * Read directory contents
-   * @param {string} dirPath - Directory path
-   * @returns {Promise<Object>} Directory listing result
+   * @param {string} dirPath - Directory path to read
+   * @returns {Promise<Object>} Directory contents
    */
-  async readdir(dirPath) {
+  readdir: async (dirPath) => {
     try {
-      if (window.secureElectronAPI) {
-        debugLog?.debug('Using secure file API for readdir', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.readdir' 
-        });
+      // Try secure API first
+      if (window.secureElectronAPI?.fileSystem?.readdir) {
         return await window.secureElectronAPI.fileSystem.readdir(dirPath);
-      } else if (window.electronAPI?.fileSystem) {
-        debugLog?.debug('Using modern file API for readdir', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.readdir' 
-        });
-        return await window.electronAPI.fileSystem.readdir(dirPath);
-      } else if (window.fs) {
-        debugLog?.debug('Using legacy file API for readdir', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.readdir' 
-        });
-        try {
-          const data = window.fs.readdirSync(dirPath);
-          return { success: true, data };
-        } catch (error) {
-          throw new Error(`Directory read failed: ${error.message}`);
-        }
-      } else {
-        throw new Error('No file system API available');
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.fileSystem?.readdir) {
+        return await window.electronAPI.fileSystem.readdir(dirPath);
+      }
+      
+      throw new Error('No file system API available');
     } catch (error) {
-      debugLog?.error('Directory read error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileSystem.readdir',
+      debugLog?.error('Directory read failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileSystem.readdir', 
+        dirPath, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Get file/directory stats
-   * @param {string} filePath - File or directory path
-   * @returns {Promise<Object>} File stat result
+   * Get file/directory statistics
+   * @param {string} filePath - Path to get stats for
+   * @returns {Promise<Object>} File stats
    */
-  async stat(filePath) {
+  stat: async (filePath) => {
     try {
-      if (window.secureElectronAPI) {
-        debugLog?.debug('Using secure file API for stat', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.stat' 
-        });
+      // Try secure API first
+      if (window.secureElectronAPI?.fileSystem?.stat) {
         return await window.secureElectronAPI.fileSystem.stat(filePath);
-      } else if (window.electronAPI?.fileSystem) {
-        debugLog?.debug('Using modern file API for stat', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.stat' 
-        });
-        return await window.electronAPI.fileSystem.stat(filePath);
-      } else if (window.fs) {
-        debugLog?.debug('Using legacy file API for stat', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.stat' 
-        });
-        try {
-          const data = window.fs.statSync(filePath);
-          return { success: true, data };
-        } catch (error) {
-          throw new Error(`File stat failed: ${error.message}`);
-        }
-      } else {
-        throw new Error('No file system API available');
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.fileSystem?.stat) {
+        return await window.electronAPI.fileSystem.stat(filePath);
+      }
+      
+      throw new Error('No file system API available');
     } catch (error) {
-      debugLog?.error('File stat error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileSystem.stat',
+      debugLog?.error('File stat failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileSystem.stat', 
+        filePath, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
    * Delete a file
-   * @param {string} filePath - File path to delete
-   * @returns {Promise<Object>} Delete result
+   * @param {string} filePath - Path to the file to delete
+   * @returns {Promise<Object>} Deletion result
    */
-  async delete(filePath) {
+  delete: async (filePath) => {
     try {
-      if (window.secureElectronAPI) {
-        debugLog?.debug('Using secure file API for delete', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.delete' 
-        });
+      // Try secure API first
+      if (window.secureElectronAPI?.fileSystem?.delete) {
         return await window.secureElectronAPI.fileSystem.delete(filePath);
-      } else if (window.electronAPI?.fileSystem) {
-        debugLog?.debug('Using modern file API for delete', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.delete' 
-        });
-        return await window.electronAPI.fileSystem.delete(filePath);
-      } else if (window.fs) {
-        debugLog?.debug('Using legacy file API for delete', { 
-          module: 'secure-adapter',
-          function: 'secureFileSystem.delete' 
-        });
-        try {
-          window.fs.unlinkSync(filePath);
-          return { success: true };
-        } catch (error) {
-          throw new Error(`File delete failed: ${error.message}`);
-        }
-      } else {
-        throw new Error('No file system API available');
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.fileSystem?.delete) {
+        return await window.electronAPI.fileSystem.delete(filePath);
+      }
+      
+      throw new Error('No file system API available');
     } catch (error) {
-      debugLog?.error('File delete error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileSystem.delete',
+      debugLog?.error('File deletion failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileSystem.delete', 
+        filePath, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   }
 };
 
 /**
- * Secure Path Adapter
- * Provides path operations that work in both insecure and secure modes
+ * Path Operations Adapter
+ * Provides secure path manipulation through IPC calls
  */
 export const securePath = {
   /**
    * Join path segments
    * @param {...string} paths - Path segments to join
-   * @returns {Promise<string>} Joined path
+   * @returns {Promise<Object>} Joined path result
    */
-  async join(...paths) {
+  join: async (...paths) => {
     try {
-      if (window.secureElectronAPI) {
-        const result = await window.secureElectronAPI.path.join(...paths);
-        return result.data || result;
-      } else if (window.electronAPI?.path) {
-        const result = await window.electronAPI.path.join(...paths);
-        return result.data || result;
-      } else if (window.path) {
-        return window.path.join(...paths);
-      } else {
-        throw new Error('No path API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.path?.join) {
+        return await window.secureElectronAPI.path.join(...paths);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.path?.join) {
+        return await window.electronAPI.path.join(...paths);
+      }
+      
+      throw new Error('No path API available');
     } catch (error) {
-      debugLog?.error('Path join error:', { 
-        module: 'secure-adapter',
-        function: 'securePath.join',
+      debugLog?.error('Path join failed:', { 
+        module: 'secure-adapter', 
+        function: 'securePath.join', 
+        paths, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
    * Get file extension
    * @param {string} filePath - File path
-   * @returns {Promise<string>} File extension
+   * @returns {Promise<Object>} Extension result
    */
-  async extname(filePath) {
+  extname: async (filePath) => {
     try {
-      if (window.secureElectronAPI) {
-        const result = await window.secureElectronAPI.path.extname(filePath);
-        return result.data || result;
-      } else if (window.electronAPI?.path) {
-        const result = await window.electronAPI.path.extname(filePath);
-        return result.data || result;
-      } else if (window.path) {
-        return window.path.extname(filePath);
-      } else {
-        throw new Error('No path API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.path?.extname) {
+        return await window.secureElectronAPI.path.extname(filePath);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.path?.extname) {
+        return await window.electronAPI.path.extname(filePath);
+      }
+      
+      throw new Error('No path API available');
     } catch (error) {
-      debugLog?.error('Path extname error:', { 
-        module: 'secure-adapter',
-        function: 'securePath.extname',
+      debugLog?.error('Path extname failed:', { 
+        module: 'secure-adapter', 
+        function: 'securePath.extname', 
+        filePath, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Get directory name
+   * Get directory name from path
    * @param {string} filePath - File path
-   * @returns {Promise<string>} Directory name
+   * @returns {Promise<Object>} Directory name result
    */
-  async dirname(filePath) {
+  dirname: async (filePath) => {
     try {
-      if (window.secureElectronAPI) {
-        const result = await window.secureElectronAPI.path.dirname(filePath);
-        return result.data || result;
-      } else if (window.electronAPI?.path) {
-        const result = await window.electronAPI.path.dirname(filePath);
-        return result.data || result;
-      } else if (window.path) {
-        return window.path.dirname(filePath);
-      } else {
-        throw new Error('No path API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.path?.dirname) {
+        return await window.secureElectronAPI.path.dirname(filePath);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.path?.dirname) {
+        return await window.electronAPI.path.dirname(filePath);
+      }
+      
+      throw new Error('No path API available');
     } catch (error) {
-      debugLog?.error('Path dirname error:', { 
-        module: 'secure-adapter',
-        function: 'securePath.dirname',
+      debugLog?.error('Path dirname failed:', { 
+        module: 'secure-adapter', 
+        function: 'securePath.dirname', 
+        filePath, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Parse a file path into components
+   * Parse file path into components
    * @param {string} filePath - File path to parse
-   * @returns {Promise<Object>} Path components (dir, name, ext, base, root)
+   * @returns {Promise<Object>} Parsed path result
    */
-  async parse(filePath) {
+  parse: async (filePath) => {
     try {
-      if (window.secureElectronAPI) {
-        const result = await window.secureElectronAPI.path.parse(filePath);
-        return result.data || result;
-      } else if (window.electronAPI?.path) {
-        const result = await window.electronAPI.path.parse(filePath);
-        return result.data || result;
-      } else if (window.path) {
-        return window.path.parse(filePath);
-      } else {
-        throw new Error('No path API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.path?.parse) {
+        return await window.secureElectronAPI.path.parse(filePath);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.path?.parse) {
+        return await window.electronAPI.path.parse(filePath);
+      }
+      
+      throw new Error('No path API available');
     } catch (error) {
-      debugLog?.error('Path parse error:', { 
-        module: 'secure-adapter',
-        function: 'securePath.parse',
+      debugLog?.error('Path parse failed:', { 
+        module: 'secure-adapter', 
+        function: 'securePath.parse', 
+        filePath, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Get the basename of a path
+   * Get base name from path
    * @param {string} filePath - File path
-   * @param {string} [ext] - Optional extension to remove
-   * @returns {Promise<string>} Base name
+   * @param {string} ext - Optional extension to remove
+   * @returns {Promise<Object>} Base name result
    */
-  async basename(filePath, ext) {
+  basename: async (filePath, ext) => {
     try {
-      if (window.secureElectronAPI) {
-        const result = await window.secureElectronAPI.path.basename(filePath, ext);
-        return result.data || result;
-      } else if (window.electronAPI?.path) {
-        const result = await window.electronAPI.path.basename(filePath, ext);
-        return result.data || result;
-      } else if (window.path) {
-        return window.path.basename(filePath, ext);
-      } else {
-        throw new Error('No path API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.path?.basename) {
+        return await window.secureElectronAPI.path.basename(filePath, ext);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.path?.basename) {
+        return await window.electronAPI.path.basename(filePath, ext);
+      }
+      
+      throw new Error('No path API available');
     } catch (error) {
-      debugLog?.error('Path basename error:', { 
-        module: 'secure-adapter',
-        function: 'securePath.basename',
+      debugLog?.error('Path basename failed:', { 
+        module: 'secure-adapter', 
+        function: 'securePath.basename', 
+        filePath, 
+        ext, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Resolve path segments into an absolute path
+   * Resolve path segments to absolute path
    * @param {...string} paths - Path segments to resolve
-   * @returns {Promise<string>} Resolved absolute path
+   * @returns {Promise<Object>} Resolved path result
    */
-  async resolve(...paths) {
+  resolve: async (...paths) => {
     try {
-      if (window.secureElectronAPI) {
-        const result = await window.secureElectronAPI.path.resolve(...paths);
-        return result.data || result;
-      } else if (window.electronAPI?.path) {
-        const result = await window.electronAPI.path.resolve(...paths);
-        return result.data || result;
-      } else if (window.path) {
-        return window.path.resolve(...paths);
-      } else {
-        throw new Error('No path API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.path?.resolve) {
+        return await window.secureElectronAPI.path.resolve(...paths);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.path?.resolve) {
+        return await window.electronAPI.path.resolve(...paths);
+      }
+      
+      throw new Error('No path API available');
     } catch (error) {
-      debugLog?.error('Path resolve error:', { 
-        module: 'secure-adapter',
-        function: 'securePath.resolve',
+      debugLog?.error('Path resolve failed:', { 
+        module: 'secure-adapter', 
+        function: 'securePath.resolve', 
+        paths, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   }
 };
 
 /**
- * Secure Store Adapter
- * Provides store operations that work in both insecure and secure modes
+ * Store Operations Adapter
+ * Provides secure store access through IPC calls
  */
 export const secureStore = {
   /**
-   * Get a value from store
+   * Get a value from the store
    * @param {string} key - Store key
-   * @returns {Promise<any>} Store value
+   * @returns {Promise<Object>} Store value
    */
-  async get(key) {
+  get: async (key) => {
     try {
-      if (window.secureElectronAPI) {
-        const result = await window.secureElectronAPI.store.get(key);
-        return result.value !== undefined ? result.value : result.data;
-      } else if (window.electronAPI?.store) {
-        const result = await window.electronAPI.store.get(key);
-        return result.value !== undefined ? result.value : result.data;
-      } else if (window.store) {
-        return window.store.get(key);
-      } else {
-        throw new Error('No store API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.store?.get) {
+        return await window.secureElectronAPI.store.get(key);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.store?.get) {
+        return await window.electronAPI.store.get(key);
+      }
+      
+      throw new Error('No store API available');
     } catch (error) {
-      debugLog?.error('Store get error:', { 
-        module: 'secure-adapter',
-        function: 'secureStore.get',
+      debugLog?.error('Store get failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureStore.get', 
+        key, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Set a value in store
+   * Set a value in the store
    * @param {string} key - Store key
-   * @param {any} value - Store value
+   * @param {any} value - Value to store
    * @returns {Promise<Object>} Set result
    */
-  async set(key, value) {
+  set: async (key, value) => {
     try {
-      if (window.secureElectronAPI) {
+      // Try secure API first
+      if (window.secureElectronAPI?.store?.set) {
         return await window.secureElectronAPI.store.set(key, value);
-      } else if (window.electronAPI?.store) {
+      }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.store?.set) {
         return await window.electronAPI.store.set(key, value);
-      } else if (window.store) {
-        window.store.set(key, value);
-        return { success: true };
-      } else {
-        throw new Error('No store API available');
       }
+      
+      throw new Error('No store API available');
     } catch (error) {
-      debugLog?.error('Store set error:', { 
-        module: 'secure-adapter',
-        function: 'secureStore.set',
+      debugLog?.error('Store set failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureStore.set', 
+        key, 
+        value, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Check if key exists in store
+   * Check if a key exists in the store
    * @param {string} key - Store key
-   * @returns {Promise<boolean>} Whether key exists
+   * @returns {Promise<Object>} Existence check result
    */
-  async has(key) {
+  has: async (key) => {
     try {
-      if (window.secureElectronAPI) {
-        const result = await window.secureElectronAPI.store.has(key);
-        return result.has !== undefined ? result.has : result.data;
-      } else if (window.electronAPI?.store) {
-        const result = await window.electronAPI.store.has(key);
-        return result.has !== undefined ? result.has : result.data;
-      } else if (window.store) {
-        return window.store.has(key);
-      } else {
-        throw new Error('No store API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.store?.has) {
+        return await window.secureElectronAPI.store.has(key);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.store?.has) {
+        return await window.electronAPI.store.has(key);
+      }
+      
+      throw new Error('No store API available');
     } catch (error) {
-      debugLog?.error('Store has error:', { 
-        module: 'secure-adapter',
-        function: 'secureStore.has',
+      debugLog?.error('Store has check failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureStore.has', 
+        key, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Delete a key from store
+   * Delete a key from the store
    * @param {string} key - Store key
-   * @returns {Promise<Object>} Delete result
+   * @returns {Promise<Object>} Deletion result
    */
-  async delete(key) {
+  delete: async (key) => {
     try {
-      if (window.secureElectronAPI) {
+      // Try secure API first
+      if (window.secureElectronAPI?.store?.delete) {
         return await window.secureElectronAPI.store.delete(key);
-      } else if (window.electronAPI?.store) {
+      }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.store?.delete) {
         return await window.electronAPI.store.delete(key);
-      } else if (window.store) {
-        window.store.delete(key);
-        return { success: true };
-      } else {
-        throw new Error('No store API available');
       }
+      
+      throw new Error('No store API available');
     } catch (error) {
-      debugLog?.error('Store delete error:', { 
-        module: 'secure-adapter',
-        function: 'secureStore.delete',
+      debugLog?.error('Store delete failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureStore.delete', 
+        key, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
     }
   }
 };
 
 /**
- * Secure OS Adapter
- * Provides OS operations that work in both insecure and secure modes
- */
-export const secureOS = {
-  /**
-   * Get home directory
-   * @returns {Promise<string>} Home directory path
-   */
-  async homedir() {
-    try {
-      if (window.secureElectronAPI) {
-        const result = await window.secureElectronAPI.os.homedir();
-        return result.data || result;
-      } else if (window.electronAPI?.os) {
-        const result = await window.electronAPI.os.homedir();
-        return result.data || result;
-      } else if (window.homedir) {
-        return window.homedir;
-      } else {
-        throw new Error('No OS API available');
-      }
-    } catch (error) {
-      debugLog?.error('OS homedir error:', { 
-        module: 'secure-adapter',
-        function: 'secureOS.homedir',
-        error: error.message 
-      });
-      throw error;
-    }
-  }
-};
-
-/**
- * Secure File Dialog Adapter
- * Provides file dialog operations that work in both insecure and secure modes
- */
-export const secureFileDialog = {
-  /**
-   * Open hotkey file dialog
-   * @returns {Promise<Object>} File dialog result
-   */
-  async openHotkeyFile() {
-    try {
-      if (window.secureElectronAPI) {
-        return await window.secureElectronAPI.openHotkeyFile();
-      } else if (window.electronAPI) {
-        return await window.electronAPI.openHotkeyFile();
-      } else {
-        throw new Error('No file dialog API available');
-      }
-    } catch (error) {
-      debugLog?.error('Open hotkey file error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileDialog.openHotkeyFile',
-        error: error.message 
-      });
-      throw error;
-    }
-  },
-
-  /**
-   * Save hotkey file dialog
-   * @param {Array} hotkeyArray - Hotkey data to save
-   * @returns {Promise<Object>} Save result
-   */
-  async saveHotkeyFile(hotkeyArray) {
-    try {
-      if (window.secureElectronAPI) {
-        return await window.secureElectronAPI.saveHotkeyFile(hotkeyArray);
-      } else if (window.electronAPI) {
-        return await window.electronAPI.saveHotkeyFile(hotkeyArray);
-      } else {
-        throw new Error('No file dialog API available');
-      }
-    } catch (error) {
-      debugLog?.error('Save hotkey file error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileDialog.saveHotkeyFile',
-        error: error.message 
-      });
-      throw error;
-    }
-  },
-
-  /**
-   * Open holding tank file dialog
-   * @returns {Promise<Object>} File dialog result
-   */
-  async openHoldingTankFile() {
-    try {
-      if (window.secureElectronAPI) {
-        return await window.secureElectronAPI.openHoldingTankFile();
-      } else if (window.electronAPI) {
-        return await window.electronAPI.openHoldingTankFile();
-      } else {
-        throw new Error('No file dialog API available');
-      }
-    } catch (error) {
-      debugLog?.error('Open holding tank file error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileDialog.openHoldingTankFile',
-        error: error.message 
-      });
-      throw error;
-    }
-  },
-
-  /**
-   * Save holding tank file dialog
-   * @param {Array} holdingTankArray - Holding tank data to save
-   * @returns {Promise<Object>} Save result
-   */
-  async saveHoldingTankFile(holdingTankArray) {
-    try {
-      if (window.secureElectronAPI) {
-        return await window.secureElectronAPI.saveHoldingTankFile(holdingTankArray);
-      } else if (window.electronAPI) {
-        return await window.electronAPI.saveHoldingTankFile(holdingTankArray);
-      } else {
-        throw new Error('No file dialog API available');
-      }
-    } catch (error) {
-      debugLog?.error('Save holding tank file error:', { 
-        module: 'secure-adapter',
-        function: 'secureFileDialog.saveHoldingTankFile',
-        error: error.message 
-      });
-      throw error;
-    }
-  }
-};
-
-/**
- * Secure System Adapter
- * Provides system operations that work in both insecure and secure modes
- */
-export const secureSystem = {
-  /**
-   * Restart application and install updates
-   * @returns {Promise<Object>} Restart result
-   */
-  async restartAndInstall() {
-    try {
-      if (window.secureElectronAPI) {
-        return await window.secureElectronAPI.restartAndInstall();
-      } else if (window.electronAPI) {
-        return await window.electronAPI.restartAndInstall();
-      } else {
-        throw new Error('No system API available');
-      }
-    } catch (error) {
-      debugLog?.error('Restart and install error:', { 
-        module: 'secure-adapter',
-        function: 'secureSystem.restartAndInstall',
-        error: error.message 
-      });
-      throw error;
-    }
-  }
-};
-
-/**
- * Secure Audio Adapter
- * Provides audio operations that work in both insecure and secure modes
+ * Audio Operations Adapter
+ * Provides secure audio management through IPC calls
  */
 export const secureAudio = {
   /**
-   * Set audio volume
-   * @param {number} volume - Volume level (0.0 to 1.0)
-   * @returns {Promise<Object>} Volume set result
-   */
-  async setVolume(volume) {
-    try {
-      if (window.secureElectronAPI?.audio) {
-        return await window.secureElectronAPI.audio.setVolume(volume);
-      } else if (window.electronAPI?.audio) {
-        return await window.electronAPI.audio.setVolume(volume);
-      } else {
-        throw new Error('No audio API available');
-      }
-    } catch (error) {
-      debugLog?.error('Audio set volume error:', { 
-        module: 'secure-adapter',
-        function: 'secureAudio.setVolume',
-        error: error.message 
-      });
-      throw error;
-    }
-  },
-
-  /**
-   * Play audio file
+   * Play an audio file
    * @param {string} filePath - Path to audio file
+   * @param {Object} options - Playback options
    * @returns {Promise<Object>} Play result
    */
-  async play(filePath) {
+  play: async (filePath, options = {}) => {
     try {
-      if (window.secureElectronAPI?.audio) {
-        return await window.secureElectronAPI.audio.play(filePath);
-      } else if (window.electronAPI?.audio) {
-        return await window.electronAPI.audio.play(filePath);
-      } else {
-        throw new Error('No audio API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.audio?.play) {
+        return await window.secureElectronAPI.audio.play(filePath, options);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.audio?.play) {
+        return await window.electronAPI.audio.play(filePath, options);
+      }
+      
+      throw new Error('No audio API available');
     } catch (error) {
-      debugLog?.error('Audio play error:', { 
-        module: 'secure-adapter',
-        function: 'secureAudio.play',
+      debugLog?.error('Audio play failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureAudio.play', 
+        filePath, 
+        options, 
         error: error.message 
       });
-      throw error;
-    }
-  },
-
-  /**
-   * Pause audio playback
-   * @param {string} audioId - Audio instance ID
-   * @returns {Promise<Object>} Pause result
-   */
-  async pause(audioId) {
-    try {
-      if (window.secureElectronAPI?.audio) {
-        return await window.secureElectronAPI.audio.pause(audioId);
-      } else if (window.electronAPI?.audio) {
-        return await window.electronAPI.audio.pause(audioId);
-      } else {
-        throw new Error('No audio API available');
-      }
-    } catch (error) {
-      debugLog?.error('Audio pause error:', { 
-        module: 'secure-adapter',
-        function: 'secureAudio.pause',
-        error: error.message 
-      });
-      throw error;
+      return { success: false, error: error.message };
     }
   },
 
   /**
    * Stop audio playback
-   * @param {string} audioId - Audio instance ID
+   * @param {string} soundId - Sound ID to stop
    * @returns {Promise<Object>} Stop result
    */
-  async stop(audioId) {
+  stop: async (soundId) => {
     try {
-      if (window.secureElectronAPI?.audio) {
-        return await window.secureElectronAPI.audio.stop(audioId);
-      } else if (window.electronAPI?.audio) {
-        return await window.electronAPI.audio.stop(audioId);
-      } else {
-        throw new Error('No audio API available');
+      // Try secure API first
+      if (window.secureElectronAPI?.audio?.stop) {
+        return await window.secureElectronAPI.audio.stop(soundId);
       }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.audio?.stop) {
+        return await window.electronAPI.audio.stop(soundId);
+      }
+      
+      throw new Error('No audio API available');
     } catch (error) {
-      debugLog?.error('Audio stop error:', { 
-        module: 'secure-adapter',
-        function: 'secureAudio.stop',
+      debugLog?.error('Audio stop failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureAudio.stop', 
+        soundId, 
         error: error.message 
       });
-      throw error;
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Set audio volume
+   * @param {number} volume - Volume level (0-1)
+   * @param {string} soundId - Optional sound ID
+   * @returns {Promise<Object>} Volume set result
+   */
+  setVolume: async (volume, soundId) => {
+    try {
+      // Try secure API first
+      if (window.secureElectronAPI?.audio?.setVolume) {
+        return await window.secureElectronAPI.audio.setVolume(volume, soundId);
+      }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.audio?.setVolume) {
+        return await window.electronAPI.audio.setVolume(volume, soundId);
+      }
+      
+      throw new Error('No audio API available');
+    } catch (error) {
+      debugLog?.error('Audio volume set failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureAudio.setVolume', 
+        volume, 
+        soundId, 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
     }
   }
 };
 
 /**
- * Test function to verify adapter functionality
+ * File Dialog Operations Adapter
+ * Provides secure file dialog access through IPC calls
+ */
+export const secureFileDialog = {
+  /**
+   * Show file picker dialog
+   * @param {Object} options - File picker options
+   * @returns {Promise<Object>} File picker result
+   */
+  showFilePicker: async (options = {}) => {
+    try {
+      // Try secure API first
+      if (window.secureElectronAPI?.file?.showFilePicker) {
+        return await window.secureElectronAPI.file.showFilePicker(options);
+      }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.file?.showFilePicker) {
+        return await window.electronAPI.file.showFilePicker(options);
+      }
+      
+      throw new Error('No file picker API available');
+    } catch (error) {
+      debugLog?.error('File picker failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileDialog.showFilePicker', 
+        options, 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Show directory picker dialog
+   * @param {string} defaultPath - Default directory path
+   * @returns {Promise<Object>} Directory picker result
+   */
+  showDirectoryPicker: async (defaultPath) => {
+    try {
+      // Try secure API first
+      if (window.secureElectronAPI?.file?.showDirectoryPicker) {
+        return await window.secureElectronAPI.file.showDirectoryPicker(defaultPath);
+      }
+      
+      // Fallback to modern API
+      if (window.electronAPI?.file?.showDirectoryPicker) {
+        return await window.electronAPI.file.showDirectoryPicker(defaultPath);
+      }
+      
+      throw new Error('No directory picker API available');
+    } catch (error) {
+      debugLog?.error('Directory picker failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileDialog.showDirectoryPicker', 
+        defaultPath, 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Open hotkey file
+   * @returns {Promise<Object>} File open result
+   */
+  openHotkeyFile: async () => {
+    try {
+      if (window.secureElectronAPI?.file?.openHotkeyFile) {
+        return await window.secureElectronAPI.file.openHotkeyFile();
+      }
+      if (window.electronAPI?.file?.openHotkeyFile) {
+        return await window.electronAPI.file.openHotkeyFile();
+      }
+      throw new Error('No hotkey file API available');
+    } catch (error) {
+      debugLog?.error('Open hotkey file failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileDialog.openHotkeyFile', 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Save hotkey file
+   * @param {Array} hotkeyArray - Hotkey data to save
+   * @returns {Promise<Object>} File save result
+   */
+  saveHotkeyFile: async (hotkeyArray) => {
+    try {
+      if (window.secureElectronAPI?.file?.saveHotkeyFile) {
+        return await window.secureElectronAPI.file.saveHotkeyFile(hotkeyArray);
+      }
+      if (window.electronAPI?.file?.saveHotkeyFile) {
+        return await window.electronAPI.file.saveHotkeyFile(hotkeyArray);
+      }
+      throw new Error('No hotkey file save API available');
+    } catch (error) {
+      debugLog?.error('Save hotkey file failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileDialog.openHotkeyFile', 
+        hotkeyArray, 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+        }
+  },
+
+  /**
+   * Open holding tank file
+   * @returns {Promise<Object>} File open result
+   */
+  openHoldingTankFile: async () => {
+    try {
+      if (window.secureElectronAPI?.file?.openHoldingTankFile) {
+        return await window.secureElectronAPI.file.openHoldingTankFile();
+      }
+      if (window.electronAPI?.file?.openHoldingTankFile) {
+        return await window.electronAPI.file.openHoldingTankFile();
+      }
+      throw new Error('No holding tank file API available');
+    } catch (error) {
+      debugLog?.error('Open holding tank file failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileDialog.openHoldingTankFile', 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Save holding tank file
+   * @param {Array} holdingTankArray - Holding tank data to save
+   * @returns {Promise<Object>} File save result
+   */
+  saveHoldingTankFile: async (holdingTankArray) => {
+    try {
+      if (window.secureElectronAPI?.file?.saveHoldingTankFile) {
+        return await window.secureElectronAPI.file.saveHoldingTankFile(holdingTankArray);
+      }
+      if (window.electronAPI?.file?.saveHoldingTankFile) {
+        return await window.electronAPI.file.saveHoldingTankFile(holdingTankArray);
+      }
+      throw new Error('No holding tank file save API available');
+    } catch (error) {
+      debugLog?.error('Save holding tank file failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileDialog.saveHoldingTankFile', 
+        holdingTankArray, 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  }
+};
+
+/**
+ * Test the secure adapter functionality
  * @returns {Object} Test results
  */
 export function testSecureAdapter() {
   const results = {
-    success: true,
+    module: 'secure-adapter',
+    passed: 0,
+    failed: 0,
     tests: [],
-    errors: [],
-    apis: {}
+    warnings: []
   };
 
-  console.log('🧪 Testing Secure Adapter Layer...');
+  console.log('🧪 Testing Secure Adapter...');
 
-  // Test API availability
-  const apiTests = [
-    { name: 'secureElectronAPI', obj: window.secureElectronAPI },
-    { name: 'electronAPI', obj: window.electronAPI },
-    { name: 'db', obj: window.db },
-    { name: 'store', obj: window.store },
-    { name: 'path', obj: window.path },
-    { name: 'fs', obj: window.fs },
-    { name: 'homedir', obj: window.homedir }
-  ];
-
-  apiTests.forEach(test => {
-    const available = typeof test.obj !== 'undefined';
-    results.apis[test.name] = available;
-    results.tests.push({ name: test.name, available });
-    
-    if (available) {
-      console.log(`✅ ${test.name} API available`);
+  // Test API availability detection
+  try {
+    if (window.secureElectronAPI) {
+      console.log('✅ Secure API detected');
+      results.passed++;
+      results.tests.push({ name: 'secureAPIDetected', success: true });
+    } else if (window.electronAPI) {
+      console.log('✅ Modern API detected');
+      results.passed++;
+      results.tests.push({ name: 'modernAPIDetected', success: true });
     } else {
-      console.log(`❌ ${test.name} API not available`);
+      console.log('⚠️ No modern APIs detected');
+      results.warnings.push('No modern APIs available');
     }
-  });
-
-  // Test adapter functions
-  const adapters = [
-    { name: 'secureDatabase', obj: secureDatabase },
-    { name: 'secureFileSystem', obj: secureFileSystem },
-    { name: 'securePath', obj: securePath },
-    { name: 'secureStore', obj: secureStore },
-    { name: 'secureOS', obj: secureOS }
-  ];
-
-  adapters.forEach(adapter => {
-    if (adapter.obj) {
-      console.log(`✅ ${adapter.name} adapter available`);
-      results.tests.push({ name: `${adapter.name}Available`, success: true });
-    } else {
-      console.log(`❌ ${adapter.name} adapter missing`);
-      results.tests.push({ name: `${adapter.name}Available`, success: false });
-      results.errors.push(`${adapter.name} adapter not available`);
-    }
-  });
-
-  // Determine which API mode we're in
-  if (window.secureElectronAPI) {
-    console.log('🔒 Running in SECURE mode (contextBridge)');
-    results.mode = 'secure';
-  } else if (window.electronAPI) {
-    console.log('🔄 Running in MODERN mode (hybrid)');
-    results.mode = 'modern';
-  } else if (window.db || window.store) {
-    console.log('⚠️ Running in LEGACY mode (insecure)');
-    results.mode = 'legacy';
-  } else {
-    console.log('❌ No recognized API mode');
-    results.mode = 'unknown';
-    results.success = false;
+  } catch (error) {
+    console.log('❌ API detection failed:', error);
+    results.failed++;
+    results.tests.push({ name: 'apiDetection', success: false, error: error.message });
   }
 
-  console.log(`🧪 Adapter test completed: ${results.tests.length} tests run`);
-  
+  // Test adapter methods
+  const adapters = [secureDatabase, secureFileSystem, securePath, secureStore, secureAudio];
+  adapters.forEach(adapter => {
+    const adapterName = adapter.constructor.name || 'Unknown';
+    const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(adapter))
+      .filter(name => name !== 'constructor' && typeof adapter[name] === 'function');
+    
+    methods.forEach(method => {
+      try {
+        if (typeof adapter[method] === 'function') {
+          results.passed++;
+          results.tests.push({ name: `${adapterName}.${method}`, success: true });
+        } else {
+          results.failed++;
+          results.tests.push({ name: `${adapterName}.${method}`, success: false, error: 'Not a function' });
+        }
+      } catch (error) {
+        results.failed++;
+        results.tests.push({ name: `${adapterName}.${method}`, success: false, error: error.message });
+      }
+    });
+  });
+
+  console.log(`📊 Secure Adapter Test Results: ${results.passed} passed, ${results.failed} failed`);
   return results;
 }
 
-// Export all adapters as a single object for convenience
-export const secureAdapters = {
-  database: secureDatabase,
-  fileSystem: secureFileSystem,
-  path: securePath,
-  store: secureStore,
-  os: secureOS,
-  test: testSecureAdapter
+// Export all adapters
+export default {
+  secureDatabase,
+  secureFileSystem,
+  securePath,
+  secureStore,
+  secureAudio,
+  secureFileDialog,
+  testSecureAdapter
 };
