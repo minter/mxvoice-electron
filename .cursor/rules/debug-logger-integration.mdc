@@ -1,149 +1,47 @@
 
-# Debug Logger Integration Patterns
+---
+alwaysApply: true
+---
 
-## PATTERN CONSISTENCY - CRITICAL REQUIREMENT
-When converting console.log statements to debug logger:
+# Debug Logger Integration
 
-**ALWAYS use the established codebase pattern:**
-- ✅ CORRECT: `debugLog?.info(message, { module: 'module-name', function: 'function-name' })`
-- ❌ WRONG: `if (debugLog) { debugLog.info(message, { context }) }`
+Use the existing debug logger modules instead of any `console.*` calls. Do not add fallbacks to `console`.
 
-**Before making any conversions:**
-1. Examine existing debug logger usage in the codebase
-2. Identify the established pattern being used
-3. Use that exact pattern throughout all conversions
-4. Do NOT introduce new patterns or defensive programming approaches
+## Which logger to use
+- Main process: `src/main/modules/debug-log.js`
+- Renderer process: `src/renderer/modules/debug-log/index.js` (backed by `debug-logger.js`)
 
-**Pattern Recognition Priority:**
-- The existing codebase pattern takes precedence over any personal coding preferences
-- If you see `debugLog?.info(...)` in the codebase, use that exact pattern
-- If you see `if (debugLog) { ... }` in the codebase, use that exact pattern
-- Never mix patterns within the same codebase
+## Usage (ES Modules with explicit .js)
 
-## PATTERN ANALYSIS - REQUIRED FIRST STEP
-Before converting any console.log statements:
+Renderer (preferred):
+```javascript
+import debugLog, { info, warn, error, debug } from './modules/debug-log/index.js';
 
-1. **Search for existing debug logger usage:**
-   ```bash
-   grep -r "debugLog\?" src/
-   grep -r "if (debugLog)" src/
-   ```
+info('Loaded search module', { module: 'search', function: 'init' });
+debug('Query built', { module: 'search', function: 'buildQuery', query });
+```
 
-2. **Identify the established pattern:**
-   - If you see `debugLog?.info(...)` → Use optional chaining pattern
-   - If you see `if (debugLog) { ... }` → Use explicit check pattern
-   - If you see both → Ask for clarification on which pattern to use
+Main:
+```javascript
+import initializeMainDebugLog from './modules/debug-log.js';
+const debugLog = initializeMainDebugLog({ store });
 
-3. **Document the pattern you're following:**
-   - Note the exact syntax being used
-   - Note the context object structure
-   - Note any specific conventions (like function names, module names)
+debugLog.info('Main started', { module: 'main', function: 'bootstrap' });
+debugLog.error('Updater failed', { module: 'main', function: 'checkForUpdates', error });
+```
 
-4. **Apply consistently:**
-   - Use the exact same pattern throughout all conversions
-   - Do not deviate from the established pattern
+## Console-to-debug mapping
+- `console.error(...)` → `debugLog.error(...)` (or `error(...)` in renderer)
+- `console.warn(...)` → `debugLog.warn(...)` (or `warn(...)`)
+- `console.info(...)` / `console.log(...)` → `debugLog.info(...)` or `debugLog.debug(...)` as appropriate
 
-## MIGRATION CRITERIA - ALWAYS USE THIS PATTERN
-When migrating console logging statements to debug logging:
+## Required conventions
+- Assume the debug logger is available; do not guard with `if (debugLog)` or optional chaining.
+- Include a small context object: `{ module: 'module-name', function: 'function-name' }` when useful.
+- Use ES Module imports with `.js` extensions. No global `window.debugLog` access.
+- Do not add or keep any `console.*` statements.
 
-1. **Add debug logger import at top of file:**
-   ```javascript
-   // Import debug logger
-   let debugLog = null;
-   try {
-     // Try to get debug logger from global scope
-     if (window.debugLog) {
-       debugLog = window.debugLog;
-     }
-   } catch (error) {
-     // Debug logger not available
-   }
-   ```
-
-2. **Replace console statements with debugLog calls:**
-   - `console.log(message)` → `debugLog?.info(message, { module: 'module-name', function: 'function-name' })`
-   - `console.warn(message)` → `debugLog?.warn(message, { module: 'module-name', function: 'function-name' })`
-   - `console.error(message)` → `debugLog?.error(message, { module: 'module-name', function: 'function-name' })`
-   - **Do this in comprehensive edits, not dozens of individual line changes**
-
-3. **Context object requirements:**
-   - Always include `{ module: 'module-name', function: 'function-name' }`
-   - Use the actual module name and function name
-   - Keep the original message exactly as it was
-
-4. **CRITICAL: DO NOT USE ES6 MODULE IMPORTS FOR DEBUG LOGGER**
-   - ❌ WRONG: `import { debugLogger } from '../debug-log/index.js';`
-   - ✅ CORRECT: Use global access pattern shown above
-   - The debug logger is available as `window.debugLog`, not as a module export
-   - Always use the global access pattern with try-catch fallback
-
-5. **DO NOT:**
-   - Remove emojis from messages
-   - Change message content
-   - Add complex patterns
-   - Use Class-Based Module Pattern unless explicitly requested
-   - Overcomplicate the conversion
-   - Make dozens of individual line edits - do comprehensive edits instead
-   - Use ES6 imports for debug logger - it's a global object
-
-## VALIDATION CHECKLIST
-Before completing any debug logger conversion:
-
-□ Did I examine existing debug logger usage in the codebase first?
-□ Am I using the exact same pattern as the existing codebase?
-□ Have I used the same pattern consistently across all files?
-□ Did I avoid introducing defensive programming patterns (`if (debugLog) { ... }`) when the codebase uses optional chaining?
-□ Did I maintain the same context object structure as the existing codebase?
-□ Did I validate consistency across all converted files?
-
-**If any answer is "no", fix the inconsistency before completing.**
-
-## COMMON MISTAKES TO AVOID
-
-❌ **Defensive Programming Over Pattern Consistency:**
-- Wrong: `if (debugLog) { debugLog.info(...) }` when codebase uses `debugLog?.info(...)`
-- Wrong: Adding explicit checks when the codebase assumes debug logger is always available
-
-❌ **Pattern Mixing:**
-- Wrong: Using `debugLog?.info(...)` in some files and `if (debugLog) { ... }` in others
-- Wrong: Following different patterns in different modules
-
-❌ **Overthinking the Problem:**
-- Wrong: Trying to be "more defensive" than the established codebase patterns
-- Wrong: Introducing new patterns instead of following existing ones
-
-❌ **Inconsistent Application:**
-- Wrong: Using correct pattern in one file but wrong pattern in others
-- Wrong: Not validating consistency across all converted files
-
-## Simple Module Pattern (Recommended)
-- For simple modules like function registries, use direct global access with optional chaining
-- Access debug logger from global scope: `window.debugLog`
-- Use optional chaining for safety: `debugLog?.warn()`, `debugLog?.info()`, etc.
-- No fallbacks to console.log - use only debug logger calls
-- Include rich context in all debug messages: `{ module: 'module-name', function: 'function-name' }`
-- Example: `debugLog?.warn('Message', { module: 'ui-function-registry', function: 'fallback' })`
-
-## Class-Based Module Pattern
-- Use proper dependency injection for class-based modules
-- Accept debugLogger parameter in constructor: `constructor(debugLogger = null)`
-- Add setDebugLogger() method to set logger after initialization
-- Add ensureDebugLogger() method to validate logger before use
-- Always call ensureDebugLogger() before any debug logging in methods
-- Throw clear errors if debug logger isn't available: `throw new Error('DebugLogger not initialized')`
-- Include class name and context in error messages
-
-## General Rules
-- Do not fall back to console.log - use only debug logger calls
-- Initialize modules after debug logger is available in renderer.js
-- Remove any console.log fallbacks
-- Test that module fails properly without debug logger
-- Include rich context information in all debug messages
-- Use appropriate log levels: warn for fallbacks, error for failures, info for operations, debug for details
-- **NEVER use ES6 imports for debug logger - it's a global object, not a module export**
-
-- Test that module fails properly without debug logger
-- When migrating a module: update constructor, add setDebugLogger(), add ensureDebugLogger(), update all methods, update renderer.js initialization
-
-- Test that module fails properly without debug logger
-- When migrating a module: update constructor, add setDebugLogger(), add ensureDebugLogger(), update all methods, update renderer.js initialization
+## Validation checklist
+- All `console.*` statements replaced with debug logger calls.
+- Imports point to the correct logger module for the process.
+- Context objects and log levels are used appropriately.
