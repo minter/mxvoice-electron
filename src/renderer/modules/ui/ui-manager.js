@@ -352,21 +352,6 @@ function initializeUIManager(options = {}) {
             });
             location.reload();
           });
-        } else if (store) {
-          // Fallback to legacy store access
-          debugLog?.info('Using legacy store API', { 
-            module: 'ui-manager',
-            function: 'closeAllTabs'
-          });
-          store.delete("holding_tank");
-          store.delete("hotkeys");
-          store.delete("column_order");
-          store.delete("font-size");
-          debugLog?.info('Reloading page', { 
-            module: 'ui-manager',
-            function: 'closeAllTabs'
-          });
-          location.reload();
         } else {
           debugLog?.warn('No store API available', { 
             module: 'ui-manager',
@@ -407,8 +392,6 @@ function initializeUIManager(options = {}) {
             error: error
           });
         });
-      } else if (store) {
-        store.set("holding_tank", currentHtml);
       }
     }
   }
@@ -427,8 +410,6 @@ function initializeUIManager(options = {}) {
             error: error
           });
         });
-      } else if (store) {
-        store.set("hotkeys", currentHtml);
       }
     }
   }

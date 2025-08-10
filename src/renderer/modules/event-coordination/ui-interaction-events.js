@@ -183,14 +183,6 @@ export default class UIInteractionEvents {
           if (debugLog.success) $("#preferences-debug-log-enabled").prop("checked", debugLog.value);
         }).catch(error => {
           this.debugLog?.warn('Failed to load preferences', error);
-          // Fallback to legacy store access
-          if (this.store) {
-            $("#preferences-database-directory").val(this.store.get("database_directory"));
-            $("#preferences-song-directory").val(this.store.get("music_directory"));
-            $("#preferences-hotkey-directory").val(this.store.get("hotkey_directory"));
-            $("#preferences-fadeout-seconds").val(this.store.get("fade_out_seconds"));
-            $("#preferences-debug-log-enabled").prop("checked", this.store.get("debug_log_enabled") || false);
-          }
         });
       } catch (error) {
         this.debugLog?.error('Error in preferences modal shown handler:', error);

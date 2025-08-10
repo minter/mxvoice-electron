@@ -33,8 +33,6 @@ function saveHotkeysToStore(options = {}) {
       }).catch(error => {
         window.debugLog?.warn('❌ Store save error:', error, { module: 'hotkey-operations', function: 'saveHotkeysToStore' });
       });
-    } else if (store) {
-      store.set("hotkeys", currentHtml);
     }
   }
 }

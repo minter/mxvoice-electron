@@ -173,8 +173,6 @@ class HotkeysModule {
         }).catch(error => {
           debugLog?.warn('❌ Store save error:', error, { module: 'hotkeys', function: 'saveHotkeysToStore' });
         });
-      } else if (this.store) {
-        this.store.set("hotkeys", currentHtml);
       }
     }
   }
@@ -205,22 +203,6 @@ class HotkeysModule {
           });
         }
       });
-    } else if (this.store) {
-      // Fallback to legacy store access
-      if (this.store.has("hotkeys")) {
-        const storedHotkeysHtml = this.store.get("hotkeys");
-        if (
-          storedHotkeysHtml && typeof storedHotkeysHtml === 'string' &&
-          storedHotkeysHtml.includes("Hotkeys") &&
-          !storedHotkeysHtml.includes("header-button")
-        ) {
-          this.store.delete("hotkeys");
-          debugLog?.info("Cleared old hotkeys HTML format", { module: 'hotkeys', function: 'loadHotkeysFromStore' });
-        } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
-          $("#hotkeys-column").html(storedHotkeysHtml);
-          $("#selected_row").removeAttr("id");
-        }
-      }
     }
   }
 

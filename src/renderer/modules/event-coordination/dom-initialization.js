@@ -157,48 +157,21 @@ export default class DOMInitialization {
       // Use new database API for song count
       if (this.electronAPI && this.electronAPI.database) {
         const result = await this.electronAPI.database.query("SELECT count(*) as count from mrvoice WHERE 1");
-        
-        if (result.success && result.data.length > 0) {
-          if (result.data[0].count <= 1) {
-            $(`#firstRunModal`).modal("show");
-            this.debugLog?.info('First run modal shown - database has <= 1 songs');
-          }
-        } else {
-          this.debugLog?.warn('Failed to get song count', result.error);
-          // Fallback to legacy database access
-          await this.setupFirstRunModalFallback();
+        if (result.success && result.data.length > 0 && result.data[0].count <= 1) {
+          $(`#firstRunModal`).modal("show");
+          this.debugLog?.info('First run modal shown - database has <= 1 songs');
         }
-      } else {
-        // Fallback to legacy database access
-        await this.setupFirstRunModalFallback();
       }
 
     } catch (error) {
       this.debugLog?.error('Database API error', error);
-      // Fallback to legacy database access
-      await this.setupFirstRunModalFallback();
     }
   }
 
   /**
-   * Fallback first run modal setup using legacy database
+   * Legacy fallback removed
    */
-  async setupFirstRunModalFallback() {
-    try {
-      if (typeof this.db !== 'undefined') {
-        const stmt = this.db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
-        const query = stmt.get();
-        if (query.count <= 1) {
-          $(`#firstRunModal`).modal("show");
-          this.debugLog?.info('First run modal shown - legacy database has <= 1 songs');
-        }
-      } else {
-        this.debugLog?.warn('No database available for first run check');
-      }
-    } catch (error) {
-      this.debugLog?.error('Failed fallback first run modal setup:', error);
-    }
-  }
+  async setupFirstRunModalFallback() {}
 
   /**
    * Get initialization status

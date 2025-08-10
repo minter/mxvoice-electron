@@ -54,40 +54,30 @@ class EventCoordination {
       // Create event handler instances
       this.searchEvents = new SearchEvents({
         electronAPI: this.electronAPI,
-        db: this.db,
-        store: this.store,
         debugLog: this.debugLog,
         moduleRegistry: this.moduleRegistry
       });
 
       this.audioControlEvents = new AudioControlEvents({
         electronAPI: this.electronAPI,
-        db: this.db,
-        store: this.store,
         debugLog: this.debugLog,
         moduleRegistry: this.moduleRegistry
       });
 
       this.uiInteractionEvents = new UIInteractionEvents({
         electronAPI: this.electronAPI,
-        db: this.db,
-        store: this.store,
         debugLog: this.debugLog,
         moduleRegistry: this.moduleRegistry
       });
 
       this.domInitialization = new DOMInitialization({
         electronAPI: this.electronAPI,
-        db: this.db,
-        store: this.store,
         debugLog: this.debugLog,
         moduleRegistry: this.moduleRegistry
       });
 
       this.eventDelegator = new EventDelegator({
         electronAPI: this.electronAPI,
-        db: this.db,
-        store: this.store,
         debugLog: this.debugLog,
         moduleRegistry: this.moduleRegistry
       });

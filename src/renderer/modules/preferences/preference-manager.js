@@ -15,7 +15,7 @@
  * @returns {Object} Preference manager interface
  */
 function initializePreferenceManager(options = {}) {
-  const { electronAPI, db, store } = options;
+  const { electronAPI } = options;
   
   /**
    * Open the preferences modal
@@ -51,12 +51,7 @@ function initializePreferenceManager(options = {}) {
           function: "loadPreferences",
           error: error
         });
-        // Fallback to legacy store access
-        await loadPreferencesLegacy();
       }
-    } else {
-      // Fallback to legacy store access
-      await loadPreferencesLegacy();
     }
   }
   
@@ -64,20 +59,7 @@ function initializePreferenceManager(options = {}) {
    * Load preferences using legacy store access
    * Fallback method when new API is not available
    */
-  async function loadPreferencesLegacy() {
-    try {
-      $("#preferences-database-directory").val(store.get("database_directory"));
-      $("#preferences-song-directory").val(store.get("music_directory"));
-      $("#preferences-hotkey-directory").val(store.get("hotkey_directory"));
-      $("#preferences-fadeout-seconds").val(store.get("fade_out_seconds"));
-      $("#preferences-debug-log-enabled").prop("checked", store.get("debug_log_enabled") || false);
-    } catch (error) {
-      await debugLog.error('Legacy preference loading failed', { 
-        function: "loadPreferencesLegacy",
-        error: error
-      });
-    }
-  }
+  async function loadPreferencesLegacy() {}
   
   /**
    * Get database directory preference
@@ -103,9 +85,6 @@ function initializePreferenceManager(options = {}) {
         });
         return null;
       }
-    } else {
-      // Fallback to legacy store access
-      return Promise.resolve(store.get("database_directory"));
     }
   }
   
@@ -133,9 +112,6 @@ function initializePreferenceManager(options = {}) {
         });
         return null;
       }
-    } else {
-      // Fallback to legacy store access
-      return Promise.resolve(store.get("music_directory"));
     }
   }
   
@@ -163,9 +139,6 @@ function initializePreferenceManager(options = {}) {
         });
         return null;
       }
-    } else {
-      // Fallback to legacy store access
-      return Promise.resolve(store.get("hotkey_directory"));
     }
   }
   
@@ -193,9 +166,6 @@ function initializePreferenceManager(options = {}) {
         });
         return null;
       }
-    } else {
-      // Fallback to legacy store access
-      return Promise.resolve(store.get("fade_out_seconds"));
     }
   }
   
@@ -223,9 +193,6 @@ function initializePreferenceManager(options = {}) {
         });
         return false;
       }
-    } else {
-      // Fallback to legacy store access
-      return Promise.resolve(store.get("debug_log_enabled") || false);
     }
   }
   

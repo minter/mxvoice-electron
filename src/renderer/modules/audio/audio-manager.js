@@ -359,58 +359,15 @@ function playSongFromId(song_id) {
             result_error: result?.error || null
           });
         }
-      }).catch(error => {
-    getDebugLog()?.error('❌ PLAYBACK FAIL: Database query error:', { 
-          module: 'audio-manager',
-          function: 'playSongFromId',
-          song_id: song_id,
-          error: error.message,
-          error_stack: error.stack?.split('\n').slice(0, 3).join('\n') || 'No stack trace'
-    });
-    // Fallback to legacy database access
-    const db = sharedState.get('db');
-    if (db) {
-          try {
-            const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-            const row = stmt.get(song_id);
-            
-            if (!row) {
-              getDebugLog()?.error('❌ No song found with ID:', { 
-                module: 'audio-manager',
-                function: 'playSongFromId',
-                song_id: song_id
-              });
-              return;
-            }
-            
-            const filename = row.filename;
-            
-            if (!filename) {
-              getDebugLog()?.error('❌ No filename found for song ID:', { 
-                module: 'audio-manager',
-                function: 'playSongFromId',
-                song_id: song_id,
-                row_title: row?.title || 'No title',
-                row_artist: row?.artist || 'No artist'
-              });
-              return;
-            }
-            
-            playSongWithFilename(filename, row, song_id);
-          } catch (dbError) {
-            getDebugLog()?.error('❌ Legacy database error:', { 
-              module: 'audio-manager',
-              function: 'playSongFromId',
-              error: dbError.message
-            });
-          }
-    } else {
-      getDebugLog()?.error('❌ No database access available', { 
+    }).catch(error => {
+      getDebugLog()?.error('❌ PLAYBACK FAIL: Database query error:', { 
         module: 'audio-manager',
-        function: 'playSongFromId'
+        function: 'playSongFromId',
+        song_id: song_id,
+        error: error.message,
+        error_stack: error.stack?.split('\n').slice(0, 3).join('\n') || 'No stack trace'
       });
-    }
-  });
+    });
   
   return; // Exit early since we're handling the rest in playSongWithFilename
 }
