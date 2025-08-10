@@ -47,23 +47,6 @@ function populateCategorySelect() {
     }
   }).catch(error => {
     debugLog?.warn('❌ Error populating category select:', { module: 'categories', function: 'populateCategorySelect', error: error });
-    // Fallback to legacy database access
-    if (typeof db !== 'undefined') {
-      try {
-        const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-        for (const row of stmt.iterate()) {
-          if (typeof categories !== 'undefined') {
-            categories[row.code] = row.description;
-          }
-          $("#category_select").append(
-            `<option value="${row.code}">${row.description}</option>`
-          );
-        }
-        debugLog?.info('✅ Category select populated successfully (legacy)', { module: 'categories', function: 'populateCategorySelect' });
-      } catch (dbError) {
-        debugLog?.error('❌ Legacy database error:', { module: 'categories', function: 'populateCategorySelect', error: dbError });
-      }
-    }
   });
 }
 

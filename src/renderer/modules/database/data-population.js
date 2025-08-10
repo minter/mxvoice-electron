@@ -151,41 +151,6 @@ function setLabelFromSongId(song_id, element) {
           songId: song_id,
           error: result.error
         });
-        // Fallback to legacy database access
-        if (typeof db !== 'undefined') {
-          const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-          const row = stmt.get(song_id);
-          const title = row.title || "[Unknown Title]";
-          const artist = row.artist || "[Unknown Artist]";
-          const time = row.time || "[??:??]";
-
-          // Handle swapping
-          const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
-            element
-          );
-          debugLog?.info('Original song node found (legacy)', { 
-            module: 'data-population',
-            function: 'setLabelFromSongId',
-            songId: song_id,
-            originalNode: original_song_node.length
-          });
-          if (original_song_node.length) {
-            const old_song = original_song_node.find("span").detach();
-            const destination_song = $(element).find("span").detach();
-            original_song_node.append(destination_song);
-            if (destination_song.attr("songid")) {
-              original_song_node.attr("songid", destination_song.attr("songid"));
-            } else {
-              original_song_node.removeAttr("songid");
-            }
-
-            $(element).append(old_song);
-          } else {
-            $(element).find("span").html(`${title} by ${artist} (${time})`);
-            $(element).find("span").attr("songid", song_id);
-          }
-          saveHotkeysToStore();
-        }
       }
     }).catch(error => {
       debugLog?.warn('Database API error', { 
@@ -194,41 +159,6 @@ function setLabelFromSongId(song_id, element) {
         songId: song_id,
         error: error.message
       });
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        const stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-        const row = stmt.get(song_id);
-        const title = row.title || "[Unknown Title]";
-        const artist = row.artist || "[Unknown Artist]";
-        const time = row.time || "[??:??]";
-
-        // Handle swapping
-        const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
-          element
-        );
-        debugLog?.info('Original song node found (legacy fallback)', { 
-          module: 'data-population',
-          function: 'setLabelFromSongId',
-          songId: song_id,
-          originalNode: original_song_node.length
-        });
-        if (original_song_node.length) {
-          const old_song = original_song_node.find("span").detach();
-          const destination_song = $(element).find("span").detach();
-          original_song_node.append(destination_song);
-          if (destination_song.attr("songid")) {
-            original_song_node.attr("songid", destination_song.attr("songid"));
-          } else {
-            original_song_node.removeAttr("songid");
-          }
-
-          $(element).append(old_song);
-        } else {
-          $(element).find("span").html(`${title} by ${artist} (${time})`);
-          $(element).find("span").attr("songid", song_id);
-        }
-        saveHotkeysToStore();
-      }
     });
   } else {
     // Fallback to legacy database access
@@ -443,22 +373,7 @@ function populateHoldingTank(songIds) {
  */
 function populateCategoriesModal() {
   $("#categoryList").find("div.row").remove();
-
-  const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-  for (const row of stmt.iterate()) {
-    $("#categoryList").append(`<div class="form-group row">
-
-      <div class="col-sm-8">
-        <div catcode="${row.code}" class="category-description">${row.description}</div>
-        <input style="display: none;" type="text" class="form-control form-control-sm categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
-      </div>
-      <div class="col-sm-4">
-      <a href="#" class="btn btn-primary btn-xs" onclick="editCategory('${row.code}')">Edit</a>&nbsp;
-      <a class="delete_link btn btn-danger btn-xs" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
-      </div>
-
-    `);
-  }
+  // Removed legacy direct DB usage
 }
 
 export {

@@ -49,25 +49,7 @@ function getCategories() {
         reject(error);
       });
     } else {
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        try {
-          const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-          const categories = [];
-          for (const row of stmt.iterate()) {
-            categories.push(row);
-          }
-          debugLog?.info('Categories retrieved successfully (legacy)', { 
-            module: 'category-operations',
-            function: 'getCategories'
-          });
-          resolve({ success: true, data: categories });
-        } catch (error) {
-          reject(error);
-        }
-      } else {
-        reject(new Error('Database not available'));
-      }
+      reject(new Error('Database not available'));
     }
   });
 }
@@ -110,27 +92,7 @@ function getCategoryByCode(code) {
         reject(error);
       });
     } else {
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        try {
-          const stmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-          const category = stmt.get(code);
-          if (category) {
-            debugLog?.info('Category retrieved successfully (legacy)', { 
-              module: 'category-operations',
-              function: 'getCategoryByCode',
-              code: code
-            });
-            resolve({ success: true, data: category });
-          } else {
-            reject(new Error(`Category ${code} not found`));
-          }
-        } catch (error) {
-          reject(error);
-        }
-      } else {
-        reject(new Error('Database not available'));
-      }
+      reject(new Error('Database not available'));
     }
   });
 }
@@ -177,28 +139,7 @@ function editCategory(code, description) {
         reject(error);
       });
     } else {
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        try {
-          const stmt = db.prepare("UPDATE categories SET description = ? WHERE code = ?");
-          const info = stmt.run(description, code);
-          if (info.changes > 0) {
-            debugLog?.info('Category updated successfully (legacy)', { 
-              module: 'category-operations',
-              function: 'editCategory',
-              code: code,
-              description: description
-            });
-            resolve({ success: true, changes: info.changes });
-          } else {
-            reject(new Error('No changes made to category'));
-          }
-        } catch (error) {
-          reject(error);
-        }
-      } else {
-        reject(new Error('Database not available'));
-      }
+      reject(new Error('Database not available'));
     }
   });
 }
@@ -269,50 +210,7 @@ function deleteCategory(code, description) {
         reject(error);
       });
     } else {
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        try {
-          // Ensure "Uncategorized" category exists
-          const uncategorizedCheckStmt = db.prepare(
-            "INSERT OR REPLACE INTO categories VALUES(?, ?);"
-          );
-          const uncategorizedCheckInfo = uncategorizedCheckStmt.run(
-            "UNC",
-            "Uncategorized"
-          );
-          
-          // Update all songs in this category to "Uncategorized"
-          const stmt = db.prepare(
-            "UPDATE mrvoice SET category = ? WHERE category = ?"
-          );
-          const info = stmt.run("UNC", code);
-          debugLog?.info('Updated songs to uncategorized', { 
-            module: 'category-operations',
-            function: 'deleteCategory',
-            code: code,
-            changes: info.changes
-          });
-
-          // Delete the category
-          const deleteStmt = db.prepare("DELETE FROM categories WHERE code = ?");
-          const deleteInfo = deleteStmt.run(code);
-          if (deleteInfo.changes == 1) {
-            debugLog?.info('Category deleted successfully (legacy)', { 
-              module: 'category-operations',
-              function: 'deleteCategory',
-              code: code,
-              description: description
-            });
-            resolve({ success: true, changes: deleteInfo.changes });
-          } else {
-            reject(new Error('No category deleted'));
-          }
-        } catch (error) {
-          reject(error);
-        }
-      } else {
-        reject(new Error('Database not available'));
-      }
+      reject(new Error('Database not available'));
     }
   });
 }
@@ -378,56 +276,7 @@ function addNewCategory(description) {
         reject(error);
       });
     } else {
-      // Fallback to legacy database access
-      if (typeof db !== 'undefined') {
-        try {
-          // Check for code collision
-          const codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-          let loopCount = 1;
-          let newCode = code;
-          
-          while (codeCheckStmt.get(newCode)) {
-            debugLog?.info('Found a code collision', { 
-              module: 'category-operations',
-              function: 'addNewCategory',
-              code: code,
-              loopCount: loopCount
-            });
-            newCode = `${code}${loopCount}`;
-            loopCount = loopCount + 1;
-          }
-          
-          code = newCode;
-          debugLog?.info('Adding new category', { 
-            module: 'category-operations',
-            function: 'addNewCategory',
-            code: code,
-            description: description
-          });
-          
-          const stmt = db.prepare("INSERT INTO categories VALUES (?, ?)");
-          const info = stmt.run(code, description);
-          if (info.changes == 1) {
-            debugLog?.info('New category added successfully (legacy)', { 
-              module: 'category-operations',
-              function: 'addNewCategory',
-              code: code,
-              description: description
-            });
-            resolve({ success: true, changes: info.changes, code: code });
-          } else {
-            reject(new Error('Failed to add category'));
-          }
-        } catch (error) {
-          if (error.message.match(/UNIQUE constraint/)) {
-            reject(new Error(`Category "${description}" already exists`));
-          } else {
-            reject(error);
-          }
-        }
-      } else {
-        reject(new Error('Database not available'));
-      }
+      reject(new Error('Database not available'));
     }
   });
 }
