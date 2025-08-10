@@ -16,7 +16,7 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem, secureDatabase, securePath } from '../adapters/secure-adapter.js';
+import { secureFileSystem, secureDatabase, securePath, secureStore } from '../adapters/secure-adapter.js';
 
 /**
  * Saves an edited song to the database
@@ -72,72 +72,63 @@ export function saveNewSong(event) {
       const title = $("#song-form-title").val();
       const artist = $("#song-form-artist").val();
       const info = $("#song-form-info").val();
-      const category = $("#song-form-category").val();
+      let category = $("#song-form-category").val();
 
       if (category == "--NEW--") {
         const description = $("#song-form-new-category").val();
-        let code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-        const codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-        let loopCount = 1;
-        let newCode = code;
-        while ((row = codeCheckStmt.get(newCode))) {
-          debugLog?.info(`Found a code collision on ${code}`, { module: 'song-management', function: 'saveNewSong' });
-          newCode = `${code}${loopCount}`;
-          loopCount = loopCount + 1;
-          debugLog?.info(`NewCode is ${newCode}`, { module: 'song-management', function: 'saveNewSong' });
-        }
-        debugLog?.info(`Out of loop, setting code to ${newCode}`, { module: 'song-management', function: 'saveNewSong' });
-        code = newCode;
-        const categoryInsertStmt = db.prepare(
-          "INSERT INTO categories VALUES (?, ?)"
-        );
-        try {
-          const categoryInfo = categoryInsertStmt.run(
-            code,
-            $("#song-form-new-category").val()
-          );
-          if (categoryInfo.changes == 1) {
-            debugLog?.info(`Added new row into database`, { module: 'song-management', function: 'saveNewSong' });
-            populateCategorySelect();
-            populateCategoriesModal();
-            category = code;
-          }
-        } catch (err) {
-          if (err.message.match(/UNIQUE constraint/)) {
-            const description = $("#song-form-new-category").val();
-            $("#song-form-new-category").val("");
-            alert(
-              `Couldn't add a category named "${description}" - apparently one already exists!`
-            );
+        let baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
+        const findUniqueCode = async (base, index = 1) => {
+          const test = index === 1 ? base : `${base}${index}`;
+          const check = await secureDatabase.query("SELECT 1 FROM categories WHERE code = ?", [test]);
+          const exists = Array.isArray(check?.data || check) && (check.data || check).length > 0;
+          return exists ? findUniqueCode(base, index + 1) : test;
+        };
+        (async () => {
+          const finalCode = await findUniqueCode(baseCode);
+          const insert = await secureDatabase.execute("INSERT INTO categories VALUES (?, ?)", [finalCode, description]);
+          if (!insert?.success) {
+            debugLog?.warn('Category insert failed', { module: 'song-management', function: 'saveNewSong', error: insert?.error });
             return;
           }
-        }
+          debugLog?.info(`Added new category`, { module: 'song-management', function: 'saveNewSong', code: finalCode });
+          if (typeof populateCategorySelect === 'function') populateCategorySelect();
+          if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
+          category = finalCode;
+        })();
       }
 
       const duration = $("#song-form-duration").val();
-      const uuid = uuidv4();
+      const uuid = (window.secureElectronAPI?.utils?.generateId)
+        ? await window.secureElectronAPI.utils.generateId()
+        : (typeof uuidv4 === 'function' ? uuidv4() : Date.now().toString());
       const newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(
         /[^-.\w]/g,
         ""
       );
-      securePath.join(store.get("music_directory"), newFilename).then(result => {
+      secureStore.get("music_directory").then(dirResult => {
+        const musicDirectory = dirResult?.success ? dirResult.value : null;
+        if (!musicDirectory) {
+          debugLog?.warn('❌ Could not get music directory from store', { module: 'song-management', function: 'saveNewSong' });
+          return;
+        }
+        securePath.join(musicDirectory, newFilename).then(result => {
           if (!result.success || !result.data) {
             debugLog?.warn('❌ Path join failed:', { module: 'song-management', function: 'saveNewSong', result: result });
             return;
           }
           const newPath = result.data;
-          const stmt = db.prepare(
-            "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
-          );
-          stmt.run(
-            title,
-            artist,
-            category,
-            info,
-            newFilename,
-            duration,
-            Math.floor(Date.now() / 1000)
-          );
+          secureDatabase.execute(
+            "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+              title,
+              artist,
+              category,
+              info,
+              newFilename,
+              duration,
+              Math.floor(Date.now() / 1000)
+            ]
+          ).then(() => {
           secureFileSystem.copy(filename, newPath).then(result => {
             if (result.success) {
               debugLog?.info('✅ File copied successfully', { module: 'song-management', function: 'saveNewSong' });
@@ -151,8 +142,11 @@ export function saveNewSong(event) {
           // Song has been saved, now let's show item
           $("#omni_search").val(title);
           searchData();
-      }).catch(error => {
+          }).catch(error => {
         debugLog?.warn('❌ Path join error:', { module: 'song-management', function: 'saveNewSong', error: error });
+        });
+      }).catch(error => {
+        debugLog?.warn('❌ Store get error:', { module: 'song-management', function: 'saveNewSong', error: error });
       });
   }).catch(error => {
     debugLog?.warn('❌ Path parse error:', { module: 'song-management', function: 'saveNewSong', error: error });

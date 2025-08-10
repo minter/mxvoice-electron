@@ -26,56 +26,56 @@ export function deleteSong() {
   const songId = $("#selected_row").attr("songid");
   if (songId) {
     debugLog?.info(`Preparing to delete song ${songId}`, { module: 'song-management', function: 'deleteSong' });
-    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    const songRow = songStmt.get(songId);
-    const filename = songRow.filename;
+    return secureDatabase.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(async (songResult) => {
+      const rows = songResult?.data || songResult;
+      const songRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+      const filename = songRow?.filename;
     
-    return customConfirm(`Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`).then(confirmed => {
+      return customConfirm(`Are you sure you want to delete ${songRow?.title || 'this song'} from Mx. Voice permanently?`).then(async confirmed => {
       if (confirmed) {
         debugLog?.info("Proceeding with delete", { module: 'song-management', function: 'deleteSong' });
-        const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
-        if (deleteStmt.run(songId)) {
-          secureStore.get("music_directory").then(result => {
-            // Extract the actual value from the result object
-            const musicDirectory = result.success && result.value ? result.value : null;
-            if (!musicDirectory) {
-              debugLog?.warn('❌ Could not get music directory from store', { module: 'song-management', function: 'deleteSong' });
-              return;
-            }
-            securePath.join(musicDirectory, filename).then(result => {
-                if (!result.success || !result.data) {
-                  debugLog?.warn('❌ Path join failed:', { module: 'song-management', function: 'deleteSong', result: result });
-                  return;
+          const delResult = await secureDatabase.execute("DELETE FROM mrvoice WHERE id = ?", [songId]);
+          if (!delResult?.success) {
+            debugLog?.info("Error deleting song from database", { module: 'song-management', function: 'deleteSong', error: delResult?.error });
+            return { success: false, error: delResult?.error || 'Database deletion failed' };
+          }
+
+          try {
+            const dirResult = await secureStore.get("music_directory");
+            const musicDirectory = dirResult?.success && dirResult.value ? dirResult.value : null;
+            if (!musicDirectory || !filename) {
+              debugLog?.warn('❌ Missing music directory or filename for file delete', { module: 'song-management', function: 'deleteSong' });
+            } else {
+              const joinResult = await securePath.join(musicDirectory, filename);
+              if (joinResult?.success && joinResult.data) {
+                const filePath = joinResult.data;
+                const delFile = await secureFileSystem.delete(filePath);
+                if (!delFile?.success) {
+                  debugLog?.warn('❌ Failed to delete file:', { module: 'song-management', function: 'deleteSong', error: delFile?.error });
+                } else {
+                  debugLog?.info('✅ File deleted successfully', { module: 'song-management', function: 'deleteSong' });
                 }
-                const filePath = result.data;
-                secureFileSystem.delete(filePath).then(result => {
-                  if (result.success) {
-                    debugLog?.info('✅ File deleted successfully', { module: 'song-management', function: 'deleteSong' });
-                  } else {
-                    debugLog?.warn('❌ Failed to delete file:', { module: 'song-management', function: 'deleteSong', error: result.error });
-                  }
-                }).catch(error => {
-                  debugLog?.warn('❌ File deletion error:', { module: 'song-management', function: 'deleteSong', error: error });
-                });
-            }).catch(error => {
-              debugLog?.warn('❌ Path join error:', { module: 'song-management', function: 'deleteSong', error: error });
-            });
-            // Remove song anywhere it appears
-            $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-            $(`.hotkeys li span[songid=${songId}]`).remove();
-            $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-            $(`#search_results tr[songid=${songId}]`).remove();
-            saveHoldingTankToStore();
-            saveHotkeysToStore();
-          });
-          return { success: true, songId: songId, title: songRow.title };
-        } else {
-          debugLog?.info("Error deleting song from database", { module: 'song-management', function: 'deleteSong' });
-          return { success: false, error: 'Database deletion failed' };
-        }
+              } else {
+                debugLog?.warn('❌ Path join failed:', { module: 'song-management', function: 'deleteSong', result: joinResult });
+              }
+            }
+          } catch (error) {
+            debugLog?.warn('❌ Error during file deletion sequence', { module: 'song-management', function: 'deleteSong', error: error?.message });
+          }
+
+          // Remove song anywhere it appears
+          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
+          $(`.hotkeys li span[songid=${songId}]`).remove();
+          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
+          $(`#search_results tr[songid=${songId}]`).remove();
+          if (typeof saveHoldingTankToStore === 'function') saveHoldingTankToStore();
+          if (typeof saveHotkeysToStore === 'function') saveHotkeysToStore();
+
+          return { success: true, songId: songId, title: songRow?.title };
       } else {
         return { success: false, error: 'User cancelled' };
       }
+      });
     });
   }
 }
@@ -88,10 +88,11 @@ export function removeFromHoldingTank() {
   const songId = $("#selected_row").attr("songid");
   if (songId) {
     debugLog?.info(`Preparing to remove song ${songId} from holding tank`, { module: 'song-management', function: 'removeFromHoldingTank' });
-    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    const songRow = songStmt.get(songId);
+    return secureDatabase.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(result => {
+      const rows = result?.data || result;
+      const songRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
     
-    return customConfirm(`Are you sure you want to remove ${songRow.title} from the holding tank?`).then(confirmed => {
+      return customConfirm(`Are you sure you want to remove ${songRow?.title || 'this song'} from the holding tank?`).then(confirmed => {
       if (confirmed) {
         debugLog?.info("Proceeding with removal from holding tank", { module: 'song-management', function: 'removeFromHoldingTank' });
         // Remove the selected row from the holding tank
@@ -99,11 +100,12 @@ export function removeFromHoldingTank() {
         // Clear the selection
         $("#selected_row").removeAttr("id");
         // Save the updated holding tank to store
-        saveHoldingTankToStore();
-        return { success: true, songId: songId, title: songRow.title };
+          if (typeof saveHoldingTankToStore === 'function') saveHoldingTankToStore();
+          return { success: true, songId: songId, title: songRow?.title };
       } else {
         return { success: false, error: 'User cancelled' };
       }
+      });
     });
   }
 }
@@ -119,11 +121,12 @@ export function removeFromHotkey() {
   
   if (songId) {
     debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'song-management', function: 'removeFromHotkey' });
-    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    const songRow = songStmt.get(songId);
+    return secureDatabase.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(result => {
+      const rows = result?.data || result;
+      const songRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
     
-    if (songRow) {
-      return customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`).then(confirmed => {
+      if (songRow) {
+        return customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`).then(confirmed => {
         if (confirmed) {
           debugLog?.info("Proceeding with removal from hotkey", { module: 'song-management', function: 'removeFromHotkey' });
           // Clear the hotkey slot
@@ -132,21 +135,22 @@ export function removeFromHotkey() {
           // Clear the selection
           $("#selected_row").removeAttr("id");
           // Save the updated hotkeys to store
-          saveHotkeysToStore();
+            if (typeof saveHotkeysToStore === 'function') saveHotkeysToStore();
           debugLog?.info("Hotkey cleared successfully", { module: 'song-management', function: 'removeFromHotkey' });
           return { success: true, songId: songId, title: songRow.title };
         } else {
           return { success: false, error: 'User cancelled' };
         }
-      });
-    } else {
-      debugLog?.error("Song not found in database for ID:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
-      // Still clear the hotkey even if song not found
-      $("#selected_row").removeAttr("songid");
-      $("#selected_row span").html("");
-      $("#selected_row").removeAttr("id");
-      saveHotkeysToStore();
-    }
+        });
+      } else {
+        debugLog?.error("Song not found in database for ID:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
+        // Still clear the hotkey even if song not found
+        $("#selected_row").removeAttr("songid");
+        $("#selected_row span").html("");
+        $("#selected_row").removeAttr("id");
+        if (typeof saveHotkeysToStore === 'function') saveHotkeysToStore();
+      }
+    });
   } else {
     debugLog?.info("No songId found on selected row", { module: 'song-management', function: 'removeFromHotkey' });
   }
