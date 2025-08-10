@@ -1,104 +1,72 @@
 /**
  * Log Formatter
  * 
- * Handles formatting of log messages, timestamps, and context information.
+ * Handles formatting of log messages with consistent structure and styling.
  * 
  * @module log-formatter
  */
 
+import { safeStringify } from './utils.js';
+
 /**
  * Initialize the log formatter
  * @param {Object} options - Configuration options
- * @param {Object} options.electronAPI - Electron API reference
- * @param {Object} options.db - Database reference
- * @param {Object} options.store - Store reference
  * @returns {Object} Log formatter interface
  */
 function initializeLogFormatter(options = {}) {
-  const { electronAPI, db, store } = options;
-  
+  const { 
+    showTimestamp = true, 
+    showLevel = true, 
+    timestampFormat = 'ISO',
+    maxContextLength = 200
+  } = options;
+
   /**
-   * Format a log message with optional context
-   * @param {string} message - The log message
-   * @param {Object} context - Additional context (optional)
-   * @returns {string} Formatted message
+   * Format a log message with consistent structure
+   * @param {string} message - Main log message
+   * @param {Object} context - Additional context information
+   * @returns {string} Formatted log message
    */
   function formatMessage(message, context = null) {
     let formattedMessage = message;
     
-    if (context) {
-      if (typeof context === 'object') {
-        // Handle different types of context objects
-        if (context.error) {
-          formattedMessage += ` | Error: ${context.error.message || context.error}`;
-        }
-        if (context.data) {
-          formattedMessage += ` | Data: ${JSON.stringify(context.data)}`;
-        }
-        if (context.function) {
-          formattedMessage += ` | Function: ${context.function}`;
-        }
-        if (context.module) {
-          formattedMessage += ` | Module: ${context.module}`;
-        }
-        if (context.userId) {
-          formattedMessage += ` | User: ${context.userId}`;
-        }
-        if (context.sessionId) {
-          formattedMessage += ` | Session: ${context.sessionId}`;
-        }
-        if (context.timestamp) {
-          formattedMessage += ` | Time: ${formatTimestamp(context.timestamp)}`;
-        }
-        
-        // Handle any other context properties
-        const otherProps = Object.keys(context).filter(key => 
-          !['error', 'data', 'function', 'module', 'userId', 'sessionId', 'timestamp'].includes(key)
-        );
-        
-        if (otherProps.length > 0) {
-          const otherContext = {};
-          otherProps.forEach(key => {
-            otherContext[key] = context[key];
-          });
-          formattedMessage += ` | Context: ${JSON.stringify(otherContext)}`;
-        }
-      } else {
-        // Simple string or primitive context
-        formattedMessage += ` | Context: ${context}`;
+    if (context && typeof context === 'object') {
+      const contextStr = formatContext(context);
+      if (contextStr) {
+        formattedMessage += ` | ${contextStr}`;
       }
     }
     
     return formattedMessage;
   }
-  
+
   /**
-   * Format a timestamp
-   * @param {Date|string|number} timestamp - Timestamp to format
+   * Format a timestamp according to specified format
+   * @param {Date} timestamp - Timestamp to format
    * @returns {string} Formatted timestamp
    */
   function formatTimestamp(timestamp) {
     if (!timestamp) {
-      return new Date().toISOString();
+      timestamp = new Date();
     }
     
-    let date;
-    if (timestamp instanceof Date) {
-      date = timestamp;
-    } else if (typeof timestamp === 'number') {
-      date = new Date(timestamp);
-    } else if (typeof timestamp === 'string') {
-      date = new Date(timestamp);
-    } else {
-      date = new Date();
+    switch (timestampFormat) {
+      case 'ISO':
+        return timestamp.toISOString();
+      case 'local':
+        return timestamp.toLocaleString();
+      case 'time':
+        return timestamp.toLocaleTimeString();
+      default:
+        return timestamp.toISOString();
     }
-    
-    return date.toISOString();
   }
-  
+
+
+
   /**
-   * Format context information
-   * @param {Object} context - Context object to format
+   * Format context information for logging
+   * @param {Object} context - Context object
    * @returns {string} Formatted context string
    */
   function formatContext(context) {
@@ -127,7 +95,7 @@ function initializeLogFormatter(options = {}) {
     // Add data if available
     if (context.data) {
       const dataStr = typeof context.data === 'object' 
-        ? JSON.stringify(context.data) 
+        ? safeStringify(context.data)
         : String(context.data);
       contextParts.push(`Data: ${dataStr}`);
     }
@@ -152,7 +120,7 @@ function initializeLogFormatter(options = {}) {
       otherProps.forEach(key => {
         otherContext[key] = context[key];
       });
-      contextParts.push(`Other: ${JSON.stringify(otherContext)}`);
+      contextParts.push(`Other: ${safeStringify(otherContext)}`);
     }
     
     return contextParts.join(' | ');

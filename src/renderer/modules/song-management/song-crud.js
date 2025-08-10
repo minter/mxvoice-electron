@@ -54,7 +54,12 @@ export function saveNewSong(event) {
   $(`#songFormModal`).modal("hide");
   debugLog?.info("Starting save process", { module: 'song-management', function: 'saveNewSong' });
   const filename = $("#song-form-filename").val();
-  securePath.parse(filename).then(pathData => {
+  securePath.parse(filename).then(result => {
+      if (!result.success || !result.data) {
+        debugLog?.warn('❌ Path parse failed:', { module: 'song-management', function: 'saveNewSong', result: result });
+        return;
+      }
+      const pathData = result.data;
       const title = $("#song-form-title").val();
       const artist = $("#song-form-artist").val();
       const info = $("#song-form-info").val();
@@ -106,7 +111,12 @@ export function saveNewSong(event) {
         /[^-.\w]/g,
         ""
       );
-      securePath.join(store.get("music_directory"), newFilename).then(newPath => {
+      securePath.join(store.get("music_directory"), newFilename).then(result => {
+          if (!result.success || !result.data) {
+            debugLog?.warn('❌ Path join failed:', { module: 'song-management', function: 'saveNewSong', result: result });
+            return;
+          }
+          const newPath = result.data;
           const stmt = db.prepare(
             "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
           );

@@ -19,7 +19,7 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem, secureStore } from '../adapters/secure-adapter.js';
+import { secureFileSystem, secureStore, securePath } from '../adapters/secure-adapter.js';
 
 /**
  * Initialize the UI Manager module
@@ -270,53 +270,60 @@ function initializeUIManager(options = {}) {
         if (deleteStmt.run(songId)) {
           // Delete file if electronAPI is available
           if (electronAPI && electronAPI.store) {
-            secureStore.get("music_directory").then(musicDirectory => {
-              if (musicDirectory.success && musicDirectory.value) {
-                electronAPI.path.join(musicDirectory.value, filename).then(joinResult => {
-                  if (joinResult.success) {
-                    const filePath = joinResult.data;
-                    secureFileSystem.delete(filePath).then(result => {
-                      if (result.success) {
-                        debugLog?.info('File deleted successfully', { 
-                          module: 'ui-manager',
-                          function: 'deleteSong',
-                          filePath: filePath
-                        });
-                      } else {
-                        debugLog?.warn('Failed to delete file', { 
-                          module: 'ui-manager',
-                          function: 'deleteSong',
-                          filePath: filePath,
-                          error: result.error
-                        });
-                      }
-                    }).catch(error => {
-                      debugLog?.warn('File deletion error', { 
+            secureStore.get("music_directory").then(result => {
+              // Extract the actual value from the result object
+              const musicDirectory = result.success && result.value ? result.value : null;
+              if (!musicDirectory) {
+                debugLog?.warn('❌ Could not get music directory from store', { 
+                  module: 'ui-manager',
+                  function: 'deleteSong'
+                });
+                return;
+              }
+              securePath.join(musicDirectory, filename).then(joinResult => {
+                if (joinResult.success) {
+                  const filePath = joinResult.data;
+                  secureFileSystem.delete(filePath).then(result => {
+                    if (result.success) {
+                      debugLog?.info('File deleted successfully', { 
+                        module: 'ui-manager',
+                        function: 'deleteSong',
+                        filePath: filePath
+                      });
+                    } else {
+                      debugLog?.warn('Failed to delete file', { 
                         module: 'ui-manager',
                         function: 'deleteSong',
                         filePath: filePath,
-                        error: error
+                        error: result.error
                       });
-                    });
-                  } else {
-                    debugLog?.warn('Failed to join path', { 
+                    }
+                  }).catch(error => {
+                    debugLog?.warn('File deletion error', { 
                       module: 'ui-manager',
                       function: 'deleteSong',
-                      musicDirectory: musicDirectory.value,
-                      filename: filename,
-                      error: joinResult.error
+                      filePath: filePath,
+                      error: error
                     });
-                  }
-                }).catch(error => {
-                  debugLog?.warn('Path join error', { 
+                  });
+                } else {
+                  debugLog?.warn('Failed to join path', { 
                     module: 'ui-manager',
                     function: 'deleteSong',
-                    musicDirectory: musicDirectory.value,
+                    musicDirectory: musicDirectory,
                     filename: filename,
-                    error: error
+                    error: joinResult.error
                   });
+                }
+              }).catch(error => {
+                debugLog?.warn('Path join error', { 
+                  module: 'ui-manager',
+                  function: 'deleteSong',
+                  musicDirectory: musicDirectory,
+                  filename: filename,
+                  error: error
                 });
-              }
+              });
             }).catch(error => {
               debugLog?.warn('Store get API error', { 
                 module: 'ui-manager',

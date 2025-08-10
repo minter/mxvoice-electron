@@ -78,7 +78,19 @@ function stopPlaying(fadeOut = false) {
         function: 'stopPlaying',
         fadeOut: fadeOut
       });
-      secureStore.get("fade_out_seconds").then(fadeSeconds => {
+      secureStore.get("fade_out_seconds").then(result => {
+        if (!result.success || !result.value) {
+          debugLog?.warn('Failed to get fade_out_seconds:', { 
+            module: 'audio-controller',
+            function: 'stopPlaying',
+            result: result
+          });
+          // Fallback to immediate stop
+          sound.unload();
+          resetUIState();
+          return;
+        }
+        const fadeSeconds = result.value;
         debugLog?.info("Fade out seconds:", { 
           module: 'audio-controller',
           function: 'stopPlaying',
@@ -211,7 +223,18 @@ function pausePlaying(fadeOut = false) {
           sound.pause();
           sound.volume(old_volume);
         });
-        secureStore.get("fade_out_seconds").then(fadeSeconds => {
+        secureStore.get("fade_out_seconds").then(result => {
+          if (!result.success || !result.value) {
+            debugLog?.warn('Failed to get fade_out_seconds:', { 
+              module: 'audio-controller',
+              function: 'pausePlaying',
+              result: result
+            });
+            // Fallback to immediate pause
+            sound.pause();
+            return;
+          }
+          const fadeSeconds = result.value;
           const fadeDuration = fadeSeconds * 1000;
           sound.fade(sound.volume(), 0, fadeDuration);
         });

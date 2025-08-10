@@ -6,6 +6,8 @@
  * @module debug-logger
  */
 
+import { safeStringify } from './utils.js';
+
 /**
  * Initialize the debug logger
  * @param {Object} options - Configuration options
@@ -112,37 +114,30 @@ function initializeDebugLogger(options = {}) {
   
   /**
    * Set log level
-   * @param {number} level - Log level to set
+   * @param {number} level - New log level
    */
   function setLogLevel(level) {
-    if (Object.values(LOG_LEVELS).includes(level)) {
+    if (LOG_LEVELS.hasOwnProperty(level) || Object.values(LOG_LEVELS).includes(level)) {
       currentLogLevel = level;
-    } else {
-      console.warn('❌ Invalid log level:', level);
     }
   }
   
   /**
-   * Format a log message with timestamp and context
-   * @param {string} level - Log level (ERROR, WARN, INFO, DEBUG)
+   * Format a log message with level and context
+   * @param {string} level - Log level
    * @param {string} message - Log message
    * @param {Object} context - Additional context (optional)
    * @returns {string} Formatted log message
    */
   function formatLogMessage(level, message, context = null) {
     const timestamp = new Date().toISOString();
-    const levelIcon = {
-      'ERROR': '❌',
-      'WARN': '⚠️',
-      'INFO': 'ℹ️',
-      'DEBUG': '🐛'
-    }[level] || '📝';
+    const levelIcon = level === 'ERROR' ? '❌' : level === 'WARN' ? '⚠️' : 'ℹ️';
     
     let formattedMessage = `${levelIcon} [${timestamp}] [${level}] ${message}`;
     
     if (context) {
       if (typeof context === 'object') {
-        formattedMessage += ` | Context: ${JSON.stringify(context)}`;
+        formattedMessage += ` | Context: ${safeStringify(context)}`;
       } else {
         formattedMessage += ` | Context: ${context}`;
       }

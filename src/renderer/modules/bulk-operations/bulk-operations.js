@@ -67,8 +67,17 @@ export function addSongsByPath(pathArray, category) {
       const artist = metadata.common.artist;
       const uuid = uuidv4();
       const newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
-      secureStore.get("music_directory").then(musicDirectory => {
-        const newPath = path.join(musicDirectory.value, newFilename);
+      secureStore.get("music_directory").then(result => {
+        if (!result.success || !result.value) {
+          debugLog?.warn('Failed to get music directory:', { 
+            module: 'bulk-operations',
+            function: 'addSongsByPath',
+            result: result
+          });
+          return;
+        }
+        const musicDirectory = result.value;
+        const newPath = path.join(musicDirectory, newFilename);
         const stmt = db.prepare(
           "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)"
         );
@@ -156,7 +165,17 @@ export function saveBulkUpload(event) {
                 results = results.concat(walk(file));
               } else {
                 /* Is a file */
-                securePath.parse(file).then(pathData => {
+                securePath.parse(file).then(result => {
+                    if (!result.success || !result.data) {
+                      debugLog?.warn('Path parse failed:', { 
+                        module: 'bulk-operations',
+                        function: 'saveBulkUpload',
+                        file: file,
+                        result: result
+                      });
+                      return;
+                    }
+                    const pathData = result.data;
                     if (
                       [".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(
                         pathData.ext.toLowerCase()

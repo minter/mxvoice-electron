@@ -208,7 +208,17 @@ export function testFileSystemAPI() {
       }
     }).then(dbResult => {
       if (dbResult.success) {
-        return securePath.join(dbResult.value, 'config.json').then(configPath => {
+        return securePath.join(dbResult.value, 'config.json').then(result => {
+            if (!result.success || !result.data) {
+              debugLog?.warn('Path join failed:', { 
+                module: 'test-utils',
+                function: 'testFileSystemAPI',
+                result: result
+              });
+              results.tests.push({ name: 'fileRead', success: false, error: 'Path join failed' });
+              return results;
+            }
+            const configPath = result.data;
             return secureFileSystem.read(configPath).then(result => {
               if (result.success) {
                 debugLog?.info('file read API works: Config file read successfully', { 

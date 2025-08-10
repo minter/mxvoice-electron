@@ -387,7 +387,8 @@ function registerAllHandlers() {
 
   ipcMain.handle('path-parse', async (event, filePath) => {
     try {
-      return path.parse(filePath);
+      const parsedPath = path.parse(filePath);
+      return { success: true, data: parsedPath };
     } catch (error) {
       debugLog?.error('Path parse error:', { module: 'ipc-handlers', function: 'path-parse', error: error.message });
       return { success: false, error: error.message };
@@ -396,7 +397,8 @@ function registerAllHandlers() {
 
   ipcMain.handle('path-extname', async (event, filePath) => {
     try {
-      return path.extname(filePath);
+      const ext = path.extname(filePath);
+      return { success: true, data: ext };
     } catch (error) {
       debugLog?.error('Path extname error:', { module: 'ipc-handlers', function: 'path-extname', error: error.message });
       return { success: false, error: error.message };

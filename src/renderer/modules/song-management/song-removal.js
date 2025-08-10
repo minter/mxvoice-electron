@@ -35,8 +35,19 @@ export function deleteSong() {
         debugLog?.info("Proceeding with delete", { module: 'song-management', function: 'deleteSong' });
         const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
         if (deleteStmt.run(songId)) {
-          secureStore.get("music_directory").then(musicDirectory => {
-            securePath.join(musicDirectory, filename).then(filePath => {
+          secureStore.get("music_directory").then(result => {
+            // Extract the actual value from the result object
+            const musicDirectory = result.success && result.value ? result.value : null;
+            if (!musicDirectory) {
+              debugLog?.warn('❌ Could not get music directory from store', { module: 'song-management', function: 'deleteSong' });
+              return;
+            }
+            securePath.join(musicDirectory, filename).then(result => {
+                if (!result.success || !result.data) {
+                  debugLog?.warn('❌ Path join failed:', { module: 'song-management', function: 'deleteSong', result: result });
+                  return;
+                }
+                const filePath = result.data;
                 secureFileSystem.delete(filePath).then(result => {
                   if (result.success) {
                     debugLog?.info('✅ File deleted successfully', { module: 'song-management', function: 'deleteSong' });

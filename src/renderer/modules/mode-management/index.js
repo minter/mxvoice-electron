@@ -43,19 +43,28 @@ class ModeManagementModule {
     
     // Load saved mode or default to storage
     try {
-      const hasMode = await secureStore.has("holding_tank_mode");
-      if (hasMode) {
-        const mode = await secureStore.get("holding_tank_mode");
-        this.holdingTankMode = mode;
-        // Initialize the mode UI
-        this.setHoldingTankMode(this.holdingTankMode);
-        return { success: true, mode: mode };
-      } else {
-        this.holdingTankMode = "storage"; // Default to storage mode
-        // Initialize the mode UI
-        this.setHoldingTankMode(this.holdingTankMode);
-        return { success: true, mode: this.holdingTankMode };
+      const hasModeResult = await secureStore.has("holding_tank_mode");
+      if (hasModeResult && hasModeResult.success && hasModeResult.has) {
+        const modeResult = await secureStore.get("holding_tank_mode");
+        if (modeResult && modeResult.success && modeResult.value) {
+          const mode = modeResult.value;
+          this.holdingTankMode = mode;
+          // Initialize the mode UI
+          this.setHoldingTankMode(this.holdingTankMode);
+          return { success: true, mode: mode };
+        } else {
+          debugLog?.warn('Failed to get holding tank mode:', { 
+            module: 'mode-management',
+            function: 'initModeManagement',
+            result: modeResult
+          });
+        }
       }
+      // Default to storage mode if no mode found or failed to get
+      this.holdingTankMode = "storage"; // Default to storage mode
+      // Initialize the mode UI
+      this.setHoldingTankMode(this.holdingTankMode);
+      return { success: true, mode: this.holdingTankMode };
     } catch (error) {
       debugLog?.error('Failed to initialize mode management', { 
         module: 'mode-management',

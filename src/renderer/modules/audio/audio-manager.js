@@ -43,7 +43,10 @@ function playSongWithFilename(filename, row, song_id) {
     song_id: song_id
   });
   
-  secureStore.get("music_directory").then(musicDirectory => {
+  secureStore.get("music_directory").then(result => {
+    // Extract the actual value from the result object
+    const musicDirectory = result.success && result.value ? result.value : null;
+    
     getDebugLog()?.info('🔍 PLAYBACK STEP 8: Music directory retrieved', { 
       module: 'audio-manager',
       function: 'playSongWithFilename',
@@ -65,7 +68,16 @@ function playSongWithFilename(filename, row, song_id) {
         });
         // Use default path as fallback - get through secure API
         const defaultPath = '.config/mxvoice/mp3';
-        securePath.join(defaultPath, filename).then(joinedPath => {
+        securePath.join(defaultPath, filename).then(result => {
+          if (!result.success || !result.data) {
+            getDebugLog()?.warn('❌ Path join failed with default path:', { 
+              module: 'audio-manager',
+              function: 'playSongWithFilename',
+              result: result
+            });
+            return;
+          }
+          const joinedPath = result.data;
           const sound_path = [joinedPath];
             getDebugLog()?.info("Inside get, Filename is " + filename, { 
               module: 'audio-manager',
@@ -126,7 +138,8 @@ function playSongWithFilename(filename, row, song_id) {
             getDebugLog()?.info('🔍 Setting sound in shared state:', { 
               module: 'audio-manager',
               function: 'playSongWithFilename',
-              sound: sound
+              soundId: sound._id || 'unknown',
+              soundSrc: sound_path
             });
             sharedState.set('sound', sound);
             getDebugLog()?.info('🔍 Sound set in shared state, now playing...', { 
@@ -146,14 +159,16 @@ function playSongWithFilename(filename, row, song_id) {
         return;
       }
       
-        securePath.join(musicDirectory, filename).then(joinedPath => {
-          if (!joinedPath) {
-            getDebugLog()?.warn('❌ joinedPath is undefined or empty', { 
+        securePath.join(musicDirectory, filename).then(result => {
+          if (!result.success || !result.data) {
+            getDebugLog()?.warn('❌ Path join failed:', { 
               module: 'audio-manager',
-              function: 'playSongWithFilename'
+              function: 'playSongWithFilename',
+              result: result
             });
             return;
           }
+          const joinedPath = result.data;
           const sound_path = [joinedPath];
           getDebugLog()?.info("Inside get, Filename is " + filename, { 
             module: 'audio-manager',
@@ -214,7 +229,8 @@ function playSongWithFilename(filename, row, song_id) {
           getDebugLog()?.info('🔍 Setting sound in shared state:', { 
             module: 'audio-manager',
             function: 'playSongWithFilename',
-            sound: sound
+            soundId: sound._id || 'unknown',
+            soundSrc: sound_path
           });
           sharedState.set('sound', sound);
           getDebugLog()?.info('🔍 Sound set in shared state, now playing...', { 
@@ -292,13 +308,13 @@ function playSongFromId(song_id) {
   });
   
   secureDatabase.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
-        getDebugLog()?.info("🔍 PLAYBACK STEP 3: Database query completed", { 
-          module: 'audio-manager',
-          function: 'playSongFromId',
-          song_id: song_id,
-          result_success: result?.success,
-          result_data_length: result?.data?.length,
-          full_result: result
+                  getDebugLog()?.info("🔍 PLAYBACK STEP 3: Database query completed", { 
+            module: 'audio-manager',
+            function: 'playSongFromId',
+            song_id: song_id,
+            result_success: result?.success,
+            result_data_length: result?.data?.length,
+            result_error: result?.error || null
     });
     if (result.success && result.data.length > 0) {
       const row = result.data[0];
@@ -311,7 +327,7 @@ function playSongFromId(song_id) {
             filename: filename,
             row_title: row.title,
             row_artist: row.artist,
-            full_row: row
+            row_id: row.id
           });
           
           if (!filename) {
@@ -339,8 +355,8 @@ function playSongFromId(song_id) {
             function: 'playSongFromId',
             song_id: song_id,
             result_success: result?.success,
-            result_data: result?.data,
-            result_error: result?.error
+            result_data_length: result?.data?.length || 0,
+            result_error: result?.error || null
           });
         }
       }).catch(error => {
@@ -349,8 +365,7 @@ function playSongFromId(song_id) {
           function: 'playSongFromId',
           song_id: song_id,
           error: error.message,
-          error_stack: error.stack,
-          error_full: error
+          error_stack: error.stack?.split('\n').slice(0, 3).join('\n') || 'No stack trace'
     });
     // Fallback to legacy database access
     const db = sharedState.get('db');
@@ -375,7 +390,8 @@ function playSongFromId(song_id) {
                 module: 'audio-manager',
                 function: 'playSongFromId',
                 song_id: song_id,
-                rowData: row
+                row_title: row?.title || 'No title',
+                row_artist: row?.artist || 'No artist'
               });
               return;
             }
@@ -417,7 +433,7 @@ function playSelected() {
     function: 'playSelected',
     song_id: song_id,
     song_id_type: typeof song_id,
-    selected_row_element: $("#selected_row")[0]
+    selected_row_exists: $("#selected_row").length > 0
   });
 
   // Only clear the now_playing class if the selected row is from the search panel
