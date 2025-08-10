@@ -1,89 +1,60 @@
-# Modular Main Process Structure
+## Modular Main Process
 
-This directory contains the modular main process scripts for the Electron application.
+This directory contains the modular main process for the Electron app. The entry point is `index-modular.js`, which initializes services, creates the window, and wires IPC securely with context isolation.
 
-## Structure
-
+### Structure
 ```
 src/main/
 ├── modules/
-│   ├── app-setup.js        # Window creation, menu setup, app lifecycle
-│   ├── ipc-handlers.js     # All IPC communication handlers
-│   └── file-operations.js  # File and directory operations
-├── index-modular.js        # Main modular coordinator
-└── README.md              # This file
+│   ├── app-setup.js        # Window/menu/app lifecycle, UI commands → renderer
+│   ├── ipc-handlers.js     # Secure IPC: database, file system, store, audio, path, os, app
+│   ├── file-operations.js  # User dialogs + hotkey/holding-tank import/export, prefs migration
+│   └── debug-log.js        # Main-process DebugLog (uses electron-store & electron-log)
+├── index-modular.js        # Coordinator: store, DB init, updater, modules init, createWindow
+└── README.md
 ```
 
-## Modules
+### Modules
 
-### app-setup.js
-- Handles window creation and configuration
-- Manages application menu creation
-- Sets up app lifecycle events
-- Handles platform-specific features (Apple Silicon warnings, etc.)
-- Exports: `createWindow()`, `createApplicationMenu()`, `setupAppLifecycle()`, UI operation functions
+- `app-setup.js`
+  - Creates the `BrowserWindow` with secure `webPreferences` (contextIsolation on, preload set)
+  - Builds the application menu (platform-aware), sends UI commands to renderer
+  - Manages app lifecycle (activate, window-all-closed, ready-to-show updater checks)
+  - Apple Silicon x64 warning for users on Rosetta
+  - Exports: `initializeAppSetup`, `createWindow`, `createApplicationMenu`, `setupAppLifecycle`, and UI senders
 
-### ipc-handlers.js
-- Contains all IPC handlers for renderer communication
-- Manages database operations through IPC
-- Handles file system operations through IPC
-- Manages store operations through IPC
-- Handles audio operations through IPC
-- Exports: `initializeIpcHandlers()`, `registerAllHandlers()`, `removeAllHandlers()`, `testIpcHandlers()`
+- `ipc-handlers.js`
+  - Registers all secure IPC handlers (DB query/execute, store get/set/has/delete/clear, FS ops, path/os, audio controls, app ops, dialogs)
+  - Injects dependencies from coordinator (window, db, store, updater, debugLog)
+  - Exports: `initializeIpcHandlers`, `registerAllHandlers`, `removeAllHandlers`, `testIpcHandlers`
 
-### file-operations.js
-- Handles hotkey file loading and saving
-- Manages holding tank file operations
-- Handles directory and file dialogs
-- Manages preference migration
-- Exports: `loadHotkeysFile()`, `saveHotkeysFile()`, `addDirectoryDialog()`, `addFileDialog()`, `migrateOldPreferences()`
+- `file-operations.js`
+  - User-facing dialogs for opening/saving hotkey (`.mrv`) and holding-tank (`.hld`) files
+  - Kicks bulk add / add single file flows in renderer via IPC
+  - Migrates legacy preferences into `electron-store`
+  - Exports: `initializeFileOperations`, `loadHotkeysFile`, `saveHotkeysFile`, `loadHoldingTankFile`, `saveHoldingTankFile`, `addDirectoryDialog`, `addFileDialog`, `migrateOldPreferences`
 
-## Usage
+- `debug-log.js`
+  - Main-process DebugLog with level control and preference-backed enablement via `electron-store`
+  - Replaces direct `electron-log` usage with structured, leveled logs
+  - Exports: `initializeMainDebugLog`
 
-### ✅ COMPLETED: Migration to Modular Implementation
-The original `src/index.js` (1203 lines) has been successfully replaced with a modular approach using `src/main/index-modular.js` (242 lines) which:
-1. Imports all modules
-2. Sets up dependencies and configuration
-3. Initializes database and store
-4. Creates window and menu
-5. Registers IPC handlers
-6. Coordinates all components
+### Coordinator (`index-modular.js`)
+- Creates `electron-store` with defaults; initializes DebugLog
+- Sets up auto-updater (logger, feed URL on macOS)
+- First-run flow: create folders, seed DB with starter content if needed
+- Initializes SQLite DB (switches mrvoice.db/mxvoice.db as present)
+- Creates the main window and application menu
+- Injects dependencies into modules; registers secure IPC handlers
 
-## Migration Path
+### Notes
+- Context Isolation is enabled; all renderer access is via preload/IPC
+- Audio playback for quick tests uses Howler in main (via IPC) when applicable
 
-1. **Phase 1**: ✅ Keep current `index.js` working
-2. **Phase 2**: ✅ Test modular implementation alongside current
-3. **Phase 3**: ✅ Switch to modular implementation
-4. **Phase 4**: ✅ Remove old `index.js` - **COMPLETED**
+### Adding a new IPC handler
+1. Add the handler in `modules/ipc-handlers.js` within `registerAllHandlers()`
+2. Validate inputs; return `{ success, data|error }`
+3. Expose via preload secure bridge if needed
 
-## Testing
-
-Run the test script to verify modular components:
-```bash
-node src/test-modular-main.js
-```
-
-## Benefits
-
-- **Maintainability**: Smaller, focused modules
-- **Testability**: Each module can be tested independently
-- **Reusability**: Modules can be reused in different contexts
-- **Clarity**: Clear separation of concerns
-- **Debugging**: Easier to isolate and fix issues
-
-## Current Status
-
-✅ **App Setup**: Complete with window creation and menu setup
-✅ **IPC Handlers**: Complete with all event handlers
-✅ **File Operations**: Complete with all file operations
-✅ **Modular Coordinator**: Complete and functional
-✅ **Testing**: Test scripts available
-✅ **Migration**: Successfully completed - original index.js removed
-
-## Next Steps
-
-The main process modularization is **COMPLETE**. The next phase is renderer process modularization:
-
-- **Renderer Process**: `src/renderer.js` (3112 lines) - Needs modularization
-- **Preload Process**: `src/preload/` - Already modularized
-- **Shared Modules**: `src/shared/` - Ready for common utilities 
+### Status
+- App setup, IPC, file ops, and coordinator are complete and in use.
