@@ -464,11 +464,9 @@ function renameHoldingTankTabWrapper() {
 function saveHoldingTankToStoreWrapper() {
   debugLog?.info('Saving holding tank to store and refreshing display');
   saveHoldingTankToStore().then(() => {
-    debugLog?.info('Holding tank saved successfully, refreshing display');
-    // Refresh the display after saving
-    if (window.populateHoldingTank) {
-      window.populateHoldingTank();
-    }
+    debugLog?.info('Holding tank saved successfully');
+    // Optionally adjust layout without repopulating
+    try { scale_scrollable(); } catch (_) {}
   }).catch(error => {
     debugLog?.error('Error saving holding tank to store', error);
   });

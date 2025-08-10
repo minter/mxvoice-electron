@@ -23,20 +23,25 @@ import { secureFileSystem, secureDatabase, securePath, secureStore } from '../ad
  * 
  * @param {string} directory - The directory path to pre-populate
  */
-export function showBulkAddModal(directory) {
+export async function showBulkAddModal(directory) {
   $("#bulk-add-path").val(directory);
   $("#bulk-add-category").empty();
-  secureDatabase.query("SELECT * FROM categories ORDER BY description ASC").then(result => {
+  try {
+    const result = await secureDatabase.query("SELECT * FROM categories ORDER BY description ASC");
     const rows = result?.data || result || [];
     if (Array.isArray(rows)) {
       rows.forEach(row => {
-        categories[row.code] = row.description;
+        if (typeof categories !== 'undefined') {
+          categories[row.code] = row.description;
+        }
         $("#bulk-add-category").append(
           `<option value="${row.code}">${row.description}</option>`
         );
       });
     }
-  }).catch(() => {/* ignore for modal open */});
+  } catch (_err) {
+    // ignore; modal can still open
+  }
   $("#bulk-add-category").append(
     `<option value="" disabled>-----------------------</option>`
   );
@@ -55,99 +60,65 @@ export function showBulkAddModal(directory) {
  * @param {string} category - Category code for the songs
  * @returns {Promise} - Promise that resolves when all songs are processed
  */
-export function addSongsByPath(pathArray, category) {
+export async function addSongsByPath(pathArray, category) {
   const songSourcePath = pathArray.shift();
-  if (songSourcePath) {
-    return mm.parseFile(songSourcePath).then((metadata) => {
-      const durationSeconds = metadata.format.duration.toFixed(0);
-      const durationString = new Date(durationSeconds * 1000)
-        .toISOString()
-        .substr(14, 5);
+  if (!songSourcePath) return;
 
-      return securePath.parse(songSourcePath).then(parseRes => {
-        const parsed = parseRes?.data || {};
-        const title = metadata.common.title || parsed.name;
-      if (!title) {
-        return;
-      }
-      const artist = metadata.common.artist;
-      const uuidPromise = (window.secureElectronAPI?.utils?.generateId)
-        ? window.secureElectronAPI.utils.generateId()
-        : Promise.resolve(Date.now().toString());
-      return uuidPromise.then(uuid => {
-        return securePath.extname(songSourcePath).then(extRes => {
-          const ext = extRes?.data || extRes || '';
-          const newFilename = `${artist}-${title}-${uuid}${ext}`.replace(/[^-.\w]/g, "");
-      secureStore.get("music_directory").then(result => {
-        if (!result.success || !result.value) {
-          debugLog?.warn('Failed to get music directory:', { 
-            module: 'bulk-operations',
-            function: 'addSongsByPath',
-            result: result
-          });
-          return;
-        }
-        const musicDirectory = result.value;
-        securePath.join(musicDirectory, newFilename).then(joinRes => {
-          const newPath = joinRes?.data || joinRes;
-          secureDatabase.execute(
-            "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)",
-            [title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000)]
-          ).then(insRes => {
-            const lastId = insRes?.data?.lastInsertRowid;
-        debugLog?.info('Copying audio file', { 
-          module: 'bulk-operations',
-          function: 'addSongsByPath',
-          songSourcePath: songSourcePath,
-          newPath: newPath
-        });
-        secureFileSystem.copy(songSourcePath, newPath).then(result => {
-          if (result.success) {
-            debugLog?.info('File copied successfully', { 
-              module: 'bulk-operations',
-              function: 'addSongsByPath',
-              songSourcePath: songSourcePath,
-              newPath: newPath
-            });
-          } else {
-            debugLog?.warn('Failed to copy file', { 
-              module: 'bulk-operations',
-              function: 'addSongsByPath',
-              songSourcePath: songSourcePath,
-              newPath: newPath,
-              error: result.error
-            });
-          }
-        }).catch(error => {
-          debugLog?.warn('File copy error', { 
-            module: 'bulk-operations',
-            function: 'addSongsByPath',
-            songSourcePath: songSourcePath,
-            newPath: newPath,
-            error: error
-          });
-        });
-        $("#search_results").append(
-          `<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${
-            lastId || ''
-          }'><td>${
-            categories[category]
-          }</td><td></td><td style='font-weight: bold'>${
-            title || ""
-          }</td><td style='font-weight:bold'>${
-            artist || ""
-          }</td><td>${durationString}</td></tr>`
-        );
+  try {
+    // Parse path to derive title and extension
+    const parseRes = await securePath.parse(songSourcePath);
+    const parsed = parseRes?.data || {};
+    const title = parsed.name;
+    if (!title) return;
 
-        return addSongsByPath(pathArray, category); // process rest of the files AFTER we are finished
-          });
-        });
-      });
-      });
-      });
-    });
+    const extRes = await securePath.extname(songSourcePath);
+    const ext = extRes?.data || extRes || '';
+
+    // Artist may be unknown here; keep empty string
+    const artist = '';
+
+    const uuid = (window.secureElectronAPI?.utils?.generateId)
+      ? await window.secureElectronAPI.utils.generateId()
+      : Date.now().toString();
+
+    const newFilename = `${artist}-${title}-${uuid}${ext}`.replace(/[^-.\w]/g, "");
+
+    const storeRes = await secureStore.get("music_directory");
+    if (!storeRes?.success || !storeRes.value) {
+      debugLog?.warn('Failed to get music directory:', { module: 'bulk-operations', function: 'addSongsByPath', result: storeRes });
+      return;
+    }
+    const musicDirectory = storeRes.value;
+
+    const joinRes = await securePath.join(musicDirectory, newFilename);
+    const newPath = joinRes?.data || joinRes;
+
+    const durationString = '';
+
+    const insRes = await secureDatabase.execute(
+      "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)",
+      [title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000)]
+    );
+    const lastId = insRes?.data?.lastInsertRowid;
+
+    debugLog?.info('Copying audio file', { module: 'bulk-operations', function: 'addSongsByPath', songSourcePath, newPath });
+    const copyRes = await secureFileSystem.copy(songSourcePath, newPath);
+    if (!copyRes?.success) {
+      debugLog?.warn('Failed to copy file', { module: 'bulk-operations', function: 'addSongsByPath', songSourcePath, newPath, error: copyRes?.error });
+    } else {
+      debugLog?.info('File copied successfully', { module: 'bulk-operations', function: 'addSongsByPath', songSourcePath, newPath });
+    }
+
+    const categoryLabel = (typeof categories !== 'undefined') ? categories[category] : category;
+    $("#search_results").append(
+      `<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${lastId || ''}'><td>${categoryLabel}</td><td></td><td style='font-weight: bold'>${title || ""}</td><td style='font-weight:bold'>${artist || ""}</td><td>${durationString}</td></tr>`
+    );
+
+    // Process the rest
+    await addSongsByPath(pathArray, category);
+  } catch (error) {
+    debugLog?.warn('Error in addSongsByPath', { module: 'bulk-operations', function: 'addSongsByPath', error: error?.message });
   }
-  return Promise.resolve();
 }
 
 /**
@@ -156,105 +127,68 @@ export function addSongsByPath(pathArray, category) {
  * 
  * @param {Event} event - The form submission event
  */
-export function saveBulkUpload(event) {
+export async function saveBulkUpload(event) {
   event.preventDefault();
   $("#bulkAddModal").modal("hide");
   const dirname = $("#bulk-add-path").val();
 
-  const walk = function (dir) {
+  const walk = async (dir) => {
     let results = [];
-    secureFileSystem.readdir(dir).then(result => {
-      if (result.success) {
-        result.data.forEach(function (file) {
-          file = dir + "/" + file;
-          secureFileSystem.stat(file).then(statResult => {
-            if (statResult.success) {
-              const stat = statResult.data;
-              if (stat && stat.isDirectory()) {
-                /* Recurse into a subdirectory */
-                results = results.concat(walk(file));
-              } else {
-                /* Is a file */
-                securePath.parse(file).then(result => {
-                    if (!result.success || !result.data) {
-                      debugLog?.warn('Path parse failed:', { 
-                        module: 'bulk-operations',
-                        function: 'saveBulkUpload',
-                        file: file,
-                        result: result
-                      });
-                      return;
-                    }
-                    const pathData = result.data;
-                    if (
-                      [".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(
-                        pathData.ext.toLowerCase()
-                      )
-                    ) {
-                      results.push(file);
-                    }
-                }).catch(error => {
-                  debugLog?.warn('Path parse error', { 
-                    module: 'bulk-operations',
-                    function: 'saveBulkUpload',
-                    file: file,
-                    error: error
-                  });
-                });
-              }
-            } else {
-              debugLog?.warn('Failed to get file stats', { 
-                module: 'bulk-operations',
-                function: 'saveBulkUpload',
-                file: file,
-                error: statResult.error
-              });
-            }
-          }).catch(error => {
-            debugLog?.warn('File stat error', { 
-              module: 'bulk-operations',
-              function: 'saveBulkUpload',
-              file: file,
-              error: error
-            });
-          });
-        });
-      } else {
-        debugLog?.warn('Failed to read directory', { 
-          module: 'bulk-operations',
-          function: 'saveBulkUpload',
-          dir: dir,
-          error: result.error
-        });
+    try {
+      const readdirResult = await secureFileSystem.readdir(dir);
+      if (!readdirResult.success) {
+        debugLog?.warn('Failed to read directory', { module: 'bulk-operations', function: 'saveBulkUpload', dir, error: readdirResult.error });
+        return results;
       }
-    }).catch(error => {
-      debugLog?.warn('Directory read error', { 
-        module: 'bulk-operations',
-        function: 'saveBulkUpload',
-        dir: dir,
-        error: error
-      });
-    });
+      for (const fileEntry of readdirResult.data) {
+        const fullPath = `${dir}/${fileEntry}`;
+        try {
+          const statResult = await secureFileSystem.stat(fullPath);
+          if (statResult.success) {
+            const stat = statResult.data;
+            if (stat && stat.isDirectory()) {
+              results = results.concat(await walk(fullPath));
+            } else {
+              const parseRes = await securePath.parse(fullPath);
+              if (!parseRes.success || !parseRes.data) {
+                debugLog?.warn('Path parse failed', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, result: parseRes });
+                continue;
+              }
+              const pathData = parseRes.data;
+              if ([".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(pathData.ext.toLowerCase())) {
+                results.push(fullPath);
+              }
+            }
+          } else {
+            debugLog?.warn('Failed to get file stats', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, error: statResult.error });
+          }
+        } catch (error) {
+          debugLog?.warn('File stat error', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, error: error?.message });
+        }
+      }
+    } catch (error) {
+      debugLog?.warn('Directory read error', { module: 'bulk-operations', function: 'saveBulkUpload', dir, error: error?.message });
+    }
     return results;
   };
 
-  const songs = walk(dirname);
+  const songs = await walk(dirname);
 
   $("#search_results tbody").find("tr").remove();
   $("#search_results thead").show();
 
-  const category = $("#bulk-add-category").val();
+  let category = $("#bulk-add-category").val();
 
   if (category == "--NEW--") {
     const description = $("#bulk-song-form-new-category").val();
-    let baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
+    const baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
     const findUnique = async (base, i = 1) => {
       const test = i === 1 ? base : `${base}${i}`;
       const existsRes = await secureDatabase.query("SELECT 1 FROM categories WHERE code = ?", [test]);
       const exists = Array.isArray(existsRes?.data || existsRes) && (existsRes.data || existsRes).length > 0;
       return exists ? findUnique(base, i + 1) : test;
     };
-    (async () => {
+    try {
       const finalCode = await findUnique(baseCode);
       const ins = await secureDatabase.execute("INSERT INTO categories VALUES (?, ?)", [finalCode, description]);
       if (ins?.success) {
@@ -263,13 +197,17 @@ export function saveBulkUpload(event) {
         if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
         category = finalCode;
       } else {
-        const desc = $("#bulk-song-form-new-category").val();
         $("#bulk-song-form-new-category").val("");
-        alert(`Couldn't add a category named "${desc}" - apparently one already exists!`);
+        alert(`Couldn't add a category named "${description}" - apparently one already exists!`);
         return;
       }
-    })();
+    } catch (err) {
+      debugLog?.warn('Error adding new category for bulk upload', { module: 'bulk-operations', function: 'saveBulkUpload', error: err?.message });
+      $("#bulk-song-form-new-category").val("");
+      alert(`Error adding category: ${err?.message}`);
+      return;
+    }
   }
 
-  addSongsByPath(songs, category);
-} 
+  await addSongsByPath(songs, category);
+}
