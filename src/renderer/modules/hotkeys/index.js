@@ -38,8 +38,9 @@ class HotkeysModule {
   constructor(options = {}) {
     debugLog?.info('🔄 HotkeysModule constructor called with options:', options, { module: 'hotkeys', function: 'constructor' });
     this.electronAPI = options.electronAPI;
-    this.db = options.db;
-    this.store = options.store;
+    // Remove legacy db/store usage in secure context
+    this.db = null;
+    this.store = null;
     debugLog?.info('🔄 this.electronAPI set:', !!this.electronAPI, { module: 'hotkeys', function: 'constructor' });
     debugLog?.info('🔄 this.store set:', !!this.store, { module: 'hotkeys', function: 'constructor' });
     
@@ -567,36 +568,36 @@ class HotkeysModule {
     
     if (songId) {
       debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'hotkeys', function: 'removeFromHotkey' });
-      if (this.db) {
-        const songStmt = this.db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-        const songRow = songStmt.get(songId);
-        
-        if (songRow) {
-          customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`, () => {
+      // Use secure database query to fetch title for confirmation
+      if (this.electronAPI?.database?.query) {
+        this.electronAPI.database.query("SELECT title FROM mrvoice WHERE ID = ?", [songId]).then(result => {
+          const title = (result?.success && result.data?.[0]?.title) ? result.data[0].title : null;
+          const message = title ? `Are you sure you want to remove ${title} from this hotkey?` : `Are you sure you want to clear this hotkey?`;
+          customConfirm(message, () => {
             debugLog?.info("Proceeding with removal from hotkey", { module: 'hotkeys', function: 'removeFromHotkey' });
-            // Clear the hotkey slot
             $("#selected_row").removeAttr("songid");
             $("#selected_row span").html("");
-            // Clear the selection
             $("#selected_row").removeAttr("id");
-            // Save the updated hotkeys to store
             this.saveHotkeysToStore();
             debugLog?.info("Hotkey cleared successfully", { module: 'hotkeys', function: 'removeFromHotkey' });
           });
-        } else {
-                      debugLog?.error("Song not found in database for ID:", songId, { module: 'hotkeys', function: 'removeFromHotkey' });
-          // Still clear the hotkey even if song not found
+        }).catch(() => {
+          // Fallback: confirm without title
+          customConfirm(`Are you sure you want to clear this hotkey?`, () => {
+            $("#selected_row").removeAttr("songid");
+            $("#selected_row span").html("");
+            $("#selected_row").removeAttr("id");
+            this.saveHotkeysToStore();
+          });
+        });
+      } else {
+        // Confirm without title if database not available
+        customConfirm(`Are you sure you want to clear this hotkey?`, () => {
           $("#selected_row").removeAttr("songid");
           $("#selected_row span").html("");
           $("#selected_row").removeAttr("id");
           this.saveHotkeysToStore();
-        }
-      } else {
-        // Clear the hotkey even if database is not available
-        $("#selected_row").removeAttr("songid");
-        $("#selected_row span").html("");
-        $("#selected_row").removeAttr("id");
-        this.saveHotkeysToStore();
+        });
       }
     } else {
       debugLog?.info("No songId found on selected row", { module: 'hotkeys', function: 'removeFromHotkey' });

@@ -69,22 +69,8 @@ function loadHotkeysFromStore(options = {}) {
         });
       }
     });
-  } else if (store) {
-    // Fallback to legacy store access
-    if (store.has("hotkeys")) {
-      const storedHotkeysHtml = store.get("hotkeys");
-      if (
-        storedHotkeysHtml && typeof storedHotkeysHtml === 'string' &&
-        storedHotkeysHtml.includes("Hotkeys") &&
-        !storedHotkeysHtml.includes("header-button")
-      ) {
-        store.delete("hotkeys");
-        window.debugLog?.info("Cleared old hotkeys HTML format", { module: 'hotkey-operations', function: 'loadHotkeysFromStore' });
-      } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
-        $("#hotkeys-column").html(storedHotkeysHtml);
-        $("#selected_row").removeAttr("id");
-      }
-    }
+  } else {
+    // No legacy store path under secure mode
   }
 }
 
@@ -104,8 +90,6 @@ function openHotkeyFile(options = {}) {
         ipcRenderer.send("open-hotkey-file");
       }
     });
-  } else if (typeof ipcRenderer !== 'undefined') {
-    ipcRenderer.send("open-hotkey-file");
   }
 }
 
@@ -134,8 +118,6 @@ function saveHotkeyFile(options = {}) {
         ipcRenderer.send("save-hotkey-file", hotkeyArray);
       }
     });
-  } else if (typeof ipcRenderer !== 'undefined') {
-    ipcRenderer.send("save-hotkey-file", hotkeyArray);
   }
 }
 
