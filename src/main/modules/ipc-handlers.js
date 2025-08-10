@@ -646,6 +646,25 @@ function registerAllHandlers() {
     }
   });
 
+  ipcMain.handle('audio-get-metadata', async (event, filePath) => {
+    try {
+      if (!filePath || typeof filePath !== 'string') {
+        throw new Error('Invalid file path');
+      }
+      const metadata = await parseAudioFile(filePath);
+      const title = metadata?.common?.title || '';
+      // Some files store artist as array
+      const artist = Array.isArray(metadata?.common?.artist)
+        ? metadata.common.artist.join(', ')
+        : (metadata?.common?.artist || '');
+      const duration = metadata?.format?.duration ? Number(metadata.format.duration) : 0;
+      return { success: true, data: { title, artist, duration } };
+    } catch (error) {
+      debugLog?.warn('Audio get metadata error', { module: 'ipc-handlers', function: 'audio-get-metadata', error: error.message, filePath });
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('audio-get-position', async (event, soundId) => {
     try {
       if (soundId) {

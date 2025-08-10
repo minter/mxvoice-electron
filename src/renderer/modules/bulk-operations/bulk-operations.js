@@ -65,17 +65,35 @@ export async function addSongsByPath(pathArray, category) {
   if (!songSourcePath) return;
 
   try {
-    // Parse path to derive title and extension
+    // Read metadata to get title/artist/duration when possible
+    let title = '';
+    let artist = '';
+    let durationString = '';
+    try {
+      const metaRes = await window.secureElectronAPI?.audio?.getMetadata?.(songSourcePath);
+      if (metaRes?.success && metaRes.data) {
+        title = metaRes.data.title || '';
+        artist = metaRes.data.artist || '';
+        const durSec = Math.round(metaRes.data.duration || 0);
+        if (durSec > 0) {
+          // Format mm:ss
+          const m = Math.floor(durSec / 60);
+          const s = durSec % 60;
+          durationString = `${m}:${s.toString().padStart(2, '0')}`;
+        }
+      }
+    } catch (_e) {
+      // ignore, fallback below
+    }
+
+    // Parse path to derive fallback title and extension
     const parseRes = await securePath.parse(songSourcePath);
     const parsed = parseRes?.data || {};
-    const title = parsed.name;
+    if (!title) title = parsed.name;
     if (!title) return;
 
     const extRes = await securePath.extname(songSourcePath);
     const ext = extRes?.data || extRes || '';
-
-    // Artist may be unknown here; keep empty string
-    const artist = '';
 
     const uuid = (window.secureElectronAPI?.utils?.generateId)
       ? await window.secureElectronAPI.utils.generateId()
@@ -92,8 +110,6 @@ export async function addSongsByPath(pathArray, category) {
 
     const joinRes = await securePath.join(musicDirectory, newFilename);
     const newPath = joinRes?.data || joinRes;
-
-    const durationString = '';
 
     const insRes = await secureDatabase.execute(
       "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)",
@@ -136,19 +152,24 @@ export async function saveBulkUpload(event) {
     let results = [];
     try {
       const readdirResult = await secureFileSystem.readdir(dir);
-      if (!readdirResult.success) {
-        debugLog?.warn('Failed to read directory', { module: 'bulk-operations', function: 'saveBulkUpload', dir, error: readdirResult.error });
+      const entries = Array.isArray(readdirResult)
+        ? readdirResult
+        : (Array.isArray(readdirResult?.data) ? readdirResult.data : null);
+      if (!entries) {
+        debugLog?.warn('Failed to read directory', { module: 'bulk-operations', function: 'saveBulkUpload', dir, error: readdirResult?.error });
         return results;
       }
-      for (const fileEntry of readdirResult.data) {
+      for (const fileEntry of entries) {
         const fullPath = `${dir}/${fileEntry}`;
         try {
           const statResult = await secureFileSystem.stat(fullPath);
-          if (statResult.success) {
-            const stat = statResult.data;
-            if (stat && stat.isDirectory()) {
+          // Normalize stat shape from secure API
+          const isDir = (!!statResult?.isDirectory) || (typeof statResult?.isDirectory === 'function' && statResult.isDirectory());
+          const isFile = (!!statResult?.isFile) || (typeof statResult?.isFile === 'function' && statResult.isFile());
+          if (isDir || isFile) {
+            if (isDir) {
               results = results.concat(await walk(fullPath));
-            } else {
+            } else if (isFile) {
               const parseRes = await securePath.parse(fullPath);
               if (!parseRes.success || !parseRes.data) {
                 debugLog?.warn('Path parse failed', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, result: parseRes });
@@ -158,9 +179,11 @@ export async function saveBulkUpload(event) {
               if ([".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(pathData.ext.toLowerCase())) {
                 results.push(fullPath);
               }
+            } else {
+              debugLog?.warn('Unknown stat shape for entry', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, stat: statResult });
             }
           } else {
-            debugLog?.warn('Failed to get file stats', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, error: statResult.error });
+            debugLog?.warn('Failed to get file stats', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, error: statResult?.error });
           }
         } catch (error) {
           debugLog?.warn('File stat error', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, error: error?.message });

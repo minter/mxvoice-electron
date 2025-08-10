@@ -86,7 +86,8 @@ const secureElectronAPI = {
     fade: (soundId, fromVolume, toVolume, duration) => ipcRenderer.invoke('audio-fade', soundId, fromVolume, toVolume, duration),
     getDuration: (filePath) => ipcRenderer.invoke('audio-get-duration', filePath),
     getPosition: (soundId) => ipcRenderer.invoke('audio-get-position', soundId),
-    setPosition: (soundId, position) => ipcRenderer.invoke('audio-set-position', soundId, position)
+    setPosition: (soundId, position) => ipcRenderer.invoke('audio-set-position', soundId, position),
+    getMetadata: (filePath) => ipcRenderer.invoke('audio-get-metadata', filePath)
   },
   
   // App operations - secure application control

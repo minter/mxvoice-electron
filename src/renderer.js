@@ -212,6 +212,19 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
             });
           }
 
+          // Bulk add dialog → showBulkAddModal
+          if (typeof window.secureElectronAPI.events.onBulkAddDialogLoad === 'function') {
+            window.secureElectronAPI.events.onBulkAddDialogLoad((dirname) => {
+              if (typeof window.showBulkAddModal === 'function') {
+                window.showBulkAddModal(dirname);
+              } else if (window.moduleRegistry?.bulkOperations?.showBulkAddModal) {
+                window.moduleRegistry.bulkOperations.showBulkAddModal(dirname);
+              } else {
+                window.logWarn('showBulkAddModal not available when bulk_add_dialog_load fired');
+              }
+            });
+          }
+
           // Manage categories → openCategoriesModal
           if (typeof window.secureElectronAPI.events.onManageCategories === 'function') {
             window.secureElectronAPI.events.onManageCategories(() => {
