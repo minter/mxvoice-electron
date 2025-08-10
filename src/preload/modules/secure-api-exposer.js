@@ -167,6 +167,25 @@ const secureElectronAPI = {
       ipcRenderer.on('decrease_font_size', handler);
       return () => ipcRenderer.removeListener('decrease_font_size', handler);
     },
+
+    // UI toggle events
+    onToggleWaveform: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('toggle_wave_form', handler);
+      return () => ipcRenderer.removeListener('toggle_wave_form', handler);
+    },
+    onToggleAdvancedSearch: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('toggle_advanced_search', handler);
+      return () => ipcRenderer.removeListener('toggle_advanced_search', handler);
+    },
+
+    // Close all tabs event
+    onCloseAllTabs: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('close_all_tabs', handler);
+      return () => ipcRenderer.removeListener('close_all_tabs', handler);
+    },
     
     // Additional UI events
     onManageCategories: (callback) => {

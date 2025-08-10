@@ -274,6 +274,43 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               }
             });
           }
+
+          // UI toggles
+          if (typeof window.secureElectronAPI.events.onToggleWaveform === 'function') {
+            window.secureElectronAPI.events.onToggleWaveform(() => {
+              if (typeof window.toggleWaveform === 'function') {
+                window.toggleWaveform();
+              } else if (window.moduleRegistry?.ui?.toggleWaveform) {
+                window.moduleRegistry.ui.toggleWaveform();
+              } else {
+                window.logWarn('toggleWaveform not available when toggle_wave_form fired');
+              }
+            });
+          }
+          if (typeof window.secureElectronAPI.events.onToggleAdvancedSearch === 'function') {
+            window.secureElectronAPI.events.onToggleAdvancedSearch(() => {
+              if (typeof window.toggleAdvancedSearch === 'function') {
+                window.toggleAdvancedSearch();
+              } else if (window.moduleRegistry?.ui?.toggleAdvancedSearch) {
+                window.moduleRegistry.ui.toggleAdvancedSearch();
+              } else {
+                window.logWarn('toggleAdvancedSearch not available when toggle_advanced_search fired');
+              }
+            });
+          }
+
+          // Close all tabs → UI manager closeAllTabs (Start A New Session)
+          if (typeof window.secureElectronAPI.events.onCloseAllTabs === 'function') {
+            window.secureElectronAPI.events.onCloseAllTabs(() => {
+              if (typeof window.closeAllTabs === 'function') {
+                window.closeAllTabs();
+              } else if (window.moduleRegistry?.ui?.closeAllTabs) {
+                window.moduleRegistry.ui.closeAllTabs();
+              } else {
+                window.logWarn('closeAllTabs not available when close_all_tabs fired');
+              }
+            });
+          }
         }
       } catch (bridgeError) {
         window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });

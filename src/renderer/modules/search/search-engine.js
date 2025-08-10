@@ -128,8 +128,22 @@ function searchData() {
       queryParams.push(`%${info}%`);
     }
     if (since.length) {
-      querySegments.push("date >= ?");
-      queryParams.push(since);
+      let thresholdSeconds = null;
+      if (/^\d+$/.test(since)) {
+        // since is number of days
+        const days = parseInt(since, 10);
+        thresholdSeconds = Math.floor(Date.now() / 1000) - (days * 86400);
+      } else {
+        // since is a date string
+        const parsed = Date.parse(since);
+        if (!Number.isNaN(parsed)) {
+          thresholdSeconds = Math.floor(parsed / 1000);
+        }
+      }
+      if (thresholdSeconds !== null) {
+        querySegments.push("modtime >= ?");
+        queryParams.push(thresholdSeconds);
+      }
     }
   } else {
     // Apply search term filter for basic search
@@ -284,7 +298,7 @@ function triggerLiveSearch() {
   const newTimeout = setTimeout(() => {
     // Check if we have either a search term or advanced search filters
     const hasSearchTerm = searchTerm.length >= 2;
-    const hasAdvancedFilters = false;
+    let hasAdvancedFilters = false;
 
     if ($("#advanced-search").is(":visible")) {
       const title = $("#title-search").val().trim();
