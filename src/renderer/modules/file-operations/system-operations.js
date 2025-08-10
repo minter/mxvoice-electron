@@ -24,9 +24,28 @@ try {
 export function pickDirectory(event, element) {
   event.preventDefault();
   const defaultPath = $(element).val();
-  ipcRenderer.invoke("show-directory-picker", defaultPath).then((result) => {
-    if (result) $(element).val(result);
-  });
+  try {
+    if (window.secureElectronAPI?.app?.showDirectoryPicker) {
+      window.secureElectronAPI.app.showDirectoryPicker(defaultPath).then((res) => {
+        if (res && res.success && res.data && !res.data.canceled && Array.isArray(res.data.filePaths)) {
+          const dir = res.data.filePaths[0];
+          if (dir) $(element).val(dir);
+        } else if (Array.isArray(res)) {
+          const dir = res[0];
+          if (dir) $(element).val(dir);
+        }
+      });
+    } else if (window.electronAPI?.showDirectoryPicker) {
+      window.electronAPI.showDirectoryPicker(defaultPath).then((res) => {
+        if (Array.isArray(res)) {
+          const dir = res[0];
+          if (dir) $(element).val(dir);
+        }
+      });
+    }
+  } catch (err) {
+    debugLog?.warn('Directory picker failed', { module: 'system-operations', function: 'pickDirectory', error: err?.message });
+  }
 }
 
 /**
@@ -35,12 +54,13 @@ export function pickDirectory(event, element) {
  */
 export function installUpdate() {
   debugLog?.info("Installing update and restarting", { module: 'system-operations', function: 'installUpdate' });
-  return secureSystem.restartAndInstall().catch(error => {
-    debugLog?.warn('Secure system API failed, falling back to legacy:', { 
-      module: 'system-operations',
-      function: 'installUpdate',
-      error: error.message
-    });
-    ipcRenderer.send("restart-and-install-new-version");
-  });
+  try {
+    if (window.secureElectronAPI?.fileOperations?.installUpdate) {
+      return window.secureElectronAPI.fileOperations.installUpdate();
+    } else if (window.electronAPI?.restartAndInstall) {
+      return window.electronAPI.restartAndInstall();
+    }
+  } catch (error) {
+    debugLog?.warn('Update install failed to invoke', { module: 'system-operations', function: 'installUpdate', error: error?.message });
+  }
 } 

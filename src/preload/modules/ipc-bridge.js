@@ -93,6 +93,10 @@ const ipcHandlers = {
 
   // Dialog handlers
   bulk_add_dialog_load: function (event, dirname) {
+    if (process?.contextIsolated) {
+      debugLog.info('ℹ️ Context isolation enabled - deferring bulk_add_dialog_load to secure event bridge');
+      return;
+    }
     debugLog.info(`Renderer received directory ${dirname}`);
     if (window.showBulkAddModal) {
       window.showBulkAddModal(dirname);
@@ -100,18 +104,14 @@ const ipcHandlers = {
   },
 
   add_dialog_load: function (event, filename) {
+    if (process?.contextIsolated) {
+      debugLog.info('ℹ️ Context isolation enabled - deferring add_dialog_load to secure event bridge');
+      return;
+    }
     debugLog.info(`Renderer received filename ${filename}`);
-    import("music-metadata")
-      .then((mm) => mm.parseFile(filename))
-      .then((metadata) => {
-        // This will be handled by the renderer modules
-        if (window.handleAddDialogLoad) {
-          window.handleAddDialogLoad(filename, metadata);
-        }
-      })
-      .catch((err) => {
-        debugLog.error(err.message);
-      });
+    if (window.handleAddDialogLoad) {
+      window.handleAddDialogLoad(filename);
+    }
   },
 
   // Song operation handlers

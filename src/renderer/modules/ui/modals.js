@@ -36,33 +36,27 @@ function initializeModals(options = {}) {
   function pickDirectory(event, element) {
     event.preventDefault();
     const defaultPath = $(element).val();
-    
-    if (electronAPI && electronAPI.dialog) {
-      electronAPI.dialog.showOpenDialog({
-        properties: ['openDirectory'],
-        defaultPath: defaultPath
-      }).then(result => {
-        if (!result.canceled && result.filePaths.length > 0) {
-          $(element).val(result.filePaths[0]);
-        }
-      }).catch(error => {
-        debugLog?.warn('Directory picker failed', { 
-          module: 'ui-modals',
-          function: 'pickDirectory',
-          error: error
+    try {
+      if (window.secureElectronAPI?.app?.showDirectoryPicker) {
+        window.secureElectronAPI.app.showDirectoryPicker(defaultPath).then(res => {
+          if (res?.success && res.data && !res.data.canceled && Array.isArray(res.data.filePaths)) {
+            const dir = res.data.filePaths[0];
+            if (dir) $(element).val(dir);
+          } else if (Array.isArray(res)) {
+            const dir = res[0];
+            if (dir) $(element).val(dir);
+          }
         });
-        // Fallback to legacy IPC
-        if (typeof ipcRenderer !== 'undefined') {
-          ipcRenderer.invoke("show-directory-picker", defaultPath).then((result) => {
-            if (result) $(element).val(result);
-          });
-        }
-      });
-    } else if (typeof ipcRenderer !== 'undefined') {
-      // Fallback to legacy IPC
-      ipcRenderer.invoke("show-directory-picker", defaultPath).then((result) => {
-        if (result) $(element).val(result);
-      });
+      } else if (window.electronAPI?.showDirectoryPicker) {
+        window.electronAPI.showDirectoryPicker(defaultPath).then(res => {
+          if (Array.isArray(res)) {
+            const dir = res[0];
+            if (dir) $(element).val(dir);
+          }
+        });
+      }
+    } catch (error) {
+      debugLog?.warn('Directory picker failed', { module: 'ui-modals', function: 'pickDirectory', error: error?.message });
     }
   }
   
@@ -70,19 +64,14 @@ function initializeModals(options = {}) {
    * Install application update
    */
   function installUpdate() {
-    if (electronAPI && electronAPI.app) {
-      electronAPI.app.restartAndInstall().catch(error => {
-        debugLog?.warn('Modern API failed, falling back to legacy', { 
-          module: 'ui-modals',
-          function: 'installUpdate',
-          error: error
-        });
-        if (typeof ipcRenderer !== 'undefined') {
-          ipcRenderer.send("restart-and-install-new-version");
-        }
-      });
-    } else if (typeof ipcRenderer !== 'undefined') {
-      ipcRenderer.send("restart-and-install-new-version");
+    try {
+      if (window.secureElectronAPI?.fileOperations?.installUpdate) {
+        return window.secureElectronAPI.fileOperations.installUpdate();
+      } else if (window.electronAPI?.restartAndInstall) {
+        return window.electronAPI.restartAndInstall();
+      }
+    } catch (error) {
+      debugLog?.warn('Install update invoke failed', { module: 'ui-modals', function: 'installUpdate', error: error?.message });
     }
   }
   
