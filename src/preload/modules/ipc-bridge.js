@@ -29,8 +29,12 @@ const ipcHandlers = {
       window.populateHotkeys(fkeys, title);
       debugLog.info('✅ window.populateHotkeys called successfully');
     } else {
+      // Under context isolation, the secure event bridge in renderer handles this
+      if (process?.contextIsolated) {
+        debugLog.info('ℹ️ Context isolation enabled - deferring fkey_load to secure event bridge');
+        return;
+      }
       debugLog.error('❌ window.populateHotkeys not available - will retry in 1 second');
-      // Retry after a short delay in case modules are still loading
       setTimeout(() => {
         if (window.populateHotkeys) {
           debugLog.debug('✅ Retry successful - calling window.populateHotkeys...');
@@ -51,8 +55,11 @@ const ipcHandlers = {
       window.populateHoldingTank(songIds);
       debugLog.info('✅ window.populateHoldingTank called successfully');
     } else {
+      if (process?.contextIsolated) {
+        debugLog.info('ℹ️ Context isolation enabled - deferring holding_tank_load to secure event bridge');
+        return;
+      }
       debugLog.error('❌ window.populateHoldingTank not available - will retry in 1 second');
-      // Retry after a short delay in case modules are still loading
       setTimeout(() => {
         if (window.populateHoldingTank) {
           debugLog.debug('✅ Retry successful - calling window.populateHoldingTank...');

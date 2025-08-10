@@ -174,6 +174,35 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     } else {
       window.logInfo('Function coordination system initialized successfully');
       
+      // Bridge secure IPC events to renderer functions under context isolation
+      try {
+        if (window.secureElectronAPI && window.secureElectronAPI.events) {
+          // Holding tank load → populateHoldingTank
+          if (typeof window.secureElectronAPI.events.onHoldingTankLoad === 'function') {
+            window.secureElectronAPI.events.onHoldingTankLoad((songIds) => {
+              if (typeof window.populateHoldingTank === 'function') {
+                window.populateHoldingTank(songIds);
+              } else {
+                window.logWarn('populateHoldingTank not yet available when holding_tank_load fired');
+              }
+            });
+          }
+
+          // Hotkey load → populateHotkeys
+          if (typeof window.secureElectronAPI.events.onFkeyLoad === 'function') {
+            window.secureElectronAPI.events.onFkeyLoad((fkeys, title) => {
+              if (typeof window.populateHotkeys === 'function') {
+                window.populateHotkeys(fkeys, title);
+              } else {
+                window.logWarn('populateHotkeys not yet available when fkey_load fired');
+              }
+            });
+          }
+        }
+      } catch (bridgeError) {
+        window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });
+      }
+
       // Get comprehensive statistics
       const comprehensiveStats = functionCoordination.getComprehensiveStats();
       window.logInfo('Function Coordination Statistics', comprehensiveStats);

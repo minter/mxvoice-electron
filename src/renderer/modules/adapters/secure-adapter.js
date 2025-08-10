@@ -817,13 +817,13 @@ export const secureFileDialog = {
   showFilePicker: async (options = {}) => {
     try {
       // Try secure API first
-      if (window.secureElectronAPI?.file?.showFilePicker) {
-        return await window.secureElectronAPI.file.showFilePicker(options);
+      if (window.secureElectronAPI?.app?.showFilePicker) {
+        return await window.secureElectronAPI.app.showFilePicker(options);
       }
       
       // Fallback to modern API
-      if (window.electronAPI?.file?.showFilePicker) {
-        return await window.electronAPI.file.showFilePicker(options);
+      if (window.electronAPI?.showFilePicker) {
+        return await window.electronAPI.showFilePicker(options);
       }
       
       throw new Error('No file picker API available');
@@ -846,13 +846,13 @@ export const secureFileDialog = {
   showDirectoryPicker: async (defaultPath) => {
     try {
       // Try secure API first
-      if (window.secureElectronAPI?.file?.showDirectoryPicker) {
-        return await window.secureElectronAPI.file.showDirectoryPicker(defaultPath);
+      if (window.secureElectronAPI?.app?.showDirectoryPicker) {
+        return await window.secureElectronAPI.app.showDirectoryPicker(defaultPath);
       }
       
       // Fallback to modern API
-      if (window.electronAPI?.file?.showDirectoryPicker) {
-        return await window.electronAPI.file.showDirectoryPicker(defaultPath);
+      if (window.electronAPI?.showDirectoryPicker) {
+        return await window.electronAPI.showDirectoryPicker(defaultPath);
       }
       
       throw new Error('No directory picker API available');
@@ -873,11 +873,11 @@ export const secureFileDialog = {
    */
   openHotkeyFile: async () => {
     try {
-      if (window.secureElectronAPI?.file?.openHotkeyFile) {
-        return await window.secureElectronAPI.file.openHotkeyFile();
+      if (window.secureElectronAPI?.fileOperations?.openHotkeyFile) {
+        return await window.secureElectronAPI.fileOperations.openHotkeyFile();
       }
-      if (window.electronAPI?.file?.openHotkeyFile) {
-        return await window.electronAPI.file.openHotkeyFile();
+      if (window.electronAPI?.openHotkeyFile) {
+        return await window.electronAPI.openHotkeyFile();
       }
       throw new Error('No hotkey file API available');
     } catch (error) {
@@ -897,11 +897,11 @@ export const secureFileDialog = {
    */
   saveHotkeyFile: async (hotkeyArray) => {
     try {
-      if (window.secureElectronAPI?.file?.saveHotkeyFile) {
-        return await window.secureElectronAPI.file.saveHotkeyFile(hotkeyArray);
+      if (window.secureElectronAPI?.fileOperations?.saveHotkeyFile) {
+        return await window.secureElectronAPI.fileOperations.saveHotkeyFile(hotkeyArray);
       }
-      if (window.electronAPI?.file?.saveHotkeyFile) {
-        return await window.electronAPI.file.saveHotkeyFile(hotkeyArray);
+      if (window.electronAPI?.saveHotkeyFile) {
+        return await window.electronAPI.saveHotkeyFile(hotkeyArray);
       }
       throw new Error('No hotkey file save API available');
     } catch (error) {
@@ -921,11 +921,11 @@ export const secureFileDialog = {
    */
   openHoldingTankFile: async () => {
     try {
-      if (window.secureElectronAPI?.file?.openHoldingTankFile) {
-        return await window.secureElectronAPI.file.openHoldingTankFile();
+      if (window.secureElectronAPI?.fileOperations?.openHoldingTankFile) {
+        return await window.secureElectronAPI.fileOperations.openHoldingTankFile();
       }
-      if (window.electronAPI?.file?.openHoldingTankFile) {
-        return await window.electronAPI.file.openHoldingTankFile();
+      if (window.electronAPI?.openHoldingTankFile) {
+        return await window.electronAPI.openHoldingTankFile();
       }
       throw new Error('No holding tank file API available');
     } catch (error) {
@@ -945,11 +945,11 @@ export const secureFileDialog = {
    */
   saveHoldingTankFile: async (holdingTankArray) => {
     try {
-      if (window.secureElectronAPI?.file?.saveHoldingTankFile) {
-        return await window.secureElectronAPI.file.saveHoldingTankFile(holdingTankArray);
+      if (window.secureElectronAPI?.fileOperations?.saveHoldingTankFile) {
+        return await window.secureElectronAPI.fileOperations.saveHoldingTankFile(holdingTankArray);
       }
-      if (window.electronAPI?.file?.saveHoldingTankFile) {
-        return await window.electronAPI.file.saveHoldingTankFile(holdingTankArray);
+      if (window.electronAPI?.saveHoldingTankFile) {
+        return await window.electronAPI.saveHoldingTankFile(holdingTankArray);
       }
       throw new Error('No holding tank file save API available');
     } catch (error) {
