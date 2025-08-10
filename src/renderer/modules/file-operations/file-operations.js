@@ -17,42 +17,36 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem } from '../adapters/secure-adapter.js';
+import { secureFileSystem, secureFileDialog } from '../adapters/secure-adapter.js';
 
 /**
  * Opens a hotkey file using the modern electronAPI with fallback to legacy ipcRenderer
  */
 export function openHotkeyFile() {
-  if (window.electronAPI) {
-    window.electronAPI.openHotkeyFile().catch(error => {
-      debugLog?.warn('Modern API failed, falling back to legacy', { 
-        module: 'file-operations',
-        function: 'openHotkeyFile',
-        error: error.message
-      });
-      ipcRenderer.send("open-hotkey-file");
+  debugLog?.info("Opening hotkey file", { module: 'file-operations', function: 'openHotkeyFile' });
+  return secureFileDialog.openHotkeyFile().catch(error => {
+    debugLog?.warn('Secure file dialog failed, falling back to legacy', { 
+      module: 'file-operations',
+      function: 'openHotkeyFile',
+      error: error.message
     });
-  } else {
     ipcRenderer.send("open-hotkey-file");
-  }
+  });
 }
 
 /**
  * Opens a holding tank file using the modern electronAPI with fallback to legacy ipcRenderer
  */
 export function openHoldingTankFile() {
-  if (window.electronAPI) {
-    window.electronAPI.openHoldingTankFile().catch(error => {
-      debugLog?.warn('Modern API failed, falling back to legacy', { 
-        module: 'file-operations',
-        function: 'openHoldingTankFile',
-        error: error.message
-      });
-      ipcRenderer.send("open-holding-tank-file");
+  debugLog?.info("Opening holding tank file", { module: 'file-operations', function: 'openHoldingTankFile' });
+  return secureFileDialog.openHoldingTankFile().catch(error => {
+    debugLog?.warn('Secure file dialog failed, falling back to legacy', { 
+      module: 'file-operations',
+      function: 'openHoldingTankFile',
+      error: error.message
     });
-  } else {
     ipcRenderer.send("open-holding-tank-file");
-  }
+  });
 }
 
 /**
@@ -77,18 +71,14 @@ export function saveHotkeyFile() {
   }
   
   // Save using modern API with fallback
-  if (window.electronAPI) {
-    window.electronAPI.saveHotkeyFile(hotkeyArray).catch(error => {
-      debugLog?.warn('Modern API failed, falling back to legacy', { 
-        module: 'file-operations',
-        function: 'saveHotkeyFile',
-        error: error.message
-      });
-      ipcRenderer.send("save-hotkey-file", hotkeyArray);
+  return secureFileDialog.saveHotkeyFile(hotkeyArray).catch(error => {
+    debugLog?.warn('Secure file dialog failed, falling back to legacy', { 
+      module: 'file-operations',
+      function: 'saveHotkeyFile',
+      error: error.message
     });
-  } else {
     ipcRenderer.send("save-hotkey-file", hotkeyArray);
-  }
+  });
 }
 
 /**
@@ -108,16 +98,12 @@ export function saveHoldingTankFile() {
   });
   
   // Save using modern API with fallback
-  if (window.electronAPI) {
-    window.electronAPI.saveHoldingTankFile(holdingTankArray).catch(error => {
-      debugLog?.warn('Modern API failed, falling back to legacy', { 
-        module: 'file-operations',
-        function: 'saveHoldingTankFile',
-        error: error.message
-      });
-      ipcRenderer.send("save-holding-tank-file", holdingTankArray);
+  return secureFileDialog.saveHoldingTankFile(holdingTankArray).catch(error => {
+    debugLog?.warn('Secure file dialog failed, falling back to legacy', { 
+      module: 'file-operations',
+      function: 'saveHoldingTankFile',
+      error: error.message
     });
-  } else {
     ipcRenderer.send("save-holding-tank-file", holdingTankArray);
-  }
+  });
 } 

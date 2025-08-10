@@ -32,9 +32,8 @@ import { secureStore } from '../adapters/secure-adapter.js';
 const store = secureStore;
 const database = window.electronAPI.database;
 // Import secure adapters
-import { secureFileSystem } from '../adapters/secure-adapter.js';
+import { secureFileSystem, securePath, secureFileDialog } from '../adapters/secure-adapter.js';
 const fileSystem = secureFileSystem;
-import { securePath } from '../adapters/secure-adapter.js';
 const path = securePath;
 
 // Module state
@@ -325,7 +324,7 @@ export async function clearHoldingTank() {
  */
 export function openHoldingTankFile() {
   if (window.electronAPI) {
-    return window.electronAPI.openHoldingTankFile().catch(error => {
+    return secureFileDialog.openHoldingTankFile().catch(error => {
       debugLog?.warn('Modern API failed, falling back to legacy', { 
         module: 'holding-tank',
         function: 'openHoldingTankFile',
@@ -354,7 +353,7 @@ export function saveHoldingTankFile() {
   });
   
   if (window.electronAPI) {
-    return window.electronAPI.saveHoldingTankFile(holdingTankArray).catch(error => {
+    return secureFileDialog.saveHoldingTankFile(holdingTankArray).catch(error => {
       debugLog?.warn('Modern API failed, falling back to legacy', { 
         module: 'holding-tank',
         function: 'saveHoldingTankFile',

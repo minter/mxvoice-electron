@@ -411,7 +411,7 @@ export function testAudioAPI() {
     };
     
     // Test audio volume
-    return window.electronAPI.audio.setVolume(0.5).then(result => {
+    return secureAudio.setVolume(0.5).then(result => {
       if (result.success) {
         debugLog?.info('audio setVolume API works', { 
           module: 'test-utils',
@@ -443,7 +443,7 @@ export function testAudioAPI() {
     }).then(joinResult => {
       if (joinResult.success) {
         const testAudioPath = joinResult.data;
-        return window.electronAPI.audio.play(testAudioPath);
+        return secureAudio.play(testAudioPath);
       } else {
         results.tests.push({ name: 'audioPlay', success: false, error: 'Failed to join path' });
         return Promise.resolve({ success: false });
@@ -460,7 +460,7 @@ export function testAudioAPI() {
         // Test pause after a short delay
         return new Promise((resolve) => {
           setTimeout(() => {
-            window.electronAPI.audio.pause(result.id).then(pauseResult => {
+            secureAudio.pause(result.id).then(pauseResult => {
               if (pauseResult.success) {
                 debugLog?.info('audio pause API works', { 
                   module: 'test-utils',
@@ -470,7 +470,7 @@ export function testAudioAPI() {
                 
                 // Test stop after another short delay
                 setTimeout(() => {
-                  window.electronAPI.audio.stop(result.id).then(stopResult => {
+                  secureAudio.stop(result.id).then(stopResult => {
                     if (stopResult.success) {
                       debugLog?.info('audio stop API works', { 
                         module: 'test-utils',

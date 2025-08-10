@@ -21,6 +21,9 @@ import * as hotkeyData from './hotkey-data.js';
 import * as hotkeyOperations from './hotkey-operations.js';
 import * as hotkeyUI from './hotkey-ui.js';
 
+// Import secure adapters for UI operations
+import { secureFileDialog } from '../adapters/secure-adapter.js';
+
 /**
  * Hotkeys Module Class
  * 
@@ -407,7 +410,7 @@ class HotkeysModule {
    */
   openHotkeyFile() {
     if (this.electronAPI) {
-      this.electronAPI.openHotkeyFile().catch(error => {
+      secureFileDialog.openHotkeyFile().catch(error => {
         debugLog?.warn('Modern API failed, falling back to legacy:', error, { module: 'hotkeys', function: 'openHotkeyFile' });
         if (typeof ipcRenderer !== 'undefined') {
           ipcRenderer.send("open-hotkey-file");
@@ -433,7 +436,7 @@ class HotkeysModule {
     }
     
     if (this.electronAPI) {
-      this.electronAPI.saveHotkeyFile(hotkeyArray).catch(error => {
+      secureFileDialog.saveHotkeyFile(hotkeyArray).catch(error => {
         debugLog?.warn('Modern API failed, falling back to legacy:', error, { module: 'hotkeys', function: 'saveHotkeyFile' });
         if (typeof ipcRenderer !== 'undefined') {
           ipcRenderer.send("save-hotkey-file", hotkeyArray);

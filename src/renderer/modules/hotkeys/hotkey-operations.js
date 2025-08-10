@@ -9,6 +9,9 @@
  * @module hotkey-operations
  */
 
+// Import secure adapters for UI operations
+import { secureFileDialog } from '../adapters/secure-adapter.js';
+
 /**
  * Save hotkeys to store
  * Only saves if we have the new HTML format with header button
@@ -95,7 +98,7 @@ function openHotkeyFile(options = {}) {
   const { electronAPI } = options;
   
   if (electronAPI) {
-    electronAPI.openHotkeyFile().catch(error => {
+    secureFileDialog.openHotkeyFile().catch(error => {
       window.debugLog?.warn('Modern API failed, falling back to legacy:', error, { module: 'hotkey-operations', function: 'openHotkeyFile' });
       if (typeof ipcRenderer !== 'undefined') {
         ipcRenderer.send("open-hotkey-file");
@@ -125,7 +128,7 @@ function saveHotkeyFile(options = {}) {
   }
   
   if (electronAPI) {
-    electronAPI.saveHotkeyFile(hotkeyArray).catch(error => {
+    secureFileDialog.saveHotkeyFile(hotkeyArray).catch(error => {
       window.debugLog?.warn('Modern API failed, falling back to legacy:', error, { module: 'hotkey-operations', function: 'saveHotkeyFile' });
       if (typeof ipcRenderer !== 'undefined') {
         ipcRenderer.send("save-hotkey-file", hotkeyArray);

@@ -34,16 +34,13 @@ export function pickDirectory(event, element) {
  * Triggers the application restart and update installation process
  */
 export function installUpdate() {
-  if (window.electronAPI) {
-    window.electronAPI.restartAndInstall().catch(error => {
-      debugLog?.warn('Modern API failed, falling back to legacy:', { 
-        module: 'system-operations',
-        function: 'installUpdate',
-        error: error.message
-      });
-      ipcRenderer.send("restart-and-install-new-version");
+  debugLog?.info("Installing update and restarting", { module: 'system-operations', function: 'installUpdate' });
+  return secureSystem.restartAndInstall().catch(error => {
+    debugLog?.warn('Secure system API failed, falling back to legacy:', { 
+      module: 'system-operations',
+      function: 'installUpdate',
+      error: error.message
     });
-  } else {
     ipcRenderer.send("restart-and-install-new-version");
-  }
+  });
 } 

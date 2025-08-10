@@ -784,6 +784,237 @@ export const secureOS = {
 };
 
 /**
+ * Secure File Dialog Adapter
+ * Provides file dialog operations that work in both insecure and secure modes
+ */
+export const secureFileDialog = {
+  /**
+   * Open hotkey file dialog
+   * @returns {Promise<Object>} File dialog result
+   */
+  async openHotkeyFile() {
+    try {
+      if (window.secureElectronAPI) {
+        return await window.secureElectronAPI.openHotkeyFile();
+      } else if (window.electronAPI) {
+        return await window.electronAPI.openHotkeyFile();
+      } else {
+        throw new Error('No file dialog API available');
+      }
+    } catch (error) {
+      debugLog?.error('Open hotkey file error:', { 
+        module: 'secure-adapter',
+        function: 'secureFileDialog.openHotkeyFile',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Save hotkey file dialog
+   * @param {Array} hotkeyArray - Hotkey data to save
+   * @returns {Promise<Object>} Save result
+   */
+  async saveHotkeyFile(hotkeyArray) {
+    try {
+      if (window.secureElectronAPI) {
+        return await window.secureElectronAPI.saveHotkeyFile(hotkeyArray);
+      } else if (window.electronAPI) {
+        return await window.electronAPI.saveHotkeyFile(hotkeyArray);
+      } else {
+        throw new Error('No file dialog API available');
+      }
+    } catch (error) {
+      debugLog?.error('Save hotkey file error:', { 
+        module: 'secure-adapter',
+        function: 'secureFileDialog.saveHotkeyFile',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Open holding tank file dialog
+   * @returns {Promise<Object>} File dialog result
+   */
+  async openHoldingTankFile() {
+    try {
+      if (window.secureElectronAPI) {
+        return await window.secureElectronAPI.openHoldingTankFile();
+      } else if (window.electronAPI) {
+        return await window.electronAPI.openHoldingTankFile();
+      } else {
+        throw new Error('No file dialog API available');
+      }
+    } catch (error) {
+      debugLog?.error('Open holding tank file error:', { 
+        module: 'secure-adapter',
+        function: 'secureFileDialog.openHoldingTankFile',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Save holding tank file dialog
+   * @param {Array} holdingTankArray - Holding tank data to save
+   * @returns {Promise<Object>} Save result
+   */
+  async saveHoldingTankFile(holdingTankArray) {
+    try {
+      if (window.secureElectronAPI) {
+        return await window.secureElectronAPI.saveHoldingTankFile(holdingTankArray);
+      } else if (window.electronAPI) {
+        return await window.electronAPI.saveHoldingTankFile(holdingTankArray);
+      } else {
+        throw new Error('No file dialog API available');
+      }
+    } catch (error) {
+      debugLog?.error('Save holding tank file error:', { 
+        module: 'secure-adapter',
+        function: 'secureFileDialog.saveHoldingTankFile',
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+};
+
+/**
+ * Secure System Adapter
+ * Provides system operations that work in both insecure and secure modes
+ */
+export const secureSystem = {
+  /**
+   * Restart application and install updates
+   * @returns {Promise<Object>} Restart result
+   */
+  async restartAndInstall() {
+    try {
+      if (window.secureElectronAPI) {
+        return await window.secureElectronAPI.restartAndInstall();
+      } else if (window.electronAPI) {
+        return await window.electronAPI.restartAndInstall();
+      } else {
+        throw new Error('No system API available');
+      }
+    } catch (error) {
+      debugLog?.error('Restart and install error:', { 
+        module: 'secure-adapter',
+        function: 'secureSystem.restartAndInstall',
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+};
+
+/**
+ * Secure Audio Adapter
+ * Provides audio operations that work in both insecure and secure modes
+ */
+export const secureAudio = {
+  /**
+   * Set audio volume
+   * @param {number} volume - Volume level (0.0 to 1.0)
+   * @returns {Promise<Object>} Volume set result
+   */
+  async setVolume(volume) {
+    try {
+      if (window.secureElectronAPI?.audio) {
+        return await window.secureElectronAPI.audio.setVolume(volume);
+      } else if (window.electronAPI?.audio) {
+        return await window.electronAPI.audio.setVolume(volume);
+      } else {
+        throw new Error('No audio API available');
+      }
+    } catch (error) {
+      debugLog?.error('Audio set volume error:', { 
+        module: 'secure-adapter',
+        function: 'secureAudio.setVolume',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Play audio file
+   * @param {string} filePath - Path to audio file
+   * @returns {Promise<Object>} Play result
+   */
+  async play(filePath) {
+    try {
+      if (window.secureElectronAPI?.audio) {
+        return await window.secureElectronAPI.audio.play(filePath);
+      } else if (window.electronAPI?.audio) {
+        return await window.electronAPI.audio.play(filePath);
+      } else {
+        throw new Error('No audio API available');
+      }
+    } catch (error) {
+      debugLog?.error('Audio play error:', { 
+        module: 'secure-adapter',
+        function: 'secureAudio.play',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Pause audio playback
+   * @param {string} audioId - Audio instance ID
+   * @returns {Promise<Object>} Pause result
+   */
+  async pause(audioId) {
+    try {
+      if (window.secureElectronAPI?.audio) {
+        return await window.secureElectronAPI.audio.pause(audioId);
+      } else if (window.electronAPI?.audio) {
+        return await window.electronAPI.audio.pause(audioId);
+      } else {
+        throw new Error('No audio API available');
+      }
+    } catch (error) {
+      debugLog?.error('Audio pause error:', { 
+        module: 'secure-adapter',
+        function: 'secureAudio.pause',
+        error: error.message 
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Stop audio playback
+   * @param {string} audioId - Audio instance ID
+   * @returns {Promise<Object>} Stop result
+   */
+  async stop(audioId) {
+    try {
+      if (window.secureElectronAPI?.audio) {
+        return await window.secureElectronAPI.audio.stop(audioId);
+      } else if (window.electronAPI?.audio) {
+        return await window.electronAPI.audio.stop(audioId);
+      } else {
+        throw new Error('No audio API available');
+      }
+    } catch (error) {
+      debugLog?.error('Audio stop error:', { 
+        module: 'secure-adapter',
+        function: 'secureAudio.stop',
+        error: error.message 
+      });
+      throw error;
+    }
+  }
+};
+
+/**
  * Test function to verify adapter functionality
  * @returns {Object} Test results
  */
