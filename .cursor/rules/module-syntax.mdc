@@ -1,0 +1,33 @@
+---
+alwaysApply: true
+---
+
+# Module Syntax
+
+- Use ES Modules (import/export) across the codebase (renderer, preload, and main). The project is configured with `"type": "module"` in `package.json`.
+- Use `.js` file extensions for all modules and include the extension in import paths.
+
+## Import/Export patterns
+
+- Default imports: `import ModuleLoader from './module-loader.js'`
+- Named imports: `import { loadModule, getModule } from './module-loader.js'`
+- Mixed exports (common pattern): export both named symbols and a convenient default object
+  - Renderer/Preload example:
+    - Named: `export const loadModule = ...`
+    - Default: `export default { loadModule }`
+  - Main modules follow the same ES Module pattern; do not use CommonJS `module.exports`
+
+## Module shapes used in this project
+
+- Singleton modules: default‑export the singleton instance, and also export named, bound functions for direct import
+- Class‑based modules: export the class (or an initialized instance) as default; add named helpers if useful
+
+## Validation
+
+- Syntax check with Node: `node --check path/to/file.js`
+- Ensure import paths are correct and include `.js` extensions
+
+## Notes
+
+- Check file location to choose appropriate API surfaces (renderer/preload vs main) but keep ES Modules consistently
+- Renderer modules may show false positives when checked by Node directly due to browser APIs; prefer bundler/runtime testing when in doubt

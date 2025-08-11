@@ -1,0 +1,47 @@
+
+---
+alwaysApply: true
+---
+
+# Debug Logger Integration
+
+Use the existing debug logger modules instead of any `console.*` calls. Do not add fallbacks to `console`.
+
+## Which logger to use
+- Main process: `src/main/modules/debug-log.js`
+- Renderer process: `src/renderer/modules/debug-log/index.js` (backed by `debug-logger.js`)
+
+## Usage (ES Modules with explicit .js)
+
+Renderer (preferred):
+```javascript
+import debugLog, { info, warn, error, debug } from './modules/debug-log/index.js';
+
+info('Loaded search module', { module: 'search', function: 'init' });
+debug('Query built', { module: 'search', function: 'buildQuery', query });
+```
+
+Main:
+```javascript
+import initializeMainDebugLog from './modules/debug-log.js';
+const debugLog = initializeMainDebugLog({ store });
+
+debugLog.info('Main started', { module: 'main', function: 'bootstrap' });
+debugLog.error('Updater failed', { module: 'main', function: 'checkForUpdates', error });
+```
+
+## Console-to-debug mapping
+- `console.error(...)` → `debugLog.error(...)` (or `error(...)` in renderer)
+- `console.warn(...)` → `debugLog.warn(...)` (or `warn(...)`)
+- `console.info(...)` / `console.log(...)` → `debugLog.info(...)` or `debugLog.debug(...)` as appropriate
+
+## Required conventions
+- Assume the debug logger is available; do not guard with `if (debugLog)` or optional chaining.
+- Include a small context object: `{ module: 'module-name', function: 'function-name' }` when useful.
+- Use ES Module imports with `.js` extensions. No global `window.debugLog` access.
+- Do not add or keep any `console.*` statements.
+
+## Validation checklist
+- All `console.*` statements replaced with debug logger calls.
+- Imports point to the correct logger module for the process.
+- Context objects and log levels are used appropriately.

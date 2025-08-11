@@ -1,5 +1,5 @@
 # Mx. Voice
-*Improv Audio Software, Version 3.2.0*
+*Improv Audio Software — Version 4 (pre-release)*
 
 ## About
 
@@ -9,7 +9,7 @@ Thus, 20 years later, this project to rewrite the software in a more modern way.
 
 ## Developing
 
-Mx. Voice 3 depends on node.js being available on your system, along with `yarn`. We recommend node 18+.
+Mx. Voice depends on Node.js and `yarn`. We recommend Node 18+.
 
 Check out the [source code from Github](https://github.com/minter/mxvoice-electron/). Go into the `mxvoice-electron` folder.
 
@@ -28,6 +28,42 @@ yarn start
 ```
 
 That should launch the app onto your desktop!
+
+## Architecture Overview
+
+The app follows a modern Electron architecture with context isolation enabled and a modular codebase:
+
+- `src/main/` (Main process)
+  - Entry: `src/main/index-modular.js`
+  - Modules: `app-setup`, `ipc-handlers`, `file-operations`, `debug-log`
+  - Responsibilities: create window/menu, initialize store/DB, secure IPC, auto-updater
+  - See `src/main/README.md`
+
+- `src/preload/` (Preload, context isolated)
+  - Entry: `src/preload/preload-modular.js`
+  - Exposes vetted APIs via `contextBridge` as `window.secureElectronAPI` (and a compatibility `window.electronAPI`)
+  - Bridges events from main to renderer
+  - See `src/preload/README.md`
+
+- `src/renderer/` (Renderer process)
+  - Feature modules under `src/renderer/modules/` (each with its own README)
+  - Core infrastructure: `function-registry`, `event-manager`, `function-monitor`, `module-loader`
+  - Services facades over secure APIs: `src/renderer/services/`
+  - See `src/renderer/README.md`
+
+### Security model
+- Context Isolation: ON
+- No direct Node.js access in renderer; all privileged operations go through preload‑exposed secure APIs
+- IPC handlers validate inputs on the main side
+
+### Useful paths
+- Assets: `src/assets/` (see `src/assets/README.md`)
+- Styles: `src/stylesheets/` (see `src/stylesheets/README.md`)
+
+### Debugging tips
+- Open DevTools from the app menu (View → Developer Tools)
+- Main process logs via structured DebugLog; renderer logs via the DebugLog module
+
 
 ## Building, Signing, and Releasing
 
@@ -187,6 +223,6 @@ Helpful tools and documentation:
 * [Electron Builder](https://www.electron.build)
 
 ## Authors
-Mx. Voice 3 is brought to you with love by:
+Mx. Voice 4 is brought to you with love by:
 * Wade Minter (<wade@wademinter.com>)
 * Andrew Berkowitz (<andrew@andrewberkowitz.com>)

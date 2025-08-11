@@ -1,0 +1,33 @@
+---
+alwaysApply: true
+---
+
+# README Maintenance
+
+- When you modify code in a module or directory, you MUST ensure the corresponding `README.md` in that module/directory remains accurate.
+
+- Update the README whenever any referenced details change, including (but not limited to):
+  - Exported names, default vs named exports, class/function/object shapes
+  - File names, paths, or import paths (relative to the documented location)
+  - Initialization patterns, dependency injection, or lifecycles (`init()`, `init*`, `reinitialize*`)
+  - Usage examples and code snippets (ensure they run with current code)
+  - Security/IPC surface (for preload/main), and context-isolation notes
+  - Integration points (e.g., module registry, function registry, bootstrap)
+
+- Documentation quality requirements:
+  - Keep READMEs concise, accurate, and task-oriented
+  - Use the established module syntax rules (see `module-syntax.mdc`) for import/export examples
+  - Use correct paths for renderer, preload, and main (all ESM) per project rules
+  - Maintain consistent terminology and naming across the repo
+  - Prefer short code snippets that mirror current code exactly
+
+- Scope:
+  - Module-level changes → update that module's `README.md`
+  - Directory-level changes (e.g., `src/main/`, `src/preload/`, `src/renderer/`, `src/assets/`, `src/stylesheets/`) → update the directory `README.md`
+  - Architecture-level changes (entry points, context isolation, preload API namespaces) → also update the root `README.md` if relevant
+
+- Process:
+  1. After implementing changes, scan the relevant README(s) for outdated references
+  2. Update sections impacted by your changes; keep examples minimal but correct
+  3. Validate import paths and export names against the codebase
+  4. Run lints on edited files and fix any issues

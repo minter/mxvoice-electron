@@ -1,1987 +1,524 @@
-var sound;
-var categories = [];
-var globalAnimation;
-var autoplay = false;
-var loop = false;
-var holdingTankMode = "storage"; // 'storage' or 'playlist'
-var searchTimeout; // Global variable for live search debouncing
-var wavesurfer = WaveSurfer.create({
-  container: "#waveform",
-  waveColor: "#e9ecef",
-  backgroundColor: "#343a40",
-  progressColor: "#007bff",
-  cursorColor: "white",
-  cursorWidth: 0,
-  responsive: true,
-  height: 100,
+// Remove legacy global variables and use shared state instead
+// Legacy globals moved to shared state module
+
+// Import debug logger for centralized logging
+import initializeDebugLogger from './renderer/modules/debug-log/debug-logger.js';
+
+// Global instances - now managed by app-initialization module  
+let debugLogger = null;
+let sharedStateInstance = null;
+let sharedStateInitialized = false;
+
+// Initialize debug logger early with basic configuration
+debugLogger = initializeDebugLogger({
+  electronAPI: window.electronAPI,
+  db: window.db,
+  store: window.store
 });
-var fontSize = 11;
 
-// Load the last holding tank and hotkeys
-
-// Always clear the holding tank store to ensure we load the new HTML
-if (store.has("holding_tank")) {
-  store.delete("holding_tank");
-  console.log("Cleared holding tank store to load new HTML");
-}
-
-// Load saved mode or default to storage
-if (store.has("holding_tank_mode")) {
-  holdingTankMode = store.get("holding_tank_mode");
-} else {
-  holdingTankMode = "storage"; // Default to storage mode
-}
-
-// Initialize the mode UI
-setHoldingTankMode(holdingTankMode);
-
-if (store.has("hotkeys")) {
-  var storedHotkeysHtml = store.get("hotkeys");
-  // Check if the stored HTML contains the old plain text header
-  if (
-    storedHotkeysHtml.includes("Hotkeys") &&
-    !storedHotkeysHtml.includes("header-button")
-  ) {
-    // This is the old HTML format, clear it so the new HTML loads
-    store.delete("hotkeys");
-    console.log("Cleared old hotkeys HTML format");
-  } else {
-    $("#hotkeys-column").html(storedHotkeysHtml);
-    $("#selected_row").removeAttr("id");
-  }
-}
-
-if (store.has("column_order")) {
-  store.get("column_order").forEach(function (val) {
-    $("#top-row").append($("#top-row").children(`#${val}`).detach());
-  });
-}
-
-if (store.has("font-size")) {
-  fontSize = store.get("font-size");
-  $(".song").css("font-size", fontSize + "px");
-}
-
-// Animate.css
-
-const animateCSS = (element, animation, speed = "", prefix = "animate__") =>
-  // We create a Promise and return it
-  new Promise((resolve, reject) => {
-    const animationName = `${prefix}${animation} ${speed}`;
-    const node = element;
-
-    node.addClass(`${prefix}animated ${animationName}`);
-
-    // When the animation ends, we clean the classes and resolve the Promise
-    function handleAnimationEnd() {
-      node.removeClass(`${prefix}animated ${animationName}`);
-      node.off("animationend", handleAnimationEnd);
-
-      resolve("Animation ended");
-    }
-
-    node.on("animationend", handleAnimationEnd);
-  });
-
-function saveHoldingTankToStore() {
-  // Only save if we have the new HTML format with mode toggle
-  var currentHtml = $("#holding-tank-column").html();
-  if (currentHtml.includes("mode-toggle")) {
-    store.set("holding_tank", currentHtml);
-  }
-}
-
-function saveHotkeysToStore() {
-  // Only save if we have the new HTML format with header button
-  var currentHtml = $("#hotkeys-column").html();
-  if (currentHtml.includes("header-button")) {
-    store.set("hotkeys", currentHtml);
-  }
-}
-
-function playSongFromHotkey(hotkey) {
-  console.log("Getting song ID from hotkey " + hotkey);
-  var song_id = $(`.hotkeys.active #${hotkey}_hotkey`).attr("songid");
-  console.log(`Found song ID ${song_id}`);
-  if (song_id) {
-    console.log(`Preparing to play song ${song_id}`);
-    // Unhighlight any selected tracks in holding tank or playlist
-    $(".now_playing").first().removeClass("now_playing");
-    $("#selected_row").removeAttr("id");
-    // Hotkey playback should not affect holding tank mode
-    // Just play the song without changing autoplay state
-    playSongFromId(song_id);
-    animateCSS($(`.hotkeys.active #${hotkey}_hotkey`), "flipInX");
-  }
-}
-
-function populateHotkeys(fkeys, title) {
-  for (var key in fkeys) {
-    if (fkeys[key]) {
-      try {
-        $(`.hotkeys.active #${key}_hotkey`).attr("songid", fkeys[key]);
-        setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`));
-      } catch (err) {
-        console.log(`Error loading fkey ${key} (DB ID: ${fkeys[key]})`);
-      }
-    } else {
-      $(`.hotkeys.active #${key}_hotkey`).removeAttr("songid");
-      $(`.hotkeys.active #${key}_hotkey span`).html("");
-    }
-  }
-  if (title) {
-    $("#hotkey_tabs li a.active").text(title);
-  }
-}
-
-function populateHoldingTank(songIds) {
-  $(".holding_tank.active").empty();
-  songIds.forEach((songId) => {
-    addToHoldingTank(songId, $(".holding_tank.active"));
-  });
-  scale_scrollable();
-  return false;
-}
-
-function clearHotkeys() {
-  customConfirm("Are you sure you want clear your hotkeys?", function () {
-    for (let key = 1; key <= 12; key++) {
-      $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
-      $(`.hotkeys.active #f${key}_hotkey span`).html("");
-    }
-  });
-}
-
-function clearHoldingTank() {
-  customConfirm("Are you sure you want clear your holding tank?", function () {
-    $(".holding_tank.active").empty();
-  });
-}
-
-function openHotkeyFile() {
-  ipcRenderer.send("open-hotkey-file");
-}
-
-function openHoldingTankFile() {
-  ipcRenderer.send("open-holding-tank-file");
-}
-
-function saveHotkeyFile() {
-  console.log("Renderer starting saveHotkeyFile");
-  var hotkeyArray = [];
-  for (let key = 1; key <= 12; key++) {
-    hotkeyArray.push($(`.hotkeys.active li#f${key}_hotkey`).attr("songid"));
-  }
-  if (!/^\d$/.test($("#hotkey_tabs li a.active").text())) {
-    hotkeyArray.push($("#hotkey_tabs li a.active").text());
-  }
-  ipcRenderer.send("save-hotkey-file", hotkeyArray);
-}
-
-function saveHoldingTankFile() {
-  console.log("Renderer starting saveHoldingTankFile");
-  var holdingTankArray = [];
-  $(".holding_tank.active .list-group-item").each(function () {
-    holdingTankArray.push($(this).attr("songid"));
-  });
-  ipcRenderer.send("save-holding-tank-file", holdingTankArray);
-}
-
-function openPreferencesModal() {
-  $("#preferencesModal").modal();
-}
-
-function populateCategorySelect() {
-  console.log("Populating categories");
-  $("#category_select option").remove();
-  $("#category_select").append(`<option value="*">All Categories</option>`);
-  var stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-  for (const row of stmt.iterate()) {
-    categories[row.code] = row.description;
-    $("#category_select").append(
-      `<option value="${row.code}">${row.description}</option>`
-    );
-    //console.log('Found ' + row.code + ' as ' + row.description);
-  }
-}
-
-function searchData() {
-  $("#search_results tbody").find("tr").remove();
-  $("#search_results thead").show();
-
-  var raw_html = [];
-  var query_params = [];
-  var query_segments = [];
-  var query_string = "";
-  var category = $("#category_select").val();
-
-  if (category != "*") {
-    query_segments.push("category = ?");
-    query_params.push(category);
-  }
-
-  if ($("#advanced-search").is(":visible")) {
-    var title = $("#title-search").val().trim();
-    var artist = $("#artist-search").val().trim();
-    var info = $("#info-search").val().trim();
-    var since = $("#date-search").val();
-    if (title.length) {
-      query_segments.push("title LIKE ?");
-      query_params.push(`%${title}%`);
-    }
-    if (artist.length) {
-      query_segments.push("artist LIKE ?");
-      query_params.push(`%${artist}%`);
-    }
-    if (info.length) {
-      query_segments.push("info LIKE ?");
-      query_params.push(`%${info}%`);
-    }
-    if (since.length) {
-      query_segments.push("modtime > ?");
-      var today = new Date();
-      query_params.push(
-        Math.round(today.setDate(today.getDate() - since) / 1000)
-      );
-    }
-    if (query_segments.length != 0) {
-      query_string = " WHERE " + query_segments.join(" AND ");
-    }
-  } else {
-    var omni = $("#omni_search").val().trim();
-    var search_term = "%" + omni + "%";
-    if (omni != "") {
-      query_segments.push("(info LIKE ? OR title LIKE ? OR artist like ?)");
-      query_params.push(search_term, search_term, search_term);
-    }
-    if (query_segments.length != 0) {
-      query_string = " WHERE " + query_segments.join(" AND ");
-    }
-  }
-
-  console.log("Query string is" + query_string);
-
-  var stmt = db.prepare(
-    "SELECT * from mrvoice" +
-      query_string +
-      " ORDER BY category,info,title,artist"
-  );
-  const rows = stmt.all(query_params);
-  rows.forEach((row) => {
-    raw_html.push(
-      `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
-        row.id
-      }'><td class='hide-1'>${
-        categories[row.category]
-      }</td><td class='hide-2'>${
-        row.info || ""
-      }</td><td style='font-weight: bold'>${
-        row.title || ""
-      }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
-        row.time
-      }</td></tr>`
-    );
-  });
-  $("#search_results").append(raw_html.join(""));
-
-  scale_scrollable();
-
-  $("#omni_search").select();
-  $("#category_select").prop("selectedIndex", 0);
-}
-
-// Live search function for real-time results as user types
-function performLiveSearch(searchTerm) {
-  console.log("performLiveSearch called with:", searchTerm);
-
-  // Check if we have either a search term or advanced search filters
-  var hasSearchTerm = searchTerm && searchTerm.length >= 2;
-  var hasAdvancedFilters = false;
-
-  if ($("#advanced-search").is(":visible")) {
-    var title = $("#title-search").val().trim();
-    var artist = $("#artist-search").val().trim();
-    var info = $("#info-search").val().trim();
-    var since = $("#date-search").val();
-    hasAdvancedFilters =
-      title.length > 0 ||
-      artist.length > 0 ||
-      info.length > 0 ||
-      since.length > 0;
-  }
-
-  if (!hasSearchTerm && !hasAdvancedFilters) {
-    // Clear results if no search term and no advanced filters
-    $("#search_results tbody").find("tr").remove();
-    $("#search_results thead").hide();
-    return;
-  }
-
-  $("#search_results tbody").find("tr").remove();
-  $("#search_results thead").show();
-
-  var raw_html = [];
-  var query_params = [];
-  var query_segments = [];
-  var query_string = "";
-  var category = $("#category_select").val();
-
-  // Apply category filter if not "All Categories"
-  if (category != "*") {
-    query_segments.push("category = ?");
-    query_params.push(category);
-  }
-
-  // Apply advanced search filters if advanced search is visible
-  if ($("#advanced-search").is(":visible")) {
-    var title = $("#title-search").val().trim();
-    var artist = $("#artist-search").val().trim();
-    var info = $("#info-search").val().trim();
-    var since = $("#date-search").val();
-
-    if (title.length) {
-      query_segments.push("title LIKE ?");
-      query_params.push(`%${title}%`);
-    }
-    if (artist.length) {
-      query_segments.push("artist LIKE ?");
-      query_params.push(`%${artist}%`);
-    }
-    if (info.length) {
-      query_segments.push("info LIKE ?");
-      query_params.push(`%${info}%`);
-    }
-    if (since.length) {
-      query_segments.push("modtime > ?");
-      var today = new Date();
-      query_params.push(
-        Math.round(today.setDate(today.getDate() - since) / 1000)
-      );
-    }
-  }
-
-  // Add the live search term to the query (only if we have a search term)
-  if (hasSearchTerm) {
-    var search_term = "%" + searchTerm + "%";
-    query_segments.push("(info LIKE ? OR title LIKE ? OR artist like ?)");
-    query_params.push(search_term, search_term, search_term);
-  }
-
-  // Build the complete query string
-  if (query_segments.length != 0) {
-    query_string = " WHERE " + query_segments.join(" AND ");
-  }
-
-  console.log("Live search query:", query_string);
-  console.log("Live search params:", query_params);
-
-  // Fast, limited search for live results with filters applied
-  var stmt = db.prepare(
-    "SELECT * from mrvoice" +
-      query_string +
-      " ORDER BY category,info,title,artist LIMIT 50"
-  );
-  const rows = stmt.all(query_params);
-
-  console.log("Live search results:", rows.length);
-
-  rows.forEach((row) => {
-    raw_html.push(
-      `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
-        row.id
-      }'><td class='hide-1'>${
-        categories[row.category]
-      }</td><td class='hide-2'>${
-        row.info || ""
-      }</td><td style='font-weight: bold'>${
-        row.title || ""
-      }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
-        row.time
-      }</td></tr>`
-    );
-  });
-
-  $("#search_results").append(raw_html.join(""));
-
-  // Show indicator if there are more results
-  if (rows.length === 50) {
-    $("#search_results").append(
-      `<tr><td colspan="5" class="text-center text-muted"><small>Showing first 50 results. Press Enter for complete search.</small></td></tr>`
-    );
-  }
-
-  scale_scrollable();
-}
-
-function setLabelFromSongId(song_id, element) {
-  //console.log(element);
-  var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-  var row = stmt.get(song_id);
-  var title = row.title || "[Unknown Title]";
-  var artist = row.artist || "[Unknown Artist]";
-  var time = row.time || "[??:??]";
-
-  // Handle swapping
-  var original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
-    element
-  );
-  console.log(original_song_node);
-  if (original_song_node.length) {
-    var old_song = original_song_node.find("span").detach();
-    var destination_song = $(element).find("span").detach();
-    original_song_node.append(destination_song);
-    if (destination_song.attr("songid")) {
-      original_song_node.attr("songid", destination_song.attr("songid"));
-    } else {
-      original_song_node.removeAttr("songid");
-    }
-
-    $(element).append(old_song);
-  } else {
-    $(element).find("span").html(`${title} by ${artist} (${time})`);
-    $(element).find("span").attr("songid", song_id);
-  }
-  saveHotkeysToStore();
-}
-
-function addToHoldingTank(song_id, element) {
-  var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-  var row = stmt.get(song_id);
-  var title = row.title || "[Unknown Title]";
-  var artist = row.artist || "[Unknown Artist]";
-  var time = row.time || "[??:??]";
-
-  var existing_song = $(
-    `.holding_tank.active .list-group-item[songid=${song_id}]`
-  );
-  if (existing_song.length) {
-    var song_row = existing_song.detach();
-  } else {
-    var song_row = document.createElement("li");
-    song_row.style.fontSize = `${fontSize}px`;
-    song_row.className = "song list-group-item";
-    song_row.setAttribute("draggable", "true");
-    song_row.setAttribute("ondragstart", "songDrag(event)");
-    song_row.setAttribute("songid", song_id);
-    song_row.textContent = `${title} by ${artist} (${time})`;
-  }
-
-  if ($(element).is("li")) {
-    $(element).after(song_row);
-  } else if ($(element).is("div")) {
-    $(element).find("ul.active").append(song_row);
-  } else {
-    $(element).append(song_row);
-  }
-  saveHoldingTankToStore();
-}
-
-var howlerUtils = {
-  formatTime: function (secs) {
-    var minutes = Math.floor(secs / 60) || 0;
-    var seconds = secs - minutes * 60 || 0;
-    return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
-  },
-  isLoaded: function (s) {
-    return s.state() == "loaded";
-  },
-  updateTimeTracker: function () {
-    if (!howlerUtils.isLoaded(sound)) {
-      cancelAnimationFrame(globalAnimation);
-      wavesurfer.empty();
-      return;
-    }
-    var self = this;
-    var seek = sound.seek() || 0;
-    var remaining = self.duration() - seek;
-    var currentTime = howlerUtils.formatTime(Math.round(seek));
-    var remainingTime = howlerUtils.formatTime(Math.round(remaining));
-    var percent_elapsed = seek / self.duration();
-    $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
-    if (!isNaN(percent_elapsed)) wavesurfer.seekTo(percent_elapsed);
-    $("#timer").text(currentTime);
-    $("#duration").text(`-${remainingTime}`);
-    globalAnimation = requestAnimationFrame(
-      howlerUtils.updateTimeTracker.bind(self)
-    );
-  },
+// Set up logging functions using the debug logger (assuming always available)
+window.logInfo = async (message, context) => {
+  await debugLogger.info(message, context);
 };
 
-function song_ended() {
-  $("#duration").html("0:00");
-  $("#timer").html("0:00");
-  $("#audio_progress").width("0%");
-  $("#song_now_playing").fadeOut(100);
-  $("song_now_playing").removeAttr("songid");
-  $("#play_button").removeClass("d-none");
-  $("#pause_button").addClass("d-none");
-  if (!$("#selected_row").length) {
-    $("#play_button").attr("disabled", true);
-  }
-  $("#stop_button").attr("disabled", true);
-}
+window.logDebug = async (message, context) => {
+  await debugLogger.debug(message, context);
+};
 
-function playSongFromId(song_id) {
-  console.log("Playing song from song ID " + song_id);
-  if (song_id) {
-    if (sound) {
-      sound.off("fade");
-      sound.unload();
-    }
-    var stmt = db.prepare("SELECT * from mrvoice WHERE id = ?");
-    var row = stmt.get(song_id);
-    var filename = row.filename;
-    var sound_path = [path.join(store.get("music_directory"), filename)];
-    console.log("Inside get, Filename is " + filename);
-    sound = new Howl({
-      src: sound_path,
-      html5: true,
-      volume: $("#volume").val() / 100,
-      mute: $("#mute_button").hasClass("active"),
-      onplay: function () {
-        var time = Math.round(sound.duration());
-        globalAnimation = requestAnimationFrame(
-          howlerUtils.updateTimeTracker.bind(this)
-        );
-        var title = row.title || "";
-        var artist = row.artist || "";
-        artist = artist.length ? "by " + artist : artist;
-        wavesurfer.load(sound_path);
-        $("#song_now_playing")
-          .html(
-            `<i id="song_spinner" title="CD" class="fas fa-sm fa-spin fa-compact-disc"></i> ${title} ${artist}`
-          )
-          .fadeIn(100);
-        $("#song_now_playing").attr("songid", song_id);
-        $("#play_button").addClass("d-none");
-        $("#pause_button").removeClass("d-none");
-        $("#stop_button").removeAttr("disabled");
-        $("#play_button").removeAttr("disabled");
-        $("#progress_bar .progress-bar").addClass(
-          "progress-bar-animated progress-bar-striped"
-        );
-      },
-      onend: function () {
-        song_ended();
-        if (loop) {
-          sound.play();
-        } else {
-          sound.unload();
-          autoplay_next();
-        }
-      },
-      onstop: function () {
-        console.log("Stopped!");
-        song_ended();
-      },
-    });
+window.logWarn = async (message, context) => {
+  await debugLogger.warn(message, context);
+};
 
-    sound.play();
-  }
-}
+window.logError = async (message, context) => {
+  await debugLogger.error(message, context);
+};
 
-function autoplay_next() {
-  if (autoplay && holdingTankMode === "playlist") {
-    var now_playing = $(".now_playing").first();
-    if (now_playing.length) {
-      now_playing.removeClass("now_playing");
-      next_song = now_playing.next();
-      next_song.addClass("now_playing");
-    }
-    if (next_song.length) {
-      // Clear any existing highlighting and highlight the new playing track
-      $("#selected_row").removeAttr("id");
-      next_song.attr("id", "selected_row");
-      playSongFromId(next_song.attr("songid"));
-      next_song.addClass("now_playing");
-    } else {
-      // End of playlist - just remove the now_playing class and stay in playlist mode
-      $("li.now_playing").first().removeClass("now_playing");
-      // Clear any highlighting at the end of playlist
-      $("#selected_row").removeAttr("id");
-      // Don't switch modes - stay in playlist mode
-    }
-  }
-}
+// Module registry to avoid window pollution
+const moduleRegistry = {};
 
-function cancel_autoplay() {
-  if (!$("#holding-tank-column").has($("#selected_row")).length) {
-    // Only cancel autoplay if we're not in the holding tank
-    if (holdingTankMode === "playlist") {
-      autoplay = false;
-      setHoldingTankMode("storage");
-    }
-  }
-}
+// Import function coordination module for centralized function management
+import FunctionCoordination from './renderer/modules/function-coordination/index.js';
 
-function playSelected() {
-  var song_id = $("#selected_row").attr("songid");
-  console.log("Got song ID " + song_id);
+// Import keyboard manager for centralized keyboard shortcut management
+import KeyboardManager from './renderer/modules/keyboard-manager/index.js';
 
-  // Only clear the now_playing class if the selected row is from the search panel
-  // (not from the holding tank/playlist)
-  if (!$("#holding-tank-column").has($("#selected_row")).length) {
-    $(".now_playing").removeClass("now_playing");
-  }
+// Function coordination instance - initialized after debug logger is available
+let functionCoordination = null;
 
-  if (holdingTankMode === "storage") {
-    // In storage mode, cancel autoplay and play just this song
-    cancel_autoplay();
-  }
-  // In playlist mode, autoplay is already set up by the double-click handler
+// Global keyboard manager instance
+let keyboardManager = null;
 
-  playSongFromId(song_id);
-}
+// Data loading and initialization now handled by app-initialization module
 
-function stopPlaying(fadeOut = false) {
-  if (sound) {
-    sound.on("fade", function () {
-      sound.unload();
-    });
-    if (autoplay && holdingTankMode === "playlist") {
-      $(".now_playing").first().removeClass("now_playing");
-    }
-    if (fadeOut) {
-      var fadeDuration = store.get("fade_out_seconds") * 1000;
-      sound.fade(sound.volume(), 0, fadeDuration);
-    } else {
-      sound.unload();
-    }
-  }
-}
+// File Operations Module - Functions extracted to src/renderer/modules/file-operations/
+// openHotkeyFile(), openHoldingTankFile(), saveHotkeyFile(), saveHoldingTankFile()
+// pickDirectory(), installUpdate() - All moved to file-operations module
 
-function pausePlaying(fadeOut = false) {
-  if (sound) {
-    toggle_play_button();
-    if (sound.playing()) {
-      sound.on("fade", function () {
-        sound.pause();
-        sound.volume(old_volume);
-      });
-      $("#song_spinner").removeClass("fa-spin");
-      $("#progress_bar .progress-bar").removeClass(
-        "progress-bar-animated progress-bar-striped"
-      );
-      if (fadeOut) {
-        var old_volume = sound.volume();
-        var fadeDuration = store.get("fade_out_seconds") * 1000;
-        sound.fade(sound.volume(), 0, fadeDuration);
-      } else {
-        sound.pause();
-      }
-    } else {
-      sound.play();
-      $("#song_spinner").addClass("fa-spin");
-      $("#progress_bar .progress-bar").addClass(
-        "progress-bar-animated progress-bar-striped"
-      );
-    }
-  }
-}
+// Import bootstrap module for module loading
+import AppBootstrap from './renderer/modules/app-bootstrap/index.js';
 
-function toggle_play_button() {
-  $("#play_button").toggleClass("d-none");
-  $("#pause_button").toggleClass("d-none");
-}
+// Import app initialization module for centralized initialization
+import AppInitialization from './renderer/modules/app-initialization/index.js';
 
-function hotkeyDrop(event) {
-  event.preventDefault();
-  var song_id = event.dataTransfer.getData("text");
-  var target = $(event.currentTarget);
-  target.attr("songid", song_id);
-  setLabelFromSongId(song_id, target);
-}
-
-function holdingTankDrop(event) {
-  event.preventDefault();
-  addToHoldingTank(event.dataTransfer.getData("text"), $(event.target));
-}
-
-function allowHotkeyDrop(event) {
-  event.preventDefault();
-}
-
-function songDrag(event) {
-  console.log("Starting drag for ID " + event.target.getAttribute("songid"));
-  event.dataTransfer.setData("text", event.target.getAttribute("songid"));
-}
-
-function columnDrag(event) {
-  console.log("Starting drag for column ID " + event.target.getAttribute("id"));
-  event.dataTransfer.setData(
-    "application/x-moz-node",
-    event.target.getAttribute("id")
-  );
-}
-
-function sendToHotkeys() {
-  if ($("#selected_row").is("span")) {
-    return;
-  }
-  target = $(".hotkeys.active li").not("[songid]").first();
-  song_id = $("#selected_row").attr("songid");
-  if ($(`.hotkeys.active li[songid=${song_id}]`).length) {
-    return;
-  }
-  if (target && song_id) {
-    target.attr("songid", song_id);
-    setLabelFromSongId(song_id, target);
-  }
-  return false;
-}
-
-function sendToHoldingTank() {
-  target = $(".holding_tank.active");
-  song_id = $("#selected_row").attr("songid");
-  if (song_id) {
-    addToHoldingTank(song_id, target);
-  }
-  return false;
-}
-
-function selectNext() {
-  $("#selected_row").removeAttr("id").next().attr("id", "selected_row");
-}
-
-function selectPrev() {
-  $("#selected_row").removeAttr("id").prev().attr("id", "selected_row");
-}
-
-// New mode management functions
-function setHoldingTankMode(mode) {
-  holdingTankMode = mode;
-
-  // Update button states
-  if (mode === "storage") {
-    $("#storage_mode_btn").addClass("active");
-    $("#playlist_mode_btn").removeClass("active");
-    $("#holding_tank")
-      .removeClass("holding-tank-playlist-mode")
-      .addClass("holding-tank-storage-mode");
-    autoplay = false;
-    $(".now_playing").removeClass("now_playing");
-    $("#holding_tank").removeClass("autoplaying");
-  } else if (mode === "playlist") {
-    $("#playlist_mode_btn").addClass("active");
-    $("#storage_mode_btn").removeClass("active");
-    $("#holding_tank")
-      .removeClass("holding-tank-storage-mode")
-      .addClass("holding-tank-playlist-mode");
-    autoplay = true;
-
-    // Only restore the speaker icon if there's a track currently playing AND it's actually playing
-    var currentSongId = $("#song_now_playing").attr("songid");
-    var isCurrentlyPlaying = sound && sound.playing && sound.playing();
-
-    if (currentSongId && isCurrentlyPlaying) {
-      // Find the track in the holding tank with this song ID and add the now_playing class
-      $(`#holding_tank .list-group-item[songid="${currentSongId}"]`).addClass(
-        "now_playing"
-      );
-    }
-  }
-
-  // Save mode to store
-  store.set("holding_tank_mode", mode);
-}
-
-// Legacy function for backward compatibility
-function toggleAutoPlay() {
-  if (holdingTankMode === "storage") {
-    setHoldingTankMode("playlist");
-  } else {
-    setHoldingTankMode("storage");
-  }
-}
-
-function deleteSong() {
-  var songId = $("#selected_row").attr("songid");
-  if (songId) {
-    console.log(`Preparing to delete song ${songId}`);
-    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    var songRow = songStmt.get(songId);
-    var filename = songRow.filename;
-
-    customConfirm(
-      `Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`,
-      function () {
-        console.log("Proceeding with delete");
-        const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
-        if (deleteStmt.run(songId)) {
-          fs.unlinkSync(path.join(store.get("music_directory"), filename));
-          // Remove song anywhere it appears
-          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-          $(`.hotkeys li span[songid=${songId}]`).remove();
-          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-          $(`#search_results tr[songid=${songId}]`).remove();
-          saveHoldingTankToStore();
-          saveHotkeysToStore();
-        } else {
-          console.log("Error deleting song from database");
-        }
-      }
-    );
-  }
-}
-
-function scale_scrollable() {
-  var advanced_search_height = $("#advanced-search").is(":visible") ? 38 : 0;
-  if ($("#advanced-search").is(":visible")) {
-    advanced_search_height = 38;
-  }
-  $(".table-wrapper-scroll-y").height(
-    $(window).height() - 240 - advanced_search_height + "px"
-  );
-}
-
-function switchToHotkeyTab(tab) {
-  $(`#hotkey_tabs li:nth-child(${tab}) a`).tab("show");
-}
-
-function renameHotkeyTab() {
-  ipcRenderer.invoke("get-app-path").then((result) => {
-    prompt({
-      title: "Rename Hotkey Tab",
-      label: "Rename this tab:",
-      value: $("#hotkey_tabs .nav-link.active").text(),
-      type: "input",
-      alwaysOnTop: true,
-      customStylesheet: path.join(result, "src/stylesheets/colors.css"),
-    })
-      .then((r) => {
-        if (r === null) {
-          console.log("user canceled");
-        } else {
-          $("#hotkey_tabs .nav-link.active").text(r);
-          saveHotkeysToStore();
-        }
-      })
-      .catch(console.error);
-  });
-}
-
-function saveEditedSong(event) {
-  event.preventDefault();
-  $(`#songFormModal`).modal("hide");
-  console.log("Starting edit process");
-  var songId = $("#song-form-songid").val();
-  var title = $("#song-form-title").val();
-  var artist = $("#song-form-artist").val();
-  var info = $("#song-form-info").val();
-  var category = $("#song-form-category").val();
-
-  const stmt = db.prepare(
-    "UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?"
-  );
-  stmt.run(title, artist, category, info, songId);
-
-  $("#omni_search").val(title);
-  searchData();
-}
-
-function saveNewSong(event) {
-  event.preventDefault();
-  $(`#songFormModal`).modal("hide");
-  console.log("Starting save process");
-  var filename = $("#song-form-filename").val();
-  var pathData = path.parse(filename);
-  var title = $("#song-form-title").val();
-  var artist = $("#song-form-artist").val();
-  var info = $("#song-form-info").val();
-  var category = $("#song-form-category").val();
-
-  if (category == "--NEW--") {
-    var description = $("#song-form-new-category").val();
-    var code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-    var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-    var loopCount = 1;
-    var newCode = code;
-    while ((row = codeCheckStmt.get(newCode))) {
-      console.log(`Found a code collision on ${code}`);
-      var newCode = `${code}${loopCount}`;
-      loopCount = loopCount + 1;
-      console.log(`NewCode is ${newCode}`);
-    }
-    console.log(`Out of loop, setting code to ${newCode}`);
-    code = newCode;
-    const categoryInsertStmt = db.prepare(
-      "INSERT INTO categories VALUES (?, ?)"
-    );
-    try {
-      const categoryInfo = categoryInsertStmt.run(
-        code,
-        $("#song-form-new-category").val()
-      );
-      if (categoryInfo.changes == 1) {
-        console.log(`Added new row into database`);
-        populateCategorySelect();
-        populateCategoriesModal();
-        category = code;
-      }
-    } catch (err) {
-      if (err.message.match(/UNIQUE constraint/)) {
-        var description = $("#song-form-new-category").val();
-        $("#song-form-new-category").val("");
-        alert(
-          `Couldn't add a category named "${description}" - apparently one already exists!`
-        );
-        return;
-      }
-    }
-  }
-
-  var duration = $("#song-form-duration").val();
-  var uuid = uuidv4();
-  var newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(
-    /[^-.\w]/g,
-    ""
-  );
-  var newPath = path.join(store.get("music_directory"), newFilename);
-
-  const stmt = db.prepare(
-    "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  );
-  stmt.run(
-    title,
-    artist,
-    category,
-    info,
-    newFilename,
-    duration,
-    Math.floor(Date.now() / 1000)
-  );
-  fs.copyFileSync(filename, newPath);
-
-  // Song has been saved, now let's show item
-  $("#omni_search").val(title);
-  searchData();
-}
-
-function savePreferences(event) {
-  console.log("Saving preferences");
-  event.preventDefault();
-  $(`#preferencesModal`).modal("hide");
-  store.set("database_directory", $("#preferences-database-directory").val());
-  store.set("music_directory", $("#preferences-song-directory").val());
-  store.set("hotkey_directory", $("#preferences-hotkey-directory").val());
-  store.set("fade_out_seconds", $("#preferences-fadeout-seconds").val());
-}
-
-function renameHoldingTankTab() {
-  ipcRenderer.invoke("get-app-path").then((result) => {
-    prompt({
-      title: "Rename Holding Tank Tab",
-      label: "Rename this tab:",
-      value: $("#holding_tank_tabs .nav-link.active").text(),
-      type: "input",
-      alwaysOnTop: true,
-      customStylesheet: path.join(result, "src/stylesheets/colors.css"),
-    })
-      .then((r) => {
-        if (r === null) {
-          console.log("user canceled");
-        } else {
-          $("#holding_tank_tabs .nav-link.active").text(r);
-          saveHoldingTankToStore();
-        }
-      })
-      .catch(console.error);
-  });
-}
-
-function increaseFontSize() {
-  if (fontSize < 25) {
-    $(".song").css("font-size", ++fontSize + "px");
-    store.set("font-size", fontSize);
-  }
-}
-
-function decreaseFontSize() {
-  if (fontSize > 5) {
-    $(".song").css("font-size", --fontSize + "px");
-    store.set("font-size", fontSize);
-  }
-}
-
-function editSelectedSong() {
-  var songId = $("#selected_row").attr("songid");
-  const stmt = db.prepare("SELECT * FROM mrvoice WHERE id = ?");
-
-  if (songId) {
-    var songInfo = stmt.get(songId);
-
-    $("#song-form-songid").val(songId);
-    $("#song-form-category").empty();
-    const categoryStmt = db.prepare(
-      "SELECT * FROM categories ORDER BY description ASC"
-    );
-    for (const row of categoryStmt.iterate()) {
-      categories[row.code] = row.description;
-      if (row.code == songInfo.category) {
-        $("#song-form-category").append(
-          `<option selected="selected" value="${row.code}">${row.description}</option>`
-        );
-      } else {
-        $("#song-form-category").append(
-          `<option value="${row.code}">${row.description}</option>`
-        );
-      }
-    }
-
-    $("#song-form-title").val(songInfo.title);
-    $("#song-form-artist").val(songInfo.artist);
-    $("#song-form-info").val(songInfo.info);
-    $("#song-form-duration").val(songInfo.time);
-    $("#songFormModal form").attr("onsubmit", "saveEditedSong(event)");
-    $("#songFormModalTitle").html("Edit This Song");
-    $("#songFormSubmitButton").html("Save");
-    $("#songFormModal").modal();
-  }
-}
-function deleteSelectedSong() {
-  var songId = $("#selected_row").attr("songid");
-  if (songId) {
-    console.log(`Preparing to delete song ${songId}`);
-    const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-    var songRow = songStmt.get(songId);
-    var filename = songRow.filename;
-
-    customConfirm(
-      `Are you sure you want to delete ${songRow.title} from Mx. Voice permanently?`,
-      function () {
-        console.log("Proceeding with delete");
-        const deleteStmt = db.prepare("DELETE FROM mrvoice WHERE id = ?");
-        if (deleteStmt.run(songId)) {
-          fs.unlinkSync(path.join(store.get("music_directory"), filename));
-          // Remove song anywhere it appears
-          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-          $(`.hotkeys li span[songid=${songId}]`).remove();
-          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-          $(`#search_results tr[songid=${songId}]`).remove();
-          saveHoldingTankToStore();
-          saveHotkeysToStore();
-        } else {
-          console.log("Error deleting song from database");
-        }
-      }
-    );
-  }
-}
-
-function showBulkAddModal(directory) {
-  $("#bulk-add-path").val(directory);
-  $("#bulk-add-category").empty();
-  const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-  for (const row of stmt.iterate()) {
-    categories[row.code] = row.description;
-    $("#bulk-add-category").append(
-      `<option value="${row.code}">${row.description}</option>`
-    );
-  }
-  $("#bulk-add-category").append(
-    `<option value="" disabled>-----------------------</option>`
-  );
-  $("#bulk-add-category").append(
-    `<option value="--NEW--">ADD NEW CATEGORY...</option>`
-  );
-
-  $("#bulkAddModal").modal();
-}
-
-function addSongsByPath(pathArray, category) {
-  const songSourcePath = pathArray.shift();
-  if (songSourcePath) {
-    return mm.parseFile(songSourcePath).then((metadata) => {
-      var durationSeconds = metadata.format.duration.toFixed(0);
-      var durationString = new Date(durationSeconds * 1000)
-        .toISOString()
-        .substr(14, 5);
-
-      var title = metadata.common.title || path.parse(songSourcePath).name;
-      if (!title) {
-        return;
-      }
-      var artist = metadata.common.artist;
-      var uuid = uuidv4();
-      var newFilename = `${artist}-${title}-${uuid}${path.extname(
-        songSourcePath
-      )}`.replace(/[^-.\w]/g, "");
-      var newPath = path.join(store.get("music_directory"), newFilename);
-      const stmt = db.prepare(
-        "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)"
-      );
-      const info = stmt.run(
-        title,
-        artist,
-        category,
-        newFilename,
-        durationString,
-        Math.floor(Date.now() / 1000)
-      );
-      console.log(`Copying audio file ${songSourcePath} to ${newPath}`);
-      fs.copyFileSync(songSourcePath, newPath);
-      $("#search_results").append(
-        `<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${
-          info.lastInsertRowid
-        }'><td>${
-          categories[category]
-        }</td><td></td><td style='font-weight: bold'>${
-          title || ""
-        }</td><td style='font-weight:bold'>${
-          artist || ""
-        }</td><td>${durationString}</td></tr>`
-      );
-
-      return addSongsByPath(pathArray, category); // process rest of the files AFTER we are finished
-    });
-  }
-  return Promise.resolve();
-}
-
-function saveBulkUpload(event) {
-  event.preventDefault();
-  $("#bulkAddModal").modal("hide");
-  var dirname = $("#bulk-add-path").val();
-
-  var walk = function (dir) {
-    var results = [];
-    var list = fs.readdirSync(dir);
-    list.forEach(function (file) {
-      file = dir + "/" + file;
-      var stat = fs.statSync(file);
-      if (stat && stat.isDirectory()) {
-        /* Recurse into a subdirectory */
-        results = results.concat(walk(file));
-      } else {
-        /* Is a file */
-        var pathData = path.parse(file);
-        if (
-          [".mp3", ".mp4", ".m4a", ".wav", ".ogg"].includes(
-            pathData.ext.toLowerCase()
-          )
-        ) {
-          results.push(file);
-        }
-      }
-    });
-    return results;
-  };
-
-  var songs = walk(dirname);
-
-  $("#search_results tbody").find("tr").remove();
-  $("#search_results thead").show();
-
-  var category = $("#bulk-add-category").val();
-
-  if (category == "--NEW--") {
-    var description = $("#bulk-song-form-new-category").val();
-    var code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-    var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-    var loopCount = 1;
-    var newCode = code;
-    while ((row = codeCheckStmt.get(newCode))) {
-      console.log(`Found a code collision on ${code}`);
-      var newCode = `${code}${loopCount}`;
-      loopCount = loopCount + 1;
-      console.log(`NewCode is ${newCode}`);
-    }
-    console.log(`Out of loop, setting code to ${newCode}`);
-    code = newCode;
-    const categoryInsertStmt = db.prepare(
-      "INSERT INTO categories VALUES (?, ?)"
-    );
-    try {
-      const categoryInfo = categoryInsertStmt.run(code, description);
-      if (categoryInfo.changes == 1) {
-        console.log(`Added new row into database`);
-        populateCategorySelect();
-        populateCategoriesModal();
-        category = code;
-      }
-    } catch (err) {
-      if (err.message.match(/UNIQUE constraint/)) {
-        var description = $("#bulk-song-form-new-category").val();
-        $("#bulk-song-form-new-category").val("");
-        alert(
-          `Couldn't add a category named "${description}" - apparently one already exists!`
-        );
-        return;
-      }
-    }
-  }
-
-  addSongsByPath(songs, category);
-}
-
-function populateCategoriesModal() {
-  $("#categoryList").find("div.row").remove();
-
-  const stmt = db.prepare("SELECT * FROM categories ORDER BY description ASC");
-  for (const row of stmt.iterate()) {
-    $("#categoryList").append(`<div class="form-group row">
-
-      <div class="col-sm-8">
-        <div catcode="${row.code}" class="category-description">${row.description}</div>
-        <input style="display: none;" type="text" class="form-control form-control-sm categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
-      </div>
-      <div class="col-sm-4">
-      <a href="#" class="btn btn-primary btn-xs" onclick="editCategory('${row.code}')">Edit</a>&nbsp;
-      <a class="delete_link btn btn-danger btn-xs" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
-      </div>
-
-    `);
-  }
-}
-
-function editCategory(code) {
-  $(".categoryDescription").hide();
-  $(".category-description").show();
-  $(`.category-description[catcode=${code}]`).hide();
-  $(`.categoryDescription[catcode=${code}]`).show().select();
-}
-
-function openCategoriesModal() {
-  populateCategoriesModal();
-
-  $("#categoryManagementModal").modal();
-}
-
-function deleteCategory(event, code, description) {
-  event.preventDefault();
-  customConfirm(
-    `Are you sure you want to delete "${description}" from Mx. Voice permanently? All songs in this category will be changed to the category "Uncategorized."`,
-    function () {
-      console.log(`Deleting category ${code}`);
-
-      const uncategorizedCheckStmt = db.prepare(
-        "INSERT OR REPLACE INTO categories VALUES(?, ?);"
-      );
-      const uncategorizedCheckInfo = uncategorizedCheckStmt.run(
-        "UNC",
-        "Uncategorized"
-      );
-      if (uncategorizedCheckInfo.changes == 1) {
-        console.log(`Had to upsert Uncategorized table`);
-      }
-      const stmt = db.prepare(
-        "UPDATE mrvoice SET category = ? WHERE category = ?"
-      );
-      const info = stmt.run("UNC", code);
-      console.log(`Updated ${info.changes} rows to uncategorized`);
-
-      const deleteStmt = db.prepare("DELETE FROM categories WHERE code = ?");
-      const deleteInfo = deleteStmt.run(code);
-      if (deleteInfo.changes == 1) {
-        console.log(`Deleted category ${code}`);
-      }
-      populateCategorySelect();
-      populateCategoriesModal();
-    }
-  );
-}
-
-function saveCategories(event) {
-  event.preventDefault();
-  $("#categoryList div.row").each(function () {
-    var code = $(this).find(".categoryDescription").attr("catcode");
-    console.log(`Checking code ${code}`);
-    var description = $(this).find(".categoryDescription").val();
-    const stmt = db.prepare(
-      "UPDATE categories SET description = ? WHERE code = ? AND description != ?"
-    );
-    const info = stmt.run(description, code, description);
-    if (info.changes == 1) {
-      console.log(
-        `Saving changes to ${code} - new description is ${description}`
-      );
-    }
-    populateCategorySelect();
-    populateCategoriesModal();
-  });
-}
-function addNewCategory(event) {
-  event.preventDefault();
-  console.log(`Adding new category`);
-  var description = $("#newCategoryDescription").val();
-  var code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-  var codeCheckStmt = db.prepare("SELECT * FROM categories WHERE code = ?");
-  var loopCount = 1;
-  var newCode = code;
-  while ((row = codeCheckStmt.get(newCode))) {
-    console.log(`Found a code collision on ${code}`);
-    var newCode = `${code}${loopCount}`;
-    loopCount = loopCount + 1;
-    console.log(`NewCode is ${newCode}`);
-  }
-  console.log(`Out of loop, setting code to ${newCode}`);
-  code = newCode;
-  console.log(`Adding ${code} :: ${description}`);
-  const stmt = db.prepare("INSERT INTO categories VALUES (?, ?)");
+// Load modules dynamically and make functions globally available
+(async function loadModules() {
   try {
-    const info = stmt.run(code, description);
-    if (info.changes == 1) {
-      console.log(`Added new row into database`);
-      $("#newCategoryCode").val("");
-      $("#newCategoryDescription").val("");
-      populateCategorySelect();
-      populateCategoriesModal();
-    }
-  } catch (err) {
-    if (err.message.match(/UNIQUE constraint/)) {
-      $("#newCategoryDescription").val("");
-      alert(
-        `Couldn't add a category named "${description}" - apparently one already exists!`
-      );
-    }
-  }
-}
-
-function toggle_selected_row(row) {
-  // if ($(row).attr('id') == "selected_row") {
-  //   $(row).removeAttr("id");
-  // } else {
-  $("#selected_row").removeAttr("id");
-  $(row).attr("id", "selected_row");
-  $("#play_button").removeAttr("disabled");
-  // }
-}
-
-function loop_on(bool) {
-  if (bool == true) {
-    $("#loop_button").addClass("active");
-  } else {
-    $("#loop_button").removeClass("active");
-  }
-}
-
-function pickDirectory(event, element) {
-  event.preventDefault();
-  defaultPath = $(element).val();
-  ipcRenderer.invoke("show-directory-picker", defaultPath).then((result) => {
-    if (result) $(element).val(result);
-  });
-}
-
-function installUpdate() {
-  ipcRenderer.send("restart-and-install-new-version");
-}
-
-function toggleWaveform() {
-  if ($("#waveform").hasClass("hidden")) {
-    $("#waveform").removeClass("hidden");
-    $("#waveform_button").addClass("active");
-    animateCSS($("#waveform"), "fadeInUp").then(() => {});
-  } else {
-    $("#waveform_button").removeClass("active");
-    animateCSS($("#waveform"), "fadeOutDown").then(() => {
-      $("#waveform").addClass("hidden");
+    window.logInfo('🔧 Starting module loading...');
+    
+    // Initialize the application using the app-initialization module
+    window.logInfo('🚀 Initializing application components...');
+    const initSuccess = await AppInitialization.initialize({
+      debug: {
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: window.store
+      },
+      environment: {
+        debugMode: true,
+        performanceMonitoring: true
+      }
     });
-  }
-}
-
-function toggleAdvancedSearch() {
-  try {
-    console.log("toggleAdvancedSearch called");
-
-    // Clear any pending live search
-    clearTimeout(searchTimeout);
-    console.log("Cleared timeout");
-
-    $("#search_form").trigger("reset");
-    console.log("Triggered form reset");
-
-    // Clear search results when toggling advanced search
-    $("#search_results tbody").find("tr").remove();
-    $("#search_results thead").hide();
-    console.log("Cleared search results");
-
-    console.log(
-      "Advanced search element exists:",
-      $("#advanced-search").length > 0
+    
+    if (!initSuccess) {
+      throw new Error('Application initialization failed');
+    }
+    
+    // Get initialized instances for backward compatibility  
+    sharedStateInstance = AppInitialization.getSharedState();
+    sharedStateInitialized = AppInitialization.isInitialized();
+    
+    // Debug logger already initialized early, no need to reinitialize
+    
+    window.logInfo('Application initialization completed, proceeding with module loading...');
+    
+    // Load basic modules using the bootstrap module
+    window.logInfo('Loading modules using bootstrap configuration...');
+    await AppBootstrap.loadBasicModules(
+      AppBootstrap.moduleConfig, 
+      moduleRegistry, 
+      window.logInfo, 
+      window.logError, 
+      window.logWarn,
+      {
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: window.store,
+        debugLog: window.debugLog
+      }
     );
-    console.log(
-      "Advanced search visible:",
-      $("#advanced-search").is(":visible")
-    );
-    console.log(
-      "Advanced search display:",
-      $("#advanced-search").css("display")
-    );
+    window.logInfo('Basic module loading completed');
+    
+    // Module loading is now handled by the bootstrap module above
+    // All modules are loaded and available in moduleRegistry
 
-    if ($("#advanced-search").is(":visible")) {
-      console.log("Hiding advanced search");
-      $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
-      $("#title-search").hide();
-      $("#omni_search").show();
-      $("#omni_search").focus();
-      animateCSS($("#advanced-search"), "fadeOutUp").then(() => {
-        $("#advanced-search").hide();
-        scale_scrollable();
-      });
+
+
+
+
+    // Set up critical function wrapper for backward compatibility with HTML
+    // The deleteCategory function is called from HTML, so we need to ensure it's available
+    window.deleteCategory = function(event, code, description) {
+      if (moduleRegistry.categories && moduleRegistry.categories.deleteCategoryUI) {
+        return moduleRegistry.categories.deleteCategoryUI(event, code, description);
+      } else {
+        window.logError('Categories module not available');
+        alert('Category deletion requires the categories module to be loaded. Please try again.');
+      }
+    };
+
+    window.logInfo('All modules loaded successfully via bootstrap!');
+    window.logInfo('Module Registry Summary:');
+    window.logDebug('File Operations', !!moduleRegistry.fileOperations);
+    window.logDebug('Song Management', !!moduleRegistry.songManagement);
+    window.logDebug('Holding Tank', !!moduleRegistry.holdingTank);
+    window.logDebug('Hotkeys', !!moduleRegistry.hotkeys);
+    window.logDebug('Categories', !!moduleRegistry.categories);
+    window.logDebug('Bulk Operations', !!moduleRegistry.bulkOperations);
+    window.logDebug('Drag Drop', !!moduleRegistry.dragDrop);
+    window.logDebug('Navigation', !!moduleRegistry.navigation);
+    window.logDebug('Mode Management', !!moduleRegistry.modeManagement);
+    window.logDebug('Test Utils', !!moduleRegistry.testUtils);
+    window.logDebug('Search', !!moduleRegistry.search);
+    window.logDebug('Audio', !!moduleRegistry.audio);
+    window.logDebug('UI', !!moduleRegistry.ui);
+    window.logDebug('Preferences', !!moduleRegistry.preferences);
+    window.logDebug('Database', !!moduleRegistry.database);
+    window.logDebug('Utils', !!moduleRegistry.utils);
+
+    // Make module registry available for debugging and development
+    window.moduleRegistry = moduleRegistry;
+    
+    // Ensure window.debugLog is available for modules
+    if (moduleRegistry.debugLog && !window.debugLog) {
+      window.debugLog = moduleRegistry.debugLog;
+      window.logInfo('Global debugLog made available');
+    }
+    
+    // Initialize function coordination system
+    window.logInfo('Initializing function coordination system...');
+    functionCoordination = new FunctionCoordination({
+      debugLog: window.debugLog || debugLogger,
+      electronAPI: window.electronAPI,
+      db: window.db,
+      store: window.store
+    });
+    
+    // Initialize all function coordination components
+    const coordinationSuccess = await functionCoordination.initialize(
+      window.debugLog || debugLogger, 
+      moduleRegistry
+    );
+    
+    if (!coordinationSuccess) {
+      window.logError('Function coordination initialization failed, but continuing...');
     } else {
-      console.log("Showing advanced search");
-      $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
-      $("#advanced-search").show();
-      $("#title-search").show();
-      $("#title-search").focus();
-      $("#omni_search").hide();
-      scale_scrollable();
-      animateCSS($("#advanced-search"), "fadeInDown").then(() => {});
+      window.logInfo('Function coordination system initialized successfully');
+      
+      // Bridge secure IPC events to renderer functions under context isolation
+      try {
+        if (window.secureElectronAPI && window.secureElectronAPI.events) {
+          // Holding tank load → populateHoldingTank
+          if (typeof window.secureElectronAPI.events.onHoldingTankLoad === 'function') {
+            window.secureElectronAPI.events.onHoldingTankLoad((songIds) => {
+              if (typeof window.populateHoldingTank === 'function') {
+                window.populateHoldingTank(songIds);
+              } else {
+                window.logWarn('populateHoldingTank not yet available when holding_tank_load fired');
+              }
+            });
+          }
+
+          // Hotkey load → populateHotkeys
+          if (typeof window.secureElectronAPI.events.onFkeyLoad === 'function') {
+            window.secureElectronAPI.events.onFkeyLoad((fkeys, title) => {
+              if (typeof window.populateHotkeys === 'function') {
+                window.populateHotkeys(fkeys, title);
+              } else {
+                window.logWarn('populateHotkeys not yet available when fkey_load fired');
+              }
+            });
+          }
+
+          // Add file dialog → startAddNewSong
+          if (typeof window.secureElectronAPI.events.onAddDialogLoad === 'function') {
+            window.secureElectronAPI.events.onAddDialogLoad((filename, metadata) => {
+              if (typeof window.startAddNewSong === 'function') {
+                window.startAddNewSong(filename, metadata);
+              } else if (window.moduleRegistry?.songManagement?.startAddNewSong) {
+                window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
+              } else {
+                window.logWarn('startAddNewSong not available when add_dialog_load fired');
+              }
+            });
+          }
+
+          // Bulk add dialog → showBulkAddModal
+          if (typeof window.secureElectronAPI.events.onBulkAddDialogLoad === 'function') {
+            window.secureElectronAPI.events.onBulkAddDialogLoad((dirname) => {
+              if (typeof window.showBulkAddModal === 'function') {
+                window.showBulkAddModal(dirname);
+              } else if (window.moduleRegistry?.bulkOperations?.showBulkAddModal) {
+                window.moduleRegistry.bulkOperations.showBulkAddModal(dirname);
+              } else {
+                window.logWarn('showBulkAddModal not available when bulk_add_dialog_load fired');
+              }
+            });
+          }
+
+          // Manage categories → openCategoriesModal
+          if (typeof window.secureElectronAPI.events.onManageCategories === 'function') {
+            window.secureElectronAPI.events.onManageCategories(() => {
+              if (typeof window.openCategoriesModal === 'function') {
+                window.openCategoriesModal();
+              } else {
+                window.logWarn('openCategoriesModal not yet available when manage_categories fired');
+              }
+            });
+          }
+          
+          // Preferences → openPreferencesModal (if available)
+          if (typeof window.secureElectronAPI.events.onShowPreferences === 'function') {
+            window.secureElectronAPI.events.onShowPreferences(() => {
+              if (typeof window.openPreferencesModal === 'function') {
+                window.openPreferencesModal();
+              } else {
+                window.logWarn('openPreferencesModal not yet available when show_preferences fired');
+              }
+            });
+          }
+
+          // Edit selected song → editSelectedSong
+          if (typeof window.secureElectronAPI.events.onEditSelectedSong === 'function') {
+            window.secureElectronAPI.events.onEditSelectedSong(() => {
+              if (typeof window.editSelectedSong === 'function') {
+                window.editSelectedSong();
+              } else if (window.moduleRegistry?.ui?.editSelectedSong) {
+                window.moduleRegistry.ui.editSelectedSong();
+              } else if (window.moduleRegistry?.songManagement?.editSelectedSong) {
+                window.moduleRegistry.songManagement.editSelectedSong();
+              } else {
+                window.logWarn('editSelectedSong not available when edit_selected_song fired');
+              }
+            });
+          }
+
+          // Delete selected song → deleteSelectedSong
+          if (typeof window.secureElectronAPI.events.onDeleteSelectedSong === 'function') {
+            window.secureElectronAPI.events.onDeleteSelectedSong(() => {
+              if (typeof window.deleteSelectedSong === 'function') {
+                window.deleteSelectedSong();
+              } else if (window.moduleRegistry?.ui?.deleteSelectedSong) {
+                window.moduleRegistry.ui.deleteSelectedSong();
+              } else if (window.moduleRegistry?.songManagement?.deleteSelectedSong) {
+                window.moduleRegistry.songManagement.deleteSelectedSong();
+              } else {
+                window.logWarn('deleteSelectedSong not available when delete_selected_song fired');
+              }
+            });
+          }
+
+          // Font size events → UI controls
+          if (typeof window.secureElectronAPI.events.onIncreaseFontSize === 'function') {
+            window.secureElectronAPI.events.onIncreaseFontSize(() => {
+              if (typeof window.increaseFontSize === 'function') {
+                window.increaseFontSize();
+              } else if (window.moduleRegistry?.ui?.increaseFontSize) {
+                window.moduleRegistry.ui.increaseFontSize();
+              } else {
+                window.logWarn('increaseFontSize not available when increase_font_size fired');
+              }
+            });
+          }
+          if (typeof window.secureElectronAPI.events.onDecreaseFontSize === 'function') {
+            window.secureElectronAPI.events.onDecreaseFontSize(() => {
+              if (typeof window.decreaseFontSize === 'function') {
+                window.decreaseFontSize();
+              } else if (window.moduleRegistry?.ui?.decreaseFontSize) {
+                window.moduleRegistry.ui.decreaseFontSize();
+              } else {
+                window.logWarn('decreaseFontSize not available when decrease_font_size fired');
+              }
+            });
+          }
+
+          // UI toggles
+          if (typeof window.secureElectronAPI.events.onToggleWaveform === 'function') {
+            window.secureElectronAPI.events.onToggleWaveform(() => {
+              if (typeof window.toggleWaveform === 'function') {
+                window.toggleWaveform();
+              } else if (window.moduleRegistry?.ui?.toggleWaveform) {
+                window.moduleRegistry.ui.toggleWaveform();
+              } else {
+                window.logWarn('toggleWaveform not available when toggle_wave_form fired');
+              }
+            });
+          }
+          if (typeof window.secureElectronAPI.events.onToggleAdvancedSearch === 'function') {
+            window.secureElectronAPI.events.onToggleAdvancedSearch(() => {
+              if (typeof window.toggleAdvancedSearch === 'function') {
+                window.toggleAdvancedSearch();
+              } else if (window.moduleRegistry?.ui?.toggleAdvancedSearch) {
+                window.moduleRegistry.ui.toggleAdvancedSearch();
+              } else {
+                window.logWarn('toggleAdvancedSearch not available when toggle_advanced_search fired');
+              }
+            });
+          }
+
+          // Close all tabs → UI manager closeAllTabs (Start A New Session)
+          if (typeof window.secureElectronAPI.events.onCloseAllTabs === 'function') {
+            window.secureElectronAPI.events.onCloseAllTabs(() => {
+              if (typeof window.closeAllTabs === 'function') {
+                window.closeAllTabs();
+              } else if (window.moduleRegistry?.ui?.closeAllTabs) {
+                window.moduleRegistry.ui.closeAllTabs();
+              } else {
+                window.logWarn('closeAllTabs not available when close_all_tabs fired');
+              }
+            });
+          }
+        }
+      } catch (bridgeError) {
+        window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });
+      }
+
+      // Get comprehensive statistics
+      const comprehensiveStats = functionCoordination.getComprehensiveStats();
+      window.logInfo('Function Coordination Statistics', comprehensiveStats);
+      
+      // Perform health check
+      const healthCheck = functionCoordination.performHealthCheck(moduleRegistry);
+      window.logInfo('Function Coordination Health Check', healthCheck);
+    }
+    
+    // Make function coordination available for debugging and access to components
+    window.functionCoordination = functionCoordination;
+    
+    // Maintain backward compatibility by exposing individual components
+    if (functionCoordination) {
+      const components = functionCoordination.getComponents();
+      window.functionRegistry = components.functionRegistry;
+      window.eventManager = components.eventManager;
+      window.functionMonitor = components.functionMonitor;
+    }
+    
+    // Legacy functions moved to modules - keeping only HTML-compatible functions
+    // All other functions are now available through moduleRegistry
+    // Example: moduleRegistry.fileOperations.openHotkeyFile() instead of window.openHotkeyFile
+
+    // Initialize modules after loading
+    try {
+      if (moduleRegistry.bulkOperations && moduleRegistry.bulkOperations.initializeBulkOperations) {
+        moduleRegistry.bulkOperations.initializeBulkOperations();
+      }
+      if (moduleRegistry.dragDrop && moduleRegistry.dragDrop.initializeDragDrop) {
+        moduleRegistry.dragDrop.initializeDragDrop();
+      }
+      if (moduleRegistry.navigation && moduleRegistry.navigation.initializeNavigation) {
+        moduleRegistry.navigation.initializeNavigation();
+      }
+      window.logInfo('All modules initialized successfully!');
+    } catch (error) {
+      window.logError('Error initializing modules', error);
+    }
+
+    // Call functions that depend on loaded modules
+    try {
+      if (window.scale_scrollable) {
+        window.scale_scrollable();
+      }
+      // Ensure categories are populated after database module is loaded
+      if (window.populateCategorySelect) {
+        window.logInfo('Attempting to populate categories...');
+        await window.populateCategorySelect();
+        window.logInfo('Categories populated successfully');
+      } else {
+        window.logWarn('populateCategorySelect function not available');
+      }
+      window.logInfo('Module-dependent functions called successfully!');
+    } catch (error) {
+      window.logError('Error calling module-dependent functions', error);
+    }
+
+    // Set up keyboard shortcuts using the keyboard manager module
+    try {
+      window.logInfo('Initializing keyboard manager...');
+      keyboardManager = new KeyboardManager({
+        debugLog: window.debugLog || debugLogger,
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: window.store
+      });
+      
+      // Initialize and set up keyboard shortcuts
+      const keyboardSuccess = await keyboardManager.setupKeyboardShortcuts();
+      
+      if (keyboardSuccess) {
+        window.logInfo('Keyboard shortcuts set up successfully!');
+        
+        // Get keyboard manager statistics
+        const keyboardStats = keyboardManager.getComprehensiveStats();
+        window.logInfo('Keyboard Manager Statistics', keyboardStats);
+        
+        // Perform health check
+        const keyboardHealth = keyboardManager.performHealthCheck();
+        window.logInfo('Keyboard Manager Health Check', keyboardHealth);
+      } else {
+        window.logError('Failed to set up keyboard shortcuts, but continuing...');
+      }
+      
+      // Make keyboard manager available for debugging
+      window.keyboardManager = keyboardManager;
+      
+    } catch (error) {
+      window.logError('Error setting up keyboard shortcuts', error);
     }
   } catch (error) {
-    console.error("Error in toggleAdvancedSearch:", error);
+    window.logError('Error loading modules', error);
+    window.logError('Error stack', error.stack);
+    window.logError('Error message', error.message);
   }
-}
+})();
 
-function closeAllTabs() {
-  customConfirm(
-    `Are you sure you want to close all open Holding Tanks and Hotkeys?`,
-    function () {
-      store.delete("holding_tank");
-      store.delete("hotkeys");
-      store.delete("column_order");
-      store.delete("font-size");
-      location.reload();
+// Legacy functions moved to respective modules (preferences, search, database, audio, etc.)
+
+
+
+
+
+// Mode Management Module - Functions extracted to src/renderer/modules/mode-management/
+// setHoldingTankMode(), toggleAutoPlay() - All moved to mode-management module
+
+// Song Management Module - Functions extracted to src/renderer/modules/song-management/
+// deleteSong(), removeFromHoldingTank(), removeFromHotkey() - All moved to song-management module
+
+// UI functions moved to ui module
+
+// Song Management Module - Functions extracted to src/renderer/modules/song-management/
+// editSelectedSong(), deleteSelectedSong() - All moved to song-management module
+
+// Song Management Module - Functions extracted to src/renderer/modules/song-management/
+// showBulkAddModal(), addSongsByPath(), saveBulkUpload() - All moved to bulk-operations module
+
+// Categories functions moved to categories module
+
+// All functions have been moved to their respective modules
+// Use moduleRegistry to access module functions
+// Example: moduleRegistry.ui.toggleSelectedRow(row) instead of toggle_selected_row(row)
+
+// Legacy functions removed - now handled by modules:
+// - toggle_selected_row() -> moduleRegistry.ui.toggleSelectedRow()
+// - loop_on() -> moduleRegistry.audio.loop_on()
+// - closeAllTabs() -> moduleRegistry.ui.closeAllTabs()
+
+// Keyboard shortcuts now handled by the keyboard-manager module
+// This function is kept for backward compatibility but now uses the KeyboardManager
+
+// Import event coordination module for centralized event handling
+import EventCoordination from './renderer/modules/event-coordination/index.js';
+
+// Global event coordination instance
+let eventCoordination = null;
+
+$(document).ready(async function () {
+  try {
+    // Initialize DOM-dependent features from app-initialization module
+    if (AppInitialization.isInitialized()) {
+      await AppInitialization.initializeDOMDependentFeatures();
     }
-  );
-}
-
-// Custom confirmation function to replace native confirm() dialogs
-function customConfirm(message, callback) {
-  $("#confirmationMessage").text(message);
-  $("#confirmationModal").modal("show");
-
-  // Store the callback to execute when confirmed
-  $("#confirmationConfirmBtn")
-    .off("click")
-    .on("click", function () {
-      $("#confirmationModal").modal("hide");
-      if (callback) {
-        callback();
-      }
-    });
-}
-
-// Focus restoration after modal dismissal
-function restoreFocusToSearch() {
-  // Small delay to ensure modal is fully closed
-  setTimeout(function () {
-    if ($("#omni_search").is(":visible")) {
-      $("#omni_search").focus();
-    } else if ($("#title-search").is(":visible")) {
-      $("#title-search").focus();
-    }
-  }, 100);
-}
-
-$(document).ready(function () {
-  scale_scrollable();
-
-  populateCategorySelect();
-
-  // Initialize progress bar to 0% width
-  $("#audio_progress").width("0%");
-
-  $("#search_results").on("click", "tbody tr", function (event) {
-    toggle_selected_row(this);
-  });
-
-  $("#search_results").on("contextmenu", "tbody tr", function (event) {
-    toggle_selected_row(this);
-  });
-
-  $("#search_results").on("dblclick", "tbody tr.song", function (event) {
-    playSelected();
-  });
-
-  // Set up fkeys
-
-  var search_field = document.getElementById("omni_search");
-
-  for (let i = 1; i <= 12; i++) {
-    Mousetrap.bind(`f${i}`, function () {
-      playSongFromHotkey(`f${i}`);
+    
+    window.logInfo('DOM ready, initializing event coordination...');
+    
+    // Initialize event coordination module
+    eventCoordination = new EventCoordination({
+      electronAPI: window.electronAPI,
+      db: window.db,
+      store: window.store,
+      debugLog: debugLogger,
+      moduleRegistry: moduleRegistry
     });
 
-    Mousetrap(search_field).bind(`f${i}`, function () {
-      playSongFromHotkey(`f${i}`);
-    });
-  }
+    // Initialize the event coordination system
+    await eventCoordination.initialize();
+    window.logInfo('Event coordination initialized successfully');
 
-  for (let i = 1; i <= 5; i++) {
-    Mousetrap.bind(`command+${i}`, function () {
-      switchToHotkeyTab(i);
-    });
-  }
+    // Attach all event handlers - this replaces all the jQuery event handling code
+    await eventCoordination.attachEventHandlers();
+    window.logInfo('All event handlers attached via event coordination module');
 
-  Mousetrap(search_field).bind("esc", function () {
-    stopPlaying();
-  });
+    // Make event coordination available globally for debugging
+    window.eventCoordination = eventCoordination;
 
-  Mousetrap.bind("esc", function () {
-    stopPlaying();
-  });
-  Mousetrap.bind("shift+esc", function () {
-    stopPlaying(true);
-  });
-
-  Mousetrap.bind("command+l", function () {
-    $("#omni_search").focus().select();
-  });
-
-  Mousetrap.bind("tab", function () {
-    sendToHotkeys();
-    return false;
-  });
-
-  Mousetrap.bind("space", function () {
-    pausePlaying();
-    return false;
-  });
-
-  Mousetrap.bind("shift+space", function () {
-    pausePlaying(true);
-    return false;
-  });
-
-  Mousetrap.bind("shift+tab", function () {
-    sendToHoldingTank();
-    return false;
-  });
-
-  Mousetrap.bind("return", function () {
-    if (!$("#songFormModal").hasClass("show")) {
-      playSelected();
-    }
-    return false;
-  });
-
-  Mousetrap.bind("down", function () {
-    selectNext();
-    return false;
-  });
-
-  Mousetrap.bind("up", function () {
-    selectPrev();
-    return false;
-  });
-
-  Mousetrap.bind(["backspace", "del"], function () {
-    deleteSong();
-    return false;
-  });
-
-  Mousetrap.bind("command+l", function () {
-    if ($("#omni_search").is(":visible")) {
-      $("#omni_search").trigger("focus");
-    } else {
-      $("#title-search").trigger("focus");
-    }
-  });
-
-  // Set up hotkey and holding tank tabs
-
-  for (var i = 2; i <= 5; i++) {
-    var hotkey_node = $("#hotkeys_list_1").clone();
-    hotkey_node.attr("id", `hotkeys_list_${i}`);
-    hotkey_node.removeClass("show active");
-    $("#hotkey-tab-content").append(hotkey_node);
-
-    var holding_tank_node = $("#holding_tank_1").clone();
-    holding_tank_node.attr("id", `holding_tank_${i}`);
-    holding_tank_node.removeClass("show active");
-    $("#holding-tank-tab-content").append(holding_tank_node);
-  }
-
-  $.contextMenu({
-    selector: ".context-menu",
-    items: {
-      play: {
-        name: "Play",
-        icon: "fas fa-play-circle",
-        callback: function (key, opt) {
-          playSelected();
-        },
-      },
-      edit: {
-        name: "Edit",
-        icon: "fas fa-edit",
-        callback: function (key, opt) {
-          editSelectedSong();
-        },
-      },
-      delete: {
-        name: "Delete",
-        icon: "fas fa-trash-alt",
-        callback: function (key, opt) {
-          deleteSelectedSong();
-        },
-      },
-    },
-  });
-
-  $(".holding_tank").on("click", ".list-group-item", function (event) {
-    toggle_selected_row(this);
-  });
-
-  $(".holding_tank").on("dblclick", ".list-group-item", function (event) {
-    $(".now_playing").first().removeClass("now_playing");
-
-    // Set the clicked item as selected
-    $("#selected_row").removeAttr("id");
-    $(this).attr("id", "selected_row");
-
-    if (holdingTankMode === "playlist") {
-      // In playlist mode, mark this song as now playing and start autoplay
-      $(this).addClass("now_playing");
-      autoplay = true;
-    }
-
-    playSelected();
-  });
-
-  // Removed single-click selection for hotkeys - they should only be draggable and double-clickable
-
-  $(".hotkeys").on("dblclick", "li", function (event) {
-    $(".now_playing").first().removeClass("now_playing");
-    $("#selected_row").removeAttr("id");
-    if ($(this).find("span").text().length) {
-      var song_id = $(this).attr("songid");
-      if (song_id) {
-        playSongFromId(song_id);
-      }
-    }
-  });
-
-  $(".hotkeys li").on("drop", function (event) {
-    $(this).removeClass("drop_target");
-    if (!event.originalEvent.dataTransfer.getData("text").length) return;
-    hotkeyDrop(event.originalEvent);
-  });
-
-  $(".hotkeys li").on("dragover", function (event) {
-    $(this).addClass("drop_target");
-    allowHotkeyDrop(event.originalEvent);
-  });
-
-  $(".hotkeys li").on("dragleave", function (event) {
-    $(this).removeClass("drop_target");
-  });
-
-  $("#category_select").on("change", function () {
-    var category = $("#category_select").prop("selectedIndex");
-    searchData();
-    $("#omni_search").focus();
-    $("#category_select").prop("selectedIndex", category);
-  });
-
-  $("#date-search").on("change", function () {
-    searchData();
-  });
-
-  $("#holding_tank").on("drop", function (event) {
-    $(event.originalEvent.target).removeClass("dropzone");
-    if (!event.originalEvent.dataTransfer.getData("text").length) return;
-    holdingTankDrop(event.originalEvent);
-  });
-
-  $(".card-header").on("dragover", function (event) {
-    event.preventDefault();
-  });
-
-  $(".card-header").on("drop", function (event) {
-    if (event.originalEvent.dataTransfer.getData("text").length) return;
-    var original_column = $(
-      `#${event.originalEvent.dataTransfer.getData("application/x-moz-node")}`
-    );
-    var target_column = $(event.target).closest(".col");
-    if (original_column.prop("id") == target_column.prop("id")) return;
-    var columns = $("#top-row").children();
-    if (columns.index(original_column) > columns.index(target_column)) {
-      target_column.before(original_column.detach());
-    } else {
-      target_column.after(original_column.detach());
-    }
-    original_column.addClass("animate__animated animate__jello");
-    var new_column_order = $("#top-row")
-      .children()
-      .map(function () {
-        return $(this).prop("id");
-      })
-      .get();
-    store.set("column_order", new_column_order);
-  });
-
-  $("#holding_tank").on("dragover", function (event) {
-    allowHotkeyDrop(event.originalEvent);
-    $(event.originalEvent.target).addClass("dropzone");
-  });
-
-  $("#holding_tank").on("dragleave", function (event) {
-    allowHotkeyDrop(event.originalEvent);
-    $(event.originalEvent.target).removeClass("dropzone");
-  });
-
-  $("#search_form :input").on("keydown", function (e) {
-    if (e.code == "Enter") {
-      // Clear any pending live search
-      clearTimeout(searchTimeout);
-      $("#search_form").submit();
-      return false;
-    }
-  });
-
-  // Live search with debouncing
-
-  // Function to trigger live search with current filters
-  function triggerLiveSearch() {
-    clearTimeout(searchTimeout);
-    var searchTerm = $("#omni_search").val().trim();
-
-    searchTimeout = setTimeout(() => {
-      // Check if we have either a search term or advanced search filters
-      var hasSearchTerm = searchTerm.length >= 2;
-      var hasAdvancedFilters = false;
-
-      if ($("#advanced-search").is(":visible")) {
-        var title = $("#title-search").val().trim();
-        var artist = $("#artist-search").val().trim();
-        var info = $("#info-search").val().trim();
-        var since = $("#date-search").val();
-        hasAdvancedFilters =
-          title.length > 0 ||
-          artist.length > 0 ||
-          info.length > 0 ||
-          since.length > 0;
-      }
-
-      if (hasSearchTerm || hasAdvancedFilters) {
-        performLiveSearch(searchTerm);
-      } else {
-        // Clear results when no search term and no advanced filters
-        $("#search_results tbody").find("tr").remove();
-        $("#search_results thead").hide();
-      }
-    }, 300); // 300ms debounce
-  }
-
-  // Live search on search term input
-  $("#omni_search").on("input", function () {
-    triggerLiveSearch();
-  });
-
-  // Live search when category filter changes
-  $("#category_select").on("change", function () {
-    var searchTerm = $("#omni_search").val().trim();
-    if (searchTerm.length >= 2) {
-      triggerLiveSearch();
-    }
-  });
-
-  // Live search when advanced search fields change
-  $("#title-search, #artist-search, #info-search, #date-search").on(
-    "input change",
-    function () {
-      // When advanced search is active, trigger live search even if omni_search is empty
-      if ($("#advanced-search").is(":visible")) {
-        triggerLiveSearch();
-      } else {
-        var searchTerm = $("#omni_search").val().trim();
-        if (searchTerm.length >= 2) {
-          triggerLiveSearch();
-        }
-      }
-    }
-  );
-
-  $("#omni_search").on("keydown", function (e) {
-    if (e.code == "Tab") {
-      if ((first_row = $("#search_results tbody tr").first())) {
-        $("#selected_row").removeAttr("id");
-        first_row.attr("id", "selected_row");
-        $("#omni_search").blur();
-        return false;
-      }
-    }
-  });
-
-  $("#reset_button").on("click", function () {
-    // Clear any pending live search
-    clearTimeout(searchTimeout);
-    $("#search_form").trigger("reset");
-    $("#omni_search").focus();
-    $("#search_results tbody").find("tr").remove();
+  } catch (error) {
+    window.logError('Error initializing event coordination:', error);
+    window.logError('Falling back to basic initialization');
+    
+    // Minimal fallback initialization if event coordination fails
+    $("#audio_progress").width("0%");
     $("#search_results thead").hide();
-    return false;
-  });
-
-  $("#advanced_search_button").on("click", function () {
-    console.log("Advanced search button clicked");
-    toggleAdvancedSearch();
-    return false;
-  });
-
-  $("#pause_button").click(function (e) {
-    if (sound) {
-      if (e.shiftKey) {
-        pausePlaying(true);
-      } else {
-        pausePlaying();
-      }
-    }
-  });
-
-  $("#play_button").click(function (e) {
-    if (sound && sound.state() == "loaded") {
-      pausePlaying();
-    } else {
-      playSelected();
-    }
-  });
-
-  $("#stop_button").click(function (e) {
-    if (sound) {
-      if (e.shiftKey) {
-        stopPlaying(true);
-      } else {
-        stopPlaying();
-      }
-    }
-  });
-
-  $("#progress_bar").click(function (e) {
-    var percent = (e.clientX - $(this).offset().left) / $(this).width();
-    if (sound) {
-      sound.seek(sound.duration() * percent);
-    }
-  });
-
-  $("#waveform").click(function (e) {
-    var percent = (e.clientX - $(this).offset().left) / $(this).width();
-    if (sound) {
-      sound.seek(sound.duration() * percent);
-    }
-  });
-
-  $("#volume").on("change", function () {
-    var volume = $(this).val() / 100;
-    if (sound) {
-      sound.volume(volume);
-    }
-  });
-
-  $("#mute_button").click(function () {
-    if (sound) {
-      sound.mute(!sound.mute());
-      sound.volume($("#volume").val() / 100);
-    }
-    $("#mute_button").toggleClass("active");
-    $("#song_now_playing").toggleClass("text-secondary");
-  });
-
-  $("#loop_button").click(function () {
-    loop = !loop;
-    loop_on(loop);
-  });
-
-  $("#waveform_button").on("click", function () {
-    toggleWaveform();
-  });
-
-  $(".modal").on("show.bs.modal", function () {
-    $(".modal").modal("hide");
-  });
-
-  $("#hotkey_tabs").on("dblclick", ".nav-link", function () {
-    renameHotkeyTab();
-  });
-
-  $("#holding_tank_tabs").on("dblclick", ".nav-link", function () {
-    renameHoldingTankTab();
-  });
-
-  $("#search_results thead").hide();
-
-  $("#songFormModal").on("hidden.bs.modal", function (e) {
-    $("#song-form-category").val("");
-    $("#song-form-title").val("");
-    $("#song-form-new-category").val("");
-    $("#song-form-artist").val("");
-    $("#song-form-info").val("");
-    $("#song-form-duration").val("");
-    $("#SongFormNewCategory").hide();
-  });
-
-  $("#songFormModal").on("shown.bs.modal", function (e) {
-    console.log($("#song-form-title").val().length);
-    if (!$("#song-form-title").val().length) {
-      $("#song-form-title").focus();
-    } else {
-      $("#song-form-info").focus();
-    }
-  });
-
-  $("#preferencesModal").on("shown.bs.modal", function (e) {
-    $("#preferences-database-directory").val(store.get("database_directory"));
-    $("#preferences-song-directory").val(store.get("music_directory"));
-    $("#preferences-hotkey-directory").val(store.get("hotkey_directory"));
-    $("#preferences-fadeout-seconds").val(store.get("fade_out_seconds"));
-  });
-
-  $(window).on("resize", function () {
-    this.scale_scrollable();
-  });
-
-  // Is there only one song in the db? Pop the first-run modal
-
-  var stmt = db.prepare("SELECT count(*) as count from mrvoice WHERE 1");
-  var query = stmt.get();
-  if (query.count <= 1) {
-    $(`#firstRunModal`).modal("show");
   }
-
-  $("#song-form-category")
-    .change(function () {
-      $(this)
-        .find("option:selected")
-        .each(function () {
-          var optionValue = $(this).attr("value");
-          if (optionValue == "--NEW--") {
-            $("#SongFormNewCategory").show();
-            $("#song-form-new-category").attr("required", "required");
-          } else {
-            $("#SongFormNewCategory").hide();
-            $("#song-form-new-category").removeAttr("required");
-          }
-        });
-    })
-    .change();
-
-  $("#bulk-add-category")
-    .change(function () {
-      $(this)
-        .find("option:selected")
-        .each(function () {
-          var optionValue = $(this).attr("value");
-          if (optionValue == "--NEW--") {
-            $("#bulkSongFormNewCategory").show();
-            $("#bulk-song-form-new-category").attr("required", "required");
-          } else {
-            $("#bulkSongFormNewCategory").hide();
-            $("#bulk-song-form-new-category").removeAttr("required");
-          }
-        });
-    })
-    .change();
-
-  $("#bulkAddModal").on("hidden.bs.modal", function (e) {
-    $("#bulkSongFormNewCategory").hide();
-    $("#bulk-song-form-new-category").val("");
-  });
-
-  // Handle focus restoration for confirmation modal
-  $("#confirmationModal").on("hidden.bs.modal", function (e) {
-    restoreFocusToSearch();
-  });
 });
+
+// Test Functions Module - Functions extracted to src/renderer/modules/test-utils/
+// testPhase2Migrations(), testDatabaseAPI(), testFileSystemAPI(), testStoreAPI(), testAudioAPI(), testSecurityFeatures() - All moved to test-utils module
+

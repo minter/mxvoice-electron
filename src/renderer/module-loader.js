@@ -1,0 +1,178 @@
+/**
+ * Module Loader
+ * 
+ * This module provides a unified interface for loading and managing
+ * all modules in the MxVoice Electron application.
+ */
+
+/**
+ * Module Loader Class
+ * 
+ * Handles dynamic loading and management of application modules
+ */
+class ModuleLoader {
+  constructor(debugLogger = null) {
+    this.modules = new Map();
+    this.loadedModules = new Set();
+    this.moduleCache = new Map();
+    this.debugLog = debugLogger;
+  }
+
+  // Set debug logger after initialization
+  setDebugLogger(debugLogger) {
+    if (!debugLogger) {
+      throw new Error('ModuleLoader requires a valid debug logger');
+    }
+    this.debugLog = debugLogger;
+    this.debugLog.info('ModuleLoader debug logger set', { 
+      function: "setDebugLogger" 
+    });
+  }
+
+  // Ensure debug logger is available before use
+  ensureDebugLogger() {
+    if (!this.debugLog) {
+      throw new Error('DebugLogger not initialized. ModuleLoader requires DebugLogger to be available.');
+    }
+  }
+
+  /**
+   * Load a module dynamically
+   * 
+   * @param {string} modulePath - The path to the module
+   * @param {Object} options - Loading options
+   * @returns {Promise<Object>} - The loaded module
+   */
+  async loadModule(modulePath, options = {}) {
+    this.ensureDebugLogger();
+    
+    try {
+      // Check if module is already loaded
+      if (this.moduleCache.has(modulePath)) {
+        this.debugLog.info(`Module already loaded: ${modulePath}`, { 
+          function: "loadModule",
+          data: { modulePath }
+        });
+        return this.moduleCache.get(modulePath);
+      }
+
+      // Import the module
+      const module = await import(modulePath);
+      
+      // Cache the module
+      this.moduleCache.set(modulePath, module);
+      this.loadedModules.add(modulePath);
+      
+      this.debugLog.info(`Module loaded successfully: ${modulePath}`, { 
+        function: "loadModule",
+        data: { modulePath }
+      });
+      return module;
+    } catch (error) {
+      this.debugLog.error(`Failed to load module: ${modulePath}`, { 
+        function: "loadModule",
+        data: { modulePath },
+        error: error.message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Load multiple modules
+   * 
+   * @param {Array<string>} modulePaths - Array of module paths
+   * @param {Object} options - Loading options
+   * @returns {Promise<Object>} - Object containing all loaded modules
+   */
+  async loadModules(modulePaths, options = {}) {
+    const results = {};
+    
+    for (const modulePath of modulePaths) {
+      try {
+        const module = await this.loadModule(modulePath, options);
+        results[modulePath] = module;
+      } catch (error) {
+        this.debugLog.error(`Failed to load module: ${modulePath}`, { 
+          function: "loadModules",
+          data: { modulePath },
+          error: error.message
+        });
+        results[modulePath] = { error: error.message };
+      }
+    }
+    
+    return results;
+  }
+
+  /**
+   * Get a loaded module
+   * 
+   * @param {string} modulePath - The path to the module
+   * @returns {Object|null} - The loaded module or null if not found
+   */
+  getModule(modulePath) {
+    return this.moduleCache.get(modulePath) || null;
+  }
+
+  /**
+   * Check if a module is loaded
+   * 
+   * @param {string} modulePath - The path to the module
+   * @returns {boolean} - True if module is loaded
+   */
+  isModuleLoaded(modulePath) {
+    return this.loadedModules.has(modulePath);
+  }
+
+  /**
+   * Get all loaded modules
+   * 
+   * @returns {Array<string>} - Array of loaded module paths
+   */
+  getLoadedModules() {
+    return Array.from(this.loadedModules);
+  }
+
+  /**
+   * Clear module cache
+   */
+  clearCache() {
+    this.moduleCache.clear();
+    this.loadedModules.clear();
+    this.debugLog.info('Module cache cleared', { 
+      function: "clearCache" 
+    });
+  }
+
+  /**
+   * Get module loader information
+   * 
+   * @returns {Object} - Module loader information
+   */
+  getInfo() {
+    return {
+      name: 'Module Loader',
+      version: '1.0.0',
+      description: 'Handles dynamic loading and management of application modules',
+      loadedModules: this.getLoadedModules(),
+      cacheSize: this.moduleCache.size
+    };
+  }
+}
+
+// Create singleton instance
+const moduleLoader = new ModuleLoader();
+
+// Export individual functions for direct access
+export const loadModule = moduleLoader.loadModule.bind(moduleLoader);
+export const loadModules = moduleLoader.loadModules.bind(moduleLoader);
+export const getModule = moduleLoader.getModule.bind(moduleLoader);
+export const isModuleLoaded = moduleLoader.isModuleLoaded.bind(moduleLoader);
+export const getLoadedModules = moduleLoader.getLoadedModules.bind(moduleLoader);
+export const clearCache = moduleLoader.clearCache.bind(moduleLoader);
+export const getInfo = moduleLoader.getInfo.bind(moduleLoader);
+export { ModuleLoader };
+
+// Default export for module loading
+export default moduleLoader; 

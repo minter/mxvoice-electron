@@ -1,7 +1,7 @@
-const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
+import { execSync } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
 
 // TOTP generation function
 function generateTOTP(secret, timeStep = 30, digits = 6) {
@@ -98,7 +98,6 @@ async function signWindowsInstaller() {
   ].join(' ');
 
   console.log('Executing SSL.com CodeSignTool...');
-  console.log(`Command: ${command.replace(/-password="[^"]*"/, '-password="***"').replace(/-totp_secret="[^"]*"/, '-totp_secret="***"')}`);
 
   try {
     // Change to CodeSignTool directory and execute
@@ -117,4 +116,4 @@ async function signWindowsInstaller() {
   }
 }
 
-module.exports = signWindowsInstaller;
+export default signWindowsInstaller;

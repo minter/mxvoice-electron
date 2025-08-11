@@ -5,8 +5,8 @@ const fs = require("fs");
 const os = require("os");
 const { v4: uuidv4 } = require("uuid");
 
-// Initialize store to get database path
-const store = new Store();
+// Initialize store to get database path (align with app config file name)
+const store = new Store({ name: 'config' });
 let dbDirectory = store.get("database_directory");
 
 // Fallback logic for when running outside Electron environment

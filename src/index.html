@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; media-src 'self' blob: data:">
 
     <title>Mx. Voice</title>
     <!-- Bootstrap CSS -->
@@ -39,6 +39,7 @@
     <script src="../node_modules/jquery-contextmenu/dist/jquery.contextMenu.min.js"></script>
     <script src="../node_modules/jquery-contextmenu/dist/jquery.ui.position.min.js"></script>
     <script src="../node_modules/wavesurfer.js/dist/wavesurfer.min.js"></script>
+    <script src="../node_modules/howler/dist/howler.min.js"></script>
 
     <!-- Insert this line after script imports -->
     <script>if (window.module) module = window.module;</script>
@@ -231,51 +232,51 @@
                   <div class="card-body">
                     <div id="hotkey-tab-content" class="tab-content">
                     <ul class="list-group list-group-flush tab-pane fade show active hotkeys" id="hotkeys_list_1" role="tabpanel">
-                      <li class="list-group-item text-nowrap unselectable" id="f1_hotkey">
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f1_hotkey">
                         <div class="badge">F1</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f2_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f2_hotkey" >
                         <div class="badge">F2</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f3_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f3_hotkey" >
                         <div class="badge">F3</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f4_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f4_hotkey" >
                         <div class="badge">F4</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f5_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f5_hotkey" >
                         <div class="badge">F5</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f6_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f6_hotkey" >
                         <div class="badge">F6</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f7_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f7_hotkey" >
                         <div class="badge">F7</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f8_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f8_hotkey" >
                         <div class="badge">F8</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f9_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f9_hotkey" >
                         <div class="badge">F9</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f10_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f10_hotkey" >
                         <div class="badge">F10</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f11_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f11_hotkey" >
                         <div class="badge">F11</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
-                      <li class="list-group-item text-nowrap unselectable" id="f12_hotkey" >
+                      <li class="list-group-item text-nowrap unselectable context-menu" id="f12_hotkey" >
                         <div class="badge">F12</div>
                         <span draggable='true' class='song' ondragstart='songDrag(event)'></span>
                       </li>
@@ -544,6 +545,21 @@
                 </div>
               </fieldset>
 
+              <fieldset>
+                <legend>Debug Options</legend>
+                <div class="form-group row">
+                  <div class="col-sm-9 offset-sm-3">
+                    <div class="form-check">
+                      <input type="checkbox" class="form-check-input" id="preferences-debug-log-enabled">
+                      <label class="form-check-label" for="preferences-debug-log-enabled">
+                        Enable Debug Log
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">When enabled, additional debug information will be logged to the console.</small>
+                  </div>
+                </div>
+              </fieldset>
+
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
@@ -623,6 +639,28 @@
       </div>
     </div>
 
+    <!-- Custom Input Modal -->
+    <div class="modal fade" id="inputModal" role="dialog">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title" id="inputModalTitle">Input</h6>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p id="inputModalMessage"></p>
+            <input type="text" class="form-control" id="inputModalField" placeholder="Enter text...">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" id="inputModalConfirmBtn">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Include all compiled plugins (below), or include individual files as needed -->
 
   <script src="../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
@@ -631,6 +669,6 @@
 
   </body>
 
-  <script src="renderer.js"></script>
+  <script src="renderer.js" type="module"></script>
 
 </html>
