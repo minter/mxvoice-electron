@@ -25,7 +25,7 @@ Provides CSS animation functionality.
 **Usage:**
 ```javascript
 import { animateCSS } from './utils/index.js';
-animateCSS($('#element'), 'fadeIn', '1s');
+animateCSS('#element', 'fadeIn', '1s');
 ```
 
 ### Modal Utilities (`modal-utils.js`)
@@ -103,7 +103,6 @@ Loaded via App Bootstrap per `module-config.js` and stored in the module registr
 ## Dependencies
 
 - **Bootstrap 5**: Modal functionality via `bootstrap-adapter`
-- **jQuery**: Used for DOM manipulation and animations
 - **Animate.css**: Required for CSS animations
 
 ## Migration from renderer.js

@@ -93,7 +93,7 @@ search/
 
 The search module depends on:
 
-- jQuery for DOM manipulation
+- DOM utilities: `Dom` helpers from `modules/dom-utils/index.js`
 - Global variables: `fontSize`, `categories`, `db`
 - Global functions: `scale_scrollable`, `animateCSS`
 - Electron API: `window.electronAPI.database`

@@ -63,7 +63,6 @@ audioModule.playSelected();
 ## Dependencies
 
 - Howler.js: audio playback (uses global `Howl` instance)
-- jQuery: UI updates (`$` selectors/classes)
 - WaveSurfer (optional): waveform visualization via `sharedState` (`wavesurfer`)
 - Secure adapters: `secureStore`, `secureDatabase`, `securePath` from `../adapters/secure-adapter.js`
 - Shared state: central state via `../shared-state.js`

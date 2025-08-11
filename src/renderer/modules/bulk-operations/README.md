@@ -36,8 +36,9 @@ bulk.showBulkAddModal('/path/to/directory');
 // Process paths
 bulk.addSongsByPath(['/path/a.mp3', '/path/b.mp3'], 'ROCK');
 
-// Submit handler
-$('#bulk_upload_form').on('submit', (e) => bulk.saveBulkUpload(e));
+// Submit handler (vanilla)
+document.querySelector('#bulk_upload_form')
+  ?.addEventListener('submit', (e) => bulk.saveBulkUpload(e));
 ```
 
 ## Features
@@ -46,4 +47,4 @@ $('#bulk_upload_form').on('submit', (e) => bulk.saveBulkUpload(e));
 - UI integration via modal and handlers
 
 ## Dependencies
-- Electron APIs (secure adapters), database module, jQuery
+- Electron APIs (secure adapters), database module, DOM APIs

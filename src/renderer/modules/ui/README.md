@@ -146,7 +146,7 @@ Shows a custom prompt dialog.
 ## Dependencies
 
 - **Bootstrap 5** - UI components; accessed via `bootstrap-adapter` (no jQuery plugins)
-- **jQuery** - DOM manipulation and event handling (non-Bootstrap)
+- **DOM Utilities** - `Dom` helper module for query/class helpers (no jQuery)
 - **Animate.css** - CSS animations
 - **Electron API** - System integration
 - **Database** - Song data access

@@ -49,7 +49,7 @@ The app follows a modern Electron architecture with context isolation enabled an
   - Feature modules under `src/renderer/modules/` (each with its own README)
   - Core infrastructure: `function-registry`, `event-manager`, `function-monitor`, `module-loader`
   - Services facades over secure APIs: `src/renderer/services/`
-  - Bootstrap 5 integration via `modules/ui/bootstrap-adapter.js` (no jQuery plugins)
+- Bootstrap 5 integration via `modules/ui/bootstrap-adapter.js` (no jQuery plugins). jQuery is not required; DOM helpers live in `modules/dom-utils/`.
   - See `src/renderer/README.md`
 
 ### Security model

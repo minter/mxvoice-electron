@@ -229,7 +229,7 @@ The holding tank module depends on:
 - **Database Service**: For song data retrieval
 - **File System Service**: For file operations
 - **Path Service**: For path manipulation
-- **jQuery**: For DOM manipulation
+- **DOM Utilities**: `Dom` from `modules/dom-utils/index.js` for selectors and class helpers
 - **Custom UI Functions**: `customConfirm`, `customPrompt`
 
 ## State Management

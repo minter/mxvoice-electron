@@ -48,6 +48,21 @@
     border-color: var(--input-border) !important;
   }
 
+  /* Ensure placeholders are readable on dark backgrounds */
+  input[type="text"]::placeholder,
+  input[type="search"]::placeholder,
+  textarea::placeholder,
+  .form-control::placeholder {
+    color: rgba(226, 226, 226, 0.6) !important; /* based on --input-text */
+  }
+  /* WebKit prefix for wider Chromium coverage */
+  input[type="text"]::-webkit-input-placeholder,
+  input[type="search"]::-webkit-input-placeholder,
+  textarea::-webkit-input-placeholder,
+  .form-control::-webkit-input-placeholder {
+    color: rgba(226, 226, 226, 0.6) !important;
+  }
+
   input[type="text"]:focus,
   input[type="search"]:focus,
   select:focus,
