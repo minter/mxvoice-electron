@@ -26,75 +26,77 @@ import { secureStore } from '../adapters/secure-adapter.js';
  */
 export function setupDragDropEventHandlers() {
   // Hotkey drop handlers
-  $(".hotkeys li").on("drop", function (event) {
-    $(this).removeClass("drop_target");
-    if (!event.originalEvent.dataTransfer.getData("text").length) return;
-    hotkeyDrop(event.originalEvent);
-  });
+  document.querySelectorAll('.hotkeys li').forEach(li => {
+    li.addEventListener('drop', (e) => {
+      li.classList.remove('drop_target');
+      const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
+      if (!dt || !dt.getData('text')?.length) return;
+      hotkeyDrop(e);
+    });
 
-  $(".hotkeys li").on("dragover", function (event) {
-    $(this).addClass("drop_target");
-    allowHotkeyDrop(event.originalEvent);
-  });
+    li.addEventListener('dragover', (e) => {
+      li.classList.add('drop_target');
+      allowHotkeyDrop(e);
+    });
 
-  $(".hotkeys li").on("dragleave", function (event) {
-    $(this).removeClass("drop_target");
+    li.addEventListener('dragleave', () => {
+      li.classList.remove('drop_target');
+    });
   });
 
   // Holding tank drop handlers - target the container and list items
-  $("#holding_tank, .holding_tank li").on("drop", function (event) {
+  document.querySelectorAll('#holding_tank, .holding_tank li').forEach(target => {
+    target.addEventListener('drop', (e) => {
     debugLog?.info('Holding tank drop event triggered', { 
       module: 'drag-drop-event-handlers',
       function: 'setupDragDropEventHandlers'
     });
-    $(event.originalEvent.target).removeClass("dropzone");
-    if (!event.originalEvent.dataTransfer.getData("text").length) return;
-    holdingTankDrop(event.originalEvent);
-  });
+      (e.target?.classList)?.remove('dropzone');
+      const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
+      if (!dt || !dt.getData('text')?.length) return;
+      holdingTankDrop(e);
+    });
 
-  $("#holding_tank, .holding_tank li").on("dragover", function (event) {
+    target.addEventListener('dragover', (e) => {
     debugLog?.info('Holding tank dragover event triggered', { 
       module: 'drag-drop-event-handlers',
       function: 'setupDragDropEventHandlers'
     });
-    allowHotkeyDrop(event.originalEvent);
-    $(event.originalEvent.target).addClass("dropzone");
-  });
+      allowHotkeyDrop(e);
+      (e.target?.classList)?.add('dropzone');
+    });
 
-  $("#holding_tank, .holding_tank li").on("dragleave", function (event) {
+    target.addEventListener('dragleave', (e) => {
     debugLog?.info('Holding tank dragleave event triggered', { 
       module: 'drag-drop-event-handlers',
       function: 'setupDragDropEventHandlers'
     });
-    allowHotkeyDrop(event.originalEvent);
-    $(event.originalEvent.target).removeClass("dropzone");
+      allowHotkeyDrop(e);
+      (e.target?.classList)?.remove('dropzone');
+    });
   });
 
   // Column drag handlers
-  $(".card-header").on("dragover", function (event) {
-    event.preventDefault();
-  });
+  document.querySelectorAll('.card-header').forEach(header => {
+    header.addEventListener('dragover', (e) => e.preventDefault());
 
-  $(".card-header").on("drop", function (event) {
-    if (event.originalEvent.dataTransfer.getData("text").length) return;
-    const original_column = $(
-      `#${event.originalEvent.dataTransfer.getData("application/x-moz-node")}`
-    );
-    const target_column = $(event.target).closest(".col");
-    if (original_column.prop("id") == target_column.prop("id")) return;
-    const columns = $("#top-row").children();
-    if (columns.index(original_column) > columns.index(target_column)) {
-      target_column.before(original_column.detach());
-    } else {
-      target_column.after(original_column.detach());
-    }
-    original_column.addClass("animate__animated animate__jello");
-    const new_column_order = $("#top-row")
-      .children()
-      .map(function () {
-        return $(this).prop("id");
-      })
-      .get();
+    header.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
+      if (dt && dt.getData('text')?.length) return;
+      const originalId = dt?.getData('application/x-moz-node');
+      if (!originalId) return;
+      const original_column = document.getElementById(originalId);
+      const target_column = (e.target instanceof Element) ? e.target.closest('.col') : null;
+      if (!original_column || !target_column) return;
+      if (original_column.id === target_column.id) return;
+      const columns = Array.from(document.getElementById('top-row')?.children || []);
+      if (columns.indexOf(original_column) > columns.indexOf(target_column)) {
+        target_column.parentNode?.insertBefore(original_column, target_column);
+      } else {
+        target_column.parentNode?.insertBefore(original_column, target_column.nextSibling);
+      }
+      original_column.classList.add('animate__animated', 'animate__jello');
+      const new_column_order = Array.from(document.getElementById('top-row')?.children || []).map(el => el.id);
     // Use new store API for column order
     secureStore.set("column_order", new_column_order).then(result => {
       if (result.success) {
@@ -115,6 +117,7 @@ export function setupDragDropEventHandlers() {
         function: 'setupDragDropEventHandlers',
         error: error
       });
+    });
     });
   });
 

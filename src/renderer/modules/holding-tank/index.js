@@ -32,6 +32,7 @@ import { secureStore, secureDatabase } from '../adapters/secure-adapter.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 const store = secureStore;
 const database = secureDatabase;
+import Dom from '../dom-utils/index.js';
 // Import secure adapters
 import { secureFileSystem, securePath, secureFileDialog } from '../adapters/secure-adapter.js';
 const fileSystem = secureFileSystem;
@@ -79,7 +80,7 @@ export function initHoldingTank() {
  */
 export function saveHoldingTankToStore() {
   // Only save if we have the new HTML format with mode toggle
-  const currentHtml = $("#holding-tank-column").html();
+  const currentHtml = Dom.html('#holding-tank-column');
   if (currentHtml.includes("mode-toggle")) {
     return store.set("holding_tank", currentHtml).then(result => {
       if (result.success) {
@@ -115,8 +116,8 @@ export function loadHoldingTankFromStore() {
     if (hasHoldingTank) {
       return store.get("holding_tank").then(storedHtml => {
         if (storedHtml && typeof storedHtml === 'string') {
-          $("#holding-tank-column").html(storedHtml);
-          $("#selected_row").removeAttr("id");
+          Dom.html('#holding-tank-column', storedHtml);
+          Dom.removeAttr('#selected_row', 'id');
           debugLog?.info('Holding tank loaded from store', { 
             module: 'holding-tank',
             function: 'loadHoldingTankFromStore'
@@ -166,7 +167,7 @@ export function populateHoldingTank(songIds) {
     return { success: false, error: 'No song IDs provided' };
   }
   
-  $(".holding_tank.active").empty();
+  Dom.empty('.holding_tank.active');
   debugLog?.info('Cleared active holding tank', { 
     module: 'holding-tank',
     function: 'populateHoldingTank'
@@ -178,7 +179,7 @@ export function populateHoldingTank(songIds) {
       function: 'populateHoldingTank',
       songId: songId
     });
-    addToHoldingTank(songId, $(".holding_tank.active"));
+    addToHoldingTank(songId, Dom.$('.holding_tank.active'));
   });
   
   scale_scrollable();
@@ -201,11 +202,10 @@ export function addToHoldingTank(song_id, element) {
       const artist = row.artist || "[Unknown Artist]";
       const time = row.time || "[??:??]";
 
-      const existing_song = $(
-        `.holding_tank.active .list-group-item[songid=${song_id}]`
-      );
-      if (existing_song.length) {
-        const song_row = existing_song.detach();
+      const existing_song = document.querySelector(`.holding_tank.active .list-group-item[songid="${song_id}"]`);
+      let song_row;
+      if (existing_song) {
+        song_row = existing_song; // already in DOM; will be moved below
       } else {
         const song_row = document.createElement("li");
         song_row.style.fontSize = `${getFontSize()}px`;
@@ -216,12 +216,14 @@ export function addToHoldingTank(song_id, element) {
         song_row.textContent = `${title} by ${artist} (${time})`;
       }
 
-      if ($(element).is("li")) {
-        $(element).after(song_row);
-      } else if ($(element).is("div")) {
-        $(element).find("ul.active").append(song_row);
-      } else {
-        $(element).append(song_row);
+      const targetEl = element && element.nodeType ? element : Dom.$(element);
+      if (targetEl?.matches?.('li')) {
+        targetEl.insertAdjacentElement('afterend', song_row);
+      } else if (targetEl?.matches?.('div')) {
+        const ul = targetEl.querySelector('ul.active');
+        (ul || targetEl).appendChild(song_row);
+      } else if (targetEl?.appendChild) {
+        targetEl.appendChild(song_row);
       }
       
       saveHoldingTankToStore();
@@ -250,7 +252,7 @@ export function addToHoldingTank(song_id, element) {
  * Remove a song from the holding tank
  */
 export function removeFromHoldingTank() {
-  const songId = $("#selected_row").attr("songid");
+  const songId = Dom.attr('#selected_row', 'songid');
   if (songId) {
     debugLog?.info('Preparing to remove song from holding tank', { 
       module: 'holding-tank',
@@ -270,9 +272,10 @@ export function removeFromHoldingTank() {
               songId: songId
             });
             // Remove the selected row from the holding tank
-            $("#selected_row").remove();
+            const selected = document.getElementById('selected_row');
+            if (selected) selected.parentElement?.removeChild(selected);
             // Clear the selection
-            $("#selected_row").removeAttr("id");
+            document.getElementById('selected_row')?.removeAttribute('id');
             // Save the updated holding tank to store
             saveHoldingTankToStore();
             return { success: true, songId: songId, title: songRow.title };
@@ -312,7 +315,7 @@ export function removeFromHoldingTank() {
 export async function clearHoldingTank() {
   const confirmed = await customConfirm("Are you sure you want clear your holding tank?");
   if (confirmed) {
-    $(".holding_tank.active").empty();
+    Dom.empty('.holding_tank.active');
     saveHoldingTankToStore();
     return { success: true };
   } else {
@@ -336,8 +339,8 @@ export function saveHoldingTankFile() {
     function: 'saveHoldingTankFile'
   });
   const holdingTankArray = [];
-  $(".holding_tank.active .list-group-item").each(function () {
-    holdingTankArray.push($(this).attr("songid"));
+  document.querySelectorAll('.holding_tank.active .list-group-item').forEach(el => {
+    holdingTankArray.push(el.getAttribute('songid'));
   });
   return secureFileDialog.saveHoldingTankFile(holdingTankArray);
 }
@@ -349,15 +352,15 @@ export function saveHoldingTankFile() {
  */
 export function holdingTankDrop(event) {
   event.preventDefault();
-  addToHoldingTank(event.dataTransfer.getData("text"), $(event.target));
+  addToHoldingTank(event.dataTransfer.getData("text"), event.target);
 }
 
 /**
  * Send selected song to holding tank
  */
 export function sendToHoldingTank() {
-  target = $(".holding_tank.active");
-  song_id = $("#selected_row").attr("songid");
+  target = Dom.$('.holding_tank.active');
+  song_id = Dom.attr('#selected_row', 'songid');
   if (song_id) {
     addToHoldingTank(song_id, target);
   }
@@ -368,10 +371,10 @@ export function sendToHoldingTank() {
  * Rename holding tank tab
  */
 export async function renameHoldingTankTab() {
-  const currentName = $("#holding_tank_tabs .nav-link.active").text();
+  const currentName = Dom.text('#holding_tank_tabs .nav-link.active');
   const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Holding Tank Tab");
   if (newName && newName.trim() !== "") {
-    $("#holding_tank_tabs .nav-link.active").text(newName);
+    Dom.text('#holding_tank_tabs .nav-link.active', newName);
     saveHoldingTankToStore();
     return { success: true, newName: newName };
   } else {
@@ -385,11 +388,15 @@ export async function renameHoldingTankTab() {
  * Cancel autoplay
  */
 export function cancel_autoplay() {
-  if (!$("#holding-tank-column").has($("#selected_row")).length) {
+  {
+    const col = Dom.$('#holding-tank-column');
+    const sel = Dom.$('#selected_row');
+    if (!(col && sel && col.contains(sel))) {
     // Only cancel autoplay if we're not in the holding tank
     if (holdingTankMode === "playlist") {
       autoplay = false;
       setHoldingTankMode("storage");
+    }
     }
   }
 }
@@ -405,11 +412,10 @@ function getFontSize() {
  * Scale scrollable elements
  */
 function scale_scrollable() {
-  const isAdvancedVisible = $("#advanced-search").is(":visible");
+  const isAdvancedVisible = Dom.isVisible('#advanced-search');
   const advancedHeight = isAdvancedVisible ? 38 : 0;
-  $(".table-wrapper-scroll-y").height(
-    $(window).height() - 240 - advancedHeight + "px"
-  );
+  const height = (window.innerHeight || document.documentElement.clientHeight) - 240 - advancedHeight + 'px';
+  document.querySelectorAll('.table-wrapper-scroll-y').forEach(el => { el.style.height = height; });
 }
 
 /**

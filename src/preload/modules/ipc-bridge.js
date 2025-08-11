@@ -163,8 +163,9 @@ const ipcHandlers = {
   // Release notes handler
   display_release_notes: function (event, releaseName, releaseNotes) {
     debugLog.info(`Attempting to display #newReleaseModal for ${releaseName}`);
-    $('#newReleaseModal .modal-title').html(`Downloaded New Version: ${releaseName}`);
-    $('#newReleaseModal .modal-body').html(releaseNotes);
+    try {
+      window.dispatchEvent(new CustomEvent('mxvoice:update-release-notes', { detail: { name: releaseName, notes: releaseNotes } }));
+    } catch {}
     try { window.dispatchEvent(new CustomEvent('mxvoice:show-modal', { detail: { selector: '#newReleaseModal' } })); } catch {}
   }
 };

@@ -7,6 +7,8 @@
  * @module controls
  */
 
+import Dom from '../dom-utils/index.js';
+
 // Import debug logger
 let debugLog = null;
 try {
@@ -36,7 +38,7 @@ function initializeControls(options = {}) {
   function increaseFontSize() {
     if (fontSize < 25) {
       fontSize++;
-      $(".song").css("font-size", fontSize + "px");
+      document.querySelectorAll('.song').forEach(el => { el.style.fontSize = fontSize + 'px'; });
       if (electronAPI && electronAPI.store) {
         electronAPI.store.set("font-size", fontSize).catch(error => {
           debugLog?.warn('Failed to save font size', { 
@@ -55,7 +57,7 @@ function initializeControls(options = {}) {
   function decreaseFontSize() {
     if (fontSize > 5) {
       fontSize--;
-      $(".song").css("font-size", fontSize + "px");
+      document.querySelectorAll('.song').forEach(el => { el.style.fontSize = fontSize + 'px'; });
       if (electronAPI && electronAPI.store) {
         electronAPI.store.set("font-size", fontSize).catch(error => {
           debugLog?.warn('Failed to save font size', { 
@@ -72,19 +74,20 @@ function initializeControls(options = {}) {
    * Toggle waveform display
    */
   function toggleWaveform() {
-    if ($("#waveform").hasClass("hidden")) {
-      $("#waveform").removeClass("hidden");
-      $("#waveform_button").addClass("active");
-      animateCSS($("#waveform"), "fadeInUp").then(() => {
+    if (!Dom.$('#waveform')) return;
+    if (Dom.hasClass('#waveform', 'hidden')) {
+      Dom.removeClass('#waveform', 'hidden');
+      Dom.addClass('#waveform_button', 'active');
+      animateCSS('#waveform', 'fadeInUp').then(() => {
         // Create WaveSurfer when waveform becomes visible
         if (window.sharedState && window.sharedState.get('createWaveSurfer')) {
           window.sharedState.get('createWaveSurfer')();
         }
       });
     } else {
-      $("#waveform_button").removeClass("active");
-      animateCSS($("#waveform"), "fadeOutDown").then(() => {
-        $("#waveform").addClass("hidden");
+      Dom.removeClass('#waveform_button', 'active');
+      animateCSS('#waveform', 'fadeOutDown').then(() => {
+        Dom.addClass('#waveform', 'hidden');
       });
     }
   }
@@ -108,44 +111,56 @@ function initializeControls(options = {}) {
         function: 'toggleAdvancedSearch'
       });
 
-      $("#search_form").trigger("reset");
+      Dom.reset('#search_form');
       debugLog?.info("Triggered form reset", { 
         module: 'ui-controls',
         function: 'toggleAdvancedSearch'
       });
 
       // Clear search results when toggling advanced search
-      $("#search_results tbody").find("tr").remove();
-      $("#search_results thead").hide();
+      {
+        const tbody = Dom.$('#search_results tbody');
+        Array.from(Dom.find(tbody, 'tr')).forEach(tr => Dom.remove(tr));
+        Dom.hide('#search_results thead');
+      }
       debugLog?.info("Cleared search results", { 
         module: 'ui-controls',
         function: 'toggleAdvancedSearch'
       });
 
-      debugLog?.info("Advanced search element exists: " + $("#advanced-search").length > 0, { 
+      debugLog?.info("Advanced search element exists: " + Boolean(Dom.$('#advanced-search')), { 
         module: 'ui-controls',
         function: 'toggleAdvancedSearch'
       });
-      debugLog?.info("Advanced search visible: " + $("#advanced-search").is(":visible"), { 
+      debugLog?.info("Advanced search visible: " + Dom.isVisible('#advanced-search'), { 
         module: 'ui-controls',
         function: 'toggleAdvancedSearch'
       });
-      debugLog?.info("Advanced search display: " + $("#advanced-search").css("display"), { 
+      {
+        const adv = Dom.$('#advanced-search');
+        const display = adv ? getComputedStyle(adv).display : '';
+        debugLog?.info("Advanced search display: " + display, { 
         module: 'ui-controls',
         function: 'toggleAdvancedSearch'
-      });
+        });
+      }
 
-      if ($("#advanced-search").is(":visible")) {
+      if (Dom.isVisible('#advanced-search')) {
         debugLog?.info("Hiding advanced search", { 
           module: 'ui-controls',
           function: 'toggleAdvancedSearch'
         });
-        $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
-        $("#title-search").hide();
-        $("#omni_search").show();
-        $("#omni_search").focus();
-        animateCSS($("#advanced-search"), "fadeOutUp").then(() => {
-          $("#advanced-search").hide();
+        // Toggle icon classes manually
+        const icon = Dom.$('#advanced-search-icon');
+        if (icon) {
+          if (Dom.hasClass(icon, 'fa-plus')) { Dom.removeClass(icon, 'fa-plus'); Dom.addClass(icon, 'fa-minus'); }
+          else { Dom.removeClass(icon, 'fa-minus'); Dom.addClass(icon, 'fa-plus'); }
+        }
+        Dom.hide('#title-search');
+        Dom.show('#omni_search');
+        Dom.$('#omni_search')?.focus();
+        animateCSS('#advanced-search', 'fadeOutUp').then(() => {
+          Dom.hide('#advanced-search');
           scale_scrollable();
         });
       } else {
@@ -153,13 +168,17 @@ function initializeControls(options = {}) {
           module: 'ui-controls',
           function: 'toggleAdvancedSearch'
         });
-        $("#advanced-search-icon").toggleClass("fa-plus fa-minus");
-        $("#advanced-search").show();
-        $("#title-search").show();
-        $("#title-search").focus();
-        $("#omni_search").hide();
+        const icon = Dom.$('#advanced-search-icon');
+        if (icon) {
+          if (Dom.hasClass(icon, 'fa-plus')) { Dom.removeClass(icon, 'fa-plus'); Dom.addClass(icon, 'fa-minus'); }
+          else { Dom.removeClass(icon, 'fa-minus'); Dom.addClass(icon, 'fa-plus'); }
+        }
+        Dom.show('#advanced-search');
+        Dom.show('#title-search');
+        Dom.$('#title-search')?.focus();
+        Dom.hide('#omni_search');
         scale_scrollable();
-        animateCSS($("#advanced-search"), "fadeInDown").then(() => {});
+        animateCSS('#advanced-search', 'fadeInDown').then(() => {});
       }
     } catch (error) {
       debugLog?.error("Error in toggleAdvancedSearch", { 
@@ -174,9 +193,9 @@ function initializeControls(options = {}) {
    * Scale scrollable elements (helper function for advanced search)
    */
   function scale_scrollable() {
-    const advancedSearchHeight = $("#advanced-search").is(":visible") ? 38 : 0;
-    const height = $(window).height() - 240 - advancedSearchHeight + "px";
-    $(".table-wrapper-scroll-y").height(height);
+    const advancedSearchHeight = Dom.isVisible('#advanced-search') ? 38 : 0;
+    const height = (window.innerHeight || document.documentElement.clientHeight) - 240 - advancedSearchHeight + 'px';
+    document.querySelectorAll('.table-wrapper-scroll-y').forEach(el => { el.style.height = height; });
   }
   
   /**
@@ -190,17 +209,18 @@ function initializeControls(options = {}) {
   function animateCSS(element, animation, speed = "", prefix = "animate__") {
     return new Promise((resolve, reject) => {
       const animationName = `${prefix}${animation} ${speed}`;
-      const node = element;
+      const node = typeof element === 'string' ? Dom.$(element) : element;
+      if (!node) return resolve("No element");
 
-      node.addClass(`${prefix}animated ${animationName}`);
+      Dom.addClass(node, `${prefix}animated ${animationName}`);
 
       function handleAnimationEnd() {
-        node.removeClass(`${prefix}animated ${animationName}`);
-        node.off("animationend", handleAnimationEnd);
+        Dom.removeClass(node, `${prefix}animated ${animationName}`);
+        Dom.off(node, "animationend", handleAnimationEnd);
         resolve("Animation ended");
       }
 
-      node.on("animationend", handleAnimationEnd);
+      Dom.on(node, "animationend", handleAnimationEnd);
     });
   }
   

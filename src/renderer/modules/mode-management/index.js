@@ -96,11 +96,13 @@ class ModeManagementModule {
 
     // Update button states
     if (mode === "storage") {
-      $("#storage_mode_btn").addClass("active");
-      $("#playlist_mode_btn").removeClass("active");
-      $("#holding_tank")
-        .removeClass("holding-tank-playlist-mode")
-        .addClass("holding-tank-storage-mode");
+      const storageBtn = document.getElementById('storage_mode_btn');
+      const playlistBtn = document.getElementById('playlist_mode_btn');
+      const holding = document.getElementById('holding_tank');
+      storageBtn?.classList.add('active');
+      playlistBtn?.classList.remove('active');
+      holding?.classList.remove('holding-tank-playlist-mode');
+      holding?.classList.add('holding-tank-storage-mode');
       
       this.autoplay = false;
       // Update shared state for autoplay
@@ -108,14 +110,16 @@ class ModeManagementModule {
         window.sharedState.set('autoplay', false);
       }
       
-      $(".now_playing").removeClass("now_playing");
-      $("#holding_tank").removeClass("autoplaying");
+      document.querySelectorAll('.now_playing').forEach(el => el.classList.remove('now_playing'));
+      holding?.classList.remove('autoplaying');
     } else if (mode === "playlist") {
-      $("#playlist_mode_btn").addClass("active");
-      $("#storage_mode_btn").removeClass("active");
-      $("#holding_tank")
-        .removeClass("holding-tank-storage-mode")
-        .addClass("holding-tank-playlist-mode");
+      const storageBtn = document.getElementById('storage_mode_btn');
+      const playlistBtn = document.getElementById('playlist_mode_btn');
+      const holding = document.getElementById('holding_tank');
+      playlistBtn?.classList.add('active');
+      storageBtn?.classList.remove('active');
+      holding?.classList.remove('holding-tank-storage-mode');
+      holding?.classList.add('holding-tank-playlist-mode');
       
       this.autoplay = true;
       // Update shared state for autoplay
@@ -124,14 +128,13 @@ class ModeManagementModule {
       }
 
       // Only restore the speaker icon if there's a track currently playing AND it's actually playing
-      let currentSongId = $("#song_now_playing").attr("songid");
+      let currentSongId = document.getElementById('song_now_playing')?.getAttribute('songid');
       let isCurrentlyPlaying = window.sound && window.sound.playing && window.sound.playing();
 
       if (currentSongId && isCurrentlyPlaying) {
         // Find the track in the holding tank with this song ID and add the now_playing class
-        $(`#holding_tank .list-group-item[songid="${currentSongId}"]`).addClass(
-          "now_playing"
-        );
+        const now = document.querySelector(`#holding_tank .list-group-item[songid="${currentSongId}"]`);
+        now?.classList.add('now_playing');
       }
     }
 

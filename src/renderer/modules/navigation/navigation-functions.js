@@ -10,16 +10,16 @@
  * @returns {boolean} - Returns false to prevent default behavior
  */
 export function sendToHotkeys() {
-  if ($("#selected_row").is("span")) {
+  if (document.getElementById('selected_row')?.tagName === 'SPAN') {
     return;
   }
-  target = $(".hotkeys.active li").not("[songid]").first();
-  song_id = $("#selected_row").attr("songid");
-  if ($(`.hotkeys.active li[songid=${song_id}]`).length) {
+  target = Array.from(document.querySelectorAll('.hotkeys.active li')).find(li => !li.getAttribute('songid'));
+  song_id = document.getElementById('selected_row')?.getAttribute('songid');
+  if (document.querySelector(`.hotkeys.active li[songid="${song_id}"]`)) {
     return;
   }
   if (target && song_id) {
-    target.attr("songid", song_id);
+    target.setAttribute('songid', song_id);
     setLabelFromSongId(song_id, target);
   }
   return false;
@@ -31,8 +31,8 @@ export function sendToHotkeys() {
  * @returns {boolean} - Returns false to prevent default behavior
  */
 export function sendToHoldingTank() {
-  target = $(".holding_tank.active");
-  song_id = $("#selected_row").attr("songid");
+  target = document.querySelector('.holding_tank.active');
+  song_id = document.getElementById('selected_row')?.getAttribute('songid');
   if (song_id) {
     addToHoldingTank(song_id, target);
   }
@@ -43,12 +43,20 @@ export function sendToHoldingTank() {
  * Selects next item in list
  */
 export function selectNext() {
-  $("#selected_row").removeAttr("id").next().attr("id", "selected_row");
+  const current = document.getElementById('selected_row');
+  if (!current) return;
+  current.removeAttribute('id');
+  const next = current.nextElementSibling;
+  if (next) next.id = 'selected_row';
 }
 
 /**
  * Selects previous item in list
  */
 export function selectPrev() {
-  $("#selected_row").removeAttr("id").prev().attr("id", "selected_row");
+  const current = document.getElementById('selected_row');
+  if (!current) return;
+  current.removeAttribute('id');
+  const prev = current.previousElementSibling;
+  if (prev) prev.id = 'selected_row';
 } 

@@ -112,46 +112,57 @@ class HotkeysModule {
    */
   setupEventListeners() {
     // Hotkey click events
-    $(".hotkeys").on("click", "li", (event) => {
-      // Only select if the hotkey has a song assigned
-      if ($(event.currentTarget).attr("songid")) {
-        $("#selected_row").removeAttr("id");
-        $(event.currentTarget).attr("id", "selected_row");
-      }
-    });
+    const hotkeysRoot = document.querySelector('.hotkeys');
+    if (hotkeysRoot) {
+      hotkeysRoot.addEventListener('click', (event) => {
+        const li = event.target && event.target.closest('li');
+        if (!li || !hotkeysRoot.contains(li)) return;
+        if (li.getAttribute('songid')) {
+          document.getElementById('selected_row')?.removeAttribute('id');
+          li.setAttribute('id', 'selected_row');
+        }
+      });
+    }
 
     // Hotkey double-click events
-    $(".hotkeys").on("dblclick", "li", (event) => {
-      $(".now_playing").first().removeClass("now_playing");
-      $("#selected_row").removeAttr("id");
-      if ($(event.currentTarget).find("span").text().length) {
-        const song_id = $(event.currentTarget).attr("songid");
-        if (song_id) {
-          this.playSongFromHotkey(song_id);
+    if (hotkeysRoot) {
+      hotkeysRoot.addEventListener('dblclick', (event) => {
+        const li = event.target && event.target.closest('li');
+        if (!li || !hotkeysRoot.contains(li)) return;
+        document.querySelector('.now_playing')?.classList.remove('now_playing');
+        document.getElementById('selected_row')?.removeAttribute('id');
+        const span = li.querySelector('span');
+        if (span && (span.textContent || '').length) {
+          const song_id = li.getAttribute('songid');
+          if (song_id) this.playSongFromHotkey(song_id);
         }
-      }
-    });
+      });
+    }
 
     // Hotkey drag and drop events
-    $(".hotkeys li").on("drop", (event) => {
-      $(event.currentTarget).removeClass("drop_target");
-      if (!event.originalEvent.dataTransfer.getData("text").length) return;
-      this.hotkeyDrop(event.originalEvent, { setLabelFromSongId: this.setLabelFromSongId.bind(this) });
-    });
-
-    $(".hotkeys li").on("dragover", (event) => {
-      $(event.currentTarget).addClass("drop_target");
-      this.allowHotkeyDrop(event.originalEvent);
-    });
-
-    $(".hotkeys li").on("dragleave", (event) => {
-      $(event.currentTarget).removeClass("drop_target");
+    document.querySelectorAll('.hotkeys li').forEach((li) => {
+      li.addEventListener('drop', (event) => {
+        li.classList.remove('drop_target');
+        const data = (event.originalEvent || event).dataTransfer?.getData('text') || '';
+        if (!data.length) return;
+        this.hotkeyDrop((event.originalEvent || event), { setLabelFromSongId: this.setLabelFromSongId.bind(this) });
+      });
+      li.addEventListener('dragover', (event) => {
+        li.classList.add('drop_target');
+        this.allowHotkeyDrop((event.originalEvent || event));
+      });
+      li.addEventListener('dragleave', (event) => {
+        (event.currentTarget).classList.remove('drop_target');
+      });
     });
 
     // Hotkey tab events
-    $("#hotkey_tabs").on("dblclick", ".nav-link", () => {
-      this.renameHotkeyTab();
-    });
+    const hotkeyTabs = document.getElementById('hotkey_tabs');
+    if (hotkeyTabs) {
+      hotkeyTabs.addEventListener('dblclick', (e) => {
+        if (e.target && e.target.closest('.nav-link')) this.renameHotkeyTab();
+      });
+    }
 
     debugLog?.info('✅ Hotkeys event listeners set up', { module: 'hotkeys', function: 'setupEventListeners' });
   }
@@ -161,7 +172,8 @@ class HotkeysModule {
    * Only saves if we have the new HTML format with header button
    */
   saveHotkeysToStore() {
-    const currentHtml = $("#hotkeys-column").html();
+    const col = document.getElementById('hotkeys-column');
+    const currentHtml = col ? col.innerHTML : '';
     if (currentHtml.includes("header-button")) {
       if (this.electronAPI && this.electronAPI.store) {
         this.electronAPI.store.set("hotkeys", currentHtml).then(result => {
@@ -197,8 +209,9 @@ class HotkeysModule {
                 debugLog?.info("Cleared old hotkeys HTML format", { module: 'hotkeys', function: 'loadHotkeysFromStore' });
               });
             } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
-              $("#hotkeys-column").html(storedHotkeysHtml);
-              $("#selected_row").removeAttr("id");
+              const column = document.getElementById('hotkeys-column');
+              if (column) column.innerHTML = storedHotkeysHtml;
+              document.getElementById('selected_row')?.removeAttribute('id');
             }
           });
         }
@@ -222,10 +235,10 @@ class HotkeysModule {
     debugLog?.info('🔄 this.electronAPI.database available:', !!this.electronAPI?.database, { module: 'hotkeys', function: 'populateHotkeys' });
     
     // Check DOM structure
-    debugLog?.info('🔄 .hotkeys.active elements found:', $('.hotkeys.active').length, { module: 'hotkeys', function: 'populateHotkeys' });
-    debugLog?.info('🔄 .hotkeys.active li elements found:', $('.hotkeys.active li').length, { module: 'hotkeys', function: 'populateHotkeys' });
-    debugLog?.info('🔄 #f1_hotkey element found:', $('#f1_hotkey').length, { module: 'hotkeys', function: 'populateHotkeys' });
-    debugLog?.info('🔄 #f2_hotkey element found:', $('#f2_hotkey').length, { module: 'hotkeys', function: 'populateHotkeys' });
+    debugLog?.info('🔄 .hotkeys.active elements found:', document.querySelectorAll('.hotkeys.active').length, { module: 'hotkeys', function: 'populateHotkeys' });
+    debugLog?.info('🔄 .hotkeys.active li elements found:', document.querySelectorAll('.hotkeys.active li').length, { module: 'hotkeys', function: 'populateHotkeys' });
+    debugLog?.info('🔄 #f1_hotkey element found:', document.getElementById('f1_hotkey') ? 1 : 0, { module: 'hotkeys', function: 'populateHotkeys' });
+    debugLog?.info('🔄 #f2_hotkey element found:', document.getElementById('f2_hotkey') ? 1 : 0, { module: 'hotkeys', function: 'populateHotkeys' });
     
     // Test database connectivity with a sample song ID
     if (this.electronAPI && this.electronAPI.database) {
@@ -247,13 +260,13 @@ class HotkeysModule {
     
     for (const key in fkeys) {
       debugLog?.info(`🔄 Processing hotkey ${key} with value: ${fkeys[key]}`, { module: 'hotkeys', function: 'populateHotkeys' });
-      const hotkeyElement = $(`.hotkeys.active #${key}_hotkey`);
-              debugLog?.info(`🔄 Found hotkey element for ${key}:`, hotkeyElement.length > 0, { module: 'hotkeys', function: 'populateHotkeys' });
+      const hotkeyElement = document.querySelector(`.hotkeys.active #${key}_hotkey`);
+              debugLog?.info(`🔄 Found hotkey element for ${key}:`, !!hotkeyElement, { module: 'hotkeys', function: 'populateHotkeys' });
       
       if (fkeys[key]) {
         try {
           debugLog?.info(`🔄 Setting hotkey ${key} with song ID: ${fkeys[key]}`, { module: 'hotkeys', function: 'populateHotkeys' });
-          hotkeyElement.attr("songid", fkeys[key]);
+          if (hotkeyElement) hotkeyElement.setAttribute('songid', fkeys[key]);
                       debugLog?.info(`🔄 About to call setLabelFromSongId for ${key}...`, { module: 'hotkeys', function: 'populateHotkeys' });
           this.setLabelFromSongId(fkeys[key], hotkeyElement);
                       debugLog?.info(`🔄 setLabelFromSongId called for ${key}`, { module: 'hotkeys', function: 'populateHotkeys' });
@@ -262,13 +275,17 @@ class HotkeysModule {
         }
       } else {
                   debugLog?.info(`🔄 Clearing hotkey ${key}`, { module: 'hotkeys', function: 'populateHotkeys' });
-        hotkeyElement.removeAttr("songid");
-        hotkeyElement.find("span").html("");
+        if (hotkeyElement) {
+          hotkeyElement.removeAttribute('songid');
+          const span = hotkeyElement.querySelector('span');
+          if (span) span.textContent = '';
+        }
       }
     }
     if (title) {
       debugLog?.info(`🔄 Setting hotkey tab title to: ${title}`, { module: 'hotkeys', function: 'populateHotkeys' });
-      $("#hotkey_tabs li a.active").text(title);
+      const active = document.querySelector('#hotkey_tabs li a.active');
+      if (active) active.textContent = title;
     }
     debugLog?.info('✅ populateHotkeys completed successfully', { module: 'hotkeys', function: 'populateHotkeys' });
   }
@@ -307,21 +324,22 @@ class HotkeysModule {
           debugLog?.info(`🔄 Found song: ${title} by ${artist} (${time})`, { module: 'hotkeys', function: 'setLabelFromSongId' });
           
           // Handle swapping
-          const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(element);
-          if (original_song_node.length) {
-            const old_song = original_song_node.find("span").detach();
-            const destination_song = $(element).find("span").detach();
-            original_song_node.append(destination_song);
-            if (destination_song.attr("songid")) {
-              original_song_node.attr("songid", destination_song.attr("songid"));
-            } else {
-              original_song_node.removeAttr("songid");
+          const other = document.querySelector(`.hotkeys.active li[songid="${song_id}"]`);
+          if (other && other !== element) {
+            const otherSpan = other.querySelector('span');
+            const elemSpan = element?.querySelector?.('span');
+            if (otherSpan && elemSpan) {
+              const tmp = elemSpan.textContent || '';
+              elemSpan.textContent = otherSpan.textContent || '';
+              otherSpan.textContent = tmp;
             }
-
-            $(element).append(old_song);
-          } else {
-            $(element).find("span").html(`${title} by ${artist} (${time})`);
-            $(element).attr("songid", song_id);
+            const destId = elemSpan?.getAttribute?.('songid');
+            if (destId) other.setAttribute('songid', destId); else other.removeAttribute('songid');
+            element?.setAttribute?.('songid', song_id);
+          } else if (element) {
+            const span = element.querySelector('span');
+            if (span) span.textContent = `${title} by ${artist} (${time})`;
+            element.setAttribute('songid', song_id);
           }
           this.saveHotkeysToStore();
         } else {
@@ -352,20 +370,22 @@ class HotkeysModule {
           const title = row.title || "[Unknown Title]";
           const artist = row.artist || "[Unknown Artist]";
           const time = row.time || "[??:??]";
-          const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(element);
-          if (original_song_node.length) {
-            const old_song = original_song_node.find("span").detach();
-            const destination_song = $(element).find("span").detach();
-            original_song_node.append(destination_song);
-            if (destination_song.attr("songid")) {
-              original_song_node.attr("songid", destination_song.attr("songid"));
-            } else {
-              original_song_node.removeAttr("songid");
+          const other2 = document.querySelector(`.hotkeys.active li[songid="${song_id}"]`);
+          if (other2 && other2 !== element) {
+            const otherSpan2 = other2.querySelector('span');
+            const elemSpan2 = element?.querySelector?.('span');
+            if (otherSpan2 && elemSpan2) {
+              const tmp2 = elemSpan2.textContent || '';
+              elemSpan2.textContent = otherSpan2.textContent || '';
+              otherSpan2.textContent = tmp2;
             }
-            $(element).append(old_song);
-          } else {
-            $(element).find("span").html(`${title} by ${artist} (${time})`);
-            $(element).attr("songid", song_id);
+            const destId2 = elemSpan2?.getAttribute?.('songid');
+            if (destId2) other2.setAttribute('songid', destId2); else other2.removeAttribute('songid');
+            element?.setAttribute?.('songid', song_id);
+          } else if (element) {
+            const span2 = element.querySelector('span');
+            if (span2) span2.textContent = `${title} by ${artist} (${time})`;
+            element.setAttribute('songid', song_id);
           }
           this.saveHotkeysToStore();
         }
@@ -380,8 +400,12 @@ class HotkeysModule {
   clearHotkeys() {
     customConfirm("Are you sure you want clear your hotkeys?", () => {
       for (let key = 1; key <= 12; key++) {
-        $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
-        $(`.hotkeys.active #f${key}_hotkey span`).html("");
+        const li = document.querySelector(`.hotkeys.active #f${key}_hotkey`);
+        if (li) {
+          li.removeAttribute('songid');
+          const span = li.querySelector('span');
+          if (span) span.textContent = '';
+        }
       }
       this.saveHotkeysToStore();
     });
@@ -403,13 +427,15 @@ class HotkeysModule {
    */
   saveHotkeyFile() {
     debugLog?.info("Renderer starting saveHotkeyFile", { module: 'hotkeys', function: 'saveHotkeyFile' });
-    const hotkeyArray = [];
-    for (let key = 1; key <= 12; key++) {
-      hotkeyArray.push($(`.hotkeys.active li#f${key}_hotkey`).attr("songid"));
-    }
-    if (!/^\d$/.test($("#hotkey_tabs li a.active").text())) {
-      hotkeyArray.push($("#hotkey_tabs li a.active").text());
-    }
+      const hotkeyArray = [];
+      for (let key = 1; key <= 12; key++) {
+        hotkeyArray.push(document.getElementById(`f${key}_hotkey`)?.getAttribute('songid') || null);
+      }
+      const activeLink = document.querySelector('#hotkey_tabs li a.active');
+      const activeText = activeLink ? activeLink.textContent || '' : '';
+      if (!/^\d$/.test(activeText)) {
+        hotkeyArray.push(activeText);
+      }
     
     if (this.electronAPI) {
       secureFileDialog.saveHotkeyFile(hotkeyArray);
@@ -424,13 +450,13 @@ class HotkeysModule {
    */
   playSongFromHotkey(hotkey) {
     debugLog?.info("Getting song ID from hotkey " + hotkey, { module: 'hotkeys', function: 'playSongFromHotkey' });
-    const song_id = $(`.hotkeys.active #${hotkey}_hotkey`).attr("songid");
+    const song_id = document.getElementById(`${hotkey}_hotkey`)?.getAttribute('songid');
     debugLog?.info(`Found song ID ${song_id}`, { module: 'hotkeys', function: 'playSongFromHotkey' });
     if (song_id) {
       debugLog?.info(`Preparing to play song ${song_id}`, { module: 'hotkeys', function: 'playSongFromHotkey' });
       // Unhighlight any selected tracks in holding tank or playlist
-      $(".now_playing").first().removeClass("now_playing");
-      $("#selected_row").removeAttr("id");
+      document.querySelector('.now_playing')?.classList.remove('now_playing');
+      document.getElementById('selected_row')?.removeAttribute('id');
       // Hotkey playback should not affect holding tank mode
       // Just play the song without changing autoplay state
       debugLog?.info("🔍 HOTKEY PLAYBACK: Checking if playSongFromId is available", { 
@@ -456,7 +482,7 @@ class HotkeysModule {
           playSongFromId_type: typeof playSongFromId
         });
       }
-      const hotkeyElement = $(`.hotkeys.active #${hotkey}_hotkey`)[0];
+      const hotkeyElement = document.getElementById(`${hotkey}_hotkey`);
       if (hotkeyElement) {
         animateCSS(hotkeyElement, "flipInX");
       }
@@ -468,16 +494,16 @@ class HotkeysModule {
    * Assigns the currently selected song to the first empty hotkey slot
    */
   sendToHotkeys() {
-    if ($("#selected_row").is("span")) {
+    if (document.getElementById('selected_row')?.tagName === 'SPAN') {
       return;
     }
-    const target = $(".hotkeys.active li").not("[songid]").first();
-    const song_id = $("#selected_row").attr("songid");
-    if ($(`.hotkeys.active li[songid=${song_id}]`).length) {
+    const target = Array.from(document.querySelectorAll('.hotkeys.active li')).find(li => !li.getAttribute('songid'));
+    const song_id = document.getElementById('selected_row')?.getAttribute('songid');
+    if (document.querySelector(`.hotkeys.active li[songid="${song_id}"]`)) {
       return;
     }
     if (target && song_id) {
-      target.attr("songid", song_id);
+      target.setAttribute('songid', song_id);
       this.setLabelFromSongId(song_id, target);
     }
     return false;
@@ -516,10 +542,11 @@ class HotkeysModule {
    * Allows user to rename the current hotkey tab
    */
   async renameHotkeyTab() {
-    const currentName = $("#hotkey_tabs .nav-link.active").text();
+    const currentName = (document.querySelector('#hotkey_tabs .nav-link.active')?.textContent) || '';
     const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
     if (newName && newName.trim() !== "") {
-      $("#hotkey_tabs .nav-link.active").text(newName);
+      const active = document.querySelector('#hotkey_tabs .nav-link.active');
+      if (active) active.textContent = newName;
       this.saveHotkeysToStore();
       return { success: true, newName: newName };
     } else {
@@ -532,9 +559,9 @@ class HotkeysModule {
    * Removes the selected song from its hotkey assignment
    */
   removeFromHotkey() {
-    const songId = $("#selected_row").attr("songid");
+    const songId = document.getElementById('selected_row')?.getAttribute('songid');
     debugLog?.info("removeFromHotkey called, songId:", songId, { module: 'hotkeys', function: 'removeFromHotkey' });
-    debugLog?.info("selected_row element:", $("#selected_row"), { module: 'hotkeys', function: 'removeFromHotkey' });
+    debugLog?.info("selected_row element:", document.getElementById('selected_row'), { module: 'hotkeys', function: 'removeFromHotkey' });
     
     if (songId) {
       debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'hotkeys', function: 'removeFromHotkey' });
@@ -545,27 +572,39 @@ class HotkeysModule {
           const message = title ? `Are you sure you want to remove ${title} from this hotkey?` : `Are you sure you want to clear this hotkey?`;
           customConfirm(message, () => {
             debugLog?.info("Proceeding with removal from hotkey", { module: 'hotkeys', function: 'removeFromHotkey' });
-            $("#selected_row").removeAttr("songid");
-            $("#selected_row span").html("");
-            $("#selected_row").removeAttr("id");
+            const selected = document.getElementById('selected_row');
+            if (selected) {
+              selected.removeAttribute('songid');
+              const span = selected.querySelector('span');
+              if (span) span.textContent = '';
+              selected.removeAttribute('id');
+            }
             this.saveHotkeysToStore();
             debugLog?.info("Hotkey cleared successfully", { module: 'hotkeys', function: 'removeFromHotkey' });
           });
         }).catch(() => {
           // Fallback: confirm without title
           customConfirm(`Are you sure you want to clear this hotkey?`, () => {
-            $("#selected_row").removeAttr("songid");
-            $("#selected_row span").html("");
-            $("#selected_row").removeAttr("id");
+            const selected = document.getElementById('selected_row');
+            if (selected) {
+              selected.removeAttribute('songid');
+              const span = selected.querySelector('span');
+              if (span) span.textContent = '';
+              selected.removeAttribute('id');
+            }
             this.saveHotkeysToStore();
           });
         });
       } else {
         // Confirm without title if database not available
         customConfirm(`Are you sure you want to clear this hotkey?`, () => {
-          $("#selected_row").removeAttr("songid");
-          $("#selected_row span").html("");
-          $("#selected_row").removeAttr("id");
+          const selected = document.getElementById('selected_row');
+          if (selected) {
+            selected.removeAttribute('songid');
+            const span = selected.querySelector('span');
+            if (span) span.textContent = '';
+            selected.removeAttribute('id');
+          }
           this.saveHotkeysToStore();
         });
       }

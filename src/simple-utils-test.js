@@ -36,17 +36,15 @@ console.log('Test 4: Animation function test');
 const testAnimationFunction = (element, animation, speed = "", prefix = "animate__") => {
     return new Promise((resolve, reject) => {
         const animationName = `${prefix}${animation} ${speed}`;
-        const node = $(element);
-
-        node.addClass(`${prefix}animated ${animationName}`);
-
+        const node = (typeof element === 'string') ? document.querySelector(element) : element;
+        if (!node) return resolve('No element');
+        node.classList.add(`${prefix}animated`, ...animationName.split(' ').filter(Boolean));
         function handleAnimationEnd() {
-            node.removeClass(`${prefix}animated ${animationName}`);
-            node.off("animationend", handleAnimationEnd);
+            node.classList.remove(`${prefix}animated`, ...animationName.split(' ').filter(Boolean));
+            node.removeEventListener("animationend", handleAnimationEnd);
             resolve("Animation ended");
         }
-
-        node.on("animationend", handleAnimationEnd);
+        node.addEventListener("animationend", handleAnimationEnd);
     });
 };
 

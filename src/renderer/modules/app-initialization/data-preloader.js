@@ -77,13 +77,11 @@ export class DataPreloader {
           await secureStore.delete("hotkeys");
           this.logInfo("Cleared old hotkeys HTML format");
         } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
-          // Check if jQuery is available and DOM is ready
-          if (typeof $ !== 'undefined' && document.getElementById('hotkeys-column')) {
-            $("#hotkeys-column").html(storedHotkeysHtml);
-            $("#selected_row").removeAttr("id");
+          const col = document.getElementById('hotkeys-column');
+          if (col) {
+            col.innerHTML = storedHotkeysHtml;
+            document.getElementById('selected_row')?.removeAttribute('id');
             this.logInfo("Loaded hotkeys from store");
-          } else {
-            this.logWarn("jQuery or hotkeys-column element not available for hotkeys loading");
           }
         }
       }
@@ -102,14 +100,13 @@ export class DataPreloader {
       if (hasColumnOrder) {
         const columnOrder = await secureStore.get("column_order");
         if (columnOrder && Array.isArray(columnOrder)) {
-          // Check if jQuery and DOM elements are available
-          if (typeof $ !== 'undefined' && document.getElementById('top-row')) {
+          const topRow = document.getElementById('top-row');
+          if (topRow) {
             columnOrder.forEach(function (val) {
-              $("#top-row").append($("#top-row").children(`#${val}`).detach());
+              const child = topRow.querySelector(`#${val}`);
+              if (child) topRow.appendChild(child);
             });
             this.logInfo("Applied column order from store");
-          } else {
-            this.logWarn("jQuery or top-row element not available for column order");
           }
         }
       }
@@ -144,13 +141,11 @@ export class DataPreloader {
    */
   saveHoldingTankToStore() {
     try {
-      // Only save if we have the new HTML format with mode toggle
-      if (typeof $ !== 'undefined' && document.getElementById('holding-tank-column')) {
-        const currentHtml = $("#holding-tank-column").html();
-        if (currentHtml && currentHtml.includes("mode-toggle")) {
-          secureStore.set("holding_tank", currentHtml);
-          this.logInfo("Saved holding tank to store");
-        }
+      const col = document.getElementById('holding-tank-column');
+      const currentHtml = col ? col.innerHTML : '';
+      if (currentHtml && currentHtml.includes("mode-toggle")) {
+        secureStore.set("holding_tank", currentHtml);
+        this.logInfo("Saved holding tank to store");
       }
     } catch (error) {
       this.logError('Error saving holding tank to store', error);
@@ -163,13 +158,11 @@ export class DataPreloader {
    */
   saveHotkeysToStore() {
     try {
-      // Only save if we have the new HTML format with header button
-      if (typeof $ !== 'undefined' && document.getElementById('hotkeys-column')) {
-        const currentHtml = $("#hotkeys-column").html();
-        if (currentHtml && currentHtml.includes("header-button")) {
-          secureStore.set("hotkeys", currentHtml);
-          this.logInfo("Saved hotkeys to store");
-        }
+      const col = document.getElementById('hotkeys-column');
+      const currentHtml = col ? col.innerHTML : '';
+      if (currentHtml && currentHtml.includes("header-button")) {
+        secureStore.set("hotkeys", currentHtml);
+        this.logInfo("Saved hotkeys to store");
       }
     } catch (error) {
       this.logError('Error saving hotkeys to store', error);

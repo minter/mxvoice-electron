@@ -87,8 +87,8 @@ function playSongWithFilename(filename, row, song_id) {
             const sound = new Howl({
               src: sound_path,
               html5: true,
-              volume: $("#volume").val() / 100,
-              mute: $("#mute_button").hasClass("active"),
+              volume: (Number(document.getElementById('volume')?.value) || 0) / 100,
+              mute: document.getElementById('mute_button')?.classList.contains('active') || false,
               onplay: function () {
                 getDebugLog()?.info('🔍 Sound onplay event fired', { 
                   module: 'audio-manager',
@@ -108,15 +108,11 @@ function playSongWithFilename(filename, row, song_id) {
               if (wavesurfer) {
                 wavesurfer.load(sound_path);
               }
-                $("#song_now_playing")
-                  .html(
-                    `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`
-                  )
-                  .fadeIn(100)
-                  .attr("songid", song_id);
-                $("#play_button").addClass("d-none");
-                $("#pause_button").removeClass("d-none");
-                $("#stop_button").removeAttr("disabled");
+                const now = document.getElementById('song_now_playing');
+                if (now) { now.innerHTML = `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`; now.style.display = ''; now.setAttribute('songid', String(song_id)); }
+                document.getElementById('play_button')?.classList.add('d-none');
+                document.getElementById('pause_button')?.classList.remove('d-none');
+                document.getElementById('stop_button')?.removeAttribute('disabled');
               },
               onend: function () {
                 getDebugLog()?.info('🔍 Sound onend event fired', { 
@@ -178,8 +174,8 @@ function playSongWithFilename(filename, row, song_id) {
           const sound = new Howl({
             src: sound_path,
             html5: true,
-            volume: $("#volume").val() / 100,
-            mute: $("#mute_button").hasClass("active"),
+            volume: (Number(document.getElementById('volume')?.value) || 0) / 100,
+            mute: document.getElementById('mute_button')?.classList.contains('active') || false,
             onplay: function () {
               getDebugLog()?.info('🔍 Sound onplay event fired', { 
                 module: 'audio-manager',
@@ -199,15 +195,11 @@ function playSongWithFilename(filename, row, song_id) {
               if (wavesurfer) {
                 wavesurfer.load(sound_path);
               }
-              $("#song_now_playing")
-                .html(
-                  `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`
-                )
-                .fadeIn(100)
-                .attr("songid", song_id);
-              $("#play_button").addClass("d-none");
-              $("#pause_button").removeClass("d-none");
-              $("#stop_button").removeAttr("disabled");
+              const now = document.getElementById('song_now_playing');
+              if (now) { now.innerHTML = `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`; now.style.display = ''; now.setAttribute('songid', String(song_id)); }
+              document.getElementById('play_button')?.classList.add('d-none');
+              document.getElementById('pause_button')?.classList.remove('d-none');
+              document.getElementById('stop_button')?.removeAttribute('disabled');
             },
             onend: function () {
               getDebugLog()?.info('🔍 Sound onend event fired', { 
@@ -381,22 +373,26 @@ function playSelected() {
     module: 'audio-manager',
     function: 'playSelected',
     timestamp: new Date().toISOString(),
-    selected_row_exists: $("#selected_row").length > 0
+    selected_row_exists: Boolean(document.getElementById('selected_row'))
   });
   
-  const song_id = $("#selected_row").attr("songid");
+  const song_id = document.getElementById('selected_row')?.getAttribute('songid');
   getDebugLog()?.info("🔍 PLAYBACK STEP: Got song ID from selected row", { 
     module: 'audio-manager',
     function: 'playSelected',
     song_id: song_id,
     song_id_type: typeof song_id,
-    selected_row_exists: $("#selected_row").length > 0
+    selected_row_exists: Boolean(document.getElementById('selected_row'))
   });
 
   // Only clear the now_playing class if the selected row is from the search panel
   // (not from the holding tank/playlist)
-  if (!$("#holding-tank-column").has($("#selected_row")).length) {
-    $(".now_playing").removeClass("now_playing");
+  {
+    const col = document.getElementById('holding-tank-column');
+    const sel = document.getElementById('selected_row');
+    if (!(col && sel && col.contains(sel))) {
+      document.querySelectorAll('.now_playing').forEach(el => el.classList.remove('now_playing'));
+    }
   }
 
   const holdingTankMode = sharedState.get('holdingTankMode');
@@ -437,22 +433,22 @@ function autoplay_next() {
   });
   
   if (autoplay && holdingTankMode === "playlist") {
-    const now_playing = $(".now_playing").first();
-    let next_song = $(); // Initialize as empty jQuery object
+    const now_playing = document.querySelector('.now_playing');
+    let next_song = null;
     
-    if (now_playing.length) {
+    if (now_playing) {
       getDebugLog()?.info('Found currently playing song, finding next', {
         module: 'audio-manager',
         function: 'autoplay_next',
         currentSongId: now_playing.attr("songid")
       });
       
-      now_playing.removeClass("now_playing");
-      next_song = now_playing.next();
-      next_song.addClass("now_playing");
+      now_playing.classList.remove('now_playing');
+      next_song = now_playing.nextElementSibling;
+      next_song?.classList.add('now_playing');
     }
     
-    if (next_song.length) {
+    if (next_song) {
       getDebugLog()?.info('Playing next song in playlist', {
         module: 'audio-manager',
         function: 'autoplay_next',
@@ -460,10 +456,10 @@ function autoplay_next() {
       });
       
       // Clear any existing highlighting and highlight the new playing track
-      $("#selected_row").removeAttr("id");
-      next_song.attr("id", "selected_row");
-      playSongFromId(next_song.attr("songid"));
-      next_song.addClass("now_playing");
+      document.getElementById('selected_row')?.removeAttribute('id');
+      next_song.id = 'selected_row';
+      playSongFromId(next_song.getAttribute('songid'));
+      next_song.classList.add('now_playing');
     } else {
       getDebugLog()?.info('End of playlist reached', {
         module: 'audio-manager',
@@ -471,9 +467,9 @@ function autoplay_next() {
       });
       
       // End of playlist - just remove the now_playing class and stay in playlist mode
-      $("li.now_playing").first().removeClass("now_playing");
+      const np = document.querySelector('li.now_playing'); if (np) np.classList.remove('now_playing');
       // Clear any highlighting at the end of playlist
-      $("#selected_row").removeAttr("id");
+      document.getElementById('selected_row')?.removeAttribute('id');
       // Don't switch modes - stay in playlist mode
     }
   } else {
@@ -490,7 +486,9 @@ function autoplay_next() {
  * Cancel autoplay functionality
  */
 function cancel_autoplay() {
-  if (!$("#holding-tank-column").has($("#selected_row")).length) {
+  const col = document.getElementById('holding-tank-column');
+  const sel = document.getElementById('selected_row');
+  if (!(col && sel && col.contains(sel))) {
     // Only cancel autoplay if we're not in the holding tank
     const holdingTankMode = sharedState.get('holdingTankMode');
     if (holdingTankMode === "playlist") {

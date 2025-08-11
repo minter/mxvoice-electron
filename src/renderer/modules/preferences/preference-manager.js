@@ -45,11 +45,11 @@ function initializePreferenceManager(options = {}) {
           electronAPI.store.get("debug_log_enabled")
         ]);
         
-        if (dbDir.success) $("#preferences-database-directory").val(dbDir.value);
-        if (musicDir.success) $("#preferences-song-directory").val(musicDir.value);
-        if (hotkeyDir.success) $("#preferences-hotkey-directory").val(hotkeyDir.value);
-        if (fadeSeconds.success) $("#preferences-fadeout-seconds").val(fadeSeconds.value);
-        if (debugLogPref.success) $("#preferences-debug-log-enabled").prop("checked", debugLogPref.value);
+        if (dbDir.success) { const el = document.getElementById('preferences-database-directory'); if (el) el.value = dbDir.value || ''; }
+        if (musicDir.success) { const el = document.getElementById('preferences-song-directory'); if (el) el.value = musicDir.value || ''; }
+        if (hotkeyDir.success) { const el = document.getElementById('preferences-hotkey-directory'); if (el) el.value = hotkeyDir.value || ''; }
+        if (fadeSeconds.success) { const el = document.getElementById('preferences-fadeout-seconds'); if (el) el.value = fadeSeconds.value || ''; }
+        if (debugLogPref.success) { const el = document.getElementById('preferences-debug-log-enabled'); if (el) el.checked = !!debugLogPref.value; }
       } catch (error) {
         await debugLog.error('Failed to load preferences', { 
           function: "loadPreferences",

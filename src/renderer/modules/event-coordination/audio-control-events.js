@@ -131,9 +131,9 @@ export default class AudioControlEvents {
       }
     };
 
-    $("#pause_button").click(pauseButtonHandler);
-    $("#play_button").click(playButtonHandler);
-    $("#stop_button").click(stopButtonHandler);
+    document.getElementById('pause_button')?.addEventListener('click', pauseButtonHandler);
+    document.getElementById('play_button')?.addEventListener('click', playButtonHandler);
+    document.getElementById('stop_button')?.addEventListener('click', stopButtonHandler);
 
     this.audioHandlers.set('pauseButton', { element: '#pause_button', event: 'click', handler: pauseButtonHandler });
     this.audioHandlers.set('playButton', { element: '#play_button', event: 'click', handler: playButtonHandler });
@@ -150,7 +150,7 @@ export default class AudioControlEvents {
     const volumeChangeHandler = (event) => {
       try {
         this.debugLog?.debug('Volume changed');
-        const volume = $(event.target).val() / 100;
+        const volume = (Number(event.target?.value) || 0) / 100;
         this.debugLog?.debug('New volume', volume);
         
         // Get sound from shared state
@@ -187,7 +187,8 @@ export default class AudioControlEvents {
             if (sound) {
               this.debugLog?.debug('Toggling mute on sound object');
               sound.mute(!sound.mute());
-              sound.volume($("#volume").val() / 100);
+              const volEl = document.getElementById('volume');
+              sound.volume(volEl ? (Number(volEl.value) || 0) / 100 : 1);
             } else {
               this.debugLog?.debug('No sound object found in shared state');
             }
@@ -197,15 +198,15 @@ export default class AudioControlEvents {
         }
         
         // Toggle UI state
-        $("#mute_button").toggleClass("active");
-        $("#song_now_playing").toggleClass("text-secondary");
+        document.getElementById('mute_button')?.classList.toggle('active');
+        document.getElementById('song_now_playing')?.classList.toggle('text-secondary');
       } catch (error) {
         this.debugLog?.error('Error in mute button handler:', error);
       }
     };
 
-    $("#volume").on("change", volumeChangeHandler);
-    $("#mute_button").click(muteButtonHandler);
+    document.getElementById('volume')?.addEventListener('change', volumeChangeHandler);
+    document.getElementById('mute_button')?.addEventListener('click', muteButtonHandler);
 
     this.audioHandlers.set('volumeChange', { element: '#volume', event: 'change', handler: volumeChangeHandler });
     this.audioHandlers.set('muteButton', { element: '#mute_button', event: 'click', handler: muteButtonHandler });
@@ -221,7 +222,8 @@ export default class AudioControlEvents {
     const progressBarClickHandler = (event) => {
       try {
         this.debugLog?.debug('Progress bar clicked');
-        const percent = (event.clientX - $(event.target).offset().left) / $(event.target).width();
+        const rect = event.currentTarget.getBoundingClientRect();
+        const percent = (event.clientX - rect.left) / rect.width;
         this.debugLog?.debug('Progress bar click - percent', percent);
         
         // Get sound from shared state
@@ -248,7 +250,8 @@ export default class AudioControlEvents {
     const waveformClickHandler = (event) => {
       try {
         this.debugLog?.debug('Waveform clicked');
-        const percent = (event.clientX - $(event.target).offset().left) / $(event.target).width();
+        const rect = event.currentTarget.getBoundingClientRect();
+        const percent = (event.clientX - rect.left) / rect.width;
         this.debugLog?.debug('Waveform click - percent', percent);
         
         // Get sound from shared state
@@ -271,8 +274,8 @@ export default class AudioControlEvents {
       }
     };
 
-    $("#progress_bar").click(progressBarClickHandler);
-    $("#waveform").click(waveformClickHandler);
+    document.getElementById('progress_bar')?.addEventListener('click', progressBarClickHandler);
+    document.getElementById('waveform')?.addEventListener('click', waveformClickHandler);
 
     this.audioHandlers.set('progressBarClick', { element: '#progress_bar', event: 'click', handler: progressBarClickHandler });
     this.audioHandlers.set('waveformClick', { element: '#waveform', event: 'click', handler: waveformClickHandler });
@@ -303,14 +306,14 @@ export default class AudioControlEvents {
             }).catch(error => {
               this.debugLog?.error('Failed to import shared state', error);
               // Fallback to simple toggle
-              const loopButton = $("#loop_button");
-              const isActive = loopButton.hasClass("active");
+              const loopButton = document.getElementById('loop_button');
+              const isActive = loopButton?.classList.contains('active') || false;
               window.loop_on(!isActive);
             });
           } else {
             // Fallback to simple toggle
-            const loopButton = $("#loop_button");
-            const isActive = loopButton.hasClass("active");
+            const loopButton = document.getElementById('loop_button');
+            const isActive = loopButton?.classList.contains('active') || false;
             window.loop_on(!isActive);
           }
         } else {
@@ -321,7 +324,7 @@ export default class AudioControlEvents {
       }
     };
 
-    $("#loop_button").click(loopButtonHandler);
+    document.getElementById('loop_button')?.addEventListener('click', loopButtonHandler);
     this.audioHandlers.set('loopButton', { element: '#loop_button', event: 'click', handler: loopButtonHandler });
     
     this.debugLog?.debug('Loop control events attached');
@@ -343,7 +346,7 @@ export default class AudioControlEvents {
       }
     };
 
-    $("#waveform_button").on("click", waveformButtonHandler);
+    document.getElementById('waveform_button')?.addEventListener('click', waveformButtonHandler);
     this.audioHandlers.set('waveformButton', { element: '#waveform_button', event: 'click', handler: waveformButtonHandler });
     
     this.debugLog?.debug('Waveform display events attached');
@@ -357,7 +360,7 @@ export default class AudioControlEvents {
       this.debugLog?.info('Detaching audio control events...');
 
       for (const [name, handler] of this.audioHandlers) {
-        $(handler.element).off(handler.event, handler.handler);
+        handler.element && (handler.el || document.querySelector(handler.element))?.removeEventListener(handler.event, handler.handler);
         this.debugLog?.debug(`Removed audio handler: ${name}`);
       }
 

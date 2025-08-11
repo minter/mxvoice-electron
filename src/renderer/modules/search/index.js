@@ -89,8 +89,10 @@ class SearchModule {
    * Clear search results
    */
   clearSearchResults() {
-    $("#search_results tbody").find("tr").remove();
-    $("#search_results thead").hide();
+    const tbody = document.querySelector('#search_results tbody');
+    const thead = document.querySelector('#search_results thead');
+    if (tbody) tbody.querySelectorAll('tr').forEach(tr => tr.remove());
+    if (thead) thead.style.display = 'none';
   }
 
   // triggerLiveSearch function moved to search-engine module
@@ -106,7 +108,7 @@ class SearchModule {
     const queryParams = [];
     const querySegments = [];
     let queryString = "";
-    const category = $("#category_select").val();
+    const category = document.getElementById('category_select')?.value;
 
     // Apply category filter if not "All Categories"
     if (category != "*") {
@@ -115,11 +117,12 @@ class SearchModule {
     }
 
     // Apply advanced search filters if advanced search is visible
-    if ($("#advanced-search").is(":visible")) {
-      const title = $("#title-search").val().trim();
-      const artist = $("#artist-search").val().trim();
-      const info = $("#info-search").val().trim();
-      const since = $("#date-search").val();
+    const adv = document.getElementById('advanced-search');
+    if (adv && adv.offsetParent !== null) {
+      const title = (document.getElementById('title-search')?.value || '').trim();
+      const artist = (document.getElementById('artist-search')?.value || '').trim();
+      const info = (document.getElementById('info-search')?.value || '').trim();
+      const since = document.getElementById('date-search')?.value || '';
 
       if (title.length) {
         querySegments.push("title LIKE ?");

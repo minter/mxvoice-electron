@@ -26,8 +26,8 @@ try {
 export function hotkeyDrop(event) {
   event.preventDefault();
   const song_id = event.dataTransfer.getData("text");
-  const target = $(event.currentTarget);
-  target.attr("songid", song_id);
+  const target = event.currentTarget;
+  if (target && target.setAttribute) target.setAttribute('songid', song_id);
   
   // Try to use setLabelFromSongId if available, otherwise fallback
   if (typeof setLabelFromSongId === 'function') {
@@ -80,7 +80,7 @@ export function holdingTankDrop(event) {
   
   // Try to use addToHoldingTank if available, otherwise fallback
   if (typeof addToHoldingTank === 'function') {
-    addToHoldingTank(songId, $(event.target)).then(result => {
+    addToHoldingTank(songId, event.target).then(result => {
       if (result && result.success) {
         debugLog?.info('Successfully added song to holding tank', { 
           module: 'drag-drop-functions',
@@ -105,7 +105,7 @@ export function holdingTankDrop(event) {
       });
     });
   } else if (typeof window.addToHoldingTank === 'function') {
-    window.addToHoldingTank(songId, $(event.target));
+    window.addToHoldingTank(songId, event.target);
   } else {
     debugLog?.error('addToHoldingTank function not available', { 
       module: 'drag-drop-functions',

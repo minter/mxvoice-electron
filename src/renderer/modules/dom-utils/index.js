@@ -4,7 +4,8 @@
  * Provides jQuery-like syntax for easy migration
  */
 
-import { debugLog } from '../debug-log/index.js';
+import DebugLog from '../debug-log/index.js';
+const debugLog = DebugLog;
 
 // jQuery-like selector functions
 export const $ = (selector) => {

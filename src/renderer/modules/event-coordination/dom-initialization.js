@@ -63,7 +63,8 @@ export default class DOMInitialization {
    * Initialize progress bar to 0% width
    */
   initializeProgressBar() {
-    $("#audio_progress").width("0%");
+    const progress = document.getElementById('audio_progress');
+    if (progress) progress.style.width = '0%';
     this.debugLog?.debug('Progress bar initialized to 0%');
   }
 
@@ -75,16 +76,24 @@ export default class DOMInitialization {
       // Set up hotkey and holding tank tabs for tabs 2-5
       for (let i = 2; i <= 5; i++) {
         // Clone hotkey tab
-        const hotkey_node = $("#hotkeys_list_1").clone();
-        hotkey_node.attr("id", `hotkeys_list_${i}`);
-        hotkey_node.removeClass("show active");
-        $("#hotkey-tab-content").append(hotkey_node);
+        const baseHotkeys = document.getElementById('hotkeys_list_1');
+        const hotkeysContainer = document.getElementById('hotkey-tab-content');
+        if (baseHotkeys && hotkeysContainer) {
+          const clone = baseHotkeys.cloneNode(true);
+          clone.id = `hotkeys_list_${i}`;
+          clone.classList.remove('show', 'active');
+          hotkeysContainer.appendChild(clone);
+        }
 
         // Clone holding tank tab
-        const holding_tank_node = $("#holding_tank_1").clone();
-        holding_tank_node.attr("id", `holding_tank_${i}`);
-        holding_tank_node.removeClass("show active");
-        $("#holding-tank-tab-content").append(holding_tank_node);
+        const baseHolding = document.getElementById('holding_tank_1');
+        const holdingContainer = document.getElementById('holding-tank-tab-content');
+        if (baseHolding && holdingContainer) {
+          const clone2 = baseHolding.cloneNode(true);
+          clone2.id = `holding_tank_${i}`;
+          clone2.classList.remove('show', 'active');
+          holdingContainer.appendChild(clone2);
+        }
       }
 
       this.debugLog?.debug('Tab structure set up for tabs 2-5');
@@ -99,49 +108,64 @@ export default class DOMInitialization {
    */
   setupContextMenu() {
     try {
-      $.contextMenu({
-        selector: ".context-menu",
-        items: {
-          play: {
-            name: "Play",
-            icon: "fas fa-play-circle",
-            callback: function (key, opt) {
-              if (window.playSelected) {
-                window.playSelected();
-              }
-            },
-          },
-          edit: {
-            name: "Edit",
-            icon: "fas fa-edit",
-            callback: function (key, opt) {
-              if (window.editSelectedSong) {
-                window.editSelectedSong();
-              }
-            },
-          },
-          delete: {
-            name: function() {
-              // Check if the selected row is in the holding tank
-              if ($("#holding-tank-column").has($("#selected_row")).length) {
-                return "Remove from Holding Tank";
-              } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
-                return "Remove from Hotkey";
-              } else {
-                return "Delete";
-              }
-            },
-            icon: "fas fa-trash-alt",
-            callback: function (key, opt) {
-              if (window.deleteSelectedSong) {
-                window.deleteSelectedSong();
-              }
-            },
-          },
-        },
+      // Native context menu implemented in place of jQuery plugin
+      const menu = document.createElement('div');
+      menu.id = 'mxv-context-menu';
+      Object.assign(menu.style, {
+        position: 'fixed', zIndex: '9999', background: '#fff',
+        border: '1px solid rgba(0,0,0,0.15)', borderRadius: '0.25rem',
+        boxShadow: '0 0.5rem 1rem rgba(0,0,0,0.15)', padding: '0.25rem 0',
+        display: 'none', minWidth: '200px'
+      });
+      const mkItem = (label, onClick) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.textContent = label;
+        Object.assign(item.style, {
+          display: 'block', width: '100%', textAlign: 'left', padding: '0.375rem 0.75rem',
+          background: 'transparent', border: 'none', cursor: 'pointer'
+        });
+        item.addEventListener('click', (e) => { e.stopPropagation(); hide(); onClick?.(); });
+        item.addEventListener('mouseenter', () => { item.style.background = '#f8f9fa'; });
+        item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+        return item;
+      };
+      const playItem = mkItem('Play', () => { if (window.playSelected) window.playSelected(); });
+      const editItem = mkItem('Edit', () => { if (window.editSelectedSong) window.editSelectedSong(); });
+      const deleteItem = mkItem('Delete', () => { if (window.deleteSelectedSong) window.deleteSelectedSong(); });
+      menu.append(playItem, editItem, deleteItem);
+      document.body.appendChild(menu);
+
+      const hide = () => { menu.style.display = 'none'; };
+      const show = (x, y, dynamicDeleteLabel) => {
+        deleteItem.textContent = dynamicDeleteLabel || 'Delete';
+        menu.style.left = `${x}px`;
+        menu.style.top = `${y}px`;
+        menu.style.display = 'block';
+      };
+
+      document.addEventListener('click', hide);
+      window.addEventListener('blur', hide);
+      window.addEventListener('resize', hide);
+
+      document.addEventListener('contextmenu', (event) => {
+        const row = event.target?.closest('.context-menu');
+        if (!row) return;
+        event.preventDefault();
+        const prev = document.getElementById('selected_row');
+        if (prev) prev.removeAttribute('id');
+        row.id = 'selected_row';
+        let label = 'Delete';
+        const holdingCol = document.getElementById('holding-tank-column');
+        const hotkeysContent = document.getElementById('hotkey-tab-content');
+        if (holdingCol && holdingCol.contains(row)) label = 'Remove from Holding Tank';
+        else if (hotkeysContent && hotkeysContent.contains(row)) label = 'Remove from Hotkey';
+        const x = Math.min(event.clientX, window.innerWidth - 220);
+        const y = Math.min(event.clientY, window.innerHeight - 150);
+        show(x, y, label);
       });
 
-      this.debugLog?.debug('Context menu set up');
+      this.debugLog?.debug('Context menu set up (native)');
 
     } catch (error) {
       this.debugLog?.error('Failed to setup context menu:', error);
@@ -152,7 +176,8 @@ export default class DOMInitialization {
    * Initialize search results display
    */
   initializeSearchResults() {
-    $("#search_results thead").hide();
+    const thead = document.querySelector('#search_results thead');
+    if (thead) thead.style.display = 'none';
     this.debugLog?.debug('Search results header hidden');
   }
 
@@ -190,10 +215,10 @@ export default class DOMInitialization {
     return {
       initialized: this.initialized,
       components: {
-        progressBar: $("#audio_progress").length > 0,
-        tabs: $("#hotkeys_list_2").length > 0,
-        contextMenu: $(".context-menu").length > 0,
-        searchResults: $("#search_results").length > 0
+        progressBar: !!document.getElementById('audio_progress'),
+        tabs: !!document.getElementById('hotkeys_list_2'),
+        contextMenu: document.querySelectorAll('.context-menu').length > 0,
+        searchResults: !!document.getElementById('search_results')
       }
     };
   }

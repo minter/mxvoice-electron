@@ -43,11 +43,11 @@ function initializeSettingsController(options = {}) {
     // Use new store API for saving preferences
     if (electronAPI && electronAPI.store) {
       const preferences = {
-        database_directory: $("#preferences-database-directory").val(),
-        music_directory: $("#preferences-song-directory").val(),
-        hotkey_directory: $("#preferences-hotkey-directory").val(),
-        fade_out_seconds: $("#preferences-fadeout-seconds").val(),
-        debug_log_enabled: $("#preferences-debug-log-enabled").is(":checked")
+        database_directory: (document.getElementById('preferences-database-directory')?.value) || '',
+        music_directory: (document.getElementById('preferences-song-directory')?.value) || '',
+        hotkey_directory: (document.getElementById('preferences-hotkey-directory')?.value) || '',
+        fade_out_seconds: (document.getElementById('preferences-fadeout-seconds')?.value) || '',
+        debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked
       };
       
       // Save all preferences
@@ -83,11 +83,11 @@ function initializeSettingsController(options = {}) {
     } else {
       // Fallback to legacy store access
       const preferences = {
-        database_directory: $("#preferences-database-directory").val(),
-        music_directory: $("#preferences-song-directory").val(),
-        hotkey_directory: $("#preferences-hotkey-directory").val(),
-        fade_out_seconds: $("#preferences-fadeout-seconds").val(),
-        debug_log_enabled: $("#preferences-debug-log-enabled").is(":checked")
+        database_directory: (document.getElementById('preferences-database-directory')?.value) || '',
+        music_directory: (document.getElementById('preferences-song-directory')?.value) || '',
+        hotkey_directory: (document.getElementById('preferences-hotkey-directory')?.value) || '',
+        fade_out_seconds: (document.getElementById('preferences-fadeout-seconds')?.value) || '',
+        debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked
       };
       savePreferencesLegacy(preferences);
     }

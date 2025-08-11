@@ -28,8 +28,10 @@ const SUPPORTED_AUDIO_EXTS = new Set([".mp3", ".mp4", ".m4a", ".wav", ".ogg", ".
  * @param {string} directory - The directory path to pre-populate
  */
 export async function showBulkAddModal(directory) {
-  $("#bulk-add-path").val(directory);
-  $("#bulk-add-category").empty();
+  const pathEl = document.getElementById('bulk-add-path');
+  if (pathEl) pathEl.value = directory || '';
+  const catSel = document.getElementById('bulk-add-category');
+  if (catSel) catSel.innerHTML = '';
   try {
     const result = await secureDatabase.query("SELECT * FROM categories ORDER BY description ASC");
     const rows = result?.data || result || [];
@@ -38,20 +40,28 @@ export async function showBulkAddModal(directory) {
         if (typeof categories !== 'undefined') {
           categories[row.code] = row.description;
         }
-        $("#bulk-add-category").append(
-          `<option value="${row.code}">${row.description}</option>`
-        );
+        if (catSel) {
+          const opt = document.createElement('option');
+          opt.value = row.code;
+          opt.textContent = row.description;
+          catSel.appendChild(opt);
+        }
       });
     }
   } catch (_err) {
     // ignore; modal can still open
   }
-  $("#bulk-add-category").append(
-    `<option value="" disabled>-----------------------</option>`
-  );
-  $("#bulk-add-category").append(
-    `<option value="--NEW--">ADD NEW CATEGORY...</option>`
-  );
+  if (catSel) {
+    const sep = document.createElement('option');
+    sep.value = '';
+    sep.disabled = true;
+    sep.textContent = '-----------------------';
+    catSel.appendChild(sep);
+    const addNew = document.createElement('option');
+    addNew.value = '--NEW--';
+    addNew.textContent = 'ADD NEW CATEGORY...';
+    catSel.appendChild(addNew);
+  }
 
   try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#bulkAddModal'); } catch {}
 }
@@ -179,7 +189,7 @@ export async function addSongsByPath(pathArray, category) {
 export async function saveBulkUpload(event) {
   event.preventDefault();
   try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#bulkAddModal'); } catch {}
-  const dirname = $("#bulk-add-path").val();
+  const dirname = (document.getElementById('bulk-add-path') || {}).value || '';
 
   const walk = async (dir) => {
     let results = [];
@@ -231,13 +241,16 @@ export async function saveBulkUpload(event) {
 
   const songs = await walk(dirname);
 
-  $("#search_results tbody").find("tr").remove();
-  $("#search_results thead").show();
+  const tbody = document.querySelector('#search_results tbody');
+  if (tbody) tbody.querySelectorAll('tr').forEach(tr => tr.remove());
+  const thead = document.querySelector('#search_results thead');
+  if (thead) thead.style.display = '';
 
-  let category = $("#bulk-add-category").val();
+  let category = (document.getElementById('bulk-add-category') || {}).value || '';
 
   if (category == "--NEW--") {
-    const description = $("#bulk-song-form-new-category").val();
+    const descriptionEl = document.getElementById('bulk-song-form-new-category');
+    const description = descriptionEl?.value || '';
     const baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
     const findUnique = async (base, i = 1) => {
       const test = i === 1 ? base : `${base}${i}`;
@@ -254,13 +267,13 @@ export async function saveBulkUpload(event) {
         if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
         category = finalCode;
       } else {
-        $("#bulk-song-form-new-category").val("");
+        if (descriptionEl) descriptionEl.value = '';
         alert(`Couldn't add a category named "${description}" - apparently one already exists!`);
         return;
       }
     } catch (err) {
       debugLog?.warn('Error adding new category for bulk upload', { module: 'bulk-operations', function: 'saveBulkUpload', error: err?.message });
-      $("#bulk-song-form-new-category").val("");
+      if (descriptionEl) descriptionEl.value = '';
       alert(`Error adding category: ${err?.message}`);
       return;
     }

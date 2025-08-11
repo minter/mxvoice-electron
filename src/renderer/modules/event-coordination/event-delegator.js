@@ -50,39 +50,26 @@ export default class EventDelegator {
    * Set up search results event delegation
    */
   setupSearchResultsDelegation() {
-    // Single click selection
-    const searchResultsClickHandler = (event) => {
-      const target = $(event.target).closest('tbody tr');
-      if (target.length && window.toggleSelectedRow) {
-        window.toggleSelectedRow(target[0]);
-      }
+    const table = document.getElementById('search_results');
+    if (!table) return;
+    const clickHandler = (event) => {
+      const row = event.target && event.target.closest('tbody tr');
+      if (row && table.contains(row) && window.toggleSelectedRow) window.toggleSelectedRow(row);
     };
-
-    // Context menu selection
-    const searchResultsContextHandler = (event) => {
-      const target = $(event.target).closest('tbody tr');
-      if (target.length && window.toggleSelectedRow) {
-        window.toggleSelectedRow(target[0]);
-      }
+    const contextHandler = (event) => {
+      const row = event.target && event.target.closest('tbody tr');
+      if (row && table.contains(row) && window.toggleSelectedRow) window.toggleSelectedRow(row);
     };
-
-    // Double click to play
-    const searchResultsDoubleClickHandler = (event) => {
-      const target = $(event.target).closest('tbody tr.song');
-      if (target.length && window.playSelected) {
-        window.playSelected();
-      }
+    const dblHandler = (event) => {
+      const row = event.target && event.target.closest('tbody tr.song');
+      if (row && table.contains(row) && window.playSelected) window.playSelected();
     };
-
-    // Attach delegated events
-    $("#search_results").on("click", "tbody tr", searchResultsClickHandler);
-    $("#search_results").on("contextmenu", "tbody tr", searchResultsContextHandler);
-    $("#search_results").on("dblclick", "tbody tr.song", searchResultsDoubleClickHandler);
-
-    // Store handlers for cleanup
-    this.delegatedHandlers.set('searchResultsClick', { element: '#search_results', event: 'click', selector: 'tbody tr', handler: searchResultsClickHandler });
-    this.delegatedHandlers.set('searchResultsContext', { element: '#search_results', event: 'contextmenu', selector: 'tbody tr', handler: searchResultsContextHandler });
-    this.delegatedHandlers.set('searchResultsDoubleClick', { element: '#search_results', event: 'dblclick', selector: 'tbody tr.song', handler: searchResultsDoubleClickHandler });
+    table.addEventListener('click', clickHandler);
+    table.addEventListener('contextmenu', contextHandler);
+    table.addEventListener('dblclick', dblHandler);
+    this.delegatedHandlers.set('searchResultsClick', { element: table, event: 'click', handler: clickHandler });
+    this.delegatedHandlers.set('searchResultsContext', { element: table, event: 'contextmenu', handler: contextHandler });
+    this.delegatedHandlers.set('searchResultsDoubleClick', { element: table, event: 'dblclick', handler: dblHandler });
 
     this.debugLog?.debug('Search results delegation set up');
   }
@@ -92,44 +79,35 @@ export default class EventDelegator {
    */
   setupHoldingTankDelegation() {
     // Single click selection
+    const container = document.querySelector('.holding_tank');
+    if (!container) return;
     const holdingTankClickHandler = (event) => {
-      const target = $(event.target).closest('.list-group-item');
-      if (target.length && window.toggleSelectedRow) {
-        window.toggleSelectedRow(target[0]);
-      }
+      const li = event.target && event.target.closest('.list-group-item');
+      if (li && container.contains(li) && window.toggleSelectedRow) window.toggleSelectedRow(li);
     };
 
     // Double click to play
     const holdingTankDoubleClickHandler = (event) => {
-      const target = $(event.target).closest('.list-group-item');
-      if (target.length) {
-        $(".now_playing").first().removeClass("now_playing");
-
-        // Set the clicked item as selected
-        $("#selected_row").removeAttr("id");
-        target.attr("id", "selected_row");
-
-        if (window.getHoldingTankMode && window.getHoldingTankMode() === "playlist") {
-          // In playlist mode, mark this song as now playing and start autoplay
-          target.addClass("now_playing");
-          if (window.sharedState) {
-            window.sharedState.set('autoplay', true);
-          }
-        }
-
-        if (window.playSelected) {
-          window.playSelected();
-        }
+      const li = event.target && event.target.closest('.list-group-item');
+      if (!li || !container.contains(li)) return;
+      const firstNow = document.querySelector('.now_playing');
+      firstNow?.classList.remove('now_playing');
+      document.getElementById('selected_row')?.removeAttribute('id');
+      li.id = 'selected_row';
+      if (window.getHoldingTankMode && window.getHoldingTankMode() === 'playlist') {
+        li.classList.add('now_playing');
+        if (window.sharedState) window.sharedState.set('autoplay', true);
       }
+      if (window.playSelected) window.playSelected();
     };
 
     // Attach delegated events
-    $(".holding_tank").on("click", ".list-group-item", holdingTankClickHandler);
-    $(".holding_tank").on("dblclick", ".list-group-item", holdingTankDoubleClickHandler);
+    container.addEventListener('click', holdingTankClickHandler);
+    container.addEventListener('dblclick', holdingTankDoubleClickHandler);
 
     // Store handlers for cleanup
-    this.delegatedHandlers.set('holdingTankClick', { element: '.holding_tank', event: 'click', selector: '.list-group-item', handler: holdingTankClickHandler });
-    this.delegatedHandlers.set('holdingTankDoubleClick', { element: '.holding_tank', event: 'dblclick', selector: '.list-group-item', handler: holdingTankDoubleClickHandler });
+    this.delegatedHandlers.set('holdingTankClick', { element: container, event: 'click', handler: holdingTankClickHandler });
+    this.delegatedHandlers.set('holdingTankDoubleClick', { element: container, event: 'dblclick', handler: holdingTankDoubleClickHandler });
 
     this.debugLog?.debug('Holding tank delegation set up');
   }
@@ -139,38 +117,37 @@ export default class EventDelegator {
    */
   setupHotkeysDelegation() {
     // Single click selection
+    const hotkeys = document.querySelector('.hotkeys');
+    if (!hotkeys) return;
     const hotkeysClickHandler = (event) => {
-      const target = $(event.target).closest('li');
-      // Only select if the hotkey has a song assigned
-      if (target.length && target.attr("songid")) {
-        $("#selected_row").removeAttr("id");
-        target.attr("id", "selected_row");
+      const li = event.target && event.target.closest('li');
+      if (!li || !hotkeys.contains(li)) return;
+      if (li.getAttribute('songid')) {
+        document.getElementById('selected_row')?.removeAttribute('id');
+        li.id = 'selected_row';
       }
     };
 
     // Double click to play
     const hotkeysDoubleClickHandler = (event) => {
-      const target = $(event.target).closest('li');
-      if (target.length) {
-        $(".now_playing").first().removeClass("now_playing");
-        $("#selected_row").removeAttr("id");
-        
-        if (target.find("span").text().length) {
-          const song_id = target.attr("songid");
-          if (song_id && window.playSongFromId) {
-            window.playSongFromId(song_id);
-          }
-        }
+      const li = event.target && event.target.closest('li');
+      if (!li || !hotkeys.contains(li)) return;
+      document.querySelector('.now_playing')?.classList.remove('now_playing');
+      document.getElementById('selected_row')?.removeAttribute('id');
+      const span = li.querySelector('span');
+      if (span && (span.textContent || '').length) {
+        const song_id = li.getAttribute('songid');
+        if (song_id && window.playSongFromId) window.playSongFromId(song_id);
       }
     };
 
     // Attach delegated events
-    $(".hotkeys").on("click", "li", hotkeysClickHandler);
-    $(".hotkeys").on("dblclick", "li", hotkeysDoubleClickHandler);
+    hotkeys.addEventListener('click', hotkeysClickHandler);
+    hotkeys.addEventListener('dblclick', hotkeysDoubleClickHandler);
 
     // Store handlers for cleanup
-    this.delegatedHandlers.set('hotkeysClick', { element: '.hotkeys', event: 'click', selector: 'li', handler: hotkeysClickHandler });
-    this.delegatedHandlers.set('hotkeysDoubleClick', { element: '.hotkeys', event: 'dblclick', selector: 'li', handler: hotkeysDoubleClickHandler });
+    this.delegatedHandlers.set('hotkeysClick', { element: hotkeys, event: 'click', handler: hotkeysClickHandler });
+    this.delegatedHandlers.set('hotkeysDoubleClick', { element: hotkeys, event: 'dblclick', handler: hotkeysDoubleClickHandler });
 
     this.debugLog?.debug('Hotkeys delegation set up');
   }
@@ -183,9 +160,12 @@ export default class EventDelegator {
       this.debugLog?.info('Cleaning up event delegation...');
 
       // Remove all delegated handlers
-      for (const [name, handler] of this.delegatedHandlers) {
-        $(handler.element).off(handler.event, handler.selector, handler.handler);
-        this.debugLog?.debug(`Removed delegated handler: ${name}`);
+      for (const [name, h] of this.delegatedHandlers) {
+        const el = h.element;
+        if (el && typeof el.removeEventListener === 'function') {
+          el.removeEventListener(h.event, h.handler);
+          this.debugLog?.debug(`Removed delegated handler: ${name}`);
+        }
       }
 
       this.delegatedHandlers.clear();

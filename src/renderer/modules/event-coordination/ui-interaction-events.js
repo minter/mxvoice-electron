@@ -65,7 +65,10 @@ export default class UIInteractionEvents {
       }
     };
 
-    $(".modal").on("show.bs.modal", modalShowHandler);
+    // Bind Bootstrap 5 modal event via native listeners
+    document.querySelectorAll('.modal').forEach((el) => {
+      el.addEventListener('show.bs.modal', modalShowHandler);
+    });
     this.uiHandlers.set('modalShow', { element: '.modal', event: 'show.bs.modal', handler: modalShowHandler });
     
     // Listen for preload-dispatched modal show events
@@ -112,12 +115,23 @@ export default class UIInteractionEvents {
       }
     };
 
-    $("#hotkey_tabs").on("dblclick", ".nav-link", hotkeyTabDoubleClickHandler);
-    $("#holding_tank_tabs").on("dblclick", ".nav-link", holdingTankTabDoubleClickHandler);
+    const hotkeyTabs = document.getElementById('hotkey_tabs');
+    if (hotkeyTabs) {
+      const handler = (e) => {
+        if (e.target && e.target.closest('.nav-link')) hotkeyTabDoubleClickHandler(e);
+      };
+      hotkeyTabs.addEventListener('dblclick', handler);
+      this.uiHandlers.set('hotkeyTabDoubleClick', { element: hotkeyTabs, event: 'dblclick', handler });
+    }
+    const holdingTabs = document.getElementById('holding_tank_tabs');
+    if (holdingTabs) {
+      const handler2 = (e) => {
+        if (e.target && e.target.closest('.nav-link')) holdingTankTabDoubleClickHandler(e);
+      };
+      holdingTabs.addEventListener('dblclick', handler2);
+      this.uiHandlers.set('holdingTankTabDoubleClick', { element: holdingTabs, event: 'dblclick', handler: handler2 });
+    }
 
-    this.uiHandlers.set('hotkeyTabDoubleClick', { element: '#hotkey_tabs', event: 'dblclick', selector: '.nav-link', handler: hotkeyTabDoubleClickHandler });
-    this.uiHandlers.set('holdingTankTabDoubleClick', { element: '#holding_tank_tabs', event: 'dblclick', selector: '.nav-link', handler: holdingTankTabDoubleClickHandler });
-    
     this.debugLog?.debug('Tab events attached');
   }
 
@@ -137,7 +151,7 @@ export default class UIInteractionEvents {
       }
     };
 
-    $(window).on("resize", windowResizeHandler);
+    window.addEventListener('resize', windowResizeHandler);
     this.uiHandlers.set('windowResize', { element: window, event: 'resize', handler: windowResizeHandler });
     
     this.debugLog?.debug('Window events attached');
@@ -150,13 +164,13 @@ export default class UIInteractionEvents {
     // Song form modal hidden event
     const songFormModalHiddenHandler = (event) => {
       try {
-        $("#song-form-category").val("");
-        $("#song-form-title").val("");
-        $("#song-form-new-category").val("");
-        $("#song-form-artist").val("");
-        $("#song-form-info").val("");
-        $("#song-form-duration").val("");
-        $("#SongFormNewCategory").hide();
+        const ids = [
+          'song-form-category', 'song-form-title', 'song-form-new-category',
+          'song-form-artist', 'song-form-info', 'song-form-duration'
+        ];
+        ids.forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
+        const newCat = document.getElementById('SongFormNewCategory');
+        if (newCat) newCat.style.display = 'none';
       } catch (error) {
         this.debugLog?.error('Error in song form modal hidden handler:', error);
       }
@@ -165,12 +179,11 @@ export default class UIInteractionEvents {
     // Song form modal shown event
     const songFormModalShownHandler = (event) => {
       try {
-        this.debugLog?.debug('Song form title length:', $("#song-form-title").val().length);
-        if (!$("#song-form-title").val().length) {
-          $("#song-form-title").focus();
-        } else {
-          $("#song-form-info").focus();
-        }
+        const title = document.getElementById('song-form-title');
+        const info = document.getElementById('song-form-info');
+        const len = (title?.value || '').length;
+        this.debugLog?.debug('Song form title length:', len);
+        if (!len) title?.focus(); else info?.focus();
       } catch (error) {
         this.debugLog?.error('Error in song form modal shown handler:', error);
       }
@@ -187,11 +200,11 @@ export default class UIInteractionEvents {
           this.electronAPI.store.get("fade_out_seconds"),
           this.electronAPI.store.get("debug_log_enabled")
         ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds, debugLog]) => {
-          if (dbDir.success) $("#preferences-database-directory").val(dbDir.value);
-          if (musicDir.success) $("#preferences-song-directory").val(musicDir.value);
-          if (hotkeyDir.success) $("#preferences-hotkey-directory").val(hotkeyDir.value);
-          if (fadeSeconds.success) $("#preferences-fadeout-seconds").val(fadeSeconds.value);
-          if (debugLog.success) $("#preferences-debug-log-enabled").prop("checked", debugLog.value);
+          if (dbDir.success) { const el = document.getElementById('preferences-database-directory'); if (el) el.value = dbDir.value || ''; }
+          if (musicDir.success) { const el = document.getElementById('preferences-song-directory'); if (el) el.value = musicDir.value || ''; }
+          if (hotkeyDir.success) { const el = document.getElementById('preferences-hotkey-directory'); if (el) el.value = hotkeyDir.value || ''; }
+          if (fadeSeconds.success) { const el = document.getElementById('preferences-fadeout-seconds'); if (el) el.value = fadeSeconds.value || ''; }
+          if (debugLog.success) { const el = document.getElementById('preferences-debug-log-enabled'); if (el) el.checked = !!debugLog.value; }
         }).catch(error => {
           this.debugLog?.warn('Failed to load preferences', error);
         });
@@ -203,34 +216,43 @@ export default class UIInteractionEvents {
     // Song form category change event
     const songFormCategoryChangeHandler = (event) => {
       try {
-        const target = $(event.target);
-        target.find("option:selected").each(function () {
-          const optionValue = $(this).attr("value");
-          if (optionValue == "--NEW--") {
-            $("#SongFormNewCategory").show();
-            $("#song-form-new-category").attr("required", "required");
-          } else {
-            $("#SongFormNewCategory").hide();
-            $("#song-form-new-category").removeAttr("required");
-          }
-        });
+        const select = event.target;
+        const optionValue = select && select.value;
+        const newCategoryRow = document.getElementById('SongFormNewCategory');
+        const newCategoryInput = document.getElementById('song-form-new-category');
+        if (optionValue === '--NEW--') {
+          if (newCategoryRow) newCategoryRow.style.display = '';
+          if (newCategoryInput) newCategoryInput.setAttribute('required', 'required');
+        } else {
+          if (newCategoryRow) newCategoryRow.style.display = 'none';
+          if (newCategoryInput) newCategoryInput.removeAttribute('required');
+        }
       } catch (error) {
         this.debugLog?.error('Error in song form category change handler:', error);
       }
     };
 
-    $("#songFormModal").on("hidden.bs.modal", songFormModalHiddenHandler);
-    $("#songFormModal").on("shown.bs.modal", songFormModalShownHandler);
-    $("#preferencesModal").on("shown.bs.modal", preferencesModalShownHandler);
-    $("#song-form-category").change(songFormCategoryChangeHandler);
-
-    this.uiHandlers.set('songFormModalHidden', { element: '#songFormModal', event: 'hidden.bs.modal', handler: songFormModalHiddenHandler });
-    this.uiHandlers.set('songFormModalShown', { element: '#songFormModal', event: 'shown.bs.modal', handler: songFormModalShownHandler });
-    this.uiHandlers.set('preferencesModalShown', { element: '#preferencesModal', event: 'shown.bs.modal', handler: preferencesModalShownHandler });
-    this.uiHandlers.set('songFormCategoryChange', { element: '#song-form-category', event: 'change', handler: songFormCategoryChangeHandler });
+    const songFormModal = document.getElementById('songFormModal');
+    if (songFormModal) {
+      songFormModal.addEventListener('hidden.bs.modal', songFormModalHiddenHandler);
+      songFormModal.addEventListener('shown.bs.modal', songFormModalShownHandler);
+      this.uiHandlers.set('songFormModalHidden', { element: songFormModal, event: 'hidden.bs.modal', handler: songFormModalHiddenHandler });
+      this.uiHandlers.set('songFormModalShown', { element: songFormModal, event: 'shown.bs.modal', handler: songFormModalShownHandler });
+    }
+    const preferencesModal = document.getElementById('preferencesModal');
+    if (preferencesModal) {
+      preferencesModal.addEventListener('shown.bs.modal', preferencesModalShownHandler);
+      this.uiHandlers.set('preferencesModalShown', { element: preferencesModal, event: 'shown.bs.modal', handler: preferencesModalShownHandler });
+    }
+    const songFormCategory = document.getElementById('song-form-category');
+    if (songFormCategory) {
+      songFormCategory.addEventListener('change', songFormCategoryChangeHandler);
+      this.uiHandlers.set('songFormCategoryChange', { element: songFormCategory, event: 'change', handler: songFormCategoryChangeHandler });
+    }
     
     // Trigger change event on page load
-    $("#song-form-category").change();
+    const cat = document.getElementById('song-form-category');
+    if (cat) cat.dispatchEvent(new Event('change'));
     
     this.debugLog?.debug('Form events attached');
   }
@@ -251,8 +273,11 @@ export default class UIInteractionEvents {
       }
     };
 
-    $("#confirmationModal").on("hidden.bs.modal", confirmationModalHiddenHandler);
-    this.uiHandlers.set('confirmationModalHidden', { element: '#confirmationModal', event: 'hidden.bs.modal', handler: confirmationModalHiddenHandler });
+    const confirmationModal = document.getElementById('confirmationModal');
+    if (confirmationModal) {
+      confirmationModal.addEventListener('hidden.bs.modal', confirmationModalHiddenHandler);
+      this.uiHandlers.set('confirmationModalHidden', { element: confirmationModal, event: 'hidden.bs.modal', handler: confirmationModalHiddenHandler });
+    }
     
     this.debugLog?.debug('Confirmation events attached');
   }
@@ -265,12 +290,14 @@ export default class UIInteractionEvents {
       this.debugLog?.info('Detaching UI interaction events...');
 
       for (const [name, handler] of this.uiHandlers) {
-        if (handler.selector) {
-          // Delegated event
-          $(handler.element).off(handler.event, handler.selector, handler.handler);
-        } else {
-          // Direct event
-          $(handler.element).off(handler.event, handler.handler);
+        const target = handler.element;
+        if (!target) continue;
+        if (target === window) {
+          window.removeEventListener(handler.event, handler.handler);
+        } else if (typeof target === 'string') {
+          document.querySelectorAll(target).forEach((el) => el.removeEventListener(handler.event, handler.handler));
+        } else if (target instanceof Element || target === document) {
+          target.removeEventListener(handler.event, handler.handler);
         }
         this.debugLog?.debug(`Removed UI handler: ${name}`);
       }

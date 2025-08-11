@@ -23,20 +23,26 @@ function populateHotkeys(fkeys, title, options = {}) {
   for (const key in fkeys) {
     if (fkeys[key]) {
       try {
-        $(`.hotkeys.active #${key}_hotkey`).attr("songid", fkeys[key]);
-        if (setLabelFromSongId) {
-          setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`));
+        const el = document.getElementById(`${key}_hotkey`);
+        if (el) el.setAttribute('songid', fkeys[key]);
+        if (setLabelFromSongId && el) {
+          setLabelFromSongId(fkeys[key], el);
         }
       } catch (err) {
         window.debugLog?.info(`Error loading fkey ${key} (DB ID: ${fkeys[key]})`, { module: 'hotkey-data', function: 'populateHotkeys' });
       }
     } else {
-      $(`.hotkeys.active #${key}_hotkey`).removeAttr("songid");
-      $(`.hotkeys.active #${key}_hotkey span`).html("");
+      const el = document.getElementById(`${key}_hotkey`);
+      if (el) {
+        el.removeAttribute('songid');
+        const span = el.querySelector('span');
+        if (span) span.textContent = '';
+      }
     }
   }
   if (title) {
-    $("#hotkey_tabs li a.active").text(title);
+    const link = document.querySelector('#hotkey_tabs li a.active');
+    if (link) link.textContent = title;
   }
 }
 
@@ -61,21 +67,22 @@ function setLabelFromSongId(song_id, element, options = {}) {
         const time = row.time || "[??:??]";
         
         // Handle swapping
-        const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(element);
-        if (original_song_node.length) {
-          const old_song = original_song_node.find("span").detach();
-          const destination_song = $(element).find("span").detach();
-          original_song_node.append(destination_song);
-          if (destination_song.attr("songid")) {
-            original_song_node.attr("songid", destination_song.attr("songid"));
-          } else {
-            original_song_node.removeAttr("songid");
+        const other = document.querySelector(`.hotkeys.active li[songid="${song_id}"]`);
+        if (other && other !== element) {
+          const otherSpan = other.querySelector('span');
+          const elemSpan = element?.querySelector?.('span');
+          if (otherSpan && elemSpan) {
+            const tmp = elemSpan.textContent || '';
+            elemSpan.textContent = otherSpan.textContent || '';
+            otherSpan.textContent = tmp;
           }
-
-          $(element).append(old_song);
-        } else {
-          $(element).find("span").html(`${title} by ${artist} (${time})`);
-          $(element).attr("songid", song_id);
+          const destId = elemSpan?.getAttribute?.('songid');
+          if (destId) other.setAttribute('songid', destId); else other.removeAttribute('songid');
+          element?.setAttribute?.('songid', song_id);
+        } else if (element) {
+          const span = element.querySelector('span');
+          if (span) span.textContent = `${title} by ${artist} (${time})`;
+          element.setAttribute('songid', song_id);
         }
         if (saveHotkeysToStore) {
           saveHotkeysToStore();
@@ -110,20 +117,22 @@ function fallbackSetLabelFromSongId(song_id, element, options = {}) {
         const title = row.title || "[Unknown Title]";
         const artist = row.artist || "[Unknown Artist]";
         const time = row.time || "[??:??]";
-        const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(element);
-        if (original_song_node.length) {
-          const old_song = original_song_node.find("span").detach();
-          const destination_song = $(element).find("span").detach();
-          original_song_node.append(destination_song);
-          if (destination_song.attr("songid")) {
-            original_song_node.attr("songid", destination_song.attr("songid"));
-          } else {
-            original_song_node.removeAttr("songid");
+        const other2 = document.querySelector(`.hotkeys.active li[songid="${song_id}"]`);
+        if (other2 && other2 !== element) {
+          const otherSpan2 = other2.querySelector('span');
+          const elemSpan2 = element?.querySelector?.('span');
+          if (otherSpan2 && elemSpan2) {
+            const tmp2 = elemSpan2.textContent || '';
+            elemSpan2.textContent = otherSpan2.textContent || '';
+            otherSpan2.textContent = tmp2;
           }
-          $(element).append(old_song);
-        } else {
-          $(element).find("span").html(`${title} by ${artist} (${time})`);
-          $(element).attr("songid", song_id);
+          const destId2 = elemSpan2?.getAttribute?.('songid');
+          if (destId2) other2.setAttribute('songid', destId2); else other2.removeAttribute('songid');
+          element?.setAttribute?.('songid', song_id);
+        } else if (element) {
+          const span2 = element.querySelector('span');
+          if (span2) span2.textContent = `${title} by ${artist} (${time})`;
+          element.setAttribute('songid', song_id);
         }
         if (saveHotkeysToStore) saveHotkeysToStore();
       }
@@ -143,8 +152,12 @@ async function clearHotkeys(options = {}) {
   const confirmed = await customConfirm("Are you sure you want clear your hotkeys?");
   if (confirmed) {
     for (let key = 1; key <= 12; key++) {
-      $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
-      $(`.hotkeys.active #f${key}_hotkey span`).html("");
+      const li = document.getElementById(`f${key}_hotkey`);
+      if (li) {
+        li.removeAttribute('songid');
+        const span = li.querySelector('span');
+        if (span) span.textContent = '';
+      }
     }
     if (saveHotkeysToStore) {
       saveHotkeysToStore();
@@ -161,7 +174,7 @@ async function clearHotkeys(options = {}) {
 function getHotkeyData() {
   const hotkeyData = {};
   for (let key = 1; key <= 12; key++) {
-    const songId = $(`.hotkeys.active #f${key}_hotkey`).attr("songid");
+    const songId = document.getElementById(`f${key}_hotkey`)?.getAttribute('songid');
     if (songId) {
       hotkeyData[`f${key}`] = songId;
     }
@@ -176,7 +189,7 @@ function getHotkeyData() {
  * @returns {string} - Current hotkey tab title
  */
 function getHotkeyTitle() {
-  return $("#hotkey_tabs li a.active").text();
+  return document.querySelector('#hotkey_tabs li a.active')?.textContent || '';
 }
 
 /**
@@ -192,23 +205,29 @@ function setHotkeyData(hotkeyData, title, options = {}) {
   
   // Clear existing hotkeys
   for (let key = 1; key <= 12; key++) {
-    $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
-    $(`.hotkeys.active #f${key}_hotkey span`).html("");
+    const li = document.getElementById(`f${key}_hotkey`);
+    if (li) {
+      li.removeAttribute('songid');
+      const span = li.querySelector('span');
+      if (span) span.textContent = '';
+    }
   }
   
   // Set new hotkey data
   for (const key in hotkeyData) {
     if (hotkeyData[key]) {
-      $(`.hotkeys.active #${key}_hotkey`).attr("songid", hotkeyData[key]);
-      if (setLabelFromSongId) {
-        setLabelFromSongId(hotkeyData[key], $(`.hotkeys.active #${key}_hotkey`));
+      const el = document.getElementById(`${key}_hotkey`);
+      if (el) el.setAttribute('songid', hotkeyData[key]);
+      if (setLabelFromSongId && el) {
+        setLabelFromSongId(hotkeyData[key], el);
       }
     }
   }
   
   // Set title if provided
   if (title) {
-    $("#hotkey_tabs li a.active").text(title);
+    const link = document.querySelector('#hotkey_tabs li a.active');
+    if (link) link.textContent = title;
   }
 }
 
