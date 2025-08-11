@@ -235,7 +235,9 @@ function registerAllHandlers() {
   // Store API handlers
   ipcMain.handle('store-get', async (event, key) => {
     try {
-      return { success: true, value: store.get(key) };
+      const value = store.get(key);
+      debugLog?.info('Store get', { module: 'ipc-handlers', function: 'store-get', key, valueType: typeof value });
+      return { success: true, value };
     } catch (error) {
       debugLog?.error('Store get error:', { module: 'ipc-handlers', function: 'store-get', error: error.message });
       return { success: false, error: error.message };
@@ -244,10 +246,12 @@ function registerAllHandlers() {
 
   ipcMain.handle('store-set', async (event, key, value) => {
     try {
+      debugLog?.info('Store set', { module: 'ipc-handlers', function: 'store-set', key, valueType: typeof value });
       store.set(key, value);
-      return { success: true };
+      const verify = store.get(key);
+      return { success: true, value: verify };
     } catch (error) {
-      debugLog?.error('Store set error:', { module: 'ipc-handlers', function: 'store-set', error: error.message });
+      debugLog?.error('Store set error:', { module: 'ipc-handlers', function: 'store-set', key, error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -273,7 +277,7 @@ function registerAllHandlers() {
 
   ipcMain.handle('store-keys', async () => {
     try {
-      return { success: true, keys: store.store };
+      return { success: true, keys: Object.keys(store.store) };
     } catch (error) {
       debugLog?.error('Store keys error:', { module: 'ipc-handlers', function: 'store-keys', error: error.message });
       return { success: false, error: error.message };

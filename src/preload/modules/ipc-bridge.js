@@ -10,7 +10,8 @@ import { initializeMainDebugLog } from '../../main/modules/debug-log.js';
 import Store from 'electron-store';
 
 // Initialize debug logger
-const store = new Store();
+// Use the same config file name as main for consistency
+const store = new Store({ name: 'config' });
 const debugLog = initializeMainDebugLog({ store });
 
 // IPC Event Handlers - extracted from preload.js

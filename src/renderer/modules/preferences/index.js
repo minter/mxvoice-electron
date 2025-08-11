@@ -18,7 +18,9 @@ import settingsController from './settings-controller.js';
  * @returns {Object} Preferences module interface
  */
 function initializePreferences(options = {}) {
-  const { electronAPI, db, store } = options;
+  const electronAPISource = (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null;
+  const electronAPI = options.electronAPI || electronAPISource;
+  const { db, store } = options;
   
   // Initialize sub-modules
   const manager = preferenceManager({ electronAPI, db, store });

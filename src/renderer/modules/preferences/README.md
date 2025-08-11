@@ -121,6 +121,7 @@ The module includes comprehensive error handling:
 - **Promise Handling** - Proper promise rejection handling
 - **Logging** - Detailed console logging for debugging
 - **Graceful Degradation** - Continues working even when some features fail
+- **Safe Debug Logger Access** - Logging uses a safely-initialized debug logger in the renderer to avoid blocking preference saves when the logger isn't yet available
 
 ## Migration from renderer.js
 

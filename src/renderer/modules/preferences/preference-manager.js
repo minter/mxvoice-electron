@@ -15,7 +15,9 @@
  * @returns {Object} Preference manager interface
  */
 function initializePreferenceManager(options = {}) {
-  const { electronAPI } = options;
+  // Prefer exposed API; fallback to secure API if only that exists
+  const electronAPISource = (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null;
+  const electronAPI = options.electronAPI || electronAPISource;
   
   /**
    * Open the preferences modal

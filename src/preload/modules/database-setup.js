@@ -10,7 +10,7 @@ import fs from 'fs';
 import Database from 'better-sqlite3';
 import { initializeMainDebugLog } from '../../main/modules/debug-log.js';
 
-const store = new Store();
+const store = new Store({ name: 'config' });
 const debugLog = initializeMainDebugLog({ store });
 
 let dbInstance = null;

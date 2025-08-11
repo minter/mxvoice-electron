@@ -6,6 +6,14 @@
  * @module settings-controller
  */
 
+// Import debug logger from global scope (renderer initializes it early)
+let debugLog = null;
+try {
+  if (typeof window !== 'undefined' && window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch (_) {}
+
 /**
  * Initialize the settings controller
  * @param {Object} options - Configuration options
@@ -15,14 +23,17 @@
  * @returns {Object} Settings controller interface
  */
 function initializeSettingsController(options = {}) {
-  const { electronAPI, db, store } = options;
+  // Prefer exposed API; fallback to secure API if only that exists
+  const electronAPISource = (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null;
+  const electronAPI = options.electronAPI || electronAPISource;
+  const { db, store } = options;
   
   /**
    * Save preferences from the preferences modal
    * @param {Event} event - The form submission event
    */
   async function savePreferences(event) {
-    await debugLog.info("Saving preferences", { function: "savePreferences" });
+    debugLog?.info("Saving preferences", { function: "savePreferences" });
     event.preventDefault();
     $(`#preferencesModal`).modal("hide");
     
@@ -48,18 +59,18 @@ function initializeSettingsController(options = {}) {
         
         const successCount = results.filter(result => result.success).length;
         if (successCount === 5) {
-          await debugLog.info('All preferences saved successfully', { 
+          debugLog?.info('All preferences saved successfully', { 
             function: "savePreferences",
             data: { successCount, totalPreferences: 5 }
           });
         } else {
-          await debugLog.warn('Some preferences failed to save', { 
+          debugLog?.warn('Some preferences failed to save', { 
             function: "savePreferences",
             data: { successCount, totalPreferences: 5, results }
           });
         }
       } catch (error) {
-        await debugLog.error('Failed to save preferences', { 
+        debugLog?.error('Failed to save preferences', { 
           function: "savePreferences",
           error: error
         });
@@ -92,42 +103,51 @@ function initializeSettingsController(options = {}) {
         store.set("hotkey_directory", preferences.hotkey_directory);
         store.set("fade_out_seconds", preferences.fade_out_seconds);
         store.set("debug_log_enabled", preferences.debug_log_enabled);
-        await debugLog.info('Preferences saved using legacy method', { 
+        debugLog?.info('Preferences saved using legacy method', { 
           function: "savePreferencesLegacy",
           data: { preferences }
         });
       } else {
         // Legacy store not available, use electronAPI.store
         try {
-          const results = await Promise.all([
-            electronAPI.store.set("database_directory", preferences.database_directory),
-            electronAPI.store.set("music_directory", preferences.music_directory),
-            electronAPI.store.set("hotkey_directory", preferences.hotkey_directory),
-            electronAPI.store.set("fade_out_seconds", preferences.fade_out_seconds),
-            electronAPI.store.set("debug_log_enabled", preferences.debug_log_enabled)
-          ]);
+          const ops = [
+            ['database_directory', preferences.database_directory],
+            ['music_directory', preferences.music_directory],
+            ['hotkey_directory', preferences.hotkey_directory],
+            ['fade_out_seconds', preferences.fade_out_seconds],
+            ['debug_log_enabled', preferences.debug_log_enabled]
+          ];
+          const results = [];
+          for (const [key, val] of ops) {
+            try {
+              const res = await electronAPI.store.set(key, val);
+              results.push({ key, ...res });
+            } catch (e) {
+              results.push({ key, success: false, error: e?.message || 'unknown' });
+            }
+          }
           
           const successCount = results.filter(result => result.success).length;
           if (successCount === 5) {
-            await debugLog.info('All preferences saved successfully using electronAPI.store', { 
+            debugLog?.info('All preferences saved successfully using electronAPI.store', { 
               function: "savePreferencesLegacy",
               data: { successCount, totalPreferences: 5 }
             });
           } else {
-            await debugLog.warn('Some preferences failed to save', { 
+            debugLog?.warn('Some preferences failed to save', { 
               function: "savePreferencesLegacy",
-              data: { successCount, totalPreferences: 5, results }
+            data: { successCount, totalPreferences: 5, results }
             });
           }
         } catch (error) {
-          await debugLog.error('Failed to save preferences using electronAPI.store', { 
+          debugLog?.error('Failed to save preferences using electronAPI.store', { 
             function: "savePreferencesLegacy",
             error: error
           });
         }
       }
     } catch (error) {
-      await debugLog.error('Legacy preference saving failed', { 
+      debugLog?.error('Legacy preference saving failed', { 
         function: "savePreferencesLegacy",
         error: error
       });
@@ -146,14 +166,14 @@ function initializeSettingsController(options = {}) {
         if (result.success) {
           return result.value;
         } else {
-          await debugLog.warn(`Failed to get preference ${key}`, { 
+          debugLog?.warn(`Failed to get preference ${key}`, { 
             function: "getPreference",
             data: { key, error: result.error }
           });
           return null;
         }
       } catch (error) {
-        await debugLog.error(`Preference get error for ${key}`, { 
+        debugLog?.error(`Preference get error for ${key}`, { 
           function: "getPreference",
           data: { key },
           error: error
@@ -184,20 +204,20 @@ function initializeSettingsController(options = {}) {
       try {
         const result = await electronAPI.store.set(key, value);
         if (result.success) {
-          await debugLog.info(`Preference ${key} saved successfully`, { 
+          debugLog?.info(`Preference ${key} saved successfully`, { 
             function: "setPreference",
             data: { key, value }
           });
           return true;
         } else {
-          await debugLog.warn(`Failed to save preference ${key}`, { 
+          debugLog?.warn(`Failed to save preference ${key}`, { 
             function: "setPreference",
             data: { key, value, error: result.error }
           });
           return false;
         }
       } catch (error) {
-        await debugLog.error(`Preference set error for ${key}`, { 
+        debugLog?.error(`Preference set error for ${key}`, { 
           function: "setPreference",
           data: { key, value },
           error: error
@@ -208,13 +228,13 @@ function initializeSettingsController(options = {}) {
       // Fallback to legacy store access
       try {
         store.set(key, value);
-        await debugLog.info(`Preference ${key} saved using legacy method`, { 
+        debugLog?.info(`Preference ${key} saved using legacy method`, { 
           function: "setPreference",
           data: { key, value }
         });
         return Promise.resolve(true);
       } catch (error) {
-        await debugLog.error(`Legacy preference saving failed for ${key}`, { 
+        debugLog?.error(`Legacy preference saving failed for ${key}`, { 
           function: "setPreference",
           data: { key, value },
           error: error

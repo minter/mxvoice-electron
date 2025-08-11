@@ -15,7 +15,8 @@ import fs from 'fs';
 import { initializeMainDebugLog } from '../../main/modules/debug-log.js';
 
 // Initialize debug logger
-const store = new Store();
+// Use the same config file name as main for consistency
+const store = new Store({ name: 'config' });
 const debugLog = initializeMainDebugLog({ store });
 
 // Modern API structure - extracted from preload.js

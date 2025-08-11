@@ -17,7 +17,8 @@ import * as ipcBridge from './modules/ipc-bridge.js';
 import * as secureApiExposer from './modules/secure-api-exposer.js';
 
 // Initialize debug logger using electron-log directly
-const store = new Store();
+// Use the same config file name as main for consistency
+const store = new Store({ name: 'config' });
 const debugLog = {
   info: (message, context) => log.info(message, context),
   error: (message, context) => log.error(message, context),

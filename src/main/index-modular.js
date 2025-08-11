@@ -58,12 +58,20 @@ const defaults = {
   first_run_completed: false
 }
 
+// Use a stable config file name and explicit project directory to ensure
+// consistent persistence across platforms/build modes (notably Windows)
 const store = new Store({
-  defaults: defaults
+  defaults: defaults,
+  name: 'config',
+  projectName: app.getName(),
+  clearInvalidConfig: true
 });
 
 // Initialize main process DebugLog
 const debugLog = initializeMainDebugLog({ store });
+
+// Log the resolved store path for diagnostics (after logger is initialized)
+debugLog.info('Electron Store initialized', { function: 'store-init', storePath: store.path, appName: app.getName() });
 
 // Auto-updater configuration
 const { autoUpdater } = electronUpdater;
