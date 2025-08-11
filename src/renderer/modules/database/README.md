@@ -38,3 +38,4 @@ const song = await db.getSongById('123');
 ## Notes
 - Logs through DebugLog if available
 - Uses Electron secure APIs where available, with legacy fallbacks
+- UI-facing helpers (e.g., hotkey/holding tank population) create DOM nodes programmatically and set text via `textContent` to avoid XSS. Drag events are wired using `addEventListener` rather than inline attributes.

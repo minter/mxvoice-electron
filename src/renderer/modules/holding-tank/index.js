@@ -29,6 +29,7 @@ try {
 // Use global electronAPI instead of importing services
 // Import secure adapters
 import { secureStore, secureDatabase } from '../adapters/secure-adapter.js';
+import { songDrag } from '../drag-drop/drag-drop-functions.js';
 const store = secureStore;
 const database = secureDatabase;
 // Import secure adapters
@@ -210,7 +211,7 @@ export function addToHoldingTank(song_id, element) {
         song_row.style.fontSize = `${getFontSize()}px`;
         song_row.className = "song list-group-item context-menu";
         song_row.setAttribute("draggable", "true");
-        song_row.setAttribute("ondragstart", "songDrag(event)");
+        song_row.addEventListener('dragstart', songDrag);
         song_row.setAttribute("songid", song_id);
         song_row.textContent = `${title} by ${artist} (${time})`;
       }

@@ -19,6 +19,9 @@ try {
   // Debug logger not available
 }
 
+// Drag handler import for programmatic binding
+import { songDrag } from '../drag-drop/drag-drop-functions.js';
+
 /**
  * Handle dropping songs into hotkey containers
  * 
@@ -235,8 +238,12 @@ function validateHotkeyElement(element) {
  * @returns {jQuery} - Created hotkey element
  */
 function createHotkeyElement(hotkey) {
-  const element = $(`<li id="${hotkey}_hotkey" class="hotkey" draggable="true" ondragstart="songDrag(event)"></li>`);
-  return element;
+  const li = document.createElement('li');
+  li.id = `${hotkey}_hotkey`;
+  li.className = 'hotkey';
+  li.draggable = true;
+  li.addEventListener('dragstart', songDrag);
+  return $(li);
 }
 
 /**
