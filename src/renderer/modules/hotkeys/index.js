@@ -506,7 +506,9 @@ class HotkeysModule {
    * @param {number} tab - Tab number to switch to
    */
   switchToHotkeyTab(tab) {
-    $(`#hotkey_tabs li:nth-child(${tab}) a`).tab("show");
+    try {
+      import('../ui/bootstrap-adapter.js').then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tab}) a`));
+    } catch {}
   }
 
   /**

@@ -26,7 +26,7 @@ import { secureFileSystem, secureDatabase, securePath, secureStore } from '../ad
  */
 export async function saveEditedSong(event) {
   event.preventDefault();
-  $(`#songFormModal`).modal("hide");
+  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
   debugLog?.info("Starting edit process", { module: 'song-management', function: 'saveEditedSong' });
   const songId = $("#song-form-songid").val();
   const title = $("#song-form-title").val();
@@ -60,7 +60,7 @@ export async function saveEditedSong(event) {
  */
 export async function saveNewSong(event) {
   event.preventDefault();
-  $(`#songFormModal`).modal("hide");
+  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
   debugLog?.info("Starting save process", { module: 'song-management', function: 'saveNewSong' });
   try {
     const filename = $("#song-form-filename").val();
@@ -179,7 +179,7 @@ export async function editSelectedSong() {
     $("#songFormModal form").attr("onsubmit", "saveEditedSong(event)");
     $("#songFormModalTitle").html("Edit This Song");
     $("#songFormSubmitButton").html("Save");
-    $("#songFormModal").modal();
+    try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#songFormModal'); } catch {}
   } catch (error) {
     debugLog?.error('Failed to open edit song modal', { module: 'song-management', function: 'editSelectedSong', error: error?.message });
   }
@@ -319,7 +319,7 @@ export async function startAddNewSong(filename, metadata = null) {
     } catch (err) {
       debugLog?.warn('Failed to populate categories for add modal', { module: 'song-management', function: 'startAddNewSong', error: err?.message });
     }
-    $("#songFormModal").modal();
+    try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#songFormModal'); } catch {}
   } catch (error) {
     debugLog?.error('Failed to open add new song modal', { module: 'song-management', function: 'startAddNewSong', error: error?.message });
   }

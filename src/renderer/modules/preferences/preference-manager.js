@@ -24,7 +24,9 @@ function initializePreferenceManager(options = {}) {
    * Shows the preferences dialog for user configuration
    */
   function openPreferencesModal() {
-    $("#preferencesModal").modal();
+    try {
+      import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#preferencesModal'));
+    } catch {}
   }
   
   /**

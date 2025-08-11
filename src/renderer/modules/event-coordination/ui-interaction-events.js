@@ -58,8 +58,8 @@ export default class UIInteractionEvents {
   attachModalEvents() {
     const modalShowHandler = (event) => {
       try {
-        // Hide other modals when one is shown
-        $(".modal").modal("hide");
+        // Hide other modals when one is shown using adapter
+        import('../ui/bootstrap-adapter.js').then(({ hideAllModals }) => hideAllModals());
       } catch (error) {
         this.debugLog?.error('Error in modal show handler:', error);
       }
@@ -67,6 +67,17 @@ export default class UIInteractionEvents {
 
     $(".modal").on("show.bs.modal", modalShowHandler);
     this.uiHandlers.set('modalShow', { element: '.modal', event: 'show.bs.modal', handler: modalShowHandler });
+    
+    // Listen for preload-dispatched modal show events
+    try {
+      const showModalListener = (e) => {
+        const selector = e?.detail?.selector;
+        if (!selector) return;
+        import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal(selector));
+      };
+      window.addEventListener('mxvoice:show-modal', showModalListener);
+      this.uiHandlers.set('mxvoiceShowModal', { element: window, event: 'mxvoice:show-modal', handler: showModalListener });
+    } catch {}
     
     this.debugLog?.debug('Modal events attached');
   }

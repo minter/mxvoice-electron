@@ -126,11 +126,11 @@ function editCategoryUI(code) {
  */
 function openCategoriesModal() {
   populateCategoriesModal().then(() => {
-    $("#categoryManagementModal").modal();
+    try { import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#categoryManagementModal')); } catch {}
   }).catch(error => {
     debugLog?.error('❌ Failed to open categories modal:', { module: 'categories', function: 'openCategoriesModal', error: error });
     // Still open the modal even if population fails
-    $("#categoryManagementModal").modal();
+    try { import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#categoryManagementModal')); } catch {}
   });
 }
 

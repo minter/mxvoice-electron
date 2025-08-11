@@ -32,6 +32,13 @@ export default class DOMInitialization {
       // Initialize progress bar
       this.initializeProgressBar();
 
+      // Initialize Bootstrap tooltips across the document
+      try {
+        const { initTooltip } = await import('../ui/bootstrap-adapter.js');
+        initTooltip('[data-bs-toggle="tooltip"]');
+        this.debugLog?.debug('Bootstrap tooltips initialized');
+      } catch {}
+
       // Set up hotkey and holding tank tabs (lines 684-694 from renderer.js)
       this.setupTabStructure();
 
@@ -158,7 +165,10 @@ export default class DOMInitialization {
       if (this.electronAPI && this.electronAPI.database) {
         const result = await this.electronAPI.database.query("SELECT count(*) as count from mrvoice WHERE 1");
         if (result.success && result.data.length > 0 && result.data[0].count <= 1) {
-          $(`#firstRunModal`).modal("show");
+          try {
+            const { showModal } = await import('../ui/bootstrap-adapter.js');
+            showModal('#firstRunModal');
+          } catch {}
           this.debugLog?.info('First run modal shown - database has <= 1 songs');
         }
       }

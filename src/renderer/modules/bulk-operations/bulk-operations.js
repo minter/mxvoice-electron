@@ -52,7 +52,7 @@ export async function showBulkAddModal(directory) {
     `<option value="--NEW--">ADD NEW CATEGORY...</option>`
   );
 
-  $("#bulkAddModal").modal();
+  try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#bulkAddModal'); } catch {}
 }
 
 /**
@@ -148,7 +148,7 @@ export async function addSongsByPath(pathArray, category) {
  */
 export async function saveBulkUpload(event) {
   event.preventDefault();
-  $("#bulkAddModal").modal("hide");
+  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#bulkAddModal'); } catch {}
   const dirname = $("#bulk-add-path").val();
 
   const walk = async (dir) => {

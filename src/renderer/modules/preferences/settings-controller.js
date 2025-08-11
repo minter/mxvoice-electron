@@ -35,7 +35,10 @@ function initializeSettingsController(options = {}) {
   async function savePreferences(event) {
     debugLog?.info("Saving preferences", { function: "savePreferences" });
     event.preventDefault();
-    $(`#preferencesModal`).modal("hide");
+    try {
+      const { hideModal } = await import('../ui/bootstrap-adapter.js');
+      hideModal('#preferencesModal');
+    } catch {}
     
     // Use new store API for saving preferences
     if (electronAPI && electronAPI.store) {

@@ -63,7 +63,11 @@ function allowHotkeyDrop(event) {
  * @param {number} tab - Tab number to switch to
  */
 function switchToHotkeyTab(tab) {
-  $(`#hotkey_tabs li:nth-child(${tab}) a`).tab("show");
+  try {
+    import('../ui/bootstrap-adapter.js')
+      .then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tab}) a`))
+      .catch(() => {});
+  } catch {}
 }
 
 /**
@@ -150,7 +154,11 @@ function getActiveHotkeyTab() {
  */
 function setActiveHotkeyTab(tabNumber) {
   if (tabNumber >= 1 && tabNumber <= 5) {
-    $(`#hotkey_tabs li:nth-child(${tabNumber}) a`).tab("show");
+    try {
+      import('../ui/bootstrap-adapter.js')
+        .then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tabNumber}) a`))
+        .catch(() => {});
+    } catch {}
   }
 }
 

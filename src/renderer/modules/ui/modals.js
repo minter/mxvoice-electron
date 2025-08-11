@@ -82,13 +82,13 @@ function initializeModals(options = {}) {
    */
   function customConfirm(message, callback) {
     $("#confirmationMessage").text(message);
-    $("#confirmationModal").modal("show");
+    try { import('./bootstrap-adapter.js').then(({ showModal }) => showModal('#confirmationModal')); } catch {}
 
     // Store the callback to execute when confirmed
     $("#confirmationConfirmBtn")
       .off("click")
       .on("click", function () {
-        $("#confirmationModal").modal("hide");
+        try { import('./bootstrap-adapter.js').then(({ hideModal }) => hideModal('#confirmationModal')); } catch {}
         if (callback) {
           callback();
         }
@@ -106,7 +106,7 @@ function initializeModals(options = {}) {
     $("#inputModalTitle").text(title);
     $("#inputModalMessage").text(message);
     $("#inputModalField").val(defaultValue);
-    $("#inputModal").modal("show");
+    try { import('./bootstrap-adapter.js').then(({ showModal }) => showModal('#inputModal')); } catch {}
     
     // Focus on the input field and select text
     $("#inputModalField").focus();
@@ -121,7 +121,7 @@ function initializeModals(options = {}) {
     
     $("#inputModalConfirmBtn").off("click").on("click", function () {
       const value = $("#inputModalField").val();
-      $("#inputModal").modal("hide");
+      try { import('./bootstrap-adapter.js').then(({ hideModal }) => hideModal('#inputModal')); } catch {}
       if (callback) {
         callback(value);
       }

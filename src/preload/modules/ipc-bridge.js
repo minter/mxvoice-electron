@@ -165,7 +165,7 @@ const ipcHandlers = {
     debugLog.info(`Attempting to display #newReleaseModal for ${releaseName}`);
     $('#newReleaseModal .modal-title').html(`Downloaded New Version: ${releaseName}`);
     $('#newReleaseModal .modal-body').html(releaseNotes);
-    $('#newReleaseModal').modal();
+    try { window.dispatchEvent(new CustomEvent('mxvoice:show-modal', { detail: { selector: '#newReleaseModal' } })); } catch {}
   }
 };
 

@@ -114,7 +114,7 @@ function initializeUIManager(options = {}) {
     $("#songFormModal form").attr("onsubmit", "saveEditedSong(event)");
     $("#songFormModalTitle").html("Edit This Song");
     $("#songFormSubmitButton").html("Save");
-    $("#songFormModal").modal();
+    try { const { showModal } = await import('./bootstrap-adapter.js'); showModal('#songFormModal'); } catch {}
   }
   
   /**
