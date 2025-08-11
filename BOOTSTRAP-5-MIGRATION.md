@@ -90,7 +90,7 @@ If you want a minimal-diff first step:
 - Remove shim after migrating to the adapter
 
 ### Phase 5: Validate styles and layout
-Status: In Progress
+Status: Completed
 - Verify and adjust:
   - `.form-group` spacing vs. utilities (`mb-*`) where necessary
   - Input group structure after removing `-prepend/-append`

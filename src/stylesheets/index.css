@@ -38,6 +38,8 @@ input[type="text"]:focus {
   overflow: hidden;
   border: 1px solid var(--card-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  white-space: nowrap; /* prevent buttons from breaking/wrapping */
+  flex-shrink: 0; /* avoid clipping in flex header */
 }
 
 /* Ensure consistent header heights across all columns */
@@ -137,7 +139,9 @@ input[type="text"]:focus {
 }
 
 .icon-bar {
-  float: right;
+  margin-left: auto; /* push to the right in flex header */
+  display: flex;
+  gap: 8px;
 }
 
 .icon-bar a {

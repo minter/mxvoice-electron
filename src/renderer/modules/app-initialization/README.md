@@ -72,6 +72,7 @@ Configures the application environment and system:
 - Enhances console output for debugging
 - Performs system capability detection
 - Manages environment configuration
+- Initializes Bootstrap 5 tooltips via the UI `bootstrap-adapter`
 
 ## Initialization Sequence
 
@@ -130,7 +131,7 @@ const success = await AppInitialization.initialize({
 
 ```javascript
 // Initialize DOM-dependent features when DOM is ready
-$(document).ready(async function() {
+document.addEventListener('DOMContentLoaded', async () => {
   if (AppInitialization.isInitialized()) {
     await AppInitialization.initializeDOMDependentFeatures();
   }

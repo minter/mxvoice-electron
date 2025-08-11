@@ -117,7 +117,6 @@
     "axios": "^0.30.0",
     "better-sqlite3": "^11.10.0",
     "bootstrap": "^5.3.3",
-    "@popperjs/core": "^2.11.8",
     "electron-log": "^5.4.2",
     "electron-squirrel-startup": "^1.0.0",
     "electron-store": "^8.0.1",

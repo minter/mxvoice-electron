@@ -350,7 +350,7 @@
           </div>
           <div class="modal-body">
             <form onsubmit="addNewCategory(event)">
-              <div class="form-group row">
+              <div class="row g-2 mb-3">
                 <div class="col-sm-8">
                   <input type="text" class="form-control" id="newCategoryDescription" required>
                 </div>
@@ -386,7 +386,7 @@
           </div>
           <div class="modal-body">
             <form onsubmit="saveBulkUpload(event)">
-              <div class="form-group row">
+              <div class="row g-2 mb-3">
                 <label for="bulk-add-category" class="col-sm-3 col-form-label">Category</label>
                 <div class="col-sm-9">
                   <select class="form-control form-control-sm" id="bulk-add-category">
@@ -394,14 +394,14 @@
                 </div>
               </div>
 
-              <div id="bulkSongFormNewCategory" style="display: none" class="form-group row">
+              <div id="bulkSongFormNewCategory" style="display: none" class="row g-2 mb-3">
                 <label for="bulk-song-form-new-category" class="col-form-label col-sm-3 text-nowrap">Category Name</label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control form-control-sm" id="bulk-song-form-new-category">
                 </div>
               </div>
 
-              <div class="form-group row">
+              <div class="row g-2 mb-3">
                 <label for="bulk-add-path" class="col-form-label col-sm-3">Source Directory</label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control form-control-sm" id="bulk-add-path" disabled>
@@ -428,7 +428,7 @@
             <form>
                 <input type="hidden" id="song-form-filename">
                 <input type="hidden" id="song-form-songid">
-              <div class="form-group row">
+              <div class="row g-2 mb-3">
                 <label for="song-form-category" class="col-sm-3 col-form-label">Category</label>
                 <div class="col-sm-9">
                   <select class="form-control form-control-sm category-menu" id="song-form-category" required>
@@ -436,32 +436,32 @@
                 </div>
               </div>
 
-              <div id="SongFormNewCategory" style="display: none" class="form-group row">
+              <div id="SongFormNewCategory" style="display: none" class="row g-2 mb-3">
                 <label for="song-form-new-category" class="col-form-label col-sm-3 text-nowrap">Category Name</label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control form-control-sm" id="song-form-new-category">
                 </div>
               </div>
 
-              <div class="form-group row">
+              <div class="row g-2 mb-3">
                 <label for="song-form-title" class="col-form-label col-sm-3">Title</label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control form-control-sm" id="song-form-title" required>
                 </div>
               </div>
-              <div class="form-group row">
+              <div class="row g-2 mb-3">
                 <label for="song-form-artist" class="col-form-label col-sm-3">Artist</label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control form-control-sm" id="song-form-artist">
                 </div>
               </div>
-              <div class="form-group row">
+              <div class="row g-2 mb-3">
                 <label for="song-form-info" class="col-form-label col-sm-3">Info</label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control form-control-sm" id="song-form-info">
                 </div>
               </div>
-              <div class="form-group row">
+              <div class="row g-2 mb-3">
                 <label for="song-form-duration" class="col-form-label col-sm-3">Duration</label>
                 <div class="col-sm-9">
                   <input type="test" class="form-control form-control-sm" id="song-form-duration" disabled="disabled">
@@ -490,7 +490,7 @@
             <form onsubmit="savePreferences(event)">
               <fieldset>
                 <legend>Data Locations</legend>
-                <div class="form-group row">
+                <div class="row g-2 mb-3">
                   <label for="preferences-database-directory" class="col-sm-3 col-form-label">Database File Location</label>
                   <div class="col-sm-6">
                     <input type="text" class="form-control" id="preferences-database-directory">
@@ -499,7 +499,7 @@
                     <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-database-directory")'>Choose Location</button>
                   </div>
                 </div>
-                <div class="form-group row">
+                <div class="row g-2 mb-3">
                   <label for="preferences-song-directory" class="col-sm-3 col-form-label">Audio Files</label>
                   <div class="col-sm-6">
                     <input type="text" class="form-control" id="preferences-song-directory">
@@ -508,7 +508,7 @@
                     <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-song-directory")'>Choose Location</button>
                   </div>
                 </div>
-                <div class="form-group row">
+                <div class="row g-2 mb-3">
                   <label for="preferences-hotkey-directory" class="col-sm-3 col-form-label">Hotkeys / Holding Tank</label>
                   <div class="col-sm-6">
                     <input type="text" class="form-control" id="preferences-hotkey-directory">
@@ -521,7 +521,7 @@
 
               <fieldset>
                 <legend>Audio Controls</legend>
-                <div class="form-group row">
+                <div class="row g-2 mb-3">
                   <label for="preferences-fadeout-seconds" class="col-sm-3 col-form-label">Fade (seconds)</label>
                   <div class="col-sm-1">
                     <input type="text" class="form-control" id="preferences-fadeout-seconds">
@@ -532,7 +532,7 @@
 
               <fieldset>
                 <legend>Debug Options</legend>
-                <div class="form-group row">
+                <div class="row g-2 mb-3">
                   <div class="col-sm-9 offset-sm-3">
                     <div class="form-check">
                       <input type="checkbox" class="form-check-input" id="preferences-debug-log-enabled">

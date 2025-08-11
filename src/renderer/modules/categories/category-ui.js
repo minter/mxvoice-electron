@@ -75,7 +75,7 @@ function populateCategoriesModal(preserveScroll = false) {
       result.data.forEach(row => {
         debugLog?.info('Category row:', { module: 'categories', function: 'populateCategoriesModal', row: row });
         debugLog?.info('Code:', { module: 'categories', function: 'populateCategoriesModal', code: row.code, description: row.description });
-        $("#categoryList").append(`<div class="form-group row">
+        $("#categoryList").append(`<div class="row g-2 mb-3">
 
           <div class="col-sm-8">
             <div catcode="${row.code}" class="category-description">${row.description}</div>

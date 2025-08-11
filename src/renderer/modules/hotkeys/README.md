@@ -67,7 +67,7 @@ hotkeys/
 - `allowHotkeyDrop(event)` - Allow hotkey drop events
 
 ### Tab Management (2)
-- `switchToHotkeyTab(tab)` - Switch between hotkey tabs
+- `switchToHotkeyTab(tab)` - Switch between hotkey tabs (uses Bootstrap 5 adapter `showTab`)
 - `renameHotkeyTab()` - Rename hotkey tab
 
 ## Usage
@@ -122,7 +122,7 @@ hotkeys.importHotkeyConfig(config);
 ### Tab Management
 
 ```javascript
-// Switch to tab 2
+// Switch to tab 2 (via Bootstrap 5 Tab API through adapter)
 hotkeys.switchToHotkeyTab(2);
 
 // Rename current tab
