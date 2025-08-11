@@ -7,9 +7,10 @@ This directory contains the modular main process for the Electron app. The entry
 src/main/
 ├── modules/
 │   ├── app-setup.js        # Window/menu/app lifecycle, UI commands → renderer
-│   ├── ipc-handlers.js     # Secure IPC: database, file system, store, audio, path, os, app
+│   ├── ipc-handlers.js     # Secure IPC: database, file system, store, audio, path, os, app, logs
 │   ├── file-operations.js  # User dialogs + hotkey/holding-tank import/export, prefs migration
-│   └── debug-log.js        # Main-process DebugLog (uses electron-store & electron-log)
+│   ├── debug-log.js        # Main-process DebugLog (uses electron-store & electron-log)
+│   └── log-service.js      # Centralized log sink: daily file, retention, export, IPC endpoints
 ├── index-modular.js        # Coordinator: store, DB init, updater, modules init, createWindow
 └── README.md
 ```
@@ -25,7 +26,8 @@ src/main/
 
 - `ipc-handlers.js`
   - Registers all secure IPC handlers (DB query/execute, store get/set/has/delete/clear, FS ops, path/os, audio controls, app ops, dialogs)
-  - Injects dependencies from coordinator (window, db, store, updater, debugLog)
+  - Adds Logs endpoints: `logs:write`, `logs:get-paths`, `logs:export`
+  - Injects dependencies from coordinator (window, db, store, updater, debugLog, logService)
   - Exports: `initializeIpcHandlers`, `registerAllHandlers`, `removeAllHandlers`, `testIpcHandlers`
 
 - `file-operations.js`
@@ -39,6 +41,13 @@ src/main/
   - Replaces direct `electron-log` usage with structured, leveled logs
   - Exports: `initializeMainDebugLog`
 
+- `log-service.js`
+  - Centralized log service configuring electron-log to write to `userData/logs/app-YYYY-MM-DD.log`
+  - Rotation: daily file (selected at app start) with 5 MB size-based rollover
+  - Retention: prune files older than 14 days at app start (configurable)
+  - Export: concatenates recent N days into a single `.log` via `exportLogs({ days })`
+  - Exports: `initMainLogService`, `getLogService`
+
 ### Coordinator (`index-modular.js`)
 - Creates `electron-store` with defaults; initializes DebugLog
 - Sets up auto-updater (logger, feed URL on macOS)
@@ -50,11 +59,17 @@ src/main/
 ### Notes
 - Context Isolation is enabled; all renderer access is via preload/IPC
 - Audio playback for quick tests uses Howler in main (via IPC) when applicable
+- The application menu includes an “Export Logs…” item on macOS (and equivalent in other platforms) to invoke the centralized log export
 
 ### Adding a new IPC handler
 1. Add the handler in `modules/ipc-handlers.js` within `registerAllHandlers()`
 2. Validate inputs; return `{ success, data|error }`
 3. Expose via preload secure bridge if needed
+
+### Logs IPC Reference
+- `logs:write` → Write a line through the centralized log service. Payload: `{ level, message, context?, meta? }`
+- `logs:get-paths` → Returns `{ logsDir, current }`
+- `logs:export` → Opens a save dialog and exports recent logs. Options: `{ days?: number }`
 
 ### Status
 - App setup, IPC, file ops, and coordinator are complete and in use.

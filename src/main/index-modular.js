@@ -30,6 +30,7 @@ import * as appSetup from './modules/app-setup.js';
 import * as ipcHandlers from './modules/ipc-handlers.js';
 import * as fileOperations from './modules/file-operations.js';
 import initializeMainDebugLog from './modules/debug-log.js';
+import { initMainLogService } from './modules/log-service.js';
 
 // Initialize Octokit for GitHub API
 let octokit;
@@ -69,6 +70,8 @@ const store = new Store({
 
 // Initialize main process DebugLog
 const debugLog = initializeMainDebugLog({ store });
+// Centralized Log Service for file persistence and export
+const logService = initMainLogService({ store });
 
 // Log the resolved store path for diagnostics (after logger is initialized)
 debugLog.info('Electron Store initialized', { function: 'store-init', storePath: store.path, appName: app.getName() });
@@ -273,7 +276,8 @@ function initializeModules() {
     audioInstances,
     autoUpdater,
     fileOperations,
-    debugLog
+    debugLog,
+    logService
   };
 
   // Initialize each module

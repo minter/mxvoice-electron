@@ -6,6 +6,7 @@
  */
 
 import { app, BrowserWindow, Menu, dialog, shell } from 'electron';
+import { getLogService } from './log-service.js';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
@@ -292,6 +293,12 @@ function createApplicationMenu() {
           label: 'Developer Tools',
           click: () => {
             mainWindow.openDevTools();
+          }
+        },
+        {
+          label: 'Export Logs…',
+          click: async () => {
+            try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
           }
         },
         {

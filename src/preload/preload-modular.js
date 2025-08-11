@@ -36,6 +36,66 @@ try {
   const secureAPIExposed = secureApiExposer.exposeSecureAPI();
   if (secureAPIExposed) {
     debugLog.info('✅ Secure API exposed via contextBridge (context isolation enabled)');
+    // Capture runtime errors and unhandled rejections for persistence
+    try {
+      window.addEventListener('error', (ev) => {
+        try {
+          const payload = {
+            message: ev?.message || 'Unhandled error',
+            stack: ev?.error?.stack || null,
+            filename: ev?.filename,
+            lineno: ev?.lineno,
+            colno: ev?.colno,
+            type: ev?.type
+          };
+          window.secureElectronAPI?.logs?.write('ERROR', payload.message, payload, { source: 'unhandled' });
+        } catch (_) {}
+      });
+      window.addEventListener('unhandledrejection', (ev) => {
+        try {
+          const reason = ev?.reason;
+          let message = 'unhandledrejection';
+          let stack = null;
+          if (reason instanceof Error) {
+            message = reason.message || message;
+            stack = reason.stack || null;
+          } else if (typeof reason === 'string') {
+            message = reason;
+          } else {
+            message = 'unhandledrejection (non-error)';
+          }
+          const context = { stack };
+          window.secureElectronAPI?.logs?.write('ERROR', message, context, { source: 'unhandled' });
+        } catch (_) {}
+      });
+    } catch (_) {
+      // ignore
+    }
+
+    // Mirror console errors and warnings to file logs while preserving DevTools output
+    try {
+      const origError = console.error.bind(console);
+      console.error = (...args) => {
+        try {
+          const msg = typeof args[0] === 'string' ? args[0] : String(args[0]);
+          const context = args.length > 1 ? { args } : null;
+          window.secureElectronAPI?.logs?.write('ERROR', msg, context, { source: 'console' });
+        } catch (_) {}
+        origError(...args);
+      };
+
+      const origWarn = console.warn.bind(console);
+      console.warn = (...args) => {
+        try {
+          const msg = typeof args[0] === 'string' ? args[0] : String(args[0]);
+          const context = args.length > 1 ? { args } : null;
+          window.secureElectronAPI?.logs?.write('WARN', msg, context, { source: 'console' });
+        } catch (_) {}
+        origWarn(...args);
+      };
+    } catch (_) {
+      // ignore
+    }
   } else {
     debugLog.error('❌ Failed to expose secure API - context isolation may not work properly');
   }

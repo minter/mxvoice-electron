@@ -356,13 +356,10 @@ const context = {
 debugLog.info("Operation completed", context);
 ```
 
-## Future Enhancements
+## Integration with Centralized Log Service
 
-Potential future improvements:
-
-1. **Log File Output**: Write logs to files
-2. **Log Rotation**: Automatic log file rotation
-3. **Remote Logging**: Send logs to remote services
-4. **Log Filtering**: Filter logs by module/function
-5. **Performance Metrics**: Built-in performance tracking
-6. **Log Aggregation**: Collect logs from multiple sources 
+- All renderer logs still show in DevTools for advanced users.
+- The same logs are forwarded to the main process via `window.secureElectronAPI.logs.write` (also available under `window.electronAPI.logs` for compatibility) and persisted to files under `userData/logs/`.
+- Errors and warnings from the renderer `console` and unhandled errors/rejections are mirrored to the centralized log service by preload.
+- Rotation: daily file (selected at app start) with 5 MB rollover; retention: 14 days (pruned at app start).
+- Users can export recent logs via the app menu (“Export Logs…”) or programmatically via `window.secureElectronAPI.logs.export({ days })`.

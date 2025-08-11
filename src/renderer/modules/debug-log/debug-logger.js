@@ -147,6 +147,7 @@ function initializeDebugLogger(options = {}) {
     if (currentLogLevel >= LOG_LEVELS.ERROR) {
       const formattedMessage = formatLogMessage('ERROR', message, context);
       console.error(formattedMessage);
+      try { electronAPI?.logs?.write('ERROR', message, context, { source: 'app' }); } catch (_) {}
     }
   }
   
@@ -160,6 +161,7 @@ function initializeDebugLogger(options = {}) {
     if (currentLogLevel >= LOG_LEVELS.WARN) {
       const formattedMessage = formatLogMessage('WARN', message, context);
       console.warn(formattedMessage);
+      try { electronAPI?.logs?.write('WARN', message, context, { source: 'app' }); } catch (_) {}
     }
   }
   
@@ -175,6 +177,7 @@ function initializeDebugLogger(options = {}) {
       if (debugEnabled) {
         const formattedMessage = formatLogMessage('INFO', message, context);
         console.info(formattedMessage);
+        try { electronAPI?.logs?.write('INFO', message, context, { source: 'app' }); } catch (_) {}
       }
     }
   }
@@ -191,6 +194,7 @@ function initializeDebugLogger(options = {}) {
       if (debugEnabled) {
         const formattedMessage = formatLogMessage('DEBUG', message, context);
         console.log(formattedMessage);
+        try { electronAPI?.logs?.write('DEBUG', message, context, { source: 'app' }); } catch (_) {}
       }
     }
   }
