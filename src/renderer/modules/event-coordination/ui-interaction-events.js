@@ -1,6 +1,6 @@
 /**
  * UI Interaction Events Module
- * 
+ *
  * Handles all UI interaction event handlers that were previously in renderer.js.
  * Includes modals, tabs, window resize, and form interactions.
  */
@@ -12,7 +12,7 @@ export default class UIInteractionEvents {
     this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
     this.moduleRegistry = dependencies.moduleRegistry || window.moduleRegistry;
-    
+
     this.eventsAttached = false;
     this.uiHandlers = new Map();
   }
@@ -23,11 +23,11 @@ export default class UIInteractionEvents {
   async attachUIInteractionEvents() {
     try {
       if (this.eventsAttached) {
-        this.debugLog?.warn('UI interaction events already attached');
+        this.debugLog?.warn("UI interaction events already attached");
         return;
       }
 
-      this.debugLog?.info('Attaching UI interaction event handlers...');
+      this.debugLog?.info("Attaching UI interaction event handlers...");
 
       // Modal events
       this.attachModalEvents();
@@ -45,10 +45,11 @@ export default class UIInteractionEvents {
       this.attachConfirmationEvents();
 
       this.eventsAttached = true;
-      this.debugLog?.info('UI interaction event handlers attached successfully');
-
+      this.debugLog?.info(
+        "UI interaction event handlers attached successfully"
+      );
     } catch (error) {
-      this.debugLog?.error('Failed to attach UI interaction events:', error);
+      this.debugLog?.error("Failed to attach UI interaction events:", error);
     }
   }
 
@@ -61,53 +62,54 @@ export default class UIInteractionEvents {
         // Hide other modals when one is shown
         $(".modal").modal("hide");
       } catch (error) {
-        this.debugLog?.error('Error in modal show handler:', error);
+        this.debugLog?.error("Error in modal show handler:", error);
       }
     };
 
     $(".modal").on("show.bs.modal", modalShowHandler);
-    this.uiHandlers.set('modalShow', { element: '.modal', event: 'show.bs.modal', handler: modalShowHandler });
-    
-    this.debugLog?.debug('Modal events attached');
+    this.uiHandlers.set("modalShow", {
+      element: ".modal",
+      event: "show.bs.modal",
+      handler: modalShowHandler,
+    });
+
+    this.debugLog?.debug("Modal events attached");
   }
 
   /**
    * Tab interaction events (lines 1114-1120 from renderer.js)
    */
   attachTabEvents() {
-    // Hotkey tab double-click for renaming
-    const hotkeyTabDoubleClickHandler = (event) => {
-      try {
-        if (window.renameHotkeyTab) {
-          window.renameHotkeyTab();
-        } else {
-          this.debugLog?.warn('renameHotkeyTab function not available');
-        }
-      } catch (error) {
-        this.debugLog?.error('Error in hotkey tab double-click handler:', error);
-      }
-    };
-
     // Holding tank tab double-click for renaming
     const holdingTankTabDoubleClickHandler = (event) => {
       try {
         if (window.renameHoldingTankTab) {
           window.renameHoldingTankTab();
         } else {
-          this.debugLog?.warn('renameHoldingTankTab function not available');
+          this.debugLog?.warn("renameHoldingTankTab function not available");
         }
       } catch (error) {
-        this.debugLog?.error('Error in holding tank tab double-click handler:', error);
+        this.debugLog?.error(
+          "Error in holding tank tab double-click handler:",
+          error
+        );
       }
     };
 
-    $("#hotkey_tabs").on("dblclick", ".nav-link", hotkeyTabDoubleClickHandler);
-    $("#holding_tank_tabs").on("dblclick", ".nav-link", holdingTankTabDoubleClickHandler);
+    $("#holding_tank_tabs").on(
+      "dblclick",
+      ".nav-link",
+      holdingTankTabDoubleClickHandler
+    );
 
-    this.uiHandlers.set('hotkeyTabDoubleClick', { element: '#hotkey_tabs', event: 'dblclick', selector: '.nav-link', handler: hotkeyTabDoubleClickHandler });
-    this.uiHandlers.set('holdingTankTabDoubleClick', { element: '#holding_tank_tabs', event: 'dblclick', selector: '.nav-link', handler: holdingTankTabDoubleClickHandler });
-    
-    this.debugLog?.debug('Tab events attached');
+    this.uiHandlers.set("holdingTankTabDoubleClick", {
+      element: "#holding_tank_tabs",
+      event: "dblclick",
+      selector: ".nav-link",
+      handler: holdingTankTabDoubleClickHandler,
+    });
+
+    this.debugLog?.debug("Tab events attached");
   }
 
   /**
@@ -119,17 +121,21 @@ export default class UIInteractionEvents {
         if (window.scaleScrollable) {
           window.scaleScrollable();
         } else {
-          this.debugLog?.warn('scaleScrollable function not available');
+          this.debugLog?.warn("scaleScrollable function not available");
         }
       } catch (error) {
-        this.debugLog?.error('Error in window resize handler:', error);
+        this.debugLog?.error("Error in window resize handler:", error);
       }
     };
 
     $(window).on("resize", windowResizeHandler);
-    this.uiHandlers.set('windowResize', { element: window, event: 'resize', handler: windowResizeHandler });
-    
-    this.debugLog?.debug('Window events attached');
+    this.uiHandlers.set("windowResize", {
+      element: window,
+      event: "resize",
+      handler: windowResizeHandler,
+    });
+
+    this.debugLog?.debug("Window events attached");
   }
 
   /**
@@ -147,21 +153,24 @@ export default class UIInteractionEvents {
         $("#song-form-duration").val("");
         $("#SongFormNewCategory").hide();
       } catch (error) {
-        this.debugLog?.error('Error in song form modal hidden handler:', error);
+        this.debugLog?.error("Error in song form modal hidden handler:", error);
       }
     };
 
     // Song form modal shown event
     const songFormModalShownHandler = (event) => {
       try {
-        this.debugLog?.debug('Song form title length:', $("#song-form-title").val().length);
+        this.debugLog?.debug(
+          "Song form title length:",
+          $("#song-form-title").val().length
+        );
         if (!$("#song-form-title").val().length) {
           $("#song-form-title").focus();
         } else {
           $("#song-form-info").focus();
         }
       } catch (error) {
-        this.debugLog?.error('Error in song form modal shown handler:', error);
+        this.debugLog?.error("Error in song form modal shown handler:", error);
       }
     };
 
@@ -174,18 +183,31 @@ export default class UIInteractionEvents {
           this.electronAPI.store.get("music_directory"),
           this.electronAPI.store.get("hotkey_directory"),
           this.electronAPI.store.get("fade_out_seconds"),
-          this.electronAPI.store.get("debug_log_enabled")
-        ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds, debugLog]) => {
-          if (dbDir.success) $("#preferences-database-directory").val(dbDir.value);
-          if (musicDir.success) $("#preferences-song-directory").val(musicDir.value);
-          if (hotkeyDir.success) $("#preferences-hotkey-directory").val(hotkeyDir.value);
-          if (fadeSeconds.success) $("#preferences-fadeout-seconds").val(fadeSeconds.value);
-          if (debugLog.success) $("#preferences-debug-log-enabled").prop("checked", debugLog.value);
-        }).catch(error => {
-          this.debugLog?.warn('Failed to load preferences', error);
-        });
+          this.electronAPI.store.get("debug_log_enabled"),
+        ])
+          .then(([dbDir, musicDir, hotkeyDir, fadeSeconds, debugLog]) => {
+            if (dbDir.success)
+              $("#preferences-database-directory").val(dbDir.value);
+            if (musicDir.success)
+              $("#preferences-song-directory").val(musicDir.value);
+            if (hotkeyDir.success)
+              $("#preferences-hotkey-directory").val(hotkeyDir.value);
+            if (fadeSeconds.success)
+              $("#preferences-fadeout-seconds").val(fadeSeconds.value);
+            if (debugLog.success)
+              $("#preferences-debug-log-enabled").prop(
+                "checked",
+                debugLog.value
+              );
+          })
+          .catch((error) => {
+            this.debugLog?.warn("Failed to load preferences", error);
+          });
       } catch (error) {
-        this.debugLog?.error('Error in preferences modal shown handler:', error);
+        this.debugLog?.error(
+          "Error in preferences modal shown handler:",
+          error
+        );
       }
     };
 
@@ -204,7 +226,10 @@ export default class UIInteractionEvents {
           }
         });
       } catch (error) {
-        this.debugLog?.error('Error in song form category change handler:', error);
+        this.debugLog?.error(
+          "Error in song form category change handler:",
+          error
+        );
       }
     };
 
@@ -213,15 +238,31 @@ export default class UIInteractionEvents {
     $("#preferencesModal").on("shown.bs.modal", preferencesModalShownHandler);
     $("#song-form-category").change(songFormCategoryChangeHandler);
 
-    this.uiHandlers.set('songFormModalHidden', { element: '#songFormModal', event: 'hidden.bs.modal', handler: songFormModalHiddenHandler });
-    this.uiHandlers.set('songFormModalShown', { element: '#songFormModal', event: 'shown.bs.modal', handler: songFormModalShownHandler });
-    this.uiHandlers.set('preferencesModalShown', { element: '#preferencesModal', event: 'shown.bs.modal', handler: preferencesModalShownHandler });
-    this.uiHandlers.set('songFormCategoryChange', { element: '#song-form-category', event: 'change', handler: songFormCategoryChangeHandler });
-    
+    this.uiHandlers.set("songFormModalHidden", {
+      element: "#songFormModal",
+      event: "hidden.bs.modal",
+      handler: songFormModalHiddenHandler,
+    });
+    this.uiHandlers.set("songFormModalShown", {
+      element: "#songFormModal",
+      event: "shown.bs.modal",
+      handler: songFormModalShownHandler,
+    });
+    this.uiHandlers.set("preferencesModalShown", {
+      element: "#preferencesModal",
+      event: "shown.bs.modal",
+      handler: preferencesModalShownHandler,
+    });
+    this.uiHandlers.set("songFormCategoryChange", {
+      element: "#song-form-category",
+      event: "change",
+      handler: songFormCategoryChangeHandler,
+    });
+
     // Trigger change event on page load
     $("#song-form-category").change();
-    
-    this.debugLog?.debug('Form events attached');
+
+    this.debugLog?.debug("Form events attached");
   }
 
   /**
@@ -233,17 +274,27 @@ export default class UIInteractionEvents {
         if (window.restoreFocusToSearch) {
           window.restoreFocusToSearch();
         } else {
-          this.debugLog?.warn('restoreFocusToSearch function not available');
+          this.debugLog?.warn("restoreFocusToSearch function not available");
         }
       } catch (error) {
-        this.debugLog?.error('Error in confirmation modal hidden handler:', error);
+        this.debugLog?.error(
+          "Error in confirmation modal hidden handler:",
+          error
+        );
       }
     };
 
-    $("#confirmationModal").on("hidden.bs.modal", confirmationModalHiddenHandler);
-    this.uiHandlers.set('confirmationModalHidden', { element: '#confirmationModal', event: 'hidden.bs.modal', handler: confirmationModalHiddenHandler });
-    
-    this.debugLog?.debug('Confirmation events attached');
+    $("#confirmationModal").on(
+      "hidden.bs.modal",
+      confirmationModalHiddenHandler
+    );
+    this.uiHandlers.set("confirmationModalHidden", {
+      element: "#confirmationModal",
+      event: "hidden.bs.modal",
+      handler: confirmationModalHiddenHandler,
+    });
+
+    this.debugLog?.debug("Confirmation events attached");
   }
 
   /**
@@ -251,12 +302,16 @@ export default class UIInteractionEvents {
    */
   detachEvents() {
     try {
-      this.debugLog?.info('Detaching UI interaction events...');
+      this.debugLog?.info("Detaching UI interaction events...");
 
       for (const [name, handler] of this.uiHandlers) {
         if (handler.selector) {
           // Delegated event
-          $(handler.element).off(handler.event, handler.selector, handler.handler);
+          $(handler.element).off(
+            handler.event,
+            handler.selector,
+            handler.handler
+          );
         } else {
           // Direct event
           $(handler.element).off(handler.event, handler.handler);
@@ -266,11 +321,10 @@ export default class UIInteractionEvents {
 
       this.uiHandlers.clear();
       this.eventsAttached = false;
-      
-      this.debugLog?.info('UI interaction events detached successfully');
 
+      this.debugLog?.info("UI interaction events detached successfully");
     } catch (error) {
-      this.debugLog?.error('Failed to detach UI interaction events:', error);
+      this.debugLog?.error("Failed to detach UI interaction events:", error);
     }
   }
 
@@ -281,7 +335,7 @@ export default class UIInteractionEvents {
     return {
       eventsAttached: this.eventsAttached,
       handlerCount: this.uiHandlers.size,
-      handlers: Array.from(this.uiHandlers.keys())
+      handlers: Array.from(this.uiHandlers.keys()),
     };
   }
 }
