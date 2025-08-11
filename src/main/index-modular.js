@@ -290,8 +290,11 @@ const createWindow = () => {
   // Initialize database connection for main process
   initializeDatabase();
 
-  // Create the window
-  mainWindow = appSetup.createWindow();
+  // Create the window with restored size from store
+  mainWindow = appSetup.createWindow({
+    width: store.get('browser_width') || defaults.browser_width,
+    height: store.get('browser_height') || defaults.browser_height
+  });
 
   // Initialize modules with dependencies AFTER mainWindow is created
   initializeModules();

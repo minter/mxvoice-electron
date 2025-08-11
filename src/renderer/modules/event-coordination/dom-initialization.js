@@ -111,23 +111,16 @@ export default class DOMInitialization {
       // Native context menu implemented in place of jQuery plugin
       const menu = document.createElement('div');
       menu.id = 'mxv-context-menu';
+      menu.className = 'mxv-context-menu';
       Object.assign(menu.style, {
-        position: 'fixed', zIndex: '9999', background: '#fff',
-        border: '1px solid rgba(0,0,0,0.15)', borderRadius: '0.25rem',
-        boxShadow: '0 0.5rem 1rem rgba(0,0,0,0.15)', padding: '0.25rem 0',
-        display: 'none', minWidth: '200px'
+        position: 'fixed', zIndex: '9999', display: 'none', minWidth: '200px'
       });
       const mkItem = (label, onClick) => {
         const item = document.createElement('button');
         item.type = 'button';
         item.textContent = label;
-        Object.assign(item.style, {
-          display: 'block', width: '100%', textAlign: 'left', padding: '0.375rem 0.75rem',
-          background: 'transparent', border: 'none', cursor: 'pointer'
-        });
+        item.className = 'mxv-context-item';
         item.addEventListener('click', (e) => { e.stopPropagation(); hide(); onClick?.(); });
-        item.addEventListener('mouseenter', () => { item.style.background = '#f8f9fa'; });
-        item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
         return item;
       };
       const playItem = mkItem('Play', () => { if (window.playSelected) window.playSelected(); });

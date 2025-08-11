@@ -31,11 +31,13 @@ function initializeAppSetup(dependencies) {
 }
 
 // Create the main window
-function createWindow() {
+// Accept initial dimensions so the caller (which has access to the store)
+// can restore the last-saved size on startup.
+function createWindow({ width = 1200, height = 800 } = {}) {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width,
+    height,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

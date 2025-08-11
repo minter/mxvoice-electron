@@ -106,8 +106,14 @@ export const domUtils = {
   addClass: (element, className) => {
     const el = $(element);
     if (el && className) {
-      el.classList.add(...className.split(' '));
-      debugLog.debug(`Classes added to ${el.tagName}: ${className}`);
+      const tokens = String(className)
+        .split(' ')
+        .map(t => t.trim())
+        .filter(Boolean);
+      if (tokens.length > 0) {
+        el.classList.add(...tokens);
+        debugLog.debug(`Classes added to ${el.tagName}: ${tokens.join(' ')}`);
+      }
     }
     return el;
   },
@@ -115,8 +121,14 @@ export const domUtils = {
   removeClass: (element, className) => {
     const el = $(element);
     if (el && className) {
-      el.classList.remove(...className.split(' '));
-      debugLog.debug(`Classes removed from ${el.tagName}: ${className}`);
+      const tokens = String(className)
+        .split(' ')
+        .map(t => t.trim())
+        .filter(Boolean);
+      if (tokens.length > 0) {
+        el.classList.remove(...tokens);
+        debugLog.debug(`Classes removed from ${el.tagName}: ${tokens.join(' ')}`);
+      }
     }
     return el;
   },
