@@ -8,6 +8,7 @@
 
 // Import shared state
 import sharedState from '../shared-state.js';
+import { songDrag } from '../drag-drop/drag-drop-functions.js';
 
 // Import debug logger
 let debugLog = null;
@@ -134,6 +135,7 @@ function performLiveSearch(searchTerm) {
   $("#search_results tbody").find("tr").remove();
   $("#search_results thead").show();
 
+  const tbody = document.querySelector('#search_results tbody');
   const raw_html = [];
   const query_params = [];
   const query_segments = [];
@@ -195,6 +197,7 @@ function performLiveSearch(searchTerm) {
           function: 'performLiveSearch',
           resultCount: result.data.length
         });
+        const fragment = document.createDocumentFragment();
         result.data.forEach((row) => {
           const categoryName = getCategoryName(row.category);
           debugLog?.info(`🔍 Row category: ${row.category} -> ${categoryName}`, { 
@@ -203,26 +206,53 @@ function performLiveSearch(searchTerm) {
             categoryCode: row.category,
             categoryName: categoryName
           });
-          
-          raw_html.push(
-            `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
-              row.id
-            }'><td class='hide-1'>${categoryName}</td><td class='hide-2'>${
-              row.info || ""
-            }</td><td style='font-weight: bold'>${
-              row.title || ""
-            }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
-              row.time
-            }</td></tr>`
-          );
+
+          const tr = document.createElement('tr');
+          tr.className = 'song unselectable context-menu';
+          tr.draggable = true;
+          tr.style.fontSize = `${fontSize}px`;
+          tr.setAttribute('songid', String(row.id));
+          tr.addEventListener('dragstart', songDrag);
+
+          const tdCategory = document.createElement('td');
+          tdCategory.className = 'hide-1';
+          tdCategory.textContent = categoryName || '';
+          tr.appendChild(tdCategory);
+
+          const tdInfo = document.createElement('td');
+          tdInfo.className = 'hide-2';
+          tdInfo.textContent = row.info || '';
+          tr.appendChild(tdInfo);
+
+          const tdTitle = document.createElement('td');
+          tdTitle.style.fontWeight = 'bold';
+          tdTitle.textContent = row.title || '';
+          tr.appendChild(tdTitle);
+
+          const tdArtist = document.createElement('td');
+          tdArtist.style.fontWeight = 'bold';
+          tdArtist.textContent = row.artist || '';
+          tr.appendChild(tdArtist);
+
+          const tdTime = document.createElement('td');
+          tdTime.textContent = row.time || '';
+          tr.appendChild(tdTime);
+
+          fragment.appendChild(tr);
         });
-        $("#search_results").append(raw_html.join(""));
+        tbody?.appendChild(fragment);
 
         // Show indicator if there are more results
         if (result.data.length === 50) {
-          $("#search_results").append(
-            `<tr><td colspan="5" class="text-center text-muted"><small>Showing first 50 results. Press Enter for complete search.</small></td></tr>`
-          );
+          const infoRow = document.createElement('tr');
+          const infoCell = document.createElement('td');
+          infoCell.colSpan = 5;
+          infoCell.className = 'text-center text-muted';
+          const small = document.createElement('small');
+          small.textContent = 'Showing first 50 results. Press Enter for complete search.';
+          infoCell.appendChild(small);
+          infoRow.appendChild(infoCell);
+          (tbody || document.querySelector('#search_results tbody'))?.appendChild(infoRow);
         }
 
         scale_scrollable();

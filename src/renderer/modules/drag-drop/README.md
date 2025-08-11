@@ -37,5 +37,9 @@ $('#some-row').on('dragstart', (e) => dragDrop.songDrag(e.originalEvent));
 - Column reorder via drag handlers
 - Event handler wiring via `setupDragDropEventHandlers()`
 
+## Security and DOM Guidance
+- Consumers should attach drag listeners using `addEventListener('dragstart', songDrag)` and avoid inline attributes like `ondragstart`.
+- When rendering draggable rows/spans, set user-provided values with `textContent` and never via `innerHTML`.
+
 ## Dependencies
 - jQuery, animation utils; integrates with hotkeys/holding-tank modules for drop behavior

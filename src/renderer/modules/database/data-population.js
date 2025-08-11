@@ -8,6 +8,7 @@
 
 // Import secure adapters for Phase 2 migration
 import { secureDatabase, secureStore } from '../adapters/secure-adapter.js';
+import { songDrag } from '../drag-drop/drag-drop-functions.js';
 
 // Import debug logger
 let debugLog = null;
@@ -209,7 +210,7 @@ async function addToHoldingTank(song_id, element) {
         song_row.style.fontSize = `${currentFontSize}px`;
         song_row.className = "song list-group-item context-menu";
         song_row.setAttribute("draggable", "true");
-        song_row.setAttribute("ondragstart", "songDrag(event)");
+        song_row.addEventListener('dragstart', songDrag);
         song_row.setAttribute("songid", song_id);
         song_row.textContent = `${title} by ${artist} (${time})`;
       }

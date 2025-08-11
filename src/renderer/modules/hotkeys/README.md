@@ -359,6 +359,10 @@ The module includes comprehensive error handling:
 - Validates all external data
 - Implements proper error boundaries
 
+### DOM Safety
+- Hotkey elements are created via DOM APIs rather than HTML strings.
+- Drag handlers are attached programmatically using `addEventListener('dragstart', songDrag)` from the `drag-drop` module; inline `ondragstart` is not used.
+
 ## Migration Guide
 
 ### From Legacy Code

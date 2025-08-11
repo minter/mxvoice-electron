@@ -17,6 +17,7 @@ try {
 
 // Import secure adapters
 import { secureFileSystem, secureDatabase, securePath, secureStore } from '../adapters/secure-adapter.js';
+import { songDrag } from '../drag-drop/drag-drop-functions.js';
 
 // Supported audio file extensions (lowercase)
 const SUPPORTED_AUDIO_EXTS = new Set([".mp3", ".mp4", ".m4a", ".wav", ".ogg", ".flac", ".aac"]);
@@ -129,9 +130,38 @@ export async function addSongsByPath(pathArray, category) {
     }
 
     const categoryLabel = (typeof categories !== 'undefined') ? categories[category] : category;
-    $("#search_results").append(
-      `<tr draggable='true' ondragstart='songDrag(event)' class='song unselectable context-menu' songid='${lastId || ''}'><td>${categoryLabel}</td><td></td><td style='font-weight: bold'>${title || ""}</td><td style='font-weight:bold'>${artist || ""}</td><td>${durationString}</td></tr>`
-    );
+
+    // Create row safely without interpreting user-controlled values as HTML
+    const row = document.createElement('tr');
+    row.className = 'song unselectable context-menu';
+    row.setAttribute('songid', String(lastId || ''));
+    row.draggable = true;
+    row.addEventListener('dragstart', songDrag);
+
+    const tdCategory = document.createElement('td');
+    tdCategory.textContent = categoryLabel || '';
+    row.appendChild(tdCategory);
+
+    const tdEmpty = document.createElement('td');
+    row.appendChild(tdEmpty);
+
+    const tdTitle = document.createElement('td');
+    tdTitle.style.fontWeight = 'bold';
+    tdTitle.textContent = title || '';
+    row.appendChild(tdTitle);
+
+    const tdArtist = document.createElement('td');
+    tdArtist.style.fontWeight = 'bold';
+    tdArtist.textContent = artist || '';
+    row.appendChild(tdArtist);
+
+    const tdDuration = document.createElement('td');
+    tdDuration.textContent = durationString || '';
+    row.appendChild(tdDuration);
+
+    // Append to results table
+    const results = document.querySelector('#search_results tbody') || document.querySelector('#search_results');
+    results?.appendChild(row);
 
     // Process the rest
     await addSongsByPath(pathArray, category);

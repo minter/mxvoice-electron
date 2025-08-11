@@ -21,6 +21,7 @@ try {
 
 // Import live search functionality
 import * as liveSearch from './live-search.js';
+import { songDrag } from '../drag-drop/drag-drop-functions.js';
 
 // Get categories for search functionality
 function getCategories() {
@@ -182,22 +183,44 @@ function searchData() {
   if (window.electronAPI && window.electronAPI.database) {
     window.electronAPI.database.query("SELECT * from mrvoice" + queryString + " ORDER BY category,info,title,artist", queryParams).then(result => {
       if (result.success) {
-        const raw_html = [];
+        const tbody = document.querySelector('#search_results tbody');
+        const fragment = document.createDocumentFragment();
         result.data.forEach((row) => {
           const categoryName = getCategoryNameSync(row.category);
-          raw_html.push(
-            `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
-              row.id
-            }'><td class='hide-1'>${categoryName}</td><td class='hide-2'>${
-              row.info || ""
-            }</td><td style='font-weight: bold'>${
-              row.title || ""
-            }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
-              row.time
-            }</td></tr>`
-          );
+          const tr = document.createElement('tr');
+          tr.className = 'song unselectable context-menu';
+          tr.draggable = true;
+          tr.style.fontSize = `${fontSize}px`;
+          tr.setAttribute('songid', String(row.id));
+          tr.addEventListener('dragstart', songDrag);
+
+          const tdCategory = document.createElement('td');
+          tdCategory.className = 'hide-1';
+          tdCategory.textContent = categoryName || '';
+          tr.appendChild(tdCategory);
+
+          const tdInfo = document.createElement('td');
+          tdInfo.className = 'hide-2';
+          tdInfo.textContent = row.info || '';
+          tr.appendChild(tdInfo);
+
+          const tdTitle = document.createElement('td');
+          tdTitle.style.fontWeight = 'bold';
+          tdTitle.textContent = row.title || '';
+          tr.appendChild(tdTitle);
+
+          const tdArtist = document.createElement('td');
+          tdArtist.style.fontWeight = 'bold';
+          tdArtist.textContent = row.artist || '';
+          tr.appendChild(tdArtist);
+
+          const tdTime = document.createElement('td');
+          tdTime.textContent = row.time || '';
+          tr.appendChild(tdTime);
+
+          fragment.appendChild(tr);
         });
-        $("#search_results").append(raw_html.join(""));
+        tbody?.appendChild(fragment);
         if (typeof scaleScrollable === 'function') {
           scaleScrollable();
         }
@@ -224,21 +247,44 @@ function searchData() {
             " ORDER BY category,info,title,artist"
         );
         const rows = stmt.all(queryParams);
+        const tbody2 = document.querySelector('#search_results tbody');
+        const fragment2 = document.createDocumentFragment();
         rows.forEach((row) => {
           const categoryName = getCategoryNameSync(row.category);
-          raw_html.push(
-            `<tr draggable='true' ondragstart='songDrag(event)' style='font-size: ${fontSize}px' class='song unselectable context-menu' songid='${
-              row.id
-            }'><td class='hide-1'>${categoryName}</td><td class='hide-2'>${
-              row.info || ""
-            }</td><td style='font-weight: bold'>${
-              row.title || ""
-            }</td><td style='font-weight:bold'>${row.artist || ""}</td><td>${
-              row.time
-            }</td></tr>`
-          );
+          const tr = document.createElement('tr');
+          tr.className = 'song unselectable context-menu';
+          tr.draggable = true;
+          tr.style.fontSize = `${fontSize}px`;
+          tr.setAttribute('songid', String(row.id));
+          tr.addEventListener('dragstart', songDrag);
+
+          const tdCategory = document.createElement('td');
+          tdCategory.className = 'hide-1';
+          tdCategory.textContent = categoryName || '';
+          tr.appendChild(tdCategory);
+
+          const tdInfo = document.createElement('td');
+          tdInfo.className = 'hide-2';
+          tdInfo.textContent = row.info || '';
+          tr.appendChild(tdInfo);
+
+          const tdTitle = document.createElement('td');
+          tdTitle.style.fontWeight = 'bold';
+          tdTitle.textContent = row.title || '';
+          tr.appendChild(tdTitle);
+
+          const tdArtist = document.createElement('td');
+          tdArtist.style.fontWeight = 'bold';
+          tdArtist.textContent = row.artist || '';
+          tr.appendChild(tdArtist);
+
+          const tdTime = document.createElement('td');
+          tdTime.textContent = row.time || '';
+          tr.appendChild(tdTime);
+
+          fragment2.appendChild(tr);
         });
-        $("#search_results").append(raw_html.join(""));
+        tbody2?.appendChild(fragment2);
         if (typeof scaleScrollable === 'function') {
           scaleScrollable();
         }
