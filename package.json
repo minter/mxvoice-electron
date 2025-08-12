@@ -124,7 +124,6 @@
     "howler": "^2.2.3",
     "jquery": "^3.6.0",
     "jquery-contextmenu": "^2.9.2",
-    "lodash": "^4.17.21",
     "markdown-it": "^14.1.0",
     "mousetrap": "^1.6.5",
     "music-metadata": "8.1.3",
