@@ -114,7 +114,6 @@
     "@fortawesome/fontawesome-free": "^7.0.0",
     "@octokit/rest": "^22.0.0",
     "animate.css": "^4.1.1",
-    "axios": "^0.30.0",
     "better-sqlite3": "^12.2.0",
     "bootstrap": "^4.6.0",
     "electron-log": "^5.4.2",
