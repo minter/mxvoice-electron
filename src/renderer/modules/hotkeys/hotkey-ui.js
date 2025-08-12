@@ -32,7 +32,6 @@ function hotkeyDrop(event, options = {}) {
   event.preventDefault();
   const song_id = event.dataTransfer.getData('text');
   const target = event.currentTarget;
-  if (target) target.setAttribute('songid', song_id);
   
   // Use the module instance's setLabelFromSongId method if available (when bound to HotkeysModule)
   // Otherwise fall back to global function

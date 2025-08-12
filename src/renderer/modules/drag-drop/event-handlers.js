@@ -25,24 +25,7 @@ import { secureStore } from '../adapters/secure-adapter.js';
  * Setup all drag and drop event handlers
  */
 export function setupDragDropEventHandlers() {
-  // Hotkey drop handlers
-  document.querySelectorAll('.hotkeys li').forEach(li => {
-    li.addEventListener('drop', (e) => {
-      li.classList.remove('drop_target');
-      const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
-      if (!dt || !dt.getData('text')?.length) return;
-      hotkeyDrop(e);
-    });
-
-    li.addEventListener('dragover', (e) => {
-      li.classList.add('drop_target');
-      allowHotkeyDrop(e);
-    });
-
-    li.addEventListener('dragleave', () => {
-      li.classList.remove('drop_target');
-    });
-  });
+  // Hotkey drop handlers are owned by the hotkeys module to avoid duplicate bindings
 
   // Holding tank drop handlers - target the container and list items
   document.querySelectorAll('#holding_tank, .holding_tank li').forEach(target => {
