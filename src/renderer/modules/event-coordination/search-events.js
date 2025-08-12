@@ -121,6 +121,27 @@ export default class SearchEvents {
     // Search form input keydown handler
     const searchFormKeydownHandler = (event) => {
       try {
+        // Esc should stop playback even when focus is inside a search field
+        if (event.key === 'Escape' || event.code === 'Escape') {
+          this.debugLog?.debug('Escape pressed in search input; attempting to stop playback');
+          if (window.stopPlaying && typeof window.stopPlaying === 'function') {
+            // Support Shift+Esc for fade-out, mirroring global behavior
+            window.stopPlaying(Boolean(event.shiftKey));
+          } else {
+            this.debugLog?.warn('stopPlaying function not available');
+          }
+          // Cancel any pending live-search debounce to avoid unintended result clearing
+          try {
+            if (window.searchTimeout) {
+              clearTimeout(window.searchTimeout);
+              window.searchTimeout = null;
+            }
+          } catch {}
+          event.preventDefault();
+          event.stopPropagation();
+          return false;
+        }
+
         if (event.code == "Enter") {
           // Clear any pending live search using shared state
           const searchTimeout = window.searchTimeout;
