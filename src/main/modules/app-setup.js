@@ -363,6 +363,12 @@ function createApplicationMenu() {
           click: () => {
             mainWindow.openDevTools();
           }
+        },
+        {
+          label: 'Export Logs…',
+          click: async () => {
+            try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
+          }
         }
       ]
     });

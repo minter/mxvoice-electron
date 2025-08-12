@@ -59,7 +59,9 @@ src/main/
 ### Notes
 - Context Isolation is enabled; all renderer access is via preload/IPC
 - Audio playback for quick tests uses Howler in main (via IPC) when applicable
-- The application menu includes an “Export Logs…” item on macOS (and equivalent in other platforms) to invoke the centralized log export
+- The application menu includes an “Export Logs…” item:
+  - macOS: under the app menu (e.g., `Mx. Voice` → `Export Logs…`)
+  - Windows/Linux: under `Help` → `Export Logs…`
 
 ### Adding a new IPC handler
 1. Add the handler in `modules/ipc-handlers.js` within `registerAllHandlers()`
