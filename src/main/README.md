@@ -66,6 +66,7 @@ src/main/
    - Developer Tools uses the built-in role (`toggleDevTools`)
    - Quit uses the built-in role (`quit`) across platforms
   - About: macOS uses the system About panel; Windows/Linux uses a custom dark-mode-aware About dialog under `Help`
+  - Support: A "Contact Support…" item opens your default mail client to `mailto:support@mxvoice.app`
 
 ### Adding a new IPC handler
 1. Add the handler in `modules/ipc-handlers.js` within `registerAllHandlers()`

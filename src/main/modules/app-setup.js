@@ -258,6 +258,12 @@ function createApplicationMenu() {
           }
         },
         {
+          label: 'Contact Support…',
+          click: () => {
+            shell.openExternal('mailto:support@mxvoice.app?subject=' + encodeURIComponent('Mx. Voice Support Request'));
+          }
+        },
+        {
           label: 'Export Logs',
           click: async () => {
             try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
@@ -338,6 +344,12 @@ function createApplicationMenu() {
           label: 'Release Notes',
           click: () => {
             shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+          }
+        },
+        {
+          label: 'Contact Support…',
+          click: () => {
+            shell.openExternal('mailto:support@mxvoice.app?subject=' + encodeURIComponent('Mx. Voice Support Request'));
           }
         },
         {
@@ -428,6 +440,10 @@ function showAboutDialog() {
       <div class="section">
         <div class="heading">Website</div>
         <a class="link" href="https://mxvoice.app/" onclick="event.preventDefault(); window.open('https://mrvoice.net/')">https://mrvoice.net/</a>
+      </div>
+      <div class="section">
+        <div class="heading">Support</div>
+        <a class="link" href="mailto:support@mxvoice.app" onclick="event.preventDefault(); window.open('mailto:support@mxvoice.app?subject=' + encodeURIComponent('Mx. Voice Support Request'))">Email support@mxvoice.app</a>
       </div>
       <div class="footer">
         <div style="color: var(--muted);">© 2025</div>
