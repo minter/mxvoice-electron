@@ -18,8 +18,12 @@ src/preload/
 
 - `secure-api-exposer.js`
   - Exposes `secureElectronAPI` via `contextBridge.exposeInMainWorld`
-  - Namespaces: `database`, `store`, `fileSystem`, `path`, `os`, `audio`, `app`, `fileOperations`, `ui`, `events`, `utils`, `testing`
-  - Also exposes a compatibility `electronAPI` with a subset of methods
+  - Namespaces: `database`, `store`, `fileSystem`, `path`, `os`, `audio`, `app`, `fileOperations`, `ui`, `events`, `utils`, `logs`, `testing`
+  - Logs API:
+    - `logs.write(level, message, context?, meta?)` → forwards to main; payload is sanitized for IPC
+    - `logs.export({ days })` → triggers export in main
+    - `logs.getPaths()` → returns `{ logsDir, current }`
+  - Also exposes a compatibility `electronAPI` with a subset of methods, including `electronAPI.logs`
   - Exports: `secureElectronAPI`, `exposeSecureAPI`
 
 - `ipc-bridge.js`
@@ -37,6 +41,7 @@ src/preload/
 - Registers IPC handlers via `ipcBridge.registerIpcHandlers()`
 - Exposes the secure API via `secureApiExposer.exposeSecureAPI()`
 - Logs initialization status; no direct global mutations
+ - Captures renderer unhandled errors/rejections and mirrors console error/warn into the centralized log service
 
 ### Usage from renderer
 - Access secure API via `window.secureElectronAPI`

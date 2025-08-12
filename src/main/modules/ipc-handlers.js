@@ -23,6 +23,7 @@ let store;
 let audioInstances;
 let autoUpdater;
 let debugLog;
+let logService;
 
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
@@ -32,6 +33,7 @@ function initializeIpcHandlers(dependencies) {
   audioInstances = dependencies.audioInstances;
   autoUpdater = dependencies.autoUpdater;
   debugLog = dependencies.debugLog;
+  logService = dependencies.logService;
   
   // Initialize file operations module
   fileOperations.initializeFileOperations(dependencies);
@@ -41,6 +43,36 @@ function initializeIpcHandlers(dependencies) {
 
 // Register all IPC handlers
 function registerAllHandlers() {
+  // Logs API (centralized log service)
+  ipcMain.handle('logs:write', async (_event, payload) => {
+    try {
+      logService?.write(payload);
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Logs write error', { module: 'ipc-handlers', function: 'logs:write', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('logs:get-paths', async () => {
+    try {
+      const paths = logService?.getPaths();
+      return { success: true, ...paths };
+    } catch (error) {
+      debugLog?.error('Logs get-paths error', { module: 'ipc-handlers', function: 'logs:get-paths', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('logs:export', async (_event, options) => {
+    try {
+      const result = await logService?.exportLogs(options || {});
+      return result || { success: false };
+    } catch (error) {
+      debugLog?.error('Logs export error', { module: 'ipc-handlers', function: 'logs:export', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
   // Get app path handler
   ipcMain.handle('get-app-path', async () => {
     try {
