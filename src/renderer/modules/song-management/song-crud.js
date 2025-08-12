@@ -318,6 +318,8 @@ export async function startAddNewSong(filename, metadata = null) {
     if (addTitle) addTitle.textContent = 'Add New Song';
     const addBtn = document.getElementById('songFormSubmitButton');
     if (addBtn) addBtn.textContent = 'Add';
+    // Ensure category select element reference exists
+    const catSelect = document.getElementById('song-form-category');
     // Populate categories for the add flow
     try {
       if (catSelect) catSelect.innerHTML = '';
