@@ -252,15 +252,15 @@ function createApplicationMenu() {
           role: 'about'
         },
         {
-          label: 'Release Notes For Version ' + app.getVersion(),
+          label: 'Release Notes',
           click: () => {
-            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/tag/v${app.getVersion()}`);
+            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
           }
         },
         {
-          label: 'Release Notes For All Versions',
-          click: () => {
-            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+          label: 'Export Logs',
+          click: async () => {
+            try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
           }
         },
         {
@@ -292,12 +292,6 @@ function createApplicationMenu() {
         {
           label: 'Developer Tools',
           role: 'toggleDevTools'
-        },
-        {
-          label: 'Export Logs…',
-          click: async () => {
-            try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
-          }
         },
         {
           type: 'separator'
@@ -341,15 +335,15 @@ function createApplicationMenu() {
           }
         },
         {
-          label: 'Release Notes For Version ' + app.getVersion(),
+          label: 'Release Notes',
           click: () => {
-            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/tag/v${app.getVersion()}`);
+            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
           }
         },
         {
-          label: 'Release Notes For All Versions',
-          click: () => {
-            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+          label: 'Export Logs',
+          click: async () => {
+            try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
           }
         },
         {
@@ -358,12 +352,6 @@ function createApplicationMenu() {
         {
           label: 'Developer Tools',
           role: 'toggleDevTools'
-        },
-        {
-          label: 'Export Logs…',
-          click: async () => {
-            try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
-          }
         }
       ]
     });
