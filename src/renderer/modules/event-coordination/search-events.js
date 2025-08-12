@@ -292,12 +292,34 @@ export default class SearchEvents {
   attachSearchNavigationEvents() {
     const omniSearchKeydownHandler = (event) => {
       try {
-        if (event.code == "Tab") {
+        // Shift+Tab: send to holding tank
+        if ((event.key === 'Tab' || event.code === 'Tab') && event.shiftKey) {
+          if (typeof window.sendToHoldingTank === 'function') {
+            window.sendToHoldingTank();
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          return false;
+        }
+
+        // Tab: either select first row, or send to hotkeys if a row is already selected
+        if (event.key === 'Tab' || event.code === 'Tab') {
+          const selected = document.getElementById('selected_row');
+          if (selected) {
+            if (typeof window.sendToHotkeys === 'function') {
+              window.sendToHotkeys();
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+          }
           const firstRow = document.querySelector('#search_results tbody tr');
           if (firstRow) {
             document.getElementById('selected_row')?.removeAttribute('id');
             firstRow.id = 'selected_row';
             document.getElementById('omni_search')?.blur();
+            event.preventDefault();
+            event.stopPropagation();
             return false;
           }
         }

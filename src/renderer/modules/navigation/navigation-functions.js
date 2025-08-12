@@ -11,16 +11,20 @@
  */
 export function sendToHotkeys() {
   if (document.getElementById('selected_row')?.tagName === 'SPAN') {
-    return;
+    return false;
   }
-  target = Array.from(document.querySelectorAll('.hotkeys.active li')).find(li => !li.getAttribute('songid'));
-  song_id = document.getElementById('selected_row')?.getAttribute('songid');
-  if (document.querySelector(`.hotkeys.active li[songid="${song_id}"]`)) {
-    return;
+  const target = Array.from(document.querySelectorAll('.hotkeys.active li')).find(li => !li.getAttribute('songid'));
+  const songId = document.getElementById('selected_row')?.getAttribute('songid');
+  if (document.querySelector(`.hotkeys.active li[songid="${songId}"]`)) {
+    return false;
   }
-  if (target && song_id) {
-    target.setAttribute('songid', song_id);
-    setLabelFromSongId(song_id, target);
+  if (target && songId) {
+    target.setAttribute('songid', songId);
+    if (typeof window.setLabelFromSongId === 'function') {
+      window.setLabelFromSongId(songId, target);
+    } else if (window.moduleRegistry?.hotkeys?.setLabelFromSongId) {
+      window.moduleRegistry.hotkeys.setLabelFromSongId(songId, target);
+    }
   }
   return false;
 }
@@ -31,10 +35,14 @@ export function sendToHotkeys() {
  * @returns {boolean} - Returns false to prevent default behavior
  */
 export function sendToHoldingTank() {
-  target = document.querySelector('.holding_tank.active');
-  song_id = document.getElementById('selected_row')?.getAttribute('songid');
-  if (song_id) {
-    addToHoldingTank(song_id, target);
+  const target = document.querySelector('.holding_tank.active');
+  const songId = document.getElementById('selected_row')?.getAttribute('songid');
+  if (songId) {
+    if (typeof window.addToHoldingTank === 'function') {
+      window.addToHoldingTank(songId, target);
+    } else if (window.moduleRegistry?.holdingTank?.addToHoldingTank) {
+      window.moduleRegistry.holdingTank.addToHoldingTank(songId, target);
+    }
   }
   return false;
 }
