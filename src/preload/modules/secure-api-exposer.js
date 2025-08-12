@@ -20,6 +20,73 @@ try {
 }
 
 // Secure API structure for context isolation
+// Helpers to make payloads structured-clone safe for IPC
+const MAX_DEPTH = 3;
+const MAX_KEYS = 50;
+const MAX_STRING = 1000;
+
+function truncateString(str) {
+  try {
+    const s = String(str);
+    return s.length > MAX_STRING ? s.slice(0, MAX_STRING) + '…' : s;
+  } catch (e) {
+    return '[Unprintable]';
+  }
+}
+
+function sanitizeForIPC(value, depth = 0, seen = new WeakSet()) {
+  if (value === null || value === undefined) return value;
+  const t = typeof value;
+  if (t === 'string') return truncateString(value);
+  if (t === 'number' || t === 'boolean' || t === 'bigint') return value;
+  if (t === 'symbol') return '[Symbol]';
+  if (t === 'function') return '[Function]';
+  if (depth >= MAX_DEPTH) return '[MaxDepth]';
+  if (seen.has(value)) return '[Circular]';
+
+  // Error objects
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: truncateString(value.message),
+      stack: truncateString(value.stack || '')
+    };
+  }
+
+  // DOM/Event-like objects
+  if (typeof Event !== 'undefined' && value instanceof Event) {
+    return { type: value.type, isTrusted: !!value.isTrusted };
+  }
+
+  // Promises / thenables
+  if (typeof value === 'object' && (typeof value.then === 'function')) {
+    return '[Promise]';
+  }
+
+  // Array
+  if (Array.isArray(value)) {
+    seen.add(value);
+    return value.slice(0, MAX_KEYS).map((v) => sanitizeForIPC(v, depth + 1, seen));
+  }
+
+  // Generic object
+  try {
+    const out = {};
+    seen.add(value);
+    let count = 0;
+    for (const key of Object.keys(value)) {
+      out[key] = sanitizeForIPC(value[key], depth + 1, seen);
+      if (++count >= MAX_KEYS) {
+        out['[truncated]'] = `Only first ${MAX_KEYS} keys included`;
+        break;
+      }
+    }
+    return out;
+  } catch (_) {
+    return '[Unserializable]';
+  }
+}
+
 const secureElectronAPI = {
   // Database operations - all go through secure IPC
   database: {
@@ -99,6 +166,19 @@ const secureElectronAPI = {
     restart: () => ipcRenderer.invoke('app-restart'),
     showDirectoryPicker: (defaultPath) => ipcRenderer.invoke('show-directory-picker', defaultPath),
     showFilePicker: (options) => ipcRenderer.invoke('show-file-picker', options)
+  },
+
+  // Logs API - centralized logging exposed securely
+  logs: {
+    write: (level, message, context = null, meta = {}) =>
+      ipcRenderer.invoke('logs:write', {
+        level,
+        message: truncateString(message),
+        context: sanitizeForIPC(context),
+        meta: sanitizeForIPC({ process: 'renderer', ...meta })
+      }),
+    export: (options) => ipcRenderer.invoke('logs:export', options),
+    getPaths: () => ipcRenderer.invoke('logs:get-paths')
   },
 
   // File operations - secure file management
@@ -286,7 +366,9 @@ function exposeSecureAPI() {
         audio: secureElectronAPI.audio,
         os: secureElectronAPI.os,
         utils: secureElectronAPI.utils,
-        testing: secureElectronAPI.testing
+        testing: secureElectronAPI.testing,
+        // Provide logs under legacy namespace for compatibility with existing renderer code
+        logs: secureElectronAPI.logs
       });
       
       if (debugLog && typeof debugLog.info === 'function') {

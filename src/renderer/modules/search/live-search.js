@@ -9,6 +9,7 @@
 // Import shared state
 import sharedState from '../shared-state.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
+import Dom from '../dom-utils/index.js';
 
 // Import debug logger
 let debugLog = null;
@@ -113,11 +114,12 @@ function performLiveSearch(searchTerm) {
   const hasSearchTerm = searchTerm && searchTerm.length >= 2;
   let hasAdvancedFilters = false;
 
-  if ($("#advanced-search").is(":visible")) {
-    const title = $("#title-search").val().trim();
-    const artist = $("#artist-search").val().trim();
-    const info = $("#info-search").val().trim();
-    const since = $("#date-search").val();
+  const adv = document.getElementById('advanced-search');
+  if (adv && adv.offsetParent !== null) {
+    const title = (document.getElementById('title-search')?.value || '').trim();
+    const artist = (document.getElementById('artist-search')?.value || '').trim();
+    const info = (document.getElementById('info-search')?.value || '').trim();
+    const since = document.getElementById('date-search')?.value || '';
     hasAdvancedFilters =
       title.length > 0 ||
       artist.length > 0 ||
@@ -127,20 +129,23 @@ function performLiveSearch(searchTerm) {
 
   if (!hasSearchTerm && !hasAdvancedFilters) {
     // Clear results if no search term and no advanced filters
-    $("#search_results tbody").find("tr").remove();
-    $("#search_results thead").hide();
+    const tbody = Dom.$('#search_results tbody');
+    Array.from(Dom.find(tbody, 'tr')).forEach(tr => Dom.remove(tr));
+    Dom.hide('#search_results thead');
     return;
   }
 
-  $("#search_results tbody").find("tr").remove();
-  $("#search_results thead").show();
+  const tbodyClear = document.querySelector('#search_results tbody');
+  if (tbodyClear) tbodyClear.querySelectorAll('tr').forEach(tr => tr.remove());
+  const theadShow = document.querySelector('#search_results thead');
+  if (theadShow) theadShow.style.display = '';
 
   const tbody = document.querySelector('#search_results tbody');
   const raw_html = [];
   const query_params = [];
   const query_segments = [];
   let query_string = "";
-  const category = $("#category_select").val();
+  const category = document.getElementById('category_select')?.value;
 
   // Apply category filter if not "All Categories"
   if (category != "*") {
@@ -149,11 +154,11 @@ function performLiveSearch(searchTerm) {
   }
 
   // Apply advanced search filters if advanced search is visible
-  if ($("#advanced-search").is(":visible")) {
-    const title = $("#title-search").val().trim();
-    const artist = $("#artist-search").val().trim();
-    const info = $("#info-search").val().trim();
-    const since = $("#date-search").val();
+  if (adv && adv.offsetParent !== null) {
+    const title = (document.getElementById('title-search')?.value || '').trim();
+    const artist = (document.getElementById('artist-search')?.value || '').trim();
+    const info = (document.getElementById('info-search')?.value || '').trim();
+    const since = document.getElementById('date-search')?.value || '';
 
     if (title.length) {
       query_segments.push("title LIKE ?");

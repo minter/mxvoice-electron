@@ -21,7 +21,8 @@ import { secureFileDialog } from '../adapters/secure-adapter.js';
 function saveHotkeysToStore(options = {}) {
   const { electronAPI, store } = options;
   
-  const currentHtml = $("#hotkeys-column").html();
+  const col = document.getElementById('hotkeys-column');
+  const currentHtml = col ? col.innerHTML : '';
   if (currentHtml.includes("header-button")) {
     if (electronAPI && electronAPI.store) {
       electronAPI.store.set("hotkeys", currentHtml).then(result => {
@@ -61,8 +62,9 @@ function loadHotkeysFromStore(options = {}) {
               window.debugLog?.info("Cleared old hotkeys HTML format", { module: 'hotkey-operations', function: 'loadHotkeysFromStore' });
             });
           } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
-            $("#hotkeys-column").html(storedHotkeysHtml);
-            $("#selected_row").removeAttr("id");
+            const column = document.getElementById('hotkeys-column');
+            if (column) column.innerHTML = storedHotkeysHtml;
+            document.getElementById('selected_row')?.removeAttribute('id');
           }
         });
       }
@@ -98,10 +100,12 @@ function saveHotkeyFile(options = {}) {
   window.debugLog?.info("Renderer starting saveHotkeyFile", { module: 'hotkey-operations', function: 'saveHotkeyFile' });
   const hotkeyArray = [];
   for (let key = 1; key <= 12; key++) {
-    hotkeyArray.push($(`.hotkeys.active li#f${key}_hotkey`).attr("songid"));
+    hotkeyArray.push(document.getElementById(`f${key}_hotkey`)?.getAttribute('songid'));
   }
-  if (!/^\d$/.test($("#hotkey_tabs li a.active").text())) {
-    hotkeyArray.push($("#hotkey_tabs li a.active").text());
+  const activeLink = document.querySelector('#hotkey_tabs li a.active');
+  const activeText = activeLink ? (activeLink.textContent || '') : '';
+  if (!/^\d$/.test(activeText)) {
+    hotkeyArray.push(activeText);
   }
   
   if (electronAPI) {
@@ -118,20 +122,20 @@ function saveHotkeyFile(options = {}) {
  */
 function playSongFromHotkey(hotkey, options = {}) {
   window.debugLog?.info("Getting song ID from hotkey " + hotkey, { module: 'hotkey-operations', function: 'playSongFromHotkey' });
-  const song_id = $(`.hotkeys.active #${hotkey}_hotkey`).attr("songid");
+  const song_id = document.getElementById(`${hotkey}_hotkey`)?.getAttribute('songid');
   window.debugLog?.info(`Found song ID ${song_id}`, { module: 'hotkey-operations', function: 'playSongFromHotkey' });
   if (song_id) {
     window.debugLog?.info(`Preparing to play song ${song_id}`, { module: 'hotkey-operations', function: 'playSongFromHotkey' });
     // Unhighlight any selected tracks in holding tank or playlist
-    $(".now_playing").first().removeClass("now_playing");
-    $("#selected_row").removeAttr("id");
+    document.querySelector('.now_playing')?.classList.remove('now_playing');
+    document.getElementById('selected_row')?.removeAttribute('id');
     // Hotkey playback should not affect holding tank mode
     // Just play the song without changing autoplay state
     if (typeof playSongFromId === 'function') {
       playSongFromId(song_id);
     }
     if (typeof animateCSS === 'function') {
-      const hotkeyElement = $(`.hotkeys.active #${hotkey}_hotkey`)[0];
+      const hotkeyElement = document.getElementById(`${hotkey}_hotkey`);
       if (hotkeyElement) {
         animateCSS(hotkeyElement, "flipInX");
       }
@@ -149,16 +153,16 @@ function playSongFromHotkey(hotkey, options = {}) {
 function sendToHotkeys(options = {}) {
   const { setLabelFromSongId } = options;
   
-  if ($("#selected_row").is("span")) {
+  if (document.getElementById('selected_row')?.tagName === 'SPAN') {
     return;
   }
-  const target = $(".hotkeys.active li").not("[songid]").first();
-  const song_id = $("#selected_row").attr("songid");
-  if ($(`.hotkeys.active li[songid=${song_id}]`).length) {
+  const target = Array.from(document.querySelectorAll('.hotkeys.active li')).find(li => !li.getAttribute('songid'));
+  const song_id = document.getElementById('selected_row')?.getAttribute('songid');
+  if (document.querySelector(`.hotkeys.active li[songid="${song_id}"]`)) {
     return;
   }
   if (target && song_id) {
-    target.attr("songid", song_id);
+    target.setAttribute('songid', song_id);
     if (setLabelFromSongId) {
       setLabelFromSongId(song_id, target);
     }
@@ -175,9 +179,9 @@ function sendToHotkeys(options = {}) {
 function removeFromHotkey(options = {}) {
   const { db, saveHotkeysToStore } = options;
   
-  const songId = $("#selected_row").attr("songid");
+  const songId = document.getElementById('selected_row')?.getAttribute('songid');
   window.debugLog?.info("removeFromHotkey called, songId:", songId, { module: 'hotkey-operations', function: 'removeFromHotkey' });
-  window.debugLog?.info("selected_row element:", $("#selected_row"), { module: 'hotkey-operations', function: 'removeFromHotkey' });
+  window.debugLog?.info("selected_row element:", document.getElementById('selected_row'), { module: 'hotkey-operations', function: 'removeFromHotkey' });
   
   if (songId) {
     window.debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'hotkey-operations', function: 'removeFromHotkey' });
@@ -189,10 +193,13 @@ function removeFromHotkey(options = {}) {
         customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`, () => {
           window.debugLog?.info("Proceeding with removal from hotkey", { module: 'hotkey-operations', function: 'removeFromHotkey' });
           // Clear the hotkey slot
-          $("#selected_row").removeAttr("songid");
-          $("#selected_row span").html("");
-          // Clear the selection
-          $("#selected_row").removeAttr("id");
+          const selected = document.getElementById('selected_row');
+          if (selected) {
+            selected.removeAttribute('songid');
+            const span = selected.querySelector('span');
+            if (span) span.textContent = '';
+            selected.removeAttribute('id');
+          }
           // Save the updated hotkeys to store
           if (saveHotkeysToStore) {
             saveHotkeysToStore();
@@ -202,18 +209,26 @@ function removeFromHotkey(options = {}) {
       } else {
         window.debugLog?.error("Song not found in database for ID:", songId, { module: 'hotkey-operations', function: 'removeFromHotkey' });
         // Still clear the hotkey even if song not found
-        $("#selected_row").removeAttr("songid");
-        $("#selected_row span").html("");
-        $("#selected_row").removeAttr("id");
+          const selected = document.getElementById('selected_row');
+          if (selected) {
+            selected.removeAttribute('songid');
+            const span = selected.querySelector('span');
+            if (span) span.textContent = '';
+            selected.removeAttribute('id');
+          }
         if (saveHotkeysToStore) {
           saveHotkeysToStore();
         }
       }
     } else {
       // Clear the hotkey even if database is not available
-      $("#selected_row").removeAttr("songid");
-      $("#selected_row span").html("");
-      $("#selected_row").removeAttr("id");
+        const selected2 = document.getElementById('selected_row');
+        if (selected2) {
+          selected2.removeAttribute('songid');
+          const span2 = selected2.querySelector('span');
+          if (span2) span2.textContent = '';
+          selected2.removeAttribute('id');
+        }
       if (saveHotkeysToStore) {
         saveHotkeysToStore();
       }
@@ -232,12 +247,12 @@ function removeFromHotkey(options = {}) {
 function exportHotkeyConfig() {
   const config = {
     hotkeys: {},
-    title: $("#hotkey_tabs li a.active").text(),
+    title: (document.querySelector('#hotkey_tabs li a.active')?.textContent) || '',
     timestamp: new Date().toISOString()
   };
   
   for (let key = 1; key <= 12; key++) {
-    const songId = $(`.hotkeys.active #f${key}_hotkey`).attr("songid");
+    const songId = document.getElementById(`f${key}_hotkey`)?.getAttribute('songid');
     if (songId) {
       config.hotkeys[`f${key}`] = songId;
     }
@@ -263,23 +278,29 @@ function importHotkeyConfig(config, options = {}) {
   
   // Clear existing hotkeys
   for (let key = 1; key <= 12; key++) {
-    $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
-    $(`.hotkeys.active #f${key}_hotkey span`).html("");
+    const li = document.getElementById(`f${key}_hotkey`);
+    if (li) {
+      li.removeAttribute('songid');
+      const span = li.querySelector('span');
+      if (span) span.textContent = '';
+    }
   }
   
   // Apply imported configuration
   for (const key in config.hotkeys) {
     if (config.hotkeys[key]) {
-      $(`.hotkeys.active #${key}_hotkey`).attr("songid", config.hotkeys[key]);
+      document.getElementById(`${key}_hotkey`)?.setAttribute('songid', config.hotkeys[key]);
       if (setLabelFromSongId) {
-        setLabelFromSongId(config.hotkeys[key], $(`.hotkeys.active #${key}_hotkey`));
+        const el = document.getElementById(`${key}_hotkey`);
+        if (el) setLabelFromSongId(config.hotkeys[key], el);
       }
     }
   }
   
   // Set title if provided
   if (config.title) {
-    $("#hotkey_tabs li a.active").text(config.title);
+    const link = document.querySelector('#hotkey_tabs li a.active');
+    if (link) link.textContent = config.title;
   }
   
   // Save to store
@@ -331,8 +352,12 @@ function clearHotkeyConfig(options = {}) {
   
   // Clear all hotkey assignments
   for (let key = 1; key <= 12; key++) {
-    $(`.hotkeys.active #f${key}_hotkey`).removeAttr("songid");
-    $(`.hotkeys.active #f${key}_hotkey span`).html("");
+    const li = document.getElementById(`f${key}_hotkey`);
+    if (li) {
+      li.removeAttribute('songid');
+      const span = li.querySelector('span');
+      if (span) span.textContent = '';
+    }
   }
   
   // Save to store if saveHotkeysToStore is provided

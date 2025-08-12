@@ -7,6 +7,7 @@
 
 // Import shared state
 import sharedState from '../shared-state.js';
+import Dom from '../dom-utils/index.js';
 
 // Import debug logger
 let debugLog = null;
@@ -88,8 +89,8 @@ function searchData() {
   });
   
   // Get search term and category
-  const searchTerm = $("#omni_search").val().trim();
-  const category = $("#category_select").val();
+  const searchTerm = (document.getElementById('omni_search')?.value || '').trim();
+  const category = document.getElementById('category_select')?.value;
   
   debugLog?.info('🔍 Search parameters:', { 
     module: 'search-engine',
@@ -110,11 +111,11 @@ function searchData() {
   }
 
   // Apply advanced search filters if advanced search is visible
-  if ($("#advanced-search").is(":visible")) {
-    const title = $("#title-search").val().trim();
-    const artist = $("#artist-search").val().trim();
-    const info = $("#info-search").val().trim();
-    const since = $("#date-search").val();
+  if (Dom.isVisible('#advanced-search')) {
+    const title = (Dom.val('#title-search') || '').trim();
+    const artist = (Dom.val('#artist-search') || '').trim();
+    const info = (Dom.val('#info-search') || '').trim();
+    const since = Dom.val('#date-search') || '';
 
     if (title.length) {
       querySegments.push("title LIKE ?");
@@ -173,8 +174,10 @@ function searchData() {
   });
 
   // Clear previous results
-  $("#search_results tbody").find("tr").remove();
-  $("#search_results thead").show();
+  const thead = document.querySelector('#search_results thead');
+  const tbody = document.querySelector('#search_results tbody');
+  if (tbody) tbody.querySelectorAll('tr').forEach(tr => tr.remove());
+  if (thead) thead.style.display = '';
 
   // Get font size from shared state
   const fontSize = sharedState.get('fontSize') || 11;
@@ -224,8 +227,9 @@ function searchData() {
         if (typeof scaleScrollable === 'function') {
           scaleScrollable();
         }
-        $("#omni_search").select();
-        $("#category_select").prop("selectedIndex", 0);
+        document.getElementById('omni_search')?.select();
+        const cat = document.getElementById('category_select');
+        if (cat) cat.selectedIndex = 0;
       } else {
         debugLog?.warn('❌ Search query failed:', { 
           module: 'search-engine',
@@ -288,8 +292,9 @@ function searchData() {
         if (typeof scaleScrollable === 'function') {
           scaleScrollable();
         }
-        $("#omni_search").select();
-        $("#category_select").prop("selectedIndex", 0);
+        document.getElementById('omni_search')?.select();
+        const cat2 = document.getElementById('category_select');
+        if (cat2) cat2.selectedIndex = 0;
       }
     });
   }
@@ -308,7 +313,7 @@ function triggerLiveSearch() {
     clearTimeout(searchTimeout);
   }
   
-  const searchTerm = $("#omni_search").val().trim();
+  const searchTerm = (document.getElementById('omni_search')?.value || '').trim();
 
   // Set new timeout and store in shared state and global
   const newTimeout = setTimeout(() => {
@@ -316,11 +321,12 @@ function triggerLiveSearch() {
     const hasSearchTerm = searchTerm.length >= 2;
     let hasAdvancedFilters = false;
 
-    if ($("#advanced-search").is(":visible")) {
-      const title = $("#title-search").val().trim();
-      const artist = $("#artist-search").val().trim();
-      const info = $("#info-search").val().trim();
-      const since = $("#date-search").val();
+    const adv = document.getElementById('advanced-search');
+    if (adv && adv.offsetParent !== null) {
+      const title = (document.getElementById('title-search')?.value || '').trim();
+      const artist = (document.getElementById('artist-search')?.value || '').trim();
+      const info = (document.getElementById('info-search')?.value || '').trim();
+      const since = document.getElementById('date-search')?.value || '';
       hasAdvancedFilters =
         title.length > 0 ||
         artist.length > 0 ||
@@ -339,8 +345,10 @@ function triggerLiveSearch() {
       }
     } else {
       // Clear results when no search term and no advanced filters
-      $("#search_results tbody").find("tr").remove();
-      $("#search_results thead").hide();
+      const thead2 = document.querySelector('#search_results thead');
+      const tbody2 = document.querySelector('#search_results tbody');
+      if (tbody2) tbody2.querySelectorAll('tr').forEach(tr => tr.remove());
+      if (thead2) thead2.style.display = 'none';
     }
   }, 300); // 300ms debounce
   

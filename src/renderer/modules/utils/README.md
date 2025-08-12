@@ -25,12 +25,13 @@ Provides CSS animation functionality.
 **Usage:**
 ```javascript
 import { animateCSS } from './utils/index.js';
-animateCSS($('#element'), 'fadeIn', '1s');
+animateCSS('#element', 'fadeIn', '1s');
 ```
 
 ### Modal Utilities (`modal-utils.js`)
 
 Provides custom modal dialog functionality to replace native browser dialogs.
+Dialogs use Bootstrap 5 via the UI `bootstrap-adapter` (no jQuery plugins).
 
 **Functions:**
 - `customConfirm(message, callback)` - Show a custom confirmation dialog
@@ -101,8 +102,7 @@ Loaded via App Bootstrap per `module-config.js` and stored in the module registr
 
 ## Dependencies
 
-- **jQuery**: Required for DOM manipulation and animations
-- **Bootstrap**: Required for modal functionality
+- **Bootstrap 5**: Modal functionality via `bootstrap-adapter`
 - **Animate.css**: Required for CSS animations
 
 ## Migration from renderer.js

@@ -26,13 +26,13 @@ import { secureFileSystem, secureDatabase, securePath, secureStore } from '../ad
  */
 export async function saveEditedSong(event) {
   event.preventDefault();
-  $(`#songFormModal`).modal("hide");
+  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
   debugLog?.info("Starting edit process", { module: 'song-management', function: 'saveEditedSong' });
-  const songId = $("#song-form-songid").val();
-  const title = $("#song-form-title").val();
-  const artist = $("#song-form-artist").val();
-  const info = $("#song-form-info").val();
-  const category = $("#song-form-category").val();
+  const songId = (document.getElementById('song-form-songid') || {}).value || '';
+  const title = (document.getElementById('song-form-title') || {}).value || '';
+  const artist = (document.getElementById('song-form-artist') || {}).value || '';
+  const info = (document.getElementById('song-form-info') || {}).value || '';
+  const category = (document.getElementById('song-form-category') || {}).value || '';
 
   try {
     const result = await secureDatabase.execute(
@@ -46,7 +46,8 @@ export async function saveEditedSong(event) {
     debugLog?.error('Edit update error', { module: 'song-management', function: 'saveEditedSong', error: error?.message });
   }
 
-  $("#omni_search").val(title);
+  const omni = document.getElementById('omni_search');
+  if (omni) omni.value = title;
   if (typeof searchData === 'function') {
     searchData();
   }
@@ -60,23 +61,23 @@ export async function saveEditedSong(event) {
  */
 export async function saveNewSong(event) {
   event.preventDefault();
-  $(`#songFormModal`).modal("hide");
+  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
   debugLog?.info("Starting save process", { module: 'song-management', function: 'saveNewSong' });
   try {
-    const filename = $("#song-form-filename").val();
+    const filename = (document.getElementById('song-form-filename') || {}).value || '';
     const parsed = await securePath.parse(filename);
     if (!parsed?.success || !parsed.data) {
       debugLog?.warn('❌ Path parse failed:', { module: 'song-management', function: 'saveNewSong', result: parsed });
       return;
     }
     const pathData = parsed.data;
-    const title = $("#song-form-title").val();
-    const artist = $("#song-form-artist").val();
-    const info = $("#song-form-info").val();
-    let category = $("#song-form-category").val();
+    const title = (document.getElementById('song-form-title') || {}).value || '';
+    const artist = (document.getElementById('song-form-artist') || {}).value || '';
+    const info = (document.getElementById('song-form-info') || {}).value || '';
+    let category = (document.getElementById('song-form-category') || {}).value || '';
 
     if (category == "--NEW--") {
-      const description = $("#song-form-new-category").val();
+      const description = (document.getElementById('song-form-new-category') || {}).value || '';
       const baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
       const findUniqueCode = async (base, index = 1) => {
         const test = index === 1 ? base : `${base}${index}`;
@@ -96,7 +97,7 @@ export async function saveNewSong(event) {
       category = finalCode;
     }
 
-    const duration = $("#song-form-duration").val();
+    const duration = (document.getElementById('song-form-duration') || {}).value || '';
     const uuid = (window.secureElectronAPI?.utils?.generateId)
       ? await window.secureElectronAPI.utils.generateId()
       : (typeof uuidv4 === 'function' ? uuidv4() : Date.now().toString());
@@ -129,7 +130,8 @@ export async function saveNewSong(event) {
       debugLog?.info('✅ File copied successfully', { module: 'song-management', function: 'saveNewSong' });
     }
 
-    $("#omni_search").val(title);
+    const omni2 = document.getElementById('omni_search');
+    if (omni2) omni2.value = title;
     if (typeof searchData === 'function') searchData();
   } catch (error) {
     debugLog?.warn('❌ Error in saveNewSong:', { module: 'song-management', function: 'saveNewSong', error: error?.message });
@@ -142,7 +144,7 @@ export async function saveNewSong(event) {
  */
 export async function editSelectedSong() {
   try {
-    const songId = $("#selected_row").attr("songid");
+    const songId = (document.getElementById('selected_row') || {}).getAttribute?.('songid');
     if (!songId) {
       debugLog?.warn('No selected song to edit', { module: 'song-management', function: 'editSelectedSong' });
       return;
@@ -158,28 +160,40 @@ export async function editSelectedSong() {
     }
 
     // Populate basic fields
-    $("#song-form-songid").val(songId);
-    $("#song-form-title").val(songInfo.title || '');
-    $("#song-form-artist").val(songInfo.artist || '');
-    $("#song-form-info").val(songInfo.info || '');
-    $("#song-form-duration").val(songInfo.time || '');
+    const idEl = document.getElementById('song-form-songid');
+    const titleEl = document.getElementById('song-form-title');
+    const artistEl = document.getElementById('song-form-artist');
+    const infoEl = document.getElementById('song-form-info');
+    const durEl = document.getElementById('song-form-duration');
+    if (idEl) idEl.value = songId;
+    if (titleEl) titleEl.value = songInfo.title || '';
+    if (artistEl) artistEl.value = songInfo.artist || '';
+    if (infoEl) infoEl.value = songInfo.info || '';
+    if (durEl) durEl.value = songInfo.time || '';
 
     // Load categories securely and populate select
-    $("#song-form-category").empty();
+    const catSelect = document.getElementById('song-form-category');
+    if (catSelect) catSelect.innerHTML = '';
     const catResult = await secureDatabase.query("SELECT * FROM categories ORDER BY description ASC");
     const categories = (catResult?.data || catResult) || [];
     if (Array.isArray(categories)) {
       categories.forEach(row => {
-        const selected = row.code === songInfo.category ? 'selected="selected"' : '';
-        $("#song-form-category").append(`<option ${selected} value="${row.code}">${row.description}</option>`);
+        const opt = document.createElement('option');
+        if (row.code === songInfo.category) opt.setAttribute('selected','selected');
+        opt.value = row.code;
+        opt.textContent = row.description;
+        catSelect?.appendChild(opt);
       });
     }
 
     // Prepare and show modal
-    $("#songFormModal form").attr("onsubmit", "saveEditedSong(event)");
-    $("#songFormModalTitle").html("Edit This Song");
-    $("#songFormSubmitButton").html("Save");
-    $("#songFormModal").modal();
+    const editForm = document.querySelector('#songFormModal form');
+    if (editForm) editForm.setAttribute('onsubmit','saveEditedSong(event)');
+    const mTitle = document.getElementById('songFormModalTitle');
+    if (mTitle) mTitle.textContent = 'Edit This Song';
+    const mBtn = document.getElementById('songFormSubmitButton');
+    if (mBtn) mBtn.textContent = 'Save';
+    try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#songFormModal'); } catch {}
   } catch (error) {
     debugLog?.error('Failed to open edit song modal', { module: 'song-management', function: 'editSelectedSong', error: error?.message });
   }
@@ -202,9 +216,11 @@ export async function startAddNewSong(filename, metadata = null) {
       metaArtist: metadata?.common?.artist || null
     });
     // Reset any previous values
-    $("#song-form-songid").val("");
+    const idEl2 = document.getElementById('song-form-songid');
+    if (idEl2) idEl2.value = '';
     if (filename) {
-      $("#song-form-filename").val(filename);
+      const fileEl = document.getElementById('song-form-filename');
+      if (fileEl) fileEl.value = filename;
     }
 
     // Prefill from metadata if available
@@ -219,8 +235,8 @@ export async function startAddNewSong(filename, metadata = null) {
       return `${m.toString().padStart(1, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
-    if (title) $("#song-form-title").val(title);
-    if (artist) $("#song-form-artist").val(artist);
+    if (title) { const t = document.getElementById('song-form-title'); if (t) t.value = title; }
+    if (artist) { const a = document.getElementById('song-form-artist'); if (a) a.value = artist; }
     // Always try secure audio.getDuration for more accuracy
     if (filename) {
       try {
@@ -262,7 +278,7 @@ export async function startAddNewSong(filename, metadata = null) {
         try {
           const fmt = await window.secureElectronAPI.utils.formatDuration(durationSeconds);
           const formatted = fmt?.data || fmt?.formatted || (typeof fmt === 'string' ? fmt : null);
-          $("#song-form-duration").val(formatted || toTimeString(durationSeconds));
+           const d = document.getElementById('song-form-duration'); if (d) d.value = (formatted || toTimeString(durationSeconds));
           debugLog?.info('Duration field set', {
             module: 'song-management',
             function: 'startAddNewSong',
@@ -270,7 +286,7 @@ export async function startAddNewSong(filename, metadata = null) {
             formatted: formatted || toTimeString(durationSeconds)
           });
         } catch {
-          $("#song-form-duration").val(toTimeString(durationSeconds));
+          const d2 = document.getElementById('song-form-duration'); if (d2) d2.value = toTimeString(durationSeconds);
           debugLog?.info('Duration field set (fallback formatter)', {
             module: 'song-management',
             function: 'startAddNewSong',
@@ -278,7 +294,7 @@ export async function startAddNewSong(filename, metadata = null) {
           });
         }
       } else {
-        $("#song-form-duration").val(toTimeString(durationSeconds));
+        const d3 = document.getElementById('song-form-duration'); if (d3) d3.value = toTimeString(durationSeconds);
         debugLog?.info('Duration field set (local formatter)', {
           module: 'song-management',
           function: 'startAddNewSong',
@@ -287,7 +303,7 @@ export async function startAddNewSong(filename, metadata = null) {
       }
     } else {
       // Ensure field not left blank if all else fails
-      $("#song-form-duration").val("");
+      const d4 = document.getElementById('song-form-duration'); if (d4) d4.value = '';
       debugLog?.warn('Duration unavailable after attempts', {
         module: 'song-management',
         function: 'startAddNewSong',
@@ -296,30 +312,46 @@ export async function startAddNewSong(filename, metadata = null) {
     }
 
     // Prepare and show modal for adding
-    $("#songFormModal form").attr("onsubmit", "saveNewSong(event)");
-    $("#songFormModalTitle").html("Add New Song");
-    $("#songFormSubmitButton").html("Add");
+    const addForm = document.querySelector('#songFormModal form');
+    if (addForm) addForm.setAttribute('onsubmit','saveNewSong(event)');
+    const addTitle = document.getElementById('songFormModalTitle');
+    if (addTitle) addTitle.textContent = 'Add New Song';
+    const addBtn = document.getElementById('songFormSubmitButton');
+    if (addBtn) addBtn.textContent = 'Add';
+    // Ensure category select element reference exists
+    const catSelect = document.getElementById('song-form-category');
     // Populate categories for the add flow
     try {
-      $("#song-form-category").empty();
+      if (catSelect) catSelect.innerHTML = '';
       if (window.secureElectronAPI?.database?.query) {
         const catResult = await window.secureElectronAPI.database.query("SELECT * FROM categories ORDER BY description ASC");
         const rows = (catResult?.data || catResult) || [];
         if (Array.isArray(rows)) {
           rows.forEach(row => {
-            $("#song-form-category").append(`<option value="${row.code}">${row.description}</option>`);
+            const opt = document.createElement('option');
+            opt.value = row.code;
+            opt.textContent = row.description;
+            catSelect?.appendChild(opt);
           });
         }
       }
       // Add new category option separator and entry
-      $("#song-form-category").append(`<option value="" disabled>-----------------------</option>`);
-      $("#song-form-category").append(`<option value="--NEW--">ADD NEW CATEGORY...</option>`);
-      // Trigger change to set up UI for new category input if needed
-      $("#song-form-category").change();
+      if (catSelect) {
+        const sep = document.createElement('option');
+        sep.value = '';
+        sep.disabled = true;
+        sep.textContent = '-----------------------';
+        catSelect.appendChild(sep);
+        const newOpt = document.createElement('option');
+        newOpt.value = '--NEW--';
+        newOpt.textContent = 'ADD NEW CATEGORY...';
+        catSelect.appendChild(newOpt);
+        catSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     } catch (err) {
       debugLog?.warn('Failed to populate categories for add modal', { module: 'song-management', function: 'startAddNewSong', error: err?.message });
     }
-    $("#songFormModal").modal();
+    try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#songFormModal'); } catch {}
   } catch (error) {
     debugLog?.error('Failed to open add new song modal', { module: 'song-management', function: 'startAddNewSong', error: error?.message });
   }
@@ -331,16 +363,16 @@ export async function startAddNewSong(filename, metadata = null) {
  */
 export function deleteSelectedSong() {
   debugLog?.info("deleteSelectedSong called", { module: 'song-management', function: 'deleteSelectedSong' });
-  debugLog?.info("selected_row:", { module: 'song-management', function: 'deleteSelectedSong', selectedRow: $("#selected_row") });
-  debugLog?.info("holding-tank-column has selected_row:", { module: 'song-management', function: 'deleteSelectedSong', hasSelectedRow: $("#holding-tank-column").has($("#selected_row")).length });
-  debugLog?.info("hotkey-tab-content has selected_row:", { module: 'song-management', function: 'deleteSelectedSong', hasSelectedRow: $("#hotkey-tab-content").has($("#selected_row")).length });
+  debugLog?.info("selected_row:", { module: 'song-management', function: 'deleteSelectedSong', selectedRow: document.getElementById('selected_row') });
+  debugLog?.info("holding-tank-column has selected_row:", { module: 'song-management', function: 'deleteSelectedSong', hasSelectedRow: document.getElementById('holding-tank-column')?.contains?.(document.getElementById('selected_row')) ? 1 : 0 });
+  debugLog?.info("hotkey-tab-content has selected_row:", { module: 'song-management', function: 'deleteSelectedSong', hasSelectedRow: document.getElementById('hotkey-tab-content')?.contains?.(document.getElementById('selected_row')) ? 1 : 0 });
   
   // Check if the selected row is in the holding tank
-  if ($("#holding-tank-column").has($("#selected_row")).length) {
+  if (document.getElementById('holding-tank-column')?.contains?.(document.getElementById('selected_row'))) {
     debugLog?.info("Selected row is in holding tank", { module: 'song-management', function: 'deleteSelectedSong' });
     // If in holding tank, remove from holding tank
     removeFromHoldingTank();
-  } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
+  } else if (document.getElementById('hotkey-tab-content')?.contains?.(document.getElementById('selected_row'))) {
     debugLog?.info("Selected row is in hotkey tab", { module: 'song-management', function: 'deleteSelectedSong' });
     // If in hotkey tab, remove from hotkey
     removeFromHotkey();

@@ -23,6 +23,7 @@ try {
 
 // Import shared state
 import sharedState from '../shared-state.js';
+import Dom from '../dom-utils/index.js';
 
 // Global variables
 let fontSize = 11;
@@ -66,8 +67,16 @@ async function populateCategorySelect() {
       function: 'populateCategorySelect'
     });
     
-    $("#category_select option").remove();
-    $("#category_select").append(`<option value="*">All Categories</option>`);
+    {
+      const sel = document.getElementById('category_select');
+      if (sel) {
+        sel.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = '*';
+        opt.textContent = 'All Categories';
+        sel.appendChild(opt);
+      }
+    }
     
     const result = await secureDatabase.getCategories();
     const data = result.data || result;
@@ -75,9 +84,13 @@ async function populateCategorySelect() {
     if (data && Array.isArray(data)) {
       data.forEach(row => {
         categories[row.code] = row.description;
-        $("#category_select").append(
-          `<option value="${row.code}">${row.description}</option>`
-        );
+        const sel = document.getElementById('category_select');
+        if (sel) {
+          const opt = document.createElement('option');
+          opt.value = row.code;
+          opt.textContent = row.description;
+          sel.appendChild(opt);
+        }
       });
       
       debugLog?.info('Categories populated successfully', { 
@@ -107,7 +120,7 @@ async function populateCategorySelect() {
  * Fetches song data by ID and sets the label for a UI element
  * 
  * @param {string} song_id - The song ID to fetch
- * @param {jQuery} element - The element to set the label for
+ * @param {Element|string} element - The element to set the label for (or selector)
  */
 function setLabelFromSongId(song_id, element) {
   // Use new database API for getting song by ID
@@ -120,9 +133,7 @@ function setLabelFromSongId(song_id, element) {
         const time = row.time || "[??:??]";
         
         // Handle swapping
-        const original_song_node = $(`.hotkeys.active li[songid=${song_id}]`).not(
-          element
-        );
+        const original_song_node = Array.from(document.querySelectorAll(`.hotkeys.active li[songid="${song_id}"]`)).filter(el => el !== (typeof element === 'string' ? document.querySelector(element) : element));
         debugLog?.info('Original song node found', { 
           module: 'data-population',
           function: 'setLabelFromSongId',
@@ -130,19 +141,26 @@ function setLabelFromSongId(song_id, element) {
           originalNode: original_song_node.length
         });
         if (original_song_node.length) {
-          const old_song = original_song_node.find("span").detach();
-          const destination_song = $(element).find("span").detach();
-          original_song_node.append(destination_song);
-          if (destination_song.attr("songid")) {
-            original_song_node.attr("songid", destination_song.attr("songid"));
+          const originalNode = original_song_node[0];
+          const oldSong = originalNode.querySelector('span');
+          const destParent = (typeof element === 'string' ? document.querySelector(element) : element);
+          const destSpan = destParent?.querySelector('span');
+          if (destSpan && destSpan.parentNode) destSpan.parentNode.removeChild(destSpan);
+          if (oldSong && oldSong.parentNode) oldSong.parentNode.removeChild(oldSong);
+          if (destSpan) originalNode.appendChild(destSpan);
+          if (destSpan?.getAttribute('songid')) {
+            originalNode.setAttribute('songid', destSpan.getAttribute('songid'));
           } else {
-            original_song_node.removeAttr("songid");
+            originalNode.removeAttribute('songid');
           }
-
-          $(element).append(old_song);
+          if (oldSong && destParent) destParent.appendChild(oldSong);
         } else {
-          $(element).find("span").html(`${title} by ${artist} (${time})`);
-          $(element).find("span").attr("songid", song_id);
+          const destParent = (typeof element === 'string' ? document.querySelector(element) : element);
+          const span = destParent?.querySelector('span');
+          if (span) {
+            span.textContent = `${title} by ${artist} (${time})`;
+            span.setAttribute('songid', String(song_id));
+          }
         }
         saveHotkeysToStore();
       } else {
@@ -169,7 +187,7 @@ function setLabelFromSongId(song_id, element) {
  * Fetches song data by ID and adds it to the holding tank UI
  * 
  * @param {string} song_id - The song ID to add
- * @param {jQuery} element - The element to add the song to
+ * @param {Element|string} element - The element to add the song to (or selector)
  */
 async function addToHoldingTank(song_id, element) {
   try {
@@ -199,12 +217,10 @@ async function addToHoldingTank(song_id, element) {
         time: time
       });
 
-      const existing_song = $(
-        `.holding_tank.active .list-group-item[songid=${song_id}]`
-      );
+      const existing_song = document.querySelector(`.holding_tank.active .list-group-item[songid="${song_id}"]`);
       let song_row;
-      if (existing_song.length) {
-        song_row = existing_song.detach();
+      if (existing_song) {
+        song_row = existing_song;
       } else {
         song_row = document.createElement("li");
         song_row.style.fontSize = `${currentFontSize}px`;
@@ -215,12 +231,14 @@ async function addToHoldingTank(song_id, element) {
         song_row.textContent = `${title} by ${artist} (${time})`;
       }
 
-      if ($(element).is("li")) {
-        $(element).after(song_row);
-      } else if ($(element).is("div")) {
-        $(element).find("ul.active").append(song_row);
-      } else {
-        $(element).append(song_row);
+      const targetEl = element && element.nodeType ? element : Dom.$(element);
+      if (targetEl?.matches?.('li')) {
+        targetEl.insertAdjacentElement('afterend', song_row);
+      } else if (targetEl?.matches?.('div')) {
+        const ul = targetEl.querySelector('ul.active');
+        (ul || targetEl).appendChild(song_row);
+      } else if (targetEl?.appendChild) {
+        targetEl.appendChild(song_row);
       }
       
       if (typeof window.saveHoldingTankToStore === 'function') {
@@ -269,8 +287,9 @@ function populateHotkeys(fkeys, title) {
   for (const key in fkeys) {
     if (fkeys[key]) {
       try {
-        $(`.hotkeys.active #${key}_hotkey`).attr("songid", fkeys[key]);
-        setLabelFromSongId(fkeys[key], $(`.hotkeys.active #${key}_hotkey`));
+        const el = document.querySelector(`.hotkeys.active #${key}_hotkey`);
+        if (el) el.setAttribute('songid', fkeys[key]);
+        setLabelFromSongId(fkeys[key], el);
       } catch (err) {
         debugLog?.warn('Error loading fkey', { 
           module: 'data-population',
@@ -281,12 +300,17 @@ function populateHotkeys(fkeys, title) {
         });
       }
     } else {
-      $(`.hotkeys.active #${key}_hotkey`).removeAttr("songid");
-      $(`.hotkeys.active #${key}_hotkey span`).html("");
+      const el = document.querySelector(`.hotkeys.active #${key}_hotkey`);
+      if (el) {
+        el.removeAttribute('songid');
+        const span = el.querySelector('span');
+        if (span) span.textContent = '';
+      }
     }
   }
   if (title) {
-    $("#hotkey_tabs li a.active").text(title);
+    const link = document.querySelector('#hotkey_tabs li a.active');
+    if (link) link.textContent = title;
   }
 }
 
@@ -311,7 +335,7 @@ function populateHoldingTank(songIds) {
     return false;
   }
   
-  $(".holding_tank.active").empty();
+  Dom.empty('.holding_tank.active');
   songIds.forEach((songId) => {
     if (songId && songId.trim()) {
       debugLog?.info('Adding song ID to holding tank', { 
@@ -319,7 +343,7 @@ function populateHoldingTank(songIds) {
         function: 'populateHoldingTank',
         songId: songId
       });
-      addToHoldingTank(songId.trim(), $(".holding_tank.active"));
+    addToHoldingTank(songId.trim(), Dom.$('.holding_tank.active'));
     } else {
       debugLog?.warn('Skipping empty or invalid song ID', { 
         module: 'data-population',
@@ -337,7 +361,8 @@ function populateHoldingTank(songIds) {
  * Fetches categories from database and populates the categories modal
  */
 function populateCategoriesModal() {
-  $("#categoryList").find("div.row").remove();
+  const list = document.getElementById('categoryList');
+  if (list) Array.from(list.querySelectorAll('div.row')).forEach(n => n.remove());
   // Removed legacy direct DB usage
 }
 

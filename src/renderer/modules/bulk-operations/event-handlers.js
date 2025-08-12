@@ -20,28 +20,32 @@ try {
  */
 export function setupBulkEventHandlers() {
   // Handle bulk add category dropdown change
-  $("#bulk-add-category")
-    .change(function () {
-      $(this)
-        .find("option:selected")
-        .each(function () {
-          const optionValue = $(this).attr("value");
-          if (optionValue == "--NEW--") {
-            $("#bulkSongFormNewCategory").show();
-            $("#bulk-song-form-new-category").attr("required", "required");
-          } else {
-            $("#bulkSongFormNewCategory").hide();
-            $("#bulk-song-form-new-category").removeAttr("required");
-          }
-        });
-    })
-    .change();
+  const bulkSelect = document.getElementById('bulk-add-category');
+  const newCatRow = document.getElementById('bulkSongFormNewCategory');
+  const newCatInput = document.getElementById('bulk-song-form-new-category');
+  if (bulkSelect) {
+    const handler = () => {
+      const optionValue = bulkSelect.value;
+      if (optionValue === '--NEW--') {
+        if (newCatRow) newCatRow.style.display = '';
+        if (newCatInput) newCatInput.setAttribute('required', 'required');
+      } else {
+        if (newCatRow) newCatRow.style.display = 'none';
+        if (newCatInput) newCatInput.removeAttribute('required');
+      }
+    };
+    bulkSelect.addEventListener('change', handler);
+    handler();
+  }
 
   // Handle bulk add modal hidden event
-  $("#bulkAddModal").on("hidden.bs.modal", function (e) {
-    $("#bulkSongFormNewCategory").hide();
-    $("#bulk-song-form-new-category").val("");
-  });
+  const bulkModal = document.getElementById('bulkAddModal');
+  if (bulkModal) {
+    bulkModal.addEventListener('hidden.bs.modal', function () {
+      if (newCatRow) newCatRow.style.display = 'none';
+      if (newCatInput) newCatInput.value = '';
+    });
+  }
 
   debugLog?.info('Bulk Operations Event Handlers initialized', { 
     module: 'bulk-operations-event-handlers',

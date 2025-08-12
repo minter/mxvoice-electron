@@ -163,8 +163,7 @@ window.testPreferencesModule = function() {
 
 - **electronAPI** - For modern store access
 - **store** - For legacy store access
-- **jQuery** - For DOM manipulation
-- **Bootstrap** - For modal functionality
+- **Bootstrap 5** - For modal functionality via `bootstrap-adapter` (no jQuery)
 
 ## Version History
 

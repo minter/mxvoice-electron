@@ -199,7 +199,9 @@ export class NavigationShortcuts {
   handleSearchFocus() {
     try {
       this.logDebug('Search focus requested');
-      $("#omni_search").focus().select();
+      const el = document.getElementById('omni_search');
+      el?.focus();
+      el?.select();
     } catch (error) {
       this.logError('Error focusing search field:', error);
     }
@@ -212,10 +214,13 @@ export class NavigationShortcuts {
     try {
       this.logDebug('Alternative search focus requested');
       
-      if ($("#omni_search").is(":visible")) {
-        $("#omni_search").trigger("focus");
+      const omni = document.getElementById('omni_search');
+      const adv = document.getElementById('advanced-search');
+      const omniVisible = omni && omni.offsetParent !== null && !(adv && adv.offsetParent !== null);
+      if (omniVisible) {
+        omni?.focus();
       } else {
-        $("#title-search").trigger("focus");
+        document.getElementById('title-search')?.focus();
       }
     } catch (error) {
       this.logError('Error with alternative search focus:', error);
@@ -274,7 +279,8 @@ export class NavigationShortcuts {
       this.logDebug('Play selected requested');
       
       // Don't play if modal is open
-      if ($("#songFormModal").hasClass("show")) {
+      const modal = document.getElementById('songFormModal');
+      if (modal && modal.classList.contains('show')) {
         return false;
       }
       
@@ -298,12 +304,15 @@ export class NavigationShortcuts {
   handleDeletion() {
     try {
       this.logDebug("Delete key pressed");
-      this.logDebug("selected_row", $("#selected_row"));
-      this.logDebug("holding-tank-column has selected_row", $("#holding-tank-column").has($("#selected_row")).length);
-      this.logDebug("hotkey-tab-content has selected_row", $("#hotkey-tab-content").has($("#selected_row")).length);
+      this.logDebug("selected_row", document.getElementById('selected_row'));
+      const sel = document.getElementById('selected_row');
+      const holding = document.getElementById('holding-tank-column');
+      const hotkeys = document.getElementById('hotkey-tab-content');
+      this.logDebug("holding-tank-column has selected_row", Number(Boolean(holding && sel && holding.contains(sel))));
+      this.logDebug("hotkey-tab-content has selected_row", Number(Boolean(hotkeys && sel && hotkeys.contains(sel))));
       
       // Check if the selected row is in the holding tank
-      if ($("#holding-tank-column").has($("#selected_row")).length) {
+      if (holding && sel && holding.contains(sel)) {
         this.logDebug("Selected row is in holding tank");
         // If in holding tank, remove from holding tank
         if (window.removeFromHoldingTank && typeof window.removeFromHoldingTank === 'function') {
@@ -311,7 +320,7 @@ export class NavigationShortcuts {
         } else {
           this.logWarn('removeFromHoldingTank function not available');
         }
-      } else if ($("#hotkey-tab-content").has($("#selected_row")).length) {
+      } else if (hotkeys && sel && hotkeys.contains(sel)) {
         this.logDebug("Selected row is in hotkey tab");
         // If in hotkey tab, remove from hotkey
         if (window.removeFromHotkey && typeof window.removeFromHotkey === 'function') {

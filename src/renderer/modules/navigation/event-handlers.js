@@ -4,6 +4,9 @@
  * Handles UI event handlers for navigation functionality
  */
 
+// Import navigation functions
+import { sendToHotkeys, sendToHoldingTank, selectNext, selectPrev } from './navigation-functions.js';
+
 // Import debug logger
 let debugLog = null;
 try {

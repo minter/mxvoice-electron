@@ -377,6 +377,9 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       if (moduleRegistry.navigation && moduleRegistry.navigation.initializeNavigation) {
         moduleRegistry.navigation.initializeNavigation();
       }
+      if (moduleRegistry.modeManagement && moduleRegistry.modeManagement.initModeManagement) {
+        await moduleRegistry.modeManagement.initModeManagement();
+      }
       window.logInfo('All modules initialized successfully!');
     } catch (error) {
       window.logError('Error initializing modules', error);
@@ -480,7 +483,7 @@ import EventCoordination from './renderer/modules/event-coordination/index.js';
 // Global event coordination instance
 let eventCoordination = null;
 
-$(document).ready(async function () {
+document.addEventListener('DOMContentLoaded', async function () {
   try {
     // Initialize DOM-dependent features from app-initialization module
     if (AppInitialization.isInitialized()) {
@@ -509,13 +512,26 @@ $(document).ready(async function () {
     // Make event coordination available globally for debugging
     window.eventCoordination = eventCoordination;
 
+    // Provide global aliases for UI scaling (legacy underscore and new camelCase)
+    try {
+      const uiModule = moduleRegistry.ui;
+      const holdingModule = moduleRegistry.holdingTank;
+      const scaleFn = (uiModule && uiModule.scaleScrollable) || (holdingModule && holdingModule.scale_scrollable) || null;
+      if (!window.scale_scrollable) {
+        window.scale_scrollable = scaleFn;
+      }
+      if (!window.scaleScrollable) {
+        window.scaleScrollable = scaleFn;
+      }
+    } catch {}
+
   } catch (error) {
     window.logError('Error initializing event coordination:', error);
     window.logError('Falling back to basic initialization');
     
     // Minimal fallback initialization if event coordination fails
-    $("#audio_progress").width("0%");
-    $("#search_results thead").hide();
+    const progress = document.getElementById('audio_progress'); if (progress) progress.style.width = '0%';
+    const thead = document.querySelector('#search_results thead'); if (thead) thead.style.display = 'none';
   }
 });
 

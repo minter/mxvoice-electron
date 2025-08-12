@@ -10,17 +10,21 @@
  * @returns {boolean} - Returns false to prevent default behavior
  */
 export function sendToHotkeys() {
-  if ($("#selected_row").is("span")) {
-    return;
+  if (document.getElementById('selected_row')?.tagName === 'SPAN') {
+    return false;
   }
-  target = $(".hotkeys.active li").not("[songid]").first();
-  song_id = $("#selected_row").attr("songid");
-  if ($(`.hotkeys.active li[songid=${song_id}]`).length) {
-    return;
+  const target = Array.from(document.querySelectorAll('.hotkeys.active li')).find(li => !li.getAttribute('songid'));
+  const songId = document.getElementById('selected_row')?.getAttribute('songid');
+  if (document.querySelector(`.hotkeys.active li[songid="${songId}"]`)) {
+    return false;
   }
-  if (target && song_id) {
-    target.attr("songid", song_id);
-    setLabelFromSongId(song_id, target);
+  if (target && songId) {
+    target.setAttribute('songid', songId);
+    if (typeof window.setLabelFromSongId === 'function') {
+      window.setLabelFromSongId(songId, target);
+    } else if (window.moduleRegistry?.hotkeys?.setLabelFromSongId) {
+      window.moduleRegistry.hotkeys.setLabelFromSongId(songId, target);
+    }
   }
   return false;
 }
@@ -31,10 +35,14 @@ export function sendToHotkeys() {
  * @returns {boolean} - Returns false to prevent default behavior
  */
 export function sendToHoldingTank() {
-  target = $(".holding_tank.active");
-  song_id = $("#selected_row").attr("songid");
-  if (song_id) {
-    addToHoldingTank(song_id, target);
+  const target = document.querySelector('.holding_tank.active');
+  const songId = document.getElementById('selected_row')?.getAttribute('songid');
+  if (songId) {
+    if (typeof window.addToHoldingTank === 'function') {
+      window.addToHoldingTank(songId, target);
+    } else if (window.moduleRegistry?.holdingTank?.addToHoldingTank) {
+      window.moduleRegistry.holdingTank.addToHoldingTank(songId, target);
+    }
   }
   return false;
 }
@@ -43,12 +51,20 @@ export function sendToHoldingTank() {
  * Selects next item in list
  */
 export function selectNext() {
-  $("#selected_row").removeAttr("id").next().attr("id", "selected_row");
+  const current = document.getElementById('selected_row');
+  if (!current) return;
+  current.removeAttribute('id');
+  const next = current.nextElementSibling;
+  if (next) next.id = 'selected_row';
 }
 
 /**
  * Selects previous item in list
  */
 export function selectPrev() {
-  $("#selected_row").removeAttr("id").prev().attr("id", "selected_row");
+  const current = document.getElementById('selected_row');
+  if (!current) return;
+  current.removeAttribute('id');
+  const prev = current.previousElementSibling;
+  if (prev) prev.id = 'selected_row';
 } 

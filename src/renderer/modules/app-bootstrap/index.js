@@ -23,8 +23,22 @@ export async function loadBasicModules(config, moduleRegistry, logInfo, logError
   for (const moduleConf of config) {
     try {
       logInfo(`Loading ${moduleConf.name} module...`);
-      const module = await import(moduleConf.path);
-      logInfo(`${moduleConf.name} module loaded successfully`);
+      let resolvedUrl = '';
+      try {
+        resolvedUrl = new URL(moduleConf.path, import.meta.url).toString();
+      } catch (_) {}
+      if (resolvedUrl) {
+        logInfo(`Resolving ${moduleConf.name} from: ${resolvedUrl}`);
+      } else {
+        logWarn(`Could not compute resolved URL for ${moduleConf.name}; path: ${moduleConf.path}`);
+      }
+
+      // Always import using the relative specifier so it resolves as an ES module
+      // Using a file:// URL can cause the browser to treat it incorrectly
+      const specifier = moduleConf.path;
+
+      // Clean imports without verbose diagnostics
+      const module = await import(specifier);
       
       if (module.default) {
         // Handle different module patterns
@@ -66,6 +80,14 @@ export async function loadBasicModules(config, moduleRegistry, logInfo, logError
         logWarn(`${moduleConf.name} module not available, Function Registry will provide fallbacks`);
       }
     } catch (error) {
+      try {
+        let resolvedUrl = '';
+        try { resolvedUrl = new URL(moduleConf.path, import.meta.url).toString(); } catch (_) {}
+        logError(`Dynamic import failed for ${moduleConf.name} at ${resolvedUrl || moduleConf.path}`, { name: error?.name, message: error?.message });
+        if (error && error.stack) {
+          logError(`Stack for ${moduleConf.name}`, error.stack);
+        }
+      } catch (_) {}
       if (moduleConf.required) {
         logError(`Error loading required ${moduleConf.name} module`, error);
         throw error;

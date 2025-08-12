@@ -48,6 +48,21 @@
     border-color: var(--input-border) !important;
   }
 
+  /* Ensure placeholders are readable on dark backgrounds */
+  input[type="text"]::placeholder,
+  input[type="search"]::placeholder,
+  textarea::placeholder,
+  .form-control::placeholder {
+    color: rgba(226, 226, 226, 0.6) !important; /* based on --input-text */
+  }
+  /* WebKit prefix for wider Chromium coverage */
+  input[type="text"]::-webkit-input-placeholder,
+  input[type="search"]::-webkit-input-placeholder,
+  textarea::-webkit-input-placeholder,
+  .form-control::-webkit-input-placeholder {
+    color: rgba(226, 226, 226, 0.6) !important;
+  }
+
   input[type="text"]:focus,
   input[type="search"]:focus,
   select:focus,
@@ -155,8 +170,15 @@ table td#selected_row {
 }
 
 /* Also handle cases where selected_row might be on a tr */
+tr#selected_row {
+  color: white !important;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3) !important;
+}
+
 tr#selected_row td {
   color: white !important;
+  background: transparent !important;
 }
 
 #player {
@@ -226,6 +248,32 @@ table td {
   background: var(--context-menu-list);
   background-color: var(--context-menu-list);
   color: var(--card-text);
+}
+
+/* New native context menu styling to match app theme */
+.mxv-context-menu {
+  background-color: var(--panel-color);
+  color: var(--card-text);
+  border: 1px solid var(--card-border);
+  border-radius: 0.25rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  padding: 0.25rem 0;
+}
+
+.mxv-context-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.375rem 0.75rem;
+  background: transparent;
+  border: none;
+  color: var(--card-text);
+  cursor: pointer;
+}
+
+.mxv-context-item:hover,
+.mxv-context-item:focus {
+  background-color: var(--header-color);
 }
 
 .holding_tank li {

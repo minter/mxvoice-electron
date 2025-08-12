@@ -23,23 +23,23 @@ try {
  */
 export function pickDirectory(event, element) {
   event.preventDefault();
-  const defaultPath = $(element).val();
+  const defaultPath = (element && element instanceof Element) ? (element.value || '') : '';
   try {
     if (window.secureElectronAPI?.app?.showDirectoryPicker) {
       window.secureElectronAPI.app.showDirectoryPicker(defaultPath).then((res) => {
         if (res && res.success && res.data && !res.data.canceled && Array.isArray(res.data.filePaths)) {
           const dir = res.data.filePaths[0];
-          if (dir) $(element).val(dir);
+          if (dir && element && element instanceof Element) element.value = dir;
         } else if (Array.isArray(res)) {
           const dir = res[0];
-          if (dir) $(element).val(dir);
+          if (dir && element && element instanceof Element) element.value = dir;
         }
       });
     } else if (window.electronAPI?.showDirectoryPicker) {
       window.electronAPI.showDirectoryPicker(defaultPath).then((res) => {
         if (Array.isArray(res)) {
           const dir = res[0];
-          if (dir) $(element).val(dir);
+          if (dir && element && element instanceof Element) element.value = dir;
         }
       });
     }

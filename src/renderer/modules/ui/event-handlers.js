@@ -34,9 +34,9 @@ function initializeEventHandlers(options = {}) {
    * @param {HTMLElement} row - The row element to toggle
    */
   function toggleSelectedRow(row) {
-    $("#selected_row").removeAttr("id");
-    $(row).attr("id", "selected_row");
-    $("#play_button").removeAttr("disabled");
+    document.getElementById('selected_row')?.removeAttribute('id');
+    if (row && row instanceof Element) row.id = 'selected_row';
+    document.getElementById('play_button')?.removeAttribute('disabled');
   }
   
   /**
@@ -44,17 +44,20 @@ function initializeEventHandlers(options = {}) {
    * @param {number} tab - Tab number to switch to
    */
   function switchToHotkeyTab(tab) {
-    $(`#hotkey_tabs li:nth-child(${tab}) a`).tab("show");
+    try {
+      import('../ui/bootstrap-adapter.js').then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tab}) a`));
+    } catch {}
   }
   
   /**
    * Rename the currently active hotkey tab
    */
   async function renameHotkeyTab() {
-    const currentName = $("#hotkey_tabs .nav-link.active").text();
+    const currentName = document.querySelector('#hotkey_tabs .nav-link.active')?.textContent || '';
     const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
     if (newName && newName.trim() !== "") {
-      $("#hotkey_tabs .nav-link.active").text(newName);
+      const link = document.querySelector('#hotkey_tabs .nav-link.active');
+      if (link) link.textContent = newName;
       saveHotkeysToStore();
       return { success: true, newName: newName };
     } else {
@@ -66,10 +69,11 @@ function initializeEventHandlers(options = {}) {
    * Rename the currently active holding tank tab
    */
   async function renameHoldingTankTab() {
-    const currentName = $("#holding_tank_tabs .nav-link.active").text();
+    const currentName = document.querySelector('#holding_tank_tabs .nav-link.active')?.textContent || '';
     const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Holding Tank Tab");
     if (newName && newName.trim() !== "") {
-      $("#holding_tank_tabs .nav-link.active").text(newName);
+      const link = document.querySelector('#holding_tank_tabs .nav-link.active');
+      if (link) link.textContent = newName;
       saveHoldingTankToStore();
       return { success: true, newName: newName };
     } else {
@@ -81,7 +85,8 @@ function initializeEventHandlers(options = {}) {
    * Save hotkeys to store
    */
   function saveHotkeysToStore() {
-    const currentHtml = $("#hotkeys-column").html();
+    const col = document.getElementById('hotkeys-column');
+    const currentHtml = col ? col.innerHTML : '';
     if (currentHtml.includes("header-button")) {
       if (electronAPI && electronAPI.store) {
         electronAPI.store.set("hotkeys", currentHtml).catch(error => {
@@ -99,7 +104,8 @@ function initializeEventHandlers(options = {}) {
    * Save holding tank to store
    */
   function saveHoldingTankToStore() {
-    const currentHtml = $("#holding-tank-column").html();
+    const col = document.getElementById('holding-tank-column');
+    const currentHtml = col ? col.innerHTML : '';
     if (currentHtml.includes("mode-toggle")) {
       if (electronAPI && electronAPI.store) {
         electronAPI.store.set("holding_tank", currentHtml).catch(error => {

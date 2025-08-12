@@ -6,10 +6,13 @@
  */
 
 // Import UI sub-modules
+// Use the full UI manager now that syntax issues are resolved
 import uiManager from './ui-manager.js';
 import eventHandlers from './event-handlers.js';
 import controls from './controls.js';
 import modals from './modals.js';
+
+//
 
 /**
  * Initialize the UI module
@@ -19,7 +22,7 @@ import modals from './modals.js';
  * @param {Object} options.store - Store reference
  * @returns {Object} UI module interface
  */
-function initializeUI(options = {}) {
+export function initializeUI(options = {}) {
   const { electronAPI, db, store } = options;
   
   // Initialize sub-modules
@@ -61,35 +64,9 @@ function initializeUI(options = {}) {
   };
 }
 
-// Create and export a singleton instance
-let uiModule = initializeUI();
-
-// Add reinitialize function
-function reinitializeUI(options = {}) {
-  uiModule = initializeUI(options);
-  return uiModule;
+export function reinitializeUI(options = {}) {
+  return initializeUI(options);
 }
 
-// Export individual functions for direct access
-export const scaleScrollable = uiModule.scaleScrollable;
-export const editSelectedSong = uiModule.editSelectedSong;
-export const deleteSelectedSong = uiModule.deleteSelectedSong;
-export const closeAllTabs = uiModule.closeAllTabs;
-export const toggleSelectedRow = uiModule.toggleSelectedRow;
-export const switchToHotkeyTab = uiModule.switchToHotkeyTab;
-export const renameHotkeyTab = uiModule.renameHotkeyTab;
-export const renameHoldingTankTab = uiModule.renameHoldingTankTab;
-export const increaseFontSize = uiModule.increaseFontSize;
-export const decreaseFontSize = uiModule.decreaseFontSize;
-export const toggleWaveform = uiModule.toggleWaveform;
-export const toggleAdvancedSearch = uiModule.toggleAdvancedSearch;
-export const pickDirectory = uiModule.pickDirectory;
-export const installUpdate = uiModule.installUpdate;
-export const getFontSize = uiModule.getFontSize;
-export const setFontSize = uiModule.setFontSize;
-
-// Add reinitialize function to exports
-uiModule.reinitializeUI = reinitializeUI;
-
-// Default export for module loading
-export default uiModule; 
+// Default export is the initializer; the bootstrap loader will call it
+export default initializeUI;

@@ -5,7 +5,8 @@
  * for the MxVoice Electron application.
  */
 
-import { app, BrowserWindow, Menu, dialog, shell } from 'electron';
+import { app, BrowserWindow, Menu, dialog, shell, nativeTheme } from 'electron';
+import { getLogService } from './log-service.js';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
@@ -31,11 +32,13 @@ function initializeAppSetup(dependencies) {
 }
 
 // Create the main window
-function createWindow() {
+// Accept initial dimensions so the caller (which has access to the store)
+// can restore the last-saved size on startup.
+function createWindow({ width = 1200, height = 800 } = {}) {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width,
+    height,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -249,15 +252,15 @@ function createApplicationMenu() {
           role: 'about'
         },
         {
-          label: 'Release Notes For Version ' + app.getVersion(),
+          label: 'Release Notes',
           click: () => {
-            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/tag/v${app.getVersion()}`);
+            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
           }
         },
         {
-          label: 'Release Notes For All Versions',
-          click: () => {
-            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+          label: 'Export Logs',
+          click: async () => {
+            try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
           }
         },
         {
@@ -288,17 +291,13 @@ function createApplicationMenu() {
         },
         {
           label: 'Developer Tools',
-          click: () => {
-            mainWindow.openDevTools();
-          }
+          role: 'toggleDevTools'
         },
         {
           type: 'separator'
         },
         {
-          label: 'Quit',
-          accelerator: 'Command+Q',
-          click: () => { app.quit(); }
+          role: 'quit'
         },
       ]
     });
@@ -320,8 +319,7 @@ function createApplicationMenu() {
       label: 'File',
       submenu: [
         {
-          label: 'Exit',
-          click: () => { app.quit(); }
+          role: 'quit'
         }
       ]
     })
@@ -332,18 +330,20 @@ function createApplicationMenu() {
       submenu: [
         {
           label: 'About ' + name,
-          role: 'about'
-        },
-        {
-          label: 'Release Notes For Version ' + app.getVersion(),
           click: () => {
-            shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/tag/v${app.getVersion()}`);
+            showAboutDialog();
           }
         },
         {
-          label: 'Release Notes For All Versions',
+          label: 'Release Notes',
           click: () => {
             shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+          }
+        },
+        {
+          label: 'Export Logs',
+          click: async () => {
+            try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
           }
         },
         {
@@ -351,9 +351,7 @@ function createApplicationMenu() {
         },
         {
           label: 'Developer Tools',
-          click: () => {
-            mainWindow.openDevTools();
-          }
+          role: 'toggleDevTools'
         }
       ]
     });
@@ -364,6 +362,97 @@ function createApplicationMenu() {
 }
 
 // UI operation functions
+function showAboutDialog() {
+  try {
+    const applicationName = app.name;
+    const applicationVersion = app.getVersion();
+    const isDarkMode = nativeTheme.shouldUseDarkColors;
+    const backgroundColor = isDarkMode ? '#1e1e1e' : '#ffffff';
+    const foregroundColor = isDarkMode ? '#e6e6e6' : '#222222';
+    const mutedColor = isDarkMode ? '#bbbbbb' : '#666666';
+
+    const aboutWindow = new BrowserWindow({
+      parent: mainWindow,
+      modal: true,
+      width: 460,
+      height: 360,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      title: `About ${applicationName}`,
+      backgroundColor,
+      autoHideMenuBar: true,
+      webPreferences: {
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false
+      }
+    });
+
+    const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:;" />
+    <title>About ${applicationName}</title>
+    <style>
+      :root {
+        --bg: ${backgroundColor};
+        --fg: ${foregroundColor};
+        --muted: ${mutedColor};
+      }
+      html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; }
+      .container { padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+      h1 { margin: 0; font-size: 20px; }
+      .version { color: var(--muted); }
+      .section { margin-top: 8px; }
+      .heading { font-weight: 600; margin-bottom: 4px; }
+      .credits { white-space: pre-line; }
+      .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+      .link { color: #4da3ff; text-decoration: none; }
+      .btn { background: transparent; color: var(--fg); border: 1px solid var(--muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+      .btn:hover { border-color: var(--fg); }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div>
+        <h1>${applicationName}</h1>
+        <div class="version">Version ${applicationVersion}</div>
+      </div>
+      <div class="section">
+        <div class="heading">Authors</div>
+        <div>Wade Minter</div>
+        <div>Andrew Berkowitz</div>
+      </div>
+      <div class="section">
+        <div class="heading">Website</div>
+        <a class="link" href="https://mxvoice.app/" onclick="event.preventDefault(); window.open('https://mrvoice.net/')">https://mrvoice.net/</a>
+      </div>
+      <div class="footer">
+        <div style="color: var(--muted);">© 2025</div>
+        <button class="btn" onclick="window.close()">Close</button>
+      </div>
+    </div>
+  </body>
+</html>`;
+
+    aboutWindow.removeMenu();
+    aboutWindow.loadURL('data:text/html;charset=UTF-8,' + encodeURIComponent(html));
+  } catch (_error) {
+    // Fallback to simple message box if anything fails
+    try {
+      const name = app.name;
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: `About ${name}`,
+        message: `${name}`,
+        detail: `Version ${app.getVersion()}\n\nAuthors:\n  • Wade Minter\n  • Andrew Berkowitz`,
+        buttons: ['OK']
+      });
+    } catch (_) {}
+  }
+}
 function increaseFontSize() {
   debugLog?.info('Increasing font size', { module: 'app-setup', function: 'increaseFontSize' });
   if (mainWindow) {

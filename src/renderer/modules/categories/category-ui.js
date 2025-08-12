@@ -26,8 +26,14 @@ import * as categoryOperations from './category-operations.js';
  */
 function populateCategorySelect() {
   debugLog?.info("Populating categories", { module: 'categories', function: 'populateCategorySelect' });
-  $("#category_select option").remove();
-  $("#category_select").append(`<option value="*">All Categories</option>`);
+  const select = document.getElementById('category_select');
+  if (select) {
+    select.innerHTML = '';
+    const optAll = document.createElement('option');
+    optAll.value = '*';
+    optAll.textContent = 'All Categories';
+    select.appendChild(optAll);
+  }
   
   return categoryOperations.getCategories().then(result => {
     if (result.success) {
@@ -36,9 +42,12 @@ function populateCategorySelect() {
         if (typeof categories !== 'undefined') {
           categories[row.code] = row.description;
         }
-        $("#category_select").append(
-          `<option value="${row.code}">${row.description}</option>`
-        );
+        if (select) {
+          const opt = document.createElement('option');
+          opt.value = row.code;
+          opt.textContent = row.description;
+          select.appendChild(opt);
+        }
       });
       debugLog?.info('✅ Category select populated successfully', { module: 'categories', function: 'populateCategorySelect' });
     } else {
@@ -67,7 +76,8 @@ function populateCategoriesModal(preserveScroll = false) {
     }
   }
 
-  $("#categoryList").find("div.row").remove();
+  const list = document.getElementById('categoryList');
+  if (list) Array.from(list.querySelectorAll('div.row')).forEach(n => n.remove());
 
   return categoryOperations.getCategories().then(result => {
     if (result.success) {
@@ -75,18 +85,22 @@ function populateCategoriesModal(preserveScroll = false) {
       result.data.forEach(row => {
         debugLog?.info('Category row:', { module: 'categories', function: 'populateCategoriesModal', row: row });
         debugLog?.info('Code:', { module: 'categories', function: 'populateCategoriesModal', code: row.code, description: row.description });
-        $("#categoryList").append(`<div class="form-group row">
-
-          <div class="col-sm-8">
-            <div catcode="${row.code}" class="category-description">${row.description}</div>
-            <input style="display: none;" type="text" class="form-control form-control-sm categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
-          </div>
-          <div class="col-sm-4">
-          <a href="#" class="btn btn-primary btn-xs" onclick="editCategoryUI('${row.code}')">Edit</a>&nbsp;
-          <a class="delete_link btn btn-danger btn-xs" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
-          </div>
-
-        </div>`);
+        const container = document.getElementById('categoryList');
+        if (container) {
+          const rowDiv = document.createElement('div');
+          rowDiv.className = 'row g-2 mb-3';
+          rowDiv.innerHTML = `
+            <div class="col-sm-8">
+              <div catcode="${row.code}" class="category-description">${row.description}</div>
+              <input style="display: none;" type="text" class="form-control form-control-sm categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
+            </div>
+            <div class="col-sm-4">
+              <a href="#" class="btn btn-primary btn-xs" onclick="editCategoryUI('${row.code}')">Edit</a>&nbsp;
+              <a class="delete_link btn btn-danger btn-xs" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
+            </div>
+          `;
+          container.appendChild(rowDiv);
+        }
       });
       debugLog?.info('✅ Categories modal populated successfully', { module: 'categories', function: 'populateCategoriesModal' });
       
@@ -114,10 +128,12 @@ function populateCategoriesModal(preserveScroll = false) {
  * @param {string} code - Category code to edit
  */
 function editCategoryUI(code) {
-  $(".categoryDescription").hide();
-  $(".category-description").show();
-  $(`.category-description[catcode=${code}]`).hide();
-  $(`.categoryDescription[catcode=${code}]`).show().select();
+  document.querySelectorAll('.categoryDescription').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.category-description').forEach(el => el.style.display = 'block');
+  const desc = document.querySelector(`.category-description[catcode="${code}"]`);
+  if (desc) desc.style.display = 'none';
+  const input = document.querySelector(`.categoryDescription[catcode="${code}"]`);
+  if (input) { input.style.display = 'block'; input.select(); }
 }
 
 /**
@@ -126,11 +142,11 @@ function editCategoryUI(code) {
  */
 function openCategoriesModal() {
   populateCategoriesModal().then(() => {
-    $("#categoryManagementModal").modal();
+    try { import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#categoryManagementModal')); } catch {}
   }).catch(error => {
     debugLog?.error('❌ Failed to open categories modal:', { module: 'categories', function: 'openCategoriesModal', error: error });
     // Still open the modal even if population fails
-    $("#categoryManagementModal").modal();
+    try { import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#categoryManagementModal')); } catch {}
   });
 }
 
@@ -146,9 +162,11 @@ function saveCategories(event) {
   
   const promises = [];
   
-  $("#categoryList div.row").each(function () {
-    const code = $(this).find(".categoryDescription").attr("catcode");
-    const description = $(this).find(".categoryDescription").val();
+  document.querySelectorAll('#categoryList div.row').forEach((row) => {
+    const codeEl = row.querySelector('.categoryDescription');
+    const code = codeEl ? codeEl.getAttribute('catcode') : null;
+    const descEl = row.querySelector('.categoryDescription');
+    const description = descEl ? descEl.value : null;
     
     if (code && description) {
       debugLog?.info(`Checking code ${code}`, { module: 'categories', function: 'saveCategories', code: code });
@@ -189,7 +207,8 @@ function addNewCategoryUI(event) {
   event.preventDefault();
   debugLog?.info(`Adding new category`, { module: 'categories', function: 'addNewCategoryUI' });
   
-  const description = $("#newCategoryDescription").val();
+  const descInput = document.getElementById('newCategoryDescription');
+  const description = descInput ? descInput.value : '';
   
   if (!description || description.trim() === '') {
     alert('Category description is required');
@@ -199,8 +218,9 @@ function addNewCategoryUI(event) {
   return categoryOperations.addNewCategory(description).then(result => {
     if (result.success) {
       debugLog?.info(`Added new row into database`, { module: 'categories', function: 'addNewCategoryUI' });
-      $("#newCategoryCode").val("");
-      $("#newCategoryDescription").val("");
+      const codeInput = document.getElementById('newCategoryCode');
+      if (codeInput) codeInput.value = '';
+      if (descInput) descInput.value = '';
       populateCategorySelect();
       populateCategoriesModal();
       debugLog?.info('✅ New category added successfully', { module: 'categories', function: 'addNewCategoryUI' });
@@ -210,7 +230,7 @@ function addNewCategoryUI(event) {
   }).catch(error => {
     debugLog?.error('❌ Error adding new category:', { module: 'categories', function: 'addNewCategoryUI', error: error });
     if (error.message.includes('already exists')) {
-      $("#newCategoryDescription").val("");
+      if (descInput) descInput.value = '';
       alert(`Couldn't add a category named "${description}" - apparently one already exists!`);
     } else {
       alert(`Error adding category: ${error.message}`);

@@ -1,0 +1,8 @@
+# Ignore artifacts:
+build/
+dist/
+node_modules/
+
+# Ignore specific file types if needed:
+# *.min.js
+# *.json

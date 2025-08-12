@@ -48,12 +48,14 @@ export function saveHotkeyFile() {
   
   // Collect song IDs from all hotkey elements (F1-F12)
   for (let key = 1; key <= 12; key++) {
-    hotkeyArray.push($(`.hotkeys.active li#f${key}_hotkey`).attr("songid"));
+    hotkeyArray.push(document.getElementById(`f${key}_hotkey`)?.getAttribute('songid'));
   }
   
   // Add the active tab name if it's not a numeric tab
-  if (!/^\d$/.test($("#hotkey_tabs li a.active").text())) {
-    hotkeyArray.push($("#hotkey_tabs li a.active").text());
+  const activeLink = document.querySelector('#hotkey_tabs li a.active');
+  const activeText = activeLink ? (activeLink.textContent || '') : '';
+  if (!/^\d$/.test(activeText)) {
+    hotkeyArray.push(activeText);
   }
   
   // Save using modern API with fallback
@@ -72,8 +74,8 @@ export function saveHoldingTankFile() {
   const holdingTankArray = [];
   
   // Collect song IDs from all active holding tank items
-  $(".holding_tank.active .list-group-item").each(function () {
-    holdingTankArray.push($(this).attr("songid"));
+  document.querySelectorAll('.holding_tank.active .list-group-item').forEach(li => {
+    holdingTankArray.push(li.getAttribute('songid'));
   });
   
   // Save using modern API with fallback

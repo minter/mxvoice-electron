@@ -64,7 +64,8 @@ export default class SearchEvents {
   attachCategorySelectEvents() {
     const categorySelectHandler = (event) => {
       try {
-        const category = $("#category_select").prop("selectedIndex");
+        const select = document.getElementById('category_select');
+        const category = select ? select.selectedIndex : 0;
         this.debugLog?.debug('Category select changed, calling searchData...');
         
         if (window.searchData) {
@@ -74,15 +75,15 @@ export default class SearchEvents {
           this.debugLog?.warn('searchData function not available');
         }
         
-        $("#omni_search").focus();
-        $("#category_select").prop("selectedIndex", category);
+        document.getElementById('omni_search')?.focus();
+        if (select) select.selectedIndex = category;
       } catch (error) {
         this.debugLog?.error('Error in category select handler:', error);
       }
     };
-
-    $("#category_select").on("change", categorySelectHandler);
-    this.searchHandlers.set('categorySelect', { element: '#category_select', event: 'change', handler: categorySelectHandler });
+    const el = document.getElementById('category_select');
+    el?.addEventListener('change', categorySelectHandler);
+    this.searchHandlers.set('categorySelect', { element: '#category_select', el, event: 'change', handler: categorySelectHandler });
     
     this.debugLog?.debug('Category select events attached');
   }
@@ -106,8 +107,9 @@ export default class SearchEvents {
       }
     };
 
-    $("#date-search").on("change", dateSearchHandler);
-    this.searchHandlers.set('dateSearch', { element: '#date-search', event: 'change', handler: dateSearchHandler });
+    const el = document.getElementById('date-search');
+    el?.addEventListener('change', dateSearchHandler);
+    this.searchHandlers.set('dateSearch', { element: '#date-search', el, event: 'change', handler: dateSearchHandler });
     
     this.debugLog?.debug('Date search events attached');
   }
@@ -119,6 +121,27 @@ export default class SearchEvents {
     // Search form input keydown handler
     const searchFormKeydownHandler = (event) => {
       try {
+        // Esc should stop playback even when focus is inside a search field
+        if (event.key === 'Escape' || event.code === 'Escape') {
+          this.debugLog?.debug('Escape pressed in search input; attempting to stop playback');
+          if (window.stopPlaying && typeof window.stopPlaying === 'function') {
+            // Support Shift+Esc for fade-out, mirroring global behavior
+            window.stopPlaying(Boolean(event.shiftKey));
+          } else {
+            this.debugLog?.warn('stopPlaying function not available');
+          }
+          // Cancel any pending live-search debounce to avoid unintended result clearing
+          try {
+            if (window.searchTimeout) {
+              clearTimeout(window.searchTimeout);
+              window.searchTimeout = null;
+            }
+          } catch {}
+          event.preventDefault();
+          event.stopPropagation();
+          return false;
+        }
+
         if (event.code == "Enter") {
           // Clear any pending live search using shared state
           const searchTimeout = window.searchTimeout;
@@ -155,18 +178,22 @@ export default class SearchEvents {
           this.debugLog?.warn('searchData function not available');
         }
         
-        $("#omni_search").focus();
+        document.getElementById('omni_search')?.focus();
         return false;
       } catch (error) {
         this.debugLog?.error('Error in search form submit handler:', error);
       }
     };
 
-    $("#search_form :input").on("keydown", searchFormKeydownHandler);
-    $("#search_form").on("submit", searchFormSubmitHandler);
-    
-    this.searchHandlers.set('searchFormKeydown', { element: '#search_form :input', event: 'keydown', handler: searchFormKeydownHandler });
-    this.searchHandlers.set('searchFormSubmit', { element: '#search_form', event: 'submit', handler: searchFormSubmitHandler });
+    const form = document.getElementById('search_form');
+    if (form) {
+      form.querySelectorAll(':is(input,select,textarea)').forEach(input => {
+        input.addEventListener('keydown', searchFormKeydownHandler);
+        this.searchHandlers.set(`searchFormKeydown:${input.name || input.id}`, { element: '#search_form :input', el: input, event: 'keydown', handler: searchFormKeydownHandler });
+      });
+      form.addEventListener('submit', searchFormSubmitHandler);
+      this.searchHandlers.set('searchFormSubmit', { element: '#search_form', el: form, event: 'submit', handler: searchFormSubmitHandler });
+    }
     
     this.debugLog?.debug('Search form events attached');
   }
@@ -194,7 +221,7 @@ export default class SearchEvents {
     // Category select change for live search
     const categoryLiveSearchHandler = (event) => {
       try {
-        const searchTerm = $("#omni_search").val().trim();
+        const searchTerm = (document.getElementById('omni_search')?.value || '').trim();
         this.debugLog?.debug('Category select changed, search term', searchTerm);
         
         if (searchTerm.length >= 2) {
@@ -216,7 +243,8 @@ export default class SearchEvents {
         this.debugLog?.debug('Advanced search field changed');
         
         // When advanced search is active, trigger live search even if omni_search is empty
-        if ($("#advanced-search").is(":visible")) {
+        const adv = document.getElementById('advanced-search');
+        if (adv && adv.offsetParent !== null) {
           if (window.triggerLiveSearch) {
             window.triggerLiveSearch();
             this.debugLog?.info('triggerLiveSearch called successfully from advanced search');
@@ -224,7 +252,7 @@ export default class SearchEvents {
             this.debugLog?.warn('triggerLiveSearch function not available');
           }
         } else {
-          const searchTerm = $("#omni_search").val().trim();
+          const searchTerm = (document.getElementById('omni_search')?.value || '').trim();
           if (searchTerm.length >= 2) {
             if (window.triggerLiveSearch) {
               window.triggerLiveSearch();
@@ -238,14 +266,22 @@ export default class SearchEvents {
         this.debugLog?.error('Error in advanced live search handler:', error);
       }
     };
-
-    $("#omni_search").on("input", omniSearchInputHandler);
-    $("#category_select").on("change", categoryLiveSearchHandler);
-    $("#title-search, #artist-search, #info-search, #date-search").on("input change", advancedLiveSearchHandler);
-
-    this.searchHandlers.set('omniSearchInput', { element: '#omni_search', event: 'input', handler: omniSearchInputHandler });
-    this.searchHandlers.set('categoryLiveSearch', { element: '#category_select', event: 'change', handler: categoryLiveSearchHandler });
-    this.searchHandlers.set('advancedLiveSearch', { element: '#title-search, #artist-search, #info-search, #date-search', event: 'input change', handler: advancedLiveSearchHandler });
+    const omni = document.getElementById('omni_search');
+    const cat = document.getElementById('category_select');
+    const title = document.getElementById('title-search');
+    const artist = document.getElementById('artist-search');
+    const info = document.getElementById('info-search');
+    const date = document.getElementById('date-search');
+    omni?.addEventListener('input', omniSearchInputHandler);
+    cat?.addEventListener('change', categoryLiveSearchHandler);
+    [title, artist, info, date].forEach(el => el?.addEventListener('input', advancedLiveSearchHandler));
+    date?.addEventListener('change', advancedLiveSearchHandler);
+    this.searchHandlers.set('omniSearchInput', { element: '#omni_search', el: omni, event: 'input', handler: omniSearchInputHandler });
+    this.searchHandlers.set('categoryLiveSearch', { element: '#category_select', el: cat, event: 'change', handler: categoryLiveSearchHandler });
+    this.searchHandlers.set('advancedLiveSearch:title', { element: '#title-search', el: title, event: 'input', handler: advancedLiveSearchHandler });
+    this.searchHandlers.set('advancedLiveSearch:artist', { element: '#artist-search', el: artist, event: 'input', handler: advancedLiveSearchHandler });
+    this.searchHandlers.set('advancedLiveSearch:info', { element: '#info-search', el: info, event: 'input', handler: advancedLiveSearchHandler });
+    this.searchHandlers.set('advancedLiveSearch:date', { element: '#date-search', el: date, event: 'change', handler: advancedLiveSearchHandler });
     
     this.debugLog?.debug('Live search events attached');
   }
@@ -256,12 +292,34 @@ export default class SearchEvents {
   attachSearchNavigationEvents() {
     const omniSearchKeydownHandler = (event) => {
       try {
-        if (event.code == "Tab") {
-          const first_row = $("#search_results tbody tr").first();
-          if (first_row.length) {
-            $("#selected_row").removeAttr("id");
-            first_row.attr("id", "selected_row");
-            $("#omni_search").blur();
+        // Shift+Tab: send to holding tank
+        if ((event.key === 'Tab' || event.code === 'Tab') && event.shiftKey) {
+          if (typeof window.sendToHoldingTank === 'function') {
+            window.sendToHoldingTank();
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          return false;
+        }
+
+        // Tab: either select first row, or send to hotkeys if a row is already selected
+        if (event.key === 'Tab' || event.code === 'Tab') {
+          const selected = document.getElementById('selected_row');
+          if (selected) {
+            if (typeof window.sendToHotkeys === 'function') {
+              window.sendToHotkeys();
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+          }
+          const firstRow = document.querySelector('#search_results tbody tr');
+          if (firstRow) {
+            document.getElementById('selected_row')?.removeAttribute('id');
+            firstRow.id = 'selected_row';
+            document.getElementById('omni_search')?.blur();
+            event.preventDefault();
+            event.stopPropagation();
             return false;
           }
         }
@@ -269,9 +327,9 @@ export default class SearchEvents {
         this.debugLog?.error('Error in omni search keydown handler:', error);
       }
     };
-
-    $("#omni_search").on("keydown", omniSearchKeydownHandler);
-    this.searchHandlers.set('omniSearchKeydown', { element: '#omni_search', event: 'keydown', handler: omniSearchKeydownHandler });
+    const omni = document.getElementById('omni_search');
+    omni?.addEventListener('keydown', omniSearchKeydownHandler);
+    this.searchHandlers.set('omniSearchKeydown', { element: '#omni_search', el: omni, event: 'keydown', handler: omniSearchKeydownHandler });
     
     this.debugLog?.debug('Search navigation events attached');
   }
@@ -290,10 +348,13 @@ export default class SearchEvents {
           clearTimeout(searchTimeout);
         }
         
-        $("#search_form").trigger("reset");
-        $("#omni_search").focus();
-        $("#search_results tbody").find("tr").remove();
-        $("#search_results thead").hide();
+        const form = document.getElementById('search_form');
+        form?.reset();
+        document.getElementById('omni_search')?.focus();
+        const tbody = document.querySelector('#search_results tbody');
+        tbody?.querySelectorAll('tr').forEach(tr => tr.remove());
+        const thead = document.querySelector('#search_results thead');
+        if (thead) thead.style.display = 'none';
         
         this.debugLog?.info('Search results cleared');
         return false;
@@ -301,9 +362,9 @@ export default class SearchEvents {
         this.debugLog?.error('Error in reset button handler:', error);
       }
     };
-
-    $("#reset_button").on("click", resetButtonHandler);
-    this.searchHandlers.set('resetButton', { element: '#reset_button', event: 'click', handler: resetButtonHandler });
+    const resetBtn = document.getElementById('reset_button');
+    resetBtn?.addEventListener('click', resetButtonHandler);
+    this.searchHandlers.set('resetButton', { element: '#reset_button', el: resetBtn, event: 'click', handler: resetButtonHandler });
     
     this.debugLog?.debug('Reset button events attached');
   }
@@ -329,8 +390,9 @@ export default class SearchEvents {
       }
     };
 
-    $("#advanced_search_button").on("click", advancedSearchButtonHandler);
-    this.searchHandlers.set('advancedSearchButton', { element: '#advanced_search_button', event: 'click', handler: advancedSearchButtonHandler });
+    const advBtn = document.getElementById('advanced_search_button');
+    advBtn?.addEventListener('click', advancedSearchButtonHandler);
+    this.searchHandlers.set('advancedSearchButton', { element: '#advanced_search_button', el: advBtn, event: 'click', handler: advancedSearchButtonHandler });
     
     this.debugLog?.debug('Advanced search events attached');
   }
@@ -343,7 +405,7 @@ export default class SearchEvents {
       this.debugLog?.info('Detaching search events...');
 
       for (const [name, handler] of this.searchHandlers) {
-        $(handler.element).off(handler.event, handler.handler);
+        handler.el?.removeEventListener(handler.event, handler.handler);
         this.debugLog?.debug(`Removed search handler: ${name}`);
       }
 

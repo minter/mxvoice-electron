@@ -25,9 +25,17 @@ try {
  */
 export function hotkeyDrop(event) {
   event.preventDefault();
-  const song_id = event.dataTransfer.getData("text");
-  const target = $(event.currentTarget);
-  target.attr("songid", song_id);
+  const song_id_raw = event.dataTransfer.getData("text");
+  const song_id = (song_id_raw && song_id_raw !== 'null' && song_id_raw !== 'undefined') ? song_id_raw : '';
+  if (!song_id) {
+    debugLog?.warn('hotkeyDrop aborted: no valid song ID on dataTransfer', {
+      module: 'drag-drop-functions',
+      function: 'hotkeyDrop'
+    });
+    return;
+  }
+  const target = event.currentTarget;
+  if (target && target.setAttribute) target.setAttribute('songid', song_id);
   
   // Try to use setLabelFromSongId if available, otherwise fallback
   if (typeof setLabelFromSongId === 'function') {
@@ -57,7 +65,8 @@ export function holdingTankDrop(event) {
   
   event.preventDefault();
   
-  const songId = event.dataTransfer.getData("text");
+  const songIdRaw = event.dataTransfer.getData("text");
+  const songId = (songIdRaw && songIdRaw !== 'null' && songIdRaw !== 'undefined') ? songIdRaw : '';
   debugLog?.info('Song ID from data transfer', { 
     module: 'drag-drop-functions',
     function: 'holdingTankDrop',
@@ -80,7 +89,7 @@ export function holdingTankDrop(event) {
   
   // Try to use addToHoldingTank if available, otherwise fallback
   if (typeof addToHoldingTank === 'function') {
-    addToHoldingTank(songId, $(event.target)).then(result => {
+    addToHoldingTank(songId, event.target).then(result => {
       if (result && result.success) {
         debugLog?.info('Successfully added song to holding tank', { 
           module: 'drag-drop-functions',
@@ -105,7 +114,7 @@ export function holdingTankDrop(event) {
       });
     });
   } else if (typeof window.addToHoldingTank === 'function') {
-    window.addToHoldingTank(songId, $(event.target));
+    window.addToHoldingTank(songId, event.target);
   } else {
     debugLog?.error('addToHoldingTank function not available', { 
       module: 'drag-drop-functions',
@@ -129,12 +138,29 @@ export function allowHotkeyDrop(event) {
  * @param {Event} event - The dragstart event
  */
 export function songDrag(event) {
+  const sourceElement = (event.currentTarget instanceof Element)
+    ? event.currentTarget
+    : (event.target instanceof Element ? event.target : null);
+  const withSongId = sourceElement?.hasAttribute?.('songid')
+    ? sourceElement
+    : sourceElement?.closest?.('[songid]') || null;
+  const songId = withSongId?.getAttribute?.('songid') || '';
+
   debugLog?.info('Starting drag for song ID', { 
     module: 'drag-drop-functions',
     function: 'songDrag',
-    songId: event.target.getAttribute("songid")
+    songId: songId
   });
-  event.dataTransfer.setData("text", event.target.getAttribute("songid"));
+
+  if (!songId) {
+    debugLog?.warn('songDrag aborted: no songid on source element', {
+      module: 'drag-drop-functions',
+      function: 'songDrag'
+    });
+    return;
+  }
+
+  event.dataTransfer.setData("text", songId);
 }
 
 /**

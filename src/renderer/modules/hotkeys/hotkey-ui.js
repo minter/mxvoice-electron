@@ -30,9 +30,8 @@ import { songDrag } from '../drag-drop/drag-drop-functions.js';
  */
 function hotkeyDrop(event, options = {}) {
   event.preventDefault();
-  const song_id = event.dataTransfer.getData("text");
-  const target = $(event.currentTarget);
-  target.attr("songid", song_id);
+  const song_id = event.dataTransfer.getData('text');
+  const target = event.currentTarget;
   
   // Use the module instance's setLabelFromSongId method if available (when bound to HotkeysModule)
   // Otherwise fall back to global function
@@ -66,7 +65,11 @@ function allowHotkeyDrop(event) {
  * @param {number} tab - Tab number to switch to
  */
 function switchToHotkeyTab(tab) {
-  $(`#hotkey_tabs li:nth-child(${tab}) a`).tab("show");
+  try {
+    import('../ui/bootstrap-adapter.js')
+      .then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tab}) a`))
+      .catch(() => {});
+  } catch {}
 }
 
 /**
@@ -75,10 +78,11 @@ function switchToHotkeyTab(tab) {
  * @param {Object} options - Additional options
  */
 async function renameHotkeyTab(options = {}) {
-  const currentName = $("#hotkey_tabs .nav-link.active").text();
+  const currentName = document.querySelector('#hotkey_tabs .nav-link.active')?.textContent || '';
   const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
   if (newName && newName.trim() !== "") {
-    $("#hotkey_tabs .nav-link.active").text(newName);
+    const link = document.querySelector('#hotkey_tabs .nav-link.active');
+    if (link) link.textContent = newName;
     return { success: true, newName: newName };
   } else {
     return { success: false, error: 'Invalid name' };
@@ -92,27 +96,31 @@ async function renameHotkeyTab(options = {}) {
  */
 function setupHotkeyEventListeners(options = {}) {
   // Hotkey drop handlers
-  $(".hotkeys li").on("drop", function (event) {
-    $(this).removeClass("drop_target");
-    if (!event.originalEvent.dataTransfer.getData("text").length) return;
-    hotkeyDrop(event.originalEvent, options);
-  });
-
-  $(".hotkeys li").on("dragover", function (event) {
-    $(this).addClass("drop_target");
-    allowHotkeyDrop(event.originalEvent);
-  });
-
-  $(".hotkeys li").on("dragleave", function (event) {
-    $(event.currentTarget).removeClass("drop_target");
+  document.querySelectorAll('.hotkeys li').forEach((li) => {
+    li.addEventListener('drop', (event) => {
+      li.classList.remove('drop_target');
+      const data = (event.originalEvent || event).dataTransfer?.getData('text') || '';
+      if (!data.length) return;
+      hotkeyDrop((event.originalEvent || event), options);
+    });
+    li.addEventListener('dragover', (event) => {
+      li.classList.add('drop_target');
+      allowHotkeyDrop((event.originalEvent || event));
+    });
+    li.addEventListener('dragleave', (event) => {
+      (event.currentTarget).classList.remove('drop_target');
+    });
   });
 
   // Hotkey tab events
-  $("#hotkey_tabs").on("dblclick", ".nav-link", () => {
-    if (renameHotkeyTab) {
-      renameHotkeyTab(options);
-    }
-  });
+  const hotkeyTabs = document.getElementById('hotkey_tabs');
+  if (hotkeyTabs) {
+    hotkeyTabs.addEventListener('dblclick', (e) => {
+      if (e.target && e.target.closest('.nav-link')) {
+        renameHotkeyTab?.(options);
+      }
+    });
+  }
 
   debugLog?.info('Hotkeys event listeners set up', { 
     module: 'hotkey-ui',
@@ -127,10 +135,13 @@ function setupHotkeyEventListeners(options = {}) {
 function initHotkeyTabs() {
   // Set up hotkey and holding tank tabs
   for (let i = 2; i <= 5; i++) {
-    const hotkey_node = $("#hotkeys_list_1").clone();
-    hotkey_node.attr("id", `hotkeys_list_${i}`);
-    hotkey_node.removeClass("show active");
-    $("#hotkey-tab-content").append(hotkey_node);
+    const base = document.getElementById('hotkeys_list_1');
+    if (!base) continue;
+    const clone = base.cloneNode(true);
+    clone.id = `hotkeys_list_${i}`;
+    clone.classList.remove('show','active');
+    const container = document.getElementById('hotkey-tab-content');
+    container?.appendChild(clone);
   }
 }
 
@@ -141,8 +152,9 @@ function initHotkeyTabs() {
  * @returns {number} - Active tab number (1-5)
  */
 function getActiveHotkeyTab() {
-  const activeTab = $("#hotkey_tabs .nav-link.active");
-  return $("#hotkey_tabs .nav-link").index(activeTab) + 1;
+  const links = Array.from(document.querySelectorAll('#hotkey_tabs .nav-link'));
+  const active = document.querySelector('#hotkey_tabs .nav-link.active');
+  return Math.max(0, links.indexOf(active)) + 1;
 }
 
 /**
@@ -153,7 +165,11 @@ function getActiveHotkeyTab() {
  */
 function setActiveHotkeyTab(tabNumber) {
   if (tabNumber >= 1 && tabNumber <= 5) {
-    $(`#hotkey_tabs li:nth-child(${tabNumber}) a`).tab("show");
+    try {
+      import('../ui/bootstrap-adapter.js')
+        .then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tabNumber}) a`))
+        .catch(() => {});
+    } catch {}
   }
 }
 
@@ -165,7 +181,7 @@ function setActiveHotkeyTab(tabNumber) {
  * @returns {jQuery} - Hotkey element
  */
 function getHotkeyElement(hotkey) {
-  return $(`.hotkeys.active #${hotkey}_hotkey`);
+  return document.querySelector(`.hotkeys.active #${hotkey}_hotkey`);
 }
 
 /**
@@ -175,7 +191,7 @@ function getHotkeyElement(hotkey) {
  * @returns {jQuery} - All hotkey elements
  */
 function getAllHotkeyElements() {
-  return $(".hotkeys.active li");
+  return document.querySelectorAll('.hotkeys.active li');
 }
 
 /**
@@ -187,11 +203,11 @@ function getAllHotkeyElements() {
  */
 function highlightHotkey(hotkey, className = 'highlight') {
   const element = getHotkeyElement(hotkey);
-  element.addClass(className);
+  if (element) element.classList.add(className);
   
   // Remove highlight after animation
   setTimeout(() => {
-    element.removeClass(className);
+    if (element) element.classList.remove(className);
   }, 1000);
 }
 
@@ -200,7 +216,7 @@ function highlightHotkey(hotkey, className = 'highlight') {
  * Removes all highlighting from hotkeys
  */
 function clearHotkeyHighlighting() {
-  $(".hotkeys.active li").removeClass('highlight');
+  document.querySelectorAll('.hotkeys.active li').forEach(li => li.classList.remove('highlight'));
 }
 
 /**
@@ -211,11 +227,9 @@ function clearHotkeyHighlighting() {
  */
 function updateHotkeyDisplay(options = {}) {
   // Update hotkey labels and styling
-  $(".hotkeys.active li").each(function() {
-    const songId = $(this).attr("songid");
-    if (songId) {
-      setLabelFromSongId(songId, $(this));
-    }
+  document.querySelectorAll('.hotkeys.active li').forEach((li) => {
+    const songId = li.getAttribute('songid');
+    if (songId) setLabelFromSongId(songId, li);
   });
 }
 
@@ -227,7 +241,7 @@ function updateHotkeyDisplay(options = {}) {
  * @returns {boolean} - Whether the element is valid
  */
 function validateHotkeyElement(element) {
-  return element && element.length > 0 && element.hasClass('hotkey');
+  return !!element && (element instanceof Element) && element.classList.contains('hotkey');
 }
 
 /**
@@ -243,7 +257,7 @@ function createHotkeyElement(hotkey) {
   li.className = 'hotkey';
   li.draggable = true;
   li.addEventListener('dragstart', songDrag);
-  return $(li);
+  return li;
 }
 
 /**
@@ -253,7 +267,8 @@ function createHotkeyElement(hotkey) {
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  */
 function removeHotkeyElement(hotkey) {
-  $(`#${hotkey}_hotkey`).remove();
+  const el = document.getElementById(`${hotkey}_hotkey`);
+  el?.parentElement?.removeChild(el);
 }
 
 /**
@@ -264,7 +279,7 @@ function removeHotkeyElement(hotkey) {
  * @returns {string} - Song ID or null
  */
 function getHotkeySongId(hotkey) {
-  return $(`#${hotkey}_hotkey`).attr("songid") || null;
+  return document.getElementById(`${hotkey}_hotkey`)?.getAttribute('songid') || null;
 }
 
 /**
@@ -275,7 +290,8 @@ function getHotkeySongId(hotkey) {
  * @param {string} songId - Song ID to assign
  */
 function setHotkeySongId(hotkey, songId) {
-  $(`#${hotkey}_hotkey`).attr("songid", songId);
+  const el = document.getElementById(`${hotkey}_hotkey`);
+  if (el) el.setAttribute('songid', songId);
 }
 
 /**
@@ -285,8 +301,11 @@ function setHotkeySongId(hotkey, songId) {
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  */
 function clearHotkeySongId(hotkey) {
-  $(`#${hotkey}_hotkey`).removeAttr("songid");
-  $(`#${hotkey}_hotkey`).text("");
+  const el = document.getElementById(`${hotkey}_hotkey`);
+  if (el) {
+    el.removeAttribute('songid');
+    el.textContent = '';
+  }
 }
 
 /**
@@ -297,7 +316,7 @@ function clearHotkeySongId(hotkey) {
  * @returns {string} - Hotkey label
  */
 function getHotkeyLabel(hotkey) {
-  return $(`#${hotkey}_hotkey`).text() || "";
+  return document.getElementById(`${hotkey}_hotkey`)?.textContent || '';
 }
 
 /**
@@ -308,7 +327,8 @@ function getHotkeyLabel(hotkey) {
  * @param {string} label - Label to set
  */
 function setHotkeyLabel(hotkey, label) {
-  $(`#${hotkey}_hotkey`).text(label);
+  const el = document.getElementById(`${hotkey}_hotkey`);
+  if (el) el.textContent = label;
 }
 
 /**

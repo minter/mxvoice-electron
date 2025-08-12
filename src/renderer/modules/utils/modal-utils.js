@@ -20,15 +20,13 @@ export function customConfirm(message, title = 'Confirm') {
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">${title}</h5>
-            <button type="button" class="close" data-dismiss="modal">
-              <span>&times;</span>
-            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <p>${message}</p>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
             <button type="button" class="btn btn-primary confirm-btn">Confirm</button>
           </div>
         </div>
@@ -38,28 +36,18 @@ export function customConfirm(message, title = 'Confirm') {
     document.body.appendChild(modal);
 
     const confirmBtn = modal.querySelector('.confirm-btn');
-    const closeBtn = modal.querySelector('.close');
+    const closeBtn = modal.querySelector('.btn-close');
     const cancelBtn = modal.querySelector('.btn-secondary');
 
     const cleanup = () => {
-      // Hide the modal properly using Bootstrap
-      $(modal).modal('hide');
-      
-      // Remove the modal backdrop
-      const backdrop = document.querySelector('.modal-backdrop');
-      if (backdrop) {
-        backdrop.remove();
-      }
-      
-      // Remove modal-open class from body
-      document.body.classList.remove('modal-open');
-      
-      // Remove the modal element
+      // Use Bootstrap 5 API to hide and remove
+      const instance = bootstrap.Modal.getOrCreateInstance(modal);
+      instance.hide();
       setTimeout(() => {
         if (document.body.contains(modal)) {
           document.body.removeChild(modal);
         }
-      }, 150); // Small delay to ensure Bootstrap animations complete
+      }, 200);
     };
 
     confirmBtn.addEventListener('click', () => {
@@ -77,8 +65,9 @@ export function customConfirm(message, title = 'Confirm') {
       resolve(false);
     });
 
-    // Show modal
-    $(modal).modal('show');
+    // Show modal via Bootstrap 5 API
+    const instance = new bootstrap.Modal(modal, { backdrop: true, keyboard: true });
+    instance.show();
   });
 }
 
@@ -110,12 +99,9 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
     
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
-    closeBtn.className = 'close';
-    closeBtn.setAttribute('data-dismiss', 'modal');
-    
-    const closeSpan = document.createElement('span');
-    closeSpan.textContent = '×';
-    closeBtn.appendChild(closeSpan);
+    closeBtn.className = 'btn-close';
+    closeBtn.setAttribute('data-bs-dismiss', 'modal');
+    closeBtn.setAttribute('aria-label', 'Close');
     
     modalHeader.appendChild(modalTitle);
     modalHeader.appendChild(closeBtn);
@@ -140,7 +126,7 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
     cancelBtn.className = 'btn btn-secondary';
-    cancelBtn.setAttribute('data-dismiss', 'modal');
+    cancelBtn.setAttribute('data-bs-dismiss', 'modal');
     cancelBtn.textContent = 'Cancel';
     
     const confirmBtn = document.createElement('button');
@@ -161,24 +147,14 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
 
     // Use the already created element references instead of querying again
     const cleanup = () => {
-      // Hide the modal properly using Bootstrap
-      $(modal).modal('hide');
-      
-      // Remove the modal backdrop
-      const backdrop = document.querySelector('.modal-backdrop');
-      if (backdrop) {
-        backdrop.remove();
-      }
-      
-      // Remove modal-open class from body
-      document.body.classList.remove('modal-open');
-      
-      // Remove the modal element
+      // Hide and remove using Bootstrap 5 API
+      const instance = bootstrap.Modal.getOrCreateInstance(modal);
+      instance.hide();
       setTimeout(() => {
         if (document.body.contains(modal)) {
           document.body.removeChild(modal);
         }
-      }, 150); // Small delay to ensure Bootstrap animations complete
+      }, 200);
     };
 
     confirmBtn.addEventListener('click', () => {
@@ -188,7 +164,7 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
     });
 
     // Note: closeBtn is not created in this function, so we'll handle it differently
-    // The modal will be closed via Bootstrap's data-dismiss attribute
+    // The modal will be closed via Bootstrap's data-bs-dismiss attribute
     
     cancelBtn.addEventListener('click', () => {
       cleanup();
@@ -196,7 +172,8 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
     });
 
     // Focus input, select text, and show modal
-    $(modal).modal('show');
+    const instance = new bootstrap.Modal(modal, { backdrop: true, keyboard: true });
+    instance.show();
     setTimeout(() => {
       input.focus();
       input.select(); // Select all text so user can type over it

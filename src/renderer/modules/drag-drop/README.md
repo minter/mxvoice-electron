@@ -28,8 +28,9 @@ import dragDrop from './modules/drag-drop/index.js';
 // Initialize (attaches event handlers)
 dragDrop.init();
 
-// Programmatic usage
-$('#some-row').on('dragstart', (e) => dragDrop.songDrag(e.originalEvent));
+// Programmatic usage (vanilla):
+document.querySelector('#some-row')
+  ?.addEventListener('dragstart', (e) => dragDrop.songDrag(e));
 ```
 
 ## Features
@@ -42,4 +43,4 @@ $('#some-row').on('dragstart', (e) => dragDrop.songDrag(e.originalEvent));
 - When rendering draggable rows/spans, set user-provided values with `textContent` and never via `innerHTML`.
 
 ## Dependencies
-- jQuery, animation utils; integrates with hotkeys/holding-tank modules for drop behavior
+- DOM APIs and project `Dom` utilities; integrates with hotkeys/holding-tank modules for drop behavior

@@ -39,7 +39,9 @@ class NavigationModule {
   initializeNavigation() {
     // Setup event handlers for navigation
     setupNavigationEventHandlers();
-    
+    // Global exposure is handled centrally by the function registry to avoid duplicates
+    // Do not assign navigation functions directly to window here
+
     debugLog?.info('Navigation Module initialized', { 
       module: 'navigation',
       function: 'initializeNavigation'

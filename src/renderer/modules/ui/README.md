@@ -11,6 +11,7 @@ ui/
 ├── event-handlers.js # UI event handling functions
 ├── controls.js       # UI control functions
 ├── modals.js         # Modal operations
+├── bootstrap-adapter.js # Bootstrap 5 helpers (modal/tab/tooltip)
 └── README.md         # This documentation
 ```
 
@@ -144,12 +145,29 @@ Shows a custom prompt dialog.
 
 ## Dependencies
 
-- **jQuery** - DOM manipulation and event handling
-- **Bootstrap** - Modal and UI components
+- **Bootstrap 5** - UI components; accessed via `bootstrap-adapter` (no jQuery plugins)
+- **DOM Utilities** - `Dom` helper module for query/class helpers (no jQuery)
 - **Animate.css** - CSS animations
 - **Electron API** - System integration
 - **Database** - Song data access
 - **Store** - Persistent data storage
+
+### Bootstrap 5 integration
+- Use `bootstrap-adapter.js` to interact with Bootstrap JS APIs:
+  - `showModal(selector)`, `hideModal(selector)`, `hideAllModals()`
+  - `showTab(selector)`
+  - `initTooltip(selector)`
+- HTML uses `data-bs-*` attributes (e.g., `data-bs-toggle="tab"`, `data-bs-dismiss="modal"`).
+- Close buttons are `.btn-close` (not `.close`).
+
+Example:
+```javascript
+import { showModal, showTab, initTooltip } from './modules/ui/bootstrap-adapter.js';
+
+showModal('#preferencesModal');
+showTab('#hotkey_tabs li:nth-child(2) a');
+initTooltip('[data-bs-toggle="tooltip"]');
+```
 
 ## Error Handling
 

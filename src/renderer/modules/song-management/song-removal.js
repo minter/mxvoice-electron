@@ -23,7 +23,7 @@ import { secureFileSystem, secureDatabase, secureStore, securePath } from '../ad
  * Also removes the song from all UI elements (holding tank, hotkeys, search results)
  */
 export function deleteSong() {
-  const songId = $("#selected_row").attr("songid");
+  const songId = document.getElementById('selected_row')?.getAttribute('songid');
   if (songId) {
     debugLog?.info(`Preparing to delete song ${songId}`, { module: 'song-management', function: 'deleteSong' });
     return secureDatabase.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(async (songResult) => {
@@ -64,10 +64,10 @@ export function deleteSong() {
           }
 
           // Remove song anywhere it appears
-          $(`.holding_tank .list-group-item[songid=${songId}]`).remove();
-          $(`.hotkeys li span[songid=${songId}]`).remove();
-          $(`.hotkeys li [songid=${songId}]`).removeAttr("id");
-          $(`#search_results tr[songid=${songId}]`).remove();
+          document.querySelectorAll(`.holding_tank .list-group-item[songid="${songId}"]`).forEach(el => el.remove());
+          document.querySelectorAll(`.hotkeys li span[songid="${songId}"]`).forEach(el => el.remove());
+          document.querySelectorAll(`.hotkeys li [songid="${songId}"]`).forEach(el => el.removeAttribute('id'));
+          document.querySelectorAll(`#search_results tr[songid="${songId}"]`).forEach(el => el.remove());
           if (typeof saveHoldingTankToStore === 'function') saveHoldingTankToStore();
           if (typeof saveHotkeysToStore === 'function') saveHotkeysToStore();
 
@@ -85,7 +85,7 @@ export function deleteSong() {
  * Prompts for confirmation and updates the store after removal
  */
 export function removeFromHoldingTank() {
-  const songId = $("#selected_row").attr("songid");
+  const songId = document.getElementById('selected_row')?.getAttribute('songid');
   if (songId) {
     debugLog?.info(`Preparing to remove song ${songId} from holding tank`, { module: 'song-management', function: 'removeFromHoldingTank' });
     return secureDatabase.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(result => {
@@ -96,9 +96,9 @@ export function removeFromHoldingTank() {
       if (confirmed) {
         debugLog?.info("Proceeding with removal from holding tank", { module: 'song-management', function: 'removeFromHoldingTank' });
         // Remove the selected row from the holding tank
-        $("#selected_row").remove();
+        document.getElementById('selected_row')?.remove();
         // Clear the selection
-        $("#selected_row").removeAttr("id");
+        document.getElementById('selected_row')?.removeAttribute('id');
         // Save the updated holding tank to store
           if (typeof saveHoldingTankToStore === 'function') saveHoldingTankToStore();
           return { success: true, songId: songId, title: songRow?.title };
@@ -115,9 +115,9 @@ export function removeFromHoldingTank() {
  * Clears the hotkey slot and updates the store
  */
 export function removeFromHotkey() {
-  const songId = $("#selected_row").attr("songid");
+  const songId = document.getElementById('selected_row')?.getAttribute('songid');
   debugLog?.info("removeFromHotkey called, songId:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
-  debugLog?.info("selected_row element:", { module: 'song-management', function: 'removeFromHotkey', selectedRow: $("#selected_row") });
+  debugLog?.info("selected_row element:", { module: 'song-management', function: 'removeFromHotkey', selectedRow: document.getElementById('selected_row') });
   
   if (songId) {
     debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'song-management', function: 'removeFromHotkey' });
@@ -130,10 +130,10 @@ export function removeFromHotkey() {
         if (confirmed) {
           debugLog?.info("Proceeding with removal from hotkey", { module: 'song-management', function: 'removeFromHotkey' });
           // Clear the hotkey slot
-          $("#selected_row").removeAttr("songid");
-          $("#selected_row span").html("");
+          document.getElementById('selected_row')?.removeAttribute('songid');
+          { const span = document.querySelector('#selected_row span'); if (span) span.textContent = ''; }
           // Clear the selection
-          $("#selected_row").removeAttr("id");
+          document.getElementById('selected_row')?.removeAttribute('id');
           // Save the updated hotkeys to store
             if (typeof saveHotkeysToStore === 'function') saveHotkeysToStore();
           debugLog?.info("Hotkey cleared successfully", { module: 'song-management', function: 'removeFromHotkey' });
@@ -145,9 +145,9 @@ export function removeFromHotkey() {
       } else {
         debugLog?.error("Song not found in database for ID:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
         // Still clear the hotkey even if song not found
-        $("#selected_row").removeAttr("songid");
-        $("#selected_row span").html("");
-        $("#selected_row").removeAttr("id");
+        document.getElementById('selected_row')?.removeAttribute('songid');
+        { const span2 = document.querySelector('#selected_row span'); if (span2) span2.textContent = ''; }
+        document.getElementById('selected_row')?.removeAttribute('id');
         if (typeof saveHotkeysToStore === 'function') saveHotkeysToStore();
       }
     });

@@ -62,12 +62,15 @@ export const howlerUtils = {
     const currentTime = howlerUtils.formatTime(Math.round(seek));
     const remainingTime = howlerUtils.formatTime(Math.round(remaining));
     const percent_elapsed = seek / self.duration();
-    $("#audio_progress").width((percent_elapsed * 100 || 0) + "%");
+    const progressBar = document.getElementById('audio_progress');
+    if (progressBar) progressBar.style.width = ((percent_elapsed * 100) || 0) + '%';
     if (!isNaN(percent_elapsed) && wavesurfer) {
       wavesurfer.seekTo(percent_elapsed);
     }
-    $("#timer").text(currentTime);
-    $("#duration").text(`-${remainingTime}`);
+    const timer = document.getElementById('timer');
+    const duration = document.getElementById('duration');
+    if (timer) timer.textContent = currentTime;
+    if (duration) duration.textContent = `-${remainingTime}`;
     
     const newAnimation = requestAnimationFrame(
       howlerUtils.updateTimeTracker.bind(self)
