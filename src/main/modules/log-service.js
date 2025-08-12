@@ -60,12 +60,12 @@ export function initMainLogService({ store, keepDays = 14 } = {}) {
 
   const currentFile = getTodayFilePath(logsDir);
   // Route electron-log to our daily file
-  log.transports.file.resolvePath = () => currentFile;
+  log.transports.file.resolvePathFn = () => currentFile;
   // Cap file size; electron-log will rotate when exceeded
   log.transports.file.maxSize = 5 * 1024 * 1024; // 5MB
 
   // Capture unhandled errors in main without dialog
-  log.catchErrors({ showDialog: false });
+  log.errorHandler.startCatching({ showDialog: false });
 
   // Prune old logs based on retention
   const pruneCutoff = Date.now() - keepDays * 24 * 60 * 60 * 1000;
