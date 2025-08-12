@@ -146,6 +146,7 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
     document.body.appendChild(modal);
 
     // Use the already created element references instead of querying again
+    let hasResolved = false;
     const cleanup = () => {
       // Hide and remove using Bootstrap 5 API
       const instance = bootstrap.Modal.getOrCreateInstance(modal);
@@ -156,20 +157,43 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
         }
       }, 200);
     };
+    const safeResolve = (value) => {
+      if (hasResolved) return;
+      hasResolved = true;
+      cleanup();
+      resolve(value);
+    };
 
     confirmBtn.addEventListener('click', () => {
       const value = input.value.trim();
-      cleanup();
-      resolve(value || null);
+      safeResolve(value || null);
     });
 
-    // Note: closeBtn is not created in this function, so we'll handle it differently
-    // The modal will be closed via Bootstrap's data-bs-dismiss attribute
+    // Support closing via the header X button as a cancel
+    closeBtn.addEventListener('click', () => {
+      safeResolve(null);
+    });
     
     cancelBtn.addEventListener('click', () => {
-      cleanup();
-      resolve(null);
+      safeResolve(null);
     });
+
+    // Keyboard handling inside the input
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        confirmBtn.click();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        cancelBtn.click();
+      }
+    });
+
+    // If user closes via backdrop click or Esc (Bootstrap keyboard option),
+    // ensure the promise resolves to null
+    modal.addEventListener('hidden.bs.modal', () => {
+      safeResolve(null);
+    }, { once: true });
 
     // Focus input, select text, and show modal
     const instance = new bootstrap.Modal(modal, { backdrop: true, keyboard: true });

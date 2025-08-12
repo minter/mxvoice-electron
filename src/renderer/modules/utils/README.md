@@ -34,22 +34,29 @@ Provides custom modal dialog functionality to replace native browser dialogs.
 Dialogs use Bootstrap 5 via the UI `bootstrap-adapter` (no jQuery plugins).
 
 **Functions:**
-- `customConfirm(message, callback)` - Show a custom confirmation dialog
-- `customPrompt(title, message, defaultValue, callback)` - Show a custom prompt dialog
+- `customConfirm(message, title = 'Confirm') => Promise<boolean>` - Show a custom confirmation dialog
+- `customPrompt(message, defaultValue = '', title = 'Input') => Promise<string|null>` - Show a custom prompt dialog
 - `restoreFocusToSearch()` - Restore focus to search fields after modal dismissal
 
 **Usage:**
 ```javascript
 import { customConfirm, customPrompt } from './utils/index.js';
 
-customConfirm('Are you sure?', () => {
-  console.log('User confirmed');
-});
+const confirmed = await customConfirm('Are you sure?');
+if (confirmed) {
+  // proceed
+}
 
-customPrompt('Enter name', 'Name:', 'Default', (value) => {
-  console.log('User entered:', value);
-});
+const value = await customPrompt('Enter a new name for this tab:', 'Current Name', 'Rename Tab');
+if (value) {
+  // use value
+}
 ```
+
+Keyboard behavior inside `customPrompt`:
+- Enter confirms (equivalent to clicking OK)
+- Escape cancels (equivalent to clicking Cancel)
+- Closing with the X button or backdrop also cancels
 
 ### Validation Utilities (`validation-utils.js`)
 

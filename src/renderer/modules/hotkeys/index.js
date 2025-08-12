@@ -181,13 +181,8 @@ class HotkeysModule {
       });
     });
 
-    // Hotkey tab events
-    const hotkeyTabs = document.getElementById('hotkey_tabs');
-    if (hotkeyTabs) {
-      hotkeyTabs.addEventListener('dblclick', (e) => {
-        if (e.target && e.target.closest('.nav-link')) this.renameHotkeyTab();
-      });
-    }
+    // Hotkey tab rename is handled centrally by UI Interaction Events module
+    // to avoid duplicate handlers and duplicate modals.
 
     debugLog?.info('✅ Hotkeys event listeners set up', {
       module: 'hotkeys',
