@@ -13,6 +13,12 @@ Global styles for the renderer UI.
 - Follow BEM-ish naming for complex components: `.block__element--modifier`
 - Prefer utility classes for spacing where reasonable
 
+### Layout notes
+- Headers (`.card-header`) now allow wrapping. This prevents icon bars in the Holding Tank and Hotkeys columns from clipping on narrow screens.
+- `.icon-bar` wraps to multiple rows when space is constrained.
+- The main row `#top-row` allows horizontal scrolling if the fixed-width side columns can't shrink further.
+- The search column (`#search-column`) flexes to fill all remaining horizontal space.
+
 ### Import order
 1. Variables/tokens (`colors.css`)
 2. Fonts (`fonts.css`)

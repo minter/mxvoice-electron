@@ -19,7 +19,8 @@ input[type="text"]:focus {
   flex-direction: row;
   gap: 8px;
   padding: 8px;
-  overflow: hidden;
+  overflow-x: auto; /* allow horizontal scroll if columns cannot shrink further */
+  overflow-y: hidden;
 }
 
 #player-row {
@@ -49,9 +50,15 @@ input[type="text"]:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap; /* allow wrapping so icons are always visible */
   background: var(--header-color);
   border-bottom: 1px solid var(--card-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Ensure header text and controls can wrap on narrow screens */
+h6.card-header {
+  white-space: normal;
 }
 
 /* Header labels for Search and Hotkeys - not clickable */
@@ -132,6 +139,22 @@ input[type="text"]:focus {
   min-height: 0;
 }
 
+/* Ensure each column's body grows and scrolls while header stays visible */
+#holding-tank-column .card,
+#search-column .card,
+#hotkeys-column .card {
+  display: flex;
+  flex-direction: column;
+}
+
+#holding-tank-column .card-body,
+#search-column .card-body,
+#hotkeys-column .card-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow inner scrollers to compute height */
+}
+
 .table-wrapper-scroll-y {
   display: block;
   cursor: pointer;
@@ -141,7 +164,10 @@ input[type="text"]:focus {
 .icon-bar {
   margin-left: auto; /* push to the right in flex header */
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap; /* wrap icons to next line when needed */
+  column-gap: 8px;
+  row-gap: 4px;
+  max-width: 100%;
 }
 
 .icon-bar a {
@@ -350,7 +376,6 @@ input[type="text"]:focus {
 h6 {
   font-size: 12px;
   text-transform: uppercase;
-  white-space: nowrap;
   line-height: 17px;
   color: var(--card-text);
 }
@@ -585,8 +610,8 @@ h6 a {
 @media screen and (max-width: 1200px) {
   #holding-tank-column,
   #hotkeys-column {
-    min-width: 250px;
-    max-width: 300px;
+    min-width: 260px; /* avoid clipping icons on medium screens */
+    max-width: 320px;
   }
 }
 
@@ -625,8 +650,8 @@ h6 a {
 
 #holding-tank-column,
 #hotkeys-column {
-  min-width: 300px;
-  max-width: 350px;
+  min-width: 300px; /* guarantees header actions fit */
+  max-width: 360px; /* allow a touch more room for icons */
   flex: 0 0 auto;
   border: 1px solid var(--card-border);
   border-radius: 8px;
@@ -638,7 +663,7 @@ h6 a {
 }
 
 #search-column {
-  flex: 1 1 auto;
+  flex: 1 1 auto; /* search fills remaining space */
   border: 1px solid var(--card-border);
   border-radius: 8px;
   background: var(--panel-color);
