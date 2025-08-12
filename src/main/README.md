@@ -62,6 +62,10 @@ src/main/
 - The application menu includes an “Export Logs…” item:
   - macOS: under the app menu (e.g., `Mx. Voice` → `Export Logs…`)
   - Windows/Linux: under `Help` → `Export Logs…`
+ - Standard roles are used for common actions:
+   - Developer Tools uses the built-in role (`toggleDevTools`)
+   - Quit uses the built-in role (`quit`) across platforms
+  - About: macOS uses the system About panel; Windows/Linux uses a custom dark-mode-aware About dialog under `Help`
 
 ### Adding a new IPC handler
 1. Add the handler in `modules/ipc-handlers.js` within `registerAllHandlers()`
