@@ -1,6 +1,6 @@
 /**
  * DOM Initialization Module
- * 
+ *
  * Handles DOM structure initialization that was previously in renderer.js.
  * Sets up tab structure, context menus, and other DOM elements.
  */
@@ -12,7 +12,7 @@ export default class DOMInitialization {
     this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
     this.moduleRegistry = dependencies.moduleRegistry || window.moduleRegistry;
-    
+
     this.initialized = false;
   }
 
@@ -53,7 +53,6 @@ export default class DOMInitialization {
 
       this.initialized = true;
       this.debugLog?.info('DOM structure initialized successfully');
-
     } catch (error) {
       this.debugLog?.error('Failed to initialize DOM structure:', error);
     }
@@ -87,7 +86,9 @@ export default class DOMInitialization {
 
         // Clone holding tank tab
         const baseHolding = document.getElementById('holding_tank_1');
-        const holdingContainer = document.getElementById('holding-tank-tab-content');
+        const holdingContainer = document.getElementById(
+          'holding-tank-tab-content'
+        );
         if (baseHolding && holdingContainer) {
           const clone2 = baseHolding.cloneNode(true);
           clone2.id = `holding_tank_${i}`;
@@ -97,7 +98,6 @@ export default class DOMInitialization {
       }
 
       this.debugLog?.debug('Tab structure set up for tabs 2-5');
-
     } catch (error) {
       this.debugLog?.error('Failed to setup tab structure:', error);
     }
@@ -113,23 +113,38 @@ export default class DOMInitialization {
       menu.id = 'mxv-context-menu';
       menu.className = 'mxv-context-menu';
       Object.assign(menu.style, {
-        position: 'fixed', zIndex: '9999', display: 'none', minWidth: '200px'
+        position: 'fixed',
+        zIndex: '9999',
+        display: 'none',
+        minWidth: '200px',
       });
       const mkItem = (label, onClick) => {
         const item = document.createElement('button');
         item.type = 'button';
         item.textContent = label;
         item.className = 'mxv-context-item';
-        item.addEventListener('click', (e) => { e.stopPropagation(); hide(); onClick?.(); });
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          hide();
+          onClick?.();
+        });
         return item;
       };
-      const playItem = mkItem('Play', () => { if (window.playSelected) window.playSelected(); });
-      const editItem = mkItem('Edit', () => { if (window.editSelectedSong) window.editSelectedSong(); });
-      const deleteItem = mkItem('Delete', () => { if (window.deleteSelectedSong) window.deleteSelectedSong(); });
+      const playItem = mkItem('Play', () => {
+        if (window.playSelected) window.playSelected();
+      });
+      const editItem = mkItem('Edit', () => {
+        if (window.editSelectedSong) window.editSelectedSong();
+      });
+      const deleteItem = mkItem('Delete', () => {
+        if (window.deleteSelectedSong) window.deleteSelectedSong();
+      });
       menu.append(playItem, editItem, deleteItem);
       document.body.appendChild(menu);
 
-      const hide = () => { menu.style.display = 'none'; };
+      const hide = () => {
+        menu.style.display = 'none';
+      };
       const show = (x, y, dynamicDeleteLabel) => {
         deleteItem.textContent = dynamicDeleteLabel || 'Delete';
         menu.style.left = `${x}px`;
@@ -145,21 +160,33 @@ export default class DOMInitialization {
         const row = event.target?.closest('.context-menu');
         if (!row) return;
         event.preventDefault();
-        const prev = document.getElementById('selected_row');
-        if (prev) prev.removeAttribute('id');
-        row.id = 'selected_row';
+
         let label = 'Delete';
         const holdingCol = document.getElementById('holding-tank-column');
         const hotkeysContent = document.getElementById('hotkey-tab-content');
-        if (holdingCol && holdingCol.contains(row)) label = 'Remove from Holding Tank';
-        else if (hotkeysContent && hotkeysContent.contains(row)) label = 'Remove from Hotkey';
+
+        // Only select the row if it's NOT in the hotkeys area
+        // Hotkey tracks should not be selected even for context menus
+        if (hotkeysContent && hotkeysContent.contains(row)) {
+          label = 'Remove from Hotkey';
+          // Don't select hotkey tracks - just show the menu
+        } else {
+          // Select the row for non-hotkey items
+          const prev = document.getElementById('selected_row');
+          if (prev) prev.removeAttribute('id');
+          row.id = 'selected_row';
+
+          if (holdingCol && holdingCol.contains(row)) {
+            label = 'Remove from Holding Tank';
+          }
+        }
+
         const x = Math.min(event.clientX, window.innerWidth - 220);
         const y = Math.min(event.clientY, window.innerHeight - 150);
         show(x, y, label);
       });
 
       this.debugLog?.debug('Context menu set up (native)');
-
     } catch (error) {
       this.debugLog?.error('Failed to setup context menu:', error);
     }
@@ -181,16 +208,23 @@ export default class DOMInitialization {
     try {
       // Use new database API for song count
       if (this.electronAPI && this.electronAPI.database) {
-        const result = await this.electronAPI.database.query("SELECT count(*) as count from mrvoice WHERE 1");
-        if (result.success && result.data.length > 0 && result.data[0].count <= 1) {
+        const result = await this.electronAPI.database.query(
+          'SELECT count(*) as count from mrvoice WHERE 1'
+        );
+        if (
+          result.success &&
+          result.data.length > 0 &&
+          result.data[0].count <= 1
+        ) {
           try {
             const { showModal } = await import('../ui/bootstrap-adapter.js');
             showModal('#firstRunModal');
           } catch {}
-          this.debugLog?.info('First run modal shown - database has <= 1 songs');
+          this.debugLog?.info(
+            'First run modal shown - database has <= 1 songs'
+          );
         }
       }
-
     } catch (error) {
       this.debugLog?.error('Database API error', error);
     }
@@ -211,8 +245,8 @@ export default class DOMInitialization {
         progressBar: !!document.getElementById('audio_progress'),
         tabs: !!document.getElementById('hotkeys_list_2'),
         contextMenu: document.querySelectorAll('.context-menu').length > 0,
-        searchResults: !!document.getElementById('search_results')
-      }
+        searchResults: !!document.getElementById('search_results'),
+      },
     };
   }
 }

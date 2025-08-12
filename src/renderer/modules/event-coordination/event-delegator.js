@@ -1,6 +1,6 @@
 /**
  * Event Delegator Module
- * 
+ *
  * Handles event delegation patterns for efficient event management.
  * Provides optimized event delegation for dynamic content.
  */
@@ -12,7 +12,7 @@ export default class EventDelegator {
     this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
     this.moduleRegistry = dependencies.moduleRegistry || window.moduleRegistry;
-    
+
     this.delegatedHandlers = new Map();
     this.isSetup = false;
   }
@@ -31,16 +31,15 @@ export default class EventDelegator {
 
       // Search results delegation
       this.setupSearchResultsDelegation();
-      
+
       // Holding tank delegation
       this.setupHoldingTankDelegation();
-      
+
       // Hotkeys delegation
       this.setupHotkeysDelegation();
-      
+
       this.isSetup = true;
       this.debugLog?.info('Event delegation set up successfully');
-
     } catch (error) {
       this.debugLog?.error('Failed to setup event delegation:', error);
     }
@@ -54,22 +53,37 @@ export default class EventDelegator {
     if (!table) return;
     const clickHandler = (event) => {
       const row = event.target && event.target.closest('tbody tr');
-      if (row && table.contains(row) && window.toggleSelectedRow) window.toggleSelectedRow(row);
+      if (row && table.contains(row) && window.toggleSelectedRow)
+        window.toggleSelectedRow(row);
     };
     const contextHandler = (event) => {
       const row = event.target && event.target.closest('tbody tr');
-      if (row && table.contains(row) && window.toggleSelectedRow) window.toggleSelectedRow(row);
+      if (row && table.contains(row) && window.toggleSelectedRow)
+        window.toggleSelectedRow(row);
     };
     const dblHandler = (event) => {
       const row = event.target && event.target.closest('tbody tr.song');
-      if (row && table.contains(row) && window.playSelected) window.playSelected();
+      if (row && table.contains(row) && window.playSelected)
+        window.playSelected();
     };
     table.addEventListener('click', clickHandler);
     table.addEventListener('contextmenu', contextHandler);
     table.addEventListener('dblclick', dblHandler);
-    this.delegatedHandlers.set('searchResultsClick', { element: table, event: 'click', handler: clickHandler });
-    this.delegatedHandlers.set('searchResultsContext', { element: table, event: 'contextmenu', handler: contextHandler });
-    this.delegatedHandlers.set('searchResultsDoubleClick', { element: table, event: 'dblclick', handler: dblHandler });
+    this.delegatedHandlers.set('searchResultsClick', {
+      element: table,
+      event: 'click',
+      handler: clickHandler,
+    });
+    this.delegatedHandlers.set('searchResultsContext', {
+      element: table,
+      event: 'contextmenu',
+      handler: contextHandler,
+    });
+    this.delegatedHandlers.set('searchResultsDoubleClick', {
+      element: table,
+      event: 'dblclick',
+      handler: dblHandler,
+    });
 
     this.debugLog?.debug('Search results delegation set up');
   }
@@ -83,7 +97,8 @@ export default class EventDelegator {
     if (!container) return;
     const holdingTankClickHandler = (event) => {
       const li = event.target && event.target.closest('.list-group-item');
-      if (li && container.contains(li) && window.toggleSelectedRow) window.toggleSelectedRow(li);
+      if (li && container.contains(li) && window.toggleSelectedRow)
+        window.toggleSelectedRow(li);
     };
 
     // Double click to play
@@ -94,7 +109,10 @@ export default class EventDelegator {
       firstNow?.classList.remove('now_playing');
       document.getElementById('selected_row')?.removeAttribute('id');
       li.id = 'selected_row';
-      if (window.getHoldingTankMode && window.getHoldingTankMode() === 'playlist') {
+      if (
+        window.getHoldingTankMode &&
+        window.getHoldingTankMode() === 'playlist'
+      ) {
         li.classList.add('now_playing');
         if (window.sharedState) window.sharedState.set('autoplay', true);
       }
@@ -106,8 +124,16 @@ export default class EventDelegator {
     container.addEventListener('dblclick', holdingTankDoubleClickHandler);
 
     // Store handlers for cleanup
-    this.delegatedHandlers.set('holdingTankClick', { element: container, event: 'click', handler: holdingTankClickHandler });
-    this.delegatedHandlers.set('holdingTankDoubleClick', { element: container, event: 'dblclick', handler: holdingTankDoubleClickHandler });
+    this.delegatedHandlers.set('holdingTankClick', {
+      element: container,
+      event: 'click',
+      handler: holdingTankClickHandler,
+    });
+    this.delegatedHandlers.set('holdingTankDoubleClick', {
+      element: container,
+      event: 'dblclick',
+      handler: holdingTankDoubleClickHandler,
+    });
 
     this.debugLog?.debug('Holding tank delegation set up');
   }
@@ -122,10 +148,8 @@ export default class EventDelegator {
     const hotkeysClickHandler = (event) => {
       const li = event.target && event.target.closest('li');
       if (!li || !hotkeys.contains(li)) return;
-      if (li.getAttribute('songid')) {
-        document.getElementById('selected_row')?.removeAttribute('id');
-        li.id = 'selected_row';
-      }
+      // Note: Intentionally not selecting hotkey tracks on single click
+      // Hotkey tracks should be triggered via keyboard shortcuts or double-click to play
     };
 
     // Double click to play
@@ -146,8 +170,16 @@ export default class EventDelegator {
     hotkeys.addEventListener('dblclick', hotkeysDoubleClickHandler);
 
     // Store handlers for cleanup
-    this.delegatedHandlers.set('hotkeysClick', { element: hotkeys, event: 'click', handler: hotkeysClickHandler });
-    this.delegatedHandlers.set('hotkeysDoubleClick', { element: hotkeys, event: 'dblclick', handler: hotkeysDoubleClickHandler });
+    this.delegatedHandlers.set('hotkeysClick', {
+      element: hotkeys,
+      event: 'click',
+      handler: hotkeysClickHandler,
+    });
+    this.delegatedHandlers.set('hotkeysDoubleClick', {
+      element: hotkeys,
+      event: 'dblclick',
+      handler: hotkeysDoubleClickHandler,
+    });
 
     this.debugLog?.debug('Hotkeys delegation set up');
   }
@@ -170,9 +202,8 @@ export default class EventDelegator {
 
       this.delegatedHandlers.clear();
       this.isSetup = false;
-      
-      this.debugLog?.info('Event delegation cleanup completed');
 
+      this.debugLog?.info('Event delegation cleanup completed');
     } catch (error) {
       this.debugLog?.error('Failed to cleanup event delegation:', error);
     }
@@ -185,7 +216,7 @@ export default class EventDelegator {
     return {
       isSetup: this.isSetup,
       handlerCount: this.delegatedHandlers.size,
-      handlers: Array.from(this.delegatedHandlers.keys())
+      handlers: Array.from(this.delegatedHandlers.keys()),
     };
   }
 }
