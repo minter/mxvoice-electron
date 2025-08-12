@@ -377,6 +377,9 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       if (moduleRegistry.navigation && moduleRegistry.navigation.initializeNavigation) {
         moduleRegistry.navigation.initializeNavigation();
       }
+      if (moduleRegistry.modeManagement && moduleRegistry.modeManagement.initModeManagement) {
+        await moduleRegistry.modeManagement.initModeManagement();
+      }
       window.logInfo('All modules initialized successfully!');
     } catch (error) {
       window.logError('Error initializing modules', error);
