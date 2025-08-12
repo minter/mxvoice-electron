@@ -39,11 +39,9 @@ class NavigationModule {
   initializeNavigation() {
     // Setup event handlers for navigation
     setupNavigationEventHandlers();
-    
-    // Expose minimal globals for integration points that expect window functions
-    if (!window.sendToHotkeys) window.sendToHotkeys = this.sendToHotkeys;
-    if (!window.sendToHoldingTank) window.sendToHoldingTank = this.sendToHoldingTank;
-    
+    // Global exposure is handled centrally by the function registry to avoid duplicates
+    // Do not assign navigation functions directly to window here
+
     debugLog?.info('Navigation Module initialized', { 
       module: 'navigation',
       function: 'initializeNavigation'

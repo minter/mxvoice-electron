@@ -121,8 +121,10 @@ export class EnvironmentSetup {
       info: console.info
     };
 
-    // Only enhance if debug mode is enabled
-    if (this.environmentConfig.debugMode) {
+    // Only enhance if debug mode is enabled AND global debug logger shim is not present
+    // This prevents double-prefixing logs (debug logger already formats console output)
+    const hasGlobalDebugShim = typeof window !== 'undefined' && !!window.logInfo;
+    if (this.environmentConfig.debugMode && !hasGlobalDebugShim) {
       // Add timestamps to console output
       const addTimestamp = (originalMethod, prefix) => {
         return function(...args) {
