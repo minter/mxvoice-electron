@@ -170,8 +170,15 @@ table td#selected_row {
 }
 
 /* Also handle cases where selected_row might be on a tr */
+tr#selected_row {
+  color: white !important;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3) !important;
+}
+
 tr#selected_row td {
   color: white !important;
+  background: transparent !important;
 }
 
 #player {
@@ -249,7 +256,7 @@ table td {
   color: var(--card-text);
   border: 1px solid var(--card-border);
   border-radius: 0.25rem;
-  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
   padding: 0.25rem 0;
 }
 
