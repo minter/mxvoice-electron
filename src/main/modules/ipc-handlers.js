@@ -794,6 +794,50 @@ function registerAllHandlers() {
     }
   });
 
+  // Add the missing install-update handler for auto-updates
+  ipcMain.handle('install-update', async () => {
+    try {
+      // Add console.log for production builds
+      console.log('🚀 [PRODUCTION] install-update handler called');
+      console.log('🚀 [PRODUCTION] autoUpdater available:', !!autoUpdater);
+      console.log('🚀 [PRODUCTION] autoUpdater type:', typeof autoUpdater);
+      
+      debugLog?.error('install-update handler called', { 
+        module: 'ipc-handlers', 
+        function: 'install-update',
+        autoUpdaterAvailable: !!autoUpdater,
+        autoUpdaterType: typeof autoUpdater
+      });
+      
+      if (autoUpdater) {
+        console.log('🚀 [PRODUCTION] Calling autoUpdater.quitAndInstall()');
+        debugLog?.error('Installing update via autoUpdater', { 
+          module: 'ipc-handlers', 
+          function: 'install-update',
+          method: 'quitAndInstall'
+        });
+        autoUpdater.quitAndInstall();
+        return { success: true };
+      } else {
+        console.log('❌ [PRODUCTION] Auto updater not available');
+        debugLog?.error('Auto updater not available', { 
+          module: 'ipc-handlers', 
+          function: 'install-update' 
+        });
+        throw new Error('Auto updater not available');
+      }
+    } catch (error) {
+      console.log('❌ [PRODUCTION] Install update error:', error.message);
+      debugLog?.error('Install update error:', { 
+        module: 'ipc-handlers', 
+        function: 'install-update', 
+        error: error.message,
+        stack: error.stack
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('show-file-picker', async (event, options = {}) => {
     try {
       const result = await dialog.showOpenDialog(mainWindow, options);

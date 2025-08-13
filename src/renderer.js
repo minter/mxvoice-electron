@@ -154,6 +154,18 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logInfo('Global debugLog made available');
     }
     
+    // Register installUpdate function globally for the update button
+    if (moduleRegistry.fileOperations && moduleRegistry.fileOperations.installUpdate) {
+      window.installUpdate = moduleRegistry.fileOperations.installUpdate;
+      window.logInfo('installUpdate function registered globally');
+      window.logInfo('installUpdate function type:', typeof window.installUpdate);
+      window.logInfo('moduleRegistry.fileOperations keys:', Object.keys(moduleRegistry.fileOperations || {}));
+    } else {
+      window.logWarn('installUpdate function not available in moduleRegistry');
+      window.logWarn('moduleRegistry.fileOperations:', moduleRegistry.fileOperations);
+      window.logWarn('Available modules:', Object.keys(moduleRegistry));
+    }
+    
     // Initialize function coordination system
     window.logInfo('Initializing function coordination system...');
     functionCoordination = new FunctionCoordination({

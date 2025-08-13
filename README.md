@@ -89,7 +89,7 @@ The app follows a modern Electron architecture with context isolation enabled an
 
 **ARM64 (Apple Silicon) builds are still built locally:**
 ```bash
-yarn build:mac:arm64
+yarn build:mac:arm64:release
 ```
 
 This creates the ARM64 build artifacts in your `dist/` directory for manual distribution or future automation.

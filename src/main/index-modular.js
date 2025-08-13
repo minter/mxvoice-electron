@@ -303,7 +303,15 @@ function initializeModules() {
 
   // Initialize each module
   appSetup.initializeAppSetup(dependencies);
+  
+  console.log('🚀 [MAIN] Initializing IPC handlers...');
+  console.log('🚀 [MAIN] autoUpdater available:', !!dependencies.autoUpdater);
+  console.log('🚀 [MAIN] autoUpdater type:', typeof dependencies.autoUpdater);
+  
   ipcHandlers.initializeIpcHandlers(dependencies);
+  
+  console.log('🚀 [MAIN] IPC handlers initialized');
+  
   fileOperations.initializeFileOperations(dependencies);
 }
 

@@ -52,15 +52,54 @@ export function pickDirectory(event, element) {
  * Installs an update using the modern electronAPI with fallback to legacy ipcRenderer
  * Triggers the application restart and update installation process
  */
-export function installUpdate() {
+export async function installUpdate() {
   debugLog?.info("Installing update and restarting", { module: 'system-operations', function: 'installUpdate' });
+  
+  // Add more detailed logging
+  debugLog?.info("installUpdate function called - checking available APIs", { 
+    module: 'system-operations', 
+    function: 'installUpdate',
+    secureElectronAPIAvailable: !!window.secureElectronAPI,
+    fileOperationsAvailable: !!window.secureElectronAPI?.fileOperations,
+    installUpdateAvailable: !!window.secureElectronAPI?.fileOperations?.installUpdate,
+    electronAPIAvailable: !!window.electronAPI,
+    restartAndInstallAvailable: !!window.electronAPI?.restartAndInstall
+  });
+  
   try {
     if (window.secureElectronAPI?.fileOperations?.installUpdate) {
-      return window.secureElectronAPI.fileOperations.installUpdate();
+      debugLog?.info("Calling secureElectronAPI.fileOperations.installUpdate", { module: 'system-operations', function: 'installUpdate' });
+      const result = await window.secureElectronAPI.fileOperations.installUpdate();
+      debugLog?.info("secureElectronAPI.fileOperations.installUpdate returned:", { 
+        module: 'system-operations', 
+        function: 'installUpdate',
+        result: result,
+        resultType: typeof result
+      });
+      return result;
     } else if (window.electronAPI?.restartAndInstall) {
-      return window.electronAPI.restartAndInstall();
+      debugLog?.info("Calling electronAPI.restartAndInstall", { module: 'system-operations', function: 'installUpdate' });
+      return await window.electronAPI.restartAndInstall();
+    } else {
+      debugLog?.error("No update installation method available", { 
+        module: 'system-operations', 
+        function: 'installUpdate',
+        availableAPIs: {
+          secureElectronAPI: !!window.secureElectronAPI,
+          fileOperations: !!window.secureElectronAPI?.fileOperations,
+          installUpdate: !!window.secureElectronAPI?.fileOperations?.installUpdate,
+          electronAPI: !!window.electronAPI,
+          restartAndInstall: !!window.electronAPI?.restartAndInstall
+        }
+      });
     }
   } catch (error) {
-    debugLog?.warn('Update install failed to invoke', { module: 'system-operations', function: 'installUpdate', error: error?.message });
+    debugLog?.error('Update install failed to invoke', { 
+      module: 'system-operations', 
+      function: 'installUpdate', 
+      error: error?.message,
+      errorStack: error?.stack,
+      errorType: typeof error
+    });
   }
 } 

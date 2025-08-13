@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Local ARM64 build script for Mx. Voice
- * This builds the ARM64 version locally and prepares for merging with x64 builds
+ * ARM64 Build Script with Release Metadata Preparation
+ * 
+ * This script builds the ARM64 version locally and prepares the latest-mac.yml
+ * file with correct GitHub URLs for the auto-updater.
+ * 
+ * It does NOT build multiple architectures - it only builds ARM64 and prepares
+ * the metadata needed for the multi-architecture merge workflow.
  */
 
 import { execSync } from 'child_process';
@@ -10,11 +15,22 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 
-const VERSION = process.env.VERSION || '4.0.0-pre.1';
+// Read version from package.json
+function getVersion() {
+  try {
+    const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    return packageJson.version;
+  } catch (error) {
+    console.error('❌ Could not read version from package.json:', error);
+    process.exit(1);
+  }
+}
+
+const VERSION = getVersion();
 const BUILD_DIR = 'dist';
 
 async function buildArm64() {
-  console.log('🚀 Building ARM64 version locally...');
+  console.log(`🚀 Building ARM64 version ${VERSION} with release metadata preparation...`);
   
   try {
     // Build ARM64 version
@@ -30,7 +46,7 @@ async function buildArm64() {
       console.log('✅ latest-mac.yml found');
     }
     
-    console.log('🎯 ARM64 build ready for merging with x64');
+    console.log('🎯 ARM64 build ready for merging with x64 GitHub Actions build');
     
   } catch (error) {
     console.error('❌ ARM64 build failed:', error);
@@ -39,28 +55,31 @@ async function buildArm64() {
 }
 
 async function createArm64LatestMac() {
+  // Base GitHub release URL
+  const GITHUB_BASE_URL = `https://github.com/minter/mxvoice-electron/releases/download/${VERSION}`;
+  
   const arm64LatestMac = {
     version: VERSION,
     files: [
       {
-        url: `Mx. Voice-${VERSION}-arm64.dmg`,
+        url: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-arm64.dmg`,
         sha512: 'placeholder-sha512', // Will be updated after actual build
         size: 0
       },
       {
-        url: `Mx. Voice-${VERSION}-arm64.zip`,
+        url: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-arm64.zip`,
         sha512: 'placeholder-sha512', // Will be updated after actual build
         size: 0
       }
     ],
-    path: `Mx. Voice-${VERSION}-arm64.dmg`,
+    path: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-arm64.dmg`,
     sha512: 'placeholder-sha512', // Will be updated after actual build
     releaseDate: new Date().toISOString()
   };
   
   const latestMacPath = path.join(BUILD_DIR, 'latest-mac.yml');
   fs.writeFileSync(latestMacPath, yaml.dump(arm64LatestMac));
-  console.log('📝 Created ARM64 latest-mac.yml template');
+  console.log('📝 Created ARM64 latest-mac.yml template with full GitHub URLs');
 }
 
 // Run the build

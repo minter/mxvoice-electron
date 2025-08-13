@@ -188,7 +188,17 @@ const secureElectronAPI = {
     openHoldingTankFile: () => ipcRenderer.invoke('open-holding-tank-file'),
     saveHoldingTankFile: (data) => ipcRenderer.invoke('save-holding-tank-file', data),
     pickDirectory: (defaultPath) => ipcRenderer.invoke('pick-directory', defaultPath),
-    installUpdate: () => ipcRenderer.invoke('install-update'),
+    installUpdate: () => {
+      try {
+        console.log('🔄 Preload: installUpdate called, invoking install-update IPC');
+        const result = ipcRenderer.invoke('install-update');
+        console.log('🔄 Preload: install-update IPC result:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Preload: install-update IPC failed:', error);
+        throw error;
+      }
+    },
     importAudioFiles: (filePaths) => ipcRenderer.invoke('import-audio-files', filePaths),
     exportData: (exportOptions) => ipcRenderer.invoke('export-data', exportOptions)
   },

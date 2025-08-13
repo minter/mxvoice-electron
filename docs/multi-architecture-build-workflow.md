@@ -15,11 +15,9 @@ Since universal builds have compatibility issues with native modules like `bette
 ### 1. Build ARM64 Locally
 
 ```bash
-# Set the version you're building
-export VERSION="4.0.0-pre.2"
-
-# Build ARM64 version locally
-yarn build:mac:multi
+# Build ARM64 version locally with release metadata
+# Version is automatically read from package.json
+yarn build:mac:arm64:release
 ```
 
 This will:
