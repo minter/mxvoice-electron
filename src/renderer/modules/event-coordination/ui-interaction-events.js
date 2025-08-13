@@ -81,6 +81,22 @@ export default class UIInteractionEvents {
       window.addEventListener('mxvoice:show-modal', showModalListener);
       this.uiHandlers.set('mxvoiceShowModal', { element: window, event: 'mxvoice:show-modal', handler: showModalListener });
     } catch {}
+
+    try {
+      const updateReleaseNotesListener = (e) => {
+        const { name, notes } = e?.detail || {};
+        if (!name || !notes) return;
+        
+        // Update the modal title and content
+        const modalTitle = document.querySelector('#newReleaseModal .modal-title');
+        const modalBody = document.querySelector('#newReleaseModal .modal-body');
+        
+        if (modalTitle) modalTitle.textContent = `Update Available: ${name}`;
+        if (modalBody) modalBody.innerHTML = notes;
+      };
+      window.addEventListener('mxvoice:update-release-notes', updateReleaseNotesListener);
+      this.uiHandlers.set('mxvoiceUpdateReleaseNotes', { element: window, event: 'mxvoice:update-release-notes', handler: updateReleaseNotesListener });
+    } catch {}
     
     this.debugLog?.debug('Modal events attached');
   }
