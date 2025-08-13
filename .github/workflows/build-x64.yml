@@ -1,7 +1,17 @@
-name: Build and Sign macOS x64 App
+name: Build and Release macOS x64 App
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 4.0.0-pre.2)'
+        required: true
+        default: '4.0.0-pre.2'
+      is_prerelease:
+        description: 'Is this a pre-release?'
+        required: true
+        default: true
+        type: boolean
 
 jobs:
   build-macos-x64:
@@ -54,18 +64,19 @@ jobs:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
 
-      - name: Build, Sign, and Notarize x64 macOS App
+      - name: Build, Sign, and Publish to GitHub
         env:
           CSC_LINK: certificate.p12
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           DEBUG: electron-builder
         run: |
-          npx electron-builder --mac --x64 --publish never
+          npx electron-builder --mac --x64 --publish always
 
-      - name: Upload build artifacts
+      - name: Upload build artifacts (backup)
         uses: actions/upload-artifact@v4
         with:
           name: macos-x64-signed-build
