@@ -84,3 +84,4 @@ jobs:
             dist/*.dmg
             dist/*.zip
             dist/*.blockmap
+            dist/latest-mac.yml

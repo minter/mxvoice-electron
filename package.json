@@ -16,6 +16,8 @@
     "build:mac:arm64": "electron-builder --mac --arm64",
     "build:mac:x64": "electron-builder --mac --x64",
     "build:linux:x64": "electron-builder --linux --x64",
+    "build:mac:multi": "node scripts/build-arm64-local.js",
+    "merge:latest-mac": "node scripts/merge-latest-mac.js",
     "release": "electron-builder --mac --publish always",
     "release:prerelease": "electron-builder --mac --publish always",
     "release:draft": "electron-builder --mac --publish always --config.publish[0].releaseType=draft",
@@ -139,6 +141,7 @@
     "electron": "^37.2.6",
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
+    "js-yaml": "^4.1.0",
     "node-abi": "4.12.0"
   }
 }
