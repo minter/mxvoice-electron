@@ -18,6 +18,15 @@ Global styles for the renderer UI.
 - `.icon-bar` wraps to multiple rows when space is constrained.
 - The main row `#top-row` allows horizontal scrolling if the fixed-width side columns can't shrink further.
 - The search column (`#search-column`) flexes to fill all remaining horizontal space.
+- **Mode toggle buttons** (`.mode-toggle`) are responsive and automatically hide text labels on smaller screens while maintaining icon visibility and hover tooltips.
+
+### Responsive Design
+- **Mode toggle buttons** (`.mode-toggle`): Automatically adapt from text+icon to icon-only mode based on screen width while maintaining horizontal layout
+- **Breakpoints**: 
+  - 1400px: Text labels hidden, icons remain with tooltips (prevents misalignment)
+  - 1200px: Optimized spacing and touch targets
+  - 1000px: Minimal spacing for extremely narrow columns
+- **Icon bars** (`.icon-bar`): Adjust spacing and icon sizes for different screen sizes
 
 ### Import order
 1. Variables/tokens (`colors.css`)

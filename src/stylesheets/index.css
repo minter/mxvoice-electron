@@ -41,6 +41,67 @@ input[type="text"]:focus {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   white-space: nowrap; /* prevent buttons from breaking/wrapping */
   flex-shrink: 0; /* avoid clipping in flex header */
+  font-size: 0; /* Remove whitespace between inline-block buttons */
+}
+
+.mode-toggle .mode-btn {
+  font-size: 11px; /* Restore font size for buttons */
+}
+
+/* Responsive mode toggle - hide text on small screens */
+@media screen and (max-width: 1400px) {
+  .mode-toggle .mode-btn-text {
+    display: none;
+  }
+  
+  .mode-toggle .mode-btn {
+    padding: 6px 8px; /* Slightly more padding for icon-only mode */
+    min-width: 32px; /* Ensure consistent button width */
+    text-align: center;
+  }
+  
+  .mode-toggle .mode-btn i {
+    margin-right: 0; /* Remove right margin when no text */
+  }
+}
+
+/* Even smaller screens - optimize for very narrow columns */
+@media screen and (max-width: 1200px) {
+  .mode-toggle .mode-btn {
+    padding: 8px; /* More padding for better touch targets */
+    min-width: 36px;
+  }
+  
+  .mode-toggle {
+    margin-right: 8px; /* Add some spacing from the icon bar */
+  }
+  
+  .icon-bar {
+    column-gap: 4px; /* Reduce spacing between icons */
+    row-gap: 2px;
+  }
+  
+  .icon-bar a {
+    padding: 6px; /* Slightly more padding for better touch targets */
+    font-size: 14px; /* Slightly smaller icons to fit better */
+  }
+}
+
+/* Extremely narrow columns - optimize for minimal space */
+@media screen and (max-width: 1000px) {
+  .mode-toggle .mode-btn {
+    padding: 6px;
+    min-width: 32px;
+  }
+  
+  .icon-bar {
+    column-gap: 2px;
+  }
+  
+  .icon-bar a {
+    padding: 4px;
+    font-size: 12px;
+  }
 }
 
 /* Ensure consistent header heights across all columns */
@@ -88,6 +149,18 @@ h6.card-header {
   transition: all 0.2s ease;
   color: var(--card-text);
   position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  min-height: 28px;
+}
+
+.mode-btn i {
+  margin-right: 4px;
+  transition: margin 0.2s ease;
+}
+
+.mode-btn-text {
+  transition: opacity 0.2s ease;
 }
 
 .mode-btn:hover {
@@ -607,11 +680,11 @@ h6 a {
 }
 
 /* Responsive breakpoints */
-@media screen and (max-width: 1200px) {
+@media screen and (max-width: 1400px) {
   #holding-tank-column,
   #hotkeys-column {
-    min-width: 260px; /* avoid clipping icons on medium screens */
-    max-width: 320px;
+    min-width: 280px; /* ensure mode toggle icons fit properly */
+    max-width: 340px;
   }
 }
 

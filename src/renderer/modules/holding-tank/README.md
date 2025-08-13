@@ -19,6 +19,18 @@ The holding tank operates in two distinct modes:
 - ✅ Tab management
 - ✅ Autoplay management
 - ✅ UI state management
+- ✅ Responsive design with adaptive mode toggle
+
+## Responsive Design
+
+The holding tank mode toggle buttons automatically adapt to different screen sizes while maintaining horizontal alignment:
+
+- **Large screens (>1400px)**: Display both icons and text labels side by side
+- **Medium screens (≤1400px)**: Show only icons with hover tooltips, maintaining horizontal layout
+- **Small screens (≤1200px)**: Optimized spacing and touch targets
+- **Very small screens (≤1000px)**: Minimal spacing for extremely narrow columns
+
+The buttons maintain proper horizontal alignment across all screen sizes, with hover tooltips providing context when text is hidden. The breakpoint at 1400px ensures icons remain properly aligned before text labels cause misalignment.
 
 ## API Reference
 
