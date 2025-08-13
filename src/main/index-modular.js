@@ -90,10 +90,31 @@ autoUpdater.logger = {
 
 // Set architecture-aware update feed URL for macOS
 if (process.platform === "darwin") {
-  const server = "https://download.mxvoice.app";
-  const arch = process.arch; // 'x64' or 'arm64'
-  const feed = `${server}/update/darwin/${arch}/${app.getVersion()}`;
-  autoUpdater.setFeedURL({ provider: "generic", url: feed });
+  const currentVersion = getTestVersion(); // Use test version if available
+  
+  if (currentVersion.startsWith('4.')) {
+    // 4.0+ users: Use GitHub provider for multi-architecture support
+    debugLog.info(`Using GitHub provider for version ${currentVersion}`, { 
+      function: "auto-updater setup",
+      provider: "github"
+    });
+    autoUpdater.setFeedURL({ 
+      provider: "github",
+      owner: "minter",
+      repo: "mxvoice-electron"
+    });
+  } else {
+    // 3.x users: Use your custom server (legacy support)
+    debugLog.info(`Using custom server for version ${currentVersion}`, { 
+      function: "auto-updater setup",
+      provider: "custom",
+      server: "download.mxvoice.app"
+    });
+    const server = "https://download.mxvoice.app";
+    const arch = process.arch; // 'x64' or 'arm64'
+    const feed = `${server}/update/darwin/${arch}/${currentVersion}`;
+    autoUpdater.setFeedURL({ provider: "generic", url: feed });
+  }
 }
 
 // Global variables
@@ -322,16 +343,48 @@ function setupApp() {
   // initialization and is ready to create browser windows.
   app.on('ready', () => {
     createWindow();
+    
+    // Test auto-update scenarios if enabled
+    testAutoUpdateScenarios();
   });
 
   // Setup auto-updater events
   autoUpdater.on('update-available', (updateInfo) => {
-    debugLog.info(`Triggering update-available action with info ${updateInfo.releaseNotes}`, { 
-      function: "autoUpdater update-available" 
+    debugLog.info(`Update available: ${updateInfo.releaseName}`, { 
+      function: "autoUpdater update-available",
+      currentVersion: app.getVersion(),
+      updateVersion: updateInfo.releaseName,
+      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom'
     });
     mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + updateInfo.releaseNotes);
     debugLog.info('display_release_notes call done', { 
       function: "autoUpdater update-available" 
+    });
+  });
+
+  // Add more auto-updater event logging for testing
+  autoUpdater.on('checking-for-update', () => {
+    debugLog.info('Checking for updates...', { 
+      function: "autoUpdater checking-for-update",
+      currentVersion: app.getVersion(),
+      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom'
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    debugLog.info('No updates available', { 
+      function: "autoUpdater update-not-available",
+      currentVersion: app.getVersion(),
+      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom'
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    debugLog.error(`Auto-updater error: ${err.message}`, { 
+      function: "autoUpdater error",
+      currentVersion: app.getVersion(),
+      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      error: err.message
     });
   });
 }
@@ -358,6 +411,63 @@ function testModularMain() {
     });
     return false;
   }
+}
+
+// Temporary testing functions for auto-update validation
+function testAutoUpdateScenarios() {
+  if (process.env.TEST_AUTO_UPDATE === 'true') {
+    debugLog.info('Testing auto-update scenarios...', { 
+      function: "testAutoUpdateScenarios" 
+    });
+    
+    const currentVersion = getTestVersion(); // Use test version if available
+    const isV4 = currentVersion.startsWith('4.');
+    
+    debugLog.info(`Current version: ${currentVersion}, Provider: ${isV4 ? 'github' : 'custom'}`, { 
+      function: "testAutoUpdateScenarios",
+      version: currentVersion,
+      provider: isV4 ? 'github' : 'custom'
+    });
+    
+    // Test provider configuration
+    if (isV4) {
+      debugLog.info('Testing GitHub provider configuration', { 
+        function: "testAutoUpdateScenarios",
+        owner: "minter",
+        repo: "mxvoice-electron"
+      });
+    } else {
+      debugLog.info('Testing custom server configuration', { 
+        function: "testAutoUpdateScenarios",
+        server: "https://download.mxvoice.app",
+        arch: process.arch
+      });
+    }
+    
+    // Simulate update check for testing
+    setTimeout(() => {
+      debugLog.info('Simulating update check for testing...', { 
+        function: "testAutoUpdateScenarios" 
+      });
+      if (autoUpdater) {
+        autoUpdater.checkForUpdatesAndNotify();
+      }
+    }, 3000);
+  }
+}
+
+// Version override for testing - allows testing different versions without package.json changes
+function getTestVersion() {
+  if (process.env.TEST_UPDATE_VERSION) {
+    const originalVersion = app.getVersion();
+    debugLog.info(`Using test version override: ${process.env.TEST_UPDATE_VERSION}`, { 
+      function: "getTestVersion",
+      originalVersion: originalVersion,
+      testVersion: process.env.TEST_UPDATE_VERSION
+    });
+    return process.env.TEST_UPDATE_VERSION;
+  }
+  return app.getVersion();
 }
 
 // Initialize the app
