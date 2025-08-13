@@ -17,7 +17,8 @@
     "build:mac:x64": "electron-builder --mac --x64",
     "build:linux:x64": "electron-builder --linux --x64",
     "release": "electron-builder --mac --publish always",
-    "release:universal": "node build/release-universal.js",
+    "release:prerelease": "electron-builder --mac --publish always",
+    "release:draft": "electron-builder --mac --publish always --config.publish[0].releaseType=draft",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "build:win": "electron-builder --win",
@@ -105,7 +106,8 @@
       {
         "provider": "github",
         "owner": "minter",
-        "repo": "mxvoice-electron"
+        "repo": "mxvoice-electron",
+        "releaseType": "prerelease"
       }
     ]
   },

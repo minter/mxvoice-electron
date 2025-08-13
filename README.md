@@ -69,92 +69,38 @@ The app follows a modern Electron architecture with context isolation enabled an
 
 ## Building, Signing, and Releasing
 
-### macOS (OS X)
+### macOS
 
-To build packages for release on macOS, use the following commands depending on your architecture:
+#### Building and Signing
 
-- For Intel (x64) builds:
+**x64 (Intel Mac) builds are now automated via GitHub Actions:**
 
-```bash
-yarn build:mac:x64
-```
+1. **Push a tag** to trigger the automated build and release:
+   ```bash
+   git tag v4.0.0-pre.2
+   git push origin v4.0.0-pre.2
+   ```
 
-- For Apple Silicon (arm64) builds:
+2. **The GitHub Action will automatically:**
+   - Build and sign the x64 macOS app
+   - Create a GitHub release
+   - Upload all assets (DMG, ZIP, blockmap files)
+   - Generate the `latest.yml` file for auto-updates
 
+**ARM64 (Apple Silicon) builds are still built locally:**
 ```bash
 yarn build:mac:arm64
 ```
 
-These commands use the makers defined in `package.json`, along with your current system architecture, and build the available targets.
+This creates the ARM64 build artifacts in your `dist/` directory for manual distribution or future automation.
 
-Build output will be available in the `dist/` subdirectory. Currently, this produces both a `.dmg` and a `.zip` file, with the `.dmg` being directly installable on the system.
+#### Auto-Update Support
 
-The build process includes code signing and notarization for macOS. The signing identity and entitlements are configured in the build scripts located in the `build/` directory (`afterPack.js`, `notarize.js`, and `entitlements.mac.plist`). To successfully sign and notarize the app, you need to set the following environment variables:
+The app now supports two auto-update providers:
+- **4.x users**: GitHub provider for multi-architecture support
+- **3.x users**: Custom download server (legacy support)
 
-- `APPLE_ID`: Your Apple developer Apple ID email.
-- `APPLE_ID_PASSWORD`: Your Apple app-specific password or Apple ID password.
-- `APPLE_TEAM_ID`: Your Apple developer team ID.
-- `GITHUB_TOKEN`: A GitHub token with permissions to upload releases.
-
-To publish the release to the official Mx. Voice GitHub Releases, use:
-
-```bash
-yarn release
-```
-
-This command requires the above environment variables to be set.
-
-#### Universal macOS Releases (ARM64 + x64)
-
-For creating universal macOS releases that support both Apple Silicon and Intel Macs, follow this workflow:
-
-**Prerequisites:**
-- Set up the required environment variables listed above
-- Ensure you have access to push tags to the repository
-
-**Release Process:**
-
-1. **Create and push a version tag** (this automatically triggers x64 build on GitHub Actions):
-   ```bash
-   git tag v3.2.0
-   git push origin v3.2.0
-   ```
-
-2. **Build ARM64 locally** while the GitHub Actions x64 build runs:
-   ```bash
-   yarn build:mac:arm64
-   ```
-
-3. **Download x64 artifacts** from the completed GitHub Actions run:
-   - Go to the Actions tab in your GitHub repository
-   - Find the workflow run triggered by your tag
-   - Download the `macos-x64-signed-build` artifact
-   - Extract the contents to your local `dist/` directory
-
-4. **Create the universal release**:
-   ```bash
-   export GITHUB_TOKEN=your_github_token_here
-   yarn release:universal
-   ```
-
-This process creates a draft GitHub release with:
-- ARM64 and x64 `.dmg` files
-- ARM64 and x64 `.zip` files
-- ARM64 and x64 `.blockmap` files (for efficient updates)
-- A universal `latest-mac.yml` file that supports both architectures
-
-The release will be created as a **draft** for you to review before publishing. The x64 architecture is set as the default download for backward compatibility with existing Intel Mac users, while Apple Silicon users will automatically receive the ARM64 version.
-
-**Expected files in dist/ before running `yarn release:universal`:**
-- `Mx. Voice-3.2.0-arm64.dmg`
-- `Mx. Voice-3.2.0-arm64.zip`
-- `Mx. Voice-3.2.0-arm64.dmg.blockmap`
-- `Mx. Voice-3.2.0-arm64.zip.blockmap`
-- `Mx. Voice-3.2.0-x64.dmg`
-- `Mx. Voice-3.2.0-x64.zip`
-- `Mx. Voice-3.2.0-x64.dmg.blockmap`
-- `Mx. Voice-3.2.0-x64.zip.blockmap`
-- `latest-mac.yml`
+This ensures backward compatibility while providing modern auto-update functionality for new releases.
 
 ### Windows
 
