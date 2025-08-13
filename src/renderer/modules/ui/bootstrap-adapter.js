@@ -51,7 +51,20 @@ export function initTooltip(selector = '[data-bs-toggle="tooltip"]') {
     try { window.logWarn && window.logWarn('Bootstrap Tooltip not available on window.bootstrap'); } catch (_) {}
     return;
   }
-  document.querySelectorAll(selector).forEach((element) => { new bs.Tooltip(element); });
+  
+  // Get tooltip delay from CSS custom property, default to 1000ms if not set
+  const tooltipDelay = getComputedStyle(document.documentElement)
+    .getPropertyValue('--tooltip-delay')
+    .trim() || '1000ms';
+  
+  // Convert CSS time value to milliseconds for Bootstrap
+  const delayMs = parseInt(tooltipDelay) || 1000;
+  
+  document.querySelectorAll(selector).forEach((element) => { 
+    new bs.Tooltip(element, {
+      delay: { show: delayMs, hide: 0 }
+    });
+  });
 }
 
 export default {

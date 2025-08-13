@@ -54,25 +54,25 @@
           <div class="h-100 card rounded-0">
             <h6 class="card-header rounded-0">
               <div class="mode-toggle">
-                <button id="storage_mode_btn" class="mode-btn active" onclick="setHoldingTankMode('storage')" title="Holding Mode - Songs play individually">
+                <button id="storage_mode_btn" class="mode-btn active" onclick="setHoldingTankMode('storage')" data-bs-toggle="tooltip" data-bs-placement="top" title="Holding Mode - Songs play individually">
                   <i class="fas fa-box"></i> <span class="mode-btn-text">Holding</span>
                 </button>
-                <button id="playlist_mode_btn" class="mode-btn" onclick="setHoldingTankMode('playlist')" title="Playlist Mode - Songs play continuously">
+                <button id="playlist_mode_btn" class="mode-btn" onclick="setHoldingTankMode('playlist')" data-bs-toggle="tooltip" data-bs-placement="top" title="Playlist Mode - Songs play continuously">
                   <i class="fas fa-list"></i> <span class="mode-btn-text">Playlist</span>
                 </button>
               </div>
               <div class="icon-bar">
-                <a href="#">
-                  <i title="Load Holding Tank File" onclick="openHoldingTankFile()" class="far fa-sm fa-folder-open"></i>
+                <a href="#" data-bs-toggle="tooltip" data-bs-placement="top" title="Load Holding Tank File">
+                  <i onclick="openHoldingTankFile()" class="far fa-sm fa-folder-open"></i>
                 </a>
-                <a href="#">
-                  <i title="Save Holding Tank To File" onclick="saveHoldingTankFile()" class="far fa-sm fa-save"></i>
+                <a href="#" data-bs-toggle="tooltip" data-bs-placement="top" title="Save Holding Tank To File">
+                  <i onclick="saveHoldingTankFile()" class="far fa-sm fa-save"></i>
                 </a>
-                <a href="#">
-                  <i title="Rename Hotkey Tab" onclick="renameHoldingTankTab()" class="far fa-sm fa-edit"></i>
+                <a href="#" data-bs-toggle="tooltip" data-bs-placement="top" title="Rename Hotkey Tab">
+                  <i onclick="renameHoldingTankTab()" class="far fa-sm fa-edit"></i>
                 </a>
-                <a href="#">
-                  <i title="Clear Holding Tank List" onclick="clearHoldingTank()" class="far fa-sm fa-trash-alt"></i>
+                <a href="#" data-bs-toggle="tooltip" data-bs-placement="top" title="Clear Holding Tank List">
+                  <i onclick="clearHoldingTank()" class="far fa-sm fa-trash-alt"></i>
                 </a>
               </div>
             </h6>
@@ -127,10 +127,8 @@
                   <select class="form-select" id="category_select"></select>
                   <input type="text" class="form-control" placeholder="Enter search term..." id="omni_search">
                   <input type="text" class="form-control" tabindex="0" placeholder="Title" id="title-search" style="display:none;">
-                  <button type="reset" id="reset_button" tabindex="-1" class="btn btn-secondary"><i title="Reset Search"
-                      class="fas fa-sm fa-times"></i></button>
-                  <button type="button" id="advanced_search_button" tabindex="-1" class="btn btn-primary"><i title="Advanced Search" id="advanced-search-icon"
-                      class="fas fa-sm fa-plus"></i></button>
+                  <button type="reset" id="reset_button" tabindex="-1" class="btn btn-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Reset Search"><i class="fas fa-sm fa-times"></i></button>
+                  <button type="button" id="advanced_search_button" tabindex="-1" class="btn btn-primary" data-bs-toggle="tooltip" data-bs-placement="top" title="Advanced Search" id="advanced-search-icon"><i class="fas fa-sm fa-plus"></i></button>
                 </div>
 
                 <!-- Advanced Search -->
@@ -188,18 +186,18 @@
                   <div class="header-button">
                     <i class="fas fa-keyboard"></i> Hotkeys
                   </div>
-                  <div class="icon-bar">
-                      <a href="#">
-                        <i title="Load Hotkey File" onclick="openHotkeyFile()" class="far fa-sm fa-folder-open"></i>
+                                      <div class="icon-bar">
+                      <a href="#" data-bs-toggle="tooltip" data-bs-placement="top" title="Load Hotkey File">
+                        <i onclick="openHotkeyFile()" class="far fa-sm fa-folder-open"></i>
                       </a>
-                      <a href="#">
-                        <i title="Save Hotkeys To File" onclick="saveHotkeyFile()" class="far fa-sm fa-save"></i>
+                      <a href="#" data-bs-toggle="tooltip" data-bs-placement="top" title="Save Hotkeys To File">
+                        <i onclick="saveHotkeyFile()" class="far fa-sm fa-save"></i>
                       </a>
-                      <a href="#">
-                        <i title="Rename Hotkey Tab" onclick="renameHotkeyTab()" class="far fa-sm fa-edit"></i>
+                      <a href="#" data-bs-toggle="tooltip" data-bs-placement="top" title="Rename Hotkey Tab">
+                        <i onclick="renameHotkeyTab()" class="far fa-sm fa-edit"></i>
                       </a>
-                      <a href="#">
-                        <i title="Clear Hotkey List" onclick="clearHotkeys()" class="far fa-sm fa-trash-alt"></i>
+                      <a href="#" data-bs-toggle="tooltip" data-bs-placement="top" title="Clear Hotkey List">
+                        <i onclick="clearHotkeys()" class="far fa-sm fa-trash-alt"></i>
                       </a>
                     </div>
                   </h6>
@@ -299,9 +297,8 @@
             <div class="card-body">
               <div class="row align-items-center">
                 <div id="play_column" class="col-1">
-                  <button id="play_button" class="btn btn-success btn-lg" disabled><i title="Play"
-                      class="fas fa-sm fa-play"></i></button>
-                  <button id="pause_button" class="d-none btn btn-warning btn-lg"><i title="Stop" class="fas fa-sm fa-pause"></i></button>
+                  <button id="play_button" class="btn btn-success btn-lg" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="Play"><i class="fas fa-sm fa-play"></i></button>
+                  <button id="pause_button" class="d-none btn btn-warning btn-lg" data-bs-toggle="tooltip" data-bs-placement="top" title="Stop"><i class="fas fa-sm fa-pause"></i></button>
                 </div>
                 <div id="player-col" class="col-7">
                   <div id="now_playing_bar" class="flex-row d-flex justify-content-between">
@@ -317,14 +314,13 @@
                   </div>
                 </div>
                 <div id="stop_column" class="col-1">
-                  <button id="stop_button" class="btn btn-danger btn-lg" disabled><i title="Stop" class="fas fa-sm fa-stop"></i></button>
+                  <button id="stop_button" class="btn btn-danger btn-lg" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="Stop"><i class="fas fa-sm fa-stop"></i></button>
                 </div>
                 <div id="controls_column" class="col-3 d-flex align-items-center">
-                  <button id="waveform_button" class="btn btn-secondary btn-sm" title="Waveform"><i class="fas fa-chart-bar"></i></button>
+                  <button id="waveform_button" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Waveform"><i class="fas fa-chart-bar"></i></button>
                   <button id="loop_button"
-                    class="btn btn-secondary btn-sm"><i title="Loop"
-                      class="fas fa-md fa-sync-alt fa-flip-vertical"></i></button>
-                  <button id="mute_button" class="btn btn-secondary btn-sm"><i title="Mute" class="fas fa-md fa-volume-mute"></i></button>
+                    class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Loop"><i class="fas fa-md fa-sync-alt fa-flip-vertical"></i></button>
+                  <button id="mute_button" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Mute"><i class="fas fa-md fa-volume-mute"></i></button>
                   <input type="range" class="form-range mousetrap" value="100" id="volume">
                 </div>
               </div>
@@ -494,7 +490,7 @@
                     <input type="text" class="form-control" id="preferences-database-directory">
                   </div>
                   <div class="col-sm-3">
-                    <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-database-directory")'>Choose Location</button>
+                    <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-database-directory")' data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your database file is stored">Choose Location</button>
                   </div>
                 </div>
                 <div class="row g-2 mb-3">
@@ -503,7 +499,7 @@
                     <input type="text" class="form-control" id="preferences-song-directory">
                   </div>
                   <div class="col-sm-3">
-                    <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-song-directory")'>Choose Location</button>
+                    <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-song-directory")' data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your song files are stored">Choose Location</button>
                   </div>
                 </div>
                 <div class="row g-2 mb-3">
@@ -512,7 +508,7 @@
                     <input type="text" class="form-control" id="preferences-hotkey-directory">
                   </div>
                   <div class="col-sm-3">
-                    <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-hotkey-directory")'>Choose Location</button>
+                    <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-hotkey-directory")' data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your hotkey files are stored">Choose Location</button>
                   </div>
                 </div>
               </fieldset>
@@ -546,7 +542,7 @@
             </div>
             <div class="modal-footer">
               <div class="me-auto">
-                <a class="btn btn-warning btn-sm" href="mailto:support@mxvoice.app?subject=Mx.%20Voice%20Support%20Request">
+                <a class="btn btn-warning btn-sm" href="mailto:support@mxvoice.app?subject=Mx.%20Voice%20Support%20Request" data-bs-toggle="tooltip" data-bs-placement="top" title="Send an email to our support team">
                   <i class="fas fa-envelope"></i> Contact Support
                 </a>
               </div>
@@ -576,7 +572,7 @@
             <p class="lead">This is the fastest, easiest way to play music, sound effects and audio drops for theater, improv shows, radio programs and more.</p>
             <p></p>
             <p><strong>New to Mx. Voice?</strong> Before you can start using Mx. Voice you'll need to import some songs or sounds. Head on up to the <strong>Songs</strong> menu to add audio tracks to the Mx. Voice database.</p>
-            <p><strong>Previous user of Mr. Voice?</strong> If you already have a database of songs from old versions of Mr. Voice, you can copy all of that into this installation. Contact <a href="mailto:support@mxvoice.app?subject=Mx.%20Voice%20Migration%20Help">support</a> for assistance.</p>
+                            <p><strong>Previous user of Mr. Voice?</strong> If you already have a database of songs from old versions of Mr. Voice, you can copy all of that into this installation. Contact <a href="mailto:support@mxvoice.app?subject=Mx.%20Voice%20Migration%20Help" data-bs-toggle="tooltip" data-bs-placement="top" title="Get help migrating your existing Mr. Voice database">support</a> for assistance.</p>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-success btn-sm" data-bs-dismiss="modal">Got It!</button>
@@ -596,7 +592,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-warning btn-sm" data-bs-dismiss="modal">Install Later</button>
-            <button type="submit" class="btn btn-success btn-sm" data-bs-dismiss="modal" onclick="installUpdate()">Relaunch And Install</button>
+            <button type="submit" class="btn btn-success btn-sm" data-bs-dismiss="modal" onclick="installUpdate()" data-bs-toggle="tooltip" data-bs-placement="top" title="Restart the application and install the update">Relaunch And Install</button>
           </div>
         </div>
       </div>

@@ -32,6 +32,8 @@ The holding tank mode toggle buttons automatically adapt to different screen siz
 
 The buttons maintain proper horizontal alignment across all screen sizes, with hover tooltips providing context when text is hidden. The breakpoint at 1400px ensures icons remain properly aligned before text labels cause misalignment.
 
+**Tooltip Behavior**: All tooltips have a 1-second delay before appearing, preventing accidental activation when quickly moving the mouse across the interface. The delay is centrally configured via CSS custom properties for easy modification.
+
 ## API Reference
 
 ### Core Functions

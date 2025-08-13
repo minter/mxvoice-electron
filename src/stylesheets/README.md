@@ -27,6 +27,7 @@ Global styles for the renderer UI.
   - 1200px: Optimized spacing and touch targets
   - 1000px: Minimal spacing for extremely narrow columns
 - **Icon bars** (`.icon-bar`): Adjust spacing and icon sizes for different screen sizes
+- **Tooltips**: All tooltips use Bootstrap with centrally configured delay via CSS custom properties (`--tooltip-delay: 1000ms`) for easy global modification
 
 ### Import order
 1. Variables/tokens (`colors.css`)
@@ -38,4 +39,13 @@ Global styles for the renderer UI.
 - For new font files, add `@font-face` in `fonts.css`
 - For new color tokens, add to `colors.css` and reference via `var(--token-name)`
 - Keep `index.css` as the orchestrator; avoid duplicating variable definitions
+
+### Tooltip Configuration
+- **Global delay**: Modify `--tooltip-delay` in `:root` to change all tooltip delays at once
+- **Current setting**: `--tooltip-delay: 1000ms` (1 second)
+- **Examples**: 
+  - `500ms` for faster tooltips
+  - `2000ms` for slower tooltips
+  - `0ms` for instant tooltips
+- **No HTML changes needed**: The JavaScript automatically reads the CSS variable and applies it to all tooltips
 
