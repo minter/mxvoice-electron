@@ -55,31 +55,29 @@ async function buildArm64() {
 }
 
 async function createArm64LatestMac() {
-  // Base GitHub release URL
-  const GITHUB_BASE_URL = `https://github.com/minter/mxvoice-electron/releases/download/${VERSION}`;
-  
+  // IMPORTANT: For GitHub provider, entries must be relative file names, not full URLs
   const arm64LatestMac = {
     version: VERSION,
     files: [
       {
-        url: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-arm64.dmg`,
+        url: `Mx. Voice-${VERSION}-arm64.dmg`,
         sha512: 'placeholder-sha512', // Will be updated after actual build
         size: 0
       },
       {
-        url: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-arm64.zip`,
+        url: `Mx. Voice-${VERSION}-arm64.zip`,
         sha512: 'placeholder-sha512', // Will be updated after actual build
         size: 0
       }
     ],
-    path: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-arm64.dmg`,
+    path: `Mx. Voice-${VERSION}-arm64.dmg`,
     sha512: 'placeholder-sha512', // Will be updated after actual build
     releaseDate: new Date().toISOString()
   };
   
   const latestMacPath = path.join(BUILD_DIR, 'latest-mac.yml');
   fs.writeFileSync(latestMacPath, yaml.dump(arm64LatestMac));
-  console.log('📝 Created ARM64 latest-mac.yml template with full GitHub URLs');
+  console.log('📝 Created ARM64 latest-mac.yml template with relative file names');
 }
 
 // Run the build

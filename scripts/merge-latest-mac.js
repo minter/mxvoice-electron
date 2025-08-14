@@ -45,37 +45,34 @@ async function mergeLatestMac() {
     console.log('✅ Loaded ARM64 latest-mac.yml');
     console.log('✅ Loaded x64 latest-mac-x64.yml');
     
-    // Base GitHub release URL
-    const GITHUB_BASE_URL = `https://github.com/minter/mxvoice-electron/releases/download/${VERSION}`;
-    
-    // Create merged latest-mac.yml with both architectures and full GitHub URLs
+    // IMPORTANT: For GitHub provider, entries must be relative file names, not full URLs
     const mergedLatestMac = {
       version: VERSION,
       files: [
-        // ARM64 files with full GitHub URLs
+        // ARM64 files (relative names)
         {
-          url: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-arm64.dmg`,
+          url: `Mx. Voice-${VERSION}-arm64.dmg`,
           sha512: arm64LatestMac.files?.[0]?.sha512 || 'placeholder-sha512',
           size: arm64LatestMac.files?.[0]?.size || 0
         },
         {
-          url: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-arm64.zip`,
+          url: `Mx. Voice-${VERSION}-arm64.zip`,
           sha512: arm64LatestMac.files?.[1]?.sha512 || 'placeholder-sha512',
           size: arm64LatestMac.files?.[1]?.size || 0
         },
-        // x64 files with full GitHub URLs
+        // x64 files (relative names)
         {
-          url: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-x64.dmg`,
+          url: `Mx. Voice-${VERSION}-x64.dmg`,
           sha512: x64LatestMac.files?.[0]?.sha512 || 'placeholder-sha512',
           size: x64LatestMac.files?.[0]?.size || 0
         },
         {
-          url: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-x64.zip`,
+          url: `Mx. Voice-${VERSION}-x64.zip`,
           sha512: x64LatestMac.files?.[1]?.sha512 || 'placeholder-sha512',
           size: x64LatestMac.files?.[1]?.size || 0
         }
       ],
-      path: `${GITHUB_BASE_URL}/Mx. Voice-${VERSION}-x64.dmg`, // Default to x64 for backward compatibility
+      path: `Mx. Voice-${VERSION}-x64.dmg`, // Default to x64 for backward compatibility
       sha512: x64LatestMac.files?.[0]?.sha512 || 'placeholder-sha512', // Use x64 DMG hash as default
       releaseDate: new Date().toISOString()
     };

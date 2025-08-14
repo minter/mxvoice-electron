@@ -98,10 +98,17 @@ if (process.platform === "darwin") {
       function: "auto-updater setup",
       provider: "github"
     });
+    
+    // Allow pre-releases like 4.0.0-pre.X
+    autoUpdater.allowPrerelease = true;
+    
+    // Explicitly configure GitHub provider; allow prereleases and let provider resolve URLs
     autoUpdater.setFeedURL({ 
       provider: "github",
       owner: "minter",
-      repo: "mxvoice-electron"
+      repo: "mxvoice-electron",
+      private: false,
+      channel: "latest"
     });
   } else {
     // 3.x users: Use your custom server (legacy support)
