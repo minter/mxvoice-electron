@@ -64,7 +64,7 @@ jobs:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
 
-      - name: Build, Sign, and Publish to GitHub
+      - name: Build and Sign (no publish)
         env:
           CSC_LINK: certificate.p12
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -74,7 +74,32 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           DEBUG: electron-builder
         run: |
-          npx electron-builder --mac --x64 --publish always --config.extraMetadata.version=${{ inputs.version }}
+          npx electron-builder --mac --x64 --publish never --config.extraMetadata.version=${{ inputs.version }}
+
+      - name: Normalize artifact names to "Mx. Voice-*"
+        run: |
+          ls -la dist | cat
+          for f in dist/Mx.-Voice-* dist/Mx.Voice-*; do
+            if [ -e "$f" ]; then
+              base=$(basename "$f")
+              norm=${base/Mx.-Voice-/Mx. Voice-}
+              norm=${norm/Mx.Voice-/Mx. Voice-}
+              if [ "$base" != "$norm" ]; then
+                echo "Renaming $base -> $norm"
+                mv "dist/$base" "dist/$norm"
+              fi
+            fi
+          done
+          if [ -f dist/latest-mac.yml ]; then
+            sed -i '' -e 's/Mx\.-Voice-/Mx. Voice-/g' -e 's/Mx\.Voice-/Mx. Voice-/g' dist/latest-mac.yml || sed -i -e 's/Mx\.-Voice-/Mx. Voice-/g' -e 's/Mx\.Voice-/Mx. Voice-/g' dist/latest-mac.yml
+          fi
+
+      - name: Upload artifacts to GitHub Release (clobber)
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          TAG=v${{ inputs.version }}
+          gh release upload "$TAG" dist/*.dmg dist/*.zip dist/*.blockmap dist/latest-mac.yml --clobber
 
       - name: Upload build artifacts (backup)
         uses: actions/upload-artifact@v4

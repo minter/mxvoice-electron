@@ -37,6 +37,9 @@ async function buildArm64() {
     execSync('yarn build:mac:arm64', { stdio: 'inherit' });
     console.log('✅ ARM64 build completed successfully');
     
+    // Normalize artifact names to "Mx. Voice-*" to avoid environment-specific sanitization
+    normalizeArtifactNames();
+    
     // Check if latest-mac.yml was created
     const latestMacPath = path.join(BUILD_DIR, 'latest-mac.yml');
     if (!fs.existsSync(latestMacPath)) {
@@ -45,12 +48,46 @@ async function buildArm64() {
     } else {
       console.log('✅ latest-mac.yml found');
     }
+    // Ensure yml references use "Mx. Voice-*"
+    normalizeLatestMacYml();
     
     console.log('🎯 ARM64 build ready for merging with x64 GitHub Actions build');
     
   } catch (error) {
     console.error('❌ ARM64 build failed:', error);
     process.exit(1);
+  }
+}
+
+function normalizeArtifactNames() {
+  try {
+    const files = fs.readdirSync(BUILD_DIR);
+    files.forEach((file) => {
+      if (/^Mx\.-Voice-/.test(file) || /^Mx\.Voice-/.test(file)) {
+        const normalized = file.replace(/^Mx\.-Voice-/, 'Mx. Voice-').replace(/^Mx\.Voice-/, 'Mx. Voice-');
+        if (normalized !== file) {
+          fs.renameSync(path.join(BUILD_DIR, file), path.join(BUILD_DIR, normalized));
+          console.log(`🔤 Renamed artifact: ${file} -> ${normalized}`);
+        }
+      }
+    });
+  } catch (e) {
+    console.warn('⚠️  Could not normalize artifact names:', e?.message || e);
+  }
+}
+
+function normalizeLatestMacYml() {
+  try {
+    const latestMacPath = path.join(BUILD_DIR, 'latest-mac.yml');
+    if (!fs.existsSync(latestMacPath)) return;
+    let yml = fs.readFileSync(latestMacPath, 'utf8');
+    const updated = yml.replace(/Mx\.-Voice-/g, 'Mx. Voice-').replace(/Mx\.Voice-/g, 'Mx. Voice-');
+    if (updated !== yml) {
+      fs.writeFileSync(latestMacPath, updated);
+      console.log('🔤 Normalized names inside latest-mac.yml');
+    }
+  } catch (e) {
+    console.warn('⚠️  Could not normalize latest-mac.yml:', e?.message || e);
   }
 }
 
