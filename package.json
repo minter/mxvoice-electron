@@ -1,7 +1,7 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "4.0.0-pre.3",
+  "version": "4.0.0-pre.4",
   "description": "Improv Audio Software",
   "type": "module",
   "repository": "https://github.com/minter/mxvoice-electron",
@@ -26,7 +26,7 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
-    "appId": "app.mxvoice.mxvoice",
+    "appId": "com.electron.mx.-voice",
     "productName": "Mx. Voice",
     "copyright": "Copyright © 2025 Wade Minter and Andrew Berkowitz",
     "npmRebuild": false,
