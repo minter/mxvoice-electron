@@ -50,15 +50,16 @@ src/main/
 
 ### Coordinator (`index-modular.js`)
 - Creates `electron-store` with defaults; initializes DebugLog
-- Sets up auto-updater (logger, feed URL on macOS)
+- Sets up auto-updater (logger, feed URL on macOS, markdown processing for release notes)
 - First-run flow: create folders, seed DB with starter content if needed
-- Initializes SQLite DB (switches mrvoice.db/mxvoice.db as present)
+- Initializes SQLite WebAssembly database using `@sqlite.org/sqlite-wasm`
 - Creates the main window and application menu
 - Injects dependencies into modules; registers secure IPC handlers
 
 ### Notes
 - Context Isolation is enabled; all renderer access is via preload/IPC
 - Audio playback for quick tests uses Howler in main (via IPC) when applicable
+- Auto-updater includes markdown processing for GitHub release notes using `markdown-it`
 - The application menu includes an “Export Logs…” item:
   - macOS: under the app menu (e.g., `Mx. Voice` → `Export Logs…`)
   - Windows/Linux: under `Help` → `Export Logs…`

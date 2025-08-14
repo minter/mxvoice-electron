@@ -58,9 +58,11 @@ The app follows a modern Electron architecture with context isolation enabled an
 - IPC handlers validate inputs on the main side
 
 ### Database
-- Uses SQL.js (pure JavaScript SQLite implementation) for cross-platform compatibility
-- No native binary dependencies - works consistently across all architectures
+- Uses the official `@sqlite.org/sqlite-wasm` WebAssembly module for cross-platform compatibility
+- No native binary dependencies - works consistently across all architectures (x64, ARM64)
 - Database files are stored in the user's application data directory
+- Automatic migration support from legacy database formats
+- Fallback to in-memory database if file operations fail
 
 ### Useful paths
 - Assets: `src/assets/` (see `src/assets/README.md`)
@@ -69,10 +71,38 @@ The app follows a modern Electron architecture with context isolation enabled an
 ### Debugging tips
 - Open DevTools from the app menu (View → Developer Tools)
 - Main process logs via structured DebugLog; renderer logs via the DebugLog module
-- Bootstrap Bootstrap 5 is bundled via `bootstrap.bundle.min.js` and accessed using the adapter; prefer `data-bs-*` attributes in HTML.
+- Bootstrap 5 is bundled via `bootstrap.bundle.min.js` and accessed using the adapter; prefer `data-bs-*` attributes in HTML
+- Auto-updater logs show markdown processing status for release notes
 
 
 ## Building, Signing, and Releasing
+
+### Available Build Scripts
+
+The following build scripts are available:
+
+```bash
+# Development
+yarn start                    # Start the app in development mode
+
+# macOS Builds
+yarn build:mac:universal     # Build universal macOS app (x64 + ARM64)
+yarn build:mac:arm64         # Build ARM64-only macOS app
+
+# Windows Builds  
+yarn build:win               # Build Windows installer
+
+# Publishing (GitHub Actions)
+yarn release:mac             # Publish macOS stable build to GitHub
+yarn release:mac:prerelease  # Publish macOS prerelease to GitHub
+yarn release:draft           # Publish as draft release
+yarn release:win             # Publish Windows stable build to GitHub
+yarn release:win:prerelease  # Publish Windows prerelease to GitHub
+
+# Local builds (no publishing)
+yarn pack                    # Build without publishing
+yarn dist                    # Build all platforms locally
+```
 
 ### macOS
 
@@ -92,18 +122,26 @@ The app follows a modern Electron architecture with context isolation enabled an
    - Upload all assets (DMG, ZIP, blockmap files)
    - Generate the `latest.yml` file for auto-updates
 
-**ARM64 (Apple Silicon) builds are still built locally:**
+**ARM64 (Apple Silicon) builds are built locally:**
 ```bash
-yarn build:mac:arm64:release
+yarn build:mac:universal
 ```
 
-This creates the ARM64 build artifacts in your `dist/` directory for manual distribution or future automation.
+This creates universal builds (x64 + ARM64) in your `dist/` directory. For ARM64-only builds:
+```bash
+yarn build:mac:arm64
+```
 
 #### Auto-Update Support
 
 The app now supports two auto-update providers:
-- **4.x users**: GitHub provider for multi-architecture support
+- **4.x users**: GitHub provider for multi-architecture support with automatic release notes processing
 - **3.x users**: Custom download server (legacy support)
+
+**Release Notes Processing:**
+- GitHub release notes are automatically processed from markdown to HTML
+- Users see properly formatted update information with bullet points, paragraphs, and links
+- Fallback to raw text if markdown processing fails
 
 This ensures backward compatibility while providing modern auto-update functionality for new releases.
 
@@ -169,11 +207,31 @@ To publish Windows releases, use your preferred workflow for uploading the signe
 
 **Note:** The old certificate file-based signing is no longer used. All signing is handled via SSL.com credentials and the automated script.
 
+## Dependencies and Architecture
+
+### Core Dependencies
+- **Database**: `@sqlite.org/sqlite-wasm` - Official SQLite WebAssembly module
+- **UI Framework**: Bootstrap 5 with custom adapter (no jQuery required)
+- **Audio**: Howler.js for audio playback, WaveSurfer.js for waveform visualization
+- **Markdown**: `markdown-it` for processing GitHub release notes
+- **Auto-updates**: `electron-updater` with GitHub provider support
+- **Logging**: Structured DebugLog system with file rotation and export
+
+### Optimized Package List
+The package.json has been cleaned up to remove orphaned dependencies. All remaining packages are actively used:
+- FontAwesome for UI icons
+- Bootstrap for responsive UI components
+- SQLite WebAssembly for cross-platform database
+- Markdown processing for release notes
+- Audio libraries for playback and visualization
+- Electron utilities for development and production builds
+
 ## References and Utilities
 
 Helpful tools and documentation:
 * [Electron.js](https://www.electronjs.org)
 * [Electron Builder](https://www.electron.build)
+* [SQLite WebAssembly](https://sqlite.org/wasm)
 
 ## Authors
 Mx. Voice 4 is brought to you with love by:
