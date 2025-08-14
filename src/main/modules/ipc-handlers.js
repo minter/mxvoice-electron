@@ -26,8 +26,8 @@ let debugLog;
 let logService;
 let updateState;
 
-// Helper function to convert sql.js format to better-sqlite3 format for compatibility
-function convertSqlJsResult(result) {
+// Helper function to convert sqlite-wasm format to consistent format
+function convertSqliteWasmResult(result) {
   if (result && result.length > 0) {
     const columns = result[0].columns;
     const values = result[0].values;
@@ -44,8 +44,8 @@ function convertSqlJsResult(result) {
   }
 }
 
-// Helper function to convert single row sql.js result
-function convertSqlJsSingleRow(result) {
+// Helper function to convert single row sqlite-wasm result
+function convertSqliteWasmSingleRow(result) {
   if (result && result.length > 0 && result[0].values.length > 0) {
     const columns = result[0].columns;
     const row = result[0].values[0];
@@ -187,11 +187,16 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
-      const result = db.exec(sql, params || []);
       
-      // Convert sql.js format to better-sqlite3 format for compatibility
-      const data = convertSqlJsResult(result);
-      return { success: true, data: data };
+      // For the official SQLite WebAssembly, use the correct exec API
+      const result = db.exec({
+        sql: sql,
+        bind: params || [],
+        returnValue: "resultRows",
+        rowMode: "object"
+      });
+      
+      return { success: true, data: result || [] };
     } catch (error) {
       debugLog?.error('Database query error:', { module: 'ipc-handlers', function: 'database-query', error: error.message });
       return { success: false, error: error.message };
@@ -203,8 +208,10 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
-      const result = db.run(sql, params || []);
-      return { success: true, data: { changes: result.changes, lastInsertRowid: result.lastInsertRowid } };
+      
+      // sqlite-wasm uses exec() for statements
+      const result = db.exec(sql, params || []);
+      return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
     } catch (error) {
       debugLog?.error('Database execute error:', { module: 'ipc-handlers', function: 'database-execute', error: error.message });
       return { success: false, error: error.message };
@@ -216,12 +223,21 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
-      const result = db.exec('SELECT * FROM categories ORDER BY description ASC');
       
-      // Convert sql.js format to better-sqlite3 format for compatibility
-      const data = convertSqlJsResult(result);
-      return { success: true, data: data };
+      // For the official SQLite WebAssembly, we need to use a different approach
+      const sql = 'SELECT * FROM categories ORDER BY description ASC';
+      console.log('Executing categories query:', sql);
+      
+      const result = db.exec({
+        sql: sql,
+        returnValue: "resultRows",
+        rowMode: "object"
+      });
+      console.log('Raw categories result:', JSON.stringify(result, null, 2));
+      
+      return { success: true, data: result || [] };
     } catch (error) {
+      console.log('Categories query error:', error);
       debugLog?.error('Get categories error:', { module: 'ipc-handlers', function: 'get-categories', error: error.message });
       return { success: false, error: error.message };
     }
@@ -232,12 +248,12 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
-      const result = db.run(`
+      const result = db.exec(`
         INSERT INTO mrvoice (title, artist, category, filename, time, modtime)
         VALUES (?, ?, ?, ?, ?, ?)
       `, [songData.title, songData.artist, songData.category, 
           songData.filename, songData.duration || '00:00', Math.floor(Date.now() / 1000)]);
-      return { success: true, data: { changes: result.changes, lastInsertRowid: result.lastInsertRowid } };
+      return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
     } catch (error) {
       debugLog?.error('Add song error:', { module: 'ipc-handlers', function: 'add-song', error: error.message });
       return { success: false, error: error.message };

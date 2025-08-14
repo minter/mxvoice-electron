@@ -12,16 +12,19 @@ Provides debug logging functionality for the main process.
 
 ### database-setup.js
 Handles database initialization and setup for the main process. This module:
-- Initializes SQL.js with proper WASM file path resolution for both development and production
-- Creates and manages the SQLite database instance
+- Initializes the official @sqlite.org/sqlite-wasm WebAssembly module
+- Creates and manages the SQLite database instance using the oo1 (object-oriented) API
 - Sets up database schema and indexes
-- Provides database save/load functionality
+- Provides database save/load functionality with file serialization
 
 **Key Features:**
-- Correctly resolves SQL.js WASM file paths in both development (`yarn start`) and production (built binary) environments
-- Uses `process.resourcesPath` for production WASM file location
+- Uses the official @sqlite.org/sqlite-wasm package for maximum compatibility and performance
+- Automatically handles WebAssembly module initialization
+- Supports migration from old sqlite-wasm package format with automatic backup creation
+- Direct file-based database operations with automatic persistence
 - Falls back to in-memory database if file operations fail
-- Provides comprehensive error logging
+- Provides comprehensive error logging and fallback handling
+- Modern ES module design with async/await patterns
 
 ### file-operations.js
 Handles file system operations and file management.

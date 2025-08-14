@@ -34,9 +34,7 @@
     "asarUnpack": [
       "**/*.node",
       "**/*.wasm",
-      "node_modules/sql.js/dist/*.wasm",
-      "node_modules/sql.js/dist/sql-wasm.wasm",
-      "node_modules/sql.js/dist/sql-wasm-debug.wasm"
+      "node_modules/@sqlite.org/sqlite-wasm/dist/*.wasm"
     ],
     "afterPack": "build/afterPack.js",
     "mac": {
@@ -53,16 +51,34 @@
       "identity": "E31B13B9566B95D1BC1F46F0C3B2FA6C739356CB",
       "mergeASARs": false,
       "target": [
-        { "target": "dmg", "arch": ["universal"] },
-        { "target": "zip", "arch": ["universal"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
       ]
     },
     "dmg": {
       "icon": "src/assets/icons/dmg-image.icns",
       "background": "src/assets/images/dmg-background-image.png",
       "contents": [
-        { "x": 180, "y": 340 },
-        { "x": 450, "y": 340, "type": "link", "path": "/Applications" }
+        {
+          "x": 180,
+          "y": 340
+        },
+        {
+          "x": 450,
+          "y": 340,
+          "type": "link",
+          "path": "/Applications"
+        }
       ],
       "sign": false,
       "format": "UDZO"
@@ -77,8 +93,18 @@
       "synopsis": "Improv Audio Software",
       "description": "Professional audio software for improvisation and live performance",
       "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb", "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "publish": [
@@ -94,7 +120,7 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.0.0",
     "@octokit/rest": "^22.0.0",
-    "sql.js": "^1.13.0",
+    "@sqlite.org/sqlite-wasm": "^3.50.4-build1",
     "animate.css": "^4.1.1",
     "bootstrap": "^5.3.3",
     "electron-log": "^5.4.2",

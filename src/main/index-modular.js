@@ -229,14 +229,13 @@ async function checkFirstRun() {
       const initDb = await initializeDatabase();
       
       // Insert initial data
-      initDb.run(`INSERT OR IGNORE INTO categories VALUES('UNC', 'Uncategorized')`);
-      initDb.run(`INSERT OR IGNORE INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)`, 
+      initDb.exec(`INSERT OR IGNORE INTO categories VALUES('UNC', 'Uncategorized')`);
+      initDb.exec(`INSERT OR IGNORE INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)`, 
         ['Rock Bumper', 'Patrick Short', 'UNC', 'PatrickShort-CSzRockBumper.mp3', '00:49', Math.floor(Date.now() / 1000)]);
       
-      // Save the database to file
+      // Save the database to file - sqlite-wasm handles this automatically
       const dbPath = path.join(store.get('database_directory'), 'mxvoice.db');
-      const data = initDb.export();
-      fs.writeFileSync(dbPath, data);
+      console.log(`Database will be saved to ${dbPath} by sqlite-wasm`);
       
       fs.copyFileSync(path.join(__dirname, '..', 'assets', 'music', 'CSz Rock Bumper.mp3'), path.join(store.get('music_directory'), 'PatrickShort-CSzRockBumper.mp3'));
       debugLog.info(`mxvoice.db created at ${store.get('database_directory')}`, { 
