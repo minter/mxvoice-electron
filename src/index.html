@@ -548,13 +548,28 @@
                 <legend>Debug Options</legend>
                 <div class="row g-2 mb-3">
                   <div class="col-sm-9 offset-sm-3">
-                    <div class="form-check">
-                      <input type="checkbox" class="form-check-input" id="preferences-debug-log-enabled">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" role="switch" id="preferences-debug-log-enabled">
                       <label class="form-check-label" for="preferences-debug-log-enabled">
-                        Enable Debug Log
+                        Enable debug logging
                       </label>
                     </div>
                     <small class="form-text text-muted">When enabled, additional debug information will be logged to the console.</small>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Update Options</legend>
+                <div class="row g-2 mb-3">
+                  <div class="col-sm-9 offset-sm-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" role="switch" id="preferences-prerelease-updates">
+                      <label class="form-check-label" for="preferences-prerelease-updates">
+                        Include prerelease updates (beta/alpha versions)
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">By default, only stable releases are shown. Enable this to receive beta and alpha updates.</small>
                   </div>
                 </div>
               </fieldset>

@@ -57,11 +57,12 @@ function initializeSettingsController(options = {}) {
           electronAPI.store.set("music_directory", preferences.music_directory),
           electronAPI.store.set("hotkey_directory", preferences.hotkey_directory),
           electronAPI.store.set("fade_out_seconds", preferences.fade_out_seconds),
-          electronAPI.store.set("debug_log_enabled", preferences.debug_log_enabled)
+          electronAPI.store.set("debug_log_enabled", preferences.debug_log_enabled),
+          electronAPI.store.set("prerelease_updates", preferences.prerelease_updates)
         ]);
         
         const successCount = results.filter(result => result.success).length;
-        if (successCount === 5) {
+        if (successCount === 6) {
           debugLog?.info('All preferences saved successfully', { 
             function: "savePreferences",
             data: { successCount, totalPreferences: 5 }
@@ -87,7 +88,8 @@ function initializeSettingsController(options = {}) {
         music_directory: (document.getElementById('preferences-song-directory')?.value) || '',
         hotkey_directory: (document.getElementById('preferences-hotkey-directory')?.value) || '',
         fade_out_seconds: (document.getElementById('preferences-fadeout-seconds')?.value) || '',
-        debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked
+        debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
+        prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked
       };
       savePreferencesLegacy(preferences);
     }
@@ -106,6 +108,7 @@ function initializeSettingsController(options = {}) {
         store.set("hotkey_directory", preferences.hotkey_directory);
         store.set("fade_out_seconds", preferences.fade_out_seconds);
         store.set("debug_log_enabled", preferences.debug_log_enabled);
+        store.set("prerelease_updates", preferences.prerelease_updates);
         debugLog?.info('Preferences saved using legacy method', { 
           function: "savePreferencesLegacy",
           data: { preferences }
@@ -118,7 +121,8 @@ function initializeSettingsController(options = {}) {
             ['music_directory', preferences.music_directory],
             ['hotkey_directory', preferences.hotkey_directory],
             ['fade_out_seconds', preferences.fade_out_seconds],
-            ['debug_log_enabled', preferences.debug_log_enabled]
+            ['debug_log_enabled', preferences.debug_log_enabled],
+            ['prerelease_updates', preferences.prerelease_updates]
           ];
           const results = [];
           for (const [key, val] of ops) {
@@ -131,15 +135,15 @@ function initializeSettingsController(options = {}) {
           }
           
           const successCount = results.filter(result => result.success).length;
-          if (successCount === 5) {
+          if (successCount === 6) {
             debugLog?.info('All preferences saved successfully using electronAPI.store', { 
               function: "savePreferencesLegacy",
-              data: { successCount, totalPreferences: 5 }
+              data: { successCount, totalPreferences: 6 }
             });
           } else {
             debugLog?.warn('Some preferences failed to save', { 
               function: "savePreferencesLegacy",
-            data: { successCount, totalPreferences: 5, results }
+            data: { successCount, totalPreferences: 6, results }
             });
           }
         } catch (error) {

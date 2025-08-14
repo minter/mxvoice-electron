@@ -37,12 +37,13 @@ function initializePreferenceManager(options = {}) {
     // Use new store API for loading preferences
     if (electronAPI && electronAPI.store) {
       try {
-        const [dbDir, musicDir, hotkeyDir, fadeSeconds, debugLogPref] = await Promise.all([
+        const [dbDir, musicDir, hotkeyDir, fadeSeconds, debugLogPref, prereleasePref] = await Promise.all([
           electronAPI.store.get("database_directory"),
           electronAPI.store.get("music_directory"),
           electronAPI.store.get("hotkey_directory"),
           electronAPI.store.get("fade_out_seconds"),
-          electronAPI.store.get("debug_log_enabled")
+          electronAPI.store.get("debug_log_enabled"),
+          electronAPI.store.get("prerelease_updates")
         ]);
         
         if (dbDir.success) { const el = document.getElementById('preferences-database-directory'); if (el) el.value = dbDir.value || ''; }
@@ -50,6 +51,7 @@ function initializePreferenceManager(options = {}) {
         if (hotkeyDir.success) { const el = document.getElementById('preferences-hotkey-directory'); if (el) el.value = hotkeyDir.value || ''; }
         if (fadeSeconds.success) { const el = document.getElementById('preferences-fadeout-seconds'); if (el) el.value = fadeSeconds.value || ''; }
         if (debugLogPref.success) { const el = document.getElementById('preferences-debug-log-enabled'); if (el) el.checked = !!debugLogPref.value; }
+        if (prereleasePref.success) { const el = document.getElementById('preferences-prerelease-updates'); if (el) el.checked = !!prereleasePref.value; }
       } catch (error) {
         await debugLog.error('Failed to load preferences', { 
           function: "loadPreferences",

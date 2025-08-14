@@ -99,8 +99,14 @@ if (process.platform === "darwin") {
       provider: "github"
     });
     
-    // Allow pre-releases like 4.0.0-pre.X
-    autoUpdater.allowPrerelease = true;
+    // Check user preference for prerelease updates
+    const userPrefersPrereleases = store.get('prerelease_updates') || false;
+    autoUpdater.allowPrerelease = userPrefersPrereleases;
+    
+    debugLog.info(`Prerelease updates ${userPrefersPrereleases ? 'enabled' : 'disabled'} by user preference`, { 
+      function: "auto-updater setup",
+      prereleaseEnabled: userPrefersPrereleases
+    });
     // Do not auto-download; wait for explicit user action
     autoUpdater.autoDownload = false;
     
@@ -382,6 +388,17 @@ const createWindow = async () => {
 function setupApp() {
   // Setup app lifecycle events
   appSetup.setupAppLifecycle();
+  
+  // Listen for preference changes that affect auto-updater
+  store.onDidChange('prerelease_updates', (newValue) => {
+    if (autoUpdater) {
+      autoUpdater.allowPrerelease = newValue || false;
+      debugLog.info(`Auto-updater prerelease setting updated to: ${newValue}`, { 
+        function: "preference-change",
+        prereleaseEnabled: newValue
+      });
+    }
+  });
 
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.

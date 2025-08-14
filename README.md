@@ -144,6 +144,12 @@ The app now supports two auto-update providers:
 - Users see properly formatted update information with bullet points, paragraphs, and links
 - Fallback to raw text if markdown processing fails
 
+**Update Channel Control:**
+- Users can choose whether to receive prerelease updates (beta/alpha versions)
+- Default behavior: Only stable releases are shown
+- Prerelease updates are opt-in via Preferences → Update Options
+- Setting can be changed at any time and takes effect immediately
+
 This ensures backward compatibility while providing modern auto-update functionality for new releases.
 
 ### Windows
