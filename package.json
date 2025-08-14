@@ -13,12 +13,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "build:mac:arm64": "electron-builder --mac --arm64",
-    "build:mac:x64": "electron-builder --mac --x64",
     "build:mac:universal": "electron-builder --mac --universal",
-    "build:mac": "electron-builder --mac",
-    "build:mac:arm64:release": "node scripts/build-arm64-local.js",
-    "merge:latest-mac": "node scripts/merge-latest-mac.js",
     "release": "electron-builder --mac --publish always",
     "release:prerelease": "electron-builder --mac --publish always",
     "release:draft": "electron-builder --mac --publish always --config.publish[0].releaseType=draft",
