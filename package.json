@@ -33,14 +33,12 @@
     "appId": "app.mxvoice.mxvoice",
     "productName": "Mx. Voice",
     "copyright": "Copyright © 2025 Wade Minter and Andrew Berkowitz",
-    "afterSign": "build/notarize.js",
     "npmRebuild": false,
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": true,
     "asar": true,
     "asarUnpack": ["**/*.node"],
     "afterPack": "build/afterPack.js",
-    "afterAllArtifactBuild": "build/afterAllArtifacts.js",
     "mac": {
       "forceCodeSigning": true,
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
@@ -49,11 +47,10 @@
       "darkModeSupport": true,
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
+      "notarize": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "identity": "E31B13B9566B95D1BC1F46F0C3B2FA6C739356CB",
-      "provisioningProfile": null,
-      "notarize": false,
       "mergeASARs": false,
       "target": [
         { "target": "dmg", "arch": ["universal"] },
@@ -67,7 +64,8 @@
         { "x": 180, "y": 340 },
         { "x": 450, "y": 340, "type": "link", "path": "/Applications" }
       ],
-      "sign": true
+      "sign": false,
+      "format": "UDZO"
     },
     "win": {
       "icon": "src/assets/icons/mxvoice.ico"
@@ -96,6 +94,7 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.0.0",
     "@octokit/rest": "^22.0.0",
+    "sql.js": "^1.13.0",
     "animate.css": "^4.1.1",
     "bootstrap": "^5.3.3",
     "electron-log": "^5.4.2",
@@ -108,13 +107,11 @@
     "mousetrap": "^1.6.5",
     "music-metadata": "11.8.1",
     "n-readlines": "^1.0.1",
-    "sql.js": "^1.13.0",
     "uuid": "^11.1.0",
     "wavesurfer.js": "^7.10.1",
     "yarn": "^1.22.22"
   },
   "devDependencies": {
-    "@electron/notarize": "^3.0.2",
     "electron": "^37.2.6",
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
