@@ -37,7 +37,7 @@ async function buildArm64() {
     execSync('yarn build:mac:arm64', { stdio: 'inherit' });
     console.log('✅ ARM64 build completed successfully');
     
-    // Normalize artifact names to "Mx. Voice-*" to avoid environment-specific sanitization
+    // Normalize artifact names to "Mx.-Voice-*" to avoid environment-specific sanitization
     normalizeArtifactNames();
     
     // Check if latest-mac.yml was created
@@ -48,7 +48,7 @@ async function buildArm64() {
     } else {
       console.log('✅ latest-mac.yml found');
     }
-    // Ensure yml references use "Mx. Voice-*"
+    // Ensure yml references use "Mx.-Voice-*"
     normalizeLatestMacYml();
     
     console.log('🎯 ARM64 build ready for merging with x64 GitHub Actions build');
@@ -63,8 +63,8 @@ function normalizeArtifactNames() {
   try {
     const files = fs.readdirSync(BUILD_DIR);
     files.forEach((file) => {
-      if (/^Mx\.-Voice-/.test(file) || /^Mx\.Voice-/.test(file)) {
-        const normalized = file.replace(/^Mx\.-Voice-/, 'Mx. Voice-').replace(/^Mx\.Voice-/, 'Mx. Voice-');
+      if (/^Mx\. Voice-/.test(file) || /^Mx\.Voice-/.test(file)) {
+        const normalized = file.replace(/^Mx\. Voice-/, 'Mx.-Voice-').replace(/^Mx\.Voice-/, 'Mx.-Voice-');
         if (normalized !== file) {
           fs.renameSync(path.join(BUILD_DIR, file), path.join(BUILD_DIR, normalized));
           console.log(`🔤 Renamed artifact: ${file} -> ${normalized}`);
@@ -81,7 +81,7 @@ function normalizeLatestMacYml() {
     const latestMacPath = path.join(BUILD_DIR, 'latest-mac.yml');
     if (!fs.existsSync(latestMacPath)) return;
     let yml = fs.readFileSync(latestMacPath, 'utf8');
-    const updated = yml.replace(/Mx\.-Voice-/g, 'Mx. Voice-').replace(/Mx\.Voice-/g, 'Mx. Voice-');
+    const updated = yml.replace(/Mx\. Voice-/g, 'Mx.-Voice-').replace(/Mx\.Voice-/g, 'Mx.-Voice-');
     if (updated !== yml) {
       fs.writeFileSync(latestMacPath, updated);
       console.log('🔤 Normalized names inside latest-mac.yml');
@@ -97,17 +97,17 @@ async function createArm64LatestMac() {
     version: VERSION,
     files: [
       {
-        url: `Mx. Voice-${VERSION}-arm64.dmg`,
+        url: `Mx.-Voice-${VERSION}-arm64.dmg`,
         sha512: 'placeholder-sha512', // Will be updated after actual build
         size: 0
       },
       {
-        url: `Mx. Voice-${VERSION}-arm64.zip`,
+        url: `Mx.-Voice-${VERSION}-arm64.zip`,
         sha512: 'placeholder-sha512', // Will be updated after actual build
         size: 0
       }
     ],
-    path: `Mx. Voice-${VERSION}-arm64.dmg`,
+    path: `Mx.-Voice-${VERSION}-arm64.dmg`,
     sha512: 'placeholder-sha512', // Will be updated after actual build
     releaseDate: new Date().toISOString()
   };

@@ -44,7 +44,7 @@
     "afterAllArtifactBuild": "build/windowsSign.js",
     "mac": {
       "forceCodeSigning": true,
-      "artifactName": "Mx. Voice-${version}-${arch}.${ext}",
+      "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
       "category": "public.app-category.music",
       "icon": "src/assets/icons/mxvoice",
       "darkModeSupport": true,
@@ -85,7 +85,7 @@
       "icon": "src/assets/icons/mxvoice.ico"
     },
     "linux": {
-      "artifactName": "Mx. Voice-${version}-${arch}.${ext}",
+      "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
       "category": "AudioVideo",
       "icon": "src/assets/icons/mxvoice.png",
       "synopsis": "Improv Audio Software",

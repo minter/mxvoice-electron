@@ -76,14 +76,14 @@ jobs:
         run: |
           npx electron-builder --mac --x64 --publish never --config.extraMetadata.version=${{ inputs.version }}
 
-      - name: Normalize artifact names to "Mx. Voice-*"
+      - name: Normalize artifact names to "Mx.-Voice-*"
         run: |
           ls -la dist | cat
-          for f in dist/Mx.-Voice-* dist/Mx.Voice-*; do
+          for f in dist/Mx.\ Voice-* dist/Mx.Voice-*; do
             if [ -e "$f" ]; then
               base=$(basename "$f")
-              norm=${base/Mx.-Voice-/Mx. Voice-}
-              norm=${norm/Mx.Voice-/Mx. Voice-}
+              norm=${base/Mx. Voice-/Mx.-Voice-}
+              norm=${norm/Mx.Voice-/Mx.-Voice-}
               if [ "$base" != "$norm" ]; then
                 echo "Renaming $base -> $norm"
                 mv "dist/$base" "dist/$norm"
@@ -91,7 +91,7 @@ jobs:
             fi
           done
           if [ -f dist/latest-mac.yml ]; then
-            sed -i '' -e 's/Mx\.-Voice-/Mx. Voice-/g' -e 's/Mx\.Voice-/Mx. Voice-/g' dist/latest-mac.yml || sed -i -e 's/Mx\.-Voice-/Mx. Voice-/g' -e 's/Mx\.Voice-/Mx. Voice-/g' dist/latest-mac.yml
+            sed -i '' -e 's/Mx\. Voice-/Mx.-Voice-/g' -e 's/Mx\.Voice-/Mx.-Voice-/g' dist/latest-mac.yml || sed -i -e 's/Mx\. Voice-/Mx.-Voice-/g' -e 's/Mx\.Voice-/Mx.-Voice-/g' dist/latest-mac.yml
           fi
 
       - name: Upload artifacts to GitHub Release (clobber)

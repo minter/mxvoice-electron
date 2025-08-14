@@ -51,28 +51,28 @@ async function mergeLatestMac() {
       files: [
         // ARM64 files (relative names)
         {
-          url: `Mx. Voice-${VERSION}-arm64.dmg`,
+          url: `Mx.-Voice-${VERSION}-arm64.dmg`,
           sha512: arm64LatestMac.files?.[0]?.sha512 || 'placeholder-sha512',
           size: arm64LatestMac.files?.[0]?.size || 0
         },
         {
-          url: `Mx. Voice-${VERSION}-arm64.zip`,
+          url: `Mx.-Voice-${VERSION}-arm64.zip`,
           sha512: arm64LatestMac.files?.[1]?.sha512 || 'placeholder-sha512',
           size: arm64LatestMac.files?.[1]?.size || 0
         },
         // x64 files (relative names)
         {
-          url: `Mx. Voice-${VERSION}-x64.dmg`,
+          url: `Mx.-Voice-${VERSION}-x64.dmg`,
           sha512: x64LatestMac.files?.[0]?.sha512 || 'placeholder-sha512',
           size: x64LatestMac.files?.[0]?.size || 0
         },
         {
-          url: `Mx. Voice-${VERSION}-x64.zip`,
+          url: `Mx.-Voice-${VERSION}-x64.zip`,
           sha512: x64LatestMac.files?.[1]?.sha512 || 'placeholder-sha512',
           size: x64LatestMac.files?.[1]?.size || 0
         }
       ],
-      path: `Mx. Voice-${VERSION}-x64.dmg`, // Default to x64 for backward compatibility
+      path: `Mx.-Voice-${VERSION}-x64.dmg`, // Default to x64 for backward compatibility
       sha512: x64LatestMac.files?.[0]?.sha512 || 'placeholder-sha512', // Use x64 DMG hash as default
       releaseDate: new Date().toISOString()
     };
