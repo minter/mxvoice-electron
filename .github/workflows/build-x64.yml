@@ -74,7 +74,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           DEBUG: electron-builder
         run: |
-          npx electron-builder --mac --x64 --publish always --config.publish[0].provider=github
+          npx electron-builder --mac --x64 --publish always --config.extraMetadata.version=${{ inputs.version }}
 
       - name: Upload build artifacts (backup)
         uses: actions/upload-artifact@v4
