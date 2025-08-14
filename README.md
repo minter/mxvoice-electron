@@ -95,9 +95,10 @@ yarn build:win               # Build Windows installer
 # Publishing (GitHub Actions)
 yarn release:mac             # Publish macOS stable build to GitHub
 yarn release:mac:prerelease  # Publish macOS prerelease to GitHub
-yarn release:draft           # Publish as draft release
+yarn release:mac:draft       # Publish macOS draft to GitHub
 yarn release:win             # Publish Windows stable build to GitHub
 yarn release:win:prerelease  # Publish Windows prerelease to GitHub
+yarn release:win:draft       # Publish Windows draft to GitHub
 
 # Local builds (no publishing)
 yarn pack                    # Build without publishing

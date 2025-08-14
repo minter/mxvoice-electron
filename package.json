@@ -14,11 +14,11 @@
   "scripts": {
     "start": "electron .",
     "build:mac:universal": "electron-builder --mac --universal",
-    "release:mac:draft": "EP_DRAFT=true electron-builder --mac --universal --publish always",
-    "release:mac:prerelease": "EP_PRE_RELEASE=true electron-builder --mac --universal --publish always",
+    "release:mac:draft": "cross-env EP_DRAFT=true electron-builder --mac --universal --publish always",
+    "release:mac:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --mac --universal --publish always",
     "release:mac": "electron-builder --mac --universal --publish always",
-    "release:win:draft": "EP_DRAFT=true electron-builder --win --publish always",
-    "release:win:prerelease": "EP_PRE_RELEASE=true electron-builder --win --publish always",
+    "release:win:draft": "cross-env EP_DRAFT=true electron-builder --win --publish always",
+    "release:win:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --win --publish always",
     "release:win": "electron-builder --win --publish always",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
@@ -140,6 +140,7 @@
     "yarn": "^1.22.22"
   },
   "devDependencies": {
+    "cross-env": "^10.0.0",
     "electron": "^37.2.6",
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
