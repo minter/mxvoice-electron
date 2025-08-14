@@ -7,6 +7,11 @@
   resolved "https://registry.yarnpkg.com/7zip-bin/-/7zip-bin-5.2.0.tgz#7a03314684dd6572b7dfa89e68ce31d60286854d"
   integrity sha512-ukTPVhqG4jNzMro2qA9HSCSSVJN3aN7tlb+hfqYCt3ER0yWroeA2VR38MNrOHLQ/cVj+DaIMad0kFCtWWowh/A==
 
+"@borewit/text-codec@^0.1.0":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@borewit/text-codec/-/text-codec-0.1.1.tgz#7e7f27092473d5eabcffef693a849f2cc48431da"
+  integrity sha512-5L/uBxmjaCIX5h8Z+uu+kA9BQLkc/Wl06UGR5ajNRxu+/XjonB5i8JpgFMrPj3LXTCPA0pv8yxUvbUi+QthGGA==
+
 "@develar/schema-utils@~2.6.5":
   version "2.6.5"
   resolved "https://registry.yarnpkg.com/@develar/schema-utils/-/schema-utils-2.6.5.tgz#3ece22c5838402419a6e0425f85742b961d9b6c6"
@@ -167,11 +172,6 @@
     strip-ansi-cjs "npm:strip-ansi@^6.0.1"
     wrap-ansi "^8.1.0"
     wrap-ansi-cjs "npm:wrap-ansi@^7.0.0"
-
-"@kayahr/text-encoding@^2.0.1":
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/@kayahr/text-encoding/-/text-encoding-2.0.1.tgz#09cfb634cefcdb580c8f9e1523a4c2d693d1ce9e"
-  integrity sha512-OUsJJVn85VrfNiiT6CSbHK2Jr9YS6tVsgQhly+EkcbYTT2SXeibU4nQNO2IzCRttKJt4zw4W60KtLifRRJBIng==
 
 "@malept/cross-spawn-promise@^2.0.0":
   version "2.0.0"
@@ -2167,19 +2167,19 @@ ms@^2.0.0, ms@^2.1.3:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#574c8138ce1d2b5861f0b44579dbadd60c6615b2"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
 
-music-metadata@11.8.1:
-  version "11.8.1"
-  resolved "https://registry.yarnpkg.com/music-metadata/-/music-metadata-11.8.1.tgz#f69084ffbd479adc293ea103038d3542ba579632"
-  integrity sha512-DS6F/lB6rEI9yiPsUnw48nsZx0lZwXSWh7IEhsOVNzVeTnhs/3SUi2JqhkHXbF9SK5TgF0HQUJ08YJr6Xv5IXw==
+music-metadata@11.8.2:
+  version "11.8.2"
+  resolved "https://registry.yarnpkg.com/music-metadata/-/music-metadata-11.8.2.tgz#61053b956d31eae479f6c045210d559ed8fc583d"
+  integrity sha512-k7fxn9GCl27b+P+suLwMuEuS1Kft32P1jBZ/MXLh5iRTll60qbWWc/hh+Xvv70khyykcGwsVzddURzLdKymZ0g==
   dependencies:
-    "@kayahr/text-encoding" "^2.0.1"
+    "@borewit/text-codec" "^0.1.0"
     "@tokenizer/token" "^0.3.0"
     content-type "^1.0.5"
     debug "^4.4.1"
     file-type "^21.0.0"
     media-typer "^1.1.0"
     strtok3 "^10.3.4"
-    token-types "^6.1.0"
+    token-types "^6.1.1"
 
 n-readlines@^1.0.1:
   version "1.0.1"
@@ -2818,12 +2818,12 @@ to-regex-range@^5.0.1:
   dependencies:
     is-number "^7.0.0"
 
-token-types@^6.0.0, token-types@^6.1.0:
-  version "6.1.0"
-  resolved "https://registry.yarnpkg.com/token-types/-/token-types-6.1.0.tgz#4a220f7bb2af522ebb095de7542bb9dde3033031"
-  integrity sha512-IwovPojr3nD6KBpwSdWq7zL4D9xDLMSqZm/mFweaFFXiS7mtD1qea2WKcth6lyErwZZjsavZk4AnwPJzT9/wVA==
+token-types@^6.0.0, token-types@^6.1.1:
+  version "6.1.1"
+  resolved "https://registry.yarnpkg.com/token-types/-/token-types-6.1.1.tgz#85bd0ada82939b9178ecd5285881a538c4c00fdd"
+  integrity sha512-kh9LVIWH5CnL63Ipf0jhlBIy0UsrMj/NJDfpsy1SqOXlLKEVyXXYrnFxFT1yOOYVGBSApeVnjPw/sBz5BfEjAQ==
   dependencies:
-    "@kayahr/text-encoding" "^2.0.1"
+    "@borewit/text-codec" "^0.1.0"
     "@tokenizer/token" "^0.3.0"
     ieee754 "^1.2.1"
 
