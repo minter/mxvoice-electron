@@ -14,9 +14,8 @@
   "scripts": {
     "start": "electron .",
     "build:mac:universal": "electron-builder --mac --universal",
-    "release": "electron-builder --mac --publish always",
-    "release:prerelease": "electron-builder --mac --publish always",
-    "release:draft": "electron-builder --mac --publish always --config.publish[0].releaseType=draft",
+    "release": "electron-builder --mac --universal --publish always",
+    "release:draft": "electron-builder --mac --universal --publish always --config.publish[0].releaseType=draft",
     "release:win": "electron-builder --win --publish always",
     "release:win:prerelease": "electron-builder --win --publish always",
     "pack": "electron-builder --dir",
@@ -32,7 +31,11 @@
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": true,
     "asar": true,
-    "asarUnpack": ["**/*.node"],
+    "asarUnpack": [
+      "**/*.node",
+      "**/*.wasm",
+      "node_modules/sql.js/dist/*.wasm"
+    ],
     "afterPack": "build/afterPack.js",
     "mac": {
       "forceCodeSigning": true,
