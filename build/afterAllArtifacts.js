@@ -3,37 +3,52 @@ import { execFileSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
-export default async function afterAllArtifactBuild(context) {
-  // electron-builder passes info about the produced artifact
-  const { artifactPath, target, packager } = context || {};
-  if (process.platform !== 'darwin') {
-    // On Windows we still want your existing behavior, so defer to your Windows signer if present
-    try {
-      if (process.platform === 'win32') {
-        const winHook = path.resolve('build/windowsSign.js');
-        if (fs.existsSync(winHook)) {
-          const mod = await import(`file://${winHook}`);
-          if (typeof mod.default === 'function') await mod.default(context);
-        }
-      }
-    } catch (e) {
-      console.warn('[afterAllArtifacts] Windows hook error:', e?.message || e);
+function submitNotarization(artifactPath) {
+  const hasProfile = !!process.env.APPLE_NOTARY_KEYCHAIN_PROFILE || true; // default to AC_NOTARY if created
+  const profile = process.env.APPLE_NOTARY_KEYCHAIN_PROFILE || 'AC_NOTARY';
+
+  const args = ['notarytool', 'submit', artifactPath, '--wait'];
+  if (hasProfile) {
+    args.push('--keychain-profile', profile);
+  } else {
+    const appleId = process.env.APPLE_ID;
+    const password = process.env.APPLE_APP_SPECIFIC_PASSWORD || process.env.APPLE_ID_PASSWORD;
+    const teamId = process.env.APPLE_TEAM_ID;
+    if (!appleId || !password || !teamId) {
+      throw new Error('Apple notarization credentials missing (APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID).');
     }
+    args.push('--apple-id', appleId, '--team-id', teamId, '--password', password);
+  }
+  console.log('[notarytool] submit', artifactPath);
+  execFileSync('xcrun', args, { stdio: 'inherit' });
+}
+
+function staple(artifactPath) {
+  console.log('[staple] Stapling', artifactPath);
+  execFileSync('xcrun', ['stapler', 'staple', '-v', artifactPath], { stdio: 'inherit' });
+}
+
+export default async function afterAllArtifactBuild(context) {
+  const { artifactPath } = context || {};
+  if (!artifactPath || process.platform !== 'darwin') return;
+
+  const ext = path.extname(artifactPath).toLowerCase();
+  if (!['.dmg', '.pkg'].includes(ext)) return; // ZIPs cannot be stapled
+
+  if (!fs.existsSync(artifactPath)) {
+    console.warn('[afterAllArtifacts] Missing artifact:', artifactPath);
     return;
   }
 
-  if (!artifactPath || !fs.existsSync(artifactPath)) return;
-
-  const ext = path.extname(artifactPath).toLowerCase();
-  if (!['.dmg', '.pkg'].includes(ext)) return;
-
-  // Staple the DMG/PKG
   try {
-    console.log(`[staple] Stapling ${ext}…`, artifactPath);
-    execFileSync('xcrun', ['stapler', 'staple', '-v', artifactPath], { stdio: 'inherit' });
-    console.log('[staple] Stapled:', artifactPath);
+    submitNotarization(artifactPath);
   } catch (e) {
-    // If notarization was skipped (e.g., creds missing), this will fail — that’s fine.
-    console.warn('[staple] Staple failed:', e?.message || e);
+    console.warn('[notarytool] submit failed (DMG may already be notarized, or creds missing):', e?.message || e);
+  }
+
+  try {
+    staple(artifactPath);
+  } catch (e) {
+    console.warn('[staple] Failed to staple:', e?.message || e);
   }
 }

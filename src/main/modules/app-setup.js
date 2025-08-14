@@ -59,34 +59,6 @@ function createWindow({ width = 1200, height = 800 } = {}) {
   // Load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, '../../index.html'));
 
-  // Show Apple Silicon warning if running x64 build on Apple Silicon Mac
-  if (
-    process.platform === 'darwin' &&
-    process.arch === 'x64'
-  ) {
-    try {
-      const cpuModel = os.cpus()[0].model || '';
-      if (cpuModel.includes('Apple')) {
-        dialog.showMessageBox(mainWindow, {
-          type: 'warning',
-          buttons: ['OK', 'Visit Website'],
-          defaultId: 1,
-          cancelId: 0,
-          title: 'Apple Silicon Version Recommended',
-          message: 'You are running the Intel (x64) version of Mx. Voice on an Apple Silicon Mac.',
-          detail: 'For best performance, please visit https://mxvoice.app/ and download the Apple Silicon version.',
-          noLink: true
-        }).then(result => {
-          if (result.response === 1) {
-            shell.openExternal('https://mxvoice.app/');
-          }
-        });
-      }
-    } catch (e) {
-      // Fallback: do nothing if detection fails
-    }
-  }
-
   // Open the DevTools.
   //mainWindow.webContents.openDevTools();
 
