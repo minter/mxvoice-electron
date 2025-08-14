@@ -9,7 +9,7 @@ src/preload/
 │   ├── ipc-bridge.js          # Registers inbound events from main → renderer callbacks
 │   ├── secure-api-exposer.js  # Exposes `secureElectronAPI` and legacy `electronAPI` via contextBridge
 │   ├── api-exposer.js         # Legacy/global exposure helper (kept for migration)
-│   └── database-setup.js      # (reserved) database helpers if needed
+│   └── database-setup.js      # SQL.js database initialization and management
 ├── preload-modular.js         # Coordinator: register IPC handlers, expose secure API
 └── README.md
 ```

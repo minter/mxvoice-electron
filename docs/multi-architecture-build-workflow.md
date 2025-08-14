@@ -4,7 +4,7 @@ This document explains how to build and release Mx. Voice for both ARM64 and x64
 
 ## Overview
 
-Since universal builds have compatibility issues with native modules like `better-sqlite3`, we use a multi-architecture approach:
+Since universal builds can have compatibility issues with certain native modules, we use a multi-architecture approach:
 
 1. **x64 builds** are built on GitHub Actions (macos-13 runner)
 2. **ARM64 builds** are built locally on your ARM Mac
@@ -64,7 +64,7 @@ Upload the merged `latest-mac-merged.yml` to your GitHub release to replace the 
 
 ✅ **Reliable builds** - Each architecture builds in its native environment
 ✅ **No update conflicts** - Single `latest-mac.yml` file includes both architectures
-✅ **Better compatibility** - Native modules build correctly for each architecture
+✅ **Better compatibility** - Each architecture builds in its optimal environment
 ✅ **Simpler debugging** - Each build process is independent
 
 ## Troubleshooting

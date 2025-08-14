@@ -26,6 +26,39 @@ let debugLog;
 let logService;
 let updateState;
 
+// Helper function to convert sql.js format to better-sqlite3 format for compatibility
+function convertSqlJsResult(result) {
+  if (result && result.length > 0) {
+    const columns = result[0].columns;
+    const values = result[0].values;
+    const data = values.map(row => {
+      const obj = {};
+      columns.forEach((col, index) => {
+        obj[col] = row[index];
+      });
+      return obj;
+    });
+    return data;
+  } else {
+    return [];
+  }
+}
+
+// Helper function to convert single row sql.js result
+function convertSqlJsSingleRow(result) {
+  if (result && result.length > 0 && result[0].values.length > 0) {
+    const columns = result[0].columns;
+    const row = result[0].values[0];
+    const data = {};
+    columns.forEach((col, index) => {
+      data[col] = row[index];
+    });
+    return data;
+  } else {
+    return null;
+  }
+}
+
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
   mainWindow = dependencies.mainWindow;
@@ -154,8 +187,11 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
-      const stmt = db.prepare(sql);
-      return { success: true, data: stmt.all(params || []) };
+      const result = db.exec(sql, params || []);
+      
+      // Convert sql.js format to better-sqlite3 format for compatibility
+      const data = convertSqlJsResult(result);
+      return { success: true, data: data };
     } catch (error) {
       debugLog?.error('Database query error:', { module: 'ipc-handlers', function: 'database-query', error: error.message });
       return { success: false, error: error.message };
@@ -167,8 +203,8 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
-      const stmt = db.prepare(sql);
-      return { success: true, data: stmt.run(params || []) };
+      const result = db.run(sql, params || []);
+      return { success: true, data: { changes: result.changes, lastInsertRowid: result.lastInsertRowid } };
     } catch (error) {
       debugLog?.error('Database execute error:', { module: 'ipc-handlers', function: 'database-execute', error: error.message });
       return { success: false, error: error.message };
@@ -180,8 +216,11 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
-      const stmt = db.prepare('SELECT * FROM categories ORDER BY description ASC');
-      return { success: true, data: stmt.all() };
+      const result = db.exec('SELECT * FROM categories ORDER BY description ASC');
+      
+      // Convert sql.js format to better-sqlite3 format for compatibility
+      const data = convertSqlJsResult(result);
+      return { success: true, data: data };
     } catch (error) {
       debugLog?.error('Get categories error:', { module: 'ipc-handlers', function: 'get-categories', error: error.message });
       return { success: false, error: error.message };
@@ -193,13 +232,12 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
-      const stmt = db.prepare(`
-        INSERT INTO songs (title, artist, category_id, filename, duration, notes)
+      const result = db.run(`
+        INSERT INTO mrvoice (title, artist, category, filename, time, modtime)
         VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      const result = stmt.run(songData.title, songData.artist, songData.category_id, 
-                             songData.filename, songData.duration, songData.notes);
-      return { success: true, data: result };
+      `, [songData.title, songData.artist, songData.category, 
+          songData.filename, songData.duration || '00:00', Math.floor(Date.now() / 1000)]);
+      return { success: true, data: { changes: result.changes, lastInsertRowid: result.lastInsertRowid } };
     } catch (error) {
       debugLog?.error('Add song error:', { module: 'ipc-handlers', function: 'add-song', error: error.message });
       return { success: false, error: error.message };
@@ -862,9 +900,11 @@ function registerAllHandlers() {
       if (!songId) {
         throw new Error('Song ID is required');
       }
-      const stmt = db.prepare('SELECT * FROM mrvoice WHERE id = ?');
-      const result = stmt.get(songId);
-      return { success: true, data: result };
+      const result = db.exec('SELECT * FROM mrvoice WHERE id = ?', [songId]);
+      
+      // Convert sql.js format to better-sqlite3 format for compatibility
+      const data = convertSqlJsSingleRow(result);
+      return { success: true, data: data };
     } catch (error) {
       debugLog?.error('Get song by ID error:', { module: 'ipc-handlers', function: 'get-song-by-id', error: error.message });
       return { success: false, error: error.message };
@@ -879,9 +919,8 @@ function registerAllHandlers() {
       if (!songId) {
         throw new Error('Song ID is required');
       }
-      const stmt = db.prepare('DELETE FROM mrvoice WHERE id = ?');
-      const result = stmt.run(songId);
-      return { success: true, data: result };
+      const result = db.run('DELETE FROM mrvoice WHERE id = ?', [songId]);
+      return { success: true, data: { changes: result.changes } };
     } catch (error) {
       debugLog?.error('Delete song error:', { module: 'ipc-handlers', function: 'delete-song', error: error.message });
       return { success: false, error: error.message };
@@ -920,16 +959,13 @@ function registerAllHandlers() {
       if (!songData || !songData.id) {
         throw new Error('Song data with ID is required');
       }
-      const stmt = db.prepare(`
+      const result = db.run(`
         UPDATE mrvoice 
-        SET title = ?, artist = ?, category = ?, info = ?, filename = ?, duration = ?
+        SET title = ?, artist = ?, category = ?, info = ?, filename = ?, time = ?
         WHERE id = ?
-      `);
-      const result = stmt.run(
-        songData.title, songData.artist, songData.category, 
-        songData.info, songData.filename, songData.duration, songData.id
-      );
-      return { success: true, data: result };
+      `, [songData.title, songData.artist, songData.category, 
+          songData.info, songData.filename, songData.duration, songData.id]);
+      return { success: true, data: { changes: result.changes } };
     } catch (error) {
       debugLog?.error('Update song error:', { module: 'ipc-handlers', function: 'update-song', error: error.message });
       return { success: false, error: error.message };
@@ -944,9 +980,8 @@ function registerAllHandlers() {
       if (!categoryData || !categoryData.code || !categoryData.description) {
         throw new Error('Category code and description are required');
       }
-      const stmt = db.prepare('INSERT INTO categories (code, description) VALUES (?, ?)');
-      const result = stmt.run(categoryData.code, categoryData.description);
-      return { success: true, data: result };
+      const result = db.run('INSERT INTO categories (code, description) VALUES (?, ?)', [categoryData.code, categoryData.description]);
+      return { success: true, data: { changes: result.changes, lastInsertRowid: result.lastInsertRowid } };
     } catch (error) {
       debugLog?.error('Add category error:', { module: 'ipc-handlers', function: 'add-category', error: error.message });
       return { success: false, error: error.message };
@@ -961,9 +996,8 @@ function registerAllHandlers() {
       if (!code || !description) {
         throw new Error('Category code and description are required');
       }
-      const stmt = db.prepare('UPDATE categories SET description = ? WHERE code = ?');
-      const result = stmt.run(description, code);
-      return { success: true, data: result };
+      const result = db.run('UPDATE categories SET description = ? WHERE code = ?', [description, code]);
+      return { success: true, data: { changes: result.changes } };
     } catch (error) {
       debugLog?.error('Update category error:', { module: 'ipc-handlers', function: 'update-category', error: error.message });
       return { success: false, error: error.message };
@@ -980,14 +1014,12 @@ function registerAllHandlers() {
       }
       
       // First move all songs to "Uncategorized"
-      const updateStmt = db.prepare('UPDATE mrvoice SET category = ? WHERE category = ?');
-      updateStmt.run('UNCATEGORIZED', code);
+      db.run('UPDATE mrvoice SET category = ? WHERE category = ?', ['UNCATEGORIZED', code]);
       
       // Then delete the category
-      const deleteStmt = db.prepare('DELETE FROM categories WHERE code = ?');
-      const result = deleteStmt.run(code);
+      const result = db.run('DELETE FROM categories WHERE code = ?', [code]);
       
-      return { success: true, data: result };
+      return { success: true, data: { changes: result.changes } };
     } catch (error) {
       debugLog?.error('Delete category error:', { module: 'ipc-handlers', function: 'delete-category', error: error.message });
       return { success: false, error: error.message };

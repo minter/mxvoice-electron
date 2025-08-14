@@ -15,6 +15,8 @@
     "start": "electron .",
     "build:mac:arm64": "electron-builder --mac --arm64",
     "build:mac:x64": "electron-builder --mac --x64",
+    "build:mac:universal": "electron-builder --mac --universal",
+    "build:mac": "electron-builder --mac",
     "build:mac:arm64:release": "node scripts/build-arm64-local.js",
     "merge:latest-mac": "node scripts/merge-latest-mac.js",
     "release": "electron-builder --mac --publish always",
@@ -35,13 +37,10 @@
     "npmRebuild": false,
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": true,
-    "electronDist": "node_modules/electron/dist",
     "asar": true,
-    "asarUnpack": [
-      "node_modules/better-sqlite3/**/*"
-    ],
+    "asarUnpack": ["**/*.node"],
     "afterPack": "build/afterPack.js",
-    "afterAllArtifactBuild": "build/windowsSign.js",
+    "afterAllArtifactBuild": "build/afterAllArtifacts.js",
     "mac": {
       "forceCodeSigning": true,
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
@@ -55,29 +54,18 @@
       "identity": "E31B13B9566B95D1BC1F46F0C3B2FA6C739356CB",
       "provisioningProfile": null,
       "notarize": false,
+      "mergeASARs": false,
       "target": [
-        {
-          "target": "dmg"
-        },
-        {
-          "target": "zip"
-        }
+        { "target": "dmg", "arch": ["universal"] },
+        { "target": "zip", "arch": ["universal"] }
       ]
     },
     "dmg": {
       "icon": "src/assets/icons/dmg-image.icns",
       "background": "src/assets/images/dmg-background-image.png",
       "contents": [
-        {
-          "x": 180,
-          "y": 340
-        },
-        {
-          "x": 450,
-          "y": 340,
-          "type": "link",
-          "path": "/Applications"
-        }
+        { "x": 180, "y": 340 },
+        { "x": 450, "y": 340, "type": "link", "path": "/Applications" }
       ],
       "sign": false
     },
@@ -91,18 +79,8 @@
       "synopsis": "Improv Audio Software",
       "description": "Professional audio software for improvisation and live performance",
       "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        }
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb", "arch": ["x64"] }
       ]
     },
     "publish": [
@@ -119,7 +97,6 @@
     "@fortawesome/fontawesome-free": "^7.0.0",
     "@octokit/rest": "^22.0.0",
     "animate.css": "^4.1.1",
-    "better-sqlite3": "^12.2.0",
     "bootstrap": "^5.3.3",
     "electron-log": "^5.4.2",
     "electron-squirrel-startup": "^1.0.0",
@@ -131,6 +108,7 @@
     "mousetrap": "^1.6.5",
     "music-metadata": "11.8.1",
     "n-readlines": "^1.0.1",
+    "sql.js": "^1.13.0",
     "uuid": "^11.1.0",
     "wavesurfer.js": "^7.10.1",
     "yarn": "^1.22.22"

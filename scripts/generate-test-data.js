@@ -1,12 +1,17 @@
-const Database = require("better-sqlite3");
-const path = require("path");
-const Store = require("electron-store");
-const fs = require("fs");
-const os = require("os");
-const { v4: uuidv4 } = require("uuid");
+import initSqlJs from "sql.js";
+import path from "path";
+import Store from "electron-store";
+import fs from "fs";
+import os from "os";
+import { v4 as uuidv4 } from "uuid";
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent for ES6 modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize store to get database path (align with app config file name)
-const store = new Store({ name: 'config' });
+const store = new Store({ name: 'config', projectName: 'Mx. Voice' });
 let dbDirectory = store.get("database_directory");
 
 // Fallback logic for when running outside Electron environment
@@ -380,7 +385,7 @@ function findTestDatabase() {
 }
 
 // Helper function to create test database
-function createTestDatabase() {
+async function createTestDatabase() {
   const baseName = path.basename(dbPath, ".db");
   const testDbPath = path.join(path.dirname(dbPath), `${baseName}-test.db`);
 
@@ -406,16 +411,23 @@ function createTestDatabase() {
     console.log(`🧪 Creating new test database: ${path.basename(testDbPath)}`);
   }
 
+  // Initialize SQL.js
+  const sqlWasm = await initSqlJs({
+    locateFile: file => `node_modules/sql.js/dist/${file}`
+  });
+
   // Create the database schema
-  const db = new Database(testDbPath);
+  const db = new sqlWasm.Database();
 
   // Create tables with the same schema as the main application
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS 'categories' (
       code varchar(8) NOT NULL,
       description varchar(255) NOT NULL
     );
-    
+  `);
+  
+  db.run(`
     CREATE TABLE IF NOT EXISTS mrvoice (
       id INTEGER PRIMARY KEY,
       title varchar(255) NOT NULL,
@@ -428,28 +440,27 @@ function createTestDatabase() {
       publisher varchar(16),
       md5 varchar(32)
     );
-    
-    CREATE UNIQUE INDEX IF NOT EXISTS 'category_code_index' ON categories(code);
-    CREATE UNIQUE INDEX IF NOT EXISTS 'category_description_index' ON categories(description);
   `);
+  
+  db.run(`CREATE UNIQUE INDEX IF NOT EXISTS 'category_code_index' ON categories(code)`);
+  db.run(`CREATE UNIQUE INDEX IF NOT EXISTS 'category_description_index' ON categories(description)`);
 
   // Insert default category
   try {
-    db.prepare("INSERT INTO categories (code, description) VALUES (?, ?)").run(
-      "UNC",
-      "Uncategorized"
-    );
+    db.run("INSERT INTO categories (code, description) VALUES (?, ?)", ["UNC", "Uncategorized"]);
   } catch (error) {
     // Category might already exist, that's okay
   }
 
-  db.close();
+  // Save the database to file
+  const data = db.export();
+  fs.writeFileSync(testDbPath, data);
 
   return testDbPath;
 }
 
 // Main function to generate test data
-function generateTestData(numEntries = 5000, options = {}) {
+async function generateTestData(numEntries = 5000, options = {}) {
   const { testMode = false, createBackup = true, backupPath = null } = options;
 
   let targetDbPath = dbPath;
@@ -457,7 +468,7 @@ function generateTestData(numEntries = 5000, options = {}) {
 
   // Handle test mode
   if (testMode) {
-    targetDbPath = createTestDatabase();
+    targetDbPath = await createTestDatabase();
   } else if (createBackup && !backupPath) {
     // Create backup of existing database (only for production database, not test databases)
     originalBackupPath = createBackup();
@@ -469,26 +480,31 @@ function generateTestData(numEntries = 5000, options = {}) {
   console.log(`Generating ${numEntries} test entries...`);
   console.log(`Target database: ${path.basename(targetDbPath)}`);
 
-  const db = new Database(targetDbPath);
+  // Initialize SQL.js
+  const sqlWasm = await initSqlJs({
+    locateFile: file => `node_modules/sql.js/dist/${file}`
+  });
+
+  // Load existing database or create new one
+  let db;
+  if (fs.existsSync(targetDbPath)) {
+    const data = fs.readFileSync(targetDbPath);
+    db = new sqlWasm.Database(data);
+  } else {
+    db = new sqlWasm.Database();
+  }
 
   // First, ensure categories exist
   console.log("Setting up categories...");
   for (const category of categories) {
     try {
-      db.prepare(
-        "INSERT INTO categories (code, description) VALUES (?, ?)"
-      ).run(category.code, category.description);
+      db.run("INSERT INTO categories (code, description) VALUES (?, ?)", [category.code, category.description]);
     } catch (error) {
       // Category might already exist, that's okay
     }
   }
 
   // Generate and insert song entries
-  const insertStmt = db.prepare(`
-    INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) 
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
   const batchSize = 100;
   const totalBatches = Math.ceil(numEntries / batchSize);
 
@@ -505,15 +521,10 @@ function generateTestData(numEntries = 5000, options = {}) {
       const modtime =
         Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 31536000); // Random time in last year
 
-      insertStmt.run(
-        title,
-        artist,
-        category.code,
-        info,
-        filename,
-        time,
-        modtime
-      );
+      db.run(`
+        INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [title, artist, category.code, info, filename, time, modtime]);
     }
 
     console.log(
@@ -524,26 +535,26 @@ function generateTestData(numEntries = 5000, options = {}) {
   }
 
   // Get final count
-  const count = db.prepare("SELECT COUNT(*) as count FROM mrvoice").get();
+  const countResult = db.exec("SELECT COUNT(*) as count FROM mrvoice");
+  const count = countResult[0]?.values?.[0]?.[0] || 0;
   console.log(
-    `\n✅ Successfully generated ${count.count} total entries in the database!`
+    `\n✅ Successfully generated ${count} total entries in the database!`
   );
 
   // Show some sample entries
   console.log("\n📋 Sample entries:");
-  const samples = db
-    .prepare(
-      "SELECT title, artist, category, info FROM mrvoice ORDER BY RANDOM() LIMIT 10"
-    )
-    .all();
+  const samplesResult = db.exec("SELECT title, artist, category, info FROM mrvoice ORDER BY RANDOM() LIMIT 10");
+  const samples = samplesResult[0]?.values || [];
   samples.forEach((sample, index) => {
     console.log(
-      `${index + 1}. "${sample.title}" by ${sample.artist} (${sample.category})`
+      `${index + 1}. "${sample[0]}" by ${sample[1]} (${sample[2]})`
     );
-    console.log(`   ${sample.info}`);
+    console.log(`   ${sample[3]}`);
   });
 
-  db.close();
+  // Save the database to file
+  const data = db.export();
+  fs.writeFileSync(targetDbPath, data);
 
   // Return information about what was done
   return {
@@ -565,9 +576,10 @@ function restoreOriginalDatabase(backupPath) {
 }
 
 // Run the script
-if (require.main === module) {
-  const args = process.argv.slice(2);
-  let numEntries = 5000;
+if (import.meta.url === `file://${process.argv[1]}`) {
+  (async () => {
+    const args = process.argv.slice(2);
+    let numEntries = 5000;
   let testMode = false;
   let createBackup = true;
   let restoreMode = false;
@@ -627,7 +639,7 @@ Safety Features:
     }
   } else {
     try {
-      const result = generateTestData(numEntries, {
+      const result = await generateTestData(numEntries, {
         testMode,
         createBackup,
         backupPath,
@@ -663,6 +675,7 @@ Safety Features:
       process.exit(1);
     }
   }
+  })();
 }
 
-module.exports = { generateTestData, restoreOriginalDatabase, createBackup };
+export { generateTestData, restoreOriginalDatabase, createBackup };

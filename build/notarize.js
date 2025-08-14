@@ -1,137 +1,44 @@
+// build/notarize.js
 import { notarize } from '@electron/notarize';
-import { execSync } from 'child_process';
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
+import { execFileSync } from 'child_process';
 
-async function signBinary(binaryPath, identity, entitlements) {
-  try {
-    console.log(`Signing binary: ${binaryPath}`);
-    execSync(
-      `codesign --sign "${identity}" --entitlements "${entitlements}" --options runtime --timestamp --force "${binaryPath}"`,
-      { stdio: 'inherit' }
-    );
-  } catch (error) {
-    console.error(`Failed to sign binary ${binaryPath}:`, error);
-    throw error;
-  }
-}
-
-function isMachOBinary(filePath) {
-  // Use 'file' command to check if file is a Mach-O binary or dylib or .node native module
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext === '.node') {
-    return true;
-  }
-  try {
-    const output = execSync(`file -b "${filePath}"`).toString();
-    if (
-      output.includes('Mach-O') &&
-      (output.includes('executable') || output.includes('dynamically linked shared library'))
-    ) {
-      return true;
-    }
-  } catch {
-    return false;
-  }
-  return false;
-}
-
-function walkDir(dir, callback) {
-  fs.readdirSync(dir).forEach((f) => {
-    const fullPath = path.join(dir, f);
-    const stats = fs.statSync(fullPath);
-    if (stats.isDirectory()) {
-      callback(fullPath, true);
-      walkDir(fullPath, callback);
-    } else if (stats.isFile()) {
-      callback(fullPath, false);
-    }
-  });
-}
-
-async function signAppBinaries(appPath, identity, entitlements) {
-  // Collect all files and directories to sign
-  const toSign = [];
-
-  walkDir(appPath, (filePath, isDir) => {
-    if (isDir) {
-      // Sign .app bundles inside Contents/Frameworks (helper apps)
-      if (filePath.endsWith('.app')) {
-        toSign.push({ path: filePath, isDir: true });
-      }
-    } else {
-      if (isMachOBinary(filePath)) {
-        toSign.push({ path: filePath, isDir: false });
-      }
-    }
-  });
-
-  // Sign all collected binaries and app bundles
-  for (const item of toSign) {
-    try {
-      console.log(`Signing ${item.isDir ? 'app bundle' : 'binary'}: ${item.path}`);
-      execSync(
-        `codesign --sign "${identity}" --entitlements "${entitlements}" --options runtime --timestamp --force "${item.path}"`,
-        { stdio: 'inherit' }
-      );
-    } catch (error) {
-      console.error(`Failed to sign ${item.isDir ? 'app bundle' : 'binary'} ${item.path}:`, error);
-      throw error;
-    }
-  }
-
-  // Finally, sign the main app bundle itself
-  try {
-    console.log(`Signing main app bundle: ${appPath}`);
-    execSync(
-      `codesign --sign "${identity}" --entitlements "${entitlements}" --options runtime --timestamp --force "${appPath}"`,
-      { stdio: 'inherit' }
-    );
-  } catch (error) {
-    console.error(`Failed to sign app bundle ${appPath}:`, error);
-    throw error;
-  }
-}
-
-export default async function notarizing(context) {
-  const { electronPlatformName, appOutDir, packager, buildMetadata } = context;
-  if (electronPlatformName !== 'darwin') {
-    return;
-  }
+export default async function afterSign(context) {
+  const { electronPlatformName, appOutDir, packager } = context;
+  if (electronPlatformName !== 'darwin') return;
 
   const appName = packager.appInfo.productFilename;
+  const appBundleId = packager.appInfo.appId;
   const appPath = path.join(appOutDir, `${appName}.app`);
 
-  // Check for environment variables for notarization
-  const appleId = process.env.APPLE_ID;
-  const appleIdPassword = process.env.APPLE_APP_SPECIFIC_PASSWORD || process.env.APPLE_ID_PASSWORD;
-  const teamId = process.env.APPLE_TEAM_ID;
-
-  if (!appleId || !appleIdPassword || !teamId) {
-    console.log('Skipping notarization: Missing required environment variables');
-    console.log(`APPLE_ID: ${appleId ? 'Set' : 'Missing'}`);
-    console.log(`APPLE_APP_SPECIFIC_PASSWORD/APPLE_ID_PASSWORD: ${appleIdPassword ? 'Set' : 'Missing'}`);
-    console.log(`APPLE_TEAM_ID: ${teamId ? 'Set' : 'Missing'}`);
+  if (!fs.existsSync(appPath)) {
+    console.warn('[notarize] App path not found:', appPath);
     return;
   }
 
-  console.log(`Notarizing ${appName} with Apple ID: ${appleId}, Team ID: ${teamId}`);
+  const { APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID } = process.env;
+  if (!APPLE_ID || !APPLE_APP_SPECIFIC_PASSWORD) {
+    console.log('[notarize] Skipping: APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD not set');
+    return;
+  }
 
+  console.log('[notarize] Submitting for notarization…');
+  await notarize({
+    appBundleId,
+    appPath,
+    appleId: APPLE_ID,
+    appleIdPassword: APPLE_APP_SPECIFIC_PASSWORD,
+    teamId: APPLE_TEAM_ID, // optional
+  });
+  console.log('[notarize] Notarization complete');
+
+  // Staple the ticket to the .app
   try {
-    // Skip signing since electron-builder has already signed the app
-    // Just perform notarization
-    console.log('Notarizing app...');
-    await notarize({
-      tool: 'notarytool',
-      appPath: appPath,
-      appleId: appleId,
-      appleIdPassword: appleIdPassword,
-      teamId: teamId,
-    });
-
-    console.log('Notarization completed successfully');
-  } catch (error) {
-    console.error('Notarization failed:', error);
-    // Don't throw the error to allow the build to continue
+    console.log('[staple] Stapling ticket to app…');
+    execFileSync('xcrun', ['stapler', 'staple', '-v', appPath], { stdio: 'inherit' });
+    console.log('[staple] App stapled');
+  } catch (e) {
+    console.warn('[staple] Failed to staple app (will still try to staple DMG later):', e?.message || e);
   }
 }

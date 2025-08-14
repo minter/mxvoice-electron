@@ -57,6 +57,11 @@ The app follows a modern Electron architecture with context isolation enabled an
 - No direct Node.js access in renderer; all privileged operations go through preload‑exposed secure APIs
 - IPC handlers validate inputs on the main side
 
+### Database
+- Uses SQL.js (pure JavaScript SQLite implementation) for cross-platform compatibility
+- No native binary dependencies - works consistently across all architectures
+- Database files are stored in the user's application data directory
+
 ### Useful paths
 - Assets: `src/assets/` (see `src/assets/README.md`)
 - Styles: `src/stylesheets/` (see `src/stylesheets/README.md`)

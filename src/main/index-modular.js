@@ -15,7 +15,7 @@ import fs from 'fs';
 import readlines from 'n-readlines';
 import Store from 'electron-store';
 import log from 'electron-log';
-import Database from 'better-sqlite3';
+import { initializeDatabase, getDatabase } from '../preload/modules/database-setup.js';
 import { Howl, Howler } from 'howler';
 import electronUpdater from 'electron-updater';
 import markdownIt from 'markdown-it';
@@ -177,41 +177,26 @@ import('electron-squirrel-startup').then(electronSquirrelStartup => {
 });
 
 // Initialize database
-function initializeDatabase() {
+async function initializeMainDatabase() {
   try {
-    let dbName = "mxvoice.db";
-    const dbDir = store.get("database_directory");
-    debugLog.info(`Looking for database in ${dbDir}`, { 
-      function: "initializeDatabase" 
+    debugLog.info('Initializing main database', { 
+      function: "initializeMainDatabase" 
     });
     
-    // Handle undefined database directory
-    if (!dbDir) {
-      const defaultDbPath = path.join(__dirname, '..', '..', 'data', 'mxvoice.db');
-      debugLog.info(`Using default database path: ${defaultDbPath}`, { 
-        function: "initializeDatabase" 
-      });
-      db = Database(defaultDbPath);
-      return;
-    }
-    
-    if (fs.existsSync(path.join(dbDir, "mrvoice.db"))) {
-      dbName = "mrvoice.db";
-    }
-    debugLog.info(`Attempting to open database file ${path.join(dbDir, dbName)}`, { 
-      function: "initializeDatabase" 
+    db = await initializeDatabase();
+    debugLog.info('Main database initialized successfully', { 
+      function: "initializeMainDatabase" 
     });
-    db = Database(path.join(dbDir, dbName));
   } catch (error) {
-    debugLog.error('Error initializing database', { 
-      function: "initializeDatabase",
+    debugLog.error('Error initializing main database', { 
+      function: "initializeMainDatabase",
       error: error.message 
     });
   }
 }
 
 // Check first run
-function checkFirstRun() {
+async function checkFirstRun() {
   debugLog.info(`First run preference returns ${store.get('first_run_completed')}`, { 
     function: "checkFirstRun" 
   });
@@ -231,19 +216,23 @@ function checkFirstRun() {
       fs.mkdirSync(store.get('music_directory'), { recursive: true });
       fs.mkdirSync(store.get('hotkey_directory'), { recursive: true });
 
-      const initDb = Database(path.join(store.get('database_directory'), 'mxvoice.db'));
-      initDb.exec(`CREATE TABLE IF NOT EXISTS 'categories' (   code varchar(8) NOT NULL,   description varchar(255) NOT NULL );
-CREATE TABLE IF NOT EXISTS mrvoice (   id INTEGER PRIMARY KEY,   title varchar(255) NOT NULL,   artist varchar(255),   category varchar(8) NOT NULL,   info varchar(255),   filename varchar(255) NOT NULL,   time varchar(10),   modtime timestamp(6),   publisher varchar(16),   md5 varchar(32) );
-CREATE UNIQUE INDEX IF NOT EXISTS 'category_code_index' ON categories(code);
-CREATE UNIQUE INDEX IF NOT EXISTS 'category_description_index' ON categories(description);
-INSERT OR IGNORE INTO categories VALUES('UNC', 'Uncategorized');
-INSERT OR IGNORE INTO mrvoice (title, artist, category, filename, time, modtime) VALUES ('Rock Bumper', 'Patrick Short', 'UNC', 'PatrickShort-CSzRockBumper.mp3', '00:49', '${Math.floor(Date.now() / 1000)}');
-`);
+      // Initialize database for first run
+      const initDb = await initializeDatabase();
+      
+      // Insert initial data
+      initDb.run(`INSERT OR IGNORE INTO categories VALUES('UNC', 'Uncategorized')`);
+      initDb.run(`INSERT OR IGNORE INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)`, 
+        ['Rock Bumper', 'Patrick Short', 'UNC', 'PatrickShort-CSzRockBumper.mp3', '00:49', Math.floor(Date.now() / 1000)]);
+      
+      // Save the database to file
+      const dbPath = path.join(store.get('database_directory'), 'mxvoice.db');
+      const data = initDb.export();
+      fs.writeFileSync(dbPath, data);
+      
       fs.copyFileSync(path.join(__dirname, '..', 'assets', 'music', 'CSz Rock Bumper.mp3'), path.join(store.get('music_directory'), 'PatrickShort-CSzRockBumper.mp3'));
       debugLog.info(`mxvoice.db created at ${store.get('database_directory')}`, { 
         function: "checkFirstRun" 
       });
-      initDb.close();
       store.set('first_run_completed', true);
     }
   }
@@ -327,12 +316,12 @@ function initializeModules() {
 }
 
 // Main window creation function
-const createWindow = () => {
+const createWindow = async () => {
   // Check first run (which also checks old config)
-  checkFirstRun();
+  await checkFirstRun();
   
   // Initialize database connection for main process
-  initializeDatabase();
+  await initializeMainDatabase();
 
   // Create the window with restored size from store
   mainWindow = appSetup.createWindow({
