@@ -141,7 +141,6 @@
     "electron": "^37.2.6",
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
-    "js-yaml": "^4.1.0",
     "node-abi": "4.12.0"
   }
 }

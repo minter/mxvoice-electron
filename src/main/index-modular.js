@@ -401,7 +401,29 @@ function setupApp() {
       updateVersion: updateInfo.releaseName,
       provider: app.getVersion().startsWith('4.') ? 'github' : 'custom'
     });
-    mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + updateInfo.releaseNotes);
+    
+    // Process markdown in release notes for proper formatting
+    let processedNotes = updateInfo.releaseNotes;
+    if (updateInfo.releaseNotes && typeof updateInfo.releaseNotes === 'string') {
+      try {
+        processedNotes = md.render(updateInfo.releaseNotes);
+        debugLog.info('Markdown processed successfully for release notes', { 
+          function: "autoUpdater update-available",
+          originalLength: updateInfo.releaseNotes.length,
+          processedLength: processedNotes.length,
+          sampleProcessed: processedNotes.substring(0, 100) + (processedNotes.length > 100 ? '...' : '')
+        });
+      } catch (markdownError) {
+        debugLog.warn('Failed to process markdown in release notes, using raw text', { 
+          function: "autoUpdater update-available",
+          error: markdownError.message
+        });
+        // Fall back to raw text if markdown processing fails
+        processedNotes = updateInfo.releaseNotes;
+      }
+    }
+    
+    mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + processedNotes);
     debugLog.info('display_release_notes call done', { 
       function: "autoUpdater update-available" 
     });
