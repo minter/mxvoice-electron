@@ -34,7 +34,9 @@
     "asarUnpack": [
       "**/*.node",
       "**/*.wasm",
-      "node_modules/sql.js/dist/*.wasm"
+      "node_modules/sql.js/dist/*.wasm",
+      "node_modules/sql.js/dist/sql-wasm.wasm",
+      "node_modules/sql.js/dist/sql-wasm-debug.wasm"
     ],
     "afterPack": "build/afterPack.js",
     "mac": {

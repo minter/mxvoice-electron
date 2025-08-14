@@ -15,7 +15,7 @@ import fs from 'fs';
 import readlines from 'n-readlines';
 import Store from 'electron-store';
 import log from 'electron-log';
-import { initializeDatabase, getDatabase } from '../preload/modules/database-setup.js';
+import { initializeDatabase, getDatabase } from './modules/database-setup.js';
 import { Howl, Howler } from 'howler';
 import electronUpdater from 'electron-updater';
 import markdownIt from 'markdown-it';
@@ -184,14 +184,23 @@ async function initializeMainDatabase() {
     });
     
     db = await initializeDatabase();
-    debugLog.info('Main database initialized successfully', { 
-      function: "initializeMainDatabase" 
-    });
+    
+    if (db) {
+      debugLog.info('Main database initialized successfully', { 
+        function: "initializeMainDatabase" 
+      });
+    } else {
+      debugLog.warn('Database initialization returned null - app will continue without database', { 
+        function: "initializeMainDatabase" 
+      });
+    }
   } catch (error) {
     debugLog.error('Error initializing main database', { 
       function: "initializeMainDatabase",
       error: error.message 
     });
+    // Don't re-throw - let the app continue without database
+    db = null;
   }
 }
 
@@ -317,29 +326,57 @@ function initializeModules() {
 
 // Main window creation function
 const createWindow = async () => {
-  // Check first run (which also checks old config)
-  await checkFirstRun();
-  
-  // Initialize database connection for main process
-  await initializeMainDatabase();
+  try {
+    // Check first run (which also checks old config)
+    await checkFirstRun();
+    
+    // Initialize database connection for main process
+    await initializeMainDatabase();
 
-  // Create the window with restored size from store
-  mainWindow = appSetup.createWindow({
-    width: store.get('browser_width') || defaults.browser_width,
-    height: store.get('browser_height') || defaults.browser_height
-  });
+    // Create the window with restored size from store
+    mainWindow = appSetup.createWindow({
+      width: store.get('browser_width') || defaults.browser_width,
+      height: store.get('browser_height') || defaults.browser_height
+    });
 
-  // Initialize modules with dependencies AFTER mainWindow is created
-  initializeModules();
+    // Initialize modules with dependencies AFTER mainWindow is created
+    initializeModules();
 
-  // Migrate old preferences after modules are initialized
-  fileOperations.migrateOldPreferences();
+    // Migrate old preferences after modules are initialized
+    fileOperations.migrateOldPreferences();
 
-  // Create the menu
-  appSetup.createApplicationMenu();
+    // Create the menu
+    appSetup.createApplicationMenu();
 
-  // Track user
-  trackUser();
+    // Track user
+    trackUser();
+  } catch (error) {
+    console.error('Failed to create main window:', error);
+    debugLog?.error('Failed to create main window', { 
+      function: "createWindow",
+      error: error.message,
+      stack: error.stack
+    });
+    
+    // Create a minimal window even if database fails
+    try {
+      mainWindow = appSetup.createWindow({
+        width: store.get('browser_width') || defaults.browser_width,
+        height: store.get('browser_height') || defaults.browser_height
+      });
+      
+      // Initialize basic modules without database
+      initializeModules();
+      
+      // Create the menu
+      appSetup.createApplicationMenu();
+      
+      console.log('Created minimal window despite database initialization failure');
+    } catch (fallbackError) {
+      console.error('Failed to create even minimal window:', fallbackError);
+      app.quit();
+    }
+  }
 };
 
 // Setup app lifecycle
