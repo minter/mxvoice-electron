@@ -45,35 +45,66 @@ async function mergeLatestMac() {
     console.log('✅ Loaded ARM64 latest-mac.yml');
     console.log('✅ Loaded x64 latest-mac-x64.yml');
     
+    // Helper to reliably pick the correct entry by arch and extension
+    function pickFileEntry(latestMacObj, arch, ext) {
+      const files = Array.isArray(latestMacObj?.files) ? latestMacObj.files : [];
+      // Prefer exact suffix: -{arch}.{ext}
+      let found = files.find(f => typeof f?.url === 'string' && f.url.endsWith(`-${arch}.${ext}`));
+      if (!found) {
+        // Fallback: any entry with both arch and ext in the name
+        found = files.find(f => {
+          if (typeof f?.url !== 'string') return false;
+          const u = f.url.toLowerCase();
+          return u.includes(`-${arch}`) && u.endsWith(`.${ext.toLowerCase()}`);
+        });
+      }
+      return found || null;
+    }
+
     // IMPORTANT: For GitHub provider, entries must be relative file names, not full URLs
     const mergedLatestMac = {
       version: VERSION,
       files: [
-        // ARM64 files (relative names)
-        {
-          url: `Mx.-Voice-${VERSION}-arm64.dmg`,
-          sha512: arm64LatestMac.files?.[0]?.sha512 || 'placeholder-sha512',
-          size: arm64LatestMac.files?.[0]?.size || 0
-        },
-        {
-          url: `Mx.-Voice-${VERSION}-arm64.zip`,
-          sha512: arm64LatestMac.files?.[1]?.sha512 || 'placeholder-sha512',
-          size: arm64LatestMac.files?.[1]?.size || 0
-        },
-        // x64 files (relative names)
-        {
-          url: `Mx.-Voice-${VERSION}-x64.dmg`,
-          sha512: x64LatestMac.files?.[0]?.sha512 || 'placeholder-sha512',
-          size: x64LatestMac.files?.[0]?.size || 0
-        },
-        {
-          url: `Mx.-Voice-${VERSION}-x64.zip`,
-          sha512: x64LatestMac.files?.[1]?.sha512 || 'placeholder-sha512',
-          size: x64LatestMac.files?.[1]?.size || 0
-        }
+        // ARM64 ZIP
+        (() => {
+          const e = pickFileEntry(arm64LatestMac, 'arm64', 'zip');
+          return {
+            url: `Mx.-Voice-${VERSION}-arm64.zip`,
+            sha512: e?.sha512 || 'placeholder-sha512',
+            size: e?.size || 0
+          };
+        })(),
+        // ARM64 DMG
+        (() => {
+          const e = pickFileEntry(arm64LatestMac, 'arm64', 'dmg');
+          return {
+            url: `Mx.-Voice-${VERSION}-arm64.dmg`,
+            sha512: e?.sha512 || 'placeholder-sha512',
+            size: e?.size || 0
+          };
+        })(),
+        // x64 ZIP
+        (() => {
+          const e = pickFileEntry(x64LatestMac, 'x64', 'zip');
+          return {
+            url: `Mx.-Voice-${VERSION}-x64.zip`,
+            sha512: e?.sha512 || 'placeholder-sha512',
+            size: e?.size || 0
+          };
+        })(),
+        // x64 DMG
+        (() => {
+          const e = pickFileEntry(x64LatestMac, 'x64', 'dmg');
+          return {
+            url: `Mx.-Voice-${VERSION}-x64.dmg`,
+            sha512: e?.sha512 || 'placeholder-sha512',
+            size: e?.size || 0
+          };
+        })()
       ],
-      path: `Mx.-Voice-${VERSION}-x64.dmg`, // Default to x64 for backward compatibility
-      sha512: x64LatestMac.files?.[0]?.sha512 || 'placeholder-sha512', // Use x64 DMG hash as default
+      // Default path to x64 dmg; not used for zip validation
+      path: `Mx.-Voice-${VERSION}-x64.dmg`,
+      sha512: (() => { const e = pickFileEntry(x64LatestMac, 'x64', 'dmg'); return e?.sha512 || 'placeholder-sha512'; })(),
       releaseDate: new Date().toISOString()
     };
     
@@ -81,7 +112,7 @@ async function mergeLatestMac() {
     const mergedPath = path.join(BUILD_DIR, 'latest-mac-merged.yml');
     fs.writeFileSync(mergedPath, yaml.dump(mergedLatestMac));
     
-    console.log('✅ Created merged latest-mac-merged.yml with full GitHub URLs for both architectures');
+    console.log('✅ Created merged latest-mac-merged.yml with both architectures');
     console.log('✅ Default path set to x64 for backward compatibility');
     console.log('📋 Next steps:');
     console.log('   1. Upload the merged file to GitHub');

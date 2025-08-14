@@ -24,6 +24,7 @@ let audioInstances;
 let autoUpdater;
 let debugLog;
 let logService;
+let updateState;
 
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
@@ -34,6 +35,7 @@ function initializeIpcHandlers(dependencies) {
   autoUpdater = dependencies.autoUpdater;
   debugLog = dependencies.debugLog;
   logService = dependencies.logService;
+  updateState = dependencies.updateState || { downloaded: false };
   
   // Initialize file operations module
   fileOperations.initializeFileOperations(dependencies);
@@ -801,23 +803,25 @@ function registerAllHandlers() {
       console.log('🚀 [PRODUCTION] install-update handler called');
       console.log('🚀 [PRODUCTION] autoUpdater available:', !!autoUpdater);
       console.log('🚀 [PRODUCTION] autoUpdater type:', typeof autoUpdater);
+      console.log('🚀 [PRODUCTION] updateState.downloaded:', !!updateState?.downloaded);
       
       debugLog?.error('install-update handler called', { 
         module: 'ipc-handlers', 
         function: 'install-update',
         autoUpdaterAvailable: !!autoUpdater,
-        autoUpdaterType: typeof autoUpdater
+        autoUpdaterType: typeof autoUpdater,
+        updateDownloaded: !!updateState?.downloaded
       });
       
-      if (autoUpdater) {
-        console.log('🚀 [PRODUCTION] Calling autoUpdater.quitAndInstall()');
-        debugLog?.error('Installing update via autoUpdater', { 
-          module: 'ipc-handlers', 
-          function: 'install-update',
-          method: 'quitAndInstall'
-        });
-        autoUpdater.quitAndInstall();
-        return { success: true };
+      if (autoUpdater && updateState?.downloaded) {
+        // Prefer install on app quit to avoid network race; trigger graceful quit
+        debugLog?.error('Scheduling install on app quit', { module: 'ipc-handlers', function: 'install-update' });
+        app.relaunch();
+        app.quit();
+        return { success: true, scheduled: true };
+      } else if (autoUpdater && !updateState?.downloaded) {
+        debugLog?.warn('Install requested before download completed', { module: 'ipc-handlers', function: 'install-update' });
+        return { success: false, error: 'Update is still downloading. Please wait until it is ready.' };
       } else {
         console.log('❌ [PRODUCTION] Auto updater not available');
         debugLog?.error('Auto updater not available', { 

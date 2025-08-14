@@ -14,6 +14,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
+import crypto from 'crypto';
 
 // Read version from package.json
 function getVersion() {
@@ -40,16 +41,8 @@ async function buildArm64() {
     // Normalize artifact names to "Mx.-Voice-*" to avoid environment-specific sanitization
     normalizeArtifactNames();
     
-    // Check if latest-mac.yml was created
-    const latestMacPath = path.join(BUILD_DIR, 'latest-mac.yml');
-    if (!fs.existsSync(latestMacPath)) {
-      console.log('⚠️  No latest-mac.yml found, creating one for ARM64...');
-      await createArm64LatestMac();
-    } else {
-      console.log('✅ latest-mac.yml found');
-    }
-    // Ensure yml references use "Mx.-Voice-*"
-    normalizeLatestMacYml();
+    // Always regenerate per-arch metadata for ARM64 only
+    await createArm64LatestMac();
     
     console.log('🎯 ARM64 build ready for merging with x64 GitHub Actions build');
     
@@ -76,45 +69,59 @@ function normalizeArtifactNames() {
   }
 }
 
-function normalizeLatestMacYml() {
-  try {
-    const latestMacPath = path.join(BUILD_DIR, 'latest-mac.yml');
-    if (!fs.existsSync(latestMacPath)) return;
-    let yml = fs.readFileSync(latestMacPath, 'utf8');
-    const updated = yml.replace(/Mx\. Voice-/g, 'Mx.-Voice-').replace(/Mx\.Voice-/g, 'Mx.-Voice-');
-    if (updated !== yml) {
-      fs.writeFileSync(latestMacPath, updated);
-      console.log('🔤 Normalized names inside latest-mac.yml');
+function computeSha512Base64(filePath) {
+  return new Promise((resolve, reject) => {
+    try {
+      const hash = crypto.createHash('sha512');
+      const stream = fs.createReadStream(filePath);
+      stream.on('data', chunk => hash.update(chunk));
+      stream.on('end', () => resolve(hash.digest('base64')));
+      stream.on('error', reject);
+    } catch (err) {
+      reject(err);
     }
-  } catch (e) {
-    console.warn('⚠️  Could not normalize latest-mac.yml:', e?.message || e);
-  }
+  });
 }
 
 async function createArm64LatestMac() {
+  const zipName = `Mx.-Voice-${VERSION}-arm64.zip`;
+  const dmgName = `Mx.-Voice-${VERSION}-arm64.dmg`;
+  const zipPath = path.join(BUILD_DIR, zipName);
+  const dmgPath = path.join(BUILD_DIR, dmgName);
+
+  if (!fs.existsSync(zipPath)) throw new Error(`Missing ${zipName}`);
+  if (!fs.existsSync(dmgPath)) throw new Error(`Missing ${dmgName}`);
+
+  const zipStat = fs.statSync(zipPath);
+  const dmgStat = fs.statSync(dmgPath);
+  const [zipSha, dmgSha] = await Promise.all([
+    computeSha512Base64(zipPath),
+    computeSha512Base64(dmgPath)
+  ]);
+
   // IMPORTANT: For GitHub provider, entries must be relative file names, not full URLs
   const arm64LatestMac = {
     version: VERSION,
     files: [
       {
-        url: `Mx.-Voice-${VERSION}-arm64.dmg`,
-        sha512: 'placeholder-sha512', // Will be updated after actual build
-        size: 0
+        url: zipName,
+        sha512: zipSha,
+        size: zipStat.size
       },
       {
-        url: `Mx.-Voice-${VERSION}-arm64.zip`,
-        sha512: 'placeholder-sha512', // Will be updated after actual build
-        size: 0
+        url: dmgName,
+        sha512: dmgSha,
+        size: dmgStat.size
       }
     ],
-    path: `Mx.-Voice-${VERSION}-arm64.dmg`,
-    sha512: 'placeholder-sha512', // Will be updated after actual build
+    path: zipName,
+    sha512: zipSha,
     releaseDate: new Date().toISOString()
   };
-  
-  const latestMacPath = path.join(BUILD_DIR, 'latest-mac.yml');
-  fs.writeFileSync(latestMacPath, yaml.dump(arm64LatestMac));
-  console.log('📝 Created ARM64 latest-mac.yml template with relative file names');
+
+  const latestMacArmPath = path.join(BUILD_DIR, 'latest-mac-arm64.yml');
+  fs.writeFileSync(latestMacArmPath, yaml.dump(arm64LatestMac));
+  console.log('📝 Created ARM64 metadata: dist/latest-mac-arm64.yml');
 }
 
 // Run the build

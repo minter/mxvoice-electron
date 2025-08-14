@@ -128,6 +128,7 @@ if (process.platform === "darwin") {
 let mainWindow;
 let db; // Database connection for main process
 let audioInstances = new Map(); // Track audio instances in main process
+const updateState = { downloaded: false };
 
 // Enable live reload (only in development)
 // Use dynamic import for electron-util to avoid CommonJS module issues
@@ -305,6 +306,7 @@ function initializeModules() {
     autoUpdater,
     fileOperations,
     debugLog,
+    updateState,
     logService
   };
 
@@ -365,6 +367,7 @@ function setupApp() {
 
   // Setup auto-updater events
   autoUpdater.on('update-available', (updateInfo) => {
+    updateState.downloaded = false;
     debugLog.info(`Update available: ${updateInfo.releaseName}`, { 
       function: "autoUpdater update-available",
       currentVersion: app.getVersion(),
@@ -401,6 +404,25 @@ function setupApp() {
       provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
       error: err.message
     });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    try { mainWindow?.webContents.send('update_download_progress', progress || {}); } catch (_) {}
+    debugLog.info('Auto-updater download progress', { function: 'autoUpdater download-progress', ...progress });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    updateState.downloaded = true;
+    try { mainWindow?.webContents.send('update_ready', info?.version || ''); } catch (_) {}
+    debugLog.info('Update downloaded and ready to install', { function: 'autoUpdater update-downloaded', version: info?.version });
+    // Auto-install shortly after download completes to avoid user-triggered races
+    setTimeout(() => {
+      try {
+        autoUpdater.quitAndInstall();
+      } catch (e) {
+        debugLog.error('Auto-install failed', { function: 'autoUpdater update-downloaded', error: e?.message });
+      }
+    }, 500);
   });
 }
 
