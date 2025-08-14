@@ -14,11 +14,12 @@
   "scripts": {
     "start": "electron .",
     "build:mac:universal": "electron-builder --mac --universal",
+    "release:mac:draft": "EP_DRAFT=true electron-builder --mac --universal --publish always",
+    "release:mac:prerelease": "EP_PRE_RELEASE=true electron-builder --mac --universal --publish always",
     "release:mac": "electron-builder --mac --universal --publish always",
-    "release:mac:prerelease": "electron-builder --mac --universal --publish always --prerelease",
-    "release:draft": "electron-builder --mac --universal --publish always --draft",
+    "release:win:draft": "EP_DRAFT=true electron-builder --win --publish always",
+    "release:win:prerelease": "EP_PRE_RELEASE=true electron-builder --win --publish always",
     "release:win": "electron-builder --win --publish always",
-    "release:win:prerelease": "electron-builder --win --publish always --prerelease",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "build:win": "electron-builder --win",
@@ -112,7 +113,8 @@
       {
         "provider": "github",
         "owner": "minter",
-        "repo": "mxvoice-electron"
+        "repo": "mxvoice-electron",
+        "releaseType": "release"
       }
     ]
   },
