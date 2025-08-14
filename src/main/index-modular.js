@@ -101,6 +101,8 @@ if (process.platform === "darwin") {
     
     // Allow pre-releases like 4.0.0-pre.X
     autoUpdater.allowPrerelease = true;
+    // Do not auto-download; wait for explicit user action
+    autoUpdater.autoDownload = false;
     
     // Explicitly configure GitHub provider; allow prereleases and let provider resolve URLs
     autoUpdater.setFeedURL({ 
@@ -128,7 +130,7 @@ if (process.platform === "darwin") {
 let mainWindow;
 let db; // Database connection for main process
 let audioInstances = new Map(); // Track audio instances in main process
-const updateState = { downloaded: false };
+const updateState = { downloaded: false, userApprovedInstall: false };
 
 // Enable live reload (only in development)
 // Use dynamic import for electron-util to avoid CommonJS module issues
@@ -415,14 +417,15 @@ function setupApp() {
     updateState.downloaded = true;
     try { mainWindow?.webContents.send('update_ready', info?.version || ''); } catch (_) {}
     debugLog.info('Update downloaded and ready to install', { function: 'autoUpdater update-downloaded', version: info?.version });
-    // Auto-install shortly after download completes to avoid user-triggered races
-    setTimeout(() => {
+    // If user already approved install, proceed automatically now
+    if (updateState.userApprovedInstall) {
       try {
+        debugLog.info('User approved install earlier; quitting to install now', { function: 'autoUpdater update-downloaded' });
         autoUpdater.quitAndInstall();
       } catch (e) {
-        debugLog.error('Auto-install failed', { function: 'autoUpdater update-downloaded', error: e?.message });
+        debugLog.error('Auto-install on ready failed', { function: 'autoUpdater update-downloaded', error: e?.message });
       }
-    }, 500);
+    }
   });
 }
 

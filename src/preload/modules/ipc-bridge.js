@@ -168,6 +168,18 @@ const ipcHandlers = {
     } catch {}
     try { window.dispatchEvent(new CustomEvent('mxvoice:show-modal', { detail: { selector: '#newReleaseModal' } })); } catch {}
   }
+  ,
+  // Auto-update progress events
+  update_download_progress: function (_event, progress) {
+    try {
+      window.dispatchEvent(new CustomEvent('mxvoice:update-download-progress', { detail: progress || {} }));
+    } catch (_) {}
+  },
+  update_ready: function (_event, version) {
+    try {
+      window.dispatchEvent(new CustomEvent('mxvoice:update-ready', { detail: { version }}));
+    } catch (_) {}
+  }
 };
 
 // Register all IPC handlers

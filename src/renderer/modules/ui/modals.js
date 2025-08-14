@@ -72,6 +72,11 @@ function initializeModals(options = {}) {
    */
   function installUpdate() {
     try {
+      // Show updating modal immediately
+      try { import('./bootstrap-adapter.js').then(({ showModal }) => showModal('#updateInProgressModal', { backdrop: 'static', keyboard: false })); } catch {}
+      const statusEl = document.getElementById('updateStatusText');
+      if (statusEl) statusEl.textContent = 'Preparing installation…';
+      
       if (window.secureElectronAPI?.fileOperations?.installUpdate) {
         return window.secureElectronAPI.fileOperations.installUpdate();
       } else if (window.electronAPI?.restartAndInstall) {
@@ -81,6 +86,38 @@ function initializeModals(options = {}) {
       debugLog?.warn('Install update invoke failed', { module: 'ui-modals', function: 'installUpdate', error: error?.message });
     }
   }
+
+  // Listen for update events to show progress
+  try {
+    window.addEventListener('mxvoice:update-download-progress', (e) => {
+      // Only update UI if the update modal is already visible (user initiated)
+      const modalEl = document.getElementById('updateInProgressModal');
+      if (!modalEl || !modalEl.classList.contains('show')) return;
+      const p = e?.detail || {};
+      const text = document.getElementById('updateProgressText');
+      const status = document.getElementById('updateStatusText');
+      if (status) status.textContent = 'Downloading update…';
+      if (text) {
+        const pct = (typeof p.percent === 'number') ? Math.max(0, Math.min(100, p.percent)).toFixed(0) : '';
+        const speed = (typeof p.bytesPerSecond === 'number') ? `${Math.round(p.bytesPerSecond / 1024 / 1024)} MB/s` : '';
+        const transferred = (typeof p.transferred === 'number') ? `${Math.round(p.transferred / 1024 / 1024)} MB` : '';
+        const total = (typeof p.total === 'number') ? `${Math.round(p.total / 1024 / 1024)} MB` : '';
+        text.textContent = pct ? `${pct}% • ${transferred}/${total} • ${speed}` : '';
+      }
+    });
+  } catch (_) {}
+
+  try {
+    window.addEventListener('mxvoice:update-ready', () => {
+      // Only update UI if modal already visible
+      const modalEl = document.getElementById('updateInProgressModal');
+      if (!modalEl || !modalEl.classList.contains('show')) return;
+      const status = document.getElementById('updateStatusText');
+      const text = document.getElementById('updateProgressText');
+      if (status) status.textContent = 'Installing update…';
+      if (text) text.textContent = '';
+    });
+  } catch (_) {}
   
   /**
    * Custom confirmation dialog

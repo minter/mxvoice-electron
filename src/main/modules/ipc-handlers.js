@@ -814,14 +814,15 @@ function registerAllHandlers() {
       });
       
       if (autoUpdater && updateState?.downloaded) {
-        // Prefer install on app quit to avoid network race; trigger graceful quit
-        debugLog?.error('Scheduling install on app quit', { module: 'ipc-handlers', function: 'install-update' });
-        app.relaunch();
-        app.quit();
-        return { success: true, scheduled: true };
+        debugLog?.error('Installing update via autoUpdater.quitAndInstall', { module: 'ipc-handlers', function: 'install-update' });
+        autoUpdater.quitAndInstall();
+        return { success: true };
       } else if (autoUpdater && !updateState?.downloaded) {
-        debugLog?.warn('Install requested before download completed', { module: 'ipc-handlers', function: 'install-update' });
-        return { success: false, error: 'Update is still downloading. Please wait until it is ready.' };
+        debugLog?.info('Starting explicit download via autoUpdater.downloadUpdate()', { module: 'ipc-handlers', function: 'install-update' });
+        // Mark that user approved installing once download completes
+        updateState.userApprovedInstall = true;
+        await autoUpdater.downloadUpdate();
+        return { success: true, startedDownload: true };
       } else {
         console.log('❌ [PRODUCTION] Auto updater not available');
         debugLog?.error('Auto updater not available', { 
