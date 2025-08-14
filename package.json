@@ -39,6 +39,7 @@
       "node_modules/@sqlite.org/sqlite-wasm/dist/*.wasm"
     ],
     "afterPack": "build/afterPack.js",
+    "artifactBuildCompleted": "build/windowsSign.js",
     "mac": {
       "forceCodeSigning": true,
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
