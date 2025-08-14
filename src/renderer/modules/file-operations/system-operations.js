@@ -67,6 +67,16 @@ export async function installUpdate() {
   });
   
   try {
+    // Show the updating modal immediately on user action and keep it until restart
+    try {
+      const statusEl = document.getElementById('updateStatusText');
+      const progressEl = document.getElementById('updateProgressText');
+      if (statusEl) statusEl.textContent = 'Preparing download…';
+      if (progressEl) progressEl.textContent = '';
+      const adapter = await import('../ui/bootstrap-adapter.js');
+      adapter.showModal('#updateInProgressModal', { backdrop: 'static', keyboard: false });
+    } catch (_) {}
+
     if (window.secureElectronAPI?.fileOperations?.installUpdate) {
       debugLog?.info("Calling secureElectronAPI.fileOperations.installUpdate", { module: 'system-operations', function: 'installUpdate' });
       const result = await window.secureElectronAPI.fileOperations.installUpdate();
