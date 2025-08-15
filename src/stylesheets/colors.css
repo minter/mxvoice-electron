@@ -1,14 +1,14 @@
 :root {
+  --panel-color: rgb(40, 44, 52);
+  --card-color: rgb(33, 37, 43);
+  --header-color: rgb(58, 64, 75);
+  --card-border: rgb(58, 64, 75);
+  --card-text: rgb(171, 178, 191);
+  --inverse-card-text: rgb(40, 44, 52);
+  --holding-tank-item: rgb(33, 37, 43);
   --highlight-color: rgb(145, 183, 216);
-  --header-color: rgb(236, 236, 236);
-  --panel-color: white;
-  --card-border: #e0e0e0;
-  --card-text: rgb(36, 36, 36);
-  --inverse-card-text: white;
-  --autoplay: rgb(83, 164, 81);
-  --player: rgb(45, 45, 45);
-  --holding-tank-item: rgb(203, 209, 213);
-  --context-menu-list: white;
+  --highlight-color-rgb: 145, 183, 216;
+  --context-menu-list: rgb(33, 37, 43);
   --input-background: white;
   --input-border: #ced4da;
   --input-text: rgb(36, 36, 36);
@@ -238,6 +238,53 @@ table td {
 .dropzone {
   border-bottom: 1px dotted black !important;
 }
+
+/* Column drag and drop styles */
+.column-drop-zone {
+  width: 8px;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: col-resize;
+}
+
+.column-drop-zone:hover {
+  background: var(--highlight-color);
+  opacity: 0.3;
+}
+
+.column-drop-zone.drop-zone-active {
+  background: var(--highlight-color);
+  opacity: 0.8;
+  width: 12px;
+}
+
+.column-dragging {
+  opacity: 0.7;
+  transform: rotate(2deg);
+  transition: all 0.2s ease;
+}
+
+.column-drop-target {
+  border: 2px dashed var(--highlight-color) !important;
+  background-color: rgba(var(--highlight-color-rgb), 0.1) !important;
+  transition: all 0.2s ease;
+}
+
+/* Visual indicator for draggable columns */
+.card-header {
+  cursor: grab;
+  transition: all 0.2s ease;
+}
+
+.card-header:active {
+  cursor: grabbing;
+}
+
+.card-header:hover {
+  box-shadow: 0 0 8px rgba(var(--highlight-color-rgb), 0.3);
+}
+
+
 
 .context-menu-list {
   background: var(--context-menu-list);

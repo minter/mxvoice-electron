@@ -352,8 +352,7 @@ class FunctionRegistry {
 
     // Drag Drop Functions
     this.registerModule('dragDrop', {
-      songDrag: 'songDrag',
-      columnDrag: 'columnDrag'
+      songDrag: 'songDrag'
     });
 
     this.debugLog.info('Function registration completed', { 

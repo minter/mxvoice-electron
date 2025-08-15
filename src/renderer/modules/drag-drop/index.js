@@ -5,7 +5,7 @@
  * and rearranging UI elements
  */
 
-import { songDrag, columnDrag } from './drag-drop-functions.js';
+import { songDrag } from './drag-drop-functions.js';
 import { setupDragDropEventHandlers } from './event-handlers.js';
 
 // Import debug logger
@@ -28,7 +28,7 @@ class DragDropModule {
   constructor() {
     // Bind all functions as methods (excluding hotkeyDrop, allowHotkeyDrop, and holdingTankDrop which are handled by their respective modules)
     this.songDrag = songDrag;
-    this.columnDrag = columnDrag;
+    // Note: columnDrag is now handled programmatically in event-handlers.js
   }
 
   /**
@@ -62,7 +62,7 @@ class DragDropModule {
   getAllDragDropFunctions() {
     return {
       songDrag: this.songDrag,
-      columnDrag: this.columnDrag
+      // columnDrag is now handled programmatically
     };
   }
 
@@ -76,8 +76,8 @@ class DragDropModule {
 
     // Test each function
     const functions = [
-      'songDrag',
-      'columnDrag'
+      'songDrag'
+      // columnDrag is now handled programmatically
     ];
 
     for (const funcName of functions) {

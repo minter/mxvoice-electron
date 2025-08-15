@@ -161,21 +161,4 @@ export function songDrag(event) {
   }
 
   event.dataTransfer.setData("text", songId);
-}
-
-/**
- * Handles dragging columns
- * 
- * @param {Event} event - The dragstart event
- */
-export function columnDrag(event) {
-  debugLog?.info('Starting drag for column ID', { 
-    module: 'drag-drop-functions',
-    function: 'columnDrag',
-    columnId: event.target.getAttribute("id")
-  });
-  event.dataTransfer.setData(
-    "application/x-moz-node",
-    event.target.getAttribute("id")
-  );
 } 

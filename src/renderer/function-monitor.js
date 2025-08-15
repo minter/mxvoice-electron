@@ -154,7 +154,7 @@ class FunctionMonitor {
       categories: ['populateCategorySelect', 'openCategoriesModal', 'addNewCategory', 'saveCategories', 'editCategoryUI', 'deleteCategoryUI'],
       hotkeys: ['playSongFromHotkey', 'switchToHotkeyTab', 'populateHotkeys', 'setLabelFromSongId', 'sendToHotkeys', 'hotkeyDrop', 'allowHotkeyDrop', 'removeFromHotkey'],
       holdingTank: ['clearHoldingTank', 'renameHoldingTankTab', 'scale_scrollable', 'saveHoldingTankToStore', 'holdingTankDrop'],
-      dragDrop: ['songDrag', 'columnDrag'],
+      dragDrop: ['songDrag'],
       songManagement: ['saveEditedSong', 'saveNewSong', 'editSelectedSong', 'deleteSelectedSong', 'deleteSong', 'removeFromHoldingTank', 'removeFromHotkey']
     };
 
