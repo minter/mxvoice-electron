@@ -99,13 +99,19 @@ if (process.platform === "darwin") {
       provider: "github"
     });
     
-    // Check user preference for prerelease updates
+    // Check user preference for prerelease updates OR if currently running a pre-release version
     const userPrefersPrereleases = store.get('prerelease_updates') || false;
-    autoUpdater.allowPrerelease = userPrefersPrereleases;
+    const isCurrentlyPrerelease = currentVersion.includes('-pre.') || currentVersion.includes('-beta') || currentVersion.includes('-alpha');
+    const shouldAllowPrereleases = userPrefersPrereleases || isCurrentlyPrerelease;
     
-    debugLog.info(`Prerelease updates ${userPrefersPrereleases ? 'enabled' : 'disabled'} by user preference`, { 
+    autoUpdater.allowPrerelease = shouldAllowPrereleases;
+    
+    debugLog.info(`Prerelease updates ${shouldAllowPrereleases ? 'enabled' : 'disabled'}`, { 
       function: "auto-updater setup",
-      prereleaseEnabled: userPrefersPrereleases
+      prereleaseEnabled: shouldAllowPrereleases,
+      userPreference: userPrefersPrereleases,
+      isCurrentlyPrerelease: isCurrentlyPrerelease,
+      currentVersion: currentVersion
     });
     // Do not auto-download; wait for explicit user action
     autoUpdater.autoDownload = false;
@@ -392,10 +398,17 @@ function setupApp() {
   // Listen for preference changes that affect auto-updater
   store.onDidChange('prerelease_updates', (newValue) => {
     if (autoUpdater) {
-      autoUpdater.allowPrerelease = newValue || false;
-      debugLog.info(`Auto-updater prerelease setting updated to: ${newValue}`, { 
+      const currentVersion = getTestVersion();
+      const isCurrentlyPrerelease = currentVersion.includes('-pre.') || currentVersion.includes('-beta') || currentVersion.includes('-alpha');
+      const shouldAllowPrereleases = newValue || isCurrentlyPrerelease;
+      
+      autoUpdater.allowPrerelease = shouldAllowPrereleases;
+      debugLog.info(`Auto-updater prerelease setting updated`, { 
         function: "preference-change",
-        prereleaseEnabled: newValue
+        prereleaseEnabled: shouldAllowPrereleases,
+        userPreference: newValue,
+        isCurrentlyPrerelease: isCurrentlyPrerelease,
+        currentVersion: currentVersion
       });
     }
   });

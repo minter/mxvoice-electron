@@ -147,7 +147,9 @@ The app now supports two auto-update providers:
 **Update Channel Control:**
 - Users can choose whether to receive prerelease updates (beta/alpha versions)
 - Default behavior: Only stable releases are shown
-- Prerelease updates are opt-in via Preferences → Update Options
+- Prerelease updates are offered if:
+  - User explicitly opts-in via Preferences → Update Options, OR
+  - User is currently running a pre-release version (e.g., 4.0.0-pre.4)
 - Setting can be changed at any time and takes effect immediately
 
 This ensures backward compatibility while providing modern auto-update functionality for new releases.

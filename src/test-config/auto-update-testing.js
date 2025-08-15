@@ -80,6 +80,16 @@ export const TEST_SCENARIOS = [
       "Verify release notes formatting",
       "Test markdown rendering"
     ]
+  },
+  {
+    name: "Pre-release Update Logic Test",
+    description: "Verify pre-release update logic works correctly",
+    steps: [
+      "Test with user preference enabled (should allow pre-releases)",
+      "Test with user preference disabled but running pre-release (should allow pre-releases)",
+      "Test with user preference disabled and running stable (should not allow pre-releases)",
+      "Verify logs show correct logic breakdown"
+    ]
   }
 ];
 
@@ -109,5 +119,12 @@ export const EXPECTED_LOGS = {
   V4_0_0: [
     "Using GitHub provider for version 4.0.0", 
     "provider: github"
+  ],
+  PRERELEASE_LOGIC: [
+    "Prerelease updates enabled",
+    "prereleaseEnabled: true",
+    "userPreference: false",
+    "isCurrentlyPrerelease: true",
+    "currentVersion: 4.0.0-pre.4"
   ]
 };

@@ -81,6 +81,21 @@ The auto-updater now supports two providers:
 - Release notes properly formatted
 - Markdown rendered correctly
 
+### 5. Test Pre-release Update Logic
+
+**Objective**: Verify pre-release update logic works correctly.
+
+**Steps**:
+1. Test with user preference enabled (should allow pre-releases)
+2. Test with user preference disabled but running pre-release (should allow pre-releases)
+3. Test with user preference disabled and running stable (should not allow pre-releases)
+4. Verify logs show correct logic breakdown
+
+**Expected Behavior**:
+- Users get pre-releases if they opt-in OR if currently running pre-release
+- Logs show `prereleaseEnabled`, `userPreference`, `isCurrentlyPrerelease`, and `currentVersion`
+- Auto-updater `allowPrerelease` is set correctly
+
 ## Testing Commands
 
 ### Basic Testing
@@ -120,6 +135,19 @@ server: download.mxvoice.app
 Using GitHub provider for version 4.0.0
 provider: github
 ```
+
+#### Pre-release Update Logic
+```
+Prerelease updates enabled
+prereleaseEnabled: true
+userPreference: false
+isCurrentlyPrerelease: true
+currentVersion: 4.0.0-pre.4
+```
+
+**Pre-release Logic**: Users receive pre-release updates if:
+- They explicitly opt-in via Preferences → Update Options, OR
+- They are currently running a pre-release version (e.g., 4.0.0-pre.4)
 
 #### Auto-Updater Events
 ```
