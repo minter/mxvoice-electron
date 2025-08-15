@@ -96,19 +96,76 @@ export class DataPreloader {
    */
   async loadColumnOrder() {
     try {
+      this.logInfo('Loading column order from store...');
       const hasColumnOrder = await secureStore.has("column_order");
+      this.logInfo(`Column order exists in store: ${hasColumnOrder}`);
+      
       if (hasColumnOrder) {
-        const columnOrder = await secureStore.get("column_order");
+        const columnOrderData = await secureStore.get("column_order");
+        this.logInfo(`Retrieved column order from store:`, columnOrderData);
+        
+        // Handle both wrapped format {success: true, value: [...]} and direct array format [...]
+        let columnOrder = null;
+        if (columnOrderData && typeof columnOrderData === 'object') {
+          if (Array.isArray(columnOrderData)) {
+            // Direct array format
+            columnOrder = columnOrderData;
+          } else if (columnOrderData.value && Array.isArray(columnOrderData.value)) {
+            // Wrapped format {success: true, value: [...]}
+            columnOrder = columnOrderData.value;
+          }
+        }
+        
         if (columnOrder && Array.isArray(columnOrder)) {
           const topRow = document.getElementById('top-row');
           if (topRow) {
-            columnOrder.forEach(function (val) {
+            this.logInfo('Top row found, applying column order...');
+            
+            // Log the current order before reordering
+            const currentOrder = Array.from(topRow.children).map(el => el.id).filter(id => id && id.includes('-column'));
+            this.logInfo(`Current column order before reordering:`, currentOrder);
+            
+            columnOrder.forEach((val) => {
               const child = topRow.querySelector(`#${val}`);
-              if (child) topRow.appendChild(child);
+              if (child) {
+                topRow.appendChild(child);
+                this.logInfo(`Moved column ${val} to end`);
+              } else {
+                this.logInfo(`Column ${val} not found in DOM`);
+              }
             });
+            
+            // Log the final order after reordering
+            const finalOrder = Array.from(topRow.children).map(el => el.id).filter(id => id && id.includes('-column'));
+            this.logInfo(`Final column order after reordering:`, finalOrder);
+            
             this.logInfo("Applied column order from store");
+            
+            // Add a small delay to ensure the column order is not overridden
+            // by other initialization processes that might manipulate the DOM
+            setTimeout(() => {
+              // Verify the final order after the delay
+              const verifiedOrder = Array.from(topRow.children).map(el => el.id).filter(id => id && id.includes('-column'));
+              this.logInfo(`Verified column order after delay:`, verifiedOrder);
+              
+              // Refresh column drop zones after reordering
+              // This ensures drop zones are positioned correctly after column order is restored
+              if (window.refreshColumnDropZones && typeof window.refreshColumnDropZones === 'function') {
+                this.logInfo('Refreshing column drop zones...');
+                window.refreshColumnDropZones();
+                this.logInfo('Column drop zones refreshed');
+              } else {
+                this.logWarn('refreshColumnDropZones function not available');
+              }
+            }, 100);
+          } else {
+            this.logWarn('Top row not found, cannot apply column order');
           }
+        } else {
+          this.logWarn('Column order is not a valid array:', columnOrderData);
         }
+      } else {
+        this.logInfo('No saved column order found in store');
       }
     } catch (error) {
       this.logError('Error loading column order', error);
@@ -176,19 +233,24 @@ export class DataPreloader {
    */
   async initializeDOMDependentData() {
     try {
-      this.logInfo('Initializing DOM-dependent data...');
+      this.logInfo('🚀 Initializing DOM-dependent data...');
       
       // Re-run data loading that requires DOM elements
+      this.logInfo('📊 Loading hotkeys...');
       await this.loadHotkeys();
+      
+      this.logInfo('📐 Loading column order...');
       await this.loadColumnOrder();
       
       // Make save functions available globally
+      this.logInfo('🔧 Setting up global save functions...');
       window.saveHoldingTankToStore = this.saveHoldingTankToStore.bind(this);
       window.saveHotkeysToStore = this.saveHotkeysToStore.bind(this);
       
-      this.logInfo('DOM-dependent data initialization completed');
+      this.logInfo('✅ DOM-dependent data initialization completed');
     } catch (error) {
-      this.logError('Error initializing DOM-dependent data', error);
+      this.logError('❌ Error initializing DOM-dependent data', error);
+      throw error; // Re-throw to ensure the error is visible
     }
   }
 

@@ -182,14 +182,18 @@ export class AppInitialization {
       this.logInfo('🎨 Initializing DOM-dependent features...');
       
       if (this.dataPreloader) {
+        this.logInfo('📁 Data preloader found, calling initializeDOMDependentData...');
         await this.dataPreloader.initializeDOMDependentData();
+        this.logInfo('📁 Data preloader initialization completed');
+      } else {
+        this.logWarn('⚠️ Data preloader not found!');
       }
       
       this.addInitializationStep('DOM Features', true);
-      this.logInfo('DOM-dependent features initialized');
+      this.logInfo('✅ DOM-dependent features initialized');
       return true;
     } catch (error) {
-      this.logError('Failed to initialize DOM-dependent features:', error);
+      this.logError('❌ Failed to initialize DOM-dependent features:', error);
       this.addInitializationStep('DOM Features', false, error.message);
       return false;
     }

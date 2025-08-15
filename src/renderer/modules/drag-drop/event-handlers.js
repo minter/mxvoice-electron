@@ -106,6 +106,59 @@ function setupColumnDragAndDrop() {
     zone.addEventListener('dragleave', handleDropZoneDragLeave);
     zone.addEventListener('drop', handleDropZoneDrop);
   });
+
+  // After setting up drag and drop, refresh column order if it exists
+  // This ensures drop zones are positioned correctly after any saved column order is applied
+  refreshColumnOrderIfExists();
+}
+
+/**
+ * Refresh column order from storage if it exists
+ * This is called after the drag and drop system is initialized
+ */
+async function refreshColumnOrderIfExists() {
+  try {
+    if (typeof secureStore !== 'undefined' && secureStore.has) {
+      const hasColumnOrder = await secureStore.has("column_order");
+      if (hasColumnOrder) {
+        debugLog?.info('Column order exists, refreshing drop zones after drag and drop setup', { 
+          module: 'drag-drop-event-handlers',
+          function: 'refreshColumnOrderIfExists'
+        });
+        
+        // Also apply the saved column order to ensure consistency
+        const columnOrderData = await secureStore.get("column_order");
+        if (columnOrderData && columnOrderData.value && Array.isArray(columnOrderData.value)) {
+          const topRow = document.getElementById('top-row');
+          if (topRow) {
+            const columnOrder = columnOrderData.value;
+            debugLog?.info('Applying saved column order during drag and drop setup', { 
+              module: 'drag-drop-event-handlers',
+              function: 'refreshColumnOrderIfExists',
+              columnOrder: columnOrder
+            });
+            
+            // Apply the column order
+            columnOrder.forEach((val) => {
+              const child = topRow.querySelector(`#${val}`);
+              if (child) {
+                topRow.appendChild(child);
+              }
+            });
+          }
+        }
+        
+        // Recreate drop zones to ensure they're positioned correctly
+        createColumnDropZones();
+      }
+    }
+  } catch (error) {
+    debugLog?.warn('Error refreshing column order', { 
+      module: 'drag-drop-event-handlers',
+      function: 'refreshColumnOrderIfExists',
+      error: error
+    });
+  }
 }
 
 /**
@@ -128,6 +181,56 @@ function createColumnDropZones() {
       topRow.insertBefore(dropZone, column);
     }
   });
+}
+
+// Make the function available globally for use by other modules
+if (typeof window !== 'undefined') {
+  window.refreshColumnDropZones = createColumnDropZones;
+  
+  // Add test function for debugging column order persistence
+  window.testColumnOrderStorage = async function() {
+    try {
+      debugLog?.info('Testing column order storage...', { 
+        module: 'drag-drop-event-handlers',
+        function: 'testColumnOrderStorage'
+      });
+      
+      // Test saving
+      const testOrder = ['holding-tank-column', 'search-column', 'hotkeys-column'];
+      const saveResult = await secureStore.set('column_order', testOrder);
+      debugLog?.info('Save test result:', { 
+        module: 'drag-drop-event-handlers',
+        function: 'testColumnOrderStorage',
+        saveResult: saveResult
+      });
+      
+      // Test loading
+      const hasResult = await secureStore.has('column_order');
+      debugLog?.info('Has check result:', { 
+        module: 'drag-drop-event-handlers',
+        function: 'testColumnOrderStorage',
+        hasResult: hasResult
+      });
+      
+      if (hasResult) {
+        const loadResult = await secureStore.get('column_order');
+        debugLog?.info('Load test result:', { 
+          module: 'drag-drop-event-handlers',
+          function: 'testColumnOrderStorage',
+          loadResult: loadResult
+        });
+      }
+      
+      return { success: true, saveResult, hasResult };
+    } catch (error) {
+      debugLog?.error('Column order storage test failed:', { 
+        module: 'drag-drop-event-handlers',
+        function: 'testColumnOrderStorage',
+        error: error
+      });
+      return { success: false, error: error.message };
+    }
+  };
 }
 
 /**
@@ -350,25 +453,35 @@ function reorderColumns(draggedColumnId, targetId, mode) {
  * Save column order to store
  */
 function saveColumnOrder(columnOrder) {
+  debugLog?.info('Attempting to save column order', { 
+    module: 'drag-drop-event-handlers',
+    function: 'saveColumnOrder',
+    columnOrder: columnOrder
+  });
+  
   secureStore.set("column_order", columnOrder).then(result => {
     if (result.success) {
       debugLog?.info('Column order saved successfully', { 
         module: 'drag-drop-event-handlers',
         function: 'saveColumnOrder',
-        columnOrder: columnOrder
+        columnOrder: columnOrder,
+        result: result
       });
     } else {
       debugLog?.warn('Failed to save column order', { 
         module: 'drag-drop-event-handlers',
         function: 'saveColumnOrder',
-        error: result.error
+        error: result.error,
+        result: result
       });
     }
   }).catch(error => {
-    debugLog?.warn('Column order save error', { 
+    debugLog?.error('Column order save error', { 
       module: 'drag-drop-event-handlers',
       function: 'saveColumnOrder',
-      error: error
+      error: error,
+      errorMessage: error.message,
+      errorStack: error.stack
     });
   });
 } 
