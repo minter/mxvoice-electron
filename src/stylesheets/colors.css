@@ -14,14 +14,49 @@
   --input-text: rgb(36, 36, 36);
 }
 
+/* Light theme (default) */
+.theme-light {
+  --panel-color: rgb(248, 249, 250);
+  --card-color: rgb(255, 255, 255);
+  --header-color: rgb(233, 236, 239);
+  --card-border: rgb(222, 226, 230);
+  --card-text: rgb(33, 37, 41);
+  --inverse-card-text: rgb(255, 255, 255);
+  --holding-tank-item: rgb(255, 255, 255);
+  --highlight-color: rgb(0, 123, 255);
+  --highlight-color-rgb: 0, 123, 255;
+  --context-menu-list: rgb(255, 255, 255);
+  --input-background: white;
+  --input-border: #ced4da;
+  --input-text: rgb(33, 37, 41);
+}
+
+/* Dark theme */
+.theme-dark {
+  --panel-color: rgb(30, 30, 30);
+  --card-color: rgb(40, 44, 52);
+  --header-color: rgb(45, 45, 45);
+  --card-border: #505050;
+  --card-text: rgb(226, 226, 226);
+  --inverse-card-text: black;
+  --holding-tank-item: rgb(50, 50, 50);
+  --highlight-color: rgb(79, 80, 81);
+  --highlight-color-rgb: 79, 80, 81;
+  --context-menu-list: rgb(30, 30, 30);
+  --input-background: rgb(45, 45, 45);
+  --input-border: #505050;
+  --input-text: rgb(226, 226, 226);
+}
+
 /* Light mode playlist styling */
 .holding-tank-playlist-mode {
   background-color: #e8f5e8 !important;
   border-left-color: #28a745 !important;
 }
 
+/* Dark theme specific overrides (for backward compatibility) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  .theme-auto {
     --highlight-color: rgb(79, 80, 81);
     --header-color: rgb(45, 45, 45);
     --panel-color: rgb(30, 30, 30);
@@ -37,103 +72,128 @@
   }
 }
 
-/* Dark mode specific form styling */
-@media (prefers-color-scheme: dark) {
-  input[type="text"],
-  input[type="search"],
-  select,
-  textarea {
-    background-color: var(--input-background) !important;
-    color: var(--input-text) !important;
-    border-color: var(--input-border) !important;
-  }
+/* Dark theme specific form styling */
+.theme-dark input[type="text"],
+.theme-dark input[type="search"],
+.theme-dark select,
+.theme-dark textarea,
+.theme-auto input[type="text"],
+.theme-auto input[type="search"],
+.theme-auto select,
+.theme-auto textarea {
+  background-color: var(--input-background) !important;
+  color: var(--input-text) !important;
+  border-color: var(--input-border) !important;
+}
 
-  /* Ensure placeholders are readable on dark backgrounds */
-  input[type="text"]::placeholder,
-  input[type="search"]::placeholder,
-  textarea::placeholder,
-  .form-control::placeholder {
-    color: rgba(226, 226, 226, 0.6) !important; /* based on --input-text */
-  }
-  /* WebKit prefix for wider Chromium coverage */
-  input[type="text"]::-webkit-input-placeholder,
-  input[type="search"]::-webkit-input-placeholder,
-  textarea::-webkit-input-placeholder,
-  .form-control::-webkit-input-placeholder {
-    color: rgba(226, 226, 226, 0.6) !important;
-  }
+/* Ensure placeholders are readable on dark backgrounds */
+.theme-dark input[type="text"]::placeholder,
+.theme-dark input[type="search"]::placeholder,
+.theme-dark textarea::placeholder,
+.theme-dark .form-control::placeholder,
+.theme-auto input[type="text"]::placeholder,
+.theme-auto input[type="search"]::placeholder,
+.theme-auto textarea::placeholder,
+.theme-auto .form-control::placeholder {
+  color: rgba(226, 226, 226, 0.6) !important; /* based on --input-text */
+}
+/* WebKit prefix for wider Chromium coverage */
+.theme-dark input[type="text"]::-webkit-input-placeholder,
+.theme-dark input[type="search"]::-webkit-input-placeholder,
+.theme-dark textarea::-webkit-input-placeholder,
+.theme-dark .form-control::-webkit-input-placeholder,
+.theme-auto input[type="text"]::-webkit-input-placeholder,
+.theme-auto input[type="search"]::-webkit-input-placeholder,
+.theme-auto textarea::-webkit-input-placeholder,
+.theme-auto .form-control::-webkit-input-placeholder {
+  color: rgba(226, 226, 226, 0.6) !important;
+}
 
-  input[type="text"]:focus,
-  input[type="search"]:focus,
-  select:focus,
-  textarea:focus {
-    background-color: var(--input-background) !important;
-    color: var(--input-text) !important;
-    border-color: #007bff !important;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
-  }
+.theme-dark input[type="text"]:focus,
+.theme-dark input[type="search"]:focus,
+.theme-dark select:focus,
+.theme-dark textarea:focus,
+.theme-auto input[type="text"]:focus,
+.theme-auto input[type="search"]:focus,
+.theme-auto select:focus,
+.theme-auto textarea:focus {
+  background-color: var(--input-background) !important;
+  color: var(--input-text) !important;
+  border-color: #007bff !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
 
-  .form-control {
-    background-color: var(--input-background) !important;
-    color: var(--input-text) !important;
-    border-color: var(--input-border) !important;
-  }
+.theme-dark .form-control,
+.theme-auto .form-control {
+  background-color: var(--input-background) !important;
+  color: var(--input-text) !important;
+  border-color: var(--input-border) !important;
+}
 
-  .form-control:focus {
-    background-color: var(--input-background) !important;
-    color: var(--input-text) !important;
-    border-color: #007bff !important;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
-  }
+.theme-dark .form-control:focus,
+.theme-auto .form-control:focus {
+  background-color: var(--input-background) !important;
+  color: var(--input-text) !important;
+  border-color: #007bff !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
 
-  /* Table styling for dark mode */
-  table {
-    background-color: var(--panel-color) !important;
-    color: var(--card-text) !important;
-  }
+/* Dark theme specific table styling */
+.theme-dark table,
+.theme-auto table {
+  background-color: var(--panel-color) !important;
+  color: var(--card-text) !important;
+}
 
-  table td {
-    background-color: var(--panel-color) !important;
-    color: var(--card-text) !important;
-    border-color: var(--card-border) !important;
-  }
+.theme-dark table td,
+.theme-auto table td {
+  background-color: var(--panel-color) !important;
+  color: var(--card-text) !important;
+  border-color: var(--card-border) !important;
+}
 
-  table th {
-    background-color: var(--header-color) !important;
-    color: var(--card-text) !important;
-    border-color: var(--card-border) !important;
-  }
+.theme-dark table th,
+.theme-auto table th {
+  background-color: var(--header-color) !important;
+  color: var(--card-text) !important;
+  border-color: var(--card-border) !important;
+}
 
-  /* Header button styling for dark mode */
-  .header-button {
-    background: var(--header-color) !important;
-    color: var(--card-text) !important;
-    border-color: var(--card-border) !important;
-  }
+/* Dark theme header button styling */
+.theme-dark .header-button,
+.theme-auto .header-button {
+  background: var(--header-color) !important;
+  color: var(--card-text) !important;
+  border-color: var(--card-border) !important;
+}
 
-  /* Playlist mode styling for dark mode */
-  .holding-tank-playlist-mode {
-    background-color: #1a3d1a !important;
-    border-left-color: #28a745 !important;
-  }
+/* Dark theme playlist mode styling */
+.theme-dark .holding-tank-playlist-mode,
+.theme-auto .holding-tank-playlist-mode {
+  background-color: #1a3d1a !important;
+  border-left-color: #28a745 !important;
+}
 
-  /* Scrollbar styling for dark mode */
-  ::-webkit-scrollbar {
-    width: 12px;
-  }
+/* Dark theme scrollbar styling */
+.theme-dark ::-webkit-scrollbar,
+.theme-auto ::-webkit-scrollbar {
+  width: 12px;
+}
 
-  ::-webkit-scrollbar-track {
-    background: var(--panel-color);
-  }
+.theme-dark ::-webkit-scrollbar-track,
+.theme-auto ::-webkit-scrollbar-track {
+  background: var(--panel-color);
+}
 
-  ::-webkit-scrollbar-thumb {
-    background: var(--card-border);
-    border-radius: 6px;
-  }
+.theme-dark ::-webkit-scrollbar-thumb,
+.theme-auto ::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 6px;
+}
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--highlight-color);
-  }
+.theme-dark ::-webkit-scrollbar-thumb:hover,
+.theme-auto ::-webkit-scrollbar-thumb:hover {
+  background: var(--highlight-color);
 }
 
 th {

@@ -15,6 +15,7 @@ export const moduleConfig = [
   { name: 'dragDrop', path: '../drag-drop/index.js', required: false },
   { name: 'navigation', path: '../navigation/index.js', required: false },
   { name: 'modeManagement', path: '../mode-management/index.js', required: false },
+  { name: 'themeManagement', path: '../theme-management/index.js', required: false },
   { name: 'testUtils', path: '../test-utils/index.js', required: false },
   { name: 'search', path: '../search/index.js', required: false },
   { name: 'audio', path: '../audio/index.js', required: false },

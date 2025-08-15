@@ -70,6 +70,16 @@ function initializeSettingsController(options = {}) {
             function: "savePreferences",
             data: { successCount, totalPreferences: 7 }
           });
+          
+          // Refresh theme if screen mode preference changed
+          if (window.themeManagement && window.themeManagement.refreshTheme) {
+            try {
+              await window.themeManagement.refreshTheme();
+              debugLog?.info('Theme refreshed after preference change');
+            } catch (themeError) {
+              debugLog?.warn('Failed to refresh theme after preference change', { error: themeError });
+            }
+          }
         } else {
           debugLog?.warn('Some preferences failed to save', { 
             function: "savePreferences",

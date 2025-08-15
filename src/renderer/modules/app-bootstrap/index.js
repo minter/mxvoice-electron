@@ -99,11 +99,32 @@ export async function loadBasicModules(config, moduleRegistry, logInfo, logError
   }
 }
 
+/**
+ * Initialize theme management with preferences module dependency
+ * This ensures theme management can access user preferences
+ */
+export async function initializeThemeManagement(moduleRegistry, logInfo, logError) {
+  try {
+    if (moduleRegistry.themeManagement && moduleRegistry.preferences) {
+      logInfo('Initializing theme management with preferences module');
+      await moduleRegistry.themeManagement.initThemeManagement({
+        preferencesModule: moduleRegistry.preferences
+      });
+      logInfo('Theme management initialized successfully');
+    } else {
+      logError('Theme management or preferences module not available');
+    }
+  } catch (error) {
+    logError('Failed to initialize theme management', error);
+  }
+}
+
 // Export the configuration for use by other modules
 export { moduleConfig };
 
 // Default export
 export default {
   loadBasicModules,
-  moduleConfig
+  moduleConfig,
+  initializeThemeManagement
 };

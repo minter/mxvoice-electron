@@ -108,6 +108,14 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     );
     window.logInfo('Basic module loading completed');
     
+    // Initialize theme management with preferences module dependency
+    window.logInfo('Initializing theme management...');
+    await AppBootstrap.initializeThemeManagement(
+      moduleRegistry,
+      window.logInfo,
+      window.logError
+    );
+    
     // Module loading is now handled by the bootstrap module above
     // All modules are loaded and available in moduleRegistry
 
@@ -137,6 +145,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     window.logDebug('Drag Drop', !!moduleRegistry.dragDrop);
     window.logDebug('Navigation', !!moduleRegistry.navigation);
     window.logDebug('Mode Management', !!moduleRegistry.modeManagement);
+    window.logDebug('Theme Management', !!moduleRegistry.themeManagement);
     window.logDebug('Test Utils', !!moduleRegistry.testUtils);
     window.logDebug('Search', !!moduleRegistry.search);
     window.logDebug('Audio', !!moduleRegistry.audio);

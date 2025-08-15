@@ -305,6 +305,19 @@ class FunctionRegistry {
       getAutoPlayState: 'getAutoPlayState'
     });
 
+    // Theme Management Functions
+    this.registerModule('themeManagement', {
+      initThemeManagement: 'initThemeManagement',
+      setUserTheme: 'setUserTheme',
+      getCurrentTheme: 'getCurrentTheme',
+      getUserThemePreference: 'getUserThemePreference',
+      getSystemTheme: 'getSystemTheme',
+      isDarkTheme: 'isDarkTheme',
+      isLightTheme: 'isLightTheme',
+      isAutoTheme: 'isAutoTheme',
+      refreshTheme: 'refreshTheme'
+    });
+
     // Navigation Functions
     this.registerModule('navigation', {
       sendToHoldingTank: 'sendToHoldingTank',
