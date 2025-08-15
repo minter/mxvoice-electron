@@ -1,0 +1,77 @@
+---
+# Architecture Patterns
+
+## Module Lifecycle and Bootstrap
+
+### Bootstrap Sequence
+1. **Module Loading**: Modules are loaded in order specified in `module-config.js`
+2. **Automatic init()**: Bootstrap system automatically calls `init()` on modules that have it
+3. **Dependency Injection**: Dependencies are injected later via explicit initialization functions
+4. **Module Registry**: All modules are stored in `window.moduleRegistry.{moduleName}`
+
+### Key Pattern: Two-Phase Initialization
+- **Phase 1 (Bootstrap)**: `module.init()` called automatically → minimal setup only
+- **Phase 2 (Dependency Injection)**: Explicit initialization with full dependencies
+- **Never assume dependencies are available during Phase 1**
+
+## Module Access Patterns
+
+### Correct Module Access
+- **❌ Wrong**: `window.themeManagement.function()`
+- **✅ Correct**: `window.moduleRegistry.themeManagement.function()`
+- **✅ Also Correct**: `window.functionName()` (if registered in function registry)
+
+### Function Registry vs Module Registry
+- **Function Registry**: Makes individual functions globally available (`window.functionName`)
+- **Module Registry**: Stores complete module instances (`window.moduleRegistry.moduleName`)
+- **Use Function Registry for global access, Module Registry for module operations**
+
+## Dependency Management
+
+### When Dependencies Are Available
+- **During bootstrap**: Only basic dependencies (debugLog, electronAPI)
+- **After bootstrap**: Full module dependencies available
+- **Always check**: `if (moduleRegistry.dependencyModule)` before using
+
+### Dependency Injection Pattern
+```javascript
+// Phase 1: Bootstrap (minimal)
+async init() {
+  // Only basic setup, no external dependencies
+  this.setupBasicFunctionality();
+}
+
+// Phase 2: Full initialization with dependencies
+async initWithDependencies(options) {
+  this.dependencyModule = options.dependencyModule;
+  // Now safe to use dependencies
+  await this.loadUserPreferences();
+}
+```
+
+## Common Architectural Mistakes to Avoid
+
+1. **Accessing modules directly on window** instead of through moduleRegistry
+2. **Assuming dependencies are available during bootstrap init()**
+3. **Not understanding the two-phase initialization pattern**
+4. **Mixing function registry and module registry access patterns**
+5. **Forgetting that bootstrap calls init() automatically**
+
+## Questions to Ask Before Writing Code
+
+1. **Is this during bootstrap or after dependency injection?**
+2. **What module access pattern should I use?**
+3. **Are the dependencies I need available at this point?**
+4. **Should I use the function registry or module registry?**
+5. **Am I following the two-phase initialization pattern?**
+
+## Testing Architecture Compliance
+
+- **Syntax check**: `node --check path/to/file.js`
+- **Verify module access**: Check if using correct registry pattern
+- **Verify initialization**: Ensure dependencies are available when used
+- **Verify bootstrap sequence**: Understand when init() vs explicit initialization happens
+description:
+globs:
+alwaysApply: false
+---
