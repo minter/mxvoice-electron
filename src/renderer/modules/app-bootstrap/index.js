@@ -105,17 +105,32 @@ export async function loadBasicModules(config, moduleRegistry, logInfo, logError
  */
 export async function initializeThemeManagement(moduleRegistry, logInfo, logError) {
   try {
-    if (moduleRegistry.themeManagement && moduleRegistry.preferences) {
-      logInfo('Initializing theme management with preferences module');
-      await moduleRegistry.themeManagement.initThemeManagement({
-        preferencesModule: moduleRegistry.preferences
-      });
-      logInfo('Theme management initialized successfully');
-    } else {
-      logError('Theme management or preferences module not available');
+    logInfo('Checking theme management initialization prerequisites...', {
+      hasThemeManagement: !!moduleRegistry.themeManagement,
+      hasPreferences: !!moduleRegistry.preferences,
+      themeManagementType: typeof moduleRegistry.themeManagement,
+      preferencesType: typeof moduleRegistry.preferences
+    });
+
+    if (!moduleRegistry.themeManagement) {
+      logError('Theme management module not available in registry');
+      return false;
     }
+
+    if (!moduleRegistry.preferences) {
+      logError('Preferences module not available in registry');
+      return false;
+    }
+
+    logInfo('Initializing theme management with preferences module');
+    await moduleRegistry.themeManagement.initThemeManagement({
+      preferencesModule: moduleRegistry.preferences
+    });
+    logInfo('Theme management initialized successfully');
+    return true;
   } catch (error) {
     logError('Failed to initialize theme management', error);
+    return false;
   }
 }
 

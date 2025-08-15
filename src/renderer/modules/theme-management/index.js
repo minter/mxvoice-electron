@@ -356,9 +356,35 @@ class ThemeManagementModule {
   }
 
   /**
-   * Initialize the module (alias for initThemeManagement)
+   * Initialize the module (minimal initialization for bootstrap)
+   * This is called automatically by the bootstrap system before dependencies are injected
    */
   async init(options = {}) {
+    debugLog?.info('Theme management module init() called by bootstrap system', {
+      module: 'theme-management',
+      function: 'init',
+      hasPreferencesModule: !!options.preferencesModule
+    });
+
+    // Only do minimal initialization if no preferences module is provided
+    // Full initialization will happen later via initThemeManagement() with dependencies
+    if (!options.preferencesModule) {
+      debugLog?.info('No preferences module provided, doing minimal initialization', {
+        module: 'theme-management',
+        function: 'init'
+      });
+      
+      // Just set up system theme detection without loading user preferences
+      this.setupSystemThemeDetection();
+      
+      // Set default theme based on system preference only
+      this.currentTheme = 'auto';
+      this.updateEffectiveTheme();
+      
+      return { success: true, theme: this.effectiveTheme, initialized: 'minimal' };
+    }
+
+    // If preferences module is provided, do full initialization
     return this.initThemeManagement(options);
   }
 
@@ -378,6 +404,7 @@ class ThemeManagementModule {
       isLightTheme: this.isLightTheme.bind(this),
       isAutoTheme: this.isAutoTheme.bind(this),
       refreshTheme: this.refreshTheme.bind(this),
+      testThemeSwitch: this.testThemeSwitch.bind(this),
     };
   }
 
@@ -400,6 +427,7 @@ class ThemeManagementModule {
       'isLightTheme',
       'isAutoTheme',
       'refreshTheme',
+      'testThemeSwitch',
     ];
 
     for (const funcName of functions) {
