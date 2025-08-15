@@ -71,14 +71,39 @@ function initializeSettingsController(options = {}) {
             data: { successCount, totalPreferences: 7 }
           });
           
-          // Refresh theme if screen mode preference changed
-          if (window.themeManagement && window.themeManagement.refreshTheme) {
+          // Apply new theme immediately if screen mode preference changed
+          debugLog?.info('Checking theme management availability', { 
+            hasThemeManagement: !!window.moduleRegistry?.themeManagement,
+            hasSetUserTheme: !!(window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme),
+            hasGlobalThemeManagement: !!window.setUserTheme,
+            newScreenMode: preferences.screen_mode
+          });
+          
+          // Try module registry first, then fallback to global function
+          if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
             try {
-              await window.themeManagement.refreshTheme();
-              debugLog?.info('Theme refreshed after preference change');
+              const newScreenMode = preferences.screen_mode;
+              debugLog?.info('Calling themeManagement.setUserTheme via moduleRegistry', { newTheme: newScreenMode });
+              await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
+              debugLog?.info('Theme applied immediately after preference change', { newTheme: newScreenMode });
             } catch (themeError) {
-              debugLog?.warn('Failed to refresh theme after preference change', { error: themeError });
+              debugLog?.warn('Failed to apply theme after preference change', { error: themeError });
             }
+          } else if (window.setUserTheme) {
+            try {
+              const newScreenMode = preferences.screen_mode;
+              debugLog?.info('Calling setUserTheme via global function', { newTheme: newScreenMode });
+              await window.setUserTheme(newScreenMode);
+              debugLog?.info('Theme applied immediately after preference change via global function', { newTheme: newScreenMode });
+            } catch (themeError) {
+              debugLog?.warn('Failed to apply theme after preference change via global function', { error: themeError });
+            }
+          } else {
+            debugLog?.warn('Theme management not available for immediate theme switching', {
+              hasThemeManagement: !!window.moduleRegistry?.themeManagement,
+              hasSetUserTheme: !!(window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme),
+              hasGlobalThemeManagement: !!window.setUserTheme
+            });
           }
         } else {
           debugLog?.warn('Some preferences failed to save', { 
@@ -128,6 +153,17 @@ function initializeSettingsController(options = {}) {
           function: "savePreferencesLegacy",
           data: { preferences }
         });
+        
+        // Apply new theme immediately if screen mode preference changed
+        if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
+          try {
+            const newScreenMode = preferences.screen_mode;
+            await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
+            debugLog?.info('Theme applied immediately after legacy preference save', { newTheme: newScreenMode });
+          } catch (themeError) {
+            debugLog?.warn('Failed to apply theme after legacy preference save', { error: themeError });
+          }
+        }
       } else {
         // Legacy store not available, use electronAPI.store
         try {
@@ -156,6 +192,17 @@ function initializeSettingsController(options = {}) {
               function: "savePreferencesLegacy",
               data: { successCount, totalPreferences: 7 }
             });
+            
+            // Apply new theme immediately if screen mode preference changed
+            if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
+              try {
+                const newScreenMode = preferences.screen_mode;
+                await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
+                debugLog?.info('Theme applied immediately after electronAPI.store save', { newTheme: newScreenMode });
+              } catch (themeError) {
+                debugLog?.warn('Failed to apply theme after electronAPI.store save', { error: themeError });
+              }
+            }
           } else {
             debugLog?.warn('Some preferences failed to save', { 
               function: "savePreferencesLegacy",

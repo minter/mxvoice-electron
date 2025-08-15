@@ -315,7 +315,8 @@ class FunctionRegistry {
       isDarkTheme: 'isDarkTheme',
       isLightTheme: 'isLightTheme',
       isAutoTheme: 'isAutoTheme',
-      refreshTheme: 'refreshTheme'
+      refreshTheme: 'refreshTheme',
+      testThemeSwitch: 'testThemeSwitch'
     });
 
     // Navigation Functions

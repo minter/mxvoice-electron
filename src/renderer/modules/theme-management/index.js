@@ -211,6 +211,10 @@ class ThemeManagementModule {
       });
       document.dispatchEvent(themeChangeEvent);
       
+      // Add console log for immediate feedback during development
+      console.log(`🎨 Theme applied: ${this.effectiveTheme} (User preference: ${this.currentTheme}, System: ${this.systemTheme})`);
+      console.log(`📱 Body classes: ${body.className}`);
+      
       debugLog?.info('Theme applied to DOM', {
         module: 'theme-management',
         function: 'applyThemeToDOM',
@@ -427,6 +431,24 @@ class ThemeManagementModule {
       },
     };
   }
+
+  /**
+   * Test theme switching (for debugging)
+   * @param {string} theme - Theme to test ('light', 'dark', or 'auto')
+   */
+  async testThemeSwitch(theme) {
+    debugLog?.info('Testing theme switch', { theme });
+    console.log(`🧪 Testing theme switch to: ${theme}`);
+    
+    try {
+      const result = await this.setUserTheme(theme);
+      console.log(`✅ Theme switch result:`, result);
+      return result;
+    } catch (error) {
+      console.error(`❌ Theme switch failed:`, error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 // Create and export a singleton instance
@@ -451,6 +473,8 @@ export const isAutoTheme =
   themeManagementModule.isAutoTheme.bind(themeManagementModule);
 export const refreshTheme =
   themeManagementModule.refreshTheme.bind(themeManagementModule);
+export const testThemeSwitch =
+  themeManagementModule.testThemeSwitch.bind(themeManagementModule);
 
 // Default export for module loading
 export default themeManagementModule;
