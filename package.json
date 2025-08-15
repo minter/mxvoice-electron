@@ -88,10 +88,7 @@
     "win": {
       "icon": "src/assets/icons/mxvoice.ico",
       "artifactName": "Mx.-Voice-Setup-${version}.${ext}",
-      "publisherName": ["Fourth Line LLC", "Haynie Minter"],
-      "signtoolOptions": {
-        "sign": "build/sslSign.js"
-      }
+      "publisherName": ["Haynie Minter"]
     },
     "linux": {
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
