@@ -147,7 +147,7 @@ class FunctionMonitor {
       search: ['searchData', 'performLiveSearch', 'toggleAdvancedSearch', 'triggerLiveSearch', 'clearSearchResults'],
       database: ['setLabelFromSongId', 'addToHoldingTank', 'populateHoldingTank', 'populateCategorySelect'],
       utils: ['animateCSS', 'customConfirm', 'customPrompt', 'restoreFocusToSearch', 'isValidSongId', 'isValidCategoryCode', 'isValidFilePath', 'isValidHotkey'],
-      preferences: ['openPreferencesModal', 'loadPreferences', 'savePreferences', 'getPreference', 'setPreference', 'getDatabaseDirectory', 'getMusicDirectory', 'getHotkeyDirectory', 'getFadeOutSeconds'],
+              preferences: ['openPreferencesModal', 'loadPreferences', 'savePreferences', 'getPreference', 'setPreference', 'getDatabaseDirectory', 'getMusicDirectory', 'getHotkeyDirectory', 'getFadeOutSeconds', 'getPrereleaseUpdates', 'getScreenMode'],
       modeManagement: ['setHoldingTankMode', 'getHoldingTankMode', 'toggleAutoPlay', 'getAutoPlayState'],
       navigation: ['sendToHotkeys', 'sendToHoldingTank', 'selectNext', 'selectPrev'],
       bulkOperations: ['showBulkAddModal', 'addSongsByPath', 'saveBulkUpload'],

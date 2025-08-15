@@ -208,22 +208,12 @@ export default class UIInteractionEvents {
     // Preferences modal shown event
     const preferencesModalShownHandler = (event) => {
       try {
-        // Load preferences using new store API
-        Promise.all([
-          this.electronAPI.store.get("database_directory"),
-          this.electronAPI.store.get("music_directory"),
-          this.electronAPI.store.get("hotkey_directory"),
-          this.electronAPI.store.get("fade_out_seconds"),
-          this.electronAPI.store.get("debug_log_enabled")
-        ]).then(([dbDir, musicDir, hotkeyDir, fadeSeconds, debugLog]) => {
-          if (dbDir.success) { const el = document.getElementById('preferences-database-directory'); if (el) el.value = dbDir.value || ''; }
-          if (musicDir.success) { const el = document.getElementById('preferences-song-directory'); if (el) el.value = musicDir.value || ''; }
-          if (hotkeyDir.success) { const el = document.getElementById('preferences-hotkey-directory'); if (el) el.value = hotkeyDir.value || ''; }
-          if (fadeSeconds.success) { const el = document.getElementById('preferences-fadeout-seconds'); if (el) el.value = fadeSeconds.value || ''; }
-          if (debugLog.success) { const el = document.getElementById('preferences-debug-log-enabled'); if (el) el.checked = !!debugLog.value; }
-        }).catch(error => {
-          this.debugLog?.warn('Failed to load preferences', error);
-        });
+        // Use the new preference system instead of duplicating logic
+        if (window.loadPreferences) {
+          window.loadPreferences();
+        } else {
+          this.debugLog?.warn('loadPreferences function not available, preferences may not load correctly');
+        }
       } catch (error) {
         this.debugLog?.error('Error in preferences modal shown handler:', error);
       }

@@ -37,13 +37,14 @@ function initializePreferenceManager(options = {}) {
     // Use new store API for loading preferences
     if (electronAPI && electronAPI.store) {
       try {
-        const [dbDir, musicDir, hotkeyDir, fadeSeconds, debugLogPref, prereleasePref] = await Promise.all([
+        const [dbDir, musicDir, hotkeyDir, fadeSeconds, debugLogPref, prereleasePref, screenModePref] = await Promise.all([
           electronAPI.store.get("database_directory"),
           electronAPI.store.get("music_directory"),
           electronAPI.store.get("hotkey_directory"),
           electronAPI.store.get("fade_out_seconds"),
           electronAPI.store.get("debug_log_enabled"),
-          electronAPI.store.get("prerelease_updates")
+          electronAPI.store.get("prerelease_updates"),
+          electronAPI.store.get("screen_mode")
         ]);
         
         if (dbDir.success) { const el = document.getElementById('preferences-database-directory'); if (el) el.value = dbDir.value || ''; }
@@ -52,6 +53,7 @@ function initializePreferenceManager(options = {}) {
         if (fadeSeconds.success) { const el = document.getElementById('preferences-fadeout-seconds'); if (el) el.value = fadeSeconds.value || ''; }
         if (debugLogPref.success) { const el = document.getElementById('preferences-debug-log-enabled'); if (el) el.checked = !!debugLogPref.value; }
         if (prereleasePref.success) { const el = document.getElementById('preferences-prerelease-updates'); if (el) el.checked = !!prereleasePref.value; }
+        if (screenModePref.success) { const el = document.getElementById('preferences-screen-mode'); if (el) el.value = screenModePref.value || 'auto'; }
       } catch (error) {
         await debugLog.error('Failed to load preferences', { 
           function: "loadPreferences",
@@ -186,7 +188,7 @@ function initializePreferenceManager(options = {}) {
         if (result.success) {
           return result.value || false;
         } else {
-          await debugLog.warn('Failed to get debug log enabled', { 
+          await debugLog.error('Failed to get debug log enabled', { 
             function: "getDebugLogEnabled",
             error: result.error
           });
@@ -202,6 +204,60 @@ function initializePreferenceManager(options = {}) {
     }
   }
   
+  /**
+   * Get prerelease updates preference
+   * @returns {Promise<boolean>} Prerelease updates enabled status
+   */
+  async function getPrereleaseUpdates() {
+    if (electronAPI && electronAPI.store) {
+      try {
+        const result = await electronAPI.store.get("prerelease_updates");
+        if (result.success) {
+          return result.value || false;
+        } else {
+          await debugLog.warn('Failed to get prerelease updates', { 
+            function: "getPrereleaseUpdates",
+            error: result.error
+          });
+          return false;
+        }
+      } catch (error) {
+        await debugLog.error('Prerelease updates get error', { 
+          function: "getPrereleaseUpdates",
+          error: error
+        });
+        return false;
+      }
+    }
+  }
+  
+  /**
+   * Get screen mode preference
+   * @returns {Promise<string>} Screen mode preference ('auto', 'light', or 'dark')
+   */
+  async function getScreenMode() {
+    if (electronAPI && electronAPI.store) {
+      try {
+        const result = await electronAPI.store.get("screen_mode");
+        if (result.success) {
+          return result.value || 'auto';
+        } else {
+          await debugLog.warn('Failed to get screen mode', { 
+            function: "getScreenMode",
+            error: result.error
+          });
+          return 'auto';
+        }
+      } catch (error) {
+        await debugLog.error('Screen mode get error', { 
+          function: "getScreenMode",
+          error: error
+        });
+        return 'auto';
+      }
+    }
+  }
+  
   const PreferenceManager = {
     openPreferencesModal,
     loadPreferences,
@@ -209,7 +265,9 @@ function initializePreferenceManager(options = {}) {
     getMusicDirectory,
     getHotkeyDirectory,
     getFadeOutSeconds,
-    getDebugLogEnabled
+    getDebugLogEnabled,
+    getPrereleaseUpdates,
+    getScreenMode
   };
 
   const preferenceManagerInstance = PreferenceManager;

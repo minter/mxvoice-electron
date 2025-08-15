@@ -292,7 +292,9 @@ class FunctionRegistry {
       getDatabaseDirectory: 'getDatabaseDirectory',
       getMusicDirectory: 'getMusicDirectory',
       getHotkeyDirectory: 'getHotkeyDirectory',
-      getFadeOutSeconds: 'getFadeOutSeconds'
+      getFadeOutSeconds: 'getFadeOutSeconds',
+      getPrereleaseUpdates: 'getPrereleaseUpdates',
+      getScreenMode: 'getScreenMode'
     });
 
     // Mode Management Functions

@@ -21,6 +21,8 @@ preferences/
 - **getMusicDirectory()** - Get music directory preference
 - **getHotkeyDirectory()** - Get hotkey directory preference
 - **getFadeOutSeconds()** - Get fade out duration preference
+- **getPrereleaseUpdates()** - Get prerelease updates preference
+- **getScreenMode()** - Get screen mode preference
 
 ### Settings Controller (`settings-controller.js`)
 - **savePreferences(event)** - Save preferences from the modal
@@ -79,6 +81,16 @@ Gets the fade out duration preference.
 
 **Returns:** `Promise<number>` - Fade out duration in seconds
 
+#### `getPrereleaseUpdates()`
+Gets the prerelease updates preference.
+
+**Returns:** `Promise<boolean>` - Prerelease updates enabled status
+
+#### `getScreenMode()`
+Gets the screen mode preference.
+
+**Returns:** `Promise<string>` - Screen mode preference ('auto', 'light', or 'dark')
+
 ### Settings Controller Functions
 
 #### `savePreferences(event)`
@@ -112,6 +124,7 @@ The module manages the following preference keys:
 - `music_directory` - Path to the music files directory
 - `hotkey_directory` - Path to the hotkey files directory
 - `fade_out_seconds` - Audio fade out duration in seconds
+- `screen_mode` - Screen display mode ('auto', 'light', or 'dark')
 
 ## Error Handling
 
@@ -134,6 +147,13 @@ The module includes comprehensive error handling:
 **Settings Controller:**
 - `savePreferences(event)` → `savePreferences(event)`
 
+### System Cleanup
+
+**Eliminated Duplicate Preference Loading:**
+- Removed duplicate preference loading logic from `ui-interaction-events.js`
+- Now uses single, consistent preference system through `preference-manager.js`
+- All preferences (current and future) automatically work without manual synchronization
+
 ### New Functions Added
 
 - `getPreference(key)` - Get specific preference
@@ -142,6 +162,8 @@ The module includes comprehensive error handling:
 - `getMusicDirectory()` - Get music directory
 - `getHotkeyDirectory()` - Get hotkey directory
 - `getFadeOutSeconds()` - Get fade out duration
+- `getPrereleaseUpdates()` - Get prerelease updates preference
+- `getScreenMode()` - Get screen mode preference
 
 ## Testing
 
