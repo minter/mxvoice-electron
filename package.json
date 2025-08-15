@@ -23,6 +23,12 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:linux:deb": "electron-builder --linux --target deb",
+    "build:linux:appimage": "electron-builder --linux --target AppImage",
+    "release:linux:draft": "cross-env EP_DRAFT=true electron-builder --linux --publish always",
+    "release:linux:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --linux --publish always",
+    "release:linux": "electron-builder --linux --publish always",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
