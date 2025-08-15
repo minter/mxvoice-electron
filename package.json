@@ -151,7 +151,7 @@
   },
   "devDependencies": {
     "cross-env": "^10.0.0",
-    "electron": "^37.2.6",
+    "electron": "^37.3.0",
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
     "node-abi": "4.12.0"
