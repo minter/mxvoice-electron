@@ -39,7 +39,6 @@
       "node_modules/@sqlite.org/sqlite-wasm/dist/*.wasm"
     ],
     "afterPack": "build/afterPack.js",
-    "artifactBuildCompleted": "build/windowsSign.js",
     "mac": {
       "forceCodeSigning": true,
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
@@ -87,7 +86,12 @@
       "format": "UDZO"
     },
     "win": {
-      "icon": "src/assets/icons/mxvoice.ico"
+      "icon": "src/assets/icons/mxvoice.ico",
+      "artifactName": "Mx.-Voice-Setup-${version}.${ext}",
+      "publisherName": ["Fourth Line LLC", "Haynie Minter"],
+      "signtoolOptions": {
+        "sign": "build/sslSign.js"
+      }
     },
     "linux": {
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",

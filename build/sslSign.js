@@ -32,28 +32,20 @@ function generateTOTP(secret, timeStep = 30, digits = 6) {
   return (code % Math.pow(10, digits)).toString().padStart(digits, '0');
 }
 
-async function signWindowsInstaller(context) {
+export default async function signFile(filePath, options) {
+  // electron-builder passes an object with the file path, not just the string
+  // Handle both cases for compatibility
+  const actualFilePath = typeof filePath === 'string' ? filePath : filePath.path || filePath.file;
+  
+  if (!actualFilePath) {
+    console.warn('⚠️ No valid file path provided for signing');
+    return;
+  }
+
   // Only handle Windows artifacts
   if (process.platform !== 'win32') {
     return;
   }
-
-  // artifactBuildCompleted passes a context object; prefer its file path
-  const artifactPathFromContext = context && context.file ? context.file : null;
-
-  // Validate artifact path and ensure it is an NSIS installer (.exe)
-  if (!artifactPathFromContext || path.extname(artifactPathFromContext).toLowerCase() !== '.exe') {
-    return;
-  }
-
-  // For safety, only sign the final NSIS installer (commonly contains "Setup" in name)
-  const lower = path.basename(artifactPathFromContext).toLowerCase();
-  if (!lower.includes('setup')) {
-    return;
-  }
-
-  const installerPath = artifactPathFromContext;
-  console.log(`Signing Windows installer via SSL.com: ${installerPath}`);
 
   // Get environment variables
   const username = process.env.SSL_USERNAME;
@@ -68,6 +60,16 @@ async function signWindowsInstaller(context) {
     console.error(`SSL_PASSWORD: ${password ? 'Set' : 'Missing'}`);
     console.error(`SSL_TOTP_SECRET: ${totpSecret ? 'Set' : 'Missing'}`);
     throw new Error('SSL.com environment variables not configured');
+  }
+
+  // Log pre-signing file info
+  try {
+    const preSignStats = fs.statSync(actualFilePath);
+    const preSignBuffer = fs.readFileSync(actualFilePath);
+    const preSignSha512 = crypto.createHash('sha512').update(preSignBuffer).digest('base64');
+    console.log(`📁 Pre-signing file info: size=${preSignStats.size}, sha512=${preSignSha512.slice(0,8)}...`);
+  } catch (preSignErr) {
+    console.warn('⚠️ Could not read pre-signing file info:', preSignErr?.message || preSignErr);
   }
 
   // Generate TOTP
@@ -92,10 +94,11 @@ async function signWindowsInstaller(context) {
     `-credential_id="${credentialId}"`,
     `-password="${password}"`,
     `-totp_secret="${totpSecret}"`,
-    `-input_file_path="${installerPath}"`,
+    `-input_file_path="${actualFilePath}"`,
     '-override'
   ].join(' ');
 
+  console.log(`Signing file via SSL.com: ${actualFilePath}`);
   console.log('Executing SSL.com CodeSignTool...');
 
   try {
@@ -106,39 +109,21 @@ async function signWindowsInstaller(context) {
       timeout: 120000 // 2 minute timeout
     });
 
-    console.log('✅ Windows installer signed successfully!');
-    console.log(`Signed file: ${installerPath}`);
+    console.log('✅ File signed successfully!');
+    console.log(`Signed file: ${actualFilePath}`);
 
-    // Also attempt to sign NSIS uninstaller if present alongside
-    const distDir = path.dirname(installerPath);
-    const entries = fs.readdirSync(distDir).filter(f => f.startsWith('__uninstaller-nsis') && f.endsWith('.exe'));
-    for (const name of entries) {
-      const uninstallerPath = path.join(distDir, name);
-      console.log(`Signing NSIS uninstaller via SSL.com: ${uninstallerPath}`);
-      // Reuse the same CodeSignTool command for uninstaller
-      const username = process.env.SSL_USERNAME;
-      const credentialId = process.env.SSL_CREDENTIAL_ID;
-      const password = process.env.SSL_PASSWORD;
-      const totpSecret = process.env.SSL_TOTP_SECRET;
-      const codeSignToolDir = 'C\\tools\\CodeSignTool';
-      const jarPath = path.join(codeSignToolDir, 'jar', 'code_sign_tool-1.3.2.jar');
-      const cmd = [
-        'java', '-jar', `"${jarPath}"`, 'sign',
-        `-username="${username}"`,
-        `-credential_id="${credentialId}"`,
-        `-password="${password}"`,
-        `-totp_secret="${totpSecret}"`,
-        `-input_file_path="${uninstallerPath}"`,
-        '-override'
-      ].join(' ');
-      execSync(cmd, { cwd: codeSignToolDir, stdio: 'inherit', timeout: 120000 });
-      console.log('✅ NSIS uninstaller signed successfully!');
+    // Log post-signing file info for comparison
+    try {
+      const postSignStats = fs.statSync(actualFilePath);
+      const postSignBuffer = fs.readFileSync(actualFilePath);
+      const postSignSha512 = crypto.createHash('sha512').update(postSignBuffer).digest('base64');
+      console.log(`📁 Post-signing file info: size=${postSignStats.size}, sha512=${postSignSha512.slice(0,8)}...`);
+    } catch (postSignErr) {
+      console.warn('⚠️ Could not read post-signing file info:', postSignErr?.message || postSignErr);
     }
 
   } catch (error) {
-    console.error('❌ Failed to sign Windows installer:', error.message);
+    console.error('❌ Failed to sign file:', error.message);
     throw error;
   }
 }
-
-export default signWindowsInstaller;
