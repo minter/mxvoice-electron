@@ -36,7 +36,7 @@ export default async function signFile(filePath, options) {
   // electron-builder passes an object with the file path, not just the string
   // Handle both cases for compatibility
   const actualFilePath = typeof filePath === 'string' ? filePath : filePath.path || filePath.file;
-  
+
   if (!actualFilePath) {
     console.warn('⚠️ No valid file path provided for signing');
     return;
@@ -66,10 +66,10 @@ export default async function signFile(filePath, options) {
   try {
     const preSignStats = fs.statSync(actualFilePath);
     const preSignBuffer = fs.readFileSync(actualFilePath);
-    const preSignSha512 = crypto.createHash('sha512').update(preSignBuffer).digest('base64');
+    const preSignSha512 = crypto.createHash('sha512').update(preSignBuffer).digest('base64');     
     console.log(`📁 Pre-signing file info: size=${preSignStats.size}, sha512=${preSignSha512.slice(0,8)}...`);
   } catch (preSignErr) {
-    console.warn('⚠️ Could not read pre-signing file info:', preSignErr?.message || preSignErr);
+    console.warn('⚠️ Could not read pre-signing file info:', preSignErr?.message || preSignErr);  
   }
 
   // Generate TOTP
@@ -116,7 +116,7 @@ export default async function signFile(filePath, options) {
     try {
       const postSignStats = fs.statSync(actualFilePath);
       const postSignBuffer = fs.readFileSync(actualFilePath);
-      const postSignSha512 = crypto.createHash('sha512').update(postSignBuffer).digest('base64');
+      const postSignSha512 = crypto.createHash('sha512').update(postSignBuffer).digest('base64'); 
       console.log(`📁 Post-signing file info: size=${postSignStats.size}, sha512=${postSignSha512.slice(0,8)}...`);
     } catch (postSignErr) {
       console.warn('⚠️ Could not read post-signing file info:', postSignErr?.message || postSignErr);

@@ -190,8 +190,10 @@ $env:SSL_TOTP_SECRET="your_base64_totp_secret"
 
 #### How the Signing Works
 
-- The signing process is fully automated and runs after the installer is built.
-- The script locates the most recent `.exe` installer in the `dist/` directory and signs it in-place using SSL.com's CodeSignTool and your credentials.
+- **Pre-NSIS signing**: The main executable (`Mx. Voice.exe`) and helper (`elevate.exe`) are signed with SSL.com during the `afterPack` phase.
+- **Post-NSIS signing**: The final NSIS installer (`.exe`) and uninstaller are signed with SSL.com before publishing via the `artifactBuildCompleted` hook.
+- **Checksum generation**: All checksums in `latest.yml` are calculated after SSL.com signing, ensuring they match the published artifacts.
+- **Comprehensive coverage**: All Windows executables carry SSL.com signatures for consistent publisher trust.
 
 #### Verifying the Signature
 
