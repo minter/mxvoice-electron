@@ -48,10 +48,33 @@ class DragDropModule {
   }
 
   /**
-   * Initialize the module (alias for initializeDragDrop)
+   * Initialize the module (standardized method)
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
    */
-  init() {
-    this.initializeDragDrop();
+  async init(dependencies = {}) {
+    try {
+      debugLog?.info('Drag & Drop module initializing...', { 
+        module: 'drag-drop', 
+        function: 'init' 
+      });
+
+      // Call the existing initialization logic
+      this.initializeDragDrop();
+      
+      debugLog?.info('Drag & Drop module initialized successfully', { 
+        module: 'drag-drop', 
+        function: 'init' 
+      });
+      return true;
+    } catch (error) {
+      debugLog?.error('Failed to initialize Drag & Drop module:', { 
+        module: 'drag-drop', 
+        function: 'init', 
+        error: error.message 
+      });
+      return false;
+    }
   }
 
   /**

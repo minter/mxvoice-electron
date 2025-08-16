@@ -20,14 +20,32 @@ import * as categoryOperations from './category-operations.js';
 
 /**
  * Populate the category select dropdown
- * Loads categories from database and populates the select element
+ * Fetches categories from database and populates the category select dropdown
+ * Preserves the currently selected category if one is selected
  * 
  * @returns {Promise<void>}
  */
 function populateCategorySelect() {
-  debugLog?.info("Populating categories", { module: 'categories', function: 'populateCategorySelect' });
+  debugLog?.info("Populating categories", { 
+    module: 'categories', 
+    function: 'populateCategorySelect',
+    stack: new Error().stack?.split('\n').slice(1, 4).join(' -> ') // Show call stack
+  });
+  
   const select = document.getElementById('category_select');
+  
+  // Store the currently selected category before clearing
+  let selectedCategory = '*';
   if (select) {
+    selectedCategory = select.value || '*';
+    debugLog?.info("Current category selection before clearing", { 
+      module: 'categories', 
+      function: 'populateCategorySelect',
+      selectedCategory: selectedCategory,
+      selectValue: select.value,
+      selectSelectedIndex: select.selectedIndex
+    });
+    
     select.innerHTML = '';
     const optAll = document.createElement('option');
     optAll.value = '*';
@@ -49,7 +67,25 @@ function populateCategorySelect() {
           select.appendChild(opt);
         }
       });
-      debugLog?.info('✅ Category select populated successfully', { module: 'categories', function: 'populateCategorySelect' });
+      
+      // Restore the previously selected category if it still exists
+      if (select && selectedCategory !== '*') {
+        select.value = selectedCategory;
+        debugLog?.info("Restored category selection", { 
+          module: 'categories', 
+          function: 'populateCategorySelect',
+          restoredCategory: selectedCategory,
+          finalSelectValue: select.value
+        });
+      }
+      
+      debugLog?.info('✅ Category select populated successfully', { 
+        module: 'categories', 
+        function: 'populateCategorySelect',
+        preservedSelection: selectedCategory,
+        finalValue: select?.value,
+        finalSelectedIndex: select?.selectedIndex
+      });
     } else {
       debugLog?.warn('❌ Failed to populate category select:', { module: 'categories', function: 'populateCategorySelect', error: result.error });
       throw new Error(result.error);

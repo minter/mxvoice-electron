@@ -72,7 +72,7 @@ export async function loadBasicModules(config, moduleRegistry, logInfo, logError
         if (moduleInstance && typeof moduleInstance.init === 'function') {
           logInfo(`Calling init() method for ${moduleConf.name} module`);
           try {
-            await moduleInstance.init();
+            await moduleInstance.init(defaultDependencies);
             logInfo(`${moduleConf.name} module initialized successfully`);
           } catch (initError) {
             logError(`Error initializing ${moduleConf.name} module`, initError);

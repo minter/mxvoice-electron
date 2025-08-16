@@ -58,9 +58,10 @@ class CategoriesModule {
 
   /**
    * Initialize the categories module
-   * This method can be called to set up any initialization logic
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
    */
-  async init() {
+  async init(dependencies = {}) {
     debugLog?.info('Categories module initializing...', { module: 'categories', function: 'init' });
     
     try {
@@ -68,9 +69,10 @@ class CategoriesModule {
       await this.loadCategories();
       this.isInitialized = true;
       debugLog?.info('Categories module initialized successfully', { module: 'categories', function: 'init' });
+      return true;
     } catch (error) {
       debugLog?.error('Failed to initialize categories module:', { module: 'categories', function: 'init', error: error });
-      throw error;
+      return false;
     }
   }
 

@@ -40,12 +40,17 @@ export class FunctionCoordination {
 
   /**
    * Initialize all function coordination components
-   * @param {Object} debugLogger - Debug logger instance
-   * @param {Object} moduleRegistry - Registry of loaded modules
+   * @param {Object} dependencies - Module dependencies including debugLogger and moduleRegistry
    * @returns {Promise<boolean>} - Success status
    */
-  async initialize(debugLogger, moduleRegistry) {
+  async init(dependencies = {}) {
     try {
+      const { debugLogger, moduleRegistry } = dependencies;
+      
+      if (!debugLogger || !moduleRegistry) {
+        throw new Error('Missing required dependencies: debugLogger and moduleRegistry');
+      }
+
       this.logInfo('Starting function coordination initialization...');
 
       // Step 1: Initialize function registry

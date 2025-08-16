@@ -35,7 +35,6 @@ class DatabaseModule {
     this.fontSize = 11;
     
     // Bind all functions from sub-modules as methods
-    this.populateCategorySelect = dataPopulation.populateCategorySelect;
     this.setLabelFromSongId = dataPopulation.setLabelFromSongId;
     this.addToHoldingTank = dataPopulation.addToHoldingTank;
     this.populateHotkeys = dataPopulation.populateHotkeys;
@@ -61,14 +60,32 @@ class DatabaseModule {
 
   /**
    * Initialize the database module
-   * This method can be called to set up any initialization logic
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
    */
-  init() {
-    debugLog?.info('Database module initialized', { 
-      module: 'database-index',
-      function: 'init'
-    });
-    this.setupEventListeners();
+  async init(dependencies = {}) {
+    try {
+      debugLog?.info('Database module initializing...', { 
+        module: 'database-index', 
+        function: 'init' 
+      });
+
+      // Set up event listeners
+      this.setupEventListeners();
+      
+      debugLog?.info('Database module initialized successfully', { 
+        module: 'database-index', 
+        function: 'init' 
+      });
+      return true;
+    } catch (error) {
+      debugLog?.error('Failed to initialize Database module:', { 
+        module: 'database-index', 
+        function: 'init', 
+        error: error.message 
+      });
+      return false;
+    }
   }
 
   /**
@@ -87,7 +104,6 @@ class DatabaseModule {
   getAllDatabaseFunctions() {
     return {
       // Data population functions
-      populateCategorySelect: this.populateCategorySelect,
       setLabelFromSongId: this.setLabelFromSongId,
       addToHoldingTank: this.addToHoldingTank,
       populateHotkeys: this.populateHotkeys,
@@ -130,12 +146,6 @@ class DatabaseModule {
 
     // Test data population functions
     try {
-      if (typeof this.populateCategorySelect === 'function') {
-        results.dataPopulation.populateCategorySelect = '✅ Function exists';
-      } else {
-        results.dataPopulation.populateCategorySelect = '❌ Function missing';
-      }
-
       if (typeof this.setLabelFromSongId === 'function') {
         results.dataPopulation.setLabelFromSongId = '✅ Function exists';
       } else {
@@ -284,7 +294,6 @@ class DatabaseModule {
 const databaseModule = new DatabaseModule();
 
 // Export individual functions for backward compatibility
-export const populateCategorySelect = databaseModule.populateCategorySelect;
 export const setLabelFromSongId = databaseModule.setLabelFromSongId;
 export const addToHoldingTank = databaseModule.addToHoldingTank;
 export const populateHotkeys = databaseModule.populateHotkeys;

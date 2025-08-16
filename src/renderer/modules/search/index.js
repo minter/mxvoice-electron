@@ -42,20 +42,37 @@ class SearchModule {
 
   /**
    * Initialize the search module
-   * This method can be called to set up any initialization logic
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
    */
-  init() {
-    debugLog?.info('Search module initialized', { 
-      module: 'search',
-      function: 'init'
-    });
-    
-    // Initialize advanced search state
-    if (typeof advancedSearch.initializeAdvancedSearch === 'function') {
-      advancedSearch.initializeAdvancedSearch();
+  async init(dependencies = {}) {
+    try {
+      debugLog?.info('Search module initializing...', { 
+        module: 'search', 
+        function: 'init' 
+      });
+      
+      // Initialize advanced search state
+      if (typeof advancedSearch.initializeAdvancedSearch === 'function') {
+        advancedSearch.initializeAdvancedSearch();
+      }
+      
+      // Set up event listeners
+      this.setupEventListeners();
+      
+      debugLog?.info('Search module initialized successfully', { 
+        module: 'search', 
+        function: 'init' 
+      });
+      return true;
+    } catch (error) {
+      debugLog?.error('Failed to initialize Search module:', { 
+        module: 'search', 
+        function: 'init', 
+        error: error.message 
+      });
+      return false;
     }
-    
-    this.setupEventListeners();
   }
 
   /**

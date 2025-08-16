@@ -57,65 +57,6 @@ function getFontSize() {
 }
 
 /**
- * Populate category select dropdown
- * Fetches categories from database and populates the category select dropdown
- */
-async function populateCategorySelect() {
-  try {
-    debugLog?.info('Populating categories', { 
-      module: 'data-population',
-      function: 'populateCategorySelect'
-    });
-    
-    {
-      const sel = document.getElementById('category_select');
-      if (sel) {
-        sel.innerHTML = '';
-        const opt = document.createElement('option');
-        opt.value = '*';
-        opt.textContent = 'All Categories';
-        sel.appendChild(opt);
-      }
-    }
-    
-    const result = await secureDatabase.getCategories();
-    const data = result.data || result;
-    
-    if (data && Array.isArray(data)) {
-      data.forEach(row => {
-        categories[row.code] = row.description;
-        const sel = document.getElementById('category_select');
-        if (sel) {
-          const opt = document.createElement('option');
-          opt.value = row.code;
-          opt.textContent = row.description;
-          sel.appendChild(opt);
-        }
-      });
-      
-      debugLog?.info('Categories populated successfully', { 
-        module: 'data-population',
-        function: 'populateCategorySelect',
-        count: data.length
-      });
-    } else {
-      debugLog?.warn('No categories found or invalid data format', { 
-        module: 'data-population',
-        function: 'populateCategorySelect',
-        result: result
-      });
-    }
-  } catch (error) {
-    debugLog?.error('Failed to populate categories', { 
-      module: 'data-population',
-      function: 'populateCategorySelect',
-      error: error.message
-    });
-    throw error;
-  }
-}
-
-/**
  * Set label from song ID
  * Fetches song data by ID and sets the label for a UI element
  * 
@@ -367,7 +308,6 @@ function populateCategoriesModal() {
 }
 
 export {
-  populateCategorySelect,
   setLabelFromSongId,
   addToHoldingTank,
   populateHotkeys,
@@ -377,7 +317,6 @@ export {
 
 // Default export for module loading
 export default {
-  populateCategorySelect,
   setLabelFromSongId,
   addToHoldingTank,
   populateHotkeys,

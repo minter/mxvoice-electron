@@ -49,10 +49,33 @@ class NavigationModule {
   }
 
   /**
-   * Initialize the module (alias for initializeNavigation)
+   * Initialize the module (standardized method)
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
    */
-  init() {
-    this.initializeNavigation();
+  async init(dependencies = {}) {
+    try {
+      debugLog?.info('Navigation module initializing...', { 
+        module: 'navigation', 
+        function: 'init' 
+      });
+
+      // Call the existing initialization logic
+      this.initializeNavigation();
+      
+      debugLog?.info('Navigation module initialized successfully', { 
+        module: 'navigation', 
+        function: 'init' 
+      });
+      return true;
+    } catch (error) {
+      debugLog?.error('Failed to initialize Navigation module:', { 
+        module: 'navigation', 
+        function: 'init', 
+        error: error.message 
+      });
+      return false;
+    }
   }
 
   /**

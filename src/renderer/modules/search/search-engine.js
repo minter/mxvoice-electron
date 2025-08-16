@@ -244,8 +244,6 @@ function searchData() {
           scaleScrollable();
         }
         document.getElementById('omni_search')?.select();
-        const cat = document.getElementById('category_select');
-        if (cat) cat.selectedIndex = 0;
       } else {
         debugLog?.warn('❌ Search query failed:', { 
           module: 'search-engine',
@@ -309,8 +307,6 @@ function searchData() {
           scaleScrollable();
         }
         document.getElementById('omni_search')?.select();
-        const cat2 = document.getElementById('category_select');
-        if (cat2) cat2.selectedIndex = 0;
       }
     });
   } else {

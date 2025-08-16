@@ -32,10 +32,33 @@ class BulkOperationsModule {
   }
 
   /**
-   * Initialize the module (alias for initializeBulkOperations)
+   * Initialize the module (standardized method)
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
    */
-  init() {
-    this.initializeBulkOperations();
+  async init(dependencies = {}) {
+    try {
+      window.debugLog?.info('Bulk Operations module initializing...', { 
+        module: 'bulk-operations', 
+        function: 'init' 
+      });
+
+      // Call the existing initialization logic
+      this.initializeBulkOperations();
+      
+      window.debugLog?.info('Bulk Operations module initialized successfully', { 
+        module: 'bulk-operations', 
+        function: 'init' 
+      });
+      return true;
+    } catch (error) {
+      window.debugLog?.error('Failed to initialize Bulk Operations module:', { 
+        module: 'bulk-operations', 
+        function: 'init', 
+        error: error.message 
+      });
+      return false;
+    }
   }
 
   /**

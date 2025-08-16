@@ -66,6 +66,16 @@ export default class SearchEvents {
       try {
         const select = document.getElementById('category_select');
         const category = select ? select.selectedIndex : 0;
+        const categoryValue = select ? select.value : '*';
+        
+        this.debugLog?.info('🎯 Category select changed!', { 
+          module: 'search-events',
+          function: 'categorySelectHandler',
+          selectedIndex: category,
+          selectedValue: categoryValue,
+          selectedText: select ? select.options[select.selectedIndex]?.text : 'unknown'
+        });
+        
         this.debugLog?.debug('Category select changed, calling searchData...');
         
         if (window.searchData) {
@@ -76,6 +86,21 @@ export default class SearchEvents {
         }
         
         document.getElementById('omni_search')?.focus();
+        
+        // Log the state after searchData is called
+        setTimeout(() => {
+          const selectAfter = document.getElementById('category_select');
+          if (selectAfter) {
+            this.debugLog?.info('🔍 Category select state AFTER searchData:', { 
+              module: 'search-events',
+              function: 'categorySelectHandler',
+              selectedIndex: selectAfter.selectedIndex,
+              selectedValue: selectAfter.value,
+              selectedText: selectAfter.options[selectAfter.selectedIndex]?.text || 'unknown'
+            });
+          }
+        }, 100);
+        
         if (select) select.selectedIndex = category;
       } catch (error) {
         this.debugLog?.error('Error in category select handler:', error);

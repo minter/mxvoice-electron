@@ -369,16 +369,16 @@ class ThemeManagementModule {
    * Initialize the module (minimal initialization for bootstrap)
    * This is called automatically by the bootstrap system before dependencies are injected
    */
-  async init(options = {}) {
+  async init(dependencies = {}) {
     debugLog?.info('Theme management module init() called by bootstrap system', {
       module: 'theme-management',
       function: 'init',
-      hasPreferencesModule: !!options.preferencesModule
+      hasPreferencesModule: !!dependencies.preferencesModule
     });
 
     // Only do minimal initialization if no preferences module is provided
     // Full initialization will happen later via initThemeManagement() with dependencies
-    if (!options.preferencesModule) {
+    if (!dependencies.preferencesModule) {
       debugLog?.info('No preferences module provided, doing minimal initialization', {
         module: 'theme-management',
         function: 'init'
@@ -395,7 +395,7 @@ class ThemeManagementModule {
     }
 
     // If preferences module is provided, do full initialization
-    return this.initThemeManagement(options);
+    return this.initThemeManagement(dependencies);
   }
 
   /**

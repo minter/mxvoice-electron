@@ -34,16 +34,16 @@ export class KeyboardManager {
 
   /**
    * Initialize all keyboard management components
-   * @param {Object} options - Configuration options
+   * @param {Object} dependencies - Module dependencies and configuration options
    * @returns {Promise<boolean>} - Success status
    */
-  async initialize(options = {}) {
+  async init(dependencies = {}) {
     try {
       this.logInfo('Starting keyboard manager initialization...');
 
       // Step 1: Initialize shortcut registry first
       this.logInfo('Initializing shortcut registry...');
-      const registrySuccess = this.shortcutRegistry.initialize(options.registry || {});
+      const registrySuccess = this.shortcutRegistry.initialize(dependencies.registry || {});
       
       if (!registrySuccess) {
         throw new Error('Failed to initialize shortcut registry');
@@ -51,7 +51,7 @@ export class KeyboardManager {
 
       // Step 2: Initialize hotkey bindings
       this.logInfo('Initializing hotkey bindings...');
-      const hotkeySuccess = this.hotkeyBindings.initialize(options.hotkeys || {});
+      const hotkeySuccess = this.hotkeyBindings.initialize(dependencies.hotkeys || {});
       
       if (!hotkeySuccess) {
         throw new Error('Failed to initialize hotkey bindings');
@@ -59,7 +59,7 @@ export class KeyboardManager {
 
       // Step 3: Initialize navigation shortcuts
       this.logInfo('Initializing navigation shortcuts...');
-      const navigationSuccess = this.navigationShortcuts.initialize(options.navigation || {});
+      const navigationSuccess = this.navigationShortcuts.initialize(dependencies.navigation || {});
       
       if (!navigationSuccess) {
         throw new Error('Failed to initialize navigation shortcuts');
@@ -133,7 +133,7 @@ export class KeyboardManager {
       this.logInfo('Setting up keyboard shortcuts...');
       
       if (!this.isInitialized) {
-        const initSuccess = await this.initialize(options);
+        const initSuccess = await this.init({ setup: options });
         if (!initSuccess) {
           throw new Error('Failed to initialize keyboard manager');
         }

@@ -173,10 +173,10 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     });
     
     // Initialize all function coordination components
-    const coordinationSuccess = await functionCoordination.initialize(
-      window.debugLog || debugLogger, 
-      moduleRegistry
-    );
+    const coordinationSuccess = await functionCoordination.init({
+      debugLogger: window.debugLog || debugLogger, 
+      moduleRegistry: moduleRegistry
+    });
     
     if (!coordinationSuccess) {
       window.logError('Function coordination initialization failed, but continuing...');
@@ -511,7 +511,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     // Initialize the event coordination system
-    await eventCoordination.initialize();
+    await eventCoordination.init({
+      electronAPI: window.electronAPI,
+      db: window.db,
+      store: window.store,
+      debugLog: debugLogger,
+      moduleRegistry: moduleRegistry
+    });
     window.logInfo('Event coordination initialized successfully');
 
     // Attach all event handlers - this replaces all the jQuery event handling code

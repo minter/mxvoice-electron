@@ -132,6 +132,36 @@ class HotkeysModule {
   }
 
   /**
+   * Initialize the module (standardized method)
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
+   */
+  async init(dependencies = {}) {
+    try {
+      debugLog?.info('🎹 Initializing Hotkeys Module via standardized init()...', {
+        module: 'hotkeys',
+        function: 'init',
+      });
+
+      // Call the existing initialization logic
+      this.initHotkeys();
+
+      debugLog?.info('✅ Hotkeys Module initialized successfully via init()', {
+        module: 'hotkeys',
+        function: 'init',
+      });
+      return true;
+    } catch (error) {
+      debugLog?.error('❌ Failed to initialize Hotkeys Module via init()', {
+        module: 'hotkeys',
+        function: 'init',
+        error: error.message,
+      });
+      return false;
+    }
+  }
+
+  /**
    * Set up event listeners for hotkey functionality
    */
   setupEventListeners() {

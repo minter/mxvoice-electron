@@ -33,31 +33,43 @@ class UtilsModule {
 
   /**
    * Initialize the utils module
-   * This method can be called to set up any initialization logic
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
    */
-  async init() {
+  async init(dependencies = {}) {
     try {
-      // Safe debug logging - only if available
-      if (typeof window !== 'undefined' && window.debugLog && typeof window.debugLog.info === 'function') {
-        window.debugLog.info('Utils module initialized', { 
-          module: 'utils',
-          function: 'init'
-        });
-      }
+      debugLog?.info('Utils module initializing...', { 
+        module: 'utils', 
+        function: 'init' 
+      });
+
+      // Initialize utility functions
+      this.setupUtilityFunctions();
       
-      this.isInitialized = true;
+      debugLog?.info('Utils module initialized successfully', { 
+        module: 'utils', 
+        function: 'init' 
+      });
       return true;
     } catch (error) {
-      // Log error if debug logger is available
-      if (typeof window !== 'undefined' && window.debugLog && typeof window.debugLog.error === 'function') {
-        window.debugLog.error('Utils module initialization failed', { 
-          module: 'utils',
-          function: 'init',
-          error: error.message
-        });
-      }
+      debugLog?.error('Failed to initialize utils module:', { 
+        module: 'utils', 
+        function: 'init', 
+        error: error.message 
+      });
       return false;
     }
+  }
+
+  /**
+   * Set up utility functions
+   */
+  setupUtilityFunctions() {
+    // Initialize utility functions state and functionality
+    debugLog?.info('Setting up utility functions', { 
+      module: 'utils', 
+      function: 'setupUtilityFunctions' 
+    });
   }
 
   /**

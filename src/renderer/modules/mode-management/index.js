@@ -34,45 +34,47 @@ class ModeManagementModule {
 
   /**
    * Initialize the mode management module
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
    */
-  async initModeManagement() {
-    debugLog?.info('Initializing Mode Management Module', {
-      module: 'mode-management',
-      function: 'initModeManagement',
-    });
-
-    // Load saved mode or default to storage
+  async init(dependencies = {}) {
     try {
-      const hasModeResult = await secureStore.has('holding_tank_mode');
-      if (hasModeResult && hasModeResult.success && hasModeResult.has) {
-        const modeResult = await secureStore.get('holding_tank_mode');
-        if (modeResult && modeResult.success && modeResult.value) {
-          const mode = modeResult.value;
-          this.holdingTankMode = mode;
-          // Initialize the mode UI
-          this.setHoldingTankMode(this.holdingTankMode);
-          return { success: true, mode: mode };
-        } else {
-          debugLog?.warn('Failed to get holding tank mode:', {
-            module: 'mode-management',
-            function: 'initModeManagement',
-            result: modeResult,
-          });
-        }
-      }
-      // Default to storage mode if no mode found or failed to get
-      this.holdingTankMode = 'storage'; // Default to storage mode
-      // Initialize the mode UI
-      this.setHoldingTankMode(this.holdingTankMode);
-      return { success: true, mode: this.holdingTankMode };
-    } catch (error) {
-      debugLog?.error('Failed to initialize mode management', {
-        module: 'mode-management',
-        function: 'initModeManagement',
-        error: error.message,
+      debugLog?.info('Mode management module initializing...', { 
+        module: 'mode-management', 
+        function: 'init' 
       });
-      return { success: false, error: error.message };
+
+      // Call the existing initialization logic
+      const result = await this.initModeManagement();
+      
+      if (result && result.success) {
+        debugLog?.info('Mode management module initialized successfully', { 
+          module: 'mode-management', 
+          function: 'init' 
+        });
+        return true;
+      } else {
+        throw new Error('Mode management initialization failed');
+      }
+    } catch (error) {
+      debugLog?.error('Failed to initialize mode management module:', { 
+        module: 'mode-management', 
+        function: 'init', 
+        error: error.message 
+      });
+      return false;
     }
+  }
+
+  /**
+   * Set up event listeners for mode management
+   */
+  setupEventListeners() {
+    // Initialize event listeners for mode management functionality
+    debugLog?.info('Setting up mode management event listeners', { 
+      module: 'mode-management', 
+      function: 'setupEventListeners' 
+    });
   }
 
   /**
@@ -279,8 +281,36 @@ class ModeManagementModule {
   /**
    * Initialize the module (alias for initModeManagement)
    */
-  async init() {
-    return this.initModeManagement();
+  async initModeManagement() {
+    try {
+      debugLog?.info('Mode management module initializing...', { 
+        module: 'mode-management', 
+        function: 'initModeManagement' 
+      });
+
+      // Initialize mode state with default value
+      if (typeof this.holdingTankMode === 'undefined') {
+        this.holdingTankMode = 'storage'; // Default to storage mode
+      }
+      
+      this.currentMode = this.getHoldingTankMode();
+      
+      // Set up event listeners
+      this.setupEventListeners();
+      
+      debugLog?.info('Mode management module initialized successfully', { 
+        module: 'mode-management', 
+        function: 'initModeManagement' 
+      });
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Failed to initialize mode management module:', { 
+        module: 'mode-management', 
+        function: 'initModeManagement', 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
   }
 
   /**

@@ -39,16 +39,12 @@ class EventCoordination {
   }
 
   /**
-   * Initialize all event handlers
-   * This replaces the jQuery event setup that was in renderer.js
+   * Initialize the event coordination module
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
    */
-  async initialize() {
+  async init(dependencies = {}) {
     try {
-      if (this.initialized) {
-        this.debugLog?.warn('Event coordination already initialized');
-        return true;
-      }
-
       this.debugLog?.info('Initializing event coordination module...');
 
       // Create event handler instances
@@ -82,12 +78,16 @@ class EventCoordination {
         moduleRegistry: this.moduleRegistry
       });
 
+      // Initialize sub-modules (they don't have init methods, so just mark as ready)
       this.initialized = true;
       this.debugLog?.info('Event coordination module initialized successfully');
       return true;
-
     } catch (error) {
-      this.debugLog?.error('Failed to initialize event coordination module:', error);
+      this.debugLog?.error('Failed to initialize event coordination module', {
+        module: 'event-coordination',
+        function: 'init',
+        error: error.message
+      });
       return false;
     }
   }
@@ -104,7 +104,9 @@ class EventCoordination {
       }
 
       if (!this.initialized) {
-        await this.initialize();
+        // Don't call this.init() here to avoid infinite recursion
+        this.debugLog?.warn('Event coordination not initialized, cannot attach handlers');
+        return false;
       }
 
       this.debugLog?.info('Attaching event handlers...');
