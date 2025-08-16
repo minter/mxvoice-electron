@@ -44,9 +44,29 @@ test.describe('First run flow', () => {
   });
 
   test('creates DB, copies sample song, and shows first-run modal', async () => {
+    // 1) First-run modal appears
     await page.waitForSelector('#firstRunModal.show', { timeout: 15000 });
-    await expect(page.locator('#firstRunModal')).toBeVisible();
+    const firstRunModal = page.locator('#firstRunModal');
+    await expect(firstRunModal).toBeVisible();
 
+    // 2) Close the modal via the "Got It!" button
+    await firstRunModal.getByRole('button', { name: 'Got It!' }).click();
+    await expect(firstRunModal).toBeHidden();
+
+    // 3) Click into the search bar
+    const searchInput = page.locator('#omni_search');
+    await searchInput.click();
+
+    // 4) Hit Enter to search (empty query → should return seeded song)
+    await searchInput.press('Enter');
+
+    // 5) Verify exactly one result and it is the CSz Rock Bumper
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(1, { timeout: 5000 });
+    await expect(rows.first()).toContainText('Rock Bumper');
+    await expect(rows.first()).toContainText('Patrick Short');
+
+    // Artifact checks
     expect(fs.existsSync(path.join(dbDir, 'mxvoice.db'))).toBeTruthy();
     expect(fs.existsSync(path.join(musicDir, 'PatrickShort-CSzRockBumper.mp3'))).toBeTruthy();
   });
