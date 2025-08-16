@@ -74,7 +74,7 @@ module.exports = async function sign(file, context) {
     "--credential_id", `"${credential}"`,
     "--totp", `"${totp}"`,
     // timestamp server (recommended)
-    "--tsa_url", `"http://timestamp.digicert.com"`,
+    "--tsa_url", `"https://timestamp.digicert.com"`,
     // input/output in-place
     "--input", `"${actualPath}"`,
     "--output", `"${actualPath}"`,

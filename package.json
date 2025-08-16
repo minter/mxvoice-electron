@@ -43,6 +43,8 @@
       "node_modules/node-sqlite3-wasm/dist/*.wasm"
     ],
     "afterPack": "build/afterPack.js",
+    "afterSign": "build/afterWinSign.cjs",
+    "artifactBuildCompleted": "build/winSignInstaller.cjs",
     "mac": {
       "forceCodeSigning": true,
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
@@ -57,42 +59,23 @@
       "identity": "E31B13B9566B95D1BC1F46F0C3B2FA6C739356CB",
       "mergeASARs": false,
       "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "universal"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "universal"
-          ]
-        }
+        { "target": "dmg", "arch": ["universal"] },
+        { "target": "zip", "arch": ["universal"] }
       ]
     },
     "dmg": {
       "icon": "src/assets/icons/dmg-image.icns",
       "background": "src/assets/images/dmg-background-image.png",
       "contents": [
-        {
-          "x": 180,
-          "y": 340
-        },
-        {
-          "x": 450,
-          "y": 340,
-          "type": "link",
-          "path": "/Applications"
-        }
+        { "x": 180, "y": 340 },
+        { "x": 450, "y": 340, "type": "link", "path": "/Applications" }
       ],
       "sign": false,
       "format": "UDZO"
     },
     "win": {
       "icon": "src/assets/icons/mxvoice.ico",
-      "artifactName": "Mx.-Voice-Setup-${version}.${ext}",
-      "sign": "build/sslSign.js"
+      "artifactName": "Mx.-Voice-Setup-${version}.${ext}"
     },
     "linux": {
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
@@ -101,19 +84,24 @@
       "synopsis": "Improv Audio Software",
       "description": "Professional audio software for improvisation and live performance",
       "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        }
+        "AppImage",
+        "deb"
       ]
+    },
+    "deb": {
+      "maintainer": "H. Wade Minter <wade@wademinter.com>",
+      "priority": "optional",
+      "depends": [
+        "libgtk-3-0",
+        "libnss3",
+        "libx11-xcb1",
+        "libxss1",
+        "libasound2",
+        "libxtst6"
+      ]
+    },
+    "appImage": {
+      "category": "AudioVideo"
     },
     "publish": [
       {
