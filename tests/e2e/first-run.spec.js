@@ -1,13 +1,15 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import os from 'os';
 
 test.describe('First run flow', () => {
   let app;
   let page;
 
-  const __dirname = path.dirname(new URL(import.meta.url).pathname);
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
   const userDataDir = path.join(__dirname, '../fixtures/test-user-data');
   // For first run, database_directory defaults to userData root (not userData/data)
   const dbDir = userDataDir;
@@ -40,7 +42,9 @@ test.describe('First run flow', () => {
   });
 
   test.afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   test('creates DB, copies sample song, and shows first-run modal', async () => {

@@ -2,6 +2,7 @@ import { _electron as electron, test, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { fileURLToPath } from 'url';
 import { TEST_CONFIG } from '../config/test-environment.js';
 
 test.describe('Mx. Voice App Smoke Tests', () => {
@@ -11,6 +12,8 @@ test.describe('Mx. Voice App Smoke Tests', () => {
   test.beforeAll(async () => {
     // Launch your app in dev mode: pass your main entry and any flags your app expects.
     // Ensure isolated userData is clean
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     const userDataDir = TEST_CONFIG.testAppDirs.userDataDirectory;
     if (fs.existsSync(userDataDir)) fs.rmSync(userDataDir, { recursive: true, force: true });
     fs.mkdirSync(userDataDir, { recursive: true });
