@@ -89,7 +89,7 @@ async function performAdvancedSearch(filters) {
     );
 
     // Check current state by looking at the icon and visibility
-    const icon = document.getElementById('advanced-search-icon');
+    const icon = document.getElementById('advanced_search_button');
     const isIconMinus = icon && icon.classList.contains('fa-minus');
     const isVisible = !!(document.getElementById('advanced-search') && document.getElementById('advanced-search').offsetParent !== null);
     const isCurrentlyOpen = isIconMinus || isVisible;
@@ -115,7 +115,7 @@ async function performAdvancedSearch(filters) {
         module: 'advanced-search',
         function: 'performAdvancedSearch'
       });
-      const iconEl = document.getElementById('advanced-search-icon');
+      const iconEl = document.getElementById('advanced_search_button');
       iconEl?.classList.remove('fa-minus');
       iconEl?.classList.add('fa-plus');
       const titleEl = document.getElementById('title-search');
@@ -169,7 +169,7 @@ async function performAdvancedSearch(filters) {
         module: 'advanced-search',
         function: 'performAdvancedSearch'
       });
-      const iconEl2 = document.getElementById('advanced-search-icon');
+      const iconEl2 = document.getElementById('advanced_search_button');
       iconEl2?.classList.remove('fa-plus');
       iconEl2?.classList.add('fa-minus');
       const advEl = document.getElementById('advanced-search');

@@ -98,63 +98,58 @@ function initializeControls(options = {}) {
    */
   function toggleAdvancedSearch() {
     try {
-      debugLog?.info("toggleAdvancedSearch called", { 
-        module: 'ui-controls',
-        function: 'toggleAdvancedSearch'
-      });
-      
-      const adv = Dom.$('#advanced-search');
-      if (adv) {
-        const display = adv ? getComputedStyle(adv).display : '';
-        debugLog?.info("Advanced search display: " + display, { 
-        module: 'ui-controls',
-        function: 'toggleAdvancedSearch'
-        });
-      }
-
-      if (Dom.isVisible('#advanced-search')) {
-        debugLog?.info("Hiding advanced search", { 
-          module: 'ui-controls',
-          function: 'toggleAdvancedSearch'
-        });
-        // Toggle icon classes manually
-        const icon = Dom.$('#advanced-search-icon');
+      debugLog?.info("toggleAdvancedSearch called", { module: 'ui-controls', function: 'toggleAdvancedSearch' });
+  
+      const panel = Dom.$('#advanced-search');         // panel container
+      const btn   = Dom.$('#advanced_search_button');  // the button
+      const icon  = btn ? btn.querySelector('i') : null; // the FA icon INSIDE the button
+  
+      if (!panel) return;
+  
+      const isOpen = Dom.isVisible('#advanced-search');
+  
+      if (isOpen) {
+        debugLog?.info("Hiding advanced search", { module: 'ui-controls', function: 'toggleAdvancedSearch' });
+  
+        // Icon: set to PLUS when closed
         if (icon) {
-          if (Dom.hasClass(icon, 'fa-plus')) { Dom.removeClass(icon, 'fa-plus'); Dom.addClass(icon, 'fa-minus'); }
-          else { Dom.removeClass(icon, 'fa-minus'); Dom.addClass(icon, 'fa-plus'); }
+          Dom.removeClass(icon, 'fa-minus');
+          Dom.addClass(icon,   'fa-plus');
         }
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+  
         Dom.hide('#title-search');
         Dom.show('#omni_search');
         Dom.$('#omni_search')?.focus();
+  
+        // Animate out, then hide
         animateCSS('#advanced-search', 'fadeOutUp').then(() => {
           Dom.hide('#advanced-search');
           scaleScrollable();
         });
       } else {
-        debugLog?.info("Showing advanced search", { 
-          module: 'ui-controls',
-          function: 'toggleAdvancedSearch'
-        });
-        const icon = Dom.$('#advanced-search-icon');
+        debugLog?.info("Showing advanced search", { module: 'ui-controls', function: 'toggleAdvancedSearch' });
+  
+        // Icon: set to MINUS when open
         if (icon) {
-          if (Dom.hasClass(icon, 'fa-plus')) { Dom.removeClass(icon, 'fa-plus'); Dom.addClass(icon, 'fa-minus'); }
-          else { Dom.removeClass(icon, 'fa-minus'); Dom.addClass(icon, 'fa-plus'); }
+          Dom.removeClass(icon, 'fa-plus');
+          Dom.addClass(icon,   'fa-minus');
         }
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+  
         Dom.show('#advanced-search');
         Dom.show('#title-search');
         Dom.$('#title-search')?.focus();
         Dom.hide('#omni_search');
+  
         scaleScrollable();
         animateCSS('#advanced-search', 'fadeInDown').then(() => {});
       }
     } catch (error) {
-      debugLog?.error("Error in toggleAdvancedSearch", { 
-        module: 'ui-controls',
-        function: 'toggleAdvancedSearch',
-        error: error
-      });
+      debugLog?.error("Error in toggleAdvancedSearch", { module: 'ui-controls', function: 'toggleAdvancedSearch', error });
     }
   }
+  
   
   return {
     increaseFontSize,

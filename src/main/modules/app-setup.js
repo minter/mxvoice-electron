@@ -132,6 +132,7 @@ function createApplicationMenu() {
         {
           label: "Show/Hide Advanced Search",
           accelerator: "CommandOrControl+M",
+          id: "toggle_advanced_search",
           click: () => {
             toggleAdvancedSearch();
           },

@@ -99,6 +99,13 @@ export class TestDatabaseManager {
       `);
       
       TEST_CONFIG.schema.songs.forEach(song => {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const modtimeSeconds =
+          typeof song.modtimeSeconds === 'number'
+            ? song.modtimeSeconds
+            : typeof song.daysAgo === 'number'
+              ? nowSec - Math.floor(song.daysAgo * 86400)
+              : nowSec;
         songStmt.run([
           song.id ?? null,
           song.title,
@@ -107,7 +114,7 @@ export class TestDatabaseManager {
           song.info,
           song.filename,
           song.time,
-          Date.now(),
+          modtimeSeconds,
           song.publisher || null,
           song.md5 || null
         ]);

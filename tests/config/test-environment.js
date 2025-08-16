@@ -57,7 +57,8 @@ export const TEST_CONFIG = {
         category: 'GAME',
         filename: 'Anthrax-GotTheTime.mp3',
         time: '0:06',
-        info: 'Countdown'
+        info: 'Countdown',
+        daysAgo: 60
       },
       {
         id: 1002,
