@@ -18,7 +18,6 @@ import fs from 'fs';
 import readlines from 'n-readlines';
 import Store from 'electron-store';
 import log from 'electron-log';
-import { initializeMainDatabase, getMainDatabase } from './modules/database-setup.js';
 import { Howl, Howler } from 'howler';
 import electronUpdater from 'electron-updater';
 import markdownIt from 'markdown-it';
@@ -27,6 +26,17 @@ import { fileURLToPath } from 'url';
 // Get __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// In test mode, allow overriding Electron's userData path to ensure isolation
+// Must run BEFORE creating the Store or computing defaults that depend on userData
+const E2E_USER_DATA_DIR = process.env.E2E_USER_DATA_DIR || process.env.APP_TEST_USER_DATA_DIR;
+if (process.env.APP_TEST_MODE === '1' || E2E_USER_DATA_DIR) {
+  const testUserData = E2E_USER_DATA_DIR || path.join(process.cwd(), 'tests', 'fixtures', 'test-user-data');
+  try {
+    fs.mkdirSync(testUserData, { recursive: true });
+  } catch (_) {}
+  app.setPath('userData', testUserData);
+}
 
 // Import main process modules
 import * as appSetup from './modules/app-setup.js';
@@ -159,6 +169,7 @@ if (process.platform === "darwin") {
 // Global variables
 let mainWindow;
 let db; // Database connection for main process
+let dbModule; // Lazy-loaded database module
 let audioInstances = new Map(); // Track audio instances in main process
 const updateState = { downloaded: false, userApprovedInstall: false };
 
@@ -209,11 +220,14 @@ import('electron-squirrel-startup').then(electronSquirrelStartup => {
 // Initialize database
 async function initializeMainDatabaseWrapper() {
   try {
+    if (!dbModule) {
+      dbModule = await import('./modules/database-setup.js');
+    }
     debugLog.info('Initializing main database', { 
       function: "initializeMainDatabaseWrapper" 
     });
     
-    db = await initializeMainDatabase();
+    db = await dbModule.initializeMainDatabase();
     
     if (db) {
       debugLog.info('Main database initialized successfully', { 
@@ -242,7 +256,8 @@ async function checkFirstRun() {
     function: "checkFirstRun" 
   });
   if (!store.get('first_run_completed')) {
-    const oldConfig = checkOldConfig();
+    const shouldCheckLegacyConfig = process.env.APP_TEST_MODE !== '1';
+    const oldConfig = shouldCheckLegacyConfig ? checkOldConfig() : false;
     debugLog.info(`Old config function returned ${oldConfig}`, { 
       function: "checkFirstRun" 
     });
@@ -258,7 +273,10 @@ async function checkFirstRun() {
       fs.mkdirSync(store.get('hotkey_directory'), { recursive: true });
 
       // Initialize database for first run
-      const initDb = await initializeMainDatabase();
+      if (!dbModule) {
+        dbModule = await import('./modules/database-setup.js');
+      }
+      const initDb = await dbModule.initializeMainDatabase();
       
       // Insert initial data using prepared statements
       const categoryStmt = initDb.prepare(`INSERT OR IGNORE INTO categories VALUES(?, ?)`);

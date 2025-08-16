@@ -11,4 +11,6 @@ export default defineConfig({
   },
   // CI tip: set workers to 1 if your app uses a shared profile/port
   workers: 1,
+  globalSetup: 'tests/setup/global-setup.js',
+  globalTeardown: 'tests/setup/global-teardown.js',
 });

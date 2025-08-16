@@ -1,4 +1,8 @@
 import { _electron as electron, test, expect } from '@playwright/test';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import { TEST_CONFIG } from '../config/test-environment.js';
 
 test.describe('Mx. Voice App Smoke Tests', () => {
   let app;
@@ -6,6 +10,12 @@ test.describe('Mx. Voice App Smoke Tests', () => {
 
   test.beforeAll(async () => {
     // Launch your app in dev mode: pass your main entry and any flags your app expects.
+    // Ensure isolated userData is clean
+    const userDataDir = TEST_CONFIG.testAppDirs.userDataDirectory;
+    if (fs.existsSync(userDataDir)) fs.rmSync(userDataDir, { recursive: true, force: true });
+    fs.mkdirSync(userDataDir, { recursive: true });
+    const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
+
     app = await electron.launch({
       args: ['.'], // assumes "main" in package.json points at your entry file
       // If you need a specific Electron binary, set executablePath
@@ -16,7 +26,10 @@ test.describe('Mx. Voice App Smoke Tests', () => {
         // make the app deterministic in tests:
         AUTO_UPDATE: '0',
         DISABLE_HARDWARE_ACCELERATION: '1',
-        APP_TEST_MODE: '1'
+        APP_TEST_MODE: '1',
+        E2E_USER_DATA_DIR: userDataDir,
+        HOME: fakeHome,
+        APPDATA: fakeHome
       }
     });
     page = await app.firstWindow();
