@@ -77,7 +77,7 @@ export default function initializeUIManager(options = {}) {
       try { 
         location.reload(); 
       } catch (error) {
-        console.warn('Failed to reload page', { 
+        debugLog?.warn('Failed to reload page', { 
           module: 'ui-manager', 
           function: 'reload',
           error: error?.message || 'Unknown error' 

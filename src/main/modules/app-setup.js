@@ -50,9 +50,7 @@ function createWindow({ width = 1200, height = 800 } = {}) {
       // Enhanced security settings
       experimentalFeatures: false,
       webgl: false, // Disable WebGL for security (can be enabled if needed)
-      plugins: false, // Disable plugins for security
-      // Content Security Policy
-      contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; media-src 'self' blob: data:"
+      plugins: false // Disable plugins for security
     }
   });
 
