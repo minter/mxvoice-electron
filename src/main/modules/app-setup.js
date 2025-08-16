@@ -487,6 +487,13 @@ function toggleWaveform() {
   }
 }
 
+function toggleAdvancedSearch() {
+  debugLog?.info("Toggling advanced search", { module: 'app-setup', function: 'toggleAdvancedSearch' });
+  if (mainWindow) {
+    mainWindow.webContents.send("toggle_advanced_search");
+  }
+}
+
 function closeAllTabs() {
   if (mainWindow) {
     mainWindow.webContents.send("close_all_tabs");
@@ -574,6 +581,7 @@ export {
   increaseFontSize,
   decreaseFontSize,
   toggleWaveform,
+  toggleAdvancedSearch,
   closeAllTabs,
   sendDeleteSong,
   sendEditSong,
@@ -590,6 +598,7 @@ export default {
   increaseFontSize,
   decreaseFontSize,
   toggleWaveform,
+  toggleAdvancedSearch,
   closeAllTabs,
   sendDeleteSong,
   sendEditSong,
