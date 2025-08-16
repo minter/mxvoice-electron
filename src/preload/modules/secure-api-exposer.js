@@ -93,6 +93,7 @@ const secureElectronAPI = {
     query: (sql, params) => ipcRenderer.invoke('database-query', sql, params),
     execute: (sql, params) => ipcRenderer.invoke('database-execute', sql, params),
     getCategories: () => ipcRenderer.invoke('get-categories'),
+    getAllSongs: () => ipcRenderer.invoke('database-query', 'SELECT * FROM mrvoice ORDER BY category, info, title, artist', []),
     addSong: (songData) => ipcRenderer.invoke('add-song', songData),
     getSongById: (songId) => ipcRenderer.invoke('get-song-by-id', songId),
     deleteSong: (songId) => ipcRenderer.invoke('delete-song', songId),

@@ -37,17 +37,7 @@ export const secureDatabase = {
         return result;
       }
       
-      // Fallback to modern API
-      if (window.electronAPI?.database?.query) {
-        const result = await window.electronAPI.database.query(sql, params);
-        return result;
-      }
-      
-      // Fallback to legacy API
-      if (window.electronAPI?.database?.query) {
-        const result = await window.electronAPI.database.query(sql, params);
-        return result;
-      }
+
       
       throw new Error('No database API available');
     } catch (error) {
@@ -76,17 +66,7 @@ export const secureDatabase = {
         return result;
       }
       
-      // Fallback to modern API
-      if (window.electronAPI?.database?.execute) {
-        const result = await window.electronAPI.database.execute(sql, params);
-        return result;
-      }
-      
-      // Fallback to legacy API
-      if (window.electronAPI?.database?.execute) {
-        const result = await window.electronAPI.database.execute(sql, params);
-        return result;
-      }
+
       
       throw new Error('No database API available');
     } catch (error) {
@@ -112,10 +92,7 @@ export const secureDatabase = {
         return await window.secureElectronAPI.database.getCategories();
       }
       
-      // Fallback to modern API
-      if (window.electronAPI?.database?.getCategories) {
-        return await window.electronAPI.database.getCategories();
-      }
+
       
       throw new Error('No database API available');
     } catch (error) {
@@ -140,10 +117,7 @@ export const secureDatabase = {
         return await window.secureElectronAPI.database.addSong(songData);
       }
       
-      // Fallback to modern API
-      if (window.electronAPI?.database?.addSong) {
-        return await window.electronAPI.database.addSong(songData);
-      }
+
       
       throw new Error('No database API available');
     } catch (error) {

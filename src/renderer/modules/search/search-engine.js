@@ -26,8 +26,8 @@ import { songDrag } from '../drag-drop/drag-drop-functions.js';
 
 // Get categories for search functionality
 function getCategories() {
-  if (window.electronAPI && window.electronAPI.database) {
-    return window.electronAPI.database.query("SELECT DISTINCT category FROM mrvoice ORDER BY category").then(result => {
+  if (window.secureElectronAPI && window.secureElectronAPI.database) {
+    return window.secureElectronAPI.database.query("SELECT DISTINCT category FROM mrvoice ORDER BY category").then(result => {
       if (result.success) {
         return result.data.map(row => row.category);
       } else {
@@ -53,8 +53,8 @@ function getCategories() {
 
 // Get category name for display
 function getCategoryName(categoryCode) {
-  if (window.electronAPI && window.electronAPI.database) {
-    return window.electronAPI.database.query("SELECT description FROM categories WHERE code = ?", [categoryCode]).then(result => {
+  if (window.secureElectronAPI && window.secureElectronAPI.database) {
+    return window.secureElectronAPI.database.query("SELECT description FROM categories WHERE code = ?", [categoryCode]).then(result => {
       if (result.success && result.data.length > 0) {
         return result.data[0].description;
       } else {
@@ -183,8 +183,24 @@ function searchData() {
   const fontSize = sharedState.get('fontSize') || 11;
 
   // Execute search query
-  if (window.electronAPI && window.electronAPI.database) {
-    window.electronAPI.database.query("SELECT * from mrvoice" + queryString + " ORDER BY category,info,title,artist", queryParams).then(result => {
+  debugLog?.info('🔍 Checking database API availability', { 
+    module: 'search-engine',
+    function: 'searchData',
+    hasSecureAPI: !!window.secureElectronAPI,
+    hasDatabase: !!(window.secureElectronAPI && window.secureElectronAPI.database),
+    secureAPIKeys: window.secureElectronAPI ? Object.keys(window.secureElectronAPI) : [],
+    databaseKeys: window.secureElectronAPI?.database ? Object.keys(window.secureElectronAPI.database) : []
+  });
+  
+  if (window.secureElectronAPI && window.secureElectronAPI.database) {
+    debugLog?.info('🔍 Making database query', { 
+      module: 'search-engine',
+      function: 'searchData',
+      sql: "SELECT * from mrvoice" + queryString + " ORDER BY category,info,title,artist",
+      params: queryParams
+    });
+    
+    window.secureElectronAPI.database.query("SELECT * from mrvoice" + queryString + " ORDER BY category,info,title,artist", queryParams).then(result => {
       if (result.success) {
         const tbody = document.querySelector('#search_results tbody');
         const fragment = document.createDocumentFragment();
@@ -296,6 +312,13 @@ function searchData() {
         const cat2 = document.getElementById('category_select');
         if (cat2) cat2.selectedIndex = 0;
       }
+    });
+  } else {
+    debugLog?.warn('❌ Database API not available', { 
+      module: 'search-engine',
+      function: 'searchData',
+      hasSecureAPI: !!window.secureElectronAPI,
+      hasDatabase: !!(window.secureElectronAPI && window.secureElectronAPI.database)
     });
   }
 }

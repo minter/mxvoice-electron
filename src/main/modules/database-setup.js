@@ -2,7 +2,7 @@
  * Main Process Database Setup Module
  * 
  * Handles database initialization and setup for the main process.
- * Uses the official @sqlite.org/sqlite-wasm package.
+ * Uses node-sqlite3-wasm package for persistent file-based databases.
  */
 
 import Store from 'electron-store';
@@ -10,7 +10,9 @@ import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
 import { fileURLToPath } from 'url';
-import sqlite3InitModule from '@sqlite.org/sqlite-wasm';
+import pkg from 'node-sqlite3-wasm';
+const { Database, onRuntimeInitialized } = pkg;
+import initializeMainDebugLog from './debug-log.js';
 
 // Get __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
@@ -18,40 +20,51 @@ const __dirname = path.dirname(__filename);
 
 const store = new Store({ name: 'config' });
 
+// Initialize main process DebugLog
+const debugLog = initializeMainDebugLog({ store });
+
 let dbInstance = null;
-let sqlite3 = null;
 
 /**
- * Initialize the SQLite WebAssembly module
+ * Initialize SQLite WebAssembly runtime
  */
 async function initializeSQLite() {
-  if (!sqlite3) {
-    try {
-      console.log('Initializing SQLite WebAssembly module...');
-      sqlite3 = await sqlite3InitModule({
-        print: console.log,
-        printErr: console.error,
-      });
-      console.log('SQLite WebAssembly module initialized successfully');
-      console.log('SQLite version:', sqlite3.capi.sqlite3_libversion());
-    } catch (error) {
-      console.error('Failed to initialize SQLite WebAssembly module:', error);
-      throw error;
-    }
+  try {
+    debugLog?.info('Initializing SQLite WebAssembly runtime...', { module: 'database-setup', function: 'initializeSQLite' });
+    
+    // Wait for the WebAssembly runtime to be ready
+    await onRuntimeInitialized;
+    debugLog?.info('SQLite runtime initialized successfully', { module: 'database-setup', function: 'initializeSQLite' });
+    
+    // Return an object with the Database constructor
+    return { Database };
+  } catch (error) {
+    debugLog?.error('Failed to initialize SQLite runtime:', { module: 'database-setup', function: 'initializeSQLite', error: error.message });
+    throw error;
   }
-  return sqlite3;
 }
 
 /**
- * Initialize the database instance
+ * Initialize database connection
  */
-async function initializeDatabase() {
+async function initializeMainDatabase() {
   try {
-    // Initialize SQLite first
-    const sqlite3Module = await initializeSQLite();
+    debugLog?.info('Starting database initialization', { 
+      module: 'database-setup',
+      function: 'initializeMainDatabase' 
+    });
+    
+    // Ensure SQLite runtime is initialized
+    const { Database: SQLiteDatabase } = await initializeSQLite();
+    
+    let dbInstance;
     
     const databaseDirectory = store.get("database_directory");
-    console.log(`Database directory from settings: ${databaseDirectory}`);
+    debugLog?.info('Database directory from settings', { 
+      module: 'database-setup',
+      function: 'initializeMainDatabase',
+      databaseDirectory 
+    });
     
     let dbPath;
     let dbName;
@@ -65,108 +78,89 @@ async function initializeDatabase() {
       if (fs.existsSync(mrvoiceDbPath)) {
         dbName = "mrvoice.db";
         dbPath = mrvoiceDbPath;
-        console.log(`Found mrvoice.db in configured directory: ${dbPath}`);
+        debugLog?.info(`Found mrvoice.db in configured directory: ${dbPath}`, { module: 'database-setup', function: 'initializeMainDatabase' });
       } else if (fs.existsSync(mxvoiceDbPath)) {
         dbName = "mxvoice.db";
         dbPath = mxvoiceDbPath;
-        console.log(`Found mxvoice.db in configured directory: ${dbPath}`);
+        debugLog?.info(`Found mxvoice.db in configured directory: ${dbPath}`, { module: 'database-setup', function: 'initializeMainDatabase' });
       } else {
         // No existing database, create new mxvoice.db in configured directory
         dbName = "mxvoice.db";
         dbPath = mxvoiceDbPath;
-        console.log(`No existing database found, will create: ${dbPath}`);
+        debugLog?.info(`No existing database found, will create: ${dbPath}`, { module: 'database-setup', function: 'initializeMainDatabase' });
       }
     } else {
       // Fallback to default location only if no directory is configured
-      console.warn('Database directory not set in preferences, using default userData location');
+      debugLog?.warn('Database directory not set in preferences, using default userData location', { module: 'database-setup', function: 'initializeMainDatabase' });
       const defaultDbPath = path.join(app.getPath('userData'), 'data');
       if (!fs.existsSync(defaultDbPath)) {
         fs.mkdirSync(defaultDbPath, { recursive: true });
       }
       dbName = "mxvoice.db";
       dbPath = path.join(defaultDbPath, dbName);
-      console.log(`Using default database path: ${dbPath}`);
+      debugLog?.info(`Using default database path: ${dbPath}`, { module: 'database-setup', function: 'initializeMainDatabase' });
     }
     
-    // Try to load existing database file
     if (fs.existsSync(dbPath)) {
       try {
-        console.log('Loading existing database file...');
-        // Read the database file and load it into memory
-        const data = fs.readFileSync(dbPath);
-        console.log(`Database file size: ${data.length} bytes`);
-        
-        // Create a new database instance and deserialize the file data
-        dbInstance = new sqlite3Module.oo1.DB();
-        
-        // Use the deserialize API to load the database from file data
-        // Allocate memory in the WebAssembly heap
-        const pData = sqlite3Module.wasm.alloc(data.length);
-        try {
-          // Copy the data to the allocated memory
-          sqlite3Module.wasm.heap8u().set(data, pData);
-          
-          const rc = sqlite3Module.capi.sqlite3_deserialize(
-            dbInstance.pointer, 
-            'main', 
-            pData, 
-            data.length, 
-            data.length,
-            sqlite3Module.capi.SQLITE_DESERIALIZE_FREEONCLOSE |
-            sqlite3Module.capi.SQLITE_DESERIALIZE_RESIZEABLE
-          );
-          
-          // Don't free pData here - SQLite takes ownership with FREEONCLOSE
-          if (rc === sqlite3Module.capi.SQLITE_OK) {
-            console.log('Successfully loaded existing database from file');
-          } else {
-            throw new Error(`Failed to deserialize database: ${sqlite3Module.capi.sqlite3_errstr(rc)} (${rc})`);
-          }
-        } catch (allocError) {
-          // If we allocated memory but failed, free it
-          sqlite3Module.wasm.dealloc(pData);
-          throw allocError;
-        }
+        debugLog?.info('Opening existing database in file mode...', { module: 'database-setup', function: 'initializeMainDatabase', dbPath });
+        // Open existing database directly in file mode
+        dbInstance = new SQLiteDatabase(dbPath);
+        debugLog?.info('Successfully opened existing database in file mode', { module: 'database-setup', function: 'initializeMainDatabase' });
       } catch (error) {
-        console.warn('Failed to load existing database, creating new one:', error);
+        debugLog?.warn('Failed to open existing database, creating new one:', { module: 'database-setup', function: 'initializeMainDatabase', error: error.message });
         
         // Create backup of problematic file
         const backupPath = `${dbPath}.backup-${Date.now()}`;
         try {
           const data = fs.readFileSync(dbPath);
           fs.writeFileSync(backupPath, data);
-          console.log(`Created backup of problematic database at: ${backupPath}`);
+          debugLog?.info(`Created backup of problematic database at: ${backupPath}`, { module: 'database-setup', function: 'initializeMainDatabase' });
         } catch (backupError) {
-          console.warn('Could not create backup:', backupError.message);
+                      debugLog?.warn('Could not create backup:', { module: 'database-setup', function: 'initializeMainDatabase', error: backupError.message });
         }
         
         // Create fresh database
-        dbInstance = new sqlite3Module.oo1.DB();
-        console.log('Created new database after failed load');
+        dbInstance = new SQLiteDatabase(dbPath);
+        debugLog?.info('Created new database after failed load', { module: 'database-setup', function: 'initializeMainDatabase' });
       }
     } else {
       // Create new database
-      console.log('Creating new database...');
-      dbInstance = new sqlite3Module.oo1.DB();
-      console.log('New database created');
+      debugLog?.info('Creating new database...', { module: 'database-setup', function: 'initializeMainDatabase', dbPath });
+      dbInstance = new SQLiteDatabase(dbPath);
+              debugLog?.info('New database created in file mode', { module: 'database-setup', function: 'initializeMainDatabase' });
     }
     
-    // Store the database path for later saving
+    // Store the database path for reference
     dbInstance._dbPath = dbPath;
     
-    // Setup database schema and indexes
-    await setupDatabaseSchema(dbInstance);
-    setupDatabaseIndexes(dbInstance);
-    
-    return dbInstance;
+          debugLog?.info('Setting up database schema and indexes', { 
+        module: 'database-setup',
+        function: 'initializeMainDatabase' 
+      });
+      // Setup database schema and indexes
+      await setupDatabaseSchema(dbInstance);
+      setupDatabaseIndexes(dbInstance);
+      
+      debugLog?.info('Database initialization completed successfully', {
+        module: 'database-setup',
+        function: 'initializeMainDatabase',
+        dbType: typeof dbInstance,
+        constructor: dbInstance?.constructor?.name,
+        methods: Object.getOwnPropertyNames(Object.getPrototypeOf(dbInstance || {})),
+        hasExec: typeof dbInstance?.exec === 'function',
+        hasPrepare: typeof dbInstance?.prepare === 'function',
+        hasAll: typeof dbInstance?.all === 'function',
+        hasRun: typeof dbInstance?.run === 'function'
+      });
+      return dbInstance;
   } catch (error) {
-    console.error('Error initializing database:', error);
+    debugLog?.error('Error initializing database:', { module: 'database-setup', function: 'initializeMainDatabase', error: error.message, stack: error.stack });
     
     // Fallback: create a test database in memory
-    console.log('Creating fallback in-memory database for testing');
+    debugLog?.info('Creating fallback in-memory database for testing', { module: 'database-setup', function: 'initializeMainDatabase' });
     try {
-      const sqlite3Module = await initializeSQLite();
-      dbInstance = new sqlite3Module.oo1.DB();
+      dbInstance = new SQLiteDatabase(':memory:');
       
       // Create basic tables for testing
       await setupDatabaseSchema(dbInstance);
@@ -174,10 +168,10 @@ async function initializeDatabase() {
       
       return dbInstance;
     } catch (fallbackError) {
-      console.error('Fallback database creation failed:', fallbackError);
+      debugLog?.error('Fallback database creation failed:', { module: 'database-setup', function: 'initializeMainDatabase', error: fallbackError.message, stack: fallbackError.stack });
       
       // Last resort: return null and let the app continue without database
-      console.warn('Returning null database instance - app will continue without database functionality');
+      debugLog?.warn('Returning null database instance - app will continue without database functionality', { module: 'database-setup', function: 'initializeMainDatabase' });
       return null;
     }
   }
@@ -188,15 +182,19 @@ async function initializeDatabase() {
  */
 async function setupDatabaseSchema(db) {
   try {
-    // Create tables if they don't exist
-    db.exec(`
+    debugLog?.info('Setting up database schema', { module: 'database-setup', function: 'setupDatabaseSchema' });
+    
+    // Create tables if they don't exist using prepared statements
+    const categoriesStmt = db.prepare(`
       CREATE TABLE IF NOT EXISTS categories (
         code TEXT PRIMARY KEY,
         description TEXT
-      );
+      )
     `);
+    categoriesStmt.run();
+    categoriesStmt.finalize();
     
-    db.exec(`
+    const mrvoiceStmt = db.prepare(`
       CREATE TABLE IF NOT EXISTS mrvoice (
         id INTEGER PRIMARY KEY,
         title TEXT,
@@ -206,12 +204,14 @@ async function setupDatabaseSchema(db) {
         filename TEXT,
         time TEXT,
         modtime INTEGER
-      );
+      )
     `);
+    mrvoiceStmt.run();
+    mrvoiceStmt.finalize();
     
-    console.log('Database schema setup completed');
+    debugLog?.info('Database schema setup completed', { module: 'database-setup', function: 'setupDatabaseSchema' });
   } catch (error) {
-    console.error('Error setting up database schema:', error);
+    debugLog?.error('Error setting up database schema:', { module: 'database-setup', function: 'setupDatabaseSchema', error: error.message, stack: error.stack });
     throw error;
   }
 }
@@ -221,102 +221,58 @@ async function setupDatabaseSchema(db) {
  */
 function setupDatabaseIndexes(db) {
   try {
+    debugLog?.info('Setting up database indexes', { module: 'database-setup', function: 'setupDatabaseIndexes' });
+    
     // Category indexes
-    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS 'category_code_index' ON categories(code)");
-    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS 'category_description_index' ON categories(description)");
+    const categoryCodeStmt = db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS 'category_code_index' ON categories(code)");
+    categoryCodeStmt.run();
+    categoryCodeStmt.finalize();
+    
+    const categoryDescStmt = db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS 'category_description_index' ON categories(description)");
+    categoryDescStmt.run();
+    categoryDescStmt.finalize();
 
     // Search indexes for better performance
-    db.exec("CREATE INDEX IF NOT EXISTS 'idx_title' ON mrvoice(title)");
-    db.exec("CREATE INDEX IF NOT EXISTS 'idx_artist' ON mrvoice(artist)");
-    db.exec("CREATE INDEX IF NOT EXISTS 'idx_info' ON mrvoice(info)");
-    db.exec("CREATE INDEX IF NOT EXISTS 'idx_category' ON mrvoice(category)");
+    const titleStmt = db.prepare("CREATE INDEX IF NOT EXISTS 'idx_title' ON mrvoice(title)");
+    titleStmt.run();
+    titleStmt.finalize();
     
-    console.log('Database indexes setup completed');
+    const artistStmt = db.prepare("CREATE INDEX IF NOT EXISTS 'idx_index' ON mrvoice(artist)");
+    artistStmt.run();
+    artistStmt.finalize();
+    
+    const infoStmt = db.prepare("CREATE INDEX IF NOT EXISTS 'idx_info' ON mrvoice(info)");
+    infoStmt.run();
+    infoStmt.finalize();
+    
+    const categoryStmt = db.prepare("CREATE INDEX IF NOT EXISTS 'idx_category' ON mrvoice(category)");
+    categoryStmt.run();
+    categoryStmt.finalize();
+    
+    debugLog?.info('Database indexes setup completed', { module: 'database-setup', function: 'setupDatabaseIndexes' });
   } catch (error) {
-    console.warn('Error setting up database indexes:', error);
+    debugLog?.warn('Error setting up database indexes:', { module: 'database-setup', function: 'setupDatabaseIndexes', error: error.message });
   }
 }
 
-/**
- * Save database to file
- */
-function saveDatabase(db, filePath) {
-  try {
-    if (!db || !db._dbPath) {
-      console.warn('Cannot save database: no database instance or path');
-      return;
-    }
-    
-    // Use the stored path or provided path
-    const savePath = filePath || db._dbPath;
-    
-    // Serialize the database and save to file
-    try {
-      const sqlite3Module = getSQLite();
-      if (!sqlite3Module) {
-        console.warn('SQLite module not available for saving');
-        return;
-      }
-      
-      // Serialize the database to get the raw data
-      const serializedPtr = sqlite3Module.capi.sqlite3_serialize(
-        db.pointer, 'main', null, 0
-      );
-      
-      if (serializedPtr) {
-        // Get the size of the serialized data
-        const size = sqlite3Module.capi.sqlite3_malloc_size(serializedPtr);
-        
-        // Convert to Uint8Array and save to file
-        const data = sqlite3Module.wasm.heap8u().subarray(serializedPtr, serializedPtr + size);
-        fs.writeFileSync(savePath, data);
-        
-        // Free the serialized data
-        sqlite3Module.capi.sqlite3_free(serializedPtr);
-        
-        console.log(`Database saved to ${savePath} (${size} bytes)`);
-      } else {
-        console.warn('Failed to serialize database for saving');
-      }
-    } catch (saveError) {
-      console.error('Error during database save:', saveError);
-      throw saveError;
-    }
-  } catch (error) {
-    console.error('Error saving database:', error);
-    throw error;
-  }
-}
+
 
 /**
- * Get the database instance
+ * Get the current database instance
  */
-function getDatabase() {
+function getMainDatabase() {
   return dbInstance;
 }
 
-/**
- * Get the SQLite module instance
- */
-function getSQLite() {
-  return sqlite3;
-}
-
 export {
-  initializeDatabase,
-  setupDatabaseSchema,
-  setupDatabaseIndexes,
-  saveDatabase,
-  getDatabase,
-  getSQLite
+  initializeMainDatabase,
+  getMainDatabase
 };
 
 // Default export for module loading
 export default {
-  initializeDatabase,
+  initializeMainDatabase,
   setupDatabaseSchema,
   setupDatabaseIndexes,
-  saveDatabase,
-  getDatabase,
-  getSQLite
+  getMainDatabase
 };

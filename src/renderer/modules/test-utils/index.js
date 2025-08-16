@@ -86,7 +86,7 @@ export function testDatabaseAPI() {
     function: 'testDatabaseAPI'
   });
   
-  if (window.electronAPI && window.electronAPI.database) {
+  if (window.secureElectronAPI && window.secureElectronAPI.database) {
     debugLog?.info('Database API available', { 
       module: 'test-utils',
       function: 'testDatabaseAPI'
@@ -98,7 +98,7 @@ export function testDatabaseAPI() {
     };
     
     // Test get categories
-    return window.electronAPI.database.getCategories().then(result => {
+    return window.secureElectronAPI.database.getCategories().then(result => {
       if (result.success) {
         debugLog?.info('getCategories API works', { 
           module: 'test-utils',
@@ -116,7 +116,7 @@ export function testDatabaseAPI() {
       }
       
       // Test database query
-      return window.electronAPI.database.query('SELECT COUNT(*) as count FROM categories');
+      return window.secureElectronAPI.database.query('SELECT COUNT(*) as count FROM categories');
     }).then(result => {
       if (result.success) {
         debugLog?.info('database query API works', { 
@@ -642,7 +642,7 @@ export function testSecurityFeatures() {
     }
     
     // Test that our APIs still work
-    return window.electronAPI.database.getCategories().then(result => {
+    return window.secureElectronAPI.database.getCategories().then(result => {
       if (result.success) {
         debugLog?.info('Database API still works with security features', { 
           module: 'test-utils',

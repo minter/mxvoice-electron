@@ -8,6 +8,9 @@
  * and preload scripts for enhanced security.
  */
 
+// Add immediate logging to see if the file is being loaded
+console.log('Main process starting...', new Date().toISOString());
+
 import { app, ipcMain } from 'electron';
 import path from 'path';
 import os from 'os';
@@ -15,7 +18,7 @@ import fs from 'fs';
 import readlines from 'n-readlines';
 import Store from 'electron-store';
 import log from 'electron-log';
-import { initializeDatabase, getDatabase } from './modules/database-setup.js';
+import { initializeMainDatabase, getMainDatabase } from './modules/database-setup.js';
 import { Howl, Howler } from 'howler';
 import electronUpdater from 'electron-updater';
 import markdownIt from 'markdown-it';
@@ -189,26 +192,28 @@ import('electron-squirrel-startup').then(electronSquirrelStartup => {
 });
 
 // Initialize database
-async function initializeMainDatabase() {
+async function initializeMainDatabaseWrapper() {
   try {
     debugLog.info('Initializing main database', { 
-      function: "initializeMainDatabase" 
+      function: "initializeMainDatabaseWrapper" 
     });
     
-    db = await initializeDatabase();
+    db = await initializeMainDatabase();
     
     if (db) {
       debugLog.info('Main database initialized successfully', { 
-        function: "initializeMainDatabase" 
+        function: "initializeMainDatabaseWrapper",
+        dbType: typeof db,
+        constructor: db?.constructor?.name
       });
     } else {
       debugLog.warn('Database initialization returned null - app will continue without database', { 
-        function: "initializeMainDatabase" 
+        function: "initializeMainDatabaseWrapper" 
       });
     }
   } catch (error) {
     debugLog.error('Error initializing main database', { 
-      function: "initializeMainDatabase",
+      function: "initializeMainDatabaseWrapper",
       error: error.message 
     });
     // Don't re-throw - let the app continue without database
@@ -238,16 +243,21 @@ async function checkFirstRun() {
       fs.mkdirSync(store.get('hotkey_directory'), { recursive: true });
 
       // Initialize database for first run
-      const initDb = await initializeDatabase();
+      const initDb = await initializeMainDatabase();
       
-      // Insert initial data
-      initDb.exec(`INSERT OR IGNORE INTO categories VALUES('UNC', 'Uncategorized')`);
-      initDb.exec(`INSERT OR IGNORE INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)`, 
-        ['Rock Bumper', 'Patrick Short', 'UNC', 'PatrickShort-CSzRockBumper.mp3', '00:49', Math.floor(Date.now() / 1000)]);
+      // Insert initial data using prepared statements
+      const categoryStmt = initDb.prepare(`INSERT OR IGNORE INTO categories VALUES(?, ?)`);
+      categoryStmt.run(['UNC', 'Uncategorized']);
+      categoryStmt.finalize();
       
-      // Save the database to file - sqlite-wasm handles this automatically
+      const songStmt = initDb.prepare(`INSERT OR IGNORE INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)`);
+      songStmt.run(['Rock Bumper', 'Patrick Short', 'UNC', 'PatrickShort-CSzRockBumper.mp3', '00:49', Math.floor(Date.now() / 1000)]);
+      songStmt.finalize();
+      
+      // Save the database to file - node-sqlite3-wasm handles this automatically
       const dbPath = path.join(store.get('database_directory'), 'mxvoice.db');
-      console.log(`Database will be saved to ${dbPath} by sqlite-wasm`);
+      debugLog.info(`Database path: ${dbPath}`, { function: "checkFirstRun" });
+      debugLog.info(`Database will be saved to ${dbPath} by node-sqlite3-wasm`, { function: "checkFirstRun" });
       
       fs.copyFileSync(path.join(__dirname, '..', 'assets', 'music', 'CSz Rock Bumper.mp3'), path.join(store.get('music_directory'), 'PatrickShort-CSzRockBumper.mp3'));
       debugLog.info(`mxvoice.db created at ${store.get('database_directory')}`, { 
@@ -308,7 +318,28 @@ function trackUser() {
 }
 
 // Initialize all modules with dependencies
-function initializeModules() {
+async function initializeModules() {
+  debugLog.info('Starting module initialization', { function: "initializeModules", hasDb: !!db, dbType: typeof db });
+  
+  // Ensure database is initialized before proceeding
+  if (!db) {
+    debugLog.warn('Database not ready, attempting to initialize...', { function: "initializeModules" });
+    try {
+      debugLog.info('Calling initializeMainDatabaseWrapper...', { function: "initializeModules" });
+      await initializeMainDatabaseWrapper();
+      debugLog.info('initializeMainDatabaseWrapper completed', { function: "initializeModules", hasDb: !!db, dbType: typeof db });
+    } catch (error) {
+      debugLog.error('Failed to initialize database for modules', { 
+        function: "initializeModules",
+        error: error.message,
+        stack: error.stack
+      });
+      // Continue without database
+    }
+  } else {
+    debugLog.info('Database already available, proceeding with modules', { function: "initializeModules" });
+  }
+
   const dependencies = {
     mainWindow,
     db,
@@ -324,13 +355,21 @@ function initializeModules() {
   // Initialize each module
   appSetup.initializeAppSetup(dependencies);
   
-  console.log('🚀 [MAIN] Initializing IPC handlers...');
-  console.log('🚀 [MAIN] autoUpdater available:', !!dependencies.autoUpdater);
-  console.log('🚀 [MAIN] autoUpdater type:', typeof dependencies.autoUpdater);
+  debugLog?.info('Initializing IPC handlers', { 
+    function: "initializeModules" 
+  });
+  debugLog?.info('Module dependencies status', { 
+    function: "initializeModules",
+    hasDb: !!dependencies.db,
+    hasAutoUpdater: !!dependencies.autoUpdater,
+    autoUpdaterType: typeof dependencies.autoUpdater
+  });
   
   ipcHandlers.initializeIpcHandlers(dependencies);
   
-  console.log('🚀 [MAIN] IPC handlers initialized');
+  debugLog?.info('IPC handlers initialized', { 
+    function: "initializeModules" 
+  });
   
   fileOperations.initializeFileOperations(dependencies);
 }
@@ -338,11 +377,17 @@ function initializeModules() {
 // Main window creation function
 const createWindow = async () => {
   try {
+    debugLog.info('Starting main window creation', { function: "createWindow" });
+    
     // Check first run (which also checks old config)
+    debugLog.info('Checking first run...', { function: "createWindow" });
     await checkFirstRun();
+    debugLog.info('First run check completed', { function: "createWindow" });
     
     // Initialize database connection for main process
-    await initializeMainDatabase();
+    debugLog.info('Initializing main database...', { function: "createWindow" });
+    await initializeMainDatabaseWrapper();
+    debugLog.info('Main database initialization completed', { function: "createWindow", hasDb: !!db, dbType: typeof db });
 
     // Create the window with restored size from store
     mainWindow = appSetup.createWindow({
@@ -351,7 +396,7 @@ const createWindow = async () => {
     });
 
     // Initialize modules with dependencies AFTER mainWindow is created
-    initializeModules();
+    await initializeModules();
 
     // Migrate old preferences after modules are initialized
     fileOperations.migrateOldPreferences();
@@ -362,7 +407,6 @@ const createWindow = async () => {
     // Track user
     trackUser();
   } catch (error) {
-    console.error('Failed to create main window:', error);
     debugLog?.error('Failed to create main window', { 
       function: "createWindow",
       error: error.message,
@@ -377,14 +421,19 @@ const createWindow = async () => {
       });
       
       // Initialize basic modules without database
-      initializeModules();
+      await initializeModules();
       
       // Create the menu
       appSetup.createApplicationMenu();
       
-      console.log('Created minimal window despite database initialization failure');
+      debugLog?.info('Created minimal window despite database initialization failure', { 
+        function: "createWindow" 
+      });
     } catch (fallbackError) {
-      console.error('Failed to create even minimal window:', fallbackError);
+      debugLog?.error('Failed to create even minimal window', { 
+        function: "createWindow",
+        error: fallbackError.message 
+      });
       app.quit();
     }
   }
@@ -416,6 +465,7 @@ function setupApp() {
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   app.on('ready', () => {
+    debugLog.info('Electron app ready event fired', { function: "app ready event" });
     createWindow();
     
     // Test auto-update scenarios if enabled

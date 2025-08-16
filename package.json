@@ -42,7 +42,7 @@
     "asarUnpack": [
       "**/*.node",
       "**/*.wasm",
-      "node_modules/@sqlite.org/sqlite-wasm/dist/*.wasm"
+      "node_modules/node-sqlite3-wasm/dist/*.wasm"
     ],
     "afterPack": "build/afterPack.js",
     "mac": {
@@ -126,13 +126,18 @@
         "repo": "mxvoice-electron",
         "releaseType": "release"
       }
+    ],
+    "files": [
+      "src/**/*",
+      "node_modules/**/*",
+      "node_modules/node-sqlite3-wasm/dist/*.wasm",
+      "node_modules/node-sqlite3-wasm/dist/*.js"
     ]
   },
   "license": "MIT",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.0.0",
     "@octokit/rest": "^22.0.0",
-    "@sqlite.org/sqlite-wasm": "^3.50.4-build1",
     "animate.css": "^4.1.1",
     "bootstrap": "^5.3.3",
     "electron-log": "^5.4.2",
@@ -145,6 +150,7 @@
     "mousetrap": "^1.6.5",
     "music-metadata": "11.8.2",
     "n-readlines": "^1.0.1",
+    "node-sqlite3-wasm": "^0.8.47",
     "uuid": "^11.1.0",
     "wavesurfer.js": "^7.10.1",
     "yarn": "^1.22.22"

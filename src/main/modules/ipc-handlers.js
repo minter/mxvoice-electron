@@ -26,39 +26,6 @@ let debugLog;
 let logService;
 let updateState;
 
-// Helper function to convert sqlite-wasm format to consistent format
-function convertSqliteWasmResult(result) {
-  if (result && result.length > 0) {
-    const columns = result[0].columns;
-    const values = result[0].values;
-    const data = values.map(row => {
-      const obj = {};
-      columns.forEach((col, index) => {
-        obj[col] = row[index];
-      });
-      return obj;
-    });
-    return data;
-  } else {
-    return [];
-  }
-}
-
-// Helper function to convert single row sqlite-wasm result
-function convertSqliteWasmSingleRow(result) {
-  if (result && result.length > 0 && result[0].values.length > 0) {
-    const columns = result[0].columns;
-    const row = result[0].values[0];
-    const data = {};
-    columns.forEach((col, index) => {
-      data[col] = row[index];
-    });
-    return data;
-  } else {
-    return null;
-  }
-}
-
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
   mainWindow = dependencies.mainWindow;
@@ -184,21 +151,102 @@ function registerAllHandlers() {
   // Database API handlers
   ipcMain.handle('database-query', async (event, sql, params) => {
     try {
+      debugLog?.info('Database query handler called', { 
+        module: 'ipc-handlers', 
+        function: 'database-query', 
+        sql, 
+        params, 
+        hasDb: !!db 
+      });
+      
       if (!db) {
+        debugLog?.warn('Database not initialized in query handler', { 
+          module: 'ipc-handlers', 
+          function: 'database-query' 
+        });
         throw new Error('Database not initialized');
       }
       
-      // For the official SQLite WebAssembly, use the correct exec API
-      const result = db.exec({
-        sql: sql,
-        bind: params || [],
-        returnValue: "resultRows",
-        rowMode: "object"
+      debugLog?.info('Database available, executing query', { 
+        module: 'ipc-handlers', 
+        function: 'database-query' 
       });
       
+      // For node-sqlite3-wasm, always use prepare/all for queries to ensure consistent results
+      let result;
+      debugLog?.info('Using prepared statement for query', { 
+        module: 'ipc-handlers', 
+        function: 'database-query',
+        hasParams: params && params.length > 0
+      });
+      
+      // First, let's check if the table exists and what's in it
+      try {
+        const tableCheckStmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='mrvoice'");
+        const tableExists = tableCheckStmt.all([]);
+        tableCheckStmt.finalize();
+        
+        debugLog?.info('Table existence check', { 
+          module: 'ipc-handlers', 
+          function: 'database-query',
+          tableExists: tableExists,
+          tableCount: tableExists.length
+        });
+        
+        if (tableExists.length > 0) {
+          // Check table structure
+          const structureStmt = db.prepare("PRAGMA table_info(mrvoice)");
+          const structure = structureStmt.all([]);
+          structureStmt.finalize();
+          
+          debugLog?.info('Table structure', { 
+            module: 'ipc-handlers', 
+            function: 'database-query',
+            structure: structure
+          });
+          
+          // Check row count
+          const countStmt = db.prepare("SELECT COUNT(*) as count FROM mrvoice");
+          const countResult = countStmt.all([]);
+          countStmt.finalize();
+          
+          debugLog?.info('Table row count', { 
+            module: 'ipc-handlers', 
+            function: 'database-query',
+            countResult: countResult
+          });
+        }
+      } catch (error) {
+        debugLog?.warn('Table check failed', { 
+          module: 'ipc-handlers', 
+          function: 'database-query',
+          error: error.message
+        });
+      }
+      
+      const stmt = db.prepare(sql);
+      result = stmt.all(params || []);
+      stmt.finalize();
+      
+      debugLog?.info('Prepared statement result', { 
+        module: 'ipc-handlers', 
+        function: 'database-query', 
+        resultType: typeof result,
+        resultCount: Array.isArray(result) ? result.length : 'not array',
+        result: result
+      });
+      
+      debugLog?.info('Query successful, returning result', { 
+        module: 'ipc-handlers', 
+        function: 'database-query' 
+      });
       return { success: true, data: result || [] };
     } catch (error) {
-      debugLog?.error('Database query error:', { module: 'ipc-handlers', function: 'database-query', error: error.message });
+      debugLog?.error('Database query error', { 
+        module: 'ipc-handlers', 
+        function: 'database-query', 
+        error: error.message 
+      });
       return { success: false, error: error.message };
     }
   });
@@ -209,13 +257,11 @@ function registerAllHandlers() {
         throw new Error('Database not initialized');
       }
       
-      // For the official SQLite WebAssembly, use the object format for all operations
-      const result = db.exec({
-        sql: sql,
-        bind: params || [],
-        returnValue: "resultRows",
-        rowMode: "object"
-      });
+      // For node-sqlite3-wasm, always use prepare/run for consistent results
+      let result;
+      const stmt = db.prepare(sql);
+      result = stmt.run(params || []);
+      stmt.finalize();
       
       return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
     } catch (error) {
@@ -230,21 +276,33 @@ function registerAllHandlers() {
         throw new Error('Database not initialized');
       }
       
-      // For the official SQLite WebAssembly, we need to use a different approach
+      // For node-sqlite3-wasm, use prepare/all for consistent results
       const sql = 'SELECT * FROM categories ORDER BY description ASC';
-      console.log('Executing categories query:', sql);
-      
-      const result = db.exec({
-        sql: sql,
-        returnValue: "resultRows",
-        rowMode: "object"
+      debugLog?.info('Executing categories query', { 
+        module: 'ipc-handlers', 
+        function: 'get-categories', 
+        sql 
       });
-      console.log('Raw categories result:', JSON.stringify(result, null, 2));
+      
+      const stmt = db.prepare(sql);
+      const result = stmt.all([]);
+      stmt.finalize();
+      
+      debugLog?.info('Raw categories result', { 
+        module: 'ipc-handlers', 
+        function: 'get-categories', 
+        resultType: typeof result,
+        resultLength: Array.isArray(result) ? result.length : 'not array',
+        result: result
+      });
       
       return { success: true, data: result || [] };
     } catch (error) {
-      console.log('Categories query error:', error);
-      debugLog?.error('Get categories error:', { module: 'ipc-handlers', function: 'get-categories', error: error.message });
+      debugLog?.error('Get categories error', { 
+        module: 'ipc-handlers', 
+        function: 'get-categories', 
+        error: error.message 
+      });
       return { success: false, error: error.message };
     }
   });
@@ -261,16 +319,16 @@ function registerAllHandlers() {
         songData 
       });
       
-      const result = db.exec({
-        sql: `
-          INSERT INTO mrvoice (title, artist, category, filename, time, modtime)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `,
-        bind: [songData.title, songData.artist, songData.category, 
-               songData.filename, songData.duration || '00:00', Math.floor(Date.now() / 1000)],
-        returnValue: "resultRows",
-        rowMode: "object"
-      });
+      // For node-sqlite3-wasm, use prepare/run for parameterized statements
+      const stmt = db.prepare(`
+        INSERT INTO mrvoice (title, artist, category, filename, time, modtime)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      const result = stmt.run([songData.title, songData.artist, songData.category, 
+                              songData.filename, songData.duration || '00:00', Math.floor(Date.now() / 1000)]);
+      
+      stmt.finalize();
       
       debugLog?.info('Raw database result:', { 
         module: 'ipc-handlers', 
@@ -946,15 +1004,13 @@ function registerAllHandlers() {
       if (!songId) {
         throw new Error('Song ID is required');
       }
-      const result = db.exec({
-        sql: 'SELECT * FROM mrvoice WHERE id = ?',
-        bind: [songId],
-        returnValue: "resultRows",
-        rowMode: "object"
-      });
+      // For node-sqlite3-wasm, use prepare/get for parameterized queries
+      const stmt = db.prepare('SELECT * FROM mrvoice WHERE id = ?');
+      const result = stmt.get(songId);
+      stmt.finalize();
       
-      // Convert sql.js format to better-sqlite3 format for compatibility
-      const data = convertSqlJsSingleRow(result);
+      // Convert result to expected format
+      const data = result ? [result] : [];
       return { success: true, data: data };
     } catch (error) {
       debugLog?.error('Get song by ID error:', { module: 'ipc-handlers', function: 'get-song-by-id', error: error.message });
@@ -970,12 +1026,11 @@ function registerAllHandlers() {
       if (!songId) {
         throw new Error('Song ID is required');
       }
-      const result = db.exec({
-        sql: 'DELETE FROM mrvoice WHERE id = ?',
-        bind: [songId],
-        returnValue: "resultRows",
-        rowMode: "object"
-      });
+      // For node-sqlite3-wasm, use prepare/run for parameterized statements
+      const stmt = db.prepare('DELETE FROM mrvoice WHERE id = ?');
+      const result = stmt.run(songId);
+      stmt.finalize();
+      
       return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {
       debugLog?.error('Delete song error:', { module: 'ipc-handlers', function: 'delete-song', error: error.message });
@@ -1015,17 +1070,18 @@ function registerAllHandlers() {
       if (!songData || !songData.id) {
         throw new Error('Song data with ID is required');
       }
-      const result = db.exec({
-        sql: `
-          UPDATE mrvoice 
-          SET title = ?, artist = ?, category = ?, info = ?, filename = ?, time = ?
-          WHERE id = ?
-        `,
-        bind: [songData.title, songData.artist, songData.category, 
-               songData.info, songData.filename, songData.duration, songData.id],
-        returnValue: "resultRows",
-        rowMode: "object"
-      });
+      // For node-sqlite3-wasm, use prepare/run for parameterized statements
+      const stmt = db.prepare(`
+        UPDATE mrvoice 
+        SET title = ?, artist = ?, category = ?, info = ?, filename = ?, time = ?
+        WHERE id = ?
+      `);
+      
+      const result = stmt.run([songData.title, songData.artist, songData.category, 
+                              songData.info, songData.filename, songData.duration, songData.id]);
+      
+      stmt.finalize();
+      
       return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {
       debugLog?.error('Update song error:', { module: 'ipc-handlers', function: 'update-song', error: error.message });
@@ -1043,12 +1099,11 @@ function registerAllHandlers() {
         throw new Error('Category code and description are required');
       }
       
-      const result = db.exec({
-        sql: 'INSERT INTO categories (code, description) VALUES (?, ?)',
-        bind: [categoryData.code, categoryData.description],
-        returnValue: "resultRows",
-        rowMode: "object"
-      });
+      // For node-sqlite3-wasm, use prepare/run for parameterized statements
+      const stmt = db.prepare('INSERT INTO categories (code, description) VALUES (?, ?)');
+      const result = stmt.run([categoryData.code, categoryData.description]);
+      stmt.finalize();
+      
       return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
     } catch (error) {
       debugLog?.error('Add category error:', { module: 'ipc-handlers', function: 'add-category', error: error.message });
@@ -1064,12 +1119,11 @@ function registerAllHandlers() {
       if (!code || !description) {
         throw new Error('Category code and description are required');
       }
-      const result = db.exec({
-        sql: 'UPDATE categories SET description = ? WHERE code = ?',
-        bind: [description, code],
-        returnValue: "resultRows",
-        rowMode: "object"
-      });
+      // For node-sqlite3-wasm, use prepare/run for parameterized statements
+      const stmt = db.prepare('UPDATE categories SET description = ? WHERE code = ?');
+      const result = stmt.run([description, code]);
+      stmt.finalize();
+      
       return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {
       debugLog?.error('Update category error:', { module: 'ipc-handlers', function: 'update-category', error: error.message });
@@ -1087,20 +1141,14 @@ function registerAllHandlers() {
       }
       
       // First move all songs to "Uncategorized"
-      db.exec({
-        sql: 'UPDATE mrvoice SET category = ? WHERE category = ?',
-        bind: ['UNCATEGORIZED', code],
-        returnValue: "resultRows",
-        rowMode: "object"
-      });
+      const updateStmt = db.prepare('UPDATE mrvoice SET category = ? WHERE category = ?');
+      updateStmt.run(['UNCATEGORIZED', code]);
+      updateStmt.finalize();
       
       // Then delete the category
-      const result = db.exec({
-        sql: 'DELETE FROM categories WHERE code = ?',
-        bind: [code],
-        returnValue: "resultRows",
-        rowMode: "object"
-      });
+      const deleteStmt = db.prepare('DELETE FROM categories WHERE code = ?');
+      const result = deleteStmt.run([code]);
+      deleteStmt.finalize();
       
       return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {

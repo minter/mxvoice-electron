@@ -307,11 +307,6 @@
   resolved "https://registry.yarnpkg.com/@sindresorhus/is/-/is-4.6.0.tgz#3c7c9c46e678feefe7a2e5bb609d3dbd665ffb3f"
   integrity sha512-t09vSN3MdfsyCHoFcTRCH/iUtG7OJ0CsjzB8cjAmKc/va/kIgeDI/TxsigdncE/4be734m0cvIYwNaV4i2XqAw==
 
-"@sqlite.org/sqlite-wasm@^3.50.4-build1":
-  version "3.50.4-build1"
-  resolved "https://registry.yarnpkg.com/@sqlite.org/sqlite-wasm/-/sqlite-wasm-3.50.4-build1.tgz#7283358e7cfa4083a88b86bd313982046d2a7ca0"
-  integrity sha512-Qig2Wso7gPkU1PtXwFzndh+CTRzrIFxVGqv6eCetjU7YqxlHItj+GvQYwYTppCRgAPawtRN/4AJcEgB9xDHGug==
-
 "@szmarczak/http-timer@^4.0.5":
   version "4.0.6"
   resolved "https://registry.yarnpkg.com/@szmarczak/http-timer/-/http-timer-4.0.6.tgz#b4a914bb62e7c272d4e5989fe4440f812ab1d807"
@@ -2176,6 +2171,11 @@ node-api-version@^0.2.0:
   integrity sha512-2xP/IGGMmmSQpI1+O/k72jF/ykvZ89JeuKX3TLJAYPDVLUalrshrLHkeVcCCZqG/eEa635cr8IBYzgnDvM2O8Q==
   dependencies:
     semver "^7.3.5"
+
+node-sqlite3-wasm@^0.8.47:
+  version "0.8.47"
+  resolved "https://registry.yarnpkg.com/node-sqlite3-wasm/-/node-sqlite3-wasm-0.8.47.tgz#622a70d54de17a4458dd8298d629f4bb3e5eeeb6"
+  integrity sha512-eo4FyyfstpxgivVKvNzosV+qH4Cugm+bjyyPPEZHcujRWcIURUP1pnkhWT3cyLtwGGLV1ZXyldGbHpcTfofBiA==
 
 nopt@^6.0.0:
   version "6.0.0"

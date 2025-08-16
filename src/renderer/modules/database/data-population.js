@@ -124,8 +124,8 @@ async function populateCategorySelect() {
  */
 function setLabelFromSongId(song_id, element) {
   // Use new database API for getting song by ID
-  if (window.electronAPI && window.electronAPI.database) {
-    window.electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
+      if (window.secureElectronAPI && window.secureElectronAPI.database) {
+      window.secureElectronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
       if (result.success && result.data.length > 0) {
         const row = result.data[0];
         const title = row.title || "[Unknown Title]";

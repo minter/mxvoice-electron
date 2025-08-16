@@ -193,9 +193,9 @@ function performLiveSearch(searchTerm) {
   }
 
   // Use new database API for live search
-  if (window.electronAPI && window.electronAPI.database) {
+  if (window.secureElectronAPI && window.secureElectronAPI.database) {
     const sql = "SELECT * from mrvoice" + query_string + " ORDER BY category,info,title,artist LIMIT 50";
-    window.electronAPI.database.query(sql, query_params).then(result => {
+    window.secureElectronAPI.database.query(sql, query_params).then(result => {
       if (result.success) {
         debugLog?.info(`🔍 Live search returned ${result.data.length} results`, { 
           module: 'live-search',

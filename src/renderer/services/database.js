@@ -13,7 +13,7 @@ export const database = {
    * @returns {Promise<Object>} - Query result
    */
   query: (query, params = []) => {
-    return window.electronAPI.database.query(query, params);
+    return window.secureElectronAPI.database.query(query, params);
   },
 
   /**
@@ -21,7 +21,7 @@ export const database = {
    * @returns {Promise<Array>} - Array of songs
    */
   getAllSongs: () => {
-    return window.electronAPI.database.getAllSongs();
+    return window.secureElectronAPI.database.getAllSongs();
   },
 
   /**
@@ -30,15 +30,15 @@ export const database = {
    * @returns {Promise<Object>} - Song data
    */
   getSongById: (id) => {
-    return window.electronAPI.database.getSongById(id);
+    return window.secureElectronAPI.database.query("SELECT * FROM mrvoice WHERE id = ?", [id]);
   },
 
   /**
    * Search songs in the database
    * @param {string} searchTerm - The search term
-   * @returns {Promise<Array>} - Array of matching songs
+   * @returns {Promise<Array>} - Query result
    */
   searchSongs: (searchTerm) => {
-    return window.electronAPI.database.searchSongs(searchTerm);
+    return window.secureElectronAPI.database.query("SELECT * FROM mrvoice WHERE title LIKE ? OR artist LIKE ? OR info LIKE ?", [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]);
   }
 }; 

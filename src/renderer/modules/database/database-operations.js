@@ -251,8 +251,8 @@ async function addNewCategory(description) {
  */
 function saveEditedSong(songData) {
   return new Promise((resolve, reject) => {
-    if (window.electronAPI && window.electronAPI.database) {
-      window.electronAPI.database.execute(
+    if (window.secureElectronAPI && window.secureElectronAPI.database) {
+      window.secureElectronAPI.database.execute(
         "UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?",
         [songData.title, songData.artist, songData.category, songData.info, songData.id]
       ).then(result => {
@@ -297,8 +297,8 @@ function saveEditedSong(songData) {
  */
 function saveNewSong(songData) {
   return new Promise((resolve, reject) => {
-    if (window.electronAPI && window.electronAPI.database) {
-      window.electronAPI.database.execute(
+    if (window.secureElectronAPI && window.secureElectronAPI.database) {
+      window.secureElectronAPI.database.execute(
         "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)",
         [
           songData.title,
@@ -351,8 +351,8 @@ function saveNewSong(songData) {
  */
 function deleteSong(songId) {
   return new Promise((resolve, reject) => {
-    if (window.electronAPI && window.electronAPI.database) {
-      window.electronAPI.database.execute(
+    if (window.secureElectronAPI && window.secureElectronAPI.database) {
+      window.secureElectronAPI.database.execute(
         "DELETE FROM mrvoice WHERE id = ?",
         [songId]
       ).then(result => {
@@ -396,8 +396,8 @@ function deleteSong(songId) {
  */
 function getSongById(songId) {
   return new Promise((resolve, reject) => {
-    if (window.electronAPI && window.electronAPI.database) {
-      window.electronAPI.database.query(
+    if (window.secureElectronAPI && window.secureElectronAPI.database) {
+      window.secureElectronAPI.database.query(
         "SELECT * FROM mrvoice WHERE id = ?",
         [songId]
       ).then(result => {
