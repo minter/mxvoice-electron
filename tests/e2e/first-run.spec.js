@@ -63,8 +63,34 @@ test.describe('First run flow', () => {
     // 5) Verify exactly one result and it is the CSz Rock Bumper
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
-    await expect(rows.first()).toContainText('Rock Bumper');
-    await expect(rows.first()).toContainText('Patrick Short');
+    const firstRow = rows.first();
+    await expect(firstRow).toContainText('Rock Bumper');
+    await expect(firstRow).toContainText('Patrick Short');
+
+    // 6) Double-click the result to start playback
+    await firstRow.dblclick();
+
+    // Verify playing UI state (pause button visible, stop enabled, now playing text shown)
+    await expect(page.locator('#pause_button')).toBeVisible();
+    await expect(page.locator('#stop_button')).not.toBeDisabled();
+    await expect(page.locator('#song_now_playing')).toBeVisible();
+    await expect(page.locator('#song_now_playing')).toContainText('Rock Bumper');
+
+    // 7) Wait a moment and verify the timer is progressing
+    const startTime = await page.locator('#timer').textContent();
+    const startRemaining = await page.locator('#duration').textContent();
+    await page.waitForTimeout(1200);
+    const afterTime = await page.locator('#timer').textContent();
+    const afterRemaining = await page.locator('#duration').textContent();
+    expect(startTime).not.toEqual(afterTime);
+    expect(startRemaining).not.toEqual(afterRemaining);
+
+    // 8) Click Stop to stop playback and verify UI resets
+    await page.locator('#stop_button').click();
+    await expect(page.locator('#play_button')).toBeVisible();
+    await expect(page.locator('#pause_button')).toHaveClass(/d-none/);
+    await expect(page.locator('#stop_button')).toBeDisabled();
+    await expect(page.locator('#song_now_playing')).toBeHidden();
 
     // Artifact checks
     expect(fs.existsSync(path.join(dbDir, 'mxvoice.db'))).toBeTruthy();
