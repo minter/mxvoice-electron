@@ -209,8 +209,14 @@ function registerAllHandlers() {
         throw new Error('Database not initialized');
       }
       
-      // sqlite-wasm uses exec() for statements
-      const result = db.exec(sql, params || []);
+      // For the official SQLite WebAssembly, use the object format for all operations
+      const result = db.exec({
+        sql: sql,
+        bind: params || [],
+        returnValue: "resultRows",
+        rowMode: "object"
+      });
+      
       return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
     } catch (error) {
       debugLog?.error('Database execute error:', { module: 'ipc-handlers', function: 'database-execute', error: error.message });
@@ -248,11 +254,16 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
-      const result = db.exec(`
-        INSERT INTO mrvoice (title, artist, category, filename, time, modtime)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `, [songData.title, songData.artist, songData.category, 
-          songData.filename, songData.duration || '00:00', Math.floor(Date.now() / 1000)]);
+      const result = db.exec({
+        sql: `
+          INSERT INTO mrvoice (title, artist, category, filename, time, modtime)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `,
+        bind: [songData.title, songData.artist, songData.category, 
+               songData.filename, songData.duration || '00:00', Math.floor(Date.now() / 1000)],
+        returnValue: "resultRows",
+        rowMode: "object"
+      });
       return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
     } catch (error) {
       debugLog?.error('Add song error:', { module: 'ipc-handlers', function: 'add-song', error: error.message });
@@ -935,8 +946,11 @@ function registerAllHandlers() {
       if (!songId) {
         throw new Error('Song ID is required');
       }
-      const result = db.run('DELETE FROM mrvoice WHERE id = ?', [songId]);
-      return { success: true, data: { changes: result.changes } };
+      const result = db.exec({
+        sql: 'DELETE FROM mrvoice WHERE id = ?',
+        bind: [songId]
+      });
+      return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {
       debugLog?.error('Delete song error:', { module: 'ipc-handlers', function: 'delete-song', error: error.message });
       return { success: false, error: error.message };
@@ -975,13 +989,13 @@ function registerAllHandlers() {
       if (!songData || !songData.id) {
         throw new Error('Song data with ID is required');
       }
-      const result = db.run(`
+      const result = db.exec(`
         UPDATE mrvoice 
         SET title = ?, artist = ?, category = ?, info = ?, filename = ?, time = ?
         WHERE id = ?
       `, [songData.title, songData.artist, songData.category, 
           songData.info, songData.filename, songData.duration, songData.id]);
-      return { success: true, data: { changes: result.changes } };
+      return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {
       debugLog?.error('Update song error:', { module: 'ipc-handlers', function: 'update-song', error: error.message });
       return { success: false, error: error.message };
@@ -993,11 +1007,16 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
+      
       if (!categoryData || !categoryData.code || !categoryData.description) {
         throw new Error('Category code and description are required');
       }
-      const result = db.run('INSERT INTO categories (code, description) VALUES (?, ?)', [categoryData.code, categoryData.description]);
-      return { success: true, data: { changes: result.changes, lastInsertRowid: result.lastInsertRowid } };
+      
+      const result = db.exec({
+        sql: 'INSERT INTO categories (code, description) VALUES (?, ?)',
+        bind: [categoryData.code, categoryData.description]
+      });
+      return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
     } catch (error) {
       debugLog?.error('Add category error:', { module: 'ipc-handlers', function: 'add-category', error: error.message });
       return { success: false, error: error.message };
@@ -1012,8 +1031,11 @@ function registerAllHandlers() {
       if (!code || !description) {
         throw new Error('Category code and description are required');
       }
-      const result = db.run('UPDATE categories SET description = ? WHERE code = ?', [description, code]);
-      return { success: true, data: { changes: result.changes } };
+      const result = db.exec({
+        sql: 'UPDATE categories SET description = ? WHERE code = ?',
+        bind: [description, code]
+      });
+      return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {
       debugLog?.error('Update category error:', { module: 'ipc-handlers', function: 'update-category', error: error.message });
       return { success: false, error: error.message };
@@ -1030,12 +1052,22 @@ function registerAllHandlers() {
       }
       
       // First move all songs to "Uncategorized"
-      db.run('UPDATE mrvoice SET category = ? WHERE category = ?', ['UNCATEGORIZED', code]);
+      db.exec({
+        sql: 'UPDATE mrvoice SET category = ? WHERE category = ?',
+        bind: ['UNCATEGORIZED', code],
+        returnValue: "resultRows",
+        rowMode: "object"
+      });
       
       // Then delete the category
-      const result = db.run('DELETE FROM categories WHERE code = ?', [code]);
+      const result = db.exec({
+        sql: 'DELETE FROM categories WHERE code = ?',
+        bind: [code],
+        returnValue: "resultRows",
+        rowMode: "object"
+      });
       
-      return { success: true, data: { changes: result.changes } };
+      return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {
       debugLog?.error('Delete category error:', { module: 'ipc-handlers', function: 'delete-category', error: error.message });
       return { success: false, error: error.message };

@@ -24,8 +24,8 @@ try {
  */
 function getCategories() {
   return new Promise((resolve, reject) => {
-    if (window.electronAPI && window.electronAPI.database) {
-      window.electronAPI.database.getCategories().then(result => {
+    if (window.secureElectronAPI && window.secureElectronAPI.database) {
+      window.secureElectronAPI.database.getCategories().then(result => {
         if (result.success) {
           debugLog?.info('Categories retrieved successfully', { 
             module: 'category-operations',
@@ -62,8 +62,8 @@ function getCategories() {
  */
 function getCategoryByCode(code) {
   return new Promise((resolve, reject) => {
-    if (window.electronAPI && window.electronAPI.database) {
-      window.electronAPI.database.query(
+    if (window.secureElectronAPI && window.secureElectronAPI.database) {
+      window.secureElectronAPI.database.query(
         "SELECT * FROM categories WHERE code = ?",
         [code]
       ).then(result => {
@@ -107,11 +107,8 @@ function getCategoryByCode(code) {
  */
 function editCategory(code, description) {
   return new Promise((resolve, reject) => {
-    if (window.electronAPI && window.electronAPI.database) {
-      window.electronAPI.database.execute(
-        "UPDATE categories SET description = ? WHERE code = ?",
-        [description, code]
-      ).then(result => {
+    if (window.secureElectronAPI && window.secureElectronAPI.database) {
+      window.secureElectronAPI.database.updateCategory(code, description).then(result => {
         if (result.success) {
           debugLog?.info('Category updated successfully', { 
             module: 'category-operations',
@@ -165,23 +162,20 @@ function updateCategory(code, description) {
  */
 function deleteCategory(code, description) {
   return new Promise((resolve, reject) => {
-    if (window.electronAPI && window.electronAPI.database) {
+    if (window.secureElectronAPI && window.secureElectronAPI.database) {
       // First ensure "Uncategorized" category exists
-      window.electronAPI.database.execute(
-        "INSERT OR REPLACE INTO categories VALUES(?, ?)",
-        ["UNC", "Uncategorized"]
-      ).then(() => {
+      window.secureElectronAPI.database.addCategory({
+        code: "UNC",
+        description: "Uncategorized"
+      }).then(() => {
         // Update all songs in this category to "Uncategorized"
-        return window.electronAPI.database.execute(
+        return window.secureElectronAPI.database.execute(
           "UPDATE mrvoice SET category = ? WHERE category = ?",
           ["UNC", code]
         );
       }).then(() => {
         // Delete the category
-        return window.electronAPI.database.execute(
-          "DELETE FROM categories WHERE code = ?",
-          [code]
-        );
+        return window.secureElectronAPI.database.deleteCategory(code, "Category deletion");
       }).then(result => {
         if (result.success) {
           debugLog?.info('Category deleted successfully', { 
@@ -222,63 +216,83 @@ function deleteCategory(code, description) {
  * @param {string} description - Category description
  * @returns {Promise<Object>} - Result of the operation
  */
-function addNewCategory(description) {
-  return new Promise((resolve, reject) => {
-    let code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-    
-    if (window.electronAPI && window.electronAPI.database) {
-      // Check for code collision and generate unique code
-      const checkCode = (baseCode, loopCount = 1) => {
-        const testCode = loopCount === 1 ? baseCode : `${baseCode}${loopCount}`;
-        
-        return window.electronAPI.database.query(
-          "SELECT * FROM categories WHERE code = ?",
-          [testCode]
-        ).then(result => {
-          if (result.success && result.data.length > 0) {
-            return checkCode(baseCode, loopCount + 1);
-          } else {
-            return testCode;
-          }
-        });
-      };
-      
-      checkCode(code).then(finalCode => {
-        return window.electronAPI.database.execute(
-          "INSERT INTO categories VALUES (?, ?)",
-          [finalCode, description]
-        );
-      }).then(result => {
-        if (result.success) {
-          debugLog?.info('New category added successfully', { 
-            module: 'category-operations',
-            function: 'addNewCategory',
-            code: code,
-            description: description
-          });
-          resolve(result);
-        } else {
-          debugLog?.warn('Failed to add category', { 
-            module: 'category-operations',
-            function: 'addNewCategory',
-            description: description,
-            error: result.error
-          });
-          reject(new Error(result.error));
-        }
-      }).catch(error => {
-        debugLog?.warn('Database API error', { 
-          module: 'category-operations',
-          function: 'addNewCategory',
-          description: description,
-          error: error.message
-        });
-        reject(error);
-      });
-    } else {
-      reject(new Error('Database not available'));
+async function addNewCategory(description) {
+  try {
+    // Validate input
+    if (!description || typeof description !== 'string' || description.trim() === '') {
+      throw new Error('Invalid description: must be a non-empty string');
     }
-  });
+    
+    let code = description.replace(/\s/g, "").slice(0, 4).toUpperCase();
+    
+    // Ensure we have a valid code
+    if (!code || code.length === 0) {
+      throw new Error('Failed to generate category code from description');
+    }
+    
+    if (!window.secureElectronAPI || !window.secureElectronAPI.database) {
+      throw new Error('Database not available');
+    }
+    
+    // Check for code collision and generate unique code
+    const checkCode = async (baseCode, loopCount = 1) => {
+      if (loopCount > 10) {
+        throw new Error('Too many code collision attempts');
+      }
+      
+      const testCode = loopCount === 1 ? baseCode : `${baseCode}${loopCount}`;
+      
+      const result = await window.secureElectronAPI.database.query(
+        "SELECT * FROM categories WHERE code = ?",
+        [testCode]
+      );
+      
+      if (result.success && result.data && result.data.length > 0) {
+        return await checkCode(baseCode, loopCount + 1);
+      } else {
+        return testCode;
+      }
+    };
+    
+    const finalCode = await checkCode(code);
+    
+    // Ensure we have a valid final code
+    if (!finalCode || typeof finalCode !== 'string' || finalCode.trim() === '') {
+      throw new Error('Failed to generate valid category code');
+    }
+    
+    // Use the working database-execute method with the correct object format
+    const result = await window.secureElectronAPI.database.execute(
+      "INSERT INTO categories (code, description) VALUES (?, ?)",
+      [finalCode, description]
+    );
+    
+    if (result.success) {
+      debugLog?.info('New category added successfully', { 
+        module: 'category-operations',
+        function: 'addNewCategory',
+        code: finalCode,
+        description: description
+      });
+      return result;
+    } else {
+      debugLog?.warn('Failed to add category', { 
+        module: 'category-operations',
+        function: 'addNewCategory',
+        description: description,
+        error: result.error
+      });
+      throw new Error(result.error);
+    }
+  } catch (error) {
+    debugLog?.warn('Database API error', { 
+      module: 'category-operations',
+      function: 'addNewCategory',
+      description: description,
+      error: error.message
+    });
+    throw error;
+  }
 }
 
 export {
