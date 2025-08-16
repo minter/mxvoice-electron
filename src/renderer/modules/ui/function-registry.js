@@ -16,25 +16,17 @@ try {
 }
 
 export const uiFunctions = {
-  // UI scaling and layout functions
-  scaleScrollable: 'scaleScrollable',
-  
-  // Tab management functions (note: editSelectedSong, deleteSelectedSong moved to song management)
+  // UI Functions
   closeAllTabs: 'closeAllTabs',
   toggleSelectedRow: 'toggleSelectedRow',
-  
-  // Font and display functions
   increaseFontSize: 'increaseFontSize',
   decreaseFontSize: 'decreaseFontSize',
   toggleWaveform: 'toggleWaveform',
+  toggleAdvancedSearch: 'toggleAdvancedSearch',
   getFontSize: 'getFontSize',
   setFontSize: 'setFontSize',
   
   // Fallback functions for when module fails to load
-  scaleScrollableFallback: () => debugLog?.warn('UI module not available - scaleScrollable', { 
-    module: 'ui-function-registry',
-    function: 'scaleScrollableFallback'
-  }),
   closeAllTabsFallback: () => debugLog?.warn('UI module not available - closeAllTabs', { 
     module: 'ui-function-registry',
     function: 'closeAllTabsFallback'
@@ -63,6 +55,4 @@ export const uiFunctions = {
     module: 'ui-function-registry',
     function: 'setFontSizeFallback'
   })
-};
-
-export default uiFunctions; 
+}; 

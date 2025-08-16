@@ -6,6 +6,7 @@
  */
 
 export const moduleConfig = [
+  { name: 'utils', path: '../utils/index.js', required: false },
   { name: 'fileOperations', path: '../file-operations/index.js', required: false },
   { name: 'songManagement', path: '../song-management/index.js', required: false },
   { name: 'holdingTank', path: '../holding-tank/index.js', required: true },
@@ -22,8 +23,7 @@ export const moduleConfig = [
   { name: 'audio', path: '../audio/index.js', required: false },
   { name: 'ui', path: '../ui/index.js', required: true },
   { name: 'debugLog', path: '../debug-log/index.js', required: false },
-  { name: 'database', path: '../database/index.js', required: false },
-  { name: 'utils', path: '../utils/index.js', required: false }
+  { name: 'database', path: '../database/index.js', required: false }
 ];
 
 export default moduleConfig;

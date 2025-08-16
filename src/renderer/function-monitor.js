@@ -142,11 +142,11 @@ class FunctionMonitor {
   getModuleFunctions(moduleName) {
     const moduleFunctionMappings = {
       audio: ['playSongFromId', 'stopPlaying', 'pausePlaying', 'resetUIState', 'autoplay_next', 'cancel_autoplay', 'playSelected', 'loop_on'],
-      fileOperations: ['openHotkeyFile', 'openHoldingTankFile', 'saveHotkeyFile', 'saveHoldingTankFile', 'pickDirectory', 'installUpdate'],
-      ui: ['scaleScrollable', 'editSelectedSong', 'deleteSelectedSong', 'closeAllTabs', 'toggleSelectedRow', 'switchToHotkeyTab', 'increaseFontSize', 'decreaseFontSize', 'toggleWaveform', 'getFontSize', 'setFontSize'],
+      fileOperations: ['openHotkeyFile', 'openHoldingTankFile', 'saveHotkeyFile', 'saveHoldingTankFile'],
+      ui: ['closeAllTabs', 'toggleSelectedRow', 'increaseFontSize', 'decreaseFontSize', 'toggleWaveform', 'toggleAdvancedSearch', 'getFontSize', 'setFontSize'],
       search: ['searchData', 'performLiveSearch', 'triggerLiveSearch', 'clearSearchResults', 'buildSearchQuery'],
       database: ['addToHoldingTank', 'populateHoldingTank'],
-      utils: ['animateCSS', 'customConfirm', 'customPrompt', 'restoreFocusToSearch', 'isValidSongId', 'isValidCategoryCode', 'isValidFilePath', 'isValidHotkey'],
+      utils: ['animateCSS', 'customConfirm', 'customPrompt', 'scaleScrollable', 'restoreFocusToSearch', 'isValidSongId', 'isValidCategoryCode', 'isValidFilePath', 'isValidHotkey'],
               preferences: ['openPreferencesModal', 'loadPreferences', 'savePreferences', 'getPreference', 'setPreference', 'getDatabaseDirectory', 'getMusicDirectory', 'getHotkeyDirectory', 'getFadeOutSeconds', 'getPrereleaseUpdates', 'getScreenMode'],
               modeManagement: ['setHoldingTankMode', 'getHoldingTankMode', 'toggleAutoPlay', 'getAutoPlayState'],
         themeManagement: ['initThemeManagement', 'setUserTheme', 'getCurrentTheme', 'getUserThemePreference', 'getSystemTheme', 'isDarkTheme', 'isLightTheme', 'isAutoTheme', 'refreshTheme'],
@@ -154,7 +154,7 @@ class FunctionMonitor {
       bulkOperations: ['showBulkAddModal', 'addSongsByPath', 'saveBulkUpload'],
       categories: ['populateCategorySelect', 'openCategoriesModal', 'addNewCategory', 'saveCategories', 'editCategoryUI', 'deleteCategoryUI'],
       hotkeys: ['playSongFromHotkey', 'switchToHotkeyTab', 'populateHotkeys', 'setLabelFromSongId', 'sendToHotkeys', 'hotkeyDrop', 'allowHotkeyDrop', 'removeFromHotkey'],
-      holdingTank: ['clearHoldingTank', 'renameHoldingTankTab', 'scale_scrollable', 'saveHoldingTankToStore', 'holdingTankDrop'],
+      holdingTank: ['clearHoldingTank', 'renameHoldingTankTab', 'saveHoldingTankToStore', 'holdingTankDrop'],
       dragDrop: ['songDrag'],
       songManagement: ['saveEditedSong', 'saveNewSong', 'editSelectedSong', 'deleteSelectedSong', 'deleteSong', 'removeFromHoldingTank', 'removeFromHotkey']
     };

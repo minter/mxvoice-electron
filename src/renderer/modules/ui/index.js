@@ -33,7 +33,6 @@ export function initializeUI(options = {}) {
   
   return {
     // UI Manager functions
-    scaleScrollable: manager.scaleScrollable,
     editSelectedSong: manager.editSelectedSong,
     deleteSelectedSong: manager.deleteSelectedSong,
     closeAllTabs: manager.closeAllTabs,
@@ -49,10 +48,6 @@ export function initializeUI(options = {}) {
     decreaseFontSize: uiControls.decreaseFontSize,
     toggleWaveform: uiControls.toggleWaveform,
     toggleAdvancedSearch: uiControls.toggleAdvancedSearch,
-    
-    // Modal functions
-    pickDirectory: modalOps.pickDirectory,
-    installUpdate: modalOps.installUpdate,
     
     // Utility functions
     getFontSize: manager.getFontSize,

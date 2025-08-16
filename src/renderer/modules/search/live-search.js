@@ -261,7 +261,7 @@ function performLiveSearch(searchTerm) {
           (tbody || document.querySelector('#search_results tbody'))?.appendChild(infoRow);
         }
 
-        scale_scrollable();
+        scaleScrollable();
       } else {
         debugLog?.warn('❌ Live search failed:', { 
           module: 'live-search',

@@ -108,9 +108,6 @@ class DatabaseModule {
       saveHoldingTankToStore: this.saveHoldingTankToStore,
       saveHotkeysToStore: this.saveHotkeysToStore,
       
-      // UI operation functions
-      scaleScrollable: this.scaleScrollable,
-      
       // Database operation functions
       editCategory: this.editCategory,
       deleteCategory: this.deleteCategory,
@@ -170,17 +167,6 @@ class DatabaseModule {
       }
     } catch (error) {
       results.storeOperations.error = `❌ Error: ${error.message}`;
-    }
-
-    // Test UI operation functions
-    try {
-      if (typeof this.scaleScrollable === 'function') {
-        results.uiOperations.scaleScrollable = '✅ Function exists';
-      } else {
-        results.uiOperations.scaleScrollable = '❌ Function missing';
-      }
-    } catch (error) {
-      results.uiOperations.error = `❌ Error: ${error.message}`;
     }
 
     // Test database operation functions
@@ -274,7 +260,6 @@ export const addToHoldingTank = databaseModule.addToHoldingTank;
 export const populateHoldingTank = databaseModule.populateHoldingTank;
 export const saveHoldingTankToStore = databaseModule.saveHoldingTankToStore;
 export const saveHotkeysToStore = databaseModule.saveHotkeysToStore;
-export const scaleScrollable = databaseModule.scaleScrollable;
 export const editCategory = databaseModule.editCategory;
 export const deleteCategory = databaseModule.deleteCategory;
 export const addNewCategory = databaseModule.addNewCategory;

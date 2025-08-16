@@ -181,7 +181,7 @@ function populateHoldingTank(songIds) {
     skipped: skippedCount
   });
   
-  scale_scrollable();
+  scaleScrollable();
   return { success: true, added: addedCount, skipped: skippedCount };
 }
 

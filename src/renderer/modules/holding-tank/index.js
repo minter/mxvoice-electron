@@ -37,6 +37,7 @@ import Dom from '../dom-utils/index.js';
 import { secureFileSystem, securePath, secureFileDialog } from '../adapters/secure-adapter.js';
 const fileSystem = secureFileSystem;
 const path = securePath;
+import { scaleScrollable } from '../utils/index.js';
 
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'
@@ -182,7 +183,7 @@ export function populateHoldingTank(songIds) {
     addToHoldingTank(songId, Dom.$('.holding_tank.active'));
   });
   
-  scale_scrollable();
+  scaleScrollable();
   debugLog?.info('populateHoldingTank completed successfully', { 
     module: 'holding-tank',
     function: 'populateHoldingTank',
@@ -402,13 +403,25 @@ export function cancel_autoplay() {
 }
 
 /**
- * Scale scrollable elements
+ * Wrapper for saveHoldingTankToStore - includes state updates for Function Registry
  */
-function scale_scrollable() {
-  const isAdvancedVisible = Dom.isVisible('#advanced-search');
-  const advancedHeight = isAdvancedVisible ? 38 : 0;
-  const height = (window.innerHeight || document.documentElement.clientHeight) - 240 - advancedHeight + 'px';
-  document.querySelectorAll('.table-wrapper-scroll-y').forEach(el => { el.style.height = height; });
+function saveHoldingTankToStoreWrapper() {
+  debugLog?.info('Saving holding tank to store and refreshing display');
+  saveHoldingTankToStore().then(() => {
+    debugLog?.info('Holding tank saved successfully');
+    // Optionally adjust layout without repopulating
+    try { 
+      scaleScrollable(); 
+    } catch (error) {
+      debugLog?.warn('Failed to scale scrollable elements after saving', { 
+        module: 'holding-tank', 
+        function: 'saveHoldingTankToStoreWrapper',
+        error: error?.message || 'Unknown error' 
+      });
+    }
+  }).catch(error => {
+    debugLog?.error('Error saving holding tank to store', error);
+  });
 }
 
 /**
@@ -429,28 +442,6 @@ function renameHoldingTankTabWrapper() {
   });
 }
 
-/**
- * Wrapper for saveHoldingTankToStore - includes state updates for Function Registry
- */
-function saveHoldingTankToStoreWrapper() {
-  debugLog?.info('Saving holding tank to store and refreshing display');
-  saveHoldingTankToStore().then(() => {
-    debugLog?.info('Holding tank saved successfully');
-    // Optionally adjust layout without repopulating
-    try { 
-      scale_scrollable(); 
-    } catch (error) {
-      debugLog?.warn('Failed to scale scrollable elements after saving', { 
-        module: 'holding-tank', 
-        function: 'saveHoldingTankToStoreWrapper',
-        error: error?.message || 'Unknown error' 
-      });
-    }
-  }).catch(error => {
-    debugLog?.error('Error saving holding tank to store', error);
-  });
-}
-
 // Export all functions
 export default {
   initHoldingTank,
@@ -466,7 +457,7 @@ export default {
   sendToHoldingTank,
   renameHoldingTankTab,
   cancel_autoplay,
-  scale_scrollable,
+  scaleScrollable,
   // Wrapper functions for Function Registry HTML compatibility
   clearHoldingTankWrapper,
   renameHoldingTankTabWrapper,

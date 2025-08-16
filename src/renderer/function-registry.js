@@ -166,14 +166,10 @@ class FunctionRegistry {
         openHoldingTankFile: 'openHoldingTankFile',
         saveHotkeyFile: 'saveHotkeyFile',
         saveHoldingTankFile: 'saveHoldingTankFile',
-        pickDirectory: 'pickDirectory',
-        installUpdate: 'installUpdate',
-              openHotkeyFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-      openHoldingTankFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-      saveHotkeyFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-      saveHoldingTankFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-      pickDirectoryFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-      installUpdateFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' })
+        openHotkeyFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+        openHoldingTankFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+        saveHotkeyFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+        saveHoldingTankFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' })
       },
       audio: {
         playSongFromId: 'playSongFromId',
@@ -186,16 +182,12 @@ class FunctionRegistry {
         loop_on: 'loop_on'
       },
       ui: {
-        scaleScrollable: 'scaleScrollable',
         closeAllTabs: 'closeAllTabs',
         toggleSelectedRow: 'toggleSelectedRow',
-        renameHotkeyTab: 'renameHotkeyTabWrapper',
-        renameHoldingTankTab: 'renameHoldingTankTabUIWrapper',
         increaseFontSize: 'increaseFontSize',
         decreaseFontSize: 'decreaseFontSize',
         toggleWaveform: 'toggleWaveform',
-        pickDirectory: 'pickDirectory',
-        installUpdate: 'installUpdate',
+        toggleAdvancedSearch: 'toggleAdvancedSearch',
         getFontSize: 'getFontSize',
         setFontSize: 'setFontSize'
       }
@@ -278,6 +270,7 @@ class FunctionRegistry {
       animateCSS: 'animateCSS',
       customConfirm: 'customConfirm',
       customPrompt: 'customPrompt',
+      scaleScrollable: 'scaleScrollable',
       restoreFocusToSearch: 'restoreFocusToSearch',
       isValidSongId: 'isValidSongId',
       isValidCategoryCode: 'isValidCategoryCode',
@@ -364,7 +357,6 @@ class FunctionRegistry {
     this.registerModule('holdingTank', {
       clearHoldingTank: 'clearHoldingTankWrapper',
       renameHoldingTankTab: 'renameHoldingTankTabWrapper',
-      scale_scrollable: 'scale_scrollable',
       saveHoldingTankToStore: 'saveHoldingTankToStoreWrapper',
       holdingTankDrop: 'holdingTankDrop'
     });

@@ -6,201 +6,96 @@
  */
 
 // Import all utility modules
-import animationUtils from './animation-utils.js';
-import modalUtils from './modal-utils.js';
-import validationUtils from './validation-utils.js';
+import { animateCSS as animateCSSFn } from './animation-utils.js';
+import { customConfirm as customConfirmFn, customPrompt as customPromptFn } from './modal-utils.js';
+import { scaleScrollable as scaleScrollableFn } from './layout-utils.js';
+import { restoreFocusToSearch as restoreFocusToSearchFn } from './modal-utils.js';
+import { isValidSongId as isValidSongIdFn, isValidCategoryCode as isValidCategoryCodeFn, isValidFilePath as isValidFilePathFn, isValidHotkey as isValidHotkeyFn } from './validation-utils.js';
 
 /**
- * Utils Module Class
+ * Utils Module
  * 
- * Provides a unified interface for all utility functions
+ * Provides utility functions for the MxVoice Electron application
  */
 class UtilsModule {
   constructor() {
-    // Initialize module state
-    this.animateCSS = animationUtils.animateCSS;
-    this.customConfirm = modalUtils.customConfirm;
-    this.customPrompt = modalUtils.customPrompt;
-    this.restoreFocusToSearch = modalUtils.restoreFocusToSearch;
-    this.isValidSongId = validationUtils.isValidSongId;
-    this.isValidCategoryCode = validationUtils.isValidCategoryCode;
-    this.isValidFilePath = validationUtils.isValidFilePath;
-    this.isValidHotkey = validationUtils.isValidHotkey;
-    
-    // Track initialization state
-    this.isInitialized = false;
+    this.animateCSS = animateCSSFn;
+    this.customConfirm = customConfirmFn;
+    this.customPrompt = customPromptFn;
+    this.scaleScrollable = scaleScrollableFn;
+    this.restoreFocusToSearch = restoreFocusToSearchFn;
+    this.isValidSongId = isValidSongIdFn;
+    this.isValidCategoryCode = isValidCategoryCodeFn;
+    this.isValidFilePath = isValidFilePathFn;
+    this.isValidHotkey = isValidHotkeyFn;
   }
 
   /**
    * Initialize the utils module
    * @param {Object} dependencies - Module dependencies
-   * @returns {Promise<boolean>} Success status
+   * @returns {Promise<boolean>} - Success status
    */
   async init(dependencies = {}) {
-    try {
-      debugLog?.info('Utils module initializing...', { 
-        module: 'utils', 
-        function: 'init' 
-      });
-
-      // Initialize utility functions
-      this.setupUtilityFunctions();
-      
-      debugLog?.info('Utils module initialized successfully', { 
-        module: 'utils', 
-        function: 'init' 
-      });
-      return true;
-    } catch (error) {
-      debugLog?.error('Failed to initialize utils module:', { 
-        module: 'utils', 
-        function: 'init', 
-        error: error.message 
-      });
-      return false;
-    }
+    // Utils module is self-contained, no external dependencies needed
+    return true;
   }
 
   /**
-   * Set up utility functions
+   * Test utility functions
+   * @returns {Object} Test results
    */
-  setupUtilityFunctions() {
-    // Initialize utility functions state and functionality
-    debugLog?.info('Setting up utility functions', { 
-      module: 'utils', 
-      function: 'setupUtilityFunctions' 
-    });
-  }
-
-  /**
-   * Get all available utility functions
-   * 
-   * @returns {Object} - Object containing all utility functions
-   */
-  getAllUtils() {
-    return {
-      // Animation utilities
-      animateCSS: this.animateCSS,
-      
-      // Modal utilities
-      customConfirm: this.customConfirm,
-      customPrompt: this.customPrompt,
-      restoreFocusToSearch: this.restoreFocusToSearch,
-      
-      // Validation utilities
-      isValidSongId: this.isValidSongId,
-      isValidCategoryCode: this.isValidCategoryCode,
-      isValidFilePath: this.isValidFilePath,
-      isValidHotkey: this.isValidHotkey
-    };
-  }
-
-  /**
-   * Test all utility functions
-   * 
-   * @returns {Object} - Test results
-   */
-  test() {
+  testUtils() {
     const results = {
+      module: 'utils',
+      passed: 0,
+      failed: 0,
+      tests: [],
       animation: {},
-      modal: {},
       validation: {}
     };
 
-    // Test animation utilities
-    try {
-      // Test animateCSS function exists
-      if (typeof this.animateCSS === 'function') {
-        results.animation.animateCSS = '✅ Function exists';
-      } else {
-        results.animation.animateCSS = '❌ Function missing';
-      }
-    } catch (error) {
-      results.animation.animateCSS = `❌ Error: ${error.message}`;
+    // Test animateCSS function exists
+    if (typeof this.animateCSS === 'function') {
+      results.animation.animateCSS = '✅ Function exists';
+      results.passed++;
+    } else {
+      results.animation.animateCSS = '❌ Function missing';
+      results.failed++;
     }
 
-    // Test modal utilities
-    try {
-      if (typeof this.customConfirm === 'function') {
-        results.modal.customConfirm = '✅ Function exists';
-      } else {
-        results.modal.customConfirm = '❌ Function missing';
-      }
-
-      if (typeof this.customPrompt === 'function') {
-        results.modal.customPrompt = '✅ Function exists';
-      } else {
-        results.modal.customPrompt = '❌ Function missing';
-      }
-
-      if (typeof this.restoreFocusToSearch === 'function') {
-        results.modal.restoreFocusToSearch = '✅ Function exists';
-      } else {
-        results.modal.restoreFocusToSearch = '❌ Function missing';
-      }
-    } catch (error) {
-      results.modal.error = `❌ Error: ${error.message}`;
-    }
-
-    // Test validation utilities
+    // Test validation functions
     try {
       if (typeof this.isValidSongId === 'function') {
         results.validation.isValidSongId = '✅ Function exists';
+        results.passed++;
       } else {
         results.validation.isValidSongId = '❌ Function missing';
-      }
-
-      if (typeof this.isValidCategoryCode === 'function') {
-        results.validation.isValidCategoryCode = '✅ Function exists';
-      } else {
-        results.validation.isValidCategoryCode = '❌ Function missing';
-      }
-
-      if (typeof this.isValidFilePath === 'function') {
-        results.validation.isValidFilePath = '✅ Function exists';
-      } else {
-        results.validation.isValidFilePath = '❌ Function missing';
-      }
-
-      if (typeof this.isValidHotkey === 'function') {
-        results.validation.isValidHotkey = '✅ Function exists';
-      } else {
-        results.validation.isValidHotkey = '❌ Function missing';
+        results.failed++;
       }
     } catch (error) {
-      results.validation.error = `❌ Error: ${error.message}`;
+      results.validation.isValidSongId = `❌ Error: ${error.message}`;
+      results.failed++;
     }
 
     return results;
   }
-
-  /**
-   * Get module information
-   * 
-   * @returns {Object} - Module information
-   */
-  getInfo() {
-    return {
-      name: 'Utils Module',
-      version: '1.0.0',
-      description: 'Provides utility functions for animation, modals, and validation',
-      functions: this.getAllUtils()
-    };
-  }
 }
 
-// Create and export a singleton instance
+// Create and export singleton instance
 const utilsModule = new UtilsModule();
 
-// Export individual utilities for backward compatibility
-export const animateCSS = utilsModule.animateCSS;
-export const customConfirm = utilsModule.customConfirm;
-export const customPrompt = utilsModule.customPrompt;
-export const restoreFocusToSearch = utilsModule.restoreFocusToSearch;
-export const isValidSongId = utilsModule.isValidSongId;
-export const isValidCategoryCode = utilsModule.isValidCategoryCode;
-export const isValidFilePath = utilsModule.isValidFilePath;
-export const isValidHotkey = utilsModule.isValidHotkey;
+// Named exports for direct import
+export const {
+  animateCSS,
+  customConfirm,
+  customPrompt,
+  scaleScrollable,
+  restoreFocusToSearch,
+  isValidSongId,
+  isValidCategoryCode,
+  isValidFilePath,
+  isValidHotkey
+} = utilsModule;
 
 // Default export for module loading
 export default utilsModule; 

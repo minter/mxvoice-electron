@@ -396,8 +396,8 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
 
     // Call functions that depend on loaded modules
     try {
-      if (window.scale_scrollable) {
-        window.scale_scrollable();
+      if (window.scaleScrollable) {
+        window.scaleScrollable();
       }
       // Ensure categories are populated after database module is loaded
       if (window.populateCategorySelect) {
@@ -531,9 +531,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     try {
       const uiModule = moduleRegistry.ui;
       const holdingModule = moduleRegistry.holdingTank;
-      const scaleFn = (uiModule && uiModule.scaleScrollable) || (holdingModule && holdingModule.scale_scrollable) || null;
-      if (!window.scale_scrollable) {
-        window.scale_scrollable = scaleFn;
+      const scaleFn = (uiModule && uiModule.scaleScrollable) || (holdingModule && holdingModule.scaleScrollable) || null;
+      if (!window.scaleScrollable) {
+        window.scaleScrollable = scaleFn;
       }
       if (!window.scaleScrollable) {
         window.scaleScrollable = scaleFn;

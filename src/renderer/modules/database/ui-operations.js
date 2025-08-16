@@ -4,6 +4,8 @@
  * Provides UI-related functions for the database module
  */
 
+import { scaleScrollable } from '../utils/index.js';
+
 // Import debug logger
 let debugLog = null;
 try {
@@ -13,18 +15,6 @@ try {
   }
 } catch (error) {
   // Debug logger not available
-}
-
-/**
- * Scale scrollable elements
- * Adjusts the scaling of scrollable UI elements
- */
-export function scaleScrollable() {
-  // Implementation would go here
-  debugLog?.info('Scaling scrollable elements', { 
-    module: 'database-ui-operations',
-    function: 'scaleScrollable'
-  });
 }
 
 // Default export for module loading

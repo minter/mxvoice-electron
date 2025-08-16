@@ -8,6 +8,7 @@
  */
 
 import Dom from '../dom-utils/index.js';
+import { animateCSS, scaleScrollable } from '../utils/index.js';
 
 // Import debug logger
 let debugLog = null;
@@ -101,43 +102,9 @@ function initializeControls(options = {}) {
         module: 'ui-controls',
         function: 'toggleAdvancedSearch'
       });
-
-      // Clear any pending live search using global searchTimeout
-      if (window.searchTimeout) {
-        clearTimeout(window.searchTimeout);
-      }
-      debugLog?.info("Cleared timeout", { 
-        module: 'ui-controls',
-        function: 'toggleAdvancedSearch'
-      });
-
-      Dom.reset('#search_form');
-      debugLog?.info("Triggered form reset", { 
-        module: 'ui-controls',
-        function: 'toggleAdvancedSearch'
-      });
-
-      // Clear search results when toggling advanced search
-      {
-        const tbody = Dom.$('#search_results tbody');
-        Array.from(Dom.find(tbody, 'tr')).forEach(tr => Dom.remove(tr));
-        Dom.hide('#search_results thead');
-      }
-      debugLog?.info("Cleared search results", { 
-        module: 'ui-controls',
-        function: 'toggleAdvancedSearch'
-      });
-
-      debugLog?.info("Advanced search element exists: " + Boolean(Dom.$('#advanced-search')), { 
-        module: 'ui-controls',
-        function: 'toggleAdvancedSearch'
-      });
-      debugLog?.info("Advanced search visible: " + Dom.isVisible('#advanced-search'), { 
-        module: 'ui-controls',
-        function: 'toggleAdvancedSearch'
-      });
-      {
-        const adv = Dom.$('#advanced-search');
+      
+      const adv = Dom.$('#advanced-search');
+      if (adv) {
         const display = adv ? getComputedStyle(adv).display : '';
         debugLog?.info("Advanced search display: " + display, { 
         module: 'ui-controls',
@@ -161,7 +128,7 @@ function initializeControls(options = {}) {
         Dom.$('#omni_search')?.focus();
         animateCSS('#advanced-search', 'fadeOutUp').then(() => {
           Dom.hide('#advanced-search');
-          scale_scrollable();
+          scaleScrollable();
         });
       } else {
         debugLog?.info("Showing advanced search", { 
@@ -177,7 +144,7 @@ function initializeControls(options = {}) {
         Dom.show('#title-search');
         Dom.$('#title-search')?.focus();
         Dom.hide('#omni_search');
-        scale_scrollable();
+        scaleScrollable();
         animateCSS('#advanced-search', 'fadeInDown').then(() => {});
       }
     } catch (error) {
@@ -187,41 +154,6 @@ function initializeControls(options = {}) {
         error: error
       });
     }
-  }
-  
-  /**
-   * Scale scrollable elements (helper function for advanced search)
-   */
-  function scale_scrollable() {
-    const advancedSearchHeight = Dom.isVisible('#advanced-search') ? 38 : 0;
-    const height = (window.innerHeight || document.documentElement.clientHeight) - 240 - advancedSearchHeight + 'px';
-    document.querySelectorAll('.table-wrapper-scroll-y').forEach(el => { el.style.height = height; });
-  }
-  
-  /**
-   * Animate CSS helper function
-   * @param {jQuery} element - Element to animate
-   * @param {string} animation - Animation name
-   * @param {string} speed - Animation speed
-   * @param {string} prefix - CSS prefix
-   * @returns {Promise} Animation promise
-   */
-  function animateCSS(element, animation, speed = "", prefix = "animate__") {
-    return new Promise((resolve, reject) => {
-      const animationName = `${prefix}${animation} ${speed}`;
-      const node = typeof element === 'string' ? Dom.$(element) : element;
-      if (!node) return resolve("No element");
-
-      Dom.addClass(node, `${prefix}animated ${animationName}`);
-
-      function handleAnimationEnd() {
-        Dom.removeClass(node, `${prefix}animated ${animationName}`);
-        Dom.off(node, "animationend", handleAnimationEnd);
-        resolve("Animation ended");
-      }
-
-      Dom.on(node, "animationend", handleAnimationEnd);
-    });
   }
   
   return {

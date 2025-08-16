@@ -4,6 +4,7 @@
  */
 
 import { secureStore } from '../adapters/secure-adapter.js';
+import { scaleScrollable } from '../utils/index.js';
 
 let debugLog = null;
 try { 
@@ -20,13 +21,6 @@ try {
 export default function initializeUIManager(options = {}) {
   const { electronAPI } = options;
   let fontSize = 11;
-
-  function scaleScrollable() {
-    const advEl = document.getElementById('advanced-search');
-    const advancedSearchHeight = advEl && advEl.offsetParent !== null ? 38 : 0;
-    const height = (window.innerHeight || document.documentElement.clientHeight) - 240 - advancedSearchHeight + 'px';
-    document.querySelectorAll('.table-wrapper-scroll-y').forEach(el => { el.style.height = height; });
-  }
   
   function getFontSize() { return fontSize; }
 
