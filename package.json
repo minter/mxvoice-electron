@@ -37,11 +37,9 @@
     "copyright": "Copyright © 2025 Wade Minter and Andrew Berkowitz",
     "npmRebuild": false,
     "nodeGypRebuild": false,
-    "buildDependenciesFromSource": true,
+    "buildDependenciesFromSource": false,
     "asar": true,
     "asarUnpack": [
-      "**/*.node",
-      "**/*.wasm",
       "node_modules/node-sqlite3-wasm/dist/*.wasm"
     ],
     "afterPack": "build/afterPack.js",
@@ -94,9 +92,7 @@
     "win": {
       "icon": "src/assets/icons/mxvoice.ico",
       "artifactName": "Mx.-Voice-Setup-${version}.${ext}",
-      "signtoolOptions": {
-        "sign": "build/sslSign.js"
-      }
+      "sign": "build/sslSign.js"
     },
     "linux": {
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
@@ -126,12 +122,6 @@
         "repo": "mxvoice-electron",
         "releaseType": "release"
       }
-    ],
-    "files": [
-      "src/**/*",
-      "node_modules/**/*",
-      "node_modules/node-sqlite3-wasm/dist/*.wasm",
-      "node_modules/node-sqlite3-wasm/dist/*.js"
     ]
   },
   "license": "MIT",

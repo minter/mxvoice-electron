@@ -1,129 +1,98 @@
-import { execSync } from 'child_process';
-import path from 'path';
-import fs from 'fs';
-import crypto from 'crypto';
+// build/sslSign.cjs
+const { execSync } = require("child_process");
+const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 
-// TOTP generation function
+// (same TOTP generator you already have)
 function generateTOTP(secret, timeStep = 30, digits = 6) {
   const epoch = Math.floor(Date.now() / 1000);
   const counter = Math.floor(epoch / timeStep);
-
-  // Convert base64 secret to buffer
-  const key = Buffer.from(secret, 'base64');
-
-  // Create counter buffer (8 bytes, big endian)
-  const counterBuffer = Buffer.alloc(8);
-  counterBuffer.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
-  counterBuffer.writeUInt32BE(counter & 0xffffffff, 4);
-
-  // Generate HMAC
-  const hmac = crypto.createHmac('sha1', key);
-  hmac.update(counterBuffer);
-  const digest = hmac.digest();
-
-  // Dynamic truncation
-  const offset = digest[digest.length - 1] & 0x0f;
-  const code = ((digest[offset] & 0x7f) << 24) |
-    ((digest[offset + 1] & 0xff) << 16) |
-    ((digest[offset + 2] & 0xff) << 8) |
-    (digest[offset + 3] & 0xff);
-
-  // Return 6-digit code
-  return (code % Math.pow(10, digits)).toString().padStart(digits, '0');
+  const key = Buffer.from(secret, "base64");
+  const counterBuf = Buffer.alloc(8);
+  counterBuf.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
+  counterBuf.writeUInt32BE(counter & 0xffffffff, 4);
+  const hmac = require("crypto").createHmac("sha1", key).update(counterBuf).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const binCode =
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff);
+  return (binCode % 1_000_000).toString().padStart(digits, "0");
 }
 
-export default async function signFile(filePath, options) {
-  // electron-builder passes an object with the file path, not just the string
-  // Handle both cases for compatibility
-  const actualFilePath = typeof filePath === 'string' ? filePath : filePath.path || filePath.file;
+/**
+ * Electron-builder will call this for each file to sign.
+ * It passes either a string (path) or an object with { path }.
+ */
+module.exports = async function sign(file, context) {
+  if (process.platform !== "win32") return;
 
-  if (!actualFilePath) {
-    console.warn('⚠️ No valid file path provided for signing');
+  const actualPath = typeof file === "string" ? file : (file && (file.path || file.file));
+  if (!actualPath) {
+    console.warn("[win.sign] No file path provided");
     return;
   }
 
-  // Only handle Windows artifacts
-  if (process.platform !== 'win32') {
-    return;
+  const username    = process.env.SSL_USERNAME;
+  const credential  = process.env.SSL_CREDENTIAL_ID;
+  const password    = process.env.SSL_PASSWORD;
+  const totpSecret  = process.env.SSL_TOTP_SECRET;
+
+  if (!username || !credential || !password || !totpSecret) {
+    throw new Error("[win.sign] Missing SSL.com env: SSL_USERNAME, SSL_CREDENTIAL_ID, SSL_PASSWORD, SSL_TOTP_SECRET");
   }
 
-  // Get environment variables
-  const username = process.env.SSL_USERNAME;
-  const credentialId = process.env.SSL_CREDENTIAL_ID;
-  const password = process.env.SSL_PASSWORD;
-  const totpSecret = process.env.SSL_TOTP_SECRET;
-
-  if (!username || !credentialId || !password || !totpSecret) {
-    console.error('Missing required SSL.com environment variables:');
-    console.error(`SSL_USERNAME: ${username ? 'Set' : 'Missing'}`);
-    console.error(`SSL_CREDENTIAL_ID: ${credentialId ? 'Set' : 'Missing'}`);
-    console.error(`SSL_PASSWORD: ${password ? 'Set' : 'Missing'}`);
-    console.error(`SSL_TOTP_SECRET: ${totpSecret ? 'Set' : 'Missing'}`);
-    throw new Error('SSL.com environment variables not configured');
-  }
-
-  // Log pre-signing file info
+  // Optional: log pre-sign info
   try {
-    const preSignStats = fs.statSync(actualFilePath);
-    const preSignBuffer = fs.readFileSync(actualFilePath);
-    const preSignSha512 = crypto.createHash('sha512').update(preSignBuffer).digest('base64');     
-    console.log(`📁 Pre-signing file info: size=${preSignStats.size}, sha512=${preSignSha512.slice(0,8)}...`);
-  } catch (preSignErr) {
-    console.warn('⚠️ Could not read pre-signing file info:', preSignErr?.message || preSignErr);  
+    const buf = fs.readFileSync(actualPath);
+    const sha = crypto.createHash("sha512").update(buf).digest("base64").slice(0, 8);
+    console.log(`[win.sign] pre: ${path.basename(actualPath)} sha512=${sha}... size=${buf.length}`);
+  } catch (e) {
+    console.warn("[win.sign] pre-sign read failed:", e && e.message);
   }
 
-  // Generate TOTP
   const totp = generateTOTP(totpSecret);
-  console.log(`Generated TOTP: ${totp}`);
+  console.log(`[win.sign] TOTP: ${totp}`);
 
-  // SSL.com CodeSignTool path
-  const codeSignToolDir = 'C:\\tools\\CodeSignTool';
-  const jarPath = path.join(codeSignToolDir, 'jar', 'code_sign_tool-1.3.2.jar');
-
+  // Adjust these for your environment
+  const toolDir = "C:\\tools\\CodeSignTool";
+  const jarPath = path.join(toolDir, "jar", "code_sign_tool-1.3.2.jar");
   if (!fs.existsSync(jarPath)) {
-    throw new Error(`CodeSignTool not found: ${jarPath}`);
+    throw new Error(`[win.sign] CodeSignTool not found at ${jarPath}`);
   }
 
-  // Build the signing command
-  const command = [
-    'java',
-    '-jar',
+  // eSigner command
+  const cmd = [
+    "java",
+    "-jar",
     `"${jarPath}"`,
-    'sign',
-    `-username="${username}"`,
-    `-credential_id="${credentialId}"`,
-    `-password="${password}"`,
-    `-totp_secret="${totpSecret}"`,
-    `-input_file_path="${actualFilePath}"`,
-    '-override'
-  ].join(' ');
-
-  console.log(`Signing file via SSL.com: ${actualFilePath}`);
-  console.log('Executing SSL.com CodeSignTool...');
+    "sign",
+    "--username", `"${username}"`,
+    "--password", `"${password}"`,
+    "--credential_id", `"${credential}"`,
+    "--totp", `"${totp}"`,
+    // timestamp server (recommended)
+    "--tsa_url", `"http://timestamp.digicert.com"`,
+    // input/output in-place
+    "--input", `"${actualPath}"`,
+    "--output", `"${actualPath}"`,
+  ].join(" ");
 
   try {
-    // Change to CodeSignTool directory and execute
-    execSync(command, {
-      cwd: codeSignToolDir,
-      stdio: 'inherit',
-      timeout: 120000 // 2 minute timeout
-    });
-
-    console.log('✅ File signed successfully!');
-    console.log(`Signed file: ${actualFilePath}`);
-
-    // Log post-signing file info for comparison
-    try {
-      const postSignStats = fs.statSync(actualFilePath);
-      const postSignBuffer = fs.readFileSync(actualFilePath);
-      const postSignSha512 = crypto.createHash('sha512').update(postSignBuffer).digest('base64'); 
-      console.log(`📁 Post-signing file info: size=${postSignStats.size}, sha512=${postSignSha512.slice(0,8)}...`);
-    } catch (postSignErr) {
-      console.warn('⚠️ Could not read post-signing file info:', postSignErr?.message || postSignErr);
-    }
-
-  } catch (error) {
-    console.error('❌ Failed to sign file:', error.message);
-    throw error;
+    execSync(cmd, { stdio: "inherit" });
+  } catch (e) {
+    console.error("[win.sign] signing failed:", e && e.message);
+    throw e;
   }
-}
+
+  // Optional: log post-sign info
+  try {
+    const buf = fs.readFileSync(actualPath);
+    const sha = crypto.createHash("sha512").update(buf).digest("base64").slice(0, 8);
+    console.log(`[win.sign] post: ${path.basename(actualPath)} sha512=${sha}... size=${buf.length}`);
+  } catch (e) {
+    console.warn("[win.sign] post-sign read failed:", e && e.message);
+  }
+};
