@@ -29,7 +29,16 @@
     "release:linux:draft": "cross-env EP_DRAFT=true electron-builder --linux --publish always",
     "release:linux:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --linux --publish always",
     "release:linux": "electron-builder --linux --publish always",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:install": "playwright install",
+    "test:validate": "node tests/setup/test-runner.js",
+    "test:isolate": "node tests/setup/verify-isolation.js",
+    "test:run": "./tests/run-tests.sh"
   },
   "build": {
     "appId": "com.electron.mx.-voice",
@@ -59,16 +68,34 @@
       "identity": "E31B13B9566B95D1BC1F46F0C3B2FA6C739356CB",
       "mergeASARs": false,
       "target": [
-        { "target": "dmg", "arch": ["universal"] },
-        { "target": "zip", "arch": ["universal"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
       ]
     },
     "dmg": {
       "icon": "src/assets/icons/dmg-image.icns",
       "background": "src/assets/images/dmg-background-image.png",
       "contents": [
-        { "x": 180, "y": 340 },
-        { "x": 450, "y": 340, "type": "link", "path": "/Applications" }
+        {
+          "x": 180,
+          "y": 340
+        },
+        {
+          "x": 450,
+          "y": 340,
+          "type": "link",
+          "path": "/Applications"
+        }
       ],
       "sign": false,
       "format": "UDZO"
@@ -134,10 +161,12 @@
     "yarn": "^1.22.22"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "cross-env": "^10.0.0",
     "electron": "^37.3.0",
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
-    "node-abi": "4.12.0"
+    "node-abi": "4.12.0",
+    "playwright": "^1.54.2"
   }
 }
