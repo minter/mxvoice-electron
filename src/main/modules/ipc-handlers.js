@@ -254,6 +254,13 @@ function registerAllHandlers() {
       if (!db) {
         throw new Error('Database not initialized');
       }
+      
+      debugLog?.info('Adding song to database:', { 
+        module: 'ipc-handlers', 
+        function: 'add-song', 
+        songData 
+      });
+      
       const result = db.exec({
         sql: `
           INSERT INTO mrvoice (title, artist, category, filename, time, modtime)
@@ -264,6 +271,18 @@ function registerAllHandlers() {
         returnValue: "resultRows",
         rowMode: "object"
       });
+      
+      debugLog?.info('Raw database result:', { 
+        module: 'ipc-handlers', 
+        function: 'add-song', 
+        result, 
+        resultType: typeof result,
+        hasChanges: 'changes' in result,
+        hasLastInsertRowid: 'lastInsertRowid' in result,
+        changes: result.changes,
+        lastInsertRowid: result.lastInsertRowid
+      });
+      
       return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
     } catch (error) {
       debugLog?.error('Add song error:', { module: 'ipc-handlers', function: 'add-song', error: error.message });
@@ -927,7 +946,12 @@ function registerAllHandlers() {
       if (!songId) {
         throw new Error('Song ID is required');
       }
-      const result = db.exec('SELECT * FROM mrvoice WHERE id = ?', [songId]);
+      const result = db.exec({
+        sql: 'SELECT * FROM mrvoice WHERE id = ?',
+        bind: [songId],
+        returnValue: "resultRows",
+        rowMode: "object"
+      });
       
       // Convert sql.js format to better-sqlite3 format for compatibility
       const data = convertSqlJsSingleRow(result);
@@ -948,7 +972,9 @@ function registerAllHandlers() {
       }
       const result = db.exec({
         sql: 'DELETE FROM mrvoice WHERE id = ?',
-        bind: [songId]
+        bind: [songId],
+        returnValue: "resultRows",
+        rowMode: "object"
       });
       return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {
@@ -989,12 +1015,17 @@ function registerAllHandlers() {
       if (!songData || !songData.id) {
         throw new Error('Song data with ID is required');
       }
-      const result = db.exec(`
-        UPDATE mrvoice 
-        SET title = ?, artist = ?, category = ?, info = ?, filename = ?, time = ?
-        WHERE id = ?
-      `, [songData.title, songData.artist, songData.category, 
-          songData.info, songData.filename, songData.duration, songData.id]);
+      const result = db.exec({
+        sql: `
+          UPDATE mrvoice 
+          SET title = ?, artist = ?, category = ?, info = ?, filename = ?, time = ?
+          WHERE id = ?
+        `,
+        bind: [songData.title, songData.artist, songData.category, 
+               songData.info, songData.filename, songData.duration, songData.id],
+        returnValue: "resultRows",
+        rowMode: "object"
+      });
       return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {
       debugLog?.error('Update song error:', { module: 'ipc-handlers', function: 'update-song', error: error.message });
@@ -1014,7 +1045,9 @@ function registerAllHandlers() {
       
       const result = db.exec({
         sql: 'INSERT INTO categories (code, description) VALUES (?, ?)',
-        bind: [categoryData.code, categoryData.description]
+        bind: [categoryData.code, categoryData.description],
+        returnValue: "resultRows",
+        rowMode: "object"
       });
       return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
     } catch (error) {
@@ -1033,7 +1066,9 @@ function registerAllHandlers() {
       }
       const result = db.exec({
         sql: 'UPDATE categories SET description = ? WHERE code = ?',
-        bind: [description, code]
+        bind: [description, code],
+        returnValue: "resultRows",
+        rowMode: "object"
       });
       return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {

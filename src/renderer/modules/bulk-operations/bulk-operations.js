@@ -125,11 +125,89 @@ export async function addSongsByPath(pathArray, category) {
     const joinRes = await securePath.join(musicDirectory, newFilename);
     const newPath = joinRes?.data || joinRes;
 
+    // Use direct database execute and then query for the ID instead of relying on lastInsertRowid
     const insRes = await secureDatabase.execute(
       "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)",
       [title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000)]
     );
-    const lastId = insRes?.data?.lastInsertRowid;
+    
+    // Debug the database response to see what we're getting
+    debugLog?.info('Database insert response:', { 
+      module: 'bulk-operations', 
+      function: 'addSongsByPath', 
+      insRes, 
+      insResType: typeof insRes,
+      hasData: !!insRes?.data,
+      dataType: typeof insRes?.data,
+      lastInsertRowid: insRes?.data?.lastInsertRowid,
+      changes: insRes?.data?.changes
+    });
+    
+    // Since lastInsertRowid isn't working reliably, always query for the inserted song's ID
+    let lastId = null;
+    
+    try {
+      debugLog?.info('Querying for inserted song ID', { 
+        module: 'bulk-operations', 
+        function: 'addSongsByPath',
+        title,
+        artist,
+        filename: newFilename
+      });
+      
+      const songQuery = await secureDatabase.query(
+        "SELECT id FROM mrvoice WHERE title = ? AND artist = ? AND filename = ? ORDER BY id DESC LIMIT 1",
+        [title, artist, newFilename]
+      );
+      
+      debugLog?.info('Song query result:', { 
+        module: 'bulk-operations', 
+        function: 'addSongsByPath', 
+        songQuery,
+        hasData: !!songQuery?.data,
+        dataLength: songQuery?.data?.length
+      });
+      
+      if (songQuery?.data && Array.isArray(songQuery.data) && songQuery.data.length > 0) {
+        lastId = songQuery.data[0].id;
+        debugLog?.info('Retrieved song ID from query:', { 
+          module: 'bulk-operations', 
+          function: 'addSongsByPath', 
+          lastId 
+        });
+      } else {
+        debugLog?.warn('Song query returned no results', { 
+          module: 'bulk-operations', 
+          function: 'addSongsByPath',
+          songQuery
+        });
+      }
+    } catch (queryError) {
+      debugLog?.error('Failed to query for song ID:', { 
+        module: 'bulk-operations', 
+        function: 'addSongsByPath', 
+        error: queryError?.message 
+      });
+    }
+    
+    debugLog?.info('Extracted lastId:', { 
+      module: 'bulk-operations', 
+      function: 'addSongsByPath', 
+      lastId, 
+      lastIdType: typeof lastId 
+    });
+    
+    // Only create the row if we have a valid ID
+    if (!lastId) {
+      debugLog?.error('Failed to get valid song ID for row creation:', { 
+        module: 'bulk-operations', 
+        function: 'addSongsByPath', 
+        title, 
+        artist, 
+        filename: newFilename 
+      });
+      return; // Skip creating this row
+    }
 
     debugLog?.info('Copying audio file', { module: 'bulk-operations', function: 'addSongsByPath', songSourcePath, newPath });
     const copyRes = await secureFileSystem.copy(songSourcePath, newPath);
@@ -144,7 +222,7 @@ export async function addSongsByPath(pathArray, category) {
     // Create row safely without interpreting user-controlled values as HTML
     const row = document.createElement('tr');
     row.className = 'song unselectable context-menu';
-    row.setAttribute('songid', String(lastId || ''));
+    row.setAttribute('songid', String(lastId));
     row.draggable = true;
     row.addEventListener('dragstart', songDrag);
 
