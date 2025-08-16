@@ -1,0 +1,94 @@
+name: E2E Tests (Playwright + Electron)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ '**' ]
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run E2E on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ macos-latest, windows-latest ]
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'yarn'
+
+      - name: Enable Corepack (Yarn reproducibility)
+        run: corepack enable
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          key: modules-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            modules-${{ runner.os }}-
+          path: |
+            node_modules
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile --prefer-offline
+
+      - name: Install Playwright runtime
+        run: yarn test:install
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Cache Playwright assets (optional)
+        if: always()
+        uses: actions/cache@v4
+        with:
+          key: playwright-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+          path: |
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
+            C:\\Users\\runneradmin\\AppData\\Local\\ms-playwright
+
+      # Note: Our tests set APP_TEST_MODE and E2E_USER_DATA_DIR at launch,
+      # and main overrides userData early. No extra env needed here.
+      - name: Run Playwright tests
+        run: yarn test
+        env:
+          CI: true
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.os }}
+          path: playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload test artifacts (screenshots, traces)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+
