@@ -165,20 +165,46 @@ const ipcHandlers = {
     debugLog.info(`Attempting to display #newReleaseModal for ${releaseName}`);
     try {
       window.dispatchEvent(new CustomEvent('mxvoice:update-release-notes', { detail: { name: releaseName, notes: releaseNotes } }));
-    } catch {}
-    try { window.dispatchEvent(new CustomEvent('mxvoice:show-modal', { detail: { selector: '#newReleaseModal' } })); } catch {}
+    } catch (error) {
+      debugLog.error('Failed to dispatch release notes event', { 
+        module: 'ipc-bridge', 
+        function: 'display_release_notes',
+        error: error?.message || 'Unknown error' 
+      });
+    }
+    try { 
+      window.dispatchEvent(new CustomEvent('mxvoice:show-modal', { detail: { selector: '#newReleaseModal' } })); 
+    } catch (error) {
+      debugLog.error('Failed to dispatch show modal event', { 
+        module: 'ipc-bridge', 
+        function: 'display_release_notes',
+        error: error?.message || 'Unknown error' 
+      });
+    }
   }
   ,
   // Auto-update progress events
   update_download_progress: function (_event, progress) {
     try {
       window.dispatchEvent(new CustomEvent('mxvoice:update-download-progress', { detail: progress || {} }));
-    } catch (_) {}
+    } catch (error) {
+      debugLog.error('Failed to dispatch update download progress event', { 
+        module: 'ipc-bridge', 
+        function: 'update_download_progress',
+        error: error?.message || 'Unknown error' 
+      });
+    }
   },
   update_ready: function (_event, version) {
     try {
       window.dispatchEvent(new CustomEvent('mxvoice:update-ready', { detail: { version }}));
-    } catch (_) {}
+    } catch (error) {
+      debugLog.error('Failed to dispatch update ready event', { 
+        module: 'ipc-bridge', 
+        function: 'update_ready',
+        error: error?.message || 'Unknown error' 
+      });
+    }
   }
 };
 

@@ -17,8 +17,14 @@ let service = null;
 function ensureDirectoryExists(dirPath) {
   try {
     fs.mkdirSync(dirPath, { recursive: true });
-  } catch (_) {
-    // ignore
+  } catch (error) {
+    // Log directory creation failure but continue
+    log.warn('Failed to create logs directory', { 
+      module: 'log-service', 
+      function: 'ensureDirectoryExists',
+      dirPath: dirPath,
+      error: error?.message || 'Unknown error' 
+    });
   }
 }
 
@@ -37,7 +43,12 @@ function safeStringify(value) {
       }
       return val;
     });
-  } catch (_) {
+  } catch (error) {
+    log.warn('Failed to stringify value', { 
+      module: 'log-service', 
+      function: 'safeStringify',
+      error: error?.message || 'Unknown error' 
+    });
     return '[unserializable]';
   }
 }
@@ -75,14 +86,33 @@ export function initMainLogService({ store, keepDays = 14 } = {}) {
       try {
         const st = fs.statSync(p);
         if (st.isFile() && st.mtimeMs < pruneCutoff) {
-          try { fs.unlinkSync(p); } catch (_) {}
+          try { 
+            fs.unlinkSync(p); 
+          } catch (error) {
+            log.warn('Failed to remove old log file', { 
+              module: 'log-service', 
+              function: 'pruneOldLogs',
+              filePath: p,
+              error: error?.message || 'Unknown error' 
+            });
+          }
         }
-      } catch (_) {
-        // ignore bad entries
+      } catch (error) {
+        log.warn('Failed to stat log file during pruning', { 
+          module: 'log-service', 
+          function: 'pruneOldLogs',
+          filePath: p,
+          error: error?.message || 'Unknown error' 
+        });
       }
     }
-  } catch (_) {
-    // ignore
+  } catch (error) {
+    log.warn('Failed to read logs directory during pruning', { 
+      module: 'log-service', 
+      function: 'pruneOldLogs',
+      logsDir: logsDir,
+      error: error?.message || 'Unknown error' 
+    });
   }
 
   service = {
@@ -90,7 +120,16 @@ export function initMainLogService({ store, keepDays = 14 } = {}) {
       const upper = String(level || 'INFO').toUpperCase();
       // Gate info/debug by preference flag
       let debugEnabled = false;
-      try { debugEnabled = !!store?.get?.('debug_log_enabled'); } catch (_) {}
+      try { 
+        debugEnabled = !!store?.get?.('debug_log_enabled'); 
+      } catch (error) {
+        log.warn('Failed to get debug log preference', { 
+          module: 'log-service', 
+          function: 'write',
+          error: error?.message || 'Unknown error' 
+        });
+        debugEnabled = false;
+      }
       if ((upper === 'INFO' || upper === 'DEBUG') && !debugEnabled) return;
 
       const line = formatLine(upper, message, meta, context);
@@ -109,7 +148,14 @@ export function initMainLogService({ store, keepDays = 14 } = {}) {
           const st = fs.statSync(p);
           if (st.isFile() && st.mtimeMs >= includeCutoff) files.push({ p, m: st.mtimeMs });
         }
-      } catch (_) {}
+      } catch (error) {
+        log.warn('Failed to read logs directory during export', { 
+          module: 'log-service', 
+          function: 'exportLogs',
+          logsDir: logsDir,
+          error: error?.message || 'Unknown error' 
+        });
+      }
       files.sort((a, b) => a.m - b.m);
 
       const { canceled, filePath } = await dialog.showSaveDialog({

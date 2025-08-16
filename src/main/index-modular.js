@@ -551,13 +551,29 @@ function setupApp() {
   });
 
   autoUpdater.on('download-progress', (progress) => {
-    try { mainWindow?.webContents.send('update_download_progress', progress || {}); } catch (_) {}
+    try { 
+      mainWindow?.webContents.send('update_download_progress', progress || {}); 
+    } catch (error) {
+      debugLog.warn('Failed to send update download progress to renderer', { 
+        module: 'main', 
+        function: 'autoUpdater download-progress',
+        error: error?.message || 'Unknown error' 
+      });
+    }
     debugLog.info('Auto-updater download progress', { function: 'autoUpdater download-progress', ...progress });
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     updateState.downloaded = true;
-    try { mainWindow?.webContents.send('update_ready', info?.version || ''); } catch (_) {}
+    try { 
+      mainWindow?.webContents.send('update_ready', info?.version || ''); 
+    } catch (error) {
+      debugLog.warn('Failed to send update ready to renderer', { 
+        module: 'main', 
+        function: 'autoUpdater update-downloaded',
+        error: error?.message || 'Unknown error' 
+      });
+    }
     debugLog.info('Update downloaded and ready to install', { function: 'autoUpdater update-downloaded', version: info?.version });
     // If user already approved install, proceed automatically now
     if (updateState.userApprovedInstall) {

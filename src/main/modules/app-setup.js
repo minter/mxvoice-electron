@@ -238,7 +238,15 @@ function createApplicationMenu() {
         {
           label: 'Export Logs',
           click: async () => {
-            try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
+            try { 
+              await getLogService()?.exportLogs({ days: 7 }); 
+            } catch (error) {
+              debugLog.warn('Failed to export logs from menu', { 
+                module: 'app-setup', 
+                function: 'exportLogs',
+                error: error?.message || 'Unknown error' 
+              });
+            }
           }
         },
         {
@@ -327,7 +335,15 @@ function createApplicationMenu() {
         {
           label: 'Export Logs',
           click: async () => {
-            try { await getLogService()?.exportLogs({ days: 7 }); } catch (_) {}
+            try { 
+              await getLogService()?.exportLogs({ days: 7 }); 
+            } catch (error) {
+              debugLog.warn('Failed to export logs from menu', { 
+                module: 'app-setup', 
+                function: 'exportLogs',
+                error: error?.message || 'Unknown error' 
+              });
+            }
           }
         },
         {
@@ -427,7 +443,12 @@ function showAboutDialog() {
 
     aboutWindow.removeMenu();
     aboutWindow.loadURL('data:text/html;charset=UTF-8,' + encodeURIComponent(html));
-  } catch (_error) {
+  } catch (error) {
+    debugLog.warn('Failed to create about dialog, using fallback', { 
+      module: 'app-setup', 
+      function: 'showAboutDialog',
+      error: error?.message || 'Unknown error' 
+    });
     // Fallback to simple message box if anything fails
     try {
       const name = app.name;
@@ -438,7 +459,13 @@ function showAboutDialog() {
         detail: `Version ${app.getVersion()}\n\nAuthors:\n  • Wade Minter\n  • Andrew Berkowitz`,
         buttons: ['OK']
       });
-    } catch (_) {}
+    } catch (fallbackError) {
+      debugLog.error('Failed to show fallback about dialog', { 
+        module: 'app-setup', 
+        function: 'showAboutDialog',
+        error: fallbackError?.message || 'Unknown error' 
+      });
+    }
   }
 }
 function increaseFontSize() {

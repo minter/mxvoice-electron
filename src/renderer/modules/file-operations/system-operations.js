@@ -75,7 +75,13 @@ export async function installUpdate() {
       if (progressEl) progressEl.textContent = '';
       const adapter = await import('../ui/bootstrap-adapter.js');
       adapter.showModal('#updateInProgressModal', { backdrop: 'static', keyboard: false });
-    } catch (_) {}
+    } catch (error) {
+      debugLog?.warn('Failed to show update progress modal', { 
+        module: 'system-operations', 
+        function: 'installUpdate',
+        error: error?.message || 'Unknown error' 
+      });
+    }
 
     if (window.secureElectronAPI?.fileOperations?.installUpdate) {
       debugLog?.info("Calling secureElectronAPI.fileOperations.installUpdate", { module: 'system-operations', function: 'installUpdate' });

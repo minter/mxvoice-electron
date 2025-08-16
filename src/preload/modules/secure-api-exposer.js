@@ -82,7 +82,17 @@ function sanitizeForIPC(value, depth = 0, seen = new WeakSet()) {
       }
     }
     return out;
-  } catch (_) {
+  } catch (error) {
+    // Log error in error handling to avoid infinite recursion
+    try {
+      debugLog.error('Failed to serialize object for IPC', { 
+        module: 'secure-api-exposer', 
+        function: 'sanitizeForIPC',
+        error: error?.message || 'Unknown error' 
+      });
+    } catch (_) {
+      // Fallback to prevent infinite recursion
+    }
     return '[Unserializable]';
   }
 }

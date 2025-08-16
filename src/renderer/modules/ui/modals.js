@@ -32,7 +32,13 @@ function initializeModals(options = {}) {
   try {
     // Lazy import to avoid cyclic loads during bootstrap
     import('../dom-utils/index.js').then(mod => { Dom = mod.default; }).catch(() => {});
-  } catch (_) {}
+  } catch (error) {
+    debugLog?.warn('Failed to import DOM utilities during modal initialization', { 
+      module: 'ui-modals', 
+      function: 'modal-init',
+      error: error?.message || 'Unknown error' 
+    });
+  }
   
   /**
    * Pick a directory using the system file dialog
@@ -73,7 +79,17 @@ function initializeModals(options = {}) {
   function installUpdate() {
     try {
       // Show updating modal immediately
-      try { import('./bootstrap-adapter.js').then(({ showModal }) => showModal('#updateInProgressModal', { backdrop: 'static', keyboard: false })); } catch {}
+      try { 
+        import('./bootstrap-adapter.js').then(({ showModal }) => 
+          showModal('#updateInProgressModal', { backdrop: 'static', keyboard: false })
+        ); 
+      } catch (error) {
+        debugLog?.warn('Failed to show update progress modal', { 
+          module: 'ui-modals', 
+          function: 'installUpdate',
+          error: error?.message || 'Unknown error' 
+        });
+      }
       const statusEl = document.getElementById('updateStatusText');
       if (statusEl) statusEl.textContent = 'Preparing installation…';
       
@@ -105,7 +121,13 @@ function initializeModals(options = {}) {
         text.textContent = pct ? `${pct}% • ${transferred}/${total} • ${speed}` : '';
       }
     });
-  } catch (_) {}
+  } catch (error) {
+    debugLog?.warn('Failed to add update download progress event listener', { 
+      module: 'ui-modals', 
+      function: 'event-listener-setup',
+      error: error?.message || 'Unknown error' 
+    });
+  }
 
   try {
     window.addEventListener('mxvoice:update-ready', () => {
@@ -117,7 +139,13 @@ function initializeModals(options = {}) {
       if (status) status.textContent = 'Installing update…';
       if (text) text.textContent = '';
     });
-  } catch (_) {}
+  } catch (error) {
+    debugLog?.warn('Failed to add update ready event listener', { 
+      module: 'ui-modals', 
+      function: 'event-listener-setup',
+      error: error?.message || 'Unknown error' 
+    });
+  }
   
   /**
    * Custom confirmation dialog

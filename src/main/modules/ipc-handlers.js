@@ -798,7 +798,15 @@ function registerAllHandlers() {
         durationSec = await new Promise((resolve, reject) => {
           const sound = new Howl({ src: [filePath], html5: true, preload: true });
           const cleanup = () => {
-            try { sound.unload(); } catch (_) {}
+            try { 
+              sound.unload(); 
+            } catch (error) {
+              debugLog?.warn('Failed to unload Howler sound during cleanup', { 
+                module: 'ipc-handlers', 
+                function: 'audio-get-duration',
+                error: error?.message || 'Unknown error' 
+              });
+            }
           };
           sound.once('load', () => {
             try {

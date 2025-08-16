@@ -444,7 +444,15 @@ function saveHoldingTankToStoreWrapper() {
   saveHoldingTankToStore().then(() => {
     debugLog?.info('Holding tank saved successfully');
     // Optionally adjust layout without repopulating
-    try { scale_scrollable(); } catch (_) {}
+    try { 
+      scale_scrollable(); 
+    } catch (error) {
+      debugLog?.warn('Failed to scale scrollable elements after saving', { 
+        module: 'holding-tank', 
+        function: 'saveHoldingTankToStoreWrapper',
+        error: error?.message || 'Unknown error' 
+      });
+    }
   }).catch(error => {
     debugLog?.error('Error saving holding tank to store', error);
   });

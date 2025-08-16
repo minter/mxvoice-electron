@@ -38,7 +38,7 @@ try {
     debugLog.info('✅ Secure API exposed via contextBridge (context isolation enabled)');
     // Capture runtime errors and unhandled rejections for persistence
     try {
-      window.addEventListener('error', (ev) => {
+                window.addEventListener('error', (ev) => {
         try {
           const payload = {
             message: ev?.message || 'Unhandled error',
@@ -49,7 +49,18 @@ try {
             type: ev?.type
           };
           window.secureElectronAPI?.logs?.write('ERROR', payload.message, payload, { source: 'unhandled' });
-        } catch (_) {}
+        } catch (error) {
+          // Log error in error handling to avoid infinite recursion
+          try {
+            debugLog.error('Failed to capture unhandled error', { 
+              module: 'preload', 
+              function: 'error-capture',
+              originalError: error?.message || 'Unknown error' 
+            });
+          } catch (_) {
+            // Fallback to prevent infinite recursion
+          }
+        }
       });
       window.addEventListener('unhandledrejection', (ev) => {
         try {
@@ -66,10 +77,25 @@ try {
           }
           const context = { stack };
           window.secureElectronAPI?.logs?.write('ERROR', message, context, { source: 'unhandled' });
-        } catch (_) {}
+        } catch (error) {
+          // Log error in error handling to avoid infinite recursion
+          try {
+            debugLog.error('Failed to capture unhandled rejection', { 
+              module: 'preload', 
+              function: 'rejection-capture',
+              originalError: error?.message || 'Unknown error' 
+            });
+          } catch (_) {
+            // Fallback to prevent infinite recursion
+          }
+        }
       });
-    } catch (_) {
-      // ignore
+    } catch (error) {
+      debugLog.error('Failed to set up error event listeners', { 
+        module: 'preload', 
+        function: 'error-listener-setup',
+        error: error?.message || 'Unknown error' 
+      });
     }
 
     // Mirror console errors and warnings to file logs while preserving DevTools output
@@ -80,7 +106,18 @@ try {
           const msg = typeof args[0] === 'string' ? args[0] : String(args[0]);
           const context = args.length > 1 ? { args } : null;
           window.secureElectronAPI?.logs?.write('ERROR', msg, context, { source: 'console' });
-        } catch (_) {}
+        } catch (error) {
+          // Log error in error handling to avoid infinite recursion
+          try {
+            debugLog.error('Failed to mirror console error to logs', { 
+              module: 'preload', 
+              function: 'console-mirror',
+              originalError: error?.message || 'Unknown error' 
+            });
+          } catch (_) {
+            // Fallback to prevent infinite recursion
+          }
+        }
         origError(...args);
       };
 
@@ -90,11 +127,26 @@ try {
           const msg = typeof args[0] === 'string' ? args[0] : String(args[0]);
           const context = args.length > 1 ? { args } : null;
           window.secureElectronAPI?.logs?.write('WARN', msg, context, { source: 'console' });
-        } catch (_) {}
+        } catch (error) {
+          // Log error in error handling to avoid infinite recursion
+          try {
+            debugLog.error('Failed to mirror console warn to logs', { 
+              module: 'preload', 
+              function: 'console-mirror',
+              originalError: error?.message || 'Unknown error' 
+            });
+          } catch (_) {
+            // Fallback to prevent infinite recursion
+          }
+        }
         origWarn(...args);
       };
-    } catch (_) {
-      // ignore
+    } catch (error) {
+      debugLog.error('Failed to set up console mirroring', { 
+        module: 'preload', 
+        function: 'console-mirror-setup',
+        error: error?.message || 'Unknown error' 
+      });
     }
   } else {
     debugLog.error('❌ Failed to expose secure API - context isolation may not work properly');

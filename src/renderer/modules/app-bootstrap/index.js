@@ -26,7 +26,15 @@ export async function loadBasicModules(config, moduleRegistry, logInfo, logError
       let resolvedUrl = '';
       try {
         resolvedUrl = new URL(moduleConf.path, import.meta.url).toString();
-      } catch (_) {}
+      } catch (error) {
+        // URL resolution failed, but this is not critical - continue with relative path
+        logWarn(`Could not resolve URL for ${moduleConf.name}`, { 
+          module: 'app-bootstrap', 
+          function: 'loadBasicModules',
+          path: moduleConf.path,
+          error: error?.message || 'Unknown error' 
+        });
+      }
       if (resolvedUrl) {
         logInfo(`Resolving ${moduleConf.name} from: ${resolvedUrl}`);
       } else {
@@ -82,12 +90,29 @@ export async function loadBasicModules(config, moduleRegistry, logInfo, logError
     } catch (error) {
       try {
         let resolvedUrl = '';
-        try { resolvedUrl = new URL(moduleConf.path, import.meta.url).toString(); } catch (_) {}
+        try { 
+          resolvedUrl = new URL(moduleConf.path, import.meta.url).toString(); 
+        } catch (urlError) {
+          // URL resolution failed during error reporting, but this is not critical
+          logWarn(`Could not resolve URL for error reporting`, { 
+            module: 'app-bootstrap', 
+            function: 'loadBasicModules',
+            path: moduleConf.path,
+            error: urlError?.message || 'Unknown error' 
+          });
+        }
         logError(`Dynamic import failed for ${moduleConf.name} at ${resolvedUrl || moduleConf.path}`, { name: error?.name, message: error?.message });
         if (error && error.stack) {
           logError(`Stack for ${moduleConf.name}`, error.stack);
         }
-      } catch (_) {}
+      } catch (reportingError) {
+        logError(`Failed to report module loading error`, { 
+          module: 'app-bootstrap', 
+          function: 'loadBasicModules',
+          originalError: error?.message || 'Unknown error',
+          reportingError: reportingError?.message || 'Unknown error' 
+        });
+      }
       if (moduleConf.required) {
         logError(`Error loading required ${moduleConf.name} module`, error);
         throw error;

@@ -12,7 +12,14 @@ try {
   if (typeof window !== 'undefined' && window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (_) {}
+} catch (error) {
+  // Fallback to prevent initialization failure
+  console.warn('Failed to access window.debugLog during settings controller initialization', { 
+    module: 'preferences', 
+    function: 'settings-controller-init',
+    error: error?.message || 'Unknown error' 
+  });
+}
 
 /**
  * Initialize the settings controller

@@ -6,7 +6,16 @@
 import { secureStore } from '../adapters/secure-adapter.js';
 
 let debugLog = null;
-try { debugLog = window.debugLog || null; } catch (_) {}
+try { 
+  debugLog = window.debugLog || null; 
+} catch (error) {
+  // Fallback to prevent initialization failure
+  console.warn('Failed to access window.debugLog during UI manager initialization', { 
+    module: 'ui-manager', 
+    function: 'ui-manager-init',
+    error: error?.message || 'Unknown error' 
+  });
+}
 
 export default function initializeUIManager(options = {}) {
   const { electronAPI } = options;
@@ -30,7 +39,13 @@ export default function initializeUIManager(options = {}) {
           debugLog?.warn('Failed to save font size', { module: 'ui-manager', function: 'setFontSize', error: err });
         });
       }
-    } catch (_) {}
+    } catch (error) {
+      debugLog?.warn('Failed to save font size', { 
+        module: 'ui-manager', 
+        function: 'setFontSize',
+        error: error?.message || 'Unknown error' 
+      });
+    }
   }
 
   async function editSelectedSong() {
@@ -38,7 +53,13 @@ export default function initializeUIManager(options = {}) {
       if (window.moduleRegistry?.songManagement?.editSelectedSong) {
         return await window.moduleRegistry.songManagement.editSelectedSong();
       }
-    } catch (_) {}
+    } catch (error) {
+      debugLog?.warn('Failed to call editSelectedSong in songManagement', { 
+        module: 'ui-manager', 
+        function: 'editSelectedSong',
+        error: error?.message || 'Unknown error' 
+      });
+    }
     debugLog?.warn('editSelectedSong not available in songManagement');
   }
 
@@ -47,12 +68,28 @@ export default function initializeUIManager(options = {}) {
       if (window.moduleRegistry?.songManagement?.deleteSelectedSong) {
         return await window.moduleRegistry.songManagement.deleteSelectedSong();
       }
-    } catch (_) {}
+    } catch (error) {
+      debugLog?.warn('Failed to call deleteSelectedSong in songManagement', { 
+        module: 'ui-manager', 
+        function: 'deleteSelectedSong',
+        error: error?.message || 'Unknown error' 
+      });
+    }
     debugLog?.warn('deleteSelectedSong not available in songManagement');
   }
 
   function closeAllTabs() {
-    const reload = () => { try { location.reload(); } catch (_) {} };
+    const reload = () => { 
+      try { 
+        location.reload(); 
+      } catch (error) {
+        console.warn('Failed to reload page', { 
+          module: 'ui-manager', 
+          function: 'reload',
+          error: error?.message || 'Unknown error' 
+        });
+      } 
+    };
     try {
         if (electronAPI && electronAPI.store) {
           Promise.all([
@@ -64,7 +101,14 @@ export default function initializeUIManager(options = {}) {
       } else {
         reload();
       }
-    } catch (_) { reload(); }
+    } catch (error) {
+      debugLog?.warn('Failed to clear store data during closeAllTabs', { 
+        module: 'ui-manager', 
+        function: 'closeAllTabs',
+        error: error?.message || 'Unknown error' 
+      });
+      reload();
+    }
   }
   
   return {

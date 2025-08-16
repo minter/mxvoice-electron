@@ -152,7 +152,12 @@ function initializeDebugLogger(options = {}) {
       const formattedMessage = formatLogMessage('ERROR', message, context);
               // Note: This is the fallback for when debug logging fails - avoid infinite recursion
         // In production, this should rarely be reached
-      try { electronAPI?.logs?.write('ERROR', message, context, { source: 'app' }); } catch (_) {}
+      try { 
+        electronAPI?.logs?.write('ERROR', message, context, { source: 'app' }); 
+      } catch (_) {
+        // Intentional fallback to prevent infinite recursion in debug logger
+        // This catch block prevents the debug logger from crashing when logging fails
+      }
     }
   }
   
@@ -167,7 +172,12 @@ function initializeDebugLogger(options = {}) {
       const formattedMessage = formatLogMessage('WARN', message, context);
       // Output to console for immediate visibility during development
       console.warn(formattedMessage);
-      try { electronAPI?.logs?.write('WARN', message, context, { source: 'app' }); } catch (_) {}
+      try { 
+        electronAPI?.logs?.write('WARN', message, context, { source: 'app' }); 
+      } catch (_) {
+        // Intentional fallback to prevent infinite recursion in debug logger
+        // This catch block prevents the debug logger from crashing when logging fails
+      }
     }
   }
   
@@ -184,7 +194,12 @@ function initializeDebugLogger(options = {}) {
         const formattedMessage = formatLogMessage('INFO', message, context);
         // Output to console for immediate visibility during development
         console.info(formattedMessage);
-        try { electronAPI?.logs?.write('INFO', message, context, { source: 'app' }); } catch (_) {}
+        try { 
+          electronAPI?.logs?.write('INFO', message, context, { source: 'app' }); 
+        } catch (_) {
+          // Intentional fallback to prevent infinite recursion in debug logger
+          // This catch block prevents the debug logger from crashing when logging fails
+        }
       }
     }
   }
@@ -202,7 +217,12 @@ function initializeDebugLogger(options = {}) {
         const formattedMessage = formatLogMessage('DEBUG', message, context);
         // Note: This is the fallback for when debug logging fails - avoid infinite recursion
         // In production, this should rarely be reached
-        try { electronAPI?.logs?.write('DEBUG', message, context, { source: 'app' }); } catch (_) {}
+        try { 
+          electronAPI?.logs?.write('DEBUG', message, context, { source: 'app' }); 
+        } catch (_) {
+          // Intentional fallback to prevent infinite recursion in debug logger
+          // This catch block prevents the debug logger from crashing when logging fails
+        }
       }
     }
   }
