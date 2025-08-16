@@ -191,12 +191,23 @@ const secureElectronAPI = {
     pickDirectory: (defaultPath) => ipcRenderer.invoke('pick-directory', defaultPath),
     installUpdate: () => {
       try {
-        console.log('🔄 Preload: installUpdate called, invoking install-update IPC');
+        debugLog.info('🔄 Preload: installUpdate called, invoking install-update IPC', { 
+      module: 'secure-api-exposer', 
+      function: 'installUpdate' 
+    });
         const result = ipcRenderer.invoke('install-update');
-        console.log('🔄 Preload: install-update IPC result:', result);
+        debugLog.info('🔄 Preload: install-update IPC result', { 
+          module: 'secure-api-exposer', 
+          function: 'installUpdate',
+          result: result 
+        });
         return result;
       } catch (error) {
-        console.error('❌ Preload: install-update IPC failed:', error);
+        debugLog.error('❌ Preload: install-update IPC failed', { 
+          module: 'secure-api-exposer', 
+          function: 'installUpdate',
+          error: error.message 
+        });
         throw error;
       }
     },
@@ -398,7 +409,11 @@ function exposeSecureAPI() {
     if (debugLog && typeof debugLog.error === 'function') {
       debugLog.error('❌ Failed to expose secure API:', errorMessage);
     } else {
-      console.error('❌ Failed to expose secure API:', errorMessage);
+      debugLog.error('❌ Failed to expose secure API', { 
+        module: 'secure-api-exposer', 
+        function: 'exposeSecureAPI',
+        error: errorMessage 
+      });
     }
     return false;
   }

@@ -212,8 +212,18 @@ class ThemeManagementModule {
       document.dispatchEvent(themeChangeEvent);
       
       // Add console log for immediate feedback during development
-      console.log(`🎨 Theme applied: ${this.effectiveTheme} (User preference: ${this.currentTheme}, System: ${this.systemTheme})`);
-      console.log(`📱 Body classes: ${body.className}`);
+              debugLog.info(`🎨 Theme applied: ${this.effectiveTheme} (User preference: ${this.currentTheme}, System: ${this.systemTheme})`, { 
+          module: 'theme-management', 
+          function: 'applyTheme',
+          effectiveTheme: this.effectiveTheme,
+          userPreference: this.currentTheme,
+          systemTheme: this.systemTheme 
+        });
+        debugLog.debug(`📱 Body classes: ${body.className}`, { 
+          module: 'theme-management', 
+          function: 'applyTheme',
+          bodyClasses: body.className 
+        });
       
       debugLog?.info('Theme applied to DOM', {
         module: 'theme-management',
@@ -466,14 +476,26 @@ class ThemeManagementModule {
    */
   async testThemeSwitch(theme) {
     debugLog?.info('Testing theme switch', { theme });
-    console.log(`🧪 Testing theme switch to: ${theme}`);
+            debugLog.info(`🧪 Testing theme switch to: ${theme}`, { 
+          module: 'theme-management', 
+          function: 'testThemeSwitch',
+          targetTheme: theme 
+        });
     
     try {
       const result = await this.setUserTheme(theme);
-      console.log(`✅ Theme switch result:`, result);
+              debugLog.info(`✅ Theme switch result:`, { 
+          module: 'theme-management', 
+          function: 'testThemeSwitch',
+          result: result 
+        });
       return result;
     } catch (error) {
-      console.error(`❌ Theme switch failed:`, error);
+              debugLog.error(`❌ Theme switch failed`, { 
+          module: 'theme-management', 
+          function: 'testThemeSwitch',
+          error: error.message 
+        });
       return { success: false, error: error.message };
     }
   }

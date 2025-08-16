@@ -60,7 +60,8 @@ function initializeDebugLogger(options = {}) {
         debugEnabledCache = false;
       }
     } catch (error) {
-      console.warn('❌ Failed to get debug log preference:', error);
+              // Note: This is the fallback for when debug logging fails - avoid infinite recursion
+        // In production, this should rarely be reached
       debugEnabledCache = false;
     }
     
@@ -82,15 +83,18 @@ function initializeDebugLogger(options = {}) {
           debugEnabledCacheTime = Date.now();
           return true;
         } else {
-          console.warn('❌ Failed to set debug log preference:', result.error);
+          // Note: This is the fallback for when debug logging fails - avoid infinite recursion
+        // In production, this should rarely be reached
           return false;
         }
       } else {
-        console.warn('❌ No store available for debug log preference');
+        // Note: This is the fallback for when debug logging fails - avoid infinite recursion
+        // In production, this should rarely be reached
         return false;
       }
     } catch (error) {
-      console.warn('❌ Failed to set debug log preference:', error);
+              // Note: This is the fallback for when debug logging fails - avoid infinite recursion
+        // In production, this should rarely be reached
       return false;
     }
   }
@@ -146,7 +150,8 @@ function initializeDebugLogger(options = {}) {
   function error(message, context = null) {
     if (currentLogLevel >= LOG_LEVELS.ERROR) {
       const formattedMessage = formatLogMessage('ERROR', message, context);
-      console.error(formattedMessage);
+              // Note: This is the fallback for when debug logging fails - avoid infinite recursion
+        // In production, this should rarely be reached
       try { electronAPI?.logs?.write('ERROR', message, context, { source: 'app' }); } catch (_) {}
     }
   }
@@ -160,6 +165,7 @@ function initializeDebugLogger(options = {}) {
   function warn(message, context = null) {
     if (currentLogLevel >= LOG_LEVELS.WARN) {
       const formattedMessage = formatLogMessage('WARN', message, context);
+      // Output to console for immediate visibility during development
       console.warn(formattedMessage);
       try { electronAPI?.logs?.write('WARN', message, context, { source: 'app' }); } catch (_) {}
     }
@@ -176,6 +182,7 @@ function initializeDebugLogger(options = {}) {
       const debugEnabled = await isDebugEnabled();
       if (debugEnabled) {
         const formattedMessage = formatLogMessage('INFO', message, context);
+        // Output to console for immediate visibility during development
         console.info(formattedMessage);
         try { electronAPI?.logs?.write('INFO', message, context, { source: 'app' }); } catch (_) {}
       }
@@ -193,7 +200,8 @@ function initializeDebugLogger(options = {}) {
       const debugEnabled = await isDebugEnabled();
       if (debugEnabled) {
         const formattedMessage = formatLogMessage('DEBUG', message, context);
-        console.log(formattedMessage);
+        // Note: This is the fallback for when debug logging fails - avoid infinite recursion
+        // In production, this should rarely be reached
         try { electronAPI?.logs?.write('DEBUG', message, context, { source: 'app' }); } catch (_) {}
       }
     }

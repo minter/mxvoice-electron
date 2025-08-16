@@ -941,11 +941,14 @@ function registerAllHandlers() {
   // Add the missing install-update handler for auto-updates
   ipcMain.handle('install-update', async () => {
     try {
-      // Add console.log for production builds
-      console.log('🚀 [PRODUCTION] install-update handler called');
-      console.log('🚀 [PRODUCTION] autoUpdater available:', !!autoUpdater);
-      console.log('🚀 [PRODUCTION] autoUpdater type:', typeof autoUpdater);
-      console.log('🚀 [PRODUCTION] updateState.downloaded:', !!updateState?.downloaded);
+          // Log production install-update handler details
+    debugLog.info('🚀 [PRODUCTION] install-update handler called', { 
+      module: 'ipc-handlers', 
+      function: 'install-update',
+      autoUpdaterAvailable: !!autoUpdater,
+      autoUpdaterType: typeof autoUpdater,
+      updateStateDownloaded: !!updateState?.downloaded
+    });
       
       debugLog?.error('install-update handler called', { 
         module: 'ipc-handlers', 
@@ -966,7 +969,10 @@ function registerAllHandlers() {
         await autoUpdater.downloadUpdate();
         return { success: true, startedDownload: true };
       } else {
-        console.log('❌ [PRODUCTION] Auto updater not available');
+        debugLog.error('❌ [PRODUCTION] Auto updater not available', { 
+        module: 'ipc-handlers', 
+        function: 'install-update' 
+      });
         debugLog?.error('Auto updater not available', { 
           module: 'ipc-handlers', 
           function: 'install-update' 
@@ -974,7 +980,11 @@ function registerAllHandlers() {
         throw new Error('Auto updater not available');
       }
     } catch (error) {
-      console.log('❌ [PRODUCTION] Install update error:', error.message);
+      debugLog.error('❌ [PRODUCTION] Install update error', { 
+        module: 'ipc-handlers', 
+        function: 'install-update',
+        error: error.message 
+      });
       debugLog?.error('Install update error:', { 
         module: 'ipc-handlers', 
         function: 'install-update', 

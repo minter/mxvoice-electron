@@ -9,7 +9,7 @@
  */
 
 // Add immediate logging to see if the file is being loaded
-console.log('Main process starting...', new Date().toISOString());
+// Note: debugLog will be initialized later in this file
 
 import { app, ipcMain } from 'electron';
 import path from 'path';
@@ -35,18 +35,8 @@ import * as fileOperations from './modules/file-operations.js';
 import initializeMainDebugLog from './modules/debug-log.js';
 import { initMainLogService } from './modules/log-service.js';
 
-// Initialize Octokit for GitHub API
+// Initialize Octokit for GitHub API (will be initialized after debugLog is available)
 let octokit;
-import("@octokit/rest")
-  .then(({ Octokit }) => {
-    octokit = new Octokit();
-  })
-  .catch(err => {
-    debugLog.error("Failed to load Octokit module", { 
-      function: "Octokit initialization",
-      error: err.message 
-    });
-  });
 
 // Initialize markdown parser
 const md = markdownIt();
@@ -73,6 +63,31 @@ const store = new Store({
 
 // Initialize main process DebugLog
 const debugLog = initializeMainDebugLog({ store });
+
+// Add immediate logging now that debugLog is available
+debugLog.info('Main process starting...', { 
+  module: 'main', 
+  function: 'bootstrap',
+  timestamp: new Date().toISOString() 
+});
+
+// Initialize Octokit for GitHub API now that debugLog is available
+import("@octokit/rest")
+  .then(({ Octokit }) => {
+    octokit = new Octokit();
+    debugLog.info('Octokit module loaded successfully', { 
+      module: 'main', 
+      function: 'Octokit initialization' 
+    });
+  })
+  .catch(err => {
+    debugLog.error("Failed to load Octokit module", { 
+      module: 'main',
+      function: "Octokit initialization",
+      error: err.message 
+    });
+  });
+
 // Centralized Log Service for file persistence and export
 const logService = initMainLogService({ store });
 
