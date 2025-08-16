@@ -1,46 +1,14 @@
-import { defineConfig, devices } from '@playwright/test';
-import path from 'path';
+import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
-  
+  testDir: 'tests/e2e',
+  timeout: 30_000,
   use: {
-    // Remove baseURL since we're not using a web server
+    // screenshots, traces, etc as you like
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
-  
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-  ],
-  
-  // Remove webServer configuration - Electron apps don't use web servers
-  
-  globalSetup: './tests/setup/global-setup.js',
-  globalTeardown: './tests/setup/global-teardown.js',
-  
-  // Test timeout
-  timeout: 30000,
-  
-  // Expect timeout
-  expect: {
-    timeout: 10000,
-  },
+  // CI tip: set workers to 1 if your app uses a shared profile/port
+  workers: 1,
 });
