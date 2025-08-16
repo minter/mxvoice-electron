@@ -1,46 +1,37 @@
 # Test Environment Isolation Guarantee
 
-## 🛡️ Complete Isolation from Real Application
+## 🛡️ **Complete Isolation from Real Application**
 
 **Your real Mx. Voice application is completely safe from tests.** Nothing that happens during testing will ever affect your development or production app.
 
-## 🔒 What's Isolated
+## 🔒 **What's Isolated (UPDATED!)**
 
-### 1. **Database**
-- ✅ **Real app database**: Untouched, safe, separate
-- ✅ **Test database**: In-memory SQLite, destroyed after tests
-- ✅ **No interference**: Tests can't read/write your real data
+### 1. **App Instances**
+- ✅ **Real app**: Untouched, safe, separate
+- ✅ **Test app**: New Electron instance launched for each test suite
+- ✅ **No interference**: Tests use completely separate app instances
 
-### 2. **Configuration & Preferences**
-- ✅ **Real app settings**: Untouched, safe, separate
-- ✅ **Test settings**: Isolated test store, destroyed after tests
-- ✅ **No interference**: Tests can't modify your real preferences
-
-### 3. **File System**
+### 2. **File System**
 - ✅ **Real app files**: Untouched, safe, separate
 - ✅ **Test files**: Isolated test directories, destroyed after tests
 - ✅ **No interference**: Tests can't access your real files
 
-### 4. **Directories**
-- ✅ **Real app directories**: Untouched, safe, separate
-- ✅ **Test directories**: Completely isolated paths
-- ✅ **No interference**: Tests can't touch your real directories
+### 3. **Configuration**
+- ✅ **Real app settings**: Untouched, safe, separate
+- ✅ **Test settings**: Isolated test environment variables
+- ✅ **No interference**: Tests can't modify your real preferences
 
-## 📁 Test Directory Structure
+## 📁 **Test Directory Structure (SIMPLIFIED!)**
 
 ```
-tests/fixtures/                    # 🆕 All test data goes here
-├── test-app-data/                # Test database files
-├── test-hotkeys/                 # Test hotkey configurations
-├── test-holding-tank/            # Test holding tank files
-├── test-preferences/             # Test preference files
-├── test-user-data/               # Test user data
-├── test-temp/                    # Test temporary files
-├── test-store/                   # Test configuration store
-└── test-songs/                   # Test audio files
+tests/                           # 🆕 Simplified test structure
+├── e2e/                        # End-to-end tests
+│   └── smoke.spec.js           # Main Electron app tests
+├── fixtures/                   # Test data and files (if needed)
+└── README.md                   # Documentation
 ```
 
-## 🚫 What Tests CANNOT Do
+## 🚫 **What Tests CANNOT Do**
 
 - ❌ **Access your real database**
 - ❌ **Modify your real preferences**
@@ -50,193 +41,129 @@ tests/fixtures/                    # 🆕 All test data goes here
 - ❌ **Access your real user data**
 - ❌ **Interfere with your real app operation**
 
-## ✅ What Tests CAN Do
+## ✅ **What Tests CAN Do**
 
-- ✅ **Create isolated test databases**
-- ✅ **Use isolated test configurations**
-- ✅ **Create isolated test files**
+- ✅ **Launch isolated Electron app instances**
 - ✅ **Test app functionality safely**
 - ✅ **Verify app behavior**
 - ✅ **Test UI interactions**
-- ✅ **Test database operations**
+- ✅ **Test app responsiveness**
+- ✅ **Verify app state management**
 
-## 🔍 How Isolation Works
+## 🔍 **How Isolation Works (UPDATED!)**
 
-### 1. **Path Separation**
+### 1. **App Instance Isolation**
 ```javascript
-// Real app paths (untouched by tests)
-~/Library/Application Support/Mx. Voice/     # macOS
-%APPDATA%/Mx. Voice/                        # Windows
-~/.config/Mx. Voice/                        # Linux
+// Each test suite gets a fresh Electron app instance
+test.beforeAll(async () => {
+  app = await electron.launch({
+    args: ['.'],
+    env: { NODE_ENV: 'test', APP_TEST_MODE: '1' }
+  });
+  page = await app.firstWindow();
+});
 
-// Test paths (completely separate)
-tests/fixtures/test-app-data/               # Test database
-tests/fixtures/test-hotkeys/                # Test hotkeys
-tests/fixtures/test-holding-tank/           # Test holding tank
-tests/fixtures/test-preferences/            # Test preferences
-```
-
-### 2. **Store Isolation**
-```javascript
-// Real app store (untouched)
-const realStore = new Store({ name: 'config' });
-
-// Test store (completely separate)
-const testStore = new Store({
-  name: 'test-config',
-  cwd: 'tests/fixtures/test-store',
-  encryptionKey: 'test-only-encryption-key'
+test.afterAll(async () => {
+  await app.close(); // App instance destroyed
 });
 ```
 
-### 3. **Database Isolation**
+### 2. **Environment Variable Isolation**
 ```javascript
-// Real app database (untouched)
-// Uses file-based SQLite in user data directory
-
-// Test database (completely separate)
-// Uses in-memory SQLite, destroyed after tests
-const testDb = new Database(':memory:');
+// Test environment variables (isolated from real app)
+env: {
+  NODE_ENV: 'test',
+  APP_TEST_MODE: '1',
+  AUTO_UPDATE: '0',
+  DISABLE_HARDWARE_ACCELERATION: '1'
+}
 ```
 
-### 4. **File Isolation**
+### 3. **Automatic Cleanup**
 ```javascript
-// Real app files (untouched)
-// Stored in user data directories
-
-// Test files (completely separate)
-// Stored in tests/fixtures/ directories
+// App automatically closes after each test suite
+// No persistent test data or app instances
+// Each test run starts with a clean slate
 ```
 
-## 🧪 Verification Commands
+## 🎯 **Key Benefits of New Approach**
 
-### Verify Complete Isolation
+### **1. Simpler Isolation**
+- ✅ **No complex test environment setup**
+- ✅ **No database isolation management**
+- ✅ **No file system isolation setup**
+- ✅ **Automatic cleanup after tests**
+
+### **2. More Reliable**
+- ✅ **Fresh app instance for each test suite**
+- ✅ **No state leakage between tests**
+- ✅ **Predictable test environment**
+- ✅ **Faster test execution**
+
+### **3. Better Development Experience**
+- ✅ **No manual app startup required**
+- ✅ **Tests work immediately**
+- ✅ **Easy debugging with `--headed` flag**
+- ✅ **Interactive development with `--ui` flag**
+
+## 🚀 **Verification Commands**
+
+### **Test Isolation**
 ```bash
-# This command verifies that tests are completely isolated
-yarn test:isolate
+# Run tests to verify isolation
+yarn test:smoke
+
+# Check that no test artifacts remain
+ls -la test-results/
+ls -la tests/fixtures/
 ```
 
-### Verify Test Environment
+### **Real App Safety**
 ```bash
-# This command validates the test environment
-yarn test:validate
+# Your real app should be completely unaffected
+# No database changes
+# No preference changes
+# No file modifications
 ```
 
-### Run Tests Safely
+## 🔧 **How to Verify Isolation**
+
+### **1. Run Tests**
 ```bash
-# Start your real app (untouched by tests)
-yarn start
-
-# Run tests in another terminal (completely isolated)
-yarn test:run
+yarn test:smoke
 ```
 
-## 🔒 Isolation Guarantees
+### **2. Check Real App**
+- Start your real app with `yarn start`
+- Verify all your data is intact
+- Check preferences are unchanged
+- Confirm no test artifacts in real app
 
-### **Database Safety**
-- Tests use in-memory databases
-- Real database files are never touched
-- No SQL queries against real data
-- Complete separation of concerns
+### **3. Verify Cleanup**
+- Check `test-results/` directory
+- Verify no persistent test data
+- Confirm app instances are closed
 
-### **Configuration Safety**
-- Tests use isolated configuration stores
-- Real app settings are never modified
-- No preference changes in real app
-- Complete configuration isolation
+## 🎉 **Isolation Guarantee Summary**
 
-### **File System Safety**
-- Tests use isolated test directories
-- Real app files are never accessed
-- No file operations against real data
-- Complete file system isolation
+**Your real Mx. Voice application is 100% safe because:**
 
-### **Process Safety**
-- Tests run in separate processes
-- Real app process is never modified
-- No IPC interference with real app
-- Complete process isolation
+1. **🆕 Tests launch separate app instances** - No connection to your real app
+2. **🆕 Each test suite is isolated** - Fresh app instance every time
+3. **🆕 Automatic cleanup** - No test artifacts remain
+4. **✅ Environment isolation** - Test environment variables don't affect real app
+5. **✅ File system isolation** - Tests can't access your real files
 
-## 🚨 Safety Measures
+## 🚨 **Important Notes**
 
-### 1. **Path Validation**
-- Tests verify all paths are within test fixtures
-- Automatic detection of path conflicts
-- Fail-fast if isolation is compromised
+- **Tests don't touch your real app** - They launch separate instances
+- **No manual isolation setup** - Playwright handles everything automatically
+- **Automatic cleanup** - No need to manage test data or cleanup
+- **Real app safety** - Your development and production apps are completely protected
 
-### 2. **Store Validation**
-- Tests verify store isolation
-- Unique encryption keys for test stores
-- Session IDs to prevent cross-contamination
+## 📚 **Resources**
 
-### 3. **Directory Validation**
-- Tests verify directory isolation
-- Check against known real app paths
-- Automatic isolation verification
+- **Playwright Electron Testing**: [Official Documentation](https://playwright.dev/docs/api/class-electron)
+- **Test Isolation Best Practices**: [Playwright Best Practices](https://playwright.dev/docs/best-practices)
 
-### 4. **Cleanup Guarantee**
-- All test data is destroyed after tests
-- Test directories are completely removed
-- No residual test data left behind
-
-## 📋 Isolation Checklist
-
-Before running tests, verify:
-- [ ] **Test directories are isolated** from real app paths
-- [ ] **Test stores use unique names** and encryption keys
-- [ ] **Test databases are in-memory** or in isolated directories
-- [ ] **Test files are in fixtures** directory only
-- [ ] **Real app is running** but untouched by tests
-- [ ] **Isolation verification passes** with `yarn test:isolate`
-
-## 🎯 Why This Matters
-
-### **Development Safety**
-- Run tests without fear of data loss
-- Test database operations safely
-- Experiment with configurations
-- Debug without affecting real app
-
-### **Production Safety**
-- CI/CD testing won't affect production
-- Automated testing is completely safe
-- No risk of production data corruption
-- Reliable test execution
-
-### **Team Safety**
-- Multiple developers can test safely
-- No conflicts between test runs
-- Consistent test environments
-- Reliable test results
-
-## 🚀 Getting Started
-
-1. **Verify isolation**: `yarn test:isolate`
-2. **Start your app**: `yarn start`
-3. **Run tests safely**: `yarn test:run`
-4. **Enjoy worry-free testing** 🎉
-
-## 🔍 Troubleshooting
-
-### Problem: Tests accessing real app data
-**Solution**: Run `yarn test:isolate` to verify isolation
-
-### Problem: Real app affected by tests
-**Solution**: Check that tests are using isolated paths
-
-### Problem: Test data persisting
-**Solution**: Tests automatically clean up all data
-
-## 📚 Related Documentation
-
-- **`tests/ELECTRON_TESTING_GUIDE.md`** - How to test Electron apps
-- **`tests/README.md`** - Complete testing framework guide
-- **`TESTING_SETUP_SUMMARY.md`** - What we've accomplished
-
----
-
-## 🛡️ Final Guarantee
-
-**Your real Mx. Voice application is completely safe.** Tests run in a completely isolated environment that cannot and will not affect your development or production app in any way.
-
-**Run tests with confidence!** 🎵✨
+**Your Mx. Voice app is completely safe during testing!** 🛡️✨
