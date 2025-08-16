@@ -37,7 +37,12 @@ export const secureDatabase = {
         return result;
       }
       
-
+      // Fallback to legacy database if available
+      if (typeof window.db !== 'undefined' && window.db.prepare) {
+        const stmt = window.db.prepare(sql);
+        const rows = stmt.all(params);
+        return { success: true, data: rows };
+      }
       
       throw new Error('No database API available');
     } catch (error) {
@@ -66,7 +71,12 @@ export const secureDatabase = {
         return result;
       }
       
-
+      // Fallback to legacy database if available
+      if (typeof window.db !== 'undefined' && window.db.prepare) {
+        const stmt = window.db.prepare(sql);
+        const result = stmt.run(params);
+        return { success: true, changes: result.changes, lastInsertRowid: result.lastInsertRowid };
+      }
       
       throw new Error('No database API available');
     } catch (error) {
@@ -92,7 +102,12 @@ export const secureDatabase = {
         return await window.secureElectronAPI.database.getCategories();
       }
       
-
+      // Fallback to legacy database if available
+      if (typeof window.db !== 'undefined' && window.db.prepare) {
+        const stmt = window.db.prepare("SELECT * FROM categories ORDER BY code");
+        const rows = stmt.all();
+        return { success: true, data: rows };
+      }
       
       throw new Error('No database API available');
     } catch (error) {
@@ -117,7 +132,22 @@ export const secureDatabase = {
         return await window.secureElectronAPI.database.addSong(songData);
       }
       
-
+      // Fallback to legacy database if available
+      if (typeof window.db !== 'undefined' && window.db.prepare) {
+        const stmt = window.db.prepare(
+          "INSERT INTO mrvoice (title, artist, info, time, category, filepath, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
+        const result = stmt.run([
+          songData.title || '',
+          songData.artist || '',
+          songData.info || '',
+          songData.time || '',
+          songData.category || '',
+          songData.filepath || '',
+          Math.floor(Date.now() / 1000)
+        ]);
+        return { success: true, lastInsertRowid: result.lastInsertRowid };
+      }
       
       throw new Error('No database API available');
     } catch (error) {
@@ -881,12 +911,12 @@ export const secureFileDialog = {
     } catch (error) {
       debugLog?.error('Save hotkey file failed:', { 
         module: 'secure-adapter', 
-        function: 'secureFileDialog.openHotkeyFile', 
+        function: 'secureFileDialog.saveHotkeyFile', 
         hotkeyArray, 
         error: error.message 
       });
       return { success: false, error: error.message };
-        }
+    }
   },
 
   /**

@@ -26,11 +26,12 @@ try {
 let fontSize = 11;
 
 /**
- * Get categories from shared state or fallback to empty object
+ * Get cached categories from shared state
+ * Returns categories from cache for fast access during live search
  * 
  * @returns {Object} - Categories object
  */
-function getCategories() {
+function getCachedCategories() {
   try {
     // Try to get categories from shared state first
     const categories = sharedState.get('categories');
@@ -46,9 +47,9 @@ function getCategories() {
     // Return empty object as last resort
     return {};
   } catch (error) {
-    debugLog?.warn('❌ Error getting categories:', { 
+    debugLog?.warn('❌ Error getting cached categories:', { 
       module: 'live-search',
-      function: 'getCategories',
+      function: 'getCachedCategories',
       error: error.message
     });
     return {};
@@ -66,7 +67,7 @@ function getCategoryName(categoryCode) {
     return '';
   }
   
-  const categories = getCategories();
+  const categories = getCachedCategories();
   debugLog?.info('🔍 getCategoryName called with:', { 
     module: 'live-search',
     function: 'getCategoryName',
@@ -281,13 +282,13 @@ function performLiveSearch(searchTerm) {
 // Export individual functions for direct access
 export {
   performLiveSearch,
-  getCategories,
+  getCachedCategories,
   getCategoryName
 };
 
 // Default export for module loading
 export default {
   performLiveSearch,
-  getCategories,
+  getCachedCategories,
   getCategoryName
 }; 

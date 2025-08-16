@@ -28,16 +28,15 @@ try {
  */
 class SearchModule {
   constructor() {
-    // Initialize search engine functions
+    // Initialize module state
     this.searchData = searchEngine.searchData;
     this.triggerLiveSearch = searchEngine.triggerLiveSearch;
     this.performLiveSearch = liveSearch.performLiveSearch;
-    this.toggleAdvancedSearch = advancedSearch.toggleAdvancedSearch;
+    this.getCachedCategories = liveSearch.getCachedCategories;
+    this.getCategoryName = liveSearch.getCategoryName;
     
-    // Initialize search state
-    this.searchTimeout = null;
-    this.fontSize = 11;
-    this.categories = {};
+    // Advanced search functionality
+    this.performAdvancedSearch = advancedSearch.performAdvancedSearch;
   }
 
   /**
@@ -81,25 +80,6 @@ class SearchModule {
   setupEventListeners() {
     // This will be called when the module is loaded
     // Event listeners will be set up in the main renderer
-  }
-
-  /**
-   * Get all available search functions
-   * 
-   * @returns {Object} - Object containing all search functions
-   */
-  getAllSearchFunctions() {
-    return {
-      // Search engine functions
-      searchData: this.searchData,
-      performLiveSearch: this.performLiveSearch,
-      toggleAdvancedSearch: this.toggleAdvancedSearch,
-      
-      // Utility functions
-      clearSearchResults: this.clearSearchResults,
-      triggerLiveSearch: this.triggerLiveSearch,
-      buildSearchQuery: this.buildSearchQuery
-    };
   }
 
   /**
@@ -195,48 +175,31 @@ class SearchModule {
    */
   test() {
     const results = {
-      engine: {},
-      live: {},
+      search: {},
       advanced: {}
     };
 
-    // Test search engine functions
+    // Test search functions
     try {
       if (typeof this.searchData === 'function') {
-        results.engine.searchData = '✅ Function exists';
+        results.search.searchData = '✅ Function exists';
       } else {
-        results.engine.searchData = '❌ Function missing';
+        results.search.searchData = '❌ Function missing';
       }
-    } catch (error) {
-      results.engine.error = `❌ Error: ${error.message}`;
-    }
 
-    // Test live search functions
-    try {
       if (typeof this.performLiveSearch === 'function') {
-        results.live.performLiveSearch = '✅ Function exists';
+        results.search.performLiveSearch = '✅ Function exists';
       } else {
-        results.live.performLiveSearch = '❌ Function missing';
+        results.search.performLiveSearch = '❌ Function missing';
       }
 
-      if (typeof this.triggerLiveSearch === 'function') {
-        results.live.triggerLiveSearch = '✅ Function exists';
+      if (typeof this.performAdvancedSearch === 'function') {
+        results.advanced.performAdvancedSearch = '✅ Function exists';
       } else {
-        results.live.triggerLiveSearch = '❌ Function missing';
+        results.advanced.performAdvancedSearch = '❌ Function missing';
       }
     } catch (error) {
-      results.live.error = `❌ Error: ${error.message}`;
-    }
-
-    // Test advanced search functions
-    try {
-      if (typeof this.toggleAdvancedSearch === 'function') {
-        results.advanced.toggleAdvancedSearch = '✅ Function exists';
-      } else {
-        results.advanced.toggleAdvancedSearch = '❌ Function missing';
-      }
-    } catch (error) {
-      results.advanced.error = `❌ Error: ${error.message}`;
+      results.search.error = `❌ Error: ${error.message}`;
     }
 
     return results;
@@ -263,9 +226,22 @@ class SearchModule {
           'clearSearchResults'
         ],
         advanced: [
-          'toggleAdvancedSearch'
+          'performAdvancedSearch'
         ]
       }
+    };
+  }
+
+  getPublicInterface() {
+    return {
+      searchData: this.searchData,
+      performLiveSearch: this.performLiveSearch,
+      getCachedCategories: this.getCachedCategories,
+      getCategoryName: this.getCategoryName,
+      performAdvancedSearch: this.performAdvancedSearch,
+      triggerLiveSearch: this.triggerLiveSearch,
+      clearSearchResults: this.clearSearchResults,
+      buildSearchQuery: this.buildSearchQuery
     };
   }
 }
@@ -274,12 +250,23 @@ class SearchModule {
 const searchModule = new SearchModule();
 
 // Export individual functions for direct access
-export const searchData = searchModule.searchData.bind(searchModule);
-export const performLiveSearch = searchModule.performLiveSearch.bind(searchModule);
-export const toggleAdvancedSearch = searchModule.toggleAdvancedSearch.bind(searchModule);
-export const clearSearchResults = searchModule.clearSearchResults.bind(searchModule);
-export const triggerLiveSearch = searchModule.triggerLiveSearch.bind(searchModule);
-export const buildSearchQuery = searchModule.buildSearchQuery.bind(searchModule);
+export const searchData = searchModule.searchData;
+export const triggerLiveSearch = searchModule.triggerLiveSearch;
+export const performLiveSearch = searchModule.performLiveSearch;
+export const getCachedCategories = searchModule.getCachedCategories;
+export const getCategoryName = searchModule.getCategoryName;
+export const performAdvancedSearch = searchModule.performAdvancedSearch;
+export const clearSearchResults = searchModule.clearSearchResults;
+export const buildSearchQuery = searchModule.buildSearchQuery;
 
 // Default export for module loading
-export default searchModule; 
+export default {
+  searchData: searchModule.searchData,
+  triggerLiveSearch: searchModule.triggerLiveSearch,
+  performLiveSearch: searchModule.performLiveSearch,
+  getCachedCategories: searchModule.getCachedCategories,
+  getCategoryName: searchModule.getCategoryName,
+  performAdvancedSearch: searchModule.performAdvancedSearch,
+  clearSearchResults: searchModule.clearSearchResults,
+  buildSearchQuery: searchModule.buildSearchQuery
+}; 

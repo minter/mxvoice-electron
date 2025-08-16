@@ -35,11 +35,8 @@ class DatabaseModule {
     this.fontSize = 11;
     
     // Bind all functions from sub-modules as methods
-    this.setLabelFromSongId = dataPopulation.setLabelFromSongId;
     this.addToHoldingTank = dataPopulation.addToHoldingTank;
-    this.populateHotkeys = dataPopulation.populateHotkeys;
     this.populateHoldingTank = dataPopulation.populateHoldingTank;
-    this.populateCategoriesModal = dataPopulation.populateCategoriesModal;
     
     this.saveHoldingTankToStore = storeOperations.saveHoldingTankToStore;
     this.saveHotkeysToStore = storeOperations.saveHotkeysToStore;
@@ -104,11 +101,8 @@ class DatabaseModule {
   getAllDatabaseFunctions() {
     return {
       // Data population functions
-      setLabelFromSongId: this.setLabelFromSongId,
       addToHoldingTank: this.addToHoldingTank,
-      populateHotkeys: this.populateHotkeys,
       populateHoldingTank: this.populateHoldingTank,
-      populateCategoriesModal: this.populateCategoriesModal,
       
       // Store operation functions
       saveHoldingTankToStore: this.saveHoldingTankToStore,
@@ -146,34 +140,16 @@ class DatabaseModule {
 
     // Test data population functions
     try {
-      if (typeof this.setLabelFromSongId === 'function') {
-        results.dataPopulation.setLabelFromSongId = '✅ Function exists';
-      } else {
-        results.dataPopulation.setLabelFromSongId = '❌ Function missing';
-      }
-
       if (typeof this.addToHoldingTank === 'function') {
         results.dataPopulation.addToHoldingTank = '✅ Function exists';
       } else {
         results.dataPopulation.addToHoldingTank = '❌ Function missing';
       }
 
-      if (typeof this.populateHotkeys === 'function') {
-        results.dataPopulation.populateHotkeys = '✅ Function exists';
-      } else {
-        results.dataPopulation.populateHotkeys = '❌ Function missing';
-      }
-
       if (typeof this.populateHoldingTank === 'function') {
         results.dataPopulation.populateHoldingTank = '✅ Function exists';
       } else {
         results.dataPopulation.populateHoldingTank = '❌ Function missing';
-      }
-
-      if (typeof this.populateCategoriesModal === 'function') {
-        results.dataPopulation.populateCategoriesModal = '✅ Function exists';
-      } else {
-        results.dataPopulation.populateCategoriesModal = '❌ Function missing';
       }
     } catch (error) {
       results.dataPopulation.error = `❌ Error: ${error.message}`;
@@ -294,11 +270,8 @@ class DatabaseModule {
 const databaseModule = new DatabaseModule();
 
 // Export individual functions for backward compatibility
-export const setLabelFromSongId = databaseModule.setLabelFromSongId;
 export const addToHoldingTank = databaseModule.addToHoldingTank;
-export const populateHotkeys = databaseModule.populateHotkeys;
 export const populateHoldingTank = databaseModule.populateHoldingTank;
-export const populateCategoriesModal = databaseModule.populateCategoriesModal;
 export const saveHoldingTankToStore = databaseModule.saveHoldingTankToStore;
 export const saveHotkeysToStore = databaseModule.saveHotkeysToStore;
 export const scaleScrollable = databaseModule.scaleScrollable;

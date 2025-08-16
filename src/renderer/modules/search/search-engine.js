@@ -24,57 +24,9 @@ try {
 import * as liveSearch from './live-search.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 
-// Get categories for search functionality
-function getCategories() {
-  if (window.secureElectronAPI && window.secureElectronAPI.database) {
-    return window.secureElectronAPI.database.query("SELECT DISTINCT category FROM mrvoice ORDER BY category").then(result => {
-      if (result.success) {
-        return result.data.map(row => row.category);
-      } else {
-        debugLog?.warn('❌ Failed to get categories:', { 
-          module: 'search-engine',
-          function: 'getCategories',
-          error: result.error
-        });
-        return [];
-      }
-    }).catch(error => {
-      debugLog?.warn('❌ Database API error:', { 
-        module: 'search-engine',
-        function: 'getCategories',
-        error: error.message
-      });
-      return [];
-    });
-  } else {
-    return [];
-  }
-}
-
-// Get category name for display
-function getCategoryName(categoryCode) {
-  if (window.secureElectronAPI && window.secureElectronAPI.database) {
-    return window.secureElectronAPI.database.query("SELECT description FROM categories WHERE code = ?", [categoryCode]).then(result => {
-      if (result.success && result.data.length > 0) {
-        return result.data[0].description;
-      } else {
-        return categoryCode;
-      }
-    }).catch(error => {
-      debugLog?.warn('❌ Failed to get category name:', { 
-        module: 'search-engine',
-        function: 'getCategoryName',
-        error: error.message
-      });
-      return categoryCode;
-    });
-  } else {
-    return categoryCode;
-  }
-}
-
-// Synchronous version for immediate use
+// Synchronous version for immediate use in search results
 function getCategoryNameSync(categoryCode) {
+  // This is a simple fallback - the real implementation should come from categories module
   return categoryCode;
 }
 
@@ -380,8 +332,6 @@ function triggerLiveSearch() {
 export {
   searchData,
   triggerLiveSearch,
-  getCategories,
-  getCategoryName,
   getCategoryNameSync
 };
 
@@ -389,7 +339,5 @@ export {
 export default {
   searchData,
   triggerLiveSearch,
-  getCategories,
-  getCategoryName,
   getCategoryNameSync
 }; 

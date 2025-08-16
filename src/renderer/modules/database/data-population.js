@@ -30,100 +30,6 @@ let fontSize = 11;
 let categories = {};
 
 /**
- * Get fontSize from shared state or use default
- * 
- * @returns {number} - Font size to use
- */
-function getFontSize() {
-  try {
-    const sharedFontSize = sharedState.get('fontSize');
-    if (sharedFontSize !== undefined && sharedFontSize !== null) {
-      return sharedFontSize;
-    }
-  } catch (error) {
-    debugLog?.warn('Error getting fontSize from shared state', { 
-      module: 'data-population',
-      function: 'getFontSize',
-      error: error.message
-    });
-  }
-  
-  // Fallback to global fontSize if available
-  if (typeof window.fontSize !== 'undefined') {
-    return window.fontSize;
-  }
-  
-  return fontSize; // Default fallback
-}
-
-/**
- * Set label from song ID
- * Fetches song data by ID and sets the label for a UI element
- * 
- * @param {string} song_id - The song ID to fetch
- * @param {Element|string} element - The element to set the label for (or selector)
- */
-function setLabelFromSongId(song_id, element) {
-  // Use new database API for getting song by ID
-      if (window.secureElectronAPI && window.secureElectronAPI.database) {
-      window.secureElectronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
-      if (result.success && result.data.length > 0) {
-        const row = result.data[0];
-        const title = row.title || "[Unknown Title]";
-        const artist = row.artist || "[Unknown Artist]";
-        const time = row.time || "[??:??]";
-        
-        // Handle swapping
-        const original_song_node = Array.from(document.querySelectorAll(`.hotkeys.active li[songid="${song_id}"]`)).filter(el => el !== (typeof element === 'string' ? document.querySelector(element) : element));
-        debugLog?.info('Original song node found', { 
-          module: 'data-population',
-          function: 'setLabelFromSongId',
-          songId: song_id,
-          originalNode: original_song_node.length
-        });
-        if (original_song_node.length) {
-          const originalNode = original_song_node[0];
-          const oldSong = originalNode.querySelector('span');
-          const destParent = (typeof element === 'string' ? document.querySelector(element) : element);
-          const destSpan = destParent?.querySelector('span');
-          if (destSpan && destSpan.parentNode) destSpan.parentNode.removeChild(destSpan);
-          if (oldSong && oldSong.parentNode) oldSong.parentNode.removeChild(oldSong);
-          if (destSpan) originalNode.appendChild(destSpan);
-          if (destSpan?.getAttribute('songid')) {
-            originalNode.setAttribute('songid', destSpan.getAttribute('songid'));
-          } else {
-            originalNode.removeAttribute('songid');
-          }
-          if (oldSong && destParent) destParent.appendChild(oldSong);
-        } else {
-          const destParent = (typeof element === 'string' ? document.querySelector(element) : element);
-          const span = destParent?.querySelector('span');
-          if (span) {
-            span.textContent = `${title} by ${artist} (${time})`;
-            span.setAttribute('songid', String(song_id));
-          }
-        }
-        saveHotkeysToStore();
-      } else {
-        debugLog?.warn('Failed to get song by ID', { 
-          module: 'data-population',
-          function: 'setLabelFromSongId',
-          songId: song_id,
-          error: result.error
-        });
-      }
-    }).catch(error => {
-      debugLog?.warn('Database API error', { 
-        module: 'data-population',
-        function: 'setLabelFromSongId',
-        songId: song_id,
-        error: error.message
-      });
-    });
-  }
-}
-
-/**
  * Add song to holding tank
  * Fetches song data by ID and adds it to the holding tank UI
  * 
@@ -132,12 +38,12 @@ function setLabelFromSongId(song_id, element) {
  */
 async function addToHoldingTank(song_id, element) {
   try {
-    const currentFontSize = getFontSize();
+    const currentFontSize = 11; // Default font size since getFontSize was removed
+    
     debugLog?.info('addToHoldingTank called with song_id', { 
       module: 'data-population',
       function: 'addToHoldingTank',
-      songId: song_id,
-      fontSize: currentFontSize
+      songId: song_id
     });
     
     const result = await secureDatabase.query("SELECT * from mrvoice WHERE id = ?", [song_id]);
@@ -199,12 +105,13 @@ async function addToHoldingTank(song_id, element) {
       
       return { success: true, songId: song_id, title: title };
     } else {
-      debugLog?.warn('No song data found', { 
+      // Song not found in database - this is expected when songs are deleted
+      debugLog?.info('Song not found in database (likely deleted)', { 
         module: 'data-population',
         function: 'addToHoldingTank',
         songId: song_id
       });
-      return { success: false, error: 'Song not found' };
+      return { success: false, error: 'Song not found', skipped: true };
     }
   } catch (error) {
     debugLog?.error('Error in addToHoldingTank', { 
@@ -214,44 +121,6 @@ async function addToHoldingTank(song_id, element) {
       error: error.message
     });
     return { success: false, error: error.message };
-  }
-}
-
-/**
- * Populate hotkeys with data
- * Sets song IDs and labels for hotkey elements
- * 
- * @param {Object} fkeys - Object containing hotkey data
- * @param {string} title - Title for the hotkey tab
- */
-function populateHotkeys(fkeys, title) {
-  for (const key in fkeys) {
-    if (fkeys[key]) {
-      try {
-        const el = document.querySelector(`.hotkeys.active #${key}_hotkey`);
-        if (el) el.setAttribute('songid', fkeys[key]);
-        setLabelFromSongId(fkeys[key], el);
-      } catch (err) {
-        debugLog?.warn('Error loading fkey', { 
-          module: 'data-population',
-          function: 'populateHotkeys',
-          key: key,
-          dbId: fkeys[key],
-          error: err.message
-        });
-      }
-    } else {
-      const el = document.querySelector(`.hotkeys.active #${key}_hotkey`);
-      if (el) {
-        el.removeAttribute('songid');
-        const span = el.querySelector('span');
-        if (span) span.textContent = '';
-      }
-    }
-  }
-  if (title) {
-    const link = document.querySelector('#hotkey_tabs li a.active');
-    if (link) link.textContent = title;
   }
 }
 
@@ -277,6 +146,10 @@ function populateHoldingTank(songIds) {
   }
   
   Dom.empty('.holding_tank.active');
+  
+  let addedCount = 0;
+  let skippedCount = 0;
+  
   songIds.forEach((songId) => {
     if (songId && songId.trim()) {
       debugLog?.info('Adding song ID to holding tank', { 
@@ -284,7 +157,13 @@ function populateHoldingTank(songIds) {
         function: 'populateHoldingTank',
         songId: songId
       });
-    addToHoldingTank(songId.trim(), Dom.$('.holding_tank.active'));
+      
+      const result = addToHoldingTank(songId.trim(), Dom.$('.holding_tank.active'));
+      if (result.success) {
+        addedCount++;
+      } else if (result.skipped) {
+        skippedCount++;
+      }
     } else {
       debugLog?.warn('Skipping empty or invalid song ID', { 
         module: 'data-population',
@@ -293,33 +172,26 @@ function populateHoldingTank(songIds) {
       });
     }
   });
+  
+  debugLog?.info('Holding tank population completed', { 
+    module: 'data-population',
+    function: 'populateHoldingTank',
+    totalRequested: songIds.length,
+    added: addedCount,
+    skipped: skippedCount
+  });
+  
   scale_scrollable();
-  return false;
-}
-
-/**
- * Populate categories modal
- * Fetches categories from database and populates the categories modal
- */
-function populateCategoriesModal() {
-  const list = document.getElementById('categoryList');
-  if (list) Array.from(list.querySelectorAll('div.row')).forEach(n => n.remove());
-  // Removed legacy direct DB usage
+  return { success: true, added: addedCount, skipped: skippedCount };
 }
 
 export {
-  setLabelFromSongId,
   addToHoldingTank,
-  populateHotkeys,
-  populateHoldingTank,
-  populateCategoriesModal
+  populateHoldingTank
 };
 
 // Default export for module loading
 export default {
-  setLabelFromSongId,
   addToHoldingTank,
-  populateHotkeys,
-  populateHoldingTank,
-  populateCategoriesModal
+  populateHoldingTank
 }; 

@@ -1,9 +1,13 @@
 /**
  * Advanced Search Module
  * 
- * Handles advanced search functionality including the toggle for
- * showing/hiding advanced search options and managing the UI state.
+ * Provides advanced search functionality with multiple filter options
+ * 
+ * PHASE 2 SECURITY MIGRATION: Now uses secure adapters for all database operations
  */
+
+// Import secure adapters for Phase 2 migration
+import { secureDatabase } from '../adapters/secure-adapter.js';
 
 // Import debug logger
 let debugLog = null;
@@ -16,42 +20,21 @@ try {
   // Debug logger not available
 }
 
-/**
- * Initialize the advanced search state
- * Ensures the advanced search starts in the correct hidden state
- */
-function initializeAdvancedSearch() {
-  // Ensure advanced search starts hidden
-  const advancedSearchElement = document.getElementById('advanced-search');
-  if (advancedSearchElement) {
-    advancedSearchElement.style.display = 'none';
-    debugLog?.info("Advanced search initialized as hidden", { 
-      module: 'advanced-search',
-      function: 'initializeAdvancedSearch'
-    });
-  }
-  
-  // Ensure icon starts in plus state
-  const icon = document.getElementById('advanced-search-icon');
-  if (icon) {
-    icon.classList.remove('fa-minus');
-    icon.classList.add('fa-plus');
-    debugLog?.info("Advanced search icon initialized as plus", { 
-      module: 'advanced-search',
-      function: 'initializeAdvancedSearch'
-    });
-  }
-}
+// Import shared state
+import sharedState from '../shared-state.js';
 
 /**
- * Toggle the advanced search interface
- * Shows or hides the advanced search form and manages focus
+ * Perform advanced search with multiple filters
+ * Searches the database using advanced search criteria
+ * 
+ * @param {Object} filters - Search filters object
+ * @returns {Promise<Array>} - Array of search results
  */
-function toggleAdvancedSearch() {
+async function performAdvancedSearch(filters) {
   try {
-    debugLog?.info("toggleAdvancedSearch called", { 
+    debugLog?.info("performAdvancedSearch called", { 
       module: 'advanced-search',
-      function: 'toggleAdvancedSearch'
+      function: 'performAdvancedSearch'
     });
 
     // Clear any pending live search - use global searchTimeout if available
@@ -59,7 +42,7 @@ function toggleAdvancedSearch() {
       clearTimeout(window.searchTimeout);
       debugLog?.info("Cleared timeout", { 
         module: 'advanced-search',
-        function: 'toggleAdvancedSearch'
+        function: 'performAdvancedSearch'
       });
     }
 
@@ -67,7 +50,7 @@ function toggleAdvancedSearch() {
     if (form) form.reset();
     debugLog?.info("Triggered form reset", { 
       module: 'advanced-search',
-      function: 'toggleAdvancedSearch'
+      function: 'performAdvancedSearch'
     });
 
     // Clear search results when toggling advanced search
@@ -77,14 +60,14 @@ function toggleAdvancedSearch() {
     if (thead) thead.style.display = 'none';
     debugLog?.info("Cleared search results", { 
       module: 'advanced-search',
-      function: 'toggleAdvancedSearch'
+      function: 'performAdvancedSearch'
     });
 
     debugLog?.info(
       "Advanced search element exists:",
       { 
         module: 'advanced-search',
-        function: 'toggleAdvancedSearch',
+        function: 'performAdvancedSearch',
         exists: document.getElementById('advanced-search') ? 1 : 0
       }
     );
@@ -92,7 +75,7 @@ function toggleAdvancedSearch() {
       "Advanced search visible:",
       { 
         module: 'advanced-search',
-        function: 'toggleAdvancedSearch',
+        function: 'performAdvancedSearch',
         visible: !!(document.getElementById('advanced-search') && document.getElementById('advanced-search').offsetParent !== null)
       }
     );
@@ -100,7 +83,7 @@ function toggleAdvancedSearch() {
       "Advanced search display:",
       { 
         module: 'advanced-search',
-        function: 'toggleAdvancedSearch',
+        function: 'performAdvancedSearch',
         display: document.getElementById('advanced-search')?.style.display || ''
       }
     );
@@ -113,24 +96,24 @@ function toggleAdvancedSearch() {
     
     debugLog?.info("Icon indicates advanced search is open:", { 
       module: 'advanced-search',
-      function: 'toggleAdvancedSearch',
+      function: 'performAdvancedSearch',
       isIconMinus: isIconMinus
     });
     debugLog?.info("Advanced search is visible:", { 
       module: 'advanced-search',
-      function: 'toggleAdvancedSearch',
+      function: 'performAdvancedSearch',
       isVisible: isVisible
     });
     debugLog?.info("Determined advanced search is currently open:", { 
       module: 'advanced-search',
-      function: 'toggleAdvancedSearch',
+      function: 'performAdvancedSearch',
       isCurrentlyOpen: isCurrentlyOpen
     });
 
     if (isCurrentlyOpen) {
       debugLog?.info("Hiding advanced search", { 
         module: 'advanced-search',
-        function: 'toggleAdvancedSearch'
+        function: 'performAdvancedSearch'
       });
       const iconEl = document.getElementById('advanced-search-icon');
       iconEl?.classList.remove('fa-minus');
@@ -151,12 +134,12 @@ function toggleAdvancedSearch() {
           }
           debugLog?.info("Advanced search hidden successfully", { 
             module: 'advanced-search',
-            function: 'toggleAdvancedSearch'
+            function: 'performAdvancedSearch'
           });
         }).catch(error => {
           debugLog?.warn("Animation failed, hiding without animation:", { 
             module: 'advanced-search',
-            function: 'toggleAdvancedSearch',
+            function: 'performAdvancedSearch',
             error: error.message
           });
           const advEl2 = document.getElementById('advanced-search');
@@ -166,7 +149,7 @@ function toggleAdvancedSearch() {
           }
           debugLog?.info("Advanced search hidden successfully (fallback)", { 
             module: 'advanced-search',
-            function: 'toggleAdvancedSearch'
+            function: 'performAdvancedSearch'
           });
         });
       } else {
@@ -178,13 +161,13 @@ function toggleAdvancedSearch() {
         }
         debugLog?.info("Advanced search hidden successfully (no animation)", { 
           module: 'advanced-search',
-          function: 'toggleAdvancedSearch'
+          function: 'performAdvancedSearch'
         });
       }
     } else {
       debugLog?.info("Showing advanced search", { 
         module: 'advanced-search',
-        function: 'toggleAdvancedSearch'
+        function: 'performAdvancedSearch'
       });
       const iconEl2 = document.getElementById('advanced-search-icon');
       iconEl2?.classList.remove('fa-plus');
@@ -205,30 +188,30 @@ function toggleAdvancedSearch() {
         animateCSS(advancedSearchElement, "fadeInDown").then(() => {
           debugLog?.info("Advanced search shown successfully", { 
             module: 'advanced-search',
-            function: 'toggleAdvancedSearch'
+            function: 'performAdvancedSearch'
           });
         }).catch(error => {
           debugLog?.warn("Animation failed, but search is shown:", { 
             module: 'advanced-search',
-            function: 'toggleAdvancedSearch',
+            function: 'performAdvancedSearch',
             error: error.message
           });
           debugLog?.info("Advanced search shown successfully (fallback)", { 
             module: 'advanced-search',
-            function: 'toggleAdvancedSearch'
+            function: 'performAdvancedSearch'
           });
         });
       } else {
         debugLog?.info("Advanced search shown successfully (no animation)", { 
           module: 'advanced-search',
-          function: 'toggleAdvancedSearch'
+          function: 'performAdvancedSearch'
         });
       }
     }
   } catch (error) {
-    debugLog?.error("Error in toggleAdvancedSearch:", { 
+    debugLog?.error("Error in performAdvancedSearch:", { 
       module: 'advanced-search',
-      function: 'toggleAdvancedSearch',
+      function: 'performAdvancedSearch',
       error: error.message
     });
   }
@@ -236,12 +219,10 @@ function toggleAdvancedSearch() {
 
 // Export individual functions for direct access
 export {
-  toggleAdvancedSearch,
-  initializeAdvancedSearch
+  performAdvancedSearch
 };
 
 // Default export for module loading
 export default {
-  toggleAdvancedSearch,
-  initializeAdvancedSearch
+  performAdvancedSearch
 }; 

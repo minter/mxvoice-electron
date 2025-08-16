@@ -207,8 +207,8 @@ export function addToHoldingTank(song_id, element) {
       if (existing_song) {
         song_row = existing_song; // already in DOM; will be moved below
       } else {
-        const song_row = document.createElement("li");
-        song_row.style.fontSize = `${getFontSize()}px`;
+        song_row = document.createElement("li");
+        song_row.style.fontSize = `11px`; // Default font size since getFontSize was removed
         song_row.className = "song list-group-item context-menu";
         song_row.setAttribute("draggable", "true");
         song_row.addEventListener('dragstart', songDrag);
@@ -399,13 +399,6 @@ export function cancel_autoplay() {
     }
     }
   }
-}
-
-/**
- * Get font size for UI elements
- */
-function getFontSize() {
-  return window.fontSize || 11;
 }
 
 /**

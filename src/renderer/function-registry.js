@@ -259,9 +259,12 @@ class FunctionRegistry {
     this.registerModule('search', {
       searchData: 'searchData',
       performLiveSearch: 'performLiveSearch',
-      toggleAdvancedSearch: 'toggleAdvancedSearch',
+      getCachedCategories: 'getCachedCategories',
+      getCategoryName: 'getCategoryName',
+      performAdvancedSearch: 'performAdvancedSearch',
       triggerLiveSearch: 'triggerLiveSearch',
-      clearSearchResults: 'clearSearchResults'
+      clearSearchResults: 'clearSearchResults',
+      buildSearchQuery: 'buildSearchQuery'
     });
 
     // Database Functions

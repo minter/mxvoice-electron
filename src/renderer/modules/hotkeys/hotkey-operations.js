@@ -77,40 +77,70 @@ function loadHotkeysFromStore(options = {}) {
 /**
  * Open hotkey file
  * Imports hotkey configuration from file
- * 
- * @param {Object} options - Options object containing dependencies
  */
-function openHotkeyFile(options = {}) {
-  const { electronAPI } = options;
-  
-  if (electronAPI) {
-    secureFileDialog.openHotkeyFile();
-  }
+function openHotkeyFile() {
+  // Use secureFileDialog directly since this is bound to the hotkeys module
+  secureFileDialog.openHotkeyFile();
 }
 
 /**
  * Save hotkey file
  * Exports hotkey configuration to file
- * 
- * @param {Object} options - Options object containing dependencies
  */
-function saveHotkeyFile(options = {}) {
-  const { electronAPI } = options;
-  
+function saveHotkeyFile() {
   window.debugLog?.info("Renderer starting saveHotkeyFile", { module: 'hotkey-operations', function: 'saveHotkeyFile' });
+  
   const hotkeyArray = [];
   for (let key = 1; key <= 12; key++) {
-    hotkeyArray.push(document.getElementById(`f${key}_hotkey`)?.getAttribute('songid'));
-  }
-  const activeLink = document.querySelector('#hotkey_tabs li a.active');
-  const activeText = activeLink ? (activeLink.textContent || '') : '';
-  if (!/^\d$/.test(activeText)) {
-    hotkeyArray.push(activeText);
+    const element = document.getElementById(`f${key}_hotkey`);
+    const songId = element?.getAttribute('songid');
+    
+    // Ensure we always have a value, even if element is missing
+    const safeSongId = songId || null;
+    hotkeyArray.push(safeSongId);
+    
+    window.debugLog?.info(`Hotkey ${key} data:`, { 
+      module: 'hotkey-operations', 
+      function: 'saveHotkeyFile', 
+      key: key,
+      element: !!element,
+      songId: safeSongId,
+      type: typeof safeSongId,
+      elementExists: !!element
+    });
   }
   
-  if (electronAPI) {
-    secureFileDialog.saveHotkeyFile(hotkeyArray);
+  const activeLink = document.querySelector('#hotkey_tabs li a.active');
+  const activeText = activeLink ? (activeLink.textContent || '') : '';
+  
+  // Only add tab name if it's not a number and not empty
+  if (activeText && activeText.trim() && !/^\d+$/.test(activeText.trim())) {
+    hotkeyArray.push(activeText.trim());
+    window.debugLog?.info("Added tab name to hotkey array:", { 
+      module: 'hotkey-operations', 
+      function: 'saveHotkeyFile', 
+      tabName: activeText.trim()
+    });
+  } else {
+    window.debugLog?.info("No valid tab name to add:", { 
+      module: 'hotkey-operations', 
+      function: 'saveHotkeyFile', 
+      activeText: activeText,
+      isEmpty: !activeText || !activeText.trim(),
+      isNumber: activeText && /^\d+$/.test(activeText.trim())
+    });
   }
+  
+  window.debugLog?.info("Final hotkey array:", { 
+    module: 'hotkey-operations', 
+    function: 'saveHotkeyFile', 
+    hotkeyArray: hotkeyArray,
+    length: hotkeyArray.length,
+    tabName: activeText
+  });
+  
+  // Use secureFileDialog directly since this is bound to the hotkeys module
+  secureFileDialog.saveHotkeyFile(hotkeyArray);
 }
 
 /**

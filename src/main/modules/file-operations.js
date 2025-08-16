@@ -150,17 +150,57 @@ function saveHotkeysFile(hotkeyArray) {
     else {
       const filename = result.filePath;
       debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'saveHotkeysFile', filename: filename });
+      debugLog?.info(`Hotkey array received:`, { module: 'file-operations', function: 'saveHotkeysFile', hotkeyArray: hotkeyArray });
+      
       const file = fs.createWriteStream(filename);
-      for (let i = 0; i < hotkeyArray.length; i++) {
+      
+      // Process the first 12 elements as hotkeys (f1 through f12)
+      for (let i = 0; i < 12; i++) {
         const keyId = `f${i + 1}`;
-        debugLog?.info(`Hotkey array ${i} is ${hotkeyArray[i]}`, { module: 'file-operations', function: 'saveHotkeysFile', index: i, value: hotkeyArray[i] });
-        if (hotkeyArray[i] === undefined || /^\d+$/.test(hotkeyArray[i])) {
-          file.write([keyId, hotkeyArray[i]].join('::') + '\n');
+        const hotkeyValue = hotkeyArray[i];
+        
+        debugLog?.info(`Processing hotkey ${keyId}:`, { 
+          module: 'file-operations', 
+          function: 'saveHotkeysFile', 
+          index: i, 
+          value: hotkeyValue,
+          type: typeof hotkeyValue
+        });
+        
+        // Handle null, undefined, or empty values as empty hotkeys
+        if (hotkeyValue === null || hotkeyValue === undefined || hotkeyValue === '') {
+          file.write(`${keyId}::\n`);
+        } else if (/^\d+$/.test(hotkeyValue)) {
+          // Valid song ID
+          file.write(`${keyId}::${hotkeyValue}\n`);
         } else {
-          file.write(['tab_name', hotkeyArray[i].replace(' ', '_')].join('::') + '\n')
+          // Invalid value - treat as empty
+          debugLog?.warn(`Invalid hotkey value for ${keyId}:`, { 
+            module: 'file-operations', 
+            function: 'saveHotkeysFile', 
+            value: hotkeyValue 
+          });
+          file.write(`${keyId}::\n`);
         }
       }
+      
+      // Process the 13th element as tab name if it exists
+      if (hotkeyArray.length > 12 && hotkeyArray[12]) {
+        const tabName = hotkeyArray[12];
+        if (typeof tabName === 'string' && tabName.trim()) {
+          file.write(`tab_name::${tabName.replace(/ /g, '_')}\n`);
+        }
+      }
+      
       file.end();
+      
+      debugLog?.info(`Hotkey file saved successfully to ${filename}`, { 
+        module: 'file-operations', 
+        function: 'saveHotkeysFile', 
+        filename: filename,
+        totalHotkeys: 12,
+        tabNameIncluded: hotkeyArray.length > 12 && !!hotkeyArray[12]
+      });
     }
   }).catch(err => {
     debugLog?.error('Error saving hotkeys file:', { module: 'file-operations', function: 'saveHotkeysFile', error: err });
