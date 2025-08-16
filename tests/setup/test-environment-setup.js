@@ -24,7 +24,8 @@ export class TestEnvironmentSetup {
       
       // Initialize test database
       await this.dbManager.initialize();
-      await this.dbManager.createTestDatabase();
+      // Prefer file-backed DB so the app can open the path directly if needed
+      await this.dbManager.createFileBackedDatabase();
       console.log('✅ Test database setup complete');
       
       // Initialize test store

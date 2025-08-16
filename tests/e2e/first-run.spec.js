@@ -14,6 +14,8 @@ test.describe('First run flow', () => {
   // For first run, database_directory defaults to userData root (not userData/data)
   const dbDir = userDataDir;
   const musicDir = path.join(userDataDir, 'mp3');
+  const hotkeysDir = path.join(userDataDir, 'hotkeys');
+  const configPath = path.join(userDataDir, 'config.json');
 
   test.beforeAll(async () => {
     // Clean isolated userData
@@ -70,6 +72,10 @@ test.describe('First run flow', () => {
     const firstRow = rows.first();
     await expect(firstRow).toContainText('Rock Bumper');
     await expect(firstRow).toContainText('Patrick Short');
+    await expect(firstRow).toContainText('UNC');
+
+    // Pre-play UI state
+    await expect(page.locator('#stop_button')).toBeDisabled();
 
     // 6) Double-click the result to start playback
     await firstRow.dblclick();
@@ -99,6 +105,13 @@ test.describe('First run flow', () => {
     // Artifact checks
     expect(fs.existsSync(path.join(dbDir, 'mxvoice.db'))).toBeTruthy();
     expect(fs.existsSync(path.join(musicDir, 'PatrickShort-CSzRockBumper.mp3'))).toBeTruthy();
+    expect(fs.existsSync(hotkeysDir)).toBeTruthy();
+    expect(fs.existsSync(configPath)).toBeTruthy();
+    const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    expect(cfg.first_run_completed).toBe(true);
+    expect(cfg.database_directory).toBe(dbDir);
+    expect(cfg.music_directory).toBe(musicDir);
+    expect(cfg.hotkey_directory).toBe(hotkeysDir);
   });
 });
 

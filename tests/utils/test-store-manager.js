@@ -51,6 +51,8 @@ export class TestStoreManager {
       
       // Set test configuration with COMPLETELY ISOLATED paths
       this.testStore.set('database_directory', TEST_CONFIG.testAppDirs.databaseDirectory);
+      // Point the app to the predefined songs directory so playback works without copying
+      this.testStore.set('music_directory', TEST_CONFIG.testSongsDir);
       this.testStore.set('hotkey_directory', TEST_CONFIG.testAppDirs.hotkeyDirectory);
       this.testStore.set('holding_tank_directory', TEST_CONFIG.testAppDirs.holdingTankDirectory);
       this.testStore.set('preferences_directory', TEST_CONFIG.testAppDirs.preferencesDirectory);
@@ -63,6 +65,8 @@ export class TestStoreManager {
       this.testStore.set('theme', 'light');
       this.testStore.set('auto_update_enabled', false);
       this.testStore.set('dev_tools_enabled', false);
+      // Skip app first-run seeding for predefined DB suites
+      this.testStore.set('first_run_completed', true);
       this.testStore.set('test_mode', true);
       
       // Ensure test isolation

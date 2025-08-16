@@ -5,6 +5,7 @@ export class TestDatabaseManager {
   constructor() {
     this.testDb = null;
     this.originalDbPath = null;
+    this.fileDbPath = null;
   }
 
   async initialize() {
@@ -52,13 +53,21 @@ export class TestDatabaseManager {
           info TEXT,
           filename TEXT,
           time TEXT,
-          modtime INTEGER
+          modtime INTEGER,
+          publisher TEXT,
+          md5 TEXT
         );
         
+        CREATE UNIQUE INDEX IF NOT EXISTS category_code_index ON categories(code);
+        CREATE UNIQUE INDEX IF NOT EXISTS category_description_index ON categories(description);
         CREATE INDEX IF NOT EXISTS idx_title ON mrvoice(title);
         CREATE INDEX IF NOT EXISTS idx_artist ON mrvoice(artist);
-        CREATE INDEX IF NOT EXISTS idx_category ON mrvoice(category);
         CREATE INDEX IF NOT EXISTS idx_info ON mrvoice(info);
+        CREATE INDEX IF NOT EXISTS idx_category ON mrvoice(category);
+        CREATE INDEX IF NOT EXISTS title_index ON mrvoice(title);
+        CREATE INDEX IF NOT EXISTS artist_index ON mrvoice(artist);
+        CREATE INDEX IF NOT EXISTS info_index ON mrvoice(info);
+        CREATE INDEX IF NOT EXISTS category_index ON mrvoice(category);
       `;
       
       this.testDb.exec(schema);
@@ -85,19 +94,22 @@ export class TestDatabaseManager {
 
       // Insert test songs
       const songStmt = this.testDb.prepare(`
-        INSERT OR REPLACE INTO mrvoice (title, artist, category, info, filename, time, modtime)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO mrvoice (id, title, artist, category, info, filename, time, modtime, publisher, md5)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       TEST_CONFIG.schema.songs.forEach(song => {
         songStmt.run([
+          song.id ?? null,
           song.title,
           song.artist,
           song.category,
           song.info,
           song.filename,
           song.time,
-          Date.now()
+          Date.now(),
+          song.publisher || null,
+          song.md5 || null
         ]);
       });
       songStmt.finalize();
@@ -105,6 +117,34 @@ export class TestDatabaseManager {
       console.log('✅ Test data populated');
     } catch (error) {
       console.error('❌ Failed to populate test data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a file-backed database at the test app data directory
+   */
+  async createFileBackedDatabase() {
+    try {
+      const { TEST_CONFIG } = await import('../config/test-environment.js');
+      const path = (await import('path')).default;
+      const fs = (await import('fs')).default;
+      const dbDir = TEST_CONFIG.testAppDirs.databaseDirectory;
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+      const dbPath = path.join(dbDir, 'mxvoice.db');
+      try {
+        if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
+      } catch {}
+      this.testDb = new Database(dbPath);
+      this.fileDbPath = dbPath;
+      await this.setupTestSchema();
+      await this.populateTestData();
+      console.log(`✅ File-backed test database created at ${dbPath}`);
+      return { db: this.testDb, dbPath };
+    } catch (error) {
+      console.error('❌ Failed to create file-backed test database:', error);
       throw error;
     }
   }

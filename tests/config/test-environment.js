@@ -43,52 +43,57 @@ export const TEST_CONFIG = {
   // Test database schema
   schema: {
     categories: [
-      { code: 'TEST_JAZZ', description: 'Test Jazz' },
-      { code: 'TEST_ROCK', description: 'Test Rock' },
-      { code: 'TEST_CLASSICAL', description: 'Test Classical' },
-      { code: 'TEST_BLUES', description: 'Test Blues' },
-      { code: 'TEST_ELECTRONIC', description: 'Test Electronic' }
+      { code: 'GAME', description: 'Game' },
+      { code: 'GROAN', description: 'Groaner' },
+      { code: 'RNIN', description: 'Running In' },
+      { code: 'RNOUT', description: 'Running Out' },
+      { code: 'END', description: 'Show Ending' }
     ],
     songs: [
       {
-        title: 'Test Song 1',
-        artist: 'Test Artist 1',
-        category: 'TEST_JAZZ',
-        filename: 'test-song-1.mp3',
-        time: '3:45',
-        info: 'Test jazz composition for testing'
+        id: 1001,
+        title: 'Got The Time',
+        artist: 'Anthrax',
+        category: 'GAME',
+        filename: 'Anthrax-GotTheTime.mp3',
+        time: '0:06',
+        info: 'Countdown'
       },
       {
-        title: 'Test Song 2',
-        artist: 'Test Artist 2',
-        category: 'TEST_ROCK',
-        filename: 'test-song-2.mp3',
-        time: '4:20',
-        info: 'Test rock composition for testing'
+        id: 1002,
+        title: 'The Wheel (Back And Forth)',
+        artist: 'Edie Brickell',
+        category: 'GAME',
+        filename: 'EdieBrickell-TheWheel.mp3',
+        time: '0:08',
+        info: 'Replay'
       },
       {
-        title: 'Test Song 3',
-        artist: 'Test Artist 3',
-        category: 'TEST_CLASSICAL',
-        filename: 'test-song-3.mp3',
-        time: '5:15',
-        info: 'Test classical composition for testing'
+        id: 1003,
+        title: 'Theme From The Greatest American Hero',
+        artist: 'Joey Scarbury',
+        category: 'RNIN',
+        filename: 'JoeyScarbury-GreatestAmericanHero.mp3',
+        time: '0:07',
+        info: ''
       },
       {
-        title: 'Test Song 4',
-        artist: 'Test Artist 4',
-        category: 'TEST_BLUES',
-        filename: 'test-song-4.mp3',
-        time: '3:30',
-        info: 'Test blues composition for testing'
+        id: 1004,
+        title: 'We Are Family',
+        artist: 'Sister Sledge',
+        category: 'END',
+        filename: 'SisterSledge-WeAreFamily.mp3',
+        time: '0:07',
+        info: ''
       },
       {
-        title: 'Test Song 5',
-        artist: 'Test Artist 5',
-        category: 'TEST_ELECTRONIC',
-        filename: 'test-song-5.mp3',
-        time: '6:00',
-        info: 'Test electronic composition for testing'
+        id: 1005,
+        title: 'Eat It',
+        artist: 'Weird Al Yankovic',
+        category: 'GROAN',
+        filename: 'WeirdAl-EatIt.mp3',
+        time: '0:06',
+        info: ''
       }
     ]
   }

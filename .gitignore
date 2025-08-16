@@ -141,7 +141,10 @@ videos/
 traces/
 
 # Test environment artifacts
-tests/fixtures/
+# Ignore all fixtures by default, then re-include curated test songs
+tests/fixtures/**
+!tests/fixtures/test-songs/
+!tests/fixtures/test-songs/**
 tests/test-results/
 tests/playwright-report/
 
@@ -199,7 +202,6 @@ tests/**/*.mp3
 tests/**/*.wav
 tests/**/*.flac
 tests/**/*.ogg
-tests/**/test-songs/
 tests/**/test-audio/
 
 # Test lock and state files
@@ -208,6 +210,10 @@ tests/**/*.state
 tests/**/test.lock
 tests/**/test.state
 tests/**/isolation.lock
+
+# Re-include curated test song fixtures (override broader ignores above)
+!tests/fixtures/test-songs/
+!tests/fixtures/test-songs/**
 
 # Test backup and archive files
 tests/**/*.backup

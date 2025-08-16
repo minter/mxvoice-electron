@@ -36,6 +36,11 @@ export class TestSongManager {
     try {
       const filePath = path.join(this.testSongsDir, song.filename);
       
+      // If a curated fixture already exists, don't overwrite or track it
+      if (fs.existsSync(filePath)) {
+        return filePath;
+      }
+
       // Create a minimal MP3 file for testing
       // In practice, you'd use actual short MP3 files
       const testMp3Data = this.generateTestMp3Data();
@@ -119,12 +124,6 @@ export class TestSongManager {
         }
       });
       this.testSongs.clear();
-      
-      // Clean up test songs directory
-      if (fs.existsSync(this.testSongsDir)) {
-        fs.rmSync(this.testSongsDir, { recursive: true, force: true });
-        console.log('✅ Test songs directory cleaned up');
-      }
     } catch (error) {
       console.error('❌ Failed to cleanup test songs:', error);
     }
