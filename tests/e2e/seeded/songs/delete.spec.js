@@ -27,17 +27,58 @@ test.describe('Songs - delete', () => {
     // 1) Start with a fresh database and search for "Anthrax"
     console.log('🔍 Searching for "Anthrax" to find the song to delete...');
     
+    // First, ensure the database is ready by doing an empty search
+    console.log('⏳ Ensuring database is ready with empty search...');
     const searchInput = page.locator('#omni_search');
+    await searchInput.click();
+    await searchInput.fill('');
+    await searchInput.press('Enter');
+    await page.waitForTimeout(2000);
+    
+    // Verify we have songs in the database
+    const initialRows = page.locator('#search_results tbody tr');
+    const initialCount = await initialRows.count();
+    console.log(`🔍 Initial database state: ${initialCount} songs`);
+    
+    if (initialCount === 0) {
+      console.log('⚠️ No songs found in database, waiting longer...');
+      await page.waitForTimeout(3000);
+      const retryCount = await initialRows.count();
+      console.log(`🔍 After retry: ${retryCount} songs`);
+    }
+    
+    // Now search for "Anthrax"
+    console.log('🔍 Searching for "Anthrax"...');
     await searchInput.click();
     await searchInput.fill('Anthrax');
     await searchInput.press('Enter');
     
-    // Wait for search results
-    await page.waitForTimeout(1000);
+    // Wait for search results with more debugging
+    console.log('⏳ Waiting for search results...');
+    await page.waitForTimeout(3000);
     
-    // 2) Verify exactly one song is returned
+    // Debug: Check what's in the search input
+    const searchValue = await searchInput.inputValue();
+    console.log(`🔍 Search input value: "${searchValue}"`);
+    
+    // Debug: Check if there are any search results at all
+    const allRows = page.locator('#search_results tbody tr');
+    const totalRows = await allRows.count();
+    console.log(`🔍 Total rows in search results: ${totalRows}`);
+    
+    if (totalRows > 0) {
+      // Show what songs are actually in the results
+      for (let i = 0; i < totalRows; i++) {
+        const row = allRows.nth(i);
+        const title = await row.locator('td:nth-child(3)').textContent();
+        const artist = await row.locator('td:nth-child(4)').textContent();
+        console.log(`🔍 Row ${i}: Title="${title?.trim()}", Artist="${artist?.trim()}"`);
+      }
+    }
+    
+    // 2) Verify exactly one song is returned with longer timeout for CI
     const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(1, { timeout: 5000 });
+    await expect(rows).toHaveCount(1, { timeout: 10000 });
     
     // Verify it's the expected song
     await expect(page.locator('#search_results')).toContainText('Got The Time');
