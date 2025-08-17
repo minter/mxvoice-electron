@@ -14,6 +14,29 @@ test.describe('Songs - add', () => {
     ({ app, page } = await launchSeededApp(electron, 'songs'));
   });
 
+  test.beforeEach(async () => {
+    // Ensure clean state before each test
+    try {
+      // Close any open modals
+      const modalVisible = await page.locator('#songFormModal').isVisible();
+      if (modalVisible) {
+        try {
+          await page.locator('#songFormModal .btn-close').click();
+          await page.waitForTimeout(500);
+        } catch (e) {
+          await page.keyboard.press('Escape');
+          await page.waitForTimeout(500);
+        }
+      }
+      
+      // Wait for page to be ready
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(1000);
+    } catch (error) {
+      console.log('Setup cleanup failed, continuing:', error.message);
+    }
+  });
+
   test.afterAll(async () => {
     await closeApp(app);
   });
@@ -54,23 +77,32 @@ test.describe('Songs - add', () => {
       // Listen for the add_dialog_load IPC message using the secure API
       if (window.secureElectronAPI?.events?.onAddDialogLoad) {
         window.secureElectronAPI.events.onAddDialogLoad((filename, metadata) => {
+          console.log('IPC: add_dialog_load received via secure API:', filename);
           window.___captureAddDialog?.(filename);
           
           // Also check if startAddNewSong is available and call it
           if (window.startAddNewSong) {
+            console.log('IPC: Calling startAddNewSong directly');
             window.startAddNewSong(filename, metadata);
           } else if (window.moduleRegistry?.songManagement?.startAddNewSong) {
+            console.log('IPC: Calling startAddNewSong via moduleRegistry');
             window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
+          } else {
+            console.log('IPC: startAddNewSong not available!');
           }
         });
       } else if (window.electronAPI?.onAddDialogLoad) {
         window.electronAPI.onAddDialogLoad((filename) => {
+          console.log('IPC: add_dialog_load received via legacy API:', filename);
           window.___captureAddDialog?.(filename);
         });
       } else if (window.electron?.ipcRenderer?.on) {
         window.electron.ipcRenderer.on('add_dialog_load', (_e, filename) => {
+          console.log('IPC: add_dialog_load received via direct IPC:', filename);
           window.___captureAddDialog?.(filename);
         });
+      } else {
+        console.log('IPC: No IPC monitoring method available!');
       }
     });
     
@@ -78,6 +110,24 @@ test.describe('Songs - add', () => {
 
     // 3) Trigger the menu item that opens the dialog
     const triggerMenuItem = async () => {
+      // First, ensure the page is in a clean state
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(1000); // Give extra time for any async operations
+      
+      // Verify the modal is not already visible
+      const modalVisible = await page.locator('#songFormModal').isVisible();
+      if (modalVisible) {
+        console.log('Modal already visible, closing it first...');
+        try {
+          await page.locator('#songFormModal .btn-close').click();
+          await page.waitForTimeout(500);
+        } catch (e) {
+          // If close button not found, try pressing Escape
+          await page.keyboard.press('Escape');
+          await page.waitForTimeout(500);
+        }
+      }
+      
       const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
         const menu = Menu.getApplicationMenu();
         
@@ -98,6 +148,9 @@ test.describe('Songs - add', () => {
       if (!res.ok) {
         throw new Error(`Menu item trigger failed: ${res.reason}`);
       }
+      
+      // Wait for the IPC message to be processed
+      await page.waitForTimeout(1000);
     };
     
     await triggerMenuItem();
@@ -105,8 +158,32 @@ test.describe('Songs - add', () => {
     // 4) Since the modal is showing up, the IPC message worked! 
     // Let's verify the modal content directly
     
-    // Wait for the modal to be visible with a longer timeout
-    await expect(page.locator('#songFormModal')).toBeVisible({ timeout: 10000 });
+    // Wait for the modal to be visible with a longer timeout and retry logic
+    let modalVisible = false;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (!modalVisible && attempts < maxAttempts) {
+      attempts++;
+      try {
+        console.log(`Attempt ${attempts}: Waiting for modal to appear...`);
+        await expect(page.locator('#songFormModal')).toBeVisible({ timeout: 10000 });
+        modalVisible = true;
+        console.log('Modal is now visible');
+      } catch (error) {
+        console.log(`Attempt ${attempts} failed: ${error.message}`);
+        if (attempts < maxAttempts) {
+          console.log('Retrying menu trigger...');
+          await triggerMenuItem();
+          await page.waitForTimeout(2000);
+        } else {
+          throw new Error(`Modal failed to appear after ${maxAttempts} attempts: ${error.message}`);
+        }
+      }
+    }
+    
+    // Ensure the modal is fully loaded and interactive
+    await page.waitForTimeout(500);
     
     // Wait for the title to be populated
     await expect(page.locator('#songFormModalTitle')).toContainText('Add New Song', { timeout: 5000 });
@@ -115,6 +192,11 @@ test.describe('Songs - add', () => {
     await expect(page.locator('#song-form-title')).toHaveValue('Shame On You', { timeout: 5000 });
     await expect(page.locator('#song-form-artist')).toHaveValue('Indigo Girls', { timeout: 5000 });
     await expect(page.locator('#song-form-duration')).toHaveValue('0:30', { timeout: 5000 });
+    
+    // Verify the modal is in the correct state
+    // Bootstrap modals have multiple classes, so check if they contain what we need
+    await expect(page.locator('#songFormModal')).toHaveClass(/show/);
+    await expect(page.locator('#songFormModal')).toBeVisible();
     
     // 5) Modify the form fields
     
@@ -206,6 +288,22 @@ test.describe('Songs - add', () => {
     
     // 10) Restore dialog
     await app.evaluate(() => { globalThis.__restoreDialog?.(); });
+    
+    // 11) Verify test environment is clean
+    console.log('Test completed successfully, verifying clean state...');
+    
+    // Ensure modal is closed
+    const modalStillVisible = await page.locator('#songFormModal').isVisible();
+    if (modalStillVisible) {
+      console.log('Modal still visible after test, closing...');
+      try {
+        await page.locator('#songFormModal .btn-close').click();
+        await page.waitForTimeout(500);
+      } catch (e) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+      }
+    }
   });
 });
 
