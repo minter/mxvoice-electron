@@ -17,6 +17,8 @@ test.describe('Songs - delete', () => {
     ({ app, page } = await launchSeededApp(electron, 'songs-delete'));
   });
 
+
+
   test.afterAll(async () => {
     await closeApp(app);
   });
@@ -184,11 +186,15 @@ test.describe('Songs - delete', () => {
     // Wait for search results
     await page.waitForTimeout(1000);
     
-    // 2) Verify that four songs remain (after the previous test deleted one)
+    // 2) Verify that we have the expected number of songs (4 songs after the previous test deleted one)
     const rows = page.locator('#search_results tbody tr');
+    const rowCount = await rows.count();
+    console.log(`🔍 Found ${rowCount} songs in search results`);
+    
+    // We should have 4 songs after the previous test deleted one
     await expect(rows).toHaveCount(4, { timeout: 5000 });
     
-    console.log('✅ Found 4 songs as expected (after previous deletion)');
+    console.log(`✅ Found ${rowCount} songs as expected (4 songs after previous deletion)`);
     
     // 3) Right click on the song "The Wheel (Back And Forth)" (Edie Brickell)
     console.log('🖱️ Right-clicking on "The Wheel (Back And Forth)" song...');

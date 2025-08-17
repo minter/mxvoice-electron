@@ -215,8 +215,9 @@ test.describe('Songs - edit', () => {
     const weirdAlRow = page.locator('#search_results tbody tr').filter({ hasText: 'Weird Al' });
     await weirdAlRow.click({ button: 'right' });
     
-    // Wait for context menu to appear
-    await page.waitForTimeout(500);
+    // Wait for context menu to appear and stabilize
+    console.log('⏳ Waiting for context menu to appear...');
+    await page.waitForTimeout(1000);
     
     // 4) Choose Edit from the context menu
     console.log('✏️ Selecting Edit from context menu...');
@@ -237,18 +238,37 @@ test.describe('Songs - edit', () => {
         const text = await item.textContent();
         console.log(`🔍 Menu item ${i}: "${text}"`);
       }
-    }
-    
-    const editOption = page.locator('text=Edit').first();
-    console.log(`🔍 Edit option found: ${await editOption.count() > 0}`);
-    console.log(`🔍 Edit option visible: ${await editOption.isVisible()}`);
-    
-    if (await editOption.isVisible()) {
-      console.log('✅ Clicking Edit option...');
-      await editOption.click();
+      
+      // Try to find the Edit option with more specific selectors
+      const editOption = page.locator('.mxv-context-item').filter({ hasText: 'Edit' });
+      console.log(`🔍 Edit option found: ${await editOption.count() > 0}`);
+      
+      // Wait a bit more and check visibility again
+      await page.waitForTimeout(500);
+      const isEditVisible = await editOption.isVisible();
+      console.log(`🔍 Edit option visible: ${isEditVisible}`);
+      
+      if (isEditVisible) {
+        console.log('✅ Clicking Edit option...');
+        await editOption.click();
+        console.log('✅ Edit option clicked, waiting for modal...');
+      } else {
+        console.log('⚠️ Edit option still not visible, trying direct function call...');
+        // Try to call editSelectedSong directly through the page context
+        await page.evaluate(() => {
+          if (window.editSelectedSong) {
+            console.log('✅ Calling editSelectedSong directly...');
+            window.editSelectedSong();
+          } else if (window.moduleRegistry?.songManagement?.editSelectedSong) {
+            console.log('✅ Calling editSelectedSong through moduleRegistry...');
+            window.moduleRegistry.songManagement.editSelectedSong();
+          } else {
+            console.log('❌ editSelectedSong not available');
+          }
+        });
+      }
     } else {
-      console.log('⚠️ Edit option not visible, trying direct function call...');
-      // Try to call editSelectedSong directly through the page context
+      console.log('❌ Context menu not visible, trying direct function call...');
       await page.evaluate(() => {
         if (window.editSelectedSong) {
           console.log('✅ Calling editSelectedSong directly...');
