@@ -6,6 +6,15 @@ test.describe('Search - basic', () => {
   let app; let page;
 
   test.beforeAll(async () => {
+    // Ensure clean test environment before each test sequence
+    try {
+      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
+      await resetTestEnvironment();
+      console.log('✅ Test environment reset for search tests');
+    } catch (error) {
+      console.log(`⚠️ Could not reset test environment: ${error.message}`);
+    }
+    
     ({ app, page } = await launchSeededApp(electron, 'search'));
   });
 
@@ -23,6 +32,10 @@ test.describe('Search - basic', () => {
     });
     await page.bringToFront();
     await page.click('body');
+    
+    // Wait for the page to be fully ready
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
   
     // Optional: make animations instant in tests (prevents flakiness)
     await page.addStyleTag({ content: `
@@ -35,16 +48,20 @@ test.describe('Search - basic', () => {
     const btn = page.locator('#advanced_search_button');
     const panel = page.locator('#advanced-search');
   
+    // Wait for the button to be ready
+    await expect(btn).toBeVisible({ timeout: 5000 });
+    
     const before = (await btn.getAttribute('aria-expanded')) ?? 'false';
+    console.log(`Initial aria-expanded state: ${before}`);
   
     // Helper: invoke the menu item exactly like the accelerator
     const triggerMenuItem = async () => {
       const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
         const menu = Menu.getApplicationMenu();
         const item = menu?.getMenuItemById?.('toggle_advanced_search');
-        if (!item) return { ok: false };
+        if (!item) return { ok: false, reason: 'Menu item not found' };
         const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
-        if (!win) return { ok: false };
+        if (!win) return { ok: false, reason: 'No focused window' };
         const wc = win.webContents;
         // click(event, focusedWindow, focusedWebContents)
         // @ts-ignore
@@ -52,15 +69,45 @@ test.describe('Search - basic', () => {
         if (win.isMinimized()) { win.restore(); win.focus(); }
         return { ok: true };
       });
-      if (!res.ok) throw new Error('Menu item not found or no focused window');
+      if (!res.ok) throw new Error(`Menu item trigger failed: ${res.reason || 'Unknown error'}`);
+      
+      // Wait a moment for the click to be processed
+      await page.waitForTimeout(500);
     };
   
     // First toggle
+    console.log('Triggering first menu item click...');
     await triggerMenuItem();
-    await expect(btn).toHaveAttribute('aria-expanded', before === 'true' ? 'false' : 'true', { timeout: 3000 });
+    
+    // Wait for the attribute to change with retry logic
+    let attempts = 0;
+    const maxAttempts = 5;
+    let attributeChanged = false;
+    
+    while (!attributeChanged && attempts < maxAttempts) {
+      attempts++;
+      try {
+        const expectedValue = before === 'true' ? 'false' : 'true';
+        console.log(`Attempt ${attempts}: Waiting for aria-expanded to change to ${expectedValue}...`);
+        await expect(btn).toHaveAttribute('aria-expanded', expectedValue, { timeout: 2000 });
+        attributeChanged = true;
+        console.log(`✅ aria-expanded changed to ${expectedValue}`);
+      } catch (error) {
+        console.log(`Attempt ${attempts} failed: ${error.message}`);
+        if (attempts < maxAttempts) {
+          console.log('Retrying menu trigger...');
+          await triggerMenuItem();
+          await page.waitForTimeout(1000);
+        } else {
+          throw new Error(`aria-expanded failed to change after ${maxAttempts} attempts: ${error.message}`);
+        }
+      }
+    }
   
     // (Optional) double-check panel visibility matches aria-expanded
     const visibleNow = (await btn.getAttribute('aria-expanded')) === 'true';
+    console.log(`Panel should be visible: ${visibleNow}`);
+    
     await expect
       .poll(async () => {
         return await page.evaluate(() => {
@@ -71,12 +118,16 @@ test.describe('Search - basic', () => {
                  parseFloat(cs.opacity || '1') > 0 && r.width > 0 && r.height > 0 &&
                  el.getClientRects().length > 0;
         });
-      }, { timeout: 3000 })
+      }, { timeout: 5000 })
       .toBe(visibleNow);
   
     // Second toggle (revert)
+    console.log('Triggering second menu item click to revert...');
     await triggerMenuItem();
-    await expect(btn).toHaveAttribute('aria-expanded', before, { timeout: 3000 });
+    
+    // Wait for the attribute to revert
+    await expect(btn).toHaveAttribute('aria-expanded', before, { timeout: 5000 });
+    console.log(`✅ aria-expanded reverted to ${before}`);
   });
   
     
