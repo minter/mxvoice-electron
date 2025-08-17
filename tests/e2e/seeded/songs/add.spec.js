@@ -305,6 +305,240 @@ test.describe('Songs - add', () => {
       }
     }
   });
+
+  test('Add song via dialog → cancel flow → song not added', async () => {
+    // 1) Stub dialog in main and make it return the John Lennon song path
+    const mp3 = path.resolve(__dirname, '../../../fixtures/test-songs/JohnLennon-NobodyToldMe.mp3');
+    
+    await app.evaluate(async ({ dialog }) => {
+      const original = dialog.showOpenDialog;
+      // Save a restorer for later
+      // @ts-ignore
+      globalThis.__restoreDialogCancel = () => (dialog.showOpenDialog = original);
+    });
+    await app.evaluate(({ dialog }, filePath) => {
+      dialog.showOpenDialog = async () => {
+        return {
+          canceled: false,
+          filePaths: [filePath],
+        };
+      };
+    }, mp3);
+
+    // 2) Instrument the renderer to capture the IPC payload
+    await page.exposeFunction('___captureAddDialogCancel', (filename) => {
+      window.__lastAddDialogCancel = filename;
+    });
+    
+    // Wait a moment for the page to be ready
+    await page.waitForLoadState('domcontentloaded');
+    
+    await page.addInitScript(() => {
+      // Listen for the add_dialog_load IPC message using the secure API
+      if (window.secureElectronAPI?.events?.onAddDialogLoad) {
+        window.secureElectronAPI.events.onAddDialogLoad((filename, metadata) => {
+          console.log('IPC: add_dialog_load received for cancel test:', filename);
+          window.___captureAddDialogCancel?.(filename);
+          
+          // Also check if startAddNewSong is available and call it
+          if (window.startAddNewSong) {
+            console.log('IPC: Calling startAddNewSong for cancel test');
+            window.startAddNewSong(filename, metadata);
+          } else if (window.moduleRegistry?.songManagement?.startAddNewSong) {
+            console.log('IPC: Calling startAddNewSong via moduleRegistry for cancel test');
+            window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
+          } else {
+            console.log('IPC: startAddNewSong not available for cancel test!');
+          }
+        });
+      }
+    });
+
+    // 3) Trigger the menu item that opens the dialog
+    const triggerMenuItemCancel = async () => {
+      // First, ensure the page is in a clean state
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(1000);
+      
+      // Verify the modal is not already visible
+      const modalVisible = await page.locator('#songFormModal').isVisible();
+      if (modalVisible) {
+        console.log('Modal already visible, closing it first...');
+        try {
+          await page.locator('#songFormModal .btn-close').click();
+          await page.waitForTimeout(500);
+        } catch (e) {
+          await page.keyboard.press('Escape');
+          await page.waitForTimeout(500);
+        }
+      }
+      
+      const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
+        const menu = Menu.getApplicationMenu();
+        
+        // Find the "Add Song" menu item in the Songs submenu
+        const songsSubmenu = menu?.items?.find(item => item.label === 'Songs');
+        const addSongItem = songsSubmenu?.submenu?.items?.find(item => item.label === 'Add Song');
+        
+        if (!addSongItem) return { ok: false, reason: 'Add Song menu item not found' };
+        
+        const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+        if (!win) return { ok: false, reason: 'No focused window' };
+        
+        // @ts-ignore
+        addSongItem.click({}, win, win.webContents);
+        return { ok: true };
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Menu item trigger failed: ${res.reason}`);
+      }
+      
+      // Wait for the IPC message to be processed
+      await page.waitForTimeout(1000);
+    };
+    
+    await triggerMenuItemCancel();
+
+    // 4) Wait for the modal to appear and verify John Lennon song info
+    let modalVisible = false;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (!modalVisible && attempts < maxAttempts) {
+      attempts++;
+      try {
+        console.log(`Attempt ${attempts}: Waiting for modal to appear for cancel test...`);
+        await expect(page.locator('#songFormModal')).toBeVisible({ timeout: 10000 });
+        modalVisible = true;
+        console.log('Modal is now visible for cancel test');
+      } catch (error) {
+        console.log(`Attempt ${attempts} failed: ${error.message}`);
+        if (attempts < maxAttempts) {
+          console.log('Retrying menu trigger for cancel test...');
+          await triggerMenuItemCancel();
+          await page.waitForTimeout(2000);
+        } else {
+          throw new Error(`Modal failed to appear after ${maxAttempts} attempts: ${error.message}`);
+        }
+      }
+    }
+    
+    // Ensure the modal is fully loaded and interactive
+    await page.waitForTimeout(500);
+    
+    // Wait for the title to be populated
+    await expect(page.locator('#songFormModalTitle')).toContainText('Add New Song', { timeout: 5000 });
+    
+    // Wait for the form fields to be populated with John Lennon song info
+    await expect(page.locator('#song-form-title')).toHaveValue('Nobody Told Me', { timeout: 5000 });
+    await expect(page.locator('#song-form-artist')).toHaveValue('John Lennon', { timeout: 5000 });
+    
+    // Verify the modal is in the correct state
+    await expect(page.locator('#songFormModal')).toHaveClass(/show/);
+    await expect(page.locator('#songFormModal')).toBeVisible();
+    
+    // 5) Click the Cancel button instead of Add
+    console.log('Clicking Cancel button...');
+    await page.locator('#songFormModal .btn.btn-secondary').click();
+    
+    // 6) Wait for the modal to close
+    await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
+    
+    // 7) Search for "Lennon" and verify no results
+    console.log('Searching for "Lennon" to verify no results...');
+    
+    // Find the search input and enter "Lennon"
+    const searchInput = page.locator('#omni_search');
+    await searchInput.fill('Lennon');
+    await searchInput.press('Enter');
+    
+    // Wait for search results to update
+    await page.waitForTimeout(1000);
+    
+    // Verify no search results contain "Lennon"
+    const searchResults = page.locator('#search_results');
+    await expect(searchResults).not.toContainText('John Lennon');
+    await expect(searchResults).not.toContainText('Nobody Told Me');
+    
+    // 8) Verify no John Lennon file exists in the music directory
+    console.log('Verifying no John Lennon file exists in music directory...');
+    
+    // Get the music directory from the store
+    const musicDirResult = await page.evaluate(async () => {
+      if (window.secureElectronAPI?.store?.get) {
+        return await window.secureElectronAPI.store.get('music_directory');
+      } else if (window.electronAPI?.store?.get) {
+        return await window.electronAPI.store.get('music_directory');
+      }
+      return null;
+    });
+    
+    if (musicDirResult?.success && musicDirResult.value) {
+      const musicDir = musicDirResult.value;
+      
+      // Check if any files with "Lennon" exist in the test music directory
+      const fileExists = await page.evaluate(async (dir) => {
+        if (window.secureElectronAPI?.fileSystem?.readdir) {
+          try {
+            const result = await window.secureElectronAPI.fileSystem.readdir(dir);
+            
+            // The IPC handler returns the file array directly, not wrapped in {success, data}
+            if (Array.isArray(result)) {
+              return { success: true, files: result };
+            } else if (result?.success && result.data) {
+              return { success: true, files: result.data };
+            } else {
+              return { success: false, error: 'readdir failed', result: result };
+            }
+          } catch (err) {
+            return { success: false, error: err.message };
+          }
+        } else {
+          return { success: false, error: 'secureElectronAPI.fileSystem.readdir not available' };
+        }
+      }, musicDir);
+      
+      if (fileExists?.success && fileExists.files) {
+        const files = fileExists.files;
+        
+        // Look for any files containing "Lennon"
+        const lennonFiles = files.filter(file => 
+          file.includes('Lennon') && file.endsWith('.mp3')
+        );
+        
+        if (lennonFiles.length === 0) {
+          console.log('✅ No John Lennon files found in music directory (as expected)');
+        } else {
+          console.log('❌ John Lennon files found in music directory:', lennonFiles);
+          throw new Error('John Lennon files should not exist after canceling');
+        }
+      } else {
+        console.log('❌ Failed to read test music directory:', fileExists?.error || 'Unknown error');
+      }
+    } else {
+      console.log('⚠️ Could not retrieve music directory from store');
+    }
+    
+    // 9) Restore dialog
+    await app.evaluate(() => { globalThis.__restoreDialogCancel?.(); });
+    
+    // 10) Verify test environment is clean
+    console.log('Cancel test completed successfully, verifying clean state...');
+    
+    // Ensure modal is closed
+    const modalStillVisible = await page.locator('#songFormModal').isVisible();
+    if (modalStillVisible) {
+      console.log('Modal still visible after cancel test, closing...');
+      try {
+        await page.locator('#songFormModal .btn-close').click();
+        await page.waitForTimeout(500);
+      } catch (e) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+      }
+    }
+  });
 });
 
 
