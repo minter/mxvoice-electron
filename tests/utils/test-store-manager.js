@@ -51,8 +51,8 @@ export class TestStoreManager {
       
       // Set test configuration with COMPLETELY ISOLATED paths
       this.testStore.set('database_directory', TEST_CONFIG.testAppDirs.databaseDirectory);
-      // Point the app to the predefined songs directory so playback works without copying
-      this.testStore.set('music_directory', TEST_CONFIG.testSongsDir);
+      // Point the app to the test music directory where songs will be stored
+      this.testStore.set('music_directory', TEST_CONFIG.testAppDirs.musicDirectory);
       this.testStore.set('hotkey_directory', TEST_CONFIG.testAppDirs.hotkeyDirectory);
       this.testStore.set('holding_tank_directory', TEST_CONFIG.testAppDirs.holdingTankDirectory);
       this.testStore.set('preferences_directory', TEST_CONFIG.testAppDirs.preferencesDirectory);

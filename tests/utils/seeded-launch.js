@@ -14,10 +14,10 @@ export async function launchSeededApp(electron, suffix = '') {
   if (fs.existsSync(userDataDir)) fs.rmSync(userDataDir, { recursive: true, force: true });
   fs.mkdirSync(userDataDir, { recursive: true });
 
-  // Write config to point to seeded DB and songs dir
+  // Write config to point to seeded DB and test music dir
   const config = {
     database_directory: TEST_CONFIG.testAppDirs.databaseDirectory,
-    music_directory: TEST_CONFIG.testSongsDir,
+    music_directory: TEST_CONFIG.testAppDirs.musicDirectory,
     hotkey_directory: TEST_CONFIG.testAppDirs.hotkeyDirectory,
     first_run_completed: true,
     browser_width: 1200,

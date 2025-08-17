@@ -13,8 +13,11 @@ export const TEST_CONFIG = {
   // Test data directory - completely isolated from real app
   testDataDir: path.join(__dirname, '../fixtures'),
   
-  // Test songs directory - isolated from real app
+  // Test songs directory - isolated from real app (source for copying)
   testSongsDir: path.join(__dirname, '../fixtures/test-songs'),
+  
+  // Test music directory - where the app actually stores songs (starts empty, gets populated)
+  testMusicDir: path.join(__dirname, '../fixtures/test-music'),
   
   // Test session store path - isolated from real app
   testStorePath: path.join(__dirname, '../fixtures/test-store'),
@@ -37,7 +40,10 @@ export const TEST_CONFIG = {
     userDataDirectory: path.join(__dirname, '../fixtures/test-user-data'),
     
     // Test temp directory (separate from real app)
-    tempDirectory: path.join(__dirname, '../fixtures/test-temp')
+    tempDirectory: path.join(__dirname, '../fixtures/test-temp'),
+    
+    // Test music directory - where the app stores songs (separate from real app)
+    musicDirectory: path.join(__dirname, '../fixtures/test-music')
   },
   
   // Test database schema
@@ -104,6 +110,7 @@ export function ensureTestDirectories() {
   const dirs = [
     TEST_CONFIG.testDataDir,
     TEST_CONFIG.testSongsDir,
+    TEST_CONFIG.testMusicDir,
     TEST_CONFIG.testStorePath,
     ...Object.values(TEST_CONFIG.testAppDirs)
   ];

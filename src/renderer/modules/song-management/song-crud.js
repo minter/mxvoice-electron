@@ -98,9 +98,15 @@ export async function saveNewSong(event) {
     }
 
     const duration = (document.getElementById('song-form-duration') || {}).value || '';
-    const uuid = (window.secureElectronAPI?.utils?.generateId)
-      ? await window.secureElectronAPI.utils.generateId()
-      : (typeof uuidv4 === 'function' ? uuidv4() : Date.now().toString());
+    let uuid;
+    if (window.secureElectronAPI?.utils?.generateId) {
+      const uuidResult = await window.secureElectronAPI.utils.generateId();
+      uuid = uuidResult?.success && uuidResult?.data ? uuidResult.data : Date.now().toString();
+    } else if (typeof uuidv4 === 'function') {
+      uuid = uuidv4();
+    } else {
+      uuid = Date.now().toString();
+    }
     const newFilename = `${artist}-${title}-${uuid}${pathData.ext}`.replace(/[^-.\w]/g, "");
 
     const dirResult = await secureStore.get("music_directory");

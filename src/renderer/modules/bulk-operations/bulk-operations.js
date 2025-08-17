@@ -109,9 +109,13 @@ export async function addSongsByPath(pathArray, category) {
     const extRes = await securePath.extname(songSourcePath);
     const ext = extRes?.data || extRes || '';
 
-    const uuid = (window.secureElectronAPI?.utils?.generateId)
-      ? await window.secureElectronAPI.utils.generateId()
-      : Date.now().toString();
+    let uuid;
+    if (window.secureElectronAPI?.utils?.generateId) {
+      const uuidResult = await window.secureElectronAPI.utils.generateId();
+      uuid = uuidResult?.success && uuidResult?.data ? uuidResult.data : Date.now().toString();
+    } else {
+      uuid = Date.now().toString();
+    }
 
     const newFilename = `${artist}-${title}-${uuid}${ext}`.replace(/[^-.\w]/g, "");
 

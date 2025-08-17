@@ -15,9 +15,15 @@ export class TestSongManager {
     try {
       const { TEST_CONFIG } = await import('../config/test-environment.js');
       
-      // Ensure test songs directory exists
+      // Ensure test songs directory exists (source directory)
       if (!fs.existsSync(this.testSongsDir)) {
         fs.mkdirSync(this.testSongsDir, { recursive: true });
+      }
+      
+      // Ensure test music directory exists (where app will store songs)
+      const testMusicDir = TEST_CONFIG.testAppDirs.musicDirectory;
+      if (!fs.existsSync(testMusicDir)) {
+        fs.mkdirSync(testMusicDir, { recursive: true });
       }
       
       // Create test song files (short, silent MP3s for testing)
@@ -25,7 +31,10 @@ export class TestSongManager {
         await this.createTestSongFile(song);
       }
       
-      console.log('✅ Test song files created');
+      // Copy fixture songs to the test music directory so the seeded database has songs to work with
+      await this.copyFixtureSongsToMusicDir();
+      
+      console.log('✅ Test song files created and copied to music directory');
     } catch (error) {
       console.error('❌ Failed to create test song files:', error);
       throw error;
@@ -124,6 +133,15 @@ export class TestSongManager {
         }
       });
       this.testSongs.clear();
+      
+      // Clean up the test music directory (where the app copies songs during tests)
+      const { TEST_CONFIG } = await import('../config/test-environment.js');
+      const testMusicDir = TEST_CONFIG.testAppDirs.musicDirectory;
+      
+      if (fs.existsSync(testMusicDir)) {
+        fs.rmSync(testMusicDir, { recursive: true, force: true });
+        console.log(`✅ Cleaned up test music directory: ${testMusicDir}`);
+      }
     } catch (error) {
       console.error('❌ Failed to cleanup test songs:', error);
     }
@@ -166,6 +184,43 @@ export class TestSongManager {
       return songs;
     } catch (error) {
       console.error(`❌ Failed to create batch test songs:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Copy fixture songs to the test music directory
+   * This ensures the seeded database has songs to work with
+   * Only copies the songs defined in TEST_CONFIG.schema.songs (the initial seed)
+   */
+  async copyFixtureSongsToMusicDir() {
+    try {
+      const { TEST_CONFIG } = await import('../config/test-environment.js');
+      const testMusicDir = TEST_CONFIG.testAppDirs.musicDirectory;
+      
+      // Clear the test music directory first
+      if (fs.existsSync(testMusicDir)) {
+        fs.rmSync(testMusicDir, { recursive: true, force: true });
+        fs.mkdirSync(testMusicDir, { recursive: true });
+      }
+      
+      // Copy only the songs defined in the schema (initial seed songs)
+      // This does NOT include the Indigo Girls song or other test-specific files
+      for (const song of TEST_CONFIG.schema.songs) {
+        const sourcePath = path.join(this.testSongsDir, song.filename);
+        const destPath = path.join(testMusicDir, song.filename);
+        
+        if (fs.existsSync(sourcePath)) {
+          fs.copyFileSync(sourcePath, destPath);
+          console.log(`✅ Copied seed song: ${song.filename}`);
+        } else {
+          console.log(`⚠️ Seed song not found: ${song.filename}`);
+        }
+      }
+      
+      console.log(`✅ Copied ${TEST_CONFIG.schema.songs.length} seed songs to test music directory`);
+    } catch (error) {
+      console.error('❌ Failed to copy fixture songs to music directory:', error);
       throw error;
     }
   }
