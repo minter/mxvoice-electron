@@ -15,6 +15,13 @@ test.describe('Songs - delete', () => {
     }
     
     ({ app, page } = await launchSeededApp(electron, 'songs-delete'));
+    
+    // After database reset, refresh the page to clear any cached search state
+    console.log('🔄 Refreshing page to clear search cache after database reset...');
+    await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(2000);
+    console.log('✅ Page refreshed and ready');
   });
 
 
