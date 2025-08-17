@@ -158,11 +158,29 @@ export class TestDatabaseManager {
 
   async resetDatabase() {
     try {
+      // Reset the in-memory database
       if (this.testDb) {
         this.testDb.exec('DELETE FROM mrvoice');
         this.testDb.exec('DELETE FROM categories');
         await this.populateTestData();
-        console.log('✅ Test database reset to initial state');
+        console.log('✅ In-memory test database reset to initial state');
+      }
+      
+      // Also reset the file-backed database if it exists
+      if (this.fileDbPath) {
+        const fs = (await import('fs')).default;
+        if (fs.existsSync(this.fileDbPath)) {
+          // Close the current file database connection
+          if (this.testDb) {
+            this.testDb.close();
+            this.testDb = null;
+          }
+          
+          // Delete and recreate the file database
+          fs.unlinkSync(this.fileDbPath);
+          await this.createFileBackedDatabase();
+          console.log('✅ File-backed test database reset to initial state');
+        }
       }
     } catch (error) {
       console.error('❌ Failed to reset test database:', error);
