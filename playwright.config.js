@@ -17,4 +17,15 @@ export default defineConfig({
   workers: 1,
   globalSetup: 'tests/setup/global-setup.js',
   globalTeardown: 'tests/setup/global-teardown.js',
+  // Exclude manual smoke tests from default runs; use yarn test:smoke to run them
+  // Adjust the pattern so only the unseeded smoke file is excluded here
+  // Note: paths are resolved from project root
+  snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}{ext}',
+  // Custom project-level testIgnore
+  // Playwright supports testIgnore at top level as of v1.30+
+  // If older, we can filter via CLI. Here we exclude the unseeded smoke by path.
+  testIgnore: [
+    'tests/e2e/smoke.spec.js',
+    'tests/e2e/unseeded/smoke.spec.js'
+  ]
 });

@@ -11,7 +11,7 @@ test.describe('First run flow', () => {
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const userDataDir = path.join(__dirname, '../fixtures/test-user-data');
+  const userDataDir = path.join(__dirname, '../../fixtures/test-user-data');
   // For first run, database_directory defaults to userData root (not userData/data)
   const dbDir = userDataDir;
   const musicDir = path.join(userDataDir, 'mp3');

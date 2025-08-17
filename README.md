@@ -29,6 +29,34 @@ yarn start
 
 That should launch the app onto your desktop!
 
+## Testing
+
+This project uses Playwright with first-class Electron support. Each test suite (file) launches the real app in a fully isolated environment.
+
+### Run tests
+
+```bash
+# Run all tests (default E2E suites)
+yarn test
+
+# Interactive test runner UI
+yarn test:ui
+
+# Headed mode (see windows during tests)
+yarn test:headed
+
+# Debug mode
+yarn test:debug
+
+# View the HTML report from the last run
+yarn test:report
+
+# Optional: manual smoke test (excluded from default runs)
+yarn playwright test tests/e2e/smoke.spec.js
+```
+
+For details on test isolation, per‑suite environments, and CI behavior, see `TESTING_SETUP_SUMMARY.md`.
+
 ## Architecture Overview
 
 The app follows a modern Electron architecture with context isolation enabled and a modular codebase:

@@ -2,40 +2,47 @@
 
 ## 🎉 What We've Accomplished
 
-We have successfully set up a **modern, simple, and powerful testing framework** for your Mx. Voice Electron app using **Playwright with first-class Electron support**. Here's what's now available:
+We have a **robust Playwright + Electron** test framework with **strong per‑suite isolation** and **CI‑ready diagnostics/cleanup**.
 
-## 📁 Project Structure (UPDATED!)
+## 📁 Project Structure (UPDATED)
 
 ```
 mxvoice-electron/
-├── tests/                          # 🆕 Testing framework
-│   ├── e2e/                       # End-to-end tests
-│   │   └── smoke.spec.js          # Main Electron app tests
-│   ├── fixtures/                  # Test data and files (if needed)
-│   └── README.md                  # Comprehensive documentation
-├── playwright.config.js            # 🆕 Playwright configuration
-└── package.json                   # 🆕 Updated with test scripts
+├── tests/
+│   ├── e2e/                         # All E2E suites (each file is a suite)
+│   │   ├── unseeded/
+│   │   │   └── first-run.spec.js    # First‑run flow (unseeded)
+│   │   ├── smoke.spec.js            # Manual-only smoke (excluded by default)
+│   │   └── seeded/...
+│   ├── fixtures/
+│   │   ├── test-songs/              # Curated seed MP3s
+│   │   └── test-app-data/           # Canonical seeded mxvoice.db
+│   ├── setup/                       # Global setup/teardown & helpers
+│   ├── utils/                       # Launch, environment managers
+│   └── README.md
+├── playwright.config.js             # Playwright configuration
+└── package.json                     # Test scripts
 ```
 
-## 🚀 Key Features (SIMPLIFIED!)
+## 🚀 Key Features
 
-### 1. **Complete Isolation from Real App** 🛡️
-- ✅ **100% isolated test environment** - Your real app is completely safe
-- ✅ **Separate Electron app instances** - Tests launch fresh app instances
-- ✅ **Automatic cleanup** - No test artifacts remain
-- ✅ **Environment isolation** - Test environment variables don't affect real app
+### 1) Per‑Suite Isolation (each test file)
+- ✅ Each suite launches the app with a unique `userDataDir`
+- ✅ Inside that directory: `db/`, `music/`, `hotkeys/`, and `config.json`
+- ✅ Suite DB is copied from the canonical seeded DB into `db/mxvoice.db`
+- ✅ Suite music is copied from `tests/fixtures/test-songs/` into `music/`
+- ✅ App runs with `E2E_USER_DATA_DIR=<suite userDataDir>` (fully isolated)
+- ✅ Diagnostics print the suite paths and file listings at launch
 
-### 2. **Modern Electron App Testing**
-- ✅ **Automatic app launch** - Tests launch your app automatically
-- ✅ **Real app testing** - Tests interact with actual UI
-- ✅ **Fast execution** - No waiting for app startup
-- ✅ **Reliable results** - Fresh app instance for each test suite
+### 2) Cleanup and Safety
+- ✅ Global teardown deletes all per‑suite artifacts under `tests/fixtures/suites/`
+- ✅ Per‑suite `test-user-data*` directories are also removed
+- ✅ Real app data is never touched
 
-### 3. **Simple Test Environment**
-- ✅ **No complex setup** - Playwright handles everything
-- ✅ **No database isolation** - Not needed with app instance isolation
-- ✅ **No file system isolation** - Not needed with app instance isolation
-- ✅ **Automatic state management** - Each test starts with clean slate
+### 3) Electron App Testing
+- ✅ Real app UI assertions (no mocking of Electron)
+- ✅ Deterministic Electron binary via `executablePath`
+- ✅ CI‑friendly with artifacts, traces/screenshots, and optional retries
 
 ## 🛠️ Available Commands (UPDATED!)
 
@@ -56,67 +63,44 @@ yarn playwright test tests/e2e/smoke.spec.js
 ```
 
 ## 📊 Test Coverage (CURRENT!)
+Common suites include: unseeded first‑run flow and seeded feature suites (categories, hotkeys, playback, preferences, search, songs add/delete/edit). A manual‑only smoke test exists but is excluded from default runs.
 
-### Current Tests (3 tests in smoke.spec.js)
-1. **App Launch & Basic UI** 
-   - Main window visibility
-   - Page content verification
-   - Basic element detection
+## 🔧 How It Works (UPDATED)
 
-2. **UI Element Discovery**
-   - Element counting and analysis
-   - Button, input, and link detection
-   - Page structure verification
-
-3. **Basic Interactions**
-   - Page clicking
-   - Button interactions
-   - Input field testing
-
-## 🔧 How It Works (UPDATED!)
-
-### Test Lifecycle
+### Suite Lifecycle (per file)
 ```javascript
-// 1. Test suite starts
+import { _electron as electron, test, expect } from '@playwright/test';
+import { launchSeededApp, closeApp } from '../utils/seeded-launch.js';
+
+let app, page;
+
 test.beforeAll(async () => {
-  // 2. Launch fresh Electron app instance
-  app = await electron.launch({
-    args: ['.'],
-    env: { NODE_ENV: 'test', APP_TEST_MODE: '1' }
-  });
-  page = await app.firstWindow();
+  // Creates unique userDataDir with db/music/hotkeys inside it,
+  // copies seeded DB and songs, logs the paths, and launches the app.
+  ({ app, page } = await launchSeededApp(electron, 'my-suite'));
 });
 
-// 3. Run tests against the app
-test('should work', async () => {
-  await expect(page.locator('button')).toBeVisible();
-});
-
-// 4. Clean up automatically
 test.afterAll(async () => {
-  await app.close(); // App instance destroyed
+  await closeApp(app);
+});
+
+test('example', async () => {
+  await expect(page.locator('body')).not.toBeEmpty();
 });
 ```
-
-### Key Benefits
-- ✅ **No manual app startup** required
-- ✅ **Fresh app instance** for each test suite
-- ✅ **Automatic cleanup** after tests
-- ✅ **Real app testing** with actual UI
-- ✅ **Fast execution** - no waiting for app loading
 
 ## 🎯 What We're Testing
 
 ### **Electron App Features**
-- ✅ **App Launch & Window Management** - App starts correctly and shows main window
-- ✅ **UI Elements** - Basic page structure and elements
-- ✅ **User Interactions** - Button clicks, input filling
-- ✅ **Responsive Design** - Different viewport sizes
+- ✅ App Launch & Window Management
+- ✅ UI Elements and structure
+- ✅ User Interactions (menus, context menus, keyboard)
+- ✅ Seeded flows (search, add/edit/delete songs)
 
 ### **Test Structure**
-- **`smoke.spec.js`** - Core app functionality and UI interactions
-- **Isolated Environment** - Each test suite gets fresh app instance
-- **Real App Testing** - Tests launch the actual Electron app
+- **`unseeded/first-run.spec.js`** — First‑run flow (no pre‑seeded DB)
+- **`seeded/*`** — Feature suites against seeded data
+- Manual: **`smoke.spec.js`** — Basic boot verification (excluded from default runs; use `yarn test:smoke`)
 
 ## 🚀 Getting Started
 
@@ -193,8 +177,7 @@ yarn test:debug
 
 ## 📚 Documentation
 
-- **`tests/README.md`** - Complete testing guide
-- **`tests/ELECTRON_TESTING_GUIDE.md`** - Electron-specific testing
-- **`tests/ISOLATION_GUARANTEE.md`** - Safety guarantees
+- **`tests/README.md`** — Complete testing guide
+- **`tests/ELECTRON_TESTING_GUIDE.md`** — Electron‑specific testing
 
 **Your testing framework is modern, simple, and powerful!** 🎉🚀
