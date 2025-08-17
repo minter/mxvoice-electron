@@ -1,4 +1,5 @@
 import { _electron as electron, test, expect } from '@playwright/test';
+import electronPath from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -20,6 +21,7 @@ test.describe('Mx. Voice App Smoke Tests', () => {
     const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
 
     app = await electron.launch({
+      executablePath: electronPath,
       args: ['.'], // assumes "main" in package.json points at your entry file
       // If you need a specific Electron binary, set executablePath
       // executablePath: require('electron') as unknown as string

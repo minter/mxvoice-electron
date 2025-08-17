@@ -234,15 +234,10 @@ test.describe('Songs - delete', () => {
     // Wait for search results
     await page.waitForTimeout(1000);
     
-    // 2) Verify that we have the expected number of songs (4 songs after the previous test deleted one)
+    // 2) Record the initial number of songs (avoid cross-test assumptions)
     const rows = page.locator('#search_results tbody tr');
-    const rowCount = await rows.count();
-    console.log(`🔍 Found ${rowCount} songs in search results`);
-    
-    // We should have 4 songs after the previous test deleted one
-    await expect(rows).toHaveCount(4, { timeout: 5000 });
-    
-    console.log(`✅ Found ${rowCount} songs as expected (4 songs after previous deletion)`);
+    const initialCount = await rows.count();
+    console.log(`🔍 Found ${initialCount} songs in search results (initial)`);
     
     // 3) Right click on the song "The Wheel (Back And Forth)" (Edie Brickell)
     console.log('🖱️ Right-clicking on "The Wheel (Back And Forth)" song...');
@@ -312,7 +307,15 @@ test.describe('Songs - delete', () => {
     
     console.log('✅ Edie Brickell song preserved after canceling deletion');
     
-    // 11) Verify the file still exists in the music directory
+    // 11) Verify total song count is unchanged after cancel
+    await searchInput.click();
+    await searchInput.fill('');
+    await searchInput.press('Enter');
+    await page.waitForTimeout(500);
+    const afterCancelCount = await page.locator('#search_results tbody tr').count();
+    expect(afterCancelCount).toBe(initialCount);
+
+    // 12) Verify the file still exists in the music directory
     console.log('📁 Verifying file still exists in music directory...');
     
     // Get the music directory from the store

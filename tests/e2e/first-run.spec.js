@@ -1,4 +1,5 @@
 import { _electron as electron, test, expect } from '@playwright/test';
+import electronPath from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -26,6 +27,7 @@ test.describe('First run flow', () => {
     const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
 
     app = await electron.launch({
+      executablePath: electronPath,
       args: ['.'],
       env: {
         ...process.env,
