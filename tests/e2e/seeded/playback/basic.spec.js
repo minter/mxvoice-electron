@@ -117,6 +117,79 @@ test.describe('Playback - basic', () => {
     await waitForSilence(page);
   });
 
+  test('pause functionality and time display', async () => {
+    // Search for "Weird Al" to get multiple results
+    const searchInput = page.locator('#omni_search');
+    await searchInput.clear();
+    await searchInput.fill('Weird Al');
+    await searchInput.press('Enter');
+    
+    // Wait for search results to appear
+    await page.waitForTimeout(1000);
+    
+    // Wait for results and double-click the first Weird Al song
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(1, { timeout: 5000 });
+    const songRow = rows.first();
+    await songRow.dblclick();
+    
+    // Wait for the play button to become enabled
+    const playButton = page.locator('#play_button');
+    await expect(playButton).toBeEnabled({ timeout: 5000 });
+    
+    // Start playback
+    await playButton.click();
+    
+    // Immediately pause playback
+    await page.waitForTimeout(100); // Brief moment to let playback start
+    const pauseButton = page.locator('#pause_button');
+    await expect(pauseButton).toBeVisible();
+    await pauseButton.click();
+    
+    // Wait for UI to update
+    await page.waitForTimeout(500);
+    
+    // Verify time display shows 0:00 elapsed and 0:06 remaining
+    const timeElapsed = page.locator('#timer');
+    const timeRemaining = page.locator('#duration');
+    
+    await expect(timeElapsed).toHaveText('0:00');
+    await expect(timeRemaining).toHaveText('-0:06');
+    
+    // Verify play button is visible again (not pause button)
+    await expect(playButton).toBeVisible();
+    await expect(pauseButton).not.toBeVisible();
+    
+    // Resume playback and let it play for 3 seconds
+    await playButton.click();
+    await page.waitForTimeout(3000); // Play for 3 seconds
+    
+    // Verify time display shows 0:03 elapsed and 0:03 remaining
+    await expect(timeElapsed).toHaveText('0:03');
+    await expect(timeRemaining).toHaveText('-0:03');
+    
+    // Press stop button
+    const stopButton = page.locator('#stop_button');
+    await stopButton.click();
+    
+    // Wait for UI to update
+    await page.waitForTimeout(500);
+    
+    // Verify both time displays are reset to 0:00
+    await expect(timeElapsed).toHaveText('0:00');
+    await expect(timeRemaining).toHaveText('0:00');
+    
+    // Press play again
+    await playButton.click();
+    
+    // Wait for playback to start
+    await page.waitForTimeout(500);
+    
+    // Verify song title is displayed correctly
+    const songNowPlaying = page.locator('#song_now_playing');
+    await expect(songNowPlaying).toHaveText('Eat It by Weird Al Yankovic');
+  });
+
   // test('stop button stops playback', async () => {
   //   ...
   // });
