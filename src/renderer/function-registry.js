@@ -343,7 +343,7 @@ class FunctionRegistry {
     this.registerModule('hotkeys', {
       playSongFromHotkey: 'playSongFromHotkey',
       switchToHotkeyTab: 'switchToHotkeyTab',
-      populateHotkeys: 'populateHotkeysWrapper',
+      populateHotkeys: 'populateHotkeys',
       clearHotkeys: 'clearHotkeysWrapper',
       renameHotkeyTab: 'renameHotkeyTabWrapper',
       setLabelFromSongId: 'setLabelFromSongId',

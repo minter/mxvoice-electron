@@ -36,6 +36,43 @@ test.describe('Hotkeys - save & load', () => {
   
     // Give app time to initialize
     await page.waitForTimeout(1500);
+    
+    // Ensure function registry is properly set up for hotkey loading
+    await page.evaluate(async () => {
+      // Wait for function coordination to be available
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      while (attempts < maxAttempts) {
+        if (window.moduleRegistry?.hotkeys && typeof window.populateHotkeys === 'function') {
+          console.log('✅ Function registry properly set up for hotkeys');
+          break;
+        }
+        
+        // Try to manually set up the function registry if needed
+        if (window.moduleRegistry?.hotkeys && !window.populateHotkeys) {
+          console.log('🔄 Manually setting up populateHotkeys function...');
+          const hotkeysModule = window.moduleRegistry.hotkeys;
+          if (hotkeysModule.getAllHotkeyFunctions) {
+            const functions = hotkeysModule.getAllHotkeyFunctions();
+            if (functions.populateHotkeys) {
+              window.populateHotkeys = functions.populateHotkeys;
+              console.log('✅ Manually registered populateHotkeys function');
+              break;
+            }
+          }
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        attempts++;
+      }
+      
+      if (attempts >= maxAttempts) {
+        console.warn('⚠️ Function registry setup incomplete after maximum attempts');
+      }
+    });
+    
+    await page.waitForTimeout(1000);
   });
 
   test.beforeEach(async () => {
