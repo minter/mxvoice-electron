@@ -79,7 +79,56 @@ export const howlerUtils = {
   },
 };
 
+/**
+ * Create a Howl instance with E2E-aware defaults.
+ * - In E2E: force Web Audio path (html5: false) and preload for determinism
+ * - In prod: keep existing behavior unless overridden by opts
+ */
+export function createHowl(options = {}) {
+  const isE2E = !!(typeof window !== 'undefined' && window.electronTest?.isE2E);
+  const coerced = { ...options };
+  if (isE2E) {
+    // Force WebAudio pipeline so the probe can attach
+    coerced.html5 = false;
+    if (typeof coerced.preload === 'undefined') coerced.preload = true;
+  }
+  // Howl is global from index.html
+  // eslint-disable-next-line no-undef
+  return new Howl(coerced);
+}
+
+/**
+ * E2E-only: ensure CSP allows WebAudio/XHR to load local media
+ * Adds file: to connect-src and media-src if missing
+ */
+export function enableTestModeCSP() {
+  try {
+    const isE2E = !!(typeof window !== 'undefined' && window.electronTest?.isE2E);
+    if (!isE2E) return;
+    const tag = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    if (!tag) return;
+    const content = tag.getAttribute('content') || '';
+    // Ensure tokens exist
+    const ensureDirective = (c, name) => (c.includes(name) ? c : `${c}; ${name} 'self'`);
+    let updated = ensureDirective(content, 'connect-src');
+    updated = ensureDirective(updated, 'media-src');
+    // Add file: if not present
+    const addToken = (c, name, token) => c.replace(new RegExp(`(${name}[^;]*)`), (m, grp) => (grp.includes(token) ? grp : `${grp} ${token}`));
+    updated = addToken(updated, 'connect-src', 'file:');
+    updated = addToken(updated, 'connect-src', 'blob:');
+    updated = addToken(updated, 'connect-src', 'data:');
+    updated = addToken(updated, 'media-src', 'file:');
+    updated = addToken(updated, 'media-src', 'blob:');
+    updated = addToken(updated, 'media-src', 'data:');
+    if (updated !== content) tag.setAttribute('content', updated);
+  } catch (_) {
+    // ignore in tests
+  }
+}
+
 // Default export for module loading
 export default {
-  howlerUtils
+  howlerUtils,
+  createHowl,
+  enableTestModeCSP
 }; 

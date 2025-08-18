@@ -36,6 +36,32 @@ try {
   const secureAPIExposed = secureApiExposer.exposeSecureAPI();
   if (secureAPIExposed) {
     debugLog.info('✅ Secure API exposed via contextBridge (context isolation enabled)');
+    
+    // Expose E2E environment flag for testing
+    if (process.env.APP_TEST_MODE === '1') {
+      try {
+        const _e2eState = { isE2E: true, probe: null, logs: [] };
+        const plog = (msg) => { try { _e2eState.logs.push(String(msg)); } catch (_) {} };
+        contextBridge.exposeInMainWorld('electronTest', {
+          isE2E: _e2eState.isE2E,
+          environment: {
+            E2E: true,
+            APP_TEST_MODE: '1'
+          },
+          setAudioProbe: (probe) => { _e2eState.probe = probe || null; plog('[preload] probe set'); return true; },
+          getAudioProbe: () => _e2eState.probe || null,
+          getLogs: () => _e2eState.logs.slice(),
+          log: (msg) => { plog(`[preload] ${String(msg)}`); }
+        });
+        debugLog.info('✅ E2E test environment exposed via contextBridge');
+      } catch (error) {
+        debugLog.error('Failed to expose E2E environment:', { 
+          module: 'preload', 
+          function: 'e2e-exposure',
+          error: error?.message || 'Unknown error' 
+        });
+      }
+    }
     // Capture runtime errors and unhandled rejections for persistence
     try {
                 window.addEventListener('error', (ev) => {

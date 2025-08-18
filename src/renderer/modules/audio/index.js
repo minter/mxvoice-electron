@@ -9,6 +9,8 @@
 import * as audioManager from './audio-manager.js';
 import * as audioController from './audio-controller.js';
 import * as audioUtils from './audio-utils.js';
+import { enableTestModeCSP } from './audio-utils.js';
+import { installAudioProbe, createTestOscillator } from './audio-probe.js';
 
 // Import debug logger
 let debugLog = null;
@@ -44,6 +46,12 @@ class AudioModule {
     
     // Initialize audio utilities
     // this.howlerUtils = audioUtils.howlerUtils; // Function not implemented yet
+    
+    // Test mode audio components
+    this.testOscillator = null;
+    this.audioProbe = null;
+    this.testAudioContext = null;
+    this.testMasterGain = null;
   }
 
   /**
@@ -60,6 +68,14 @@ class AudioModule {
 
       // Initialize audio functionality
       this.setupAudioModule();
+      
+      // In E2E, relax CSP slightly to allow file: media for WebAudio buffering
+      try { enableTestModeCSP(); } catch (_) {}
+
+      // In E2E test mode, set up the audio probe eagerly so tests can measure RMS
+      if (window.electronTest?.isE2E) {
+        this.setupTestMode();
+      }
       
       debugLog?.info('Audio module initialized successfully', { 
         module: 'audio', 
@@ -85,6 +101,57 @@ class AudioModule {
       module: 'audio', 
       function: 'setupAudioModule' 
     });
+  }
+
+  /**
+   * Set up test mode audio components
+   */
+  setupTestMode() {
+    try {
+      window.electronTest?.log?.('[renderer] setupTestMode() called');
+      // Install audio probe for Howler.js
+      this.audioProbe = installAudioProbe();
+      if (this.audioProbe) {
+        window.electronTest?.log?.('[renderer] installAudioProbe() returned a probe');
+      } else {
+        window.electronTest?.log?.('[renderer] installAudioProbe() returned null');
+      }
+      
+      // Create test oscillator
+      this.testOscillator = createTestOscillator();
+      
+      // Expose test oscillator for Playwright access
+      if (typeof window !== 'undefined') {
+        if (!window.electronTest) {
+          window.electronTest = {};
+        }
+        window.electronTest.testOscillator = this.testOscillator;
+      }
+      
+      debugLog?.info('Test mode audio setup complete with Howler.js', {
+        module: 'audio',
+        function: 'setupTestMode'
+      });
+    } catch (error) {
+      debugLog?.error('Failed to setup test mode audio:', {
+        module: 'audio',
+        function: 'setupTestMode',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Ensure test mode is set up (lazy initialization)
+   */
+  ensureTestMode() {
+    if (window.electronTest?.isE2E && !this.audioProbe) {
+      debugLog?.info('Lazy initializing test mode audio components', {
+        module: 'audio',
+        function: 'ensureTestMode'
+      });
+      this.setupTestMode();
+    }
   }
 
   /**

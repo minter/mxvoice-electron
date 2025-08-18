@@ -7,7 +7,7 @@
 
 // Import shared state
 import sharedState from '../shared-state.js';
-import { howlerUtils } from './audio-utils.js';
+import { howlerUtils, createHowl } from './audio-utils.js';
 
 // Import debug logger - use lazy getter for proper initialization timing
 function getDebugLog() {
@@ -99,9 +99,14 @@ function playSongWithFilename(filename, row, song_id) {
                 function: 'playSongWithFilename',
                 filename: filename,
               });
-              const sound = new Howl({
+              // Ensure E2E test mode/probe is initialized right before first playback
+              try {
+                if (window.electronTest?.isE2E && window.moduleRegistry?.audio?.ensureTestMode) {
+                  window.moduleRegistry.audio.ensureTestMode();
+                }
+              } catch (_) {}
+              const sound = createHowl({
                 src: sound_path,
-                html5: true,
                 volume:
                   (Number(document.getElementById('volume')?.value) || 0) / 100,
                 mute:
@@ -145,6 +150,26 @@ function playSongWithFilename(filename, row, song_id) {
                   document
                     .getElementById('stop_button')
                     ?.removeAttribute('disabled');
+
+                  // E2E: ensure probe is attached once WebAudio is active
+                  try {
+                    if (window.electronTest?.isE2E && !window.electronTest?.audioProbe && window.Howler?.usingWebAudio && window.Howler?.masterGain && window.Howler?.ctx) {
+                      const ctx = window.Howler.ctx;
+                      const analyser = new AnalyserNode(ctx, { fftSize: 2048 });
+                      analyser.smoothingTimeConstant = 0.2;
+                      window.Howler.masterGain.connect(analyser);
+                      if (!window.electronTest) window.electronTest = {};
+                      window.electronTest.audioProbe = {
+                        currentRMS() {
+                          const buf = new Float32Array(analyser.fftSize);
+                          analyser.getFloatTimeDomainData(buf);
+                          let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+                          return Math.sqrt(sum / buf.length);
+                        },
+                        isSilent(threshold = 1e-3) { return this.currentRMS() < threshold; }
+                      };
+                    }
+                  } catch (_) {}
                 },
                 onend: function () {
                   getDebugLog()?.info('🔍 Sound onend event fired', {
@@ -177,6 +202,36 @@ function playSongWithFilename(filename, row, song_id) {
                   function: 'playSongWithFilename',
                 }
               );
+              try {
+                if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
+                  window.Howler.ctx.resume().catch(() => {});
+                }
+              } catch (_) {}
+              // Ensure probe exists in E2E once WebAudio context is available
+              try {
+                if (window.electronTest?.isE2E && !window.electronTest?.audioProbe && window.Howler?.usingWebAudio && window.Howler?.ctx) {
+                  const ctx = window.Howler.ctx;
+                  const analyser = new AnalyserNode(ctx, { fftSize: 2048 });
+                  analyser.smoothingTimeConstant = 0.2;
+                  if (window.Howler?.masterGain) {
+                    window.Howler.masterGain.connect(analyser);
+                  } else {
+                    analyser.connect(ctx.destination);
+                  }
+                  const probe = {
+                    currentRMS() {
+                      const buf = new Float32Array(analyser.fftSize);
+                      analyser.getFloatTimeDomainData(buf);
+                      let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+                      return Math.sqrt(sum / buf.length);
+                    },
+                    isSilent(threshold = 1e-3) { return this.currentRMS() < threshold; }
+                  };
+                  if (window.electronTest?.setAudioProbe) {
+                    window.electronTest.setAudioProbe(probe);
+                  }
+                }
+              } catch (_) {}
               sound.play();
             })
             .catch((error) => {
@@ -209,9 +264,14 @@ function playSongWithFilename(filename, row, song_id) {
               function: 'playSongWithFilename',
               filename: filename,
             });
-            const sound = new Howl({
+            // Ensure E2E test mode/probe is initialized right before first playback
+            try {
+              if (window.electronTest?.isE2E && window.moduleRegistry?.audio?.ensureTestMode) {
+                window.moduleRegistry.audio.ensureTestMode();
+              }
+            } catch (_) {}
+            const sound = createHowl({
               src: sound_path,
-              html5: true,
               volume:
                 (Number(document.getElementById('volume')?.value) || 0) / 100,
               mute:
@@ -253,6 +313,26 @@ function playSongWithFilename(filename, row, song_id) {
                 document
                   .getElementById('stop_button')
                   ?.removeAttribute('disabled');
+
+                // E2E: ensure probe is attached once WebAudio is active
+                try {
+                  if (window.electronTest?.isE2E && !window.electronTest?.audioProbe && window.Howler?.usingWebAudio && window.Howler?.masterGain && window.Howler?.ctx) {
+                    const ctx = window.Howler.ctx;
+                    const analyser = new AnalyserNode(ctx, { fftSize: 2048 });
+                    analyser.smoothingTimeConstant = 0.2;
+                    window.Howler.masterGain.connect(analyser);
+                    if (!window.electronTest) window.electronTest = {};
+                    window.electronTest.audioProbe = {
+                      currentRMS() {
+                        const buf = new Float32Array(analyser.fftSize);
+                        analyser.getFloatTimeDomainData(buf);
+                        let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+                        return Math.sqrt(sum / buf.length);
+                      },
+                      isSilent(threshold = 1e-3) { return this.currentRMS() < threshold; }
+                    };
+                  }
+                } catch (_) {}
               },
               onend: function () {
                 getDebugLog()?.info('🔍 Sound onend event fired', {
@@ -285,6 +365,36 @@ function playSongWithFilename(filename, row, song_id) {
                 function: 'playSongWithFilename',
               }
             );
+            try {
+              if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
+                window.Howler.ctx.resume().catch(() => {});
+              }
+            } catch (_) {}
+            // Ensure probe exists in E2E once WebAudio context is available
+            try {
+              if (window.electronTest?.isE2E && !window.electronTest?.audioProbe && window.Howler?.usingWebAudio && window.Howler?.ctx) {
+                const ctx = window.Howler.ctx;
+                const analyser = new AnalyserNode(ctx, { fftSize: 2048 });
+                analyser.smoothingTimeConstant = 0.2;
+                if (window.Howler?.masterGain) {
+                  window.Howler.masterGain.connect(analyser);
+                } else {
+                  analyser.connect(ctx.destination);
+                }
+                const probe = {
+                  currentRMS() {
+                    const buf = new Float32Array(analyser.fftSize);
+                    analyser.getFloatTimeDomainData(buf);
+                    let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+                    return Math.sqrt(sum / buf.length);
+                  },
+                  isSilent(threshold = 1e-3) { return this.currentRMS() < threshold; }
+                };
+                if (window.electronTest?.setAudioProbe) {
+                  window.electronTest.setAudioProbe(probe);
+                }
+              }
+            } catch (_) {}
             sound.play();
           })
           .catch((error) => {

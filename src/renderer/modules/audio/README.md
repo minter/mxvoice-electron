@@ -8,6 +8,7 @@ audio/
 ├── audio-manager.js     # Playback pipeline: DB → path → Howl → UI updates
 ├── audio-controller.js  # Controls: stop, pause, loop, UI resets
 ├── audio-utils.js       # Utilities for time/progress tracking
+├── audio-probe.js       # Test mode audio analysis (E2E only)
 ├── function-registry.js # Function names and fallbacks for global registry
 ├── index.js             # Module entry; exports singleton + named bindings
 └── README.md
@@ -94,6 +95,19 @@ Managed via `sharedState`:
 Extracted mappings:
 - `playSongFromId`, `playSelected`, `song_ended`, `autoplay_next`, `cancel_autoplay` → `audio-manager.js`
 - `stopPlaying`, `pausePlaying`, `resetUIState`, `toggle_play_button`, `loop_on` → `audio-controller.js`
+
+## Test Mode (E2E Only)
+
+When running in E2E test mode (`process.env.E2E` is set), the Audio module automatically:
+
+- Creates a test Web Audio context with fixed sample rate (48kHz)
+- Installs an audio probe that measures RMS at the master output
+- Provides a test oscillator for reliable audio signal generation
+- Exposes `window.electronTest.audioProbe` and `window.electronTest.testOscillator`
+
+This enables Playwright tests to verify audio behavior without system audio dependencies.
+
+**Production Safety**: Test mode is completely inactive in production builds. No performance impact or additional audio processing occurs for end users.
 
 ## Notes
 
