@@ -680,6 +680,27 @@ test.describe('Categories - management', () => {
       
       // Click outside to close the dropdown
       await testPage.locator('body').click();
+      
+      // Now test that songs were moved to Uncategorized by selecting it from the category selector
+      // and verifying that "Theme From The Greatest American Hero" appears in search results
+      const finalCategorySelectForSearch = testPage.locator('#category_select');
+      
+      // Select "Uncategorized" by value on the native select (fires change event)
+      await finalCategorySelectForSearch.selectOption('UNC');
+      
+      // Wait for the search to execute and results to appear
+      await testPage.waitForTimeout(1000);
+      
+      // Verify that the search results area shows one song
+      const searchResults = testPage.locator('#search_results tbody tr');
+      await expect(searchResults).toHaveCount(1, { timeout: 10000 });
+      
+      // Verify that the row contains the expected song title
+      const firstRow = searchResults.nth(0);
+      await expect(firstRow).toContainText('Theme From The Greatest American Hero');
+      
+      // Click outside to close the dropdown
+      await testPage.locator('body').click();
     } finally {
       // Always close the test app instance
       if (testApp) {
