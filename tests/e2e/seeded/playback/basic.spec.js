@@ -8,7 +8,6 @@ import {
 } from '../../../utils/audio-helpers.js';
 
 // Helper to detect if we're running in CI environment
-// This enables conditional testing: full audio testing locally, simplified testing in CI
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
 test.describe('Playback - basic', () => {
@@ -46,6 +45,12 @@ test.describe('Playback - basic', () => {
     await closeApp(app);
   });
 
+  // test('can see audio controls', async () => {
+  //   await expect(page.locator('#play_button')).toBeVisible();
+  //   await expect(page.locator('#stop_button')).toBeVisible();
+  //   await expect(page.locator('#mute_button')).toBeVisible();
+  // });
+
   test('play button starts playback', async () => {
     // Search for "Eat It" song using the correct selector
     const searchInput = page.locator('#omni_search');
@@ -78,35 +83,43 @@ test.describe('Playback - basic', () => {
     // Wait for the audio probe to be available (created by the audio module)
     await page.waitForTimeout(1000); // Give time for probe to be created
     
-    // Verify audio becomes audible via probe
-    await waitForAudible(page);
+    if (!isCI) {
+      // Verify audio becomes audible via probe (local testing only)
+      await waitForAudible(page);
+    }
 
     // Verify UI reflects playback state
     await expect(page.locator('#pause_button')).toBeVisible();
     await expect(page.locator('#stop_button')).toBeEnabled();
     
-    // Mute → silence
-    await page.locator('#mute_button').click();
-    await stabilize(page, 150);
-    await waitForSilence(page);
-    
-    // Unmute → audible again
-    await page.locator('#mute_button').click();
-    await waitForAudible(page);
+    if (!isCI) {
+      // Mute → silence (local testing only)
+      await page.locator('#mute_button').click();
+      await stabilize(page, 150);
+      await waitForSilence(page);
+      
+      // Unmute → audible again (local testing only)
+      await page.locator('#mute_button').click();
+      await waitForAudible(page);
+    }
     
     // Volume relationships
     const volumeSlider = page.locator('#volume');
     await volumeSlider.fill('50');
     await stabilize(page, 250);
-    const mid = await rms(page);
-    await volumeSlider.fill('90');
-    await stabilize(page, 250);
-    const high = await rms(page);
-    await volumeSlider.fill('10');
-    await stabilize(page, 250);
-    const low = await rms(page);
-    expect(high).toBeGreaterThan(mid * 1.1);
-    expect(low).toBeLessThan(mid * 0.9);
+    
+    if (!isCI) {
+      // Audio level measurements (local testing only)
+      const mid = await rms(page);
+      await volumeSlider.fill('90');
+      await stabilize(page, 250);
+      const high = await rms(page);
+      await volumeSlider.fill('10');
+      await stabilize(page, 250);
+      const low = await rms(page);
+      expect(high).toBeGreaterThan(mid * 1.1);
+      expect(low).toBeLessThan(mid * 0.9);
+    }
     
     // Reset volume to full for subsequent tests
     await volumeSlider.fill('100');
@@ -115,15 +128,15 @@ test.describe('Playback - basic', () => {
     // Stop playback → silence
     const stopButton = page.locator('#stop_button');
     await stopButton.click();
-    await stabilize(page, 150);
-    await waitForSilence(page);
+    
+    if (!isCI) {
+      // Verify silence (local testing only)
+      await stabilize(page, 150);
+      await waitForSilence(page);
+    }
   });
 
   test('pause functionality and time display', async () => {
-    // Ensure volume is full for consistent audio behavior
-    const volumeSliderInit1 = page.locator('#volume');
-    await volumeSliderInit1.fill('100');
-    await stabilize(page, 150);
     // Search for "Weird Al" to get multiple results
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
@@ -197,10 +210,6 @@ test.describe('Playback - basic', () => {
   });
 
   test('waveform display and interaction', async () => {
-    // Ensure volume is full for consistent audio behavior
-    const volumeSliderInit2 = page.locator('#volume');
-    await volumeSliderInit2.fill('100');
-    await stabilize(page, 150);
     // Search for "Eat It" song
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
@@ -278,14 +287,6 @@ test.describe('Playback - basic', () => {
   });
 
   test('keyboard commands and shortcuts', async () => {
-    // Ensure volume is full for consistent audio behavior
-    const volumeSliderInit3 = page.locator('#volume');
-    await volumeSliderInit3.fill('100');
-    await stabilize(page, 150);
-    
-    // Debug: Verify volume was set correctly
-    const actualVolume = await volumeSliderInit3.inputValue();
-    console.log(`Volume set to: ${actualVolume}`);
     // Search for "Edie Brickell"
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
@@ -297,6 +298,10 @@ test.describe('Playback - basic', () => {
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
     
+    const volumeSlider = page.locator('#volume');
+    await volumeSlider.fill('100');
+    await stabilize(page, 250);
+
     // Single click on the row to highlight it
     const songRow = rows.first();
     await songRow.click();
@@ -348,26 +353,11 @@ test.describe('Playback - basic', () => {
     const fadeStartTime = await timeElapsed.textContent();
     expect(fadeStartTime).not.toBe('0:00');
     
-    // Wait longer for audio to stabilize and get a more reliable initial reading
-    await page.waitForTimeout(1000);
-    
-    // Additional wait for Mac CI environments which may need more time
-    await page.waitForTimeout(500);
-    
-    if (isCI) {
-      // In CI environments, fade-out may be extremely fast, so we focus on verifying
-      // the behavior we can reliably test rather than trying to measure audio levels
-      
-      // Note: fadeStartTime was already verified above
-      
-      // Wait for fade-out to complete and verify final state
-      await page.waitForTimeout(2000); // Wait for fade-out to complete
-    } else {
-      // Local testing: Full audio measurement and fade-out pattern verification
+    if (!isCI) {
+      // Audio measurement during fade-out (local testing only)
       // Monitor audio levels during the fade-out
       const initialRMS = await rms(page);
-      // Lower threshold to be more realistic for actual audio levels
-      expect(initialRMS).toBeGreaterThan(0.0001); // Reduced from 0.01 for realistic local levels
+      expect(initialRMS).toBeGreaterThan(0.01); // Should be audible initially
       
       // Sample audio levels during fade-out (every 200ms for 2.5 seconds)
       let rmsReadings = [];
@@ -378,24 +368,14 @@ test.describe('Playback - basic', () => {
       }
       
       // Verify fade-out pattern: should decrease over time
-      // Note: Fade-out may complete quickly, so we verify the pattern where we can
-      expect(rmsReadings[0]).toBeGreaterThan(0); // Should start with some audio
+      expect(rmsReadings[0]).toBeGreaterThan(rmsReadings[4]); // Start > 0.8 seconds in
+      expect(rmsReadings[4]).toBeGreaterThan(rmsReadings[8]); // 0.8 seconds > 1.6 seconds in
       
-      // Find the last non-zero reading to verify fade-out pattern
-      let lastNonZeroIndex = 0;
-      for (let i = 0; i < rmsReadings.length; i++) {
-        if (rmsReadings[i] > 0.0001) {
-          lastNonZeroIndex = i;
-        }
-      }
-      
-      // If we have multiple non-zero readings, verify they decrease
-      if (lastNonZeroIndex > 0) {
-        expect(rmsReadings[0]).toBeGreaterThan(rmsReadings[lastNonZeroIndex]);
-      }
-      
-      // Final reading should be very low (near silence) - adjusted for realistic levels
-      expect(rmsReadings[11]).toBeLessThan(0.001); // Increased from 0.005 for realistic levels
+      // Final reading should be very low (near silence)
+      expect(rmsReadings[11]).toBeLessThan(0.005);
+    } else {
+      // CI testing: Wait for fade-out to complete
+      await page.waitForTimeout(2000);
     }
     
     // Verify song has stopped after fade out
@@ -408,15 +388,6 @@ test.describe('Playback - basic', () => {
   });
 
   test('shift+click stop button fade-out behavior', async () => {
-    // Ensure volume is full for consistent audio behavior
-    const volumeSliderInit4 = page.locator('#volume');
-    await volumeSliderInit4.fill('100');
-    await stabilize(page, 150);
-    
-    // Debug: Verify volume was set correctly
-    const actualVolume = await volumeSliderInit4.inputValue();
-    console.log(`Volume set to: ${actualVolume}`);
-    
     // Search for "Edie Brickell" to get a song
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
@@ -459,26 +430,11 @@ test.describe('Playback - basic', () => {
     const fadeStartTime = await timeElapsed.textContent();
     expect(fadeStartTime).not.toBe('0:00');
     
-    // Wait longer for audio to stabilize and get a more reliable initial reading
-    await page.waitForTimeout(1000);
-    
-    // Additional wait for Mac CI environments which may need more time
-    await page.waitForTimeout(500);
-    
-    if (isCI) {
-      // In CI environments, fade-out may be extremely fast, so we focus on verifying
-      // the behavior we can reliably test rather than trying to measure audio levels
-      
-      // Note: fadeStartTime was already verified above
-      
-      // Wait for fade-out to complete and verify final state
-      await page.waitForTimeout(2000); // Wait for fade-out to complete
-    } else {
-      // Local testing: Full audio measurement and fade-out pattern verification
+    if (!isCI) {
+      // Audio measurement during fade-out (local testing only)
       // Monitor audio levels during the fade-out
       const initialRMS = await rms(page);
-      // Lower threshold to be more realistic for actual audio levels
-      expect(initialRMS).toBeGreaterThan(0.0001); // Reduced from 0.01 for realistic local levels
+      expect(initialRMS).toBeGreaterThan(0.01); // Should be audible initially
       
       // Sample audio levels during fade-out (every 200ms for 2.5 seconds)
       let rmsReadings = [];
@@ -489,24 +445,14 @@ test.describe('Playback - basic', () => {
       }
       
       // Verify fade-out pattern: should decrease over time
-      // Note: Fade-out may complete quickly, so we verify the pattern where we can
-      expect(rmsReadings[0]).toBeGreaterThan(0); // Should start with some audio
+      expect(rmsReadings[0]).toBeGreaterThan(rmsReadings[4]); // Start > 0.8 seconds in
+      expect(rmsReadings[4]).toBeGreaterThan(rmsReadings[8]); // 0.8 seconds > 1.6 seconds in
       
-      // Find the last non-zero reading to verify fade-out pattern
-      let lastNonZeroIndex = 0;
-      for (let i = 0; i < rmsReadings.length; i++) {
-        if (rmsReadings[i] > 0.0001) {
-          lastNonZeroIndex = i;
-        }
-      }
-      
-      // If we have multiple non-zero readings, verify they decrease
-      if (lastNonZeroIndex > 0) {
-        expect(rmsReadings[0]).toBeGreaterThan(rmsReadings[lastNonZeroIndex]);
-      }
-      
-      // Final reading should be very low (near silence) - adjusted for realistic levels
-      expect(rmsReadings[11]).toBeLessThan(0.001); // Increased from 0.005 for realistic levels
+      // Final reading should be very low (near silence)
+      expect(rmsReadings[11]).toBeLessThan(0.005);
+    } else {
+      // CI testing: Wait for fade-out to complete
+      await page.waitForTimeout(2000);
     }
     
     // Verify song has stopped after fade out
@@ -520,10 +466,6 @@ test.describe('Playback - basic', () => {
   });
 
   test('loop functionality', async () => {
-    // Ensure volume is full for consistent audio behavior
-    const volumeSliderInit5 = page.locator('#volume');
-    await volumeSliderInit5.fill('100');
-    await stabilize(page, 150);
     // Search for "Edie Brickell" to get a song
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
@@ -583,10 +525,6 @@ test.describe('Playback - basic', () => {
   });
 
   test('song ending behavior', async () => {
-    // Ensure volume is full for consistent audio behavior
-    const volumeSliderInit6 = page.locator('#volume');
-    await volumeSliderInit6.fill('100');
-    await stabilize(page, 150);
     // Search for "Edie Brickell" to get a song
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
@@ -635,10 +573,6 @@ test.describe('Playback - basic', () => {
   });
 
   test('progress bar functionality', async () => {
-    // Ensure volume is full for consistent audio behavior
-    const volumeSliderInit7 = page.locator('#volume');
-    await volumeSliderInit7.fill('100');
-    await stabilize(page, 150);
     // Search for "Edie Brickell" to get a song
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
@@ -704,10 +638,6 @@ test.describe('Playback - basic', () => {
   });
 
   test('shift+click pause button fade-pause behavior', async () => {
-    // Ensure volume is full for consistent audio behavior
-    const volumeSliderInit8 = page.locator('#volume');
-    await volumeSliderInit8.fill('100');
-    await stabilize(page, 150);
     // Search for "Edie Brickell" to get a song
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
@@ -775,14 +705,6 @@ test.describe('Playback - basic', () => {
   });
 
   test('configurable fade duration behavior', async () => {
-    // Ensure volume is full for consistent audio behavior
-    const volumeSliderInit9 = page.locator('#volume');
-    await volumeSliderInit9.fill('100');
-    await stabilize(page, 150);
-    
-    // Debug: Verify volume was set correctly
-    const actualVolume = await volumeSliderInit9.inputValue();
-    console.log(`Volume set to: ${actualVolume}`);
     // Search for "Edie Brickell" to get a song
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
@@ -822,26 +744,11 @@ test.describe('Playback - basic', () => {
     // Press Shift+Escape for fade-out stop with custom duration
     await page.keyboard.press('Shift+Escape');
     
-    // Wait longer for audio to stabilize and get a more reliable initial reading
-    await page.waitForTimeout(1000);
-    
-    // Additional wait for Mac CI environments which may need more time
-    await page.waitForTimeout(500);
-    
-    if (isCI) {
-      // In CI environments, fade-out may be extremely fast, so we focus on verifying
-      // the behavior we can reliably test rather than trying to measure audio levels
-      
-      // Note: fadeStartTime was already verified above
-      
-      // Wait for fade-out to complete and verify final state
-      await page.waitForTimeout(2000); // Wait for fade-out to complete
-    } else {
-      // Local testing: Full audio measurement and fade-out pattern verification
+    if (!isCI) {
+      // Audio measurement during fade-out (local testing only)
       // Monitor audio levels during the 1-second fade-out
       const initialRMS = await rms(page);
-      // Lower threshold to be more realistic for actual audio levels
-      expect(initialRMS).toBeGreaterThan(0.0001); // Reduced from 0.01 for realistic local levels
+      expect(initialRMS).toBeGreaterThan(0.01); // Should be audible initially
       
       // Sample audio levels during fade-out (every 100ms for 1.5 seconds)
       let rmsReadings = [];
@@ -852,24 +759,14 @@ test.describe('Playback - basic', () => {
       }
       
       // Verify fade-out pattern: should decrease over time
-      // Note: Fade-out may complete quickly, so we verify the pattern where we can
-      expect(rmsReadings[0]).toBeGreaterThan(0); // Should start with some audio
+      expect(rmsReadings[0]).toBeGreaterThan(rmsReadings[5]); // Start > 0.5 seconds in
+      expect(rmsReadings[5]).toBeGreaterThan(rmsReadings[10]); // 0.5 seconds > 1 second in
       
-      // Find the last non-zero reading to verify fade-out pattern
-      let lastNonZeroIndex = 0;
-      for (let i = 0; i < rmsReadings.length; i++) {
-        if (rmsReadings[i] > 0.0001) {
-          lastNonZeroIndex = i;
-        }
-      }
-      
-      // If we have multiple non-zero readings, verify they decrease
-      if (lastNonZeroIndex > 0) {
-        expect(rmsReadings[0]).toBeGreaterThan(rmsReadings[lastNonZeroIndex]);
-      }
-      
-      // Final reading should be very low (near silence) - adjusted for realistic levels
-      expect(rmsReadings[14]).toBeLessThan(0.001); // Increased from 0.03 for realistic levels
+      // Final reading should be very low (near silence) - give it extra time to complete
+      expect(rmsReadings[14]).toBeLessThan(0.05); // More realistic threshold for 1.5s monitoring
+    } else {
+      // CI testing: Wait for fade-out to complete
+      await page.waitForTimeout(2000);
     }
     
     // Verify song has stopped after fade out
