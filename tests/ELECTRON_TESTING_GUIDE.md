@@ -69,6 +69,17 @@ test.beforeAll(async () => {
 - Avoid using Node/Electron APIs directly in the renderer; our app uses secure preload IPC. Tests interact via DOM/UI.
 - When adding scenario suites that require preset data, create fixtures under `tests/fixtures/` and point the app to them via the store or initial setup in a dedicated global setup step.
 
+### Audio measurements (local vs CI)
+Some playback tests perform real audio checks using renderer tap helpers (`rms(page)`, `waitForAudible(page)`, `waitForSilence(page)`). To keep CI reliable:
+
+- On GitHub Actions: audio tap checks are skipped; tests assert UI state and timing instead (e.g., waiting for fade‑out completion).
+- Locally: full audio verification runs (audible/silence verification, volume relationship checks, fade‑out sampling).
+
+Tip: To mimic CI locally, run with `CI=true`:
+```bash
+CI=true yarn test
+```
+
 ### Troubleshooting
 - If you see your real data, ensure the suite sets `APP_TEST_MODE=1`, `E2E_USER_DATA_DIR`, and temp `HOME/APPDATA`.
 - Use `yarn test:ui` or `yarn test:headed` to inspect UI state live.

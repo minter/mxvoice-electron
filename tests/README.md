@@ -167,3 +167,19 @@ This testing framework provides:
 - **CI/CD ready** configuration
 
 Your Mx. Voice app is now properly testable! 🚀
+
+---
+
+## CI vs Local: Audio Measurement Behavior
+
+Some end‑to‑end playback tests measure real audio using the renderer tap utilities `rms(page)`, `waitForAudible(page)`, and `waitForSilence(page)`.
+
+- Locally: Full audio verification runs (audible/silence checks, volume relationships, fade‑out sampling).
+- On GitHub Actions: These audio‑tap sections are disabled to avoid flakiness on runners with non‑deterministic audio backends. The tests still validate UI state, timing (e.g., fade‑out completion), and behavior.
+
+To mimic CI behavior locally, run with `CI=true` in the environment.
+
+Example:
+```bash
+CI=true yarn test
+```
