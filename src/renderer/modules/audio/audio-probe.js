@@ -15,6 +15,50 @@ try {
 }
 
 /**
+ * Create an audio probe from Howler.js context
+ * @param {AudioContext} ctx - Howler's audio context
+ * @param {GainNode} masterGain - Howler's master gain node (optional)
+ * @returns {Object} Probe interface with currentRMS and isSilent
+ */
+export function createProbeFromHowler(ctx, masterGain = null) {
+  if (!ctx) return null;
+  
+  try {
+    const analyser = new AnalyserNode(ctx, { fftSize: 2048 });
+    analyser.smoothingTimeConstant = 0.2;
+    
+    // Connect to master gain if available, otherwise to destination
+    if (masterGain) {
+      masterGain.connect(analyser);
+    } else {
+      analyser.connect(ctx.destination);
+    }
+    
+    return {
+      currentRMS() {
+        const buf = new Float32Array(analyser.fftSize);
+        analyser.getFloatTimeDomainData(buf);
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) {
+          sum += buf[i] * buf[i];
+        }
+        return Math.sqrt(sum / buf.length);
+      },
+      isSilent(threshold = 1e-3) {
+        return this.currentRMS() < threshold;
+      }
+    };
+  } catch (error) {
+    debugLog?.error('Failed to create probe from Howler:', {
+      module: 'audio-probe',
+      function: 'createProbeFromHowler',
+      error: error.message
+    });
+    return null;
+  }
+}
+
+/**
  * Install audio probe for testing with Howler.js
  * @returns {Object} Probe interface with currentRMS and isSilent
  */

@@ -108,14 +108,8 @@ class AudioModule {
    */
   setupTestMode() {
     try {
-      window.electronTest?.log?.('[renderer] setupTestMode() called');
       // Install audio probe for Howler.js
       this.audioProbe = installAudioProbe();
-      if (this.audioProbe) {
-        window.electronTest?.log?.('[renderer] installAudioProbe() returned a probe');
-      } else {
-        window.electronTest?.log?.('[renderer] installAudioProbe() returned null');
-      }
       
       // Create test oscillator
       this.testOscillator = createTestOscillator();
