@@ -52,7 +52,7 @@ src/main/
 - Creates `electron-store` with defaults; initializes DebugLog
 - Sets up auto-updater (logger, feed URL on macOS, markdown processing for release notes)
 - First-run flow: create folders, seed DB with starter content if needed
-- Initializes SQLite WebAssembly database using `@sqlite.org/sqlite-wasm`
+- Initializes SQLite WebAssembly database using `node-sqlite3-wasm`
 - Creates the main window and application menu
 - Injects dependencies into modules; registers secure IPC handlers
 

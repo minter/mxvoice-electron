@@ -86,7 +86,7 @@ The app follows a modern Electron architecture with context isolation enabled an
 - IPC handlers validate inputs on the main side
 
 ### Database
-- Uses the official `@sqlite.org/sqlite-wasm` WebAssembly module for cross-platform compatibility
+- Uses the `node-sqlite3-wasm` WebAssembly module for cross-platform compatibility
 - No native binary dependencies - works consistently across all architectures (x64, ARM64)
 - Database files are stored in the user's application data directory
 - Automatic migration support from legacy database formats
@@ -137,21 +137,8 @@ yarn dist                    # Build all platforms locally
 
 #### Building and Signing
 
-**x64 (Intel Mac) builds are now automated via GitHub Actions:**
+**Universal Mac builds (x64 + ARM64) are built locally:**
 
-1. **Push a tag** to trigger the automated build and release:
-   ```bash
-   git tag v4.0.0-pre.2
-   git push origin v4.0.0-pre.2
-   ```
-
-2. **The GitHub Action will automatically:**
-   - Build and sign the x64 macOS app
-   - Create a GitHub release
-   - Upload all assets (DMG, ZIP, blockmap files)
-   - Generate the `latest.yml` file for auto-updates
-
-**ARM64 (Apple Silicon) builds are built locally:**
 ```bash
 yarn build:mac:universal
 ```
@@ -160,6 +147,20 @@ This creates universal builds (x64 + ARM64) in your `dist/` directory. For ARM64
 ```bash
 yarn build:mac:arm64
 ```
+
+**To release to GitHub:**
+1. **Push a tag** to trigger the release:
+   ```bash
+   git tag v4.0.0-pre.2
+   git push origin v4.0.0-pre.2
+   ```
+
+2. **Or use the release scripts directly:**
+   ```bash
+   yarn release:mac:prerelease  # For prerelease builds
+   yarn release:mac             # For stable releases
+   yarn release:mac:draft       # For draft releases
+   ```
 
 #### Auto-Update Support
 
@@ -236,7 +237,7 @@ After building, you can verify the signature:
 
 **Using signtool.exe (if available):**
 ```powershell
-signtool verify /pa "C:\Users\wade\mxvoice-electron\dist\Mx. Voice Setup 3.2.0.exe"
+signtool verify /pa "C:\Users\wade\mxvoice-electron\dist\Mx. Voice Setup 4.0.0-pre.5.exe"
 ```
 You should see "Successfully verified" if the signature is valid.
 
@@ -249,7 +250,7 @@ To publish Windows releases, use your preferred workflow for uploading the signe
 ## Dependencies and Architecture
 
 ### Core Dependencies
-- **Database**: `@sqlite.org/sqlite-wasm` - Official SQLite WebAssembly module
+- **Database**: `node-sqlite3-wasm` - SQLite WebAssembly module for cross-platform database support
 - **UI Framework**: Bootstrap 5 with custom adapter (no jQuery required)
 - **Audio**: Howler.js for audio playback, WaveSurfer.js for waveform visualization
 - **Markdown**: `markdown-it` for processing GitHub release notes
@@ -260,7 +261,7 @@ To publish Windows releases, use your preferred workflow for uploading the signe
 The package.json has been cleaned up to remove orphaned dependencies. All remaining packages are actively used:
 - FontAwesome for UI icons
 - Bootstrap for responsive UI components
-- SQLite WebAssembly for cross-platform database
+- node-sqlite3-wasm for cross-platform database
 - Markdown processing for release notes
 - Audio libraries for playback and visualization
 - Electron utilities for development and production builds
@@ -270,7 +271,7 @@ The package.json has been cleaned up to remove orphaned dependencies. All remain
 Helpful tools and documentation:
 * [Electron.js](https://www.electronjs.org)
 * [Electron Builder](https://www.electron.build)
-* [SQLite WebAssembly](https://sqlite.org/wasm)
+* [node-sqlite3-wasm](https://github.com/sqlite3/node-sqlite3-wasm)
 
 ## Authors
 Mx. Voice 4 is brought to you with love by:

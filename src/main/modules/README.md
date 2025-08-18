@@ -12,15 +12,15 @@ Provides debug logging functionality for the main process.
 
 ### database-setup.js
 Handles database initialization and setup for the main process. This module:
-- Initializes the official @sqlite.org/sqlite-wasm WebAssembly module
+- Initializes the node-sqlite3-wasm WebAssembly module
 - Creates and manages the SQLite database instance using the oo1 (object-oriented) API
 - Sets up database schema and indexes
 - Provides database save/load functionality with file serialization
 
 **Key Features:**
-- Uses the official @sqlite.org/sqlite-wasm package for maximum compatibility and performance
+- Uses the node-sqlite3-wasm package for maximum compatibility and performance
 - Automatically handles WebAssembly module initialization
-- Supports migration from old sqlite-wasm package format with automatic backup creation
+- Supports migration from legacy database formats with automatic backup creation
 - Direct file-based database operations with automatic persistence
 - Falls back to in-memory database if file operations fail
 - Provides comprehensive error logging and fallback handling
