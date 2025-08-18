@@ -141,10 +141,14 @@ videos/
 traces/
 
 # Test environment artifacts
-# Ignore all fixtures by default, then re-include curated test songs
+# Ignore all fixtures by default, then re-include curated test fixtures
 tests/fixtures/**
 !tests/fixtures/test-songs/
 !tests/fixtures/test-songs/**
+!tests/fixtures/test-holding-tank/
+!tests/fixtures/test-holding-tank/**
+!tests/fixtures/test-hotkeys/
+!tests/fixtures/test-hotkeys/**
 tests/test-results/
 tests/playwright-report/
 
