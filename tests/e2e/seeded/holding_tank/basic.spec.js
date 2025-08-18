@@ -374,22 +374,16 @@ test.describe('Holding Tank - basic', () => {
     // 5) Restore the original dialog
     await app.evaluate(() => { globalThis.__restoreHoldingTankDialog?.(); });
     
-    console.log('✅ Successfully loaded holding tank from file');
-    console.log('✅ Entry 1: Theme From The Greatest American Hero by Joey Scarbury (0:07)');
-    console.log('✅ Entry 2: Got The Time by Anthrax (0:06)');
-    console.log('✅ Entry 3: Eat It by Weird Al Yankovic (0:06)');
-    console.log('✅ Entry 4: We Are Family by Sister Sledge (0:07)');
-    console.log('✅ Entry 5: The Wheel (Back And Forth) by Edie Brickell (0:08)');
-    console.log('✅ All 5 songs loaded in correct order from test.hld file');
-  });
-
-  test('save holding tank to file', async () => {
-    // 1) Clear the holding tank first
-    // Wait a bit to ensure any tooltips are gone
-    await page.waitForTimeout(1000);
+    // 6) Test that the clear button works after loading
+    console.log('🧪 Testing clear button functionality after load...');
+    
+    // Click into search bar to dismiss any tooltips
+    const searchInput = page.locator('#omni_search');
+    await searchInput.click();
+    await page.waitForTimeout(3000);
     
     const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click({ force: true });
+    await clearButton.click();
     
     // Wait for confirmation modal to appear
     await page.waitForTimeout(1000);
@@ -403,9 +397,28 @@ test.describe('Holding Tank - basic', () => {
     await page.waitForTimeout(2000);
     
     // Verify holding tank is now empty
+    const loadTestActiveTab = page.locator('#holding_tank_1');
+    const loadTestHoldingTankItems = loadTestActiveTab.locator('.list-group-item');
+    await expect(loadTestHoldingTankItems).toHaveCount(0);
+    
+    console.log('✅ Successfully loaded holding tank from file');
+    console.log('✅ Entry 1: Theme From The Greatest American Hero by Joey Scarbury (0:07)');
+    console.log('✅ Entry 2: Got The Time by Anthrax (0:06)');
+    console.log('✅ Entry 3: Eat It by Weird Al Yankovic (0:06)');
+    console.log('✅ Entry 4: We Are Family by Sister Sledge (0:07)');
+    console.log('✅ Entry 5: The Wheel (Back And Forth) by Edie Brickell (0:08)');
+    console.log('✅ All 5 songs loaded in correct order from test.hld file');
+    console.log('✅ Clear button functionality verified - holding tank successfully cleared');
+  });
+
+  test('save holding tank to file', async () => {
+    // 1) Check what's currently in the holding tank
+    console.log('🔍 Starting save holding tank test...');
+    
     const activeTab = page.locator('#holding_tank_1');
     const holdingTankItems = activeTab.locator('.list-group-item');
-    await expect(holdingTankItems).toHaveCount(0);
+    const currentCount = await holdingTankItems.count();
+    console.log(`Current holding tank has ${currentCount} items`);
     
     // 2) Do a blank search to get all songs
     const searchInput = page.locator('#omni_search');
@@ -521,6 +534,11 @@ test.describe('Holding Tank - basic', () => {
     // 1) Clear the holding tank first
     // Wait a bit to ensure any tooltips are gone
     await page.waitForTimeout(1000);
+    
+    // Dismiss tooltip by focusing search input
+    const preClearSearchInput = page.locator('#omni_search');
+    await preClearSearchInput.click();
+    await page.waitForTimeout(3000);
     
     const clearButton = page.locator('#holding-tank-clear-btn');
     
