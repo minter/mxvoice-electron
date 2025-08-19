@@ -631,15 +631,65 @@ class HotkeysModule {
       module: 'hotkeys',
       function: 'saveHotkeyFile',
     });
-    const hotkeyArray = [];
-    for (let key = 1; key <= 12; key++) {
-      hotkeyArray.push(
-        document.getElementById(`f${key}_hotkey`)?.getAttribute('songid') ||
-          null
-      );
-    }
+    
+    // Find the active tab and its content
     const activeLink = document.querySelector('#hotkey_tabs li a.active');
     const activeText = activeLink ? activeLink.textContent || '' : '';
+    
+    // Get the active tab content div
+    let activeTabContent = null;
+    if (activeLink) {
+      const href = activeLink.getAttribute('href');
+      if (href && href.startsWith('#')) {
+        const tabId = href.substring(1);
+        activeTabContent = document.getElementById(tabId);
+        debugLog?.info("Found active tab content:", { 
+          module: 'hotkeys',
+          function: 'saveHotkeyFile', 
+          tabId: tabId,
+          tabContent: !!activeTabContent
+        });
+      }
+    }
+    
+    const hotkeyArray = [];
+    for (let key = 1; key <= 12; key++) {
+      let element = null;
+      let songId = null;
+      
+      if (activeTabContent) {
+        // Look for hotkey element within the active tab content first
+        element = activeTabContent.querySelector(`#f${key}_hotkey`);
+        if (element) {
+          songId = element.getAttribute('songid');
+          debugLog?.info(`Hotkey ${key} found in active tab:`, { 
+            module: 'hotkeys',
+            function: 'saveHotkeyFile', 
+            key: key,
+            songId: songId,
+            foundInActiveTab: true
+          });
+        }
+      }
+      
+      // Fallback to global search if not found in active tab
+      if (!element) {
+        element = document.getElementById(`f${key}_hotkey`);
+        if (element) {
+          songId = element.getAttribute('songid');
+          debugLog?.info(`Hotkey ${key} found globally (fallback):`, { 
+            module: 'hotkeys',
+            function: 'saveHotkeyFile', 
+            key: key,
+            songId: songId,
+            foundInActiveTab: false
+          });
+        }
+      }
+      
+      hotkeyArray.push(songId || null);
+    }
+    
     if (!/^\d$/.test(activeText)) {
       hotkeyArray.push(activeText);
     }

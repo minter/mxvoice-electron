@@ -90,16 +90,66 @@ function openHotkeyFile() {
 function saveHotkeyFile() {
   window.debugLog?.info("Renderer starting saveHotkeyFile", { module: 'hotkey-operations', function: 'saveHotkeyFile' });
   
+  // Find the active tab and its content
+  const activeLink = document.querySelector('#hotkey_tabs li a.active');
+  const activeText = activeLink ? (activeLink.textContent || '') : '';
+  
+  // Get the active tab content div
+  let activeTabContent = null;
+  if (activeLink) {
+    const href = activeLink.getAttribute('href');
+    if (href && href.startsWith('#')) {
+      const tabId = href.substring(1);
+      activeTabContent = document.getElementById(tabId);
+      window.debugLog?.info("Found active tab content:", { 
+        module: 'hotkey-operations', 
+        function: 'saveHotkeyFile', 
+        tabId: tabId,
+        tabContent: !!activeTabContent
+      });
+    }
+  }
+  
   const hotkeyArray = [];
   for (let key = 1; key <= 12; key++) {
-    const element = document.getElementById(`f${key}_hotkey`);
-    const songId = element?.getAttribute('songid');
+    let element = null;
+    let songId = null;
+    
+    if (activeTabContent) {
+      // Look for hotkey element within the active tab content first
+      element = activeTabContent.querySelector(`#f${key}_hotkey`);
+      if (element) {
+        songId = element.getAttribute('songid');
+        window.debugLog?.info(`Hotkey ${key} found in active tab:`, { 
+          module: 'hotkey-operations', 
+          function: 'saveHotkeyFile', 
+          key: key,
+          songId: songId,
+          foundInActiveTab: true
+        });
+      }
+    }
+    
+    // Fallback to global search if not found in active tab
+    if (!element) {
+      element = document.getElementById(`f${key}_hotkey`);
+      if (element) {
+        songId = element.getAttribute('songid');
+        window.debugLog?.info(`Hotkey ${key} found globally (fallback):`, { 
+          module: 'hotkey-operations', 
+          function: 'saveHotkeyFile', 
+          key: key,
+          songId: songId,
+          foundInActiveTab: false
+        });
+      }
+    }
     
     // Ensure we always have a value, even if element is missing
     const safeSongId = songId || null;
     hotkeyArray.push(safeSongId);
     
-    window.debugLog?.info(`Hotkey ${key} data:`, { 
+    window.debugLog?.info(`Hotkey ${key} final data:`, { 
       module: 'hotkey-operations', 
       function: 'saveHotkeyFile', 
       key: key,
@@ -109,9 +159,6 @@ function saveHotkeyFile() {
       elementExists: !!element
     });
   }
-  
-  const activeLink = document.querySelector('#hotkey_tabs li a.active');
-  const activeText = activeLink ? (activeLink.textContent || '') : '';
   
   // Only add tab name if it's not a number and not empty
   if (activeText && activeText.trim() && !/^\d+$/.test(activeText.trim())) {
@@ -136,7 +183,8 @@ function saveHotkeyFile() {
     function: 'saveHotkeyFile', 
     hotkeyArray: hotkeyArray,
     length: hotkeyArray.length,
-    tabName: activeText
+    tabName: activeText,
+    activeTabContent: !!activeTabContent
   });
   
   // Use secureFileDialog directly since this is bound to the hotkeys module
