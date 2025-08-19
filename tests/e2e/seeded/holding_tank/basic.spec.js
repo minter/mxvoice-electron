@@ -924,152 +924,51 @@ test.describe('Holding Tank - basic', () => {
     await tab1Items.first().click({ button: 'right' });
     await page.waitForTimeout(500);
 
-    // 5) Look for context menu - it might be a native OS context menu or custom one
-    // Try different selectors for context menus
-    const contextMenuSelectors = [
-      '.mxv-context-menu',
-      '.context-menu',
-      '.dropdown-menu',
-      '.menu',
-      '[role="menu"]',
-      '.popup-menu'
-    ];
-    
-    let contextMenu = null;
-    let contextMenuVisible = false;
-    
-    for (const selector of contextMenuSelectors) {
-      const menu = page.locator(selector);
-      if (await menu.isVisible()) {
-        contextMenu = menu;
-        contextMenuVisible = true;
-        console.log(`✅ Context menu found with selector: ${selector}`);
-        break;
-      }
+    // 5) Look for context menu - native app menu is #mxv-context-menu with .mxv-context-item buttons
+    const contextMenu = page.locator('#mxv-context-menu');
+    await expect(contextMenu).toBeVisible({ timeout: 2000 });
+
+    // Verify expected items exist (Play, Edit, Remove from Holding Tank)
+    const menuItems = contextMenu.locator('.mxv-context-item');
+    await expect(menuItems).toHaveCount(3);
+
+    await expect(contextMenu.locator('button:has-text("Play")')).toBeVisible();
+    await expect(contextMenu.locator('button:has-text("Edit")')).toBeVisible();
+
+    // Dynamic delete label should be "Remove from Holding Tank" when invoked from holding tank
+    let removeButton = contextMenu.locator('button:has-text("Remove from Holding Tank")');
+    if (!(await removeButton.isVisible())) {
+      // Fallback to Delete if label did not change as expected
+      removeButton = contextMenu.locator('button:has-text("Delete")');
     }
-    
-    if (!contextMenuVisible) {
-      // If no custom context menu, check if we can see any menu-like elements
-      console.log('⚠️ No custom context menu found - checking for alternative menu structures...');
-      
-      // Look for any visible menu-like elements after right-click
-      const anyMenu = page.locator('.menu, .dropdown, .popup, [class*="menu"], [class*="dropdown"]');
-      if (await anyMenu.count() > 0) {
-        console.log('✅ Found potential menu elements - context menu may be working');
-      } else {
-        console.log('⚠️ No context menu elements found - context menu may not be implemented');
-      }
-      
-      // For now, let's test the visible "Remove from Holding Tank" button that we saw in the error context
-      console.log('🧪 Testing visible "Remove from Holding Tank" button instead...');
-      
-      const removeButton = page.locator('button:has-text("Remove from Holding Tank")');
-      if (await removeButton.isVisible()) {
-        console.log('✅ "Remove from Holding Tank" button is visible');
-        
-        // Click the remove button
-        await removeButton.click();
-        await page.waitForTimeout(500);
-        
-        // Verify song was removed from holding tank
-        await expect(tab1Items).toHaveCount(0);
-        console.log('✅ Remove button works - song removed from holding tank');
-        
-        // Add another song to test other operations
-        const sisterSledgeRow = rows.filter({ hasText: 'Sister Sledge' }).first();
-        await sisterSledgeRow.dragTo(tab1List, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
-        await page.waitForTimeout(500);
-        
-        await expect(tab1Items).toHaveCount(1);
-        await expect(tab1Items.first()).toContainText('We Are Family');
-        
-        // Test the Edit button if it exists
-        const editButton = page.locator('button:has-text("Edit")');
-        if (await editButton.isVisible()) {
-          console.log('✅ "Edit" button is visible');
-          await editButton.click();
-          await page.waitForTimeout(500);
-          
-          // Look for edit modal or form
-          const editModal = page.locator('.modal, .edit-form, #songFormModal');
-          if (await editModal.isVisible()) {
-            console.log('✅ Edit button works - edit modal/form appeared');
-            // Close the edit modal/form
-            const closeBtn = editModal.locator('.btn-close, .close, .cancel');
-            if (await closeBtn.isVisible()) {
-              await closeBtn.click();
-              await page.waitForTimeout(500);
-            }
-          }
-        }
-        
-        console.log('✅ Successfully tested holding tank operations using visible buttons');
-        console.log('✅ Remove from Holding Tank button works');
-        console.log('✅ Edit button works (if available)');
-        return;
-      }
-    }
-    
-    // If we found a context menu, test it
-    if (contextMenu && contextMenuVisible) {
-      console.log('🧪 Testing custom context menu...');
-      
-      // Check for common context menu items
-      const menuItems = contextMenu.locator('.mxv-context-menu-item, .menu-item, .dropdown-item, [role="menuitem"]');
-      const itemCount = await menuItems.count();
-      console.log('Context menu items found:', itemCount);
-      
-      if (itemCount > 0) {
-        // Look for specific menu items
-        const hasRemoveOption = await contextMenu.locator('text=Remove, text=Delete, text="Remove from Holding Tank"').isVisible();
-        const hasEditOption = await contextMenu.locator('text=Edit').isVisible();
-        
-        console.log('Has Remove/Delete option:', hasRemoveOption);
-        console.log('Has Edit option:', hasEditOption);
-        
-        // Test Remove option if available
-        if (hasRemoveOption) {
-          const removeOption = contextMenu.locator('text=Remove, text=Delete, text="Remove from Holding Tank"').first();
-          await removeOption.click();
-          await page.waitForTimeout(500);
-          
-          // Verify song was removed from holding tank
-          await expect(tab1Items).toHaveCount(0);
-          console.log('✅ Remove option works - song removed from holding tank');
-        }
-        
-        // Test Edit option if available
-        if (hasEditOption) {
-          // Add another song first
-          const sisterSledgeRow = rows.filter({ hasText: 'Sister Sledge' }).first();
-          await sisterSledgeRow.dragTo(tab1List, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
-          await page.waitForTimeout(500);
-          
-          await expect(tab1Items).toHaveCount(1);
-          
-          // Right-click and test edit
-          await tab1Items.first().click({ button: 'right' });
-          await page.waitForTimeout(500);
-          
-          if (await contextMenu.isVisible()) {
-            const editOption = contextMenu.locator('text=Edit').first();
-            await editOption.click();
-            await page.waitForTimeout(500);
-            
-            // Look for edit modal or form
-            const editModal = page.locator('.modal, .edit-form, #songFormModal');
-            if (await editModal.isVisible()) {
-              console.log('✅ Edit option works - edit modal/form appeared');
-              // Close the edit modal/form
-              const closeBtn = editModal.locator('.btn-close, .close, .cancel');
-              if (await closeBtn.isVisible()) {
-                await closeBtn.click();
-                await page.waitForTimeout(500);
-              }
-            }
-          }
-        }
-      }
+
+    await removeButton.click();
+    // Confirm removal in the confirmation modal
+    const removalConfirm = page.locator('.modal:has-text("Are you sure you want to remove") .confirm-btn');
+    await expect(removalConfirm).toBeVisible({ timeout: 5000 });
+    await removalConfirm.click();
+    await page.waitForTimeout(500);
+    await expect(tab1Items).toHaveCount(0);
+    console.log('✅ Remove from Holding Tank via context menu works');
+
+    // Add another song and verify Edit path
+    const sisterSledgeRow = rows.filter({ hasText: 'Sister Sledge' }).first();
+    await sisterSledgeRow.dragTo(tab1List, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
+    await page.waitForTimeout(300);
+    await expect(tab1Items).toHaveCount(1);
+
+    await tab1Items.first().click({ button: 'right' });
+    await expect(contextMenu).toBeVisible({ timeout: 2000 });
+    const editBtn = contextMenu.locator('button:has-text("Edit")');
+    await editBtn.click();
+    await page.waitForTimeout(300);
+
+    const editModal = page.locator('#songFormModal');
+    await expect(editModal).toBeVisible({ timeout: 5000 });
+    const closeBtn = editModal.locator('.btn-close, .close, .cancel').first();
+    if (await closeBtn.isVisible()) {
+      await closeBtn.click();
+      await page.waitForTimeout(200);
     }
     
     // 6) Test context menu in search results
@@ -1081,22 +980,14 @@ test.describe('Holding Tank - basic', () => {
     await page.waitForTimeout(500);
     
     // Check if context menu appears in search results
-    let searchContextMenu = null;
-    for (const selector of contextMenuSelectors) {
-      const menu = page.locator(selector);
-      if (await menu.isVisible()) {
-        searchContextMenu = menu;
-        break;
-      }
-    }
-    
-    if (searchContextMenu) {
+    if (await contextMenu.isVisible()) {
       console.log('✅ Context menu works in search results');
       
       // Look for common search result context menu items
-      const searchMenuItems = searchContextMenu.locator('.mxv-context-menu-item, .menu-item, .dropdown-item');
-      const searchItemCount = await searchMenuItems.count();
-      console.log('Search context menu items:', searchItemCount);
+      const searchMenuItems = contextMenu.locator('.mxv-context-item');
+      await expect(searchMenuItems).toHaveCount(3);
+      // In search results, the delete label should be the generic "Delete"
+      await expect(contextMenu.locator('button:has-text("Delete")')).toBeVisible();
       
       // Close context menu by clicking elsewhere
       await page.click('body');
