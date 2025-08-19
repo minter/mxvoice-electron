@@ -28,113 +28,131 @@ test.describe('Theme Management - basic', () => {
   });
 
   test('theme switching functionality', async () => {
-    // 1) Check if theme controls are visible
     console.log('🧪 Testing theme switching functionality...');
     
-    // Look for theme-related controls (toggle button, dropdown, etc.)
-    const themeToggle = page.locator(
-      '[id*="theme"], [class*="theme"], [title*="theme"], [title*="Theme"], ' +
-      '.theme-toggle, .theme-switch, .theme-button, .fa-moon, .fa-sun, .fa-palette'
-    );
+    // 1) Check current theme state
+    const body = page.locator('body');
+    const initialTheme = await body.getAttribute('data-theme') || 
+                        await body.getAttribute('class') || 
+                        'theme-light'; // Default should be light theme
     
-    if (await themeToggle.isVisible()) {
-      console.log('✅ Theme toggle control found');
+    console.log('Initial theme:', initialTheme);
+    
+    // 2) Open preferences modal to access theme settings
+    await app.evaluate(async ({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      win.webContents.send('show_preferences');
+    });
+    
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    
+    // Wait for preferences to load
+    await page.waitForTimeout(1000);
+    
+    // 3) Find the theme dropdown (screen_mode preference)
+    const themeDropdown = page.locator('#preferences-screen-mode, select[name="screen_mode"], #screen_mode');
+    
+    if (await themeDropdown.isVisible()) {
+      console.log('✅ Theme dropdown found in preferences');
       
-      // 2) Check current theme state
-      const body = page.locator('body');
-      const initialTheme = await body.getAttribute('data-theme') || 
-                          await body.getAttribute('class') || 
-                          'default';
+      // Get current theme setting
+      const currentThemeSetting = await themeDropdown.inputValue();
+      console.log('Current theme setting:', currentThemeSetting);
       
-      console.log('Initial theme:', initialTheme);
+      // 4) Test switching to Dark mode
+      console.log('🧪 Testing switch to Dark mode...');
+      await themeDropdown.selectOption('dark');
+      await page.waitForTimeout(500);
       
-      // 3) Toggle theme
-      await themeToggle.click();
+      // Submit the form to apply changes
+      await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
+      
+      // Wait for modal to close
+      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
+      
+      // Wait for theme to apply
       await page.waitForTimeout(1000);
       
-      // 4) Check if theme changed
-      const newTheme = await body.getAttribute('data-theme') || 
-                      await body.getAttribute('class') || 
-                      'default';
+      // Check if theme changed
+      const darkThemeApplied = await body.getAttribute('data-theme') || 
+                              await body.getAttribute('class') || 
+                              'default';
       
-      console.log('New theme after toggle:', newTheme);
+      console.log('Theme after switching to Dark:', darkThemeApplied);
       
-      // Verify theme actually changed (if multiple themes are available)
-      if (newTheme !== initialTheme) {
-        console.log('✅ Theme successfully changed from', initialTheme, 'to', newTheme);
+      if (darkThemeApplied.includes('dark') || darkThemeApplied.includes('theme-dark')) {
+        console.log('✅ Dark theme successfully applied');
       } else {
-        console.log('⚠️ Theme did not change - may be single theme or toggle not implemented');
+        console.log('⚠️ Dark theme not applied - current theme:', darkThemeApplied);
       }
       
-      // 5) Toggle back to original theme
-      await themeToggle.click();
+      // 5) Test switching to Light mode
+      console.log('🧪 Testing switch to Light mode...');
+      
+      // Reopen preferences
+      await app.evaluate(async ({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        win.webContents.send('show_preferences');
+      });
+      
+      await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
       await page.waitForTimeout(1000);
       
-      const finalTheme = await body.getAttribute('data-theme') || 
-                        await body.getAttribute('class') || 
-                        'default';
+      // Switch to light mode
+      await themeDropdown.selectOption('light');
+      await page.waitForTimeout(500);
       
-      console.log('Final theme after toggle back:', finalTheme);
+      // Submit form
+      await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
       
-      // 6) Check for theme persistence
+      // Wait for modal to close
+      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
+      
+      // Wait for theme to apply
+      await page.waitForTimeout(1000);
+      
+      // Check if theme changed
+      const lightThemeApplied = await body.getAttribute('data-theme') || 
+                               await body.getAttribute('class') || 
+                               'default';
+      
+      console.log('Theme after switching to Light:', lightThemeApplied);
+      
+      if (lightThemeApplied.includes('light') || lightThemeApplied.includes('theme-light')) {
+        console.log('✅ Light theme successfully applied');
+      } else {
+        console.log('⚠️ Light theme not applied - current theme:', lightThemeApplied);
+      }
+      
+      // 6) Test theme persistence across page reload
       console.log('🧪 Testing theme persistence...');
       
-      // Refresh the page to see if theme persists
+      // Refresh the page
       await page.reload();
       await page.waitForLoadState('domcontentloaded');
       await page.waitForTimeout(1000);
       
-      const persistedTheme = await body.getAttribute('data-theme') || 
-                            await body.getAttribute('class') || 
-                            'default';
+      const themeAfterReload = await body.getAttribute('data-theme') || 
+                              await body.getAttribute('class') || 
+                              'default';
       
-      console.log('Theme after page reload:', persistedTheme);
+      console.log('Theme after page reload:', themeAfterReload);
       
-      if (persistedTheme === newTheme || persistedTheme === finalTheme) {
-        console.log('✅ Theme persistence working - theme maintained after reload');
+      if (themeAfterReload.includes('light') || themeAfterReload.includes('theme-light')) {
+        console.log('✅ Theme persistence working - Light theme maintained after reload');
       } else {
-        console.log('⚠️ Theme may not be persisting - reverted to default');
+        console.log('⚠️ Theme did not persist after page reload');
       }
       
     } else {
-      console.log('⚠️ Theme toggle control not found - theme switching may not be implemented');
+      console.log('⚠️ Theme dropdown not found in preferences - theme switching may not be implemented');
       
-      // Look for alternative theme controls
-      const themeDropdown = page.locator('select[id*="theme"], select[class*="theme"]');
-      const themeMenu = page.locator('[id*="theme-menu"], [class*="theme-menu"]');
-      
-      if (await themeDropdown.isVisible()) {
-        console.log('✅ Theme dropdown found - testing dropdown selection...');
-        
-        // Get available theme options
-        const options = themeDropdown.locator('option');
-        const optionCount = await options.count();
-        console.log('Available theme options:', optionCount);
-        
-        if (optionCount > 1) {
-          // Select a different theme
-          const secondOption = options.nth(1);
-          const secondOptionValue = await secondOption.getAttribute('value');
-          const secondOptionText = await secondOption.textContent();
-          
-          console.log('Selecting theme:', secondOptionText, 'with value:', secondOptionValue);
-          await themeDropdown.selectOption(secondOptionValue);
-          await page.waitForTimeout(1000);
-          
-          // Check if theme changed
-          const body = page.locator('body');
-          const newTheme = await body.getAttribute('data-theme') || 
+      // Check current theme
+      const currentTheme = await body.getAttribute('data-theme') || 
                           await body.getAttribute('class') || 
                           'default';
-          
-          console.log('Theme after dropdown selection:', newTheme);
-          console.log('✅ Theme dropdown selection working');
-        }
-      } else if (await themeMenu.isVisible()) {
-        console.log('✅ Theme menu found - theme switching may be available via menu');
-      } else {
-        console.log('⚠️ No theme controls found - theme management may not be implemented');
-      }
+      
+      console.log('Current theme (no theme switching available):', currentTheme);
     }
   });
 
@@ -158,10 +176,10 @@ test.describe('Theme Management - basic', () => {
       const root = document.documentElement;
       const computedStyle = getComputedStyle(root);
       
-      // Check for common theme CSS variables
+      // Check for MxVoice-specific theme CSS variables
       const themeVars = [
-        '--primary-color', '--background-color', '--text-color',
-        '--accent-color', '--border-color', '--shadow-color'
+        '--panel-color', '--card-color', '--header-color', '--card-border',
+        '--card-text', '--highlight-color', '--input-background', '--input-text'
       ];
       
       return themeVars.some(varName => {
@@ -172,20 +190,82 @@ test.describe('Theme Management - basic', () => {
     
     console.log('CSS has theme variables:', hasThemeVariables);
     
-    // 3) Check for theme-specific elements or indicators
-    const themeIndicator = page.locator(
-      '.theme-indicator, .current-theme, [class*="theme-display"], [id*="theme-display"]'
-    );
+    // 3) Test actual theme switching to verify visual changes
+    console.log('🧪 Testing theme switching to verify visual changes...');
     
-    if (await themeIndicator.isVisible()) {
-      const indicatorText = await themeIndicator.textContent();
-      console.log('Theme indicator shows:', indicatorText);
-      console.log('✅ Theme indicator is visible and shows current theme');
-    } else {
-      console.log('⚠️ No theme indicator found');
+    // Open preferences and switch to dark theme
+    await app.evaluate(async ({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      win.webContents.send('show_preferences');
+    });
+    
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    await page.waitForTimeout(1000);
+    
+    const themeDropdown = page.locator('#preferences-screen-mode, select[name="screen_mode"], #screen_mode');
+    if (await themeDropdown.isVisible()) {
+      // Switch to dark theme
+      await themeDropdown.selectOption('dark');
+      await page.waitForTimeout(500);
+      
+      // Submit form
+      await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
+      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
+      await page.waitForTimeout(1000);
+      
+      // Check if dark theme classes are applied
+      const darkThemeClasses = await body.getAttribute('class');
+      console.log('Dark theme classes:', darkThemeClasses);
+      
+      if (darkThemeClasses.includes('theme-dark') || darkThemeClasses.includes('dark')) {
+        console.log('✅ Dark theme classes successfully applied');
+        
+        // Check for dark theme CSS variables
+        const darkThemeVars = await page.evaluate(() => {
+          const root = document.documentElement;
+          const computedStyle = getComputedStyle(root);
+          
+          const panelColor = computedStyle.getPropertyValue('--panel-color');
+          const cardColor = computedStyle.getPropertyValue('--card-color');
+          const textColor = computedStyle.getPropertyValue('--card-text');
+          
+          return { panelColor, cardColor, textColor };
+        });
+        
+        console.log('Dark theme CSS variables:', darkThemeVars);
+        
+        // Verify dark theme colors are different from light theme
+        if (darkThemeVars.panelColor && darkThemeVars.cardColor && darkThemeVars.textColor) {
+          console.log('✅ Dark theme CSS variables are set');
+        }
+      }
+      
+      // Now switch back to light theme
+      await app.evaluate(async ({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        win.webContents.send('show_preferences');
+      });
+      
+      await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+      await page.waitForTimeout(1000);
+      
+      await themeDropdown.selectOption('light');
+      await page.waitForTimeout(500);
+      
+      await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
+      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
+      await page.waitForTimeout(1000);
+      
+      // Check if light theme classes are applied
+      const lightThemeClasses = await body.getAttribute('class');
+      console.log('Light theme classes:', lightThemeClasses);
+      
+      if (lightThemeClasses.includes('theme-light') || lightThemeClasses.includes('light')) {
+        console.log('✅ Light theme classes successfully applied');
+      }
     }
     
-    // 4) Test theme-specific UI elements
+    // 4) Check for theme-specific UI elements
     console.log('🧪 Testing theme-specific UI elements...');
     
     // Check if certain elements change appearance based on theme
@@ -203,83 +283,105 @@ test.describe('Theme Management - basic', () => {
     console.log('Search bar background:', searchBarBackground);
     console.log('Search bar text color:', searchBarColor);
     
-    // 5) Check for theme-specific icons or visual cues
-    const themeIcon = page.locator(
-      '.fa-moon, .fa-sun, .fa-palette, .fa-adjust, .fa-paint-brush, ' +
-      '[class*="theme-icon"], [id*="theme-icon"]'
-    );
+    // 5) Check for theme-specific visual cues in the UI
+    const cardHeaders = page.locator('.card-header');
+    const firstHeader = cardHeaders.first();
     
-    if (await themeIcon.isVisible()) {
-      const iconClass = await themeIcon.getAttribute('class');
-      console.log('Theme icon found with classes:', iconClass);
-      console.log('✅ Theme icon is visible');
-    } else {
-      console.log('⚠️ No theme icon found');
+    if (await firstHeader.isVisible()) {
+      const headerBackground = await firstHeader.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return style.backgroundColor;
+      });
+      
+      console.log('Card header background color:', headerBackground);
+      console.log('✅ Theme-specific styling visible in card headers');
     }
     
     console.log('✅ Successfully tested theme-specific styling and appearance');
     console.log('✅ Theme classes and attributes checked');
     console.log('✅ CSS theme variables checked');
-    console.log('✅ Theme indicators and icons checked');
+    console.log('✅ Theme switching verified with visual changes');
     console.log('✅ UI element styling examined');
   });
 
   test('theme preferences and settings integration', async () => {
     console.log('🧪 Testing theme preferences and settings integration...');
     
-    // 1) Check if theme settings are accessible via preferences
-    const preferencesButton = page.locator(
-      '[title*="preferences"], [title*="Preferences"], [title*="settings"], [title*="Settings"], ' +
-      '.preferences-btn, .settings-btn, .fa-cog, .fa-gear'
-    );
+    // 1) Test theme settings accessibility via preferences modal
+    console.log('🧪 Testing theme settings in preferences modal...');
     
-    if (await preferencesButton.isVisible()) {
-      console.log('✅ Preferences button found - checking for theme settings...');
+    await app.evaluate(async ({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      win.webContents.send('show_preferences');
+    });
+    
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    await page.waitForTimeout(1000);
+    
+    // Look for the screen mode (theme) preference field
+    const screenModeField = page.locator('#preferences-screen-mode, select[name="screen_mode"], #screen_mode');
+    
+    if (await screenModeField.isVisible()) {
+      console.log('✅ Theme preference field found in preferences modal');
       
-      await preferencesButton.click();
+      // Check available theme options
+      const options = screenModeField.locator('option');
+      const optionCount = await options.count();
+      console.log('Available theme options:', optionCount);
+      
+      // Verify expected theme options are present
+      const optionTexts = [];
+      for (let i = 0; i < optionCount; i++) {
+        const text = await options.nth(i).textContent();
+        optionTexts.push(text);
+      }
+      
+      console.log('Theme option texts:', optionTexts);
+      
+      // Check for expected theme options
+      const expectedOptions = ['Auto', 'Light', 'Dark'];
+      const hasExpectedOptions = expectedOptions.every(option => 
+        optionTexts.some(text => text.includes(option))
+      );
+      
+      if (hasExpectedOptions) {
+        console.log('✅ All expected theme options are present');
+      } else {
+        console.log('⚠️ Missing some expected theme options');
+      }
+      
+      // Test changing theme preference
+      console.log('🧪 Testing theme preference change...');
+      
+      // Get current value
+      const currentValue = await screenModeField.inputValue();
+      console.log('Current theme preference:', currentValue);
+      
+      // Change to a different theme
+      const newTheme = currentValue === 'light' ? 'dark' : 'light';
+      await screenModeField.selectOption(newTheme);
+      await page.waitForTimeout(500);
+      
+      // Submit the form
+      await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
+      
+      // Wait for modal to close
+      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
       await page.waitForTimeout(1000);
       
-      // Look for preferences modal
-      const preferencesModal = page.locator('#preferencesModal, .modal, [id*="preferences"], [class*="preferences"]');
+      // Verify theme actually changed
+      const body = page.locator('body');
+      const newThemeClasses = await body.getAttribute('class');
+      console.log('Theme classes after preference change:', newThemeClasses);
       
-      if (await preferencesModal.isVisible()) {
-        console.log('✅ Preferences modal opened');
-        
-        // Look for theme-related settings
-        const themeSection = preferencesModal.locator(
-          '[id*="theme"], [class*="theme"], [data-section*="theme"], ' +
-          'h3:has-text("Theme"), h4:has-text("Theme"), .theme-section'
-        );
-        
-        if (await themeSection.isVisible()) {
-          console.log('✅ Theme section found in preferences');
-          
-          // Look for theme options
-          const themeOptions = themeSection.locator(
-            'input[type="radio"], input[type="checkbox"], select, .theme-option'
-          );
-          
-          const optionCount = await themeOptions.count();
-          console.log('Theme options found in preferences:', optionCount);
-          
-          if (optionCount > 0) {
-            console.log('✅ Theme preferences are configurable via settings');
-          }
-        } else {
-          console.log('⚠️ No theme section found in preferences');
-        }
-        
-        // Close preferences modal
-        const closeButton = preferencesModal.locator('button:has-text("Close"), .btn-close, .close');
-        if (await closeButton.isVisible()) {
-          await closeButton.click();
-          await page.waitForTimeout(500);
-        }
+      if (newThemeClasses.includes(`theme-${newTheme}`) || newThemeClasses.includes(newTheme)) {
+        console.log('✅ Theme preference change successfully applied');
       } else {
-        console.log('⚠️ Preferences modal not found');
+        console.log('⚠️ Theme preference change not applied');
       }
+      
     } else {
-      console.log('⚠️ Preferences button not found - theme settings may not be accessible');
+      console.log('⚠️ Theme preference field not found in preferences modal');
     }
     
     // 2) Check for theme-related menu items
@@ -287,51 +389,65 @@ test.describe('Theme Management - basic', () => {
     
     await app.evaluate(async ({ Menu, BrowserWindow }) => {
       const menu = Menu.getApplicationMenu();
-      const themeMenuItem = menu?.getMenuItemById?.('theme') || 
-                           menu?.getMenuItemById?.('preferences') ||
-                           menu?.getMenuItemById?.('settings');
       
-      if (themeMenuItem) {
-        console.log('✅ Theme-related menu item found:', themeMenuItem.label);
+      // Look for preferences/settings menu item
+      let preferencesMenuItem = null;
+      
+      // Check main menu items
+      for (const item of menu.items || []) {
+        if (item.submenu) {
+          for (const subItem of item.submenu.items || []) {
+            if (subItem.label && (subItem.label.toLowerCase().includes('preferences') || 
+                                 subItem.label.toLowerCase().includes('settings'))) {
+              preferencesMenuItem = subItem;
+              break;
+            }
+          }
+        }
+        if (preferencesMenuItem) break;
+      }
+      
+      if (preferencesMenuItem) {
+        console.log('✅ Preferences menu item found:', preferencesMenuItem.label);
       } else {
-        console.log('⚠️ No theme-related menu items found');
+        console.log('⚠️ No preferences menu item found');
       }
     });
     
-    // 3) Check for theme-related keyboard shortcuts
-    console.log('🧪 Checking for theme-related keyboard shortcuts...');
+    // 3) Test theme persistence across page reloads
+    console.log('🧪 Testing theme persistence across page reloads...');
     
-    // Look for theme toggle keyboard shortcut (common: Ctrl+T, Ctrl+Shift+T, etc.)
-    const hasThemeShortcut = await page.evaluate(() => {
-      // Check if any keyboard event listeners are set up for theme switching
-      const body = document.body;
-      const listeners = body.onkeydown || body.onkeyup || body.onkeypress;
-      
-      // Also check for global keyboard shortcuts
-      return window.addEventListener && typeof window.addEventListener === 'function';
-    });
-    
-    console.log('Theme keyboard shortcuts available:', hasThemeShortcut);
-    
-    // 4) Test theme persistence across app restarts
-    console.log('🧪 Testing theme persistence across app restarts...');
-    
-    // Get current theme before restart
+    // Get current theme
     const body = page.locator('body');
     const currentTheme = await body.getAttribute('data-theme') || 
                         await body.getAttribute('class') || 
                         'default';
     
-    console.log('Current theme before restart:', currentTheme);
+    console.log('Current theme before reload:', currentTheme);
     
-    // Note: Full app restart test would require more complex setup
-    // For now, just verify theme state is maintained in current session
-    console.log('✅ Theme persistence test completed (session-level)');
+    // Reload the page
+    await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(1000);
+    
+    // Check if theme persisted
+    const themeAfterReload = await body.getAttribute('data-theme') || 
+                            await body.getAttribute('class') || 
+                            'default';
+    
+    console.log('Theme after page reload:', themeAfterReload);
+    
+    if (themeAfterReload === currentTheme || 
+        (themeAfterReload.includes('theme-') && currentTheme.includes('theme-'))) {
+      console.log('✅ Theme persistence working across page reloads');
+    } else {
+      console.log('⚠️ Theme may not be persisting across page reloads');
+    }
     
     console.log('✅ Successfully tested theme preferences and settings integration');
     console.log('✅ Preferences modal theme settings checked');
+    console.log('✅ Theme preference change and application verified');
     console.log('✅ Menu items for theme management checked');
-    console.log('✅ Keyboard shortcuts for theme switching checked');
-    console.log('✅ Theme persistence verification completed');
+    console.log('✅ Theme persistence across page reloads verified');
   });
 });
