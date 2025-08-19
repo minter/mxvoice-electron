@@ -279,6 +279,101 @@ test.describe('Search - basic', () => {
     await page.locator('#advanced_search_button').click();
     await page.locator('#reset_button').click();
   });
+
+  test('live search with keystrokes', async () => {
+    // Reset to a clean state
+    await page.locator('#reset_button').click();
+    await page.waitForTimeout(250);
+
+    // Go to the search bar
+    const searchBar = page.locator('#omni_search');
+    await searchBar.click();
+    await searchBar.fill('');
+
+    // Send keystrokes "T", "h", "e" one by one
+    await searchBar.type('T', { delay: 100 });
+    await page.waitForTimeout(200); // Wait for live search to process
+    
+    await searchBar.type('h', { delay: 100 });
+    await page.waitForTimeout(200); // Wait for live search to process
+    
+    await searchBar.type('e', { delay: 100 });
+    await page.waitForTimeout(500); // Wait for live search to process
+
+    // Validate that there are three songs returned
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(3, { timeout: 5000 });
+    
+    // Verify the specific songs are present
+    await expect(page.locator('#search_results')).toContainText('The Wheel (Back And Forth)');
+    await expect(page.locator('#search_results')).toContainText('Theme From The Greatest American Hero');
+    await expect(page.locator('#search_results')).toContainText('Got The Time');
+
+    // Add an additional "m" keystroke (giving "Them")
+    await searchBar.type('m', { delay: 100 });
+    await page.waitForTimeout(500); // Wait for live search to process
+
+    // Validate that there is now one result
+    await expect(rows).toHaveCount(1, { timeout: 5000 });
+    
+    // Verify the remaining song is "Theme From The Greatest American Hero"
+    await expect(page.locator('#search_results')).toContainText('Theme From The Greatest American Hero');
+    await expect(page.locator('#search_results')).not.toContainText('The Wheel (Back And Forth)');
+
+    // Reset for subsequent tests
+    await page.locator('#reset_button').click();
+  });
+
+  test('live search with category filter', async () => {
+    // Reset to a clean state
+    await page.locator('#reset_button').click();
+    await page.waitForTimeout(250);
+
+    // Start with a blank search
+    const searchBar = page.locator('#omni_search');
+    await searchBar.click();
+    await searchBar.fill('');
+
+    // Select category "GAME"
+    const catSelect = page.locator('#category_select');
+    await catSelect.selectOption({ label: 'Game' }).catch(async () => {
+      await catSelect.selectOption('GAME');
+    });
+    await page.waitForTimeout(500); // Wait for category filter to apply
+
+    // Send keystrokes "T", "h", "e" into the search bar
+    await searchBar.type('T', { delay: 100 });
+    await page.waitForTimeout(200); // Wait for live search to process
+    
+    await searchBar.type('h', { delay: 100 });
+    await page.waitForTimeout(200); // Wait for live search to process
+    
+    await searchBar.type('e', { delay: 100 });
+    await page.waitForTimeout(500); // Wait for live search to process
+
+    // Validate that there are two results: Got The Time, and The Wheel (Back And Forth)
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(2, { timeout: 5000 });
+    
+    // Verify the specific songs are present
+    await expect(page.locator('#search_results')).toContainText('Got The Time');
+    await expect(page.locator('#search_results')).toContainText('The Wheel (Back And Forth)');
+
+    // Add the keystrokes " ", "w" (giving "The w")
+    await searchBar.type(' ', { delay: 100 });
+    await page.waitForTimeout(200); // Wait for live search to process
+    
+    await searchBar.type('w', { delay: 100 });
+    await page.waitForTimeout(500); // Wait for live search to process
+
+    // Validate that there is one result - The Wheel (Back And Forth)
+    await expect(rows).toHaveCount(1, { timeout: 5000 });
+    await expect(page.locator('#search_results')).toContainText('The Wheel (Back And Forth)');
+    await expect(page.locator('#search_results')).not.toContainText('Got The Time');
+
+    // Reset for subsequent tests
+    await page.locator('#reset_button').click();
+  });
 });
 
 
