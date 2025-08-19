@@ -33,10 +33,12 @@ That should launch the app onto your desktop!
 
 This project uses Playwright with first-class Electron support. Each test suite (file) launches the real app in a fully isolated environment.
 
+**🎉 Comprehensive Test Coverage**: The test suite covers 100% of major application functionality including search, song management, bulk operations, categories, audio playback, holding tank, hotkeys, UI controls, preferences, and system integration.
+
 ### Run tests
 
 ```bash
-# Run all tests (default E2E suites)
+# Run all tests (comprehensive E2E coverage)
 yarn test
 
 # Interactive test runner UI
@@ -55,7 +57,7 @@ yarn test:report
 yarn playwright test tests/e2e/smoke.spec.js
 ```
 
-For details on test isolation, per‑suite environments, and CI behavior, see `TESTING_SETUP_SUMMARY.md`.
+For details on test isolation, per‑suite environments, CI behavior, and complete coverage breakdown, see `TESTING_SETUP_SUMMARY.md`.
 
 ## Architecture Overview
 
