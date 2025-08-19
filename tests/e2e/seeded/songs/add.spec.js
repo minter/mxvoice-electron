@@ -548,6 +548,132 @@ test.describe('Songs - add', () => {
       }
     }
   });
+
+  test('Bulk add all test songs to new category "RNOUT"', async () => {
+    // 1) Stub dialog in main to return the test-songs directory
+    const testSongsDir = path.resolve(__dirname, '../../../fixtures/test-songs');
+    
+    await app.evaluate(async ({ dialog }) => {
+      const original = dialog.showOpenDialog;
+      // Save a restorer for later
+      // @ts-ignore
+      globalThis.__restoreBulkDialog = () => (dialog.showOpenDialog = original);
+    });
+    await app.evaluate(({ dialog }, dirPath) => {
+      dialog.showOpenDialog = async () => {
+        return {
+          canceled: false,
+          filePaths: [dirPath],
+        };
+      };
+    }, testSongsDir);
+
+    // 2) Trigger the "Add All Songs In Directory" menu item
+    const triggerBulkMenuItem = async () => {
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(1000);
+      
+      const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
+        const menu = Menu.getApplicationMenu();
+        
+        // Find the "Add All Songs In Directory" menu item in the Songs submenu
+        const songsSubmenu = menu?.items?.find(item => item.label === 'Songs');
+        const bulkAddItem = songsSubmenu?.submenu?.items?.find(item => item.label === 'Add All Songs In Directory');
+        
+        if (!bulkAddItem) return { ok: false, reason: 'Add All Songs In Directory menu item not found' };
+        
+        const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+        if (!win) return { ok: false, reason: 'No focused window' };
+        
+        // @ts-ignore
+        bulkAddItem.click({}, win, win.webContents);
+        return { ok: true };
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Bulk menu item trigger failed: ${res.reason}`);
+      }
+      
+      await page.waitForTimeout(1000);
+    };
+    
+    await triggerBulkMenuItem();
+
+    // 3) Wait for the bulk add modal to appear
+    await expect(page.locator('#bulkAddModal')).toBeVisible({ timeout: 10000 });
+    
+    // 4) Select the "RNOUT" category (or create it if it doesn't exist)
+    const categorySelect = page.locator('#bulk-add-category');
+    
+    // Check if RNOUT category exists, if not, create it
+    const rnoutExists = await categorySelect.locator('option[value="RNOUT"]').count();
+    if (rnoutExists === 0) {
+      // Create new category by selecting "New Category" option
+      await categorySelect.selectOption('new');
+      await page.waitForTimeout(500);
+      
+      // Fill in the new category name
+      const newCategoryInput = page.locator('#bulk-song-form-new-category');
+      await newCategoryInput.fill('RNOUT');
+      await page.waitForTimeout(500);
+    } else {
+      // Select existing RNOUT category
+      await categorySelect.selectOption('RNOUT');
+    }
+    
+    // 5) Click "Add All" button
+    await page.locator('#bulkAddSubmitButton').click();
+    
+    // 6) Wait for the modal to close
+    await expect(page.locator('#bulkAddModal')).not.toBeVisible({ timeout: 10000 });
+    
+    // 7) Wait for bulk processing to complete
+    await page.waitForTimeout(3000);
+    
+    // 8) Verify all 7 test songs appear in the RNOUT category
+    // First, select the RNOUT category in the search dropdown
+    const searchCategorySelect = page.locator('#category_select');
+    await searchCategorySelect.selectOption('RNOUT');
+    await page.waitForTimeout(1000);
+    
+    // Clear any existing search terms
+    const searchInput = page.locator('#omni_search');
+    await searchInput.fill('');
+    await searchInput.press('Enter');
+    await page.waitForTimeout(1000);
+    
+    // Verify we have exactly 7 results
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(7, { timeout: 10000 });
+    
+    // Verify specific songs are present (using actual metadata from the files)
+    await expect(page.locator('#search_results')).toContainText('Eat It');
+    await expect(page.locator('#search_results')).toContainText('Got The Time');
+    await expect(page.locator('#search_results')).toContainText('Greatest Ameican Hero Theme');
+    await expect(page.locator('#search_results')).toContainText('Nobody Told Me');
+    await expect(page.locator('#search_results')).toContainText('Shame On You');
+    await expect(page.locator('#search_results')).toContainText('The Wheel (Back and Forth)');
+    await expect(page.locator('#search_results')).toContainText('We Are Family');
+    
+    // 9) Restore dialog
+    await app.evaluate(() => { globalThis.__restoreBulkDialog?.(); });
+    
+    // 10) Verify test environment is clean
+    console.log('Bulk add test completed successfully, verifying clean state...');
+    
+    // Ensure modal is closed
+    const modalStillVisible = await page.locator('#bulkAddModal').isVisible();
+    if (modalStillVisible) {
+      console.log('Bulk modal still visible after test, closing...');
+      try {
+        await page.locator('#bulkAddModal .btn-close').click();
+        await page.waitForTimeout(500);
+      } catch (e) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+      }
+    }
+  });
 });
 
 
