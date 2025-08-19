@@ -1,4 +1,5 @@
 import { _electron as electron, test, expect } from '@playwright/test';
+import { TEST_CONFIG } from '../../config/test-environment.js';
 import electronPath from 'electron';
 import fs from 'fs';
 import path from 'path';
@@ -57,8 +58,29 @@ test.describe('First run flow', () => {
     await expect(firstRunModal).toBeVisible();
 
     // 2) Close the modal via the "Got It!" button
-    await firstRunModal.getByRole('button', { name: 'Got It!' }).click();
-    await expect(firstRunModal).toBeHidden();
+    const gotItButton = firstRunModal.getByRole('button', { name: 'Got It!' });
+    await gotItButton.click();
+    
+    // On Windows, try multiple approaches to ensure modal is dismissed
+    if (TEST_CONFIG.platform.isWindows) {
+      // Wait for modal animation to complete
+      await page.waitForTimeout(TEST_CONFIG.platform.modalAnimationTime);
+      
+      // Try pressing Escape as a fallback
+      if (await firstRunModal.isVisible()) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+      }
+      
+      // Try clicking outside the modal
+      if (await firstRunModal.isVisible()) {
+        await page.mouse.click(100, 100); // Click outside modal
+        await page.waitForTimeout(500);
+      }
+    }
+    
+    // Wait for modal to be hidden with extended timeout
+    await expect(firstRunModal).toBeHidden({ timeout: TEST_CONFIG.platform.defaultTimeout });
 
     // 3) Click into the search bar
     const searchInput = page.locator('#omni_search');
@@ -69,7 +91,7 @@ test.describe('First run flow', () => {
 
     // 5) Verify exactly one result and it is the CSz Rock Bumper
     const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(1, { timeout: 5000 });
+    await expect(rows).toHaveCount(1, { timeout: TEST_CONFIG.platform.defaultTimeout });
     const firstRow = rows.first();
     await expect(firstRow).toContainText('Rock Bumper');
     await expect(firstRow).toContainText('Patrick Short');

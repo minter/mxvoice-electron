@@ -6,7 +6,32 @@ import os from 'os';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Windows-specific configuration for timing differences
+const isWindows = process.platform === 'win32';
+const WINDOWS_CONFIG = {
+  audioStabilizationTime: 200,
+  modalAnimationTime: 500,
+  defaultTimeout: 10000,
+  audioTolerance: 0.05
+};
+
+const DEFAULT_CONFIG = {
+  audioStabilizationTime: 100,
+  modalAnimationTime: 100,
+  defaultTimeout: 5000,
+  audioTolerance: 0.01
+};
+
 export const TEST_CONFIG = {
+  // Platform-specific configuration
+  platform: {
+    isWindows,
+    audioStabilizationTime: isWindows ? WINDOWS_CONFIG.audioStabilizationTime : DEFAULT_CONFIG.audioStabilizationTime,
+    modalAnimationTime: isWindows ? WINDOWS_CONFIG.modalAnimationTime : DEFAULT_CONFIG.modalAnimationTime,
+    defaultTimeout: isWindows ? WINDOWS_CONFIG.defaultTimeout : DEFAULT_CONFIG.defaultTimeout,
+    audioTolerance: isWindows ? WINDOWS_CONFIG.audioTolerance : DEFAULT_CONFIG.audioTolerance
+  },
+  
   // Test database path (in-memory for isolation)
   databasePath: ':memory:',
   

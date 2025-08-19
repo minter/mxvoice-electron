@@ -1,185 +1,95 @@
-# Mx. Voice Testing Framework
+# Testing
 
-This directory contains the testing framework for the Mx. Voice Electron application using **Playwright with first-class Electron support**.
+This directory contains the test suite for Mx. Voice Electron application.
 
-## 🚀 **Quick Start**
+## Test Structure
 
-### **1. Install Playwright Browsers**
+- **`e2e/`** - End-to-end tests using Playwright with Electron
+- **`fixtures/` - Test data and resources
+- **`utils/` - Test utilities and helpers
+- **`setup/` - Test environment setup and teardown
+- **`config/` - Test configuration files
+
+## Running Tests
+
 ```bash
-yarn test:install
+yarn test            # All tests
+yarn test:smoke      # Minimal boot check
+yarn test:ui         # Interactive UI mode
+yarn test:headed     # Headed runs
+yarn test:debug      # Debug mode
+yarn test:report     # Open HTML report
 ```
 
-### **2. Run Tests**
-```bash
-# Run all tests
-yarn test
+## Windows-Specific Considerations
 
-# Run just smoke tests
-yarn test:smoke
+The test suite includes platform-specific configurations to handle differences between Windows and macOS/Linux:
 
-# Run with UI for debugging
-yarn test:ui
+### Audio Testing
+- **Windows**: Uses increased tolerance (0.05) and longer stabilization times (200ms) for audio measurements
+- **macOS/Linux**: Uses standard tolerance (0.01) and shorter stabilization times (100ms)
 
-# Run with visual output
-yarn test:headed
-```
+### Modal Timing
+- **Windows**: Extended timeouts (10s) and additional modal dismissal strategies
+- **macOS/Linux**: Standard timeouts (5s) and standard modal behavior
 
-### **3. View Results**
-```bash
-yarn test:report
-```
+### Configuration
+Platform-specific settings are automatically applied via `tests/config/test-environment.js`:
 
-## 🎯 **What We're Testing**
-
-### **Electron App Features**
-- ✅ **App Launch & Window Management** - App starts correctly and shows main window
-- ✅ **UI Elements** - Holding tank, mode switching, tab navigation
-- ✅ **Responsive Design** - Different viewport sizes
-- ✅ **User Interactions** - Button clicks, mode changes, tab switching
-
-### **Test Structure**
-- **`smoke.spec.js`** - Core app functionality and UI interactions
-- **Isolated Environment** - Each test runs with clean state
-- **Real App Testing** - Tests launch the actual Electron app
-
-## 🔧 **How It Works**
-
-### **Playwright + Electron Integration**
 ```javascript
-import { _electron as electron, test, expect } from '@playwright/test';
-
-test.beforeAll(async () => {
-  // Launch the actual Electron app
-  app = await electron.launch({
-    args: ['.'],
-    env: { NODE_ENV: 'test', APP_TEST_MODE: '1' }
-  });
-  page = await app.firstWindow();
-});
+export const TEST_CONFIG = {
+  platform: {
+    isWindows: process.platform === 'win32',
+    audioStabilizationTime: isWindows ? 200 : 100,
+    modalAnimationTime: isWindows ? 500 : 100,
+    defaultTimeout: isWindows ? 10000 : 5000,
+    audioTolerance: isWindows ? 0.05 : 0.01
+  }
+  // ... other config
+};
 ```
 
-### **Key Benefits**
-- **No Manual App Startup** - Tests launch the app automatically
-- **Real App Testing** - Tests interact with the actual application
-- **Fast & Reliable** - Playwright's optimized Electron support
-- **Easy Debugging** - Built-in UI mode and debugging tools
+### Common Windows Issues and Solutions
 
-## 📁 **File Structure**
+1. **Audio Level Tests Failing**: Windows audio drivers may have different characteristics
+   - Solution: Increased tolerance and stabilization time
+   
+2. **Modal Dismissal Timeouts**: Bootstrap modals may animate slower on Windows
+   - Solution: Extended timeouts and fallback dismissal strategies (Escape key, outside clicks)
 
-```
-tests/
-├── e2e/
-│   └── smoke.spec.js          # Main Electron app tests
-├── setup/                     # Test environment setup
-├── utils/                     # Test utilities
-├── fixtures/                  # Test data and files
-└── README.md                  # This file
-```
+3. **Volume Level Tests**: Windows volume control may be less precise
+   - Solution: More lenient volume level expectations (5% vs 10% differences)
 
-## 🧪 **Running Tests**
+## Test Isolation
 
-### **Basic Test Run**
-```bash
-yarn test
-```
+Each test suite runs in complete isolation:
+- Separate user data directories
+- Isolated database instances
+- Clean test fixtures
+- No interference with real app data
 
-### **Debug Mode**
-```bash
-# Interactive UI mode
-yarn test:ui
+## Audio Testing
 
-# Visual mode (see browser)
-yarn test:headed
+Audio tests use real audio measurements when running locally:
+- RMS level monitoring
+- Volume relationship verification
+- Fade-out pattern analysis
 
-# Debug mode (step through)
-yarn test:debug
-```
+On CI environments, audio tests are skipped in favor of UI state verification.
 
-### **Specific Tests**
-```bash
-# Run just smoke tests
-yarn test:smoke
+## Troubleshooting
 
-# Run specific test file
-yarn playwright test tests/e2e/smoke.spec.js
-```
+### Windows-Specific Issues
+- If audio tests fail, check that audio drivers are working properly
+- For modal timeouts, ensure the system isn't under heavy load
+- Volume tests may need adjustment based on your audio hardware
 
-## 🔍 **Test Development**
+### General Issues
+- Ensure test environment is properly isolated
+- Check that all test dependencies are installed
+- Verify Electron is accessible in the test environment
 
-### **Adding New Tests**
-1. **Create test file** in `tests/e2e/`
-2. **Use Electron API** - `_electron as electron`
-3. **Launch app** in `beforeAll`
-4. **Test UI interactions** with Playwright selectors
-5. **Clean up** in `afterAll`
+## References
 
-### **Example Test Structure**
-```javascript
-test.describe('Feature Name', () => {
-  let app, page;
-
-  test.beforeAll(async () => {
-    app = await electron.launch({ args: ['.'] });
-    page = await app.firstWindow();
-  });
-
-  test.afterAll(async () => {
-    await app.close();
-  });
-
-  test('should do something', async () => {
-    await expect(page.locator('#element')).toBeVisible();
-  });
-});
-```
-
-## 🚨 **Troubleshooting**
-
-### **Common Issues**
-- **App won't launch** - Check `main` field in package.json
-- **Tests hang** - Increase timeout in playwright.config.js
-- **UI elements not found** - Use `page.waitForSelector()` with proper timeouts
-
-### **Debug Commands**
-```bash
-# See what's happening
-yarn test:headed
-
-# Interactive debugging
-yarn test:ui
-
-# Step-by-step debugging
-yarn test:debug
-```
-
-## 📚 **Resources**
-
-- **Playwright Electron Docs**: [Playwright Electron Testing](https://playwright.dev/docs/api/class-electron)
-- **Testing Best Practices**: [Playwright Best Practices](https://playwright.dev/docs/best-practices)
-- **CI Integration**: [Playwright CI](https://playwright.dev/docs/ci)
-
-## 🎉 **Success!**
-
-This testing framework provides:
-- **Real Electron app testing** with Playwright
-- **Fast, reliable test execution**
-- **Easy debugging and development**
-- **CI/CD ready** configuration
-
-Your Mx. Voice app is now properly testable! 🚀
-
----
-
-## CI vs Local: Audio Measurement Behavior
-
-Some end‑to‑end playback tests measure real audio using the renderer tap utilities `rms(page)`, `waitForAudible(page)`, and `waitForSilence(page)`.
-
-- Locally: Full audio verification runs (audible/silence checks, volume relationships, fade‑out sampling).
-- On GitHub Actions: These audio‑tap sections are disabled to avoid flakiness on runners with non‑deterministic audio backends. The tests still validate UI state, timing (e.g., fade‑out completion), and behavior.
-
-To mimic CI behavior locally, run with `CI=true` in the environment.
-
-Example:
-```bash
-CI=true yarn test
-```
+- [Playwright Electron Testing](https://playwright.dev/docs/api/class-electron)
+- [Electron Testing Guide](ELECTRON_TESTING_GUIDE.md)
