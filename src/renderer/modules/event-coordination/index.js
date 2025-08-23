@@ -11,6 +11,7 @@
 import SearchEvents from './search-events.js';
 import AudioControlEvents from './audio-control-events.js';
 import UIInteractionEvents from './ui-interaction-events.js';
+import HotkeysEvents from './hotkeys-events.js';
 import DOMInitialization from './dom-initialization.js';
 import EventDelegator from './event-delegator.js';
 
@@ -30,6 +31,7 @@ class EventCoordination {
     this.searchEvents = null;
     this.audioControlEvents = null;
     this.uiInteractionEvents = null;
+    this.hotkeysEvents = null;
     this.domInitialization = null;
     this.eventDelegator = null;
     
@@ -61,6 +63,12 @@ class EventCoordination {
       });
 
       this.uiInteractionEvents = new UIInteractionEvents({
+        electronAPI: this.electronAPI,
+        debugLog: this.debugLog,
+        moduleRegistry: this.moduleRegistry
+      });
+
+      this.hotkeysEvents = new HotkeysEvents({
         electronAPI: this.electronAPI,
         debugLog: this.debugLog,
         moduleRegistry: this.moduleRegistry
@@ -121,6 +129,7 @@ class EventCoordination {
       await this.searchEvents.attachSearchEvents();
       await this.audioControlEvents.attachAudioControlEvents();
       await this.uiInteractionEvents.attachUIInteractionEvents();
+      await this.hotkeysEvents.attachHotkeysEvents();
 
       this.eventHandlersAttached = true;
       this.debugLog?.info('All event handlers attached successfully');
@@ -142,6 +151,7 @@ class EventCoordination {
       if (this.searchEvents) this.searchEvents.detachEvents();
       if (this.audioControlEvents) this.audioControlEvents.detachEvents();
       if (this.uiInteractionEvents) this.uiInteractionEvents.detachEvents();
+      if (this.hotkeysEvents) this.hotkeysEvents.detachEvents();
       if (this.eventDelegator) this.eventDelegator.cleanup();
 
       this.eventHandlersAttached = false;
@@ -163,6 +173,7 @@ class EventCoordination {
         searchEvents: !!this.searchEvents,
         audioControlEvents: !!this.audioControlEvents,
         uiInteractionEvents: !!this.uiInteractionEvents,
+        hotkeysEvents: !!this.hotkeysEvents,
         domInitialization: !!this.domInitialization,
         eventDelegator: !!this.eventDelegator
       }

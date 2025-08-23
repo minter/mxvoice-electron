@@ -140,48 +140,13 @@ export default class EventDelegator {
 
   /**
    * Set up hotkeys event delegation
+   * NOTE: Hotkey event handling moved to Hotkeys module to avoid conflicts
+   * This method is now a no-op to maintain API compatibility
    */
   setupHotkeysDelegation() {
-    // Single click selection
-    const hotkeys = document.querySelector('.hotkeys');
-    if (!hotkeys) return;
-    const hotkeysClickHandler = (event) => {
-      const li = event.target && event.target.closest('li');
-      if (!li || !hotkeys.contains(li)) return;
-      // Note: Intentionally not selecting hotkey tracks on single click
-      // Hotkey tracks should be triggered via keyboard shortcuts or double-click to play
-    };
-
-    // Double click to play
-    const hotkeysDoubleClickHandler = (event) => {
-      const li = event.target && event.target.closest('li');
-      if (!li || !hotkeys.contains(li)) return;
-      document.querySelector('.now_playing')?.classList.remove('now_playing');
-      document.getElementById('selected_row')?.removeAttribute('id');
-      const span = li.querySelector('span');
-      if (span && (span.textContent || '').length) {
-        const song_id = li.getAttribute('songid');
-        if (song_id && window.playSongFromId) window.playSongFromId(song_id);
-      }
-    };
-
-    // Attach delegated events
-    hotkeys.addEventListener('click', hotkeysClickHandler);
-    hotkeys.addEventListener('dblclick', hotkeysDoubleClickHandler);
-
-    // Store handlers for cleanup
-    this.delegatedHandlers.set('hotkeysClick', {
-      element: hotkeys,
-      event: 'click',
-      handler: hotkeysClickHandler,
-    });
-    this.delegatedHandlers.set('hotkeysDoubleClick', {
-      element: hotkeys,
-      event: 'dblclick',
-      handler: hotkeysDoubleClickHandler,
-    });
-
-    this.debugLog?.debug('Hotkeys delegation set up');
+    // Hotkey event handling has been moved to the Hotkeys module
+    // to avoid duplicate event handlers and race conditions
+    this.debugLog?.debug('Hotkeys delegation skipped - handled by Hotkeys module');
   }
 
   /**

@@ -108,6 +108,9 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     );
     window.logInfo('Basic module loading completed');
     
+    // Hotkeys module will be initialized via EventCoordination system
+    // No manual initialization needed
+    
     // Initialize theme management with preferences module dependency
     window.logInfo('Initializing theme management...');
     await AppBootstrap.initializeThemeManagement(
@@ -523,6 +526,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Attach all event handlers - this replaces all the jQuery event handling code
     await eventCoordination.attachEventHandlers();
     window.logInfo('All event handlers attached via event coordination module');
+
+    // Hotkeys module is now handled by EventCoordination system
+    // No manual initialization needed
 
     // Make event coordination available globally for debugging
     window.eventCoordination = eventCoordination;

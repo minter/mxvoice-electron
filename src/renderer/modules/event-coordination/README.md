@@ -9,6 +9,7 @@ event-coordination/
 ├── search-events.js
 ├── audio-control-events.js
 ├── ui-interaction-events.js
+├── hotkeys-events.js       # Hotkey event handling
 ├── dom-initialization.js
 ├── event-delegator.js
 └── README.md
@@ -23,6 +24,14 @@ Key methods:
 - `attachEventHandlers()` – initializes DOM, sets up delegation, attaches handlers
 - `detachEventHandlers()` – cleanup
 - `getStatus()` – diagnostics
+
+## Event Handler Modules
+
+The system includes several specialized event handler modules:
+- **SearchEvents**: Search functionality and form handling
+- **AudioControlEvents**: Playback controls and audio management
+- **UIInteractionEvents**: Modals, tabs, and general UI interactions
+- **HotkeysEvents**: Hotkey playback, drag & drop, and tab management
 
 ## Usage
 ```javascript

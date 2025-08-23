@@ -122,8 +122,8 @@ class HotkeysModule {
     // Load saved hotkeys from store
     this.loadHotkeysFromStore();
 
-    // Set up event listeners
-    this.setupEventListeners();
+    // Event listeners are now handled by EventCoordination system
+    // No need to call this.setupEventListeners() here
 
     debugLog?.info('✅ Hotkeys Module initialized', {
       module: 'hotkeys',
@@ -163,6 +163,8 @@ class HotkeysModule {
 
   /**
    * Set up event listeners for hotkey functionality
+   * NOTE: This method is deprecated - event listeners are now handled by EventCoordination system
+   * Keeping for backward compatibility but it should not be called
    */
   setupEventListeners() {
     // Hotkey click events
@@ -738,13 +740,13 @@ class HotkeysModule {
         }
       );
 
-      if (typeof playSongFromId === 'function') {
+      if (typeof window.playSongFromId === 'function') {
         debugLog?.info('🎵 HOTKEY PLAYBACK: Calling playSongFromId', {
           module: 'hotkeys',
           function: 'playSongFromHotkey',
           song_id: song_id,
         });
-        playSongFromId(song_id);
+        window.playSongFromId(song_id);
       } else {
         debugLog?.error(
           '❌ HOTKEY PLAYBACK FAIL: playSongFromId not available',
@@ -752,7 +754,7 @@ class HotkeysModule {
             module: 'hotkeys',
             function: 'playSongFromHotkey',
             song_id: song_id,
-            playSongFromId_type: typeof playSongFromId,
+            playSongFromId_type: typeof window.playSongFromId,
           }
         );
       }
