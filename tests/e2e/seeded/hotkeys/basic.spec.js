@@ -1343,4 +1343,130 @@ test.describe('Hotkeys - save & load', () => {
     console.log('✅ Successfully dragged hotkey to holding tank');
     console.log('✅ Got The Time appears in the Holding Tank');
   });
+
+  test('tab switching with file loading preserves tab state', async () => {
+    // Step 1: Go to Tab 1 on hotkeys
+    const tab1 = page.locator('#hotkey_tabs a[href="#hotkeys_list_1"]');
+    await tab1.click();
+    await expect(tab1).toHaveClass(/active/);
+    
+    // Step 2: Load the file test.mrv from fixtures into tab 1
+    const hotkeyFile1 = path.resolve(__dirname, '../../../fixtures/test-hotkeys/test.mrv');
+    
+    await app.evaluate(async ({ dialog }) => {
+      const original = dialog.showOpenDialog;
+      // @ts-ignore
+      globalThis.__restoreHotkeyDialog1 = () => (dialog.showOpenDialog = original);
+    });
+    
+    await app.evaluate(({ dialog }, filePath) => {
+      dialog.showOpenDialog = async () => {
+        return {
+          canceled: false,
+          filePaths: [filePath],
+        };
+      };
+    }, hotkeyFile1);
+    
+    const loadButton = page.locator('#hotkey-load-btn');
+    await loadButton.click();
+    await page.waitForTimeout(2000);
+    
+    // Step 3: Verify that these songs from test-environment.js are in the proper spots
+    const activeTab1 = page.locator('#hotkeys_list_1');
+    
+    // F1: Got The Time
+    const f1Hotkey = activeTab1.locator('#f1_hotkey .song');
+    await expect(f1Hotkey).toHaveText('Got The Time by Anthrax (0:06)');
+    
+    // F3: Greatest American Hero
+    const f3Hotkey = activeTab1.locator('#f3_hotkey .song');
+    await expect(f3Hotkey).toHaveText('Theme From The Greatest American Hero by Joey Scarbury (0:07)');
+    
+    // F4: The Wheel
+    const f4Hotkey = activeTab1.locator('#f4_hotkey .song');
+    await expect(f4Hotkey).toHaveText('The Wheel (Back And Forth) by Edie Brickell (0:08)');
+    
+    // F12: We Are Family
+    const f12Hotkey = activeTab1.locator('#f12_hotkey .song');
+    await expect(f12Hotkey).toHaveText('We Are Family by Sister Sledge (0:07)');
+    
+    // Step 4: Verify that the first tab now has the title Intros
+    await expect(tab1).toHaveText('Intros');
+    
+    // Step 5: Go to tab 3
+    const tab3 = page.locator('#hotkey_tabs a[href="#hotkeys_list_3"]');
+    await tab3.click();
+    await expect(tab3).toHaveClass(/active/);
+    
+    // Step 6: Load the file test2.mrv from fixtures
+    const hotkeyFile2 = path.resolve(__dirname, '../../../fixtures/test-hotkeys/test2.mrv');
+    
+    await app.evaluate(({ dialog }, filePath) => {
+      dialog.showOpenDialog = async () => {
+        return {
+          canceled: false,
+          filePaths: [filePath],
+        };
+      };
+    }, hotkeyFile2);
+    
+    await loadButton.click();
+    await page.waitForTimeout(2000);
+    
+    // Step 7: Verify that tab 3 is now titled "Outros"
+    await expect(tab3).toHaveText('Outros');
+    
+    // Step 8: Verify that the following songs are in the following keys
+    const activeTab3 = page.locator('#hotkeys_list_3');
+    
+    // F1: Eat It
+    const f1HotkeyTab3 = activeTab3.locator('#f1_hotkey .song');
+    await expect(f1HotkeyTab3).toHaveText('Eat It by Weird Al Yankovic (0:06)');
+    
+    // F2: We Are Family
+    const f2HotkeyTab3 = activeTab3.locator('#f2_hotkey .song');
+    await expect(f2HotkeyTab3).toHaveText('We Are Family by Sister Sledge (0:07)');
+    
+    // F3: Greatest American Hero
+    const f3HotkeyTab3 = activeTab3.locator('#f3_hotkey .song');
+    await expect(f3HotkeyTab3).toHaveText('Theme From The Greatest American Hero by Joey Scarbury (0:07)');
+    
+    // F4: The Wheel
+    const f4HotkeyTab3 = activeTab3.locator('#f4_hotkey .song');
+    await expect(f4HotkeyTab3).toHaveText('The Wheel (Back And Forth) by Edie Brickell (0:08)');
+    
+    // F5: Got The Time
+    const f5HotkeyTab3 = activeTab3.locator('#f5_hotkey .song');
+    await expect(f5HotkeyTab3).toHaveText('Got The Time by Anthrax (0:06)');
+    
+    // Step 9: Go back to the first tab
+    await tab1.click();
+    await expect(tab1).toHaveClass(/active/);
+    
+    // Step 10: Verify that the title is still "Intros"
+    await expect(tab1).toHaveText('Intros');
+    
+    // Step 11: Verify that the songs are in the same spot
+    // F1: Got The Time
+    await expect(f1Hotkey).toHaveText('Got The Time by Anthrax (0:06)');
+    
+    // F3: Greatest American Hero
+    await expect(f3Hotkey).toHaveText('Theme From The Greatest American Hero by Joey Scarbury (0:07)');
+    
+    // F4: The Wheel
+    await expect(f4Hotkey).toHaveText('The Wheel (Back And Forth) by Edie Brickell (0:08)');
+    
+    // F12: We Are Family
+    await expect(f12Hotkey).toHaveText('We Are Family by Sister Sledge (0:07)');
+    
+    // Restore the original dialog
+    await app.evaluate(() => { globalThis.__restoreHotkeyDialog1?.(); });
+    
+    console.log('✅ Successfully tested tab switching with file loading');
+    console.log('✅ Tab 1 "Intros": F1=Got The Time, F3=Greatest American Hero, F4=The Wheel, F12=We Are Family');
+    console.log('✅ Tab 3 "Outros": F1=Eat It, F2=We Are Family, F3=Greatest American Hero, F4=The Wheel, F5=Got The Time');
+    console.log('✅ Tab state preserved when switching between tabs');
+    console.log('✅ Tab titles preserved when switching between tabs');
+  });
 });
