@@ -82,7 +82,8 @@ class HotkeysModule {
       // this.populateHotkeys = hotkeyData.populateHotkeys.bind(this);
       // Use the class's own setLabelFromSongId method instead of the hotkeyData one
       // this.setLabelFromSongId = hotkeyData.setLabelFromSongId.bind(this);
-      this.clearHotkeys = hotkeyData.clearHotkeys.bind(this);
+      // Use the class's own clearHotkeys method instead of the hotkeyData one
+      // this.clearHotkeys = hotkeyData.clearHotkeys.bind(this);
       this.openHotkeyFile = hotkeyOperations.openHotkeyFile.bind(this);
       this.saveHotkeyFile = hotkeyOperations.saveHotkeyFile.bind(this);
       this.playSongFromHotkey = hotkeyOperations.playSongFromHotkey.bind(this);
@@ -600,18 +601,36 @@ class HotkeysModule {
    * Clear all hotkeys
    * Removes all song assignments from hotkeys
    */
-  clearHotkeys() {
-    customConfirm('Are you sure you want clear your hotkeys?', () => {
-      for (let key = 1; key <= 12; key++) {
-        const li = document.querySelector(`.hotkeys.active #f${key}_hotkey`);
-        if (li) {
-          li.removeAttribute('songid');
-          const span = li.querySelector('span');
-          if (span) span.textContent = '';
+  async clearHotkeys() {
+    const confirmed = await customConfirm('Are you sure you want clear your hotkeys?');
+    if (confirmed) {
+      debugLog?.info('🧹 Executing clearHotkeys logic after confirmation...', { module: 'hotkeys', function: 'clearHotkeys' });
+      
+      // Find the currently active hotkey tab
+      const activeTab = document.querySelector('.hotkeys.show.active');
+      debugLog?.info('🔍 Active tab found:', { activeTab: !!activeTab, tabId: activeTab?.id });
+      
+      if (activeTab) {
+        let clearedCount = 0;
+        for (let key = 1; key <= 12; key++) {
+          const li = activeTab.querySelector(`#f${key}_hotkey`);
+          if (li) {
+            const hadSongId = li.hasAttribute('songid');
+            li.removeAttribute('songid');
+            const span = li.querySelector('span');
+            if (span && span.textContent.trim()) {
+              span.textContent = '';
+              clearedCount++;
+            }
+            debugLog?.debug(`Cleared F${key}: hadSongId=${hadSongId}, span cleared`, { module: 'hotkeys' });
+          }
         }
+        debugLog?.info(`✅ Cleared ${clearedCount} hotkeys in tab ${activeTab.id}`, { module: 'hotkeys' });
+      } else {
+        debugLog?.error('❌ No active hotkey tab found with selector .hotkeys.show.active', { module: 'hotkeys' });
       }
       this.saveHotkeysToStore();
-    });
+    }
   }
 
   /**
