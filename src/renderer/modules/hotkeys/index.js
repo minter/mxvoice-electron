@@ -721,25 +721,51 @@ class HotkeysModule {
   }
 
   /**
+   * Get hotkey element from active tab
+   * Helper method to get hotkey element from the currently active tab
+   *
+   * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
+   * @returns {Element|null} - Hotkey element from active tab
+   */
+  getHotkeyElementFromActiveTab(hotkey) {
+    const activeLink = document.querySelector('#hotkey_tabs .nav-link.active');
+    if (!activeLink) return null;
+    
+    const href = activeLink.getAttribute('href');
+    if (!href || !href.startsWith('#')) return null;
+    
+    const tabId = href.substring(1);
+    const activeTabContent = document.getElementById(tabId);
+    if (!activeTabContent) return null;
+    
+    return activeTabContent.querySelector(`#${hotkey}_hotkey`);
+  }
+
+  /**
    * Play song from hotkey
-   * Plays the song assigned to the specified hotkey
+   * Plays the song assigned to the specified hotkey in the active tab
    *
    * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
    */
   playSongFromHotkey(hotkey) {
-    debugLog?.info('Getting song ID from hotkey ' + hotkey, {
+    debugLog?.info('Getting song ID from hotkey ' + hotkey + ' in active tab', {
       module: 'hotkeys',
       function: 'playSongFromHotkey',
     });
-    const song_id = document
-      .getElementById(`${hotkey}_hotkey`)
-      ?.getAttribute('songid');
-    debugLog?.info(`Found song ID ${song_id}`, {
+    
+    // Get hotkey element from active tab only
+    const hotkeyElement = this.getHotkeyElementFromActiveTab(hotkey);
+    
+    const song_id = hotkeyElement?.getAttribute('songid');
+    
+    debugLog?.info(`Found song ID ${song_id} from active tab`, {
       module: 'hotkeys',
       function: 'playSongFromHotkey',
+      activeTabElement: !!hotkeyElement,
     });
+    
     if (song_id) {
-      debugLog?.info(`Preparing to play song ${song_id}`, {
+      debugLog?.info(`Preparing to play song ${song_id} from active tab`, {
         module: 'hotkeys',
         function: 'playSongFromHotkey',
       });
@@ -777,10 +803,18 @@ class HotkeysModule {
           }
         );
       }
-      const hotkeyElement = document.getElementById(`${hotkey}_hotkey`);
+      
+      // Animate the correct hotkey element from active tab
       if (hotkeyElement) {
         animateCSS(hotkeyElement, 'flipInX');
       }
+    } else {
+      debugLog?.warn('No song assigned to hotkey ' + hotkey + ' in active tab', {
+        module: 'hotkeys',
+        function: 'playSongFromHotkey',
+        hotkey: hotkey,
+        hotkeyElement: !!hotkeyElement
+      });
     }
   }
 

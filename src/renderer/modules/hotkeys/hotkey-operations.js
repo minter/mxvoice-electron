@@ -192,18 +192,48 @@ function saveHotkeyFile() {
 }
 
 /**
+ * Get hotkey element from active tab
+ * Helper function to get hotkey element from the currently active tab
+ * 
+ * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
+ * @returns {Element|null} - Hotkey element from active tab
+ */
+function getHotkeyElementFromActiveTab(hotkey) {
+  const activeLink = document.querySelector('#hotkey_tabs .nav-link.active');
+  if (!activeLink) return null;
+  
+  const href = activeLink.getAttribute('href');
+  if (!href || !href.startsWith('#')) return null;
+  
+  const tabId = href.substring(1);
+  const activeTabContent = document.getElementById(tabId);
+  if (!activeTabContent) return null;
+  
+  return activeTabContent.querySelector(`#${hotkey}_hotkey`);
+}
+
+/**
  * Play song from hotkey
- * Plays the song assigned to the specified hotkey
+ * Plays the song assigned to the specified hotkey in the active tab
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  * @param {Object} options - Options object containing dependencies
  */
 function playSongFromHotkey(hotkey, options = {}) {
-  window.debugLog?.info("Getting song ID from hotkey " + hotkey, { module: 'hotkey-operations', function: 'playSongFromHotkey' });
-  const song_id = document.getElementById(`${hotkey}_hotkey`)?.getAttribute('songid');
-  window.debugLog?.info(`Found song ID ${song_id}`, { module: 'hotkey-operations', function: 'playSongFromHotkey' });
+  window.debugLog?.info("Getting song ID from hotkey " + hotkey + " in active tab", { module: 'hotkey-operations', function: 'playSongFromHotkey' });
+  
+  // Get hotkey element from active tab only
+  const hotkeyElement = getHotkeyElementFromActiveTab(hotkey);
+  const song_id = hotkeyElement?.getAttribute('songid');
+  
+  window.debugLog?.info(`Found song ID ${song_id} from active tab`, { 
+    module: 'hotkey-operations', 
+    function: 'playSongFromHotkey',
+    activeTabElement: !!hotkeyElement
+  });
+  
   if (song_id) {
-    window.debugLog?.info(`Preparing to play song ${song_id}`, { module: 'hotkey-operations', function: 'playSongFromHotkey' });
+    window.debugLog?.info(`Preparing to play song ${song_id} from active tab`, { module: 'hotkey-operations', function: 'playSongFromHotkey' });
     // Unhighlight any selected tracks in holding tank or playlist
     document.querySelector('.now_playing')?.classList.remove('now_playing');
     document.getElementById('selected_row')?.removeAttribute('id');
@@ -212,12 +242,16 @@ function playSongFromHotkey(hotkey, options = {}) {
     if (typeof playSongFromId === 'function') {
       playSongFromId(song_id);
     }
-    if (typeof animateCSS === 'function') {
-      const hotkeyElement = document.getElementById(`${hotkey}_hotkey`);
-      if (hotkeyElement) {
-        animateCSS(hotkeyElement, "flipInX");
-      }
+    if (typeof animateCSS === 'function' && hotkeyElement) {
+      animateCSS(hotkeyElement, "flipInX");
     }
+  } else {
+    window.debugLog?.warn('No song assigned to hotkey ' + hotkey + ' in active tab', {
+      module: 'hotkey-operations',
+      function: 'playSongFromHotkey',
+      hotkey: hotkey,
+      hotkeyElement: !!hotkeyElement
+    });
   }
 }
 
@@ -472,6 +506,7 @@ export {
   loadHotkeysFromStore,
   openHotkeyFile,
   saveHotkeyFile,
+  getHotkeyElementFromActiveTab,
   playSongFromHotkey,
   sendToHotkeys,
   removeFromHotkey,
@@ -488,6 +523,7 @@ export default {
   loadHotkeysFromStore,
   openHotkeyFile,
   saveHotkeyFile,
+  getHotkeyElementFromActiveTab,
   playSongFromHotkey,
   sendToHotkeys,
   removeFromHotkey,

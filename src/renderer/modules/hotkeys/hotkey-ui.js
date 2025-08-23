@@ -174,6 +174,37 @@ function setActiveHotkeyTab(tabNumber) {
 }
 
 /**
+ * Get active hotkey tab content element
+ * Returns the DOM element for the currently active hotkey tab content
+ * 
+ * @returns {Element|null} - Active tab content element
+ */
+function getActiveHotkeyTabContent() {
+  const activeLink = document.querySelector('#hotkey_tabs .nav-link.active');
+  if (!activeLink) return null;
+  
+  const href = activeLink.getAttribute('href');
+  if (!href || !href.startsWith('#')) return null;
+  
+  const tabId = href.substring(1);
+  return document.getElementById(tabId);
+}
+
+/**
+ * Get hotkey element from active tab
+ * Returns the hotkey element for a specific hotkey within the active tab
+ * 
+ * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
+ * @returns {Element|null} - Hotkey element from active tab
+ */
+function getHotkeyElementFromActiveTab(hotkey) {
+  const activeTabContent = getActiveHotkeyTabContent();
+  if (!activeTabContent) return null;
+  
+  return activeTabContent.querySelector(`#${hotkey}_hotkey`);
+}
+
+/**
  * Get hotkey element
  * Returns the jQuery element for a specific hotkey
  * 
@@ -273,24 +304,25 @@ function removeHotkeyElement(hotkey) {
 
 /**
  * Get hotkey song ID
- * Returns the song ID assigned to a hotkey
+ * Returns the song ID assigned to a hotkey in the active tab
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  * @returns {string} - Song ID or null
  */
 function getHotkeySongId(hotkey) {
-  return document.getElementById(`${hotkey}_hotkey`)?.getAttribute('songid') || null;
+  const element = getHotkeyElementFromActiveTab(hotkey);
+  return element?.getAttribute('songid') || null;
 }
 
 /**
  * Set hotkey song ID
- * Assigns a song ID to a hotkey
+ * Assigns a song ID to a hotkey in the active tab
  * 
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  * @param {string} songId - Song ID to assign
  */
 function setHotkeySongId(hotkey, songId) {
-  const el = document.getElementById(`${hotkey}_hotkey`);
+  const el = getHotkeyElementFromActiveTab(hotkey);
   if (el) el.setAttribute('songid', songId);
 }
 
@@ -387,6 +419,8 @@ export {
   initHotkeyTabs,
   getActiveHotkeyTab,
   setActiveHotkeyTab,
+  getActiveHotkeyTabContent,
+  getHotkeyElementFromActiveTab,
   getHotkeyElement,
   getAllHotkeyElements,
   highlightHotkey,
@@ -415,6 +449,8 @@ export default {
   initHotkeyTabs,
   getActiveHotkeyTab,
   setActiveHotkeyTab,
+  getActiveHotkeyTabContent,
+  getHotkeyElementFromActiveTab,
   getHotkeyElement,
   getAllHotkeyElements,
   highlightHotkey,

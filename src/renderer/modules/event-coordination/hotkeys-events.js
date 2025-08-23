@@ -68,16 +68,20 @@ export default class HotkeysEvents {
    */
   attachPlaybackEvents() {
     try {
-      const hotkeysRoot = document.querySelector('.hotkeys');
-      if (!hotkeysRoot) {
-        this.debugLog?.warn('No hotkeys element found for playback events');
+      const hotkeysElements = document.querySelectorAll('.hotkeys');
+      if (hotkeysElements.length === 0) {
+        this.debugLog?.warn('No hotkeys elements found for playback events');
         return;
       }
 
       // Double-click to play song from hotkey
       const doubleClickHandler = (event) => {
         const li = event.target && event.target.closest('li');
-        if (!li || !hotkeysRoot.contains(li)) return;
+        if (!li) return;
+
+        // Verify the clicked element is within a hotkeys container
+        const hotkeysContainer = li.closest('.hotkeys');
+        if (!hotkeysContainer) return;
 
         // Clear any existing selection
         document.querySelector('.now_playing')?.classList.remove('now_playing');
@@ -91,7 +95,8 @@ export default class HotkeysEvents {
             this.debugLog?.info('🎵 Playing song from hotkey double-click', {
               module: 'hotkeys-events',
               function: 'attachPlaybackEvents',
-              song_id: song_id
+              song_id: song_id,
+              tab_id: hotkeysContainer.id
             });
             window.playSongFromId(song_id);
           } else {
@@ -99,22 +104,26 @@ export default class HotkeysEvents {
               module: 'hotkeys-events',
               function: 'attachPlaybackEvents',
               song_id: song_id,
-              hasPlayFunction: !!window.playSongFromId
+              hasPlayFunction: !!window.playSongFromId,
+              tab_id: hotkeysContainer.id
             });
           }
         }
       };
 
-      hotkeysRoot.addEventListener('dblclick', doubleClickHandler);
-      
-      // Store handler for cleanup
-      this.hotkeyHandlers.set('doubleClick', {
-        element: hotkeysRoot,
-        event: 'dblclick',
-        handler: doubleClickHandler
+      // Attach event handler to ALL hotkeys elements (all tabs)
+      hotkeysElements.forEach((hotkeysRoot, index) => {
+        hotkeysRoot.addEventListener('dblclick', doubleClickHandler);
+        
+        // Store handler for cleanup
+        this.hotkeyHandlers.set(`doubleClick_${index}`, {
+          element: hotkeysRoot,
+          event: 'dblclick',
+          handler: doubleClickHandler
+        });
       });
 
-      this.debugLog?.debug('Hotkey playback events attached');
+      this.debugLog?.debug(`Hotkey playback events attached to ${hotkeysElements.length} hotkey tabs`);
 
     } catch (error) {
       this.debugLog?.error('Failed to attach hotkey playback events:', error);

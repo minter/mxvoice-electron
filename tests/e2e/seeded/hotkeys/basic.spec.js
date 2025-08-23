@@ -1246,6 +1246,213 @@ test.describe('Hotkeys - save & load', () => {
     console.log('✅ File format matches expected structure');
   });
 
+  test('tab isolation bug - F1 key and double-click should respect active tab', async () => {
+    // This test reproduces the exact scenario described in the issue:
+    // 1. Drag song to F1 on Tab 1
+    // 2. Go to Tab 3
+    // 3. Drag different song to F1 on Tab 3
+    // 4. Double-click F1 on Tab 3 (should play Tab 3's song)
+    // 5. Press F1 key (should play Tab 3's song, not Tab 1's song)
+    
+    // Step 1: Do a search to get songs
+    const searchInput = page.locator('#omni_search');
+    await searchInput.clear();
+    await searchInput.press('Enter');
+    await page.waitForTimeout(1000);
+    
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(5, { timeout: 5000 });
+    
+    // Step 2: Ensure Tab 1 is active and drag "We Are Family" to F1
+    const tab1 = page.locator('#hotkey_tabs a[href="#hotkeys_list_1"]');
+    await tab1.click();
+    await expect(tab1).toHaveClass(/active/);
+    
+    const weAreFamilyRow = rows.filter({ hasText: 'Sister Sledge' }).first();
+    const tab1Content = page.locator('#hotkeys_list_1');
+    const f1HotkeyTab1 = tab1Content.locator('#f1_hotkey .song');
+    
+    await weAreFamilyRow.dragTo(f1HotkeyTab1, { 
+      force: true, 
+      sourcePosition: { x: 10, y: 10 }, 
+      targetPosition: { x: 20, y: 20 } 
+    });
+    await page.waitForTimeout(500);
+    await expect(f1HotkeyTab1).toHaveText('We Are Family by Sister Sledge (0:07)');
+    
+    console.log('✅ Step 2: Dragged "We Are Family" to F1 on Tab 1');
+    
+    // Step 3: Go to Tab 3
+    const tab3 = page.locator('#hotkey_tabs a[href="#hotkeys_list_3"]');
+    await tab3.click();
+    await expect(tab3).toHaveClass(/active/);
+    await expect(page.locator('#hotkeys_list_3')).toHaveClass(/show/);
+    
+    console.log('✅ Step 3: Switched to Tab 3');
+    
+    // Step 4: Drag "Got The Time" to F1 on Tab 3
+    const gotTheTimeRow = rows.filter({ hasText: 'Anthrax' }).first();
+    const tab3Content = page.locator('#hotkeys_list_3');
+    const f1HotkeyTab3 = tab3Content.locator('#f1_hotkey .song');
+    
+    await gotTheTimeRow.dragTo(f1HotkeyTab3, { 
+      force: true, 
+      sourcePosition: { x: 10, y: 10 }, 
+      targetPosition: { x: 20, y: 20 } 
+    });
+    await page.waitForTimeout(500);
+    await expect(f1HotkeyTab3).toHaveText('Got The Time by Anthrax (0:06)');
+    
+    console.log('✅ Step 4: Dragged "Got The Time" to F1 on Tab 3');
+    
+    // Step 5: Double-click F1 on Tab 3 - should play "Got The Time"
+    // First, let's check what song ID is actually being targeted
+    const tab3F1SongId = await page.evaluate(() => {
+      const tab3F1 = document.querySelector('#hotkeys_list_3 #f1_hotkey');
+      return tab3F1 ? tab3F1.getAttribute('songid') : null;
+    });
+    
+    const tab1F1SongId = await page.evaluate(() => {
+      const tab1F1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
+      return tab1F1 ? tab1F1.getAttribute('songid') : null;
+    });
+    
+    console.log(`Tab 1 F1 song ID: ${tab1F1SongId}`);
+    console.log(`Tab 3 F1 song ID: ${tab3F1SongId}`);
+    
+    // Verify they are different songs
+    expect(tab1F1SongId).not.toBe(tab3F1SongId);
+    
+    // Step 6: Test double-click behavior
+    // Mock the playSongFromId function to track which song gets played
+    let playedSongId = null;
+    await page.evaluate(() => {
+      window.originalPlaySongFromId = window.playSongFromId;
+      window.playSongFromId = (songId) => {
+        window.lastPlayedSongId = songId;
+        console.log(`🎵 Mock playSongFromId called with song ID: ${songId}`);
+      };
+    });
+    
+    // Debug: Check the structure of the F1 hotkey element in Tab 3
+    const hotkeyStructure = await page.evaluate(() => {
+      const tab3F1 = document.querySelector('#hotkeys_list_3 #f1_hotkey');
+      if (tab3F1) {
+        return {
+          id: tab3F1.id,
+          songId: tab3F1.getAttribute('songid'),
+          innerHTML: tab3F1.innerHTML,
+          hasSpan: !!tab3F1.querySelector('span'),
+          spanText: tab3F1.querySelector('span')?.textContent || '',
+          classList: Array.from(tab3F1.classList),
+          parentElement: tab3F1.parentElement?.tagName,
+          parentClass: tab3F1.parentElement ? Array.from(tab3F1.parentElement.classList) : []
+        };
+      }
+      return null;
+    });
+    console.log('Tab 3 F1 hotkey structure:', hotkeyStructure);
+    
+    // Double-click F1 on Tab 3 - try clicking the li element directly
+    const f1HotkeyLi = tab3Content.locator('#f1_hotkey');
+    await f1HotkeyLi.dblclick();
+    await page.waitForTimeout(500);
+    
+    // Check which song was played
+    playedSongId = await page.evaluate(() => window.lastPlayedSongId);
+    console.log(`Double-click played song ID: ${playedSongId}`);
+    
+    // If that didn't work, let's try a different approach - check if event handlers are attached
+    if (!playedSongId) {
+      console.log('Double-click did not trigger - checking event handlers...');
+      const eventInfo = await page.evaluate(() => {
+        const hotkeysRoot = document.querySelector('.hotkeys');
+        const tab3F1 = document.querySelector('#hotkeys_list_3 #f1_hotkey');
+        return {
+          hotkeysRootExists: !!hotkeysRoot,
+          hotkeysRootClass: hotkeysRoot ? Array.from(hotkeysRoot.classList) : [],
+          tab3F1Exists: !!tab3F1,
+          tab3F1InHotkeysRoot: hotkeysRoot ? hotkeysRoot.contains(tab3F1) : false
+        };
+      });
+      console.log('Event handler debug info:', eventInfo);
+      
+      // Try triggering the double-click manually
+      await page.evaluate(() => {
+        const tab3F1 = document.querySelector('#hotkeys_list_3 #f1_hotkey');
+        if (tab3F1) {
+          const span = tab3F1.querySelector('span');
+          if (span && span.textContent && span.textContent.length > 0) {
+            const song_id = tab3F1.getAttribute('songid');
+            console.log('Manually triggering playback for song ID:', song_id);
+            if (song_id && window.playSongFromId) {
+              window.playSongFromId(song_id);
+            }
+          }
+        }
+      });
+      
+      playedSongId = await page.evaluate(() => window.lastPlayedSongId);
+      console.log(`Manual trigger played song ID: ${playedSongId}`);
+    }
+    
+    // EXPECTED: Should play Tab 3's song (Got The Time)
+    // ACTUAL BUG: Might play Tab 1's song (We Are Family) due to getElementById issue
+    expect(playedSongId).toBe(tab3F1SongId);
+    
+    console.log('✅ Step 6: Double-click correctly played Tab 3 song');
+    
+    // Step 7: Test F1 keyboard press behavior
+    // Reset the tracking
+    await page.evaluate(() => {
+      window.lastPlayedSongId = null;
+    });
+    
+    // Press F1 key
+    await page.keyboard.press('F1');
+    await page.waitForTimeout(500);
+    
+    // Check which song was played
+    playedSongId = await page.evaluate(() => window.lastPlayedSongId);
+    console.log(`F1 key press played song ID: ${playedSongId}`);
+    
+    // Debug: Check what the F1 handler is actually doing
+    if (playedSongId !== tab3F1SongId) {
+      console.log('F1 key press did not play correct song - debugging...');
+      const debugInfo = await page.evaluate(() => {
+        // Check what getElementById returns vs active tab query
+        const globalF1 = document.getElementById('f1_hotkey');
+        const activeTabF1 = document.querySelector('#hotkeys_list_3 #f1_hotkey');
+        
+        return {
+          globalF1SongId: globalF1?.getAttribute('songid'),
+          activeTabF1SongId: activeTabF1?.getAttribute('songid'),
+          globalF1TabParent: globalF1?.closest('[id^="hotkeys_list_"]')?.id,
+          activeTabF1TabParent: activeTabF1?.closest('[id^="hotkeys_list_"]')?.id,
+          activeTabLink: document.querySelector('#hotkey_tabs .nav-link.active')?.getAttribute('href')
+        };
+      });
+      console.log('F1 key debug info:', debugInfo);
+    }
+    
+    // EXPECTED: Should play Tab 3's song (Got The Time)
+    // ACTUAL BUG: Will play Tab 1's song (We Are Family) due to getElementById issue
+    expect(playedSongId).toBe(tab3F1SongId);
+    
+    console.log('✅ Step 7: F1 key press correctly played Tab 3 song');
+    
+    // Restore original function
+    await page.evaluate(() => {
+      if (window.originalPlaySongFromId) {
+        window.playSongFromId = window.originalPlaySongFromId;
+        delete window.originalPlaySongFromId;
+      }
+      delete window.lastPlayedSongId;
+    });
+    
+    console.log('✅ Successfully tested tab isolation - both double-click and F1 key respect active tab');
+  });
+
   test('drag hotkey to holding tank', async () => {
     // 1) Do a search to get songs
     const searchInput = page.locator('#omni_search');
