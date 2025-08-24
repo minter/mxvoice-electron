@@ -1001,6 +1001,137 @@ test.describe('Holding Tank - basic', () => {
     console.log('✅ Menu items are present and functional');
     console.log('✅ Remove/Delete operations work correctly');
   });
+
+  test('bug reproduction: double-click playback in holding tank tab 4', async () => {
+    // This test reproduces a bug where double-clicking songs in holding tank tabs
+    // other than tab 1 doesn't work properly
+    
+    console.log('🧪 Testing bug: double-click playback in holding tank tab 4');
+    
+    // 1) Clear the holding tank first to ensure clean state
+    await page.waitForTimeout(1000);
+    const clearButton = page.locator('#holding-tank-clear-btn');
+    await clearButton.click({ force: true });
+    await page.waitForTimeout(500);
+    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
+    await expect(confirmButton).toBeVisible({ timeout: 5000 });
+    await confirmButton.click();
+    await page.waitForTimeout(1000);
+    
+    // Verify all tabs are empty initially
+    for (let i = 1; i <= 5; i++) {
+      const tabList = page.locator(`#holding_tank_${i}`);
+      await expect(tabList.locator('.list-group-item')).toHaveCount(0);
+    }
+    
+    // 2) Open Tab 4 specifically
+    const tab4Link = page.locator('#holding_tank_tabs a[href="#holding_tank_4"]');
+    await tab4Link.click();
+    await page.waitForTimeout(300);
+    
+    // Verify Tab 4 is now active
+    await expect(tab4Link).toHaveClass(/active/);
+    const tab4List = page.locator('#holding_tank_4');
+    await expect(tab4List).toHaveClass(/show/);
+    await expect(tab4List).toHaveClass(/active/);
+    
+    console.log('✅ Tab 4 is now active and visible');
+    
+    // 3) Load the test.hld file
+    const holdingTankFile = path.resolve(__dirname, '../../../fixtures/test-holding-tank/test.hld');
+    
+    // Stub the file picker dialog
+    await app.evaluate(async ({ dialog }) => {
+      const original = dialog.showOpenDialog;
+      // Save a restorer for later
+      // @ts-ignore
+      globalThis.__restoreHoldingTankDialogTab4 = () => (dialog.showOpenDialog = original);
+    });
+    
+    await app.evaluate(({ dialog }, filePath) => {
+      dialog.showOpenDialog = async () => {
+        return {
+          canceled: false,
+          filePaths: [filePath],
+        };
+      };
+    }, holdingTankFile);
+    
+    // Click the Load button to trigger the file picker
+    const loadButton = page.locator('#holding-tank-load-btn');
+    await loadButton.click();
+    
+    // Wait for the file to be loaded and processed
+    await page.waitForTimeout(2000);
+    
+    // Verify the holding tank entries loaded into Tab 4
+    const tab4Items = tab4List.locator('.list-group-item');
+    await expect(tab4Items).toHaveCount(5);
+    
+    // Verify the first entry is visible in Tab 4
+    const firstItem = tab4Items.first();
+    await expect(firstItem).toContainText('Theme From The Greatest American Hero');
+    await expect(firstItem).toContainText('Joey Scarbury');
+    
+    console.log('✅ Test.hld file loaded successfully into Tab 4');
+    console.log('✅ Tab 4 contains 5 songs, first song: Theme From The Greatest American Hero');
+    
+    // 4) Double-click the first song in Tab 4
+    console.log('🧪 Attempting to double-click first song in Tab 4...');
+    
+    // Ensure we're still on Tab 4
+    await expect(tab4Link).toHaveClass(/active/);
+    await expect(tab4List).toHaveClass(/show/);
+    
+    // Double-click the first song
+    await firstItem.dblclick();
+    
+    // Wait for potential playback to start
+    await page.waitForTimeout(2000);
+    
+    // 5) Check if playback started
+    const playButton = page.locator('#play_button');
+    const pauseButton = page.locator('#pause_button');
+    const songNowPlaying = page.locator('#song_now_playing');
+    
+    // Check current state
+    const isPlayButtonVisible = await playButton.isVisible();
+    const isPauseButtonVisible = await pauseButton.isVisible();
+    const nowPlayingText = await songNowPlaying.textContent();
+    
+    console.log('Play button visible:', isPlayButtonVisible);
+    console.log('Pause button visible:', isPauseButtonVisible);
+    console.log('Now playing text:', nowPlayingText);
+    
+    // 6) Analyze the results to confirm the bug
+    if (isPauseButtonVisible && nowPlayingText.includes('Theme From The Greatest American Hero')) {
+      console.log('✅ SUCCESS: Double-click in Tab 4 worked - song is playing');
+      console.log('✅ Bug is NOT reproducible in this test environment');
+    } else {
+      console.log('❌ BUG CONFIRMED: Double-click in Tab 4 did NOT work');
+      console.log('❌ Expected: Pause button visible and song title showing');
+      console.log('❌ Actual: Play button visible, no song playing');
+      console.log('❌ This confirms the theory about tab-specific double-click handling');
+    }
+    
+    // 7) Restore the original dialog
+    await app.evaluate(() => { globalThis.__restoreHoldingTankDialogTab4?.(); });
+    
+    // 8) Summary and bug analysis
+    if (isPauseButtonVisible && nowPlayingText.includes('Theme From The Greatest American Hero')) {
+      console.log('✅ Test completed: Double-click in Tab 4 worked correctly');
+      console.log('✅ No bug detected in this test environment');
+      console.log('✅ Holding tank double-click functionality works in all tabs');
+    } else {
+      console.log('❌ BUG REPRODUCTION SUCCESSFUL');
+      console.log('❌ Double-click in Tab 4 fails to play songs');
+      console.log('❌ This supports the theory about tab-specific event handling issues');
+      console.log('❌ Possible causes:');
+      console.log('❌   1. Event handlers only bound to Tab 1');
+      console.log('❌   2. Multiple conflicting double-click handlers');
+      console.log('❌   3. Tab switching not properly updating event bindings');
+    }
+  });
 });
 
 

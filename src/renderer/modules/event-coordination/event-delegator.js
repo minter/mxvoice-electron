@@ -93,18 +93,20 @@ export default class EventDelegator {
    */
   setupHoldingTankDelegation() {
     // Single click selection
-    const container = document.querySelector('.holding_tank');
-    if (!container) return;
+    const containers = document.querySelectorAll('.holding_tank');
+    if (!containers.length) return;
+    
+    // Create handlers that will be attached to each container
     const holdingTankClickHandler = (event) => {
       const li = event.target && event.target.closest('.list-group-item');
-      if (li && container.contains(li) && window.toggleSelectedRow)
+      if (li && event.currentTarget.contains(li) && window.toggleSelectedRow)
         window.toggleSelectedRow(li);
     };
 
     // Double click to play
     const holdingTankDoubleClickHandler = (event) => {
       const li = event.target && event.target.closest('.list-group-item');
-      if (!li || !container.contains(li)) return;
+      if (!li || !event.currentTarget.contains(li)) return;
       const firstNow = document.querySelector('.now_playing');
       firstNow?.classList.remove('now_playing');
       document.getElementById('selected_row')?.removeAttribute('id');
@@ -119,23 +121,25 @@ export default class EventDelegator {
       if (window.playSelected) window.playSelected();
     };
 
-    // Attach delegated events
-    container.addEventListener('click', holdingTankClickHandler);
-    container.addEventListener('dblclick', holdingTankDoubleClickHandler);
+    // Attach delegated events to ALL holding tank containers (all tabs)
+    containers.forEach((container, index) => {
+      container.addEventListener('click', holdingTankClickHandler);
+      container.addEventListener('dblclick', holdingTankDoubleClickHandler);
 
-    // Store handlers for cleanup
-    this.delegatedHandlers.set('holdingTankClick', {
-      element: container,
-      event: 'click',
-      handler: holdingTankClickHandler,
-    });
-    this.delegatedHandlers.set('holdingTankDoubleClick', {
-      element: container,
-      event: 'dblclick',
-      handler: holdingTankDoubleClickHandler,
+      // Store handlers for cleanup
+      this.delegatedHandlers.set(`holdingTankClick_${index}`, {
+        element: container,
+        event: 'click',
+        handler: holdingTankClickHandler,
+      });
+      this.delegatedHandlers.set(`holdingTankDoubleClick_${index}`, {
+        element: container,
+        event: 'dblclick',
+        handler: holdingTankDoubleClickHandler,
+      });
     });
 
-    this.debugLog?.debug('Holding tank delegation set up');
+    this.debugLog?.debug(`Holding tank delegation set up for ${containers.length} tab containers`);
   }
 
   /**
