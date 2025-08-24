@@ -8,16 +8,8 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 
-// Initialize debug logger safely
+// debugLog will be injected by the calling module
 let debugLog = null;
-try {
-  // Try to import debug logger if available
-  if (typeof window !== 'undefined' && window.debugLog) {
-    debugLog = window.debugLog;
-  }
-} catch (error) {
-  // Debug logger not available in secure context
-}
 
 // Secure API structure for context isolation
 // Helpers to make payloads structured-clone safe for IPC
@@ -359,7 +351,8 @@ const secureElectronAPI = {
 };
 
 // Function to expose secure API
-function exposeSecureAPI() {
+function exposeSecureAPI(injectedDebugLog) {
+  debugLog = injectedDebugLog;
   try {
     // Check if context isolation is enabled
     if (typeof contextBridge !== 'undefined') {

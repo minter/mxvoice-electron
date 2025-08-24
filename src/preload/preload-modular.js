@@ -33,7 +33,7 @@ ipcBridge.registerIpcHandlers();
 
 // Enable context isolation by exposing secure API via contextBridge
 try {
-  const secureAPIExposed = secureApiExposer.exposeSecureAPI();
+  const secureAPIExposed = secureApiExposer.exposeSecureAPI(debugLog);
   if (secureAPIExposed) {
     debugLog.info('✅ Secure API exposed via contextBridge (context isolation enabled)');
     
