@@ -191,27 +191,80 @@ const secureElectronAPI = {
     openHoldingTankFile: () => ipcRenderer.invoke('open-holding-tank-file'),
     saveHoldingTankFile: (data) => ipcRenderer.invoke('save-holding-tank-file', data),
     pickDirectory: (defaultPath) => ipcRenderer.invoke('pick-directory', defaultPath),
+    // Auto-update operations - Three-stage process
+    checkForUpdate: () => {
+      debugLog.info('🔍 Preload: checkForUpdate called', { 
+        module: 'secure-api-exposer', 
+        function: 'checkForUpdate' 
+      });
+      return ipcRenderer.invoke('check-for-update')
+        .then(result => {
+          debugLog.info('🔍 Preload: check-for-update result', { 
+            module: 'secure-api-exposer', 
+            function: 'checkForUpdate',
+            result: result 
+          });
+          return result;
+        })
+        .catch(error => {
+          const errorMessage = error?.message || error?.toString() || 'Unknown error';
+          debugLog.error('❌ Preload: check-for-update failed', { 
+            module: 'secure-api-exposer', 
+            function: 'checkForUpdate',
+            error: errorMessage 
+          });
+          throw error;
+        });
+    },
+    
+    downloadUpdate: () => {
+      debugLog.info('📥 Preload: downloadUpdate called', { 
+        module: 'secure-api-exposer', 
+        function: 'downloadUpdate' 
+      });
+      return ipcRenderer.invoke('download-update')
+        .then(result => {
+          debugLog.info('📥 Preload: download-update result', { 
+            module: 'secure-api-exposer', 
+            function: 'downloadUpdate',
+            result: result 
+          });
+          return result;
+        })
+        .catch(error => {
+          const errorMessage = error?.message || error?.toString() || 'Unknown error';
+          debugLog.error('❌ Preload: download-update failed', { 
+            module: 'secure-api-exposer', 
+            function: 'downloadUpdate',
+            error: errorMessage 
+          });
+          throw error;
+        });
+    },
+    
     installUpdate: () => {
-      try {
-        debugLog.info('🔄 Preload: installUpdate called, invoking install-update IPC', { 
-      module: 'secure-api-exposer', 
-      function: 'installUpdate' 
-    });
-        const result = ipcRenderer.invoke('install-update');
-        debugLog.info('🔄 Preload: install-update IPC result', { 
-          module: 'secure-api-exposer', 
-          function: 'installUpdate',
-          result: result 
+      debugLog.info('🚀 Preload: installUpdate called', { 
+        module: 'secure-api-exposer', 
+        function: 'installUpdate' 
+      });
+      return ipcRenderer.invoke('install-update')
+        .then(result => {
+          debugLog.info('🚀 Preload: install-update result', { 
+            module: 'secure-api-exposer', 
+            function: 'installUpdate',
+            result: result 
+          });
+          return result;
+        })
+        .catch(error => {
+          const errorMessage = error?.message || error?.toString() || 'Unknown error';
+          debugLog.error('❌ Preload: install-update failed', { 
+            module: 'secure-api-exposer', 
+            function: 'installUpdate',
+            error: errorMessage 
+          });
+          throw error;
         });
-        return result;
-      } catch (error) {
-        debugLog.error('❌ Preload: install-update IPC failed', { 
-          module: 'secure-api-exposer', 
-          function: 'installUpdate',
-          error: error.message 
-        });
-        throw error;
-      }
     },
     importAudioFiles: (filePaths) => ipcRenderer.invoke('import-audio-files', filePaths),
     exportData: (exportOptions) => ipcRenderer.invoke('export-data', exportOptions)

@@ -97,6 +97,48 @@ export default class UIInteractionEvents {
       window.addEventListener('mxvoice:update-release-notes', updateReleaseNotesListener);
       this.uiHandlers.set('mxvoiceUpdateReleaseNotes', { element: window, event: 'mxvoice:update-release-notes', handler: updateReleaseNotesListener });
     } catch {}
+
+    // Auto-update progress events
+    try {
+      const updateProgressListener = (event) => {
+        try {
+          const progress = event.detail || {};
+          // Import the system operations module to handle progress
+          import('../file-operations/system-operations.js').then(systemOps => {
+            if (systemOps.handleDownloadProgress) {
+              systemOps.handleDownloadProgress(progress);
+            }
+          }).catch(err => {
+            this.debugLog?.error('Failed to import system operations for progress update:', err);
+          });
+        } catch (error) {
+          this.debugLog?.error('Error handling update progress:', error);
+        }
+      };
+      
+      const updateReadyListener = (event) => {
+        try {
+          const version = event.detail || '';
+          // Import the system operations module to handle ready state
+          import('../file-operations/system-operations.js').then(systemOps => {
+            if (systemOps.handleUpdateReady) {
+              systemOps.handleUpdateReady(version);
+            }
+          }).catch(err => {
+            this.debugLog?.error('Failed to import system operations for update ready:', err);
+          });
+        } catch (error) {
+          this.debugLog?.error('Error handling update ready:', error);
+        }
+      };
+
+      window.addEventListener('mxvoice:update-download-progress', updateProgressListener);
+      window.addEventListener('mxvoice:update-ready', updateReadyListener);
+      this.uiHandlers.set('mxvoiceUpdateProgress', { element: window, event: 'mxvoice:update-download-progress', handler: updateProgressListener });
+      this.uiHandlers.set('mxvoiceUpdateReady', { element: window, event: 'mxvoice:update-ready', handler: updateReadyListener });
+    } catch (error) {
+      this.debugLog?.error('Failed to attach update progress events:', error);
+    }
     
     this.debugLog?.debug('Modal events attached');
   }

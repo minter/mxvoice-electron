@@ -22,7 +22,7 @@ try {
 }
 
 import { openHotkeyFile, openHoldingTankFile, saveHotkeyFile, saveHoldingTankFile } from './file-operations.js';
-import { pickDirectory, installUpdate } from './system-operations.js';
+import { pickDirectory, startUpdateProcess, checkForUpdate, downloadUpdate, installUpdate } from './system-operations.js';
 
 /**
  * File Operations Singleton
@@ -37,6 +37,9 @@ class FileOperationsModule {
     this.saveHotkeyFile = saveHotkeyFile;
     this.saveHoldingTankFile = saveHoldingTankFile;
     this.pickDirectory = pickDirectory;
+    this.startUpdateProcess = startUpdateProcess;
+    this.checkForUpdate = checkForUpdate;
+    this.downloadUpdate = downloadUpdate;
     this.installUpdate = installUpdate;
   }
 
@@ -93,6 +96,9 @@ class FileOperationsModule {
       saveHotkeyFile: this.saveHotkeyFile,
       saveHoldingTankFile: this.saveHoldingTankFile,
       pickDirectory: this.pickDirectory,
+      startUpdateProcess: this.startUpdateProcess,
+      checkForUpdate: this.checkForUpdate,
+      downloadUpdate: this.downloadUpdate,
       installUpdate: this.installUpdate
     };
   }
@@ -112,6 +118,9 @@ class FileOperationsModule {
       'saveHotkeyFile',
       'saveHoldingTankFile',
       'pickDirectory',
+      'startUpdateProcess',
+      'checkForUpdate',
+      'downloadUpdate',
       'installUpdate'
     ];
 

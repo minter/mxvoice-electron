@@ -946,60 +946,103 @@ function registerAllHandlers() {
     }
   });
 
-  // Add the missing install-update handler for auto-updates
-  ipcMain.handle('install-update', async () => {
+  // Auto-update handlers - Three-stage process for better UX
+  
+  // Stage 1: Check for updates (no download)
+  ipcMain.handle('check-for-update', async () => {
     try {
-          // Log production install-update handler details
-    debugLog.info('🚀 [PRODUCTION] install-update handler called', { 
-      module: 'ipc-handlers', 
-      function: 'install-update',
-      autoUpdaterAvailable: !!autoUpdater,
-      autoUpdaterType: typeof autoUpdater,
-      updateStateDownloaded: !!updateState?.downloaded
-    });
-      
-      debugLog?.error('install-update handler called', { 
+      debugLog.info('🔍 Checking for updates...', { 
         module: 'ipc-handlers', 
-        function: 'install-update',
-        autoUpdaterAvailable: !!autoUpdater,
-        autoUpdaterType: typeof autoUpdater,
-        updateDownloaded: !!updateState?.downloaded
+        function: 'check-for-update',
+        currentVersion: app.getVersion()
       });
       
-      if (autoUpdater && updateState?.downloaded) {
-        debugLog?.error('Installing update via autoUpdater.quitAndInstall', { module: 'ipc-handlers', function: 'install-update' });
-        autoUpdater.quitAndInstall();
-        return { success: true };
-      } else if (autoUpdater && !updateState?.downloaded) {
-        debugLog?.info('Starting explicit download via autoUpdater.downloadUpdate()', { module: 'ipc-handlers', function: 'install-update' });
-        // Mark that user approved installing once download completes
-        updateState.userApprovedInstall = true;
-        await autoUpdater.downloadUpdate();
-        return { success: true, startedDownload: true };
-      } else {
-        debugLog.error('❌ [PRODUCTION] Auto updater not available', { 
-        module: 'ipc-handlers', 
-        function: 'install-update' 
-      });
-        debugLog?.error('Auto updater not available', { 
-          module: 'ipc-handlers', 
-          function: 'install-update' 
-        });
+      if (!autoUpdater) {
         throw new Error('Auto updater not available');
       }
+      
+      // Reset download state
+      updateState.downloaded = false;
+      updateState.userApprovedInstall = false;
+      
+      const result = await autoUpdater.checkForUpdates();
+      return { 
+        success: true, 
+        updateAvailable: !!result?.updateInfo,
+        updateInfo: result?.updateInfo || null
+      };
     } catch (error) {
-      debugLog.error('❌ [PRODUCTION] Install update error', { 
+      debugLog.error('Check for update error:', { 
         module: 'ipc-handlers', 
-        function: 'install-update',
+        function: 'check-for-update',
         error: error.message 
       });
-      debugLog?.error('Install update error:', { 
-        module: 'ipc-handlers', 
-        function: 'install-update', 
-        error: error.message,
-        stack: error.stack
-      });
       return { success: false, error: error.message };
+    }
+  });
+
+  // Stage 2: Download update (user-initiated)
+  ipcMain.handle('download-update', async () => {
+    try {
+      debugLog.info('📥 Starting update download...', { 
+        module: 'ipc-handlers', 
+        function: 'download-update'
+      });
+      
+      if (!autoUpdater) {
+        throw new Error('Auto updater not available');
+      }
+      
+      // Download with timeout to prevent hangs
+      const downloadPromise = autoUpdater.downloadUpdate();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Download timeout after 60 seconds')), 60000)
+      );
+      
+      await Promise.race([downloadPromise, timeoutPromise]);
+      return { success: true, message: 'Download started' };
+    } catch (error) {
+      const errorMessage = error?.message || error?.toString() || 'Download failed';
+      debugLog.error('Download update error:', { 
+        module: 'ipc-handlers', 
+        function: 'download-update',
+        error: errorMessage 
+      });
+      return { success: false, error: errorMessage };
+    }
+  });
+
+  // Stage 3: Install update (only if downloaded)
+  ipcMain.handle('install-update', async () => {
+    try {
+      debugLog.info('🚀 Installing update...', { 
+        module: 'ipc-handlers', 
+        function: 'install-update',
+        downloaded: !!updateState?.downloaded
+      });
+      
+      if (!autoUpdater) {
+        throw new Error('Auto updater not available');
+      }
+      
+      if (!updateState?.downloaded) {
+        throw new Error('No update has been downloaded yet');
+      }
+      
+      // Install and restart immediately
+      setImmediate(() => {
+        autoUpdater.quitAndInstall();
+      });
+      
+      return { success: true, message: 'Installing and restarting...' };
+    } catch (error) {
+      const errorMessage = error?.message || error?.toString() || 'Install failed';
+      debugLog.error('Install update error:', { 
+        module: 'ipc-handlers', 
+        function: 'install-update',
+        error: errorMessage 
+      });
+      return { success: false, error: errorMessage };
     }
   });
 

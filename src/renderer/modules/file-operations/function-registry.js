@@ -26,6 +26,11 @@ export const fileOperationsFunctions = {
   
   // System operations
   pickDirectory: 'pickDirectory',
+  
+  // Auto-update operations
+  startUpdateProcess: 'startUpdateProcess',
+  checkForUpdate: 'checkForUpdate',
+  downloadUpdate: 'downloadUpdate',
   installUpdate: 'installUpdate',
   
   // Fallback functions for when module fails to load
@@ -48,6 +53,18 @@ export const fileOperationsFunctions = {
   pickDirectoryFallback: () => debugLog?.warn('⚠️ File operations not available - pickDirectory', { 
     module: 'file-operations',
     function: 'pickDirectoryFallback'
+  }),
+  startUpdateProcessFallback: () => debugLog?.warn('⚠️ File operations not available - startUpdateProcess', { 
+    module: 'file-operations',
+    function: 'startUpdateProcessFallback'
+  }),
+  checkForUpdateFallback: () => debugLog?.warn('⚠️ File operations not available - checkForUpdate', { 
+    module: 'file-operations',
+    function: 'checkForUpdateFallback'
+  }),
+  downloadUpdateFallback: () => debugLog?.warn('⚠️ File operations not available - downloadUpdate', { 
+    module: 'file-operations',
+    function: 'downloadUpdateFallback'
   }),
   installUpdateFallback: () => debugLog?.warn('⚠️ File operations not available - installUpdate', { 
     module: 'file-operations',

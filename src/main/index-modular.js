@@ -570,7 +570,13 @@ function setupApp() {
 
   autoUpdater.on('download-progress', (progress) => {
     try { 
-      mainWindow?.webContents.send('update_download_progress', progress || {}); 
+      // Send IPC event and dispatch custom event in renderer
+      mainWindow?.webContents.send('update_download_progress', progress || {});
+      mainWindow?.webContents.executeJavaScript(`
+        window.dispatchEvent(new CustomEvent('mxvoice:update-download-progress', { 
+          detail: ${JSON.stringify(progress || {})} 
+        }));
+      `);
     } catch (error) {
       debugLog.warn('Failed to send update download progress to renderer', { 
         module: 'main', 
@@ -584,7 +590,14 @@ function setupApp() {
   autoUpdater.on('update-downloaded', (info) => {
     updateState.downloaded = true;
     try { 
-      mainWindow?.webContents.send('update_ready', info?.version || ''); 
+      // Send IPC event and dispatch custom event in renderer
+      const version = info?.version || '';
+      mainWindow?.webContents.send('update_ready', version); 
+      mainWindow?.webContents.executeJavaScript(`
+        window.dispatchEvent(new CustomEvent('mxvoice:update-ready', { 
+          detail: ${JSON.stringify(version)} 
+        }));
+      `);
     } catch (error) {
       debugLog.warn('Failed to send update ready to renderer', { 
         module: 'main', 
