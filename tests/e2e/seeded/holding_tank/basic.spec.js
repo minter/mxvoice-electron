@@ -996,10 +996,30 @@ test.describe('Holding Tank - basic', () => {
       console.log('⚠️ No context menu visible in search results');
     }
     
+    // Clean up: Remove the song we added for testing
+    await tab1Items.first().click({ button: 'right' });
+    await expect(contextMenu).toBeVisible({ timeout: 2000 });
+    const cleanupRemoveButton = contextMenu.locator('button:has-text("Remove from Holding Tank")');
+    if (!(await cleanupRemoveButton.isVisible())) {
+      // Fallback to Delete if label did not change as expected
+      cleanupRemoveButton = contextMenu.locator('button:has-text("Delete")');
+    }
+    await cleanupRemoveButton.click();
+    
+    // Confirm removal in the confirmation modal
+    const cleanupRemovalConfirm = page.locator('.modal:has-text("Are you sure you want to remove") .confirm-btn');
+    await expect(cleanupRemovalConfirm).toBeVisible({ timeout: 5000 });
+    await cleanupRemovalConfirm.click();
+    await page.waitForTimeout(500);
+    
+    // Verify cleanup was successful
+    await expect(tab1Items).toHaveCount(0);
+    
     console.log('✅ Successfully tested context menu functionality in holding tank');
     console.log('✅ Context menu appears on right-click (or alternative UI elements)');
     console.log('✅ Menu items are present and functional');
     console.log('✅ Remove/Delete operations work correctly');
+    console.log('✅ Cleanup completed - holding tank is empty');
   });
 
   test('bug reproduction: double-click playback in holding tank tab 4', async () => {
@@ -1018,11 +1038,10 @@ test.describe('Holding Tank - basic', () => {
     await confirmButton.click();
     await page.waitForTimeout(1000);
     
-    // Verify all tabs are empty initially
-    for (let i = 1; i <= 5; i++) {
-      const tabList = page.locator(`#holding_tank_${i}`);
-      await expect(tabList.locator('.list-group-item')).toHaveCount(0);
-    }
+    // Verify that the active tab (tab 1) is empty after clearing
+    // Note: Clear only affects the active tab, not all tabs
+    const activeTab = page.locator('#holding_tank_1');
+    await expect(activeTab.locator('.list-group-item')).toHaveCount(0);
     
     // 2) Open Tab 4 specifically
     const tab4Link = page.locator('#holding_tank_tabs a[href="#holding_tank_4"]');
