@@ -133,6 +133,9 @@ yarn release:win:draft       # Publish Windows draft to GitHub
 # Local builds (no publishing)
 yarn pack                    # Build without publishing
 yarn dist                    # Build all platforms locally
+
+# Utility scripts
+yarn fix:checksums          # Manually fix checksums in latest.yml
 ```
 
 ### macOS
@@ -202,6 +205,7 @@ npm run build:win
 This command will:
 - Build the Windows installer (`.exe`) in the `dist/` directory.
 - Automatically sign the installer using SSL.com's CodeSignTool.
+- **Automatically fix checksums** in `latest.yml` to ensure they match the signed installer (Windows-specific).
 
 #### Required Environment Variables
 
@@ -224,8 +228,8 @@ $env:SSL_TOTP_SECRET="your_base64_totp_secret"
 #### How the Signing Works
 
 - **Pre-NSIS signing**: The main executable (`Mx. Voice.exe`) and helper (`elevate.exe`) are signed with SSL.com during the `afterPack` phase.
-- **Post-NSIS signing**: The final NSIS installer (`.exe`) and uninstaller are signed with SSL.com before publishing via the `artifactBuildCompleted` hook.
-- **Checksum generation**: All checksums in `latest.yml` are calculated after SSL.com signing, ensuring they match the published artifacts.
+- **NSIS installer signing**: The final NSIS installer (`.exe`) is signed with SSL.com after creation via the `artifactBuildCompleted` hook.
+- **Automatic checksum correction**: Windows builds automatically correct checksums in `latest.yml` after signing to ensure they match the published artifacts. macOS and Linux builds maintain correct checksums from the start.
 - **Comprehensive coverage**: All Windows executables carry SSL.com signatures for consistent publisher trust.
 
 #### Verifying the Signature

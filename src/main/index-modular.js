@@ -107,24 +107,66 @@ debugLog.info('Electron Store initialized', { function: 'store-init', storePath:
 // Auto-updater configuration
 const { autoUpdater } = electronUpdater;
 
+debugLog.info('Auto-updater module loaded', { 
+  function: "auto-updater setup",
+  hasAutoUpdater: !!autoUpdater,
+  autoUpdaterType: typeof autoUpdater,
+  platform: process.platform,
+  arch: process.arch,
+  electronVersion: process.versions.electron
+});
+
 // Configure auto-updater to use our debug logger instead of electron-log
 autoUpdater.logger = {
-  info: (message) => debugLog.info(`[AutoUpdater] ${message}`, { module: 'auto-updater' }),
-  warn: (message) => debugLog.warn(`[AutoUpdater] ${message}`, { module: 'auto-updater' }),
-  error: (message) => debugLog.error(`[AutoUpdater] ${message}`, { module: 'auto-updater' }),
-  debug: (message) => debugLog.debug(`[AutoUpdater] ${message}`, { module: 'auto-updater' }),
-  log: (message) => debugLog.info(`[AutoUpdater] ${message}`, { module: 'auto-updater' })
+  info: (message) => debugLog.info(`[AutoUpdater] ${message}`, { 
+    module: 'auto-updater',
+    platform: process.platform,
+    arch: process.arch
+  }),
+  warn: (message) => debugLog.warn(`[AutoUpdater] ${message}`, { 
+    module: 'auto-updater',
+    platform: process.platform,
+    arch: process.arch
+  }),
+  error: (message) => debugLog.error(`[AutoUpdater] ${message}`, { 
+    module: 'auto-updater',
+    platform: process.platform,
+    arch: process.arch
+  }),
+  debug: (message) => debugLog.debug(`[AutoUpdater] ${message}`, { 
+    module: 'auto-updater',
+    platform: process.platform,
+    arch: process.arch
+  }),
+  log: (message) => debugLog.info(`[AutoUpdater] ${message}`, { 
+    module: 'auto-updater',
+    platform: process.platform,
+    arch: process.arch
+  })
 };
 
-// Set architecture-aware update feed URL for macOS
-if (process.platform === "darwin") {
-  const currentVersion = getTestVersion(); // Use test version if available
+// Set architecture-aware update feed URL for macOS and Windows
+if (process.platform === "darwin" || process.platform === "win32") {
+  const currentVersion = app.getVersion(); // Use actual app version for auto-update config
+  
+  debugLog.info(`Configuring auto-updater for ${process.platform}`, { 
+    function: "auto-updater setup",
+    platform: process.platform,
+    arch: process.arch,
+    version: currentVersion,
+    electronVersion: process.versions.electron,
+    nodeVersion: process.versions.node
+  });
   
   if (currentVersion.startsWith('4.')) {
     // 4.0+ users: Use GitHub provider for multi-architecture support
-    debugLog.info(`Using GitHub provider for version ${currentVersion}`, { 
+    debugLog.info(`Using GitHub provider for version ${currentVersion} on ${process.platform}`, { 
       function: "auto-updater setup",
-      provider: "github"
+      provider: "github",
+      platform: process.platform,
+      arch: process.arch,
+      electronVersion: process.versions.electron,
+      nodeVersion: process.versions.node
     });
     
     // Check user preference for prerelease updates OR if currently running a pre-release version
@@ -139,31 +181,178 @@ if (process.platform === "darwin") {
       prereleaseEnabled: shouldAllowPrereleases,
       userPreference: userPrefersPrereleases,
       isCurrentlyPrerelease: isCurrentlyPrerelease,
-      currentVersion: currentVersion
+      currentVersion: currentVersion,
+      platform: process.platform,
+      arch: process.arch
     });
     // Do not auto-download; wait for explicit user action
     autoUpdater.autoDownload = false;
     
     // Explicitly configure GitHub provider; allow prereleases and let provider resolve URLs
-    autoUpdater.setFeedURL({ 
+    const feedConfig = {
       provider: "github",
       owner: "minter",
       repo: "mxvoice-electron",
       private: false,
       channel: "latest"
+    };
+    
+    debugLog.info('Setting GitHub feed URL', { 
+      function: "auto-updater setup",
+      feedConfig: feedConfig,
+      platform: process.platform,
+      arch: process.arch
+    });
+    
+    autoUpdater.setFeedURL(feedConfig);
+    
+    // Log GitHub feed configuration details
+    debugLog.info('GitHub feed URL set successfully', { 
+      function: "auto-updater setup",
+      feedConfig: feedConfig,
+      platform: process.platform,
+      arch: process.arch,
+      version: currentVersion
     });
   } else {
     // 3.x users: Use your custom server (legacy support)
-    debugLog.info(`Using custom server for version ${currentVersion}`, { 
+    debugLog.info(`Using custom server for version ${currentVersion} on ${process.platform}`, { 
       function: "auto-updater setup",
       provider: "custom",
-      server: "download.mxvoice.app"
+      server: "download.mxvoice.app",
+      platform: process.platform,
+      arch: process.arch
     });
     const server = "https://download.mxvoice.app";
     const arch = process.arch; // 'x64' or 'arm64'
-    const feed = `${server}/update/darwin/${arch}/${currentVersion}`;
+    const platform = process.platform === "darwin" ? "darwin" : "win32";
+    const feed = `${server}/update/${platform}/${arch}/${currentVersion}`;
+    
+    debugLog.info('Setting custom server feed URL', { 
+      function: "auto-updater setup",
+      server: server,
+      platform: platform,
+      arch: arch,
+      version: currentVersion,
+      feed: feed
+    });
+    
     autoUpdater.setFeedURL({ provider: "generic", url: feed });
+    
+    // Log custom server feed configuration details
+    debugLog.info('Custom server feed URL set successfully', { 
+      function: "auto-updater setup",
+      provider: "generic",
+      url: feed,
+      platform: process.platform,
+      arch: process.arch,
+      version: currentVersion
+    });
   }
+  
+  // Log final auto-updater configuration
+  debugLog.info('Auto-updater configuration completed', { 
+    function: "auto-updater setup",
+    platform: process.platform,
+    arch: process.arch,
+    version: currentVersion,
+    provider: currentVersion.startsWith('4.') ? 'github' : 'custom',
+    allowPrerelease: autoUpdater.allowPrerelease,
+    autoDownload: autoUpdater.autoDownload,
+    hasAutoUpdater: !!autoUpdater,
+    autoUpdaterType: typeof autoUpdater,
+    electronVersion: process.versions.electron,
+    nodeVersion: process.versions.node,
+    timestamp: new Date().toISOString(),
+    userDataPath: app.getPath('userData'),
+    appPath: app.getAppPath(),
+    storePath: store.path,
+    cwd: process.cwd(),
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      TEST_AUTO_UPDATE: process.env.TEST_AUTO_UPDATE,
+      TEST_UPDATE_VERSION: process.env.TEST_UPDATE_VERSION
+    },
+    memory: {
+      heapUsed: process.memoryUsage().heapUsed,
+      heapTotal: process.memoryUsage().heapTotal,
+      external: process.memoryUsage().external
+    },
+    uptime: process.uptime(),
+    pid: process.pid,
+    versions: {
+      chrome: process.versions.chrome,
+      node: process.versions.node,
+      electron: process.versions.electron
+    },
+    buildInfo: {
+      isDev: process.env.NODE_ENV === 'development',
+      isTest: process.env.TEST_AUTO_UPDATE === 'true',
+      hasTestVersion: !!process.env.TEST_UPDATE_VERSION
+    },
+    systemInfo: {
+      platform: process.platform,
+      arch: process.arch,
+      version: process.version,
+      release: process.release
+    },
+    electronInfo: {
+      isPackaged: app.isPackaged,
+      appPath: app.getAppPath(),
+      exePath: app.getPath('exe'),
+      appName: app.getName(),
+      appVersion: app.getVersion()
+    },
+    autoUpdaterInfo: {
+      hasLogger: !!autoUpdater.logger,
+      loggerType: typeof autoUpdater.logger,
+      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
+      hasCheckForUpdates: typeof autoUpdater.checkForUpdates === 'function',
+      hasAllowPrerelease: 'allowPrerelease' in autoUpdater,
+      hasAutoDownload: 'autoDownload' in autoUpdater,
+      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
+      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
+      hasOn: typeof autoUpdater.on === 'function',
+      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
+      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
+      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
+      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
+      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
+      hasOn: typeof autoUpdater.on === 'function',
+      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
+      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
+      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
+      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
+      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
+      hasOn: typeof autoUpdater.on === 'function',
+      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
+      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
+      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
+      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
+      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
+      hasOn: typeof autoUpdater.on === 'function',
+      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
+      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
+      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
+      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
+      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
+      hasOn: typeof autoUpdater.on === 'function',
+      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
+      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
+      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
+      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
+      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
+      hasOn: typeof autoUpdater.on === 'function',
+      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
+      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
+      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
+      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
+      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
+      hasOn: typeof autoUpdater.on === 'function',
+      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
+      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function'
+    }
+  });
 }
 
 // Global variables
@@ -490,7 +679,9 @@ function setupApp() {
         prereleaseEnabled: shouldAllowPrereleases,
         userPreference: newValue,
         isCurrentlyPrerelease: isCurrentlyPrerelease,
-        currentVersion: currentVersion
+        currentVersion: currentVersion,
+        platform: process.platform,
+        arch: process.arch
       });
     }
   });
@@ -512,7 +703,14 @@ function setupApp() {
       function: "autoUpdater update-available",
       currentVersion: app.getVersion(),
       updateVersion: updateInfo.releaseName,
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom'
+      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      platform: process.platform,
+      arch: process.arch,
+      updateInfo: {
+        version: updateInfo.version,
+        releaseDate: updateInfo.releaseDate,
+        releaseNotes: updateInfo.releaseNotes ? updateInfo.releaseNotes.substring(0, 100) + '...' : null
+      }
     });
     
     // Process markdown in release notes for proper formatting
@@ -547,7 +745,10 @@ function setupApp() {
     debugLog.info('Checking for updates...', { 
       function: "autoUpdater checking-for-update",
       currentVersion: app.getVersion(),
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom'
+      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      platform: process.platform,
+      arch: process.arch,
+      feedURL: autoUpdater.getFeedURL?.() || 'not set'
     });
   });
 
@@ -555,7 +756,9 @@ function setupApp() {
     debugLog.info('No updates available', { 
       function: "autoUpdater update-not-available",
       currentVersion: app.getVersion(),
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom'
+      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      platform: process.platform,
+      arch: process.arch
     });
   });
 
@@ -564,8 +767,22 @@ function setupApp() {
       function: "autoUpdater error",
       currentVersion: app.getVersion(),
       provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
-      error: err.message
+      error: err.message,
+      errorStack: err.stack,
+      platform: process.platform,
+      arch: process.arch
     });
+    
+    // Additional error handling for checksum mismatches
+    if (err.message.includes('checksum mismatch')) {
+      debugLog.error('Checksum mismatch detected - this could indicate file corruption or build issues', {
+        function: "autoUpdater error",
+        errorType: 'checksum_mismatch',
+        currentVersion: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch
+      });
+    }
   });
 
   autoUpdater.on('download-progress', (progress) => {
@@ -584,7 +801,12 @@ function setupApp() {
         error: error?.message || 'Unknown error' 
       });
     }
-    debugLog.info('Auto-updater download progress', { function: 'autoUpdater download-progress', ...progress });
+    debugLog.info('Auto-updater download progress', { 
+      function: 'autoUpdater download-progress', 
+      ...progress,
+      platform: process.platform,
+      arch: process.arch
+    });
   });
 
   autoUpdater.on('update-downloaded', (info) => {
@@ -605,7 +827,17 @@ function setupApp() {
         error: error?.message || 'Unknown error' 
       });
     }
-    debugLog.info('Update downloaded and ready to install', { function: 'autoUpdater update-downloaded', version: info?.version });
+    debugLog.info('Update downloaded and ready to install', { 
+      function: 'autoUpdater update-downloaded', 
+      version: info?.version,
+      platform: process.platform,
+      arch: process.arch,
+      updateInfo: {
+        version: info?.version,
+        releaseDate: info?.releaseDate,
+        releaseNotes: info?.releaseNotes ? info?.releaseNotes.substring(0, 100) + '...' : null
+      }
+    });
     // If user already approved install, proceed automatically now
     if (updateState.userApprovedInstall) {
       try {
@@ -655,7 +887,10 @@ function testAutoUpdateScenarios() {
     debugLog.info(`Current version: ${currentVersion}, Provider: ${isV4 ? 'github' : 'custom'}`, { 
       function: "testAutoUpdateScenarios",
       version: currentVersion,
-      provider: isV4 ? 'github' : 'custom'
+      provider: isV4 ? 'github' : 'custom',
+      platform: process.platform,
+      arch: process.arch,
+      testVersion: process.env.TEST_UPDATE_VERSION || 'not set'
     });
     
     // Test provider configuration
@@ -663,20 +898,29 @@ function testAutoUpdateScenarios() {
       debugLog.info('Testing GitHub provider configuration', { 
         function: "testAutoUpdateScenarios",
         owner: "minter",
-        repo: "mxvoice-electron"
+        repo: "mxvoice-electron",
+        platform: process.platform,
+        arch: process.arch,
+        currentVersion: currentVersion
       });
     } else {
       debugLog.info('Testing custom server configuration', { 
         function: "testAutoUpdateScenarios",
         server: "https://download.mxvoice.app",
-        arch: process.arch
+        arch: process.arch,
+        platform: process.platform,
+        currentVersion: currentVersion
       });
     }
     
     // Simulate update check for testing
     setTimeout(() => {
       debugLog.info('Simulating update check for testing...', { 
-        function: "testAutoUpdateScenarios" 
+        function: "testAutoUpdateScenarios",
+        hasAutoUpdater: !!autoUpdater,
+        autoUpdaterType: typeof autoUpdater,
+        platform: process.platform,
+        arch: process.arch
       });
       if (autoUpdater) {
         autoUpdater.checkForUpdatesAndNotify();
@@ -692,7 +936,9 @@ function getTestVersion() {
     debugLog.info(`Using test version override: ${process.env.TEST_UPDATE_VERSION}`, { 
       function: "getTestVersion",
       originalVersion: originalVersion,
-      testVersion: process.env.TEST_UPDATE_VERSION
+      testVersion: process.env.TEST_UPDATE_VERSION,
+      platform: process.platform,
+      arch: process.arch
     });
     return process.env.TEST_UPDATE_VERSION;
   }

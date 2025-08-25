@@ -7,7 +7,7 @@ This directory contains build scripts and configuration for the Mx. Voice Electr
 ### `afterPack.js`
 Runs after the app is packaged but before code signing. Handles any post-packaging tasks.
 
-### `sslSign.js`
+### `sslSign.cjs`
 Custom signing script for Windows artifacts using SSL.com CodeSignTool. Configured via electron-builder's `signtoolOptions`.
 
 **Features:**
@@ -24,12 +24,18 @@ Custom signing script for Windows artifacts using SSL.com CodeSignTool. Configur
   - `SSL_PASSWORD`
   - `SSL_TOTP_SECRET`
 
+### `winSignInstaller.cjs`
+Post-installer signing script that runs after the NSIS installer is created. This script:
+1. Signs the final installer using SSL.com CodeSignTool
+2. Regenerates the `latest.yml` file with correct checksums to fix SHA512 mismatches
+
 ## Build Process Flow
 
-1. **electron-builder** creates artifacts (installer, blockmap, latest.yml)
-2. **Custom signing script** (`sslSign.js`) signs the Windows artifacts via `signtoolOptions`
-3. **electron-builder** creates `latest.yml` with the correct post-signing checksums
-4. **electron-builder** publishes the artifacts with matching checksums
+1. **electron-builder** creates artifacts (installer, blockmap, latest.yml) with unsigned installer
+2. **Custom signing script** (`sslSign.cjs`) signs the main app executables via `signtoolOptions`
+3. **`artifactBuildCompleted`** hook runs and signs the installer
+4. **Checksum regeneration** updates `latest.yml` with correct post-signing checksums
+5. **Final artifacts** have matching checksums for auto-updates
 
 ## Configuration
 
@@ -38,20 +44,24 @@ The Windows signing is configured in `package.json`:
 ```json
 "win": {
   "signtoolOptions": {
-    "sign": "build/sslSign.js"
+    "sign": "build/sslSign.cjs"
   }
-}
+},
+"artifactBuildCompleted": "build/winSignInstaller.cjs"
 ```
 
-This tells electron-builder to use our custom signing script instead of the default Windows signing tools.
+This approach ensures that:
+- Main app executables are signed during the build process
+- The installer is signed after creation
+- `latest.yml` is updated with correct checksums
+- No checksum mismatches occur
 
-## Why This Approach Is Better
+## Why This Approach Works
 
-- **No timing issues** - electron-builder handles the sequence correctly
-- **No checksum mismatches** - it creates `latest.yml` with the signed file checksums
-- **Simpler configuration** - just set the right options in `package.json`
-- **More reliable** - we're using the tool as designed, not fighting it
-- **Cleaner code** - no complex hooks or workarounds needed
+- **Fixes timing issues** - We sign the installer after it's created
+- **Corrects checksum mismatches** - We regenerate `latest.yml` with the right hashes
+- **Maintains compatibility** - Uses standard electron-builder hooks
+- **Reliable auto-updates** - Users get correct checksums for verification
 
 ## Troubleshooting
 
@@ -59,24 +69,13 @@ This tells electron-builder to use our custom signing script instead of the defa
 If you see checksum mismatches between the uploaded file and `latest.yml`:
 
 1. Check that the SSL.com environment variables are set correctly
-2. Verify the signing process completed without errors
-3. Check the build logs for any signing failures
-4. Ensure the SSL.com CodeSignTool is properly installed
+2. Verify that the CodeSignTool is installed at `C:\tools\CodeSignTool`
+3. Ensure the signing script is working by checking the build logs
+4. The `artifactBuildCompleted` hook should run and regenerate `latest.yml`
 
-### Environment Variables
-
-For Windows signing to work, set these environment variables:
-
-```bash
-SSL_USERNAME=your_ssl_username
-SSL_CREDENTIAL_ID=your_credential_id
-SSL_PASSWORD=your_ssl_password
-SSL_TOTP_SECRET=your_totp_secret_base64
-```
-
-## Code Signing Tools
-
-The Windows signing process requires:
-- Java Runtime Environment (JRE)
-- SSL.com CodeSignTool installed at `C:\tools\CodeSignTool`
-- Valid SSL.com code signing credentials
+### Build Hook Order
+The correct build hook order for Windows is:
+1. `afterPack` - Post-packaging tasks
+2. `afterSign` - Post-signing tasks for app files
+3. `artifactBuildCompleted` - Signs installer and fixes checksums
+4. `latest.yml` is updated with correct post-signing checksums

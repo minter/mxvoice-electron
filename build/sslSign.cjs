@@ -5,7 +5,7 @@ const fs = require("fs");
 
 /**
  * Electron-builder will call this for each file to sign.
- * It passes either a string (path) or an object with { path }.
+ * This hook is called during the build process, not after.
  */
 module.exports = async function sign(file, context) {
   if (process.platform !== "win32") return;
