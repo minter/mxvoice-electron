@@ -29,9 +29,6 @@ export const fileOperationsFunctions = {
   
   // Auto-update operations
   startUpdateProcess: 'startUpdateProcess',
-  checkForUpdate: 'checkForUpdate',
-  downloadUpdate: 'downloadUpdate',
-  installUpdate: 'installUpdate',
   
   // Fallback functions for when module fails to load
   openHotkeyFileFallback: () => debugLog?.warn('⚠️ File operations not available - openHotkeyFile', { 
@@ -57,18 +54,6 @@ export const fileOperationsFunctions = {
   startUpdateProcessFallback: () => debugLog?.warn('⚠️ File operations not available - startUpdateProcess', { 
     module: 'file-operations',
     function: 'startUpdateProcessFallback'
-  }),
-  checkForUpdateFallback: () => debugLog?.warn('⚠️ File operations not available - checkForUpdate', { 
-    module: 'file-operations',
-    function: 'checkForUpdateFallback'
-  }),
-  downloadUpdateFallback: () => debugLog?.warn('⚠️ File operations not available - downloadUpdate', { 
-    module: 'file-operations',
-    function: 'downloadUpdateFallback'
-  }),
-  installUpdateFallback: () => debugLog?.warn('⚠️ File operations not available - installUpdate', { 
-    module: 'file-operations',
-    function: 'installUpdateFallback'
   })
 };
 
