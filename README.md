@@ -204,8 +204,8 @@ npm run build:win
 
 This command will:
 - Build the Windows installer (`.exe`) in the `dist/` directory.
-- Automatically sign the installer using SSL.com's CodeSignTool.
-- **Automatically fix checksums** in `latest.yml` to ensure they match the signed installer (Windows-specific).
+- Automatically sign all executables and DLLs using SSL.com's CodeSignTool.
+- **Automatically calculate correct checksums** in `latest.yml` - no post-processing needed.
 
 #### Required Environment Variables
 
@@ -227,10 +227,10 @@ $env:SSL_TOTP_SECRET="your_base64_totp_secret"
 
 #### How the Signing Works
 
-- **Pre-NSIS signing**: The main executable (`Mx. Voice.exe`) and helper (`elevate.exe`) are signed with SSL.com during the `afterPack` phase.
-- **NSIS installer signing**: The final NSIS installer (`.exe`) is signed with SSL.com after creation via the `artifactBuildCompleted` hook.
-- **Automatic checksum correction**: Windows builds automatically correct checksums in `latest.yml` after signing to ensure they match the published artifacts. macOS and Linux builds maintain correct checksums from the start.
-- **Comprehensive coverage**: All Windows executables carry SSL.com signatures for consistent publisher trust.
+- **Standard electron-builder Windows signing**: Uses `signAndEditExecutable: true` and `signDlls: true` for automatic signing
+- **SSL.com integration**: Signs all Windows executables and DLLs using SSL.com CodeSignTool via `signtoolOptions`
+- **Automatic checksums**: electron-builder calculates correct checksums automatically - no post-processing needed
+- **Comprehensive coverage**: All Windows artifacts are properly signed for consistent publisher trust
 
 #### Verifying the Signature
 

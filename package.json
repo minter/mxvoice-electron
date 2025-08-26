@@ -20,10 +20,10 @@
     "release:mac:draft": "cross-env EP_DRAFT=true electron-builder --mac --universal --publish always",
     "release:mac:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --mac --universal --publish always",
     "release:mac": "electron-builder --mac --universal --publish always",
-    "release:win:draft": "cross-env EP_DRAFT=true electron-builder --win --publish always && node build/fix-checksums.cjs",
-    "release:win:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --win --publish always && node build/fix-checksums.cjs",
-    "release:win": "electron-builder --win --publish always && node build/fix-checksums.cjs",
-    "build:win": "electron-builder --win && node build/fix-checksums.cjs",
+    "release:win:draft": "cross-env EP_DRAFT=true electron-builder --win --publish always",
+    "release:win:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --win --publish always",
+    "release:win": "electron-builder --win --publish always",
+    "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
     "build:linux:deb": "electron-builder --linux --target deb",
     "build:linux:appimage": "electron-builder --linux --target AppImage",
@@ -42,8 +42,7 @@
     "test:smoke": "playwright test tests/e2e/smoke.spec.js",
     "test:validate": "node tests/setup/test-runner.js",
     "test:isolate": "node tests/setup/verify-isolation.js",
-    "test:run": "./tests/run-tests.sh",
-    "fix:checksums": "node build/fix-checksums.cjs"
+    "test:run": "./tests/run-tests.sh"
   },
   "build": {
     "appId": "com.electron.mx.-voice",
@@ -57,8 +56,6 @@
       "node_modules/node-sqlite3-wasm/dist/*.wasm"
     ],
     "afterPack": "build/afterPack.js",
-    "afterSign": "build/afterWinSign.cjs",
-    "artifactBuildCompleted": "build/winSignInstaller.cjs",
     "mac": {
       "forceCodeSigning": true,
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
@@ -115,6 +112,7 @@
         }
       ],
       "verifyUpdateCodeSignature": false,
+      "signAndEditExecutable": true,
       "signtoolOptions": {
         "sign": "build/sslSign.cjs"
       }

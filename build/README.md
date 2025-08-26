@@ -5,7 +5,12 @@ This directory contains build scripts and configuration for the Mx. Voice Electr
 ## Build Hooks
 
 ### `afterPack.js`
-Runs after the app is packaged but before code signing. Handles any post-packaging tasks.
+Runs after the app is packaged but before code signing. Handles macOS code signing for nested binaries.
+
+**Features:**
+- Signs nested binaries in macOS app bundles
+- Handles hardened runtime and entitlements
+- Required for macOS builds to work properly
 
 ### `sslSign.cjs`
 Custom signing script for Windows artifacts using SSL.com CodeSignTool. Configured via electron-builder's `signtoolOptions`.
@@ -24,18 +29,12 @@ Custom signing script for Windows artifacts using SSL.com CodeSignTool. Configur
   - `SSL_PASSWORD`
   - `SSL_TOTP_SECRET`
 
-### `winSignInstaller.cjs`
-Post-installer signing script that runs after the NSIS installer is created. This script:
-1. Signs the final installer using SSL.com CodeSignTool
-2. Regenerates the `latest.yml` file with correct checksums to fix SHA512 mismatches
-
 ## Build Process Flow
 
-1. **electron-builder** creates artifacts (installer, blockmap, latest.yml) with unsigned installer
+1. **electron-builder** creates artifacts (installer, blockmap, latest.yml)
 2. **Custom signing script** (`sslSign.cjs`) signs the main app executables via `signtoolOptions`
-3. **`artifactBuildCompleted`** hook runs and signs the installer
-4. **Checksum regeneration** updates `latest.yml` with correct post-signing checksums
-5. **Final artifacts** have matching checksums for auto-updates
+3. **electron-builder** handles all additional signing automatically with `signAndEditExecutable: true`
+4. **Final artifacts** have correct checksums automatically calculated by electron-builder
 
 ## Configuration
 
@@ -45,37 +44,29 @@ The Windows signing is configured in `package.json`:
 "win": {
   "signtoolOptions": {
     "sign": "build/sslSign.cjs"
-  }
-},
-"artifactBuildCompleted": "build/winSignInstaller.cjs"
+  },
+  "signAndEditExecutable": true
+}
 ```
 
 This approach ensures that:
-- Main app executables are signed during the build process
-- The installer is signed after creation
-- `latest.yml` is updated with correct checksums
-- No checksum mismatches occur
+- Main app executables are signed during the build process via `signtoolOptions`
+- All additional Windows artifacts are automatically signed via `signAndEditExecutable: true`
+- Checksums are calculated correctly from the start
+- No post-processing or workarounds are needed
 
 ## Why This Approach Works
 
-- **Fixes timing issues** - We sign the installer after it's created
-- **Corrects checksum mismatches** - We regenerate `latest.yml` with the right hashes
-- **Maintains compatibility** - Uses standard electron-builder hooks
-- **Reliable auto-updates** - Users get correct checksums for verification
+- **Uses standard electron-builder Windows signing** with `signAndEditExecutable: true`
+- **Leverages SSL.com integration** without overcomplicating the process
+- **Ensures checksums are correct** from the start
+- **Follows electron-builder best practices** instead of workarounds
+- **Eliminates timing issues** that caused previous checksum mismatches
 
-## Troubleshooting
+## Key Benefits
 
-### Checksum Mismatch
-If you see checksum mismatches between the uploaded file and `latest.yml`:
-
-1. Check that the SSL.com environment variables are set correctly
-2. Verify that the CodeSignTool is installed at `C:\tools\CodeSignTool`
-3. Ensure the signing script is working by checking the build logs
-4. The `artifactBuildCompleted` hook should run and regenerate `latest.yml`
-
-### Build Hook Order
-The correct build hook order for Windows is:
-1. `afterPack` - Post-packaging tasks
-2. `afterSign` - Post-signing tasks for app files
-3. `artifactBuildCompleted` - Signs installer and fixes checksums
-4. `latest.yml` is updated with correct post-signing checksums
+✅ **No more checksum mismatches** - electron-builder handles this correctly  
+✅ **No custom post-processing scripts** - everything is automatic  
+✅ **Simpler, more reliable builds** - follows standard practices  
+✅ **Easier maintenance** - fewer moving parts to break  
+✅ **Standard workflow** - no more workarounds or hacks
