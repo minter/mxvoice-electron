@@ -112,6 +112,23 @@ function setupHotkeyEventListeners(options = {}) {
     });
   });
 
+  // Highlight on click
+  document.querySelectorAll('[id$="_hotkey"]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      // Remove highlight and selected-row from all other hotkeys
+      document.querySelectorAll('[id$="_hotkey"]').forEach((item) => {
+        item.classList.remove('active-hotkey', 'selected-row');
+      });
+      // Highlight clicked hotkey
+      e.currentTarget.classList.add('active-hotkey', 'selected-row');
+      // Store the selected hotkey ID (e.g., "f1_hotkey")
+      window.currentSelectedHotkey = e.currentTarget.id;
+      // Debug log
+      window.debugLog?.info(`Hotkey selected: ${window.currentSelectedHotkey}`, 
+        { module: 'hotkey-ui', function: 'setupHotkeyEventListeners' });
+    });
+  });
+
   // Hotkey tab events
   const hotkeyTabs = document.getElementById('hotkey_tabs');
   if (hotkeyTabs) {
@@ -408,6 +425,39 @@ function getUnassignedHotkeys() {
   }
   return unassigned;
 }
+
+/**
+ * Attach event delegation for hotkey highlighting
+ */
+function setupHotkeyHighlightDelegation() {
+  // Find all .hotkeys lists (one per tab)
+  document.querySelectorAll('.hotkeys').forEach((ul) => {
+    // Remove any previous listener to avoid duplicates
+    ul.removeEventListener('click', ul._hotkeyClickHandler);
+    // Define the handler
+    ul._hotkeyClickHandler = function (e) {
+      const li = e.target.closest('li');
+      if (!li || !ul.contains(li)) {
+        window.debugLog?.info('Clicked element is not a hotkey <li>', { eventTarget: e.target });
+        return;
+      }
+      window.debugLog?.info('Hotkey <li> clicked', { liId: li.id, classList: [...li.classList] });
+      // Remove highlight and selected-row from all hotkeys in this list
+      ul.querySelectorAll('li').forEach((item) => {
+        item.classList.remove('active-hotkey', 'selected-row');
+      });
+      // Highlight clicked hotkey
+      li.classList.add('active-hotkey', 'selected-row');
+      window.currentSelectedHotkey = li.id;
+      window.debugLog?.info('Hotkey highlighted', { selectedId: li.id, classList: [...li.classList] });
+    };
+    ul.addEventListener('click', ul._hotkeyClickHandler);
+    window.debugLog?.info('Hotkey highlight event delegation attached', { ulId: ul.id });
+  });
+}
+
+// Call this after hotkey lists are rendered/updated
+setupHotkeyHighlightDelegation();
 
 // Export all functions
 export {

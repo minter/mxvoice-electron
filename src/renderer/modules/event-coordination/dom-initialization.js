@@ -130,13 +130,13 @@ export default class DOMInitialization {
         });
         return item;
       };
-      const playItem = mkItem('Play', () => {
+      let playItem = mkItem('Play', () => {
         if (window.playSelected) window.playSelected();
       });
-      const editItem = mkItem('Edit', () => {
+      let editItem = mkItem('Edit', () => {
         if (window.editSelectedSong) window.editSelectedSong();
       });
-      const deleteItem = mkItem('Delete', () => {
+      let deleteItem = mkItem('Delete', () => {
         if (window.deleteSelectedSong) window.deleteSelectedSong();
       });
       menu.append(playItem, editItem, deleteItem);
@@ -145,11 +145,45 @@ export default class DOMInitialization {
       const hide = () => {
         menu.style.display = 'none';
       };
-      const show = (x, y, dynamicDeleteLabel) => {
+
+      // Helper to remove all previous click listeners from deleteItem
+      function clearDeleteItemListeners() {
+        if (deleteItem._mxvHandler) {
+          deleteItem.removeEventListener('click', deleteItem._mxvHandler);
+          deleteItem._mxvHandler = null;
+        }
+      }
+
+      const show = (x, y, dynamicDeleteLabel, onRemoveHotkey) => {
         deleteItem.textContent = dynamicDeleteLabel || 'Delete';
         menu.style.left = `${x}px`;
         menu.style.top = `${y}px`;
         menu.style.display = 'block';
+
+        clearDeleteItemListeners();
+
+        // Wire up the removal logic for 'Remove from Hotkey'
+        if (dynamicDeleteLabel === 'Remove from Hotkey') {
+          const hotkeyRow = document.getElementById('selected_row');
+          if (hotkeyRow) {
+            deleteItem._mxvHandler = (e) => {
+              e.stopPropagation();
+              hide();
+              window.debugLog?.info('Context menu: Remove from Hotkey callback triggered');
+              onRemoveHotkey?.();
+            };
+            deleteItem.addEventListener('click', deleteItem._mxvHandler);
+          }
+        } else {
+          // Default Delete action
+          deleteItem._mxvHandler = (e) => {
+            e.stopPropagation();
+            hide();
+            window.debugLog?.info('Context menu: Default Delete callback triggered');
+            if (window.deleteSelectedSong) window.deleteSelectedSong();
+          };
+          deleteItem.addEventListener('click', deleteItem._mxvHandler);
+        }
       };
 
       document.addEventListener('click', hide);
@@ -161,29 +195,42 @@ export default class DOMInitialization {
         if (!row) return;
         event.preventDefault();
 
+        // Always set the right-clicked row as selected_row
+        const prev = document.getElementById('selected_row');
+        if (prev) prev.removeAttribute('id');
+        row.id = 'selected_row';
+        window.debugLog?.info('Context menu: set selected_row', { rowId: row.id, classList: [...row.classList] });
+
         let label = 'Delete';
         const holdingCol = document.getElementById('holding-tank-column');
         const hotkeysContent = document.getElementById('hotkey-tab-content');
 
-        // Only select the row if it's NOT in the hotkeys area
-        // Hotkey tracks should not be selected even for context menus
         if (hotkeysContent && hotkeysContent.contains(row)) {
           label = 'Remove from Hotkey';
-          // Don't select hotkey tracks - just show the menu
+          show(event.clientX, event.clientY, label, () => {
+            const selected = row;
+            if (!selected) {
+              window.debugLog?.info('Context menu: Remove from Hotkey pressed but no row is selected');
+              return;
+            }
+            selected.removeAttribute('songid');
+            const span = selected.querySelector('span');
+            if (span) span.textContent = '';
+            selected.classList.remove('active-hotkey', 'selected-row');
+            window.debugLog?.info('Hotkey assignment removed via context menu', { hotkeyId: selected.id });
+            if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
+              window.hotkeysModule.saveHotkeysToStore();
+              window.debugLog?.info('Hotkeys state saved after context menu removal');
+            }
+          });
         } else {
-          // Select the row for non-hotkey items
-          const prev = document.getElementById('selected_row');
-          if (prev) prev.removeAttribute('id');
-          row.id = 'selected_row';
-
           if (holdingCol && holdingCol.contains(row)) {
             label = 'Remove from Holding Tank';
           }
+          const x = Math.min(event.clientX, window.innerWidth - 220);
+          const y = Math.min(event.clientY, window.innerHeight - 150);
+          show(x, y, label);
         }
-
-        const x = Math.min(event.clientX, window.innerWidth - 220);
-        const y = Math.min(event.clientY, window.innerHeight - 150);
-        show(x, y, label);
       });
 
       this.debugLog?.debug('Context menu set up (native)');

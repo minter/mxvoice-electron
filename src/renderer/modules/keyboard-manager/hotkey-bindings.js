@@ -37,6 +37,29 @@ export class HotkeyBindings {
       // Set up F1-F12 hotkey bindings
       this.setupFunctionKeys();
       
+      // Add Delete/Backspace key support for hotkey removal
+      this.logInfo('Setting up Delete/Backspace key binding for hotkey removal...');
+      Mousetrap.bind(['del', 'backspace'], (e) => {
+        window.debugLog?.info('Delete/Backspace key handler triggered', { event: e });
+        // Find the selected hotkey row
+        const selected = document.querySelector('.hotkeys .list-group-item.active-hotkey.selected-row');
+        if (!selected) {
+          window.debugLog?.info('Delete pressed but no hotkey row is selected');
+          return;
+        }
+        // Remove song assignment
+        selected.removeAttribute('songid');
+        const span = selected.querySelector('span');
+        if (span) span.textContent = '';
+        selected.classList.remove('active-hotkey', 'selected-row');
+        window.debugLog?.info('Hotkey assignment removed via Delete key', { hotkeyId: selected.id });
+        // Save updated hotkeys if needed
+        if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
+          window.hotkeysModule.saveHotkeysToStore();
+          window.debugLog?.info('Hotkeys state saved after Delete');
+        }
+      });
+      this.logInfo('Delete/Backspace key binding for hotkey removal set up.');
       this.isInitialized = true;
       this.logInfo('F1-F12 hotkey bindings initialized successfully');
       return true;

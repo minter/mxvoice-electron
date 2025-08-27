@@ -911,3 +911,10 @@ legend {
   font-weight: bold;
   color: var(--card-text);
 }
+
+.hotkeys .list-group-item.active-hotkey,
+.hotkeys .list-group-item.selected-row {
+  background-color: #1a4d8f !important;
+  border: 1.5px solid #0078d7 !important;
+  color: #fff !important;
+}

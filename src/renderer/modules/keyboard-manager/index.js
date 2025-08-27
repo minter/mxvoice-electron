@@ -104,6 +104,31 @@ export class KeyboardManager {
         );
       }
 
+      // Register Delete/Backspace for hotkey removal
+      this.shortcutRegistry.registerShortcut(['del', 'backspace'], () => {
+        const selected = document.querySelector('.hotkeys .list-group-item.active-hotkey.selected-row');
+        if (!selected) {
+          this.logInfo('Delete pressed but no hotkey row is selected');
+          window.debugLog?.info('Delete pressed but no hotkey row is selected');
+          return;
+        }
+        selected.removeAttribute('songid');
+        const span = selected.querySelector('span');
+        if (span) span.textContent = '';
+        selected.classList.remove('active-hotkey', 'selected-row');
+        this.logInfo('Hotkey assignment removed via Delete key', { hotkeyId: selected.id });
+        window.debugLog?.info('Hotkey assignment removed via Delete key', { hotkeyId: selected.id });
+        if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
+          window.hotkeysModule.saveHotkeysToStore();
+          this.logInfo('Hotkeys state saved after Delete');
+          window.debugLog?.info('Hotkeys state saved after Delete');
+        }
+      }, {
+        category: 'hotkeys',
+        description: 'Remove selected hotkey assignment',
+        context: 'global'
+      });
+
       // Register navigation shortcuts
       const navigationBindings = this.navigationShortcuts.getBindings();
       for (const [key, config] of navigationBindings) {
