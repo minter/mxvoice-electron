@@ -197,9 +197,28 @@ export default class DOMInitialization {
 
         // Always set the right-clicked row as selected_row
         const prev = document.getElementById('selected_row');
+        window.debugLog?.info('Context menu: about to set selected_row', {
+          prevId: prev?.id,
+          prevSongid: prev?.getAttribute('songid'),
+          rowId: row.id,
+          rowSongid: row.getAttribute('songid'),
+          rowClassList: [...row.classList]
+        });
         if (prev) prev.removeAttribute('id');
+        // Preserve songid when setting selected_row
+        const songid = row.getAttribute('songid');
         row.id = 'selected_row';
-        window.debugLog?.info('Context menu: set selected_row', { rowId: row.id, classList: [...row.classList] });
+        if (songid) {
+          row.setAttribute('songid', songid);
+          window.debugLog?.info('Context menu: preserved songid on selected_row', { songid });
+        } else {
+          window.debugLog?.info('Context menu: no songid to preserve on selected_row');
+        }
+        window.debugLog?.info('Context menu: set selected_row', {
+          rowId: row.id,
+          classList: [...row.classList],
+          songid: row.getAttribute('songid')
+        });
 
         let label = 'Delete';
         const holdingCol = document.getElementById('holding-tank-column');
@@ -296,4 +315,16 @@ export default class DOMInitialization {
       },
     };
   }
+}
+
+// GLOBAL DEBUG LOG for all contextmenu events
+if (window.debugLog) {
+  document.addEventListener('contextmenu', (e) => {
+    window.debugLog.info('GLOBAL contextmenu event', {
+      targetId: e.target?.id,
+      classList: [...e.target?.classList || []],
+      x: e.clientX,
+      y: e.clientY
+    });
+  }, true);
 }

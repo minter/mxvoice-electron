@@ -1676,4 +1676,194 @@ test.describe('Hotkeys - save & load', () => {
     console.log('✅ Tab state preserved when switching between tabs');
     console.log('✅ Tab titles preserved when switching between tabs');
   });
+
+  test('hotkey row highlights on click and can be deleted with Delete key', async () => {
+    // Do an empty search to get all 5 songs
+    const searchInput = page.locator('#omni_search');
+    await searchInput.clear();
+    await searchInput.press('Enter');
+    await page.waitForTimeout(1000);
+
+    // Drag the first song to F1 hotkey in Tab 1
+    const rows = page.locator('#search_results tbody tr');
+    const firstSongRow = rows.first();
+    await expect(firstSongRow).toBeVisible();
+    const activeTab = page.locator('#hotkeys_list_1');
+    const f1HotkeyLi = activeTab.locator('#f1_hotkey');
+    const f1HotkeySong = f1HotkeyLi.locator('.song');
+    await firstSongRow.dragTo(f1HotkeySong, {
+      force: true,
+      sourcePosition: { x: 10, y: 10 },
+      targetPosition: { x: 20, y: 20 }
+    });
+    await page.waitForTimeout(500);
+    await expect(f1HotkeySong).toHaveText(/.+/); // Should have song text
+
+    // Click the F1 hotkey row
+    await f1HotkeyLi.click();
+    await page.waitForTimeout(200);
+
+    // Check that the row is highlighted (by class)
+    const hasHighlight = await f1HotkeyLi.evaluate(el =>
+      el.classList.contains('active-hotkey') && el.classList.contains('selected-row')
+    );
+    expect(hasHighlight).toBe(true);
+
+    // Press Delete
+    await page.keyboard.press('Delete');
+    await page.waitForTimeout(300);
+
+    // Verify the assignment is removed and highlight is gone
+    await expect(f1HotkeySong).toHaveText('');
+    const hasHighlightAfter = await f1HotkeyLi.evaluate(el =>
+      el.classList.contains('active-hotkey') || el.classList.contains('selected-row')
+    );
+    expect(hasHighlightAfter).toBe(false);
+  });
+
+  test('context menu Play functionality', async () => {
+    const searchInput = page.locator('#omni_search');
+    await searchInput.clear();
+    await searchInput.press('Enter');
+    await page.waitForTimeout(1000);
+
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(5, { timeout: 5000 });
+
+    const anthraxRow = rows.filter({ hasText: 'Anthrax' }).first();
+    const activeTab = page.locator('#hotkeys_list_1');
+    const f1Hotkey = activeTab.locator('#f1_hotkey .song');
+    await anthraxRow.dragTo(f1Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
+    await page.waitForTimeout(500);
+
+    await expect(f1Hotkey).toContainText('Got The Time');
+    await expect(f1Hotkey).toContainText('Anthrax');
+
+    // Dismiss any tooltips/overlays
+    await searchInput.click();
+    await page.waitForTimeout(300);
+
+    // Right-click the <li> using mouse coordinates
+    const f1HotkeyLi = activeTab.locator('#f1_hotkey');
+    const box = await f1HotkeyLi.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
+    await page.waitForTimeout(500);
+
+    // Debug: screenshot
+    await page.screenshot({ path: 'hotkey-contextmenu-play-debug.png' });
+
+    const contextMenu = page.locator('#mxv-context-menu');
+    try {
+      await expect(contextMenu).toBeVisible({ timeout: 2000 });
+    } catch (e) {
+      // If not visible, log computed style
+      const display = await contextMenu.evaluate(el => getComputedStyle(el).display);
+      const zIndex = await contextMenu.evaluate(el => getComputedStyle(el).zIndex);
+      console.log('Menu display:', display, 'z-index:', zIndex);
+      throw e;
+    }
+    await expect(contextMenu.locator('button:has-text("Play")')).toBeVisible();
+  });
+
+  test('context menu Edit functionality', async () => {
+    const searchInput = page.locator('#omni_search');
+    await searchInput.clear();
+    await searchInput.press('Enter');
+    await page.waitForTimeout(1000);
+
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(5, { timeout: 5000 });
+
+    const sisterSledgeRow = rows.filter({ hasText: 'Sister Sledge' }).first();
+    const activeTab = page.locator('#hotkeys_list_1');
+    const f2Hotkey = activeTab.locator('#f2_hotkey .song');
+    await sisterSledgeRow.dragTo(f2Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
+    await page.waitForTimeout(500);
+
+    await expect(f2Hotkey).toContainText('We Are Family');
+    await expect(f2Hotkey).toContainText('Sister Sledge');
+
+    // Dismiss any tooltips/overlays
+    await searchInput.click();
+    await page.waitForTimeout(300);
+
+    // Right-click the <li> using mouse coordinates
+    const f2HotkeyLi = activeTab.locator('#f2_hotkey');
+    const box = await f2HotkeyLi.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
+    await page.waitForTimeout(500);
+
+    // Debug: screenshot
+    await page.screenshot({ path: 'hotkey-contextmenu-edit-debug.png' });
+
+    const contextMenu = page.locator('#mxv-context-menu');
+    try {
+      await expect(contextMenu).toBeVisible({ timeout: 2000 });
+    } catch (e) {
+      const display = await contextMenu.evaluate(el => getComputedStyle(el).display);
+      const zIndex = await contextMenu.evaluate(el => getComputedStyle(el).zIndex);
+      console.log('Menu display:', display, 'z-index:', zIndex);
+      throw e;
+    }
+    const editBtn = contextMenu.locator('button:has-text("Edit")');
+    await expect(editBtn).toBeVisible();
+    await editBtn.click();
+    await page.waitForTimeout(300);
+
+    const editModal = page.locator('#songFormModal');
+    await expect(editModal).toBeVisible({ timeout: 5000 });
+    const closeBtn = editModal.locator('.btn-close, .close, .cancel').first();
+    if (await closeBtn.isVisible()) {
+      await closeBtn.click();
+      await page.waitForTimeout(200);
+    }
+  });
+
+  test('context menu Remove functionality', async () => {
+    const searchInput = page.locator('#omni_search');
+    await searchInput.clear();
+    await searchInput.press('Enter');
+    await page.waitForTimeout(1000);
+
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(5, { timeout: 5000 });
+
+    const weirdAlRow = rows.filter({ hasText: 'Weird Al' }).first();
+    const activeTab = page.locator('#hotkeys_list_1');
+    const f3Hotkey = activeTab.locator('#f3_hotkey .song');
+    await weirdAlRow.dragTo(f3Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
+    await page.waitForTimeout(500);
+
+    await expect(f3Hotkey).toContainText('Eat It');
+    await expect(f3Hotkey).toContainText('Weird Al');
+
+    // Dismiss any tooltips/overlays
+    await searchInput.click();
+    await page.waitForTimeout(300);
+
+    // Right-click the <li> using mouse coordinates
+    const f3HotkeyLi = activeTab.locator('#f3_hotkey');
+    const box = await f3HotkeyLi.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
+    await page.waitForTimeout(500);
+
+    // Debug: screenshot
+    await page.screenshot({ path: 'hotkey-contextmenu-remove-debug.png' });
+
+    const contextMenu = page.locator('#mxv-context-menu');
+    try {
+      await expect(contextMenu).toBeVisible({ timeout: 2000 });
+    } catch (e) {
+      const display = await contextMenu.evaluate(el => getComputedStyle(el).display);
+      const zIndex = await contextMenu.evaluate(el => getComputedStyle(el).zIndex);
+      console.log('Menu display:', display, 'z-index:', zIndex);
+      throw e;
+    }
+    const removeButton = contextMenu.locator('button:has-text("Remove from Hotkey")');
+    await expect(removeButton).toBeVisible();
+    await removeButton.click();
+    await page.waitForTimeout(300);
+    // Verify the assignment is removed (same as Delete key test)
+    await expect(activeTab.locator('#f3_hotkey .song')).toHaveCount(0);
+    });
 });
