@@ -1754,8 +1754,7 @@ test.describe('Hotkeys - save & load', () => {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
     await page.waitForTimeout(500);
 
-    // Debug: screenshot
-    await page.screenshot({ path: 'hotkey-contextmenu-play-debug.png' });
+
 
     const contextMenu = page.locator('#mxv-context-menu');
     try {
@@ -1805,8 +1804,7 @@ test.describe('Hotkeys - save & load', () => {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
     await page.waitForTimeout(500);
 
-    // Debug: screenshot
-    await page.screenshot({ path: 'hotkey-contextmenu-edit-debug.png' });
+
 
     const contextMenu = page.locator('#mxv-context-menu');
     try {
@@ -1859,8 +1857,7 @@ test.describe('Hotkeys - save & load', () => {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
     await page.waitForTimeout(500);
 
-    // Debug: screenshot
-    await page.screenshot({ path: 'hotkey-contextmenu-remove-debug.png' });
+
 
     const contextMenu = page.locator('#mxv-context-menu');
     try {
