@@ -137,7 +137,8 @@ export default class DOMInitialization {
         if (window.editSelectedSong) window.editSelectedSong();
       });
       let deleteItem = mkItem('Delete', () => {
-        if (window.deleteSelectedSong) window.deleteSelectedSong();
+        // This default handler is now managed dynamically in the show function
+        // to prevent duplicate listeners.
       });
       menu.append(playItem, editItem, deleteItem);
       document.body.appendChild(menu);
@@ -162,28 +163,25 @@ export default class DOMInitialization {
 
         clearDeleteItemListeners();
 
-        // Wire up the removal logic for 'Remove from Hotkey'
-        if (dynamicDeleteLabel === 'Remove from Hotkey') {
-          const hotkeyRow = document.getElementById('selected_row');
-          if (hotkeyRow) {
-            deleteItem._mxvHandler = (e) => {
-              e.stopPropagation();
-              hide();
-              window.debugLog?.info('Context menu: Remove from Hotkey callback triggered');
-              onRemoveHotkey?.();
-            };
-            deleteItem.addEventListener('click', deleteItem._mxvHandler);
-          }
-        } else {
-          // Default Delete action
-          deleteItem._mxvHandler = (e) => {
-            e.stopPropagation();
-            hide();
+        // Define a single, reusable handler function to be attached.
+        const newHandler = (e) => {
+          e.stopPropagation();
+          hide(); // Hide menu immediately.
+
+          // Check which action to perform based on the label.
+          if (dynamicDeleteLabel === 'Remove from Hotkey') {
+            window.debugLog?.info('Context menu: Remove from Hotkey callback triggered');
+            onRemoveHotkey?.();
+          } else {
+            // This covers 'Delete' and 'Remove from Holding Tank'
             window.debugLog?.info('Context menu: Default Delete callback triggered');
             if (window.deleteSelectedSong) window.deleteSelectedSong();
-          };
-          deleteItem.addEventListener('click', deleteItem._mxvHandler);
-        }
+          }
+        };
+
+        // Attach the new handler and store a reference for removal.
+        deleteItem.addEventListener('click', newHandler);
+        deleteItem._mxvHandler = newHandler;
       };
 
       document.addEventListener('click', hide);
@@ -220,6 +218,46 @@ export default class DOMInitialization {
           songid: row.getAttribute('songid')
         });
 
+        let label = 'Delete';
+        const holdingCol = document.getElementById('holding-tank-column');
+        const hotkeysContent = document.getElementById('hotkey-tab-content');
+
+        if (hotkeysContent && hotkeysContent.contains(row)) {
+          label = 'Remove from Hotkey';
+          show(event.clientX, event.clientY, label, () => {
+            const selected = row;
+            if (!selected) {
+              window.debugLog?.info('Context menu: Remove from Hotkey pressed but no row is selected');
+              return;
+            }
+            selected.removeAttribute('songid');
+            const span = selected.querySelector('span');
+            if (span) span.textContent = '';
+            selected.classList.remove('active-hotkey', 'selected-row');
+            window.debugLog?.info('Hotkey assignment removed via context menu', { hotkeyId: selected.id });
+            if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
+              window.hotkeysModule.saveHotkeysToStore();
+              window.debugLog?.info('Hotkeys state saved after context menu removal');
+            }
+          });
+        } else {
+          if (holdingCol && holdingCol.contains(row)) {
+            label = 'Remove from Holding Tank';
+          }
+          const x = Math.min(event.clientX, window.innerWidth - 220);
+          const y = Math.min(event.clientY, window.innerHeight - 150);
+          show(x, y, label);
+        }
+      });
+
+      document.getElementById('search_results')?.addEventListener('contextmenu', (event) => {
+        const row = event.target.closest('tr');
+        if (!row) return;
+        event.preventDefault();
+
+        // Do not change the selection on right-click; only show the menu.
+        // The selection is handled by the left-click delegator.
+        
         let label = 'Delete';
         const holdingCol = document.getElementById('holding-tank-column');
         const hotkeysContent = document.getElementById('hotkey-tab-content');

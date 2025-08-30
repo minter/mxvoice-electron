@@ -106,26 +106,60 @@ export class KeyboardManager {
 
       // Register Delete/Backspace for hotkey removal
       this.shortcutRegistry.registerShortcut(['del', 'backspace'], () => {
-        const selected = document.querySelector('.hotkeys .list-group-item.active-hotkey.selected-row');
+        // Find the selected row using either the ID or the class for consistency
+        const selected = document.querySelector('#selected_row, .selected-row');
+
         if (!selected) {
-          this.logInfo('Delete pressed but no hotkey row is selected');
-          window.debugLog?.info('Delete pressed but no hotkey row is selected');
+          this.logInfo('Delete pressed but no row is selected');
           return;
         }
-        selected.removeAttribute('songid');
-        const span = selected.querySelector('span');
-        if (span) span.textContent = '';
-        selected.classList.remove('active-hotkey', 'selected-row');
-        this.logInfo('Hotkey assignment removed via Delete key', { hotkeyId: selected.id });
-        window.debugLog?.info('Hotkey assignment removed via Delete key', { hotkeyId: selected.id });
-        if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
-          window.hotkeysModule.saveHotkeysToStore();
-          this.logInfo('Hotkeys state saved after Delete');
-          window.debugLog?.info('Hotkeys state saved after Delete');
+
+        // Case 1: Hotkey removal
+        if (selected.closest('#hotkey-tab-content')) {
+          this.logInfo('Delete key triggered for a hotkey');
+          selected.removeAttribute('songid');
+          const span = selected.querySelector('span');
+          if (span) span.textContent = '';
+          selected.classList.remove('active-hotkey', 'selected-row');
+          this.logInfo('Hotkey assignment removed via Delete key', { hotkeyId: selected.id });
+          if (window.hotkeysModule?.saveHotkeysToStore) {
+            window.hotkeysModule.saveHotkeysToStore();
+            this.logInfo('Hotkeys state saved after Delete');
+          }
+          return;
         }
+
+        // Case 2: Holding tank removal
+        if (selected.closest('#holding-tank-column')) {
+          this.logInfo('Delete key triggered for the holding tank');
+          // The holding tank also uses the .selected-row class for selection
+          if (window.holdingTank?.removeSelected) {
+            window.holdingTank.removeSelected();
+          } else {
+            this.logWarn('holdingTank.removeSelected function not found');
+          }
+          return;
+        }
+
+        // Case 3: Song deletion from search results
+        if (selected.closest('#search_results')) {
+          this.logInfo('Delete key triggered for search results');
+          if (window.deleteSelectedSong) {
+            window.deleteSelectedSong();
+          } else {
+            this.logWarn('deleteSelectedSong function not found');
+          }
+          return;
+        }
+        
+        this.logInfo('Delete pressed but selected row is in an unknown context', {
+          id: selected.id,
+          parent: selected.parentElement.id,
+        });
+        
       }, {
-        category: 'hotkeys',
-        description: 'Remove selected hotkey assignment',
+        category: 'global',
+        description: 'Remove selected item (song, hotkey, or holding tank item)',
         context: 'global'
       });
 
