@@ -166,36 +166,15 @@ class FunctionMonitor {
    * Log health report with appropriate formatting
    */
   logHealthReport(report) {
-    const status = report.overallHealth === 'healthy' ? '✅' : '⚠️';
-    debugLog.info(`${status} Function Health Check - ${report.overallHealth.toUpperCase()}`, { 
-      function: "logHealthReport",
-      data: { overallHealth: report.overallHealth }
-    });
-
+    // Only log if there are actual issues to report
     if (report.issues.length > 0) {
-      debugLog.warn('Issues detected:', { 
+      this.debugLog.warn('Function health issues detected:', { 
         function: "logHealthReport",
         data: { issues: report.issues }
       });
     }
-
-    // Log critical function status
-    const criticalStatus = Object.entries(report.criticalFunctions)
-      .map(([func, status]) => `${func}: ${status.available ? '✅' : '❌'}`)
-      .join(', ');
-    debugLog.info(`Critical Functions: ${criticalStatus}`, { 
-      function: "logHealthReport",
-      data: { criticalFunctions: report.criticalFunctions }
-    });
-
-    // Log module health summary
-    const moduleSummary = Object.entries(report.moduleFunctions)
-      .map(([module, status]) => `${module}: ${status.available ? '✅' : '❌'} (${status.functionCount} functions)`)
-      .join(', ');
-    debugLog.info(`Module Health: ${moduleSummary}`, { 
-      function: "logHealthReport",
-      data: { moduleFunctions: report.moduleFunctions }
-    });
+    
+    // Store the report silently - no verbose logging
   }
 
   /**
