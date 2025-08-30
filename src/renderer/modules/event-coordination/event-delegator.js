@@ -85,19 +85,6 @@ export default class EventDelegator {
       handler: dblHandler,
     });
 
-    // Search result row selection
-    this.addEvent('click', '#search_results tbody tr', (event) => {
-      this.debugLog.debug('Search result row clicked', {
-        target: event.target,
-        currentTarget: event.currentTarget
-      });
-      const prev = document.getElementById('selected_row');
-      if (prev) {
-        prev.removeAttribute('id');
-      }
-      event.currentTarget.id = 'selected_row';
-    });
-
     this.debugLog?.debug('Search results delegation set up');
   }
 
