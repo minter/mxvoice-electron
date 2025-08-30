@@ -82,7 +82,7 @@ export function deleteSong() {
 
 /**
  * Removes a song from the holding tank
- * Prompts for confirmation and updates the store after removal
+ * Removes immediately without confirmation and updates the store after removal
  */
 export function removeFromHoldingTank() {
   const songId = document.getElementById('selected_row')?.getAttribute('songid');
@@ -92,20 +92,15 @@ export function removeFromHoldingTank() {
       const rows = result?.data || result;
       const songRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
     
-      return customConfirm(`Are you sure you want to remove ${songRow?.title || 'this song'} from the holding tank?`).then(confirmed => {
-      if (confirmed) {
-        debugLog?.info("Proceeding with removal from holding tank", { module: 'song-management', function: 'removeFromHoldingTank' });
-        // Remove the selected row from the holding tank
-        document.getElementById('selected_row')?.remove();
-        // Clear the selection
-        document.getElementById('selected_row')?.removeAttribute('id');
-        // Save the updated holding tank to store
-          if (typeof saveHoldingTankToStore === 'function') saveHoldingTankToStore();
-          return { success: true, songId: songId, title: songRow?.title };
-      } else {
-        return { success: false, error: 'User cancelled' };
-      }
-      });
+      // Remove immediately without confirmation
+      debugLog?.info("Proceeding with removal from holding tank", { module: 'song-management', function: 'removeFromHoldingTank' });
+      // Remove the selected row from the holding tank
+      document.getElementById('selected_row')?.remove();
+      // Clear the selection
+      document.getElementById('selected_row')?.removeAttribute('id');
+      // Save the updated holding tank to store
+      if (typeof saveHoldingTankToStore === 'function') saveHoldingTankToStore();
+      return { success: true, songId: songId, title: songRow?.title };
     });
   }
 }

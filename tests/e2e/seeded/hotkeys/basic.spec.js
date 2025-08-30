@@ -1743,6 +1743,11 @@ test.describe('Hotkeys - save & load', () => {
     await searchInput.click();
     await page.waitForTimeout(300);
 
+    // Get the expected now playing text from the hotkey (title and artist only)
+    const hotkeyText = (await f1Hotkey.textContent()).trim();
+    // Remove the duration in parentheses, e.g. 'Got The Time by Anthrax (0:06)' => 'Got The Time by Anthrax'
+    const expectedText = hotkeyText.replace(/\s*\([^)]*\)\s*$/, '');
+
     // Right-click the <li> using mouse coordinates
     const f1HotkeyLi = activeTab.locator('#f1_hotkey');
     const box = await f1HotkeyLi.boundingBox();
@@ -1762,7 +1767,14 @@ test.describe('Hotkeys - save & load', () => {
       console.log('Menu display:', display, 'z-index:', zIndex);
       throw e;
     }
-    await expect(contextMenu.locator('button:has-text("Play")')).toBeVisible();
+    const playBtn = contextMenu.locator('button:has-text("Play")');
+    await expect(playBtn).toBeVisible();
+    await playBtn.click();
+    await page.waitForTimeout(300);
+
+    // Assert that the now playing bar contains the expected song (title and artist only)
+    const songNowPlaying = page.locator('#song_now_playing');
+    await expect(songNowPlaying).toContainText(expectedText);
   });
 
   test('context menu Edit functionality', async () => {

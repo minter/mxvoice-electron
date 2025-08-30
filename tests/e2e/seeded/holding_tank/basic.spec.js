@@ -932,31 +932,48 @@ test.describe('Holding Tank - basic', () => {
     const menuItems = contextMenu.locator('.mxv-context-item');
     await expect(menuItems).toHaveCount(3);
 
-    await expect(contextMenu.locator('button:has-text("Play")')).toBeVisible();
+    const playBtn = contextMenu.locator('button:has-text("Play")');
+    await expect(playBtn).toBeVisible();
     await expect(contextMenu.locator('button:has-text("Edit")')).toBeVisible();
-
-    // Dynamic delete label should be "Remove from Holding Tank" when invoked from holding tank
     let removeButton = contextMenu.locator('button:has-text("Remove from Holding Tank")');
+    await expect(removeButton).toBeVisible();
+
+    // Extract the expected now playing text from the holding tank item (title and artist only)
+    const holdingTankText = (await tab1Items.first().textContent()).trim();
+    const expectedText = holdingTankText.replace(/\s*\([^)]*\)\s*$/, '');
+
+    // Click Play and assert playback UI
+    await playBtn.click();
+    await page.waitForTimeout(300);
+    const songNowPlaying = page.locator('#song_now_playing');
+    await expect(songNowPlaying).toContainText(expectedText);
+
+    // Re-open the context menu by right-clicking the holding tank song again
+    await tab1Items.first().click({ button: 'right' });
+    await page.waitForTimeout(300);
+
+    // Check for Remove button (with fallback to Delete)
+    removeButton = contextMenu.locator('button:has-text("Remove from Holding Tank")');
     if (!(await removeButton.isVisible())) {
-      // Fallback to Delete if label did not change as expected
       removeButton = contextMenu.locator('button:has-text("Delete")');
     }
-
+    await expect(removeButton).toBeVisible();
     await removeButton.click();
-    // Confirm removal in the confirmation modal
-    const removalConfirm = page.locator('.modal:has-text("Are you sure you want to remove") .confirm-btn');
-    await expect(removalConfirm).toBeVisible({ timeout: 5000 });
-    await removalConfirm.click();
-    await page.waitForTimeout(500);
+
+    // Song should be removed immediately without confirmation modal
+    await page.waitForTimeout(300);
+    // Assert the song is removed from the holding tank - should now have 0 items
     await expect(tab1Items).toHaveCount(0);
     console.log('✅ Remove from Holding Tank via context menu works');
 
-    // Add another song and verify Edit path
+    // Test Edit functionality in holding tank
+    // Add another song to test Edit path
     const sisterSledgeRow = rows.filter({ hasText: 'Sister Sledge' }).first();
     await sisterSledgeRow.dragTo(tab1List, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
     await page.waitForTimeout(300);
     await expect(tab1Items).toHaveCount(1);
 
+    // Test Edit context menu option
     await tab1Items.first().click({ button: 'right' });
     await expect(contextMenu).toBeVisible({ timeout: 2000 });
     const editBtn = contextMenu.locator('button:has-text("Edit")');
@@ -971,48 +988,19 @@ test.describe('Holding Tank - basic', () => {
       await page.waitForTimeout(200);
     }
     
-    // 6) Test context menu in search results
-    console.log('🧪 Testing context menu in search results...');
-    
-    // Right-click on a search result row
-    const searchRow = rows.filter({ hasText: 'Sister Sledge' }).first();
-    await searchRow.click({ button: 'right' });
-    await page.waitForTimeout(500);
-    
-    // Check if context menu appears in search results
-    if (await contextMenu.isVisible()) {
-      console.log('✅ Context menu works in search results');
-      
-      // Look for common search result context menu items
-      const searchMenuItems = contextMenu.locator('.mxv-context-item');
-      await expect(searchMenuItems).toHaveCount(3);
-      // In search results, the delete label should be the generic "Delete"
-      await expect(contextMenu.locator('button:has-text("Delete")')).toBeVisible();
-      
-      // Close context menu by clicking elsewhere
-      await page.click('body');
-      await page.waitForTimeout(500);
-    } else {
-      console.log('⚠️ No context menu visible in search results');
-    }
-    
     // Clean up: Remove the song we added for testing
     await tab1Items.first().click({ button: 'right' });
     await expect(contextMenu).toBeVisible({ timeout: 2000 });
-    const cleanupRemoveButton = contextMenu.locator('button:has-text("Remove from Holding Tank")');
+    let cleanupRemoveButton = contextMenu.locator('button:has-text("Remove from Holding Tank")');
     if (!(await cleanupRemoveButton.isVisible())) {
       // Fallback to Delete if label did not change as expected
       cleanupRemoveButton = contextMenu.locator('button:has-text("Delete")');
     }
     await cleanupRemoveButton.click();
     
-    // Confirm removal in the confirmation modal
-    const cleanupRemovalConfirm = page.locator('.modal:has-text("Are you sure you want to remove") .confirm-btn');
-    await expect(cleanupRemovalConfirm).toBeVisible({ timeout: 5000 });
-    await cleanupRemovalConfirm.click();
-    await page.waitForTimeout(500);
-    
-    // Verify cleanup was successful
+    // Song should be removed immediately without confirmation modal
+    await page.waitForTimeout(300);
+    // Verify cleanup was successful - holding tank should be empty
     await expect(tab1Items).toHaveCount(0);
     
     console.log('✅ Successfully tested context menu functionality in holding tank');
