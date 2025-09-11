@@ -1172,13 +1172,13 @@ electron-updater@^6.6.8:
     semver "^7.6.3"
     tiny-typed-emitter "^2.1.0"
 
-electron-util@^0.18.1:
-  version "0.18.1"
-  resolved "https://registry.yarnpkg.com/electron-util/-/electron-util-0.18.1.tgz#389ebd2c5eafb7e5eed3c020e862c0e8545a4d0a"
-  integrity sha512-Ew1h+lDYUlGUnOQNDRo87dJDPW4R7MK2PTLbzb4nHnbFEMytTlPjxFgTfZieq1pGIdhSrDWINtXNhvp6lUEH1Q==
+electron-util@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/electron-util/-/electron-util-1.0.0.tgz#5976f9ec430e43dd59656d3c8a2b55f215504801"
+  integrity sha512-aOuxp70fhKAnBE7zTvgSJbtpb+GBfho3luh43oh5UZKpFViCUA+T5eQ/OY267tvmNusrcho4TNlyAZaQwucg9w==
   dependencies:
     electron-is-dev "^3.0.1"
-    new-github-issue-url "^1.0.0"
+    new-github-issue-url "^1.1.0"
 
 electron@^38.1.0:
   version "38.1.0"
@@ -2140,7 +2140,7 @@ negotiator@^0.6.3:
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.4.tgz#777948e2452651c570b712dd01c23e262713fff7"
   integrity sha512-myRT3DiWPHqho5PrJaIRyaMv2kgYf0mUVgBNOYMuCH5Ki1yEiQaf/ZJuQ62nvpc44wL5WDbTX7yGJi1Neevw8w==
 
-new-github-issue-url@^1.0.0:
+new-github-issue-url@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/new-github-issue-url/-/new-github-issue-url-1.1.0.tgz#317333435991ae46e98831db5a237deffe4c8d33"
   integrity sha512-R4r7f3Q/SzlI4Q/J/0KPRf+bwxYk7BiaYEy0zTVqpikA5F1CwCHgwVReKhpYRlG1besvLdtABQGQRhFy8CyT3g==
