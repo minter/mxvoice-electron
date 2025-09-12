@@ -350,7 +350,8 @@ class FunctionRegistry {
       sendToHotkeys: 'sendToHotkeys',
       hotkeyDrop: 'hotkeyDrop',
       allowHotkeyDrop: 'allowHotkeyDrop',
-      removeFromHotkey: 'removeFromHotkey'
+      removeFromHotkey: 'removeFromHotkey',
+      clearAllHotkeyHighlighting: 'clearAllHotkeyHighlighting'
     });
 
     // Holding Tank Functions

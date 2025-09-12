@@ -112,22 +112,8 @@ function setupHotkeyEventListeners(options = {}) {
     });
   });
 
-  // Highlight on click
-  document.querySelectorAll('[id$="_hotkey"]').forEach((el) => {
-    el.addEventListener('click', (e) => {
-      // Remove highlight and selected-row from all other hotkeys
-      document.querySelectorAll('[id$="_hotkey"]').forEach((item) => {
-        item.classList.remove('active-hotkey', 'selected-row');
-      });
-      // Highlight clicked hotkey
-      e.currentTarget.classList.add('active-hotkey', 'selected-row');
-      // Store the selected hotkey ID (e.g., "f1_hotkey")
-      window.currentSelectedHotkey = e.currentTarget.id;
-      // Debug log
-      window.debugLog?.info(`Hotkey selected: ${window.currentSelectedHotkey}`, 
-        { module: 'hotkey-ui', function: 'setupHotkeyEventListeners' });
-    });
-  });
+  // Note: Click highlighting is now handled by event delegation in setupHotkeyHighlightDelegation()
+  // This prevents duplicate event handlers that were causing highlighting conflicts
 
   // Hotkey tab events
   const hotkeyTabs = document.getElementById('hotkey_tabs');
@@ -265,6 +251,36 @@ function highlightHotkey(hotkey, className = 'highlight') {
  */
 function clearHotkeyHighlighting() {
   document.querySelectorAll('.hotkeys.active li').forEach(li => li.classList.remove('highlight'));
+}
+
+/**
+ * Clear all hotkey selection highlighting
+ * Removes active-hotkey and selected-row classes from all hotkey elements
+ * This ensures consistent highlighting state across all hotkey tabs
+ */
+function clearAllHotkeyHighlighting() {
+  // Clear highlighting from all hotkey elements across all tabs
+  const hotkeyElements = document.querySelectorAll('[id$="_hotkey"]');
+  let clearedCount = 0;
+  
+  hotkeyElements.forEach((item) => {
+    const hadHighlighting = item.classList.contains('active-hotkey') || item.classList.contains('selected-row');
+    if (hadHighlighting) {
+      clearedCount++;
+    }
+    item.classList.remove('active-hotkey', 'selected-row');
+  });
+  
+  // Clear the global selected hotkey reference
+  window.currentSelectedHotkey = null;
+  
+  debugLog?.info('All hotkey highlighting cleared', { 
+    module: 'hotkey-ui', 
+    function: 'clearAllHotkeyHighlighting',
+    totalElements: hotkeyElements.length,
+    clearedCount: clearedCount,
+    previousSelected: window.currentSelectedHotkey
+  });
 }
 
 /**
@@ -475,6 +491,7 @@ export {
   getAllHotkeyElements,
   highlightHotkey,
   clearHotkeyHighlighting,
+  clearAllHotkeyHighlighting,
   updateHotkeyDisplay,
   validateHotkeyElement,
   createHotkeyElement,
@@ -505,6 +522,7 @@ export default {
   getAllHotkeyElements,
   highlightHotkey,
   clearHotkeyHighlighting,
+  clearAllHotkeyHighlighting,
   updateHotkeyDisplay,
   validateHotkeyElement,
   createHotkeyElement,

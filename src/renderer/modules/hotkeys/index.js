@@ -622,9 +622,15 @@ class HotkeysModule {
               span.textContent = '';
               clearedCount++;
             }
+            // Remove highlighting classes when clearing hotkeys
+            li.classList.remove('active-hotkey', 'selected-row');
             debugLog?.debug(`Cleared F${key}: hadSongId=${hadSongId}, span cleared`, { module: 'hotkeys' });
           }
         }
+        
+        // Clear global selected hotkey reference
+        window.currentSelectedHotkey = null;
+        
         debugLog?.info(`✅ Cleared ${clearedCount} hotkeys in tab ${activeTab.id}`, { module: 'hotkeys' });
       } else {
         debugLog?.error('❌ No active hotkey tab found with selector .hotkeys.show.active', { module: 'hotkeys' });
@@ -896,6 +902,28 @@ class HotkeysModule {
   }
 
   /**
+   * Clear all hotkey highlighting
+   * Removes active-hotkey and selected-row classes from all hotkey elements
+   * This ensures consistent highlighting state across all hotkey tabs
+   */
+  clearAllHotkeyHighlighting() {
+    // Import the function from hotkey-ui module
+    if (this.ui && this.ui.clearAllHotkeyHighlighting) {
+      this.ui.clearAllHotkeyHighlighting();
+    } else {
+      // Fallback implementation
+      document.querySelectorAll('[id$="_hotkey"]').forEach((item) => {
+        item.classList.remove('active-hotkey', 'selected-row');
+      });
+      window.currentSelectedHotkey = null;
+      debugLog?.info('All hotkey highlighting cleared (fallback)', { 
+        module: 'hotkeys', 
+        function: 'clearAllHotkeyHighlighting' 
+      });
+    }
+  }
+
+  /**
    * Remove song from hotkey
    * Removes the selected song from its hotkey assignment
    */
@@ -1019,6 +1047,9 @@ class HotkeysModule {
 
       // Removal function - properly bound to maintain context
       removeFromHotkey: this.removeFromHotkey.bind(this),
+
+      // Highlighting management - properly bound to maintain context
+      clearAllHotkeyHighlighting: this.clearAllHotkeyHighlighting.bind(this),
 
       // Wrapper functions for Function Registry HTML compatibility
       populateHotkeysWrapper: this.populateHotkeysWrapper.bind(this),

@@ -193,6 +193,53 @@ export default class DOMInitialization {
         if (!row) return;
         event.preventDefault();
 
+        // Check if this is a hotkey element
+        const hotkeyLi = event.target.closest('li[id$="_hotkey"]');
+        if (hotkeyLi) {
+          // Handle hotkey context menu
+          window.debugLog?.info('Context menu triggered on hotkey element', { 
+            hotkeyId: hotkeyLi.id,
+            hasSongId: hotkeyLi.hasAttribute('songid'),
+            songId: hotkeyLi.getAttribute('songid'),
+            spanText: hotkeyLi.querySelector('span')?.textContent?.trim()
+          });
+
+          // Check if this hotkey has a song assigned
+          const hasSong = hotkeyLi.hasAttribute('songid') && hotkeyLi.querySelector('span')?.textContent?.trim();
+          
+          if (hasSong) {
+            show(event.clientX, event.clientY, 'Remove from Hotkey', () => {
+              window.debugLog?.info('Context menu: Remove from Hotkey pressed', { hotkeyId: hotkeyLi.id });
+              
+              // Remove the song assignment
+              hotkeyLi.removeAttribute('songid');
+              const span = hotkeyLi.querySelector('span');
+              if (span) span.textContent = '';
+              
+              // Clear all hotkey highlighting to prevent multiple highlighted rows
+              if (window.moduleRegistry?.hotkeys?.clearAllHotkeyHighlighting) {
+                window.moduleRegistry.hotkeys.clearAllHotkeyHighlighting();
+              } else if (window.clearAllHotkeyHighlighting) {
+                window.clearAllHotkeyHighlighting();
+              } else {
+                // Fallback: clear highlighting manually
+                document.querySelectorAll('[id$="_hotkey"]').forEach((item) => {
+                  item.classList.remove('active-hotkey', 'selected-row');
+                });
+                window.currentSelectedHotkey = null;
+              }
+              
+              window.debugLog?.info('Hotkey assignment removed via context menu', { hotkeyId: hotkeyLi.id });
+              if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
+                window.hotkeysModule.saveHotkeysToStore();
+                window.debugLog?.info('Hotkeys state saved after context menu removal');
+              }
+            });
+          }
+          return; // Don't process as regular context menu
+        }
+
+        // Handle regular context menu for non-hotkey elements
         // Always set the right-clicked row as selected_row
         const prev = document.getElementById('selected_row');
         window.debugLog?.info('Context menu: about to set selected_row', {
@@ -220,75 +267,16 @@ export default class DOMInitialization {
 
         let label = 'Delete';
         const holdingCol = document.getElementById('holding-tank-column');
-        const hotkeysContent = document.getElementById('hotkey-tab-content');
 
-        if (hotkeysContent && hotkeysContent.contains(row)) {
-          label = 'Remove from Hotkey';
-          show(event.clientX, event.clientY, label, () => {
-            const selected = row;
-            if (!selected) {
-              window.debugLog?.info('Context menu: Remove from Hotkey pressed but no row is selected');
-              return;
-            }
-            selected.removeAttribute('songid');
-            const span = selected.querySelector('span');
-            if (span) span.textContent = '';
-            selected.classList.remove('active-hotkey', 'selected-row');
-            window.debugLog?.info('Hotkey assignment removed via context menu', { hotkeyId: selected.id });
-            if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
-              window.hotkeysModule.saveHotkeysToStore();
-              window.debugLog?.info('Hotkeys state saved after context menu removal');
-            }
-          });
-        } else {
-          if (holdingCol && holdingCol.contains(row)) {
-            label = 'Remove from Holding Tank';
-          }
-          const x = Math.min(event.clientX, window.innerWidth - 220);
-          const y = Math.min(event.clientY, window.innerHeight - 150);
-          show(x, y, label);
+        if (holdingCol && holdingCol.contains(row)) {
+          label = 'Remove from Holding Tank';
         }
+        const x = Math.min(event.clientX, window.innerWidth - 220);
+        const y = Math.min(event.clientY, window.innerHeight - 150);
+        show(x, y, label);
       });
 
-      document.getElementById('search_results')?.addEventListener('contextmenu', (event) => {
-        const row = event.target.closest('tr');
-        if (!row) return;
-        event.preventDefault();
-
-        // Do not change the selection on right-click; only show the menu.
-        // The selection is handled by the left-click delegator.
-        
-        let label = 'Delete';
-        const holdingCol = document.getElementById('holding-tank-column');
-        const hotkeysContent = document.getElementById('hotkey-tab-content');
-
-        if (hotkeysContent && hotkeysContent.contains(row)) {
-          label = 'Remove from Hotkey';
-          show(event.clientX, event.clientY, label, () => {
-            const selected = row;
-            if (!selected) {
-              window.debugLog?.info('Context menu: Remove from Hotkey pressed but no row is selected');
-              return;
-            }
-            selected.removeAttribute('songid');
-            const span = selected.querySelector('span');
-            if (span) span.textContent = '';
-            selected.classList.remove('active-hotkey', 'selected-row');
-            window.debugLog?.info('Hotkey assignment removed via context menu', { hotkeyId: selected.id });
-            if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
-              window.hotkeysModule.saveHotkeysToStore();
-              window.debugLog?.info('Hotkeys state saved after context menu removal');
-            }
-          });
-        } else {
-          if (holdingCol && holdingCol.contains(row)) {
-            label = 'Remove from Holding Tank';
-          }
-          const x = Math.min(event.clientX, window.innerWidth - 220);
-          const y = Math.min(event.clientY, window.innerHeight - 150);
-          show(x, y, label);
-        }
-      });
+      // Note: Context menu handling is now consolidated in the main document.addEventListener('contextmenu') handler above
 
       this.debugLog?.debug('Context menu set up (native)');
     } catch (error) {
