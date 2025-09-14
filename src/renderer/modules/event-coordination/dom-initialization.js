@@ -208,44 +208,83 @@ export default class DOMInitialization {
           const hasSong = hotkeyLi.hasAttribute('songid') && hotkeyLi.querySelector('span')?.textContent?.trim();
           
           if (hasSong) {
-            // Set the hotkey as selected_row so Play/Edit functions work
+            // Store original hotkey ID and song info for direct removal
+            const originalHotkeyId = hotkeyLi.id;
+            const songid = hotkeyLi.getAttribute('songid');
+            
+            // Clear all previous hotkey highlighting FIRST (like left-click does)
+            document.querySelectorAll('[id$="_hotkey"]').forEach((item) => {
+              item.classList.remove('active-hotkey', 'selected-row');
+            });
+            window.currentSelectedHotkey = null;
+            
+            // Set the hotkey as selected_row so Play/Edit functions work with existing logic
             const prev = document.getElementById('selected_row');
             if (prev) prev.removeAttribute('id');
-            const songid = hotkeyLi.getAttribute('songid');
             hotkeyLi.id = 'selected_row';
+            hotkeyLi.classList.add('active-hotkey', 'selected-row');
             if (songid) {
               hotkeyLi.setAttribute('songid', songid);
             }
+            window.currentSelectedHotkey = originalHotkeyId;
             window.debugLog?.info('Context menu: set hotkey as selected_row', {
-              hotkeyId: hotkeyLi.id,
+              originalHotkeyId: originalHotkeyId,
               songid: songid
             });
 
             show(event.clientX, event.clientY, 'Remove from Hotkey', () => {
-              window.debugLog?.info('Context menu: Remove from Hotkey pressed', { hotkeyId: hotkeyLi.id });
+              window.debugLog?.info('Context menu: Remove from Hotkey pressed', { originalHotkeyId: originalHotkeyId });
               
-              // Remove the song assignment
-              hotkeyLi.removeAttribute('songid');
-              const span = hotkeyLi.querySelector('span');
-              if (span) span.textContent = '';
-              
-              // Clear all hotkey highlighting to prevent multiple highlighted rows
-              if (window.moduleRegistry?.hotkeys?.clearAllHotkeyHighlighting) {
-                window.moduleRegistry.hotkeys.clearAllHotkeyHighlighting();
-              } else if (window.clearAllHotkeyHighlighting) {
-                window.clearAllHotkeyHighlighting();
+              // Use the proper hotkeys module function and restore original ID afterward
+              if (window.moduleRegistry?.hotkeys?.removeFromHotkey) {
+                // Call the hotkeys module function
+                const result = window.moduleRegistry.hotkeys.removeFromHotkey();
+                // Restore the original hotkey ID after removal
+                setTimeout(() => {
+                  const element = document.getElementById('selected_row');
+                  if (element) {
+                    element.id = originalHotkeyId;
+                  }
+                }, 10);
+              } else if (window.removeFromHotkey && typeof window.removeFromHotkey === 'function') {
+                window.removeFromHotkey();
+                // Restore the original hotkey ID after removal
+                setTimeout(() => {
+                  const element = document.getElementById('selected_row');
+                  if (element) {
+                    element.id = originalHotkeyId;
+                  }
+                }, 10);
               } else {
-                // Fallback: clear highlighting manually
-                document.querySelectorAll('[id$="_hotkey"]').forEach((item) => {
-                  item.classList.remove('active-hotkey', 'selected-row');
-                });
-                window.currentSelectedHotkey = null;
-              }
-              
-              window.debugLog?.info('Hotkey assignment removed via context menu', { hotkeyId: hotkeyLi.id });
-              if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
-                window.hotkeysModule.saveHotkeysToStore();
-                window.debugLog?.info('Hotkeys state saved after context menu removal');
+                // Fallback: use manual removal if module function not available
+                window.debugLog?.warn('removeFromHotkey function not available, using fallback');
+                const element = document.getElementById('selected_row');
+                if (element) {
+                  element.removeAttribute('songid');
+                  const span = element.querySelector('span');
+                  if (span) span.textContent = '';
+                  // Restore original ID immediately
+                  element.id = originalHotkeyId;
+                }
+                
+                // Clear all hotkey highlighting to prevent multiple highlighted rows
+                if (window.moduleRegistry?.hotkeys?.clearAllHotkeyHighlighting) {
+                  window.moduleRegistry.hotkeys.clearAllHotkeyHighlighting();
+                } else if (window.clearAllHotkeyHighlighting) {
+                  window.clearAllHotkeyHighlighting();
+                } else {
+                  // Fallback: clear highlighting manually
+                  document.querySelectorAll('[id$="_hotkey"]').forEach((item) => {
+                    item.classList.remove('active-hotkey', 'selected-row');
+                  });
+                  window.currentSelectedHotkey = null;
+                }
+                
+                window.debugLog?.info('Hotkey assignment removed via context menu fallback', { hotkeyId: originalHotkeyId });
+                if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
+                  window.hotkeysModule.saveHotkeysToStore();
+                  window.debugLog?.info('Hotkeys state saved after context menu removal');
+                }
               }
             });
           }

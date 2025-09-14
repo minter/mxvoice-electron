@@ -363,6 +363,11 @@ The module includes comprehensive error handling:
 - Hotkey elements are created via DOM APIs rather than HTML strings.
 - Drag handlers are attached programmatically using `addEventListener('dragstart', songDrag)` from the `drag-drop` module; inline `ondragstart` is not used.
 
+### Context Menu Integration
+- Right-click context menu properly handles hotkey removal without breaking element IDs
+- The `removeFromHotkey` function preserves hotkey element structure during removal
+- Context menu temporarily sets elements as `selected_row` but restores original IDs afterward
+
 ## Migration Guide
 
 ### From Legacy Code

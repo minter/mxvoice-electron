@@ -92,7 +92,7 @@ class HotkeysModule {
       this.allowHotkeyDrop = hotkeyUI.allowHotkeyDrop.bind(this);
       this.switchToHotkeyTab = hotkeyUI.switchToHotkeyTab.bind(this);
       this.renameHotkeyTab = hotkeyUI.renameHotkeyTab.bind(this);
-      this.removeFromHotkey = hotkeyOperations.removeFromHotkey.bind(this);
+      // removeFromHotkey is implemented directly in this class
       this.exportHotkeyConfig = hotkeyOperations.exportHotkeyConfig.bind(this);
       this.importHotkeyConfig = hotkeyOperations.importHotkeyConfig.bind(this);
       this.clearHotkeyConfig = hotkeyOperations.clearHotkeyConfig.bind(this);
@@ -968,7 +968,9 @@ class HotkeysModule {
                 selected.removeAttribute('songid');
                 const span = selected.querySelector('span');
                 if (span) span.textContent = '';
-                selected.removeAttribute('id');
+                // Don't remove ID here - let context menu handler restore original hotkey ID
+                selected.classList.remove('active-hotkey', 'selected-row');
+                window.currentSelectedHotkey = null;
               }
               this.saveHotkeysToStore();
               debugLog?.info('Hotkey cleared successfully', {
@@ -985,7 +987,9 @@ class HotkeysModule {
                 selected.removeAttribute('songid');
                 const span = selected.querySelector('span');
                 if (span) span.textContent = '';
-                selected.removeAttribute('id');
+                // Don't remove ID here - let context menu handler restore original hotkey ID
+                selected.classList.remove('active-hotkey', 'selected-row');
+                window.currentSelectedHotkey = null;
               }
               this.saveHotkeysToStore();
             });
@@ -998,7 +1002,9 @@ class HotkeysModule {
             selected.removeAttribute('songid');
             const span = selected.querySelector('span');
             if (span) span.textContent = '';
-            selected.removeAttribute('id');
+            // Don't remove ID here - let context menu handler restore original hotkey ID
+            selected.classList.remove('active-hotkey', 'selected-row');
+            window.currentSelectedHotkey = null;
           }
           this.saveHotkeysToStore();
         });

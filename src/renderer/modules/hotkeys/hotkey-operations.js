@@ -282,73 +282,8 @@ function sendToHotkeys(options = {}) {
   return false;
 }
 
-/**
- * Remove song from hotkey
- * Removes the selected song from its hotkey assignment
- * 
- * @param {Object} options - Options object containing dependencies
- */
-function removeFromHotkey(options = {}) {
-  const { db, saveHotkeysToStore } = options;
-  
-  const songId = document.getElementById('selected_row')?.getAttribute('songid');
-  window.debugLog?.info("removeFromHotkey called, songId:", songId, { module: 'hotkey-operations', function: 'removeFromHotkey' });
-  window.debugLog?.info("selected_row element:", document.getElementById('selected_row'), { module: 'hotkey-operations', function: 'removeFromHotkey' });
-  
-  if (songId) {
-    window.debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'hotkey-operations', function: 'removeFromHotkey' });
-    if (db) {
-      const songStmt = db.prepare("SELECT * FROM mrvoice WHERE ID = ?");
-      const songRow = songStmt.get(songId);
-      
-      if (songRow) {
-        customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`, () => {
-          window.debugLog?.info("Proceeding with removal from hotkey", { module: 'hotkey-operations', function: 'removeFromHotkey' });
-          // Clear the hotkey slot
-          const selected = document.getElementById('selected_row');
-          if (selected) {
-            selected.removeAttribute('songid');
-            const span = selected.querySelector('span');
-            if (span) span.textContent = '';
-            selected.removeAttribute('id');
-          }
-          // Save the updated hotkeys to store
-          if (saveHotkeysToStore) {
-            saveHotkeysToStore();
-          }
-          window.debugLog?.info("Hotkey cleared successfully", { module: 'hotkey-operations', function: 'removeFromHotkey' });
-        });
-      } else {
-        window.debugLog?.error("Song not found in database for ID:", songId, { module: 'hotkey-operations', function: 'removeFromHotkey' });
-        // Still clear the hotkey even if song not found
-          const selected = document.getElementById('selected_row');
-          if (selected) {
-            selected.removeAttribute('songid');
-            const span = selected.querySelector('span');
-            if (span) span.textContent = '';
-            selected.removeAttribute('id');
-          }
-        if (saveHotkeysToStore) {
-          saveHotkeysToStore();
-        }
-      }
-    } else {
-      // Clear the hotkey even if database is not available
-        const selected2 = document.getElementById('selected_row');
-        if (selected2) {
-          selected2.removeAttribute('songid');
-          const span2 = selected2.querySelector('span');
-          if (span2) span2.textContent = '';
-          selected2.removeAttribute('id');
-        }
-      if (saveHotkeysToStore) {
-        saveHotkeysToStore();
-      }
-    }
-  } else {
-    window.debugLog?.info("No songId found on selected row", { module: 'hotkey-operations', function: 'removeFromHotkey' });
-  }
-}
+// removeFromHotkey function moved to main hotkeys module (index.js) to avoid conflicts
+// This ensures consistent behavior and prevents ID manipulation issues
 
 /**
  * Export hotkey configuration
@@ -509,7 +444,6 @@ export {
   getHotkeyElementFromActiveTab,
   playSongFromHotkey,
   sendToHotkeys,
-  removeFromHotkey,
   exportHotkeyConfig,
   importHotkeyConfig,
   clearHotkeyConfig,
@@ -526,7 +460,6 @@ export default {
   getHotkeyElementFromActiveTab,
   playSongFromHotkey,
   sendToHotkeys,
-  removeFromHotkey,
   exportHotkeyConfig,
   importHotkeyConfig,
   clearHotkeyConfig,
