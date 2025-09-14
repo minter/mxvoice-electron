@@ -151,8 +151,17 @@ export default class DOMInitialization {
       menu.append(playItem, editItem, deleteItem);
       document.body.appendChild(menu);
 
+      // Track if we're waiting for a hotkey operation to complete
+      let isHotkeyOperationPending = false;
+      
       // Helper function to restore hotkey ID
       const restoreHotkeyId = () => {
+        // Don't restore if we're in the middle of a hotkey operation
+        if (isHotkeyOperationPending) {
+          window.debugLog?.info('Context menu: skipping ID restoration - operation pending');
+          return;
+        }
+        
         const selectedRow = document.getElementById('selected_row');
         if (selectedRow && selectedRow.classList.contains('list-group-item') && 
             selectedRow.closest('.hotkeys')) {
@@ -279,50 +288,58 @@ export default class DOMInitialization {
               songid: songid
             });
 
-            show(event.clientX, event.clientY, 'Remove from Hotkey', () => {
+            show(event.clientX, event.clientY, 'Remove from Hotkey', async () => {
               window.debugLog?.info('Context menu: Remove from Hotkey pressed', { originalHotkeyId: originalHotkeyId });
               
-              // Use the proper hotkeys module function and restore original ID afterward
-              if (window.moduleRegistry?.hotkeys?.removeFromHotkey) {
-                // Call the hotkeys module function
-                const result = window.moduleRegistry.hotkeys.removeFromHotkey();
-                // Restore the original hotkey ID after removal
-                setTimeout(() => restoreHotkeyId(), 50);
-              } else if (window.removeFromHotkey && typeof window.removeFromHotkey === 'function') {
-                window.removeFromHotkey();
-                // Restore the original hotkey ID after removal
-                setTimeout(() => restoreHotkeyId(), 50);
-              } else {
-                // Fallback: use manual removal if module function not available
-                window.debugLog?.warn('removeFromHotkey function not available, using fallback');
-                const element = document.getElementById('selected_row');
-                if (element) {
-                  element.removeAttribute('songid');
-                  const span = element.querySelector('span');
-                  if (span) span.textContent = '';
+              // Prevent ID restoration while operation is in progress
+              isHotkeyOperationPending = true;
+              
+              try {
+                // Get song title for confirmation (same as the complex function)
+                let songTitle = 'this song';
+                if (window.electronAPI?.database?.query) {
+                  try {
+                    const result = await window.electronAPI.database.query('SELECT title FROM mrvoice WHERE ID = ?', [songid]);
+                    if (result?.success && result.data?.[0]?.title) {
+                      songTitle = result.data[0].title;
+                    }
+                  } catch (error) {
+                    window.debugLog?.warn('Could not fetch song title:', error);
+                  }
                 }
                 
-                // Clear all hotkey highlighting to prevent multiple highlighted rows
-                if (window.moduleRegistry?.hotkeys?.clearAllHotkeyHighlighting) {
-                  window.moduleRegistry.hotkeys.clearAllHotkeyHighlighting();
-                } else if (window.clearAllHotkeyHighlighting) {
-                  window.clearAllHotkeyHighlighting();
+                // Show confirmation (using the simple modal approach)
+                const confirmed = await customConfirm(`Are you sure you want to remove ${songTitle} from this hotkey?`);
+                
+                if (confirmed) {
+                  window.debugLog?.info('User confirmed hotkey removal');
+                  
+                  // Use the same direct approach as delete keypress (no ID manipulation needed)
+                  const element = document.getElementById('selected_row'); // This is our hotkeyLi
+                  if (element) {
+                    element.removeAttribute('songid');
+                    const span = element.querySelector('span');
+                    if (span) span.textContent = '';
+                    element.classList.remove('active-hotkey', 'selected-row');
+                    window.currentSelectedHotkey = null;
+                    
+                    // Save hotkeys state
+                    if (window.hotkeysModule?.saveHotkeysToStore) {
+                      window.hotkeysModule.saveHotkeysToStore();
+                      window.debugLog?.info('Hotkeys state saved after context menu removal');
+                    }
+                    
+                    window.debugLog?.info('Hotkey assignment removed via context menu', { hotkeyId: originalHotkeyId });
+                  }
                 } else {
-                  // Fallback: clear highlighting manually
-                  document.querySelectorAll('[id$="_hotkey"]').forEach((item) => {
-                    item.classList.remove('active-hotkey', 'selected-row');
-                  });
-                  window.currentSelectedHotkey = null;
+                  window.debugLog?.info('User cancelled hotkey removal');
                 }
-                
-                // Restore ID after manual removal
+              } catch (error) {
+                window.debugLog?.error('Error in context menu hotkey removal:', error);
+              } finally {
+                // Restore ID and allow future operations
+                isHotkeyOperationPending = false;
                 restoreHotkeyId();
-                
-                window.debugLog?.info('Hotkey assignment removed via context menu fallback', { hotkeyId: originalHotkeyId });
-                if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
-                  window.hotkeysModule.saveHotkeysToStore();
-                  window.debugLog?.info('Hotkeys state saved after context menu removal');
-                }
               }
             });
           }

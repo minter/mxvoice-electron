@@ -958,55 +958,70 @@ class HotkeysModule {
             const message = title
               ? `Are you sure you want to remove ${title} from this hotkey?`
               : `Are you sure you want to clear this hotkey?`;
-            customConfirm(message, () => {
-              debugLog?.info('Proceeding with removal from hotkey', {
-                module: 'hotkeys',
-                function: 'removeFromHotkey',
-              });
-              const selected = document.getElementById('selected_row');
-              if (selected) {
-                selected.removeAttribute('songid');
-                const span = selected.querySelector('span');
-                if (span) span.textContent = '';
-                // Don't remove ID here - let context menu handler restore original hotkey ID
-                selected.classList.remove('active-hotkey', 'selected-row');
-                window.currentSelectedHotkey = null;
+            return customConfirm(message).then((confirmed) => {
+              if (confirmed) {
+                debugLog?.info('Proceeding with removal from hotkey', {
+                  module: 'hotkeys',
+                  function: 'removeFromHotkey',
+                });
+                const selected = document.getElementById('selected_row');
+                if (selected) {
+                  selected.removeAttribute('songid');
+                  const span = selected.querySelector('span');
+                  if (span) span.textContent = '';
+                  // Don't remove ID here - let context menu handler restore original hotkey ID
+                  selected.classList.remove('active-hotkey', 'selected-row');
+                  window.currentSelectedHotkey = null;
+                }
+                this.saveHotkeysToStore();
+                debugLog?.info('Hotkey cleared successfully', {
+                  module: 'hotkeys',
+                  function: 'removeFromHotkey',
+                });
+                return { success: true, songId: songId };
+              } else {
+                return { success: false, cancelled: true };
               }
-              this.saveHotkeysToStore();
-              debugLog?.info('Hotkey cleared successfully', {
-                module: 'hotkeys',
-                function: 'removeFromHotkey',
-              });
             });
           })
           .catch(() => {
             // Fallback: confirm without title
-            customConfirm(`Are you sure you want to clear this hotkey?`, () => {
-              const selected = document.getElementById('selected_row');
-              if (selected) {
-                selected.removeAttribute('songid');
-                const span = selected.querySelector('span');
-                if (span) span.textContent = '';
-                // Don't remove ID here - let context menu handler restore original hotkey ID
-                selected.classList.remove('active-hotkey', 'selected-row');
-                window.currentSelectedHotkey = null;
+            return customConfirm(`Are you sure you want to clear this hotkey?`).then((confirmed) => {
+              if (confirmed) {
+                const selected = document.getElementById('selected_row');
+                if (selected) {
+                  selected.removeAttribute('songid');
+                  const span = selected.querySelector('span');
+                  if (span) span.textContent = '';
+                  // Don't remove ID here - let context menu handler restore original hotkey ID
+                  selected.classList.remove('active-hotkey', 'selected-row');
+                  window.currentSelectedHotkey = null;
+                }
+                this.saveHotkeysToStore();
+                return { success: true, songId: songId };
+              } else {
+                return { success: false, cancelled: true };
               }
-              this.saveHotkeysToStore();
             });
           });
       } else {
         // Confirm without title if database not available
-        customConfirm(`Are you sure you want to clear this hotkey?`, () => {
-          const selected = document.getElementById('selected_row');
-          if (selected) {
-            selected.removeAttribute('songid');
-            const span = selected.querySelector('span');
-            if (span) span.textContent = '';
-            // Don't remove ID here - let context menu handler restore original hotkey ID
-            selected.classList.remove('active-hotkey', 'selected-row');
-            window.currentSelectedHotkey = null;
+        return customConfirm(`Are you sure you want to clear this hotkey?`).then((confirmed) => {
+          if (confirmed) {
+            const selected = document.getElementById('selected_row');
+            if (selected) {
+              selected.removeAttribute('songid');
+              const span = selected.querySelector('span');
+              if (span) span.textContent = '';
+              // Don't remove ID here - let context menu handler restore original hotkey ID
+              selected.classList.remove('active-hotkey', 'selected-row');
+              window.currentSelectedHotkey = null;
+            }
+            this.saveHotkeysToStore();
+            return { success: true, songId: songId };
+          } else {
+            return { success: false, cancelled: true };
           }
-          this.saveHotkeysToStore();
         });
       }
     } else {
@@ -1014,6 +1029,7 @@ class HotkeysModule {
         module: 'hotkeys',
         function: 'removeFromHotkey',
       });
+      return Promise.resolve({ success: false, error: 'No song assigned' });
     }
   }
 
