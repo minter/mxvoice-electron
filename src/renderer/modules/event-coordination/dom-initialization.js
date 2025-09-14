@@ -131,10 +131,18 @@ export default class DOMInitialization {
         return item;
       };
       let playItem = mkItem('Play', () => {
-        if (window.playSelected) window.playSelected();
+        if (window.playSelected) {
+          window.playSelected();
+          // Delay ID restoration to allow Play function to complete
+          setTimeout(() => restoreHotkeyId(), 50);
+        }
       });
       let editItem = mkItem('Edit', () => {
-        if (window.editSelectedSong) window.editSelectedSong();
+        if (window.editSelectedSong) {
+          window.editSelectedSong();
+          // Delay ID restoration to allow Edit function to complete
+          setTimeout(() => restoreHotkeyId(), 50);
+        }
       });
       let deleteItem = mkItem('Delete', () => {
         // This default handler is now managed dynamically in the show function
@@ -143,8 +151,38 @@ export default class DOMInitialization {
       menu.append(playItem, editItem, deleteItem);
       document.body.appendChild(menu);
 
+      // Helper function to restore hotkey ID
+      const restoreHotkeyId = () => {
+        const selectedRow = document.getElementById('selected_row');
+        if (selectedRow && selectedRow.classList.contains('list-group-item') && 
+            selectedRow.closest('.hotkeys')) {
+          // This is a hotkey element that was temporarily renamed - restore its original ID
+          const originalId = selectedRow.getAttribute('data-original-hotkey-id');
+          if (originalId) {
+            selectedRow.id = originalId;
+            selectedRow.removeAttribute('data-original-hotkey-id');
+            window.debugLog?.info('Context menu: restored hotkey ID', { 
+              restoredId: originalId 
+            });
+          } else {
+            // Fallback: try to determine the original ID from the hotkey structure
+            const badge = selectedRow.querySelector('.badge');
+            if (badge) {
+              const keyText = badge.textContent.toLowerCase();
+              const restoredId = `${keyText}_hotkey`;
+              selectedRow.id = restoredId;
+              window.debugLog?.info('Context menu: restored hotkey ID via fallback', { 
+                restoredId: restoredId,
+                keyText: keyText
+              });
+            }
+          }
+        }
+      };
+
       const hide = () => {
         menu.style.display = 'none';
+        // Note: ID restoration is now handled by individual menu items or dismissal events
       };
 
       // Helper to remove all previous click listeners from deleteItem
@@ -184,9 +222,15 @@ export default class DOMInitialization {
         deleteItem._mxvHandler = newHandler;
       };
 
-      document.addEventListener('click', hide);
-      window.addEventListener('blur', hide);
-      window.addEventListener('resize', hide);
+      // For dismissal events (clicking away, blur, resize), immediately restore ID
+      const hideAndRestore = () => {
+        hide();
+        restoreHotkeyId();
+      };
+      
+      document.addEventListener('click', hideAndRestore);
+      window.addEventListener('blur', hideAndRestore);
+      window.addEventListener('resize', hideAndRestore);
 
       document.addEventListener('contextmenu', (event) => {
         const row = event.target?.closest('.context-menu');
@@ -221,6 +265,9 @@ export default class DOMInitialization {
             // Set the hotkey as selected_row so Play/Edit functions work with existing logic
             const prev = document.getElementById('selected_row');
             if (prev) prev.removeAttribute('id');
+            
+            // Store the original ID so we can restore it when the menu is dismissed
+            hotkeyLi.setAttribute('data-original-hotkey-id', originalHotkeyId);
             hotkeyLi.id = 'selected_row';
             hotkeyLi.classList.add('active-hotkey', 'selected-row');
             if (songid) {
@@ -240,21 +287,11 @@ export default class DOMInitialization {
                 // Call the hotkeys module function
                 const result = window.moduleRegistry.hotkeys.removeFromHotkey();
                 // Restore the original hotkey ID after removal
-                setTimeout(() => {
-                  const element = document.getElementById('selected_row');
-                  if (element) {
-                    element.id = originalHotkeyId;
-                  }
-                }, 10);
+                setTimeout(() => restoreHotkeyId(), 50);
               } else if (window.removeFromHotkey && typeof window.removeFromHotkey === 'function') {
                 window.removeFromHotkey();
                 // Restore the original hotkey ID after removal
-                setTimeout(() => {
-                  const element = document.getElementById('selected_row');
-                  if (element) {
-                    element.id = originalHotkeyId;
-                  }
-                }, 10);
+                setTimeout(() => restoreHotkeyId(), 50);
               } else {
                 // Fallback: use manual removal if module function not available
                 window.debugLog?.warn('removeFromHotkey function not available, using fallback');
@@ -263,8 +300,6 @@ export default class DOMInitialization {
                   element.removeAttribute('songid');
                   const span = element.querySelector('span');
                   if (span) span.textContent = '';
-                  // Restore original ID immediately
-                  element.id = originalHotkeyId;
                 }
                 
                 // Clear all hotkey highlighting to prevent multiple highlighted rows
@@ -279,6 +314,9 @@ export default class DOMInitialization {
                   });
                   window.currentSelectedHotkey = null;
                 }
+                
+                // Restore ID after manual removal
+                restoreHotkeyId();
                 
                 window.debugLog?.info('Hotkey assignment removed via context menu fallback', { hotkeyId: originalHotkeyId });
                 if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
