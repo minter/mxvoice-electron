@@ -208,6 +208,19 @@ export default class DOMInitialization {
           const hasSong = hotkeyLi.hasAttribute('songid') && hotkeyLi.querySelector('span')?.textContent?.trim();
           
           if (hasSong) {
+            // Set the hotkey as selected_row so Play/Edit functions work
+            const prev = document.getElementById('selected_row');
+            if (prev) prev.removeAttribute('id');
+            const songid = hotkeyLi.getAttribute('songid');
+            hotkeyLi.id = 'selected_row';
+            if (songid) {
+              hotkeyLi.setAttribute('songid', songid);
+            }
+            window.debugLog?.info('Context menu: set hotkey as selected_row', {
+              hotkeyId: hotkeyLi.id,
+              songid: songid
+            });
+
             show(event.clientX, event.clientY, 'Remove from Hotkey', () => {
               window.debugLog?.info('Context menu: Remove from Hotkey pressed', { hotkeyId: hotkeyLi.id });
               
