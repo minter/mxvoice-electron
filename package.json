@@ -165,7 +165,7 @@
     "howler": "^2.2.3",
     "markdown-it": "^14.1.0",
     "mousetrap": "^1.6.5",
-    "music-metadata": "11.8.3",
+    "music-metadata": "11.9.0",
     "n-readlines": "^1.0.1",
     "node-sqlite3-wasm": "^0.8.48",
     "uuid": "^13.0.0",
