@@ -117,6 +117,12 @@ export class HotkeyBindings {
       } else {
         this.logWarn(`playSongFromHotkey function not available for ${fkey}`);
       }
+      
+      // Remove focus from any active tab to prevent outline from appearing
+      const activeTab = document.querySelector('#hotkey_tabs .nav-link.active');
+      if (activeTab) {
+        activeTab.blur();
+      }
     } catch (error) {
       this.logError(`Error handling function key ${fkey}:`, error);
     }
