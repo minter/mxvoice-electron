@@ -184,7 +184,7 @@ test.describe('Songs - edit', () => {
     await expect(page.locator('#search_results')).toContainText('Anthrax (Edited)');
     await expect(page.locator('#search_results')).toContainText('Edited Countdown Info');
     // The category should show as "Running In" in the results
-    await expect(page.locator('#search_results')).toContainText('RNIN');
+    await expect(page.locator('#search_results')).toContainText('Running In');
     
     console.log('✅ Song changes verified in search results');
     

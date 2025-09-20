@@ -95,7 +95,7 @@ test.describe('First run flow', () => {
     const firstRow = rows.first();
     await expect(firstRow).toContainText('Rock Bumper');
     await expect(firstRow).toContainText('Patrick Short');
-    await expect(firstRow).toContainText('UNC');
+    await expect(firstRow).toContainText('Uncategorized');
 
     // Pre-play UI state
     await expect(page.locator('#stop_button')).toBeDisabled();
