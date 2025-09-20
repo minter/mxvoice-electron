@@ -1,0 +1,138 @@
+---
+alwaysApply: true
+---
+
+# IPC Handler Management
+
+## Critical Rule: Never Duplicate IPC Handlers
+
+**IPC handlers are global and persist across window recreation. Duplicate registration causes immediate crashes.**
+
+## Before Adding Any IPC Handler
+
+### 1. Always Check Existing Handlers First
+```bash
+# Search for existing handler patterns
+grep -r "ipcMain.handle.*handler-name" src/main/
+grep -r "ipcRenderer.invoke.*handler-name" src/preload/
+```
+
+### 2. Understand Registration Flow
+- **Main process**: `src/main/modules/ipc-handlers.js` → `registerAllHandlers()`
+- **Preload process**: `src/preload/modules/secure-api-exposer.js` → contextBridge
+- **Renderer process**: Event listeners via `secureElectronAPI.events`
+
+### 3. Check Initialization Sequence
+- **Multiple paths** can call `registerAllHandlers()` (error recovery, window recreation)
+- **Always implement deduplication** for any handler registration
+- **Use registration flags** to prevent duplicate calls
+
+## Handler Registration Pattern
+
+### Required Pattern for All Handler Registration
+```javascript
+// Track registration state
+let handlersRegistered = false;
+
+function registerAllHandlers() {
+  // ALWAYS check for duplicates first
+  if (handlersRegistered) {
+    debugLog?.info('Handlers already registered, skipping', { 
+      module: 'module-name', 
+      function: 'registerAllHandlers' 
+    });
+    return;
+  }
+
+  // Register handlers...
+  
+  // ALWAYS mark as registered
+  handlersRegistered = true;
+}
+
+function removeAllHandlers() {
+  // ALWAYS reset flag
+  handlersRegistered = false;
+  // Remove handlers...
+}
+```
+
+## Handler Naming Conventions
+
+### Use Consistent Naming
+- **Main → Renderer**: `action-name` (kebab-case)
+- **Renderer → Main**: `module:action` (module prefix)
+- **Events**: `onActionName` (camelCase with 'on' prefix)
+
+### Examples
+```javascript
+// Main process handlers
+ipcMain.handle('profile-get-active', ...)
+ipcMain.handle('profile-create', ...)
+
+// Preload events
+onShowProfileManagement: (callback) => { ... }
+onProfileSwitch: (callback) => { ... }
+```
+
+## Validation Checklist
+
+### Before Committing Any IPC Changes
+1. **Search existing handlers**: `grep -r "ipcMain.handle.*your-handler" src/main/`
+2. **Check registration flow**: Ensure deduplication is implemented
+3. **Verify naming consistency**: Follow established patterns
+4. **Test error scenarios**: Window recreation, module re-initialization
+5. **Check both processes**: Main and preload handler coordination
+
+## Common Mistakes to Avoid
+
+### ❌ Never Do These
+- Add handlers without checking existing ones
+- Assume handlers are only registered once
+- Forget deduplication in registration functions
+- Mix handler naming conventions
+- Add handlers without corresponding preload events
+
+### ✅ Always Do These
+- Check existing handlers before adding new ones
+- Implement deduplication for all handler registration
+- Use consistent naming conventions
+- Coordinate main and preload handler changes
+- Test error recovery scenarios
+
+## Error Prevention
+
+### If You See This Error
+```
+"Attempted to register a second handler for 'handler-name'"
+```
+
+### Immediate Steps
+1. **Stop and analyze**: Don't add more handlers
+2. **Check registration flow**: Find where duplicate registration occurs
+3. **Implement deduplication**: Add registration flags
+4. **Test thoroughly**: Verify no more duplicates
+
+## Architecture Understanding
+
+### Your App's Initialization Flow
+1. **Main process starts** → `registerAllHandlers()` called
+2. **Window creation** → May call initialization again
+3. **Error recovery** → Creates new windows, re-initializes modules
+4. **Multiple paths** → Can lead to duplicate registration
+
+### Key Principle
+**IPC handlers are global singleton resources. Treat them like database connections - initialize once, reuse everywhere.**
+
+## Integration Points
+
+### When Adding New IPC Functionality
+1. **Main process**: Add to `ipc-handlers.js` with deduplication
+2. **Preload process**: Add to `secure-api-exposer.js` 
+3. **Renderer process**: Add event listeners in `renderer.js`
+4. **Test all three** integration points together
+
+### Coordination Required
+- **Main ↔ Preload**: Handler names must match
+- **Preload ↔ Renderer**: Event names must match  
+- **All processes**: Must handle deduplication consistently
