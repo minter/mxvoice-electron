@@ -1,0 +1,70 @@
+---
+alwaysApply: true
+---
+
+# Test Execution
+
+## Environment Setup for Tests
+
+When running Playwright tests for this Electron application, always unset the `ELECTRON_RUN_AS_NODE` environment variable before execution. This variable prevents Electron from running as a GUI application, which is required for the tests to function properly.
+
+### Required Command Pattern
+
+```bash
+unset ELECTRON_RUN_AS_NODE && yarn test [test-options]
+```
+
+### Examples
+
+```bash
+# Run all tests
+unset ELECTRON_RUN_AS_NODE && yarn test
+
+# Run specific test file
+unset ELECTRON_RUN_AS_NODE && yarn test tests/e2e/seeded/songs/edit.spec.js
+
+# Run tests matching a pattern
+unset ELECTRON_RUN_AS_NODE && yarn test --grep "Edit song via context menu"
+
+# Run with specific reporter
+unset ELECTRON_RUN_AS_NODE && yarn test --reporter=line
+```
+
+## Why This Is Needed
+
+- The `ELECTRON_RUN_AS_NODE=1` environment variable is often set by IDEs (VS Code, Cursor) to run Node.js processes
+- This variable prevents Electron from launching its GUI components
+- Playwright tests require Electron to run as a full GUI application to interact with the UI
+- Without unsetting this variable, tests will fail with "Process failed to launch!" errors
+
+## Alternative Solutions
+
+If you prefer not to unset the variable each time, you can:
+
+1. **Temporarily unset in your shell session:**
+   ```bash
+   export ELECTRON_RUN_AS_NODE=""
+   yarn test
+   ```
+
+2. **Add to your shell profile** (if you want to permanently disable it):
+   ```bash
+   echo 'unset ELECTRON_RUN_AS_NODE' >> ~/.zshrc
+   ```
+
+3. **Use a test script** in `package.json`:
+   ```json
+   {
+     "scripts": {
+       "test:clean": "unset ELECTRON_RUN_AS_NODE && yarn test"
+     }
+   }
+   ```
+
+## Test Execution Best Practices
+
+- Always run tests from the project root directory
+- Use `yarn test` instead of `npm test` (project uses Yarn)
+- For debugging, use `--reporter=line` for cleaner output
+- Use `--grep` to run specific tests instead of line numbers
+- Check that both Node.js and Electron versions are compatible
