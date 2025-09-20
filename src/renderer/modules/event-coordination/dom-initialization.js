@@ -34,8 +34,26 @@ export default class DOMInitialization {
 
       // Initialize Bootstrap tooltips across the document
       try {
-        const { initTooltip } = await import('../ui/bootstrap-adapter.js');
+        const { initTooltip, disposeAllTooltips, hideAllTooltips } = await import('../ui/bootstrap-adapter.js');
+        // Dispose any existing tooltips first to prevent duplicates
+        disposeAllTooltips();
+        // Initialize fresh tooltip instances
         initTooltip('[data-bs-toggle="tooltip"]');
+        // Make hideAllTooltips available globally for debugging and manual control
+        window.hideAllTooltips = hideAllTooltips;
+        
+        // Add tooltip testing function for debugging
+        window.testTooltips = async function() {
+          const { initTooltip, disposeAllTooltips, hideAllTooltips } = await import('../ui/bootstrap-adapter.js');
+          console.log('Testing tooltip behavior...');
+          console.log('1. Disposing all tooltips...');
+          disposeAllTooltips();
+          console.log('2. Re-initializing tooltips...');
+          initTooltip('[data-bs-toggle="tooltip"]');
+          console.log('3. Tooltips re-initialized. Try hovering over buttons to test.');
+          console.log('4. Call window.hideAllTooltips() to force hide all tooltips.');
+        };
+        
         this.debugLog?.debug('Bootstrap tooltips initialized');
       } catch {}
 

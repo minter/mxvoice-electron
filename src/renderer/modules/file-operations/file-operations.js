@@ -24,6 +24,28 @@ import { secureFileSystem, secureFileDialog } from '../adapters/secure-adapter.j
  */
 export function openHotkeyFile() {
   debugLog?.info("Opening hotkey file", { module: 'file-operations', function: 'openHotkeyFile' });
+  
+  // Hide any visible tooltips before opening file dialog
+  if (window.hideAllTooltips) {
+    window.hideAllTooltips();
+  }
+  
+  // Mark the button as having been clicked to suppress tooltips for longer duration
+  // This covers the file dialog + hotkey loading process
+  const loadBtn = document.getElementById('hotkey-load-btn');
+  if (loadBtn) {
+    loadBtn.dataset.tooltipSuppressUntil = Date.now() + 5000; // Suppress for 5 seconds
+  }
+  
+  // Also suppress tooltips on all file operation buttons during this process
+  const fileButtons = ['hotkey-load-btn', 'hotkey-save-btn', 'holding-tank-load-btn', 'holding-tank-save-btn'];
+  fileButtons.forEach(btnId => {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.dataset.tooltipSuppressUntil = Date.now() + 5000;
+    }
+  });
+  
   return secureFileDialog.openHotkeyFile();
 }
 
@@ -32,6 +54,18 @@ export function openHotkeyFile() {
  */
 export function openHoldingTankFile() {
   debugLog?.info("Opening holding tank file", { module: 'file-operations', function: 'openHoldingTankFile' });
+  
+  // Hide any visible tooltips before opening file dialog
+  if (window.hideAllTooltips) {
+    window.hideAllTooltips();
+  }
+  
+  // Mark the button as having been clicked to suppress tooltips
+  const loadBtn = document.getElementById('holding-tank-load-btn');
+  if (loadBtn) {
+    loadBtn.dataset.tooltipSuppressUntil = Date.now() + 3000; // Suppress for 3 seconds
+  }
+  
   return secureFileDialog.openHoldingTankFile();
 }
 
@@ -44,6 +78,17 @@ export function saveHotkeyFile() {
     module: 'file-operations',
     function: 'saveHotkeyFile'
   });
+  
+  // Hide any visible tooltips before saving file
+  if (window.hideAllTooltips) {
+    window.hideAllTooltips();
+  }
+  
+  // Mark the button as having been clicked to suppress tooltips
+  const saveBtn = document.getElementById('hotkey-save-btn');
+  if (saveBtn) {
+    saveBtn.dataset.tooltipSuppressUntil = Date.now() + 2000; // Suppress for 2 seconds
+  }
   
   // Find the active tab and its content
   const activeLink = document.querySelector('#hotkey_tabs li a.active');
@@ -123,6 +168,17 @@ export function saveHoldingTankFile() {
     module: 'file-operations',
     function: 'saveHoldingTankFile'
   });
+  
+  // Hide any visible tooltips before saving file
+  if (window.hideAllTooltips) {
+    window.hideAllTooltips();
+  }
+  
+  // Mark the button as having been clicked to suppress tooltips
+  const saveBtn = document.getElementById('holding-tank-save-btn');
+  if (saveBtn) {
+    saveBtn.dataset.tooltipSuppressUntil = Date.now() + 2000; // Suppress for 2 seconds
+  }
   const holdingTankArray = [];
   
   // Collect song IDs from all active holding tank items

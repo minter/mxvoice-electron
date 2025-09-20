@@ -454,6 +454,16 @@ class HotkeysModule {
    * Public populateHotkeys method - calls the implementation
    */
   populateHotkeys(fkeys, title) {
+    // Extend tooltip suppression during hotkey population to prevent tooltips
+    // from appearing during DOM updates that happen after file loading
+    const fileButtons = ['hotkey-load-btn', 'hotkey-save-btn', 'holding-tank-load-btn', 'holding-tank-save-btn'];
+    fileButtons.forEach(btnId => {
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.dataset.tooltipSuppressUntil = Date.now() + 3000; // Extend suppression for 3 more seconds
+      }
+    });
+    
     return this._populateHotkeysImpl(fkeys, title);
   }
 

@@ -160,6 +160,16 @@ export function populateHoldingTank(songIds) {
     databaseAvailable: !!window.electronAPI?.database
   });
   
+  // Extend tooltip suppression during holding tank population to prevent tooltips
+  // from appearing during DOM updates that happen after file loading
+  const fileButtons = ['hotkey-load-btn', 'hotkey-save-btn', 'holding-tank-load-btn', 'holding-tank-save-btn'];
+  fileButtons.forEach(btnId => {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.dataset.tooltipSuppressUntil = Date.now() + 3000; // Extend suppression for 3 more seconds
+    }
+  });
+  
   if (!songIds || songIds.length === 0) {
     debugLog?.warn('No song IDs provided to populateHoldingTank', { 
       module: 'holding-tank',

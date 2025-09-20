@@ -156,17 +156,18 @@ Shows a custom prompt dialog.
 - Use `bootstrap-adapter.js` to interact with Bootstrap JS APIs:
   - `showModal(selector)`, `hideModal(selector)`, `hideAllModals()`
   - `showTab(selector)`
-  - `initTooltip(selector)`
+  - `initTooltip(selector)`, `disposeAllTooltips()`, `hideAllTooltips()`
 - HTML uses `data-bs-*` attributes (e.g., `data-bs-toggle="tab"`, `data-bs-dismiss="modal"`).
 - Close buttons are `.btn-close` (not `.close`).
 
 Example:
 ```javascript
-import { showModal, showTab, initTooltip } from './modules/ui/bootstrap-adapter.js';
+import { showModal, showTab, initTooltip, hideAllTooltips } from './modules/ui/bootstrap-adapter.js';
 
 showModal('#preferencesModal');
 showTab('#hotkey_tabs li:nth-child(2) a');
 initTooltip('[data-bs-toggle="tooltip"]');
+hideAllTooltips(); // Force hide all tooltips
 ```
 
 ## Error Handling
