@@ -5,7 +5,11 @@ This directory contains modules that run in the main Electron process.
 ## Modules
 
 ### app-setup.js
-Handles application setup, window creation, and lifecycle management.
+Handles application setup, window creation, and lifecycle management. Enhanced with:
+- **Window state persistence**: Saves and restores window position, size, maximized/fullscreen state
+- **Multi-monitor support**: Tracks display ID and validates display availability on startup
+- **Event-driven saving**: Automatically saves state on window resize, move, maximize, minimize, and close events
+- **Backward compatibility**: Integrates with existing UI state persistence patterns
 
 ### debug-log.js
 Provides debug logging functionality for the main process.
@@ -30,7 +34,18 @@ Handles database initialization and setup for the main process. This module:
 Handles file system operations and file management.
 
 ### ipc-handlers.js
-Manages all IPC (Inter-Process Communication) between main and renderer processes.
+Manages all IPC (Inter-Process Communication) between main and renderer processes. Enhanced with:
+- **Streaming file operations**: Uses Node.js streams for efficient memory usage during large file copies
+- **Progress tracking**: Provides real-time progress updates for long-running file operations
+- **Error handling and cleanup**: Robust error handling with automatic cleanup of partial files
+- **Stream management**: Proper stream lifecycle management with automatic cleanup
+
+**Key Features:**
+- `file-copy`: Streaming file copy with memory efficiency
+- `file-copy-with-progress`: File copy with progress tracking capabilities
+- Automatic destination directory creation
+- Partial file cleanup on errors
+- Comprehensive error logging and recovery
 
 ### log-service.js
 Provides centralized logging service for file persistence and export.
