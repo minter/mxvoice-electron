@@ -311,6 +311,51 @@ export function removeFromHoldingTank() {
 }
 
 /**
+ * Remove selected song from holding tank (for Delete key)
+ * Removes immediately without confirmation dialog
+ */
+export function removeSelected() {
+  const songId = Dom.attr('#selected_row', 'songid');
+  if (songId) {
+    debugLog?.info('Removing selected song from holding tank via Delete key', { 
+      module: 'holding-tank',
+      function: 'removeSelected',
+      songId: songId
+    });
+    
+    // Remove the selected row from the holding tank immediately
+    const selected = document.getElementById('selected_row');
+    if (selected) {
+      selected.remove();
+      // Clear the selection
+      document.getElementById('selected_row')?.removeAttribute('id');
+      // Save the updated holding tank to store
+      saveHoldingTankToStore();
+      
+      debugLog?.info('Song removed from holding tank successfully', { 
+        module: 'holding-tank',
+        function: 'removeSelected',
+        songId: songId
+      });
+      
+      return { success: true, songId: songId };
+    } else {
+      debugLog?.warn('Selected row not found in DOM', { 
+        module: 'holding-tank',
+        function: 'removeSelected'
+      });
+      return { success: false, error: 'Selected row not found' };
+    }
+  } else {
+    debugLog?.info('No songId found on selected row', { 
+      module: 'holding-tank',
+      function: 'removeSelected'
+    });
+    return { success: false, error: 'No song selected' };
+  }
+}
+
+/**
  * Clear all songs from the holding tank
  */
 export async function clearHoldingTank() {
@@ -450,6 +495,7 @@ export default {
   populateHoldingTank,
   addToHoldingTank,
   removeFromHoldingTank,
+  removeSelected,
   clearHoldingTank,
   openHoldingTankFile,
   saveHoldingTankFile,

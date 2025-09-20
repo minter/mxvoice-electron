@@ -1010,6 +1010,85 @@ test.describe('Holding Tank - basic', () => {
     console.log('✅ Cleanup completed - holding tank is empty');
   });
 
+  test('delete song from holding tank via click and Delete key', async () => {
+    // 1) Clear the holding tank first
+    await page.waitForTimeout(1000);
+    const clearButton = page.locator('#holding-tank-clear-btn');
+    await clearButton.click({ force: true });
+    await page.waitForTimeout(500);
+    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
+    await expect(confirmButton).toBeVisible({ timeout: 5000 });
+    await confirmButton.click();
+    await page.waitForTimeout(1000);
+
+    // Verify tab 1 is empty
+    const tab1Link = page.locator('#holding_tank_tabs a[href="#holding_tank_1"]');
+    await tab1Link.click();
+    const tab1List = page.locator('#holding_tank_1');
+    await expect(tab1List.locator('.list-group-item')).toHaveCount(0);
+
+    // 2) Do a blank search to get all songs
+    const searchInput = page.locator('#omni_search');
+    await searchInput.clear();
+    await searchInput.press('Enter');
+    await page.waitForTimeout(1000);
+
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(5, { timeout: 5000 });
+
+    // 3) Drag two songs into holding tank tab 1
+    const anthraxRow = rows.filter({ hasText: 'Anthrax' }).first();
+    await anthraxRow.dragTo(tab1List, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
+    await page.waitForTimeout(500);
+
+    const sisterSledgeRow = rows.filter({ hasText: 'Sister Sledge' }).first();
+    await sisterSledgeRow.dragTo(tab1List, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
+    await page.waitForTimeout(500);
+
+    // Verify both songs are in the holding tank
+    const tab1Items = tab1List.locator('.list-group-item');
+    await expect(tab1Items).toHaveCount(2);
+    await expect(tab1Items.first()).toContainText('Got The Time');
+    await expect(tab1Items.first()).toContainText('Anthrax');
+    await expect(tab1Items.nth(1)).toContainText('We Are Family');
+    await expect(tab1Items.nth(1)).toContainText('Sister Sledge');
+
+    console.log('✅ Added two songs to holding tank for delete key test');
+
+    // 4) Click on the first song to select it
+    console.log('🖱️ Clicking on first song to select it...');
+    await tab1Items.first().click();
+    await page.waitForTimeout(200);
+
+    // 5) Press the Delete key
+    console.log('⌨️ Pressing Delete key...');
+    await page.keyboard.press('Delete');
+    await page.waitForTimeout(300);
+
+    // 6) Verify the song was removed (should now have 1 item)
+    await expect(tab1Items).toHaveCount(1);
+    await expect(tab1Items.first()).toContainText('We Are Family');
+    await expect(tab1Items.first()).toContainText('Sister Sledge');
+
+    console.log('✅ First song successfully removed via Delete key');
+
+    // 7) Test with the remaining song
+    console.log('🖱️ Clicking on remaining song to select it...');
+    await tab1Items.first().click();
+    await page.waitForTimeout(200);
+
+    console.log('⌨️ Pressing Delete key on second song...');
+    await page.keyboard.press('Delete');
+    await page.waitForTimeout(300);
+
+    // 8) Verify the second song was also removed (should now have 0 items)
+    await expect(tab1Items).toHaveCount(0);
+
+    console.log('✅ Second song successfully removed via Delete key');
+    console.log('✅ Delete key functionality works correctly in holding tank');
+    console.log('✅ Songs are removed immediately without confirmation modal');
+  });
+
   test('bug reproduction: double-click playback in holding tank tab 4', async () => {
     // This test reproduces a bug where double-clicking songs in holding tank tabs
     // other than tab 1 doesn't work properly
