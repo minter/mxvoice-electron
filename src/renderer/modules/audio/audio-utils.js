@@ -80,18 +80,27 @@ export const howlerUtils = {
 };
 
 /**
- * Create a Howl instance with E2E-aware defaults.
+ * Create a Howl instance with E2E-aware defaults and Windows optimizations.
  * - In E2E: force Web Audio path (html5: false) and preload for determinism
+ * - On Windows: optimize for responsiveness with Web Audio and preload
  * - In prod: keep existing behavior unless overridden by opts
  */
 export function createHowl(options = {}) {
   const isE2E = !!(typeof window !== 'undefined' && window.electronTest?.isE2E);
+  const isWindows = typeof process !== 'undefined' && process.platform === 'win32';
   const coerced = { ...options };
+  
   if (isE2E) {
     // Force WebAudio pipeline so the probe can attach
     coerced.html5 = false;
     if (typeof coerced.preload === 'undefined') coerced.preload = true;
+  } else if (isWindows) {
+    // Windows optimizations for responsiveness
+    coerced.html5 = false; // Force Web Audio for better performance
+    if (typeof coerced.preload === 'undefined') coerced.preload = true; // Preload for instant playback
+    coerced.format = ['mp3']; // Specify format to avoid detection delays
   }
+  
   // Howl is global from index.html
   // eslint-disable-next-line no-undef
   return new Howl(coerced);

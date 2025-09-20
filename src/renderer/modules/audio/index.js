@@ -101,6 +101,84 @@ class AudioModule {
       module: 'audio', 
       function: 'setupAudioModule' 
     });
+    
+    // Pre-warm audio context for Windows responsiveness
+    this.preWarmAudioContext();
+    
+    // Set up user interaction handlers to resume context
+    this.setupUserInteractionHandlers();
+  }
+  
+  /**
+   * Pre-warm the Web Audio context to prevent suspension delays
+   * Critical for Windows performance
+   */
+  preWarmAudioContext() {
+    try {
+      if (window.Howler?.ctx) {
+        // Resume context if suspended
+        if (window.Howler.ctx.state === 'suspended') {
+          window.Howler.ctx.resume().then(() => {
+            debugLog?.info('Audio context pre-warmed successfully', {
+              module: 'audio',
+              function: 'preWarmAudioContext',
+              contextState: window.Howler.ctx.state
+            });
+          }).catch(error => {
+            debugLog?.warn('Failed to pre-warm audio context:', {
+              module: 'audio',
+              function: 'preWarmAudioContext',
+              error: error.message
+            });
+          });
+        } else {
+          debugLog?.info('Audio context already active', {
+            module: 'audio',
+            function: 'preWarmAudioContext',
+            contextState: window.Howler.ctx.state
+          });
+        }
+      } else {
+        debugLog?.warn('Howler context not available for pre-warming', {
+          module: 'audio',
+          function: 'preWarmAudioContext'
+        });
+      }
+    } catch (error) {
+      debugLog?.error('Error pre-warming audio context:', {
+        module: 'audio',
+        function: 'preWarmAudioContext',
+        error: error.message
+      });
+    }
+  }
+  
+  /**
+   * Set up user interaction handlers to resume audio context
+   * Windows requires user interaction to resume suspended contexts
+   */
+  setupUserInteractionHandlers() {
+    const resumeContext = () => {
+      if (window.Howler?.ctx?.state === 'suspended') {
+        window.Howler.ctx.resume().then(() => {
+          debugLog?.info('Audio context resumed via user interaction', {
+            module: 'audio',
+            function: 'setupUserInteractionHandlers'
+          });
+        }).catch(error => {
+          debugLog?.warn('Failed to resume context via user interaction:', {
+            module: 'audio',
+            function: 'setupUserInteractionHandlers',
+            error: error.message
+          });
+        });
+      }
+    };
+    
+    // Add listeners for common user interactions
+    document.addEventListener('click', resumeContext, { once: true });
+    document.addEventListener('keydown', resumeContext, { once: true });
+    document.addEventListener('touchstart', resumeContext, { once: true });
   }
 
   /**

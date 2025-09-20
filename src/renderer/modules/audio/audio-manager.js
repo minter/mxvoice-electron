@@ -54,26 +54,13 @@ import {
  * @param {string} song_id - The database ID of the song
  */
 function playSongWithFilename(filename, row, song_id) {
-  getDebugLog()?.info('🎵 PLAYBACK STEP 6: playSongWithFilename called', {
+  getDebugLog()?.info('Playing song', {
     module: 'audio-manager',
     function: 'playSongWithFilename',
     filename: filename,
     song_id: song_id,
-    row_title: row?.title,
-    row_artist: row?.artist,
-    timestamp: new Date().toISOString(),
+    title: row?.title
   });
-
-  // Get music directory from store
-  getDebugLog()?.info(
-    '🔍 PLAYBACK STEP 7: Getting music directory from store',
-    {
-      module: 'audio-manager',
-      function: 'playSongWithFilename',
-      filename: filename,
-      song_id: song_id,
-    }
-  );
 
   secureStore
     .get('music_directory')
@@ -82,35 +69,19 @@ function playSongWithFilename(filename, row, song_id) {
       const musicDirectory =
         result.success && result.value ? result.value : null;
 
-      getDebugLog()?.info('🔍 PLAYBACK STEP 8: Music directory retrieved', {
-        module: 'audio-manager',
-        function: 'playSongWithFilename',
-        musicDirectory: musicDirectory,
-        musicDirectory_type: typeof musicDirectory,
-        filename: filename,
-        song_id: song_id,
-      });
       if (musicDirectory) {
-        getDebugLog()?.info('🔍 Debug: musicDirectory:', {
-          module: 'audio-manager',
-          function: 'playSongWithFilename',
-          musicDirectoryValue: musicDirectory,
-        });
         if (!musicDirectory) {
-          getDebugLog()?.warn(
-            '❌ musicDirectory is undefined or empty, using default path',
-            {
-              module: 'audio-manager',
-              function: 'playSongWithFilename',
-            }
-          );
+          getDebugLog()?.warn('Music directory not found, using default path', {
+            module: 'audio-manager',
+            function: 'playSongWithFilename',
+          });
           // Use default path as fallback - get through secure API
           const defaultPath = '.config/mxvoice/mp3';
           securePath
             .join(defaultPath, filename)
             .then((result) => {
               if (!result.success || !result.data) {
-                getDebugLog()?.warn('❌ Path join failed with default path:', {
+                getDebugLog()?.warn('Path join failed with default path', {
                   module: 'audio-manager',
                   function: 'playSongWithFilename',
                   result: result,
@@ -119,15 +90,32 @@ function playSongWithFilename(filename, row, song_id) {
               }
               const joinedPath = result.data;
               const sound_path = [joinedPath];
-              getDebugLog()?.info('Inside get, Filename is ' + filename, {
-                module: 'audio-manager',
-                function: 'playSongWithFilename',
-                filename: filename,
-              });
               // Ensure E2E test mode/probe is initialized right before first playback
               if (window.electronTest?.isE2E && window.moduleRegistry?.audio?.ensureTestMode) {
                 window.moduleRegistry.audio.ensureTestMode();
               }
+              
+          // Resume suspended Web Audio context on Windows
+          // This fixes the 1-2 second lag issue on Windows
+          if (window.Howler?.ctx?.state === 'suspended') {
+            getDebugLog()?.info('Resuming suspended Web Audio context', {
+              module: 'audio-manager',
+              function: 'playSongWithFilename'
+            });
+            window.Howler.ctx.resume().then(() => {
+              getDebugLog()?.info('Web Audio context resumed successfully', {
+                module: 'audio-manager',
+                function: 'playSongWithFilename'
+              });
+            }).catch(error => {
+              getDebugLog()?.warn('Failed to resume audio context:', {
+                module: 'audio-manager',
+                function: 'playSongWithFilename',
+                error: error.message
+              });
+            });
+          }
+              
               const sound = createHowl({
                 src: sound_path,
                 volume:
@@ -136,10 +124,20 @@ function playSongWithFilename(filename, row, song_id) {
                   document
                     .getElementById('mute_button')
                     ?.classList.contains('active') || false,
-                onplay: function () {
-                  getDebugLog()?.info('🔍 Sound onplay event fired', {
+                onload: function () {
+                  getDebugLog()?.info('Sound loaded, starting playback', {
                     module: 'audio-manager',
-                    function: 'playSongWithFilename',
+                    function: 'playSongWithFilename'
+                  });
+                  
+                  // Only play after the sound is fully loaded
+                  // This prevents the 1-2 second lag on Windows
+                  sound.play();
+                },
+                onplay: function () {
+                  getDebugLog()?.info('Sound playback started', {
+                    module: 'audio-manager',
+                    function: 'playSongWithFilename'
                   });
                   const time = Math.round(sound.duration());
                   sharedState.set(
@@ -180,7 +178,7 @@ function playSongWithFilename(filename, row, song_id) {
                   }
                 },
                 onend: function () {
-                  getDebugLog()?.info('🔍 Sound onend event fired', {
+                  getDebugLog()?.info('Sound playback ended', {
                     module: 'audio-manager',
                     function: 'playSongWithFilename',
                   });
@@ -196,20 +194,8 @@ function playSongWithFilename(filename, row, song_id) {
                   }
                 },
               });
-              getDebugLog()?.info('🔍 Setting sound in shared state:', {
-                module: 'audio-manager',
-                function: 'playSongWithFilename',
-                soundId: sound._id || 'unknown',
-                soundSrc: sound_path,
-              });
+              
               sharedState.set('sound', sound);
-              getDebugLog()?.info(
-                '🔍 Sound set in shared state, now playing...',
-                {
-                  module: 'audio-manager',
-                  function: 'playSongWithFilename',
-                }
-              );
               // Resume suspended audio context in E2E mode
               if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
                 window.Howler.ctx.resume().catch(() => {});
@@ -239,10 +225,9 @@ function playSongWithFilename(filename, row, song_id) {
                   }
                 }
               } catch (_) {}
-              sound.play();
             })
             .catch((error) => {
-              getDebugLog()?.warn('❌ Path join error with default:', {
+              getDebugLog()?.warn('Path join error with default path', {
                 module: 'audio-manager',
                 function: 'playSongWithFilename',
                 error: error.message,
@@ -253,24 +238,19 @@ function playSongWithFilename(filename, row, song_id) {
           return;
         }
 
-        securePath
-          .join(musicDirectory, filename)
-          .then((result) => {
-            if (!result.success || !result.data) {
-              getDebugLog()?.warn('❌ Path join failed:', {
-                module: 'audio-manager',
-                function: 'playSongWithFilename',
-                result: result,
-              });
-              return;
-            }
-            const joinedPath = result.data;
-            const sound_path = [joinedPath];
-            getDebugLog()?.info('Inside get, Filename is ' + filename, {
-              module: 'audio-manager',
-              function: 'playSongWithFilename',
-              filename: filename,
-            });
+          securePath
+            .join(musicDirectory, filename)
+            .then((result) => {
+              if (!result.success || !result.data) {
+                getDebugLog()?.warn('Path join failed', {
+                  module: 'audio-manager',
+                  function: 'playSongWithFilename',
+                  result: result,
+                });
+                return;
+              }
+              const joinedPath = result.data;
+              const sound_path = [joinedPath];
             // Ensure E2E test mode/probe is initialized right before first playback
             if (window.electronTest?.isE2E && window.moduleRegistry?.audio?.ensureTestMode) {
               window.moduleRegistry.audio.ensureTestMode();
@@ -283,8 +263,18 @@ function playSongWithFilename(filename, row, song_id) {
                 document
                   .getElementById('mute_button')
                   ?.classList.contains('active') || false,
+              onload: function () {
+                getDebugLog()?.info('Sound loaded, starting playback', {
+                  module: 'audio-manager',
+                  function: 'playSongWithFilename'
+                });
+                
+                // Only play after the sound is fully loaded
+                // This prevents the 1-2 second lag on Windows
+                sound.play();
+              },
               onplay: function () {
-                getDebugLog()?.info('🔍 Sound onplay event fired', {
+                getDebugLog()?.info('Sound playback started', {
                   module: 'audio-manager',
                   function: 'playSongWithFilename',
                 });
@@ -340,7 +330,7 @@ function playSongWithFilename(filename, row, song_id) {
                 } catch (_) {}
               },
               onend: function () {
-                getDebugLog()?.info('🔍 Sound onend event fired', {
+                getDebugLog()?.info('Sound playback ended', {
                   module: 'audio-manager',
                   function: 'playSongWithFilename',
                 });
@@ -356,20 +346,7 @@ function playSongWithFilename(filename, row, song_id) {
                 }
               },
             });
-            getDebugLog()?.info('🔍 Setting sound in shared state:', {
-              module: 'audio-manager',
-              function: 'playSongWithFilename',
-              soundId: sound._id || 'unknown',
-              soundSrc: sound_path,
-            });
             sharedState.set('sound', sound);
-            getDebugLog()?.info(
-              '🔍 Sound set in shared state, now playing...',
-              {
-                module: 'audio-manager',
-                function: 'playSongWithFilename',
-              }
-            );
             try {
               if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
                 window.Howler.ctx.resume().catch(() => {});
@@ -379,10 +356,10 @@ function playSongWithFilename(filename, row, song_id) {
             if (window.electronTest?.isE2E && !window.electronTest?.audioProbe) {
               createAndInstallProbe();
             }
-            sound.play();
+            
           })
           .catch((error) => {
-            getDebugLog()?.warn('❌ Path join error:', {
+            getDebugLog()?.warn('Path join error', {
               module: 'audio-manager',
               function: 'playSongWithFilename',
               error: error.message,
@@ -391,7 +368,7 @@ function playSongWithFilename(filename, row, song_id) {
             });
           });
       } else {
-        getDebugLog()?.warn('❌ Could not get music directory from store', {
+        getDebugLog()?.warn('Could not get music directory from store', {
           module: 'audio-manager',
           function: 'playSongWithFilename',
           musicDirectory: musicDirectory,
@@ -399,7 +376,7 @@ function playSongWithFilename(filename, row, song_id) {
       }
     })
     .catch((error) => {
-      getDebugLog()?.warn('❌ Store get API error:', {
+      getDebugLog()?.warn('Store get API error', {
         module: 'audio-manager',
         function: 'playSongWithFilename',
         error: error.message,
@@ -413,19 +390,14 @@ function playSongWithFilename(filename, row, song_id) {
  * @param {string} song_id - The database ID of the song to play
  */
 function playSongFromId(song_id) {
-  getDebugLog()?.info(
-    '🎵 PLAYBACK START: Playing song from song ID ' + song_id,
-    {
-      module: 'audio-manager',
-      function: 'playSongFromId',
-      song_id: song_id,
-      song_id_type: typeof song_id,
-      timestamp: new Date().toISOString(),
-    }
-  );
+  getDebugLog()?.info('Playing song from ID', {
+    module: 'audio-manager',
+    function: 'playSongFromId',
+    song_id: song_id
+  });
 
   if (!song_id) {
-    getDebugLog()?.error('❌ PLAYBACK FAIL: No song_id provided', {
+    getDebugLog()?.error('No song_id provided', {
       module: 'audio-manager',
       function: 'playSongFromId',
       song_id: song_id,
@@ -433,96 +405,43 @@ function playSongFromId(song_id) {
     return;
   }
 
-  getDebugLog()?.info(
-    '🔍 PLAYBACK STEP 1: Stopping current sound and querying database',
-    {
-      module: 'audio-manager',
-      function: 'playSongFromId',
-      song_id: song_id,
-    }
-  );
-
   const sound = sharedState.get('sound');
   if (sound) {
     sound.off('fade');
     sound.unload();
   }
 
-  // Use secure database adapter to get song data
-  getDebugLog()?.info('🔍 PLAYBACK STEP 2: Executing database query', {
-    module: 'audio-manager',
-    function: 'playSongFromId',
-    song_id: song_id,
-    query: 'SELECT * from mrvoice WHERE id = ?',
-    params: [song_id],
-  });
-
   secureDatabase
     .query('SELECT * from mrvoice WHERE id = ?', [song_id])
     .then((result) => {
-      getDebugLog()?.info('🔍 PLAYBACK STEP 3: Database query completed', {
-        module: 'audio-manager',
-        function: 'playSongFromId',
-        song_id: song_id,
-        result_success: result?.success,
-        result_data_length: result?.data?.length,
-        result_error: result?.error || null,
-      });
       if (result.success && result.data.length > 0) {
         const row = result.data[0];
         const filename = row.filename;
 
-        getDebugLog()?.info('🔍 PLAYBACK STEP 4: Song data retrieved', {
-          module: 'audio-manager',
-          function: 'playSongFromId',
-          song_id: song_id,
-          filename: filename,
-          row_title: row.title,
-          row_artist: row.artist,
-          row_id: row.id,
-        });
-
         if (!filename) {
-          getDebugLog()?.error(
-            '❌ PLAYBACK FAIL: No filename found for song ID:',
-            {
-              module: 'audio-manager',
-              function: 'playSongFromId',
-              song_id: song_id,
-              rowData: row,
-            }
-          );
+          getDebugLog()?.error('No filename found for song ID', {
+            module: 'audio-manager',
+            function: 'playSongFromId',
+            song_id: song_id,
+            rowData: row,
+          });
           return;
         }
 
-        getDebugLog()?.info(
-          '🎵 PLAYBACK STEP 5: Calling playSongWithFilename',
-          {
-            module: 'audio-manager',
-            function: 'playSongFromId',
-            song_id: song_id,
-            filename: filename,
-          }
-        );
-
-        // Continue with the rest of the function...
         playSongWithFilename(filename, row, song_id);
       } else {
-        getDebugLog()?.error(
-          '❌ PLAYBACK FAIL: No song found with ID or query failed:',
-          {
-            module: 'audio-manager',
-            function: 'playSongFromId',
-            song_id: song_id,
-            result_success: result?.success,
-            result_data_length: result?.data?.length || 0,
-            result_error: result?.error || null,
-          }
-        );
+        getDebugLog()?.error('No song found with ID or query failed', {
+          module: 'audio-manager',
+          function: 'playSongFromId',
+          song_id: song_id,
+          result_success: result?.success,
+          result_data_length: result?.data?.length || 0,
+          result_error: result?.error || null,
+        });
       }
     })
     .catch((error) => {
-      getDebugLog()?.error('❌ PLAYBACK FAIL: Database query error:', {
+      getDebugLog()?.error('Database query error', {
         module: 'audio-manager',
         function: 'playSongFromId',
         song_id: song_id,
@@ -539,23 +458,14 @@ function playSongFromId(song_id) {
  * Play the currently selected song
  */
 function playSelected() {
-  getDebugLog()?.info('🎵 PLAYBACK TRIGGER: playSelected called', {
+  getDebugLog()?.info('Play selected called', {
     module: 'audio-manager',
-    function: 'playSelected',
-    timestamp: new Date().toISOString(),
-    selected_row_exists: Boolean(document.getElementById('selected_row')),
+    function: 'playSelected'
   });
 
   const song_id = document
     .getElementById('selected_row')
     ?.getAttribute('songid');
-  getDebugLog()?.info('🔍 PLAYBACK STEP: Got song ID from selected row', {
-    module: 'audio-manager',
-    function: 'playSelected',
-    song_id: song_id,
-    song_id_type: typeof song_id,
-    selected_row_exists: Boolean(document.getElementById('selected_row')),
-  });
 
   // Only clear the now_playing class if the selected row is from the search panel
   // (not from the holding tank/playlist)
@@ -575,15 +485,6 @@ function playSelected() {
     cancel_autoplay();
   }
   // In playlist mode, autoplay is already set up by the double-click handler
-
-  getDebugLog()?.info(
-    '🎵 PLAYBACK STEP: Calling playSongFromId from playSelected',
-    {
-      module: 'audio-manager',
-      function: 'playSelected',
-      song_id: song_id,
-    }
-  );
 
   playSongFromId(song_id);
 }
