@@ -156,11 +156,6 @@ class SearchModule {
 
     // Add ORDER BY clause
     queryString += " ORDER BY category,info,title,artist";
-    
-    // Add LIMIT for live search
-    if (isLiveSearch) {
-      queryString += " LIMIT 50";
-    }
 
     return {
       queryString,

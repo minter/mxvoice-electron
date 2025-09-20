@@ -195,7 +195,7 @@ function performLiveSearch(searchTerm) {
 
   // Use new database API for live search
   if (window.secureElectronAPI && window.secureElectronAPI.database) {
-    const sql = "SELECT * from mrvoice" + query_string + " ORDER BY category,info,title,artist LIMIT 50";
+    const sql = "SELECT * from mrvoice" + query_string + " ORDER BY category,info,title,artist";
     window.secureElectronAPI.database.query(sql, query_params).then(result => {
       if (result.success) {
         debugLog?.info(`🔍 Live search returned ${result.data.length} results`, { 
@@ -247,19 +247,6 @@ function performLiveSearch(searchTerm) {
           fragment.appendChild(tr);
         });
         tbody?.appendChild(fragment);
-
-        // Show indicator if there are more results
-        if (result.data.length === 50) {
-          const infoRow = document.createElement('tr');
-          const infoCell = document.createElement('td');
-          infoCell.colSpan = 5;
-          infoCell.className = 'text-center text-muted';
-          const small = document.createElement('small');
-          small.textContent = 'Showing first 50 results. Press Enter for complete search.';
-          infoCell.appendChild(small);
-          infoRow.appendChild(infoCell);
-          (tbody || document.querySelector('#search_results tbody'))?.appendChild(infoRow);
-        }
 
         scaleScrollable();
       } else {

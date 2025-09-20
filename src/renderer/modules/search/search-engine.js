@@ -26,8 +26,15 @@ import { songDrag } from '../drag-drop/drag-drop-functions.js';
 
 // Synchronous version for immediate use in search results
 function getCategoryNameSync(categoryCode) {
-  // This is a simple fallback - the real implementation should come from categories module
-  return categoryCode;
+  if (!categoryCode) {
+    return '';
+  }
+  
+  // Get categories from shared state
+  const categories = sharedState.get('categories') || {};
+  
+  // Return the category name if found, otherwise return the code
+  return categories[categoryCode] || categoryCode;
 }
 
 /**
