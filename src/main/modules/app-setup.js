@@ -5,7 +5,7 @@
  * for the MxVoice Electron application.
  */
 
-import { app, BrowserWindow, Menu, dialog, shell, nativeTheme } from 'electron';
+import { app, BrowserWindow, Menu, dialog, shell, nativeTheme, screen } from 'electron';
 import { getLogService } from './log-service.js';
 import path from 'path';
 import os from 'os';
@@ -32,11 +32,18 @@ function initializeAppSetup(dependencies) {
 }
 
 // Create the main window
-// Accept initial dimensions so the caller (which has access to the store)
-// can restore the last-saved size on startup.
-function createWindow({ width = 1200, height = 800 } = {}) {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
+// Accept initial dimensions and state so the caller (which has access to the store)
+// can restore the last-saved window state on startup.
+function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScreen, displayId } = {}) {
+  // Validate display still exists if displayId is provided
+  let validDisplay = null;
+  if (displayId) {
+    const displays = screen.getAllDisplays();
+    validDisplay = displays.find(d => d.id === displayId);
+  }
+
+  // If display is valid and coordinates are provided, use them; otherwise use defaults
+  const windowOptions = {
     width,
     height,
     webPreferences: {
@@ -52,7 +59,16 @@ function createWindow({ width = 1200, height = 800 } = {}) {
       webgl: false, // Disable WebGL for security (can be enabled if needed)
       plugins: false // Disable plugins for security
     }
-  });
+  };
+
+  // Add position if we have valid coordinates and display
+  if (validDisplay && x !== undefined && y !== undefined) {
+    windowOptions.x = x;
+    windowOptions.y = y;
+  }
+
+  // Create the browser window.
+  const mainWindow = new BrowserWindow(windowOptions);
 
   // Load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, '../../index.html'));
@@ -60,20 +76,206 @@ function createWindow({ width = 1200, height = 800 } = {}) {
   // Open the DevTools.
   //mainWindow.webContents.openDevTools();
 
-  mainWindow.on('will-resize', (_event, newBounds) => {
-    if (store) {
-      store.set('browser_width', newBounds.width);
-      store.set('browser_height', newBounds.height);
-    }
-  });
-
-  mainWindow.on('ready-to-show', () => {
+  // Restore window state after window is ready
+  mainWindow.once('ready-to-show', () => {
     if (autoUpdater) {
       autoUpdater.checkForUpdatesAndNotify();
+    }
+    
+    // Restore maximized/fullscreen state after window is ready
+    if (isMaximized && !mainWindow.isDestroyed()) {
+      mainWindow.maximize();
+    }
+    if (isFullScreen && !mainWindow.isDestroyed()) {
+      mainWindow.setFullScreen(true);
     }
   });
 
   return mainWindow;
+}
+
+/**
+ * Set up comprehensive window state saving
+ * Saves window state on resize, move, maximize, minimize, and close events
+ * This should be called after the store is available (after module initialization)
+ */
+function setupWindowStateSaving() {
+  if (!mainWindow || !store) {
+    debugLog?.warn('Cannot setup window state saving - missing window or store', { 
+      module: 'app-setup', 
+      function: 'setupWindowStateSaving',
+      hasWindow: !!mainWindow,
+      hasStore: !!store
+    });
+    return;
+  }
+
+  debugLog?.info('Setting up window state saving', { 
+    module: 'app-setup', 
+    function: 'setupWindowStateSaving',
+    windowId: mainWindow.id,
+    windowBounds: mainWindow.getBounds()
+  });
+
+  // Save window state on resize
+  mainWindow.on('will-resize', (_event, newBounds) => {
+    debugLog?.debug('Window will-resize event triggered', { 
+      module: 'app-setup', 
+      function: 'setupWindowStateSaving',
+      newBounds: newBounds
+    });
+    saveWindowState(mainWindow);
+  });
+
+  // Save window state on move
+  mainWindow.on('will-move', (_event, newBounds) => {
+    debugLog?.debug('Window will-move event triggered', { 
+      module: 'app-setup', 
+      function: 'setupWindowStateSaving',
+      newBounds: newBounds
+    });
+    saveWindowState(mainWindow);
+  });
+
+  // Save window state when maximized
+  mainWindow.on('maximize', () => {
+    saveWindowState(mainWindow);
+  });
+
+  // Save window state when unmaximized
+  mainWindow.on('unmaximize', () => {
+    saveWindowState(mainWindow);
+  });
+
+  // Save window state when entering fullscreen
+  mainWindow.on('enter-full-screen', () => {
+    saveWindowState(mainWindow);
+  });
+
+  // Save window state when leaving fullscreen
+  mainWindow.on('leave-full-screen', () => {
+    saveWindowState(mainWindow);
+  });
+
+  // Save window state when minimized (for completeness)
+  mainWindow.on('minimize', () => {
+    saveWindowState(mainWindow);
+  });
+
+  // Save window state when restored from minimize
+  mainWindow.on('restore', () => {
+    saveWindowState(mainWindow);
+  });
+
+  // Save window state before closing (this is the key event)
+  mainWindow.on('close', () => {
+    saveWindowState(mainWindow);
+  });
+
+  // Also save on before-unload as backup
+  mainWindow.on('before-unload', () => {
+    saveWindowState(mainWindow);
+  });
+
+}
+
+/**
+ * Save complete window state to store
+ * Includes position, size, maximized state, fullscreen state, and display ID
+ */
+function saveWindowState(window) {
+  if (!window || !store || window.isDestroyed()) {
+    debugLog?.warn('Cannot save window state - missing dependencies', { 
+      module: 'app-setup', 
+      function: 'saveWindowState',
+      hasWindow: !!window,
+      hasStore: !!store,
+      isDestroyed: window?.isDestroyed?.()
+    });
+    return;
+  }
+
+  try {
+    const bounds = window.getBounds();
+    const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y });
+    const state = {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      isMaximized: window.isMaximized(),
+      isFullScreen: window.isFullScreen(),
+      displayId: display.id,
+      displayName: display.label || `Display ${display.id}`
+    };
+
+    // Save individual properties for backward compatibility
+    const widthResult = store.set('browser_width', state.width);
+    const heightResult = store.set('browser_height', state.height);
+    
+    // Save complete window state
+    const windowStateResult = store.set('window_state', state);
+
+    debugLog?.debug('Window state saved successfully', { 
+      module: 'app-setup', 
+      function: 'saveWindowState',
+      state: state
+    });
+  } catch (error) {
+    debugLog?.error('Failed to save window state', { 
+      module: 'app-setup', 
+      function: 'saveWindowState',
+      error: error.message,
+      stack: error.stack
+    });
+  }
+}
+
+/**
+ * Load window state from store
+ * Returns complete window state object or null if not available
+ */
+function loadWindowState(storeInstance = store) {
+  if (!storeInstance) {
+    debugLog?.warn('Cannot load window state - store not available', { 
+      module: 'app-setup', 
+      function: 'loadWindowState'
+    });
+    return null;
+  }
+
+  try {
+    debugLog?.info('Loading window state from store', { 
+      module: 'app-setup', 
+      function: 'loadWindowState',
+      storePath: storeInstance.path
+    });
+    
+    const state = storeInstance.get('window_state');
+    if (state && typeof state === 'object') {
+      debugLog?.info('Window state loaded successfully', { 
+        module: 'app-setup', 
+        function: 'loadWindowState',
+        state: state
+      });
+      return state;
+    } else {
+      debugLog?.info('No window state found in store', { 
+        module: 'app-setup', 
+        function: 'loadWindowState',
+        foundState: state
+      });
+    }
+  } catch (error) {
+    debugLog?.error('Failed to load window state', { 
+      module: 'app-setup', 
+      function: 'loadWindowState',
+      error: error.message,
+      stack: error.stack
+    });
+  }
+  
+  return null;
 }
 
 // Create application menu
@@ -587,7 +789,10 @@ export {
   sendDeleteSong,
   sendEditSong,
   manageCategories,
-  testAppSetup
+  testAppSetup,
+  setupWindowStateSaving,
+  saveWindowState,
+  loadWindowState
 };
 
 // Default export for module loading
@@ -604,5 +809,8 @@ export default {
   sendDeleteSong,
   sendEditSong,
   manageCategories,
-  testAppSetup
+  testAppSetup,
+  setupWindowStateSaving,
+  saveWindowState,
+  loadWindowState
 }; 

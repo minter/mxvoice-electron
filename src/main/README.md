@@ -19,10 +19,12 @@ src/main/
 
 - `app-setup.js`
   - Creates the `BrowserWindow` with secure `webPreferences` (contextIsolation on, preload set)
+  - **Enhanced window state persistence**: saves/restores position, size, maximized state, fullscreen state, and display ID
+  - **Multi-monitor support**: validates display existence and handles display changes gracefully
   - Builds the application menu (platform-aware), sends UI commands to renderer
   - Manages app lifecycle (activate, window-all-closed, ready-to-show updater checks)
   - Apple Silicon x64 warning for users on Rosetta
-  - Exports: `initializeAppSetup`, `createWindow`, `createApplicationMenu`, `setupAppLifecycle`, and UI senders
+  - Exports: `initializeAppSetup`, `createWindow`, `createApplicationMenu`, `setupAppLifecycle`, `setupWindowStateSaving`, `saveWindowState`, `loadWindowState`, and UI senders
 
 - `ipc-handlers.js`
   - Registers all secure IPC handlers (DB query/execute, store get/set/has/delete/clear, FS ops, path/os, audio controls, app ops, dialogs)
@@ -53,8 +55,17 @@ src/main/
 - Sets up auto-updater (logger, feed URL on macOS, markdown processing for release notes)
 - First-run flow: create folders, seed DB with starter content if needed
 - Initializes SQLite WebAssembly database using `node-sqlite3-wasm`
-- Creates the main window and application menu
+- Creates the main window and application menu with enhanced state restoration
 - Injects dependencies into modules; registers secure IPC handlers
+
+### Window State Persistence
+The application now maintains complete window state across sessions:
+- **Position & Size**: Window coordinates and dimensions are saved and restored
+- **Window State**: Maximized and fullscreen states are preserved
+- **Multi-Monitor Support**: Display ID is saved and validated on startup
+- **Event-Driven Saving**: State is automatically saved on resize, move, maximize, minimize, and close
+- **Backward Compatibility**: Falls back to legacy width/height storage if no complete state exists
+- **Store Integration**: Uses the same `electron-store` system as other UI state (column order, holding tank, etc.)
 
 ### Notes
 - Context Isolation is enabled; all renderer access is via preload/IPC

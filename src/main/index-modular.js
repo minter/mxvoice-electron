@@ -611,14 +611,38 @@ const createWindow = async () => {
     await initializeMainDatabaseWrapper();
     debugLog.info('Main database initialization completed', { function: "createWindow", hasDb: !!db, dbType: typeof db });
 
-    // Create the window with restored size from store
-    mainWindow = appSetup.createWindow({
+    // Create the window with restored state from store
+    const windowState = appSetup.loadWindowState(store);
+    debugLog.debug('Window state for creation', { 
+      function: "createWindow",
+      windowState: windowState
+    });
+    
+    const windowOptions = windowState ? {
+      width: windowState.width || defaults.browser_width,
+      height: windowState.height || defaults.browser_height,
+      x: windowState.x,
+      y: windowState.y,
+      isMaximized: windowState.isMaximized,
+      isFullScreen: windowState.isFullScreen,
+      displayId: windowState.displayId
+    } : {
       width: store.get('browser_width') || defaults.browser_width,
       height: store.get('browser_height') || defaults.browser_height
+    };
+
+    debugLog.debug('Window creation options', { 
+      function: "createWindow",
+      windowOptions: windowOptions
     });
+
+    mainWindow = appSetup.createWindow(windowOptions);
 
     // Initialize modules with dependencies AFTER mainWindow is created
     await initializeModules();
+
+    // Set up window state saving now that store is available
+    appSetup.setupWindowStateSaving();
 
     // Migrate old preferences after modules are initialized
     fileOperations.migrateOldPreferences();
@@ -637,13 +661,27 @@ const createWindow = async () => {
     
     // Create a minimal window even if database fails
     try {
-      mainWindow = appSetup.createWindow({
+      const windowState = appSetup.loadWindowState(store);
+      const windowOptions = windowState ? {
+        width: windowState.width || defaults.browser_width,
+        height: windowState.height || defaults.browser_height,
+        x: windowState.x,
+        y: windowState.y,
+        isMaximized: windowState.isMaximized,
+        isFullScreen: windowState.isFullScreen,
+        displayId: windowState.displayId
+      } : {
         width: store.get('browser_width') || defaults.browser_width,
         height: store.get('browser_height') || defaults.browser_height
-      });
+      };
+
+      mainWindow = appSetup.createWindow(windowOptions);
       
       // Initialize basic modules without database
       await initializeModules();
+      
+      // Set up window state saving now that store is available
+      appSetup.setupWindowStateSaving();
       
       // Create the menu
       appSetup.createApplicationMenu();
