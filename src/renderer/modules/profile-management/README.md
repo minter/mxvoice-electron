@@ -24,10 +24,13 @@ profile-management/
 - **markProfileSelectionShown()** - Mark profile selection as shown
 
 ### Profile UI (`profile-ui.js`)
-- **showProfileSelectionModal(options)** - Show profile selection modal
-- **showCreateProfileModal()** - Show create profile modal
-- **showProfileManagementModal()** - Show profile management modal
+- **showProfileSelectionModal(options)** - Show profile selection modal using static HTML
+- **showCreateProfileModal()** - Show create profile modal using static HTML
+- **showProfileManagementModal()** - Show profile management modal using static HTML
+- **showEditProfileModal(name, description)** - Show edit profile modal using static HTML
 - **updateProfileIndicator(profileName)** - Update profile indicator in UI
+
+**Theme Integration**: All modals use static HTML in `index.html` for proper Bootstrap 5 and theme system integration. CSS variables automatically inherit from the app's theme classes.
 
 ## Usage
 
@@ -82,29 +85,48 @@ Named bindings are also exported for direct imports if needed.
 
 ## UI Components
 
-### Profile Selection Modal
-Shows available profiles with options to:
-- Select existing profile
-- Create new profile
-- Cancel (if allowed)
+All modals are implemented as static HTML in `index.html` with IDs:
+- `#profileSelectionModal`
+- `#createProfileModal`
+- `#profileManagementModal`
+- `#editProfileModal`
 
-### Create Profile Modal
+This approach ensures proper Bootstrap 5 integration and automatic theme inheritance.
+
+### Profile Selection Modal (`#profileSelectionModal`)
+Shows available profiles with options to:
+- Select existing profile (radio button cards with hover effects)
+- Create new profile (if enabled)
+- Cancel (if allowed)
+- Dynamic content population with theme-aware styling
+
+### Create Profile Modal (`#createProfileModal`)
 Allows users to:
 - Enter profile name (required, max 50 chars)
-- Enter description (optional, max 100 chars)
+- Enter description (optional, max 200 chars)
 - Choose to copy settings from current profile
+- Form validation with focus management
 
-### Profile Management Modal
+### Profile Management Modal (`#profileManagementModal`)
 Shows all profiles with options to:
-- View profile details
+- View profile details (creation date, last used)
+- Switch to different profiles
+- Edit profile names and descriptions
 - Delete profiles (except Default User)
 - Create new profiles
+- Active profile indication with badges
+
+### Edit Profile Modal (`#editProfileModal`)
+Allows editing existing profiles:
+- Update profile name (with validation)
+- Update description
+- Preserves original name for API calls
 
 ### Profile Indicator
 Shows current profile in search header with:
-- Profile icon
-- Tooltip with profile name
-- Click to open profile management
+- Profile icon with tooltip
+- Current profile name in tooltip
+- Click handler to open profile management
 
 ## Integration Points
 

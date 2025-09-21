@@ -50,6 +50,11 @@ export class AppInitialization {
       this.initialized = true;
       this.logInfo('✅ Application initialization completed successfully');
       
+      // Mark startup as complete for UI interaction events (reduces startup warnings)
+      if (window.eventCoordination && window.eventCoordination.uiInteractionEvents) {
+        window.eventCoordination.uiInteractionEvents.markStartupComplete();
+      }
+      
       // Mark performance milestone
       if (typeof performance !== 'undefined' && performance.mark) {
         performance.mark('app-init-complete');
@@ -249,6 +254,26 @@ export class AppInitialization {
       
       if (selectedProfile) {
         this.logInfo(`✅ Profile selected: ${selectedProfile}`);
+        
+        // Check current active profile
+        const currentProfile = await window.profileManagement.getActiveProfile();
+        this.logInfo(`Current active profile: ${currentProfile?.name || 'Unknown'}`);
+        
+        // If the selected profile is different from current, switch to it
+        if (currentProfile?.name !== selectedProfile) {
+          this.logInfo(`🔄 Switching from ${currentProfile?.name || 'Unknown'} to ${selectedProfile}`);
+          
+          // Switch to the selected profile (but don't restart - we're already starting up)
+          const switchResult = await window.secureElectronAPI.profile.setActive(selectedProfile);
+          
+          if (switchResult.success) {
+            this.logInfo(`✅ Successfully switched to profile: ${selectedProfile}`);
+          } else {
+            this.logError(`❌ Failed to switch to profile: ${switchResult.error}`);
+          }
+        } else {
+          this.logInfo(`✅ Selected profile ${selectedProfile} is already active`);
+        }
         
         // Update profile indicator
         window.profileManagement.updateProfileIndicator(selectedProfile);

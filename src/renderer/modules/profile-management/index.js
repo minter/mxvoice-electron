@@ -34,6 +34,7 @@ function initializeProfileManagement(options = {}) {
     deleteProfile: manager.deleteProfile,
     switchProfile: manager.switchProfile,
     shouldShowProfileSelection: manager.shouldShowProfileSelection,
+    markProfileSelectionShown: manager.markProfileSelectionShown,
     
     // Profile UI functions
     showProfileSelectionModal: ui.showProfileSelectionModal,
@@ -85,6 +86,7 @@ export const {
   switchToProfile,
   editProfile,
   shouldShowProfileSelection,
+  markProfileSelectionShown,
   showProfileSelectionModal,
   showCreateProfileModal,
   showProfileManagementModal,

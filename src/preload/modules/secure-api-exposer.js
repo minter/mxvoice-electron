@@ -178,6 +178,7 @@ const secureElectronAPI = {
     create: (name, description, copyFromCurrent) => ipcRenderer.invoke('profile-create', name, description, copyFromCurrent),
     delete: (name) => ipcRenderer.invoke('profile-delete', name),
     switch: (name) => ipcRenderer.invoke('profile-switch', name),
+    setActive: (name) => ipcRenderer.invoke('profile-set-active', name),
     shouldShowSelection: () => ipcRenderer.invoke('profile-should-show-selection'),
     markSelectionShown: () => ipcRenderer.invoke('profile-mark-selection-shown')
   },

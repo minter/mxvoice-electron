@@ -856,6 +856,14 @@ async function switchToProfile(profileName) {
     if (result) {
       debugLog?.info('Profile switch successful, restarting app', { module: 'app-setup', function: 'switchToProfile', profileName });
       
+      // Set flag to indicate this restart is due to a profile switch
+      try {
+        store.set('profile_switch_restart', true);
+        debugLog?.debug('Set profile switch restart flag', { module: 'app-setup', function: 'switchToProfile' });
+      } catch (error) {
+        debugLog?.warn('Failed to set profile switch restart flag', { module: 'app-setup', function: 'switchToProfile', error: error.message });
+      }
+      
       // Restart the app to load the new profile
       app.relaunch();
       app.exit(0);

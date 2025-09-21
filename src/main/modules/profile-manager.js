@@ -533,6 +533,18 @@ async function deleteProfile(profileName) {
  */
 async function shouldShowProfileSelection() {
   try {
+    // Check if this restart is due to a profile switch
+    const isProfileSwitchRestart = store.get('profile_switch_restart') || false;
+    if (isProfileSwitchRestart) {
+      // Clear the flag and skip profile selection
+      store.delete('profile_switch_restart');
+      debugLog?.info('Skipping profile selection - restart due to profile switch', {
+        module: 'profile-manager',
+        function: 'shouldShowProfileSelection'
+      });
+      return false;
+    }
+    
     const profiles = await getAvailableProfiles();
     const activeProfile = await getActiveProfile();
     

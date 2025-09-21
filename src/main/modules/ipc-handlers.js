@@ -682,25 +682,53 @@ function registerAllHandlers() {
       if (!profileManagerInstance) {
         throw new Error('Profile manager not initialized');
       }
+      
+      debugLog?.info('Profile switch requested', { 
+        module: 'ipc-handlers', 
+        function: 'profile-switch', 
+        profileName: name 
+      });
+      
+      // Import switchToProfile function to properly restart the app
+      const { switchToProfile } = await import('./app-setup.js');
+      
+      // Use switchToProfile which will set the active profile AND restart the app
+      await switchToProfile(name);
+      
+      // This line should never be reached since switchToProfile calls app.exit(0)
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Profile switch error:', { module: 'ipc-handlers', function: 'profile-switch', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile-set-active', async (event, name) => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      
+      debugLog?.info('Setting active profile (no restart)', { 
+        module: 'ipc-handlers', 
+        function: 'profile-set-active', 
+        profileName: name 
+      });
+      
+      // Set active profile without restarting (for use during startup)
       const result = await profileManagerInstance.setActiveProfile(name);
       
       if (result) {
-        debugLog?.info('Profile switched successfully', { 
+        debugLog?.info('Active profile set successfully', { 
           module: 'ipc-handlers', 
-          function: 'profile-switch', 
+          function: 'profile-set-active', 
           profileName: name 
         });
-        
-        // Send profile switch event to renderer to reload with new profile
-        const mainWindow = BrowserWindow.getFocusedWindow();
-        if (mainWindow) {
-          mainWindow.webContents.send('profile-switched', { profileName: name });
-        }
       }
       
       return { success: result };
     } catch (error) {
-      debugLog?.error('Profile switch error:', { module: 'ipc-handlers', function: 'profile-switch', error: error.message });
+      debugLog?.error('Set active profile error:', { module: 'ipc-handlers', function: 'profile-set-active', error: error.message });
       return { success: false, error: error.message };
     }
   });
