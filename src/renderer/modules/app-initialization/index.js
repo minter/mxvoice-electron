@@ -212,17 +212,25 @@ export class AppInitialization {
    */
   async handleProfileSelection(config = {}) {
     try {
+      console.log('🎭 PROFILE SELECTION: Starting handleProfileSelection');
+      console.log('🎭 PROFILE SELECTION: window.profileManagement exists:', !!window.profileManagement);
+      console.log('🎭 PROFILE SELECTION: window.profileManagement type:', typeof window.profileManagement);
+      console.log('🎭 PROFILE SELECTION: window.profileManagement keys:', window.profileManagement ? Object.keys(window.profileManagement) : 'N/A');
+      
       this.logInfo('👤 Checking profile selection requirements...');
       
       // Check if profile management is available
       if (!window.profileManagement) {
         this.logInfo('⚠️ Profile management not available, skipping profile selection');
+        console.log('🎭 PROFILE SELECTION: ERROR - Profile management not available');
         this.addInitializationStep('Profile Selection', true, 'Profile management not available');
         return true;
       }
       
       // Check if profile selection should be shown
+      console.log('🎭 PROFILE SELECTION: Calling shouldShowProfileSelection');
       const shouldShow = await window.profileManagement.shouldShowProfileSelection();
+      console.log('🎭 PROFILE SELECTION: shouldShow result:', shouldShow);
       
       if (!shouldShow) {
         this.logInfo('✅ Profile selection not needed, continuing with app startup');

@@ -286,14 +286,21 @@ function initializeProfileUI(options = {}) {
     let profilesHtml = '';
     profiles.forEach((profile, index) => {
       const isDefault = profile.name === 'Default User';
+      const isSelected = index === 0; // First profile is selected by default
       profilesHtml += `
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="profileSelection" id="profile-${index}" value="${profile.name}" ${index === 0 ? 'checked' : ''}>
-          <label class="form-check-label" for="profile-${index}">
-            <strong>${profile.name}</strong>
-            ${profile.description ? `<br><small class="text-muted">${profile.description}</small>` : ''}
-            ${isDefault ? '<br><small class="text-info">Protected profile</small>' : ''}
-          </label>
+        <div class="card mb-3 profile-selection-card" data-profile-name="${profile.name}" style="cursor: pointer;">
+          <div class="card-body">
+            <div class="d-flex align-items-start">
+              <div class="form-check me-3 mt-1">
+                <input class="form-check-input" type="radio" name="profileSelection" id="profile-${index}" value="${profile.name}" ${isSelected ? 'checked' : ''}>
+              </div>
+              <div class="flex-grow-1">
+                <h6 class="card-title mb-1">${profile.name}</h6>
+                ${profile.description ? `<p class="card-text small mb-1" style="color: var(--card-text); opacity: 0.7;">${profile.description}</p>` : ''}
+                ${isDefault ? '<small style="color: var(--bs-info, #0dcaf0);">Protected profile</small>' : ''}
+              </div>
+            </div>
+          </div>
         </div>
       `;
     });
@@ -307,7 +314,7 @@ function initializeProfileUI(options = {}) {
               ${showCancelOption ? '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' : ''}
             </div>
             <div class="modal-body">
-              <p>Choose your profile to continue:</p>
+              <p style="color: var(--card-text); opacity: 0.7;">Choose your profile to continue:</p>
               <form id="profile-selection-form">
                 ${profilesHtml}
               </form>
@@ -327,6 +334,21 @@ function initializeProfileUI(options = {}) {
           </div>
         </div>
       </div>
+      <style>
+        .profile-selection-card:hover {
+          background-color: var(--bs-gray-100, #f8f9fa) !important;
+        }
+        .theme-dark .profile-selection-card:hover {
+          background-color: var(--bs-gray-800, #343a40) !important;
+        }
+        .profile-selection-card.selected {
+          border-color: var(--bs-primary, #0d6efd) !important;
+          background-color: var(--bs-primary-bg-subtle, #cfe2ff) !important;
+        }
+        .theme-dark .profile-selection-card.selected {
+          background-color: var(--bs-primary-bg-subtle, rgba(13, 110, 253, 0.2)) !important;
+        }
+      </style>
     `;
   }
   
@@ -348,16 +370,19 @@ function initializeProfileUI(options = {}) {
                 <div class="mb-3">
                   <label for="profile-name" class="form-label">Profile Name</label>
                   <input type="text" class="form-control" id="profile-name" required maxlength="50" placeholder="Enter profile name...">
+                  <div class="form-text">Choose a unique name for your profile</div>
                 </div>
                 <div class="mb-3">
                   <label for="profile-description" class="form-label">Description (optional)</label>
                   <input type="text" class="form-control" id="profile-description" maxlength="100" placeholder="Enter description...">
+                  <div class="form-text">Add a brief description to help identify this profile</div>
                 </div>
-                <div class="form-check">
+                <div class="form-check mb-3">
                   <input class="form-check-input" type="checkbox" id="copy-current-settings" checked>
                   <label class="form-check-label" for="copy-current-settings">
                     Copy settings from current profile
                   </label>
+                  <div class="form-text">Start with the current app settings as a base</div>
                 </div>
               </form>
             </div>
@@ -394,9 +419,9 @@ function initializeProfileUI(options = {}) {
                   ${profile.name}
                   ${isActive ? '<span class="badge bg-success ms-2">Active</span>' : ''}
                 </h6>
-                ${profile.description ? `<p class="card-text text-secondary small mb-1">${profile.description}</p>` : ''}
-                <small class="text-secondary">Created: ${createdDate} | Last used: ${lastUsedDate}</small>
-                ${isDefault ? '<br><small class="text-info">Protected profile</small>' : ''}
+                ${profile.description ? `<p class="card-text small mb-1" style="color: var(--card-text); opacity: 0.7;">${profile.description}</p>` : ''}
+                <small style="color: var(--card-text); opacity: 0.7;">Created: ${createdDate} | Last used: ${lastUsedDate}</small>
+                ${isDefault ? '<br><small style="color: var(--bs-info, #0dcaf0);">Protected profile</small>' : ''}
               </div>
               <div class="ms-4">
                 ${!isActive ? `
@@ -428,10 +453,10 @@ function initializeProfileUI(options = {}) {
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6>Current Profiles</h6>
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h6 class="mb-0">Current Profiles</h6>
                 <button type="button" class="btn btn-primary btn-sm" id="create-new-profile-management-btn">
-                  <i class="fas fa-plus"></i> Create New Profile
+                  <i class="fas fa-plus me-1"></i>Create New Profile
                 </button>
               </div>
               ${profilesHtml}
@@ -507,6 +532,30 @@ function initializeProfileUI(options = {}) {
   function setupProfileSelectionHandlers(modal, resolve, modalInstance) {
     const selectBtn = modal.querySelector('#select-profile-btn');
     const createBtn = modal.querySelector('#create-new-profile-btn');
+    
+    // Handle card clicks
+    const profileCards = modal.querySelectorAll('.profile-selection-card');
+    profileCards.forEach(card => {
+      card.addEventListener('click', (e) => {
+        // Don't trigger if clicking on the radio button itself
+        if (e.target.type === 'radio') return;
+        
+        const radio = card.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+          
+          // Update visual selection
+          profileCards.forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+        }
+      });
+    });
+    
+    // Set initial selection
+    const initialSelected = modal.querySelector('input[name="profileSelection"]:checked');
+    if (initialSelected) {
+      initialSelected.closest('.profile-selection-card')?.classList.add('selected');
+    }
     
     selectBtn?.addEventListener('click', () => {
       const selectedRadio = modal.querySelector('input[name="profileSelection"]:checked');

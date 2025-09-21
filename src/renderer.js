@@ -65,6 +65,33 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
   try {
     window.logInfo('🔧 Starting module loading...');
     
+    // Load modules first
+    await AppBootstrap.loadBasicModules(
+      AppBootstrap.moduleConfig,
+      moduleRegistry,
+      window.logInfo,
+      window.logError,
+      window.logWarn,
+      {
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: window.store
+      }
+    );
+    
+    // Make profile management module available globally AFTER module loading
+    console.log('🔍 MODULE REGISTRY DEBUG: moduleRegistry keys:', Object.keys(moduleRegistry));
+    console.log('🔍 MODULE REGISTRY DEBUG: profileManagement exists:', !!moduleRegistry.profileManagement);
+    console.log('🔍 MODULE REGISTRY DEBUG: profileManagement type:', typeof moduleRegistry.profileManagement);
+    
+    if (moduleRegistry.profileManagement) {
+      window.profileManagement = moduleRegistry.profileManagement;
+      window.logInfo('Profile management module made available on window object (early)');
+      console.log('✅ Profile management module attached to window (early)');
+    } else {
+      console.log('❌ Profile management module NOT found in moduleRegistry');
+    }
+
     // Initialize the application using the app-initialization module
     window.logInfo('🚀 Initializing application components...');
     const initSuccess = await AppInitialization.initialize({
@@ -94,23 +121,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     
     // Debug logger already initialized early, no need to reinitialize
     
-    window.logInfo('Application initialization completed, proceeding with module loading...');
-    
-    // Load basic modules using the bootstrap module
-    window.logInfo('Loading modules using bootstrap configuration...');
-    await AppBootstrap.loadBasicModules(
-      AppBootstrap.moduleConfig, 
-      moduleRegistry, 
-      window.logInfo, 
-      window.logError, 
-      window.logWarn,
-      {
-        electronAPI: window.electronAPI,
-        db: window.db,
-        store: window.store,
-        debugLog: window.debugLog
-      }
-    );
+    window.logInfo('Application initialization completed, modules already loaded...');
     window.logInfo('Basic module loading completed');
     
     // Hotkeys module will be initialized via EventCoordination system
