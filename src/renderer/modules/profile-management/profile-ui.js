@@ -59,6 +59,18 @@ function initializeProfileUI(options = {}) {
         options 
       });
       
+      // Hide any visible tooltips before showing the modal
+      try {
+        const { hideAllTooltips } = await import('../ui/bootstrap-adapter.js');
+        hideAllTooltips();
+      } catch (error) {
+        debugLog?.warn('Failed to hide tooltips', { 
+          module: 'profile-ui', 
+          function: 'showProfileSelectionModal',
+          error: error.message 
+        });
+      }
+      
       // Get available profiles
       const profiles = await window.secureElectronAPI.profile.getAvailable();
       
@@ -120,6 +132,18 @@ function initializeProfileUI(options = {}) {
         function: 'showCreateProfileModal' 
       });
       
+      // Hide any visible tooltips before showing the modal
+      try {
+        const { hideAllTooltips } = await import('../ui/bootstrap-adapter.js');
+        hideAllTooltips();
+      } catch (error) {
+        debugLog?.warn('Failed to hide tooltips', { 
+          module: 'profile-ui', 
+          function: 'showCreateProfileModal',
+          error: error.message 
+        });
+      }
+      
       const modal = document.getElementById('createProfileModal');
       const nameInput = document.getElementById('createProfileName');
       const descInput = document.getElementById('createProfileDescription');
@@ -166,6 +190,18 @@ function initializeProfileUI(options = {}) {
         module: 'profile-ui', 
         function: 'showProfileManagementModal' 
       });
+      
+      // Hide any visible tooltips before showing the modal
+      try {
+        const { hideAllTooltips } = await import('../ui/bootstrap-adapter.js');
+        hideAllTooltips();
+      } catch (error) {
+        debugLog?.warn('Failed to hide tooltips', { 
+          module: 'profile-ui', 
+          function: 'showProfileManagementModal',
+          error: error.message 
+        });
+      }
       
       // Get available profiles and active profile
       const [profilesResult, activeProfileResult] = await Promise.all([
@@ -226,6 +262,18 @@ function initializeProfileUI(options = {}) {
         currentName,
         currentDescription 
       });
+      
+      // Hide any visible tooltips before showing the modal
+      try {
+        const { hideAllTooltips } = await import('../ui/bootstrap-adapter.js');
+        hideAllTooltips();
+      } catch (error) {
+        debugLog?.warn('Failed to hide tooltips', { 
+          module: 'profile-ui', 
+          function: 'showEditProfileModal',
+          error: error.message 
+        });
+      }
       
       const modal = document.getElementById('editProfileModal');
       const originalNameInput = document.getElementById('editProfileOriginalName');

@@ -144,13 +144,55 @@ export function hideAllTooltips() {
     return;
   }
   
-  // Hide all visible tooltips
+  // Method 1: Hide all tooltip instances
   document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
     const tooltip = bs.Tooltip.getInstance(element);
     if (tooltip) {
       tooltip.hide();
     }
   });
+  
+  // Method 2: Remove any visible tooltip elements from DOM
+  document.querySelectorAll('.tooltip').forEach((tooltipEl) => {
+    tooltipEl.remove();
+  });
+  
+  // Method 3: Clear any tooltip-related aria-describedby attributes
+  document.querySelectorAll('[aria-describedby]').forEach((element) => {
+    const describedBy = element.getAttribute('aria-describedby');
+    if (describedBy && (describedBy.includes('tooltip') || document.getElementById(describedBy)?.classList.contains('tooltip'))) {
+      element.removeAttribute('aria-describedby');
+    }
+  });
+  
+  // Method 4: Remove focus from any focused elements to prevent focus-triggered tooltips
+  if (document.activeElement && document.activeElement.hasAttribute('data-bs-toggle')) {
+    document.activeElement.blur();
+  }
+  
+  debugLog?.debug('All tooltips forcefully hidden and cleaned up');
+}
+
+export function forceResetAllTooltips() {
+  const bs = (typeof window !== 'undefined' ? window.bootstrap : undefined) || (typeof bootstrap !== 'undefined' ? bootstrap : undefined);
+  if (!bs || !bs.Tooltip) {
+    debugLog?.warn('Bootstrap Tooltip not available for reset');
+    return;
+  }
+  
+  debugLog?.info('Force resetting all tooltips due to persistent issues');
+  
+  // Step 1: Dispose all existing tooltips completely
+  disposeAllTooltips();
+  
+  // Step 2: Aggressively clean up any remaining tooltip artifacts
+  hideAllTooltips();
+  
+  // Step 3: Re-initialize all tooltips with fresh instances
+  setTimeout(() => {
+    initTooltip('[data-bs-toggle="tooltip"]');
+    debugLog?.info('All tooltips have been force reset and re-initialized');
+  }, 200);
 }
 
 export default {
@@ -161,6 +203,7 @@ export default {
   initTooltip,
   disposeAllTooltips,
   hideAllTooltips,
+  forceResetAllTooltips,
 };
 
 

@@ -821,6 +821,47 @@
   <script>
     // Global function for opening profile menu
     function openProfileMenu() {
+      // Aggressively handle tooltip cleanup for profile indicator
+      const profileIndicator = document.getElementById('profile-indicator');
+      if (profileIndicator) {
+        // Method 1: Remove focus to prevent focus-triggered tooltips
+        profileIndicator.blur();
+        
+        // Method 2: Dispose of the specific tooltip instance completely
+        if (window.bootstrap && window.bootstrap.Tooltip) {
+          const tooltip = window.bootstrap.Tooltip.getInstance(profileIndicator);
+          if (tooltip) {
+            tooltip.dispose();
+          }
+        }
+        
+        // Method 3: Use global hideAllTooltips if available
+        if (window.hideAllTooltips) {
+          window.hideAllTooltips();
+        }
+        
+        // Method 4: Remove any tooltip-related classes and attributes that might persist
+        profileIndicator.removeAttribute('aria-describedby');
+        const tooltipElements = document.querySelectorAll('.tooltip');
+        tooltipElements.forEach(el => el.remove());
+        
+        // Method 5: Re-initialize tooltip after a brief delay to reset state
+        setTimeout(() => {
+          if (window.bootstrap && window.bootstrap.Tooltip) {
+            try {
+              new window.bootstrap.Tooltip(profileIndicator, {
+                delay: { show: 1500, hide: 0 },
+                trigger: 'hover focus',
+                boundary: 'viewport',
+                fallbackPlacements: ['top', 'bottom', 'left', 'right']
+              });
+            } catch (e) {
+              // Silently handle any re-initialization errors
+            }
+          }
+        }, 100);
+      }
+      
       if (window.profileManagement) {
         window.profileManagement.showProfileManagementModal();
       } else {
