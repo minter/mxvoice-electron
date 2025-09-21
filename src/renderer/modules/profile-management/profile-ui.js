@@ -339,6 +339,22 @@ function initializeProfileUI(options = {}) {
   }
   
   /**
+   * Sort profiles alphabetically with default profile first
+   * @param {Array} profiles - Available profiles
+   * @returns {Array} Sorted profiles
+   */
+  function sortProfiles(profiles) {
+    return [...profiles].sort((a, b) => {
+      // Default User profile always comes first
+      if (a.name === 'Default User') return -1;
+      if (b.name === 'Default User') return 1;
+      
+      // All other profiles sorted alphabetically
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  /**
    * Populate profile selection list
    * @param {HTMLElement} container - Container element
    * @param {Array} profiles - Available profiles
@@ -346,7 +362,10 @@ function initializeProfileUI(options = {}) {
   function populateProfileSelectionList(container, profiles) {
     container.innerHTML = '';
     
-    profiles.forEach((profile, index) => {
+    // Sort profiles with default profile first, then alphabetically
+    const sortedProfiles = sortProfiles(profiles);
+    
+    sortedProfiles.forEach((profile, index) => {
       const isDefault = profile.name === 'Default User';
       const isSelected = index === 0; // First profile is selected by default
       
@@ -398,7 +417,10 @@ function initializeProfileUI(options = {}) {
   function populateProfileManagementList(container, profiles, activeProfileName) {
     container.innerHTML = '';
     
-    profiles.forEach(profile => {
+    // Sort profiles with default profile first, then alphabetically
+    const sortedProfiles = sortProfiles(profiles);
+    
+    sortedProfiles.forEach(profile => {
       const isDefault = profile.name === 'Default User';
       const isActive = profile.name === activeProfileName;
       const createdDate = new Date(profile.created_at).toLocaleDateString();

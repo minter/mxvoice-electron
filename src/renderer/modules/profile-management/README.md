@@ -99,6 +99,7 @@ Shows available profiles with options to:
 - Create new profile (if enabled)
 - Cancel (if allowed)
 - Dynamic content population with theme-aware styling
+- **Profile Sorting**: Profiles are sorted alphabetically with "Default User" always appearing first
 
 ### Create Profile Modal (`#createProfileModal`)
 Allows users to:
@@ -115,6 +116,7 @@ Shows all profiles with options to:
 - Delete profiles (except Default User)
 - Create new profiles
 - Active profile indication with badges
+- **Profile Sorting**: Profiles are sorted alphabetically with "Default User" always appearing first
 
 ### Edit Profile Modal (`#editProfileModal`)
 Allows editing existing profiles:
