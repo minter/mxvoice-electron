@@ -5,7 +5,7 @@
  * for the MxVoice Electron application.
  */
 
-import { ipcMain, dialog, app } from 'electron';
+import { ipcMain, dialog, app, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { pipeline } from 'stream/promises';
@@ -18,6 +18,10 @@ import { v4 as uuidv4 } from 'uuid';
 // Import file operations module
 import fileOperations from './file-operations.js';
 
+// Import profile system modules
+import * as profileManager from './profile-manager.js';
+import * as profileStore from './profile-store.js';
+
 // Dependencies that will be injected
 let mainWindow;
 let db;
@@ -27,6 +31,8 @@ let autoUpdater;
 let debugLog;
 let logService;
 let updateState;
+let profileManagerInstance;
+let profileStoreInstance;
 
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
@@ -38,6 +44,8 @@ function initializeIpcHandlers(dependencies) {
   debugLog = dependencies.debugLog;
   logService = dependencies.logService;
   updateState = dependencies.updateState || { downloaded: false };
+  profileManagerInstance = dependencies.profileManager;
+  profileStoreInstance = dependencies.profileStore;
   
   // Initialize file operations module
   fileOperations.initializeFileOperations(dependencies);
@@ -45,8 +53,25 @@ function initializeIpcHandlers(dependencies) {
   registerAllHandlers();
 }
 
+// Track if handlers have been registered to prevent duplicates
+let handlersRegistered = false;
+
 // Register all IPC handlers
 function registerAllHandlers() {
+  // Prevent duplicate registration
+  if (handlersRegistered) {
+    debugLog?.info('IPC handlers already registered, skipping', { 
+      module: 'ipc-handlers', 
+      function: 'registerAllHandlers'
+    });
+    return;
+  }
+
+  debugLog?.info('Registering IPC handlers', { 
+    module: 'ipc-handlers', 
+    function: 'registerAllHandlers' 
+  });
+
   // Logs API (centralized log service)
   ipcMain.handle('logs:write', async (_event, payload) => {
     try {
@@ -149,6 +174,8 @@ function registerAllHandlers() {
   ipcMain.handle('show-preferences', async () => {
     mainWindow.webContents.send('show_preferences');
   });
+
+  // Profile menu operations - these are handled by the profile-specific handlers below
 
   // Database API handlers
   ipcMain.handle('database-query', async (event, sql, params) => {
@@ -533,8 +560,15 @@ function registerAllHandlers() {
   // Store API handlers
   ipcMain.handle('store-get', async (event, key) => {
     try {
-      const value = store.get(key);
-      debugLog?.info('Store get', { module: 'ipc-handlers', function: 'store-get', key, valueType: typeof value });
+      // Use profile-aware store if available, fallback to regular store
+      let value;
+      if (profileStoreInstance && profileStoreInstance.get) {
+        value = await profileStoreInstance.get(key);
+        debugLog?.info('Profile-aware store get', { module: 'ipc-handlers', function: 'store-get', key, valueType: typeof value });
+      } else {
+        value = store.get(key);
+        debugLog?.info('Regular store get', { module: 'ipc-handlers', function: 'store-get', key, valueType: typeof value });
+      }
       return { success: true, value };
     } catch (error) {
       debugLog?.error('Store get error:', { module: 'ipc-handlers', function: 'store-get', error: error.message });
@@ -544,10 +578,18 @@ function registerAllHandlers() {
 
   ipcMain.handle('store-set', async (event, key, value) => {
     try {
-      debugLog?.info('Store set', { module: 'ipc-handlers', function: 'store-set', key, valueType: typeof value });
-      store.set(key, value);
-      const verify = store.get(key);
-      return { success: true, value: verify };
+      // Use profile-aware store if available, fallback to regular store
+      let result;
+      if (profileStoreInstance && profileStoreInstance.set) {
+        result = await profileStoreInstance.set(key, value);
+        debugLog?.info('Profile-aware store set', { module: 'ipc-handlers', function: 'store-set', key, valueType: typeof value, result });
+      } else {
+        store.set(key, value);
+        const verify = store.get(key);
+        result = { success: true, value: verify };
+        debugLog?.info('Regular store set', { module: 'ipc-handlers', function: 'store-set', key, valueType: typeof value });
+      }
+      return result;
     } catch (error) {
       debugLog?.error('Store set error:', { module: 'ipc-handlers', function: 'store-set', key, error: error.message });
       return { success: false, error: error.message };
@@ -578,6 +620,140 @@ function registerAllHandlers() {
       return { success: true, keys: Object.keys(store.store) };
     } catch (error) {
       debugLog?.error('Store keys error:', { module: 'ipc-handlers', function: 'store-keys', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile API handlers
+  ipcMain.handle('profile-get-available', async () => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      const profiles = await profileManagerInstance.getAvailableProfiles();
+      return { success: true, profiles };
+    } catch (error) {
+      debugLog?.error('Profile get available error:', { module: 'ipc-handlers', function: 'profile-get-available', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile-get-active', async () => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      const activeProfileName = await profileManagerInstance.getActiveProfile();
+      return { success: true, profile: { name: activeProfileName } };
+    } catch (error) {
+      debugLog?.error('Profile get active error:', { module: 'ipc-handlers', function: 'profile-get-active', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile-create', async (event, name, description, copyFromCurrent) => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      const result = await profileManagerInstance.createProfile(name, description, copyFromCurrent);
+      return result;
+    } catch (error) {
+      debugLog?.error('Profile create error:', { module: 'ipc-handlers', function: 'profile-create', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile-delete', async (event, name) => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      const result = await profileManagerInstance.deleteProfile(name);
+      return result;
+    } catch (error) {
+      debugLog?.error('Profile delete error:', { module: 'ipc-handlers', function: 'profile-delete', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile-switch', async (event, name) => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      const result = await profileManagerInstance.setActiveProfile(name);
+      
+      if (result) {
+        debugLog?.info('Profile switched successfully', { 
+          module: 'ipc-handlers', 
+          function: 'profile-switch', 
+          profileName: name 
+        });
+        
+        // Send profile switch event to renderer to reload with new profile
+        const mainWindow = BrowserWindow.getFocusedWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('profile-switched', { profileName: name });
+        }
+      }
+      
+      return { success: result };
+    } catch (error) {
+      debugLog?.error('Profile switch error:', { module: 'ipc-handlers', function: 'profile-switch', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile-should-show-selection', async () => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      const shouldShow = await profileManagerInstance.shouldShowProfileSelection();
+      return { success: true, shouldShow };
+    } catch (error) {
+      debugLog?.error('Profile should show selection error:', { module: 'ipc-handlers', function: 'profile-should-show-selection', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile-mark-selection-shown', async () => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      const result = profileManagerInstance.markProfileSelectionShown();
+      return { success: result };
+    } catch (error) {
+      debugLog?.error('Profile mark selection shown error:', { module: 'ipc-handlers', function: 'profile-mark-selection-shown', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile menu IPC handlers
+  ipcMain.handle('show-profile-management', async () => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      // This will be handled by the renderer process
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Show profile management error:', { module: 'ipc-handlers', function: 'show-profile-management', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('show-create-profile', async () => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      // This will be handled by the renderer process
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Show create profile error:', { module: 'ipc-handlers', function: 'show-create-profile', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -1435,10 +1611,15 @@ function registerAllHandlers() {
     function: 'registerAllHandlers',
     note: 'Using secure handlers only - legacy handlers removed for security'
   });
+
+  // Mark handlers as registered to prevent duplicates
+  handlersRegistered = true;
 }
 
   // Remove all handlers (for cleanup)
 function removeAllHandlers() {
+  // Reset registration flag
+  handlersRegistered = false;
   // Legacy handlers
   ipcMain.removeHandler('get-app-path');
   ipcMain.removeHandler('show-directory-picker');

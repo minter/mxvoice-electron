@@ -21,6 +21,7 @@ let store;
 let autoUpdater;
 let fileOperations;
 let debugLog;
+let profileManager;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -29,6 +30,7 @@ function initializeAppSetup(dependencies) {
   autoUpdater = dependencies.autoUpdater;
   fileOperations = dependencies.fileOperations;
   debugLog = dependencies.debugLog;
+  profileManager = dependencies.profileManager;
 }
 
 // Create the main window
@@ -278,6 +280,89 @@ function loadWindowState(storeInstance = store) {
   return null;
 }
 
+/**
+ * Apply profile-specific window state to the current window
+ * This should be called after profile system is initialized
+ */
+function applyProfileWindowState() {
+  if (!mainWindow || !store || mainWindow.isDestroyed()) {
+    debugLog?.warn('Cannot apply profile window state - missing dependencies', { 
+      module: 'app-setup', 
+      function: 'applyProfileWindowState',
+      hasWindow: !!mainWindow,
+      hasStore: !!store,
+      isDestroyed: mainWindow?.isDestroyed?.()
+    });
+    return false;
+  }
+
+  try {
+    // Load window state using profile-aware store (via IPC handlers)
+    const windowState = loadWindowState(store);
+    
+    if (!windowState) {
+      debugLog?.info('No profile-specific window state found', { 
+        module: 'app-setup', 
+        function: 'applyProfileWindowState'
+      });
+      return false;
+    }
+
+    debugLog?.info('Applying profile-specific window state', { 
+      module: 'app-setup', 
+      function: 'applyProfileWindowState',
+      windowState: windowState
+    });
+
+    // Validate display still exists if displayId is provided
+    let validDisplay = null;
+    if (windowState.displayId) {
+      const displays = screen.getAllDisplays();
+      validDisplay = displays.find(d => d.id === windowState.displayId);
+    }
+
+    // Apply window size and position
+    if (windowState.width && windowState.height) {
+      if (validDisplay && windowState.x !== undefined && windowState.y !== undefined) {
+        mainWindow.setBounds({
+          x: windowState.x,
+          y: windowState.y,
+          width: windowState.width,
+          height: windowState.height
+        });
+      } else {
+        mainWindow.setSize(windowState.width, windowState.height);
+        // Center the window if position is invalid
+        mainWindow.center();
+      }
+    }
+
+    // Apply maximized/fullscreen state
+    if (windowState.isMaximized && !mainWindow.isMaximized()) {
+      mainWindow.maximize();
+    }
+    
+    if (windowState.isFullScreen && !mainWindow.isFullScreen()) {
+      mainWindow.setFullScreen(true);
+    }
+
+    debugLog?.info('Profile-specific window state applied successfully', { 
+      module: 'app-setup', 
+      function: 'applyProfileWindowState'
+    });
+    
+    return true;
+  } catch (error) {
+    debugLog?.error('Failed to apply profile window state', { 
+      module: 'app-setup', 
+      function: 'applyProfileWindowState',
+      error: error.message,
+      stack: error.stack
+    });
+    return false;
+  }
+}
+
 // Create application menu
 function createApplicationMenu() {
   const application_menu = [
@@ -409,6 +494,30 @@ function createApplicationMenu() {
           label: "Manage Categories",
           click: () => {
             manageCategories();
+          },
+        },
+      ],
+    },
+    {
+      label: "Profiles",
+      submenu: [
+        {
+          label: "Manage Profiles",
+          click: () => {
+            showProfileManagement();
+          },
+        },
+        {
+          label: "Create New Profile",
+          click: () => {
+            createNewProfile();
+          },
+        },
+        { type: "separator" },
+        {
+          label: "Switch to Default User",
+          click: () => {
+            switchToProfile("Default User");
           },
         },
       ],
@@ -724,6 +833,47 @@ function manageCategories() {
   }
 }
 
+// Profile menu functions
+async function showProfileManagement() {
+  debugLog?.info('Showing profile management', { module: 'app-setup', function: 'showProfileManagement' });
+  if (mainWindow) {
+    mainWindow.webContents.send('show_profile_management');
+  }
+}
+
+async function switchToProfile(profileName) {
+  debugLog?.info('Switching to profile', { module: 'app-setup', function: 'switchToProfile', profileName });
+  
+  if (!profileManager) {
+    debugLog?.error('Profile manager not available', { module: 'app-setup', function: 'switchToProfile' });
+    return;
+  }
+  
+  try {
+    // Switch to the selected profile
+    const result = await profileManager.setActiveProfile(profileName);
+    
+    if (result) {
+      debugLog?.info('Profile switch successful, restarting app', { module: 'app-setup', function: 'switchToProfile', profileName });
+      
+      // Restart the app to load the new profile
+      app.relaunch();
+      app.exit(0);
+    } else {
+      debugLog?.error('Profile switch failed', { module: 'app-setup', function: 'switchToProfile', profileName });
+    }
+  } catch (error) {
+    debugLog?.error('Profile switch error', { module: 'app-setup', function: 'switchToProfile', profileName, error: error.message });
+  }
+}
+
+async function createNewProfile() {
+  debugLog?.info('Creating new profile', { module: 'app-setup', function: 'createNewProfile' });
+  if (mainWindow) {
+    mainWindow.webContents.send('show_create_profile');
+  }
+}
+
 // Setup app lifecycle events
 function setupAppLifecycle() {
   app.on('closed', function () {
@@ -789,10 +939,14 @@ export {
   sendDeleteSong,
   sendEditSong,
   manageCategories,
+  showProfileManagement,
+  switchToProfile,
+  createNewProfile,
   testAppSetup,
   setupWindowStateSaving,
   saveWindowState,
-  loadWindowState
+  loadWindowState,
+  applyProfileWindowState
 };
 
 // Default export for module loading
@@ -809,8 +963,12 @@ export default {
   sendDeleteSong,
   sendEditSong,
   manageCategories,
+  showProfileManagement,
+  switchToProfile,
+  createNewProfile,
   testAppSetup,
   setupWindowStateSaving,
   saveWindowState,
-  loadWindowState
+  loadWindowState,
+  applyProfileWindowState
 }; 

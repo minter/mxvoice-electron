@@ -73,6 +73,11 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         db: window.db,
         store: window.store
       },
+      profileManagement: {
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: window.store
+      },
       environment: {
         debugMode: true,
         performanceMonitoring: true
@@ -156,6 +161,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     window.logDebug('Preferences', !!moduleRegistry.preferences);
     window.logDebug('Database', !!moduleRegistry.database);
     window.logDebug('Utils', !!moduleRegistry.utils);
+    window.logDebug('Profile Management', !!moduleRegistry.profileManagement);
 
     // Make module registry available for debugging and development
     window.moduleRegistry = moduleRegistry;
@@ -164,6 +170,12 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     if (moduleRegistry.holdingTank) {
       window.holdingTank = moduleRegistry.holdingTank;
       window.logInfo('Holding tank module made available on window object');
+    }
+    
+    // Make profile management module available globally
+    if (moduleRegistry.profileManagement) {
+      window.profileManagement = moduleRegistry.profileManagement;
+      window.logInfo('Profile management module made available on window object');
     }
     
     // Ensure window.debugLog is available for modules
@@ -355,6 +367,52 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               }
             });
           }
+
+          // Profile management → showProfileManagementModal
+          if (typeof window.secureElectronAPI.events.onShowProfileManagement === 'function') {
+            window.secureElectronAPI.events.onShowProfileManagement(() => {
+              if (window.profileManagement && typeof window.profileManagement.showProfileManagementModal === 'function') {
+                window.profileManagement.showProfileManagementModal();
+              } else {
+                window.logWarn('Profile management not available when show_profile_management fired');
+              }
+            });
+          }
+
+        // Create profile → showCreateProfileModal
+        if (typeof window.secureElectronAPI.events.onShowCreateProfile === 'function') {
+          window.secureElectronAPI.events.onShowCreateProfile(() => {
+            if (window.profileManagement && typeof window.profileManagement.showCreateProfileModal === 'function') {
+              window.profileManagement.showCreateProfileModal();
+            } else {
+              window.logWarn('Profile management not available when show_create_profile fired');
+            }
+          });
+        }
+
+        // Profile switched → reload app state
+        if (typeof window.secureElectronAPI.events.onProfileSwitched === 'function') {
+          window.secureElectronAPI.events.onProfileSwitched((profileData) => {
+            window.logInfo('Profile switched, reloading app state', profileData);
+            
+            // Close any open modals
+            const modals = document.querySelectorAll('.modal.show');
+            modals.forEach(modal => {
+              const modalInstance = bootstrap.Modal.getInstance(modal);
+              if (modalInstance) {
+                modalInstance.hide();
+              }
+            });
+            
+            // Update profile indicator
+            if (window.profileManagement && typeof window.profileManagement.updateProfileIndicator === 'function') {
+              window.profileManagement.updateProfileIndicator(profileData.profileName);
+            }
+            
+            // Reload the page to apply new profile settings
+            window.location.reload();
+          });
+        }
         }
       } catch (bridgeError) {
         window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });

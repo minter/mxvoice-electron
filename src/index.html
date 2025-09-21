@@ -115,8 +115,8 @@
                 <i class="fas fa-search"></i> Search
               </div>
               <div class="icon-bar">
-                <a href="#">
-                  <!-- Icons could go here -->
+                <a href="#" id="profile-indicator" onclick="openProfileMenu()" data-bs-toggle="tooltip" data-bs-placement="top" title="Current Profile: Default User">
+                  <i class="fas fa-user"></i>
                 </a>
               </div>
             </h6>
@@ -694,6 +694,45 @@
   <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <!-- FontAwesome Javascript -->
   <script src="../node_modules/@fortawesome/fontawesome-free/js/all.js"></script>
+
+  <!-- Global functions for profile management -->
+  <script>
+    // Global function for opening profile menu
+    function openProfileMenu() {
+      if (window.profileManagement) {
+        window.profileManagement.showProfileManagementModal();
+      } else {
+        console.warn('Profile management not available');
+      }
+    }
+
+    // Global function for switching profiles
+    function switchToProfile(profileName) {
+      if (window.profileManagement && window.profileManagement.switchToProfile) {
+        window.profileManagement.switchToProfile(profileName);
+      } else {
+        console.warn('Profile management not available for switching');
+      }
+    }
+
+    // Global function for editing profiles
+    function editProfile(profileName, description) {
+      if (window.profileManagement && window.profileManagement.editProfile) {
+        window.profileManagement.editProfile(profileName, description);
+      } else {
+        console.warn('Profile management not available for editing');
+      }
+    }
+
+    // Global function for deleting profiles
+    function deleteProfile(profileName) {
+      if (window.profileManagement && window.profileManagement.deleteProfile) {
+        window.profileManagement.deleteProfile(profileName);
+      } else {
+        console.warn('Profile management not available for deletion');
+      }
+    }
+  </script>
 
   </body>
 

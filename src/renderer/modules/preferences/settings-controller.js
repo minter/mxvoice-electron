@@ -71,7 +71,7 @@ function initializeSettingsController(options = {}) {
           electronAPI.store.set("screen_mode", preferences.screen_mode)
         ]);
         
-        const successCount = results.filter(result => result.success).length;
+        const successCount = results.filter(result => result === true || (result && result.success === true)).length;
         if (successCount === 7) {
           debugLog?.info('All preferences saved successfully', { 
             function: "savePreferences",
@@ -80,10 +80,12 @@ function initializeSettingsController(options = {}) {
           
           // Apply new theme immediately if screen mode preference changed
           debugLog?.info('Checking theme management availability', { 
+            hasModuleRegistry: !!window.moduleRegistry,
             hasThemeManagement: !!window.moduleRegistry?.themeManagement,
             hasSetUserTheme: !!(window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme),
             hasGlobalThemeManagement: !!window.setUserTheme,
-            newScreenMode: preferences.screen_mode
+            newScreenMode: preferences.screen_mode,
+            moduleRegistryKeys: window.moduleRegistry ? Object.keys(window.moduleRegistry) : 'no registry'
           });
           
           // Try module registry first, then fallback to global function
@@ -187,7 +189,7 @@ function initializeSettingsController(options = {}) {
           for (const [key, val] of ops) {
             try {
               const res = await electronAPI.store.set(key, val);
-              results.push({ key, ...res });
+              results.push({ key, success: res === true || (res && res.success === true) });
             } catch (e) {
               results.push({ key, success: false, error: e?.message || 'unknown' });
             }

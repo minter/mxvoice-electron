@@ -41,6 +41,12 @@ export class AppInitialization {
       // Step 4: Preload initial data
       await this.preloadInitialData(config.dataLoader || {});
       
+      // Step 5: Handle profile selection if needed
+      await this.handleProfileSelection(config.profileManagement || {});
+      
+      // Step 6: Initialize profile indicator
+      await this.initializeProfileIndicator(config.profileManagement || {});
+      
       this.initialized = true;
       this.logInfo('✅ Application initialization completed successfully');
       
@@ -196,6 +202,107 @@ export class AppInitialization {
       this.logError('❌ Failed to initialize DOM-dependent features:', error);
       this.addInitializationStep('DOM Features', false, error.message);
       return false;
+    }
+  }
+
+  /**
+   * Handle profile selection if needed
+   * @param {Object} config - Profile management configuration
+   * @returns {Promise<boolean>} Success status
+   */
+  async handleProfileSelection(config = {}) {
+    try {
+      this.logInfo('👤 Checking profile selection requirements...');
+      
+      // Check if profile management is available
+      if (!window.profileManagement) {
+        this.logInfo('⚠️ Profile management not available, skipping profile selection');
+        this.addInitializationStep('Profile Selection', true, 'Profile management not available');
+        return true;
+      }
+      
+      // Check if profile selection should be shown
+      const shouldShow = await window.profileManagement.shouldShowProfileSelection();
+      
+      if (!shouldShow) {
+        this.logInfo('✅ Profile selection not needed, continuing with app startup');
+        this.addInitializationStep('Profile Selection', true, 'Not needed');
+        return true;
+      }
+      
+      this.logInfo('🎭 Showing profile selection modal...');
+      
+      // Show profile selection modal
+      const selectedProfile = await window.profileManagement.showProfileSelectionModal({
+        showCreateOption: true,
+        showCancelOption: false,
+        title: 'Select Your Profile'
+      });
+      
+      if (selectedProfile) {
+        this.logInfo(`✅ Profile selected: ${selectedProfile}`);
+        
+        // Update profile indicator
+        window.profileManagement.updateProfileIndicator(selectedProfile);
+        
+        // Mark profile selection as shown
+        await window.profileManagement.markProfileSelectionShown();
+        
+        this.addInitializationStep('Profile Selection', true);
+        return true;
+      } else {
+        this.logInfo('⚠️ No profile selected, using default');
+        this.addInitializationStep('Profile Selection', true, 'No selection made');
+        return true;
+      }
+    } catch (error) {
+      this.logError('Failed to handle profile selection', error);
+      this.addInitializationStep('Profile Selection', false, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Initialize profile indicator with current active profile
+   * @param {Object} config - Profile management configuration
+   * @returns {Promise<boolean>} Success status
+   */
+  async initializeProfileIndicator(config = {}) {
+    try {
+      this.logInfo('👤 Initializing profile indicator...');
+      
+      // Check if profile management is available
+      if (!window.profileManagement) {
+        this.logInfo('⚠️ Profile management not available, skipping profile indicator initialization');
+        this.addInitializationStep('Profile Indicator', true, 'Profile management not available');
+        return true;
+      }
+      
+      // Get the current active profile
+      const activeProfile = await window.profileManagement.getActiveProfile();
+      
+      if (activeProfile) {
+        this.logInfo(`✅ Active profile: ${activeProfile.name}`);
+        
+        // Update profile indicator
+        window.profileManagement.updateProfileIndicator(activeProfile.name);
+        
+        this.addInitializationStep('Profile Indicator', true);
+        return true;
+      } else {
+        this.logInfo('⚠️ No active profile found, using default');
+        window.profileManagement.updateProfileIndicator('Default User');
+        this.addInitializationStep('Profile Indicator', true, 'Using default profile');
+        return true;
+      }
+    } catch (error) {
+      this.logError('Failed to initialize profile indicator', error);
+      // Fallback to default profile
+      if (window.profileManagement) {
+        window.profileManagement.updateProfileIndicator('Default User');
+      }
+      this.addInitializationStep('Profile Indicator', true, 'Using fallback profile');
+      return true; // Don't fail initialization for this
     }
   }
 
