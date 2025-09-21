@@ -36,7 +36,7 @@ function initializeProfileUI(options = {}) {
         error: error.message 
       });
     });
-
+  
   /**
    * Show profile selection modal
    * @param {Object} options - Modal options
@@ -529,26 +529,26 @@ function initializeProfileUI(options = {}) {
         cleanup();
         resolve(value);
       };
-      
-      createBtn?.addEventListener('click', async () => {
+    
+    createBtn?.addEventListener('click', async () => {
         const name = nameInput.value.trim();
         const description = descInput.value.trim();
         const copyFromCurrent = copySettingsInput.checked;
-        
-        if (!name) {
-          alert('Please enter a profile name');
+      
+      if (!name) {
+        alert('Please enter a profile name');
           nameInput.focus();
-          return;
-        }
-        
+        return;
+      }
+      
         try {
-          const result = await window.secureElectronAPI.profile.create(name, description, copyFromCurrent);
-          
-          if (result.success) {
+      const result = await window.secureElectronAPI.profile.create(name, description, copyFromCurrent);
+      
+      if (result.success) {
             safeResolve({ name, description });
-          } else {
-            alert(`Failed to create profile: ${result.error}`);
-          }
+      } else {
+        alert(`Failed to create profile: ${result.error}`);
+      }
         } catch (error) {
           alert(`Failed to create profile: ${error.message}`);
         }
@@ -603,8 +603,8 @@ function initializeProfileUI(options = {}) {
         
         if (name) {
           safeResolve({ name, description });
-        } else {
-          alert('Profile name is required');
+      } else {
+        alert('Profile name is required');
           nameInput.focus();
         }
       }, { once: true });
@@ -622,7 +622,7 @@ function initializeProfileUI(options = {}) {
       }, 500);
     });
   }
-  
+
   /**
    * Show profile management modal and wait for user interaction
    * @param {HTMLElement} modal - Modal element
@@ -654,9 +654,9 @@ function initializeProfileUI(options = {}) {
       };
       
       // Handle create new profile
-      createBtn?.addEventListener('click', async () => {
-        const createResult = await showCreateProfileModal();
-        if (createResult) {
+    createBtn?.addEventListener('click', async () => {
+      const createResult = await showCreateProfileModal();
+      if (createResult) {
           changesMade = true;
           // Refresh the modal would go here, but for now just close
           safeResolve(true);
@@ -680,23 +680,55 @@ function initializeProfileUI(options = {}) {
               alert(`Failed to switch to profile: ${result.error}`);
             }
           } else if (action === 'delete') {
-            if (confirm(`Are you sure you want to delete the profile "${profileName}"? This action cannot be undone.`)) {
-              const result = await window.secureElectronAPI.profile.delete(profileName);
-              if (result.success) {
+        if (confirm(`Are you sure you want to delete the profile "${profileName}"? This action cannot be undone.`)) {
+          const result = await window.secureElectronAPI.profile.delete(profileName);
+          if (result.success) {
                 changesMade = true;
                 // Refresh modal would go here
                 safeResolve(true);
-              } else {
-                alert(`Failed to delete profile: ${result.error}`);
-              }
-            }
+          } else {
+            alert(`Failed to delete profile: ${result.error}`);
+          }
+        }
           } else if (action === 'edit') {
             const currentDescription = e.target.dataset.description || e.target.closest('[data-description]')?.dataset.description || '';
             const editResult = await showEditProfileModal(profileName, currentDescription);
             if (editResult) {
-              changesMade = true;
-              // TODO: Add API call to update profile info
-              safeResolve(true);
+              // Call API to update profile info
+              try {
+                const updateResult = await window.secureElectronAPI.profile.update(
+                  profileName,
+                  editResult.name,
+                  editResult.description
+                );
+                
+                if (updateResult.success) {
+                  changesMade = true;
+                  debugLog?.info('Profile updated successfully', { 
+            module: 'profile-ui', 
+                    function: 'showProfileManagementModalAndWait',
+                    originalName: profileName,
+                    newName: editResult.name 
+                  });
+                  
+                  // Refresh the profile list to show updated information
+                  const profilesResult = await window.secureElectronAPI.profile.getAvailable();
+                  if (profilesResult.success) {
+                    populateProfileManagementList(profileList, profilesResult.profiles, editResult.name);
+                  }
+                  
+                  safeResolve(true);
+          } else {
+                  throw new Error(updateResult.error || 'Failed to update profile');
+          }
+        } catch (error) {
+                debugLog?.error('Failed to update profile', { 
+            module: 'profile-ui', 
+                  function: 'showProfileManagementModalAndWait',
+            error: error.message 
+          });
+                alert(`Failed to update profile: ${error.message}`);
+              }
             }
           }
         } catch (error) {

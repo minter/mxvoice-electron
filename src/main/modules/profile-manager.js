@@ -440,6 +440,84 @@ async function saveProfilePreferences(profileName, preferences) {
 }
 
 /**
+ * Update profile information (name and/or description)
+ * @param {string} originalName - Original profile name
+ * @param {string} newName - New profile name (can be same as original)
+ * @param {string} description - New description
+ * @returns {Promise<boolean>} Success status
+ */
+async function updateProfile(originalName, newName, description) {
+  try {
+    debugLog?.info('Updating profile information', { 
+      module: 'profile-manager', 
+      function: 'updateProfile',
+      originalName,
+      newName,
+      description 
+    });
+
+    const registry = await loadProfileRegistry();
+    
+    if (!registry.profiles[originalName]) {
+      throw new Error(`Profile '${originalName}' not found`);
+    }
+
+    // If name is changing, we need to handle renaming
+    if (originalName !== newName) {
+      // Check if new name already exists
+      if (registry.profiles[newName]) {
+        throw new Error(`Profile '${newName}' already exists`);
+      }
+
+      // Copy profile data with new name
+      registry.profiles[newName] = {
+        ...registry.profiles[originalName],
+        name: newName,
+        description: description || '',
+        last_used: Date.now()
+      };
+
+      // Remove old profile
+      delete registry.profiles[originalName];
+
+      // Update active profile if it was the one being renamed
+      if (registry.active_profile === originalName) {
+        registry.active_profile = newName;
+      }
+
+      debugLog?.info('Profile renamed successfully', { 
+        module: 'profile-manager', 
+        function: 'updateProfile',
+        originalName,
+        newName 
+      });
+    } else {
+      // Just updating description
+      registry.profiles[originalName].description = description || '';
+      registry.profiles[originalName].last_used = Date.now();
+
+      debugLog?.info('Profile description updated successfully', { 
+        module: 'profile-manager', 
+        function: 'updateProfile',
+        profileName: originalName 
+      });
+    }
+
+    await saveProfileRegistry(registry);
+    return true;
+  } catch (error) {
+    debugLog?.error('Failed to update profile', { 
+      module: 'profile-manager', 
+      function: 'updateProfile',
+      originalName,
+      newName,
+      error: error.message 
+    });
+    return false;
+  }
+}
+
+/**
  * Update profile last used timestamp
  * @param {string} profileName - Profile name
  * @returns {Promise<boolean>} Success status
@@ -655,6 +733,7 @@ export {
   profileExists,
   validateProfileName,
   createProfile,
+  updateProfile,
   loadProfilePreferences,
   saveProfilePreferences,
   deleteProfile,

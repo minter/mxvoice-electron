@@ -677,6 +677,19 @@ function registerAllHandlers() {
     }
   });
 
+  ipcMain.handle('profile-update', async (event, originalName, newName, description) => {
+    try {
+      if (!profileManagerInstance) {
+        throw new Error('Profile manager not initialized');
+      }
+      const result = await profileManagerInstance.updateProfile(originalName, newName, description);
+      return { success: result };
+    } catch (error) {
+      debugLog?.error('Profile update error:', { module: 'ipc-handlers', function: 'profile-update', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('profile-switch', async (event, name) => {
     try {
       if (!profileManagerInstance) {
