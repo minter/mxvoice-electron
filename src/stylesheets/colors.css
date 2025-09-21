@@ -218,6 +218,107 @@ h6 a,
   background-color: var(--header-color);
 }
 
+/* CRITICAL: Bootstrap 5 Modal Dark Mode Fixes */
+[data-bs-theme="dark"] .modal-content {
+  background-color: var(--panel-color) !important;
+  color: var(--card-text) !important;
+  border: 1px solid var(--card-border) !important;
+}
+
+[data-bs-theme="dark"] .modal-header {
+  background-color: var(--header-color) !important;
+  color: var(--card-text) !important;
+  border-bottom: 1px solid var(--card-border) !important;
+}
+
+[data-bs-theme="dark"] .modal-title {
+  color: var(--card-text) !important;
+}
+
+[data-bs-theme="dark"] .modal-body {
+  background-color: var(--panel-color) !important;
+  color: var(--card-text) !important;
+}
+
+[data-bs-theme="dark"] .modal-footer {
+  background-color: var(--header-color) !important;
+  color: var(--card-text) !important;
+  border-top: 1px solid var(--card-border) !important;
+}
+
+/* Fix all text elements in dark mode modals */
+[data-bs-theme="dark"] .modal h1,
+[data-bs-theme="dark"] .modal h2,
+[data-bs-theme="dark"] .modal h3,
+[data-bs-theme="dark"] .modal h4,
+[data-bs-theme="dark"] .modal h5,
+[data-bs-theme="dark"] .modal h6,
+[data-bs-theme="dark"] .modal p,
+[data-bs-theme="dark"] .modal span,
+[data-bs-theme="dark"] .modal div,
+[data-bs-theme="dark"] .modal label,
+[data-bs-theme="dark"] .modal .text-muted {
+  color: var(--card-text) !important;
+}
+
+/* Ensure Bootstrap close button works in dark mode */
+[data-bs-theme="dark"] .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Bootstrap 5 Button Dark Mode Fixes */
+[data-bs-theme="dark"] .btn-secondary {
+  background-color: var(--header-color) !important;
+  border-color: var(--card-border) !important;
+  color: var(--card-text) !important;
+}
+
+[data-bs-theme="dark"] .btn-secondary:hover {
+  background-color: var(--highlight-color) !important;
+  border-color: var(--highlight-color) !important;
+  color: var(--card-text) !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-primary {
+  color: var(--card-text) !important;
+  border-color: var(--card-border) !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-primary:hover {
+  background-color: #007bff !important;
+  border-color: #007bff !important;
+  color: white !important;
+}
+
+/* Bootstrap 5 Form Control Dark Mode Fixes */
+[data-bs-theme="dark"] .form-control {
+  background-color: var(--input-background) !important;
+  border-color: var(--input-border) !important;
+  color: var(--input-text) !important;
+}
+
+[data-bs-theme="dark"] .form-control:focus {
+  background-color: var(--input-background) !important;
+  border-color: #007bff !important;
+  color: var(--input-text) !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
+
+[data-bs-theme="dark"] .form-check-input {
+  background-color: var(--input-background) !important;
+  border-color: var(--input-border) !important;
+}
+
+[data-bs-theme="dark"] .form-check-input:checked {
+  background-color: #007bff !important;
+  border-color: #007bff !important;
+}
+
+/* Bootstrap 5 Badge Dark Mode Fixes */
+[data-bs-theme="dark"] .badge {
+  color: white !important;
+}
+
 #selected_row {
   color: white !important;
   background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;

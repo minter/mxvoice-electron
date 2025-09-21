@@ -445,6 +445,32 @@ h6.card-header {
   font-weight: 500;
 }
 
+/* CRITICAL: Bootstrap 5 Dark Mode Profile Card Fixes */
+[data-bs-theme="dark"] .profile-selection-card {
+  border: 1px solid var(--card-border) !important;
+  background-color: var(--panel-color) !important;
+  color: var(--card-text) !important;
+}
+
+[data-bs-theme="dark"] .profile-selection-card:hover {
+  background-color: var(--header-color) !important;
+  border-color: var(--highlight-color) !important;
+}
+
+[data-bs-theme="dark"] .profile-selection-card .card-title,
+[data-bs-theme="dark"] .profile-selection-card .card-text,
+[data-bs-theme="dark"] .profile-selection-card h6,
+[data-bs-theme="dark"] .profile-selection-card p,
+[data-bs-theme="dark"] .profile-selection-card span,
+[data-bs-theme="dark"] .profile-selection-card div {
+  color: var(--card-text) !important;
+  background: none !important;
+}
+
+[data-bs-theme="dark"] .profile-protected-indicator {
+  color: #17a2b8 !important;
+}
+
 .song_title {
   font-weight: bold;
 }

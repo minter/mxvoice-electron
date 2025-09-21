@@ -129,26 +129,33 @@ document.addEventListener('themeChanged', (event) => {
 
 ## CSS Integration
 
-The module applies theme classes to the document body:
+The module applies theme classes to the document body and Bootstrap 5 data attributes:
 
-- `.theme-light` - Applied when light theme is active
-- `.theme-dark` - Applied when dark theme is active
+- **Body Classes**: `.theme-light` or `.theme-dark` - Applied when theme is active
+- **Bootstrap 5 Native**: `data-bs-theme="light"` or `data-bs-theme="dark"` - Applied to `<html>` element
 
-These classes can be used for theme-specific CSS rules:
+This dual approach ensures both custom components and Bootstrap components respect the theme:
 
 ```css
-/* Light theme styles */
+/* Custom theme styles using classes */
 .theme-light {
   --background-color: #ffffff;
   --text-color: #000000;
 }
 
-/* Dark theme styles */
 .theme-dark {
   --background-color: #1a1a1a;
   --text-color: #ffffff;
 }
+
+/* Bootstrap 5 native theme styles using data attributes */
+[data-bs-theme="dark"] .modal-content {
+  background-color: var(--panel-color) !important;
+  color: var(--card-text) !important;
+}
 ```
+
+**CRITICAL**: The `data-bs-theme` attribute is essential for proper Bootstrap 5 component theming (modals, buttons, forms, etc.).
 
 ## Dependencies
 
