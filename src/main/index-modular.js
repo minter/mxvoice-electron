@@ -47,6 +47,11 @@ import * as fileOperations from './modules/file-operations.js';
 import initializeMainDebugLog from './modules/debug-log.js';
 import { initMainLogService } from './modules/log-service.js';
 
+// Import profile system modules
+import * as profileManager from './modules/profile-manager.js';
+import * as profileMigration from './modules/profile-migration.js';
+import * as profileStore from './modules/profile-store.js';
+
 // Initialize Octokit for GitHub API (will be initialized after debugLog is available)
 let octokit;
 
@@ -660,31 +665,38 @@ function trackUser() {
   });
 }
 
-// Initialize all modules with dependencies
-async function initializeModules() {
-  debugLog.info('Starting module initialization', { function: "initializeModules", hasDb: !!db, dbType: typeof db });
+// Global initialization - happens once per app
+let globalInitialized = false;
+
+async function initializeGlobalModules() {
+  if (globalInitialized) {
+    debugLog.info('Global modules already initialized, skipping', { function: "initializeGlobalModules" });
+    return;
+  }
+
+  debugLog.info('Starting global module initialization', { function: "initializeGlobalModules", hasDb: !!db, dbType: typeof db });
   
   // Ensure database is initialized before proceeding
   if (!db) {
-    debugLog.warn('Database not ready, attempting to initialize...', { function: "initializeModules" });
+    debugLog.warn('Database not ready, attempting to initialize...', { function: "initializeGlobalModules" });
     try {
-      debugLog.info('Calling initializeMainDatabaseWrapper...', { function: "initializeModules" });
+      debugLog.info('Calling initializeMainDatabaseWrapper...', { function: "initializeGlobalModules" });
       await initializeMainDatabaseWrapper();
-      debugLog.info('initializeMainDatabaseWrapper completed', { function: "initializeModules", hasDb: !!db, dbType: typeof db });
+      debugLog.info('initializeMainDatabaseWrapper completed', { function: "initializeGlobalModules", hasDb: !!db, dbType: typeof db });
     } catch (error) {
       debugLog.error('Failed to initialize database for modules', { 
-        function: "initializeModules",
+        function: "initializeGlobalModules",
         error: error.message,
         stack: error.stack
       });
       // Continue without database
     }
   } else {
-    debugLog.info('Database already available, proceeding with modules', { function: "initializeModules" });
+    debugLog.info('Database already available, proceeding with modules', { function: "initializeGlobalModules" });
   }
 
   const dependencies = {
-    mainWindow,
+    mainWindow: null, // Global modules don't need mainWindow
     db,
     store,
     audioInstances,
@@ -692,17 +704,30 @@ async function initializeModules() {
     fileOperations,
     debugLog,
     updateState,
-    logService
+    logService,
+    profileManager,
+    profileStore
   };
 
-  // Initialize each module
-  appSetup.initializeAppSetup(dependencies);
+  // Initialize profile system modules (global)
+  debugLog?.info('Initializing profile system', { 
+    function: "initializeGlobalModules" 
+  });
   
+  profileMigration.initializeProfileMigration(dependencies);
+  profileManager.initializeProfileManager(dependencies);
+  profileStore.initializeProfileStore({ ...dependencies, profileManager });
+  
+  debugLog?.info('Profile system initialized', { 
+    function: "initializeGlobalModules" 
+  });
+  
+  // Initialize IPC handlers (global)
   debugLog?.info('Initializing IPC handlers', { 
-    function: "initializeModules" 
+    function: "initializeGlobalModules" 
   });
   debugLog?.info('Module dependencies status', { 
-    function: "initializeModules",
+    function: "initializeGlobalModules",
     hasDb: !!dependencies.db,
     hasAutoUpdater: !!dependencies.autoUpdater,
     autoUpdaterType: typeof dependencies.autoUpdater
@@ -711,10 +736,49 @@ async function initializeModules() {
   ipcHandlers.initializeIpcHandlers(dependencies);
   
   debugLog?.info('IPC handlers initialized', { 
-    function: "initializeModules" 
+    function: "initializeGlobalModules" 
   });
   
+  // Initialize file operations (global)
   fileOperations.initializeFileOperations(dependencies);
+  
+  globalInitialized = true;
+  debugLog.info('Global module initialization completed', { function: "initializeGlobalModules" });
+}
+
+// Window-specific initialization - happens per window
+async function initializeWindowModules(window) {
+  debugLog.info('Starting window-specific module initialization', { function: "initializeWindowModules" });
+
+  const dependencies = {
+    mainWindow: window,
+    db,
+    store,
+    audioInstances,
+    autoUpdater,
+    fileOperations,
+    debugLog,
+    updateState,
+    logService,
+    profileManager,
+    profileStore
+  };
+
+  // Initialize app setup (window-specific)
+  appSetup.initializeAppSetup(dependencies);
+  
+  debugLog.info('Window-specific module initialization completed', { function: "initializeWindowModules" });
+}
+
+// Legacy function - kept for backward compatibility
+async function initializeModules() {
+  debugLog.info('Legacy initializeModules called - delegating to new pattern', { function: "initializeModules" });
+  
+  // Use the new initialization pattern
+  await initializeGlobalModules();
+  if (mainWindow) {
+    await initializeWindowModules(mainWindow);
+  }
 }
 
 // Main window creation function
@@ -726,6 +790,20 @@ const createWindow = async () => {
     debugLog.info('Checking first run...', { function: "createWindow" });
     await checkFirstRun();
     debugLog.info('First run check completed', { function: "createWindow" });
+    
+    // Perform profile migration if needed
+    debugLog.info('Checking profile migration...', { function: "createWindow" });
+    if (profileMigration.needsMigration()) {
+      debugLog.info('Profile migration needed, performing migration...', { function: "createWindow" });
+      const migrationSuccess = await profileMigration.performMigration();
+      if (migrationSuccess) {
+        debugLog.info('Profile migration completed successfully', { function: "createWindow" });
+      } else {
+        debugLog.error('Profile migration failed', { function: "createWindow" });
+      }
+    } else {
+      debugLog.info('No profile migration needed', { function: "createWindow" });
+    }
     
     // Initialize database connection for main process
     debugLog.info('Initializing main database...', { function: "createWindow" });
@@ -759,11 +837,17 @@ const createWindow = async () => {
 
     mainWindow = appSetup.createWindow(windowOptions);
 
-    // Initialize modules with dependencies AFTER mainWindow is created
-    await initializeModules();
+    // Initialize global modules (IPC handlers, profile system) - happens once
+    await initializeGlobalModules();
+    
+    // Initialize window-specific modules
+    await initializeWindowModules(mainWindow);
 
     // Set up window state saving now that store is available
     appSetup.setupWindowStateSaving();
+    
+    // Apply profile-specific window state now that profile system is initialized
+    appSetup.applyProfileWindowState();
 
     // Migrate old preferences after modules are initialized
     fileOperations.migrateOldPreferences();
@@ -798,11 +882,17 @@ const createWindow = async () => {
 
       mainWindow = appSetup.createWindow(windowOptions);
       
-      // Initialize basic modules without database
-      await initializeModules();
+      // Initialize global modules (IPC handlers, profile system) - happens once
+      await initializeGlobalModules();
+      
+      // Initialize window-specific modules
+      await initializeWindowModules(mainWindow);
       
       // Set up window state saving now that store is available
       appSetup.setupWindowStateSaving();
+      
+      // Apply profile-specific window state now that profile system is initialized
+      appSetup.applyProfileWindowState();
       
       // Create the menu
       appSetup.createApplicationMenu();

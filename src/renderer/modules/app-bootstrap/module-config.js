@@ -23,7 +23,8 @@ export const moduleConfig = [
   { name: 'audio', path: '../audio/index.js', required: false },
   { name: 'ui', path: '../ui/index.js', required: true },
   { name: 'debugLog', path: '../debug-log/index.js', required: false },
-  { name: 'database', path: '../database/index.js', required: false }
+  { name: 'database', path: '../database/index.js', required: false },
+  { name: 'profileManagement', path: '../profile-management/index.js', required: true }
 ];
 
 export default moduleConfig;

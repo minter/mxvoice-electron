@@ -15,6 +15,7 @@ export default class UIInteractionEvents {
     
     this.eventsAttached = false;
     this.uiHandlers = new Map();
+    this.startupComplete = false;
   }
 
   /**
@@ -199,10 +200,19 @@ export default class UIInteractionEvents {
   attachWindowEvents() {
     const windowResizeHandler = (event) => {
       try {
+        // Try multiple ways to access scaleScrollable function
         if (window.scaleScrollable) {
           window.scaleScrollable();
+        } else if (window.functionRegistry && window.functionRegistry.scaleScrollable) {
+          window.functionRegistry.scaleScrollable();
+        } else if (window.utilsModule && typeof window.utilsModule.scaleScrollable === 'function') {
+          window.utilsModule.scaleScrollable();
         } else {
-          this.debugLog?.warn('scaleScrollable function not available');
+          // During startup, the function may not be available yet - silently skip
+          // Only warn if this happens frequently (not during initial startup)
+          if (this.startupComplete) {
+            this.debugLog?.warn('scaleScrollable function not available after startup');
+          }
         }
       } catch (error) {
         this.debugLog?.error('Error in window resize handler:', error);
@@ -361,11 +371,20 @@ export default class UIInteractionEvents {
   }
 
   /**
+   * Mark startup as complete to enable warnings for missing functions
+   */
+  markStartupComplete() {
+    this.startupComplete = true;
+    this.debugLog?.debug('UI interaction events startup marked as complete');
+  }
+
+  /**
    * Get UI interaction events status
    */
   getStatus() {
     return {
       eventsAttached: this.eventsAttached,
+      startupComplete: this.startupComplete,
       handlerCount: this.uiHandlers.size,
       handlers: Array.from(this.uiHandlers.keys())
     };

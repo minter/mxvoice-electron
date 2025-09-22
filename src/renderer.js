@@ -65,10 +65,42 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
   try {
     window.logInfo('🔧 Starting module loading...');
     
+    // Load modules first
+    await AppBootstrap.loadBasicModules(
+      AppBootstrap.moduleConfig,
+      moduleRegistry,
+      window.logInfo,
+      window.logError,
+      window.logWarn,
+      {
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: window.store
+      }
+    );
+    
+    // Make profile management module available globally AFTER module loading
+    console.log('🔍 MODULE REGISTRY DEBUG: moduleRegistry keys:', Object.keys(moduleRegistry));
+    console.log('🔍 MODULE REGISTRY DEBUG: profileManagement exists:', !!moduleRegistry.profileManagement);
+    console.log('🔍 MODULE REGISTRY DEBUG: profileManagement type:', typeof moduleRegistry.profileManagement);
+    
+    if (moduleRegistry.profileManagement) {
+      window.profileManagement = moduleRegistry.profileManagement;
+      window.logInfo('Profile management module made available on window object (early)');
+      console.log('✅ Profile management module attached to window (early)');
+    } else {
+      console.log('❌ Profile management module NOT found in moduleRegistry');
+    }
+
     // Initialize the application using the app-initialization module
     window.logInfo('🚀 Initializing application components...');
     const initSuccess = await AppInitialization.initialize({
       debug: {
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: window.store
+      },
+      profileManagement: {
         electronAPI: window.electronAPI,
         db: window.db,
         store: window.store
@@ -89,23 +121,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     
     // Debug logger already initialized early, no need to reinitialize
     
-    window.logInfo('Application initialization completed, proceeding with module loading...');
-    
-    // Load basic modules using the bootstrap module
-    window.logInfo('Loading modules using bootstrap configuration...');
-    await AppBootstrap.loadBasicModules(
-      AppBootstrap.moduleConfig, 
-      moduleRegistry, 
-      window.logInfo, 
-      window.logError, 
-      window.logWarn,
-      {
-        electronAPI: window.electronAPI,
-        db: window.db,
-        store: window.store,
-        debugLog: window.debugLog
-      }
-    );
+    window.logInfo('Application initialization completed, modules already loaded...');
     window.logInfo('Basic module loading completed');
     
     // Hotkeys module will be initialized via EventCoordination system
@@ -156,6 +172,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     window.logDebug('Preferences', !!moduleRegistry.preferences);
     window.logDebug('Database', !!moduleRegistry.database);
     window.logDebug('Utils', !!moduleRegistry.utils);
+    window.logDebug('Profile Management', !!moduleRegistry.profileManagement);
 
     // Make module registry available for debugging and development
     window.moduleRegistry = moduleRegistry;
@@ -164,6 +181,12 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     if (moduleRegistry.holdingTank) {
       window.holdingTank = moduleRegistry.holdingTank;
       window.logInfo('Holding tank module made available on window object');
+    }
+    
+    // Make profile management module available globally
+    if (moduleRegistry.profileManagement) {
+      window.profileManagement = moduleRegistry.profileManagement;
+      window.logInfo('Profile management module made available on window object');
     }
     
     // Ensure window.debugLog is available for modules
@@ -355,6 +378,52 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               }
             });
           }
+
+          // Profile management → showProfileManagementModal
+          if (typeof window.secureElectronAPI.events.onShowProfileManagement === 'function') {
+            window.secureElectronAPI.events.onShowProfileManagement(() => {
+              if (window.profileManagement && typeof window.profileManagement.showProfileManagementModal === 'function') {
+                window.profileManagement.showProfileManagementModal();
+              } else {
+                window.logWarn('Profile management not available when show_profile_management fired');
+              }
+            });
+          }
+
+        // Create profile → showCreateProfileModal
+        if (typeof window.secureElectronAPI.events.onShowCreateProfile === 'function') {
+          window.secureElectronAPI.events.onShowCreateProfile(() => {
+            if (window.profileManagement && typeof window.profileManagement.showCreateProfileModal === 'function') {
+              window.profileManagement.showCreateProfileModal();
+            } else {
+              window.logWarn('Profile management not available when show_create_profile fired');
+            }
+          });
+        }
+
+        // Profile switched → reload app state
+        if (typeof window.secureElectronAPI.events.onProfileSwitched === 'function') {
+          window.secureElectronAPI.events.onProfileSwitched((profileData) => {
+            window.logInfo('Profile switched, reloading app state', profileData);
+            
+            // Close any open modals
+            const modals = document.querySelectorAll('.modal.show');
+            modals.forEach(modal => {
+              const modalInstance = bootstrap.Modal.getInstance(modal);
+              if (modalInstance) {
+                modalInstance.hide();
+              }
+            });
+            
+            // Update profile indicator
+            if (window.profileManagement && typeof window.profileManagement.updateProfileIndicator === 'function') {
+              window.profileManagement.updateProfileIndicator(profileData.profileName);
+            }
+            
+            // Reload the page to apply new profile settings
+            window.location.reload();
+          });
+        }
         }
       } catch (bridgeError) {
         window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });

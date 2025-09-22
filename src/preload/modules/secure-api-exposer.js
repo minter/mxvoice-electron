@@ -171,6 +171,19 @@ const secureElectronAPI = {
     showFilePicker: (options) => ipcRenderer.invoke('show-file-picker', options)
   },
 
+  // Profile operations - secure profile management
+  profile: {
+    getAvailable: () => ipcRenderer.invoke('profile-get-available'),
+    getActive: () => ipcRenderer.invoke('profile-get-active'),
+    create: (name, description, copyFromCurrent) => ipcRenderer.invoke('profile-create', name, description, copyFromCurrent),
+    delete: (name) => ipcRenderer.invoke('profile-delete', name),
+    update: (originalName, newName, description) => ipcRenderer.invoke('profile-update', originalName, newName, description),
+    switch: (name) => ipcRenderer.invoke('profile-switch', name),
+    setActive: (name) => ipcRenderer.invoke('profile-set-active', name),
+    shouldShowSelection: () => ipcRenderer.invoke('profile-should-show-selection'),
+    markSelectionShown: () => ipcRenderer.invoke('profile-mark-selection-shown')
+  },
+
   // Logs API - centralized logging exposed securely
   logs: {
     write: (level, message, context = null, meta = {}) =>
@@ -369,6 +382,25 @@ const secureElectronAPI = {
       const handler = (_event, ...args) => callback(...args);
       ipcRenderer.on('show_preferences', handler);
       return () => ipcRenderer.removeListener('show_preferences', handler);
+    },
+
+    // Profile menu events
+    onShowProfileManagement: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('show_profile_management', handler);
+      return () => ipcRenderer.removeListener('show_profile_management', handler);
+    },
+
+    onShowCreateProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('show_create_profile', handler);
+      return () => ipcRenderer.removeListener('show_create_profile', handler);
+    },
+
+    onProfileSwitched: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('profile-switched', handler);
+      return () => ipcRenderer.removeListener('profile-switched', handler);
     },
 
     onEditSelectedSong: (callback) => {

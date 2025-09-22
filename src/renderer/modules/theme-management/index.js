@@ -191,12 +191,20 @@ class ThemeManagementModule {
   applyThemeToDOM() {
     try {
       const body = document.body;
+      const html = document.documentElement;
       
       // Remove existing theme classes
       body.classList.remove('theme-light', 'theme-dark');
       
       // Add the current theme class
       body.classList.add(`theme-${this.effectiveTheme}`);
+      
+      // CRITICAL: Set Bootstrap 5 native data-bs-theme attribute for proper component theming
+      if (this.effectiveTheme === 'dark') {
+        html.setAttribute('data-bs-theme', 'dark');
+      } else {
+        html.setAttribute('data-bs-theme', 'light');
+      }
       
       // Set CSS custom property for JavaScript access
       document.documentElement.style.setProperty('--current-theme', this.effectiveTheme);
