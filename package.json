@@ -169,7 +169,7 @@
     "n-readlines": "^1.0.1",
     "node-sqlite3-wasm": "^0.8.49",
     "uuid": "^13.0.0",
-    "wavesurfer.js": "^7.10.1",
+    "wavesurfer.js": "^7.10.3",
     "yarn": "^1.22.22"
   },
   "devDependencies": {
