@@ -154,7 +154,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^7.0.1",
+    "@fortawesome/fontawesome-free": "^7.1.0",
     "@octokit/rest": "^22.0.0",
     "animate.css": "^4.1.1",
     "bootstrap": "^5.3.8",
