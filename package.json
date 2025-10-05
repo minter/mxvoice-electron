@@ -120,9 +120,11 @@
     "linux": {
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
       "category": "AudioVideo",
-      "icon": "src/assets/icons/mxvoice.png",
+      "icon": "src/assets/icons/mxvoice-square.png",
       "synopsis": "Improv Audio Software",
       "description": "Professional audio software for improvisation and live performance",
+      "vendor": "Wade Minter",
+      "maintainer": "H. Wade Minter <wade@wademinter.com>",
       "target": [
         "AppImage",
         "deb"
@@ -141,7 +143,18 @@
       ]
     },
     "appImage": {
-      "category": "AudioVideo"
+      "category": "AudioVideo",
+      "license": "MIT",
+      "desktop": {
+        "Name": "Mx. Voice",
+        "Comment": "Professional audio software for improvisation and live performance",
+        "Keywords": "audio;music;improv;performance;sound;audioediting",
+        "Terminal": false,
+        "Type": "Application",
+        "Categories": "AudioVideo;Audio;Music;AudioEditing",
+        "MimeType": "audio/mpeg;audio/mp3;audio/wav;audio/x-wav",
+        "StartupNotify": true
+      }
     },
     "publish": [
       {
