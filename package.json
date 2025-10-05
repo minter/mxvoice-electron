@@ -144,7 +144,6 @@
     },
     "appImage": {
       "category": "AudioVideo",
-      "license": "MIT",
       "synopsis": "Professional audio software for improvisation and live performance",
       "description": "Mx. Voice is professional audio software for improvisation and live performance. Create and manage audio clips, organize them into categories, and trigger them with customizable hotkeys."
     },
