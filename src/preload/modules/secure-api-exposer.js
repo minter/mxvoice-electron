@@ -386,12 +386,13 @@ const secureElectronAPI = {
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
   },
   
-  // Profile functions
-  profile: {
-    getCurrent: () => ipcRenderer.invoke('profile:get-current'),
-    getDirectory: (type) => ipcRenderer.invoke('profile:get-directory', type),
-    switchProfile: () => ipcRenderer.invoke('profile:switch')
-  },
+    // Profile functions
+    profile: {
+      getCurrent: () => ipcRenderer.invoke('profile:get-current'),
+      getDirectory: (type) => ipcRenderer.invoke('profile:get-directory', type),
+      switchProfile: () => ipcRenderer.invoke('profile:switch'),
+      saveState: (state) => ipcRenderer.invoke('profile:save-state', state)
+    },
   
   // Utility functions
   utils: {

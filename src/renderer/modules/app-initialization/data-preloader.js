@@ -21,11 +21,13 @@ export class DataPreloader {
     try {
       this.logInfo('Starting initial data loading...');
       
-      // Clear holding tank store to ensure we load new HTML
-      await this.clearHoldingTankStore();
+      // NOTE: clearHoldingTankStore() disabled for profile state management
+      // Profile state will restore holding tank content automatically
+      // await this.clearHoldingTankStore();
       
-      // Load hotkeys data
-      await this.loadHotkeys();
+      // NOTE: loadHotkeys() disabled for profile state management  
+      // Profile state will restore hotkey content automatically
+      // await this.loadHotkeys();
       
       // Load column order
       await this.loadColumnOrder();

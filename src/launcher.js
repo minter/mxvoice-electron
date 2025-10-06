@@ -155,23 +155,56 @@ async function launchApp() {
 }
 
 /**
+ * Show create profile modal
+ */
+function showCreateModal() {
+  const modal = document.getElementById('create-modal');
+  const nameInput = document.getElementById('profile-name-input');
+  const descInput = document.getElementById('profile-desc-input');
+  
+  // Clear inputs
+  nameInput.value = '';
+  descInput.value = '';
+  
+  // Show modal
+  modal.style.display = 'flex';
+  
+  // Focus name input
+  setTimeout(() => nameInput.focus(), 100);
+}
+
+/**
+ * Hide create profile modal
+ */
+function hideCreateModal() {
+  const modal = document.getElementById('create-modal');
+  modal.style.display = 'none';
+}
+
+/**
  * Create a new profile
  */
-async function createNewProfile() {
-  const name = prompt('Enter profile name:');
+async function createNewProfile(event) {
+  event.preventDefault();
   
-  if (!name || !name.trim()) {
+  const nameInput = document.getElementById('profile-name-input');
+  const descInput = document.getElementById('profile-desc-input');
+  
+  const name = nameInput.value.trim();
+  const description = descInput.value.trim();
+  
+  if (!name) {
+    showError('Profile name is required');
     return;
   }
   
-  const description = prompt('Enter profile description (optional):') || '';
-  
   try {
-    const result = await window.launcherAPI.createProfile(name.trim(), description.trim());
+    const result = await window.launcherAPI.createProfile(name, description);
     
     if (result.success) {
+      hideCreateModal();
       await loadProfiles();
-      selectProfile(name.trim());
+      selectProfile(name);
       clearError();
     } else {
       showError(result.error || 'Failed to create profile');
@@ -216,12 +249,29 @@ async function deleteProfile(profileName) {
  */
 function setupEventListeners() {
   document.getElementById('launch-btn').addEventListener('click', launchApp);
-  document.getElementById('create-btn').addEventListener('click', createNewProfile);
+  document.getElementById('create-btn').addEventListener('click', showCreateModal);
+  document.getElementById('cancel-create-btn').addEventListener('click', hideCreateModal);
+  document.getElementById('create-form').addEventListener('submit', createNewProfile);
   
-  // Enter key launches app if profile selected
+  // Enter key launches app if profile selected (only when modal is not open)
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && selectedProfile) {
+    const modal = document.getElementById('create-modal');
+    const modalOpen = modal.style.display === 'flex';
+    
+    if (e.key === 'Enter' && selectedProfile && !modalOpen) {
       launchApp();
+    }
+    
+    // Escape key closes modal
+    if (e.key === 'Escape' && modalOpen) {
+      hideCreateModal();
+    }
+  });
+  
+  // Click outside modal to close
+  document.getElementById('create-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'create-modal') {
+      hideCreateModal();
     }
   });
 }

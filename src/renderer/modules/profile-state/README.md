@@ -1,0 +1,154 @@
+# Profile State Persistence Module
+
+Automatically saves and restores profile-specific UI state without user interaction.
+
+## Purpose
+
+Preserves user's working state across app restarts and profile switches:
+- All hotkey tabs (song IDs + custom tab names)
+- All holding tank tabs (song IDs + custom tab names)
+
+State is saved to `profiles/<ProfileName>/state.json` and automatically loaded on profile start.
+
+## Features
+
+- **Auto-save on:** Window close, app quit, profile switch
+- **Auto-load on:** Profile start (during app initialization)
+- **Data validation:** Skips songs that have been deleted from database
+- **Tab preservation:** Maintains custom tab names and song order
+
+## Usage
+
+### Initialization
+
+```javascript
+import { initializeProfileState } from './modules/profile-state/index.js';
+
+// Initialize during app bootstrap (pass module references for auto-save)
+initializeProfileState({
+  hotkeysModule: window.hotkeysModule,
+  holdingTankModule: window.holdingTank
+});
+```
+
+### Manual Save
+
+```javascript
+import { saveProfileState } from './modules/profile-state/index.js';
+
+// Manually save current state
+await saveProfileState({
+  hotkeysModule: window.hotkeysModule,
+  holdingTankModule: window.holdingTank
+});
+```
+
+### Manual Load
+
+```javascript
+import { loadProfileState } from './modules/profile-state/index.js';
+
+// Load state with module instances for restoration
+await loadProfileState({
+  hotkeysModule: window.hotkeysModule,
+  holdingTankModule: window.holdingTank
+});
+```
+
+## State Format
+
+```json
+{
+  "version": "1.0.0",
+  "timestamp": 1234567890,
+  "hotkeys": [
+    {
+      "tabNumber": 1,
+      "tabName": "Rock Songs",
+      "hotkeys": {
+        "f1": "song-id-1",
+        "f2": "song-id-2"
+      }
+    }
+  ],
+  "holdingTank": [
+    {
+      "tabNumber": 1,
+      "tabName": "Tonight's Set",
+      "songIds": ["song-id-1", "song-id-2", "song-id-3"]
+    }
+  ]
+}
+```
+
+## Integration Points
+
+### App Bootstrap
+Module is initialized during app bootstrap after hotkeys and holding tank modules are ready.
+
+### App Initialization
+State is loaded after database is ready but before UI is shown.
+
+### Window Close
+`beforeunload` event triggers automatic state save.
+
+### Profile Switch
+IPC handler saves state before closing app.
+
+## Data Validation
+
+When loading state:
+- Each song ID is validated against the database
+- Deleted songs are skipped (not restored)
+- Invalid data is logged but doesn't break initialization
+- Missing state file is treated as fresh start
+
+## Differences from Manual Save/Load
+
+| Feature | Auto-State | Manual Files (.mrv/.hld) |
+|---------|-----------|-------------------------|
+| User interaction | None (automatic) | User initiates |
+| Scope | All tabs | Single tab |
+| Persistence | Profile directory | User-chosen location |
+| Format | JSON | Plain text array |
+| Purpose | Preserve session | Export/import/backup |
+
+## File Location
+
+State files are stored per-profile:
+```
+userData/
+└── profiles/
+    ├── Default User/
+    │   └── state.json
+    └── Bob/
+        └── state.json
+```
+
+## Export Interface
+
+```javascript
+// Initialize module (sets up auto-save)
+export function initializeProfileState(options): Object
+  // options: { hotkeysModule, holdingTankModule }
+
+// Extract current state without saving
+export function extractProfileState(): Object
+
+// Save state to file
+export function saveProfileState(options): Promise<{success: boolean, error?: string}>
+  // options: { hotkeysModule, holdingTankModule }
+
+// Load state from file
+export function loadProfileState(options): Promise<{success: boolean, loaded: boolean, error?: string}>
+  // options: { hotkeysModule, holdingTankModule }
+```
+
+## Dependencies
+
+- `window.secureElectronAPI.profile.getDirectory()` - Get profile-specific paths
+- `window.secureElectronAPI.fileSystem` - File operations
+- `window.secureElectronAPI.database` - Song validation
+- `hotkeysModule` - Hotkey restoration
+- `holdingTankModule` - Holding tank restoration
+

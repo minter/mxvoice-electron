@@ -8,6 +8,7 @@
 import { ipcMain, dialog, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import { pipeline } from 'stream/promises';
 import { createReadStream, createWriteStream } from 'fs';
 import os from 'os';
@@ -1406,8 +1407,55 @@ function registerAllHandlers() {
     }
   });
 
+  // Profile: Save state (called on window close)
+  ipcMain.handle('profile:save-state', async (event, state) => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const profileDir = mainModule.getProfileDirectory('state');
+      const stateFile = path.join(profileDir, 'state.json');
+      
+      debugLog?.info('Saving profile state', { 
+        module: 'ipc-handlers',
+        function: 'profile:save-state',
+        file: stateFile
+      });
+      
+      // Ensure directory exists
+      await fsPromises.mkdir(profileDir, { recursive: true });
+      
+      // Write state file
+      await fsPromises.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
+      
+      debugLog?.info('Profile state saved successfully', { 
+        module: 'ipc-handlers',
+        function: 'profile:save-state',
+        file: stateFile
+      });
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Error saving profile state', { 
+        module: 'ipc-handlers',
+        function: 'profile:save-state',
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('profile:switch', async () => {
     try {
+      debugLog?.info('Profile switch requested, will save state and relaunch', { 
+        module: 'ipc-handlers',
+        function: 'profile:switch' 
+      });
+      
+      // Note: State is saved by beforeunload handler in renderer
+      // We just need to close and relaunch
+      
+      // Give renderer time to save state
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Close main window and relaunch launcher
       if (mainWindow) {
         mainWindow.close();

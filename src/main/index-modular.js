@@ -97,6 +97,8 @@ export function getProfileDirectory(type) {
       return path.join(profilesDir, sanitized, 'hotkeys');
     case 'holding-tank':
       return path.join(profilesDir, sanitized, 'holding-tank');
+    case 'state':
+      return path.join(profilesDir, sanitized);
     case 'preferences':
       return path.join(profilesDir, sanitized);
     default:

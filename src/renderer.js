@@ -207,10 +207,38 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logInfo('Holding tank module made available on window object');
     }
     
+    // Make hotkeys module available
+    if (moduleRegistry.hotkeys) {
+      window.hotkeysModule = moduleRegistry.hotkeys;
+      window.logInfo('Hotkeys module made available on window object');
+    }
+    
     // Ensure window.debugLog is available for modules
     if (moduleRegistry.debugLog && !window.debugLog) {
       window.debugLog = moduleRegistry.debugLog;
       window.logInfo('Global debugLog made available');
+    }
+    
+    // Initialize profile state persistence
+    if (moduleRegistry.profileState) {
+      window.logInfo('🔄 Initializing profile state persistence...');
+      moduleRegistry.profileState.initializeProfileState({
+        hotkeysModule: moduleRegistry.hotkeys,
+        holdingTankModule: moduleRegistry.holdingTank
+      });
+      
+      // Load saved profile state (hotkeys + holding tank)
+      window.logInfo('📂 Loading profile state...');
+      const loadResult = await moduleRegistry.profileState.loadProfileState({
+        hotkeysModule: moduleRegistry.hotkeys,
+        holdingTankModule: moduleRegistry.holdingTank
+      });
+      
+      if (loadResult.loaded) {
+        window.logInfo('✅ Profile state restored successfully');
+      } else {
+        window.logInfo('ℹ️ No previous state found, starting fresh');
+      }
     }
     
     // Initialize function coordination system

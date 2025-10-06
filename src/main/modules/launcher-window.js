@@ -103,7 +103,7 @@ function registerLauncherHandlers() {
   // Get all profiles
   ipcMain.handle('launcher:get-profiles', async () => {
     try {
-      const profiles = profileManager.getAvailableProfiles();
+      const profiles = await profileManager.getAvailableProfiles();
       
       debugLog?.info('Launcher: Retrieved profiles', { 
         module: 'launcher-window',
@@ -131,7 +131,7 @@ function registerLauncherHandlers() {
         name 
       });
       
-      const result = profileManager.createProfile(name, description);
+      const result = await profileManager.createProfile(name, description);
       
       if (result.success) {
         debugLog?.info('Launcher: Profile created', { 
@@ -162,7 +162,7 @@ function registerLauncherHandlers() {
         name 
       });
       
-      const result = profileManager.deleteProfile(name);
+      const result = await profileManager.deleteProfile(name);
       
       if (result.success) {
         debugLog?.info('Launcher: Profile deleted', { 
