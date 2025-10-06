@@ -51,10 +51,29 @@ function initializeSettingsController(options = {}) {
     
     // Use new store API for saving preferences
     if (electronAPI && electronAPI.store) {
+      // Get current values from form
+      const dbDir = (document.getElementById('preferences-database-directory')?.value) || '';
+      const musicDir = (document.getElementById('preferences-song-directory')?.value) || '';
+      const hotkeyDir = (document.getElementById('preferences-hotkey-directory')?.value) || '';
+      
+      // Validate that critical directory preferences are not being cleared
+      // Only save if the value is non-empty OR if it was already empty
+      const validateDirectory = async (key) => {
+        const current = await getPreference(key, electronAPI);
+        return current.success ? current.value : '';
+      };
+      
+      const [currentDbDir, currentMusicDir, currentHotkeyDir] = await Promise.all([
+        validateDirectory('database_directory'),
+        validateDirectory('music_directory'),
+        validateDirectory('hotkey_directory')
+      ]);
+      
       const preferences = {
-        database_directory: (document.getElementById('preferences-database-directory')?.value) || '',
-        music_directory: (document.getElementById('preferences-song-directory')?.value) || '',
-        hotkey_directory: (document.getElementById('preferences-hotkey-directory')?.value) || '',
+        // Only update directory if new value is non-empty OR current value is already empty
+        database_directory: dbDir || currentDbDir,
+        music_directory: musicDir || currentMusicDir,
+        hotkey_directory: hotkeyDir || currentHotkeyDir,
         fade_out_seconds: (document.getElementById('preferences-fadeout-seconds')?.value) || '',
         debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
         prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
@@ -73,47 +92,35 @@ function initializeSettingsController(options = {}) {
           setPreference("screen_mode", preferences.screen_mode, electronAPI)
         ]);
         
-        const successCount = results.filter(result => result.success).length;
+        const successCount = results.filter(result => result && result.success).length;
+        
+        // Apply new theme immediately if screen mode preference changed
+        // (do this regardless of other preferences succeeding)
+        if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
+          try {
+            const newScreenMode = preferences.screen_mode;
+            debugLog?.info('Applying theme after preference change', { newTheme: newScreenMode });
+            await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
+            debugLog?.info('Theme applied successfully', { newTheme: newScreenMode });
+          } catch (themeError) {
+            debugLog?.warn('Failed to apply theme', { error: themeError });
+          }
+        } else if (window.setUserTheme) {
+          try {
+            const newScreenMode = preferences.screen_mode;
+            debugLog?.info('Applying theme via global function', { newTheme: newScreenMode });
+            await window.setUserTheme(newScreenMode);
+            debugLog?.info('Theme applied successfully via global function', { newTheme: newScreenMode });
+          } catch (themeError) {
+            debugLog?.warn('Failed to apply theme via global function', { error: themeError });
+          }
+        }
+        
         if (successCount === 7) {
           debugLog?.info('All preferences saved successfully', { 
             function: "savePreferences",
             data: { successCount, totalPreferences: 7 }
           });
-          
-          // Apply new theme immediately if screen mode preference changed
-          debugLog?.info('Checking theme management availability', { 
-            hasThemeManagement: !!window.moduleRegistry?.themeManagement,
-            hasSetUserTheme: !!(window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme),
-            hasGlobalThemeManagement: !!window.setUserTheme,
-            newScreenMode: preferences.screen_mode
-          });
-          
-          // Try module registry first, then fallback to global function
-          if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
-            try {
-              const newScreenMode = preferences.screen_mode;
-              debugLog?.info('Calling themeManagement.setUserTheme via moduleRegistry', { newTheme: newScreenMode });
-              await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
-              debugLog?.info('Theme applied immediately after preference change', { newTheme: newScreenMode });
-            } catch (themeError) {
-              debugLog?.warn('Failed to apply theme after preference change', { error: themeError });
-            }
-          } else if (window.setUserTheme) {
-            try {
-              const newScreenMode = preferences.screen_mode;
-              debugLog?.info('Calling setUserTheme via global function', { newTheme: newScreenMode });
-              await window.setUserTheme(newScreenMode);
-              debugLog?.info('Theme applied immediately after preference change via global function', { newTheme: newScreenMode });
-            } catch (themeError) {
-              debugLog?.warn('Failed to apply theme after preference change via global function', { error: themeError });
-            }
-          } else {
-            debugLog?.warn('Theme management not available for immediate theme switching', {
-              hasThemeManagement: !!window.moduleRegistry?.themeManagement,
-              hasSetUserTheme: !!(window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme),
-              hasGlobalThemeManagement: !!window.setUserTheme
-            });
-          }
         } else {
           debugLog?.warn('Some preferences failed to save', { 
             function: "savePreferences",

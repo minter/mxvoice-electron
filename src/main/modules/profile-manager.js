@@ -498,7 +498,21 @@ async function loadProfilePreferences(profileName) {
     }
     
     const data = fs.readFileSync(preferencesPath, 'utf8');
-    return JSON.parse(data);
+    let preferences = JSON.parse(data);
+    
+    // Clean up any deprecated keys that should be in state.json
+    delete preferences.hotkeys;
+    delete preferences.holding_tank;
+    delete preferences.browser_width;
+    delete preferences.browser_height;
+    delete preferences.window_state;
+    
+    // Unwrap any corrupted nested success objects
+    for (const key of Object.keys(preferences)) {
+      preferences[key] = unwrapValue(preferences[key]);
+    }
+    
+    return preferences;
   } catch (error) {
     debugLog?.error('Failed to load profile preferences', { 
       module: 'profile-manager', 
@@ -508,6 +522,19 @@ async function loadProfilePreferences(profileName) {
     });
     return null;
   }
+}
+
+/**
+ * Unwrap nested {success: true, value: ...} objects
+ * @param {any} value - Value to unwrap
+ * @returns {any} Unwrapped value
+ */
+function unwrapValue(value) {
+  // If value is an object with success and value properties, unwrap it recursively
+  if (value && typeof value === 'object' && 'success' in value && 'value' in value) {
+    return unwrapValue(value.value);
+  }
+  return value;
 }
 
 /**

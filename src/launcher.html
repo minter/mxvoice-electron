@@ -12,19 +12,55 @@
       box-sizing: border-box;
     }
 
+    :root {
+      --bg-gradient-start: #667eea;
+      --bg-gradient-end: #764ba2;
+      --container-bg: #ffffff;
+      --text-primary: #333333;
+      --text-secondary: #666666;
+      --item-bg: #f8f9fa;
+      --item-hover-bg: #e9ecef;
+      --item-selected-bg: #e7eaf6;
+      --border-color: #ddd;
+      --error-bg: #f8d7da;
+      --error-border: #f5c6cb;
+      --error-text: #721c24;
+      --modal-bg: #ffffff;
+      --scrollbar-track: #f1f1f1;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-gradient-start: #2d3748;
+        --bg-gradient-end: #1a202c;
+        --container-bg: #2d3748;
+        --text-primary: #f7fafc;
+        --text-secondary: #cbd5e0;
+        --item-bg: #1a202c;
+        --item-hover-bg: #374151;
+        --item-selected-bg: #4a5568;
+        --border-color: #4a5568;
+        --error-bg: #7f1d1d;
+        --error-border: #991b1b;
+        --error-text: #fecaca;
+        --modal-bg: #1a202c;
+        --scrollbar-track: #1a202c;
+      }
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       padding: 20px;
-      color: #333;
+      color: var(--text-primary);
     }
 
     .launcher-container {
-      background: white;
+      background: var(--container-bg);
       border-radius: 16px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       max-width: 500px;
@@ -33,7 +69,7 @@
     }
 
     .launcher-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
       color: white;
       padding: 30px;
       text-align: center;
@@ -62,8 +98,8 @@
     }
 
     .profile-item {
-      background: #f8f9fa;
-      border: 2px solid transparent;
+      background: var(--item-bg);
+      border: 2px solid var(--border-color);
       border-radius: 12px;
       padding: 16px;
       margin-bottom: 10px;
@@ -73,16 +109,21 @@
       justify-content: space-between;
       align-items: center;
     }
+    
+    @media (prefers-color-scheme: light) {
+      .profile-item {
+        border-color: transparent;
+      }
+    }
 
     .profile-item:hover {
-      background: #e9ecef;
-      border-color: #667eea;
-      transform: translateX(4px);
+      background: var(--item-hover-bg);
+      border-color: var(--bg-gradient-start);
     }
 
     .profile-item.selected {
-      background: #e7eaf6;
-      border-color: #667eea;
+      background: var(--item-selected-bg);
+      border-color: var(--bg-gradient-start);
     }
 
     .profile-info {
@@ -92,13 +133,13 @@
     .profile-name {
       font-size: 16px;
       font-weight: 600;
-      color: #333;
+      color: var(--text-primary);
       margin-bottom: 4px;
     }
 
     .profile-description {
       font-size: 13px;
-      color: #666;
+      color: var(--text-secondary);
     }
 
     .profile-actions {
@@ -150,7 +191,6 @@
     }
 
     .btn-primary:hover {
-      transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
 
@@ -162,20 +202,32 @@
     }
 
     .btn-secondary {
-      background: white;
-      color: #667eea;
-      border: 2px solid #667eea;
+      background: transparent;
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
     }
 
     .btn-secondary:hover {
-      background: #f8f9fa;
-      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+    
+    @media (prefers-color-scheme: light) {
+      .btn-secondary {
+        color: var(--bg-gradient-start);
+        border-color: var(--bg-gradient-start);
+      }
+      
+      .btn-secondary:hover {
+        background: var(--item-bg);
+        border-color: var(--bg-gradient-start);
+      }
     }
 
     .empty-state {
       text-align: center;
       padding: 40px 20px;
-      color: #666;
+      color: var(--text-secondary);
     }
 
     .empty-state p {
@@ -184,9 +236,9 @@
     }
 
     .error-message {
-      background: #f8d7da;
-      border: 1px solid #f5c6cb;
-      color: #721c24;
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error-text);
       padding: 12px;
       border-radius: 8px;
       margin-bottom: 16px;
@@ -199,23 +251,23 @@
     }
 
     .profile-list::-webkit-scrollbar-track {
-      background: #f1f1f1;
+      background: var(--scrollbar-track);
       border-radius: 10px;
     }
 
     .profile-list::-webkit-scrollbar-thumb {
-      background: #667eea;
+      background: var(--bg-gradient-start);
       border-radius: 10px;
     }
 
     .profile-list::-webkit-scrollbar-thumb:hover {
-      background: #764ba2;
+      background: var(--bg-gradient-end);
     }
 
     .loading {
       text-align: center;
       padding: 40px;
-      color: #666;
+      color: var(--text-secondary);
     }
 
     .loading::after {
@@ -244,7 +296,7 @@
     }
 
     .modal-content {
-      background: white;
+      background: var(--modal-bg);
       padding: 30px;
       border-radius: 12px;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
@@ -253,7 +305,7 @@
 
     .modal-content h2 {
       margin: 0 0 20px 0;
-      color: #333;
+      color: var(--text-primary);
       font-size: 22px;
     }
 
@@ -264,7 +316,7 @@
     .form-group label {
       display: block;
       margin-bottom: 8px;
-      color: #555;
+      color: var(--text-secondary);
       font-weight: 600;
       font-size: 14px;
     }
@@ -272,15 +324,17 @@
     .form-group input {
       width: 100%;
       padding: 10px;
-      border: 2px solid #ddd;
+      border: 2px solid var(--border-color);
       border-radius: 6px;
       font-size: 15px;
       transition: border-color 0.2s;
+      background: var(--container-bg);
+      color: var(--text-primary);
     }
 
     .form-group input:focus {
       outline: none;
-      border-color: #667eea;
+      border-color: var(--bg-gradient-start);
     }
 
     .modal-actions {
