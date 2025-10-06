@@ -1,7 +1,7 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "4.0.0-pre.11",
+  "version": "4.0.1-pre.1",
   "description": "Improv Audio Software",
   "type": "module",
   "repository": "https://github.com/minter/mxvoice-electron",
@@ -25,8 +25,8 @@
     "release:win": "electron-builder --win --publish always",
     "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
-    "build:linux:deb": "electron-builder --linux --target deb",
-    "build:linux:appimage": "electron-builder --linux --target AppImage",
+    "build:linux:deb": "electron-builder --linux deb",
+    "build:linux:appimage": "electron-builder --linux AppImage",
     "release:linux:draft": "cross-env EP_DRAFT=true electron-builder --linux --publish always",
     "release:linux:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --linux --publish always",
     "release:linux": "electron-builder --linux --publish always",
@@ -120,9 +120,11 @@
     "linux": {
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
       "category": "AudioVideo",
-      "icon": "src/assets/icons/mxvoice.png",
+      "icon": "src/assets/icons/mxvoice-square.png",
       "synopsis": "Improv Audio Software",
       "description": "Professional audio software for improvisation and live performance",
+      "vendor": "Wade Minter",
+      "maintainer": "H. Wade Minter <wade@wademinter.com>",
       "target": [
         "AppImage",
         "deb"
@@ -141,7 +143,9 @@
       ]
     },
     "appImage": {
-      "category": "AudioVideo"
+      "category": "AudioVideo",
+      "synopsis": "Professional audio software for improvisation and live performance",
+      "description": "Mx. Voice is professional audio software for improvisation and live performance. Create and manage audio clips, organize them into categories, and trigger them with customizable hotkeys."
     },
     "publish": [
       {
@@ -154,12 +158,12 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^7.0.1",
+    "@fortawesome/fontawesome-free": "^7.1.0",
     "@octokit/rest": "^22.0.0",
     "animate.css": "^4.1.1",
     "bootstrap": "^5.3.8",
     "electron-log": "^5.4.3",
-    "electron-store": "^10.1.0",
+    "electron-store": "^11.0.0",
     "electron-updater": "^6.6.8",
     "electron-util": "^1.0.0",
     "howler": "^2.2.3",
@@ -169,16 +173,16 @@
     "n-readlines": "^1.0.1",
     "node-sqlite3-wasm": "^0.8.49",
     "uuid": "^13.0.0",
-    "wavesurfer.js": "^7.10.1",
+    "wavesurfer.js": "^7.11.0",
     "yarn": "^1.22.22"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
-    "cross-env": "^10.0.0",
-    "electron": "^38.1.2",
+    "@playwright/test": "^1.55.1",
+    "cross-env": "^10.1.0",
+    "electron": "^38.2.0",
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
     "node-abi": "4.14.0",
-    "playwright": "^1.55.0"
+    "playwright": "^1.55.1"
   }
 }

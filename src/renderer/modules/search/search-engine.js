@@ -24,6 +24,9 @@ try {
 import * as liveSearch from './live-search.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 
+// Track active search to prevent race conditions
+let activeSearchId = 0;
+
 // Synchronous version for immediate use in search results
 function getCategoryNameSync(categoryCode) {
   if (!categoryCode) {
@@ -42,9 +45,14 @@ function getCategoryNameSync(categoryCode) {
  * This function handles the main search functionality
  */
 function searchData() {
+  // Increment search ID to invalidate any in-flight searches
+  activeSearchId++;
+  const thisSearchId = activeSearchId;
+  
   debugLog?.info('🔍 Search data function called', { 
     module: 'search-engine',
-    function: 'searchData'
+    function: 'searchData',
+    searchId: thisSearchId
   });
   
   // Get search term and category
@@ -132,11 +140,24 @@ function searchData() {
     queryParams: queryParams
   });
 
-  // Clear previous results
+  // Clear previous results and show loading indicator
   const thead = document.querySelector('#search_results thead');
   const tbody = document.querySelector('#search_results tbody');
   if (tbody) tbody.querySelectorAll('tr').forEach(tr => tr.remove());
   if (thead) thead.style.display = '';
+  
+  // Show loading indicator
+  if (tbody) {
+    const loadingRow = document.createElement('tr');
+    loadingRow.id = 'search-loading-indicator';
+    const loadingCell = document.createElement('td');
+    loadingCell.colSpan = 5;
+    loadingCell.style.textAlign = 'center';
+    loadingCell.style.padding = '20px';
+    loadingCell.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
+    loadingRow.appendChild(loadingCell);
+    tbody.appendChild(loadingRow);
+  }
 
   // Get font size from shared state
   const fontSize = sharedState.get('fontSize') || 11;
@@ -160,8 +181,26 @@ function searchData() {
     });
     
     window.secureElectronAPI.database.query("SELECT * from mrvoice" + queryString + " ORDER BY category,info,title,artist", queryParams).then(result => {
+      // Check if this search is still the active one
+      if (thisSearchId !== activeSearchId) {
+        debugLog?.info('🔍 Search cancelled, newer search in progress', { 
+          module: 'search-engine',
+          function: 'searchData',
+          thisSearchId: thisSearchId,
+          activeSearchId: activeSearchId
+        });
+        return;
+      }
+      
       if (result.success) {
         const tbody = document.querySelector('#search_results tbody');
+        
+        // Remove loading indicator
+        const loadingIndicator = document.getElementById('search-loading-indicator');
+        if (loadingIndicator) {
+          loadingIndicator.remove();
+        }
+        
         const fragment = document.createDocumentFragment();
         result.data.forEach((row) => {
           const categoryName = getCategoryNameSync(row.category);
@@ -204,18 +243,41 @@ function searchData() {
         }
         document.getElementById('omni_search')?.select();
       } else {
+        // Check if this search is still the active one
+        if (thisSearchId !== activeSearchId) {
+          return;
+        }
+        
         debugLog?.warn('❌ Search query failed:', { 
           module: 'search-engine',
           function: 'searchData',
           error: result.error
         });
+        
+        // Remove loading indicator on error
+        const loadingIndicator = document.getElementById('search-loading-indicator');
+        if (loadingIndicator) {
+          loadingIndicator.remove();
+        }
       }
     }).catch(error => {
+      // Check if this search is still the active one
+      if (thisSearchId !== activeSearchId) {
+        return;
+      }
+      
       debugLog?.warn('❌ Database API error:', { 
         module: 'search-engine',
         function: 'searchData',
         error: error.message
       });
+      
+      // Remove loading indicator on error
+      const loadingIndicator = document.getElementById('search-loading-indicator');
+      if (loadingIndicator) {
+        loadingIndicator.remove();
+      }
+      
       // Fallback to legacy database access
       if (typeof db !== 'undefined') {
         const stmt = db.prepare(

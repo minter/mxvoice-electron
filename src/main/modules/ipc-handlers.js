@@ -209,50 +209,7 @@ function registerAllHandlers() {
         hasParams: params && params.length > 0
       });
       
-      // First, let's check if the table exists and what's in it
-      try {
-        const tableCheckStmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='mrvoice'");
-        const tableExists = tableCheckStmt.all([]);
-        tableCheckStmt.finalize();
-        
-        debugLog?.info('Table existence check', { 
-          module: 'ipc-handlers', 
-          function: 'database-query',
-          tableExists: tableExists,
-          tableCount: tableExists.length
-        });
-        
-        if (tableExists.length > 0) {
-          // Check table structure
-          const structureStmt = db.prepare("PRAGMA table_info(mrvoice)");
-          const structure = structureStmt.all([]);
-          structureStmt.finalize();
-          
-          debugLog?.info('Table structure', { 
-            module: 'ipc-handlers', 
-            function: 'database-query',
-            structure: structure
-          });
-          
-          // Check row count
-          const countStmt = db.prepare("SELECT COUNT(*) as count FROM mrvoice");
-          const countResult = countStmt.all([]);
-          countStmt.finalize();
-          
-          debugLog?.info('Table row count', { 
-            module: 'ipc-handlers', 
-            function: 'database-query',
-            countResult: countResult
-          });
-        }
-      } catch (error) {
-        debugLog?.warn('Table check failed', { 
-          module: 'ipc-handlers', 
-          function: 'database-query',
-          error: error.message
-        });
-      }
-      
+      // Execute the actual query
       const stmt = db.prepare(sql);
       result = stmt.all(params || []);
       stmt.finalize();

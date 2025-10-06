@@ -1,3 +1,29 @@
+// Set window title based on platform (macOS HIG compliance)
+// On macOS, window title should be empty; on other platforms, use default from HTML
+async function setWindowTitle() {
+  try {
+    const platformResponse = await window.secureElectronAPI.os.platform();
+    
+    // Handle the IPC response format: { success: true, data: 'darwin' }
+    const platform = platformResponse?.data || platformResponse;
+    
+    if (platform === 'darwin') {
+      // macOS: use zero-width space character (completely invisible)
+      document.title = '\u200B'; // Zero-width space
+    }
+    // For other platforms, leave the default title from HTML file
+  } catch (error) {
+    // If platform detection fails, leave the default title from HTML file
+  }
+}
+
+// Set title immediately when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setWindowTitle);
+} else {
+  setWindowTitle();
+}
+
 // Remove legacy global variables and use shared state instead
 // Legacy globals moved to shared state module
 
