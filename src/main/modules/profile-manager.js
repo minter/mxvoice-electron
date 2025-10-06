@@ -87,7 +87,7 @@ function sanitizeProfileName(name) {
 function getDefaultPreferences() {
   return {
     // Audio settings
-    fade_out_seconds: 2,
+    fade_out_seconds: 3,
     
     // Appearance & UI
     screen_mode: 'auto',

@@ -74,7 +74,7 @@ function initializeSettingsController(options = {}) {
         database_directory: dbDir || currentDbDir,
         music_directory: musicDir || currentMusicDir,
         hotkey_directory: hotkeyDir || currentHotkeyDir,
-        fade_out_seconds: (document.getElementById('preferences-fadeout-seconds')?.value) || '',
+        fade_out_seconds: parseInt(document.getElementById('preferences-fadeout-seconds')?.value) || 3,
         debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
         prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
         screen_mode: (document.getElementById('preferences-screen-mode')?.value) || 'auto'

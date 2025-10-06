@@ -29,15 +29,39 @@ const PROFILE_PREFERENCES = [
  * @returns {Promise<{success: boolean, value: any}>}
  */
 export async function getPreference(key, electronAPI) {
+  // Validate electronAPI
+  if (!electronAPI) {
+    console.error('[PREF-ADAPTER] electronAPI is undefined');
+    return { success: false, error: 'electronAPI is undefined' };
+  }
+  
   if (GLOBAL_PREFERENCES.includes(key)) {
     // Use global store for directories
+    if (!electronAPI.store) {
+      console.error('[PREF-ADAPTER] electronAPI.store is undefined');
+      return { success: false, error: 'electronAPI.store is undefined' };
+    }
     return await electronAPI.store.get(key);
   } else if (PROFILE_PREFERENCES.includes(key)) {
-    // Use profile preferences
+    // Use profile preferences (with fallback to global store during initialization)
+    if (!electronAPI.profile) {
+      // During app initialization, profile API may not be ready yet
+      // Fall back to global store temporarily
+      if (electronAPI.store) {
+        return await electronAPI.store.get(key);
+      } else {
+        console.error('[PREF-ADAPTER] Neither electronAPI.profile nor electronAPI.store is available');
+        return { success: false, error: 'No preference API available' };
+      }
+    }
     return await electronAPI.profile.getPreference(key);
   } else {
     // Unknown preference, try global store as fallback
     console.warn(`Unknown preference key: ${key}, using global store`);
+    if (!electronAPI.store) {
+      console.error('[PREF-ADAPTER] electronAPI.store is undefined for fallback');
+      return { success: false, error: 'electronAPI.store is undefined' };
+    }
     return await electronAPI.store.get(key);
   }
 }
@@ -50,15 +74,39 @@ export async function getPreference(key, electronAPI) {
  * @returns {Promise<{success: boolean}>}
  */
 export async function setPreference(key, value, electronAPI) {
+  // Validate electronAPI
+  if (!electronAPI) {
+    console.error('[PREF-ADAPTER] electronAPI is undefined in setPreference');
+    return { success: false, error: 'electronAPI is undefined' };
+  }
+  
   if (GLOBAL_PREFERENCES.includes(key)) {
     // Use global store for directories
+    if (!electronAPI.store) {
+      console.error('[PREF-ADAPTER] electronAPI.store is undefined in setPreference');
+      return { success: false, error: 'electronAPI.store is undefined' };
+    }
     return await electronAPI.store.set(key, value);
   } else if (PROFILE_PREFERENCES.includes(key)) {
-    // Use profile preferences
+    // Use profile preferences (with fallback to global store during initialization)
+    if (!electronAPI.profile) {
+      // During app initialization, profile API may not be ready yet
+      // Fall back to global store temporarily
+      if (electronAPI.store) {
+        return await electronAPI.store.set(key, value);
+      } else {
+        console.error('[PREF-ADAPTER] Neither electronAPI.profile nor electronAPI.store is available in setPreference');
+        return { success: false, error: 'No preference API available' };
+      }
+    }
     return await electronAPI.profile.setPreference(key, value);
   } else {
     // Unknown preference, try global store as fallback
     console.warn(`Unknown preference key: ${key}, using global store`);
+    if (!electronAPI.store) {
+      console.error('[PREF-ADAPTER] electronAPI.store is undefined for fallback in setPreference');
+      return { success: false, error: 'electronAPI.store is undefined' };
+    }
     return await electronAPI.store.set(key, value);
   }
 }
