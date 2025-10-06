@@ -28,8 +28,14 @@ export default function initializeUIManager(options = {}) {
     fontSize = size;
     document.querySelectorAll('.song').forEach(el => { el.style.fontSize = fontSize + 'px'; });
     try {
-    if (electronAPI && electronAPI.store) {
-        secureStore.set('font-size', fontSize).catch(err => {
+      // Save to profile preferences (not global store)
+      if (electronAPI && electronAPI.profile) {
+        electronAPI.profile.setPreference('font_size', fontSize).catch(err => {
+          debugLog?.warn('Failed to save font size to profile', { module: 'ui-manager', function: 'setFontSize', error: err });
+        });
+      } else if (electronAPI && electronAPI.store) {
+        // Fallback to global store if profile API not available
+        secureStore.set('font_size', fontSize).catch(err => {
           debugLog?.warn('Failed to save font size', { module: 'ui-manager', function: 'setFontSize', error: err });
         });
       }
@@ -86,11 +92,14 @@ export default function initializeUIManager(options = {}) {
     };
     try {
         if (electronAPI && electronAPI.store) {
+          // Note: In the new profile architecture, hotkeys and holding_tank are auto-saved to state.json
+          // This clears any legacy stored data. Profile preferences (font_size, column_order) are intentionally preserved.
           Promise.all([
           secureStore.delete('holding_tank'),
           secureStore.delete('hotkeys'),
-          secureStore.delete('column_order'),
-          secureStore.delete('font-size')
+          secureStore.delete('column_order'), // Legacy cleanup
+          secureStore.delete('font-size'), // Legacy cleanup (old key)
+          secureStore.delete('font_size') // Current key cleanup
         ]).finally(reload);
       } else {
         reload();

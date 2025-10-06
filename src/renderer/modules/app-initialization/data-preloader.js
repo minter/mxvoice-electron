@@ -195,18 +195,32 @@ export class DataPreloader {
   }
 
   /**
-   * Load font size from electron store
+   * Load font size from profile preferences
    * @returns {Promise<void>}
    */
   async loadFontSize() {
     try {
+      // Try to load from profile preferences first (new system)
+      if (window.electronAPI && window.electronAPI.profile) {
+        const result = await window.electronAPI.profile.getPreference('font_size');
+        if (result && result.success && result.value !== undefined && result.value !== null) {
+          this.logInfo(`Font size loaded from profile preferences: ${result.value}`);
+          return;
+        }
+      }
+      
+      // Fallback to legacy store for backward compatibility
       const hasFontSize = await secureStore.has("font-size");
       if (hasFontSize) {
         const size = await secureStore.get("font-size");
         if (size !== undefined && size !== null) {
-          // Font size is now managed by shared state
-          // This is kept for backward compatibility but doesn't set moduleRegistry.fontSize
-          this.logInfo(`Font size loaded from store: ${size}`);
+          // Migrate to profile preferences if available
+          if (window.electronAPI && window.electronAPI.profile) {
+            await window.electronAPI.profile.setPreference('font_size', size);
+            this.logInfo(`Font size migrated from legacy store to profile: ${size}`);
+          } else {
+            this.logInfo(`Font size loaded from legacy store: ${size}`);
+          }
         }
       }
     } catch (error) {

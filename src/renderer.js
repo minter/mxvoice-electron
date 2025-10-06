@@ -244,6 +244,31 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       } else {
         window.logInfo('ℹ️ No previous state found, starting fresh');
       }
+      
+      // Set up profile switch event listener
+      const apiToUse = window.secureElectronAPI || window.electronAPI;
+      if (apiToUse && apiToUse.events && apiToUse.events.onSwitchProfile) {
+        window.logInfo('🔀 Setting up profile switch event listener...');
+        apiToUse.events.onSwitchProfile(async () => {
+          window.logInfo('🔀 Profile switch requested from menu');
+          if (moduleRegistry.profileState && moduleRegistry.profileState.switchProfileWithSave) {
+            await moduleRegistry.profileState.switchProfileWithSave();
+          } else {
+            window.logError('Profile state module not available for switch');
+          }
+        });
+      } else if (apiToUse && apiToUse.onSwitchProfile) {
+        // Fallback to legacy namespace
+        window.logInfo('🔀 Setting up profile switch event listener (legacy)...');
+        apiToUse.onSwitchProfile(async () => {
+          window.logInfo('🔀 Profile switch requested from menu');
+          if (moduleRegistry.profileState && moduleRegistry.profileState.switchProfileWithSave) {
+            await moduleRegistry.profileState.switchProfileWithSave();
+          } else {
+            window.logError('Profile state module not available for switch');
+          }
+        });
+      }
     }
     
     // Initialize function coordination system

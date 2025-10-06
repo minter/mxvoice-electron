@@ -383,19 +383,26 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('delete_selected_song', handler);
     },
     
+    onSwitchProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:switch-profile', handler);
+      return () => ipcRenderer.removeListener('menu:switch-profile', handler);
+    },
+    
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
   },
   
-    // Profile functions
-    profile: {
-      getCurrent: () => ipcRenderer.invoke('profile:get-current'),
-      getDirectory: (type) => ipcRenderer.invoke('profile:get-directory', type),
-      switchProfile: () => ipcRenderer.invoke('profile:switch'),
-      saveState: (state) => ipcRenderer.invoke('profile:save-state', state),
-      getPreference: (key) => ipcRenderer.invoke('profile:get-preference', key),
-      setPreference: (key, value) => ipcRenderer.invoke('profile:set-preference', key, value),
-      getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences')
-    },
+  // Profile functions
+  profile: {
+    getCurrent: () => ipcRenderer.invoke('profile:get-current'),
+    getDirectory: (type) => ipcRenderer.invoke('profile:get-directory', type),
+    switchProfile: () => ipcRenderer.invoke('profile:switch'),
+    saveState: (state) => ipcRenderer.invoke('profile:save-state', state),
+    saveStateBeforeSwitch: (state) => ipcRenderer.invoke('profile:save-state-before-switch', state),
+    getPreference: (key) => ipcRenderer.invoke('profile:get-preference', key),
+    setPreference: (key, value) => ipcRenderer.invoke('profile:set-preference', key, value),
+    getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences')
+  },
   
   // Utility functions
   utils: {
@@ -447,6 +454,7 @@ function exposeSecureAPI(injectedDebugLog) {
         onBulkAddDialogLoad: secureElectronAPI.events.onBulkAddDialogLoad,
         onAddDialogLoad: secureElectronAPI.events.onAddDialogLoad,
         onDisplayReleaseNotes: secureElectronAPI.events.onDisplayReleaseNotes,
+        onSwitchProfile: secureElectronAPI.events.onSwitchProfile,
         removeAllListeners: secureElectronAPI.events.removeAllListeners,
         database: secureElectronAPI.database,
         fileSystem: secureElectronAPI.fileSystem,
@@ -456,6 +464,7 @@ function exposeSecureAPI(injectedDebugLog) {
         os: secureElectronAPI.os,
         utils: secureElectronAPI.utils,
         testing: secureElectronAPI.testing,
+        profile: secureElectronAPI.profile,
         // Provide logs under legacy namespace for compatibility with existing renderer code
         logs: secureElectronAPI.logs
       });

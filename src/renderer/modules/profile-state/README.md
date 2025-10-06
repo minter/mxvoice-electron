@@ -12,10 +12,11 @@ State is saved to `profiles/<ProfileName>/state.json` and automatically loaded o
 
 ## Features
 
-- **Auto-save on:** Window close, app quit, profile switch
+- **Auto-save on:** Window close, app quit (via beforeunload), **and explicitly before profile switch**
 - **Auto-load on:** Profile start (during app initialization)
 - **Data validation:** Skips songs that have been deleted from database
 - **Tab preservation:** Maintains custom tab names and song order
+- **Explicit save before switch:** State is saved synchronously before profile switching to ensure no data loss
 
 ## Usage
 
@@ -54,6 +55,18 @@ await loadProfileState({
   holdingTankModule: window.holdingTank
 });
 ```
+
+### Switch Profile with Save
+
+```javascript
+import { switchProfileWithSave } from './modules/profile-state/index.js';
+
+// Switch profiles after explicitly saving current state
+// This is automatically called when user selects "Switch Profile..." from menu
+await switchProfileWithSave();
+```
+
+**Note:** Profile switching now explicitly saves state *before* initiating the switch, ensuring no data loss even if the window closes immediately.
 
 ## State Format
 

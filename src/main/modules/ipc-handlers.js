@@ -1544,11 +1544,8 @@ function registerAllHandlers() {
         function: 'profile:switch' 
       });
       
-      // Note: State is saved by beforeunload handler in renderer
-      // We just need to close and relaunch
-      
-      // Give renderer time to save state
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Note: State must be saved BEFORE we tell the renderer we're switching
+      // The renderer should call profile:save-state-before-switch first
       
       // Close main window and relaunch launcher
       if (mainWindow) {
@@ -1565,11 +1562,64 @@ function registerAllHandlers() {
       return { success: false, error: error.message };
     }
   });
+  
+  // Profile: Save state before switch (explicit save, not relying on beforeunload)
+  ipcMain.handle('profile:save-state-before-switch', async (event, state) => {
+    try {
+      debugLog?.info('Saving profile state before switch', { 
+        module: 'ipc-handlers',
+        function: 'profile:save-state-before-switch',
+        hasState: !!state
+      });
+      
+      // Get the current profile
+      const mainModule = await import('../index-modular.js');
+      const profileName = mainModule.getCurrentProfile();
+      
+      if (!profileName) {
+        throw new Error('No active profile');
+      }
+      
+      // Get profile directory
+      const userDataPath = app.getPath('userData');
+      const profilesDir = path.join(userDataPath, 'profiles');
+      const profileDir = path.join(profilesDir, profileName);
+      const stateFile = path.join(profileDir, 'state.json');
+      
+      debugLog?.info('Writing state file before switch', {
+        module: 'ipc-handlers',
+        function: 'profile:save-state-before-switch',
+        file: stateFile,
+        profileName: profileName
+      });
+      
+      // Ensure directory exists
+      await fsPromises.mkdir(profileDir, { recursive: true });
+      
+      // Write state file
+      await fsPromises.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
+      
+      debugLog?.info('State saved successfully before switch', {
+        module: 'ipc-handlers',
+        function: 'profile:save-state-before-switch',
+        file: stateFile
+      });
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Error saving profile state before switch', {
+        module: 'ipc-handlers',
+        function: 'profile:save-state-before-switch',
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
 
   debugLog?.info('✅ Secure IPC handlers registered successfully', { 
     module: 'ipc-handlers', 
     function: 'registerAllHandlers',
-    secureHandlersCount: 53
+    secureHandlersCount: 54
   });
 
   debugLog?.info('✅ All IPC handlers registered successfully (context isolation ready)', { 

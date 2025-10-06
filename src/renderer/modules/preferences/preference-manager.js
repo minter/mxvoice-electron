@@ -109,10 +109,34 @@ function initializePreferenceManager(options = {}) {
             });
           }
         }
-        if (fadeSeconds.success) { const el = document.getElementById('preferences-fadeout-seconds'); if (el) el.value = fadeSeconds.value || ''; }
-        if (debugLogPref.success) { const el = document.getElementById('preferences-debug-log-enabled'); if (el) el.checked = !!debugLogPref.value; }
-        if (prereleasePref.success) { const el = document.getElementById('preferences-prerelease-updates'); if (el) el.checked = !!prereleasePref.value; }
-        if (screenModePref.success) { const el = document.getElementById('preferences-screen-mode'); if (el) el.value = screenModePref.value || 'auto'; }
+        if (fadeSeconds.success) { 
+          const el = document.getElementById('preferences-fadeout-seconds'); 
+          if (el) {
+            el.value = fadeSeconds.value || '3';
+            debugLog?.info('[PREFS-LOAD] Set fade seconds field', { value: fadeSeconds.value, finalValue: el.value });
+          }
+        }
+        if (debugLogPref.success) { 
+          const el = document.getElementById('preferences-debug-log-enabled'); 
+          if (el) {
+            el.checked = !!debugLogPref.value;
+            debugLog?.info('[PREFS-LOAD] Set debug log field', { value: debugLogPref.value, checked: el.checked });
+          }
+        }
+        if (prereleasePref.success) { 
+          const el = document.getElementById('preferences-prerelease-updates'); 
+          if (el) {
+            el.checked = !!prereleasePref.value;
+            debugLog?.info('[PREFS-LOAD] Set prerelease field', { value: prereleasePref.value, checked: el.checked });
+          }
+        }
+        if (screenModePref.success) { 
+          const el = document.getElementById('preferences-screen-mode'); 
+          if (el) {
+            el.value = screenModePref.value || 'auto';
+            debugLog?.info('[PREFS-LOAD] Set screen mode field', { value: screenModePref.value, finalValue: el.value });
+          }
+        }
       } catch (error) {
         debugLog?.error('Failed to load preferences', { 
           function: "loadPreferences",

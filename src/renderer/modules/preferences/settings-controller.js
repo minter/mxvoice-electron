@@ -6,7 +6,7 @@
  * @module settings-controller
  */
 
-import { setPreference } from './profile-preference-adapter.js';
+import { setPreference as setPreferenceViaAdapter } from './profile-preference-adapter.js';
 
 // Import debug logger from global scope (renderer initializes it early)
 let debugLog = null;
@@ -42,7 +42,7 @@ function initializeSettingsController(options = {}) {
    * @param {Event} event - The form submission event
    */
   async function savePreferences(event) {
-    debugLog?.info("Saving preferences", { function: "savePreferences" });
+    debugLog?.info("[PREFS-SAVE] Saving preferences", { function: "savePreferences" });
     event.preventDefault();
     try {
       const { hideModal } = await import('../ui/bootstrap-adapter.js');
@@ -80,19 +80,27 @@ function initializeSettingsController(options = {}) {
         screen_mode: (document.getElementById('preferences-screen-mode')?.value) || 'auto'
       };
       
+      debugLog?.info("[PREFS-SAVE] Preferences to save", { preferences });
+      
       // Save all preferences (using adapter to route to profile or global as appropriate)
       try {
         const results = await Promise.all([
-          setPreference("database_directory", preferences.database_directory, electronAPI),
-          setPreference("music_directory", preferences.music_directory, electronAPI),
-          setPreference("hotkey_directory", preferences.hotkey_directory, electronAPI),
-          setPreference("fade_out_seconds", preferences.fade_out_seconds, electronAPI),
-          setPreference("debug_log_enabled", preferences.debug_log_enabled, electronAPI),
-          setPreference("prerelease_updates", preferences.prerelease_updates, electronAPI),
-          setPreference("screen_mode", preferences.screen_mode, electronAPI)
+          setPreferenceViaAdapter("database_directory", preferences.database_directory, electronAPI),
+          setPreferenceViaAdapter("music_directory", preferences.music_directory, electronAPI),
+          setPreferenceViaAdapter("hotkey_directory", preferences.hotkey_directory, electronAPI),
+          setPreferenceViaAdapter("fade_out_seconds", preferences.fade_out_seconds, electronAPI),
+          setPreferenceViaAdapter("debug_log_enabled", preferences.debug_log_enabled, electronAPI),
+          setPreferenceViaAdapter("prerelease_updates", preferences.prerelease_updates, electronAPI),
+          setPreferenceViaAdapter("screen_mode", preferences.screen_mode, electronAPI)
         ]);
         
-        const successCount = results.filter(result => result && result.success).length;
+        debugLog?.info("[PREFS-SAVE] Save results", { results });
+        
+        // Count successes - handle both boolean true and {success: true} formats
+        const successCount = results.filter(result => {
+          if (typeof result === 'boolean') return result;
+          return result && result.success;
+        }).length;
         
         // Apply new theme immediately if screen mode preference changed
         // (do this regardless of other preferences succeeding)
@@ -117,12 +125,12 @@ function initializeSettingsController(options = {}) {
         }
         
         if (successCount === 7) {
-          debugLog?.info('All preferences saved successfully', { 
+          debugLog?.info('[PREFS-SAVE] All preferences saved successfully', { 
             function: "savePreferences",
             data: { successCount, totalPreferences: 7 }
           });
         } else {
-          debugLog?.warn('Some preferences failed to save', { 
+          debugLog?.warn('[PREFS-SAVE] Some preferences failed to save', { 
             function: "savePreferences",
             data: { successCount, totalPreferences: 7, results }
           });
@@ -279,61 +287,13 @@ function initializeSettingsController(options = {}) {
     }
   }
   
-  /**
-   * Set a specific preference value
-   * @param {string} key - Preference key
-   * @param {any} value - Preference value
-   * @returns {Promise<boolean>} Success status
-   */
-  async function setPreference(key, value) {
-    if (electronAPI && electronAPI.store) {
-      try {
-        const result = await electronAPI.store.set(key, value);
-        if (result.success) {
-          debugLog?.info(`Preference ${key} saved successfully`, { 
-            function: "setPreference",
-            data: { key, value }
-          });
-          return true;
-        } else {
-          debugLog?.warn(`Failed to save preference ${key}`, { 
-            function: "setPreference",
-            data: { key, value, error: result.error }
-          });
-          return false;
-        }
-      } catch (error) {
-        debugLog?.error(`Preference set error for ${key}`, { 
-          function: "setPreference",
-          data: { key, value },
-          error: error
-        });
-        return false;
-      }
-    } else {
-      // Fallback to legacy store access
-      try {
-        store.set(key, value);
-        debugLog?.info(`Preference ${key} saved using legacy method`, { 
-          function: "setPreference",
-          data: { key, value }
-        });
-        return Promise.resolve(true);
-      } catch (error) {
-        debugLog?.error(`Legacy preference saving failed for ${key}`, { 
-          function: "setPreference",
-          data: { key, value },
-          error: error
-        });
-        return Promise.resolve(false);
-      }
-    }
-  }
+  // Note: setPreference is imported from profile-preference-adapter.js
+  // It routes preferences to either global store or profile-specific storage
   
   return {
     savePreferences,
     getPreference,
-    setPreference
+    setPreference: (key, value) => setPreferenceViaAdapter(key, value, electronAPI)
   };
 }
 

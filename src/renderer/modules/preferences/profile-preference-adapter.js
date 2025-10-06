@@ -92,6 +92,7 @@ export async function setPreference(key, value, electronAPI) {
     if (!electronAPI.profile) {
       // During app initialization, profile API may not be ready yet
       // Fall back to global store temporarily
+      console.warn(`[PREF-ADAPTER] Profile API not available for ${key}, falling back to global store`);
       if (electronAPI.store) {
         return await electronAPI.store.set(key, value);
       } else {
@@ -102,7 +103,7 @@ export async function setPreference(key, value, electronAPI) {
     return await electronAPI.profile.setPreference(key, value);
   } else {
     // Unknown preference, try global store as fallback
-    console.warn(`Unknown preference key: ${key}, using global store`);
+    console.warn(`[PREF-ADAPTER] Unknown preference key: ${key}, using global store`);
     if (!electronAPI.store) {
       console.error('[PREF-ADAPTER] electronAPI.store is undefined for fallback in setPreference');
       return { success: false, error: 'electronAPI.store is undefined' };

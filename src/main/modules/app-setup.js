@@ -350,11 +350,11 @@ function createApplicationMenu() {
         {
           label: "Switch Profile...",
           click: async () => {
-            // Import main module to trigger profile switch
-            const mainModule = await import('../index-modular.js');
-            // Relaunch without profile argument to show launcher
-            app.relaunch({ args: process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')) });
-            app.exit(0);
+            // Send message to renderer to handle profile switch with state save
+            // The renderer will extract and save state, then call the IPC handler
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:switch-profile');
+            }
           },
         },
       ],
