@@ -86,6 +86,21 @@ import AppBootstrap from './renderer/modules/app-bootstrap/index.js';
 // Import app initialization module for centralized initialization
 import AppInitialization from './renderer/modules/app-initialization/index.js';
 
+// Load and display current profile
+(async function loadProfileIndicator() {
+  try {
+    const result = await window.secureElectronAPI.profile.getCurrent();
+    if (result.success) {
+      const profileNameElement = document.getElementById('profile-name');
+      if (profileNameElement) {
+        profileNameElement.textContent = result.profile;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load profile:', error);
+  }
+})();
+
 // Load modules dynamically and make functions globally available
 (async function loadModules() {
   try {

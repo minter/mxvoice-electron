@@ -918,3 +918,28 @@ legend {
   border: 1.5px solid #0078d7 !important;
   color: #fff !important;
 }
+
+/* Profile indicator styles */
+.profile-indicator {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--card-header-bg);
+}
+
+.profile-indicator i {
+  font-size: 10px;
+}
+
+.profile-indicator:hover {
+  color: var(--text-color);
+  background: var(--hover-bg);
+}
+/* End profile indicator styles */

@@ -1381,10 +1381,53 @@ function registerAllHandlers() {
     }
   });
 
+  // Profile handlers
+  ipcMain.handle('profile:get-current', async () => {
+    try {
+      // Import the main module to get current profile
+      const mainModule = await import('../index-modular.js');
+      const profile = mainModule.getCurrentProfile();
+      return { success: true, profile };
+    } catch (error) {
+      debugLog?.error('Get current profile error:', { module: 'ipc-handlers', function: 'profile:get-current', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile:get-directory', async (event, type) => {
+    try {
+      // Import the main module to get profile directory
+      const mainModule = await import('../index-modular.js');
+      const directory = mainModule.getProfileDirectory(type);
+      return { success: true, directory };
+    } catch (error) {
+      debugLog?.error('Get profile directory error:', { module: 'ipc-handlers', function: 'profile:get-directory', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile:switch', async () => {
+    try {
+      // Close main window and relaunch launcher
+      if (mainWindow) {
+        mainWindow.close();
+      }
+      
+      // Relaunch the app without profile argument to show launcher
+      app.relaunch({ args: process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')) });
+      app.exit(0);
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Profile switch error:', { module: 'ipc-handlers', function: 'profile:switch', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
   debugLog?.info('✅ Secure IPC handlers registered successfully', { 
     module: 'ipc-handlers', 
     function: 'registerAllHandlers',
-    secureHandlersCount: 50
+    secureHandlersCount: 53
   });
 
   debugLog?.info('✅ All IPC handlers registered successfully (context isolation ready)', { 

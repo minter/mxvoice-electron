@@ -346,6 +346,17 @@ function createApplicationMenu() {
             closeAllTabs();
           },
         },
+        { type: "separator" },
+        {
+          label: "Switch Profile...",
+          click: async () => {
+            // Import main module to trigger profile switch
+            const mainModule = await import('../index-modular.js');
+            // Relaunch without profile argument to show launcher
+            app.relaunch({ args: process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')) });
+            app.exit(0);
+          },
+        },
       ],
     },
     {
