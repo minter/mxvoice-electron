@@ -97,7 +97,12 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       }
     }
   } catch (error) {
-    console.error('Failed to load profile:', error);
+    // Use debugLog if available, fallback to console for early initialization
+    if (window.debugLog) {
+      window.debugLog.error('Failed to load profile', { error: error.message });
+    } else {
+      console.error('Failed to load profile:', error);
+    }
   }
 })();
 

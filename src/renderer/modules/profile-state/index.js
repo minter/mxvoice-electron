@@ -567,7 +567,11 @@ export function initializeProfileState({ hotkeysModule, holdingTankModule } = {}
     // The main process will handle the actual file write
     if (window.secureElectronAPI && window.secureElectronAPI.profile) {
       window.secureElectronAPI.profile.saveState(state).catch(err => {
-        console.error('Failed to save state on quit:', err);
+        debugLog?.error('[PROFILE-STATE] Failed to save state on quit', { 
+          module: 'profile-state',
+          function: 'beforeunload',
+          error: err.message 
+        });
       });
     }
   });
