@@ -6,6 +6,8 @@
  * @module settings-controller
  */
 
+import { setPreference } from './profile-preference-adapter.js';
+
 // Import debug logger from global scope (renderer initializes it early)
 let debugLog = null;
 try {
@@ -59,16 +61,16 @@ function initializeSettingsController(options = {}) {
         screen_mode: (document.getElementById('preferences-screen-mode')?.value) || 'auto'
       };
       
-      // Save all preferences
+      // Save all preferences (using adapter to route to profile or global as appropriate)
       try {
         const results = await Promise.all([
-          electronAPI.store.set("database_directory", preferences.database_directory),
-          electronAPI.store.set("music_directory", preferences.music_directory),
-          electronAPI.store.set("hotkey_directory", preferences.hotkey_directory),
-          electronAPI.store.set("fade_out_seconds", preferences.fade_out_seconds),
-          electronAPI.store.set("debug_log_enabled", preferences.debug_log_enabled),
-          electronAPI.store.set("prerelease_updates", preferences.prerelease_updates),
-          electronAPI.store.set("screen_mode", preferences.screen_mode)
+          setPreference("database_directory", preferences.database_directory, electronAPI),
+          setPreference("music_directory", preferences.music_directory, electronAPI),
+          setPreference("hotkey_directory", preferences.hotkey_directory, electronAPI),
+          setPreference("fade_out_seconds", preferences.fade_out_seconds, electronAPI),
+          setPreference("debug_log_enabled", preferences.debug_log_enabled, electronAPI),
+          setPreference("prerelease_updates", preferences.prerelease_updates, electronAPI),
+          setPreference("screen_mode", preferences.screen_mode, electronAPI)
         ]);
         
         const successCount = results.filter(result => result.success).length;

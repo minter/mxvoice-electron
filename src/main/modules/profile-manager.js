@@ -92,6 +92,7 @@ function getDefaultPreferences() {
     // Appearance & UI
     screen_mode: 'auto',
     font_size: 11,
+    column_order: null, // Will default to natural order if null
     
     // Debug & Updates
     debug_log_enabled: false,
@@ -402,28 +403,95 @@ function deleteProfile(profileName) {
 }
 
 /**
+ * Migrate global electron-store preferences to profile preferences
+ * @param {string} profileName - Profile name
+ * @returns {Object} Preferences (defaults + migrated global values if available)
+ */
+async function migrateGlobalPreferencesToProfile(profileName) {
+  const preferences = getDefaultPreferences();
+  
+  try {
+    // Try to import electron-store to read global preferences
+    const Store = (await import('electron-store')).default;
+    const globalStore = new Store();
+    
+    // List of preferences to migrate from global store
+    const prefsToMigrate = [
+      'screen_mode',
+      'font_size',
+      'column_order',
+      'fade_out_seconds',
+      'debug_log_enabled',
+      'prerelease_updates',
+      'holding_tank_mode'
+    ];
+    
+    let migratedCount = 0;
+    
+    for (const key of prefsToMigrate) {
+      if (globalStore.has(key)) {
+        const value = globalStore.get(key);
+        preferences[key] = value;
+        migratedCount++;
+        
+        debugLog?.info('Migrated global preference to profile', {
+          module: 'profile-manager',
+          function: 'migrateGlobalPreferencesToProfile',
+          profileName,
+          key,
+          value
+        });
+      }
+    }
+    
+    if (migratedCount > 0) {
+      preferences._migrated = true;
+      preferences._migration_date = Date.now();
+      preferences._migrated_count = migratedCount;
+      
+      debugLog?.info('Completed preference migration', {
+        module: 'profile-manager',
+        function: 'migrateGlobalPreferencesToProfile',
+        profileName,
+        migratedCount
+      });
+    }
+  } catch (error) {
+    debugLog?.warn('Could not migrate global preferences (this is okay for new installations)', {
+      module: 'profile-manager',
+      function: 'migrateGlobalPreferencesToProfile',
+      profileName,
+      error: error.message
+    });
+  }
+  
+  return preferences;
+}
+
+/**
  * Load profile preferences
  * @param {string} profileName - Profile name
  * @returns {Object|null} Profile preferences or null if not found
  */
-function loadProfilePreferences(profileName) {
+async function loadProfilePreferences(profileName) {
   try {
     const preferencesPath = getProfilePreferencesPath(profileName);
     
     if (!fs.existsSync(preferencesPath)) {
-      // Create default preferences if they don't exist
+      // Create preferences, migrating from global store if available
       const profileDir = path.dirname(preferencesPath);
       if (!fs.existsSync(profileDir)) {
         fs.mkdirSync(profileDir, { recursive: true });
       }
       
-      const preferences = getDefaultPreferences();
+      const preferences = await migrateGlobalPreferencesToProfile(profileName);
       fs.writeFileSync(preferencesPath, JSON.stringify(preferences, null, 2));
       
-      debugLog?.info('Created default preferences for profile', { 
+      debugLog?.info('Created preferences for profile', { 
         module: 'profile-manager', 
         function: 'loadProfilePreferences',
-        profileName 
+        profileName,
+        migrated: preferences._migrated || false
       });
       
       return preferences;
@@ -448,7 +516,7 @@ function loadProfilePreferences(profileName) {
  * @param {Object} preferences - Preferences to save
  * @returns {boolean} Success status
  */
-function saveProfilePreferences(profileName, preferences) {
+async function saveProfilePreferences(profileName, preferences) {
   try {
     const preferencesPath = getProfilePreferencesPath(profileName);
     const profileDir = path.dirname(preferencesPath);

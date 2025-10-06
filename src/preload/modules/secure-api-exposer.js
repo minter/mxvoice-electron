@@ -391,7 +391,10 @@ const secureElectronAPI = {
       getCurrent: () => ipcRenderer.invoke('profile:get-current'),
       getDirectory: (type) => ipcRenderer.invoke('profile:get-directory', type),
       switchProfile: () => ipcRenderer.invoke('profile:switch'),
-      saveState: (state) => ipcRenderer.invoke('profile:save-state', state)
+      saveState: (state) => ipcRenderer.invoke('profile:save-state', state),
+      getPreference: (key) => ipcRenderer.invoke('profile:get-preference', key),
+      setPreference: (key, value) => ipcRenderer.invoke('profile:set-preference', key, value),
+      getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences')
     },
   
   // Utility functions

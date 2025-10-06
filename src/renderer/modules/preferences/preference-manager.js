@@ -6,6 +6,8 @@
  * @module preference-manager
  */
 
+import { getPreference, setPreference } from './profile-preference-adapter.js';
+
 /**
  * Initialize the preference manager
  * @param {Object} options - Configuration options
@@ -34,17 +36,17 @@ function initializePreferenceManager(options = {}) {
    * Loads all stored preferences and populates the preferences modal
    */
   async function loadPreferences() {
-    // Use new store API for loading preferences
+    // Use adapter for loading preferences (routes to profile or global as appropriate)
     if (electronAPI && electronAPI.store) {
       try {
         const [dbDir, musicDir, hotkeyDir, fadeSeconds, debugLogPref, prereleasePref, screenModePref] = await Promise.all([
-          electronAPI.store.get("database_directory"),
-          electronAPI.store.get("music_directory"),
-          electronAPI.store.get("hotkey_directory"),
-          electronAPI.store.get("fade_out_seconds"),
-          electronAPI.store.get("debug_log_enabled"),
-          electronAPI.store.get("prerelease_updates"),
-          electronAPI.store.get("screen_mode")
+          getPreference("database_directory", electronAPI),
+          getPreference("music_directory", electronAPI),
+          getPreference("hotkey_directory", electronAPI),
+          getPreference("fade_out_seconds", electronAPI),
+          getPreference("debug_log_enabled", electronAPI),
+          getPreference("prerelease_updates", electronAPI),
+          getPreference("screen_mode", electronAPI)
         ]);
         
         if (dbDir.success) { const el = document.getElementById('preferences-database-directory'); if (el) el.value = dbDir.value || ''; }
@@ -76,7 +78,7 @@ function initializePreferenceManager(options = {}) {
   async function getDatabaseDirectory() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("database_directory");
+        const result = await getPreference("database_directory", electronAPI);
         if (result.success) {
           return result.value;
         } else {
@@ -103,7 +105,7 @@ function initializePreferenceManager(options = {}) {
   async function getMusicDirectory() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("music_directory");
+        const result = await getPreference("music_directory", electronAPI);
         if (result.success) {
           return result.value;
         } else {
@@ -130,7 +132,7 @@ function initializePreferenceManager(options = {}) {
   async function getHotkeyDirectory() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("hotkey_directory");
+        const result = await getPreference("hotkey_directory", electronAPI);
         if (result.success) {
           return result.value;
         } else {
@@ -157,7 +159,7 @@ function initializePreferenceManager(options = {}) {
   async function getFadeOutSeconds() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("fade_out_seconds");
+        const result = await getPreference("fade_out_seconds", electronAPI);
         if (result.success) {
           return result.value;
         } else {
@@ -184,7 +186,7 @@ function initializePreferenceManager(options = {}) {
   async function getDebugLogEnabled() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("debug_log_enabled");
+        const result = await getPreference("debug_log_enabled", electronAPI);
         if (result.success) {
           return result.value || false;
         } else {
@@ -211,7 +213,7 @@ function initializePreferenceManager(options = {}) {
   async function getPrereleaseUpdates() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("prerelease_updates");
+        const result = await getPreference("prerelease_updates", electronAPI);
         if (result.success) {
           return result.value || false;
         } else {
@@ -238,7 +240,7 @@ function initializePreferenceManager(options = {}) {
   async function getScreenMode() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("screen_mode");
+        const result = await getPreference("screen_mode", electronAPI);
         if (result.success) {
           return result.value || 'auto';
         } else {

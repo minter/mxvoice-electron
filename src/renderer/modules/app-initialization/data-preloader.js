@@ -93,32 +93,55 @@ export class DataPreloader {
   }
 
   /**
-   * Load column order from electron store
+   * Load column order from profile preferences
    * @returns {Promise<void>}
    */
   async loadColumnOrder() {
     try {
-      this.logInfo('Loading column order from store...');
-      const hasColumnOrder = await secureStore.has("column_order");
-      this.logInfo(`Column order exists in store: ${hasColumnOrder}`);
+      this.logInfo('Loading column order from profile preferences...');
       
-      if (hasColumnOrder) {
-        const columnOrderData = await secureStore.get("column_order");
-        this.logInfo(`Retrieved column order from store:`, columnOrderData);
+      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      if (!electronAPI || !electronAPI.profile) {
+        this.logWarn('Profile API not available, trying global store');
+        const hasColumnOrder = await secureStore.has("column_order");
+        this.logInfo(`Column order exists in global store: ${hasColumnOrder}`);
         
-        // Handle both wrapped format {success: true, value: [...]} and direct array format [...]
-        let columnOrder = null;
-        if (columnOrderData && typeof columnOrderData === 'object') {
-          if (Array.isArray(columnOrderData)) {
-            // Direct array format
-            columnOrder = columnOrderData;
-          } else if (columnOrderData.value && Array.isArray(columnOrderData.value)) {
-            // Wrapped format {success: true, value: [...]}
-            columnOrder = columnOrderData.value;
+        if (hasColumnOrder) {
+          const columnOrderData = await secureStore.get("column_order");
+          this.logInfo(`Retrieved column order from global store:`, columnOrderData);
+          
+          // Handle both wrapped format {success: true, value: [...]} and direct array format [...]
+          let columnOrder = null;
+          if (columnOrderData && typeof columnOrderData === 'object') {
+            if (Array.isArray(columnOrderData)) {
+              columnOrder = columnOrderData;
+            } else if (columnOrderData.value && Array.isArray(columnOrderData.value)) {
+              columnOrder = columnOrderData.value;
+            }
+          }
+          
+          if (columnOrder && Array.isArray(columnOrder)) {
+            const topRow = document.getElementById('top-row');
+            if (topRow) {
+              columnOrder.forEach((val) => {
+                const child = topRow.querySelector(`#${val}`);
+                if (child) {
+                  topRow.appendChild(child);
+                }
+              });
+              this.logInfo('Column order applied from global store successfully');
+            }
           }
         }
-        
-        if (columnOrder && Array.isArray(columnOrder)) {
+        return;
+      }
+      
+      // Use profile preferences
+      const result = await electronAPI.profile.getPreference('column_order');
+      this.logInfo(`Retrieved column order from profile:`, result);
+      
+      if (result.success && result.value && Array.isArray(result.value)) {
+          const columnOrder = result.value;
           const topRow = document.getElementById('top-row');
           if (topRow) {
             this.logInfo('Top row found, applying column order...');
@@ -163,11 +186,8 @@ export class DataPreloader {
           } else {
             this.logWarn('Top row not found, cannot apply column order');
           }
-        } else {
-          this.logWarn('Column order is not a valid array:', columnOrderData);
-        }
       } else {
-        this.logInfo('No saved column order found in store');
+        this.logInfo('No saved column order found in profile');
       }
     } catch (error) {
       this.logError('Error loading column order', error);

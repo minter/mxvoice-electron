@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Import file operations module
 import fileOperations from './file-operations.js';
+import * as profileManager from './profile-manager.js';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -1437,6 +1438,99 @@ function registerAllHandlers() {
       debugLog?.error('Error saving profile state', { 
         module: 'ipc-handlers',
         function: 'profile:save-state',
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Get preference value
+  ipcMain.handle('profile:get-preference', async (event, key) => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const profileName = mainModule.getCurrentProfile();
+      const preferences = await profileManager.loadProfilePreferences(profileName);
+      
+      return { success: true, value: preferences[key] };
+    } catch (error) {
+      debugLog?.error('Error getting profile preference', { 
+        module: 'ipc-handlers',
+        function: 'profile:get-preference',
+        key: key,
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Set preference value
+  ipcMain.handle('profile:set-preference', async (event, key, value) => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const profileName = mainModule.getCurrentProfile();
+      
+      debugLog?.info('[PROFILE-PREF] Loading preferences for profile', {
+        module: 'ipc-handlers',
+        function: 'profile:set-preference',
+        profileName,
+        key
+      });
+      
+      const preferences = await profileManager.loadProfilePreferences(profileName);
+      
+      debugLog?.info('[PROFILE-PREF] Current preferences loaded', {
+        module: 'ipc-handlers',
+        function: 'profile:set-preference',
+        profileName,
+        key,
+        hasPreferences: !!preferences
+      });
+      
+      preferences[key] = value;
+      
+      debugLog?.info('[PROFILE-PREF] Saving updated preferences', {
+        module: 'ipc-handlers',
+        function: 'profile:set-preference',
+        profileName,
+        key,
+        valueType: typeof value,
+        valueLength: Array.isArray(value) ? value.length : undefined
+      });
+      
+      await profileManager.saveProfilePreferences(profileName, preferences);
+      
+      debugLog?.info('[PROFILE-PREF] Profile preference saved successfully', { 
+        module: 'ipc-handlers',
+        function: 'profile:set-preference',
+        profileName,
+        key
+      });
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('[PROFILE-PREF] Error setting profile preference', { 
+        module: 'ipc-handlers',
+        function: 'profile:set-preference',
+        key: key,
+        error: error.message,
+        stack: error.stack
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Get all preferences
+  ipcMain.handle('profile:get-all-preferences', async () => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const profileName = mainModule.getCurrentProfile();
+      const preferences = await profileManager.loadProfilePreferences(profileName);
+      
+      return { success: true, preferences: preferences };
+    } catch (error) {
+      debugLog?.error('Error getting all profile preferences', { 
+        module: 'ipc-handlers',
+        function: 'profile:get-all-preferences',
         error: error.message
       });
       return { success: false, error: error.message };
