@@ -389,6 +389,18 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('menu:switch-profile', handler);
     },
     
+    onNewProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:new-profile', handler);
+      return () => ipcRenderer.removeListener('menu:new-profile', handler);
+    },
+    
+    onDeleteCurrentProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:delete-current-profile', handler);
+      return () => ipcRenderer.removeListener('menu:delete-current-profile', handler);
+    },
+    
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
   },
   
@@ -397,11 +409,14 @@ const secureElectronAPI = {
     getCurrent: () => ipcRenderer.invoke('profile:get-current'),
     getDirectory: (type) => ipcRenderer.invoke('profile:get-directory', type),
     switchProfile: () => ipcRenderer.invoke('profile:switch'),
+    switchToProfile: (name) => ipcRenderer.invoke('profile:switch-to', name),
     saveState: (state) => ipcRenderer.invoke('profile:save-state', state),
     saveStateBeforeSwitch: (state) => ipcRenderer.invoke('profile:save-state-before-switch', state),
     getPreference: (key) => ipcRenderer.invoke('profile:get-preference', key),
     setPreference: (key, value) => ipcRenderer.invoke('profile:set-preference', key, value),
-    getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences')
+    getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences'),
+    createProfile: (name, description) => ipcRenderer.invoke('profile:create', name, description),
+    deleteProfile: (name) => ipcRenderer.invoke('profile:delete', name)
   },
   
   // Utility functions

@@ -270,8 +270,10 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         window.logInfo('ℹ️ No previous state found, starting fresh');
       }
       
-      // Set up profile switch event listener
+      // Set up profile event listeners
       const apiToUse = window.secureElectronAPI || window.electronAPI;
+      
+      // Profile switch event listener
       if (apiToUse && apiToUse.events && apiToUse.events.onSwitchProfile) {
         window.logInfo('🔀 Setting up profile switch event listener...');
         apiToUse.events.onSwitchProfile(async () => {
@@ -291,6 +293,45 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
             await moduleRegistry.profileState.switchProfileWithSave();
           } else {
             window.logError('Profile state module not available for switch');
+          }
+        });
+      }
+      
+      // New profile event listener
+      if (apiToUse && apiToUse.events && apiToUse.events.onNewProfile) {
+        window.logInfo('🆕 Setting up new profile event listener...');
+        apiToUse.events.onNewProfile(async () => {
+          window.logInfo('🆕 New profile requested from menu');
+          showNewProfileModal();
+        });
+      }
+      
+      // Delete current profile event listener
+      if (apiToUse && apiToUse.events && apiToUse.events.onDeleteCurrentProfile) {
+        window.logInfo('🗑️ Setting up delete current profile event listener...');
+        apiToUse.events.onDeleteCurrentProfile(async () => {
+          window.logInfo('🗑️ Delete current profile requested from menu');
+          try {
+            const currentProfile = await window.secureElectronAPI.profile.getCurrent();
+            if (currentProfile.success) {
+              const confirmed = confirm(`Are you sure you want to delete the profile "${currentProfile.profile}"?\n\nThis will remove all preferences and data for this profile.`);
+              if (confirmed) {
+                const result = await window.secureElectronAPI.profile.deleteProfile(currentProfile.profile);
+                if (result.success) {
+                  // Profile deleted, switch to launcher to select a different profile
+                  if (moduleRegistry.profileState && moduleRegistry.profileState.switchProfileWithSave) {
+                    await moduleRegistry.profileState.switchProfileWithSave();
+                  }
+                } else {
+                  alert(`Failed to delete profile: ${result.error}`);
+                }
+              }
+            } else {
+              alert('Could not determine current profile');
+            }
+          } catch (error) {
+            window.logError('Error deleting current profile', { error: error.message });
+            alert(`Error deleting profile: ${error.message}`);
           }
         });
       }
@@ -688,4 +729,116 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 // Test Functions Module - Functions extracted to src/renderer/modules/test-utils/
 // testPhase2Migrations(), testDatabaseAPI(), testFileSystemAPI(), testStoreAPI(), testAudioAPI(), testSecurityFeatures() - All moved to test-utils module
+
+/**
+ * Show the new profile creation modal
+ */
+function showNewProfileModal() {
+  // Clear any previous form data
+  document.getElementById('newProfileName').value = '';
+  document.getElementById('newProfileDescription').value = '';
+  
+  // Show the modal
+  const modal = new bootstrap.Modal(document.getElementById('newProfileModal'));
+  modal.show();
+  
+  // Focus the name input after modal is shown
+  document.getElementById('newProfileModal').addEventListener('shown.bs.modal', function () {
+    document.getElementById('newProfileName').focus();
+  }, { once: true });
+}
+
+/**
+ * Handle new profile form submission
+ */
+async function handleNewProfileSubmit() {
+  const nameInput = document.getElementById('newProfileName');
+  const descInput = document.getElementById('newProfileDescription');
+  
+  const name = nameInput.value.trim();
+  const description = descInput.value.trim();
+  
+  // Validate profile name
+  if (!name) {
+    alert('Profile name is required');
+    nameInput.focus();
+    return;
+  }
+  
+  // Check for invalid characters (basic validation)
+  if (!/^[a-zA-Z0-9\s\-_]+$/.test(name)) {
+    alert('Profile name can only contain letters, numbers, spaces, hyphens, and underscores');
+    nameInput.focus();
+    return;
+  }
+  
+  try {
+    // Create the profile
+    const result = await window.secureElectronAPI.profile.createProfile(name, description);
+    
+    if (result.success) {
+      // Close the modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('newProfileModal'));
+      modal.hide();
+      
+      // Switch directly to the newly created profile
+      try {
+        const switchResult = await window.secureElectronAPI.profile.switchToProfile(name);
+        if (!switchResult.success) {
+          window.logError('Failed to switch to new profile:', switchResult.error);
+          // Fallback: just refresh the indicator
+          await refreshProfileIndicator();
+        }
+      } catch (switchError) {
+        window.logError('Error switching to new profile:', switchError);
+        // Fallback: just refresh the indicator
+        await refreshProfileIndicator();
+      }
+    } else {
+      alert(`Failed to create profile: ${result.error}`);
+    }
+  } catch (error) {
+    window.logError('Error creating new profile:', error);
+    alert(`Error creating profile: ${error.message}`);
+  }
+}
+
+/**
+ * Refresh the profile indicator after profile changes
+ */
+async function refreshProfileIndicator() {
+  try {
+    const result = await window.secureElectronAPI.profile.getCurrent();
+    if (result.success) {
+      const profileNameElement = document.getElementById('profile-name');
+      if (profileNameElement) {
+        profileNameElement.textContent = `Profile: ${result.profile}`;
+      }
+    }
+  } catch (error) {
+    window.logError('Failed to refresh profile indicator:', error);
+  }
+}
+
+// Set up event listeners for the new profile modal
+document.addEventListener('DOMContentLoaded', function() {
+  // Create profile button click handler
+  document.getElementById('createProfileBtn').addEventListener('click', handleNewProfileSubmit);
+  
+  // Enter key in name field submits form
+  document.getElementById('newProfileName').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleNewProfileSubmit();
+    }
+  });
+  
+  // Enter key in description field submits form
+  document.getElementById('newProfileDescription').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleNewProfileSubmit();
+    }
+  });
+});
 

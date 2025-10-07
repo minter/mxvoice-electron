@@ -346,14 +346,36 @@ function createApplicationMenu() {
             closeAllTabs();
           },
         },
-        { type: "separator" },
+      ],
+    },
+    {
+      label: "Profile",
+      submenu: [
         {
           label: "Switch Profile...",
           click: async () => {
             // Send message to renderer to handle profile switch with state save
-            // The renderer will extract and save state, then call the IPC handler
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu:switch-profile');
+            }
+          },
+        },
+        {
+          label: "New Profile...",
+          click: () => {
+            // Send message to renderer to handle new profile creation
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:new-profile');
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: "Delete Current Profile...",
+          click: () => {
+            // Send message to renderer to handle current profile deletion
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:delete-current-profile');
             }
           },
         },

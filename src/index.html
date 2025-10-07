@@ -671,6 +671,38 @@
       </div>
     </div>
 
+    <!-- New Profile Modal -->
+    <div class="modal fade" id="newProfileModal" role="dialog">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title">Create New Profile</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="newProfileForm">
+              <div class="mb-3">
+                <label for="newProfileName" class="form-label">Profile Name</label>
+                <input type="text" class="form-control" id="newProfileName" required 
+                       placeholder="Enter profile name" maxlength="50">
+                <div class="form-text">Profile names must be unique and cannot contain special characters.</div>
+              </div>
+              <div class="mb-3">
+                <label for="newProfileDescription" class="form-label">Description (Optional)</label>
+                <input type="text" class="form-control" id="newProfileDescription" 
+                       placeholder="Enter a description for this profile" maxlength="100">
+                <div class="form-text">A brief description to help identify this profile.</div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-success btn-sm" id="createProfileBtn">Create Profile</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Custom Input Modal -->
     <div class="modal fade" id="inputModal" role="dialog">
       <div class="modal-dialog modal-dialog-centered" role="document">

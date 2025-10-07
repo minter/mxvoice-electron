@@ -9,6 +9,7 @@ import { ipcMain, dialog, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
+import Store from 'electron-store';
 import { pipeline } from 'stream/promises';
 import { createReadStream, createWriteStream } from 'fs';
 import os from 'os';
@@ -1624,6 +1625,128 @@ function registerAllHandlers() {
         module: 'ipc-handlers',
         function: 'profile:save-state-before-switch',
         error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Create profile
+  ipcMain.handle('profile:create', async (event, profileName, description) => {
+    try {
+      debugLog?.info('Profile create requested', { 
+        module: 'ipc-handlers',
+        function: 'profile:create',
+        profileName,
+        description 
+      });
+      
+      // Create the profile using the imported profile manager
+      const result = await profileManager.createProfile(profileName, description);
+      
+      if (result.success) {
+        debugLog?.info('Profile created successfully', { 
+          module: 'ipc-handlers',
+          function: 'profile:create',
+          profileName 
+        });
+      } else {
+        debugLog?.error('Failed to create profile', { 
+          module: 'ipc-handlers',
+          function: 'profile:create',
+          profileName,
+          error: result.error 
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      debugLog?.error('Profile create error:', { 
+        module: 'ipc-handlers', 
+        function: 'profile:create',
+        profileName,
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Switch to specific profile
+  ipcMain.handle('profile:switch-to', async (event, profileName) => {
+    try {
+      debugLog?.info('Profile switch to specific profile requested', { 
+        module: 'ipc-handlers',
+        function: 'profile:switch-to',
+        profileName 
+      });
+      
+      // Save current profile name for fallback if launcher is closed without selection
+      const mainModule = await import('../index-modular.js');
+      const currentProfile = mainModule.getCurrentProfile();
+      if (currentProfile) {
+        store.set('fallback-profile', currentProfile);
+        debugLog?.info('Saved fallback profile before switch', {
+          module: 'ipc-handlers',
+          function: 'profile:switch-to',
+          fallbackProfile: currentProfile 
+        });
+      }
+      
+      // Set the target profile as the fallback so launcher will auto-select it
+      store.set('auto-select-profile', profileName);
+      
+      // Close main window and relaunch launcher
+      if (mainWindow) {
+        mainWindow.close();
+      }
+      app.relaunch({ args: [...process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')), `--profile=${profileName}`] });
+      app.exit(0);
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Profile switch to specific profile error:', { 
+        module: 'ipc-handlers', 
+        function: 'profile:switch-to',
+        profileName,
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Delete profile
+  ipcMain.handle('profile:delete', async (event, profileName) => {
+    try {
+      debugLog?.info('Profile delete requested', { 
+        module: 'ipc-handlers',
+        function: 'profile:delete',
+        profileName 
+      });
+      
+      // Delete the profile using the imported profile manager
+      const result = await profileManager.deleteProfile(profileName);
+      
+      if (result.success) {
+        debugLog?.info('Profile deleted successfully', { 
+          module: 'ipc-handlers',
+          function: 'profile:delete',
+          profileName 
+        });
+      } else {
+        debugLog?.error('Failed to delete profile', { 
+          module: 'ipc-handlers',
+          function: 'profile:delete',
+          profileName,
+          error: result.error 
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      debugLog?.error('Profile delete error:', { 
+        module: 'ipc-handlers', 
+        function: 'profile:delete',
+        profileName,
+        error: error.message 
       });
       return { success: false, error: error.message };
     }
