@@ -1547,6 +1547,19 @@ function registerAllHandlers() {
       // Note: State must be saved BEFORE we tell the renderer we're switching
       // The renderer should call profile:save-state-before-switch first
       
+      // Save current profile name for fallback if launcher is closed without selection
+      const mainModule = await import('../index-modular.js');
+      const currentProfile = mainModule.getCurrentProfile();
+      if (currentProfile) {
+        // Store the current profile as the fallback profile
+        store.set('fallback-profile', currentProfile);
+        debugLog?.info('Saved fallback profile for launcher close scenario', { 
+          module: 'ipc-handlers',
+          function: 'profile:switch',
+          fallbackProfile: currentProfile 
+        });
+      }
+      
       // Close main window and relaunch launcher
       if (mainWindow) {
         mainWindow.close();

@@ -5,7 +5,7 @@
  * Allows users to select/create/delete profiles before launching the main app.
  */
 
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, ipcMain, app } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -17,6 +17,9 @@ let debugLog = null;
 let profileManager = null;
 let launcherWindow = null;
 let mainAppLauncher = null;
+let store = null;
+let mainWindow = null;
+let profileSelected = false;
 
 /**
  * Initialize the launcher window module
@@ -26,6 +29,8 @@ function initializeLauncherWindow(dependencies) {
   debugLog = dependencies.debugLog;
   profileManager = dependencies.profileManager;
   mainAppLauncher = dependencies.mainAppLauncher;
+  store = dependencies.store;
+  mainWindow = dependencies.mainWindow;
   
   debugLog?.info('Launcher window module initialized', { 
     module: 'launcher-window',
@@ -45,6 +50,9 @@ async function createLauncherWindow() {
     launcherWindow.focus();
     return launcherWindow;
   }
+  
+  // Reset the profile selected flag for new launcher sessions
+  profileSelected = false;
   
   debugLog?.info('Creating launcher window', { 
     module: 'launcher-window',
@@ -80,6 +88,65 @@ async function createLauncherWindow() {
       module: 'launcher-window',
       function: 'createLauncherWindow' 
     });
+    
+    // Check if we have a fallback profile and no profile was selected
+    const fallbackProfile = store.get('fallback-profile');
+    if (!profileSelected) {
+      // Check if main window exists and is not destroyed
+      const mainWindowExists = mainWindow && !mainWindow.isDestroyed();
+      
+      if (!mainWindowExists) {
+        if (fallbackProfile) {
+          // Profile switching scenario: fall back to previous profile
+          debugLog?.info('Launcher closed without profile selection, falling back to previous profile', { 
+            module: 'launcher-window',
+            function: 'createLauncherWindow',
+            fallbackProfile,
+            mainWindowExists,
+            profileSelected 
+          });
+          
+          // Clear the fallback profile
+          store.delete('fallback-profile');
+          
+          // Relaunch with the fallback profile
+          app.relaunch({ args: [...process.argv.slice(1), `--profile=${fallbackProfile}`] });
+          app.exit(0);
+        } else {
+          // Initial launch scenario: no fallback profile, quit the app
+          debugLog?.info('Launcher closed without profile selection and no fallback profile, quitting app', { 
+            module: 'launcher-window',
+            function: 'createLauncherWindow',
+            fallbackProfile,
+            mainWindowExists,
+            profileSelected 
+          });
+          
+          app.quit();
+        }
+      } else {
+        debugLog?.info('Launcher closed but main window still exists, not taking action', { 
+          module: 'launcher-window',
+          function: 'createLauncherWindow',
+          fallbackProfile,
+          mainWindowExists,
+          profileSelected 
+        });
+      }
+    } else if (profileSelected) {
+      debugLog?.info('Launcher closed after profile selection, not taking action', { 
+        module: 'launcher-window',
+        function: 'createLauncherWindow',
+        fallbackProfile: !!fallbackProfile,
+        profileSelected 
+      });
+      
+      // Clear the fallback profile since we successfully launched with a selected profile
+      if (fallbackProfile) {
+        store.delete('fallback-profile');
+      }
+    }
+    
     launcherWindow = null;
   });
   
@@ -199,6 +266,9 @@ function registerLauncherHandlers() {
       // Launch main app with profile context
       if (mainAppLauncher) {
         await mainAppLauncher(profileName);
+        
+        // Mark that a profile was successfully selected
+        profileSelected = true;
         
         // Close launcher window after main app launches
         closeLauncherWindow();

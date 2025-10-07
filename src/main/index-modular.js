@@ -930,6 +930,8 @@ function setupApp() {
       launcherWindow.initializeLauncherWindow({
         debugLog,
         profileManager,
+        store,
+        mainWindow,
         mainAppLauncher: async (profileName) => {
           currentProfile = profileName;
           
