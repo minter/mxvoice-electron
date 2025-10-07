@@ -578,43 +578,27 @@ async function saveProfilePreferences(profileName, preferences) {
  * Duplicate an existing profile
  */
 async function duplicateProfile(sourceProfileName, targetProfileName, description) {
-  console.log('duplicateProfile called with:', { sourceProfileName, targetProfileName, description });
   try {
-    console.log('Starting duplicateProfile validation...');
-    
     // Prevent duplication of Default User
     if (sourceProfileName === 'Default User') {
-      console.log('Blocked: Cannot duplicate Default User profile');
       return { success: false, error: 'Cannot duplicate Default User profile' };
     }
     
-    console.log('Default User check passed');
-    
     // Check if source profile exists
-    console.log('Checking if source profile exists...');
     if (!profileExists(sourceProfileName)) {
-      console.log('Source profile does not exist:', sourceProfileName);
       return { success: false, error: 'Source profile does not exist' };
     }
-    console.log('Source profile exists');
     
     // Check if target profile already exists
-    console.log('Checking if target profile already exists...');
     if (profileExists(targetProfileName)) {
-      console.log('Target profile already exists:', targetProfileName);
       return { success: false, error: 'Target profile already exists' };
     }
-    console.log('Target profile does not exist (good)');
     
     // Validate target profile name
-    console.log('Validating target profile name...');
     const nameValidation = validateProfileName(targetProfileName);
-    console.log('Name validation result:', nameValidation);
     if (!nameValidation.valid) {
-      console.log('Target profile name validation failed:', nameValidation.error);
       return { success: false, error: nameValidation.error };
     }
-    console.log('Target profile name validation passed');
     
     // Get profiles directory
     const profilesDir = getProfilesDirectory();

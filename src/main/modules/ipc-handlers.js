@@ -1671,64 +1671,47 @@ function registerAllHandlers() {
   });
 
   // Profile: Duplicate profile
-  ipcMain.handle('profile:duplicate', async (event, sourceProfileName, targetProfileName, description) => {
-    console.log('IPC handler profile:duplicate called with:', { sourceProfileName, targetProfileName, description });
-    try {
-      debugLog?.info('Profile duplicate requested', { 
-        module: 'ipc-handlers',
-        function: 'profile:duplicate',
-        sourceProfileName,
-        targetProfileName,
-        description 
-      });
-      
-      // Duplicate the profile using the imported profile manager
-      console.log('About to call profileManager.duplicateProfile, function type:', typeof profileManager.duplicateProfile);
-      debugLog?.info('About to call profileManager.duplicateProfile', { 
-        module: 'ipc-handlers',
-        function: 'profile:duplicate',
-        sourceProfileName,
-        targetProfileName,
-        hasDuplicateProfile: typeof profileManager.duplicateProfile
-      });
-      
-      const result = await profileManager.duplicateProfile(sourceProfileName, targetProfileName, description);
-      
-      debugLog?.info('Result from profileManager.duplicateProfile', { 
-        module: 'ipc-handlers',
-        function: 'profile:duplicate',
-        result: result
-      });
-      
-      if (result.success) {
-        debugLog?.info('Profile duplicated successfully', { 
-          module: 'ipc-handlers',
-          function: 'profile:duplicate',
-          sourceProfileName,
-          targetProfileName 
+        ipcMain.handle('profile:duplicate', async (event, sourceProfileName, targetProfileName, description) => {
+          try {
+            debugLog?.info('Profile duplicate requested', {
+              module: 'ipc-handlers',
+              function: 'profile:duplicate',
+              sourceProfileName,
+              targetProfileName,
+              description
+            });
+
+            const result = await profileManager.duplicateProfile(sourceProfileName, targetProfileName, description);
+
+            if (result.success) {
+              debugLog?.info('Profile duplicated successfully', {
+                module: 'ipc-handlers',
+                function: 'profile:duplicate',
+                sourceProfileName,
+                targetProfileName
+              });
+            } else {
+              debugLog?.error('Failed to duplicate profile', {
+                module: 'ipc-handlers',
+                function: 'profile:duplicate',
+                sourceProfileName,
+                targetProfileName,
+                error: result.error
+              });
+            }
+
+            return result;
+          } catch (error) {
+            debugLog?.error('Profile duplicate error:', {
+              module: 'ipc-handlers',
+              function: 'profile:duplicate',
+              sourceProfileName,
+              targetProfileName,
+              error: error.message
+            });
+            return { success: false, error: error.message };
+          }
         });
-      } else {
-        debugLog?.error('Failed to duplicate profile', { 
-          module: 'ipc-handlers',
-          function: 'profile:duplicate',
-          sourceProfileName,
-          targetProfileName,
-          error: result.error 
-        });
-      }
-      
-      return result;
-    } catch (error) {
-      debugLog?.error('Profile duplicate error:', { 
-        module: 'ipc-handlers', 
-        function: 'profile:duplicate',
-        sourceProfileName,
-        targetProfileName,
-        error: error.message 
-      });
-      return { success: false, error: error.message };
-    }
-  });
 
   // Profile: Switch to specific profile
   ipcMain.handle('profile:switch-to', async (event, profileName) => {

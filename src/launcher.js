@@ -97,8 +97,15 @@ function renderProfiles() {
     return;
   }
   
-  // Sort filtered profiles by last used (most recent first)
-  const sortedProfiles = [...filteredProfiles].sort((a, b) => b.last_used - a.last_used);
+  // Sort filtered profiles alphabetically, with Default User at the top
+  const sortedProfiles = [...filteredProfiles].sort((a, b) => {
+    // Default User always comes first
+    if (a.name === 'Default User') return -1;
+    if (b.name === 'Default User') return 1;
+    
+    // Sort all other profiles alphabetically (case-insensitive)
+    return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+  });
   
   sortedProfiles.forEach(profile => {
     const li = document.createElement('li');
