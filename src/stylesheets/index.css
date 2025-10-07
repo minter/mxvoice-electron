@@ -933,7 +933,6 @@ legend {
   border-radius: 4px;
   background: var(--card-header-bg);
   text-transform: none;
-  color:#015EC4;
   cursor: pointer;
 }
 

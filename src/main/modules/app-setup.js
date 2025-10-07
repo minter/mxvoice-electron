@@ -349,48 +349,6 @@ function createApplicationMenu() {
       ],
     },
     {
-      label: "Profile",
-      submenu: [
-        {
-          label: "Switch Profile...",
-          click: async () => {
-            // Send message to renderer to handle profile switch with state save
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('menu:switch-profile');
-            }
-          },
-        },
-        {
-          label: "New Profile...",
-          click: () => {
-            // Send message to renderer to handle new profile creation
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('menu:new-profile');
-            }
-          },
-        },
-        {
-          label: "Duplicate Profile...",
-          click: () => {
-            // Send message to renderer to handle profile duplication
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('menu:duplicate-profile');
-            }
-          },
-        },
-        { type: "separator" },
-        {
-          label: "Delete Current Profile...",
-          click: () => {
-            // Send message to renderer to handle current profile deletion
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('menu:delete-current-profile');
-            }
-          },
-        },
-      ],
-    },
-    {
       label: "Songs",
       submenu: [
         {
@@ -451,6 +409,49 @@ function createApplicationMenu() {
           label: "Manage Categories",
           click: () => {
             manageCategories();
+          },
+        },
+      ],
+    },
+    {
+      label: "Profile",
+      submenu: [
+        {
+          label: "Switch Profile...",
+          click: async () => {
+            // Send message to renderer to handle profile switch with state save
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:switch-profile');
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: "New Profile...",
+          click: () => {
+            // Send message to renderer to handle new profile creation
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:new-profile');
+            }
+          },
+        },
+        {
+          label: "Duplicate Profile...",
+          click: () => {
+            // Send message to renderer to handle profile duplication
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:duplicate-profile');
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: "Delete Current Profile...",
+          click: () => {
+            // Send message to renderer to handle current profile deletion
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:delete-current-profile');
+            }
           },
         },
       ],
