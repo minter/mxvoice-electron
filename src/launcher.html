@@ -90,10 +90,36 @@
       padding: 30px;
     }
 
+    .profile-search-container {
+      margin-bottom: 20px;
+    }
+
+    .profile-search {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--item-bg);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .profile-search:focus {
+      outline: none;
+      border-color: var(--bg-gradient-start);
+      box-shadow: 0 0 0 3px rgba(var(--highlight-color-rgb), 0.1);
+    }
+
+    .profile-search::placeholder {
+      color: var(--text-secondary);
+    }
+
     .profile-list {
       list-style: none;
       margin-bottom: 20px;
-      max-height: 300px;
+      max-height: 280px;
       overflow-y: auto;
     }
 
@@ -360,6 +386,15 @@
       </div>
 
       <div id="profile-content" style="display: none;">
+        <div class="profile-search-container">
+          <input 
+            type="text" 
+            id="profile-search" 
+            class="profile-search" 
+            placeholder="Search profiles..."
+            autocomplete="off"
+          />
+        </div>
         <ul id="profile-list" class="profile-list"></ul>
 
         <div class="launcher-actions">

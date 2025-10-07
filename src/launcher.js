@@ -11,6 +11,7 @@
 
 let selectedProfile = null;
 let profiles = [];
+let filteredProfiles = [];
 
 // Wait for the secure API to be available
 window.addEventListener('DOMContentLoaded', async () => {
@@ -26,12 +27,21 @@ async function loadProfiles() {
     const result = await window.launcherAPI.getProfiles();
     
     if (result.success) {
-      profiles = result.profiles;
-      renderProfiles();
+    profiles = result.profiles;
+    filteredProfiles = [...profiles];
+    renderProfiles();
       
       // Hide loading, show content
       document.getElementById('loading-state').style.display = 'none';
       document.getElementById('profile-content').style.display = 'block';
+      
+      // Focus the search field now that it's visible
+      setTimeout(() => {
+        const searchField = document.getElementById('profile-search');
+        if (searchField) {
+          searchField.focus();
+        }
+      }, 100);
       
       // Auto-select first profile if only one exists
       if (profiles.length === 1) {
@@ -46,23 +56,49 @@ async function loadProfiles() {
 }
 
 /**
+ * Filter profiles based on search term
+ */
+function filterProfiles(searchTerm = '') {
+  if (!searchTerm.trim()) {
+    filteredProfiles = [...profiles];
+  } else {
+    const term = searchTerm.toLowerCase();
+    filteredProfiles = profiles.filter(profile => 
+      profile.name.toLowerCase().includes(term) ||
+      (profile.description && profile.description.toLowerCase().includes(term))
+    );
+  }
+  
+  renderProfiles();
+}
+
+/**
  * Render profiles in the list
  */
 function renderProfiles() {
   const listElement = document.getElementById('profile-list');
   listElement.innerHTML = '';
   
-  if (profiles.length === 0) {
-    listElement.innerHTML = `
-      <div class="empty-state">
-        <p>No profiles found. Create your first profile to get started.</p>
-      </div>
-    `;
+  if (filteredProfiles.length === 0) {
+    const searchTerm = document.getElementById('profile-search')?.value || '';
+    if (searchTerm.trim()) {
+      listElement.innerHTML = `
+        <div class="empty-state">
+          <p>No profiles match "${escapeHtml(searchTerm)}". Try a different search term.</p>
+        </div>
+      `;
+    } else {
+      listElement.innerHTML = `
+        <div class="empty-state">
+          <p>No profiles found. Create your first profile to get started.</p>
+        </div>
+      `;
+    }
     return;
   }
   
-  // Sort profiles by last used (most recent first)
-  const sortedProfiles = [...profiles].sort((a, b) => b.last_used - a.last_used);
+  // Sort filtered profiles by last used (most recent first)
+  const sortedProfiles = [...filteredProfiles].sort((a, b) => b.last_used - a.last_used);
   
   sortedProfiles.forEach(profile => {
     const li = document.createElement('li');
@@ -252,6 +288,11 @@ function setupEventListeners() {
   document.getElementById('create-btn').addEventListener('click', showCreateModal);
   document.getElementById('cancel-create-btn').addEventListener('click', hideCreateModal);
   document.getElementById('create-form').addEventListener('submit', createNewProfile);
+  
+  // Search functionality
+  document.getElementById('profile-search').addEventListener('input', (e) => {
+    filterProfiles(e.target.value);
+  });
   
   // Enter key launches app if profile selected (only when modal is not open)
   document.addEventListener('keydown', (e) => {
