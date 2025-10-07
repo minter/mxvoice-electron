@@ -922,9 +922,9 @@ legend {
 /* Profile indicator styles */
 .profile-indicator {
   position: absolute;
-  top: 8px;
+  top: 15px;
   right: 10px;
-  font-size: 11px;
+  font-size: 18px;
   color: var(--text-muted);
   display: flex;
   align-items: center;
@@ -932,6 +932,8 @@ legend {
   padding: 2px 8px;
   border-radius: 4px;
   background: var(--card-header-bg);
+  text-transform: none;
+  color:#027BFF;
 }
 
 .profile-indicator i {
@@ -940,6 +942,11 @@ legend {
 
 .profile-indicator:hover {
   color: var(--text-color);
-  background: var(--hover-bg);
+  cursor: pointer;
+}
+
+#profile-indicator-icon {
+  position: relative;
+  top: -1px;
 }
 /* End profile indicator styles */
