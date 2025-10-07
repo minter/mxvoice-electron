@@ -401,6 +401,12 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('menu:delete-current-profile', handler);
     },
     
+    onDuplicateProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:duplicate-profile', handler);
+      return () => ipcRenderer.removeListener('menu:duplicate-profile', handler);
+    },
+    
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
   },
   
@@ -416,6 +422,7 @@ const secureElectronAPI = {
     setPreference: (key, value) => ipcRenderer.invoke('profile:set-preference', key, value),
     getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences'),
     createProfile: (name, description) => ipcRenderer.invoke('profile:create', name, description),
+    duplicateProfile: (sourceName, targetName, description) => ipcRenderer.invoke('profile:duplicate', sourceName, targetName, description),
     deleteProfile: (name) => ipcRenderer.invoke('profile:delete', name)
   },
   

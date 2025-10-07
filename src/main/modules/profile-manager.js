@@ -13,6 +13,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { promisify } from 'util';
 import { app } from 'electron';
 import { fileURLToPath } from 'url';
 
@@ -573,6 +574,176 @@ async function saveProfilePreferences(profileName, preferences) {
   }
 }
 
+/**
+ * Duplicate an existing profile
+ */
+async function duplicateProfile(sourceProfileName, targetProfileName, description) {
+  console.log('duplicateProfile called with:', { sourceProfileName, targetProfileName, description });
+  try {
+    console.log('Starting duplicateProfile validation...');
+    
+    // Prevent duplication of Default User
+    if (sourceProfileName === 'Default User') {
+      console.log('Blocked: Cannot duplicate Default User profile');
+      return { success: false, error: 'Cannot duplicate Default User profile' };
+    }
+    
+    console.log('Default User check passed');
+    
+    // Check if source profile exists
+    console.log('Checking if source profile exists...');
+    if (!profileExists(sourceProfileName)) {
+      console.log('Source profile does not exist:', sourceProfileName);
+      return { success: false, error: 'Source profile does not exist' };
+    }
+    console.log('Source profile exists');
+    
+    // Check if target profile already exists
+    console.log('Checking if target profile already exists...');
+    if (profileExists(targetProfileName)) {
+      console.log('Target profile already exists:', targetProfileName);
+      return { success: false, error: 'Target profile already exists' };
+    }
+    console.log('Target profile does not exist (good)');
+    
+    // Validate target profile name
+    console.log('Validating target profile name...');
+    const nameValidation = validateProfileName(targetProfileName);
+    console.log('Name validation result:', nameValidation);
+    if (!nameValidation.valid) {
+      console.log('Target profile name validation failed:', nameValidation.error);
+      return { success: false, error: nameValidation.error };
+    }
+    console.log('Target profile name validation passed');
+    
+    // Get profiles directory
+    const profilesDir = getProfilesDirectory();
+    const sourceDir = path.join(profilesDir, sanitizeProfileName(sourceProfileName));
+    const targetDir = path.join(profilesDir, sanitizeProfileName(targetProfileName));
+    
+    debugLog?.info('Profile directory paths', { 
+      module: 'profile-manager', 
+      function: 'duplicateProfile',
+      profilesDir,
+      sourceDir,
+      targetDir 
+    });
+    
+    // Check if source directory exists
+    if (!fs.existsSync(sourceDir)) {
+      debugLog?.error('Source directory does not exist', { 
+        module: 'profile-manager', 
+        function: 'duplicateProfile',
+        sourceDir 
+      });
+      return { success: false, error: 'Source profile directory not found' };
+    }
+    
+    // Create target directory
+    debugLog?.info('Creating target directory', { 
+      module: 'profile-manager', 
+      function: 'duplicateProfile',
+      targetDir 
+    });
+    fs.mkdirSync(targetDir, { recursive: true });
+    
+    // Copy all files from source to target directory using a more robust method
+    const copyDirectoryRecursive = async (src, dest) => {
+      try {
+        debugLog?.info('Copying directory', { 
+          module: 'profile-manager', 
+          function: 'copyDirectoryRecursive',
+          src,
+          dest 
+        });
+        
+        // Ensure destination directory exists
+        if (!fs.existsSync(dest)) {
+          fs.mkdirSync(dest, { recursive: true });
+        }
+        
+        const entries = await promisify(fs.readdir)(src, { withFileTypes: true });
+        
+        for (const entry of entries) {
+          const srcPath = path.join(src, entry.name);
+          const destPath = path.join(dest, entry.name);
+          
+          debugLog?.info('Copying entry', { 
+            module: 'profile-manager', 
+            function: 'copyDirectoryRecursive',
+            entryName: entry.name,
+            isDirectory: entry.isDirectory(),
+            srcPath,
+            destPath 
+          });
+          
+          if (entry.isDirectory()) {
+            await copyDirectoryRecursive(srcPath, destPath);
+          } else {
+            await promisify(fs.copyFile)(srcPath, destPath);
+          }
+        }
+      } catch (error) {
+        debugLog?.error('Error in copyDirectoryRecursive', { 
+          module: 'profile-manager', 
+          function: 'copyDirectoryRecursive',
+          src,
+          dest,
+          error: error.message 
+        });
+        throw error;
+      }
+    };
+    
+    await copyDirectoryRecursive(sourceDir, targetDir);
+    
+    // Load registry
+    debugLog?.info('Loading profile registry', { 
+      module: 'profile-manager', 
+      function: 'duplicateProfile' 
+    });
+    const registry = loadProfileRegistry();
+    
+    // Add new profile to registry
+    debugLog?.info('Adding profile to registry', { 
+      module: 'profile-manager', 
+      function: 'duplicateProfile',
+      targetProfileName 
+    });
+    registry.profiles[targetProfileName] = {
+      name: targetProfileName,
+      description: description || `Copy of ${sourceProfileName}`,
+      created: Date.now(),
+      last_used: Date.now()
+    };
+    
+    // Save registry
+    debugLog?.info('Saving profile registry', { 
+      module: 'profile-manager', 
+      function: 'duplicateProfile' 
+    });
+    saveProfileRegistry(registry);
+    
+    debugLog?.info('Profile duplicated successfully', { 
+      module: 'profile-manager', 
+      function: 'duplicateProfile',
+      sourceProfileName,
+      targetProfileName 
+    });
+    
+    return { success: true };
+  } catch (error) {
+    debugLog?.error('Failed to duplicate profile', { 
+      module: 'profile-manager', 
+      function: 'duplicateProfile',
+      sourceProfileName,
+      targetProfileName,
+      error: error.message 
+    });
+    return { success: false, error: error.message };
+  }
+}
+
 export {
   initializeProfileManager,
   getAvailableProfiles,
@@ -580,6 +751,7 @@ export {
   validateProfileName,
   createProfile,
   updateProfileLastUsed,
+  duplicateProfile,
   deleteProfile,
   loadProfilePreferences,
   saveProfilePreferences,

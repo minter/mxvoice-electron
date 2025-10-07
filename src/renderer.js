@@ -306,6 +306,15 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         });
       }
       
+      // Duplicate profile event listener
+      if (apiToUse && apiToUse.events && apiToUse.events.onDuplicateProfile) {
+        window.logInfo('📋 Setting up duplicate profile event listener...');
+        apiToUse.events.onDuplicateProfile(async () => {
+          window.logInfo('📋 Duplicate profile requested from menu');
+          showDuplicateProfileModal();
+        });
+      }
+      
       // Delete current profile event listener
       if (apiToUse && apiToUse.events && apiToUse.events.onDeleteCurrentProfile) {
         window.logInfo('🗑️ Setting up delete current profile event listener...');
@@ -804,6 +813,109 @@ async function handleNewProfileSubmit() {
 }
 
 /**
+ * Show the duplicate profile modal
+ */
+async function showDuplicateProfileModal() {
+  try {
+    // Get current profile name
+    const currentProfile = await window.secureElectronAPI.profile.getCurrent();
+    if (!currentProfile.success) {
+      alert('Could not determine current profile');
+      return;
+    }
+    
+    // Store the current profile name for use in duplication
+    window.currentProfileForDuplication = currentProfile.profile;
+    
+    // Clear target fields
+    document.getElementById('duplicateTargetName').value = '';
+    document.getElementById('duplicateTargetDescription').value = '';
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('duplicateProfileModal'));
+    modal.show();
+    
+    // Focus the target name input after modal is shown
+    document.getElementById('duplicateProfileModal').addEventListener('shown.bs.modal', function () {
+      document.getElementById('duplicateTargetName').focus();
+    }, { once: true });
+  } catch (error) {
+    window.logError('Error showing duplicate profile modal:', error);
+    alert(`Error: ${error.message}`);
+  }
+}
+
+/**
+ * Handle duplicate profile form submission
+ */
+async function handleDuplicateProfileSubmit() {
+  const targetNameInput = document.getElementById('duplicateTargetName');
+  const targetDescInput = document.getElementById('duplicateTargetDescription');
+  
+  const sourceName = window.currentProfileForDuplication;
+  const targetName = targetNameInput.value.trim();
+  const targetDescription = targetDescInput.value.trim();
+  
+  // Validate source profile exists
+  if (!sourceName) {
+    alert('Could not determine source profile');
+    return;
+  }
+  
+  // Validate target profile name
+  if (!targetName) {
+    alert('New profile name is required');
+    targetNameInput.focus();
+    return;
+  }
+  
+  // Check for invalid characters (basic validation)
+  if (!/^[a-zA-Z0-9\s\-_]+$/.test(targetName)) {
+    alert('Profile name can only contain letters, numbers, spaces, hyphens, and underscores');
+    targetNameInput.focus();
+    return;
+  }
+  
+  // Check if trying to duplicate to same name
+  if (sourceName === targetName) {
+    alert('New profile name must be different from the source profile');
+    targetNameInput.focus();
+    return;
+  }
+  
+  try {
+    // Duplicate the profile
+    const result = await window.secureElectronAPI.profile.duplicateProfile(sourceName, targetName, targetDescription);
+    
+    if (result && result.success) {
+      // Close the modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('duplicateProfileModal'));
+      modal.hide();
+      
+      // Switch directly to the newly duplicated profile
+      try {
+        const switchResult = await window.secureElectronAPI.profile.switchToProfile(targetName);
+        if (!switchResult.success) {
+          window.logError('Failed to switch to duplicated profile:', switchResult.error);
+          // Fallback: just refresh the indicator
+          await refreshProfileIndicator();
+        }
+      } catch (switchError) {
+        window.logError('Error switching to duplicated profile:', switchError);
+        // Fallback: just refresh the indicator
+        await refreshProfileIndicator();
+      }
+    } else {
+      const errorMessage = result?.error || 'Unknown error occurred';
+      alert(`Failed to duplicate profile: ${errorMessage}`);
+    }
+  } catch (error) {
+    window.logError('Error duplicating profile:', error);
+    alert(`Error duplicating profile: ${error.message}`);
+  }
+}
+
+/**
  * Refresh the profile indicator after profile changes
  */
 async function refreshProfileIndicator() {
@@ -820,12 +932,11 @@ async function refreshProfileIndicator() {
   }
 }
 
-// Set up event listeners for the new profile modal
+// Set up event listeners for the profile modals
 document.addEventListener('DOMContentLoaded', function() {
-  // Create profile button click handler
+  // New profile modal handlers
   document.getElementById('createProfileBtn').addEventListener('click', handleNewProfileSubmit);
   
-  // Enter key in name field submits form
   document.getElementById('newProfileName').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -833,11 +944,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  // Enter key in description field submits form
   document.getElementById('newProfileDescription').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleNewProfileSubmit();
+    }
+  });
+  
+  // Duplicate profile modal handlers
+  document.getElementById('duplicateProfileBtn').addEventListener('click', handleDuplicateProfileSubmit);
+  
+  document.getElementById('duplicateTargetName').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleDuplicateProfileSubmit();
+    }
+  });
+  
+  document.getElementById('duplicateTargetDescription').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleDuplicateProfileSubmit();
     }
   });
 });

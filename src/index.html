@@ -703,6 +703,38 @@
       </div>
     </div>
 
+    <!-- Duplicate Profile Modal -->
+    <div class="modal fade" id="duplicateProfileModal" role="dialog">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title">Duplicate Profile</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="duplicateProfileForm">
+              <div class="mb-3">
+                <label for="duplicateTargetName" class="form-label">New Profile Name</label>
+                <input type="text" class="form-control" id="duplicateTargetName" required 
+                       placeholder="Enter name for duplicated profile" maxlength="50">
+                <div class="form-text">Profile names must be unique and cannot contain special characters.</div>
+              </div>
+              <div class="mb-3">
+                <label for="duplicateTargetDescription" class="form-label">Description (Optional)</label>
+                <input type="text" class="form-control" id="duplicateTargetDescription" 
+                       placeholder="Enter a description for this profile" maxlength="100">
+                <div class="form-text">A brief description to help identify this profile.</div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-success btn-sm" id="duplicateProfileBtn">Duplicate Profile</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Custom Input Modal -->
     <div class="modal fade" id="inputModal" role="dialog">
       <div class="modal-dialog modal-dialog-centered" role="document">

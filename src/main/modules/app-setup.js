@@ -369,6 +369,15 @@ function createApplicationMenu() {
             }
           },
         },
+        {
+          label: "Duplicate Profile...",
+          click: () => {
+            // Send message to renderer to handle profile duplication
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:duplicate-profile');
+            }
+          },
+        },
         { type: "separator" },
         {
           label: "Delete Current Profile...",
