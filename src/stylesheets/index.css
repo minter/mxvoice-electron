@@ -933,7 +933,8 @@ legend {
   border-radius: 4px;
   background: var(--card-header-bg);
   text-transform: none;
-  color:#027BFF;
+  color:#015EC4;
+  cursor: pointer;
 }
 
 .profile-indicator i {
