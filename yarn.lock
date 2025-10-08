@@ -307,12 +307,12 @@
   resolved "https://registry.yarnpkg.com/@pkgjs/parseargs/-/parseargs-0.11.0.tgz#a77ea742fab25775145434eb1d2328cf5013ac33"
   integrity sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==
 
-"@playwright/test@^1.55.1":
-  version "1.55.1"
-  resolved "https://registry.yarnpkg.com/@playwright/test/-/test-1.55.1.tgz#80f775d5f948cd3ef550fcc45ef99986d3ffb36c"
-  integrity sha512-IVAh/nOJaw6W9g+RJVlIQJ6gSiER+ae6mKQ5CX1bERzQgbC1VSeBlwdvczT7pxb0GWiyrxH4TGKbMfDb4Sq/ig==
+"@playwright/test@^1.56.0":
+  version "1.56.0"
+  resolved "https://registry.yarnpkg.com/@playwright/test/-/test-1.56.0.tgz#891fe101bddf3eee3dd609e7a145f705dc0f3054"
+  integrity sha512-Tzh95Twig7hUwwNe381/K3PggZBZblKUe2wv25oIpzWLr6Z0m4KgV1ZVIjnR6GM9ANEqjZD7XsZEa6JL/7YEgg==
   dependencies:
-    playwright "1.55.1"
+    playwright "1.56.0"
 
 "@sindresorhus/is@^4.0.0":
   version "4.6.0"
@@ -904,10 +904,10 @@ concat-map@0.0.1:
   resolved "https://registry.yarnpkg.com/concat-map/-/concat-map-0.0.1.tgz#d8a96bd77fd68df7793a73036a3ba0d5405d477b"
   integrity sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==
 
-conf@^15.0.0:
-  version "15.0.0"
-  resolved "https://registry.yarnpkg.com/conf/-/conf-15.0.0.tgz#640e26ec4f6ae7ef57d15ab3601cd6f919a70c96"
-  integrity sha512-w9BzJHS5swhxUq3+nF5hbI0XbfCNH5nfP/IL4HpkmdLtejSPen20hvRkcnk8Xht7YyLoHjvxDm99bqsa1l9qlw==
+conf@^15.0.2:
+  version "15.0.2"
+  resolved "https://registry.yarnpkg.com/conf/-/conf-15.0.2.tgz#b983be81227a304b9f885fde6c86c7fe5902dc9d"
+  integrity sha512-JBSrutapCafTrddF9dH3lc7+T2tBycGF4uPkI4Js+g4vLLEhG6RZcFi3aJd5zntdf5tQxAejJt8dihkoQ/eSJw==
   dependencies:
     ajv "^8.17.1"
     ajv-formats "^3.0.1"
@@ -1150,12 +1150,12 @@ electron-reload@^1.5.0:
   dependencies:
     chokidar "^3.0.2"
 
-electron-store@^11.0.0:
-  version "11.0.0"
-  resolved "https://registry.yarnpkg.com/electron-store/-/electron-store-11.0.0.tgz#68be40a743c0a39384b77c1fecd1faca91e037a2"
-  integrity sha512-msCXEmzIGdnIq/u3od5mh/Hk5mZAGKa+3gGGTQcqPPkHcD/otlLyIZuRd1WAOhhg0gKo17BK5Avsl7OHkxir7w==
+electron-store@^11.0.2:
+  version "11.0.2"
+  resolved "https://registry.yarnpkg.com/electron-store/-/electron-store-11.0.2.tgz#00a182c8a8cfa3816240273bb9aa5732de6063b8"
+  integrity sha512-4VkNRdN+BImL2KcCi41WvAYbh6zLX5AUTi4so68yPqiItjbgTjqpEnGAqasgnG+lB6GuAyUltKwVopp6Uv+gwQ==
   dependencies:
-    conf "^15.0.0"
+    conf "^15.0.2"
     type-fest "^5.0.1"
 
 electron-updater@^6.6.8:
@@ -1180,10 +1180,10 @@ electron-util@^1.0.0:
     electron-is-dev "^3.0.1"
     new-github-issue-url "^1.1.0"
 
-electron@^38.2.1:
-  version "38.2.1"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-38.2.1.tgz#c018fa527253ecbe10ac04ea61aeec4d2b7baf62"
-  integrity sha512-P4pE2RpRg3kM8IeOK+heg6iAxR5wcXnNHrbVchn7M3GBnYAhjfJRkROusdOro5PlKzdtfKjesbbqaG4MqQXccg==
+electron@^38.2.2:
+  version "38.2.2"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-38.2.2.tgz#117a516fa2215604e35a60f3cc2543f3f5404a16"
+  integrity sha512-OXSaVNXDlonXDjMRsFNQo1j5tzTKwKXh5/m46IjAFccBcZJZMISI+EjSI07oexIuhvKM8AZLuFuihVn4YjWWrA==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^22.7.7"
@@ -2289,17 +2289,17 @@ picomatch@^2.0.4, picomatch@^2.2.1:
   resolved "https://registry.yarnpkg.com/picomatch/-/picomatch-2.3.1.tgz#3ba3833733646d9d3e4995946c1365a67fb07a42"
   integrity sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==
 
-playwright-core@1.55.1:
-  version "1.55.1"
-  resolved "https://registry.yarnpkg.com/playwright-core/-/playwright-core-1.55.1.tgz#5d3bb1846bc4289d364ea1a9dcb33f14545802e9"
-  integrity sha512-Z6Mh9mkwX+zxSlHqdr5AOcJnfp+xUWLCt9uKV18fhzA8eyxUd8NUWzAjxUh55RZKSYwDGX0cfaySdhZJGMoJ+w==
+playwright-core@1.56.0:
+  version "1.56.0"
+  resolved "https://registry.yarnpkg.com/playwright-core/-/playwright-core-1.56.0.tgz#14b40ea436551b0bcefe19c5bfb8d1804c83739c"
+  integrity sha512-1SXl7pMfemAMSDn5rkPeZljxOCYAmQnYLBTExuh6E8USHXGSX3dx6lYZN/xPpTz1vimXmPA9CDnILvmJaB8aSQ==
 
-playwright@1.55.1, playwright@^1.55.1:
-  version "1.55.1"
-  resolved "https://registry.yarnpkg.com/playwright/-/playwright-1.55.1.tgz#8a9954e9e61ed1ab479212af9be336888f8b3f0e"
-  integrity sha512-cJW4Xd/G3v5ovXtJJ52MAOclqeac9S/aGGgRzLabuF8TnIb6xHvMzKIa6JmrRzUkeXJgfL1MhukP0NK6l39h3A==
+playwright@1.56.0, playwright@^1.55.1:
+  version "1.56.0"
+  resolved "https://registry.yarnpkg.com/playwright/-/playwright-1.56.0.tgz#71c533c61da33e95812f8c6fa53960e073548d9a"
+  integrity sha512-X5Q1b8lOdWIE4KAoHpW3SE8HvUB+ZZsUoN64ZhjnN8dOb1UpujxBtENGiZFE+9F/yhzJwYa+ca3u43FeLbboHA==
   dependencies:
-    playwright-core "1.55.1"
+    playwright-core "1.56.0"
   optionalDependencies:
     fsevents "2.3.2"
 
