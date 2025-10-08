@@ -21,6 +21,7 @@ let store;
 let autoUpdater;
 let fileOperations;
 let debugLog;
+let getCurrentProfile;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -29,6 +30,7 @@ function initializeAppSetup(dependencies) {
   autoUpdater = dependencies.autoUpdater;
   fileOperations = dependencies.fileOperations;
   debugLog = dependencies.debugLog;
+  getCurrentProfile = dependencies.getCurrentProfile;
 }
 
 // Create the main window
@@ -447,6 +449,7 @@ function createApplicationMenu() {
         { type: "separator" },
         {
           label: "Delete Current Profile...",
+          enabled: getCurrentProfile ? getCurrentProfile() !== 'Default User' : true,
           click: () => {
             // Send message to renderer to handle current profile deletion
             if (mainWindow && !mainWindow.isDestroyed()) {

@@ -745,7 +745,8 @@ async function initializeModules() {
     fileOperations,
     debugLog,
     updateState,
-    logService
+    logService,
+    getCurrentProfile
   };
 
   // Initialize each module
