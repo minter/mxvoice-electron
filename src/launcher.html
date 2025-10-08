@@ -307,6 +307,102 @@
       60%, 100% { content: '...'; }
     }
 
+    /* Modal styles */
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: var(--modal-bg);
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .close {
+      color: var(--text-secondary);
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .close:hover {
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 20px 24px;
+    }
+
+    .modal-footer {
+      padding: 16px 24px 20px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      background: var(--item-bg);
+      color: var(--text-primary);
+      transition: border-color 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--bg-gradient-start);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-secondary);
+    }
+
   </style>
 </head>
 <body>
@@ -336,6 +432,9 @@
         <ul id="profile-list" class="profile-list"></ul>
 
         <div class="launcher-actions">
+          <button id="create-profile-btn" class="btn btn-secondary">
+            Create New Profile
+          </button>
           <button id="launch-btn" class="btn btn-primary" disabled>
             Choose Profile
           </button>
@@ -344,6 +443,29 @@
     </div>
   </div>
 
+  <!-- Create Profile Modal -->
+  <div id="create-profile-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Create New Profile</h2>
+        <span class="close" id="modal-close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="profile-name-input">Profile Name</label>
+          <input type="text" id="profile-name-input" class="form-input" placeholder="Enter profile name..." required>
+        </div>
+        <div class="form-group">
+          <label for="profile-description-input">Description (Optional)</label>
+          <input type="text" id="profile-description-input" class="form-input" placeholder="Enter description...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-create-btn" class="btn btn-secondary">Cancel</button>
+        <button id="confirm-create-btn" class="btn btn-primary">Create Profile</button>
+      </div>
+    </div>
+  </div>
 
   <script src="launcher.js"></script>
 </body>

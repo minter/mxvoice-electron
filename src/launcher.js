@@ -187,6 +187,35 @@ async function launchApp() {
 function setupEventListeners() {
   document.getElementById('launch-btn').addEventListener('click', launchApp);
   
+  // Create profile button
+  document.getElementById('create-profile-btn').addEventListener('click', showCreateProfileModal);
+  
+  // Modal event listeners
+  document.getElementById('modal-close').addEventListener('click', hideCreateProfileModal);
+  document.getElementById('cancel-create-btn').addEventListener('click', hideCreateProfileModal);
+  document.getElementById('confirm-create-btn').addEventListener('click', createProfile);
+  
+  // Close modal when clicking outside
+  document.getElementById('create-profile-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'create-profile-modal') {
+      hideCreateProfileModal();
+    }
+  });
+  
+  // Enter key in name field creates profile
+  document.getElementById('profile-name-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      createProfile();
+    }
+  });
+  
+  // Enter key in description field creates profile
+  document.getElementById('profile-description-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      createProfile();
+    }
+  });
+  
   // Search functionality
   document.getElementById('profile-search').addEventListener('input', (e) => {
     filterProfiles(e.target.value);
@@ -213,6 +242,86 @@ function showError(message) {
  */
 function clearError() {
   document.getElementById('error-container').innerHTML = '';
+}
+
+/**
+ * Show the create profile modal
+ */
+function showCreateProfileModal() {
+  // Clear form fields
+  document.getElementById('profile-name-input').value = '';
+  document.getElementById('profile-description-input').value = '';
+  
+  // Show modal
+  document.getElementById('create-profile-modal').style.display = 'flex';
+  
+  // Focus the name input
+  setTimeout(() => {
+    document.getElementById('profile-name-input').focus();
+  }, 100);
+}
+
+/**
+ * Hide the create profile modal
+ */
+function hideCreateProfileModal() {
+  document.getElementById('create-profile-modal').style.display = 'none';
+}
+
+/**
+ * Create a new profile
+ */
+async function createProfile() {
+  const nameInput = document.getElementById('profile-name-input');
+  const descInput = document.getElementById('profile-description-input');
+  
+  const name = nameInput.value.trim();
+  const description = descInput.value.trim();
+  
+  // Validate profile name
+  if (!name) {
+    showError('Profile name is required');
+    nameInput.focus();
+    return;
+  }
+  
+  // Check for invalid characters (basic validation)
+  if (!/^[a-zA-Z0-9\s\-_]+$/.test(name)) {
+    showError('Profile name can only contain letters, numbers, spaces, hyphens, and underscores');
+    nameInput.focus();
+    return;
+  }
+  
+  // Check if profile already exists
+  const existingProfile = profiles.find(p => p.name === name);
+  if (existingProfile) {
+    showError('A profile with this name already exists');
+    nameInput.focus();
+    return;
+  }
+  
+  try {
+    // Clear any existing errors
+    clearError();
+    
+    // Create the profile
+    const result = await window.launcherAPI.createProfile(name, description);
+    
+    if (result.success) {
+      // Hide modal
+      hideCreateProfileModal();
+      
+      // Reload profiles to include the new one
+      await loadProfiles();
+      
+      // Auto-select the newly created profile
+      selectProfile(name);
+    } else {
+      showError(result.error || 'Failed to create profile');
+    }
+  } catch (error) {
+    showError(`Error creating profile: ${error.message}`);
+  }
 }
 
 /**
