@@ -904,10 +904,10 @@ concat-map@0.0.1:
   resolved "https://registry.yarnpkg.com/concat-map/-/concat-map-0.0.1.tgz#d8a96bd77fd68df7793a73036a3ba0d5405d477b"
   integrity sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==
 
-conf@^15.0.0:
-  version "15.0.0"
-  resolved "https://registry.yarnpkg.com/conf/-/conf-15.0.0.tgz#640e26ec4f6ae7ef57d15ab3601cd6f919a70c96"
-  integrity sha512-w9BzJHS5swhxUq3+nF5hbI0XbfCNH5nfP/IL4HpkmdLtejSPen20hvRkcnk8Xht7YyLoHjvxDm99bqsa1l9qlw==
+conf@^15.0.2:
+  version "15.0.2"
+  resolved "https://registry.yarnpkg.com/conf/-/conf-15.0.2.tgz#b983be81227a304b9f885fde6c86c7fe5902dc9d"
+  integrity sha512-JBSrutapCafTrddF9dH3lc7+T2tBycGF4uPkI4Js+g4vLLEhG6RZcFi3aJd5zntdf5tQxAejJt8dihkoQ/eSJw==
   dependencies:
     ajv "^8.17.1"
     ajv-formats "^3.0.1"
@@ -1150,12 +1150,12 @@ electron-reload@^1.5.0:
   dependencies:
     chokidar "^3.0.2"
 
-electron-store@^11.0.0:
-  version "11.0.0"
-  resolved "https://registry.yarnpkg.com/electron-store/-/electron-store-11.0.0.tgz#68be40a743c0a39384b77c1fecd1faca91e037a2"
-  integrity sha512-msCXEmzIGdnIq/u3od5mh/Hk5mZAGKa+3gGGTQcqPPkHcD/otlLyIZuRd1WAOhhg0gKo17BK5Avsl7OHkxir7w==
+electron-store@^11.0.2:
+  version "11.0.2"
+  resolved "https://registry.yarnpkg.com/electron-store/-/electron-store-11.0.2.tgz#00a182c8a8cfa3816240273bb9aa5732de6063b8"
+  integrity sha512-4VkNRdN+BImL2KcCi41WvAYbh6zLX5AUTi4so68yPqiItjbgTjqpEnGAqasgnG+lB6GuAyUltKwVopp6Uv+gwQ==
   dependencies:
-    conf "^15.0.0"
+    conf "^15.0.2"
     type-fest "^5.0.1"
 
 electron-updater@^6.6.8:
