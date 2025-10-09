@@ -551,19 +551,6 @@ import('electron-util').then(electronUtil => {
   });
 });
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-// Use dynamic import for electron-squirrel-startup to avoid CommonJS issues
-import('electron-squirrel-startup').then(electronSquirrelStartup => {
-  if (electronSquirrelStartup.default) {
-    app.quit();
-  }
-}).catch(error => {
-  debugLog.warn('Could not load electron-squirrel-startup', { 
-    function: "electron-squirrel-startup import",
-    error: error.message 
-  });
-});
-
 // Initialize database
 async function initializeMainDatabaseWrapper() {
   try {
