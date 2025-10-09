@@ -427,6 +427,16 @@ function createApplicationMenu() {
             }
           },
         },
+        {
+          label: "Log Out",
+          enabled: getCurrentProfile ? getCurrentProfile() !== 'Default User' : true,
+          click: () => {
+            // Send message to renderer to handle logout (switch to Default Profile)
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:logout');
+            }
+          },
+        },
         { type: "separator" },
         {
           label: "New Profile...",

@@ -273,6 +273,24 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         });
       }
       
+      // Logout event listener
+      if (apiToUse && apiToUse.events && apiToUse.events.onLogout) {
+        window.logInfo('🚪 Setting up logout event listener...');
+        apiToUse.events.onLogout(async () => {
+          window.logInfo('🚪 Logout requested from menu');
+          try {
+            const result = await window.secureElectronAPI.profile.switchToProfile('Default User');
+            if (!result.success) {
+              window.logError('Failed to logout (switch to Default Profile):', result.error);
+              alert(`Failed to logout: ${result.error}`);
+            }
+          } catch (error) {
+            window.logError('Error logging out:', error);
+            alert(`Error logging out: ${error.message}`);
+          }
+        });
+      }
+      
       // New profile event listener
       if (apiToUse && apiToUse.events && apiToUse.events.onNewProfile) {
         window.logInfo('🆕 Setting up new profile event listener...');

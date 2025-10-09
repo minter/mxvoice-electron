@@ -389,6 +389,12 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('menu:switch-profile', handler);
     },
     
+    onLogout: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:logout', handler);
+      return () => ipcRenderer.removeListener('menu:logout', handler);
+    },
+    
     onNewProfile: (callback) => {
       const handler = (_event, ...args) => callback(...args);
       ipcRenderer.on('menu:new-profile', handler);
