@@ -81,9 +81,33 @@
       margin-bottom: 8px;
     }
 
-    .launcher-header p {
+    .header-actions {
+      display: flex;
+      justify-content: right;
+      margin-top: 8px;
+    }
+
+    .header-actions p {
       font-size: 14px;
       opacity: 0.9;
+      margin: 0;
+    }
+
+    .header-create-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .header-create-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
     }
 
     .launcher-body {
@@ -194,13 +218,11 @@
     }
 
     .launcher-actions {
-      display: flex;
-      gap: 12px;
       margin-top: 20px;
     }
 
     .btn {
-      flex: 1;
+      width: 100%;
       padding: 14px 24px;
       border: none;
       border-radius: 10px;
@@ -227,28 +249,6 @@
       box-shadow: none;
     }
 
-    .btn-secondary {
-      background: transparent;
-      color: white;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.5);
-    }
-    
-    @media (prefers-color-scheme: light) {
-      .btn-secondary {
-        color: var(--bg-gradient-start);
-        border-color: var(--bg-gradient-start);
-      }
-      
-      .btn-secondary:hover {
-        background: var(--item-bg);
-        border-color: var(--bg-gradient-start);
-      }
-    }
 
     .empty-state {
       text-align: center;
@@ -409,7 +409,11 @@
   <div class="launcher-container">
     <div class="launcher-header">
       <h1>🎵 Mx. Voice</h1>
-      <p>Select your profile to continue</p>
+      <div class="header-actions">
+        <button id="create-profile-btn" class="header-create-btn">
+          + New Profile
+        </button>
+      </div>
     </div>
 
     <div class="launcher-body">
@@ -432,9 +436,6 @@
         <ul id="profile-list" class="profile-list"></ul>
 
         <div class="launcher-actions">
-          <button id="create-profile-btn" class="btn btn-secondary">
-            Create New Profile
-          </button>
           <button id="launch-btn" class="btn btn-primary" disabled>
             Choose Profile
           </button>
