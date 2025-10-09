@@ -933,7 +933,6 @@ legend {
   border-radius: 4px;
   background: var(--card-header-bg);
   text-transform: none;
-  cursor: pointer;
 }
 
 .profile-indicator i {
@@ -942,7 +941,6 @@ legend {
 
 .profile-indicator:hover {
   color: var(--text-color);
-  cursor: pointer;
 }
 
 #profile-indicator-icon {

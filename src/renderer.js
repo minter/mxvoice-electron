@@ -96,30 +96,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         profileNameElement.textContent = result.profile;
       }
       
-      // Add click event listener to profile indicator
-      const profileIndicator = document.getElementById('profile-indicator');
-      if (profileIndicator) {
-        profileIndicator.addEventListener('click', async () => {
-          try {
-            // Call the same function that the View menu uses
-            if (window.moduleRegistry && window.moduleRegistry.profileState && window.moduleRegistry.profileState.switchProfileWithSave) {
-              await window.moduleRegistry.profileState.switchProfileWithSave();
-            } else {
-              // Fallback: trigger the menu switch profile event
-              if (window.secureElectronAPI && window.secureElectronAPI.events && window.secureElectronAPI.events.onSwitchProfile) {
-                // This will trigger the same flow as the menu
-                window.secureElectronAPI.events.onSwitchProfile(() => {});
-              }
-            }
-          } catch (error) {
-            if (window.debugLog) {
-              window.debugLog.error('Failed to switch profile', { error: error.message });
-            } else {
-              console.error('Failed to switch profile:', error);
-            }
-          }
-        });
-      }
     }
   } catch (error) {
     // Use debugLog if available, fallback to console for early initialization
