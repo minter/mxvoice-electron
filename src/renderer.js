@@ -707,6 +707,16 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Make event coordination available globally for debugging
     window.eventCoordination = eventCoordination;
 
+    // Initialize cleanup module for resource cleanup on window close
+    if (moduleRegistry.cleanup && moduleRegistry.cleanup.initializeCleanup) {
+      window.logInfo('Initializing cleanup module...');
+      moduleRegistry.cleanup.initializeCleanup({
+        debugLog: debugLogger,
+        eventCoordination: eventCoordination
+      });
+      window.logInfo('Cleanup module initialized successfully');
+    }
+
     // Provide global aliases for UI scaling (legacy underscore and new camelCase)
     try {
       const uiModule = moduleRegistry.ui;
