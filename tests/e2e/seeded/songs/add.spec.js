@@ -783,7 +783,7 @@ test.describe('Songs - add', () => {
     }
   });
 
-  test('Bulk add all test songs to new category "RNOUT"', async () => {
+  test('Bulk add all test songs to new category "Running Out"', async () => {
     // 1) Stub dialog in main to return the test-songs directory
     const testSongsDir = path.resolve(__dirname, '../../../fixtures/test-songs');
     
@@ -836,24 +836,18 @@ test.describe('Songs - add', () => {
     // 3) Wait for the bulk add modal to appear
     await expect(page.locator('#bulkAddModal')).toBeVisible({ timeout: 10000 });
     
-    // 4) Select the "RNOUT" category (or create it if it doesn't exist)
+    // 4) Create a new "Running Out" category
+    // This will generate a code like "RUNN" but display "Running Out"
     const categorySelect = page.locator('#bulk-add-category');
     
-    // Check if RNOUT category exists, if not, create it
-    const rnoutExists = await categorySelect.locator('option[value="RNOUT"]').count();
-    if (rnoutExists === 0) {
-      // Create new category by selecting "New Category" option
-      await categorySelect.selectOption('new');
-      await page.waitForTimeout(500);
-      
-      // Fill in the new category name
-      const newCategoryInput = page.locator('#bulk-song-form-new-category');
-      await newCategoryInput.fill('RNOUT');
-      await page.waitForTimeout(500);
-    } else {
-      // Select existing RNOUT category
-      await categorySelect.selectOption('RNOUT');
-    }
+    // Always create new category for this test
+    await categorySelect.selectOption('--NEW--');
+    await page.waitForTimeout(500);
+    
+    // Fill in the new category description
+    const newCategoryInput = page.locator('#bulk-song-form-new-category');
+    await newCategoryInput.fill('Running Out');
+    await page.waitForTimeout(500);
     
     // 5) Click "Add All" button
     await page.locator('#bulkAddSubmitButton').click();
@@ -864,10 +858,13 @@ test.describe('Songs - add', () => {
     // 7) Wait for bulk processing to complete
     await page.waitForTimeout(3000);
     
-    // 8) Verify all 8 test songs appear in the RNOUT category (including OGG file)
-    // First, select the RNOUT category in the search dropdown
+    // 8) Verify all 8 test songs appear in the "Running Out" category (including OGG file)
+    // The category code will be "RUNN" (first 4 letters, no spaces, uppercase)
+    // but the UI should display "Running Out" (the description/name)
+    
+    // First, select the category by its CODE in the search dropdown
     const searchCategorySelect = page.locator('#category_select');
-    await searchCategorySelect.selectOption('RNOUT');
+    await searchCategorySelect.selectOption('RUNN');
     await page.waitForTimeout(1000);
     
     // Clear any existing search terms
@@ -879,6 +876,20 @@ test.describe('Songs - add', () => {
     // Verify we have exactly 8 results (7 MP3s + 1 OGG)
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(8, { timeout: 10000 });
+    
+    // **CRITICAL TEST**: Verify that category NAME is displayed, not category CODE
+    // The category column should show "Running Out" (description), NOT "RUNN" (code)
+    const firstRow = rows.first();
+    const categoryCell = firstRow.locator('td').first();
+    await expect(categoryCell).toContainText('Running Out');
+    
+    // Verify all rows show the category name (not code)
+    for (let i = 0; i < 8; i++) {
+      const row = rows.nth(i);
+      const catCell = row.locator('td').first();
+      const catText = await catCell.textContent();
+      expect(catText).toBe('Running Out'); // Should be "Running Out", NOT "RUNN"
+    }
     
     // Verify specific songs are present (using actual metadata from the files)
     await expect(page.locator('#search_results')).toContainText("Alice's Restaurant"); // OGG file
