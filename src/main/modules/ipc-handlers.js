@@ -865,10 +865,10 @@ function registerAllHandlers() {
       if (!filePath || typeof filePath !== 'string') {
         throw new Error('Invalid file path');
       }
-      // First attempt: music-metadata
+      // First attempt: music-metadata with duration calculation enabled
       let durationSec = 0;
       try {
-        const metadata = await parseAudioFile(filePath);
+        const metadata = await parseAudioFile(filePath, { duration: true });
         durationSec = metadata?.format?.duration ? Number(metadata.format.duration) : 0;
       } catch (e) {
         debugLog?.warn('music-metadata parse failed for duration', { module: 'ipc-handlers', function: 'audio-get-duration', error: e?.message, filePath });
@@ -921,7 +921,9 @@ function registerAllHandlers() {
       if (!filePath || typeof filePath !== 'string') {
         throw new Error('Invalid file path');
       }
-      const metadata = await parseAudioFile(filePath);
+      // Enable duration calculation to get accurate duration for OGG and other formats
+      // Without this option, music-metadata may report incorrect durations for OGG/Vorbis files
+      const metadata = await parseAudioFile(filePath, { duration: true });
       const title = metadata?.common?.title || '';
       // Some files store artist as array
       const artist = Array.isArray(metadata?.common?.artist)
