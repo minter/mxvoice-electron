@@ -549,6 +549,240 @@ test.describe('Songs - add', () => {
     }
   });
 
+  test('Add OGG file via Electron dialog → metadata correctly extracted', async () => {
+    // Absolute path to OGG fixture file
+    const oggFile = path.resolve(__dirname, '../../../fixtures/test-songs/ArloGuthrie-AlicesRestaurant.ogg');
+
+    // 1) Stub dialog in main and make it return our OGG file path
+    await app.evaluate(async ({ dialog }) => {
+      const original = dialog.showOpenDialog;
+      // Save a restorer for later
+      // @ts-ignore
+      globalThis.__restoreDialogOgg = () => (dialog.showOpenDialog = original);
+    });
+    await app.evaluate(({ dialog }, filePath) => {
+      dialog.showOpenDialog = async () => {
+        return {
+          canceled: false,
+          filePaths: [filePath],
+        };
+      };
+    }, oggFile);
+
+    // 2) Instrument the renderer to capture the IPC payload
+    await page.exposeFunction('___captureAddDialogOgg', (filename) => {
+      window.__lastAddDialogOgg = filename;
+    });
+    
+    // Wait a moment for the page to be ready
+    await page.waitForLoadState('domcontentloaded');
+    
+    await page.addInitScript(() => {
+      // Listen for the add_dialog_load IPC message using the secure API
+      if (window.secureElectronAPI?.events?.onAddDialogLoad) {
+        window.secureElectronAPI.events.onAddDialogLoad((filename, metadata) => {
+          console.log('IPC: add_dialog_load received for OGG file:', filename);
+          window.___captureAddDialogOgg?.(filename);
+          
+          // Also check if startAddNewSong is available and call it
+          if (window.startAddNewSong) {
+            console.log('IPC: Calling startAddNewSong for OGG file');
+            window.startAddNewSong(filename, metadata);
+          } else if (window.moduleRegistry?.songManagement?.startAddNewSong) {
+            console.log('IPC: Calling startAddNewSong via moduleRegistry for OGG file');
+            window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
+          } else {
+            console.log('IPC: startAddNewSong not available for OGG file!');
+          }
+        });
+      } else if (window.electronAPI?.onAddDialogLoad) {
+        window.electronAPI.onAddDialogLoad((filename) => {
+          console.log('IPC: add_dialog_load received via legacy API for OGG file:', filename);
+          window.___captureAddDialogOgg?.(filename);
+        });
+      } else if (window.electron?.ipcRenderer?.on) {
+        window.electron.ipcRenderer.on('add_dialog_load', (_e, filename) => {
+          console.log('IPC: add_dialog_load received via direct IPC for OGG file:', filename);
+          window.___captureAddDialogOgg?.(filename);
+        });
+      } else {
+        console.log('IPC: No IPC monitoring method available for OGG file!');
+      }
+    });
+
+    // 3) Trigger the menu item that opens the dialog
+    const triggerMenuItem = async () => {
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(1000);
+      
+      // Verify the modal is not already visible
+      const modalVisible = await page.locator('#songFormModal').isVisible();
+      if (modalVisible) {
+        console.log('Modal already visible, closing it first...');
+        try {
+          await page.locator('#songFormModal .btn-close').click();
+          await page.waitForTimeout(500);
+        } catch (e) {
+          await page.keyboard.press('Escape');
+          await page.waitForTimeout(500);
+        }
+      }
+      
+      const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
+        const menu = Menu.getApplicationMenu();
+        
+        // Find the "Add Song" menu item in the Songs submenu
+        const songsSubmenu = menu?.items?.find(item => item.label === 'Songs');
+        const addSongItem = songsSubmenu?.submenu?.items?.find(item => item.label === 'Add Song');
+        
+        if (!addSongItem) return { ok: false, reason: 'Add Song menu item not found' };
+        
+        const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+        if (!win) return { ok: false, reason: 'No focused window' };
+        
+        // @ts-ignore
+        addSongItem.click({}, win, win.webContents);
+        return { ok: true };
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Menu item trigger failed: ${res.reason}`);
+      }
+      
+      await page.waitForTimeout(1000);
+    };
+    
+    await triggerMenuItem();
+
+    // 4) Wait for the modal to appear with retry logic
+    let modalVisible = false;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (!modalVisible && attempts < maxAttempts) {
+      attempts++;
+      try {
+        console.log(`Attempt ${attempts}: Waiting for modal to appear for OGG file...`);
+        await expect(page.locator('#songFormModal')).toBeVisible({ timeout: 10000 });
+        modalVisible = true;
+        console.log('Modal is now visible for OGG file');
+      } catch (error) {
+        console.log(`Attempt ${attempts} failed: ${error.message}`);
+        if (attempts < maxAttempts) {
+          console.log('Retrying menu trigger for OGG file...');
+          await triggerMenuItem();
+          await page.waitForTimeout(2000);
+        } else {
+          throw new Error(`Modal failed to appear after ${maxAttempts} attempts: ${error.message}`);
+        }
+      }
+    }
+    
+    // Ensure the modal is fully loaded and interactive
+    await page.waitForTimeout(500);
+    
+    // Wait for the title to be populated
+    await expect(page.locator('#songFormModalTitle')).toContainText('Add New Song', { timeout: 5000 });
+    
+    // Verify OGG file metadata is correctly extracted with { duration: true } option
+    await expect(page.locator('#song-form-title')).toHaveValue("Alice's Restaurant", { timeout: 5000 });
+    await expect(page.locator('#song-form-artist')).toHaveValue('Arlo Guthrie', { timeout: 5000 });
+    await expect(page.locator('#song-form-duration')).toHaveValue('0:13', { timeout: 5000 });
+    
+    // Verify the modal is in the correct state
+    await expect(page.locator('#songFormModal')).toHaveClass(/show/);
+    await expect(page.locator('#songFormModal')).toBeVisible();
+    
+    // 5) Submit the form by clicking the Add button
+    await page.locator('#songFormSubmitButton').click();
+    
+    // 6) Wait for the modal to close
+    await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
+    
+    // 7) Verify the song appears in the search results
+    await page.waitForTimeout(1000);
+    
+    await expect(page.locator('#search_results')).toContainText("Alice's Restaurant");
+    await expect(page.locator('#search_results')).toContainText('Arlo Guthrie');
+    
+    // 8) Verify the OGG file exists in the test music directory
+    await page.waitForTimeout(2000);
+    
+    const musicDirResult = await page.evaluate(async () => {
+      if (window.secureElectronAPI?.store?.get) {
+        return await window.secureElectronAPI.store.get('music_directory');
+      } else if (window.electronAPI?.store?.get) {
+        return await window.electronAPI.store.get('music_directory');
+      }
+      return null;
+    });
+    
+    if (musicDirResult?.success && musicDirResult.value) {
+      const musicDir = musicDirResult.value;
+      
+      const fileExists = await page.evaluate(async (dir) => {
+        if (window.secureElectronAPI?.fileSystem?.readdir) {
+          try {
+            const result = await window.secureElectronAPI.fileSystem.readdir(dir);
+            
+            if (Array.isArray(result)) {
+              return { success: true, files: result };
+            } else if (result?.success && result.data) {
+              return { success: true, files: result.data };
+            } else {
+              return { success: false, error: 'readdir failed', result: result };
+            }
+          } catch (err) {
+            return { success: false, error: err.message };
+          }
+        } else {
+          return { success: false, error: 'secureElectronAPI.fileSystem.readdir not available' };
+        }
+      }, musicDir);
+      
+      if (fileExists?.success && fileExists.files) {
+        const files = fileExists.files;
+        
+        // Look for a file that contains "Arlo Guthrie" and "Alice"
+        const songFile = files.find(file => 
+          (file.includes('Arlo Guthrie') || file.includes('ArloGuthrie')) && 
+          (file.includes('Alice') || file.includes('Restaurant')) && 
+          file.endsWith('.ogg')
+        );
+        
+        if (songFile) {
+          console.log('✅ OGG song file found in test music directory:', songFile);
+        } else {
+          console.log('❌ No matching OGG song file found');
+          const oggFiles = files.filter(f => f.endsWith('.ogg'));
+          console.log('OGG files in directory:', oggFiles);
+        }
+      } else {
+        console.log('❌ Failed to read test music directory:', fileExists?.error || 'Unknown error');
+      }
+    } else {
+      console.log('⚠️ Could not retrieve music directory from store');
+    }
+    
+    // 9) Restore dialog
+    await app.evaluate(() => { globalThis.__restoreDialogOgg?.(); });
+    
+    // 10) Verify test environment is clean
+    console.log('OGG test completed successfully, verifying clean state...');
+    
+    const modalStillVisible = await page.locator('#songFormModal').isVisible();
+    if (modalStillVisible) {
+      console.log('Modal still visible after OGG test, closing...');
+      try {
+        await page.locator('#songFormModal .btn-close').click();
+        await page.waitForTimeout(500);
+      } catch (e) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+      }
+    }
+  });
+
   test('Bulk add all test songs to new category "RNOUT"', async () => {
     // 1) Stub dialog in main to return the test-songs directory
     const testSongsDir = path.resolve(__dirname, '../../../fixtures/test-songs');
@@ -630,7 +864,7 @@ test.describe('Songs - add', () => {
     // 7) Wait for bulk processing to complete
     await page.waitForTimeout(3000);
     
-    // 8) Verify all 7 test songs appear in the RNOUT category
+    // 8) Verify all 8 test songs appear in the RNOUT category (including OGG file)
     // First, select the RNOUT category in the search dropdown
     const searchCategorySelect = page.locator('#category_select');
     await searchCategorySelect.selectOption('RNOUT');
@@ -642,11 +876,12 @@ test.describe('Songs - add', () => {
     await searchInput.press('Enter');
     await page.waitForTimeout(1000);
     
-    // Verify we have exactly 7 results
+    // Verify we have exactly 8 results (7 MP3s + 1 OGG)
     const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(7, { timeout: 10000 });
+    await expect(rows).toHaveCount(8, { timeout: 10000 });
     
     // Verify specific songs are present (using actual metadata from the files)
+    await expect(page.locator('#search_results')).toContainText("Alice's Restaurant"); // OGG file
     await expect(page.locator('#search_results')).toContainText('Eat It');
     await expect(page.locator('#search_results')).toContainText('Got The Time');
     await expect(page.locator('#search_results')).toContainText('Greatest Ameican Hero Theme');
