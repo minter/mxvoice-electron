@@ -7,12 +7,10 @@
 
 const { ipcRenderer } = require('electron');
 const { initializeMainDebugLog } = require('../../main/modules/debug-log.js');
-const Store = require('electron-store');
 
-// Initialize debug logger
-// Use the same config file name as main for consistency
-const store = new Store({ name: 'config' });
-const debugLog = initializeMainDebugLog({ store });
+// Initialize debug logger - don't use store in preload context
+// The main process will handle store operations
+const debugLog = initializeMainDebugLog();
 
 // IPC Event Handlers - extracted from preload.js
 const ipcHandlers = {
