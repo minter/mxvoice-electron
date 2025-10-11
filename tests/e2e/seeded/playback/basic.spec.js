@@ -200,7 +200,14 @@ test.describe('Playback - basic', () => {
     
     // Resume playback and let it play for 3 seconds
     await playButton.click();
+    
+    // Wait for playback to actually start (pause button becomes visible)
+    await expect(pauseButton).toBeVisible({ timeout: 5000 });
     await page.waitForTimeout(3000); // Play for 3 seconds
+    
+    // Pause playback before checking time
+    await pauseButton.click();
+    await page.waitForTimeout(300); // Brief wait for pause to complete
     
     // Verify time display shows 0:03 elapsed and 0:03 remaining
     await expect(timeElapsed).toHaveText('0:03');
