@@ -71,6 +71,14 @@ function initializeSettingsController(options = {}) {
           electronAPI.store.set("screen_mode", preferences.screen_mode)
         ]);
         
+        // Update audio module's music directory cache if it changed
+        if (preferences.music_directory && window.moduleRegistry?.audio?.updateMusicDirectoryCache) {
+          window.moduleRegistry.audio.updateMusicDirectoryCache(preferences.music_directory);
+          debugLog?.info("Updated audio module music directory cache", { 
+            musicDirectory: preferences.music_directory 
+          });
+        }
+        
         const successCount = results.filter(result => result.success).length;
         if (successCount === 7) {
           debugLog?.info('All preferences saved successfully', { 

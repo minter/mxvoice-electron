@@ -80,25 +80,25 @@ export const howlerUtils = {
 };
 
 /**
- * Create a Howl instance with E2E-aware defaults and Windows optimizations.
+ * Create a Howl instance with E2E-aware defaults and production optimizations.
  * - In E2E: force Web Audio path (html5: false) and preload for determinism
- * - On Windows: optimize for responsiveness with Web Audio and preload
- * - In prod: keep existing behavior unless overridden by opts
+ * - In production: use Web Audio API WITHOUT preload for fast, high-quality playback
  */
 export function createHowl(options = {}) {
   const isE2E = !!(typeof window !== 'undefined' && window.electronTest?.isE2E);
-  const isWindows = typeof process !== 'undefined' && process.platform === 'win32';
   const coerced = { ...options };
   
   if (isE2E) {
     // Force WebAudio pipeline so the probe can attach
     coerced.html5 = false;
     if (typeof coerced.preload === 'undefined') coerced.preload = true;
-  } else if (isWindows) {
-    // Windows optimizations for responsiveness
-    coerced.html5 = false; // Force Web Audio for better performance
-    if (typeof coerced.preload === 'undefined') coerced.preload = true; // Preload for instant playback
-    coerced.format = ['mp3']; // Specify format to avoid detection delays
+  } else {
+    // Production: Use Web Audio API (better quality, works with file:// URLs)
+    // Use preload:true because Web Audio can't stream file:// URLs
+    // But we call play() immediately, so it starts as soon as possible
+    if (typeof coerced.html5 === 'undefined') coerced.html5 = false; // Web Audio API
+    if (typeof coerced.preload === 'undefined') coerced.preload = true; // Required for local files
+    coerced.format = ['mp3', 'ogg', 'm4a', 'aac', 'mp4', 'webm', 'wav', 'wma', 'flac']; // Support all common audio formats
   }
   
   // Howl is global from index.html
