@@ -81,19 +81,69 @@
       margin-bottom: 8px;
     }
 
-    .launcher-header p {
+    .header-actions {
+      display: flex;
+      justify-content: right;
+      margin-top: 8px;
+    }
+
+    .header-actions p {
       font-size: 14px;
       opacity: 0.9;
+      margin: 0;
+    }
+
+    .header-create-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .header-create-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
     }
 
     .launcher-body {
       padding: 30px;
     }
 
+    .profile-search-container {
+      margin-bottom: 20px;
+    }
+
+    .profile-search {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--item-bg);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .profile-search:focus {
+      outline: none;
+      border-color: var(--bg-gradient-start);
+      box-shadow: 0 0 0 3px rgba(var(--highlight-color-rgb), 0.1);
+    }
+
+    .profile-search::placeholder {
+      color: var(--text-secondary);
+    }
+
     .profile-list {
       list-style: none;
       margin-bottom: 20px;
-      max-height: 300px;
+      max-height: 280px;
       overflow-y: auto;
     }
 
@@ -168,13 +218,11 @@
     }
 
     .launcher-actions {
-      display: flex;
-      gap: 12px;
       margin-top: 20px;
     }
 
     .btn {
-      flex: 1;
+      width: 100%;
       padding: 14px 24px;
       border: none;
       border-radius: 10px;
@@ -201,28 +249,6 @@
       box-shadow: none;
     }
 
-    .btn-secondary {
-      background: transparent;
-      color: white;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.5);
-    }
-    
-    @media (prefers-color-scheme: light) {
-      .btn-secondary {
-        color: var(--bg-gradient-start);
-        border-color: var(--bg-gradient-start);
-      }
-      
-      .btn-secondary:hover {
-        background: var(--item-bg);
-        border-color: var(--bg-gradient-start);
-      }
-    }
 
     .empty-state {
       text-align: center;
@@ -282,74 +308,112 @@
     }
 
     /* Modal styles */
-    .modal-overlay {
+    .modal {
       position: fixed;
-      top: 0;
+      z-index: 1000;
       left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 1000;
     }
 
     .modal-content {
       background: var(--modal-bg);
-      padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-      min-width: 400px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
     }
 
-    .modal-content h2 {
-      margin: 0 0 20px 0;
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
       color: var(--text-primary);
-      font-size: 22px;
+    }
+
+    .close {
+      color: var(--text-secondary);
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .close:hover {
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 20px 24px;
+    }
+
+    .modal-footer {
+      padding: 16px 24px 20px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
     }
 
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .form-group label {
       display: block;
-      margin-bottom: 8px;
-      color: var(--text-secondary);
-      font-weight: 600;
+      margin-bottom: 6px;
       font-size: 14px;
-    }
-
-    .form-group input {
-      width: 100%;
-      padding: 10px;
-      border: 2px solid var(--border-color);
-      border-radius: 6px;
-      font-size: 15px;
-      transition: border-color 0.2s;
-      background: var(--container-bg);
+      font-weight: 500;
       color: var(--text-primary);
     }
 
-    .form-group input:focus {
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      background: var(--item-bg);
+      color: var(--text-primary);
+      transition: border-color 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .form-input:focus {
       outline: none;
       border-color: var(--bg-gradient-start);
     }
 
-    .modal-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      margin-top: 24px;
+    .form-input::placeholder {
+      color: var(--text-secondary);
     }
+
   </style>
 </head>
 <body>
   <div class="launcher-container">
     <div class="launcher-header">
       <h1>🎵 Mx. Voice</h1>
-      <p>Select your profile to continue</p>
+      <div class="header-actions">
+        <button id="create-profile-btn" class="header-create-btn">
+          + New Profile
+        </button>
+      </div>
     </div>
 
     <div class="launcher-body">
@@ -360,14 +424,20 @@
       </div>
 
       <div id="profile-content" style="display: none;">
+        <div class="profile-search-container">
+          <input 
+            type="text" 
+            id="profile-search" 
+            class="profile-search" 
+            placeholder="Search profiles..."
+            autocomplete="off"
+          />
+        </div>
         <ul id="profile-list" class="profile-list"></ul>
 
         <div class="launcher-actions">
           <button id="launch-btn" class="btn btn-primary" disabled>
-            Launch App
-          </button>
-          <button id="create-btn" class="btn btn-secondary">
-            + New Profile
+            Choose Profile
           </button>
         </div>
       </div>
@@ -375,23 +445,26 @@
   </div>
 
   <!-- Create Profile Modal -->
-  <div id="create-modal" class="modal-overlay" style="display: none;">
+  <div id="create-profile-modal" class="modal" style="display: none;">
     <div class="modal-content">
-      <h2>Create New Profile</h2>
-      <form id="create-form">
+      <div class="modal-header">
+        <h2>Create New Profile</h2>
+        <span class="close" id="modal-close">&times;</span>
+      </div>
+      <div class="modal-body">
         <div class="form-group">
-          <label for="profile-name-input">Profile Name:</label>
-          <input type="text" id="profile-name-input" required autofocus />
+          <label for="profile-name-input">Profile Name</label>
+          <input type="text" id="profile-name-input" class="form-input" placeholder="Enter profile name..." required>
         </div>
         <div class="form-group">
-          <label for="profile-desc-input">Description (optional):</label>
-          <input type="text" id="profile-desc-input" />
+          <label for="profile-description-input">Description (Optional)</label>
+          <input type="text" id="profile-description-input" class="form-input" placeholder="Enter description...">
         </div>
-        <div class="modal-actions">
-          <button type="submit" class="btn btn-primary">Create</button>
-          <button type="button" id="cancel-create-btn" class="btn btn-secondary">Cancel</button>
-        </div>
-      </form>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-create-btn" class="btn btn-secondary">Cancel</button>
+        <button id="confirm-create-btn" class="btn btn-primary">Create Profile</button>
+      </div>
     </div>
   </div>
 

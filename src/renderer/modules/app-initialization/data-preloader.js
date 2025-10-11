@@ -34,7 +34,10 @@ export class DataPreloader {
       
       // Load font size
       await this.loadFontSize();
-      
+
+      // Load categories
+      await this.loadCategories();
+
       this.logInfo('Initial data loading completed successfully');
       return true;
     } catch (error) {
@@ -208,7 +211,7 @@ export class DataPreloader {
           return;
         }
       }
-      
+
       // Fallback to legacy store for backward compatibility
       const hasFontSize = await secureStore.has("font-size");
       if (hasFontSize) {
@@ -225,6 +228,32 @@ export class DataPreloader {
       }
     } catch (error) {
       this.logError('Error loading font size', error);
+    }
+  }
+
+  /**
+   * Load categories from database into shared state
+   * @returns {Promise<void>}
+   */
+  async loadCategories() {
+    try {
+      this.logInfo('Loading categories from database...');
+
+      // Import the categories module
+      const { loadCategories } = await import('../categories/index.js');
+
+      if (typeof loadCategories === 'function') {
+        const result = await loadCategories();
+        if (result.success) {
+          this.logInfo(`Categories loaded successfully: ${Object.keys(result.data).length} categories`);
+        } else {
+          this.logWarn(`Failed to load categories: ${result.error}`);
+        }
+      } else {
+        this.logWarn('loadCategories function not available');
+      }
+    } catch (error) {
+      this.logError('Error loading categories', error);
     }
   }
 

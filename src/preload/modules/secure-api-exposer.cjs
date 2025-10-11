@@ -6,7 +6,7 @@
  * alternative to direct Node.js API exposure.
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
+const { contextBridge, ipcRenderer } = require('electron');
 
 // debugLog will be injected by the calling module
 let debugLog = null;
@@ -389,6 +389,30 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('menu:switch-profile', handler);
     },
     
+    onLogout: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:logout', handler);
+      return () => ipcRenderer.removeListener('menu:logout', handler);
+    },
+    
+    onNewProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:new-profile', handler);
+      return () => ipcRenderer.removeListener('menu:new-profile', handler);
+    },
+    
+    onDeleteCurrentProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:delete-current-profile', handler);
+      return () => ipcRenderer.removeListener('menu:delete-current-profile', handler);
+    },
+    
+    onDuplicateProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:duplicate-profile', handler);
+      return () => ipcRenderer.removeListener('menu:duplicate-profile', handler);
+    },
+    
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
   },
   
@@ -397,11 +421,15 @@ const secureElectronAPI = {
     getCurrent: () => ipcRenderer.invoke('profile:get-current'),
     getDirectory: (type) => ipcRenderer.invoke('profile:get-directory', type),
     switchProfile: () => ipcRenderer.invoke('profile:switch'),
+    switchToProfile: (name) => ipcRenderer.invoke('profile:switch-to', name),
     saveState: (state) => ipcRenderer.invoke('profile:save-state', state),
     saveStateBeforeSwitch: (state) => ipcRenderer.invoke('profile:save-state-before-switch', state),
     getPreference: (key) => ipcRenderer.invoke('profile:get-preference', key),
     setPreference: (key, value) => ipcRenderer.invoke('profile:set-preference', key, value),
-    getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences')
+    getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences'),
+    createProfile: (name, description) => ipcRenderer.invoke('profile:create', name, description),
+    duplicateProfile: (sourceName, targetName, description) => ipcRenderer.invoke('profile:duplicate', sourceName, targetName, description),
+    deleteProfile: (name) => ipcRenderer.invoke('profile:delete', name)
   },
   
   // Utility functions
@@ -498,7 +526,7 @@ function exposeSecureAPI(injectedDebugLog) {
 // Note: Secure API exposure is now handled by the calling module
 // to avoid duplicate exposure conflicts
 
-export {
+module.exports = {
   secureElectronAPI,
   exposeSecureAPI
 };

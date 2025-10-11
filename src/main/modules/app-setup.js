@@ -5,7 +5,7 @@
  * for the MxVoice Electron application.
  */
 
-import { app, BrowserWindow, Menu, dialog, shell, nativeTheme, screen } from 'electron';
+import { app, BrowserWindow, Menu, dialog, shell, nativeTheme, screen, ipcMain } from 'electron';
 import { getLogService } from './log-service.js';
 import path from 'path';
 import os from 'os';
@@ -21,6 +21,7 @@ let store;
 let autoUpdater;
 let fileOperations;
 let debugLog;
+let getCurrentProfile;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -29,6 +30,7 @@ function initializeAppSetup(dependencies) {
   autoUpdater = dependencies.autoUpdater;
   fileOperations = dependencies.fileOperations;
   debugLog = dependencies.debugLog;
+  getCurrentProfile = dependencies.getCurrentProfile;
 }
 
 // Create the main window
@@ -50,7 +52,7 @@ function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScr
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, '../../preload/preload-modular.js'),
+      preload: path.join(__dirname, '../../preload/preload-modular.cjs'),
       sandbox: false, // Keep false for now as we're using preload scripts
       webSecurity: true,
       allowRunningInsecureContent: false,
@@ -346,17 +348,6 @@ function createApplicationMenu() {
             closeAllTabs();
           },
         },
-        { type: "separator" },
-        {
-          label: "Switch Profile...",
-          click: async () => {
-            // Send message to renderer to handle profile switch with state save
-            // The renderer will extract and save state, then call the IPC handler
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('menu:switch-profile');
-            }
-          },
-        },
       ],
     },
     {
@@ -420,6 +411,60 @@ function createApplicationMenu() {
           label: "Manage Categories",
           click: () => {
             manageCategories();
+          },
+        },
+      ],
+    },
+    {
+      label: "Profile",
+      submenu: [
+        {
+          label: "Switch Profile...",
+          click: async () => {
+            // Send message to renderer to handle profile switch with state save
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:switch-profile');
+            }
+          },
+        },
+        {
+          label: "Log Out",
+          enabled: getCurrentProfile ? getCurrentProfile() !== 'Default User' : true,
+          click: () => {
+            // Send message to renderer to handle logout (switch to Default Profile)
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:logout');
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: "New Profile...",
+          click: () => {
+            // Send message to renderer to handle new profile creation
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:new-profile');
+            }
+          },
+        },
+        {
+          label: "Duplicate Profile...",
+          click: () => {
+            // Send message to renderer to handle profile duplication
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:duplicate-profile');
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: "Delete Current Profile...",
+          enabled: getCurrentProfile ? getCurrentProfile() !== 'Default User' : true,
+          click: () => {
+            // Send message to renderer to handle current profile deletion
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:delete-current-profile');
+            }
           },
         },
       ],
@@ -595,9 +640,10 @@ function showAboutDialog() {
       backgroundColor,
       autoHideMenuBar: true,
       webPreferences: {
-        sandbox: true,
+        sandbox: false, // Required for preload script
         contextIsolation: true,
-        nodeIntegration: false
+        nodeIntegration: false,
+        preload: path.join(__dirname, '../../preload/about-preload.cjs')
       }
     });
 
@@ -605,7 +651,7 @@ function showAboutDialog() {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;" />
     <title>About ${applicationName}</title>
     <style>
       :root {
@@ -621,10 +667,46 @@ function showAboutDialog() {
       .heading { font-weight: 600; margin-bottom: 4px; }
       .credits { white-space: pre-line; }
       .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
-      .link { color: #4da3ff; text-decoration: none; }
+      .link { color: #4da3ff; text-decoration: none; cursor: pointer; }
       .btn { background: transparent; color: var(--fg); border: 1px solid var(--muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
       .btn:hover { border-color: var(--fg); }
     </style>
+    <script>
+      // Wait for DOM to load, then attach event listeners
+      document.addEventListener('DOMContentLoaded', () => {
+        // Check if aboutAPI is available
+        if (!window.aboutAPI) {
+          console.error('aboutAPI is not available! Preload script may not have loaded.');
+          return;
+        }
+
+        // Close button
+        const closeBtn = document.getElementById('close-btn');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => {
+            window.aboutAPI.closeWindow();
+          });
+        }
+
+        // Website link
+        const websiteLink = document.getElementById('website-link');
+        if (websiteLink) {
+          websiteLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.aboutAPI.openExternal('https://mxvoice.app/');
+          });
+        }
+
+        // Support link
+        const supportLink = document.getElementById('support-link');
+        if (supportLink) {
+          supportLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.aboutAPI.openExternal('mailto:support@mxvoice.app?subject=' + encodeURIComponent('Mx. Voice Support Request'));
+          });
+        }
+      });
+    </script>
   </head>
   <body>
     <div class="container">
@@ -639,19 +721,63 @@ function showAboutDialog() {
       </div>
       <div class="section">
         <div class="heading">Website</div>
-        <a class="link" href="https://mxvoice.app/" onclick="event.preventDefault(); window.open('https://mrvoice.net/')">https://mrvoice.net/</a>
+        <a class="link" id="website-link" href="https://mxvoice.app/">https://mxvoice.app/</a>
       </div>
       <div class="section">
         <div class="heading">Support</div>
-        <a class="link" href="mailto:support@mxvoice.app" onclick="event.preventDefault(); window.open('mailto:support@mxvoice.app?subject=' + encodeURIComponent('Mx. Voice Support Request'))">Email support@mxvoice.app</a>
+        <a class="link" id="support-link" href="mailto:support@mxvoice.app">Email support@mxvoice.app</a>
       </div>
       <div class="footer">
         <div style="color: var(--muted);">© 2025</div>
-        <button class="btn" onclick="window.close()">Close</button>
+        <button class="btn" id="close-btn">Close</button>
       </div>
     </div>
   </body>
 </html>`;
+
+    // Register IPC handlers for this about window
+    const closeHandler = () => {
+      debugLog?.info('About window close requested via IPC', { 
+        module: 'app-setup', 
+        function: 'showAboutDialog' 
+      });
+      if (aboutWindow && !aboutWindow.isDestroyed()) {
+        aboutWindow.close();
+      }
+    };
+
+    const openExternalHandler = (event, url) => {
+      debugLog?.info('Opening external URL from about dialog', { 
+        module: 'app-setup', 
+        function: 'showAboutDialog',
+        url 
+      });
+      shell.openExternal(url);
+    };
+
+    // Remove existing handlers if any
+    ipcMain.removeHandler('about:close-window');
+    ipcMain.removeAllListeners('about:close-window');
+    ipcMain.removeAllListeners('about:open-external');
+
+    debugLog?.info('Registering IPC handlers for about window', { 
+      module: 'app-setup', 
+      function: 'showAboutDialog' 
+    });
+
+    // Register new handlers
+    ipcMain.on('about:close-window', closeHandler);
+    ipcMain.on('about:open-external', openExternalHandler);
+
+    // Clean up handlers when window closes
+    aboutWindow.on('closed', () => {
+      debugLog?.info('About window closed, cleaning up IPC handlers', { 
+        module: 'app-setup', 
+        function: 'showAboutDialog' 
+      });
+      ipcMain.removeListener('about:close-window', closeHandler);
+      ipcMain.removeListener('about:open-external', openExternalHandler);
+    });
 
     aboutWindow.removeMenu();
     aboutWindow.loadURL('data:text/html;charset=UTF-8,' + encodeURIComponent(html));
@@ -774,7 +900,7 @@ function setupAppLifecycle() {
         'Wade Minter',
         'Andrew Berkowitz'
       ],
-      website: 'https://mrvoice.net/',
+      website: 'https://mxvoice.app/',
       credits: "Wade Minter\nAndrew Berkowitz"
     })
   }

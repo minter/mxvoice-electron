@@ -11,6 +11,7 @@
 
 let selectedProfile = null;
 let profiles = [];
+let filteredProfiles = [];
 
 // Wait for the secure API to be available
 window.addEventListener('DOMContentLoaded', async () => {
@@ -27,11 +28,20 @@ async function loadProfiles() {
     
     if (result.success) {
       profiles = result.profiles;
+      filteredProfiles = [...profiles];
       renderProfiles();
       
       // Hide loading, show content
       document.getElementById('loading-state').style.display = 'none';
       document.getElementById('profile-content').style.display = 'block';
+      
+      // Focus the search field now that it's visible
+      setTimeout(() => {
+        const searchField = document.getElementById('profile-search');
+        if (searchField) {
+          searchField.focus();
+        }
+      }, 100);
       
       // Auto-select first profile if only one exists
       if (profiles.length === 1) {
@@ -39,10 +49,33 @@ async function loadProfiles() {
       }
     } else {
       showError(result.error || 'Failed to load profiles');
+      // Still show the UI even if there was an error
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('profile-content').style.display = 'block';
     }
   } catch (error) {
     showError(`Error loading profiles: ${error.message}`);
+    // Still show the UI even if there was an error
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('profile-content').style.display = 'block';
   }
+}
+
+/**
+ * Filter profiles based on search term
+ */
+function filterProfiles(searchTerm = '') {
+  if (!searchTerm.trim()) {
+    filteredProfiles = [...profiles];
+  } else {
+    const term = searchTerm.toLowerCase();
+    filteredProfiles = profiles.filter(profile => 
+      profile.name.toLowerCase().includes(term) ||
+      (profile.description && profile.description.toLowerCase().includes(term))
+    );
+  }
+  
+  renderProfiles();
 }
 
 /**
@@ -52,17 +85,33 @@ function renderProfiles() {
   const listElement = document.getElementById('profile-list');
   listElement.innerHTML = '';
   
-  if (profiles.length === 0) {
-    listElement.innerHTML = `
-      <div class="empty-state">
-        <p>No profiles found. Create your first profile to get started.</p>
-      </div>
-    `;
+  if (filteredProfiles.length === 0) {
+    const searchTerm = document.getElementById('profile-search')?.value || '';
+    if (searchTerm.trim()) {
+      listElement.innerHTML = `
+        <div class="empty-state">
+          <p>No profiles match "${escapeHtml(searchTerm)}". Try a different search term.</p>
+        </div>
+      `;
+    } else {
+      listElement.innerHTML = `
+        <div class="empty-state">
+          <p>No profiles found. Create your first profile to get started.</p>
+        </div>
+      `;
+    }
     return;
   }
   
-  // Sort profiles by last used (most recent first)
-  const sortedProfiles = [...profiles].sort((a, b) => b.last_used - a.last_used);
+  // Sort filtered profiles alphabetically, with Default User at the top
+  const sortedProfiles = [...filteredProfiles].sort((a, b) => {
+    // Default User always comes first
+    if (a.name === 'Default User') return -1;
+    if (b.name === 'Default User') return 1;
+    
+    // Sort all other profiles alphabetically (case-insensitive)
+    return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+  });
   
   sortedProfiles.forEach(profile => {
     const li = document.createElement('li');
@@ -78,37 +127,19 @@ function renderProfiles() {
         <div class="profile-name">${escapeHtml(profile.name)}</div>
         <div class="profile-description">${escapeHtml(profile.description || 'No description')}</div>
       </div>
-      <div class="profile-actions">
-        ${profiles.length > 1 && profile.name !== 'Default User' ? `
-          <button class="profile-delete" data-profile="${escapeHtml(profile.name)}">Delete</button>
-        ` : ''}
-      </div>
     `;
     
     // Click to select profile
     li.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('profile-delete')) {
-        selectProfile(profile.name);
-      }
+      selectProfile(profile.name);
     });
     
     // Double-click to launch
     li.addEventListener('dblclick', (e) => {
-      if (!e.target.classList.contains('profile-delete')) {
-        launchApp();
-      }
+      launchApp();
     });
     
     listElement.appendChild(li);
-  });
-  
-  // Setup delete button handlers
-  document.querySelectorAll('.profile-delete').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const profileName = btn.dataset.profile;
-      await deleteProfile(profileName);
-    });
   });
 }
 
@@ -144,8 +175,11 @@ async function launchApp() {
     const result = await window.launcherAPI.launchApp(selectedProfile);
     
     if (result.success) {
-      // Main app is launching, close launcher window
-      window.close();
+      // Main app is launching, close launcher window after a short delay
+      // This allows the main window to be created and detected by tests
+      setTimeout(() => {
+        window.close();
+      }, 100);
     } else {
       showError(result.error || 'Failed to launch app');
     }
@@ -154,124 +188,52 @@ async function launchApp() {
   }
 }
 
-/**
- * Show create profile modal
- */
-function showCreateModal() {
-  const modal = document.getElementById('create-modal');
-  const nameInput = document.getElementById('profile-name-input');
-  const descInput = document.getElementById('profile-desc-input');
-  
-  // Clear inputs
-  nameInput.value = '';
-  descInput.value = '';
-  
-  // Show modal
-  modal.style.display = 'flex';
-  
-  // Focus name input
-  setTimeout(() => nameInput.focus(), 100);
-}
 
-/**
- * Hide create profile modal
- */
-function hideCreateModal() {
-  const modal = document.getElementById('create-modal');
-  modal.style.display = 'none';
-}
-
-/**
- * Create a new profile
- */
-async function createNewProfile(event) {
-  event.preventDefault();
-  
-  const nameInput = document.getElementById('profile-name-input');
-  const descInput = document.getElementById('profile-desc-input');
-  
-  const name = nameInput.value.trim();
-  const description = descInput.value.trim();
-  
-  if (!name) {
-    showError('Profile name is required');
-    return;
-  }
-  
-  try {
-    const result = await window.launcherAPI.createProfile(name, description);
-    
-    if (result.success) {
-      hideCreateModal();
-      await loadProfiles();
-      selectProfile(name);
-      clearError();
-    } else {
-      showError(result.error || 'Failed to create profile');
-    }
-  } catch (error) {
-    showError(`Error creating profile: ${error.message}`);
-  }
-}
-
-/**
- * Delete a profile
- */
-async function deleteProfile(profileName) {
-  const confirmed = confirm(`Are you sure you want to delete the profile "${profileName}"?\n\nThis will remove all preferences for this profile.`);
-  
-  if (!confirmed) {
-    return;
-  }
-  
-  try {
-    const result = await window.launcherAPI.deleteProfile(profileName);
-    
-    if (result.success) {
-      // If deleted profile was selected, clear selection
-      if (selectedProfile === profileName) {
-        selectedProfile = null;
-        document.getElementById('launch-btn').disabled = true;
-      }
-      
-      await loadProfiles();
-      clearError();
-    } else {
-      showError(result.error || 'Failed to delete profile');
-    }
-  } catch (error) {
-    showError(`Error deleting profile: ${error.message}`);
-  }
-}
 
 /**
  * Setup event listeners
  */
 function setupEventListeners() {
   document.getElementById('launch-btn').addEventListener('click', launchApp);
-  document.getElementById('create-btn').addEventListener('click', showCreateModal);
-  document.getElementById('cancel-create-btn').addEventListener('click', hideCreateModal);
-  document.getElementById('create-form').addEventListener('submit', createNewProfile);
   
-  // Enter key launches app if profile selected (only when modal is not open)
-  document.addEventListener('keydown', (e) => {
-    const modal = document.getElementById('create-modal');
-    const modalOpen = modal.style.display === 'flex';
-    
-    if (e.key === 'Enter' && selectedProfile && !modalOpen) {
-      launchApp();
-    }
-    
-    // Escape key closes modal
-    if (e.key === 'Escape' && modalOpen) {
-      hideCreateModal();
+  // Create profile button
+  document.getElementById('create-profile-btn').addEventListener('click', showCreateProfileModal);
+  
+  // Modal event listeners
+  document.getElementById('modal-close').addEventListener('click', hideCreateProfileModal);
+  document.getElementById('cancel-create-btn').addEventListener('click', hideCreateProfileModal);
+  document.getElementById('confirm-create-btn').addEventListener('click', createProfile);
+  
+  // Close modal when clicking outside
+  document.getElementById('create-profile-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'create-profile-modal') {
+      hideCreateProfileModal();
     }
   });
   
-  // Click outside modal to close
-  document.getElementById('create-modal').addEventListener('click', (e) => {
-    if (e.target.id === 'create-modal') {
-      hideCreateModal();
+  // Enter key in name field creates profile
+  document.getElementById('profile-name-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      createProfile();
+    }
+  });
+  
+  // Enter key in description field creates profile
+  document.getElementById('profile-description-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      createProfile();
+    }
+  });
+  
+  // Search functionality
+  document.getElementById('profile-search').addEventListener('input', (e) => {
+    filterProfiles(e.target.value);
+  });
+  
+  // Enter key launches app if profile selected
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && selectedProfile) {
+      launchApp();
     }
   });
 }
@@ -289,6 +251,94 @@ function showError(message) {
  */
 function clearError() {
   document.getElementById('error-container').innerHTML = '';
+}
+
+/**
+ * Show the create profile modal
+ */
+function showCreateProfileModal() {
+  // Clear form fields
+  document.getElementById('profile-name-input').value = '';
+  document.getElementById('profile-description-input').value = '';
+  
+  // Show modal
+  document.getElementById('create-profile-modal').style.display = 'flex';
+  
+  // Focus the name input
+  setTimeout(() => {
+    document.getElementById('profile-name-input').focus();
+  }, 100);
+}
+
+/**
+ * Hide the create profile modal
+ */
+function hideCreateProfileModal() {
+  // Clear any error messages
+  clearError();
+  
+  // Clear form fields
+  document.getElementById('profile-name-input').value = '';
+  document.getElementById('profile-description-input').value = '';
+  
+  // Hide modal
+  document.getElementById('create-profile-modal').style.display = 'none';
+}
+
+/**
+ * Create a new profile
+ */
+async function createProfile() {
+  const nameInput = document.getElementById('profile-name-input');
+  const descInput = document.getElementById('profile-description-input');
+  
+  const name = nameInput.value.trim();
+  const description = descInput.value.trim();
+  
+  // Validate profile name
+  if (!name) {
+    showError('Profile name is required');
+    nameInput.focus();
+    return;
+  }
+  
+  // Check for invalid characters (basic validation)
+  if (!/^[a-zA-Z0-9\s\-_]+$/.test(name)) {
+    showError('Profile name can only contain letters, numbers, spaces, hyphens, and underscores');
+    nameInput.focus();
+    return;
+  }
+  
+  // Check if profile already exists
+  const existingProfile = profiles.find(p => p.name === name);
+  if (existingProfile) {
+    showError('A profile with this name already exists');
+    nameInput.focus();
+    return;
+  }
+  
+  try {
+    // Clear any existing errors
+    clearError();
+    
+    // Create the profile
+    const result = await window.launcherAPI.createProfile(name, description);
+    
+    if (result.success) {
+      // Hide modal
+      hideCreateProfileModal();
+      
+      // Reload profiles to include the new one
+      await loadProfiles();
+      
+      // Auto-select the newly created profile
+      selectProfile(name);
+    } else {
+      showError(result.error || 'Failed to create profile');
+    }
+  } catch (error) {
+    showError(`Error creating profile: ${error.message}`);
+  }
 }
 
 /**

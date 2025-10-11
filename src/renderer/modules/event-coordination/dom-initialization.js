@@ -423,6 +423,24 @@ export default class DOMInitialization {
    */
   async setupFirstRunModal() {
     try {
+      // Check if we're in a seeded test environment (has multiple songs)
+      if (window.electronTest?.isE2E) {
+        try {
+          // In seeded test environment, check if we have multiple songs
+          if (this.electronAPI && this.electronAPI.database) {
+            const result = await this.electronAPI.database.query(
+              'SELECT count(*) as count from mrvoice WHERE 1'
+            );
+            if (result.success && result.data.length > 0 && result.data[0].count > 1) {
+              this.debugLog?.info('Seeded test environment detected with multiple songs - skipping first run modal');
+              return;
+            }
+          }
+        } catch (error) {
+          this.debugLog?.info('Could not check song count in test environment, proceeding with modal check');
+        }
+      }
+
       // Use new database API for song count
       if (this.electronAPI && this.electronAPI.database) {
         const result = await this.electronAPI.database.query(
@@ -430,16 +448,27 @@ export default class DOMInitialization {
         );
         if (
           result.success &&
-          result.data.length > 0 &&
-          result.data[0].count <= 1
+          result.data.length > 0
         ) {
-          try {
-            const { showModal } = await import('../ui/bootstrap-adapter.js');
-            showModal('#firstRunModal');
-          } catch {}
-          this.debugLog?.info(
-            'First run modal shown - database has <= 1 songs'
-          );
+          const songCount = result.data[0].count;
+          this.debugLog?.info(`Database song count: ${songCount}`);
+
+          // Only show first run modal if database has <= 1 songs
+          if (songCount <= 1) {
+            try {
+              const { showModal } = await import('../ui/bootstrap-adapter.js');
+              showModal('#firstRunModal');
+            } catch {}
+            this.debugLog?.info(
+              'First run modal shown - database has <= 1 songs'
+            );
+          } else {
+            this.debugLog?.info(
+              'First run modal skipped - database has > 1 songs'
+            );
+          }
+        } else {
+          this.debugLog?.warn('Failed to get song count from database');
         }
       }
     } catch (error) {

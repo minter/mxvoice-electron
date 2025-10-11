@@ -22,7 +22,7 @@ test.describe('Mx. Voice App Smoke Tests (manual)', () => {
 
     app = await electron.launch({
       executablePath: electronPath,
-      args: ['.'],
+      args: ['.', '--profile=Default User'],
       env: {
         ...process.env,
         NODE_ENV: 'test',
