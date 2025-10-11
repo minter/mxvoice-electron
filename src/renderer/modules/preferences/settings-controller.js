@@ -96,6 +96,14 @@ function initializeSettingsController(options = {}) {
         
         debugLog?.info("[PREFS-SAVE] Save results", { results });
         
+        // Update audio module's music directory cache if it changed
+        if (preferences.music_directory && window.moduleRegistry?.audio?.updateMusicDirectoryCache) {
+          window.moduleRegistry.audio.updateMusicDirectoryCache(preferences.music_directory);
+          debugLog?.info("[PREFS-SAVE] Updated audio module music directory cache", { 
+            musicDirectory: preferences.music_directory 
+          });
+        }
+        
         // Count successes - handle both boolean true and {success: true} formats
         const successCount = results.filter(result => {
           if (typeof result === 'boolean') return result;
