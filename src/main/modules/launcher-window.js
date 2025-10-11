@@ -68,7 +68,7 @@ async function createLauncherWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, '..', '..', 'preload', 'launcher-preload.js')
+      preload: path.join(__dirname, '..', '..', 'preload', 'launcher-preload.cjs')
     }
   });
   

@@ -52,7 +52,7 @@ function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScr
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, '../../preload/preload-modular.js'),
+      preload: path.join(__dirname, '../../preload/preload-modular.cjs'),
       sandbox: false, // Keep false for now as we're using preload scripts
       webSecurity: true,
       allowRunningInsecureContent: false,
@@ -693,7 +693,7 @@ function showAboutDialog() {
         if (websiteLink) {
           websiteLink.addEventListener('click', (e) => {
             e.preventDefault();
-            window.aboutAPI.openExternal('https://mrvoice.net/');
+            window.aboutAPI.openExternal('https://mxvoice.app/');
           });
         }
 
@@ -721,7 +721,7 @@ function showAboutDialog() {
       </div>
       <div class="section">
         <div class="heading">Website</div>
-        <a class="link" id="website-link" href="https://mrvoice.net/">https://mrvoice.net/</a>
+        <a class="link" id="website-link" href="https://mxvoice.app/">https://mxvoice.app/</a>
       </div>
       <div class="section">
         <div class="heading">Support</div>
@@ -900,7 +900,7 @@ function setupAppLifecycle() {
         'Wade Minter',
         'Andrew Berkowitz'
       ],
-      website: 'https://mrvoice.net/',
+      website: 'https://mxvoice.app/',
       credits: "Wade Minter\nAndrew Berkowitz"
     })
   }

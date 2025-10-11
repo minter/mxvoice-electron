@@ -7,14 +7,14 @@
  * CONTEXT ISOLATION ENABLED - This version uses secure API exposure via contextBridge.
  */
 
-import { ipcRenderer, contextBridge } from 'electron';
-import { Howl, Howler } from 'howler';
-import log from 'electron-log';
-import Store from 'electron-store';
+const { ipcRenderer, contextBridge } = require('electron');
+const { Howl, Howler } = require('howler');
+const log = require('electron-log');
+const Store = require('electron-store');
 
 // Import preload modules
-import * as ipcBridge from './modules/ipc-bridge.js';
-import * as secureApiExposer from './modules/secure-api-exposer.js';
+const ipcBridge = require('./modules/ipc-bridge.cjs');
+const secureApiExposer = require('./modules/secure-api-exposer.cjs');
 
 // Initialize debug logger using electron-log directly
 // Use the same config file name as main for consistency

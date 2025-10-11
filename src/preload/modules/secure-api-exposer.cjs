@@ -6,7 +6,7 @@
  * alternative to direct Node.js API exposure.
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
+const { contextBridge, ipcRenderer } = require('electron');
 
 // debugLog will be injected by the calling module
 let debugLog = null;
@@ -526,7 +526,7 @@ function exposeSecureAPI(injectedDebugLog) {
 // Note: Secure API exposure is now handled by the calling module
 // to avoid duplicate exposure conflicts
 
-export {
+module.exports = {
   secureElectronAPI,
   exposeSecureAPI
 };

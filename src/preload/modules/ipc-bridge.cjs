@@ -5,9 +5,9 @@
  * for the MxVoice Electron application.
  */
 
-import { ipcRenderer } from 'electron';
-import { initializeMainDebugLog } from '../../main/modules/debug-log.js';
-import Store from 'electron-store';
+const { ipcRenderer } = require('electron');
+const { initializeMainDebugLog } = require('../../main/modules/debug-log.js');
+const Store = require('electron-store');
 
 // Initialize debug logger
 // Use the same config file name as main for consistency
@@ -236,16 +236,7 @@ function testIpcBridge() {
   return true;
 }
 
-export {
-  registerIpcHandlers,
-  removeIpcHandlers,
-  getIpcHandlers,
-  testIpcBridge,
-  ipcHandlers
-};
-
-// Default export for module loading
-export default {
+module.exports = {
   registerIpcHandlers,
   removeIpcHandlers,
   getIpcHandlers,
