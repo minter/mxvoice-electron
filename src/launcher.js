@@ -274,6 +274,14 @@ function showCreateProfileModal() {
  * Hide the create profile modal
  */
 function hideCreateProfileModal() {
+  // Clear any error messages
+  clearError();
+  
+  // Clear form fields
+  document.getElementById('profile-name-input').value = '';
+  document.getElementById('profile-description-input').value = '';
+  
+  // Hide modal
   document.getElementById('create-profile-modal').style.display = 'none';
 }
 
