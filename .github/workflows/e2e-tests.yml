@@ -68,7 +68,14 @@ jobs:
 
       # Note: Our tests set APP_TEST_MODE and E2E_USER_DATA_DIR at launch,
       # and main overrides userData early. No extra env needed here.
-      - name: Run Playwright tests
+      - name: Run Playwright tests (Linux with xvfb)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" -- yarn test
+        env:
+          CI: true
+      
+      - name: Run Playwright tests (macOS/Windows)
+        if: runner.os != 'Linux'
         run: yarn test
         env:
           CI: true
