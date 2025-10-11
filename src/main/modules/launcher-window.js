@@ -270,8 +270,11 @@ function registerLauncherHandlers() {
         // Mark that a profile was successfully selected
         profileSelected = true;
         
-        // Close launcher window after main app launches
-        closeLauncherWindow();
+        // Close launcher window after main app launches with a delay
+        // This allows the main window to be created and detected by tests
+        setTimeout(() => {
+          closeLauncherWindow();
+        }, 200);
         
         return { success: true };
       } else {

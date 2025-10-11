@@ -76,10 +76,10 @@ function getProfileFromArgs() {
 
 /**
  * Get the current active profile
- * @returns {string} Current profile name
+ * @returns {string|null} Current profile name or null if not set
  */
 export function getCurrentProfile() {
-  return currentProfile || 'Default User';
+  return currentProfile;
 }
 
 /**
@@ -89,9 +89,12 @@ export function getCurrentProfile() {
  */
 export function getProfileDirectory(type) {
   const profile = getCurrentProfile();
+  if (!profile) {
+    throw new Error('No current profile set');
+  }
   const sanitized = profileManager.sanitizeProfileName(profile);
   const profilesDir = profileManager.getProfilesDirectory();
-  
+
   switch (type) {
     case 'hotkeys':
       return path.join(profilesDir, sanitized, 'hotkeys');
@@ -586,8 +589,8 @@ async function initializeMainDatabaseWrapper() {
 
 // Check first run
 async function checkFirstRun() {
-  debugLog.info(`First run preference returns ${store.get('first_run_completed')}`, { 
-    function: "checkFirstRun" 
+  debugLog.info(`First run preference returns ${store.get('first_run_completed')}`, {
+    function: "checkFirstRun"
   });
   if (!store.get('first_run_completed')) {
     const shouldCheckLegacyConfig = process.env.APP_TEST_MODE !== '1';
@@ -896,22 +899,23 @@ function setupApp() {
     
     // Check if profile was provided via command line
     currentProfile = getProfileFromArgs();
-    
+
     if (currentProfile) {
-      // Profile provided - launch main app directly
-      debugLog.info('Profile provided via command line, launching main app', { 
+      // Profile provided (or default) - launch main app directly
+      debugLog.info('Profile set, launching main app', {
         function: "app ready event",
-        profile: currentProfile 
+        profile: currentProfile,
+        source: getProfileFromArgs() ? 'command-line' : 'default'
       });
-      
+
       createWindow();
-      
+
       // Test auto-update scenarios if enabled
       testAutoUpdateScenarios();
     } else {
       // No profile - show launcher window
-      debugLog.info('No profile provided, showing launcher', { 
-        function: "app ready event" 
+      debugLog.info('No profile provided, showing launcher', {
+        function: "app ready event"
       });
       
       // Initialize launcher window with ability to launch main app
@@ -928,7 +932,7 @@ function setupApp() {
             profile: profileName 
           });
           
-          createWindow();
+          await createWindow();
           
           // Test auto-update scenarios if enabled
           testAutoUpdateScenarios();

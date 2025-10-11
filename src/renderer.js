@@ -90,12 +90,17 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
 (async function loadProfileIndicator() {
   try {
     const result = await window.secureElectronAPI.profile.getCurrent();
-    if (result.success) {
+    if (result.success && result.profile) {
       const profileNameElement = document.getElementById('profile-name');
       if (profileNameElement) {
         profileNameElement.textContent = result.profile;
       }
-      
+    } else {
+      // Handle case where no profile is available (launcher mode)
+      const profileNameElement = document.getElementById('profile-name');
+      if (profileNameElement) {
+        profileNameElement.textContent = 'No Profile';
+      }
     }
   } catch (error) {
     // Use debugLog if available, fallback to console for early initialization

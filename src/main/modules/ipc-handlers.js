@@ -1392,7 +1392,7 @@ function registerAllHandlers() {
       // Import the main module to get current profile
       const mainModule = await import('../index-modular.js');
       const profile = mainModule.getCurrentProfile();
-      return { success: true, profile };
+      return { success: true, profile: profile || null };
     } catch (error) {
       debugLog?.error('Get current profile error:', { module: 'ipc-handlers', function: 'profile:get-current', error: error.message });
       return { success: false, error: error.message };

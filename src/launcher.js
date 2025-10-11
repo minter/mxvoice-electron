@@ -169,8 +169,11 @@ async function launchApp() {
     const result = await window.launcherAPI.launchApp(selectedProfile);
     
     if (result.success) {
-      // Main app is launching, close launcher window
-      window.close();
+      // Main app is launching, close launcher window after a short delay
+      // This allows the main window to be created and detected by tests
+      setTimeout(() => {
+        window.close();
+      }, 100);
     } else {
       showError(result.error || 'Failed to launch app');
     }
