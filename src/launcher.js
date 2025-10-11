@@ -27,9 +27,9 @@ async function loadProfiles() {
     const result = await window.launcherAPI.getProfiles();
     
     if (result.success) {
-    profiles = result.profiles;
-    filteredProfiles = [...profiles];
-    renderProfiles();
+      profiles = result.profiles;
+      filteredProfiles = [...profiles];
+      renderProfiles();
       
       // Hide loading, show content
       document.getElementById('loading-state').style.display = 'none';
@@ -49,9 +49,15 @@ async function loadProfiles() {
       }
     } else {
       showError(result.error || 'Failed to load profiles');
+      // Still show the UI even if there was an error
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('profile-content').style.display = 'block';
     }
   } catch (error) {
     showError(`Error loading profiles: ${error.message}`);
+    // Still show the UI even if there was an error
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('profile-content').style.display = 'block';
   }
 }
 
