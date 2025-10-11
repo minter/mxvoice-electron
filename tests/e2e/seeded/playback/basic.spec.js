@@ -203,7 +203,18 @@ test.describe('Playback - basic', () => {
     
     // Wait for playback to actually start (pause button becomes visible)
     await expect(pauseButton).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(3000); // Play for 3 seconds
+    
+    // Wait for timer to start incrementing (CI can be slow to start audio)
+    await page.waitForFunction(
+      () => {
+        const timer = document.querySelector('#timer');
+        return timer && timer.textContent !== '0:00';
+      },
+      { timeout: 3000 }
+    );
+    
+    // Now wait for 3 seconds of playback
+    await page.waitForTimeout(3000);
     
     // Pause playback before checking time
     await pauseButton.click();
