@@ -13,7 +13,7 @@ import Store from 'electron-store';
 /**
  * Initialize the main process debug logger
  * @param {Object} options - Configuration options
- * @param {Object} options.store - Store reference
+ * @param {Object} options.store - Store reference (optional, for main process use)
  * @returns {Object} Debug logger interface
  */
 function initializeMainDebugLog(options = {}) {
@@ -42,19 +42,24 @@ function initializeMainDebugLog(options = {}) {
    */
   function isDebugEnabled() {
     const now = Date.now();
-    
+
     // Return cached value if still valid
     if (now - debugEnabledCacheTime < CACHE_DURATION) {
       return debugEnabledCache;
     }
-    
+
     try {
-      debugEnabledCache = store.get("debug_log_enabled") || false;
+      if (store) {
+        debugEnabledCache = store.get("debug_log_enabled") || false;
+      } else {
+        // Default to false when no store available (preload context)
+        debugEnabledCache = false;
+      }
     } catch (error) {
       log.warn('Failed to get debug log preference:', error);
       debugEnabledCache = false;
     }
-    
+
     debugEnabledCacheTime = now;
     return debugEnabledCache;
   }
@@ -66,7 +71,9 @@ function initializeMainDebugLog(options = {}) {
    */
   function setDebugEnabled(enabled) {
     try {
-      store.set("debug_log_enabled", enabled);
+      if (store) {
+        store.set("debug_log_enabled", enabled);
+      }
       debugEnabledCache = enabled;
       debugEnabledCacheTime = Date.now();
       return true;

@@ -8,6 +8,8 @@
 import { ipcMain, dialog, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import { promises as fsPromises } from 'fs';
+import Store from 'electron-store';
 import { pipeline } from 'stream/promises';
 import { createReadStream, createWriteStream } from 'fs';
 import os from 'os';
@@ -17,6 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Import file operations module
 import fileOperations from './file-operations.js';
+import * as profileManager from './profile-manager.js';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -862,10 +865,10 @@ function registerAllHandlers() {
       if (!filePath || typeof filePath !== 'string') {
         throw new Error('Invalid file path');
       }
-      // First attempt: music-metadata
+      // First attempt: music-metadata with duration calculation enabled
       let durationSec = 0;
       try {
-        const metadata = await parseAudioFile(filePath);
+        const metadata = await parseAudioFile(filePath, { duration: true });
         durationSec = metadata?.format?.duration ? Number(metadata.format.duration) : 0;
       } catch (e) {
         debugLog?.warn('music-metadata parse failed for duration', { module: 'ipc-handlers', function: 'audio-get-duration', error: e?.message, filePath });
@@ -918,7 +921,9 @@ function registerAllHandlers() {
       if (!filePath || typeof filePath !== 'string') {
         throw new Error('Invalid file path');
       }
-      const metadata = await parseAudioFile(filePath);
+      // Enable duration calculation to get accurate duration for OGG and other formats
+      // Without this option, music-metadata may report incorrect durations for OGG/Vorbis files
+      const metadata = await parseAudioFile(filePath, { duration: true });
       const title = metadata?.common?.title || '';
       // Some files store artist as array
       const artist = Array.isArray(metadata?.common?.artist)
@@ -1381,10 +1386,421 @@ function registerAllHandlers() {
     }
   });
 
+  // Profile handlers
+  ipcMain.handle('profile:get-current', async () => {
+    try {
+      // Import the main module to get current profile
+      const mainModule = await import('../index-modular.js');
+      const profile = mainModule.getCurrentProfile();
+      return { success: true, profile: profile || null };
+    } catch (error) {
+      debugLog?.error('Get current profile error:', { module: 'ipc-handlers', function: 'profile:get-current', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile:get-directory', async (event, type) => {
+    try {
+      // Import the main module to get profile directory
+      const mainModule = await import('../index-modular.js');
+      const directory = mainModule.getProfileDirectory(type);
+      return { success: true, directory };
+    } catch (error) {
+      debugLog?.error('Get profile directory error:', { module: 'ipc-handlers', function: 'profile:get-directory', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Save state (called on window close)
+  ipcMain.handle('profile:save-state', async (event, state) => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const profileDir = mainModule.getProfileDirectory('state');
+      const stateFile = path.join(profileDir, 'state.json');
+      
+      debugLog?.info('Saving profile state', { 
+        module: 'ipc-handlers',
+        function: 'profile:save-state',
+        file: stateFile
+      });
+      
+      // Ensure directory exists
+      await fsPromises.mkdir(profileDir, { recursive: true });
+      
+      // Write state file
+      await fsPromises.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
+      
+      debugLog?.info('Profile state saved successfully', { 
+        module: 'ipc-handlers',
+        function: 'profile:save-state',
+        file: stateFile
+      });
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Error saving profile state', { 
+        module: 'ipc-handlers',
+        function: 'profile:save-state',
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Get preference value
+  ipcMain.handle('profile:get-preference', async (event, key) => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const profileName = mainModule.getCurrentProfile();
+      const preferences = await profileManager.loadProfilePreferences(profileName);
+      
+      return { success: true, value: preferences[key] };
+    } catch (error) {
+      debugLog?.error('Error getting profile preference', { 
+        module: 'ipc-handlers',
+        function: 'profile:get-preference',
+        key: key,
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Set preference value
+  ipcMain.handle('profile:set-preference', async (event, key, value) => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const profileName = mainModule.getCurrentProfile();
+      
+      debugLog?.info('[PROFILE-PREF] Loading preferences for profile', {
+        module: 'ipc-handlers',
+        function: 'profile:set-preference',
+        profileName,
+        key
+      });
+      
+      const preferences = await profileManager.loadProfilePreferences(profileName);
+      
+      debugLog?.info('[PROFILE-PREF] Current preferences loaded', {
+        module: 'ipc-handlers',
+        function: 'profile:set-preference',
+        profileName,
+        key,
+        hasPreferences: !!preferences
+      });
+      
+      preferences[key] = value;
+      
+      debugLog?.info('[PROFILE-PREF] Saving updated preferences', {
+        module: 'ipc-handlers',
+        function: 'profile:set-preference',
+        profileName,
+        key,
+        valueType: typeof value,
+        valueLength: Array.isArray(value) ? value.length : undefined
+      });
+      
+      await profileManager.saveProfilePreferences(profileName, preferences);
+      
+      debugLog?.info('[PROFILE-PREF] Profile preference saved successfully', { 
+        module: 'ipc-handlers',
+        function: 'profile:set-preference',
+        profileName,
+        key
+      });
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('[PROFILE-PREF] Error setting profile preference', { 
+        module: 'ipc-handlers',
+        function: 'profile:set-preference',
+        key: key,
+        error: error.message,
+        stack: error.stack
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Get all preferences
+  ipcMain.handle('profile:get-all-preferences', async () => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const profileName = mainModule.getCurrentProfile();
+      const preferences = await profileManager.loadProfilePreferences(profileName);
+      
+      return { success: true, preferences: preferences };
+    } catch (error) {
+      debugLog?.error('Error getting all profile preferences', { 
+        module: 'ipc-handlers',
+        function: 'profile:get-all-preferences',
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile:switch', async () => {
+    try {
+      debugLog?.info('Profile switch requested, will save state and relaunch', { 
+        module: 'ipc-handlers',
+        function: 'profile:switch' 
+      });
+      
+      // Note: State must be saved BEFORE we tell the renderer we're switching
+      // The renderer should call profile:save-state-before-switch first
+      
+      // Save current profile name for fallback if launcher is closed without selection
+      const mainModule = await import('../index-modular.js');
+      const currentProfile = mainModule.getCurrentProfile();
+      if (currentProfile) {
+        // Store the current profile as the fallback profile
+        store.set('fallback-profile', currentProfile);
+        debugLog?.info('Saved fallback profile for launcher close scenario', { 
+          module: 'ipc-handlers',
+          function: 'profile:switch',
+          fallbackProfile: currentProfile 
+        });
+      }
+      
+      // Close main window and relaunch launcher
+      if (mainWindow) {
+        mainWindow.close();
+      }
+      
+      // Relaunch the app without profile argument to show launcher
+      app.relaunch({ args: process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')) });
+      app.exit(0);
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Profile switch error:', { module: 'ipc-handlers', function: 'profile:switch', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+  
+  // Profile: Save state before switch (explicit save, not relying on beforeunload)
+  ipcMain.handle('profile:save-state-before-switch', async (event, state) => {
+    try {
+      debugLog?.info('Saving profile state before switch', { 
+        module: 'ipc-handlers',
+        function: 'profile:save-state-before-switch',
+        hasState: !!state
+      });
+      
+      // Get the current profile
+      const mainModule = await import('../index-modular.js');
+      const profileName = mainModule.getCurrentProfile();
+      
+      if (!profileName) {
+        throw new Error('No active profile');
+      }
+      
+      // Get profile directory
+      const userDataPath = app.getPath('userData');
+      const profilesDir = path.join(userDataPath, 'profiles');
+      const profileDir = path.join(profilesDir, profileName);
+      const stateFile = path.join(profileDir, 'state.json');
+      
+      debugLog?.info('Writing state file before switch', {
+        module: 'ipc-handlers',
+        function: 'profile:save-state-before-switch',
+        file: stateFile,
+        profileName: profileName
+      });
+      
+      // Ensure directory exists
+      await fsPromises.mkdir(profileDir, { recursive: true });
+      
+      // Write state file
+      await fsPromises.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
+      
+      debugLog?.info('State saved successfully before switch', {
+        module: 'ipc-handlers',
+        function: 'profile:save-state-before-switch',
+        file: stateFile
+      });
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Error saving profile state before switch', {
+        module: 'ipc-handlers',
+        function: 'profile:save-state-before-switch',
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Create profile
+  ipcMain.handle('profile:create', async (event, profileName, description) => {
+    try {
+      debugLog?.info('Profile create requested', { 
+        module: 'ipc-handlers',
+        function: 'profile:create',
+        profileName,
+        description 
+      });
+      
+      // Create the profile using the imported profile manager
+      const result = await profileManager.createProfile(profileName, description);
+      
+      if (result.success) {
+        debugLog?.info('Profile created successfully', { 
+          module: 'ipc-handlers',
+          function: 'profile:create',
+          profileName 
+        });
+      } else {
+        debugLog?.error('Failed to create profile', { 
+          module: 'ipc-handlers',
+          function: 'profile:create',
+          profileName,
+          error: result.error 
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      debugLog?.error('Profile create error:', { 
+        module: 'ipc-handlers', 
+        function: 'profile:create',
+        profileName,
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Duplicate profile
+        ipcMain.handle('profile:duplicate', async (event, sourceProfileName, targetProfileName, description) => {
+          try {
+            debugLog?.info('Profile duplicate requested', {
+              module: 'ipc-handlers',
+              function: 'profile:duplicate',
+              sourceProfileName,
+              targetProfileName,
+              description
+            });
+
+            const result = await profileManager.duplicateProfile(sourceProfileName, targetProfileName, description);
+
+            if (result.success) {
+              debugLog?.info('Profile duplicated successfully', {
+                module: 'ipc-handlers',
+                function: 'profile:duplicate',
+                sourceProfileName,
+                targetProfileName
+              });
+            } else {
+              debugLog?.error('Failed to duplicate profile', {
+                module: 'ipc-handlers',
+                function: 'profile:duplicate',
+                sourceProfileName,
+                targetProfileName,
+                error: result.error
+              });
+            }
+
+            return result;
+          } catch (error) {
+            debugLog?.error('Profile duplicate error:', {
+              module: 'ipc-handlers',
+              function: 'profile:duplicate',
+              sourceProfileName,
+              targetProfileName,
+              error: error.message
+            });
+            return { success: false, error: error.message };
+          }
+        });
+
+  // Profile: Switch to specific profile
+  ipcMain.handle('profile:switch-to', async (event, profileName) => {
+    try {
+      debugLog?.info('Profile switch to specific profile requested', { 
+        module: 'ipc-handlers',
+        function: 'profile:switch-to',
+        profileName 
+      });
+      
+      // Save current profile name for fallback if launcher is closed without selection
+      const mainModule = await import('../index-modular.js');
+      const currentProfile = mainModule.getCurrentProfile();
+      if (currentProfile) {
+        store.set('fallback-profile', currentProfile);
+        debugLog?.info('Saved fallback profile before switch', {
+          module: 'ipc-handlers',
+          function: 'profile:switch-to',
+          fallbackProfile: currentProfile 
+        });
+      }
+      
+      // Set the target profile as the fallback so launcher will auto-select it
+      store.set('auto-select-profile', profileName);
+      
+      // Close main window and relaunch launcher
+      if (mainWindow) {
+        mainWindow.close();
+      }
+      app.relaunch({ args: [...process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')), `--profile=${profileName}`] });
+      app.exit(0);
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Profile switch to specific profile error:', { 
+        module: 'ipc-handlers', 
+        function: 'profile:switch-to',
+        profileName,
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Profile: Delete profile
+  ipcMain.handle('profile:delete', async (event, profileName) => {
+    try {
+      debugLog?.info('Profile delete requested', { 
+        module: 'ipc-handlers',
+        function: 'profile:delete',
+        profileName 
+      });
+      
+      // Delete the profile using the imported profile manager
+      const result = await profileManager.deleteProfile(profileName);
+      
+      if (result.success) {
+        debugLog?.info('Profile deleted successfully', { 
+          module: 'ipc-handlers',
+          function: 'profile:delete',
+          profileName 
+        });
+      } else {
+        debugLog?.error('Failed to delete profile', { 
+          module: 'ipc-handlers',
+          function: 'profile:delete',
+          profileName,
+          error: result.error 
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      debugLog?.error('Profile delete error:', { 
+        module: 'ipc-handlers', 
+        function: 'profile:delete',
+        profileName,
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
   debugLog?.info('✅ Secure IPC handlers registered successfully', { 
     module: 'ipc-handlers', 
     function: 'registerAllHandlers',
-    secureHandlersCount: 50
+    secureHandlersCount: 54
   });
 
   debugLog?.info('✅ All IPC handlers registered successfully (context isolation ready)', { 

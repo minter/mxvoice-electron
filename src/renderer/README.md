@@ -41,6 +41,14 @@ Typed facades over secure preload APIs (via `window.electronAPI` or secure adapt
 4. `FunctionMonitor` periodically validates availability and logs health
 5. Feature modules consume `services/` for secure, preload‑mediated APIs
 
+### Lifecycle Management
+
+- `cleanup/` module handles resource cleanup on window close (`beforeunload`)
+  - Cancels animation frames (audio time tracking)
+  - Unloads Howler.js sound instances
+  - Cleans up event listeners via event coordination
+  - Integrated automatically during bootstrap; runs best-effort cleanup
+
 ### Notes
 
 - Context isolation is enabled; all privileged access goes through preload secure APIs

@@ -12,6 +12,12 @@
 - Tests pass a clean `E2E_USER_DATA_DIR`, and also set `HOME` and `APPDATA` to temp dirs to prevent legacy config migration.
 - See `src/main/index-modular.js` for the early `app.setPath('userData', ...)` logic.
 
+### Profile Selection
+- The app now requires profile selection on startup (via the launcher window).
+- Tests bypass the launcher by passing `--profile=Default User` as a command line argument.
+- This allows tests to launch directly into the main app without manual profile selection.
+- See `src/main/index-modular.js` (around line 898) for the profile argument handling logic.
+
 ### Running Tests
 ```bash
 yarn test            # All tests
@@ -37,7 +43,7 @@ test.beforeAll(async () => {
   const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
 
   app = await electron.launch({
-    args: ['.'],
+    args: ['.', '--profile=Default User'],
     env: {
       ...process.env,
       NODE_ENV: 'test',
