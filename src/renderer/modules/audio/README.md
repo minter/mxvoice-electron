@@ -24,6 +24,7 @@ Available methods/functions:
 - Autoplay: `autoplay_next()`, `cancel_autoplay()`
 - Controls: `stopPlaying(fadeOut = false)`, `pausePlaying(fadeOut = false)`
 - UI helpers: `resetUIState()`, `toggle_play_button()`, `loop_on(bool)`
+- Cache management: `initializeMusicDirectoryCache()`, `updateMusicDirectoryCache(newDirectory)`
 - Diagnostics: `test()`, `getInfo()`
 
 ## Usage
@@ -86,9 +87,11 @@ Managed via `sharedState`:
 
 ## Performance considerations
 
+- Music directory caching: The music directory path is cached on initialization and updated whenever preferences change, eliminating repeated IPC calls during playback
 - On‑demand file loading and cleanup of Howler instances
 - Progress tracking runs only while playing; animation handles are cleared
 - Expensive operations gated behind preferences when applicable
+- Audio context pre-warming on Windows to prevent suspension delays
 
 ## Migration from renderer.js
 

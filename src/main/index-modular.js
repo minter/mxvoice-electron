@@ -46,12 +46,68 @@ import * as ipcHandlers from './modules/ipc-handlers.js';
 import * as fileOperations from './modules/file-operations.js';
 import initializeMainDebugLog from './modules/debug-log.js';
 import { initMainLogService } from './modules/log-service.js';
+import * as profileManager from './modules/profile-manager.js';
+import * as launcherWindow from './modules/launcher-window.js';
 
 // Initialize Octokit for GitHub API (will be initialized after debugLog is available)
 let octokit;
 
 // Initialize markdown parser
 const md = markdownIt();
+
+// Profile context - set via command line arg or launcher
+let currentProfile = null;
+
+/**
+ * Parse command line arguments to check for profile
+ * @returns {string|null} Profile name if provided, null otherwise
+ */
+function getProfileFromArgs() {
+  const args = process.argv.slice(1); // Skip electron executable
+  
+  for (const arg of args) {
+    if (arg.startsWith('--profile=')) {
+      return arg.substring('--profile='.length);
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Get the current active profile
+ * @returns {string|null} Current profile name or null if not set
+ */
+export function getCurrentProfile() {
+  return currentProfile;
+}
+
+/**
+ * Get profile-specific directory path
+ * @param {string} type - Type of directory ('hotkeys', 'holding-tank', etc.)
+ * @returns {string} Profile-specific directory path
+ */
+export function getProfileDirectory(type) {
+  const profile = getCurrentProfile();
+  if (!profile) {
+    throw new Error('No current profile set');
+  }
+  const sanitized = profileManager.sanitizeProfileName(profile);
+  const profilesDir = profileManager.getProfilesDirectory();
+
+  switch (type) {
+    case 'hotkeys':
+      return path.join(profilesDir, sanitized, 'hotkeys');
+    case 'holding-tank':
+      return path.join(profilesDir, sanitized, 'holding-tank');
+    case 'state':
+      return path.join(profilesDir, sanitized);
+    case 'preferences':
+      return path.join(profilesDir, sanitized);
+    default:
+      return path.join(profilesDir, sanitized);
+  }
+}
 
 // Streaming file copy function for large files with progress tracking
 async function copyFileStreaming(source, destination, progressCallback = null) {
@@ -498,19 +554,6 @@ import('electron-util').then(electronUtil => {
   });
 });
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-// Use dynamic import for electron-squirrel-startup to avoid CommonJS issues
-import('electron-squirrel-startup').then(electronSquirrelStartup => {
-  if (electronSquirrelStartup.default) {
-    app.quit();
-  }
-}).catch(error => {
-  debugLog.warn('Could not load electron-squirrel-startup', { 
-    function: "electron-squirrel-startup import",
-    error: error.message 
-  });
-});
-
 // Initialize database
 async function initializeMainDatabaseWrapper() {
   try {
@@ -546,8 +589,8 @@ async function initializeMainDatabaseWrapper() {
 
 // Check first run
 async function checkFirstRun() {
-  debugLog.info(`First run preference returns ${store.get('first_run_completed')}`, { 
-    function: "checkFirstRun" 
+  debugLog.info(`First run preference returns ${store.get('first_run_completed')}`, {
+    function: "checkFirstRun"
   });
   if (!store.get('first_run_completed')) {
     const shouldCheckLegacyConfig = process.env.APP_TEST_MODE !== '1';
@@ -692,7 +735,8 @@ async function initializeModules() {
     fileOperations,
     debugLog,
     updateState,
-    logService
+    logService,
+    getCurrentProfile
   };
 
   // Initialize each module
@@ -847,12 +891,57 @@ function setupApp() {
 
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
-  app.on('ready', () => {
+  app.on('ready', async () => {
     debugLog.info('Electron app ready event fired', { function: "app ready event" });
-    createWindow();
     
-    // Test auto-update scenarios if enabled
-    testAutoUpdateScenarios();
+    // Initialize profile manager
+    profileManager.initializeProfileManager({ debugLog });
+    
+    // Check if profile was provided via command line
+    currentProfile = getProfileFromArgs();
+
+    if (currentProfile) {
+      // Profile provided (or default) - launch main app directly
+      debugLog.info('Profile set, launching main app', {
+        function: "app ready event",
+        profile: currentProfile,
+        source: getProfileFromArgs() ? 'command-line' : 'default'
+      });
+
+      createWindow();
+
+      // Test auto-update scenarios if enabled
+      testAutoUpdateScenarios();
+    } else {
+      // No profile - show launcher window
+      debugLog.info('No profile provided, showing launcher', {
+        function: "app ready event"
+      });
+      
+      // Initialize launcher window with ability to launch main app
+      launcherWindow.initializeLauncherWindow({
+        debugLog,
+        profileManager,
+        store,
+        mainWindow,
+        mainAppLauncher: async (profileName) => {
+          currentProfile = profileName;
+          
+          debugLog.info('Launching main app from launcher', { 
+            function: "mainAppLauncher",
+            profile: profileName 
+          });
+          
+          await createWindow();
+          
+          // Test auto-update scenarios if enabled
+          testAutoUpdateScenarios();
+        }
+      });
+      
+      // Show launcher window
+      await launcherWindow.createLauncherWindow();
+    }
   });
 
   // Setup auto-updater events

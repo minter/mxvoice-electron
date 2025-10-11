@@ -84,7 +84,7 @@ export async function launchSeededApp(electron, suffix = '') {
 
   const app = await electron.launch({
     executablePath: electronPath,
-    args: ['.'],
+    args: ['.', '--profile=Default User'],
     env: {
       ...process.env,
       NODE_ENV: 'test',

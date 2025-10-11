@@ -21,18 +21,23 @@ export class DataPreloader {
     try {
       this.logInfo('Starting initial data loading...');
       
-      // Clear holding tank store to ensure we load new HTML
-      await this.clearHoldingTankStore();
+      // NOTE: clearHoldingTankStore() disabled for profile state management
+      // Profile state will restore holding tank content automatically
+      // await this.clearHoldingTankStore();
       
-      // Load hotkeys data
-      await this.loadHotkeys();
+      // NOTE: loadHotkeys() disabled for profile state management  
+      // Profile state will restore hotkey content automatically
+      // await this.loadHotkeys();
       
       // Load column order
       await this.loadColumnOrder();
       
       // Load font size
       await this.loadFontSize();
-      
+
+      // Load categories
+      await this.loadCategories();
+
       this.logInfo('Initial data loading completed successfully');
       return true;
     } catch (error) {
@@ -91,32 +96,55 @@ export class DataPreloader {
   }
 
   /**
-   * Load column order from electron store
+   * Load column order from profile preferences
    * @returns {Promise<void>}
    */
   async loadColumnOrder() {
     try {
-      this.logInfo('Loading column order from store...');
-      const hasColumnOrder = await secureStore.has("column_order");
-      this.logInfo(`Column order exists in store: ${hasColumnOrder}`);
+      this.logInfo('Loading column order from profile preferences...');
       
-      if (hasColumnOrder) {
-        const columnOrderData = await secureStore.get("column_order");
-        this.logInfo(`Retrieved column order from store:`, columnOrderData);
+      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      if (!electronAPI || !electronAPI.profile) {
+        this.logWarn('Profile API not available, trying global store');
+        const hasColumnOrder = await secureStore.has("column_order");
+        this.logInfo(`Column order exists in global store: ${hasColumnOrder}`);
         
-        // Handle both wrapped format {success: true, value: [...]} and direct array format [...]
-        let columnOrder = null;
-        if (columnOrderData && typeof columnOrderData === 'object') {
-          if (Array.isArray(columnOrderData)) {
-            // Direct array format
-            columnOrder = columnOrderData;
-          } else if (columnOrderData.value && Array.isArray(columnOrderData.value)) {
-            // Wrapped format {success: true, value: [...]}
-            columnOrder = columnOrderData.value;
+        if (hasColumnOrder) {
+          const columnOrderData = await secureStore.get("column_order");
+          this.logInfo(`Retrieved column order from global store:`, columnOrderData);
+          
+          // Handle both wrapped format {success: true, value: [...]} and direct array format [...]
+          let columnOrder = null;
+          if (columnOrderData && typeof columnOrderData === 'object') {
+            if (Array.isArray(columnOrderData)) {
+              columnOrder = columnOrderData;
+            } else if (columnOrderData.value && Array.isArray(columnOrderData.value)) {
+              columnOrder = columnOrderData.value;
+            }
+          }
+          
+          if (columnOrder && Array.isArray(columnOrder)) {
+            const topRow = document.getElementById('top-row');
+            if (topRow) {
+              columnOrder.forEach((val) => {
+                const child = topRow.querySelector(`#${val}`);
+                if (child) {
+                  topRow.appendChild(child);
+                }
+              });
+              this.logInfo('Column order applied from global store successfully');
+            }
           }
         }
-        
-        if (columnOrder && Array.isArray(columnOrder)) {
+        return;
+      }
+      
+      // Use profile preferences
+      const result = await electronAPI.profile.getPreference('column_order');
+      this.logInfo(`Retrieved column order from profile:`, result);
+      
+      if (result.success && result.value && Array.isArray(result.value)) {
+          const columnOrder = result.value;
           const topRow = document.getElementById('top-row');
           if (topRow) {
             this.logInfo('Top row found, applying column order...');
@@ -161,11 +189,8 @@ export class DataPreloader {
           } else {
             this.logWarn('Top row not found, cannot apply column order');
           }
-        } else {
-          this.logWarn('Column order is not a valid array:', columnOrderData);
-        }
       } else {
-        this.logInfo('No saved column order found in store');
+        this.logInfo('No saved column order found in profile');
       }
     } catch (error) {
       this.logError('Error loading column order', error);
@@ -173,22 +198,62 @@ export class DataPreloader {
   }
 
   /**
-   * Load font size from electron store
+   * Load font size from profile preferences
    * @returns {Promise<void>}
    */
   async loadFontSize() {
     try {
+      // Try to load from profile preferences first (new system)
+      if (window.electronAPI && window.electronAPI.profile) {
+        const result = await window.electronAPI.profile.getPreference('font_size');
+        if (result && result.success && result.value !== undefined && result.value !== null) {
+          this.logInfo(`Font size loaded from profile preferences: ${result.value}`);
+          return;
+        }
+      }
+
+      // Fallback to legacy store for backward compatibility
       const hasFontSize = await secureStore.has("font-size");
       if (hasFontSize) {
         const size = await secureStore.get("font-size");
         if (size !== undefined && size !== null) {
-          // Font size is now managed by shared state
-          // This is kept for backward compatibility but doesn't set moduleRegistry.fontSize
-          this.logInfo(`Font size loaded from store: ${size}`);
+          // Migrate to profile preferences if available
+          if (window.electronAPI && window.electronAPI.profile) {
+            await window.electronAPI.profile.setPreference('font_size', size);
+            this.logInfo(`Font size migrated from legacy store to profile: ${size}`);
+          } else {
+            this.logInfo(`Font size loaded from legacy store: ${size}`);
+          }
         }
       }
     } catch (error) {
       this.logError('Error loading font size', error);
+    }
+  }
+
+  /**
+   * Load categories from database into shared state
+   * @returns {Promise<void>}
+   */
+  async loadCategories() {
+    try {
+      this.logInfo('Loading categories from database...');
+
+      // Import the categories module
+      const { loadCategories } = await import('../categories/index.js');
+
+      if (typeof loadCategories === 'function') {
+        const result = await loadCategories();
+        if (result.success) {
+          this.logInfo(`Categories loaded successfully: ${Object.keys(result.data).length} categories`);
+        } else {
+          this.logWarn(`Failed to load categories: ${result.error}`);
+        }
+      } else {
+        this.logWarn('loadCategories function not available');
+      }
+    } catch (error) {
+      this.logError('Error loading categories', error);
     }
   }
 

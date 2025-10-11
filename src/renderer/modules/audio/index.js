@@ -36,6 +36,8 @@ class AudioModule {
     this.song_ended = audioManager.song_ended;
     this.autoplay_next = audioManager.autoplay_next;
     this.cancel_autoplay = audioManager.cancel_autoplay;
+    this.initializeMusicDirectoryCache = audioManager.initializeMusicDirectoryCache;
+    this.updateMusicDirectoryCache = audioManager.updateMusicDirectoryCache;
     
     // Initialize audio controller functions
     this.stopPlaying = audioController.stopPlaying;
@@ -68,6 +70,9 @@ class AudioModule {
 
       // Initialize audio functionality
       this.setupAudioModule();
+      
+      // Initialize music directory cache to reduce IPC overhead
+      await this.initializeMusicDirectoryCache();
       
       // In E2E, relax CSP slightly to allow file: media for WebAudio buffering
       try { enableTestModeCSP(); } catch (_) {}
@@ -380,6 +385,8 @@ export const pausePlaying = audioModule.pausePlaying.bind(audioModule);
 export const resetUIState = audioModule.resetUIState.bind(audioModule);
 export const toggle_play_button = audioModule.toggle_play_button.bind(audioModule);
 export const loop_on = audioModule.loop_on.bind(audioModule);
+export const initializeMusicDirectoryCache = audioModule.initializeMusicDirectoryCache.bind(audioModule);
+export const updateMusicDirectoryCache = audioModule.updateMusicDirectoryCache.bind(audioModule);
 
 // Default export for module loading
 export default audioModule; 

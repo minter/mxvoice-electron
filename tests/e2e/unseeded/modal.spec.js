@@ -28,7 +28,7 @@ test.describe('First run modal behavior', () => {
 
     app = await electron.launch({
       executablePath: electronPath,
-      args: ['.'],
+      args: ['.', '--profile=Default User'],
       env: {
         ...process.env,
         NODE_ENV: 'test',
@@ -206,7 +206,7 @@ test.describe('First run modal behavior', () => {
     // 12) Reopen the app without resetting state
     app = await electron.launch({
       executablePath: electronPath,
-      args: ['.'],
+      args: ['.', '--profile=Default User'],
       env: {
         ...process.env,
         NODE_ENV: 'test',

@@ -92,7 +92,13 @@ export default class UIInteractionEvents {
         const modalBody = document.querySelector('#newReleaseModal .modal-body');
         
         if (modalTitle) modalTitle.textContent = `Update Available: ${name}`;
-        if (modalBody) modalBody.innerHTML = notes;
+        if (modalBody) {
+          // Decode HTML entities (electron-updater encodes the HTML)
+          const textarea = document.createElement('textarea');
+          textarea.innerHTML = notes;
+          const decodedNotes = textarea.value;
+          modalBody.innerHTML = decodedNotes;
+        }
       };
       window.addEventListener('mxvoice:update-release-notes', updateReleaseNotesListener);
       this.uiHandlers.set('mxvoiceUpdateReleaseNotes', { element: window, event: 'mxvoice:update-release-notes', handler: updateReleaseNotesListener });

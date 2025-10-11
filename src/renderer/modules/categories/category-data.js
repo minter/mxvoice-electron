@@ -152,9 +152,17 @@ function generateCategoryCode(description) {
  * @returns {string|null} - Category description or null if not found
  */
 function getCategoryDescription(code) {
+  // Try global categories object first
   if (typeof categories !== 'undefined' && categories[code]) {
     return categories[code];
   }
+  
+  // Fallback to shared state
+  const categoriesData = sharedState.get('categories');
+  if (categoriesData && categoriesData[code]) {
+    return categoriesData[code];
+  }
+  
   return null;
 }
 
@@ -164,9 +172,17 @@ function getCategoryDescription(code) {
  * @returns {Array<string>} - Array of category codes
  */
 function getCategoryCodes() {
+  // Try global categories object first
   if (typeof categories !== 'undefined') {
     return Object.keys(categories);
   }
+  
+  // Fallback to shared state
+  const categoriesData = sharedState.get('categories');
+  if (categoriesData) {
+    return Object.keys(categoriesData);
+  }
+  
   return [];
 }
 
@@ -176,9 +192,17 @@ function getCategoryCodes() {
  * @returns {Array<string>} - Array of category descriptions
  */
 function getCategoryDescriptions() {
+  // Try global categories object first
   if (typeof categories !== 'undefined') {
     return Object.values(categories);
   }
+  
+  // Fallback to shared state
+  const categoriesData = sharedState.get('categories');
+  if (categoriesData) {
+    return Object.values(categoriesData);
+  }
+  
   return [];
 }
 
@@ -189,9 +213,17 @@ function getCategoryDescriptions() {
  * @returns {boolean} - True if category exists, false otherwise
  */
 function categoryExists(code) {
+  // Try global categories object first
   if (typeof categories !== 'undefined') {
     return categories.hasOwnProperty(code);
   }
+  
+  // Fallback to shared state
+  const categoriesData = sharedState.get('categories');
+  if (categoriesData) {
+    return categoriesData.hasOwnProperty(code);
+  }
+  
   return false;
 }
 
@@ -201,9 +233,17 @@ function categoryExists(code) {
  * @returns {number} - Number of categories
  */
 function getCategoryCount() {
+  // Try global categories object first
   if (typeof categories !== 'undefined') {
     return Object.keys(categories).length;
   }
+  
+  // Fallback to shared state
+  const categoriesData = sharedState.get('categories');
+  if (categoriesData) {
+    return Object.keys(categoriesData).length;
+  }
+  
   return 0;
 }
 
@@ -213,12 +253,23 @@ function getCategoryCount() {
  * @returns {Array<Object>} - Array of category objects with code and description
  */
 function getCategoriesAsArray() {
+  // Try global categories object first
   if (typeof categories !== 'undefined') {
     return Object.entries(categories).map(([code, description]) => ({
       code,
       description
     }));
   }
+  
+  // Fallback to shared state
+  const categoriesData = sharedState.get('categories');
+  if (categoriesData) {
+    return Object.entries(categoriesData).map(([code, description]) => ({
+      code,
+      description
+    }));
+  }
+  
   return [];
 }
 
