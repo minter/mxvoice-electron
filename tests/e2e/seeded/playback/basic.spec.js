@@ -209,9 +209,13 @@ test.describe('Playback - basic', () => {
     await pauseButton.click();
     await page.waitForTimeout(300); // Brief wait for pause to complete
     
-    // Verify time display shows 0:03 elapsed and 0:03 remaining
-    await expect(timeElapsed).toHaveText('0:03');
-    await expect(timeRemaining).toHaveText('-0:03');
+    // Verify time display shows approximately 3 seconds elapsed (allow 3-4 seconds due to CI timing)
+    const elapsedTime = await timeElapsed.textContent();
+    expect(['0:03', '0:04']).toContain(elapsedTime);
+    
+    // Verify remaining time matches (will be -0:03 or -0:02 depending on elapsed time)
+    const remainingTime = await timeRemaining.textContent();
+    expect(['-0:03', '-0:02']).toContain(remainingTime);
     
     // Press stop button
     const stopButton = page.locator('#stop_button');

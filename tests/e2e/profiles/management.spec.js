@@ -221,6 +221,7 @@ test.describe('Profile Management', () => {
     await expect(modal).toBeVisible();
     await nameInput.fill('Alice');
     await confirmButton.click();
+    await page.waitForTimeout(500);
     await expect(modal).not.toBeVisible({ timeout: 5000 });
     
     // Create "Bob" profile
@@ -228,6 +229,7 @@ test.describe('Profile Management', () => {
     await expect(modal).toBeVisible();
     await nameInput.fill('Bob');
     await confirmButton.click();
+    await page.waitForTimeout(500);
     await expect(modal).not.toBeVisible({ timeout: 5000 });
     
     // Create "Charlie" profile
@@ -235,6 +237,7 @@ test.describe('Profile Management', () => {
     await expect(modal).toBeVisible();
     await nameInput.fill('Charlie');
     await confirmButton.click();
+    await page.waitForTimeout(500);
     await expect(modal).not.toBeVisible({ timeout: 5000 });
     
     // Now test search
@@ -367,6 +370,8 @@ test.describe('Profile Management', () => {
       await expect(modal).toBeVisible();
       await nameInput.fill(name);
       await confirmButton.click();
+      // Wait a bit for profile creation to complete (especially on Windows)
+      await page.waitForTimeout(500);
       await expect(modal).not.toBeVisible({ timeout: 5000 });
     }
     
@@ -465,6 +470,7 @@ test.describe('Profile Switching and Isolation', () => {
     
     const confirmButton = page.locator('#confirm-create-btn');
     await confirmButton.click();
+    await page.waitForTimeout(500);
     await expect(modal).not.toBeVisible({ timeout: 5000 });
 
     // Create Profile B
@@ -472,6 +478,7 @@ test.describe('Profile Switching and Isolation', () => {
     await expect(modal).toBeVisible();
     await nameInput.fill('Profile B');
     await confirmButton.click();
+    await page.waitForTimeout(500);
     await expect(modal).not.toBeVisible({ timeout: 5000 });
     
     await app.close();
