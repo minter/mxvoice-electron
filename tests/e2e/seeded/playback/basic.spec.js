@@ -585,12 +585,13 @@ test.describe('Playback - basic', () => {
     const duration = await timeRemaining.textContent();
     expect(duration).not.toBe('0:00');
     
-    // Wait for song to end naturally
-    await page.waitForTimeout(8000); // Wait longer than song duration
-    
-    // Verify song has ended and UI is in stop state
-    await expect(playButton).toBeVisible();
+    // Wait for song to end naturally - wait for play button to become visible (indicates stopped state)
+    // The Edie Brickell song is ~8 seconds, so give it up to 12 seconds total
+    await expect(playButton).toBeVisible({ timeout: 12000 });
     await expect(pauseButton).not.toBeVisible();
+    
+    // Give UI a moment to fully update after song ends
+    await page.waitForTimeout(500);
     
     // Verify time displays are reset
     const timeElapsed = page.locator('#timer');
