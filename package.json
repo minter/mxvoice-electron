@@ -177,7 +177,7 @@
     "yarn": "^1.22.22"
   },
   "devDependencies": {
-    "@playwright/test": "^1.56.0",
+    "@playwright/test": "^1.56.1",
     "cross-env": "^10.1.0",
     "electron": "^38.3.0",
     "electron-builder": "26.0.12",
