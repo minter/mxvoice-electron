@@ -307,12 +307,12 @@
   resolved "https://registry.yarnpkg.com/@pkgjs/parseargs/-/parseargs-0.11.0.tgz#a77ea742fab25775145434eb1d2328cf5013ac33"
   integrity sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==
 
-"@playwright/test@^1.56.0":
-  version "1.56.0"
-  resolved "https://registry.yarnpkg.com/@playwright/test/-/test-1.56.0.tgz#891fe101bddf3eee3dd609e7a145f705dc0f3054"
-  integrity sha512-Tzh95Twig7hUwwNe381/K3PggZBZblKUe2wv25oIpzWLr6Z0m4KgV1ZVIjnR6GM9ANEqjZD7XsZEa6JL/7YEgg==
+"@playwright/test@^1.56.1":
+  version "1.56.1"
+  resolved "https://registry.yarnpkg.com/@playwright/test/-/test-1.56.1.tgz#6e3bf3d0c90c5cf94bf64bdb56fd15a805c8bd3f"
+  integrity sha512-vSMYtL/zOcFpvJCW71Q/OEGQb7KYBPAdKh35WNSkaZA75JlAO8ED8UN6GUNTm3drWomcbcqRPFqQbLae8yBTdg==
   dependencies:
-    playwright "1.56.0"
+    playwright "1.56.1"
 
 "@sindresorhus/is@^4.0.0":
   version "4.6.0"
@@ -705,10 +705,10 @@ builder-util-runtime@9.3.1:
     debug "^4.3.4"
     sax "^1.2.4"
 
-builder-util-runtime@9.4.0:
-  version "9.4.0"
-  resolved "https://registry.yarnpkg.com/builder-util-runtime/-/builder-util-runtime-9.4.0.tgz#8bb685e1c2037c18234fc1983c3fe195328ced75"
-  integrity sha512-omkpaKbutPYqC0nwLEeGq540xND1YPhfVzwT6CFyCFzxhNDt/X+fykr17Yo3jxiuwI3zaAnY/1tKFoRN+FeHhg==
+builder-util-runtime@9.5.0:
+  version "9.5.0"
+  resolved "https://registry.yarnpkg.com/builder-util-runtime/-/builder-util-runtime-9.5.0.tgz#0074d170608cee67a48578141b32d217b824f942"
+  integrity sha512-7qmRMH8X/IzDM+1TysKNFo5cNWBbfacdLX4EqkuE5aiRTECAlYiKHSqEc6cc3c4Lrmpgk0utbxOPkj0iYaWAWQ==
   dependencies:
     debug "^4.3.4"
     sax "^1.2.4"
@@ -1158,18 +1158,18 @@ electron-store@^11.0.2:
     conf "^15.0.2"
     type-fest "^5.0.1"
 
-electron-updater@^6.6.8:
-  version "6.6.8"
-  resolved "https://registry.yarnpkg.com/electron-updater/-/electron-updater-6.6.8.tgz#8550a9c25851fa7239ffce4525363c9a1422bae3"
-  integrity sha512-n8FeXRc7Q7BBweS85+H5h4/uzBz8hSSOYhDnwOumpbIhYdPk9EEzWLKDyoArMyf4RebywqWBUE96QDn9TETRhQ==
+electron-updater@^6.7.0:
+  version "6.7.0"
+  resolved "https://registry.yarnpkg.com/electron-updater/-/electron-updater-6.7.0.tgz#8dd471de27193a5192bda322c66cdbff0add4123"
+  integrity sha512-j8ejBZCkp5kvv1MxJNoQaSjNvEbr/ZHSeQdwm0jbZGgVm+Z6ExqRpqE8oRxDsDacxQfk7l8hlBAnlq4qAk2wfw==
   dependencies:
-    builder-util-runtime "9.4.0"
+    builder-util-runtime "9.5.0"
     fs-extra "^10.1.0"
     js-yaml "^4.1.0"
     lazy-val "^1.0.5"
     lodash.escaperegexp "^4.1.2"
     lodash.isequal "^4.5.0"
-    semver "^7.6.3"
+    semver "7.7.2"
     tiny-typed-emitter "^2.1.0"
 
 electron-util@^1.0.0:
@@ -1180,10 +1180,10 @@ electron-util@^1.0.0:
     electron-is-dev "^3.0.1"
     new-github-issue-url "^1.1.0"
 
-electron@^38.2.2:
-  version "38.2.2"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-38.2.2.tgz#117a516fa2215604e35a60f3cc2543f3f5404a16"
-  integrity sha512-OXSaVNXDlonXDjMRsFNQo1j5tzTKwKXh5/m46IjAFccBcZJZMISI+EjSI07oexIuhvKM8AZLuFuihVn4YjWWrA==
+electron@^38.3.0:
+  version "38.3.0"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-38.3.0.tgz#5f8c8bc3153555832a465cbe271b0ae8117f4145"
+  integrity sha512-Wij4AzX4SAV0X/ktq+NrWrp5piTCSS8F6YWh1KAcG+QRtNzyns9XLKERP68nFHIwfprhxF2YCN2uj7nx9DaeJw==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^22.7.7"
@@ -2171,10 +2171,10 @@ node-api-version@^0.2.0:
   dependencies:
     semver "^7.3.5"
 
-node-sqlite3-wasm@^0.8.49:
-  version "0.8.49"
-  resolved "https://registry.yarnpkg.com/node-sqlite3-wasm/-/node-sqlite3-wasm-0.8.49.tgz#1b3f9abc619ce5b1ce194a3733d91987156d76e4"
-  integrity sha512-ilyuz5iZb5+XfEcbciQIGSAVuc4P4p1RGDX61HbrB3Ms1bNX3lYAXLfSH5tjGM0/JwK2wdt5Xv2JHzdgGRiDEQ==
+node-sqlite3-wasm@^0.8.50:
+  version "0.8.50"
+  resolved "https://registry.yarnpkg.com/node-sqlite3-wasm/-/node-sqlite3-wasm-0.8.50.tgz#3e4bc9cca9cd4a8830ecbcac1174df6c065c1d34"
+  integrity sha512-6gZLL2j8LDeh9SgZT0vglfILfyXocHxFTOfAdDTX0vikY59E3ZnL7WB2a5kszumvpVAlVdc5bYVR8hnSgYpXwA==
 
 nopt@^6.0.0:
   version "6.0.0"
@@ -2289,17 +2289,17 @@ picomatch@^2.0.4, picomatch@^2.2.1:
   resolved "https://registry.yarnpkg.com/picomatch/-/picomatch-2.3.1.tgz#3ba3833733646d9d3e4995946c1365a67fb07a42"
   integrity sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==
 
-playwright-core@1.56.0:
-  version "1.56.0"
-  resolved "https://registry.yarnpkg.com/playwright-core/-/playwright-core-1.56.0.tgz#14b40ea436551b0bcefe19c5bfb8d1804c83739c"
-  integrity sha512-1SXl7pMfemAMSDn5rkPeZljxOCYAmQnYLBTExuh6E8USHXGSX3dx6lYZN/xPpTz1vimXmPA9CDnILvmJaB8aSQ==
+playwright-core@1.56.1:
+  version "1.56.1"
+  resolved "https://registry.yarnpkg.com/playwright-core/-/playwright-core-1.56.1.tgz#24a66481e5cd33a045632230aa2c4f0cb6b1db3d"
+  integrity sha512-hutraynyn31F+Bifme+Ps9Vq59hKuUCz7H1kDOcBs+2oGguKkWTU50bBWrtz34OUWmIwpBTWDxaRPXrIXkgvmQ==
 
-playwright@1.56.0, playwright@^1.55.1:
-  version "1.56.0"
-  resolved "https://registry.yarnpkg.com/playwright/-/playwright-1.56.0.tgz#71c533c61da33e95812f8c6fa53960e073548d9a"
-  integrity sha512-X5Q1b8lOdWIE4KAoHpW3SE8HvUB+ZZsUoN64ZhjnN8dOb1UpujxBtENGiZFE+9F/yhzJwYa+ca3u43FeLbboHA==
+playwright@1.56.1, playwright@^1.55.1:
+  version "1.56.1"
+  resolved "https://registry.yarnpkg.com/playwright/-/playwright-1.56.1.tgz#62e3b99ddebed0d475e5936a152c88e68be55fbf"
+  integrity sha512-aFi5B0WovBHTEvpM3DzXTUaeN6eN0qWnTkKx4NQaH4Wvcmc153PdaY2UBdSYKaGYw+UyWXSVyxDUg5DoPEttjw==
   dependencies:
-    playwright-core "1.56.0"
+    playwright-core "1.56.1"
   optionalDependencies:
     fsevents "2.3.2"
 
@@ -2469,6 +2469,11 @@ semver-compare@^1.0.0:
   resolved "https://registry.yarnpkg.com/semver-compare/-/semver-compare-1.0.0.tgz#0dee216a1c941ab37e9efb1788f6afc5ff5537fc"
   integrity sha512-YM3/ITh2MJ5MtzaM429anh+x2jiLVjqILF4m4oyQB18W7Ggea7BfqdH/wGMK7dDiMghv/6WG7znWMwUDzJiXow==
 
+semver@7.7.2, semver@^7.3.2, semver@^7.3.5, semver@^7.3.8, semver@^7.5.3, semver@^7.6.3, semver@^7.7.2:
+  version "7.7.2"
+  resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.2.tgz#67d99fdcd35cec21e6f8b87a7fd515a33f982b58"
+  integrity sha512-RF0Fw+rO5AMf9MAyaRXI4AV0Ulj5lMHqVxxdSgiVbixSCXoEmmX/jk0CuJw4+3SqroYO9VoUh+HcuJivvtJemA==
+
 semver@^5.5.0:
   version "5.7.2"
   resolved "https://registry.yarnpkg.com/semver/-/semver-5.7.2.tgz#48d55db737c3287cd4835e17fa13feace1c41ef8"
@@ -2478,11 +2483,6 @@ semver@^6.2.0:
   version "6.3.1"
   resolved "https://registry.yarnpkg.com/semver/-/semver-6.3.1.tgz#556d2ef8689146e46dcea4bfdd095f3434dffcb4"
   integrity sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==
-
-semver@^7.3.2, semver@^7.3.5, semver@^7.3.8, semver@^7.5.3, semver@^7.6.3, semver@^7.7.2:
-  version "7.7.2"
-  resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.2.tgz#67d99fdcd35cec21e6f8b87a7fd515a33f982b58"
-  integrity sha512-RF0Fw+rO5AMf9MAyaRXI4AV0Ulj5lMHqVxxdSgiVbixSCXoEmmX/jk0CuJw4+3SqroYO9VoUh+HcuJivvtJemA==
 
 serialize-error@^7.0.1:
   version "7.0.1"

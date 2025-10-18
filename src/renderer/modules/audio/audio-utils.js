@@ -93,11 +93,10 @@ export function createHowl(options = {}) {
     coerced.html5 = false;
     if (typeof coerced.preload === 'undefined') coerced.preload = true;
   } else {
-    // Production: Use Web Audio API (better quality, works with file:// URLs)
-    // Use preload:true because Web Audio can't stream file:// URLs
-    // But we call play() immediately, so it starts as soon as possible
-    if (typeof coerced.html5 === 'undefined') coerced.html5 = false; // Web Audio API
-    if (typeof coerced.preload === 'undefined') coerced.preload = true; // Required for local files
+    // Production: Use HTML5 Audio for true streaming with local files
+    // HTML5 Audio handles file:// URLs better and can start playing faster
+    if (typeof coerced.html5 === 'undefined') coerced.html5 = true; // HTML5 Audio mode
+    if (typeof coerced.preload === 'undefined') coerced.preload = 'auto'; // Auto buffer management
     coerced.format = ['mp3', 'ogg', 'm4a', 'aac', 'mp4', 'webm', 'wav', 'wma', 'flac']; // Support all common audio formats
   }
   
