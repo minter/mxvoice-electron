@@ -340,6 +340,15 @@ function registerAllHandlers() {
     }
   });
 
+  ipcMain.handle('file-get-user-data-path', async (event) => {
+    try {
+      return { success: true, path: app.getPath('userData') };
+    } catch (error) {
+      debugLog?.error('Get user data path error:', { module: 'ipc-handlers', function: 'file-get-user-data-path', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('file-delete', async (event, filePath) => {
     try {
       fs.unlinkSync(filePath);

@@ -249,6 +249,22 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         window.logInfo('✅ Profile state restored successfully');
       } else {
         window.logInfo('ℹ️ No previous state found, starting fresh');
+        
+        // Check if we just loaded legacy HTML data that needs to be saved
+        if (window._needsInitialStateSave) {
+          window.logInfo('💾 Saving initial profile state after 3.1.5 migration...');
+          
+          // Give the DOM a moment to settle
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Save the profile state to capture the migrated hotkeys/holding tank
+          await moduleRegistry.profileState.saveProfileState();
+          
+          // Clear the flag
+          delete window._needsInitialStateSave;
+          
+          window.logInfo('✅ Migration state save complete');
+        }
       }
       
       // Set up profile event listeners

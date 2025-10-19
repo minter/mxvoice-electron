@@ -124,7 +124,8 @@ const secureElectronAPI = {
     copy: (sourcePath, destPath) => ipcRenderer.invoke('file-copy', sourcePath, destPath),
     mkdir: (dirPath, options) => ipcRenderer.invoke('file-mkdir', dirPath, options),
     readdir: (dirPath) => ipcRenderer.invoke('fs-readdir', dirPath),
-    stat: (filePath) => ipcRenderer.invoke('fs-stat', filePath)
+    stat: (filePath) => ipcRenderer.invoke('fs-stat', filePath),
+    getUserDataPath: () => ipcRenderer.invoke('file-get-user-data-path')
   },
   
   // Path operations - secure path manipulation
