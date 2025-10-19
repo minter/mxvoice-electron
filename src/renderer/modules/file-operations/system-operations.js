@@ -19,27 +19,70 @@ try {
  * Opens a directory picker dialog and updates the specified element with the selected path
  * 
  * @param {Event} event - The triggering event
- * @param {HTMLElement} element - The element to update with the selected path
+ * @param {HTMLElement|string} element - The element or CSS selector to update with the selected path
  */
 export function pickDirectory(event, element) {
   event.preventDefault();
-  const defaultPath = (element && element instanceof Element) ? (element.value || '') : '';
+  
+  // Handle both selector strings and element objects
+  const el = typeof element === 'string' ? document.querySelector(element) : element;
+  const defaultPath = (el && el instanceof Element) ? (el.value || '') : '';
+  
+  debugLog?.info('pickDirectory called', {
+    module: 'system-operations',
+    function: 'pickDirectory',
+    elementType: typeof element,
+    elementValue: element,
+    resolvedElement: !!el,
+    defaultPath
+  });
+  
   try {
     if (window.secureElectronAPI?.app?.showDirectoryPicker) {
       window.secureElectronAPI.app.showDirectoryPicker(defaultPath).then((res) => {
+        debugLog?.info('Directory picker response', {
+          module: 'system-operations',
+          function: 'pickDirectory',
+          success: res?.success,
+          hasData: !!res?.data,
+          canceled: res?.data?.canceled,
+          hasFilePaths: Array.isArray(res?.data?.filePaths)
+        });
+        
         if (res && res.success && res.data && !res.data.canceled && Array.isArray(res.data.filePaths)) {
           const dir = res.data.filePaths[0];
-          if (dir && element && element instanceof Element) element.value = dir;
+          if (dir && el && el instanceof Element) {
+            el.value = dir;
+            debugLog?.info('Updated element value', {
+              module: 'system-operations',
+              function: 'pickDirectory',
+              directory: dir
+            });
+          }
         } else if (Array.isArray(res)) {
           const dir = res[0];
-          if (dir && element && element instanceof Element) element.value = dir;
+          if (dir && el && el instanceof Element) {
+            el.value = dir;
+            debugLog?.info('Updated element value (array format)', {
+              module: 'system-operations',
+              function: 'pickDirectory',
+              directory: dir
+            });
+          }
         }
       });
     } else if (window.electronAPI?.showDirectoryPicker) {
       window.electronAPI.showDirectoryPicker(defaultPath).then((res) => {
         if (Array.isArray(res)) {
           const dir = res[0];
-          if (dir && element && element instanceof Element) element.value = dir;
+          if (dir && el && el instanceof Element) {
+            el.value = dir;
+            debugLog?.info('Updated element value (legacy API)', {
+              module: 'system-operations',
+              function: 'pickDirectory',
+              directory: dir
+            });
+          }
         }
       });
     }
