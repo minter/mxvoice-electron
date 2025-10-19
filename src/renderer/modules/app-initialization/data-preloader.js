@@ -147,38 +147,31 @@ export class DataPreloader {
     try {
       let storedHotkeysHtml = null;
       
-      this.logInfo("loadHotkeys() called - checking for hotkeys data");
-      
       // First try the store
       const hasHotkeys = await secureStore.has("hotkeys");
-      this.logInfo(`Store has hotkeys: ${hasHotkeys}`);
       
       if (hasHotkeys) {
         const result = await secureStore.get("hotkeys");
-        this.logInfo(`Retrieved hotkeys from store: ${JSON.stringify({success: result?.success, type: typeof result, hasValue: !!result?.value})}`);
         // Unwrap the result if it's wrapped in {success: true, value: ...}
         storedHotkeysHtml = result?.value || result;
-        this.logInfo(`Unwrapped hotkeys type: ${typeof storedHotkeysHtml}, length: ${storedHotkeysHtml?.length || 0}`);
       } else {
         // Store doesn't have it - read from config.json directly (migration scenario)
-        this.logInfo("Store doesn't have hotkeys, trying config.json");
         const electronAPI = window.secureElectronAPI || window.electronAPI;
         const userDataResult = await electronAPI.fileSystem.getUserDataPath();
-        this.logInfo(`getUserDataPath result: ${JSON.stringify(userDataResult)}`);
         
         if (userDataResult.success) {
           const configPathResult = await electronAPI.path.join(userDataResult.path, 'config.json');
-          this.logInfo(`config.json path: ${JSON.stringify(configPathResult)}`);
           
           if (configPathResult.success) {
             const configReadResult = await electronAPI.fileSystem.read(configPathResult.data);
-            this.logInfo(`config.json read result: success=${configReadResult.success}, hasData=${!!configReadResult.data}`);
             
             if (configReadResult.success) {
               try {
                 const config = JSON.parse(configReadResult.data);
                 storedHotkeysHtml = config.hotkeys;
-                this.logInfo(`Loaded hotkeys from config.json for migration (length: ${storedHotkeysHtml?.length || 0})`);
+                if (storedHotkeysHtml) {
+                  this.logInfo("Loaded hotkeys from config.json for migration");
+                }
               } catch (parseError) {
                 this.logError('Error parsing config.json for hotkeys', parseError);
               }
@@ -188,31 +181,23 @@ export class DataPreloader {
       }
       
       if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
-        this.logInfo(`Processing hotkeys HTML (length: ${storedHotkeysHtml.length})`);
-        
         // Check if HTML has songid data - if so, load it regardless of header format
         const hasSongData = storedHotkeysHtml.includes('songid=');
-        this.logInfo(`Hotkeys HTML has songid data: ${hasSongData}`);
         
         if (hasSongData) {
           // Parse HTML to extract song data for all tabs
           const parser = new DOMParser();
           const doc = parser.parseFromString(storedHotkeysHtml, 'text/html');
           
+          let totalMigrated = 0;
+          
           // Extract data for all 5 tabs
           for (let tabNum = 1; tabNum <= 5; tabNum++) {
             // Use only the FIRST instance of each tab ID (avoid duplicates from old saves)
             const tabContent = doc.querySelector(`#hotkeys_list_${tabNum}`);
-            
-            if (!tabContent) {
-              this.logInfo(`Hotkeys tab ${tabNum} not found in parsed HTML`);
-              continue;
-            }
-            
-            this.logInfo(`Processing hotkeys_list_${tabNum} (using first instance only)`);
+            if (!tabContent) continue;
             
             // Find all hotkeys with song IDs in this tab
-            let migratedCount = 0;
             for (let keyNum = 1; keyNum <= 12; keyNum++) {
               const hotkeyElement = tabContent.querySelector(`#f${keyNum}_hotkey[songid]`);
               if (hotkeyElement) {
@@ -231,32 +216,24 @@ export class DataPreloader {
                         songSpan.setAttribute('songid', songId);
                         songSpan.textContent = songText;
                       }
-                      this.logInfo(`Migrated hotkey tab ${tabNum} F${keyNum}: song ${songId} - ${songText}`);
-                      migratedCount++;
+                      totalMigrated++;
                     }
                   }
                 }
               }
             }
-            
-            if (migratedCount > 0) {
-              this.logInfo(`✅ Migrated ${migratedCount} hotkeys to tab ${tabNum}`);
-            }
           }
           
-          this.logInfo("✅ Migrated all hotkey tabs from 3.1.5 data");
+          if (totalMigrated > 0) {
+            this.logInfo(`Migrated ${totalMigrated} hotkeys from legacy data`);
+          }
         } else if (
           storedHotkeysHtml.includes("Hotkeys") &&
           !storedHotkeysHtml.includes("header-button")
         ) {
           // Old empty HTML format without song data, clear it
           await secureStore.delete("hotkeys");
-          this.logInfo("Cleared old empty hotkeys HTML format");
-        } else {
-          this.logInfo("Hotkeys HTML has no song data, skipping");
         }
-      } else {
-        this.logInfo(`No hotkeys HTML to load (html: ${!!storedHotkeysHtml}, type: ${typeof storedHotkeysHtml})`);
       }
     } catch (error) {
       this.logError('Error loading hotkeys', error);
@@ -271,38 +248,31 @@ export class DataPreloader {
     try {
       let storedHoldingTankHtml = null;
       
-      this.logInfo("loadHoldingTank() called - checking for holding tank data");
-      
       // First try the store
       const hasHoldingTank = await secureStore.has("holding_tank");
-      this.logInfo(`Store has holding_tank: ${hasHoldingTank}`);
       
       if (hasHoldingTank) {
         const result = await secureStore.get("holding_tank");
-        this.logInfo(`Retrieved holding tank from store: ${JSON.stringify({success: result?.success, type: typeof result, hasValue: !!result?.value})}`);
         // Unwrap the result if it's wrapped in {success: true, value: ...}
         storedHoldingTankHtml = result?.value || result;
-        this.logInfo(`Unwrapped holding tank type: ${typeof storedHoldingTankHtml}, length: ${storedHoldingTankHtml?.length || 0}`);
       } else {
         // Store doesn't have it - read from config.json directly (migration scenario)
-        this.logInfo("Store doesn't have holding_tank, trying config.json");
         const electronAPI = window.secureElectronAPI || window.electronAPI;
         const userDataResult = await electronAPI.fileSystem.getUserDataPath();
-        this.logInfo(`getUserDataPath result: ${JSON.stringify(userDataResult)}`);
         
         if (userDataResult.success) {
           const configPathResult = await electronAPI.path.join(userDataResult.path, 'config.json');
-          this.logInfo(`config.json path: ${JSON.stringify(configPathResult)}`);
           
           if (configPathResult.success) {
             const configReadResult = await electronAPI.fileSystem.read(configPathResult.data);
-            this.logInfo(`config.json read result: success=${configReadResult.success}, hasData=${!!configReadResult.data}`);
             
             if (configReadResult.success) {
               try {
                 const config = JSON.parse(configReadResult.data);
                 storedHoldingTankHtml = config.holding_tank;
-                this.logInfo(`Loaded holding tank from config.json for migration (length: ${storedHoldingTankHtml?.length || 0})`);
+                if (storedHoldingTankHtml) {
+                  this.logInfo("Loaded holding tank from config.json for migration");
+                }
               } catch (parseError) {
                 this.logError('Error parsing config.json for holding tank', parseError);
               }
@@ -312,32 +282,24 @@ export class DataPreloader {
       }
       
       if (storedHoldingTankHtml && typeof storedHoldingTankHtml === 'string') {
-        this.logInfo(`Processing holding tank HTML (length: ${storedHoldingTankHtml.length})`);
-        
         // Check if HTML has songid data
         const hasSongData = storedHoldingTankHtml.includes('songid=');
-        this.logInfo(`Holding tank HTML has songid data: ${hasSongData}`);
         
         if (hasSongData) {
           // Parse HTML to extract song data for all tabs
           const parser = new DOMParser();
           const doc = parser.parseFromString(storedHoldingTankHtml, 'text/html');
           
+          let totalMigrated = 0;
+          
           // Extract data for all 5 tabs
           for (let tabNum = 1; tabNum <= 5; tabNum++) {
-            // Handle duplicate IDs - use only the FIRST instance (most recent/relevant)
+            // Use only the FIRST instance of each tab ID (avoid duplicates from old saves)
             const tabContent = doc.querySelector(`#holding_tank_${tabNum}`);
-            
-            if (!tabContent) {
-              this.logInfo(`Holding tank tab ${tabNum} not found in parsed HTML`);
-              continue;
-            }
-            
-            this.logInfo(`Processing holding_tank_${tabNum} (using first instance only)`);
+            if (!tabContent) continue;
             
             // Find all songs with song IDs in this tab
             const songElements = tabContent.querySelectorAll('li[songid]');
-            this.logInfo(`Found ${songElements.length} songs in holding tank tab ${tabNum}`);
             
             if (songElements.length > 0) {
               // Get the current tab in the live DOM
@@ -360,20 +322,17 @@ export class DataPreloader {
                     li.textContent = songText;
                     
                     currentTabContent.appendChild(li);
-                    this.logInfo(`Migrated holding tank tab ${tabNum}: song ${songId} - ${songText}`);
+                    totalMigrated++;
                   }
                 });
-                this.logInfo(`✅ Migrated ${songElements.length} songs to holding tank tab ${tabNum}`);
               }
             }
           }
           
-          this.logInfo("✅ Migrated all holding tank tabs from 3.1.5 data");
-        } else {
-          this.logInfo("Holding tank HTML has no song data, skipping");
+          if (totalMigrated > 0) {
+            this.logInfo(`Migrated ${totalMigrated} holding tank songs from legacy data`);
+          }
         }
-      } else {
-        this.logInfo(`No holding tank HTML to load (html: ${!!storedHoldingTankHtml}, type: ${typeof storedHoldingTankHtml})`);
       }
     } catch (error) {
       this.logError('Error loading holding tank', error);
