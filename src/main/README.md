@@ -1,9 +1,10 @@
-## Modular Main Process
+# Modular Main Process
 
 This directory contains the modular main process for the Electron app. The entry point is `index-modular.js`, which initializes services, creates the window, and wires IPC securely with context isolation.
 
-### Structure
-```
+## Structure
+
+```text
 src/main/
 ├── modules/
 │   ├── app-setup.js        # Window/menu/app lifecycle, UI commands → renderer
@@ -15,7 +16,7 @@ src/main/
 └── README.md
 ```
 
-### Modules
+## Modules
 
 - `app-setup.js`
   - Creates the `BrowserWindow` with secure `webPreferences` (contextIsolation on, preload set)
@@ -50,16 +51,19 @@ src/main/
   - Export: concatenates recent N days into a single `.log` via `exportLogs({ days })`
   - Exports: `initMainLogService`, `getLogService`
 
-### Coordinator (`index-modular.js`)
+## Coordinator (`index-modular.js`)
+
 - Creates `electron-store` with defaults; initializes DebugLog
-- Sets up auto-updater (logger, feed URL on macOS, markdown processing for release notes)
+- Sets up auto-updater (logger, feed URL on macOS, sends release notes to renderer for sanitization)
 - First-run flow: create folders, seed DB with starter content if needed
 - Initializes SQLite WebAssembly database using `node-sqlite3-wasm`
 - Creates the main window and application menu with enhanced state restoration
 - Injects dependencies into modules; registers secure IPC handlers
 
-### Window State Persistence
+## Window State Persistence
+
 The application now maintains complete window state across sessions:
+
 - **Position & Size**: Window coordinates and dimensions are saved and restored
 - **Window State**: Maximized and fullscreen states are preserved
 - **Multi-Monitor Support**: Display ID is saved and validated on startup
@@ -68,27 +72,31 @@ The application now maintains complete window state across sessions:
 - **Store Integration**: Uses the same `electron-store` system as other UI state (column order, holding tank, etc.)
 
 ### Notes
+
 - Context Isolation is enabled; all renderer access is via preload/IPC
 - Audio playback for quick tests uses Howler in main (via IPC) when applicable
-- Auto-updater includes markdown processing for GitHub release notes using `markdown-it`
-- The application menu includes an “Export Logs…” item:
+- Auto-updater sends release notes to renderer where they are sanitized using DOMPurify
+- The application menu includes an "Export Logs…" item:
   - macOS: under the app menu (e.g., `Mx. Voice` → `Export Logs…`)
   - Windows/Linux: under `Help` → `Export Logs…`
- - Standard roles are used for common actions:
-   - Developer Tools uses the built-in role (`toggleDevTools`)
-   - Quit uses the built-in role (`quit`) across platforms
-  - About: macOS uses the system About panel; Windows/Linux uses a custom dark-mode-aware About dialog under `Help`
-  - Support: A "Contact Support…" item opens your default mail client to `mailto:support@mxvoice.app`
+- Standard roles are used for common actions:
+  - Developer Tools uses the built-in role (`toggleDevTools`)
+  - Quit uses the built-in role (`quit`) across platforms
+- About: macOS uses the system About panel; Windows/Linux uses a custom dark-mode-aware About dialog under `Help`
+- Support: A "Contact Support…" item opens your default mail client to `mailto:support@mxvoice.app`
 
 ### Adding a new IPC handler
+
 1. Add the handler in `modules/ipc-handlers.js` within `registerAllHandlers()`
 2. Validate inputs; return `{ success, data|error }`
 3. Expose via preload secure bridge if needed
 
 ### Logs IPC Reference
+
 - `logs:write` → Write a line through the centralized log service. Payload: `{ level, message, context?, meta? }`
 - `logs:get-paths` → Returns `{ logsDir, current }`
 - `logs:export` → Opens a save dialog and exports recent logs. Options: `{ days?: number }`
 
 ### Status
+
 - App setup, IPC, file ops, and coordinator are complete and in use.

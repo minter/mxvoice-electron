@@ -459,6 +459,7 @@ function exposeSecureAPI(injectedDebugLog) {
       // Expose the secure API via contextBridge
       contextBridge.exposeInMainWorld('secureElectronAPI', secureElectronAPI);
       
+      
       // Also expose a legacy compatibility layer for existing code
       contextBridge.exposeInMainWorld('electronAPI', {
         // Legacy API compatibility

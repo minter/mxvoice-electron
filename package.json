@@ -1,7 +1,7 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "4.1.0",
+  "version": "4.0.0-test.1",
   "description": "Improv Audio Software",
   "type": "module",
   "repository": "https://github.com/minter/mxvoice-electron",
@@ -108,7 +108,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "verifyUpdateCodeSignature": false,
@@ -162,12 +164,13 @@
     "@octokit/rest": "^22.0.0",
     "animate.css": "^4.1.1",
     "bootstrap": "^5.3.8",
+    "dompurify": "^3.3.0",
     "electron-log": "^5.4.3",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.7.0",
     "electron-util": "^1.0.0",
     "howler": "^2.2.3",
-    "markdown-it": "^14.1.0",
+    "jsdom": "^27.0.1",
     "mousetrap": "^1.6.5",
     "music-metadata": "11.9.0",
     "n-readlines": "^1.0.1",

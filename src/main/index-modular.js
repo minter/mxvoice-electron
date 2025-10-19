@@ -22,7 +22,6 @@ import Store from 'electron-store';
 import log from 'electron-log';
 import { Howl, Howler } from 'howler';
 import electronUpdater from 'electron-updater';
-import markdownIt from 'markdown-it';
 import { fileURLToPath } from 'url';
 
 // Get __dirname equivalent for ES6 modules
@@ -52,8 +51,6 @@ import * as launcherWindow from './modules/launcher-window.js';
 // Initialize Octokit for GitHub API (will be initialized after debugLog is available)
 let octokit;
 
-// Initialize markdown parser
-const md = markdownIt();
 
 // Profile context - set via command line arg or launcher
 let currentProfile = null;
@@ -961,28 +958,11 @@ function setupApp() {
       }
     });
     
-    // Process markdown in release notes for proper formatting
-    let processedNotes = updateInfo.releaseNotes;
-    if (updateInfo.releaseNotes && typeof updateInfo.releaseNotes === 'string') {
-      try {
-        processedNotes = md.render(updateInfo.releaseNotes);
-        debugLog.info('Markdown processed successfully for release notes', { 
-          function: "autoUpdater update-available",
-          originalLength: updateInfo.releaseNotes.length,
-          processedLength: processedNotes.length,
-          sampleProcessed: processedNotes.substring(0, 100) + (processedNotes.length > 100 ? '...' : '')
-        });
-      } catch (markdownError) {
-        debugLog.warn('Failed to process markdown in release notes, using raw text', { 
-          function: "autoUpdater update-available",
-          error: markdownError.message
-        });
-        // Fall back to raw text if markdown processing fails
-        processedNotes = updateInfo.releaseNotes;
-      }
-    }
+    // Pass release notes to renderer for sanitization
+    // GitHub provides HTML in releaseNotes, which will be sanitized by DOMPurify in the renderer
+    const releaseNotes = updateInfo.releaseNotes || '';
     
-    mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + processedNotes);
+    mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + releaseNotes);
     debugLog.info('display_release_notes call done', { 
       function: "autoUpdater update-available" 
     });

@@ -83,7 +83,7 @@ export default class UIInteractionEvents {
     } catch {}
 
     try {
-      const updateReleaseNotesListener = (e) => {
+      const updateReleaseNotesListener = async (e) => {
         const { name, notes } = e?.detail || {};
         if (!name || !notes) return;
         
@@ -97,12 +97,60 @@ export default class UIInteractionEvents {
           const textarea = document.createElement('textarea');
           textarea.innerHTML = notes;
           const decodedNotes = textarea.value;
-          modalBody.innerHTML = decodedNotes;
+          
+          // Safely sanitize and render HTML using DOMPurify
+          try {
+            let cleanHTML;
+            
+            if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+              // Use global DOMPurify (loaded via script tag in index.html)
+              cleanHTML = window.DOMPurify.sanitize(decodedNotes, {
+                ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'a', 'code', 'pre', 'blockquote'],
+                ALLOWED_ATTR: ['href', 'target', 'rel']
+              });
+            } else {
+              // Fallback: Simple HTML sanitization using browser APIs
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = decodedNotes;
+              
+              // Remove script tags and other dangerous elements
+              const scripts = tempDiv.querySelectorAll('script, style, iframe, object, embed, form, input, button, select, textarea');
+              scripts.forEach(el => el.remove());
+              
+              // Remove dangerous attributes
+              const allElements = tempDiv.querySelectorAll('*');
+              allElements.forEach(el => {
+                // Remove dangerous attributes
+                const dangerousAttrs = ['onload', 'onerror', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'onchange', 'onsubmit'];
+                dangerousAttrs.forEach(attr => el.removeAttribute(attr));
+                
+                // Only allow safe attributes for links
+                if (el.tagName === 'A') {
+                  const href = el.getAttribute('href');
+                  if (href && (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:'))) {
+                    el.setAttribute('target', '_blank');
+                    el.setAttribute('rel', 'noopener noreferrer');
+                  } else {
+                    el.removeAttribute('href');
+                  }
+                }
+              });
+              
+              cleanHTML = tempDiv.innerHTML;
+            }
+            
+            modalBody.innerHTML = cleanHTML;
+          } catch (error) {
+            this.debugLog?.error('Failed to sanitize HTML, falling back to plain text:', error);
+            modalBody.textContent = decodedNotes;
+          }
         }
       };
       window.addEventListener('mxvoice:update-release-notes', updateReleaseNotesListener);
       this.uiHandlers.set('mxvoiceUpdateReleaseNotes', { element: window, event: 'mxvoice:update-release-notes', handler: updateReleaseNotesListener });
-    } catch {}
+    } catch (error) {
+      this.debugLog?.error('Failed to register release notes listener:', error);
+    }
 
     // Auto-update progress events
     try {
