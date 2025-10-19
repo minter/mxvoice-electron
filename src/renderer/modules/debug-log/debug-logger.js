@@ -27,12 +27,12 @@ function initializeDebugLogger(options = {}) {
     DEBUG: 3
   };
   
-  // Default log level (temporarily set to DEBUG for migration testing)
-  let currentLogLevel = LOG_LEVELS.DEBUG;
+  // Default log level
+  let currentLogLevel = LOG_LEVELS.INFO;
   
-  // Cache for debug enabled state (temporarily enabled for migration testing)
-  let debugEnabledCache = true;
-  let debugEnabledCacheTime = Date.now();
+  // Cache for debug enabled state
+  let debugEnabledCache = false;
+  let debugEnabledCacheTime = 0;
   const CACHE_DURATION = 5000; // 5 seconds
   
   /**
