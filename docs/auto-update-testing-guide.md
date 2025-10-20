@@ -12,18 +12,18 @@ The auto-updater now supports two providers:
 
 ### 1. Test 3.x Behavior (Custom Server)
 
-**Objective**: Verify that 3.1.5 users still use the custom download server.
+**Objective**: Verify that 3.x users still use the custom download server.
 
 **Steps**:
 1. Set environment variable: `export TEST_AUTO_UPDATE=true`
 2. Start the app: `yarn start`
 3. Check the logs for these messages:
    ```
-   Using custom server for version 3.1.5
+   Using custom server for version 3.x.x
    provider: custom
    server: download.mxvoice.app
    ```
-4. Verify the auto-updater hits: `https://download.mxvoice.app/update/darwin/{arch}/3.1.5`
+4. Verify the auto-updater hits: `https://download.mxvoice.app/update/darwin/{arch}/{version}`
 
 **Expected Behavior**:
 - Provider: `custom`
@@ -39,7 +39,7 @@ The auto-updater now supports two providers:
 2. Start the app: `yarn start`
 3. Check the logs for these messages:
    ```
-   Using GitHub provider for version 4.0.0
+   Using GitHub provider for version 4.x.x
    provider: github
    ```
 4. Verify the auto-updater uses GitHub API
@@ -125,14 +125,14 @@ yarn start
 
 #### 3.x (Custom Server)
 ```
-Using custom server for version 3.1.5
+Using custom server for version 3.x.x
 provider: custom
 server: download.mxvoice.app
 ```
 
 #### 4.x (GitHub Provider)
 ```
-Using GitHub provider for version 4.0.0
+Using GitHub provider for version 4.x.x
 provider: github
 ```
 
@@ -142,12 +142,12 @@ Prerelease updates enabled
 prereleaseEnabled: true
 userPreference: false
 isCurrentlyPrerelease: true
-currentVersion: 4.0.0-pre.4
+currentVersion: {current-version}
 ```
 
 **Pre-release Logic**: Users receive pre-release updates if:
 - They explicitly opt-in via Preferences → Update Options, OR
-- They are currently running a pre-release version (e.g., 4.0.0-pre.4)
+- They are currently running a pre-release version (e.g., 4.0.1-pre.3)
 
 #### Auto-Updater Events
 ```

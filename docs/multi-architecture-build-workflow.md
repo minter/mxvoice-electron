@@ -30,8 +30,8 @@ This will:
 1. Go to your GitHub repository
 2. Navigate to Actions → Build and Release macOS x64 App
 3. Click "Run workflow"
-4. Enter your version (e.g., `4.0.0-pre.2`)
-5. Set `is_prerelease` to `true`
+4. The version is automatically read from `package.json`
+5. Set `is_prerelease` to `true` if building a prerelease
 6. Click "Run workflow"
 
 The workflow will:
@@ -88,16 +88,19 @@ Upload the merged `latest-mac-merged.yml` to your GitHub release to replace the 
 
 ```
 dist/
-├── Mx. Voice-4.0.0-pre.2-arm64.dmg      # ARM64 DMG (local build)
-├── Mx. Voice-4.0.0-pre.2-arm64.zip      # ARM64 ZIP (local build)
+├── Mx. Voice-{version}-arm64.dmg        # ARM64 DMG (local build)
+├── Mx. Voice-{version}-arm64.zip        # ARM64 ZIP (local build)
 ├── latest-mac.yml                        # ARM64 update info (local build)
 ├── latest-mac-merged.yml                 # Combined update info (after merge)
 └── [x64 files will be here after GitHub Actions build]
 ```
 
-## Environment Variables
+**Note**: `{version}` is automatically read from `package.json` (e.g., `4.0.1-pre.3`).
 
-- `VERSION` - The version being built (defaults to `4.0.0-pre.1`)
+## Version Management
+
+- Version is automatically read from `package.json`
+- No environment variable configuration needed
 - `BUILD_DIR` - Build output directory (defaults to `dist`)
 
 ## Next Steps

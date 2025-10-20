@@ -47,19 +47,20 @@ mxvoice-electron/
 ## 🛠️ Available Commands (UPDATED!)
 
 ```bash
-# Core testing
-yarn test                    # Run all tests
-yarn test:smoke             # Run smoke tests
-yarn test:ui                # Interactive test runner
-yarn test:headed            # See browser during tests
-yarn test:debug             # Debug mode with breakpoints
-yarn test:report            # View test results
+# Core testing (remember to unset ELECTRON_RUN_AS_NODE on macOS/Linux)
+unset ELECTRON_RUN_AS_NODE && yarn test                    # Run all tests
+unset ELECTRON_RUN_AS_NODE && yarn test:ui                # Interactive test runner
+unset ELECTRON_RUN_AS_NODE && yarn test:headed            # See browser during tests
+unset ELECTRON_RUN_AS_NODE && yarn test:debug             # Debug mode with breakpoints
+yarn test:report            # View test results (no unset needed)
 
 # Setup
 yarn test:install           # Install Playwright browsers
 
 # Specific test runs
-yarn playwright test tests/e2e/smoke.spec.js
+unset ELECTRON_RUN_AS_NODE && yarn playwright test tests/e2e/smoke.spec.js
+
+# Note: The test:smoke script is deprecated; use the main test command instead
 ```
 
 ## 📊 Test Coverage (COMPREHENSIVE!)
@@ -179,7 +180,8 @@ yarn test:install
 ### **2. Run Tests**
 ```bash
 # Tests launch your app automatically!
-yarn test:smoke
+# Remember to unset ELECTRON_RUN_AS_NODE on macOS/Linux
+unset ELECTRON_RUN_AS_NODE && yarn test
 ```
 
 ### **3. View Results**
@@ -237,8 +239,8 @@ yarn test:debug
 
 ## 🚀 Next Steps
 
-1. **Run the smoke tests**: `yarn test:smoke`
-2. **Explore the test runner**: `yarn test:ui`
+1. **Run the tests**: `unset ELECTRON_RUN_AS_NODE && yarn test`
+2. **Explore the test runner**: `unset ELECTRON_RUN_AS_NODE && yarn test:ui`
 3. **Add more specific tests** for your app's features
 4. **Integrate with CI/CD** for automated testing
 

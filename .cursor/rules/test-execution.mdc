@@ -42,17 +42,20 @@ unset ELECTRON_RUN_AS_NODE && yarn test --reporter=line
 If you prefer not to unset the variable each time, you can:
 
 1. **Temporarily unset in your shell session:**
+
    ```bash
    export ELECTRON_RUN_AS_NODE=""
    yarn test
    ```
 
 2. **Add to your shell profile** (if you want to permanently disable it):
+
    ```bash
    echo 'unset ELECTRON_RUN_AS_NODE' >> ~/.zshrc
    ```
 
 3. **Use a test script** in `package.json`:
+
    ```json
    {
      "scripts": {

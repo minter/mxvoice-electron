@@ -160,7 +160,7 @@ async function initializeMainDatabase() {
     // Fallback: create a test database in memory
     debugLog?.info('Creating fallback in-memory database for testing', { module: 'database-setup', function: 'initializeMainDatabase' });
     try {
-      dbInstance = new SQLiteDatabase(':memory:');
+      dbInstance = new Database(':memory:');
       
       // Create basic tables for testing
       await setupDatabaseSchema(dbInstance);

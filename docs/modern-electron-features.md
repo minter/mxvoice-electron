@@ -178,8 +178,8 @@ function createSystemTray() {
 #### Implementation
 ```javascript
 // New file: src/main/workers/metadata-worker.js
-const { parentPort, workerData } = require('worker_threads');
-const musicMetadata = require('music-metadata');
+import { parentPort, workerData } from 'worker_threads';
+import musicMetadata from 'music-metadata';
 
 async function extractMetadata(filePath) {
   try {

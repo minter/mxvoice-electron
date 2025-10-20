@@ -1,5 +1,5 @@
 # Mx. Voice
-*Improv Audio Software — Version 4 (pre-release)*
+*Improv Audio Software — Version 4.0.1-pre.3*
 
 ## About
 
@@ -37,27 +37,31 @@ This project uses Playwright with first-class Electron support. Each test suite 
 
 ### Run tests
 
+**Important**: On macOS/Linux, unset `ELECTRON_RUN_AS_NODE` before running tests:
+
 ```bash
 # Run all tests (comprehensive E2E coverage)
-yarn test
+unset ELECTRON_RUN_AS_NODE && yarn test
 
 # Interactive test runner UI
-yarn test:ui
+unset ELECTRON_RUN_AS_NODE && yarn test:ui
 
 # Headed mode (see windows during tests)
-yarn test:headed
+unset ELECTRON_RUN_AS_NODE && yarn test:headed
 
 # Debug mode
-yarn test:debug
+unset ELECTRON_RUN_AS_NODE && yarn test:debug
 
 # View the HTML report from the last run
 yarn test:report
 
 # Optional: manual smoke test (excluded from default runs)
-yarn playwright test tests/e2e/smoke.spec.js
+unset ELECTRON_RUN_AS_NODE && yarn playwright test tests/e2e/smoke.spec.js
 ```
 
-For details on test isolation, per‑suite environments, CI behavior, and complete coverage breakdown, see `TESTING_SETUP_SUMMARY.md`.
+**Why?** IDEs like VS Code and Cursor often set `ELECTRON_RUN_AS_NODE=1`, which prevents Electron from launching its GUI. Tests require the full GUI application.
+
+For details on test isolation, per‑suite environments, CI behavior, and complete coverage breakdown, see `docs/TESTING_SETUP_SUMMARY.md`.
 
 ## Architecture Overview
 
@@ -94,15 +98,23 @@ The app follows a modern Electron architecture with context isolation enabled an
 - Automatic migration support from legacy database formats
 - Fallback to in-memory database if file operations fail
 
+### Module system
+- All code uses ES Modules (`import`/`export`)
+- All imports must include `.js` extensions
+- See `.cursorrules` for detailed module patterns and requirements
+
 ### Useful paths
 - Assets: `src/assets/` (see `src/assets/README.md`)
 - Styles: `src/stylesheets/` (see `src/stylesheets/README.md`)
+- Tests: `tests/` (see `tests/README.md`)
+- Docs: `docs/` (see individual documentation files)
 
 ### Debugging tips
 - Open DevTools from the app menu (View → Developer Tools)
 - Main process logs via structured DebugLog; renderer logs via the DebugLog module
 - Bootstrap 5 is bundled via `bootstrap.bundle.min.js` and accessed using the adapter; prefer `data-bs-*` attributes in HTML
 - Auto-updater logs show markdown processing status for release notes
+- Use `yarn test:headed` to see the app during test execution
 
 
 ## Building, Signing, and Releasing
@@ -122,6 +134,11 @@ yarn build:mac:arm64         # Build ARM64-only macOS app
 # Windows Builds  
 yarn build:win               # Build Windows installer
 
+# Linux Builds
+yarn build:linux             # Build all Linux formats
+yarn build:linux:deb         # Build Debian package
+yarn build:linux:appimage    # Build AppImage
+
 # Publishing (GitHub Actions)
 yarn release:mac             # Publish macOS stable build to GitHub
 yarn release:mac:prerelease  # Publish macOS prerelease to GitHub
@@ -129,6 +146,9 @@ yarn release:mac:draft       # Publish macOS draft to GitHub
 yarn release:win             # Publish Windows stable build to GitHub
 yarn release:win:prerelease  # Publish Windows prerelease to GitHub
 yarn release:win:draft       # Publish Windows draft to GitHub
+yarn release:linux           # Publish Linux stable build to GitHub
+yarn release:linux:prerelease # Publish Linux prerelease to GitHub
+yarn release:linux:draft     # Publish Linux draft to GitHub
 
 # Local builds (no publishing)
 yarn pack                    # Build without publishing
@@ -156,8 +176,8 @@ yarn build:mac:arm64
 **To release to GitHub:**
 1. **Push a tag** to trigger the release:
    ```bash
-   git tag v4.0.0-pre.2
-   git push origin v4.0.0-pre.2
+   git tag v{version}
+   git push origin v{version}
    ```
 
 2. **Or use the release scripts directly:**
@@ -187,6 +207,35 @@ The app now supports two auto-update providers:
 - Setting can be changed at any time and takes effect immediately
 
 This ensures backward compatibility while providing modern auto-update functionality for new releases.
+
+### Linux
+
+#### Building
+
+To build Linux packages:
+
+```bash
+# Build all Linux formats (AppImage and deb)
+yarn build:linux
+
+# Build specific formats
+yarn build:linux:deb         # Debian package
+yarn build:linux:appimage    # AppImage
+```
+
+**To release to GitHub:**
+```bash
+yarn release:linux:prerelease  # For prerelease builds
+yarn release:linux             # For stable releases
+yarn release:linux:draft       # For draft releases
+```
+
+#### Linux Package Details
+
+- **AppImage**: Universal Linux format, runs on most distributions
+- **Debian (.deb)**: Package for Debian, Ubuntu, and derivatives
+- **Category**: AudioVideo
+- **Dependencies**: Listed in `package.json` under `deb.depends`
 
 ### Windows
 
@@ -243,7 +292,7 @@ After building, you can verify the signature:
 
 **Using signtool.exe (if available):**
 ```powershell
-signtool verify /pa "C:\Users\wade\mxvoice-electron\dist\Mx. Voice Setup 4.0.0-pre.5.exe"
+signtool verify /pa "C:\path\to\mxvoice-electron\dist\Mx. Voice Setup {version}.exe"
 ```
 You should see "Successfully verified" if the signature is valid.
 

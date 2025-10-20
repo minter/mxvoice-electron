@@ -90,7 +90,7 @@ const metadata = await musicMetadata.parseFile(filePath, options);
 - **User Experience**: More detailed song information
 - **Professional Feel**: Technical audio details for power users
 
-## 🌊 wavesurfer.js (v7.10.1)
+## 🌊 wavesurfer.js (v7.11.0)
 
 ### Current Usage
 - **Basic waveform display**: Simple wave visualization
@@ -207,7 +207,7 @@ wavesurfer.on('region-created', (region) => {
 - **Audio Analysis**: Beat detection, frequency analysis
 - **User Experience**: More intuitive audio interaction
 
-## 🗄️ electron-store (v10.1.0)
+## 🗄️ electron-store (v11.0.2)
 
 ### Current Usage
 - **Basic key-value storage**: Simple get/set operations
