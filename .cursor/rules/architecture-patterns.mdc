@@ -1,15 +1,19 @@
 ---
+alwaysApply: true
+---
 # Architecture Patterns
 
 ## Module Lifecycle and Bootstrap
 
 ### Bootstrap Sequence
+
 1. **Module Loading**: Modules are loaded in order specified in `module-config.js`
 2. **Automatic init()**: Bootstrap system automatically calls `init()` on modules that have it
 3. **Dependency Injection**: Dependencies are injected later via explicit initialization functions
 4. **Module Registry**: All modules are stored in `window.moduleRegistry.{moduleName}`
 
 ### Key Pattern: Two-Phase Initialization
+
 - **Phase 1 (Bootstrap)**: `module.init()` called automatically → minimal setup only
 - **Phase 2 (Dependency Injection)**: Explicit initialization with full dependencies
 - **Never assume dependencies are available during Phase 1**
@@ -17,11 +21,13 @@
 ## Module Access Patterns
 
 ### Correct Module Access
+
 - **❌ Wrong**: `window.themeManagement.function()`
 - **✅ Correct**: `window.moduleRegistry.themeManagement.function()`
 - **✅ Also Correct**: `window.functionName()` (if registered in function registry)
 
 ### Function Registry vs Module Registry
+
 - **Function Registry**: Makes individual functions globally available (`window.functionName`)
 - **Module Registry**: Stores complete module instances (`window.moduleRegistry.moduleName`)
 - **Use Function Registry for global access, Module Registry for module operations**
@@ -29,11 +35,13 @@
 ## Dependency Management
 
 ### When Dependencies Are Available
+
 - **During bootstrap**: Only basic dependencies (debugLog, electronAPI)
 - **After bootstrap**: Full module dependencies available
 - **Always check**: `if (moduleRegistry.dependencyModule)` before using
 
 ### Dependency Injection Pattern
+
 ```javascript
 // Phase 1: Bootstrap (minimal)
 async init() {
@@ -71,7 +79,3 @@ async initWithDependencies(options) {
 - **Verify module access**: Check if using correct registry pattern
 - **Verify initialization**: Ensure dependencies are available when used
 - **Verify bootstrap sequence**: Understand when init() vs explicit initialization happens
-description:
-globs:
-alwaysApply: false
----

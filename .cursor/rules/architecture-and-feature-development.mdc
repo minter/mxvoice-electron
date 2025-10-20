@@ -7,39 +7,46 @@ alwaysApply: true
 Ground rules for adding or modifying features in this codebase.
 
 ## Architecture principles
+
 - Context isolation is enabled. Renderer must NOT use Node/Electron APIs directly.
 - Access native capabilities only via `window.secureElectronAPI` exposed by preload.
 - IPC must be explicit and whitelisted in preload (`secure-api-exposer.js`) and main (`ipc-handlers.js`).
 - ES Modules everywhere (renderer, preload, main). Always include `.js` in import paths.
 
 ## Feature module pattern (renderer)
+
 - Location: `src/renderer/modules/<feature>/`
 - Export shape (ESM): default singleton + named, bound helpers.
 - Provide `reinitialize<Feature>(deps)` to inject dependencies during bootstrap.
 - Include a `README.md` describing purpose, exports, and usage.
 
 ## Bootstrap integration
+
 - Register the module in `src/renderer/modules/app-bootstrap/module-config.js`.
 - Use the reinitialize function to wire dependencies (store, db, electronAPI, debugLog).
 - If UI bindings are needed, register functions via `function-registry` and events via `event-coordination`.
 
 ## Services and IPC
+
 - Renderer services (`src/renderer/services/*`) must call through preload `secureElectronAPI` (never `fs`, `path`, etc. directly).
 - New native capabilities: add to preload (`secure-api-exposer.js`) and main (`ipc-handlers.js`) with clear, narrow IPC messages.
 
 ## Logging
+
 - Do not use `console.*`. Use the debug logger modules:
   - Renderer: `src/renderer/modules/debug-log/index.js`
   - Main: `src/main/modules/debug-log.js`
 - Follow the mapping: error → `error`, warn → `warn`, info/log → `info`/`debug`.
 
 ## Coding style
+
 - Prefer clear, explicit code and meaningful names; avoid 1–2 char identifiers.
 - Use guard clauses and handle edge cases early; avoid deep nesting.
 - Keep comments short and focused on “why”.
 - Match existing formatting and avoid unrelated reformatting.
 
 ## Documentation and process
+
 - Keep READMEs accurate. When behavior, exports, paths, or usage change, update:
   - Module `README.md`
   - Directory `README.md` (renderer/main/preload/assets/stylesheets) if relevant
@@ -47,6 +54,7 @@ Ground rules for adding or modifying features in this codebase.
 - Validate import paths and exports in examples. Run `node --check path/to/file.js` for syntax checks where applicable.
 
 ## New feature checklist
+
 1. Create `src/renderer/modules/<feature>/` with `index.js` and `README.md` (default singleton + named exports).
 2. Implement `reinitialize<Feature>(deps)` and wire via app bootstrap.
 3. Expose any UI actions through function registry and event modules as needed.
