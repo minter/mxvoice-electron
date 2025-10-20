@@ -45,6 +45,38 @@ async function initializeSQLite() {
 }
 
 /**
+ * Clean up stale lock directories from previous sessions
+ * With single-instance enforcement, any lock at startup is stale
+ */
+function cleanStaleLocks(dbPath) {
+  const lockDir = `${dbPath}.lock`;
+  
+  try {
+    if (fs.existsSync(lockDir)) {
+      const stats = fs.statSync(lockDir);
+      const ageMinutes = (Date.now() - stats.mtimeMs) / 1000 / 60;
+      
+      debugLog?.info('Removing stale lock directory from previous session', {
+        module: 'database-setup',
+        function: 'cleanStaleLocks',
+        lockDir,
+        ageMinutes: Math.round(ageMinutes)
+      });
+      
+      fs.rmSync(lockDir, { recursive: true, force: true });
+    }
+  } catch (error) {
+    debugLog?.error('Failed to remove stale lock directory', {
+      module: 'database-setup',
+      function: 'cleanStaleLocks',
+      lockDir,
+      error: error.message
+    });
+    // Don't throw - allow app to continue and try to open database
+  }
+}
+
+/**
  * Initialize database connection
  */
 async function initializeMainDatabase() {
@@ -100,6 +132,9 @@ async function initializeMainDatabase() {
       dbPath = path.join(defaultDbPath, dbName);
       debugLog?.info(`Using default database path: ${dbPath}`, { module: 'database-setup', function: 'initializeMainDatabase' });
     }
+    
+    // Clean up any stale lock directories from previous sessions
+    cleanStaleLocks(dbPath);
     
     if (fs.existsSync(dbPath)) {
       try {

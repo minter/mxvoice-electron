@@ -209,6 +209,24 @@ async function copyFileStreaming(source, destination, progressCallback = null) {
   }
 }
 
+// Single-instance lock - prevent multiple app instances from running
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Another instance is already running, quit immediately
+  console.log('Another instance of the app is already running. Quitting.');
+  app.quit();
+} else {
+  // Handle second instance attempts - focus the existing window
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, focus our existing window instead
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 // Store configuration
 const defaults = {
   browser_width: 1280,
