@@ -5,13 +5,16 @@
  * for the MxVoice Electron application.
  */
 
-import { app, BrowserWindow, Menu, dialog, shell, nativeTheme, screen, ipcMain } from 'electron';
+import electron from 'electron';
 import log from 'electron-log';
 import { getLogService } from './log-service.js';
 import * as profileManager from './profile-manager.js';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
+
+// Destructure from electron (handles both named and default exports)
+const { app, BrowserWindow, Menu, dialog, shell, nativeTheme, screen, ipcMain } = electron;
 
 // Get __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
@@ -196,39 +199,30 @@ function setupWindowStateSaving() {
     });
   });
 
-  // Critical: Save window state before closing and wait for completion
-  let isClosing = false;
+  // Save window state on close (non-blocking)
   mainWindow.on('close', async (event) => {
-    if (!isClosing) {
-      event.preventDefault(); // Prevent close until we save
-      isClosing = true;
+    debugLog?.info('Window closing, saving window state...', {
+      module: 'app-setup',
+      function: 'setupWindowStateSaving'
+    });
+    
+    try {
+      // Clear any pending debounced saves
+      if (saveTimeout) clearTimeout(saveTimeout);
       
-      debugLog?.info('Window closing, saving state...', {
+      // Save window state (let renderer handle profile state via beforeunload)
+      await saveWindowState(mainWindow);
+      
+      debugLog?.info('Window state saved on close', {
         module: 'app-setup',
         function: 'setupWindowStateSaving'
       });
-      
-      try {
-        // Clear any pending debounced saves
-        if (saveTimeout) clearTimeout(saveTimeout);
-        
-        // Save immediately and wait for completion
-        await saveWindowState(mainWindow);
-        
-        debugLog?.info('Window state saved on close, proceeding with close', {
-          module: 'app-setup',
-          function: 'setupWindowStateSaving'
-        });
-      } catch (err) {
-        debugLog?.error('Error saving window state on close', {
-          module: 'app-setup',
-          function: 'setupWindowStateSaving',
-          error: err.message
-        });
-      }
-      
-      // Now actually close the window
-      mainWindow.destroy();
+    } catch (err) {
+      debugLog?.error('Error saving window state on close', {
+        module: 'app-setup',
+        function: 'setupWindowStateSaving',
+        error: err.message
+      });
     }
   });
 

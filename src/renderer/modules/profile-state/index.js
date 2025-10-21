@@ -29,12 +29,35 @@ let holdingTankModuleRef = null;
 function extractHotkeyTabs() {
   const tabs = [];
   
+  debugLog?.info('[PROFILE-STATE] Starting hotkey tabs extraction', {
+    module: 'profile-state',
+    function: 'extractHotkeyTabs'
+  });
+  
   // Iterate through all 5 hotkey tabs
   for (let tabNum = 1; tabNum <= 5; tabNum++) {
     const tabContent = document.getElementById(`hotkeys_list_${tabNum}`);
     const tabLink = document.querySelector(`#hotkey_tabs .nav-item:nth-child(${tabNum}) a`);
     
-    if (!tabContent || !tabLink) continue;
+    debugLog?.info(`[PROFILE-STATE] Checking hotkey tab ${tabNum}`, {
+      module: 'profile-state',
+      function: 'extractHotkeyTabs',
+      tabNum,
+      hasTabContent: !!tabContent,
+      hasTabLink: !!tabLink,
+      tabContentId: tabContent?.id
+    });
+    
+    if (!tabContent || !tabLink) {
+      debugLog?.warn(`[PROFILE-STATE] Missing hotkey tab elements for tab ${tabNum}`, {
+        module: 'profile-state',
+        function: 'extractHotkeyTabs',
+        tabNum,
+        hasTabContent: !!tabContent,
+        hasTabLink: !!tabLink
+      });
+      continue;
+    }
     
     const hotkeys = {};
     let hasData = false;
@@ -47,7 +70,22 @@ function extractHotkeyTabs() {
         if (songId) {
           hotkeys[`f${key}`] = songId;
           hasData = true;
+          debugLog?.info(`[PROFILE-STATE] Found hotkey data: f${key} = ${songId}`, {
+            module: 'profile-state',
+            function: 'extractHotkeyTabs',
+            tabNum,
+            key: `f${key}`,
+            songId
+          });
         }
+      } else {
+        debugLog?.warn(`[PROFILE-STATE] Hotkey element not found: f${key}`, {
+          module: 'profile-state',
+          function: 'extractHotkeyTabs',
+          tabNum,
+          key: `f${key}`,
+          selector: `#f${key}_hotkey`
+        });
       }
     }
     
@@ -55,12 +93,29 @@ function extractHotkeyTabs() {
     const tabName = tabLink.textContent.trim();
     const isCustomName = !/^\d$/.test(tabName); // Not just a number
     
+    debugLog?.info(`[PROFILE-STATE] Extracted tab ${tabNum}`, {
+      module: 'profile-state',
+      function: 'extractHotkeyTabs',
+      tabNum,
+      tabName,
+      isCustomName,
+      hotkeyCount: Object.keys(hotkeys).length,
+      hasData
+    });
+    
     tabs.push({
       tabNumber: tabNum,
       tabName: isCustomName ? tabName : null,
       hotkeys: hasData ? hotkeys : {}
     });
   }
+  
+  debugLog?.info('[PROFILE-STATE] Hotkey extraction complete', {
+    module: 'profile-state',
+    function: 'extractHotkeyTabs',
+    totalTabs: tabs.length,
+    tabsWithData: tabs.filter(t => Object.keys(t.hotkeys).length > 0).length
+  });
   
   return tabs;
 }
@@ -127,6 +182,11 @@ function extractHoldingTankTabs() {
  * @returns {Object} Complete state object
  */
 export function extractProfileState() {
+  debugLog?.info('[PROFILE-STATE] === STARTING COMPLETE STATE EXTRACTION ===', { 
+    module: 'profile-state',
+    function: 'extractProfileState'
+  });
+  
   const state = {
     version: '1.0.0',
     timestamp: Date.now(),
@@ -138,13 +198,25 @@ export function extractProfileState() {
   const hotkeyCount = state.hotkeys.reduce((sum, tab) => sum + Object.keys(tab.hotkeys).length, 0);
   const holdingTankCount = state.holdingTank.reduce((sum, tab) => sum + tab.songIds.length, 0);
   
-  debugLog?.info('[PROFILE-STATE] Extracted profile state', { 
+  debugLog?.info('[PROFILE-STATE] Extracted profile state - SUMMARY', { 
     module: 'profile-state',
     function: 'extractProfileState',
     hotkeyTabs: state.hotkeys.length,
     holdingTankTabs: state.holdingTank.length,
     totalHotkeys: hotkeyCount,
-    totalHoldingTankSongs: holdingTankCount
+    totalHoldingTankSongs: holdingTankCount,
+    detailedHotkeys: state.hotkeys.map(tab => ({
+      tabNumber: tab.tabNumber,
+      tabName: tab.tabName,
+      hotkeyCount: Object.keys(tab.hotkeys).length,
+      hotkeys: tab.hotkeys
+    })),
+    detailedHoldingTank: state.holdingTank.map(tab => ({
+      tabNumber: tab.tabNumber,
+      tabName: tab.tabName,
+      songCount: tab.songIds.length,
+      songIds: tab.songIds
+    }))
   });
   
   // Log warning if state is empty but we expected data
@@ -154,6 +226,12 @@ export function extractProfileState() {
       function: 'extractProfileState'
     });
   }
+  
+  debugLog?.info('[PROFILE-STATE] === STATE EXTRACTION COMPLETE ===', { 
+    module: 'profile-state',
+    function: 'extractProfileState',
+    timestamp: new Date(state.timestamp).toISOString()
+  });
   
   return state;
 }
@@ -447,17 +525,35 @@ export async function loadProfileState(options = {}) {
   try {
     const { hotkeysModule, holdingTankModule } = options;
     
+    // Get current profile name for logging
+    const currentProfileResult = await window.secureElectronAPI.profile.getCurrent();
+    const currentProfile = currentProfileResult?.profile || 'unknown';
+    
+    debugLog?.info('[PROFILE-STATE] Starting profile state load', { 
+      module: 'profile-state',
+      function: 'loadProfileState',
+      profile: currentProfile
+    });
+    
     // Get profile-specific directory
     const dirResult = await window.secureElectronAPI.profile.getDirectory('state');
     if (!dirResult.success) {
       debugLog?.info('[PROFILE-STATE] No profile directory found, skipping state load', { 
         module: 'profile-state',
-        function: 'loadProfileState'
+        function: 'loadProfileState',
+        profile: currentProfile
       });
       return { success: true, loaded: false };
     }
     
     const stateDir = dirResult.directory;
+    debugLog?.info('[PROFILE-STATE] Profile directory found', { 
+      module: 'profile-state',
+      function: 'loadProfileState',
+      profile: currentProfile,
+      stateDir
+    });
+    
     const stateFileResult = await window.secureElectronAPI.path.join(stateDir, 'state.json');
     const stateFile = stateFileResult.success ? stateFileResult.data : null;
     
@@ -465,10 +561,18 @@ export async function loadProfileState(options = {}) {
       debugLog?.error('[PROFILE-STATE] Failed to build state file path', {
         module: 'profile-state',
         function: 'loadProfileState',
+        profile: currentProfile,
         error: stateFileResult.error
       });
       return { success: false, error: 'Failed to build state file path' };
     }
+    
+    debugLog?.info('[PROFILE-STATE] Checking for state file', { 
+      module: 'profile-state',
+      function: 'loadProfileState',
+      profile: currentProfile,
+      stateFile
+    });
     
     // Check if state file exists
     const existsResult = await window.secureElectronAPI.fileSystem.exists(stateFile);
@@ -476,11 +580,19 @@ export async function loadProfileState(options = {}) {
       debugLog?.info('[PROFILE-STATE] No state file found, starting fresh', { 
         module: 'profile-state',
         function: 'loadProfileState',
+        profile: currentProfile,
         stateFile: stateFile,
         existsResult: existsResult
       });
       return { success: true, loaded: false };
     }
+    
+    debugLog?.info('[PROFILE-STATE] State file exists, reading contents', { 
+      module: 'profile-state',
+      function: 'loadProfileState',
+      profile: currentProfile,
+      stateFile
+    });
     
     // Read state file
     const readResult = await window.secureElectronAPI.fileSystem.read(stateFile);
@@ -514,10 +626,24 @@ export async function loadProfileState(options = {}) {
     debugLog?.info('[PROFILE-STATE] Loaded profile state', { 
       module: 'profile-state',
       function: 'loadProfileState',
+      profile: currentProfile,
+      stateFile,
       version: state.version,
       timestamp: state.timestamp,
       hotkeyTabs: state.hotkeys?.length || 0,
-      holdingTankTabs: state.holdingTank?.length || 0
+      holdingTankTabs: state.holdingTank?.length || 0,
+      statePreview: {
+        hotkeys: state.hotkeys?.map(tab => ({
+          tabNumber: tab.tabNumber,
+          tabName: tab.tabName,
+          hotkeyCount: Object.keys(tab.hotkeys || {}).length
+        })),
+        holdingTank: state.holdingTank?.map(tab => ({
+          tabNumber: tab.tabNumber,
+          tabName: tab.tabName,
+          songCount: (tab.songIds || []).length
+        }))
+      }
     });
     
     // Restore hotkeys

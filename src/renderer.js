@@ -250,15 +250,19 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       } else {
         window.logInfo('ℹ️ No previous state found, starting fresh');
         
-        // Check if we just loaded legacy HTML data that needs to be saved
+        // Check if we just loaded legacy HTML data that needs to be saved (one-time migration)
         if (window._needsInitialStateSave) {
-          window.logInfo('💾 Saving initial profile state after 3.1.5 migration...');
+          window.logInfo('💾 Saving initial profile state after 3.1.5 → 4.1 migration...');
           
           // Give the DOM a moment to settle
           await new Promise(resolve => setTimeout(resolve, 100));
           
           // Save the profile state to capture the migrated hotkeys/holding tank
           await moduleRegistry.profileState.saveProfileState();
+          
+          // Mark migration as completed so it never runs again
+          await window.secureElectronAPI.profile.setPreference('migration_completed', true);
+          window.logInfo('✅ Migration marked as completed - will not run again');
           
           // Clear the flag
           delete window._needsInitialStateSave;

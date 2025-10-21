@@ -252,8 +252,24 @@ const store = new Store({
   clearInvalidConfig: true
 });
 
-// Initialize main process DebugLog
-const debugLog = initializeMainDebugLog({ store });
+// Helper function to get debug preference (breaks circular dependency with profile-manager)
+async function getDebugPreference() {
+  try {
+    const currentProfile = getCurrentProfile();
+    if (currentProfile && profileManager) {
+      const preferences = await profileManager.loadProfilePreferences(currentProfile);
+      return !!preferences?.debug_log_enabled;
+    } else if (store) {
+      return !!store.get('debug_log_enabled');
+    }
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Initialize main process DebugLog with injected preference getter
+const debugLog = initializeMainDebugLog({ store, getDebugPreference });
 
 // Add immediate logging now that debugLog is available
 debugLog.info('Main process starting...', { 
@@ -279,8 +295,8 @@ import("@octokit/rest")
     });
   });
 
-// Centralized Log Service for file persistence and export
-const logService = initMainLogService({ store });
+// Centralized Log Service for file persistence and export (inject preference getter)
+const logService = initMainLogService({ store, getDebugPreference });
 
 // Log the resolved store path for diagnostics (after logger is initialized)
 debugLog.info('Electron Store initialized', { function: 'store-init', storePath: store.path, appName: app.getName() });

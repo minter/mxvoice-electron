@@ -14,8 +14,11 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
-import { app } from 'electron';
+import electron from 'electron';
 import { fileURLToPath } from 'url';
+
+// Destructure app from electron (handles both named and default exports)
+const { app } = electron;
 
 // Get __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
@@ -288,9 +291,38 @@ function createProfile(profileName, description = '') {
     
     // Create profile directory
     const profileDir = path.join(getProfilesDirectory(), sanitizeProfileName(profileName));
-    if (!fs.existsSync(profileDir)) {
-      fs.mkdirSync(profileDir, { recursive: true });
+    
+    debugLog?.info('Creating new profile', { 
+      module: 'profile-manager', 
+      function: 'createProfile',
+      profileName,
+      profileDir,
+      sanitizedName: sanitizeProfileName(profileName),
+      dirExistsBefore: fs.existsSync(profileDir)
+    });
+    
+    // Check if directory already exists (shouldn't happen but log it)
+    if (fs.existsSync(profileDir)) {
+      const existingContents = fs.readdirSync(profileDir);
+      debugLog?.warn('Profile directory already exists when creating new profile', { 
+        module: 'profile-manager', 
+        function: 'createProfile',
+        profileName,
+        profileDir,
+        existingContents
+      });
+      
+      // Delete the existing directory to ensure clean slate
+      fs.rmSync(profileDir, { recursive: true, force: true });
+      debugLog?.info('Removed existing profile directory', { 
+        module: 'profile-manager', 
+        function: 'createProfile',
+        profileDir
+      });
     }
+    
+    // Create fresh profile directory
+    fs.mkdirSync(profileDir, { recursive: true });
     
     // Create profile preferences with defaults
     const preferences = getDefaultPreferences();
@@ -298,6 +330,12 @@ function createProfile(profileName, description = '') {
     // Save profile preferences
     const preferencesPath = getProfilePreferencesPath(profileName);
     fs.writeFileSync(preferencesPath, JSON.stringify(preferences, null, 2));
+    
+    debugLog?.info('Profile preferences file created', { 
+      module: 'profile-manager', 
+      function: 'createProfile',
+      preferencesPath
+    });
     
     // Add to registry
     registry.profiles[profileName] = {
@@ -310,10 +348,14 @@ function createProfile(profileName, description = '') {
     // Save registry
     saveProfileRegistry(registry);
     
-    debugLog?.info('Profile created', { 
+    // Verify final state
+    const finalContents = fs.readdirSync(profileDir);
+    debugLog?.info('Profile created successfully', { 
       module: 'profile-manager', 
       function: 'createProfile',
-      profileName
+      profileName,
+      profileDir,
+      finalContents
     });
     
     return { success: true };
@@ -322,7 +364,8 @@ function createProfile(profileName, description = '') {
       module: 'profile-manager', 
       function: 'createProfile',
       profileName,
-      error: error.message 
+      error: error.message,
+      stack: error.stack
     });
     return { success: false, error: error.message };
   }
@@ -380,22 +423,62 @@ function deleteProfile(profileName) {
     // Load registry
     const registry = loadProfileRegistry();
     
-    // Remove from registry
+    // Remove profile directory FIRST (before updating registry)
+    // This ensures we can't end up in a state where registry is updated but directory remains
+    const profileDir = path.join(getProfilesDirectory(), sanitizeProfileName(profileName));
+    
+    debugLog?.info('Attempting to delete profile directory', { 
+      module: 'profile-manager', 
+      function: 'deleteProfile',
+      profileName,
+      profileDir,
+      sanitizedName: sanitizeProfileName(profileName),
+      exists: fs.existsSync(profileDir)
+    });
+    
+    if (fs.existsSync(profileDir)) {
+      // List contents before deletion for debugging
+      const contents = fs.readdirSync(profileDir);
+      debugLog?.info('Profile directory contents before deletion', { 
+        module: 'profile-manager', 
+        function: 'deleteProfile',
+        profileDir,
+        contents
+      });
+      
+      fs.rmSync(profileDir, { recursive: true, force: true });
+      
+      // Verify deletion
+      const stillExists = fs.existsSync(profileDir);
+      debugLog?.info('Profile directory deletion result', { 
+        module: 'profile-manager', 
+        function: 'deleteProfile',
+        profileDir,
+        stillExists
+      });
+      
+      if (stillExists) {
+        throw new Error(`Failed to delete profile directory: ${profileDir}`);
+      }
+    } else {
+      debugLog?.warn('Profile directory does not exist, skipping filesystem deletion', { 
+        module: 'profile-manager', 
+        function: 'deleteProfile',
+        profileDir
+      });
+    }
+    
+    // Remove from registry (only after successful directory deletion)
     delete registry.profiles[profileName];
     
     // Save registry
     saveProfileRegistry(registry);
     
-    // Remove profile directory
-    const profileDir = path.join(getProfilesDirectory(), sanitizeProfileName(profileName));
-    if (fs.existsSync(profileDir)) {
-      fs.rmSync(profileDir, { recursive: true, force: true });
-    }
-    
-    debugLog?.info('Profile deleted', { 
+    debugLog?.info('Profile deleted successfully', { 
       module: 'profile-manager', 
       function: 'deleteProfile',
-      profileName 
+      profileName,
+      profileDir
     });
     
     return { success: true };
@@ -404,7 +487,8 @@ function deleteProfile(profileName) {
       module: 'profile-manager', 
       function: 'deleteProfile',
       profileName,
-      error: error.message 
+      error: error.message,
+      stack: error.stack
     });
     return { success: false, error: error.message };
   }

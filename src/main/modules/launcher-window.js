@@ -5,7 +5,10 @@
  * Allows users to select/create/delete profiles before launching the main app.
  */
 
-import { BrowserWindow, ipcMain, app } from 'electron';
+import electron from 'electron';
+
+// Destructure from electron (handles both named and default exports)
+const { BrowserWindow, ipcMain, app } = electron;
 import path from 'path';
 import { fileURLToPath } from 'url';
 

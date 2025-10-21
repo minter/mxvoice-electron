@@ -66,14 +66,48 @@ export class DataPreloader {
   }
 
   /**
-   * Check if we need to load legacy HTML (migration from 3.1.5)
-   * Returns true if state.json doesn't exist but config.json has hotkeys/holding_tank HTML
+   * Check if we need to load legacy HTML (migration from 3.1.5 to 4.1+)
+   * Returns true ONLY for Default User profile, ONLY ONCE when upgrading from pre-4.1
+   * 
+   * IMPORTANT: Migration is a ONE-TIME event:
+   * - Only happens for "Default User" profile
+   * - Only happens on first run after upgrading from pre-4.1 (pre-profiles)
+   * - Checks for migration_completed flag to prevent re-running
+   * - New profiles NEVER migrate from global config.json
+   * 
+   * After migration, global config.json is only used for:
+   * - Directory paths (music_directory, hotkey_directory, database_directory)
+   * - Window state and other global settings
+   * - NOT for hotkeys or holding_tank data
+   * 
    * @returns {Promise<boolean>}
    */
   async checkNeedsMigrationLoad() {
     try {
       const electronAPI = window.secureElectronAPI || window.electronAPI;
       if (!electronAPI?.profile) {
+        return false;
+      }
+      
+      // Get current profile name
+      const currentProfileResult = await electronAPI.profile.getCurrent();
+      const currentProfile = currentProfileResult?.profile;
+      
+      // ONLY "Default User" can migrate from global config.json
+      // All other profiles (including newly created ones) should start fresh
+      if (currentProfile !== 'Default User') {
+        this.logInfo('Skipping migration check for non-Default User profile', {
+          profile: currentProfile
+        });
+        return false;
+      }
+      
+      this.logInfo('Checking migration need for Default User profile');
+      
+      // Check if migration has already been completed
+      const preferencesResult = await electronAPI.profile.getPreference('migration_completed');
+      if (preferencesResult?.success && preferencesResult?.value === true) {
+        this.logInfo('Migration already completed for Default User, skipping');
         return false;
       }
       
@@ -90,8 +124,11 @@ export class DataPreloader {
       
       const existsResult = await electronAPI.fileSystem.exists(stateFileResult.data);
       
-      // If state file already exists, no migration needed
+      // If state file already exists, mark migration as completed and skip
       if (existsResult.exists) {
+        this.logInfo('State file exists for Default User, marking migration as completed');
+        // Mark migration as done so we don't check again
+        await electronAPI.profile.setPreference('migration_completed', true);
         return false;
       }
       
@@ -109,6 +146,9 @@ export class DataPreloader {
       
       const configExistsResult = await electronAPI.fileSystem.exists(configPathResult.data);
       if (!configExistsResult.success || !configExistsResult.exists) {
+        this.logInfo('No global config.json found, no migration needed');
+        // Mark migration as done so we don't check again
+        await electronAPI.profile.setPreference('migration_completed', true);
         return false;
       }
       
@@ -124,15 +164,19 @@ export class DataPreloader {
         const hasHoldingTank = config.holding_tank && typeof config.holding_tank === 'string' && config.holding_tank.includes('songid=');
         
         if (hasHotkeys || hasHoldingTank) {
-          this.logInfo('Migration scenario detected: state.json missing but legacy HTML data in config.json');
+          this.logInfo('ONE-TIME MIGRATION: Default User upgrading from pre-4.1, will load legacy data from global config.json');
+          // Don't mark as completed yet - will be marked after successful migration
           return true;
+        } else {
+          this.logInfo('No legacy data in global config.json');
+          // Mark migration as done so we don't check again
+          await electronAPI.profile.setPreference('migration_completed', true);
+          return false;
         }
       } catch (parseError) {
         this.logError('Error parsing config.json', parseError);
         return false;
       }
-      
-      return false;
     } catch (error) {
       this.logError('Error checking migration status', error);
       return false;

@@ -5,7 +5,10 @@
  * for the MxVoice Electron application.
  */
 
-import { ipcMain, dialog, app } from 'electron';
+import electron from 'electron';
+
+// Destructure from electron (handles both named and default exports)
+const { ipcMain, dialog, app } = electron;
 import path from 'path';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
@@ -1450,11 +1453,12 @@ function registerAllHandlers() {
       debugLog?.error('Error saving profile state', { 
         module: 'ipc-handlers',
         function: 'profile:save-state',
-        error: error.message
+        error: error.message 
       });
       return { success: false, error: error.message };
     }
   });
+
 
   // Profile: Get preference value
   ipcMain.handle('profile:get-preference', async (event, key) => {

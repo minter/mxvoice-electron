@@ -14,10 +14,11 @@ import Store from 'electron-store';
  * Initialize the main process debug logger
  * @param {Object} options - Configuration options
  * @param {Object} options.store - Store reference (optional, for main process use)
+ * @param {Function} options.getDebugPreference - Optional function to get debug preference (breaks circular dependency)
  * @returns {Object} Debug logger interface
  */
 function initializeMainDebugLog(options = {}) {
-  const { store } = options;
+  const { store, getDebugPreference } = options;
   
   // Log levels
   const LOG_LEVELS = {
@@ -49,19 +50,14 @@ function initializeMainDebugLog(options = {}) {
     }
 
     try {
-      // Try to get from profile preferences first (if profiles are active)
-      const profileManager = await import('./profile-manager.js');
-      const mainModule = await import('../index-modular.js');
-      const currentProfile = mainModule.getCurrentProfile();
-      
-      if (currentProfile) {
-        const preferences = await profileManager.loadProfilePreferences(currentProfile);
-        debugEnabledCache = !!preferences?.debug_log_enabled;
+      // Use injected preference getter if available (breaks circular dependency)
+      if (getDebugPreference && typeof getDebugPreference === 'function') {
+        debugEnabledCache = await getDebugPreference();
       } else if (store) {
-        // Fallback to global store if no profile active
+        // Fallback to global store
         debugEnabledCache = store.get("debug_log_enabled") || false;
       } else {
-        // Default to false when no store available (preload context)
+        // Default to false when no store available
         debugEnabledCache = false;
       }
     } catch (error) {
