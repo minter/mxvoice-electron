@@ -300,6 +300,23 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         apiToUse.events.onLogout(async () => {
           window.logInfo('🚪 Logout requested from menu');
           try {
+            // Save current state before logging out
+            window.logInfo('💾 Saving current profile state before logout...');
+            if (moduleRegistry.profileState && moduleRegistry.profileState.extractProfileState) {
+              try {
+                const state = moduleRegistry.profileState.extractProfileState();
+                const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state);
+                
+                if (!saveResult.success) {
+                  window.logError('Failed to save state before logout:', saveResult.error);
+                } else {
+                  window.logInfo('✅ State saved successfully before logout');
+                }
+              } catch (stateError) {
+                window.logError('Error saving state before logout:', stateError);
+              }
+            }
+            
             const result = await window.secureElectronAPI.profile.switchToProfile('Default User');
             if (!result.success) {
               window.logError('Failed to logout (switch to Default Profile):', result.error);
@@ -815,6 +832,23 @@ async function handleNewProfileSubmit() {
       const modal = bootstrap.Modal.getInstance(document.getElementById('newProfileModal'));
       modal.hide();
       
+      // Save current state before switching to new profile
+      window.logInfo('💾 Saving current profile state before switching to new profile...');
+      if (moduleRegistry.profileState && moduleRegistry.profileState.extractProfileState) {
+        try {
+          const state = moduleRegistry.profileState.extractProfileState();
+          const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state);
+          
+          if (!saveResult.success) {
+            window.logError('Failed to save state before switching to new profile:', saveResult.error);
+          } else {
+            window.logInfo('✅ State saved successfully before switching to new profile');
+          }
+        } catch (stateError) {
+          window.logError('Error saving state before switching to new profile:', stateError);
+        }
+      }
+      
       // Switch directly to the newly created profile
       try {
         const switchResult = await window.secureElectronAPI.profile.switchToProfile(name);
@@ -916,6 +950,23 @@ async function handleDuplicateProfileSubmit() {
       // Close the modal
       const modal = bootstrap.Modal.getInstance(document.getElementById('duplicateProfileModal'));
       modal.hide();
+      
+      // Save current state before switching to duplicated profile
+      window.logInfo('💾 Saving current profile state before switching to duplicated profile...');
+      if (moduleRegistry.profileState && moduleRegistry.profileState.extractProfileState) {
+        try {
+          const state = moduleRegistry.profileState.extractProfileState();
+          const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state);
+          
+          if (!saveResult.success) {
+            window.logError('Failed to save state before switching to duplicated profile:', saveResult.error);
+          } else {
+            window.logInfo('✅ State saved successfully before switching to duplicated profile');
+          }
+        } catch (stateError) {
+          window.logError('Error saving state before switching to duplicated profile:', stateError);
+        }
+      }
       
       // Switch directly to the newly duplicated profile
       try {
