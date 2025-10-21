@@ -6,7 +6,9 @@
  */
 
 import { app, BrowserWindow, Menu, dialog, shell, nativeTheme, screen, ipcMain } from 'electron';
+import log from 'electron-log';
 import { getLogService } from './log-service.js';
+import * as profileManager from './profile-manager.js';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
@@ -119,64 +121,115 @@ function setupWindowStateSaving() {
     windowBounds: mainWindow.getBounds()
   });
 
-  // Save window state on resize
-  mainWindow.on('will-resize', (_event, newBounds) => {
-    debugLog?.debug('Window will-resize event triggered', { 
+  // Use debounced save for frequent events (move/resize)
+  let saveTimeout = null;
+  const debouncedSave = () => {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+      saveWindowState(mainWindow).catch(err => {
+        debugLog?.error('Error in debounced window state save', {
+          module: 'app-setup',
+          function: 'setupWindowStateSaving',
+          error: err.message
+        });
+      });
+    }, 500); // Wait 500ms after last event before saving
+  };
+
+  // Save window state after resize completes
+  mainWindow.on('resized', () => {
+    debugLog?.debug('Window resized event triggered', { 
       module: 'app-setup', 
-      function: 'setupWindowStateSaving',
-      newBounds: newBounds
+      function: 'setupWindowStateSaving'
     });
-    saveWindowState(mainWindow);
+    debouncedSave();
   });
 
-  // Save window state on move
-  mainWindow.on('will-move', (_event, newBounds) => {
-    debugLog?.debug('Window will-move event triggered', { 
+  // Save window state after move completes
+  mainWindow.on('moved', () => {
+    debugLog?.debug('Window moved event triggered', { 
       module: 'app-setup', 
-      function: 'setupWindowStateSaving',
-      newBounds: newBounds
+      function: 'setupWindowStateSaving'
     });
-    saveWindowState(mainWindow);
+    debouncedSave();
   });
 
   // Save window state when maximized
   mainWindow.on('maximize', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on maximize', { module: 'app-setup', error: err.message });
+    });
   });
 
   // Save window state when unmaximized
   mainWindow.on('unmaximize', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on unmaximize', { module: 'app-setup', error: err.message });
+    });
   });
 
   // Save window state when entering fullscreen
   mainWindow.on('enter-full-screen', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on enter-fullscreen', { module: 'app-setup', error: err.message });
+    });
   });
 
   // Save window state when leaving fullscreen
   mainWindow.on('leave-full-screen', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on leave-fullscreen', { module: 'app-setup', error: err.message });
+    });
   });
 
   // Save window state when minimized (for completeness)
   mainWindow.on('minimize', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on minimize', { module: 'app-setup', error: err.message });
+    });
   });
 
   // Save window state when restored from minimize
   mainWindow.on('restore', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on restore', { module: 'app-setup', error: err.message });
+    });
   });
 
-  // Save window state before closing (this is the key event)
-  mainWindow.on('close', () => {
-    saveWindowState(mainWindow);
-  });
-
-  // Also save on before-unload as backup
-  mainWindow.on('before-unload', () => {
-    saveWindowState(mainWindow);
+  // Critical: Save window state before closing and wait for completion
+  let isClosing = false;
+  mainWindow.on('close', async (event) => {
+    if (!isClosing) {
+      event.preventDefault(); // Prevent close until we save
+      isClosing = true;
+      
+      debugLog?.info('Window closing, saving state...', {
+        module: 'app-setup',
+        function: 'setupWindowStateSaving'
+      });
+      
+      try {
+        // Clear any pending debounced saves
+        if (saveTimeout) clearTimeout(saveTimeout);
+        
+        // Save immediately and wait for completion
+        await saveWindowState(mainWindow);
+        
+        debugLog?.info('Window state saved on close, proceeding with close', {
+          module: 'app-setup',
+          function: 'setupWindowStateSaving'
+        });
+      } catch (err) {
+        debugLog?.error('Error saving window state on close', {
+          module: 'app-setup',
+          function: 'setupWindowStateSaving',
+          error: err.message
+        });
+      }
+      
+      // Now actually close the window
+      mainWindow.destroy();
+    }
   });
 
 }
@@ -184,14 +237,14 @@ function setupWindowStateSaving() {
 /**
  * Save complete window state to store
  * Includes position, size, maximized state, fullscreen state, and display ID
+ * Saves to profile-specific preferences when a profile is active
  */
-function saveWindowState(window) {
-  if (!window || !store || window.isDestroyed()) {
+async function saveWindowState(window) {
+  if (!window || window.isDestroyed()) {
     debugLog?.warn('Cannot save window state - missing dependencies', { 
       module: 'app-setup', 
       function: 'saveWindowState',
       hasWindow: !!window,
-      hasStore: !!store,
       isDestroyed: window?.isDestroyed?.()
     });
     return;
@@ -211,18 +264,37 @@ function saveWindowState(window) {
       displayName: display.label || `Display ${display.id}`
     };
 
-    // Save individual properties for backward compatibility
-    const widthResult = store.set('browser_width', state.width);
-    const heightResult = store.set('browser_height', state.height);
+    // Check if a profile is active
+    const mainModule = await import('../index-modular.js');
+    const currentProfile = mainModule.getCurrentProfile();
     
-    // Save complete window state
-    const windowStateResult = store.set('window_state', state);
-
-    debugLog?.debug('Window state saved successfully', { 
-      module: 'app-setup', 
-      function: 'saveWindowState',
-      state: state
-    });
+    if (currentProfile && profileManager) {
+      // Save to profile-specific preferences
+      await profileManager.saveProfilePreferences(currentProfile, {
+        ...await profileManager.loadProfilePreferences(currentProfile),
+        window_state: state,
+        browser_width: state.width,
+        browser_height: state.height
+      });
+      
+      debugLog?.debug('Window state saved to profile preferences', { 
+        module: 'app-setup', 
+        function: 'saveWindowState',
+        profile: currentProfile,
+        state: state
+      });
+    } else if (store) {
+      // Fallback to global store if no profile active
+      store.set('browser_width', state.width);
+      store.set('browser_height', state.height);
+      store.set('window_state', state);
+      
+      debugLog?.debug('Window state saved to global store (no profile)', { 
+        module: 'app-setup', 
+        function: 'saveWindowState',
+        state: state
+      });
+    }
   } catch (error) {
     debugLog?.error('Failed to save window state', { 
       module: 'app-setup', 
@@ -236,18 +308,73 @@ function saveWindowState(window) {
 /**
  * Load window state from store
  * Returns complete window state object or null if not available
+ * Loads from profile-specific preferences when a profile is active
  */
-function loadWindowState(storeInstance = store) {
-  if (!storeInstance) {
-    debugLog?.warn('Cannot load window state - store not available', { 
-      module: 'app-setup', 
-      function: 'loadWindowState'
-    });
-    return null;
-  }
-
+async function loadWindowState(storeInstance = store, currentProfile = null) {
   try {
-    debugLog?.info('Loading window state from store', { 
+    log.info('loadWindowState called', {
+      module: 'app-setup',
+      function: 'loadWindowState',
+      hasCurrentProfile: !!currentProfile,
+      currentProfile: currentProfile,
+      hasProfileManager: !!profileManager,
+      hasStore: !!storeInstance
+    });
+    
+    // Check if a profile is active
+    if (currentProfile && profileManager) {
+      log.info('Loading window state from profile preferences', { 
+        module: 'app-setup', 
+        function: 'loadWindowState',
+        profile: currentProfile
+      });
+      
+      const preferences = await profileManager.loadProfilePreferences(currentProfile);
+      log.info('Profile preferences loaded', {
+        module: 'app-setup',
+        function: 'loadWindowState',
+        hasPreferences: !!preferences,
+        hasWindowState: !!preferences?.window_state,
+        windowState: preferences?.window_state
+      });
+      
+      const state = preferences?.window_state;
+      
+      if (state && typeof state === 'object') {
+        log.info('Window state loaded from profile successfully', { 
+          module: 'app-setup', 
+          function: 'loadWindowState',
+          profile: currentProfile,
+          state: state
+        });
+        return state;
+      } else {
+        log.info('No window state found in profile, trying global fallback', { 
+          module: 'app-setup', 
+          function: 'loadWindowState',
+          profile: currentProfile,
+          preferencesType: typeof preferences,
+          stateType: typeof state
+        });
+      }
+    } else {
+      log.info('Skipping profile-specific window state', {
+        module: 'app-setup',
+        function: 'loadWindowState',
+        reason: !currentProfile ? 'no currentProfile' : 'no profileManager'
+      });
+    }
+    
+    // Fallback to global store if no profile or no profile state
+    if (!storeInstance) {
+      log.warn('Cannot load window state - store not available', { 
+        module: 'app-setup', 
+        function: 'loadWindowState'
+      });
+      return null;
+    }
+
+    log.info('Loading window state from global store', { 
       module: 'app-setup', 
       function: 'loadWindowState',
       storePath: storeInstance.path
@@ -255,21 +382,21 @@ function loadWindowState(storeInstance = store) {
     
     const state = storeInstance.get('window_state');
     if (state && typeof state === 'object') {
-      debugLog?.info('Window state loaded successfully', { 
+      log.info('Window state loaded from global store successfully', { 
         module: 'app-setup', 
         function: 'loadWindowState',
         state: state
       });
       return state;
     } else {
-      debugLog?.info('No window state found in store', { 
+      log.info('No window state found in global store', { 
         module: 'app-setup', 
         function: 'loadWindowState',
         foundState: state
       });
     }
   } catch (error) {
-    debugLog?.error('Failed to load window state', { 
+    log.error('Failed to load window state', { 
       module: 'app-setup', 
       function: 'loadWindowState',
       error: error.message,

@@ -19,7 +19,10 @@ const PROFILE_PREFERENCES = [
   'fade_out_seconds',
   'debug_log_enabled',
   'prerelease_updates',
-  'holding_tank_mode'
+  'holding_tank_mode',
+  'window_state',
+  'browser_width',
+  'browser_height'
 ];
 
 /**

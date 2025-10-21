@@ -81,8 +81,13 @@ export function getCurrentProfile() {
 
 /**
  * Get profile-specific directory path
- * @param {string} type - Type of directory ('hotkeys', 'holding-tank', etc.)
- * @returns {string} Profile-specific directory path
+ * 
+ * IMPORTANT: Always use this function to get profile directories.
+ * Never manually construct profile paths - this ensures profile names
+ * are consistently sanitized for filesystem safety.
+ * 
+ * @param {string} type - Type of directory ('hotkeys', 'holding-tank', 'state', 'preferences', etc.)
+ * @returns {string} Profile-specific directory path (sanitized)
  */
 export function getProfileDirectory(type) {
   const profile = getCurrentProfile();
@@ -791,11 +796,12 @@ const createWindow = async () => {
     await initializeMainDatabaseWrapper();
     debugLog.info('Main database initialization completed', { function: "createWindow", hasDb: !!db, dbType: typeof db });
 
-    // Create the window with restored state from store
-    const windowState = appSetup.loadWindowState(store);
-    debugLog.debug('Window state for creation', { 
+    // Create the window with restored state from store (profile-specific if available)
+    const windowState = await appSetup.loadWindowState(store, currentProfile);
+    log.info('Window state for creation', { 
       function: "createWindow",
-      windowState: windowState
+      windowState: windowState,
+      profile: currentProfile
     });
     
     const windowOptions = windowState ? {
@@ -811,7 +817,7 @@ const createWindow = async () => {
       height: store.get('browser_height') || defaults.browser_height
     };
 
-    debugLog.debug('Window creation options', { 
+    log.info('Window creation options', { 
       function: "createWindow",
       windowOptions: windowOptions
     });
@@ -841,7 +847,7 @@ const createWindow = async () => {
     
     // Create a minimal window even if database fails
     try {
-      const windowState = appSetup.loadWindowState(store);
+      const windowState = await appSetup.loadWindowState(store, currentProfile);
       const windowOptions = windowState ? {
         width: windowState.width || defaults.browser_width,
         height: windowState.height || defaults.browser_height,

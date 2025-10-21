@@ -145,6 +145,16 @@ export class DataPreloader {
    */
   async loadHotkeys() {
     try {
+      // When profiles are active, skip global store - profile state will load instead
+      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      if (electronAPI && electronAPI.profile) {
+        const currentProfileResult = await electronAPI.profile.getCurrent();
+        if (currentProfileResult && currentProfileResult.profile) {
+          this.logInfo('Profile active - skipping global hotkeys store, will use profile state');
+          return;
+        }
+      }
+      
       let storedHotkeysHtml = null;
       
       // First try the store
@@ -246,6 +256,16 @@ export class DataPreloader {
    */
   async loadHoldingTank() {
     try {
+      // When profiles are active, skip global store - profile state will load instead
+      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      if (electronAPI && electronAPI.profile) {
+        const currentProfileResult = await electronAPI.profile.getCurrent();
+        if (currentProfileResult && currentProfileResult.profile) {
+          this.logInfo('Profile active - skipping global holding tank store, will use profile state');
+          return;
+        }
+      }
+      
       let storedHoldingTankHtml = null;
       
       // First try the store

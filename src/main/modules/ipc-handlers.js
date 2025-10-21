@@ -1597,25 +1597,15 @@ function registerAllHandlers() {
         hasState: !!state
       });
       
-      // Get the current profile
+      // Use the same approach as profile:save-state to ensure correct directory
       const mainModule = await import('../index-modular.js');
-      const profileName = mainModule.getCurrentProfile();
-      
-      if (!profileName) {
-        throw new Error('No active profile');
-      }
-      
-      // Get profile directory
-      const userDataPath = app.getPath('userData');
-      const profilesDir = path.join(userDataPath, 'profiles');
-      const profileDir = path.join(profilesDir, profileName);
+      const profileDir = mainModule.getProfileDirectory('state');
       const stateFile = path.join(profileDir, 'state.json');
       
       debugLog?.info('Writing state file before switch', {
         module: 'ipc-handlers',
         function: 'profile:save-state-before-switch',
-        file: stateFile,
-        profileName: profileName
+        file: stateFile
       });
       
       // Ensure directory exists

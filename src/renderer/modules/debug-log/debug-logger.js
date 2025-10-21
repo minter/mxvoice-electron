@@ -49,7 +49,21 @@ function initializeDebugLogger(options = {}) {
     }
     
     try {
-      if (electronAPI && electronAPI.store) {
+      // Try to get from profile preferences first (if profiles are active)
+      if (electronAPI && electronAPI.profile) {
+        const result = await electronAPI.profile.getPreference("debug_log_enabled");
+        if (result && result.success) {
+          debugEnabledCache = result.value || false;
+        } else {
+          // Fallback to global store
+          if (electronAPI.store) {
+            const storeResult = await electronAPI.store.get("debug_log_enabled");
+            debugEnabledCache = storeResult?.value || false;
+          } else {
+            debugEnabledCache = false;
+          }
+        }
+      } else if (electronAPI && electronAPI.store) {
         const result = await electronAPI.store.get("debug_log_enabled");
         if (result.success) {
           debugEnabledCache = result.value || false;

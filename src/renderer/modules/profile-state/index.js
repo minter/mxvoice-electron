@@ -134,12 +134,26 @@ export function extractProfileState() {
     holdingTank: extractHoldingTankTabs()
   };
   
+  // Calculate actual data counts for debugging
+  const hotkeyCount = state.hotkeys.reduce((sum, tab) => sum + Object.keys(tab.hotkeys).length, 0);
+  const holdingTankCount = state.holdingTank.reduce((sum, tab) => sum + tab.songIds.length, 0);
+  
   debugLog?.info('[PROFILE-STATE] Extracted profile state', { 
     module: 'profile-state',
     function: 'extractProfileState',
     hotkeyTabs: state.hotkeys.length,
-    holdingTankTabs: state.holdingTank.length
+    holdingTankTabs: state.holdingTank.length,
+    totalHotkeys: hotkeyCount,
+    totalHoldingTankSongs: holdingTankCount
   });
+  
+  // Log warning if state is empty but we expected data
+  if (hotkeyCount === 0 && holdingTankCount === 0) {
+    debugLog?.warn('[PROFILE-STATE] Extracted state is empty - DOM may not be ready or data may have been cleared', {
+      module: 'profile-state',
+      function: 'extractProfileState'
+    });
+  }
   
   return state;
 }
@@ -474,7 +488,28 @@ export async function loadProfileState(options = {}) {
       throw new Error(readResult.error || 'Failed to read state file');
     }
     
-    const state = JSON.parse(readResult.data);
+    // Handle empty or invalid state files
+    if (!readResult.data || readResult.data.trim() === '') {
+      debugLog?.warn('[PROFILE-STATE] State file is empty, treating as no state', {
+        module: 'profile-state',
+        function: 'loadProfileState',
+        stateFile: stateFile
+      });
+      return { success: true, loaded: false };
+    }
+    
+    let state;
+    try {
+      state = JSON.parse(readResult.data);
+    } catch (parseError) {
+      debugLog?.error('[PROFILE-STATE] Failed to parse state JSON', {
+        module: 'profile-state',
+        function: 'loadProfileState',
+        error: parseError.message,
+        dataLength: readResult.data?.length || 0
+      });
+      return { success: true, loaded: false };
+    }
     
     debugLog?.info('[PROFILE-STATE] Loaded profile state', { 
       module: 'profile-state',

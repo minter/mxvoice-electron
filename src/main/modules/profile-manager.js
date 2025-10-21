@@ -74,8 +74,15 @@ function getProfilePreferencesPath(profileName) {
 
 /**
  * Sanitize profile name for filesystem safety
+ * 
+ * CRITICAL: This function MUST be used whenever constructing filesystem paths
+ * for profile directories. Inconsistent sanitization causes state files to be
+ * saved/loaded from wrong locations (e.g., "ComedySportz Saturday" vs "ComedySportzSaturday").
+ * 
+ * Use getProfileDirectory() from index-modular.js instead of manually constructing paths.
+ * 
  * @param {string} name - Profile name
- * @returns {string} Sanitized name safe for filesystem
+ * @returns {string} Sanitized name safe for filesystem (removes special chars, keeps spaces/hyphens/underscores)
  */
 function sanitizeProfileName(name) {
   return name.replace(/[^a-zA-Z0-9\s\-_]/g, '').trim();
@@ -501,12 +508,9 @@ async function loadProfilePreferences(profileName) {
     const data = fs.readFileSync(preferencesPath, 'utf8');
     let preferences = JSON.parse(data);
     
-    // Clean up any deprecated keys that should be in state.json
+    // Clean up deprecated keys that should be in state.json (NOT window_state - that's a valid preference now)
     delete preferences.hotkeys;
     delete preferences.holding_tank;
-    delete preferences.browser_width;
-    delete preferences.browser_height;
-    delete preferences.window_state;
     
     // Unwrap any corrupted nested success objects
     for (const key of Object.keys(preferences)) {

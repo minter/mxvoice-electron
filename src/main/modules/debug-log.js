@@ -40,7 +40,7 @@ function initializeMainDebugLog(options = {}) {
    * Uses caching to avoid repeated preference checks
    * @returns {boolean} Whether debug logging is enabled
    */
-  function isDebugEnabled() {
+  async function isDebugEnabled() {
     const now = Date.now();
 
     // Return cached value if still valid
@@ -49,7 +49,16 @@ function initializeMainDebugLog(options = {}) {
     }
 
     try {
-      if (store) {
+      // Try to get from profile preferences first (if profiles are active)
+      const profileManager = await import('./profile-manager.js');
+      const mainModule = await import('../index-modular.js');
+      const currentProfile = mainModule.getCurrentProfile();
+      
+      if (currentProfile) {
+        const preferences = await profileManager.loadProfilePreferences(currentProfile);
+        debugEnabledCache = !!preferences?.debug_log_enabled;
+      } else if (store) {
+        // Fallback to global store if no profile active
         debugEnabledCache = store.get("debug_log_enabled") || false;
       } else {
         // Default to false when no store available (preload context)
@@ -185,9 +194,9 @@ function initializeMainDebugLog(options = {}) {
    * @param {string} message - Info message
    * @param {Object} context - Additional context (optional)
    */
-  function info(message, context = null) {
+  async function info(message, context = null) {
     if (currentLogLevel >= LOG_LEVELS.INFO) {
-      const debugEnabled = isDebugEnabled();
+      const debugEnabled = await isDebugEnabled();
       if (debugEnabled) {
         const formattedMessage = formatLogMessage('INFO', message, context);
         log.info(formattedMessage);
@@ -201,9 +210,9 @@ function initializeMainDebugLog(options = {}) {
    * @param {string} message - Debug message
    * @param {Object} context - Additional context (optional)
    */
-  function debug(message, context = null) {
+  async function debug(message, context = null) {
     if (currentLogLevel >= LOG_LEVELS.DEBUG) {
-      const debugEnabled = isDebugEnabled();
+      const debugEnabled = await isDebugEnabled();
       if (debugEnabled) {
         const formattedMessage = formatLogMessage('DEBUG', message, context);
         log.debug(formattedMessage);
@@ -217,8 +226,8 @@ function initializeMainDebugLog(options = {}) {
    * @param {string} message - Log message
    * @param {Object} context - Additional context (optional)
    */
-  function logMessage(message, context = null) {
-    info(message, context);
+  async function logMessage(message, context = null) {
+    await info(message, context);
   }
   
   return {

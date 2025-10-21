@@ -225,9 +225,29 @@ class HotkeysModule {
 
   /**
    * Save hotkeys to store
-   * Only saves if we have the new HTML format with header button
+   * When profiles are active, saves to profile state instead of global store
    */
   saveHotkeysToStore() {
+    // When profiles are active, save to profile state instead
+    if (window.moduleRegistry && window.moduleRegistry.profileState) {
+      debugLog?.info('Saving hotkeys to profile state', {
+        module: 'hotkeys',
+        function: 'saveHotkeysToStore'
+      });
+      window.moduleRegistry.profileState.saveProfileState({
+        hotkeysModule: this,
+        holdingTankModule: window.moduleRegistry.holdingTank
+      }).catch(err => {
+        debugLog?.error('Failed to save profile state from hotkeys', {
+          module: 'hotkeys',
+          function: 'saveHotkeysToStore',
+          error: err.message
+        });
+      });
+      return;
+    }
+    
+    // Legacy: save to global store for non-profile setups
     const col = document.getElementById('hotkeys-column');
     const currentHtml = col ? col.innerHTML : '';
     if (currentHtml.includes('header-button')) {
