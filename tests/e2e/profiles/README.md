@@ -16,6 +16,21 @@ These tests verify the profile management system, including:
 
 Comprehensive test suite covering all aspects of profile management.
 
+### `state-persistence.spec.js` ⚠️ CRITICAL
+
+**These tests prevent regressions of the data loss bug** where hotkeys and holding tank data were lost during profile operations (duplication, switching).
+
+Test coverage:
+- ✅ **Duplication preserves data** - The exact bug scenario (duplicate Profile A → Profile B, switch back to A, verify data persists)
+- ✅ **Repeated switching preserves data** - Switch A → B → A → B → A multiple times without data loss
+- ✅ **Quit/restart preserves data** - Close app, restart with same profile, data should persist
+- ✅ **New profiles start empty** - Fresh profiles should not inherit data from other profiles
+- ✅ **state.json structure** - Verify file format is correct after operations
+
+**Root cause of the bug:** Race condition during profile state restoration where partial DOM state was saved during restoration, overwriting good state.json files. The fix introduces a restoration lock (`window.isRestoringProfileState`) that prevents saves during DOM reconstruction.
+
+**These tests MUST pass before releasing any profile-related changes.**
+
 #### Profile Launcher Tests
 - **Default profile display**: Verifies "Default User" profile appears on first launch
 - **Profile selection**: Tests clicking and selecting profiles
@@ -124,20 +139,24 @@ Each profile's preferences are stored in:
 tests/fixtures/test-user-data-<testId>/profiles/<ProfileName>/preferences.json
 ```
 
+## Completed Test Coverage
+
+✅ **Profile Duplication** - Covered in `state-persistence.spec.js`
+✅ **Hotkey Isolation** - Covered in `state-persistence.spec.js`
+✅ **Holding Tank Isolation** - Covered in `state-persistence.spec.js`
+
 ## Future Test Additions
 
 Potential areas for expanded test coverage:
 
 1. **Profile Deletion** - When delete functionality is added
 2. **Profile Renaming** - When rename functionality is added
-3. **Profile Duplication** - When duplicate functionality is added
-4. **Profile Export/Import** - When import/export is added
-5. **Hotkey Isolation** - Verify hotkeys don't bleed between profiles
-6. **Holding Tank Isolation** - Verify holding tank items are profile-specific
-7. **Window State Isolation** - Verify window size/position is per-profile
-8. **Last Used Tracking** - Verify profiles track when they were last used
-9. **Profile Avatars** - When avatar/icon support is added
-10. **Profile Colors** - When custom theming per profile is added
+3. **Profile Export/Import** - When import/export is added
+4. **File Loading (.mrv/.hld)** - Verify loading files doesn't corrupt state
+5. **Window State Isolation** - Verify window size/position is per-profile
+6. **Last Used Tracking** - Verify profiles track when they were last used
+7. **Profile Avatars** - When avatar/icon support is added
+8. **Profile Colors** - When custom theming per profile is added
 
 ## Related Files
 

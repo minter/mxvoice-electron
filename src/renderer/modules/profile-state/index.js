@@ -238,6 +238,10 @@ export function extractProfileState() {
 
 /**
  * Save profile state to file
+ * 
+ * IMPORTANT: This function takes NO parameters. It always extracts state from the DOM.
+ * Do not pass hotkeysModule or holdingTankModule - they are ignored.
+ * 
  * @returns {Promise<Object>} Result with success status
  */
 export async function saveProfileState() {
@@ -474,20 +478,46 @@ async function restoreHoldingTankTabs(holdingTankTabs, holdingTankModule) {
         tabContent.innerHTML = '';
       }
       
-      // Restore each song in order
+      // Restore each song in order by building DOM directly (avoids triggering saves)
       for (const songId of songIds) {
         try {
-          // Validate that song still exists in database
+          // Validate that song still exists in database and get its info
           const songResult = await window.secureElectronAPI.database.query(
-            'SELECT id FROM mrvoice WHERE id = ?',
+            'SELECT * FROM mrvoice WHERE id = ?',
             [songId]
           );
           
           if (songResult.success && songResult.data && songResult.data.length > 0) {
-            // Use holding tank module to add the song
-            if (holdingTankModule && holdingTankModule.addToHoldingTank) {
-              await holdingTankModule.addToHoldingTank(songId, tabContent);
+            const row = songResult.data[0];
+            const title = row.title || '[Unknown Title]';
+            const artist = row.artist || '[Unknown Artist]';
+            const time = row.time || '[??:??]';
+            
+            // Build DOM element directly (like addToHoldingTank but without the save)
+            const song_row = document.createElement('li');
+            song_row.style.fontSize = '11px';
+            song_row.className = 'song list-group-item context-menu';
+            song_row.setAttribute('draggable', 'true');
+            song_row.setAttribute('songid', songId);
+            song_row.textContent = `${title} by ${artist} (${time})`;
+            
+            // Add drag event listener
+            song_row.addEventListener('dragstart', (e) => {
+              e.dataTransfer.setData('text', songId);
+            });
+            
+            // Append to tab content
+            if (tabContent) {
+              tabContent.appendChild(song_row);
             }
+            
+            debugLog?.info('[PROFILE-STATE] Holding tank song restored successfully', {
+              module: 'profile-state',
+              function: 'restoreHoldingTankTabs',
+              tabNumber: tabNumber,
+              songId: songId,
+              title: title
+            });
           } else {
             debugLog?.warn('[PROFILE-STATE] Skipping deleted song in holding tank restore', { 
               module: 'profile-state',
@@ -525,11 +555,14 @@ export async function loadProfileState(options = {}) {
   try {
     const { hotkeysModule, holdingTankModule } = options;
     
+    // Set restoration lock to prevent saves during DOM restoration
+    window.isRestoringProfileState = true;
+    
     // Get current profile name for logging
     const currentProfileResult = await window.secureElectronAPI.profile.getCurrent();
     const currentProfile = currentProfileResult?.profile || 'unknown';
     
-    debugLog?.info('[PROFILE-STATE] Starting profile state load', { 
+    debugLog?.info('[PROFILE-STATE] Starting profile state load (restoration lock enabled)', { 
       module: 'profile-state',
       function: 'loadProfileState',
       profile: currentProfile
@@ -538,6 +571,7 @@ export async function loadProfileState(options = {}) {
     // Get profile-specific directory
     const dirResult = await window.secureElectronAPI.profile.getDirectory('state');
     if (!dirResult.success) {
+      window.isRestoringProfileState = false;
       debugLog?.info('[PROFILE-STATE] No profile directory found, skipping state load', { 
         module: 'profile-state',
         function: 'loadProfileState',
@@ -558,6 +592,7 @@ export async function loadProfileState(options = {}) {
     const stateFile = stateFileResult.success ? stateFileResult.data : null;
     
     if (!stateFile) {
+      window.isRestoringProfileState = false;
       debugLog?.error('[PROFILE-STATE] Failed to build state file path', {
         module: 'profile-state',
         function: 'loadProfileState',
@@ -577,6 +612,7 @@ export async function loadProfileState(options = {}) {
     // Check if state file exists
     const existsResult = await window.secureElectronAPI.fileSystem.exists(stateFile);
     if (!existsResult.success || !existsResult.exists) {
+      window.isRestoringProfileState = false;
       debugLog?.info('[PROFILE-STATE] No state file found, starting fresh', { 
         module: 'profile-state',
         function: 'loadProfileState',
@@ -602,6 +638,7 @@ export async function loadProfileState(options = {}) {
     
     // Handle empty or invalid state files
     if (!readResult.data || readResult.data.trim() === '') {
+      window.isRestoringProfileState = false;
       debugLog?.warn('[PROFILE-STATE] State file is empty, treating as no state', {
         module: 'profile-state',
         function: 'loadProfileState',
@@ -614,6 +651,7 @@ export async function loadProfileState(options = {}) {
     try {
       state = JSON.parse(readResult.data);
     } catch (parseError) {
+      window.isRestoringProfileState = false;
       debugLog?.error('[PROFILE-STATE] Failed to parse state JSON', {
         module: 'profile-state',
         function: 'loadProfileState',
@@ -685,8 +723,18 @@ export async function loadProfileState(options = {}) {
       function: 'loadProfileState'
     });
     
+    // Clear restoration lock
+    window.isRestoringProfileState = false;
+    debugLog?.info('[PROFILE-STATE] Restoration lock cleared', {
+      module: 'profile-state',
+      function: 'loadProfileState'
+    });
+    
     return { success: true, loaded: true };
   } catch (error) {
+    // Clear restoration lock even on error
+    window.isRestoringProfileState = false;
+    
     debugLog?.error('[PROFILE-STATE] Failed to load profile state', { 
       module: 'profile-state',
       function: 'loadProfileState',

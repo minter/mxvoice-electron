@@ -17,6 +17,7 @@ State is saved to `profiles/<ProfileName>/state.json` and automatically loaded o
 - **Data validation:** Skips songs that have been deleted from database
 - **Tab preservation:** Maintains custom tab names and song order
 - **Explicit save before switch:** State is saved synchronously before profile switching to ensure no data loss
+- **Restoration lock:** Prevents saves during state restoration to avoid race conditions and data corruption
 
 ## Usage
 
@@ -37,12 +38,11 @@ initializeProfileState({
 ```javascript
 import { saveProfileState } from './modules/profile-state/index.js';
 
-// Manually save current state
-await saveProfileState({
-  hotkeysModule: window.hotkeysModule,
-  holdingTankModule: window.holdingTank
-});
+// Manually save current state (extracts from DOM, takes no parameters)
+await saveProfileState();
 ```
+
+**Note:** `saveProfileState()` takes NO parameters. It always extracts state from the current DOM.
 
 ### Manual Load
 
@@ -138,6 +138,20 @@ userData/
         └── state.json
 ```
 
+## Restoration Lock
+
+During profile state restoration, a global flag `window.isRestoringProfileState` is set to prevent saves:
+
+1. **Set at start of restoration:** `loadProfileState()` sets `window.isRestoringProfileState = true`
+2. **Checked by save functions:** Both `saveHotkeysToStore()` and `saveHoldingTankToStore()` check this flag and skip saves if true
+3. **Cleared after restoration:** Flag is cleared when restoration completes or on error
+
+This prevents race conditions where:
+- DOM is being rebuilt from saved state
+- Each DOM update would trigger a save
+- Saves extract from partially-rebuilt DOM
+- Good state.json gets overwritten with incomplete data
+
 ## Export Interface
 
 ```javascript
@@ -148,8 +162,8 @@ export function initializeProfileState(options): Object
 // Extract current state without saving
 export function extractProfileState(): Object
 
-// Save state to file
-export function saveProfileState(options): Promise<{success: boolean, error?: string}>
+// Save state to file (takes NO parameters, extracts from DOM)
+export function saveProfileState(): Promise<{success: boolean, error?: string}>
   // options: { hotkeysModule, holdingTankModule }
 
 // Load state from file

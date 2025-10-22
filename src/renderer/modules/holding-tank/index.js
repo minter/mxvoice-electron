@@ -81,16 +81,22 @@ export function initHoldingTank() {
  * When profiles are active, saves to profile state instead of global store
  */
 export function saveHoldingTankToStore() {
+  // Skip save if currently restoring profile state
+  if (window.isRestoringProfileState) {
+    debugLog?.info('Skipping holding tank save - profile state restoration in progress', {
+      module: 'holding-tank',
+      function: 'saveHoldingTankToStore'
+    });
+    return Promise.resolve({ success: true, skipped: true });
+  }
+  
   // When profiles are active, save to profile state instead
   if (window.moduleRegistry && window.moduleRegistry.profileState) {
     debugLog?.info('Saving holding tank to profile state', {
       module: 'holding-tank',
       function: 'saveHoldingTankToStore'
     });
-    return window.moduleRegistry.profileState.saveProfileState({
-      hotkeysModule: window.moduleRegistry.hotkeys,
-      holdingTankModule: window.moduleRegistry.holdingTank
-    }).catch(err => {
+    return window.moduleRegistry.profileState.saveProfileState().catch(err => {
       debugLog?.error('Failed to save profile state from holding tank', {
         module: 'holding-tank',
         function: 'saveHoldingTankToStore',
@@ -213,6 +219,9 @@ export function populateHoldingTank(songIds) {
     addToHoldingTank(songId, Dom.$('.holding_tank.active'));
   });
   
+  // Save after all songs added (single save instead of N saves during loading)
+  saveHoldingTankToStore();
+  
   scaleScrollable();
   debugLog?.info('populateHoldingTank completed successfully', { 
     module: 'holding-tank',
@@ -257,7 +266,7 @@ export function addToHoldingTank(song_id, element) {
         targetEl.appendChild(song_row);
       }
       
-      saveHoldingTankToStore();
+      // Note: Save is now done by caller, not here, to avoid N saves during batch operations
       return { success: true, songId: song_id, title: title };
     } else {
       debugLog?.warn('Failed to get song by ID', { 

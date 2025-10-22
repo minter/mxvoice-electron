@@ -228,16 +228,22 @@ class HotkeysModule {
    * When profiles are active, saves to profile state instead of global store
    */
   saveHotkeysToStore() {
+    // Skip save if currently restoring profile state
+    if (window.isRestoringProfileState) {
+      debugLog?.info('Skipping hotkeys save - profile state restoration in progress', {
+        module: 'hotkeys',
+        function: 'saveHotkeysToStore'
+      });
+      return;
+    }
+    
     // When profiles are active, save to profile state instead
     if (window.moduleRegistry && window.moduleRegistry.profileState) {
       debugLog?.info('Saving hotkeys to profile state', {
         module: 'hotkeys',
         function: 'saveHotkeysToStore'
       });
-      window.moduleRegistry.profileState.saveProfileState({
-        hotkeysModule: this,
-        holdingTankModule: window.moduleRegistry.holdingTank
-      }).catch(err => {
+      window.moduleRegistry.profileState.saveProfileState().catch(err => {
         debugLog?.error('Failed to save profile state from hotkeys', {
           module: 'hotkeys',
           function: 'saveHotkeysToStore',
@@ -464,6 +470,10 @@ class HotkeysModule {
       const active = document.querySelector('#hotkey_tabs li a.active');
       if (active) active.textContent = title;
     }
+    
+    // Save after all hotkeys populated (single save instead of N saves during loading)
+    this.saveHotkeysToStore();
+    
     debugLog?.info('✅ populateHotkeys completed successfully', {
       module: 'hotkeys',
       function: 'populateHotkeys',
@@ -560,7 +570,7 @@ class HotkeysModule {
               if (span) span.textContent = `${title} by ${artist} (${time})`;
               element.setAttribute('songid', song_id);
             }
-            this.saveHotkeysToStore();
+            // Note: Save is now done by caller, not here, to avoid N saves during batch operations
           } else {
             debugLog?.warn('❌ Failed to get song by ID:', result.error, {
               module: 'hotkeys',
@@ -618,7 +628,7 @@ class HotkeysModule {
               if (span2) span2.textContent = `${title} by ${artist} (${time})`;
               element.setAttribute('songid', song_id);
             }
-            this.saveHotkeysToStore();
+            // Note: Save is now done by caller, not here, to avoid N saves during batch operations
           }
         })
         .catch(() => {
