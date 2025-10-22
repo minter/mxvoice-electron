@@ -78,9 +78,35 @@ export function initHoldingTank() {
 
 /**
  * Save holding tank data to store
+ * When profiles are active, saves to profile state instead of global store
  */
 export function saveHoldingTankToStore() {
-  // Only save if we have the new HTML format with mode toggle
+  // Skip save if currently restoring profile state
+  if (window.isRestoringProfileState) {
+    debugLog?.info('Skipping holding tank save - profile state restoration in progress', {
+      module: 'holding-tank',
+      function: 'saveHoldingTankToStore'
+    });
+    return Promise.resolve({ success: true, skipped: true });
+  }
+  
+  // When profiles are active, save to profile state instead
+  if (window.moduleRegistry && window.moduleRegistry.profileState) {
+    debugLog?.info('Saving holding tank to profile state', {
+      module: 'holding-tank',
+      function: 'saveHoldingTankToStore'
+    });
+    return window.moduleRegistry.profileState.saveProfileState().catch(err => {
+      debugLog?.error('Failed to save profile state from holding tank', {
+        module: 'holding-tank',
+        function: 'saveHoldingTankToStore',
+        error: err.message
+      });
+      return { success: false, error: err.message };
+    });
+  }
+  
+  // Legacy: save to global store for non-profile setups
   const currentHtml = Dom.html('#holding-tank-column');
   if (currentHtml.includes("mode-toggle")) {
     return store.set("holding_tank", currentHtml).then(result => {
@@ -193,6 +219,9 @@ export function populateHoldingTank(songIds) {
     addToHoldingTank(songId, Dom.$('.holding_tank.active'));
   });
   
+  // Save after all songs added (single save instead of N saves during loading)
+  saveHoldingTankToStore();
+  
   scaleScrollable();
   debugLog?.info('populateHoldingTank completed successfully', { 
     module: 'holding-tank',
@@ -237,7 +266,7 @@ export function addToHoldingTank(song_id, element) {
         targetEl.appendChild(song_row);
       }
       
-      saveHoldingTankToStore();
+      // Note: Save is now done by caller, not here, to avoid N saves during batch operations
       return { success: true, songId: song_id, title: title };
     } else {
       debugLog?.warn('Failed to get song by ID', { 

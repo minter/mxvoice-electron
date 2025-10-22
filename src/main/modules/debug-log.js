@@ -13,11 +13,12 @@ import Store from 'electron-store';
 /**
  * Initialize the main process debug logger
  * @param {Object} options - Configuration options
- * @param {Object} options.store - Store reference
+ * @param {Object} options.store - Store reference (optional, for main process use)
+ * @param {Function} options.getDebugPreference - Optional function to get debug preference (breaks circular dependency)
  * @returns {Object} Debug logger interface
  */
 function initializeMainDebugLog(options = {}) {
-  const { store } = options;
+  const { store, getDebugPreference } = options;
   
   // Log levels
   const LOG_LEVELS = {
@@ -40,21 +41,30 @@ function initializeMainDebugLog(options = {}) {
    * Uses caching to avoid repeated preference checks
    * @returns {boolean} Whether debug logging is enabled
    */
-  function isDebugEnabled() {
+  async function isDebugEnabled() {
     const now = Date.now();
-    
+
     // Return cached value if still valid
     if (now - debugEnabledCacheTime < CACHE_DURATION) {
       return debugEnabledCache;
     }
-    
+
     try {
-      debugEnabledCache = store.get("debug_log_enabled") || false;
+      // Use injected preference getter if available (breaks circular dependency)
+      if (getDebugPreference && typeof getDebugPreference === 'function') {
+        debugEnabledCache = await getDebugPreference();
+      } else if (store) {
+        // Fallback to global store
+        debugEnabledCache = store.get("debug_log_enabled") || false;
+      } else {
+        // Default to false when no store available
+        debugEnabledCache = false;
+      }
     } catch (error) {
       log.warn('Failed to get debug log preference:', error);
       debugEnabledCache = false;
     }
-    
+
     debugEnabledCacheTime = now;
     return debugEnabledCache;
   }
@@ -66,7 +76,9 @@ function initializeMainDebugLog(options = {}) {
    */
   function setDebugEnabled(enabled) {
     try {
-      store.set("debug_log_enabled", enabled);
+      if (store) {
+        store.set("debug_log_enabled", enabled);
+      }
       debugEnabledCache = enabled;
       debugEnabledCacheTime = Date.now();
       return true;
@@ -178,9 +190,9 @@ function initializeMainDebugLog(options = {}) {
    * @param {string} message - Info message
    * @param {Object} context - Additional context (optional)
    */
-  function info(message, context = null) {
+  async function info(message, context = null) {
     if (currentLogLevel >= LOG_LEVELS.INFO) {
-      const debugEnabled = isDebugEnabled();
+      const debugEnabled = await isDebugEnabled();
       if (debugEnabled) {
         const formattedMessage = formatLogMessage('INFO', message, context);
         log.info(formattedMessage);
@@ -194,9 +206,9 @@ function initializeMainDebugLog(options = {}) {
    * @param {string} message - Debug message
    * @param {Object} context - Additional context (optional)
    */
-  function debug(message, context = null) {
+  async function debug(message, context = null) {
     if (currentLogLevel >= LOG_LEVELS.DEBUG) {
-      const debugEnabled = isDebugEnabled();
+      const debugEnabled = await isDebugEnabled();
       if (debugEnabled) {
         const formattedMessage = formatLogMessage('DEBUG', message, context);
         log.debug(formattedMessage);
@@ -210,8 +222,8 @@ function initializeMainDebugLog(options = {}) {
    * @param {string} message - Log message
    * @param {Object} context - Additional context (optional)
    */
-  function logMessage(message, context = null) {
-    info(message, context);
+  async function logMessage(message, context = null) {
+    await info(message, context);
   }
   
   return {

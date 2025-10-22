@@ -221,7 +221,21 @@ export async function addSongsByPath(pathArray, category) {
       debugLog?.info('File copied successfully', { module: 'bulk-operations', function: 'addSongsByPath', songSourcePath, newPath });
     }
 
-    const categoryLabel = (typeof categories !== 'undefined') ? categories[category] : category;
+    // Get category description from database instead of relying on global categories object
+    let categoryLabel = category;
+    try {
+      const catResult = await secureDatabase.query("SELECT description FROM categories WHERE code = ?", [category]);
+      if (catResult?.data && Array.isArray(catResult.data) && catResult.data.length > 0) {
+        categoryLabel = catResult.data[0].description || category;
+      }
+    } catch (catError) {
+      debugLog?.warn('Failed to get category description, using code', { 
+        module: 'bulk-operations', 
+        function: 'addSongsByPath', 
+        category, 
+        error: catError?.message 
+      });
+    }
 
     // Create row safely without interpreting user-controlled values as HTML
     const row = document.createElement('tr');

@@ -63,6 +63,7 @@ Handles initial data loading from electron store:
 - Loads column order configuration
 - Loads font size preferences
 - Provides DOM-dependent initialization for post-load setup
+- **Profile-aware one-time migration**: Only migrates legacy data from global config.json for "Default User" profile on first run after upgrading from pre-4.1; uses `migration_completed` flag to ensure it never runs again; new profiles always start fresh
 
 ### 5. EnvironmentSetup (environment-setup.js)
 Configures the application environment and system:

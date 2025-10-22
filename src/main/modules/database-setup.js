@@ -8,7 +8,10 @@
 import Store from 'electron-store';
 import path from 'path';
 import fs from 'fs';
-import { app } from 'electron';
+import electron from 'electron';
+
+// Destructure from electron (handles both named and default exports)
+const { app } = electron;
 import { fileURLToPath } from 'url';
 import pkg from 'node-sqlite3-wasm';
 const { Database, onRuntimeInitialized } = pkg;

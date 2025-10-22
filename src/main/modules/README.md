@@ -50,11 +50,15 @@ Manages all IPC (Inter-Process Communication) between main and renderer processe
 - **Progress tracking**: Provides real-time progress updates for long-running file operations
 - **Error handling and cleanup**: Robust error handling with automatic cleanup of partial files
 - **Stream management**: Proper stream lifecycle management with automatic cleanup
+- **Audio metadata extraction**: Uses `music-metadata` with `duration: true` option for accurate metadata parsing
 
 **Key Features:**
 
 - `file-copy`: Streaming file copy with memory efficiency
 - `file-copy-with-progress`: File copy with progress tracking capabilities
+- `audio-get-metadata`: Extracts title, artist, and duration from audio files
+  - Uses `duration: true` option to ensure accurate duration for OGG/Vorbis and other formats
+  - Without this option, music-metadata may report incorrect (truncated) durations for certain file types
 - Automatic destination directory creation
 - Partial file cleanup on errors
 - Comprehensive error logging and recovery

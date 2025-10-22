@@ -4,7 +4,10 @@
  * Handles file system operations for the MxVoice Electron application.
  */
 
-import { dialog, app } from 'electron';
+import electron from 'electron';
+
+// Destructure from electron (handles both named and default exports)
+const { dialog, app } = electron;
 import fs from 'fs';
 import path from 'path';
 import readlines from 'n-readlines';

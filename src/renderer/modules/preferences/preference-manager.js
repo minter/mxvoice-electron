@@ -6,6 +6,8 @@
  * @module preference-manager
  */
 
+import { getPreference, setPreference } from './profile-preference-adapter.js';
+
 /**
  * Initialize the preference manager
  * @param {Object} options - Configuration options
@@ -18,15 +20,24 @@ function initializePreferenceManager(options = {}) {
   // Prefer exposed API; fallback to secure API if only that exists
   const electronAPISource = (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null;
   const electronAPI = options.electronAPI || electronAPISource;
+  const debugLog = typeof window !== 'undefined' ? window.debugLog : null;
   
   /**
    * Open the preferences modal
    * Shows the preferences dialog for user configuration
    */
-  function openPreferencesModal() {
+  async function openPreferencesModal() {
     try {
-      import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#preferencesModal'));
-    } catch {}
+      // Load preferences first, then show modal
+      await loadPreferences();
+      const { showModal } = await import('../ui/bootstrap-adapter.js');
+      showModal('#preferencesModal');
+    } catch (error) {
+      debugLog?.error('Failed to open preferences modal', {
+        function: 'openPreferencesModal',
+        error: error.message
+      });
+    }
   }
   
   /**
@@ -34,32 +45,115 @@ function initializePreferenceManager(options = {}) {
    * Loads all stored preferences and populates the preferences modal
    */
   async function loadPreferences() {
-    // Use new store API for loading preferences
-    if (electronAPI && electronAPI.store) {
+    // Get the current electronAPI (may have been set after initialization)
+    const currentAPI = electronAPI || (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI));
+    
+    debugLog?.info('[PREFS-LOAD] Current API status', {
+      function: 'loadPreferences',
+      hasCurrentAPI: !!currentAPI,
+      hasStore: !!(currentAPI && currentAPI.store),
+      hasProfile: !!(currentAPI && currentAPI.profile),
+      apiKeys: currentAPI ? Object.keys(currentAPI) : []
+    });
+    
+    // Use adapter for loading preferences (routes to profile or global as appropriate)
+    if (currentAPI && currentAPI.store) {
       try {
         const [dbDir, musicDir, hotkeyDir, fadeSeconds, debugLogPref, prereleasePref, screenModePref] = await Promise.all([
-          electronAPI.store.get("database_directory"),
-          electronAPI.store.get("music_directory"),
-          electronAPI.store.get("hotkey_directory"),
-          electronAPI.store.get("fade_out_seconds"),
-          electronAPI.store.get("debug_log_enabled"),
-          electronAPI.store.get("prerelease_updates"),
-          electronAPI.store.get("screen_mode")
+          getPreference("database_directory", currentAPI),
+          getPreference("music_directory", currentAPI),
+          getPreference("hotkey_directory", currentAPI),
+          getPreference("fade_out_seconds", currentAPI),
+          getPreference("debug_log_enabled", currentAPI),
+          getPreference("prerelease_updates", currentAPI),
+          getPreference("screen_mode", currentAPI)
         ]);
         
-        if (dbDir.success) { const el = document.getElementById('preferences-database-directory'); if (el) el.value = dbDir.value || ''; }
-        if (musicDir.success) { const el = document.getElementById('preferences-song-directory'); if (el) el.value = musicDir.value || ''; }
-        if (hotkeyDir.success) { const el = document.getElementById('preferences-hotkey-directory'); if (el) el.value = hotkeyDir.value || ''; }
-        if (fadeSeconds.success) { const el = document.getElementById('preferences-fadeout-seconds'); if (el) el.value = fadeSeconds.value || ''; }
-        if (debugLogPref.success) { const el = document.getElementById('preferences-debug-log-enabled'); if (el) el.checked = !!debugLogPref.value; }
-        if (prereleasePref.success) { const el = document.getElementById('preferences-prerelease-updates'); if (el) el.checked = !!prereleasePref.value; }
-        if (screenModePref.success) { const el = document.getElementById('preferences-screen-mode'); if (el) el.value = screenModePref.value || 'auto'; }
+        debugLog?.info('[PREFS-LOAD] Loaded preferences', {
+          function: 'loadPreferences',
+          dbDir: dbDir,
+          musicDir: musicDir,
+          hotkeyDir: hotkeyDir
+        });
+        
+        if (dbDir.success) { 
+          const el = document.getElementById('preferences-database-directory'); 
+          if (el) {
+            el.value = dbDir.value || ''; 
+            debugLog?.info('[PREFS-LOAD] Set database directory field', {
+              elementFound: !!el,
+              value: dbDir.value,
+              finalValue: el.value
+            });
+          }
+        }
+        if (musicDir.success) { 
+          const el = document.getElementById('preferences-song-directory'); 
+          if (el) {
+            el.value = musicDir.value || ''; 
+            debugLog?.info('[PREFS-LOAD] Set music directory field', {
+              elementFound: !!el,
+              value: musicDir.value,
+              finalValue: el.value
+            });
+          }
+        }
+        if (hotkeyDir.success) { 
+          const el = document.getElementById('preferences-hotkey-directory'); 
+          if (el) {
+            el.value = hotkeyDir.value || ''; 
+            debugLog?.info('[PREFS-LOAD] Set hotkey directory field', {
+              elementFound: !!el,
+              value: hotkeyDir.value,
+              finalValue: el.value
+            });
+          }
+        }
+        if (fadeSeconds.success) { 
+          const el = document.getElementById('preferences-fadeout-seconds'); 
+          if (el) {
+            el.value = fadeSeconds.value || '3';
+            debugLog?.info('[PREFS-LOAD] Set fade seconds field', { value: fadeSeconds.value, finalValue: el.value });
+          }
+        }
+        if (debugLogPref.success) { 
+          const el = document.getElementById('preferences-debug-log-enabled'); 
+          if (el) {
+            el.checked = !!debugLogPref.value;
+            debugLog?.info('[PREFS-LOAD] Set debug log field', { value: debugLogPref.value, checked: el.checked });
+          }
+        }
+        if (prereleasePref.success) { 
+          const el = document.getElementById('preferences-prerelease-updates'); 
+          if (el) {
+            el.checked = !!prereleasePref.value;
+            debugLog?.info('[PREFS-LOAD] Set prerelease field', { value: prereleasePref.value, checked: el.checked });
+          }
+        }
+        if (screenModePref.success) { 
+          const el = document.getElementById('preferences-screen-mode'); 
+          if (el) {
+            el.value = screenModePref.value || 'auto';
+            debugLog?.info('[PREFS-LOAD] Set screen mode field', { value: screenModePref.value, finalValue: el.value });
+          }
+        }
       } catch (error) {
-        await debugLog.error('Failed to load preferences', { 
+        debugLog?.error('Failed to load preferences', { 
           function: "loadPreferences",
-          error: error
+          error: error.message,
+          stack: error.stack
         });
       }
+    } else {
+      debugLog?.error('Cannot load preferences - electronAPI not available', {
+        function: 'loadPreferences',
+        hasElectronAPI: !!currentAPI,
+        hasStore: !!(currentAPI && currentAPI.store),
+        windowAPI: typeof window !== 'undefined' ? {
+          hasElectronAPI: !!window.electronAPI,
+          hasSecureAPI: !!window.secureElectronAPI
+        } : 'window not available'
+      });
     }
   }
   
@@ -76,7 +170,7 @@ function initializePreferenceManager(options = {}) {
   async function getDatabaseDirectory() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("database_directory");
+        const result = await getPreference("database_directory", electronAPI);
         if (result.success) {
           return result.value;
         } else {
@@ -103,7 +197,7 @@ function initializePreferenceManager(options = {}) {
   async function getMusicDirectory() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("music_directory");
+        const result = await getPreference("music_directory", electronAPI);
         if (result.success) {
           return result.value;
         } else {
@@ -130,7 +224,7 @@ function initializePreferenceManager(options = {}) {
   async function getHotkeyDirectory() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("hotkey_directory");
+        const result = await getPreference("hotkey_directory", electronAPI);
         if (result.success) {
           return result.value;
         } else {
@@ -157,7 +251,7 @@ function initializePreferenceManager(options = {}) {
   async function getFadeOutSeconds() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("fade_out_seconds");
+        const result = await getPreference("fade_out_seconds", electronAPI);
         if (result.success) {
           return result.value;
         } else {
@@ -184,7 +278,7 @@ function initializePreferenceManager(options = {}) {
   async function getDebugLogEnabled() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("debug_log_enabled");
+        const result = await getPreference("debug_log_enabled", electronAPI);
         if (result.success) {
           return result.value || false;
         } else {
@@ -211,7 +305,7 @@ function initializePreferenceManager(options = {}) {
   async function getPrereleaseUpdates() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("prerelease_updates");
+        const result = await getPreference("prerelease_updates", electronAPI);
         if (result.success) {
           return result.value || false;
         } else {
@@ -238,7 +332,7 @@ function initializePreferenceManager(options = {}) {
   async function getScreenMode() {
     if (electronAPI && electronAPI.store) {
       try {
-        const result = await electronAPI.store.get("screen_mode");
+        const result = await getPreference("screen_mode", electronAPI);
         if (result.success) {
           return result.value || 'auto';
         } else {

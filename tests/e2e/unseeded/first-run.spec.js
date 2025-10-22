@@ -28,7 +28,7 @@ test.describe('First run flow', () => {
 
     app = await electron.launch({
       executablePath: electronPath,
-      args: ['.'],
+      args: ['.', '--profile=Default User'],
       env: {
         ...process.env,
         NODE_ENV: 'test',

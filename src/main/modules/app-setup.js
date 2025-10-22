@@ -5,11 +5,16 @@
  * for the MxVoice Electron application.
  */
 
-import { app, BrowserWindow, Menu, dialog, shell, nativeTheme, screen } from 'electron';
+import electron from 'electron';
+import log from 'electron-log';
 import { getLogService } from './log-service.js';
+import * as profileManager from './profile-manager.js';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
+
+// Destructure from electron (handles both named and default exports)
+const { app, BrowserWindow, Menu, dialog, shell, nativeTheme, screen, ipcMain } = electron;
 
 // Get __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
@@ -21,6 +26,7 @@ let store;
 let autoUpdater;
 let fileOperations;
 let debugLog;
+let getCurrentProfile;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -29,6 +35,7 @@ function initializeAppSetup(dependencies) {
   autoUpdater = dependencies.autoUpdater;
   fileOperations = dependencies.fileOperations;
   debugLog = dependencies.debugLog;
+  getCurrentProfile = dependencies.getCurrentProfile;
 }
 
 // Create the main window
@@ -50,7 +57,7 @@ function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScr
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, '../../preload/preload-modular.js'),
+      preload: path.join(__dirname, '../../preload/preload-modular.cjs'),
       sandbox: false, // Keep false for now as we're using preload scripts
       webSecurity: true,
       allowRunningInsecureContent: false,
@@ -117,64 +124,106 @@ function setupWindowStateSaving() {
     windowBounds: mainWindow.getBounds()
   });
 
-  // Save window state on resize
-  mainWindow.on('will-resize', (_event, newBounds) => {
-    debugLog?.debug('Window will-resize event triggered', { 
+  // Use debounced save for frequent events (move/resize)
+  let saveTimeout = null;
+  const debouncedSave = () => {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+      saveWindowState(mainWindow).catch(err => {
+        debugLog?.error('Error in debounced window state save', {
+          module: 'app-setup',
+          function: 'setupWindowStateSaving',
+          error: err.message
+        });
+      });
+    }, 500); // Wait 500ms after last event before saving
+  };
+
+  // Save window state after resize completes
+  mainWindow.on('resized', () => {
+    debugLog?.debug('Window resized event triggered', { 
       module: 'app-setup', 
-      function: 'setupWindowStateSaving',
-      newBounds: newBounds
+      function: 'setupWindowStateSaving'
     });
-    saveWindowState(mainWindow);
+    debouncedSave();
   });
 
-  // Save window state on move
-  mainWindow.on('will-move', (_event, newBounds) => {
-    debugLog?.debug('Window will-move event triggered', { 
+  // Save window state after move completes
+  mainWindow.on('moved', () => {
+    debugLog?.debug('Window moved event triggered', { 
       module: 'app-setup', 
-      function: 'setupWindowStateSaving',
-      newBounds: newBounds
+      function: 'setupWindowStateSaving'
     });
-    saveWindowState(mainWindow);
+    debouncedSave();
   });
 
   // Save window state when maximized
   mainWindow.on('maximize', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on maximize', { module: 'app-setup', error: err.message });
+    });
   });
 
   // Save window state when unmaximized
   mainWindow.on('unmaximize', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on unmaximize', { module: 'app-setup', error: err.message });
+    });
   });
 
   // Save window state when entering fullscreen
   mainWindow.on('enter-full-screen', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on enter-fullscreen', { module: 'app-setup', error: err.message });
+    });
   });
 
   // Save window state when leaving fullscreen
   mainWindow.on('leave-full-screen', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on leave-fullscreen', { module: 'app-setup', error: err.message });
+    });
   });
 
   // Save window state when minimized (for completeness)
   mainWindow.on('minimize', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on minimize', { module: 'app-setup', error: err.message });
+    });
   });
 
   // Save window state when restored from minimize
   mainWindow.on('restore', () => {
-    saveWindowState(mainWindow);
+    saveWindowState(mainWindow).catch(err => {
+      debugLog?.error('Error saving on restore', { module: 'app-setup', error: err.message });
+    });
   });
 
-  // Save window state before closing (this is the key event)
-  mainWindow.on('close', () => {
-    saveWindowState(mainWindow);
-  });
-
-  // Also save on before-unload as backup
-  mainWindow.on('before-unload', () => {
-    saveWindowState(mainWindow);
+  // Save window state on close (non-blocking)
+  mainWindow.on('close', async (event) => {
+    debugLog?.info('Window closing, saving window state...', {
+      module: 'app-setup',
+      function: 'setupWindowStateSaving'
+    });
+    
+    try {
+      // Clear any pending debounced saves
+      if (saveTimeout) clearTimeout(saveTimeout);
+      
+      // Save window state (let renderer handle profile state via beforeunload)
+      await saveWindowState(mainWindow);
+      
+      debugLog?.info('Window state saved on close', {
+        module: 'app-setup',
+        function: 'setupWindowStateSaving'
+      });
+    } catch (err) {
+      debugLog?.error('Error saving window state on close', {
+        module: 'app-setup',
+        function: 'setupWindowStateSaving',
+        error: err.message
+      });
+    }
   });
 
 }
@@ -182,14 +231,14 @@ function setupWindowStateSaving() {
 /**
  * Save complete window state to store
  * Includes position, size, maximized state, fullscreen state, and display ID
+ * Saves to profile-specific preferences when a profile is active
  */
-function saveWindowState(window) {
-  if (!window || !store || window.isDestroyed()) {
+async function saveWindowState(window) {
+  if (!window || window.isDestroyed()) {
     debugLog?.warn('Cannot save window state - missing dependencies', { 
       module: 'app-setup', 
       function: 'saveWindowState',
       hasWindow: !!window,
-      hasStore: !!store,
       isDestroyed: window?.isDestroyed?.()
     });
     return;
@@ -209,18 +258,37 @@ function saveWindowState(window) {
       displayName: display.label || `Display ${display.id}`
     };
 
-    // Save individual properties for backward compatibility
-    const widthResult = store.set('browser_width', state.width);
-    const heightResult = store.set('browser_height', state.height);
+    // Check if a profile is active
+    const mainModule = await import('../index-modular.js');
+    const currentProfile = mainModule.getCurrentProfile();
     
-    // Save complete window state
-    const windowStateResult = store.set('window_state', state);
-
-    debugLog?.debug('Window state saved successfully', { 
-      module: 'app-setup', 
-      function: 'saveWindowState',
-      state: state
-    });
+    if (currentProfile && profileManager) {
+      // Save to profile-specific preferences
+      await profileManager.saveProfilePreferences(currentProfile, {
+        ...await profileManager.loadProfilePreferences(currentProfile),
+        window_state: state,
+        browser_width: state.width,
+        browser_height: state.height
+      });
+      
+      debugLog?.debug('Window state saved to profile preferences', { 
+        module: 'app-setup', 
+        function: 'saveWindowState',
+        profile: currentProfile,
+        state: state
+      });
+    } else if (store) {
+      // Fallback to global store if no profile active
+      store.set('browser_width', state.width);
+      store.set('browser_height', state.height);
+      store.set('window_state', state);
+      
+      debugLog?.debug('Window state saved to global store (no profile)', { 
+        module: 'app-setup', 
+        function: 'saveWindowState',
+        state: state
+      });
+    }
   } catch (error) {
     debugLog?.error('Failed to save window state', { 
       module: 'app-setup', 
@@ -234,18 +302,73 @@ function saveWindowState(window) {
 /**
  * Load window state from store
  * Returns complete window state object or null if not available
+ * Loads from profile-specific preferences when a profile is active
  */
-function loadWindowState(storeInstance = store) {
-  if (!storeInstance) {
-    debugLog?.warn('Cannot load window state - store not available', { 
-      module: 'app-setup', 
-      function: 'loadWindowState'
-    });
-    return null;
-  }
-
+async function loadWindowState(storeInstance = store, currentProfile = null) {
   try {
-    debugLog?.info('Loading window state from store', { 
+    log.info('loadWindowState called', {
+      module: 'app-setup',
+      function: 'loadWindowState',
+      hasCurrentProfile: !!currentProfile,
+      currentProfile: currentProfile,
+      hasProfileManager: !!profileManager,
+      hasStore: !!storeInstance
+    });
+    
+    // Check if a profile is active
+    if (currentProfile && profileManager) {
+      log.info('Loading window state from profile preferences', { 
+        module: 'app-setup', 
+        function: 'loadWindowState',
+        profile: currentProfile
+      });
+      
+      const preferences = await profileManager.loadProfilePreferences(currentProfile);
+      log.info('Profile preferences loaded', {
+        module: 'app-setup',
+        function: 'loadWindowState',
+        hasPreferences: !!preferences,
+        hasWindowState: !!preferences?.window_state,
+        windowState: preferences?.window_state
+      });
+      
+      const state = preferences?.window_state;
+      
+      if (state && typeof state === 'object') {
+        log.info('Window state loaded from profile successfully', { 
+          module: 'app-setup', 
+          function: 'loadWindowState',
+          profile: currentProfile,
+          state: state
+        });
+        return state;
+      } else {
+        log.info('No window state found in profile, trying global fallback', { 
+          module: 'app-setup', 
+          function: 'loadWindowState',
+          profile: currentProfile,
+          preferencesType: typeof preferences,
+          stateType: typeof state
+        });
+      }
+    } else {
+      log.info('Skipping profile-specific window state', {
+        module: 'app-setup',
+        function: 'loadWindowState',
+        reason: !currentProfile ? 'no currentProfile' : 'no profileManager'
+      });
+    }
+    
+    // Fallback to global store if no profile or no profile state
+    if (!storeInstance) {
+      log.warn('Cannot load window state - store not available', { 
+        module: 'app-setup', 
+        function: 'loadWindowState'
+      });
+      return null;
+    }
+
+    log.info('Loading window state from global store', { 
       module: 'app-setup', 
       function: 'loadWindowState',
       storePath: storeInstance.path
@@ -253,21 +376,21 @@ function loadWindowState(storeInstance = store) {
     
     const state = storeInstance.get('window_state');
     if (state && typeof state === 'object') {
-      debugLog?.info('Window state loaded successfully', { 
+      log.info('Window state loaded from global store successfully', { 
         module: 'app-setup', 
         function: 'loadWindowState',
         state: state
       });
       return state;
     } else {
-      debugLog?.info('No window state found in store', { 
+      log.info('No window state found in global store', { 
         module: 'app-setup', 
         function: 'loadWindowState',
         foundState: state
       });
     }
   } catch (error) {
-    debugLog?.error('Failed to load window state', { 
+    log.error('Failed to load window state', { 
       module: 'app-setup', 
       function: 'loadWindowState',
       error: error.message,
@@ -409,6 +532,60 @@ function createApplicationMenu() {
           label: "Manage Categories",
           click: () => {
             manageCategories();
+          },
+        },
+      ],
+    },
+    {
+      label: "Profile",
+      submenu: [
+        {
+          label: "Switch Profile...",
+          click: async () => {
+            // Send message to renderer to handle profile switch with state save
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:switch-profile');
+            }
+          },
+        },
+        {
+          label: "Log Out",
+          enabled: getCurrentProfile ? getCurrentProfile() !== 'Default User' : true,
+          click: () => {
+            // Send message to renderer to handle logout (switch to Default Profile)
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:logout');
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: "New Profile...",
+          click: () => {
+            // Send message to renderer to handle new profile creation
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:new-profile');
+            }
+          },
+        },
+        {
+          label: "Duplicate Profile...",
+          click: () => {
+            // Send message to renderer to handle profile duplication
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:duplicate-profile');
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: "Delete Current Profile...",
+          enabled: getCurrentProfile ? getCurrentProfile() !== 'Default User' : true,
+          click: () => {
+            // Send message to renderer to handle current profile deletion
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:delete-current-profile');
+            }
           },
         },
       ],
@@ -584,9 +761,10 @@ function showAboutDialog() {
       backgroundColor,
       autoHideMenuBar: true,
       webPreferences: {
-        sandbox: true,
+        sandbox: false, // Required for preload script
         contextIsolation: true,
-        nodeIntegration: false
+        nodeIntegration: false,
+        preload: path.join(__dirname, '../../preload/about-preload.cjs')
       }
     });
 
@@ -594,7 +772,7 @@ function showAboutDialog() {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;" />
     <title>About ${applicationName}</title>
     <style>
       :root {
@@ -610,10 +788,46 @@ function showAboutDialog() {
       .heading { font-weight: 600; margin-bottom: 4px; }
       .credits { white-space: pre-line; }
       .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
-      .link { color: #4da3ff; text-decoration: none; }
+      .link { color: #4da3ff; text-decoration: none; cursor: pointer; }
       .btn { background: transparent; color: var(--fg); border: 1px solid var(--muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
       .btn:hover { border-color: var(--fg); }
     </style>
+    <script>
+      // Wait for DOM to load, then attach event listeners
+      document.addEventListener('DOMContentLoaded', () => {
+        // Check if aboutAPI is available
+        if (!window.aboutAPI) {
+          console.error('aboutAPI is not available! Preload script may not have loaded.');
+          return;
+        }
+
+        // Close button
+        const closeBtn = document.getElementById('close-btn');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => {
+            window.aboutAPI.closeWindow();
+          });
+        }
+
+        // Website link
+        const websiteLink = document.getElementById('website-link');
+        if (websiteLink) {
+          websiteLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.aboutAPI.openExternal('https://mxvoice.app/');
+          });
+        }
+
+        // Support link
+        const supportLink = document.getElementById('support-link');
+        if (supportLink) {
+          supportLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.aboutAPI.openExternal('mailto:support@mxvoice.app?subject=' + encodeURIComponent('Mx. Voice Support Request'));
+          });
+        }
+      });
+    </script>
   </head>
   <body>
     <div class="container">
@@ -628,19 +842,63 @@ function showAboutDialog() {
       </div>
       <div class="section">
         <div class="heading">Website</div>
-        <a class="link" href="https://mxvoice.app/" onclick="event.preventDefault(); window.open('https://mrvoice.net/')">https://mrvoice.net/</a>
+        <a class="link" id="website-link" href="https://mxvoice.app/">https://mxvoice.app/</a>
       </div>
       <div class="section">
         <div class="heading">Support</div>
-        <a class="link" href="mailto:support@mxvoice.app" onclick="event.preventDefault(); window.open('mailto:support@mxvoice.app?subject=' + encodeURIComponent('Mx. Voice Support Request'))">Email support@mxvoice.app</a>
+        <a class="link" id="support-link" href="mailto:support@mxvoice.app">Email support@mxvoice.app</a>
       </div>
       <div class="footer">
         <div style="color: var(--muted);">© 2025</div>
-        <button class="btn" onclick="window.close()">Close</button>
+        <button class="btn" id="close-btn">Close</button>
       </div>
     </div>
   </body>
 </html>`;
+
+    // Register IPC handlers for this about window
+    const closeHandler = () => {
+      debugLog?.info('About window close requested via IPC', { 
+        module: 'app-setup', 
+        function: 'showAboutDialog' 
+      });
+      if (aboutWindow && !aboutWindow.isDestroyed()) {
+        aboutWindow.close();
+      }
+    };
+
+    const openExternalHandler = (event, url) => {
+      debugLog?.info('Opening external URL from about dialog', { 
+        module: 'app-setup', 
+        function: 'showAboutDialog',
+        url 
+      });
+      shell.openExternal(url);
+    };
+
+    // Remove existing handlers if any
+    ipcMain.removeHandler('about:close-window');
+    ipcMain.removeAllListeners('about:close-window');
+    ipcMain.removeAllListeners('about:open-external');
+
+    debugLog?.info('Registering IPC handlers for about window', { 
+      module: 'app-setup', 
+      function: 'showAboutDialog' 
+    });
+
+    // Register new handlers
+    ipcMain.on('about:close-window', closeHandler);
+    ipcMain.on('about:open-external', openExternalHandler);
+
+    // Clean up handlers when window closes
+    aboutWindow.on('closed', () => {
+      debugLog?.info('About window closed, cleaning up IPC handlers', { 
+        module: 'app-setup', 
+        function: 'showAboutDialog' 
+      });
+      ipcMain.removeListener('about:close-window', closeHandler);
+      ipcMain.removeListener('about:open-external', openExternalHandler);
+    });
 
     aboutWindow.removeMenu();
     aboutWindow.loadURL('data:text/html;charset=UTF-8,' + encodeURIComponent(html));
@@ -763,7 +1021,7 @@ function setupAppLifecycle() {
         'Wade Minter',
         'Andrew Berkowitz'
       ],
-      website: 'https://mrvoice.net/',
+      website: 'https://mxvoice.app/',
       credits: "Wade Minter\nAndrew Berkowitz"
     })
   }
