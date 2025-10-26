@@ -1424,36 +1424,52 @@ function registerAllHandlers() {
   });
 
   // Profile: Save state (called on window close)
-  ipcMain.handle('profile:save-state', async (event, state) => {
+  ipcMain.handle('profile:save-state', async (event, state, profileName) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const profileDir = mainModule.getProfileDirectory('state');
+      // If profileName is not provided, fall back to current profile
+      if (!profileName) {
+        const mainModule = await import('../index-modular.js');
+        profileName = mainModule.getCurrentProfile();
+      }
+
+      if (!profileName) {
+        throw new Error('No profile name available for state save');
+      }
+
+      // Use profile manager to get the correct directory path
+      const profileManager = await import('./profile-manager.js');
+      const sanitizedName = profileManager.sanitizeProfileName(profileName);
+      const profilesDir = profileManager.getProfilesDirectory();
+      const profileDir = path.join(profilesDir, sanitizedName, 'state');
       const stateFile = path.join(profileDir, 'state.json');
-      
-      debugLog?.info('Saving profile state', { 
+
+      debugLog?.info('Saving profile state', {
         module: 'ipc-handlers',
         function: 'profile:save-state',
+        profileName: profileName,
+        sanitizedName: sanitizedName,
         file: stateFile
       });
-      
+
       // Ensure directory exists
       await fsPromises.mkdir(profileDir, { recursive: true });
-      
+
       // Write state file
       await fsPromises.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
-      
-      debugLog?.info('Profile state saved successfully', { 
+
+      debugLog?.info('Profile state saved successfully', {
         module: 'ipc-handlers',
         function: 'profile:save-state',
+        profileName: profileName,
         file: stateFile
       });
-      
+
       return { success: true };
     } catch (error) {
-      debugLog?.error('Error saving profile state', { 
+      debugLog?.error('Error saving profile state', {
         module: 'ipc-handlers',
         function: 'profile:save-state',
-        error: error.message 
+        error: error.message
       });
       return { success: false, error: error.message };
     }
@@ -1593,37 +1609,53 @@ function registerAllHandlers() {
   });
   
   // Profile: Save state before switch (explicit save, not relying on beforeunload)
-  ipcMain.handle('profile:save-state-before-switch', async (event, state) => {
+  ipcMain.handle('profile:save-state-before-switch', async (event, state, profileName) => {
     try {
-      debugLog?.info('Saving profile state before switch', { 
+      // If profileName is not provided, fall back to current profile
+      if (!profileName) {
+        const mainModule = await import('../index-modular.js');
+        profileName = mainModule.getCurrentProfile();
+      }
+
+      if (!profileName) {
+        throw new Error('No profile name available for state save before switch');
+      }
+
+      debugLog?.info('Saving profile state before switch', {
         module: 'ipc-handlers',
         function: 'profile:save-state-before-switch',
+        profileName: profileName,
         hasState: !!state
       });
-      
-      // Use the same approach as profile:save-state to ensure correct directory
-      const mainModule = await import('../index-modular.js');
-      const profileDir = mainModule.getProfileDirectory('state');
+
+      // Use profile manager to get the correct directory path
+      const profileManager = await import('./profile-manager.js');
+      const sanitizedName = profileManager.sanitizeProfileName(profileName);
+      const profilesDir = profileManager.getProfilesDirectory();
+      const profileDir = path.join(profilesDir, sanitizedName, 'state');
       const stateFile = path.join(profileDir, 'state.json');
-      
+
       debugLog?.info('Writing state file before switch', {
         module: 'ipc-handlers',
         function: 'profile:save-state-before-switch',
+        profileName: profileName,
+        sanitizedName: sanitizedName,
         file: stateFile
       });
-      
+
       // Ensure directory exists
       await fsPromises.mkdir(profileDir, { recursive: true });
-      
+
       // Write state file
       await fsPromises.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
-      
+
       debugLog?.info('State saved successfully before switch', {
         module: 'ipc-handlers',
         function: 'profile:save-state-before-switch',
+        profileName: profileName,
         file: stateFile
       });
-      
+
       return { success: true };
     } catch (error) {
       debugLog?.error('Error saving profile state before switch', {

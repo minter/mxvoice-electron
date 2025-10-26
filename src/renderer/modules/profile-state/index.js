@@ -766,20 +766,26 @@ export async function switchProfileWithSave() {
       holdingTankTabs: state.holdingTank?.length || 0
     });
     
+    // Get current profile name for explicit saving
+    const currentProfileResult = await window.secureElectronAPI.profile.getCurrent();
+    const currentProfile = currentProfileResult?.profile || 'unknown';
+
     // Save state explicitly before switching
-    const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state);
-    
+    const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state, currentProfile);
+
     if (!saveResult.success) {
       debugLog?.error('[PROFILE-STATE] Failed to save state before switch', {
         module: 'profile-state',
         function: 'switchProfileWithSave',
+        profile: currentProfile,
         error: saveResult.error
       });
       // Continue with switch anyway - better to switch than to block
     } else {
       debugLog?.info('[PROFILE-STATE] State saved successfully before switch', {
         module: 'profile-state',
-        function: 'switchProfileWithSave'
+        function: 'switchProfileWithSave',
+        profile: currentProfile
       });
     }
     
@@ -828,11 +834,15 @@ export function initializeProfileState({ hotkeysModule, holdingTankModule } = {}
     // Send to main process for saving (fire and forget)
     // The main process will handle the actual file write
     if (window.secureElectronAPI && window.secureElectronAPI.profile) {
-      window.secureElectronAPI.profile.saveState(state).catch(err => {
-        debugLog?.error('[PROFILE-STATE] Failed to save state on quit', { 
+      // Get current profile name for explicit saving
+      window.secureElectronAPI.profile.getCurrent().then(currentProfileResult => {
+        const currentProfile = currentProfileResult?.profile || 'unknown';
+        return window.secureElectronAPI.profile.saveState(state, currentProfile);
+      }).catch(err => {
+        debugLog?.error('[PROFILE-STATE] Failed to save state on quit', {
           module: 'profile-state',
           function: 'beforeunload',
-          error: err.message 
+          error: err.message
         });
       });
     }

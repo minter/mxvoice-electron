@@ -17,6 +17,7 @@ State is saved to `profiles/<ProfileName>/state.json` and automatically loaded o
 - **Data validation:** Skips songs that have been deleted from database
 - **Tab preservation:** Maintains custom tab names and song order
 - **Explicit save before switch:** State is saved synchronously before profile switching to ensure no data loss
+- **Race condition protection:** Profile name is explicitly passed to save handlers to prevent state being saved to wrong profile directory
 - **Restoration lock:** Prevents saves during state restoration to avoid race conditions and data corruption
 
 ## Usage
@@ -151,6 +152,22 @@ This prevents race conditions where:
 - Each DOM update would trigger a save
 - Saves extract from partially-rebuilt DOM
 - Good state.json gets overwritten with incomplete data
+
+## Race Condition Fix (v4.1.0)
+
+**Problem Fixed:** Profile state was sometimes saved to the wrong profile directory during profile switching due to a race condition between the renderer extracting state and the main process determining which profile to save to.
+
+**Solution:** Modified save handlers to explicitly accept the profile name as a parameter instead of relying on the global `currentProfile` variable:
+
+```javascript
+// Before (race condition prone)
+window.secureElectronAPI.profile.saveState(state);
+
+// After (race condition protected)
+window.secureElectronAPI.profile.saveState(state, currentProfileName);
+```
+
+This ensures that state is always saved to the correct profile directory, preventing data loss during profile switching.
 
 ## Export Interface
 
