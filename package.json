@@ -176,16 +176,16 @@
     "n-readlines": "^1.0.1",
     "node-sqlite3-wasm": "^0.8.50",
     "uuid": "^13.0.0",
-    "wavesurfer.js": "^7.11.0",
+    "wavesurfer.js": "^7.11.1",
     "yarn": "^1.22.22"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "cross-env": "^10.1.0",
-    "electron": "^38.4.0",
+    "electron": "^39.0.0",
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
-    "node-abi": "4.15.0",
+    "node-abi": "4.16.0",
     "playwright": "^1.55.1"
   }
 }
