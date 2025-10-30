@@ -210,25 +210,29 @@ export function populateHoldingTank(songIds) {
     function: 'populateHoldingTank'
   });
   
-  songIds.forEach((songId) => {
+  // Wait for all songs to be added
+  const addPromises = songIds.map((songId) => {
     debugLog?.info('Adding song ID to holding tank', { 
       module: 'holding-tank',
       function: 'populateHoldingTank',
       songId: songId
     });
-    addToHoldingTank(songId, Dom.$('.holding_tank.active'));
+    return addToHoldingTank(songId, Dom.$('.holding_tank.active'));
   });
   
-  // Save after all songs added (single save instead of N saves during loading)
-  saveHoldingTankToStore();
-  
-  scaleScrollable();
-  debugLog?.info('populateHoldingTank completed successfully', { 
-    module: 'holding-tank',
-    function: 'populateHoldingTank',
-    count: songIds.length
+  // Wait for all additions to complete, then save
+  return Promise.all(addPromises).then(() => {
+    // Save after all songs added (single save instead of N saves during loading)
+    saveHoldingTankToStore();
+    
+    scaleScrollable();
+    debugLog?.info('populateHoldingTank completed successfully', { 
+      module: 'holding-tank',
+      function: 'populateHoldingTank',
+      count: songIds.length
+    });
+    return { success: true, count: songIds.length };
   });
-  return { success: true, count: songIds.length };
 }
 
 /**
@@ -437,7 +441,12 @@ export function saveHoldingTankFile() {
  */
 export function holdingTankDrop(event) {
   event.preventDefault();
-  addToHoldingTank(event.dataTransfer.getData("text"), event.target);
+  addToHoldingTank(event.dataTransfer.getData("text"), event.target).then(result => {
+    if (result && result.success) {
+      // Save holding tank state after adding
+      saveHoldingTankToStore();
+    }
+  }).catch(() => {});
 }
 
 /**

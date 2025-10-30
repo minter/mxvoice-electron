@@ -1440,7 +1440,7 @@ function registerAllHandlers() {
       const profileManager = await import('./profile-manager.js');
       const sanitizedName = profileManager.sanitizeProfileName(profileName);
       const profilesDir = profileManager.getProfilesDirectory();
-      const profileDir = path.join(profilesDir, sanitizedName, 'state');
+      const profileDir = path.join(profilesDir, sanitizedName);
       const stateFile = path.join(profileDir, 'state.json');
 
       debugLog?.info('Saving profile state', {
@@ -1632,7 +1632,7 @@ function registerAllHandlers() {
       const profileManager = await import('./profile-manager.js');
       const sanitizedName = profileManager.sanitizeProfileName(profileName);
       const profilesDir = profileManager.getProfilesDirectory();
-      const profileDir = path.join(profilesDir, sanitizedName, 'state');
+      const profileDir = path.join(profilesDir, sanitizedName);
       const stateFile = path.join(profileDir, 'state.json');
 
       debugLog?.info('Writing state file before switch', {

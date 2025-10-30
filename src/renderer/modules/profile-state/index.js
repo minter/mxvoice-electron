@@ -77,6 +77,15 @@ function extractHotkeyTabs() {
             key: `f${key}`,
             songId
           });
+        } else {
+          debugLog?.info(`[PROFILE-STATE] No songId attribute on f${key}`, {
+            module: 'profile-state',
+            function: 'extractHotkeyTabs',
+            tabNum,
+            key: `f${key}`,
+            hasElement: !!element,
+            elementId: element.id
+          });
         }
       } else {
         debugLog?.warn(`[PROFILE-STATE] Hotkey element not found: f${key}`, {

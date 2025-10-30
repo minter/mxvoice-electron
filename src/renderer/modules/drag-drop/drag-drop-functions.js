@@ -50,8 +50,24 @@ export function hotkeyDrop(event) {
   }
   
   // Save hotkeys state after assignment
-  if (typeof window.saveHotkeysToStore === 'function') {
+  // First try to use the hotkeys module's save function
+  if (window.moduleRegistry?.hotkeys?.saveHotkeysToStore) {
+    debugLog?.info('Saving hotkeys via module registry', {
+      module: 'drag-drop-functions',
+      function: 'hotkeyDrop'
+    });
+    window.moduleRegistry.hotkeys.saveHotkeysToStore();
+  } else if (typeof window.saveHotkeysToStore === 'function') {
+    debugLog?.info('Saving hotkeys via window function', {
+      module: 'drag-drop-functions',
+      function: 'hotkeyDrop'
+    });
     window.saveHotkeysToStore();
+  } else {
+    debugLog?.error('No saveHotkeysToStore function available', {
+      module: 'drag-drop-functions',
+      function: 'hotkeyDrop'
+    });
   }
 }
 

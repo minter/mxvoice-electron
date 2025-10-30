@@ -33,27 +33,33 @@ function hotkeyDrop(event, options = {}) {
   const song_id = event.dataTransfer.getData('text');
   const target = event.currentTarget;
   
+  // Save function to call after setLabelFromSongId completes
+  const saveFunction = () => {
+    if (this && this.saveHotkeysToStore) {
+      this.saveHotkeysToStore();
+    } else if (window.saveHotkeysToStore) {
+      window.saveHotkeysToStore();
+    }
+  };
+  
   // Use the module instance's setLabelFromSongId method if available (when bound to HotkeysModule)
   // Otherwise fall back to global function
   if (this && this.setLabelFromSongId) {
-    this.setLabelFromSongId(song_id, target);
+    // Call setLabelFromSongId and save after completion
+    const result = this.setLabelFromSongId(song_id, target);
+    if (result && result instanceof Promise) {
+      result.then(() => saveFunction()).catch(() => saveFunction());
+    } else {
+      // If not a promise, save immediately
+      setTimeout(saveFunction, 100);
+    }
   } else if (window.setLabelFromSongId) {
-    window.setLabelFromSongId(song_id, target);
-  } else {
-    debugLog?.error('❌ setLabelFromSongId not available', { 
-      module: 'hotkey-ui', 
-      function: 'hotkeyDrop',
-      hasThis: !!this,
-      hasThisMethod: !!(this && this.setLabelFromSongId),
-      hasGlobal: !!window.setLabelFromSongId
-    });
-  }
-  
-  // Save hotkeys state after assignment
-  if (this && this.saveHotkeysToStore) {
-    this.saveHotkeysToStore();
-  } else if (window.saveHotkeysToStore) {
-    window.saveHotkeysToStore();
+    const result = window.setLabelFromSongId(song_id, target);
+    if (result && result instanceof Promise) {
+      result.then(() => saveFunction()).catch(() => saveFunction());
+    } else {
+      setTimeout(saveFunction, 100);
+    }
   }
 }
 

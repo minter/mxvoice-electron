@@ -409,7 +409,9 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
           if (typeof window.secureElectronAPI.events.onHoldingTankLoad === 'function') {
             window.secureElectronAPI.events.onHoldingTankLoad((songIds) => {
               if (typeof window.populateHoldingTank === 'function') {
-                window.populateHoldingTank(songIds);
+                window.populateHoldingTank(songIds).catch(error => {
+                  window.logError('Error populating holding tank:', error);
+                });
               } else {
                 window.logWarn('populateHoldingTank not yet available when holding_tank_load fired');
               }
