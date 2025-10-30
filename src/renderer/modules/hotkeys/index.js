@@ -884,6 +884,8 @@ class HotkeysModule {
     if (target && song_id) {
       target.setAttribute('songid', song_id);
       this.setLabelFromSongId(song_id, target);
+      // Save hotkeys state after assignment
+      this.saveHotkeysToStore();
     }
     return false;
   }

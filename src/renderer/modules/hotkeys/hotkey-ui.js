@@ -48,6 +48,13 @@ function hotkeyDrop(event, options = {}) {
       hasGlobal: !!window.setLabelFromSongId
     });
   }
+  
+  // Save hotkeys state after assignment
+  if (this && this.saveHotkeysToStore) {
+    this.saveHotkeysToStore();
+  } else if (window.saveHotkeysToStore) {
+    window.saveHotkeysToStore();
+  }
 }
 
 /**

@@ -48,6 +48,11 @@ export function hotkeyDrop(event) {
       function: 'hotkeyDrop'
     });
   }
+  
+  // Save hotkeys state after assignment
+  if (typeof window.saveHotkeysToStore === 'function') {
+    window.saveHotkeysToStore();
+  }
 }
 
 /**
