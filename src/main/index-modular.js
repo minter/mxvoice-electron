@@ -511,42 +511,6 @@ if (process.platform === "darwin" || process.platform === "win32") {
       hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
       hasOn: typeof autoUpdater.on === 'function',
       hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
       hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function'
     }
   });
@@ -705,13 +669,16 @@ function checkOldConfig() {
     debugLog.info(`Found old Mr. Voice 2 config file at ${config_path}`, { 
       function: "checkOldConfig" 
     });
-    old_settings = [];
+    const old_settings = {};
 
     const line_reader = new readlines(config_path);
 
-    while (line = line_reader.next()) {
-      [key, val] = line.toString().trim().split('::');
-      old_settings[key] = val;
+    let line;
+    while ((line = line_reader.next())) {
+      const [key, val] = line.toString().trim().split('::');
+      if (key && val) {
+        old_settings[key] = val;
+      }
     }
     store.set('database_directory', path.dirname(old_settings['db_file']));
     store.set('music_directory', old_settings['filepath']);

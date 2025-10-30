@@ -42,7 +42,9 @@
     "test:smoke": "playwright test tests/e2e/smoke.spec.js",
     "test:validate": "node tests/setup/test-runner.js",
     "test:isolate": "node tests/setup/verify-isolation.js",
-    "test:run": "./tests/run-tests.sh"
+    "test:run": "./tests/run-tests.sh",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "build": {
     "appId": "com.electron.mx.-voice",
@@ -185,6 +187,7 @@
     "electron": "^39.0.0",
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
+    "eslint": "^9.38.0",
     "node-abi": "4.16.0",
     "playwright": "^1.55.1"
   }

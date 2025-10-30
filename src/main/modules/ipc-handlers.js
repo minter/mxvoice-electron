@@ -1326,26 +1326,16 @@ function registerAllHandlers() {
   });
 
   // File operations enhancements
-  ipcMain.handle('import-audio-files', async (event, filePaths) => {
-    try {
-      // This would be implemented to handle bulk import
-      // For now, return a placeholder
-      return { success: true, imported: 0, skipped: 0, errors: [] };
-    } catch (error) {
-      debugLog?.error('Import audio files error:', { module: 'ipc-handlers', function: 'import-audio-files', error: error.message });
-      return { success: false, error: error.message };
-    }
+  ipcMain.handle('import-audio-files', async (_event, _filePaths) => {
+    // This would be implemented to handle bulk import
+    // For now, return a placeholder
+    return { success: true, imported: 0, skipped: 0, errors: [] };
   });
 
-  ipcMain.handle('export-data', async (event, exportOptions) => {
-    try {
-      // This would be implemented to handle data export
-      // For now, return a placeholder
-      return { success: true, exportPath: '' };
-    } catch (error) {
-      debugLog?.error('Export data error:', { module: 'ipc-handlers', function: 'export-data', error: error.message });
-      return { success: false, error: error.message };
-    }
+  ipcMain.handle('export-data', async (_event, _exportOptions) => {
+    // This would be implemented to handle data export
+    // For now, return a placeholder
+    return { success: true, exportPath: '' };
   });
 
   // Utility functions for secure API
