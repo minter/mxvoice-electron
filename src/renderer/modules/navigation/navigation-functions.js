@@ -39,9 +39,17 @@ export function sendToHoldingTank() {
   const songId = document.getElementById('selected_row')?.getAttribute('songid');
   if (songId) {
     if (typeof window.addToHoldingTank === 'function') {
-      window.addToHoldingTank(songId, target);
+      window.addToHoldingTank(songId, target).then(result => {
+        if (result && result.success && typeof window.saveHoldingTankToStore === 'function') {
+          window.saveHoldingTankToStore();
+        }
+      }).catch(() => {});
     } else if (window.moduleRegistry?.holdingTank?.addToHoldingTank) {
-      window.moduleRegistry.holdingTank.addToHoldingTank(songId, target);
+      window.moduleRegistry.holdingTank.addToHoldingTank(songId, target).then(result => {
+        if (result && result.success && window.moduleRegistry?.holdingTank?.saveHoldingTankToStore) {
+          window.moduleRegistry.holdingTank.saveHoldingTankToStore();
+        }
+      }).catch(() => {});
     }
   }
   return false;

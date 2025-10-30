@@ -102,6 +102,10 @@ export function holdingTankDrop(event) {
           songId: songId,
           title: result.title
         });
+        // Save holding tank state after adding
+        if (typeof window.saveHoldingTankToStore === 'function') {
+          window.saveHoldingTankToStore();
+        }
       } else {
         debugLog?.error('Failed to add song to holding tank', { 
           module: 'drag-drop-functions',
@@ -119,7 +123,14 @@ export function holdingTankDrop(event) {
       });
     });
   } else if (typeof window.addToHoldingTank === 'function') {
-    window.addToHoldingTank(songId, event.target);
+    window.addToHoldingTank(songId, event.target).then(result => {
+      if (result && result.success) {
+        // Save holding tank state after adding
+        if (typeof window.saveHoldingTankToStore === 'function') {
+          window.saveHoldingTankToStore();
+        }
+      }
+    }).catch(() => {});
   } else {
     debugLog?.error('addToHoldingTank function not available', { 
       module: 'drag-drop-functions',
