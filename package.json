@@ -182,7 +182,7 @@
     "electron": "^39.0.0",
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
-    "node-abi": "4.16.0",
+    "node-abi": "4.17.0",
     "playwright": "^1.55.1"
   }
 }
