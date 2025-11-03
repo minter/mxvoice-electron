@@ -184,7 +184,9 @@ tests/**/debug/
 tests/**/debug.log
 tests/**/test-debug/
 tests/**/profile/
-tests/**/profiles/
+# Ignore generated profile data in fixtures, but not test specs in e2e/profiles/
+tests/fixtures/**/profiles/
+tests/**/test-user-data-profile-*/
 tests/**/*.cpuprofile
 tests/**/*.heapprofile
 tests/**/*.profile

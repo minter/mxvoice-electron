@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>Mx. Voice - Profile Launcher</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-gradient-start: #667eea;
+      --bg-gradient-end: #764ba2;
+      --container-bg: #ffffff;
+      --text-primary: #333333;
+      --text-secondary: #666666;
+      --item-bg: #f8f9fa;
+      --item-hover-bg: #e9ecef;
+      --item-selected-bg: #e7eaf6;
+      --border-color: #ddd;
+      --error-bg: #f8d7da;
+      --error-border: #f5c6cb;
+      --error-text: #721c24;
+      --modal-bg: #ffffff;
+      --scrollbar-track: #f1f1f1;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-gradient-start: #2d3748;
+        --bg-gradient-end: #1a202c;
+        --container-bg: #2d3748;
+        --text-primary: #f7fafc;
+        --text-secondary: #cbd5e0;
+        --item-bg: #1a202c;
+        --item-hover-bg: #374151;
+        --item-selected-bg: #4a5568;
+        --border-color: #4a5568;
+        --error-bg: #7f1d1d;
+        --error-border: #991b1b;
+        --error-text: #fecaca;
+        --modal-bg: #1a202c;
+        --scrollbar-track: #1a202c;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--text-primary);
+    }
+
+    .launcher-container {
+      background: var(--container-bg);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .launcher-header {
+      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .launcher-header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .header-actions {
+      display: flex;
+      justify-content: right;
+      margin-top: 8px;
+    }
+
+    .header-actions p {
+      font-size: 14px;
+      opacity: 0.9;
+      margin: 0;
+    }
+
+    .header-create-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .header-create-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .launcher-body {
+      padding: 30px;
+    }
+
+    .profile-search-container {
+      margin-bottom: 20px;
+    }
+
+    .profile-search {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--item-bg);
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .profile-search:focus {
+      outline: none;
+      border-color: var(--bg-gradient-start);
+      box-shadow: 0 0 0 3px rgba(var(--highlight-color-rgb), 0.1);
+    }
+
+    .profile-search::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .profile-list {
+      list-style: none;
+      margin-bottom: 20px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .profile-item {
+      background: var(--item-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    @media (prefers-color-scheme: light) {
+      .profile-item {
+        border-color: transparent;
+      }
+    }
+
+    .profile-item:hover {
+      background: var(--item-hover-bg);
+      border-color: var(--bg-gradient-start);
+    }
+
+    .profile-item.selected {
+      background: var(--item-selected-bg);
+      border-color: var(--bg-gradient-start);
+    }
+
+    .profile-info {
+      flex: 1;
+    }
+
+    .profile-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .profile-description {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .profile-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .profile-delete {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .profile-delete:hover {
+      background: #c82333;
+    }
+
+    .profile-delete:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .launcher-actions {
+      margin-top: 20px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state p {
+      margin-bottom: 20px;
+      font-size: 15px;
+    }
+
+    .error-message {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error-text);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    /* Scrollbar styling */
+    .profile-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .profile-list::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+      border-radius: 10px;
+    }
+
+    .profile-list::-webkit-scrollbar-thumb {
+      background: var(--bg-gradient-start);
+      border-radius: 10px;
+    }
+
+    .profile-list::-webkit-scrollbar-thumb:hover {
+      background: var(--bg-gradient-end);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+
+    .loading::after {
+      content: '...';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+
+    /* Modal styles */
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: var(--modal-bg);
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .close {
+      color: var(--text-secondary);
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .close:hover {
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 20px 24px;
+    }
+
+    .modal-footer {
+      padding: 16px 24px 20px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      background: var(--item-bg);
+      color: var(--text-primary);
+      transition: border-color 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--bg-gradient-start);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+  </style>
+</head>
+<body>
+  <div class="launcher-container">
+    <div class="launcher-header">
+      <h1>🎵 Mx. Voice</h1>
+      <div class="header-actions">
+        <button id="create-profile-btn" class="header-create-btn">
+          + New Profile
+        </button>
+      </div>
+    </div>
+
+    <div class="launcher-body">
+      <div id="error-container"></div>
+      
+      <div id="loading-state" class="loading">
+        Loading profiles
+      </div>
+
+      <div id="profile-content" style="display: none;">
+        <div class="profile-search-container">
+          <input 
+            type="text" 
+            id="profile-search" 
+            class="profile-search" 
+            placeholder="Search profiles..."
+            autocomplete="off"
+          />
+        </div>
+        <ul id="profile-list" class="profile-list"></ul>
+
+        <div class="launcher-actions">
+          <button id="launch-btn" class="btn btn-primary" disabled>
+            Choose Profile
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Profile Modal -->
+  <div id="create-profile-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Create New Profile</h2>
+        <span class="close" id="modal-close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="profile-name-input">Profile Name</label>
+          <input type="text" id="profile-name-input" class="form-input" placeholder="Enter profile name..." required>
+        </div>
+        <div class="form-group">
+          <label for="profile-description-input">Description (Optional)</label>
+          <input type="text" id="profile-description-input" class="form-input" placeholder="Enter description...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-create-btn" class="btn btn-secondary">Cancel</button>
+        <button id="confirm-create-btn" class="btn btn-primary">Create Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="launcher.js"></script>
+</body>
+</html>
+

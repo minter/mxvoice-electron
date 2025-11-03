@@ -6,7 +6,7 @@
  * alternative to direct Node.js API exposure.
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
+const { contextBridge, ipcRenderer } = require('electron');
 
 // debugLog will be injected by the calling module
 let debugLog = null;
@@ -124,7 +124,8 @@ const secureElectronAPI = {
     copy: (sourcePath, destPath) => ipcRenderer.invoke('file-copy', sourcePath, destPath),
     mkdir: (dirPath, options) => ipcRenderer.invoke('file-mkdir', dirPath, options),
     readdir: (dirPath) => ipcRenderer.invoke('fs-readdir', dirPath),
-    stat: (filePath) => ipcRenderer.invoke('fs-stat', filePath)
+    stat: (filePath) => ipcRenderer.invoke('fs-stat', filePath),
+    getUserDataPath: () => ipcRenderer.invoke('file-get-user-data-path')
   },
   
   // Path operations - secure path manipulation
@@ -383,7 +384,54 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('delete_selected_song', handler);
     },
     
+    onSwitchProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:switch-profile', handler);
+      return () => ipcRenderer.removeListener('menu:switch-profile', handler);
+    },
+    
+    
+    onLogout: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:logout', handler);
+      return () => ipcRenderer.removeListener('menu:logout', handler);
+    },
+    
+    onNewProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:new-profile', handler);
+      return () => ipcRenderer.removeListener('menu:new-profile', handler);
+    },
+    
+    onDeleteCurrentProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:delete-current-profile', handler);
+      return () => ipcRenderer.removeListener('menu:delete-current-profile', handler);
+    },
+    
+    onDuplicateProfile: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:duplicate-profile', handler);
+      return () => ipcRenderer.removeListener('menu:duplicate-profile', handler);
+    },
+    
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
+  },
+  
+  // Profile functions
+  profile: {
+    getCurrent: () => ipcRenderer.invoke('profile:get-current'),
+    getDirectory: (type) => ipcRenderer.invoke('profile:get-directory', type),
+    switchProfile: () => ipcRenderer.invoke('profile:switch'),
+    switchToProfile: (name) => ipcRenderer.invoke('profile:switch-to', name),
+    saveState: (state, profileName) => ipcRenderer.invoke('profile:save-state', state, profileName),
+    saveStateBeforeSwitch: (state, profileName) => ipcRenderer.invoke('profile:save-state-before-switch', state, profileName),
+    getPreference: (key) => ipcRenderer.invoke('profile:get-preference', key),
+    setPreference: (key, value) => ipcRenderer.invoke('profile:set-preference', key, value),
+    getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences'),
+    createProfile: (name, description) => ipcRenderer.invoke('profile:create', name, description),
+    duplicateProfile: (sourceName, targetName, description) => ipcRenderer.invoke('profile:duplicate', sourceName, targetName, description),
+    deleteProfile: (name) => ipcRenderer.invoke('profile:delete', name)
   },
   
   // Utility functions
@@ -412,6 +460,7 @@ function exposeSecureAPI(injectedDebugLog) {
       // Expose the secure API via contextBridge
       contextBridge.exposeInMainWorld('secureElectronAPI', secureElectronAPI);
       
+      
       // Also expose a legacy compatibility layer for existing code
       contextBridge.exposeInMainWorld('electronAPI', {
         // Legacy API compatibility
@@ -436,6 +485,7 @@ function exposeSecureAPI(injectedDebugLog) {
         onBulkAddDialogLoad: secureElectronAPI.events.onBulkAddDialogLoad,
         onAddDialogLoad: secureElectronAPI.events.onAddDialogLoad,
         onDisplayReleaseNotes: secureElectronAPI.events.onDisplayReleaseNotes,
+        onSwitchProfile: secureElectronAPI.events.onSwitchProfile,
         removeAllListeners: secureElectronAPI.events.removeAllListeners,
         database: secureElectronAPI.database,
         fileSystem: secureElectronAPI.fileSystem,
@@ -445,6 +495,7 @@ function exposeSecureAPI(injectedDebugLog) {
         os: secureElectronAPI.os,
         utils: secureElectronAPI.utils,
         testing: secureElectronAPI.testing,
+        profile: secureElectronAPI.profile,
         // Provide logs under legacy namespace for compatibility with existing renderer code
         logs: secureElectronAPI.logs
       });
@@ -478,7 +529,7 @@ function exposeSecureAPI(injectedDebugLog) {
 // Note: Secure API exposure is now handled by the calling module
 // to avoid duplicate exposure conflicts
 
-export {
+module.exports = {
   secureElectronAPI,
   exposeSecureAPI
 };

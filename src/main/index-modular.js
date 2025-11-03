@@ -22,7 +22,6 @@ import Store from 'electron-store';
 import log from 'electron-log';
 import { Howl, Howler } from 'howler';
 import electronUpdater from 'electron-updater';
-import markdownIt from 'markdown-it';
 import { fileURLToPath } from 'url';
 
 // Get __dirname equivalent for ES6 modules
@@ -46,12 +45,71 @@ import * as ipcHandlers from './modules/ipc-handlers.js';
 import * as fileOperations from './modules/file-operations.js';
 import initializeMainDebugLog from './modules/debug-log.js';
 import { initMainLogService } from './modules/log-service.js';
+import * as profileManager from './modules/profile-manager.js';
+import * as launcherWindow from './modules/launcher-window.js';
 
 // Initialize Octokit for GitHub API (will be initialized after debugLog is available)
 let octokit;
 
-// Initialize markdown parser
-const md = markdownIt();
+
+// Profile context - set via command line arg or launcher
+let currentProfile = null;
+
+/**
+ * Parse command line arguments to check for profile
+ * @returns {string|null} Profile name if provided, null otherwise
+ */
+function getProfileFromArgs() {
+  const args = process.argv.slice(1); // Skip electron executable
+  
+  for (const arg of args) {
+    if (arg.startsWith('--profile=')) {
+      return arg.substring('--profile='.length);
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Get the current active profile
+ * @returns {string|null} Current profile name or null if not set
+ */
+export function getCurrentProfile() {
+  return currentProfile;
+}
+
+/**
+ * Get profile-specific directory path
+ * 
+ * IMPORTANT: Always use this function to get profile directories.
+ * Never manually construct profile paths - this ensures profile names
+ * are consistently sanitized for filesystem safety.
+ * 
+ * @param {string} type - Type of directory ('hotkeys', 'holding-tank', 'state', 'preferences', etc.)
+ * @returns {string} Profile-specific directory path (sanitized)
+ */
+export function getProfileDirectory(type) {
+  const profile = getCurrentProfile();
+  if (!profile) {
+    throw new Error('No current profile set');
+  }
+  const sanitized = profileManager.sanitizeProfileName(profile);
+  const profilesDir = profileManager.getProfilesDirectory();
+
+  switch (type) {
+    case 'hotkeys':
+      return path.join(profilesDir, sanitized, 'hotkeys');
+    case 'holding-tank':
+      return path.join(profilesDir, sanitized, 'holding-tank');
+    case 'state':
+      return path.join(profilesDir, sanitized);
+    case 'preferences':
+      return path.join(profilesDir, sanitized);
+    default:
+      return path.join(profilesDir, sanitized);
+  }
+}
 
 // Streaming file copy function for large files with progress tracking
 async function copyFileStreaming(source, destination, progressCallback = null) {
@@ -194,8 +252,24 @@ const store = new Store({
   clearInvalidConfig: true
 });
 
-// Initialize main process DebugLog
-const debugLog = initializeMainDebugLog({ store });
+// Helper function to get debug preference (breaks circular dependency with profile-manager)
+async function getDebugPreference() {
+  try {
+    const currentProfile = getCurrentProfile();
+    if (currentProfile && profileManager) {
+      const preferences = await profileManager.loadProfilePreferences(currentProfile);
+      return !!preferences?.debug_log_enabled;
+    } else if (store) {
+      return !!store.get('debug_log_enabled');
+    }
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
+// Initialize main process DebugLog with injected preference getter
+const debugLog = initializeMainDebugLog({ store, getDebugPreference });
 
 // Add immediate logging now that debugLog is available
 debugLog.info('Main process starting...', { 
@@ -221,8 +295,8 @@ import("@octokit/rest")
     });
   });
 
-// Centralized Log Service for file persistence and export
-const logService = initMainLogService({ store });
+// Centralized Log Service for file persistence and export (inject preference getter)
+const logService = initMainLogService({ store, getDebugPreference });
 
 // Log the resolved store path for diagnostics (after logger is initialized)
 debugLog.info('Electron Store initialized', { function: 'store-init', storePath: store.path, appName: app.getName() });
@@ -437,42 +511,6 @@ if (process.platform === "darwin" || process.platform === "win32") {
       hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
       hasOn: typeof autoUpdater.on === 'function',
       hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function',
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
       hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function'
     }
   });
@@ -516,19 +554,6 @@ import('electron-util').then(electronUtil => {
   });
 });
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-// Use dynamic import for electron-squirrel-startup to avoid CommonJS issues
-import('electron-squirrel-startup').then(electronSquirrelStartup => {
-  if (electronSquirrelStartup.default) {
-    app.quit();
-  }
-}).catch(error => {
-  debugLog.warn('Could not load electron-squirrel-startup', { 
-    function: "electron-squirrel-startup import",
-    error: error.message 
-  });
-});
-
 // Initialize database
 async function initializeMainDatabaseWrapper() {
   try {
@@ -564,8 +589,8 @@ async function initializeMainDatabaseWrapper() {
 
 // Check first run
 async function checkFirstRun() {
-  debugLog.info(`First run preference returns ${store.get('first_run_completed')}`, { 
-    function: "checkFirstRun" 
+  debugLog.info(`First run preference returns ${store.get('first_run_completed')}`, {
+    function: "checkFirstRun"
   });
   if (!store.get('first_run_completed')) {
     const shouldCheckLegacyConfig = process.env.APP_TEST_MODE !== '1';
@@ -644,13 +669,16 @@ function checkOldConfig() {
     debugLog.info(`Found old Mr. Voice 2 config file at ${config_path}`, { 
       function: "checkOldConfig" 
     });
-    old_settings = [];
+    const old_settings = {};
 
     const line_reader = new readlines(config_path);
 
-    while (line = line_reader.next()) {
-      [key, val] = line.toString().trim().split('::');
-      old_settings[key] = val;
+    let line;
+    while ((line = line_reader.next())) {
+      const [key, val] = line.toString().trim().split('::');
+      if (key && val) {
+        old_settings[key] = val;
+      }
     }
     store.set('database_directory', path.dirname(old_settings['db_file']));
     store.set('music_directory', old_settings['filepath']);
@@ -710,7 +738,8 @@ async function initializeModules() {
     fileOperations,
     debugLog,
     updateState,
-    logService
+    logService,
+    getCurrentProfile
   };
 
   // Initialize each module
@@ -750,11 +779,12 @@ const createWindow = async () => {
     await initializeMainDatabaseWrapper();
     debugLog.info('Main database initialization completed', { function: "createWindow", hasDb: !!db, dbType: typeof db });
 
-    // Create the window with restored state from store
-    const windowState = appSetup.loadWindowState(store);
-    debugLog.debug('Window state for creation', { 
+    // Create the window with restored state from store (profile-specific if available)
+    const windowState = await appSetup.loadWindowState(store, currentProfile);
+    log.info('Window state for creation', { 
       function: "createWindow",
-      windowState: windowState
+      windowState: windowState,
+      profile: currentProfile
     });
     
     const windowOptions = windowState ? {
@@ -770,7 +800,7 @@ const createWindow = async () => {
       height: store.get('browser_height') || defaults.browser_height
     };
 
-    debugLog.debug('Window creation options', { 
+    log.info('Window creation options', { 
       function: "createWindow",
       windowOptions: windowOptions
     });
@@ -800,7 +830,7 @@ const createWindow = async () => {
     
     // Create a minimal window even if database fails
     try {
-      const windowState = appSetup.loadWindowState(store);
+      const windowState = await appSetup.loadWindowState(store, currentProfile);
       const windowOptions = windowState ? {
         width: windowState.width || defaults.browser_width,
         height: windowState.height || defaults.browser_height,
@@ -865,12 +895,57 @@ function setupApp() {
 
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
-  app.on('ready', () => {
+  app.on('ready', async () => {
     debugLog.info('Electron app ready event fired', { function: "app ready event" });
-    createWindow();
     
-    // Test auto-update scenarios if enabled
-    testAutoUpdateScenarios();
+    // Initialize profile manager
+    profileManager.initializeProfileManager({ debugLog });
+    
+    // Check if profile was provided via command line
+    currentProfile = getProfileFromArgs();
+
+    if (currentProfile) {
+      // Profile provided (or default) - launch main app directly
+      debugLog.info('Profile set, launching main app', {
+        function: "app ready event",
+        profile: currentProfile,
+        source: getProfileFromArgs() ? 'command-line' : 'default'
+      });
+
+      createWindow();
+
+      // Test auto-update scenarios if enabled
+      testAutoUpdateScenarios();
+    } else {
+      // No profile - show launcher window
+      debugLog.info('No profile provided, showing launcher', {
+        function: "app ready event"
+      });
+      
+      // Initialize launcher window with ability to launch main app
+      launcherWindow.initializeLauncherWindow({
+        debugLog,
+        profileManager,
+        store,
+        mainWindow,
+        mainAppLauncher: async (profileName) => {
+          currentProfile = profileName;
+          
+          debugLog.info('Launching main app from launcher', { 
+            function: "mainAppLauncher",
+            profile: profileName 
+          });
+          
+          await createWindow();
+          
+          // Test auto-update scenarios if enabled
+          testAutoUpdateScenarios();
+        }
+      });
+      
+      // Show launcher window
+      await launcherWindow.createLauncherWindow();
+    }
   });
 
   // Setup auto-updater events
@@ -890,28 +965,11 @@ function setupApp() {
       }
     });
     
-    // Process markdown in release notes for proper formatting
-    let processedNotes = updateInfo.releaseNotes;
-    if (updateInfo.releaseNotes && typeof updateInfo.releaseNotes === 'string') {
-      try {
-        processedNotes = md.render(updateInfo.releaseNotes);
-        debugLog.info('Markdown processed successfully for release notes', { 
-          function: "autoUpdater update-available",
-          originalLength: updateInfo.releaseNotes.length,
-          processedLength: processedNotes.length,
-          sampleProcessed: processedNotes.substring(0, 100) + (processedNotes.length > 100 ? '...' : '')
-        });
-      } catch (markdownError) {
-        debugLog.warn('Failed to process markdown in release notes, using raw text', { 
-          function: "autoUpdater update-available",
-          error: markdownError.message
-        });
-        // Fall back to raw text if markdown processing fails
-        processedNotes = updateInfo.releaseNotes;
-      }
-    }
+    // Pass release notes to renderer for sanitization
+    // GitHub provides HTML in releaseNotes, which will be sanitized by DOMPurify in the renderer
+    const releaseNotes = updateInfo.releaseNotes || '';
     
-    mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + processedNotes);
+    mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + releaseNotes);
     debugLog.info('display_release_notes call done', { 
       function: "autoUpdater update-available" 
     });

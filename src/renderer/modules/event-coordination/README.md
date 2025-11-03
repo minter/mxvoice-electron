@@ -50,3 +50,8 @@ await events.attachEventHandlers();
 ## Notes
 - Ensures DOM structure init precedes handler attachment
 - Integrates with module/function registries and DebugLog
+
+## Security
+- **UIInteractionEvents** sanitizes auto-update release notes using DOMPurify
+- Release notes from GitHub are HTML-sanitized to prevent XSS attacks
+- Only safe HTML tags (headings, paragraphs, lists, links) are allowed in release notes

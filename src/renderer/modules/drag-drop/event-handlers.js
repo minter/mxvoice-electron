@@ -113,32 +113,60 @@ function setupColumnDragAndDrop() {
 }
 
 /**
- * Refresh column order from storage if it exists
+ * Refresh column order from profile preferences if it exists
  * This is called after the drag and drop system is initialized
  */
 async function refreshColumnOrderIfExists() {
   try {
-    if (typeof secureStore !== 'undefined' && secureStore.has) {
-      const hasColumnOrder = await secureStore.has("column_order");
-      if (hasColumnOrder) {
-        debugLog?.info('Column order exists, refreshing drop zones after drag and drop setup', { 
+    const electronAPI = window.secureElectronAPI || window.electronAPI;
+    
+    // Try profile preferences first
+    if (electronAPI && electronAPI.profile) {
+      const result = await electronAPI.profile.getPreference('column_order');
+      if (result.success && result.value && Array.isArray(result.value)) {
+        debugLog?.info('Column order exists in profile, refreshing drop zones after drag and drop setup', { 
           module: 'drag-drop-event-handlers',
           function: 'refreshColumnOrderIfExists'
         });
         
-        // Also apply the saved column order to ensure consistency
+        const topRow = document.getElementById('top-row');
+        if (topRow) {
+          const columnOrder = result.value;
+          debugLog?.info('Applying saved column order during drag and drop setup', { 
+            module: 'drag-drop-event-handlers',
+            function: 'refreshColumnOrderIfExists',
+            columnOrder: columnOrder
+          });
+          
+          // Apply the column order
+          columnOrder.forEach((val) => {
+            const child = topRow.querySelector(`#${val}`);
+            if (child) {
+              topRow.appendChild(child);
+            }
+          });
+        }
+        
+        // Recreate drop zones to ensure they're positioned correctly
+        createColumnDropZones();
+        return;
+      }
+    }
+    
+    // Fall back to global store if profile API not available
+    if (typeof secureStore !== 'undefined' && secureStore.has) {
+      const hasColumnOrder = await secureStore.has("column_order");
+      if (hasColumnOrder) {
+        debugLog?.info('Column order exists in global store, refreshing drop zones', { 
+          module: 'drag-drop-event-handlers',
+          function: 'refreshColumnOrderIfExists'
+        });
+        
         const columnOrderData = await secureStore.get("column_order");
         if (columnOrderData && columnOrderData.value && Array.isArray(columnOrderData.value)) {
           const topRow = document.getElementById('top-row');
           if (topRow) {
             const columnOrder = columnOrderData.value;
-            debugLog?.info('Applying saved column order during drag and drop setup', { 
-              module: 'drag-drop-event-handlers',
-              function: 'refreshColumnOrderIfExists',
-              columnOrder: columnOrder
-            });
-            
-            // Apply the column order
             columnOrder.forEach((val) => {
               const child = topRow.querySelector(`#${val}`);
               if (child) {
@@ -148,7 +176,6 @@ async function refreshColumnOrderIfExists() {
           }
         }
         
-        // Recreate drop zones to ensure they're positioned correctly
         createColumnDropZones();
       }
     }
@@ -450,38 +477,54 @@ function reorderColumns(draggedColumnId, targetId, mode) {
 }
 
 /**
- * Save column order to store
+ * Save column order to profile preferences
  */
-function saveColumnOrder(columnOrder) {
-  debugLog?.info('Attempting to save column order', { 
+async function saveColumnOrder(columnOrder) {
+  debugLog?.info('[COLUMN-ORDER] Attempting to save column order', { 
     module: 'drag-drop-event-handlers',
     function: 'saveColumnOrder',
     columnOrder: columnOrder
   });
   
-  secureStore.set("column_order", columnOrder).then(result => {
+  try {
+    const electronAPI = window.secureElectronAPI || window.electronAPI;
+    if (!electronAPI || !electronAPI.profile) {
+      debugLog?.warn('[COLUMN-ORDER] Profile API not available, falling back to global store', {
+        module: 'drag-drop-event-handlers',
+        function: 'saveColumnOrder'
+      });
+      const result = await secureStore.set("column_order", columnOrder);
+      if (!result.success) {
+        debugLog?.warn('[COLUMN-ORDER] Failed to save column order to global store', {
+          module: 'drag-drop-event-handlers',
+          function: 'saveColumnOrder',
+          error: result.error
+        });
+      }
+      return;
+    }
+    
+    const result = await electronAPI.profile.setPreference('column_order', columnOrder);
     if (result.success) {
-      debugLog?.info('Column order saved successfully', { 
+      debugLog?.info('[COLUMN-ORDER] Column order saved successfully to profile', { 
         module: 'drag-drop-event-handlers',
         function: 'saveColumnOrder',
-        columnOrder: columnOrder,
-        result: result
+        columnOrder: columnOrder
       });
     } else {
-      debugLog?.warn('Failed to save column order', { 
+      debugLog?.warn('[COLUMN-ORDER] Failed to save column order to profile', { 
         module: 'drag-drop-event-handlers',
         function: 'saveColumnOrder',
-        error: result.error,
-        result: result
+        error: result.error
       });
     }
-  }).catch(error => {
-    debugLog?.error('Column order save error', { 
+  } catch (error) {
+    debugLog?.error('[COLUMN-ORDER] Column order save error', { 
       module: 'drag-drop-event-handlers',
       function: 'saveColumnOrder',
       error: error,
       errorMessage: error.message,
       errorStack: error.stack
     });
-  });
+  }
 } 

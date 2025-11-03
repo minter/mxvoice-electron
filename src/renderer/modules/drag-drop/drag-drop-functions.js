@@ -48,6 +48,27 @@ export function hotkeyDrop(event) {
       function: 'hotkeyDrop'
     });
   }
+  
+  // Save hotkeys state after assignment
+  // First try to use the hotkeys module's save function
+  if (window.moduleRegistry?.hotkeys?.saveHotkeysToStore) {
+    debugLog?.info('Saving hotkeys via module registry', {
+      module: 'drag-drop-functions',
+      function: 'hotkeyDrop'
+    });
+    window.moduleRegistry.hotkeys.saveHotkeysToStore();
+  } else if (typeof window.saveHotkeysToStore === 'function') {
+    debugLog?.info('Saving hotkeys via window function', {
+      module: 'drag-drop-functions',
+      function: 'hotkeyDrop'
+    });
+    window.saveHotkeysToStore();
+  } else {
+    debugLog?.error('No saveHotkeysToStore function available', {
+      module: 'drag-drop-functions',
+      function: 'hotkeyDrop'
+    });
+  }
 }
 
 /**
@@ -97,6 +118,10 @@ export function holdingTankDrop(event) {
           songId: songId,
           title: result.title
         });
+        // Save holding tank state after adding
+        if (typeof window.saveHoldingTankToStore === 'function') {
+          window.saveHoldingTankToStore();
+        }
       } else {
         debugLog?.error('Failed to add song to holding tank', { 
           module: 'drag-drop-functions',
@@ -114,7 +139,14 @@ export function holdingTankDrop(event) {
       });
     });
   } else if (typeof window.addToHoldingTank === 'function') {
-    window.addToHoldingTank(songId, event.target);
+    window.addToHoldingTank(songId, event.target).then(result => {
+      if (result && result.success) {
+        // Save holding tank state after adding
+        if (typeof window.saveHoldingTankToStore === 'function') {
+          window.saveHoldingTankToStore();
+        }
+      }
+    }).catch(() => {});
   } else {
     debugLog?.error('addToHoldingTank function not available', { 
       module: 'drag-drop-functions',

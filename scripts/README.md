@@ -1,6 +1,45 @@
-# Test Data Generator for Mx. Voice - Safe Mode
+# Mx. Voice Scripts
 
-This script generates thousands of fun mock song entries for testing the live search functionality in Mx. Voice, with multiple safety options to protect your existing database.
+This directory contains utility scripts for Mx. Voice development and testing.
+
+## Scripts
+
+### 1. Test Data Generator (`generate-test-data.js`, `run-test-data-generator.js`)
+
+Generates thousands of fun mock song entries for testing the live search functionality in Mx. Voice, with multiple safety options to protect your existing database.
+
+### 2. Profile Cleanup Script (`cleanup-old-profiles.sh`)
+
+Removes old profile state from the previous `user-profiles` branch implementation. Use this if you were testing the old profile system and want to start fresh with the new `profiles2` implementation.
+
+**When to use:**
+- You previously tested the `user-profiles` branch
+- You want to clean up old profile data before testing `profiles2`
+- You're switching from the old profile system to the new launcher-based system
+
+**What it does:**
+- Detects old profile directories (`mxvoice`, `MxVoice`)
+- Creates automatic backups before making changes
+- Removes `profiles.json` and `profiles/` directory from old implementations
+- Cleans up old profile-related keys from `config.json`
+
+**Usage:**
+```bash
+./scripts/cleanup-old-profiles.sh
+```
+
+The script will:
+1. Check for old profile directories
+2. Ask for confirmation before proceeding
+3. Create timestamped backups
+4. Remove old profile data
+5. Provide restore instructions if needed
+
+**Note:** The new `profiles2` implementation uses `~/Library/Application Support/Mx. Voice/` (with space) instead of the old `mxvoice` or `MxVoice` directories.
+
+---
+
+## Test Data Generator - Safe Mode
 
 ## 🛡️ Safety Features
 

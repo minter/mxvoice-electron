@@ -6,6 +6,8 @@
  * @module settings-controller
  */
 
+import { setPreference as setPreferenceViaAdapter } from './profile-preference-adapter.js';
+
 // Import debug logger from global scope (renderer initializes it early)
 let debugLog = null;
 try {
@@ -40,7 +42,7 @@ function initializeSettingsController(options = {}) {
    * @param {Event} event - The form submission event
    */
   async function savePreferences(event) {
-    debugLog?.info("Saving preferences", { function: "savePreferences" });
+    debugLog?.info("[PREFS-SAVE] Saving preferences", { function: "savePreferences" });
     event.preventDefault();
     try {
       const { hideModal } = await import('../ui/bootstrap-adapter.js');
@@ -49,79 +51,94 @@ function initializeSettingsController(options = {}) {
     
     // Use new store API for saving preferences
     if (electronAPI && electronAPI.store) {
+      // Get current values from form
+      const dbDir = (document.getElementById('preferences-database-directory')?.value) || '';
+      const musicDir = (document.getElementById('preferences-song-directory')?.value) || '';
+      const hotkeyDir = (document.getElementById('preferences-hotkey-directory')?.value) || '';
+      
+      // Validate that critical directory preferences are not being cleared
+      // Only save if the value is non-empty OR if it was already empty
+      const validateDirectory = async (key) => {
+        const current = await getPreference(key, electronAPI);
+        return current.success ? current.value : '';
+      };
+      
+      const [currentDbDir, currentMusicDir, currentHotkeyDir] = await Promise.all([
+        validateDirectory('database_directory'),
+        validateDirectory('music_directory'),
+        validateDirectory('hotkey_directory')
+      ]);
+      
       const preferences = {
-        database_directory: (document.getElementById('preferences-database-directory')?.value) || '',
-        music_directory: (document.getElementById('preferences-song-directory')?.value) || '',
-        hotkey_directory: (document.getElementById('preferences-hotkey-directory')?.value) || '',
-        fade_out_seconds: (document.getElementById('preferences-fadeout-seconds')?.value) || '',
+        // Only update directory if new value is non-empty OR current value is already empty
+        database_directory: dbDir || currentDbDir,
+        music_directory: musicDir || currentMusicDir,
+        hotkey_directory: hotkeyDir || currentHotkeyDir,
+        fade_out_seconds: parseInt(document.getElementById('preferences-fadeout-seconds')?.value) || 3,
         debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
         prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
         screen_mode: (document.getElementById('preferences-screen-mode')?.value) || 'auto'
       };
       
-      // Save all preferences
+      debugLog?.info("[PREFS-SAVE] Preferences to save", { preferences });
+      
+      // Save all preferences (using adapter to route to profile or global as appropriate)
       try {
         const results = await Promise.all([
-          electronAPI.store.set("database_directory", preferences.database_directory),
-          electronAPI.store.set("music_directory", preferences.music_directory),
-          electronAPI.store.set("hotkey_directory", preferences.hotkey_directory),
-          electronAPI.store.set("fade_out_seconds", preferences.fade_out_seconds),
-          electronAPI.store.set("debug_log_enabled", preferences.debug_log_enabled),
-          electronAPI.store.set("prerelease_updates", preferences.prerelease_updates),
-          electronAPI.store.set("screen_mode", preferences.screen_mode)
+          setPreferenceViaAdapter("database_directory", preferences.database_directory, electronAPI),
+          setPreferenceViaAdapter("music_directory", preferences.music_directory, electronAPI),
+          setPreferenceViaAdapter("hotkey_directory", preferences.hotkey_directory, electronAPI),
+          setPreferenceViaAdapter("fade_out_seconds", preferences.fade_out_seconds, electronAPI),
+          setPreferenceViaAdapter("debug_log_enabled", preferences.debug_log_enabled, electronAPI),
+          setPreferenceViaAdapter("prerelease_updates", preferences.prerelease_updates, electronAPI),
+          setPreferenceViaAdapter("screen_mode", preferences.screen_mode, electronAPI)
         ]);
+        
+        debugLog?.info("[PREFS-SAVE] Save results", { results });
         
         // Update audio module's music directory cache if it changed
         if (preferences.music_directory && window.moduleRegistry?.audio?.updateMusicDirectoryCache) {
           window.moduleRegistry.audio.updateMusicDirectoryCache(preferences.music_directory);
-          debugLog?.info("Updated audio module music directory cache", { 
+          debugLog?.info("[PREFS-SAVE] Updated audio module music directory cache", { 
             musicDirectory: preferences.music_directory 
           });
         }
         
-        const successCount = results.filter(result => result.success).length;
+        // Count successes - handle both boolean true and {success: true} formats
+        const successCount = results.filter(result => {
+          if (typeof result === 'boolean') return result;
+          return result && result.success;
+        }).length;
+        
+        // Apply new theme immediately if screen mode preference changed
+        // (do this regardless of other preferences succeeding)
+        if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
+          try {
+            const newScreenMode = preferences.screen_mode;
+            debugLog?.info('Applying theme after preference change', { newTheme: newScreenMode });
+            await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
+            debugLog?.info('Theme applied successfully', { newTheme: newScreenMode });
+          } catch (themeError) {
+            debugLog?.warn('Failed to apply theme', { error: themeError });
+          }
+        } else if (window.setUserTheme) {
+          try {
+            const newScreenMode = preferences.screen_mode;
+            debugLog?.info('Applying theme via global function', { newTheme: newScreenMode });
+            await window.setUserTheme(newScreenMode);
+            debugLog?.info('Theme applied successfully via global function', { newTheme: newScreenMode });
+          } catch (themeError) {
+            debugLog?.warn('Failed to apply theme via global function', { error: themeError });
+          }
+        }
+        
         if (successCount === 7) {
-          debugLog?.info('All preferences saved successfully', { 
+          debugLog?.info('[PREFS-SAVE] All preferences saved successfully', { 
             function: "savePreferences",
             data: { successCount, totalPreferences: 7 }
           });
-          
-          // Apply new theme immediately if screen mode preference changed
-          debugLog?.info('Checking theme management availability', { 
-            hasThemeManagement: !!window.moduleRegistry?.themeManagement,
-            hasSetUserTheme: !!(window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme),
-            hasGlobalThemeManagement: !!window.setUserTheme,
-            newScreenMode: preferences.screen_mode
-          });
-          
-          // Try module registry first, then fallback to global function
-          if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
-            try {
-              const newScreenMode = preferences.screen_mode;
-              debugLog?.info('Calling themeManagement.setUserTheme via moduleRegistry', { newTheme: newScreenMode });
-              await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
-              debugLog?.info('Theme applied immediately after preference change', { newTheme: newScreenMode });
-            } catch (themeError) {
-              debugLog?.warn('Failed to apply theme after preference change', { error: themeError });
-            }
-          } else if (window.setUserTheme) {
-            try {
-              const newScreenMode = preferences.screen_mode;
-              debugLog?.info('Calling setUserTheme via global function', { newTheme: newScreenMode });
-              await window.setUserTheme(newScreenMode);
-              debugLog?.info('Theme applied immediately after preference change via global function', { newTheme: newScreenMode });
-            } catch (themeError) {
-              debugLog?.warn('Failed to apply theme after preference change via global function', { error: themeError });
-            }
-          } else {
-            debugLog?.warn('Theme management not available for immediate theme switching', {
-              hasThemeManagement: !!window.moduleRegistry?.themeManagement,
-              hasSetUserTheme: !!(window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme),
-              hasGlobalThemeManagement: !!window.setUserTheme
-            });
-          }
         } else {
-          debugLog?.warn('Some preferences failed to save', { 
+          debugLog?.warn('[PREFS-SAVE] Some preferences failed to save', { 
             function: "savePreferences",
             data: { successCount, totalPreferences: 7, results }
           });
@@ -278,61 +295,13 @@ function initializeSettingsController(options = {}) {
     }
   }
   
-  /**
-   * Set a specific preference value
-   * @param {string} key - Preference key
-   * @param {any} value - Preference value
-   * @returns {Promise<boolean>} Success status
-   */
-  async function setPreference(key, value) {
-    if (electronAPI && electronAPI.store) {
-      try {
-        const result = await electronAPI.store.set(key, value);
-        if (result.success) {
-          debugLog?.info(`Preference ${key} saved successfully`, { 
-            function: "setPreference",
-            data: { key, value }
-          });
-          return true;
-        } else {
-          debugLog?.warn(`Failed to save preference ${key}`, { 
-            function: "setPreference",
-            data: { key, value, error: result.error }
-          });
-          return false;
-        }
-      } catch (error) {
-        debugLog?.error(`Preference set error for ${key}`, { 
-          function: "setPreference",
-          data: { key, value },
-          error: error
-        });
-        return false;
-      }
-    } else {
-      // Fallback to legacy store access
-      try {
-        store.set(key, value);
-        debugLog?.info(`Preference ${key} saved using legacy method`, { 
-          function: "setPreference",
-          data: { key, value }
-        });
-        return Promise.resolve(true);
-      } catch (error) {
-        debugLog?.error(`Legacy preference saving failed for ${key}`, { 
-          function: "setPreference",
-          data: { key, value },
-          error: error
-        });
-        return Promise.resolve(false);
-      }
-    }
-  }
+  // Note: setPreference is imported from profile-preference-adapter.js
+  // It routes preferences to either global store or profile-specific storage
   
   return {
     savePreferences,
     getPreference,
-    setPreference
+    setPreference: (key, value) => setPreferenceViaAdapter(key, value, electronAPI)
   };
 }
 

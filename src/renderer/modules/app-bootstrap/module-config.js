@@ -11,6 +11,7 @@ export const moduleConfig = [
   { name: 'songManagement', path: '../song-management/index.js', required: false },
   { name: 'holdingTank', path: '../holding-tank/index.js', required: true },
   { name: 'hotkeys', path: '../hotkeys/index.js', required: false },
+  { name: 'profileState', path: '../profile-state/index.js', required: false },
   { name: 'categories', path: '../categories/index.js', required: false },
   { name: 'bulkOperations', path: '../bulk-operations/index.js', required: false },
   { name: 'dragDrop', path: '../drag-drop/index.js', required: false },
@@ -23,7 +24,8 @@ export const moduleConfig = [
   { name: 'audio', path: '../audio/index.js', required: false },
   { name: 'ui', path: '../ui/index.js', required: true },
   { name: 'debugLog', path: '../debug-log/index.js', required: false },
-  { name: 'database', path: '../database/index.js', required: false }
+  { name: 'database', path: '../database/index.js', required: false },
+  { name: 'cleanup', path: '../cleanup/index.js', required: false }
 ];
 
 export default moduleConfig;

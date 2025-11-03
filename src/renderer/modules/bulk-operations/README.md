@@ -45,6 +45,7 @@ document.querySelector('#bulk_upload_form')
 - Directory recursion, metadata extraction, file copying
 - Category assignment and creation
 - UI integration via modal and handlers
+- Database-driven category name display (queries category description directly instead of relying on global state)
 
 ## Dependencies
 - Electron APIs (secure adapters), database module, DOM APIs

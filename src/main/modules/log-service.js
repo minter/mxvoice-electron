@@ -7,10 +7,13 @@
  * - Gates INFO/DEBUG by renderer preference `debug_log_enabled`
  */
 
-import { app, dialog } from 'electron';
+import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
 import log from 'electron-log';
+
+// Destructure from electron (handles both named and default exports)
+const { app, dialog } = electron;
 
 let service = null;
 
@@ -65,7 +68,7 @@ function formatLine(level, message, meta = {}, context = null) {
   return line;
 }
 
-export function initMainLogService({ store, keepDays = 14 } = {}) {
+export function initMainLogService({ store, keepDays = 14, getDebugPreference } = {}) {
   const logsDir = path.join(app.getPath('userData'), 'logs');
   ensureDirectoryExists(logsDir);
 
@@ -116,12 +119,17 @@ export function initMainLogService({ store, keepDays = 14 } = {}) {
   }
 
   service = {
-    write({ level, message, context = null, meta = {} }) {
+    async write({ level, message, context = null, meta = {} }) {
       const upper = String(level || 'INFO').toUpperCase();
       // Gate info/debug by preference flag
       let debugEnabled = false;
-      try { 
-        debugEnabled = !!store?.get?.('debug_log_enabled'); 
+      try {
+        // Use injected preference getter if available (breaks circular dependency)
+        if (getDebugPreference && typeof getDebugPreference === 'function') {
+          debugEnabled = await getDebugPreference();
+        } else if (store?.get) {
+          debugEnabled = !!store.get('debug_log_enabled');
+        }
       } catch (error) {
         log.warn('Failed to get debug log preference', { 
           module: 'log-service', 

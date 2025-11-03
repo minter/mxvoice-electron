@@ -68,6 +68,19 @@ Each test suite runs in complete isolation:
 - Clean test fixtures
 - No interference with real app data
 
+### Profile Selection
+
+The app requires profile selection on startup. Tests bypass the launcher window by passing `--profile=Default User` as a command line argument:
+
+```javascript
+app = await electron.launch({
+  args: ['.', '--profile=Default User'],
+  env: { /* ... */ }
+});
+```
+
+This allows tests to launch directly into the main app without requiring manual profile selection.
+
 ## Audio Testing
 
 Audio tests use real audio measurements when running locally:

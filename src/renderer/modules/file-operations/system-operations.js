@@ -28,46 +28,18 @@ export function pickDirectory(event, element) {
   const el = typeof element === 'string' ? document.querySelector(element) : element;
   const defaultPath = (el && el instanceof Element) ? (el.value || '') : '';
   
-  debugLog?.info('pickDirectory called', {
-    module: 'system-operations',
-    function: 'pickDirectory',
-    elementType: typeof element,
-    elementValue: element,
-    resolvedElement: !!el,
-    defaultPath
-  });
-  
   try {
     if (window.secureElectronAPI?.app?.showDirectoryPicker) {
       window.secureElectronAPI.app.showDirectoryPicker(defaultPath).then((res) => {
-        debugLog?.info('Directory picker response', {
-          module: 'system-operations',
-          function: 'pickDirectory',
-          success: res?.success,
-          hasData: !!res?.data,
-          canceled: res?.data?.canceled,
-          hasFilePaths: Array.isArray(res?.data?.filePaths)
-        });
-        
         if (res && res.success && res.data && !res.data.canceled && Array.isArray(res.data.filePaths)) {
           const dir = res.data.filePaths[0];
           if (dir && el && el instanceof Element) {
             el.value = dir;
-            debugLog?.info('Updated element value', {
-              module: 'system-operations',
-              function: 'pickDirectory',
-              directory: dir
-            });
           }
         } else if (Array.isArray(res)) {
           const dir = res[0];
           if (dir && el && el instanceof Element) {
             el.value = dir;
-            debugLog?.info('Updated element value (array format)', {
-              module: 'system-operations',
-              function: 'pickDirectory',
-              directory: dir
-            });
           }
         }
       });
@@ -77,11 +49,6 @@ export function pickDirectory(event, element) {
           const dir = res[0];
           if (dir && el && el instanceof Element) {
             el.value = dir;
-            debugLog?.info('Updated element value (legacy API)', {
-              module: 'system-operations',
-              function: 'pickDirectory',
-              directory: dir
-            });
           }
         }
       });

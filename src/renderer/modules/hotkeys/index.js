@@ -36,23 +36,10 @@ import { secureFileDialog } from '../adapters/secure-adapter.js';
  */
 class HotkeysModule {
   constructor(options = {}) {
-    debugLog?.info(
-      '🔄 HotkeysModule constructor called with options:',
-      options,
-      { module: 'hotkeys', function: 'constructor' }
-    );
     this.electronAPI = options.electronAPI;
     // Remove legacy db/store usage in secure context
     this.db = null;
     this.store = null;
-    debugLog?.info('🔄 this.electronAPI set:', !!this.electronAPI, {
-      module: 'hotkeys',
-      function: 'constructor',
-    });
-    debugLog?.info('🔄 this.store set:', !!this.store, {
-      module: 'hotkeys',
-      function: 'constructor',
-    });
 
     // Initialize sub-modules
     this.data = hotkeyData;
@@ -225,9 +212,31 @@ class HotkeysModule {
 
   /**
    * Save hotkeys to store
-   * Only saves if we have the new HTML format with header button
+   * When profiles are active, saves to profile state instead of global store
    */
   saveHotkeysToStore() {
+    // Skip save if currently restoring profile state
+    if (window.isRestoringProfileState) {
+      return;
+    }
+    
+    // When profiles are active, save to profile state instead
+    if (window.moduleRegistry && window.moduleRegistry.profileState) {
+      debugLog?.info('Saving hotkeys to profile state', {
+        module: 'hotkeys',
+        function: 'saveHotkeysToStore'
+      });
+      window.moduleRegistry.profileState.saveProfileState().catch(err => {
+        debugLog?.error('Failed to save profile state from hotkeys', {
+          module: 'hotkeys',
+          function: 'saveHotkeysToStore',
+          error: err.message
+        });
+      });
+      return;
+    }
+    
+    // Legacy: save to global store for non-profile setups
     const col = document.getElementById('hotkeys-column');
     const currentHtml = col ? col.innerHTML : '';
     if (currentHtml.includes('header-button')) {
@@ -303,132 +312,26 @@ class HotkeysModule {
    * @param {string} title - Title for the hotkey tab
    */
   _populateHotkeysImpl(fkeys, title) {
-    debugLog?.info('🔄 ===== POPULATEHOTKEYS FUNCTION ENTERED =====', {
-      module: 'hotkeys',
-      function: 'populateHotkeys',
-    });
-    debugLog?.info(
-      '🔄 populateHotkeys called with:',
-      { fkeys, title },
-      { module: 'hotkeys', function: 'populateHotkeys' }
-    );
-    debugLog?.info('🔄 electronAPI available:', !!window.electronAPI, {
-      module: 'hotkeys',
-      function: 'populateHotkeys',
-    });
-    debugLog?.info(
-      '🔄 database API available:',
-      !!window.electronAPI?.database,
-      { module: 'hotkeys', function: 'populateHotkeys' }
-    );
-    debugLog?.info('🔄 this.electronAPI available:', !!this.electronAPI, {
-      module: 'hotkeys',
-      function: 'populateHotkeys',
-    });
-    debugLog?.info(
-      '🔄 this.electronAPI.database available:',
-      !!this.electronAPI?.database,
-      { module: 'hotkeys', function: 'populateHotkeys' }
-    );
-
-    // Check DOM structure
-    debugLog?.info(
-      '🔄 .hotkeys.active elements found:',
-      document.querySelectorAll('.hotkeys.active').length,
-      { module: 'hotkeys', function: 'populateHotkeys' }
-    );
-    debugLog?.info(
-      '🔄 .hotkeys.active li elements found:',
-      document.querySelectorAll('.hotkeys.active li').length,
-      { module: 'hotkeys', function: 'populateHotkeys' }
-    );
-    debugLog?.info(
-      '🔄 #f1_hotkey element found:',
-      document.getElementById('f1_hotkey') ? 1 : 0,
-      { module: 'hotkeys', function: 'populateHotkeys' }
-    );
-    debugLog?.info(
-      '🔄 #f2_hotkey element found:',
-      document.getElementById('f2_hotkey') ? 1 : 0,
-      { module: 'hotkeys', function: 'populateHotkeys' }
-    );
-
-    // Test database connectivity with a sample song ID
-    if (this.electronAPI && this.electronAPI.database) {
-      debugLog?.info('🔄 Testing database connectivity...', {
-        module: 'hotkeys',
-        function: 'populateHotkeys',
-      });
-      const testSongId = '800'; // From your hotkey file
-      this.electronAPI.database
-        .query('SELECT COUNT(*) as count FROM mrvoice WHERE id = ?', [
-          testSongId,
-        ])
-        .then((result) => {
-          debugLog?.info(
-            `🔄 Database test result for song ${testSongId}:`,
-            result,
-            { module: 'hotkeys', function: 'populateHotkeys' }
-          );
-        })
-        .catch((error) => {
-          debugLog?.error(
-            `❌ Database test failed for song ${testSongId}:`,
-            error,
-            { module: 'hotkeys', function: 'populateHotkeys' }
-          );
-        });
-    }
-
     if (!fkeys || Object.keys(fkeys).length === 0) {
-      debugLog?.info('⚠️ No hotkey data provided to populateHotkeys', {
-        module: 'hotkeys',
-        function: 'populateHotkeys',
-      });
       return;
     }
 
     for (const key in fkeys) {
-      debugLog?.info(`🔄 Processing hotkey ${key} with value: ${fkeys[key]}`, {
-        module: 'hotkeys',
-        function: 'populateHotkeys',
-      });
       const hotkeyElement = document.querySelector(
         `.hotkeys.active #${key}_hotkey`
       );
-      debugLog?.info(`🔄 Found hotkey element for ${key}:`, !!hotkeyElement, {
-        module: 'hotkeys',
-        function: 'populateHotkeys',
-      });
 
       if (fkeys[key]) {
         try {
-          debugLog?.info(
-            `🔄 Setting hotkey ${key} with song ID: ${fkeys[key]}`,
-            { module: 'hotkeys', function: 'populateHotkeys' }
-          );
           if (hotkeyElement) hotkeyElement.setAttribute('songid', fkeys[key]);
-          debugLog?.info(`🔄 About to call setLabelFromSongId for ${key}...`, {
-            module: 'hotkeys',
-            function: 'populateHotkeys',
-          });
           this.setLabelFromSongId(fkeys[key], hotkeyElement);
-          debugLog?.info(`🔄 setLabelFromSongId called for ${key}`, {
-            module: 'hotkeys',
-            function: 'populateHotkeys',
-          });
         } catch (err) {
           debugLog?.error(
-            `❌ Error loading fkey ${key} (DB ID: ${fkeys[key]})`,
-            err,
-            { module: 'hotkeys', function: 'populateHotkeys' }
+            `Error loading hotkey ${key} (DB ID: ${fkeys[key]})`,
+            { module: 'hotkeys', function: 'populateHotkeys', error: err }
           );
         }
       } else {
-        debugLog?.info(`🔄 Clearing hotkey ${key}`, {
-          module: 'hotkeys',
-          function: 'populateHotkeys',
-        });
         if (hotkeyElement) {
           hotkeyElement.removeAttribute('songid');
           const span = hotkeyElement.querySelector('span');
@@ -436,18 +339,14 @@ class HotkeysModule {
         }
       }
     }
+    
     if (title) {
-      debugLog?.info(`🔄 Setting hotkey tab title to: ${title}`, {
-        module: 'hotkeys',
-        function: 'populateHotkeys',
-      });
       const active = document.querySelector('#hotkey_tabs li a.active');
       if (active) active.textContent = title;
     }
-    debugLog?.info('✅ populateHotkeys completed successfully', {
-      module: 'hotkeys',
-      function: 'populateHotkeys',
-    });
+    
+    // Save after all hotkeys populated (single save instead of N saves during loading)
+    this.saveHotkeysToStore();
   }
 
   /**
@@ -475,49 +374,16 @@ class HotkeysModule {
    * @param {jQuery} element - Hotkey element to update
    */
   setLabelFromSongId(song_id, element) {
-    debugLog?.info(`🔄 setLabelFromSongId called with song_id: ${song_id}`, {
-      module: 'hotkeys',
-      function: 'setLabelFromSongId',
-    });
-    debugLog?.info(`🔄 element found:`, element.length > 0, {
-      module: 'hotkeys',
-      function: 'setLabelFromSongId',
-    });
-
     // Use new database API for getting song by ID
     if (this.electronAPI && this.electronAPI.database) {
-      debugLog?.info(`🔄 Using database API to query song ${song_id}`, {
-        module: 'hotkeys',
-        function: 'setLabelFromSongId',
-      });
-      debugLog?.info(
-        `🔄 Database API available:`,
-        !!this.electronAPI.database,
-        { module: 'hotkeys', function: 'setLabelFromSongId' }
-      );
-      debugLog?.info(
-        `🔄 Database query method available:`,
-        typeof this.electronAPI.database.query,
-        { module: 'hotkeys', function: 'setLabelFromSongId' }
-      );
-
-      this.electronAPI.database
+      return this.electronAPI.database
         .query('SELECT * from mrvoice WHERE id = ?', [song_id])
         .then((result) => {
-          debugLog?.info(
-            `🔄 Database query result for song ${song_id}:`,
-            result,
-            { module: 'hotkeys', function: 'setLabelFromSongId' }
-          );
           if (result.success && result.data.length > 0) {
             const row = result.data[0];
             const title = row.title || '[Unknown Title]';
             const artist = row.artist || '[Unknown Artist]';
             const time = row.time || '[??:??]';
-            debugLog?.info(`🔄 Found song: ${title} by ${artist} (${time})`, {
-              module: 'hotkeys',
-              function: 'setLabelFromSongId',
-            });
 
             // Handle swapping
             const other = document.querySelector(
@@ -540,24 +406,16 @@ class HotkeysModule {
               if (span) span.textContent = `${title} by ${artist} (${time})`;
               element.setAttribute('songid', song_id);
             }
-            this.saveHotkeysToStore();
+            // Note: Save is now done by caller, not here, to avoid N saves during batch operations
           } else {
-            debugLog?.warn('❌ Failed to get song by ID:', result.error, {
-              module: 'hotkeys',
-              function: 'setLabelFromSongId',
-            });
-            this.fallbackSetLabelFromSongId(song_id, element);
+            return this.fallbackSetLabelFromSongId(song_id, element);
           }
         })
         .catch((error) => {
-          debugLog?.warn('❌ Database API error:', error, {
-            module: 'hotkeys',
-            function: 'setLabelFromSongId',
-          });
-          this.fallbackSetLabelFromSongId(song_id, element);
+          return this.fallbackSetLabelFromSongId(song_id, element);
         });
     } else {
-      this.fallbackSetLabelFromSongId(song_id, element);
+      return this.fallbackSetLabelFromSongId(song_id, element) || Promise.resolve();
     }
   }
 
@@ -598,7 +456,7 @@ class HotkeysModule {
               if (span2) span2.textContent = `${title} by ${artist} (${time})`;
               element.setAttribute('songid', song_id);
             }
-            this.saveHotkeysToStore();
+            // Note: Save is now done by caller, not here, to avoid N saves during batch operations
           }
         })
         .catch(() => {
@@ -854,6 +712,8 @@ class HotkeysModule {
     if (target && song_id) {
       target.setAttribute('songid', song_id);
       this.setLabelFromSongId(song_id, target);
+      // Save hotkeys state after assignment
+      this.saveHotkeysToStore();
     }
     return false;
   }

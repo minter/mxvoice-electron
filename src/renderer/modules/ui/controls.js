@@ -40,8 +40,18 @@ function initializeControls(options = {}) {
     if (fontSize < 25) {
       fontSize++;
       document.querySelectorAll('.song').forEach(el => { el.style.fontSize = fontSize + 'px'; });
-      if (electronAPI && electronAPI.store) {
-        electronAPI.store.set("font-size", fontSize).catch(error => {
+      // Save to profile preferences (not global store)
+      if (electronAPI && electronAPI.profile) {
+        electronAPI.profile.setPreference("font_size", fontSize).catch(error => {
+          debugLog?.warn('Failed to save font size to profile', { 
+            module: 'ui-controls',
+            function: 'increaseFontSize',
+            error: error
+          });
+        });
+      } else if (electronAPI && electronAPI.store) {
+        // Fallback to global store if profile API not available
+        electronAPI.store.set("font_size", fontSize).catch(error => {
           debugLog?.warn('Failed to save font size', { 
             module: 'ui-controls',
             function: 'increaseFontSize',
@@ -59,8 +69,18 @@ function initializeControls(options = {}) {
     if (fontSize > 5) {
       fontSize--;
       document.querySelectorAll('.song').forEach(el => { el.style.fontSize = fontSize + 'px'; });
-      if (electronAPI && electronAPI.store) {
-        electronAPI.store.set("font-size", fontSize).catch(error => {
+      // Save to profile preferences (not global store)
+      if (electronAPI && electronAPI.profile) {
+        electronAPI.profile.setPreference("font_size", fontSize).catch(error => {
+          debugLog?.warn('Failed to save font size to profile', { 
+            module: 'ui-controls',
+            function: 'decreaseFontSize',
+            error: error
+          });
+        });
+      } else if (electronAPI && electronAPI.store) {
+        // Fallback to global store if profile API not available
+        electronAPI.store.set("font_size", fontSize).catch(error => {
           debugLog?.warn('Failed to save font size', { 
             module: 'ui-controls',
             function: 'decreaseFontSize',

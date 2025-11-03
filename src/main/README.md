@@ -55,7 +55,7 @@ src/main/
 
 - Enforces single-instance lock (prevents multiple app instances from running simultaneously)
 - Creates `electron-store` with defaults; initializes DebugLog
-- Sets up auto-updater (logger, feed URL on macOS, markdown processing for release notes)
+- Sets up auto-updater (logger, feed URL on macOS, sends release notes to renderer for sanitization)
 - First-run flow: create folders, seed DB with starter content if needed
 - Initializes SQLite WebAssembly database using `node-sqlite3-wasm` with automatic stale lock cleanup
 - Creates the main window and application menu with enhanced state restoration
@@ -76,8 +76,8 @@ The application now maintains complete window state across sessions:
 
 - Context Isolation is enabled; all renderer access is via preload/IPC
 - Audio playback for quick tests uses Howler in main (via IPC) when applicable
-- Auto-updater includes markdown processing for GitHub release notes using `markdown-it`
-- The application menu includes an “Export Logs…” item:
+- Auto-updater sends release notes to renderer where they are sanitized using DOMPurify
+- The application menu includes an "Export Logs…" item:
   - macOS: under the app menu (e.g., `Mx. Voice` → `Export Logs…`)
   - Windows/Linux: under `Help` → `Export Logs…`
 - Standard roles are used for common actions:
