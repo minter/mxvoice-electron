@@ -2610,10 +2610,10 @@ node-api-version@^0.2.0:
   dependencies:
     semver "^7.3.5"
 
-node-sqlite3-wasm@^0.8.50:
-  version "0.8.50"
-  resolved "https://registry.yarnpkg.com/node-sqlite3-wasm/-/node-sqlite3-wasm-0.8.50.tgz#3e4bc9cca9cd4a8830ecbcac1174df6c065c1d34"
-  integrity sha512-6gZLL2j8LDeh9SgZT0vglfILfyXocHxFTOfAdDTX0vikY59E3ZnL7WB2a5kszumvpVAlVdc5bYVR8hnSgYpXwA==
+node-sqlite3-wasm@^0.8.51:
+  version "0.8.51"
+  resolved "https://registry.yarnpkg.com/node-sqlite3-wasm/-/node-sqlite3-wasm-0.8.51.tgz#fb3d69350f3f73d3c9773c0f9031c990125db4ee"
+  integrity sha512-tbUWEZLrGJwfi6eE6Xw+6GYRIQne4/C7uyh76hDI1tD88JfnLQCqPED8IvW0FVfrMNYuhYkO5a10XjI1du1kLg==
 
 nopt@^6.0.0:
   version "6.0.0"

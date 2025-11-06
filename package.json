@@ -176,7 +176,7 @@
     "mousetrap": "^1.6.5",
     "music-metadata": "11.9.0",
     "n-readlines": "^1.0.1",
-    "node-sqlite3-wasm": "^0.8.50",
+    "node-sqlite3-wasm": "^0.8.51",
     "uuid": "^13.0.0",
     "wavesurfer.js": "^7.11.1",
     "yarn": "^1.22.22"
