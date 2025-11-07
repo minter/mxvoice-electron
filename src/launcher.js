@@ -12,6 +12,7 @@
 let selectedProfile = null;
 let profiles = [];
 let filteredProfiles = [];
+let latestLoadProfilesRequestId = 0;
 
 // Wait for the secure API to be available
 window.addEventListener('DOMContentLoaded', async () => {
@@ -23,8 +24,12 @@ window.addEventListener('DOMContentLoaded', async () => {
  * Load profiles from main process
  */
 async function loadProfiles() {
+  const requestId = ++latestLoadProfilesRequestId;
   try {
     const result = await window.launcherAPI.getProfiles();
+    if (requestId !== latestLoadProfilesRequestId) {
+      return;
+    }
     
     if (result.success) {
       profiles = result.profiles;
@@ -54,6 +59,9 @@ async function loadProfiles() {
       document.getElementById('profile-content').style.display = 'block';
     }
   } catch (error) {
+    if (requestId !== latestLoadProfilesRequestId) {
+      return;
+    }
     showError(`Error loading profiles: ${error.message}`);
     // Still show the UI even if there was an error
     document.getElementById('loading-state').style.display = 'none';
@@ -130,12 +138,12 @@ function renderProfiles() {
     `;
     
     // Click to select profile
-    li.addEventListener('click', (e) => {
+    li.addEventListener('click', () => {
       selectProfile(profile.name);
     });
     
     // Double-click to launch
-    li.addEventListener('dblclick', (e) => {
+    li.addEventListener('dblclick', () => {
       launchApp();
     });
     
