@@ -2549,10 +2549,10 @@ ms@^2.0.0, ms@^2.1.3:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#574c8138ce1d2b5861f0b44579dbadd60c6615b2"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
 
-music-metadata@11.9.0:
-  version "11.9.0"
-  resolved "https://registry.yarnpkg.com/music-metadata/-/music-metadata-11.9.0.tgz#74108323106d5fb93e969a96a9136f8bc5b8d209"
-  integrity sha512-J7VqD8FY6KRcm75Fzj86FPsckiD/EdvO5OS3P+JiMf/2krP3TcAseZYfkic6eFeJ0iBhhzcdxgfu8hLW95aXXw==
+music-metadata@11.10.0:
+  version "11.10.0"
+  resolved "https://registry.yarnpkg.com/music-metadata/-/music-metadata-11.10.0.tgz#96aeaf2da55d485306d3a1cce077538e1206c350"
+  integrity sha512-alZYPjpqAPFgVZaFQob0PMq/9tSqaR+3m159vavrptxj09P0GcyBkDQI/wuCyn4uz/TDCrS8gN+9SzURlahmdQ==
   dependencies:
     "@borewit/text-codec" "^0.2.0"
     "@tokenizer/token" "^0.3.0"
