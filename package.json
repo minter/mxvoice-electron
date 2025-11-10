@@ -174,7 +174,7 @@
     "howler": "^2.2.3",
     "jsdom": "^27.0.1",
     "mousetrap": "^1.6.5",
-    "music-metadata": "11.9.0",
+    "music-metadata": "11.10.0",
     "n-readlines": "^1.0.1",
     "node-sqlite3-wasm": "^0.8.51",
     "uuid": "^13.0.0",
