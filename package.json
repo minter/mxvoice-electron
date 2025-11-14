@@ -188,7 +188,7 @@
     "electron-builder": "26.0.12",
     "electron-reload": "^1.5.0",
     "eslint": "^9.39.1",
-    "node-abi": "4.17.0",
+    "node-abi": "4.24.0",
     "playwright": "^1.55.1"
   }
 }
