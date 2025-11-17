@@ -670,6 +670,50 @@ export async function loadProfileState(options = {}) {
       return { success: true, loaded: false };
     }
     
+    // Validate state structure
+    if (!state || typeof state !== 'object') {
+      window.isRestoringProfileState = false;
+      debugLog?.error('[PROFILE-STATE] Invalid state structure - not an object', {
+        module: 'profile-state',
+        function: 'loadProfileState',
+        stateType: typeof state
+      });
+      return { success: true, loaded: false };
+    }
+    
+    // Ensure required arrays exist (even if empty)
+    if (!Array.isArray(state.hotkeys)) {
+      debugLog?.warn('[PROFILE-STATE] State missing hotkeys array, initializing empty', {
+        module: 'profile-state',
+        function: 'loadProfileState'
+      });
+      state.hotkeys = [];
+    }
+    
+    if (!Array.isArray(state.holdingTank)) {
+      debugLog?.warn('[PROFILE-STATE] State missing holdingTank array, initializing empty', {
+        module: 'profile-state',
+        function: 'loadProfileState'
+      });
+      state.holdingTank = [];
+    }
+    
+    // Validate that state has some content (not completely empty)
+    const hasHotkeys = state.hotkeys.some(tab => tab.hotkeys && Object.keys(tab.hotkeys).length > 0);
+    const hasHoldingTank = state.holdingTank.some(tab => tab.songIds && tab.songIds.length > 0);
+    
+    if (!hasHotkeys && !hasHoldingTank) {
+      debugLog?.warn('[PROFILE-STATE] State file exists but contains no data (empty profile)', {
+        module: 'profile-state',
+        function: 'loadProfileState',
+        profile: currentProfile,
+        stateFile
+      });
+      // Still return success but mark as not loaded so UI shows empty state
+      window.isRestoringProfileState = false;
+      return { success: true, loaded: false };
+    }
+    
     debugLog?.info('[PROFILE-STATE] Loaded profile state', { 
       module: 'profile-state',
       function: 'loadProfileState',
@@ -679,6 +723,8 @@ export async function loadProfileState(options = {}) {
       timestamp: state.timestamp,
       hotkeyTabs: state.hotkeys?.length || 0,
       holdingTankTabs: state.holdingTank?.length || 0,
+      hasHotkeys: hasHotkeys,
+      hasHoldingTank: hasHoldingTank,
       statePreview: {
         hotkeys: state.hotkeys?.map(tab => ({
           tabNumber: tab.tabNumber,

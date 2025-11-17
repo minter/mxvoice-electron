@@ -50,6 +50,103 @@ import {
 let cachedMusicDirectory = null;
 
 /**
+ * Ensure audio context is resumed and attempt playback with validation
+ * @param {Object} sound - Howl sound instance
+ * @param {string} song_id - Song ID for logging
+ * @returns {number|undefined} Sound ID if playback started, undefined otherwise
+ */
+async function ensureAudioContextAndPlay(sound, song_id) {
+  try {
+    // Check if Web Audio context exists and is suspended
+    if (window.Howler?.ctx && window.Howler.ctx.state === 'suspended') {
+      getDebugLog()?.info('Audio context is suspended, resuming...', {
+        module: 'audio-manager',
+        function: 'ensureAudioContextAndPlay',
+        song_id: song_id
+      });
+      
+      try {
+        await window.Howler.ctx.resume();
+        getDebugLog()?.info('Audio context resumed successfully', {
+          module: 'audio-manager',
+          function: 'ensureAudioContextAndPlay',
+          song_id: song_id
+        });
+      } catch (error) {
+        getDebugLog()?.warn('Failed to resume audio context, attempting playback anyway', {
+          module: 'audio-manager',
+          function: 'ensureAudioContextAndPlay',
+          song_id: song_id,
+          error: error.message
+        });
+      }
+    }
+    
+    // Attempt playback
+    const playResult = sound.play();
+    
+    // Validate playback started
+    if (playResult === undefined) {
+      getDebugLog()?.warn('sound.play() returned undefined, playback may have failed', {
+        module: 'audio-manager',
+        function: 'ensureAudioContextAndPlay',
+        song_id: song_id,
+        soundState: sound.state()
+      });
+      
+      // Wait a moment and check if sound is actually playing
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (!sound.playing()) {
+        getDebugLog()?.error('Playback failed - sound is not playing after play() call', {
+          module: 'audio-manager',
+          function: 'ensureAudioContextAndPlay',
+          song_id: song_id,
+          soundState: sound.state(),
+          playResult: playResult
+        });
+        return undefined;
+      }
+    }
+    
+    // Verify playback is actually happening
+    if (playResult !== undefined) {
+      // Double-check that the sound is actually playing
+      setTimeout(() => {
+        if (!sound.playing()) {
+          getDebugLog()?.warn('Playback may have stopped immediately after starting', {
+            module: 'audio-manager',
+            function: 'ensureAudioContextAndPlay',
+            song_id: song_id,
+            playResult: playResult,
+            soundState: sound.state()
+          });
+        }
+      }, 200);
+    }
+    
+    getDebugLog()?.info('Playback started successfully', {
+      module: 'audio-manager',
+      function: 'ensureAudioContextAndPlay',
+      song_id: song_id,
+      playResult: playResult,
+      soundState: sound.state(),
+      playing: sound.playing()
+    });
+    
+    return playResult;
+  } catch (error) {
+    getDebugLog()?.error('Error in ensureAudioContextAndPlay', {
+      module: 'audio-manager',
+      function: 'ensureAudioContextAndPlay',
+      song_id: song_id,
+      error: error.message
+    });
+    return undefined;
+  }
+}
+
+/**
  * Initialize the music directory cache
  * This is called during module initialization to pre-fetch the music directory
  */
@@ -264,26 +361,33 @@ function playSongWithFilename(filename, row, song_id) {
               
               sharedState.set('sound', sound);
               
-              getDebugLog()?.info('About to call play()', {
+              getDebugLog()?.info('About to start playback', {
                 module: 'audio-manager',
                 function: 'playSongWithFilename',
                 soundState: sound.state(),
                 src: sound_path
               });
               
-              // Start playback immediately (progressive loading mode)
-              // With preload: false, this starts as soon as buffer is ready
-              const playResult = sound.play();
-              
-              getDebugLog()?.info('Called play(), result:', {
-                module: 'audio-manager',
-                function: 'playSongWithFilename',
-                playResult: playResult,
-                soundState: sound.state(),
-                playing: sound.playing()
+              // Start playback with audio context resume and validation
+              ensureAudioContextAndPlay(sound, song_id).then(playResult => {
+                if (playResult === undefined) {
+                  getDebugLog()?.error('Playback failed to start', {
+                    module: 'audio-manager',
+                    function: 'playSongWithFilename',
+                    song_id: song_id,
+                    soundState: sound.state()
+                  });
+                }
+              }).catch(error => {
+                getDebugLog()?.error('Error during playback start', {
+                  module: 'audio-manager',
+                  function: 'playSongWithFilename',
+                  song_id: song_id,
+                  error: error.message
+                });
               });
               
-              // Resume suspended audio context in E2E mode
+              // Resume suspended audio context in E2E mode (additional check)
               if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
                 window.Howler.ctx.resume().catch(() => {});
               }
@@ -455,20 +559,24 @@ function playSongWithFilename(filename, row, song_id) {
             
             sharedState.set('sound', sound);
             
-            // Resume audio context if suspended (critical for playback)
-            if (window.Howler?.ctx?.state === 'suspended') {
-              getDebugLog()?.info('Resuming suspended audio context', {
+            // Start playback with audio context resume and validation
+            ensureAudioContextAndPlay(sound, song_id).then(playResult => {
+              if (playResult === undefined) {
+                getDebugLog()?.error('Playback failed to start', {
+                  module: 'audio-manager',
+                  function: 'playSongWithFilename',
+                  song_id: song_id,
+                  soundState: sound.state()
+                });
+              }
+            }).catch(error => {
+              getDebugLog()?.error('Error during playback start', {
                 module: 'audio-manager',
-                function: 'playSongWithFilename'
+                function: 'playSongWithFilename',
+                song_id: song_id,
+                error: error.message
               });
-              window.Howler.ctx.resume().then(() => {
-                sound.play();
-              }).catch(() => {
-                sound.play(); // Try anyway
-              });
-            } else {
-              sound.play();
-            }
+            });
             
             try {
               if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
