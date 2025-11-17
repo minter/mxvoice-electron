@@ -1394,10 +1394,10 @@ electron-store@^11.0.2:
     conf "^15.0.2"
     type-fest "^5.0.1"
 
-electron-updater@^6.7.0:
-  version "6.7.0"
-  resolved "https://registry.yarnpkg.com/electron-updater/-/electron-updater-6.7.0.tgz#8dd471de27193a5192bda322c66cdbff0add4123"
-  integrity sha512-j8ejBZCkp5kvv1MxJNoQaSjNvEbr/ZHSeQdwm0jbZGgVm+Z6ExqRpqE8oRxDsDacxQfk7l8hlBAnlq4qAk2wfw==
+electron-updater@^6.7.1:
+  version "6.7.1"
+  resolved "https://registry.yarnpkg.com/electron-updater/-/electron-updater-6.7.1.tgz#3fc1fc26527db8f0533655a105ab8be28879d199"
+  integrity sha512-CWqe8I6e0WKJlh6zrXJhyojpWG7T6ZuxTsM91KDEvRFT1QzrKbbRvQhwSyuL6HnIfdRpPVnGz5Rqxjv3OcP1aQ==
   dependencies:
     builder-util-runtime "9.5.0"
     fs-extra "^10.1.0"
