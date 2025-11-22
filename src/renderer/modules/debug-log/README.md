@@ -15,7 +15,7 @@ debug-log/
 ## Features
 
 ### ✅ Centralized Logging
-- **Respects Debug Preference**: Only logs debug messages when debug logging is enabled
+- **Respects Debug Preference**: Only logs debug messages when debug logging is enabled (universal setting, shared across all profiles, default: enabled)
 - **Multiple Log Levels**: ERROR, WARN, INFO, DEBUG
 - **Context Support**: Rich context information for better debugging
 - **Performance Optimized**: Caches debug preference to avoid repeated checks

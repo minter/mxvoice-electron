@@ -240,6 +240,7 @@ const defaults = {
   hotkey_directory: path.join(app.getPath('userData'), 'hotkeys'),
   database_directory: app.getPath('userData'),
   fade_out_seconds: 2,
+  debug_log_enabled: true,
   first_run_completed: false
 }
 
@@ -253,18 +254,15 @@ const store = new Store({
 });
 
 // Helper function to get debug preference (breaks circular dependency with profile-manager)
+// Debug logging is a universal setting, not profile-specific
 async function getDebugPreference() {
   try {
-    const currentProfile = getCurrentProfile();
-    if (currentProfile && profileManager) {
-      const preferences = await profileManager.loadProfilePreferences(currentProfile);
-      return !!preferences?.debug_log_enabled;
-    } else if (store) {
+    if (store) {
       return !!store.get('debug_log_enabled');
     }
-    return false;
+    return true; // Default to enabled if store is not available
   } catch (error) {
-    return false;
+    return true; // Default to enabled on error
   }
 }
 

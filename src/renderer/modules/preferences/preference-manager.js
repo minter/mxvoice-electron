@@ -272,7 +272,7 @@ function initializePreferenceManager(options = {}) {
   }
   
   /**
-   * Get debug log enabled preference
+   * Get debug log enabled preference (universal setting)
    * @returns {Promise<boolean>} Debug log enabled status
    */
   async function getDebugLogEnabled() {
@@ -280,22 +280,23 @@ function initializePreferenceManager(options = {}) {
       try {
         const result = await getPreference("debug_log_enabled", electronAPI);
         if (result.success) {
-          return result.value || false;
+          return result.value !== undefined ? result.value : true;
         } else {
           await debugLog.error('Failed to get debug log enabled', { 
             function: "getDebugLogEnabled",
             error: result.error
           });
-          return false;
+          return true; // Default to enabled on error
         }
       } catch (error) {
         await debugLog.error('Debug log enabled get error', { 
           function: "getDebugLogEnabled",
           error: error
         });
-        return false;
+        return true; // Default to enabled on error
       }
     }
+    return true; // Default to enabled if no electronAPI
   }
   
   /**

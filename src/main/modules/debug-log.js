@@ -54,15 +54,16 @@ function initializeMainDebugLog(options = {}) {
       if (getDebugPreference && typeof getDebugPreference === 'function') {
         debugEnabledCache = await getDebugPreference();
       } else if (store) {
-        // Fallback to global store
-        debugEnabledCache = store.get("debug_log_enabled") || false;
+        // Fallback to global store - debug logging is now enabled by default
+        const value = store.get("debug_log_enabled");
+        debugEnabledCache = value !== undefined ? value : true;
       } else {
-        // Default to false when no store available
-        debugEnabledCache = false;
+        // Default to enabled when no store available
+        debugEnabledCache = true;
       }
     } catch (error) {
       log.warn('Failed to get debug log preference:', error);
-      debugEnabledCache = false;
+      debugEnabledCache = true; // Default to enabled on error
     }
 
     debugEnabledCacheTime = now;

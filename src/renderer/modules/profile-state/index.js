@@ -251,11 +251,38 @@ export function extractProfileState() {
  * IMPORTANT: This function takes NO parameters. It always extracts state from the DOM.
  * Do not pass hotkeysModule or holdingTankModule - they are ignored.
  * 
+ * CRITICAL DATA PROTECTION:
+ * - Will NOT save if restoration is in progress (extended lock covers full app init)
+ * - Creates backup of existing state before overwriting
+ * 
  * @returns {Promise<Object>} Result with success status
  */
 export async function saveProfileState() {
   try {
+    // PROTECTION: Never save during restoration/initialization (race condition protection)
+    if (window.isRestoringProfileState) {
+      debugLog?.warn('[PROFILE-STATE] Refusing to save - restoration in progress', {
+        module: 'profile-state',
+        function: 'saveProfileState',
+        reason: 'restoration_lock_active'
+      });
+      return { success: false, error: 'Restoration in progress', skipped: true };
+    }
+    
     const state = extractProfileState();
+    
+    // Calculate state contents for logging
+    const hotkeyCount = state.hotkeys.reduce((sum, tab) => sum + Object.keys(tab.hotkeys).length, 0);
+    const holdingTankCount = state.holdingTank.reduce((sum, tab) => sum + tab.songIds.length, 0);
+    const hasData = hotkeyCount > 0 || holdingTankCount > 0;
+    
+    debugLog?.info('[PROFILE-STATE] Saving profile state', {
+      module: 'profile-state',
+      function: 'saveProfileState',
+      hotkeyCount: hotkeyCount,
+      holdingTankCount: holdingTankCount,
+      hasData: hasData
+    });
     
     // Get profile-specific directory
     const result = await window.secureElectronAPI.profile.getDirectory('state');
@@ -274,6 +301,24 @@ export async function saveProfileState() {
     // Ensure directory exists
     await window.secureElectronAPI.fileSystem.mkdir(stateDir);
     
+    // BACKUP: Always backup existing state before overwriting
+    const existsResult = await window.secureElectronAPI.fileSystem.exists(stateFile);
+    if (existsResult.success && existsResult.data) {
+      const backupFileResult = await window.secureElectronAPI.path.join(stateDir, 'state.json.backup');
+      if (backupFileResult.success) {
+        const backupFile = backupFileResult.data;
+        const readResult = await window.secureElectronAPI.fileSystem.read(stateFile);
+        if (readResult.success && readResult.data) {
+          await window.secureElectronAPI.fileSystem.write(backupFile, readResult.data);
+          debugLog?.info('[PROFILE-STATE] Created backup of existing state', {
+            module: 'profile-state',
+            function: 'saveProfileState',
+            backupFile: backupFile
+          });
+        }
+      }
+    }
+    
     // Write state file
     const writeResult = await window.secureElectronAPI.fileSystem.write(
       stateFile,
@@ -284,7 +329,10 @@ export async function saveProfileState() {
       debugLog?.info('[PROFILE-STATE] Profile state saved successfully', { 
         module: 'profile-state',
         function: 'saveProfileState',
-        stateFile: stateFile
+        stateFile: stateFile,
+        hotkeyCount: hotkeyCount,
+        holdingTankCount: holdingTankCount,
+        hasData: hasData
       });
       return { success: true };
     } else {
@@ -778,24 +826,45 @@ export async function loadProfileState(options = {}) {
       function: 'loadProfileState'
     });
     
-    // Clear restoration lock
-    window.isRestoringProfileState = false;
-    debugLog?.info('[PROFILE-STATE] Restoration lock cleared', {
+    // DO NOT clear restoration lock here - it will be cleared after full app initialization
+    // This prevents saves from happening before the song table is populated
+    debugLog?.info('[PROFILE-STATE] Restoration complete, keeping lock active until app initialization finishes', {
       module: 'profile-state',
-      function: 'loadProfileState'
+      function: 'loadProfileState',
+      note: 'Restoration lock will be cleared by clearProfileRestorationLock() after full app init'
     });
     
     return { success: true, loaded: true };
   } catch (error) {
-    // Clear restoration lock even on error
+    // Clear restoration lock on error
     window.isRestoringProfileState = false;
-    
+
     debugLog?.error('[PROFILE-STATE] Failed to load profile state', { 
       module: 'profile-state',
       function: 'loadProfileState',
       error: error.message
     });
     return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Clear the profile restoration lock
+ * MUST be called after full app initialization is complete (including song table population)
+ * This allows profile state saves to proceed normally after the app is fully loaded
+ */
+export function clearProfileRestorationLock() {
+  if (window.isRestoringProfileState) {
+    window.isRestoringProfileState = false;
+    debugLog?.info('[PROFILE-STATE] Restoration lock cleared - app initialization complete', {
+      module: 'profile-state',
+      function: 'clearProfileRestorationLock'
+    });
+  } else {
+    debugLog?.warn('[PROFILE-STATE] clearProfileRestorationLock called but lock was not set', {
+      module: 'profile-state',
+      function: 'clearProfileRestorationLock'
+    });
   }
 }
 
@@ -811,14 +880,32 @@ export async function switchProfileWithSave() {
       function: 'switchProfileWithSave'
     });
     
+    // PROTECTION: Never extract/save during restoration/initialization
+    if (window.isRestoringProfileState) {
+      debugLog?.warn('[PROFILE-STATE] Skipping state save during profile switch - restoration in progress', {
+        module: 'profile-state',
+        function: 'switchProfileWithSave',
+        reason: 'restoration_lock_active'
+      });
+      // Continue with switch - don't block the switch
+      await window.secureElectronAPI.profile.switchProfile();
+      return { success: true, skipped: true };
+    }
+    
     // Extract current state
     const state = extractProfileState();
+    
+    // Calculate state contents for logging
+    const hotkeyCount = state.hotkeys.reduce((sum, tab) => sum + Object.keys(tab.hotkeys).length, 0);
+    const holdingTankCount = state.holdingTank.reduce((sum, tab) => sum + tab.songIds.length, 0);
     
     debugLog?.info('[PROFILE-STATE] State extracted, saving before switch', {
       module: 'profile-state',
       function: 'switchProfileWithSave',
       hotkeyTabs: state.hotkeys?.length || 0,
-      holdingTankTabs: state.holdingTank?.length || 0
+      holdingTankTabs: state.holdingTank?.length || 0,
+      hotkeyCount: hotkeyCount,
+      holdingTankCount: holdingTankCount
     });
     
     // Get current profile name for explicit saving
@@ -883,6 +970,16 @@ export function initializeProfileState({ hotkeysModule, holdingTankModule } = {}
       function: 'beforeunload'
     });
     
+    // PROTECTION: Never save during restoration/initialization
+    if (window.isRestoringProfileState) {
+      debugLog?.warn('[PROFILE-STATE] Skipping save on window close - restoration in progress', {
+        module: 'profile-state',
+        function: 'beforeunload',
+        reason: 'restoration_lock_active'
+      });
+      return;
+    }
+    
     // Extract state immediately (synchronous)
     const state = extractProfileState();
     
@@ -907,7 +1004,8 @@ export function initializeProfileState({ hotkeysModule, holdingTankModule } = {}
     extractProfileState,
     saveProfileState,
     loadProfileState,
-    switchProfileWithSave
+    switchProfileWithSave,
+    clearProfileRestorationLock
   };
 }
 
@@ -916,6 +1014,7 @@ export default {
   extractProfileState,
   saveProfileState,
   loadProfileState,
-  switchProfileWithSave
+  switchProfileWithSave,
+  clearProfileRestorationLock
 };
 

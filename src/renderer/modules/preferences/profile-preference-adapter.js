@@ -2,14 +2,15 @@
  * Profile Preference Adapter
  * 
  * Routes preference get/set operations to either:
- * - Profile-specific preferences (theme, font, column order, etc.)
- * - Global preferences (directories)
+ * - Profile-specific preferences (theme, font, column order, fade out, etc.)
+ * - Global preferences (directories, debug logging)
  */
 
 const GLOBAL_PREFERENCES = [
   'database_directory',
   'music_directory',
-  'hotkey_directory'
+  'hotkey_directory',
+  'debug_log_enabled'
 ];
 
 const PROFILE_PREFERENCES = [
@@ -17,7 +18,6 @@ const PROFILE_PREFERENCES = [
   'font_size',
   'column_order',
   'fade_out_seconds',
-  'debug_log_enabled',
   'prerelease_updates',
   'holding_tank_mode',
   'window_state',

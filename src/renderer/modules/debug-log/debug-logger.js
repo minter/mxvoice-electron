@@ -38,6 +38,7 @@ function initializeDebugLogger(options = {}) {
   /**
    * Check if debug logging is enabled
    * Uses caching to avoid repeated preference checks
+   * Debug logging is a universal setting, not profile-specific
    * @returns {Promise<boolean>} Whether debug logging is enabled
    */
   async function isDebugEnabled() {
@@ -49,34 +50,21 @@ function initializeDebugLogger(options = {}) {
     }
     
     try {
-      // Try to get from profile preferences first (if profiles are active)
-      if (electronAPI && electronAPI.profile) {
-        const result = await electronAPI.profile.getPreference("debug_log_enabled");
-        if (result && result.success) {
-          debugEnabledCache = result.value || false;
-        } else {
-          // Fallback to global store
-          if (electronAPI.store) {
-            const storeResult = await electronAPI.store.get("debug_log_enabled");
-            debugEnabledCache = storeResult?.value || false;
-          } else {
-            debugEnabledCache = false;
-          }
-        }
-      } else if (electronAPI && electronAPI.store) {
+      // Debug logging is a universal setting - always use global store
+      if (electronAPI && electronAPI.store) {
         const result = await electronAPI.store.get("debug_log_enabled");
         if (result.success) {
-          debugEnabledCache = result.value || false;
+          debugEnabledCache = result.value !== undefined ? result.value : true;
         } else {
-          debugEnabledCache = false;
+          debugEnabledCache = true; // Default to enabled
         }
       } else {
-        debugEnabledCache = false;
+        debugEnabledCache = true; // Default to enabled if no store available
       }
     } catch (error) {
-              // Note: This is the fallback for when debug logging fails - avoid infinite recursion
-        // In production, this should rarely be reached
-      debugEnabledCache = false;
+      // Note: This is the fallback for when debug logging fails - avoid infinite recursion
+      // In production, this should rarely be reached
+      debugEnabledCache = true; // Default to enabled on error
     }
     
     debugEnabledCacheTime = now;

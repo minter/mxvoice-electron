@@ -17,12 +17,13 @@ preferences/
 ### Preference Manager (`preference-manager.js`)
 - **openPreferencesModal()** - Open the preferences modal dialog
 - **loadPreferences()** - Load preferences into the UI
-- **getDatabaseDirectory()** - Get database directory preference
-- **getMusicDirectory()** - Get music directory preference
-- **getHotkeyDirectory()** - Get hotkey directory preference
-- **getFadeOutSeconds()** - Get fade out duration preference
-- **getPrereleaseUpdates()** - Get prerelease updates preference
-- **getScreenMode()** - Get screen mode preference
+- **getDatabaseDirectory()** - Get database directory preference (universal)
+- **getMusicDirectory()** - Get music directory preference (universal)
+- **getHotkeyDirectory()** - Get hotkey directory preference (universal)
+- **getDebugLogEnabled()** - Get debug log enabled preference (universal, default: enabled)
+- **getFadeOutSeconds()** - Get fade out duration preference (profile-specific)
+- **getPrereleaseUpdates()** - Get prerelease updates preference (profile-specific)
+- **getScreenMode()** - Get screen mode preference (profile-specific)
 
 ### Settings Controller (`settings-controller.js`)
 - **savePreferences(event)** - Save preferences from the modal
@@ -72,12 +73,17 @@ Gets the music directory preference.
 **Returns:** `Promise<string>` - Music directory path
 
 #### `getHotkeyDirectory()`
-Gets the hotkey directory preference.
+Gets the hotkey directory preference (universal setting).
 
 **Returns:** `Promise<string>` - Hotkey directory path
 
+#### `getDebugLogEnabled()`
+Gets the debug log enabled preference (universal setting).
+
+**Returns:** `Promise<boolean>` - Debug log enabled status (default: true)
+
 #### `getFadeOutSeconds()`
-Gets the fade out duration preference.
+Gets the fade out duration preference (profile-specific).
 
 **Returns:** `Promise<number>` - Fade out duration in seconds
 
@@ -120,11 +126,16 @@ Sets a specific preference value.
 
 The module manages the following preference keys:
 
+### Universal Preferences (Shared Across All Profiles)
 - `database_directory` - Path to the database directory
 - `music_directory` - Path to the music files directory
 - `hotkey_directory` - Path to the hotkey files directory
+- `debug_log_enabled` - Enable or disable debug logging (default: enabled)
+
+### Profile-Specific Preferences
 - `fade_out_seconds` - Audio fade out duration in seconds
 - `screen_mode` - Screen display mode ('auto', 'light', or 'dark')
+- `prerelease_updates` - Include prerelease updates (beta/alpha versions)
 
 ## Error Handling
 
@@ -158,12 +169,13 @@ The module includes comprehensive error handling:
 
 - `getPreference(key)` - Get specific preference
 - `setPreference(key, value)` - Set specific preference
-- `getDatabaseDirectory()` - Get database directory
-- `getMusicDirectory()` - Get music directory
-- `getHotkeyDirectory()` - Get hotkey directory
-- `getFadeOutSeconds()` - Get fade out duration
-- `getPrereleaseUpdates()` - Get prerelease updates preference
-- `getScreenMode()` - Get screen mode preference
+- `getDatabaseDirectory()` - Get database directory (universal)
+- `getMusicDirectory()` - Get music directory (universal)
+- `getHotkeyDirectory()` - Get hotkey directory (universal)
+- `getDebugLogEnabled()` - Get debug log enabled status (universal, default: enabled)
+- `getFadeOutSeconds()` - Get fade out duration (profile-specific)
+- `getPrereleaseUpdates()` - Get prerelease updates preference (profile-specific)
+- `getScreenMode()` - Get screen mode preference (profile-specific)
 
 ## Testing
 

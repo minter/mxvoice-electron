@@ -402,6 +402,13 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     } else {
       window.logInfo('Function coordination system initialized successfully');
       
+      // Clear profile restoration lock now that app initialization is complete
+      // This allows profile state saves to proceed normally
+      if (moduleRegistry.profileState && moduleRegistry.profileState.clearProfileRestorationLock) {
+        moduleRegistry.profileState.clearProfileRestorationLock();
+        window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
+      }
+      
       // Bridge secure IPC events to renderer functions under context isolation
       try {
         if (window.secureElectronAPI && window.secureElectronAPI.events) {

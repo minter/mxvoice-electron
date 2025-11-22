@@ -534,6 +534,17 @@
                     <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-hotkey-directory")' data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your hotkey files are stored">Choose Location</button>
                   </div>
                 </div>
+                <div class="row g-2 mb-3">
+                  <div class="col-sm-9 offset-sm-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" role="switch" id="preferences-debug-log-enabled">
+                      <label class="form-check-label" for="preferences-debug-log-enabled">
+                        Enable debug logging
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">When enabled, additional debug information will be logged. This setting is shared across all profiles.</small>
+                  </div>
+                </div>
               </fieldset>
 
               <fieldset>
@@ -544,21 +555,6 @@
                     <input type="text" class="form-control" id="preferences-fadeout-seconds">
                   </div>
 
-                </div>
-              </fieldset>
-
-              <fieldset>
-                <legend>Debug Options</legend>
-                <div class="row g-2 mb-3">
-                  <div class="col-sm-9 offset-sm-3">
-                    <div class="form-check form-switch">
-                      <input class="form-check-input" type="checkbox" role="switch" id="preferences-debug-log-enabled">
-                      <label class="form-check-label" for="preferences-debug-log-enabled">
-                        Enable debug logging
-                      </label>
-                    </div>
-                    <small class="form-text text-muted">When enabled, additional debug information will be logged to the console.</small>
-                  </div>
                 </div>
               </fieldset>
 

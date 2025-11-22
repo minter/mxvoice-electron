@@ -1433,16 +1433,77 @@ function registerAllHandlers() {
       const profileDir = path.join(profilesDir, sanitizedName);
       const stateFile = path.join(profileDir, 'state.json');
 
+      // Calculate state contents
+      const hotkeyCount = state?.hotkeys?.reduce((sum, tab) => sum + Object.keys(tab.hotkeys || {}).length, 0) || 0;
+      const holdingTankCount = state?.holdingTank?.reduce((sum, tab) => sum + (tab.songIds?.length || 0), 0) || 0;
+      const hasData = hotkeyCount > 0 || holdingTankCount > 0;
+
       debugLog?.info('Saving profile state', {
         module: 'ipc-handlers',
         function: 'profile:save-state',
         profileName: profileName,
         sanitizedName: sanitizedName,
-        file: stateFile
+        file: stateFile,
+        hotkeyCount: hotkeyCount,
+        holdingTankCount: holdingTankCount,
+        hasData: hasData
       });
+
+      // Log warning if saving empty state over existing data
+      // (Renderer-side protection is primary, this is backup logging)
+      if (!hasData) {
+        try {
+          const existingData = await fsPromises.readFile(stateFile, 'utf8');
+          const existingState = JSON.parse(existingData);
+          const existingHotkeyCount = existingState.hotkeys?.reduce((sum, tab) => sum + Object.keys(tab.hotkeys || {}).length, 0) || 0;
+          const existingHoldingTankCount = existingState.holdingTank?.reduce((sum, tab) => sum + (tab.songIds?.length || 0), 0) || 0;
+          const existingHasData = existingHotkeyCount > 0 || existingHoldingTankCount > 0;
+
+          if (existingHasData) {
+            // Log as warning - renderer-side protection should have caught this
+            debugLog?.warn('Saving empty state over existing data (renderer allowed this)', {
+              module: 'ipc-handlers',
+              function: 'profile:save-state',
+              profileName: profileName,
+              existingHotkeys: existingHotkeyCount,
+              existingHoldingTank: existingHoldingTankCount,
+              newHotkeys: hotkeyCount,
+              newHoldingTank: holdingTankCount,
+              file: stateFile,
+              note: 'User may have cleared data intentionally'
+            });
+          }
+        } catch (readError) {
+          // File doesn't exist or can't be read - that's OK, we can save empty state for new profiles
+          debugLog?.info('No existing state file or could not read it', {
+            module: 'ipc-handlers',
+            function: 'profile:save-state',
+            error: readError.message
+          });
+        }
+      }
 
       // Ensure directory exists
       await fsPromises.mkdir(profileDir, { recursive: true });
+
+      // Create backup of existing state before overwriting
+      try {
+        const backupFile = path.join(profileDir, 'state.json.backup');
+        const existingData = await fsPromises.readFile(stateFile, 'utf8');
+        await fsPromises.writeFile(backupFile, existingData, 'utf8');
+        debugLog?.info('Created backup of existing state', {
+          module: 'ipc-handlers',
+          function: 'profile:save-state',
+          backupFile: backupFile
+        });
+      } catch (backupError) {
+        // Backup failed (maybe no existing file) - continue with save
+        debugLog?.info('Could not create backup (file may not exist)', {
+          module: 'ipc-handlers',
+          function: 'profile:save-state',
+          error: backupError.message
+        });
+      }
 
       // Write state file
       await fsPromises.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
@@ -1611,11 +1672,19 @@ function registerAllHandlers() {
         throw new Error('No profile name available for state save before switch');
       }
 
+      // Calculate state contents
+      const hotkeyCount = state?.hotkeys?.reduce((sum, tab) => sum + Object.keys(tab.hotkeys || {}).length, 0) || 0;
+      const holdingTankCount = state?.holdingTank?.reduce((sum, tab) => sum + (tab.songIds?.length || 0), 0) || 0;
+      const hasData = hotkeyCount > 0 || holdingTankCount > 0;
+
       debugLog?.info('Saving profile state before switch', {
         module: 'ipc-handlers',
         function: 'profile:save-state-before-switch',
         profileName: profileName,
-        hasState: !!state
+        hasState: !!state,
+        hotkeyCount: hotkeyCount,
+        holdingTankCount: holdingTankCount,
+        hasData: hasData
       });
 
       // Use profile manager to get the correct directory path
@@ -1624,6 +1693,40 @@ function registerAllHandlers() {
       const profilesDir = profileManager.getProfilesDirectory();
       const profileDir = path.join(profilesDir, sanitizedName);
       const stateFile = path.join(profileDir, 'state.json');
+
+      // Log warning if saving empty state over existing data before switch
+      // (Renderer-side protection is primary, this is backup logging)
+      if (!hasData) {
+        try {
+          const existingData = await fsPromises.readFile(stateFile, 'utf8');
+          const existingState = JSON.parse(existingData);
+          const existingHotkeyCount = existingState.hotkeys?.reduce((sum, tab) => sum + Object.keys(tab.hotkeys || {}).length, 0) || 0;
+          const existingHoldingTankCount = existingState.holdingTank?.reduce((sum, tab) => sum + (tab.songIds?.length || 0), 0) || 0;
+          const existingHasData = existingHotkeyCount > 0 || existingHoldingTankCount > 0;
+
+          if (existingHasData) {
+            // Log as warning - renderer-side protection should have caught this
+            debugLog?.warn('Saving empty state over existing data before switch (renderer allowed this)', {
+              module: 'ipc-handlers',
+              function: 'profile:save-state-before-switch',
+              profileName: profileName,
+              existingHotkeys: existingHotkeyCount,
+              existingHoldingTank: existingHoldingTankCount,
+              newHotkeys: hotkeyCount,
+              newHoldingTank: holdingTankCount,
+              file: stateFile,
+              note: 'User may have cleared data intentionally'
+            });
+          }
+        } catch (readError) {
+          // File doesn't exist or can't be read - that's OK, we can save empty state for new profiles
+          debugLog?.info('No existing state file or could not read it before switch', {
+            module: 'ipc-handlers',
+            function: 'profile:save-state-before-switch',
+            error: readError.message
+          });
+        }
+      }
 
       debugLog?.info('Writing state file before switch', {
         module: 'ipc-handlers',
@@ -1635,6 +1738,25 @@ function registerAllHandlers() {
 
       // Ensure directory exists
       await fsPromises.mkdir(profileDir, { recursive: true });
+
+      // Create backup of existing state before overwriting
+      try {
+        const backupFile = path.join(profileDir, 'state.json.backup');
+        const existingData = await fsPromises.readFile(stateFile, 'utf8');
+        await fsPromises.writeFile(backupFile, existingData, 'utf8');
+        debugLog?.info('Created backup of existing state before switch', {
+          module: 'ipc-handlers',
+          function: 'profile:save-state-before-switch',
+          backupFile: backupFile
+        });
+      } catch (backupError) {
+        // Backup failed (maybe no existing file) - continue with save
+        debugLog?.info('Could not create backup before switch (file may not exist)', {
+          module: 'ipc-handlers',
+          function: 'profile:save-state-before-switch',
+          error: backupError.message
+        });
+      }
 
       // Write state file
       await fsPromises.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
