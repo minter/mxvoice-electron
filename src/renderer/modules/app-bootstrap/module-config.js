@@ -12,6 +12,7 @@ export const moduleConfig = [
   { name: 'holdingTank', path: '../holding-tank/index.js', required: true },
   { name: 'hotkeys', path: '../hotkeys/index.js', required: false },
   { name: 'profileState', path: '../profile-state/index.js', required: false },
+  { name: 'profileBackup', path: '../profile-backup/index.js', required: false },
   { name: 'categories', path: '../categories/index.js', required: false },
   { name: 'bulkOperations', path: '../bulk-operations/index.js', required: false },
   { name: 'dragDrop', path: '../drag-drop/index.js', required: false },

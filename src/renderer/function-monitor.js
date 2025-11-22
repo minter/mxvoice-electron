@@ -61,7 +61,7 @@ class FunctionMonitor {
     // Monitor for function changes
     this.setupFunctionChangeMonitoring();
 
-    debugLog.info('Function monitoring started', { function: "startMonitoring" });
+    this.debugLog.info('Function monitoring started', { function: "startMonitoring" });
   }
 
   /**
@@ -69,11 +69,11 @@ class FunctionMonitor {
    */
   stopMonitoring() {
     if (!this.monitoring) {
-      debugLog.warn('Function monitoring not active', { function: "stopMonitoring" });
+      this.debugLog.warn('Function monitoring not active', { function: "stopMonitoring" });
       return;
     }
 
-    debugLog.info('Stopping function availability monitoring...', { function: "stopMonitoring" });
+    this.debugLog.info('Stopping function availability monitoring...', { function: "stopMonitoring" });
     this.monitoring = false;
 
     if (this.healthCheckInterval) {
@@ -81,7 +81,7 @@ class FunctionMonitor {
       this.healthCheckInterval = null;
     }
 
-    debugLog.info('Function monitoring stopped', { function: "stopMonitoring" });
+    this.debugLog.info('Function monitoring stopped', { function: "stopMonitoring" });
   }
 
   /**
@@ -192,14 +192,14 @@ class FunctionMonitor {
       const removedFunctions = originalFunctions.filter(fn => !currentFunctions.includes(fn));
       
       if (newFunctions.length > 0) {
-        debugLog.info('New functions detected:', { 
+        this.debugLog.info('New functions detected:', { 
           function: "setupFunctionChangeMonitoring",
           data: { newFunctions }
         });
       }
       
       if (removedFunctions.length > 0) {
-        debugLog.warn('Functions removed:', { 
+        this.debugLog.warn('Functions removed:', { 
           function: "setupFunctionChangeMonitoring",
           data: { removedFunctions }
         });

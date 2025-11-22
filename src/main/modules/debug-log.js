@@ -8,7 +8,6 @@
  */
 
 import log from 'electron-log';
-import Store from 'electron-store';
 
 /**
  * Initialize the main process debug logger

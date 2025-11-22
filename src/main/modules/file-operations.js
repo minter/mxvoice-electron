@@ -64,7 +64,8 @@ function loadHotkeysFile() {
         let title;
 
         let line;
-        while (line = line_reader.next()) {
+         
+        while ((line = line_reader.next())) {
           const lineStr = line.toString().trim();
           debugLog?.info('📁 Reading line:', { module: 'file-operations', function: 'loadHotkeysFile', line: lineStr });
           let [key, val] = lineStr.split('::');
@@ -122,7 +123,8 @@ function loadHoldingTankFile() {
         const line_reader = new readlines(filename);
 
         let line;
-        while (line = line_reader.next()) {
+         
+        while ((line = line_reader.next())) {
           song_ids.push(line.toString().trim());
         }
         debugLog?.info('📁 Main process: Sending holding_tank_load with:', { module: 'file-operations', function: 'loadHoldingTankFile', song_ids: song_ids });

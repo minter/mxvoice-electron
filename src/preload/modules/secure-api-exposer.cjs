@@ -415,6 +415,24 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('menu:duplicate-profile', handler);
     },
     
+    onCreateBackup: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:create-backup', handler);
+      return () => ipcRenderer.removeListener('menu:create-backup', handler);
+    },
+    
+    onRestoreBackup: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:restore-backup', handler);
+      return () => ipcRenderer.removeListener('menu:restore-backup', handler);
+    },
+    
+    onBackupSettings: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:backup-settings', handler);
+      return () => ipcRenderer.removeListener('menu:backup-settings', handler);
+    },
+    
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
   },
   
@@ -431,7 +449,15 @@ const secureElectronAPI = {
     getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences'),
     createProfile: (name, description) => ipcRenderer.invoke('profile:create', name, description),
     duplicateProfile: (sourceName, targetName, description) => ipcRenderer.invoke('profile:duplicate', sourceName, targetName, description),
-    deleteProfile: (name) => ipcRenderer.invoke('profile:delete', name)
+    deleteProfile: (name) => ipcRenderer.invoke('profile:delete', name),
+    // Backup functions
+    createBackup: () => ipcRenderer.invoke('profile:createBackup'),
+    listBackups: () => ipcRenderer.invoke('profile:listBackups'),
+    getBackupMetadata: () => ipcRenderer.invoke('profile:getBackupMetadata'),
+    restoreBackup: (backupId) => ipcRenderer.invoke('profile:restoreBackup', backupId),
+    deleteBackup: (backupId) => ipcRenderer.invoke('profile:deleteBackup', backupId),
+    getBackupSettings: () => ipcRenderer.invoke('profile:getBackupSettings'),
+    saveBackupSettings: (settings) => ipcRenderer.invoke('profile:saveBackupSettings', settings)
   },
   
   // Utility functions

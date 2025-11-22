@@ -9,6 +9,7 @@
 import sharedState from '../shared-state.js';
 import { howlerUtils, createHowl } from './audio-utils.js';
 import { createProbeFromHowler } from './audio-probe.js';
+import { resetUIState } from './audio-controller.js';
 
 // Import debug logger - use lazy getter for proper initialization timing
 function getDebugLog() {
