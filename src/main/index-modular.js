@@ -46,6 +46,8 @@ import * as fileOperations from './modules/file-operations.js';
 import initializeMainDebugLog from './modules/debug-log.js';
 import { initMainLogService } from './modules/log-service.js';
 import * as profileManager from './modules/profile-manager.js';
+import * as profileBackupManager from './modules/profile-backup-manager.js';
+import * as autoBackupTimer from './modules/auto-backup-timer.js';
 import * as launcherWindow from './modules/launcher-window.js';
 
 // Initialize Octokit for GitHub API (will be initialized after debugLog is available)
@@ -737,7 +739,8 @@ async function initializeModules() {
     debugLog,
     updateState,
     logService,
-    getCurrentProfile
+    getCurrentProfile,
+    autoBackupTimer
   };
 
   // Initialize each module
@@ -899,6 +902,12 @@ function setupApp() {
     // Initialize profile manager
     profileManager.initializeProfileManager({ debugLog });
     
+    // Initialize profile backup manager
+    profileBackupManager.initializeProfileBackupManager({ debugLog });
+    
+    // Initialize auto-backup timer
+    autoBackupTimer.initializeAutoBackupTimer({ debugLog });
+    
     // Check if profile was provided via command line
     currentProfile = getProfileFromArgs();
 
@@ -911,6 +920,9 @@ function setupApp() {
       });
 
       createWindow();
+      
+      // Start auto-backup timer for this profile
+      autoBackupTimer.startAutoBackupTimer(currentProfile);
 
       // Test auto-update scenarios if enabled
       testAutoUpdateScenarios();
@@ -935,6 +947,9 @@ function setupApp() {
           });
           
           await createWindow();
+          
+          // Start auto-backup timer for this profile
+          autoBackupTimer.startAutoBackupTimer(profileName);
           
           // Test auto-update scenarios if enabled
           testAutoUpdateScenarios();

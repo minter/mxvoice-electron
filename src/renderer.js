@@ -230,6 +230,14 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logInfo('Global debugLog made available');
     }
     
+    // Initialize profile backup module
+    if (moduleRegistry.profileBackup) {
+      window.logInfo('💾 Initializing profile backup module...');
+      moduleRegistry.profileBackup.initializeProfileBackup({
+        electronAPI: window.secureElectronAPI || window.electronAPI
+      });
+    }
+    
     // Initialize profile state persistence
     if (moduleRegistry.profileState) {
       window.logInfo('🔄 Initializing profile state persistence...');
@@ -377,6 +385,43 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
           } catch (error) {
             window.logError('Error deleting current profile', { error: error.message });
             alert(`Error deleting profile: ${error.message}`);
+          }
+        });
+      }
+      
+      // Backup menu event listeners
+      if (apiToUse && apiToUse.events && apiToUse.events.onCreateBackup) {
+        window.logInfo('💾 Setting up create backup event listener...');
+        apiToUse.events.onCreateBackup(async () => {
+          window.logInfo('💾 Create backup requested from menu');
+          if (moduleRegistry.profileBackup && moduleRegistry.profileBackup.createBackupNow) {
+            await moduleRegistry.profileBackup.createBackupNow();
+          } else {
+            window.logWarn('Profile backup module not available for create backup');
+          }
+        });
+      }
+      
+      if (apiToUse && apiToUse.events && apiToUse.events.onRestoreBackup) {
+        window.logInfo('📥 Setting up restore backup event listener...');
+        apiToUse.events.onRestoreBackup(async () => {
+          window.logInfo('📥 Restore backup requested from menu');
+          if (moduleRegistry.profileBackup && moduleRegistry.profileBackup.openBackupRestoreDialog) {
+            await moduleRegistry.profileBackup.openBackupRestoreDialog();
+          } else {
+            window.logWarn('Profile backup module not available for restore backup');
+          }
+        });
+      }
+      
+      if (apiToUse && apiToUse.events && apiToUse.events.onBackupSettings) {
+        window.logInfo('⚙️ Setting up backup settings event listener...');
+        apiToUse.events.onBackupSettings(async () => {
+          window.logInfo('⚙️ Backup settings requested from menu');
+          if (moduleRegistry.profileBackup && moduleRegistry.profileBackup.openBackupSettingsDialog) {
+            await moduleRegistry.profileBackup.openBackupSettingsDialog();
+          } else {
+            window.logWarn('Profile backup module not available for backup settings');
           }
         });
       }

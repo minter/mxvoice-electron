@@ -752,6 +752,80 @@
       </div>
     </div>
 
+    <!-- Backup Restore Modal -->
+    <div class="modal fade" id="backupRestoreModal" role="dialog">
+      <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title">Restore from Backup</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted mb-3">Select a backup to restore. Your current profile will be backed up automatically before restoration.</p>
+            <div id="backup-restore-list" class="list-group" style="max-height: 400px; overflow-y: auto;">
+              <!-- Backup list will be populated here -->
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backup Settings Modal -->
+    <div class="modal fade" id="backupSettingsModal" role="dialog">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title">Backup Settings</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="backup-settings-enabled" checked>
+                <label class="form-check-label" for="backup-settings-enabled">
+                  Enable automatic backups
+                </label>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="backup-settings-interval" class="form-label">Backup Interval</label>
+              <select class="form-select" id="backup-settings-interval">
+                <option value="900000">15 minutes</option>
+                <option value="1800000" selected>30 minutes</option>
+                <option value="3600000">1 hour</option>
+                <option value="7200000">2 hours</option>
+                <option value="21600000">6 hours</option>
+                <option value="43200000">12 hours</option>
+                <option value="86400000">24 hours</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="backup-settings-max-count" class="form-label">Maximum Backups to Keep</label>
+              <input type="number" class="form-control" id="backup-settings-max-count" min="1" max="100" value="25">
+            </div>
+            <div class="mb-3">
+              <label for="backup-settings-max-age" class="form-label">Maximum Backup Age</label>
+              <select class="form-select" id="backup-settings-max-age">
+                <option value="604800000">7 days</option>
+                <option value="1209600000">14 days</option>
+                <option value="2592000000" selected>30 days</option>
+                <option value="5184000000">60 days</option>
+                <option value="7776000000">90 days</option>
+                <option value="0">Never delete</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" id="backup-settings-save-btn">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Include all compiled plugins (below), or include individual files as needed -->
 
   <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
