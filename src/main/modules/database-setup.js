@@ -17,9 +17,9 @@ import pkg from 'node-sqlite3-wasm';
 const { Database, onRuntimeInitialized } = pkg;
 import initializeMainDebugLog from './debug-log.js';
 
-// Get __dirname equivalent for ES6 modules
+// Get __filename equivalent for ES6 modules (__dirname not currently used)
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __dirname = path.dirname(__filename); // Currently unused
 
 const store = new Store({ name: 'config' });
 

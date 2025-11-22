@@ -453,8 +453,8 @@ export function holdingTankDrop(event) {
  * Send selected song to holding tank
  */
 export function sendToHoldingTank() {
-  target = Dom.$('.holding_tank.active');
-  song_id = Dom.attr('#selected_row', 'songid');
+  const target = Dom.$('.holding_tank.active');
+  const song_id = Dom.attr('#selected_row', 'songid');
   if (song_id) {
     addToHoldingTank(song_id, target).then(result => {
       if (result && result.success) {

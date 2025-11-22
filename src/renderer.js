@@ -12,7 +12,7 @@ async function setWindowTitle() {
       document.title = '\u200B'; // Zero-width space
     }
     // For other platforms, leave the default title from HTML file
-  } catch (error) {
+  } catch {
     // If platform detection fails, leave the default title from HTML file
   }
 }
@@ -107,7 +107,8 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     if (window.debugLog) {
       window.debugLog.error('Failed to load profile', { error: error.message });
     } else {
-      console.error('Failed to load profile:', error);
+      // Early initialization - debugLog not available yet
+      // Error will be logged when debugLog is available
     }
   }
 })();
@@ -824,7 +825,9 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (!window.scaleScrollable) {
         window.scaleScrollable = scaleFn;
       }
-    } catch {}
+    } catch {
+      // Ignore scaleScrollable initialization errors
+    }
 
   } catch (error) {
     window.logError('Error initializing event coordination:', error);

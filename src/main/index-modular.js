@@ -11,16 +11,14 @@
 // Add immediate logging to see if the file is being loaded
 // Note: debugLog will be initialized later in this file
 
-import { app, ipcMain } from 'electron';
+import { app } from 'electron';
 import path from 'path';
-import os from 'os';
 import fs from 'fs';
 import { pipeline } from 'stream/promises';
 import { createReadStream, createWriteStream } from 'fs';
 import readlines from 'n-readlines';
 import Store from 'electron-store';
 import log from 'electron-log';
-import { Howl, Howler } from 'howler';
 import electronUpdater from 'electron-updater';
 import { fileURLToPath } from 'url';
 
@@ -35,7 +33,9 @@ if (process.env.APP_TEST_MODE === '1' || E2E_USER_DATA_DIR) {
   const testUserData = E2E_USER_DATA_DIR || path.join(process.cwd(), 'tests', 'fixtures', 'test-user-data');
   try {
     fs.mkdirSync(testUserData, { recursive: true });
-  } catch (_) {}
+  } catch {
+    // Ignore directory creation errors
+  }
   app.setPath('userData', testUserData);
 }
 
@@ -140,7 +140,7 @@ async function copyFileStreaming(source, destination, progressCallback = null) {
     try {
       const stats = fs.statSync(source);
       totalSize = stats.size;
-    } catch (statError) {
+    } catch {
       debugLog?.warn('Could not get file size for progress tracking', { 
         function: 'copyFileStreaming',
         source
@@ -221,11 +221,11 @@ const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   // Another instance is already running, quit immediately
-  console.log('Another instance of the app is already running. Quitting.');
+  // Note: debugLog may not be initialized yet, so we can't log here
   app.quit();
 } else {
   // Handle second instance attempts - focus the existing window
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
     // Someone tried to run a second instance, focus our existing window instead
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -263,7 +263,7 @@ async function getDebugPreference() {
       return !!store.get('debug_log_enabled');
     }
     return true; // Default to enabled if store is not available
-  } catch (error) {
+  } catch {
     return true; // Default to enabled on error
   }
 }

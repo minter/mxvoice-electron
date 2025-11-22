@@ -10,7 +10,6 @@ import log from 'electron-log';
 import { getLogService } from './log-service.js';
 import * as profileManager from './profile-manager.js';
 import path from 'path';
-import os from 'os';
 import { fileURLToPath } from 'url';
 
 // Destructure from electron (handles both named and default exports)
@@ -202,7 +201,7 @@ function setupWindowStateSaving() {
   });
 
   // Save window state on close (non-blocking)
-  mainWindow.on('close', async (event) => {
+  mainWindow.on('close', async (_event) => {
     debugLog?.info('Window closing, saving window state...', {
       module: 'app-setup',
       function: 'setupWindowStateSaving'
