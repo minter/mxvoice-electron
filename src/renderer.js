@@ -391,6 +391,13 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       }
       
       // Backup menu event listeners
+      // Remove existing listeners first to prevent duplicates
+      if (apiToUse && apiToUse.events && apiToUse.events.removeAllListeners) {
+        apiToUse.events.removeAllListeners('menu:create-backup');
+        apiToUse.events.removeAllListeners('menu:restore-backup');
+        apiToUse.events.removeAllListeners('menu:backup-settings');
+      }
+      
       if (apiToUse && apiToUse.events && apiToUse.events.onCreateBackup) {
         window.logInfo('💾 Setting up create backup event listener...');
         apiToUse.events.onCreateBackup(async () => {

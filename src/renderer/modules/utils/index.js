@@ -7,7 +7,7 @@
 
 // Import all utility modules
 import { animateCSS as animateCSSFn } from './animation-utils.js';
-import { customConfirm as customConfirmFn, customPrompt as customPromptFn } from './modal-utils.js';
+import { customConfirm as customConfirmFn, customPrompt as customPromptFn, customAlert as customAlertFn } from './modal-utils.js';
 import { scaleScrollable as scaleScrollableFn } from './layout-utils.js';
 import { restoreFocusToSearch as restoreFocusToSearchFn } from './modal-utils.js';
 import { isValidSongId as isValidSongIdFn, isValidCategoryCode as isValidCategoryCodeFn, isValidFilePath as isValidFilePathFn, isValidHotkey as isValidHotkeyFn } from './validation-utils.js';
@@ -22,6 +22,7 @@ class UtilsModule {
     this.animateCSS = animateCSSFn;
     this.customConfirm = customConfirmFn;
     this.customPrompt = customPromptFn;
+    this.customAlert = customAlertFn;
     this.scaleScrollable = scaleScrollableFn;
     this.restoreFocusToSearch = restoreFocusToSearchFn;
     this.isValidSongId = isValidSongIdFn;
@@ -89,6 +90,7 @@ export const {
   animateCSS,
   customConfirm,
   customPrompt,
+  customAlert,
   scaleScrollable,
   restoreFocusToSearch,
   isValidSongId,

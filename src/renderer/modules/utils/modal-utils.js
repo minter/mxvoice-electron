@@ -206,6 +206,96 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
 }
 
 /**
+ * Custom alert dialog (single OK button)
+ * 
+ * @param {string} message - The alert message
+ * @param {string} title - The dialog title (default: 'Alert')
+ * @returns {Promise<void>} - Promise that resolves when the alert is dismissed
+ */
+export function customAlert(message, title = 'Alert') {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    
+    const modalDialog = document.createElement('div');
+    modalDialog.className = 'modal-dialog';
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'modal-header';
+    
+    const modalTitle = document.createElement('h5');
+    modalTitle.className = 'modal-title';
+    modalTitle.textContent = title;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn-close';
+    closeBtn.setAttribute('data-bs-dismiss', 'modal');
+    closeBtn.setAttribute('aria-label', 'Close');
+    
+    modalHeader.appendChild(modalTitle);
+    modalHeader.appendChild(closeBtn);
+    
+    const modalBody = document.createElement('div');
+    modalBody.className = 'modal-body';
+    
+    const messageP = document.createElement('p');
+    messageP.textContent = message;
+    
+    modalBody.appendChild(messageP);
+    
+    const modalFooter = document.createElement('div');
+    modalFooter.className = 'modal-footer';
+    
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'btn btn-primary';
+    okBtn.setAttribute('data-bs-dismiss', 'modal');
+    okBtn.textContent = 'OK';
+    
+    modalFooter.appendChild(okBtn);
+    
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
+    modalContent.appendChild(modalFooter);
+    modalDialog.appendChild(modalContent);
+    modal.appendChild(modalDialog);
+
+    document.body.appendChild(modal);
+
+    let hasResolved = false;
+    const cleanup = () => {
+      const instance = bootstrap.Modal.getOrCreateInstance(modal);
+      instance.hide();
+      setTimeout(() => {
+        if (document.body.contains(modal)) {
+          document.body.removeChild(modal);
+        }
+      }, 200);
+    };
+    
+    const safeResolve = () => {
+      if (hasResolved) return;
+      hasResolved = true;
+      cleanup();
+      resolve();
+    };
+
+    okBtn.addEventListener('click', safeResolve);
+    closeBtn.addEventListener('click', safeResolve);
+    
+    // Handle backdrop click and Esc key
+    modal.addEventListener('hidden.bs.modal', safeResolve, { once: true });
+
+    const instance = new bootstrap.Modal(modal, { backdrop: true, keyboard: true });
+    instance.show();
+  });
+}
+
+/**
  * Restore focus to search input
  * 
  * @param {string} selector - The search input selector (default: '#search-input')
@@ -221,5 +311,6 @@ export function restoreFocusToSearch(selector = '#search-input') {
 export default {
   customConfirm,
   customPrompt,
+  customAlert,
   restoreFocusToSearch
 }; 

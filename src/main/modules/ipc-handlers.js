@@ -2281,6 +2281,15 @@ function removeAllHandlers() {
   ipcMain.removeHandler('validate-audio-file');
   ipcMain.removeHandler('sanitize-filename');
   
+  // Profile Backup handlers
+  ipcMain.removeHandler('profile:createBackup');
+  ipcMain.removeHandler('profile:listBackups');
+  ipcMain.removeHandler('profile:getBackupMetadata');
+  ipcMain.removeHandler('profile:restoreBackup');
+  ipcMain.removeHandler('profile:deleteBackup');
+  ipcMain.removeHandler('profile:getBackupSettings');
+  ipcMain.removeHandler('profile:saveBackupSettings');
+  
   // Remove legacy event listeners
   ipcMain.removeAllListeners('open-hotkey-file');
   ipcMain.removeAllListeners('save-hotkey-file');

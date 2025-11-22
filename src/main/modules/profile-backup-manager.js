@@ -30,6 +30,9 @@ let debugLog = null;
 // Operation queue per profile to serialize metadata operations
 const metadataOperationQueue = new Map();
 
+// Backup creation locks per profile to prevent duplicate backups
+const backupCreationLocks = new Map();
+
 /**
  * Initialize the Profile Backup Manager
  * @param {Object} dependencies - Module dependencies
@@ -513,6 +516,19 @@ function getProfileDirectory(profileName) {
  * @returns {Promise<{success: boolean, backupId?: string, error?: string}>}
  */
 async function createBackup(profileName) {
+  // Check if backup creation is already in progress for this profile
+  if (backupCreationLocks.has(profileName)) {
+    debugLog?.warn('Backup creation already in progress for profile', {
+      module: 'profile-backup-manager',
+      function: 'createBackup',
+      profileName
+    });
+    return { success: false, error: 'Backup creation already in progress' };
+  }
+  
+  // Set lock
+  backupCreationLocks.set(profileName, true);
+  
   try {
     const profileDir = getProfileDirectory(profileName);
     
@@ -588,6 +604,9 @@ async function createBackup(profileName) {
       stack: error.stack
     });
     return { success: false, error: error.message };
+  } finally {
+    // Release lock
+    backupCreationLocks.delete(profileName);
   }
 }
 

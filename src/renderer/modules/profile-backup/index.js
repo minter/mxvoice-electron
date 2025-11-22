@@ -4,9 +4,10 @@
  * Handles backup restore and settings dialogs for profile backups.
  */
 
-import debugLog, { info, warn, error } from '../debug-log/index.js';
+import { info, warn, error } from '../debug-log/index.js';
 
 let electronAPI = null;
+let isCreatingBackup = false; // Lock to prevent duplicate backup creation
 
 /**
  * Initialize the Profile Backup module
@@ -74,7 +75,10 @@ async function openBackupRestoreDialog() {
       backupList.innerHTML = '';
       
       if (backups.length === 0) {
-        backupList.innerHTML = '<div class="text-muted text-center p-3">No backups available</div>';
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'text-muted text-center p-3';
+        emptyMsg.textContent = 'No backups available';
+        backupList.appendChild(emptyMsg);
       } else {
         backups.forEach(backup => {
           const item = createBackupListItem(backup);
@@ -109,18 +113,30 @@ function createBackupListItem(backup) {
   const formattedDate = date.toLocaleString();
   const size = formatBytes(backup.size);
   
-  item.innerHTML = `
-    <div class="d-flex w-100 justify-content-between">
-      <div>
-        <h6 class="mb-1">${formattedDate}</h6>
-        <small class="text-muted">${size} • ${backup.fileCount} files</small>
-      </div>
-      <button class="btn btn-sm btn-primary restore-btn" data-backup-id="${backup.id}">Restore</button>
-    </div>
-  `;
+  // Create structure using DOM methods to prevent XSS
+  const container = document.createElement('div');
+  container.className = 'd-flex w-100 justify-content-between';
+  
+  const leftDiv = document.createElement('div');
+  const h6 = document.createElement('h6');
+  h6.className = 'mb-1';
+  h6.textContent = formattedDate;
+  const small = document.createElement('small');
+  small.className = 'text-muted';
+  small.textContent = `${size} • ${backup.fileCount} files`;
+  leftDiv.appendChild(h6);
+  leftDiv.appendChild(small);
+  
+  const restoreBtn = document.createElement('button');
+  restoreBtn.className = 'btn btn-sm btn-primary restore-btn';
+  restoreBtn.dataset.backupId = backup.id;
+  restoreBtn.textContent = 'Restore';
+  
+  container.appendChild(leftDiv);
+  container.appendChild(restoreBtn);
+  item.appendChild(container);
   
   // Add restore button handler
-  const restoreBtn = item.querySelector('.restore-btn');
   restoreBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
     await restoreBackup(backup.id);
@@ -334,6 +350,15 @@ async function saveBackupSettings() {
  * Create backup manually
  */
 async function createBackupNow() {
+  // Prevent duplicate backup creation
+  if (isCreatingBackup) {
+    warn('Backup creation already in progress', {
+      module: 'profile-backup',
+      function: 'createBackupNow'
+    });
+    return;
+  }
+  
   try {
     if (!electronAPI || !electronAPI.profile) {
       error('Electron API not available', {
@@ -343,6 +368,9 @@ async function createBackupNow() {
       return;
     }
     
+    // Set lock
+    isCreatingBackup = true;
+    
     info('Creating backup manually', {
       module: 'profile-backup',
       function: 'createBackupNow'
@@ -351,13 +379,18 @@ async function createBackupNow() {
     const result = await electronAPI.profile.createBackup();
     
     if (result.success) {
-      // Silent success - backup completed successfully
-      // Per spec: "Silent by default, optional notification in settings"
       info('Backup created successfully', {
         module: 'profile-backup',
         function: 'createBackupNow',
         backupId: result.backupId
       });
+      
+      // Show success notification
+      const { customAlert } = await import('../utils/index.js');
+      await customAlert(
+        'Backup created successfully.',
+        'Backup Complete'
+      );
     } else {
       error('Failed to create backup', {
         module: 'profile-backup',
@@ -378,6 +411,16 @@ async function createBackupNow() {
       function: 'createBackupNow',
       error: err.message
     });
+    
+    // Show error modal for exceptions
+    const { customConfirm } = await import('../utils/index.js');
+    await customConfirm(
+      `Error creating backup: ${err.message}`,
+      'Backup Error'
+    );
+  } finally {
+    // Release lock
+    isCreatingBackup = false;
   }
 }
 
