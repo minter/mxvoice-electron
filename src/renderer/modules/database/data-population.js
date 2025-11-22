@@ -129,8 +129,9 @@ async function addToHoldingTank(song_id, element) {
  * Adds songs to the holding tank UI based on song IDs
  * 
  * @param {Array} songIds - Array of song IDs to add
+ * @returns {Promise<{success: boolean, added?: number, skipped?: number, error?: string}>}
  */
-function populateHoldingTank(songIds) {
+async function populateHoldingTank(songIds) {
   debugLog?.info('populateHoldingTank called with song IDs', { 
     module: 'data-population',
     function: 'populateHoldingTank',
@@ -142,7 +143,7 @@ function populateHoldingTank(songIds) {
       module: 'data-population',
       function: 'populateHoldingTank'
     });
-    return false;
+    return Promise.resolve({ success: false, error: 'No song IDs provided' });
   }
   
   Dom.empty('.holding_tank.active');
@@ -150,7 +151,8 @@ function populateHoldingTank(songIds) {
   let addedCount = 0;
   let skippedCount = 0;
   
-  songIds.forEach((songId) => {
+  // Process all songs and wait for them to complete
+  const addPromises = songIds.map(async (songId) => {
     if (songId && songId.trim()) {
       debugLog?.info('Adding song ID to holding tank', { 
         module: 'data-population',
@@ -158,20 +160,24 @@ function populateHoldingTank(songIds) {
         songId: songId
       });
       
-      const result = addToHoldingTank(songId.trim(), Dom.$('.holding_tank.active'));
+      const result = await addToHoldingTank(songId.trim(), Dom.$('.holding_tank.active'));
       if (result.success) {
         addedCount++;
       } else if (result.skipped) {
         skippedCount++;
       }
+      return result;
     } else {
       debugLog?.warn('Skipping empty or invalid song ID', { 
         module: 'data-population',
         function: 'populateHoldingTank',
         songId: songId
       });
+      return { skipped: true };
     }
   });
+  
+  await Promise.all(addPromises);
   
   debugLog?.info('Holding tank population completed', { 
     module: 'data-population',

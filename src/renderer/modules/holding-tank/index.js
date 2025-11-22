@@ -201,7 +201,7 @@ export function populateHoldingTank(songIds) {
       module: 'holding-tank',
       function: 'populateHoldingTank'
     });
-    return { success: false, error: 'No song IDs provided' };
+    return Promise.resolve({ success: false, error: 'No song IDs provided' });
   }
   
   Dom.empty('.holding_tank.active');

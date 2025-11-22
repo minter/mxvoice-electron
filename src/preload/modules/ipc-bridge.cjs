@@ -51,7 +51,9 @@ const ipcHandlers = {
     debugLog.debug('🔄 window.populateHoldingTank available:', typeof window.populateHoldingTank);
     if (window.populateHoldingTank) {
       debugLog.info('✅ Calling window.populateHoldingTank...');
-      window.populateHoldingTank(songIds);
+      Promise.resolve(window.populateHoldingTank(songIds)).catch(error => {
+        debugLog.error('❌ Error in window.populateHoldingTank:', error);
+      });
       debugLog.info('✅ window.populateHoldingTank called successfully');
     } else {
       if (process?.contextIsolated) {
@@ -62,7 +64,9 @@ const ipcHandlers = {
       setTimeout(() => {
         if (window.populateHoldingTank) {
           debugLog.debug('✅ Retry successful - calling window.populateHoldingTank...');
-          window.populateHoldingTank(songIds);
+          Promise.resolve(window.populateHoldingTank(songIds)).catch(error => {
+            debugLog.error('❌ Error in window.populateHoldingTank on retry:', error);
+          });
           debugLog.info('✅ window.populateHoldingTank called successfully on retry');
         } else {
           debugLog.error('❌ window.populateHoldingTank still not available after retry');
