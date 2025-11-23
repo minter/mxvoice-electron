@@ -26,10 +26,10 @@ The Hotkeys Module provides comprehensive F1-F12 hotkey functionality for quick 
 - Drag songs from search results to hotkeys
 - Intuitive user interface
 
-### 💾 Store Persistence
-- Automatic saving of hotkey state
-- Legacy format compatibility
-- Store API integration
+### 💾 Persistence (Profiles + Legacy Store)
+- **Profiles (current behavior):** Hotkeys are saved and restored via per-profile `state.json` handled by the Profile State module
+- **Legacy store (fallback):** Global Electron store key `hotkeys` is only used when no profile system is active
+- **Migration-aware:** Legacy data is migrated once for `Default User` and then profile state becomes authoritative
 
 ## Module Structure
 
@@ -45,8 +45,8 @@ hotkeys/
 ## Core Functions (12 total)
 
 ### Core Functions (3)
-- `saveHotkeysToStore()` - Save hotkey state to store
-- `loadHotkeysFromStore()` - Load hotkey data from store
+- `saveHotkeysToStore()` - Save current hotkey/holding tank layout (routes to profile state when profiles are active)
+- `loadHotkeysFromStore()` - Load *legacy* hotkey data from global store (NO-OP when profiles are active)
 - `initHotkeys()` - Initialize hotkey module
 
 ### Data Management (3)
@@ -84,13 +84,13 @@ const hotkeys = new HotkeysModule({
 });
 ```
 
-### Core Operations
+### Core Operations (legacy / non-profile builds)
 
 ```javascript
-// Save hotkeys to store
+// Save hotkeys (routes to profile state when profiles are enabled)
 hotkeys.saveHotkeysToStore();
 
-// Load hotkeys from store
+// Load legacy hotkeys from global store (no-op under profile system)
 hotkeys.loadHotkeysFromStore();
 
 // Clear all hotkeys
@@ -282,19 +282,17 @@ The module automatically sets up the following event listeners:
 ### Tab Events
 - Double-click on tab allows renaming
 
-## Store Integration
+## Store & Profile Integration
 
-The module integrates with the Electron store API for persistence:
+The module integrates with both the Electron store API and the profile state system:
 
 ### Save Operations
-- Automatically saves hotkey state when changes occur
-- Only saves new HTML format with header button
-- Falls back to legacy store access if needed
+- **With profiles enabled:** hotkey/holding tank state is saved via the Profile State module to `profiles/<ProfileName>/state.json`
+- **Without profiles:** hotkey HTML is saved to the global Electron store key `hotkeys` (new-format HTML only)
 
 ### Load Operations
-- Loads saved hotkey state on initialization
-- Handles legacy format migration
-- Clears old format to load new HTML
+- **With profiles enabled:** state is restored exclusively from profile state; the global `hotkeys` key is ignored to prevent cross-profile leakage
+- **Without profiles:** legacy HTML is loaded from the global store and migrated if needed
 
 ## Backward Compatibility
 

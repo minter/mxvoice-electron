@@ -139,6 +139,26 @@ export function saveHoldingTankToStore() {
  * Load holding tank data from store
  */
 export function loadHoldingTankFromStore() {
+  // When profiles are active, holding tank state is managed by the profile-state
+  // module (profiles/<ProfileName>/state.json). The legacy global "holding_tank"
+  // store key must not override per-profile state, so we no-op in that case.
+  try {
+    const api = window.secureElectronAPI || window.electronAPI;
+    if (api && api.profile && typeof api.profile.getCurrent === 'function') {
+      debugLog?.info('Profile API detected - skipping legacy holding_tank store load (profile state is authoritative)', {
+        module: 'holding-tank',
+        function: 'loadHoldingTankFromStore'
+      });
+      return Promise.resolve({ success: true, skipped: true });
+    }
+  } catch (error) {
+    debugLog?.warn('Error while checking profile API, continuing with legacy holding_tank store load', {
+      module: 'holding-tank',
+      function: 'loadHoldingTankFromStore',
+      error: error.message
+    });
+  }
+
   return store.has("holding_tank").then(hasHoldingTank => {
     if (hasHoldingTank) {
       return store.get("holding_tank").then(storedHtml => {

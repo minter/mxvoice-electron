@@ -109,7 +109,7 @@ export function removeFromHoldingTank() {
  * Removes a song from a hotkey slot
  * Clears the hotkey slot and updates the store
  */
-export function removeFromHotkey() {
+export async function removeFromHotkey() {
   const songId = document.getElementById('selected_row')?.getAttribute('songid');
   debugLog?.info("removeFromHotkey called, songId:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
   debugLog?.info("selected_row element:", { module: 'song-management', function: 'removeFromHotkey', selectedRow: document.getElementById('selected_row') });
@@ -129,8 +129,12 @@ export function removeFromHotkey() {
           { const span = document.querySelector('#selected_row span'); if (span) span.textContent = ''; }
           // Clear the selection
           document.getElementById('selected_row')?.removeAttribute('id');
-          // Save the updated hotkeys to store
-            if (typeof saveHotkeysToStore === 'function') saveHotkeysToStore();
+          // Save the updated hotkeys to store and wait for completion
+          if (window.hotkeysModule?.saveHotkeysToStore) {
+            await window.hotkeysModule.saveHotkeysToStore();
+          } else if (typeof saveHotkeysToStore === 'function') {
+            await saveHotkeysToStore();
+          }
           debugLog?.info("Hotkey cleared successfully", { module: 'song-management', function: 'removeFromHotkey' });
           return { success: true, songId: songId, title: songRow.title };
         } else {
@@ -143,7 +147,12 @@ export function removeFromHotkey() {
         document.getElementById('selected_row')?.removeAttribute('songid');
         { const span2 = document.querySelector('#selected_row span'); if (span2) span2.textContent = ''; }
         document.getElementById('selected_row')?.removeAttribute('id');
-        if (typeof saveHotkeysToStore === 'function') saveHotkeysToStore();
+        // Save the updated hotkeys to store and wait for completion
+        if (window.hotkeysModule?.saveHotkeysToStore) {
+          await window.hotkeysModule.saveHotkeysToStore();
+        } else if (typeof saveHotkeysToStore === 'function') {
+          await saveHotkeysToStore();
+        }
       }
     });
   } else {

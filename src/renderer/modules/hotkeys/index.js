@@ -62,7 +62,12 @@ class HotkeysModule {
 
     // Delegate to sub-modules for functions with error handling
     try {
-      this.saveHotkeysToStore = hotkeyOperations.saveHotkeysToStore.bind(this);
+      // Use the class's own saveHotkeysToStore implementation so that
+      // profile-aware persistence (profile-state → state.json) is used
+      // instead of the legacy global store path from hotkey-operations.
+      //
+      // For loading, we still delegate to hotkey-operations.loadHotkeysFromStore,
+      // which now no-ops when profiles are active.
       this.loadHotkeysFromStore =
         hotkeyOperations.loadHotkeysFromStore.bind(this);
       // Use the class's own populateHotkeys method instead of the hotkeyData one
@@ -214,7 +219,7 @@ class HotkeysModule {
    * Save hotkeys to store
    * When profiles are active, saves to profile state instead of global store
    */
-  saveHotkeysToStore() {
+  async saveHotkeysToStore() {
     // Skip save if currently restoring profile state
     if (window.isRestoringProfileState) {
       return;
@@ -226,13 +231,19 @@ class HotkeysModule {
         module: 'hotkeys',
         function: 'saveHotkeysToStore'
       });
-      window.moduleRegistry.profileState.saveProfileState().catch(err => {
+      try {
+        await window.moduleRegistry.profileState.saveProfileState();
+        debugLog?.info('Hotkeys saved to profile state successfully', {
+          module: 'hotkeys',
+          function: 'saveHotkeysToStore'
+        });
+      } catch (err) {
         debugLog?.error('Failed to save profile state from hotkeys', {
           module: 'hotkeys',
           function: 'saveHotkeysToStore',
           error: err.message
         });
-      });
+      }
       return;
     }
     
@@ -241,28 +252,26 @@ class HotkeysModule {
     const currentHtml = col ? col.innerHTML : '';
     if (currentHtml.includes('header-button')) {
       if (this.electronAPI && this.electronAPI.store) {
-        this.electronAPI.store
-          .set('hotkeys', currentHtml)
-          .then((result) => {
-            if (result.success) {
-              debugLog?.info('✅ Hotkeys saved to store successfully', {
-                module: 'hotkeys',
-                function: 'saveHotkeysToStore',
-              });
-            } else {
-              debugLog?.warn(
-                '❌ Failed to save hotkeys to store:',
-                result.error,
-                { module: 'hotkeys', function: 'saveHotkeysToStore' }
-              );
-            }
-          })
-          .catch((error) => {
-            debugLog?.warn('❌ Store save error:', error, {
+        try {
+          const result = await this.electronAPI.store.set('hotkeys', currentHtml);
+          if (result.success) {
+            debugLog?.info('✅ Hotkeys saved to store successfully', {
               module: 'hotkeys',
               function: 'saveHotkeysToStore',
             });
+          } else {
+            debugLog?.warn(
+              '❌ Failed to save hotkeys to store:',
+              result.error,
+              { module: 'hotkeys', function: 'saveHotkeysToStore' }
+            );
+          }
+        } catch (error) {
+          debugLog?.warn('❌ Store save error:', error, {
+            module: 'hotkeys',
+            function: 'saveHotkeysToStore',
           });
+        }
       }
     }
   }

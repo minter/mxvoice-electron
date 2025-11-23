@@ -454,14 +454,17 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logError('Function coordination initialization failed, but continuing...');
     } else {
       window.logInfo('Function coordination system initialized successfully');
-      
-      // Clear profile restoration lock now that app initialization is complete
-      // This allows profile state saves to proceed normally
-      if (moduleRegistry.profileState && moduleRegistry.profileState.clearProfileRestorationLock) {
-        moduleRegistry.profileState.clearProfileRestorationLock();
-        window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
-      }
-      
+    }
+
+    // Clear profile restoration lock now that app initialization is complete,
+    // even if function coordination failed. Saves must never remain blocked
+    // for the entire session just because coordination init had an issue.
+    if (moduleRegistry.profileState && moduleRegistry.profileState.clearProfileRestorationLock) {
+      moduleRegistry.profileState.clearProfileRestorationLock();
+      window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
+    }
+
+    if (coordinationSuccess) {
       // Bridge secure IPC events to renderer functions under context isolation
       try {
         if (window.secureElectronAPI && window.secureElectronAPI.events) {

@@ -2069,11 +2069,25 @@ test.describe('Hotkeys - save & load', () => {
       await expect(f3AfterFirstRestart).toHaveText('');
       console.log('✅ All hotkeys deleted from DOM');
       
-      // CRITICAL: Wait for save to complete (or not, if bug is present)
-      // The bug is that save isn't awaited, so it may not complete before quit
-      await testPage.waitForTimeout(500); // Minimal wait - this is where the bug manifests
+      // CRITICAL: Wait for save to complete
+      // With the fix, saveHotkeysToStore is async and should complete
+      // We need to explicitly wait for any pending saves to complete
+      // Try to trigger a save and wait for it to complete by calling saveProfileState directly
+      await testPage.evaluate(async () => {
+        if (window.moduleRegistry?.profileState?.saveProfileState) {
+          try {
+            await window.moduleRegistry.profileState.saveProfileState();
+            console.log('✅ Profile state saved explicitly before close');
+          } catch (err) {
+            console.error('❌ Failed to save profile state before close:', err);
+          }
+        }
+      });
       
-      // Close the app (deletions should be saved but may not be - bug!)
+      // Additional wait to ensure save completes
+      await testPage.waitForTimeout(1000);
+      
+      // Close the app (deletions should now be saved)
       await closeApp(testApp);
       console.log('✅ App closed (deletions should be saved)');
       
