@@ -100,24 +100,17 @@ test.describe('Songs - delete', () => {
     const anthraxRow = page.locator('#search_results tbody tr').filter({ hasText: 'Anthrax' });
     await anthraxRow.click({ button: 'right' });
     
-    // Wait for context menu to appear
-    await page.waitForTimeout(500);
+    // 4) Wait for custom context menu to appear and click Delete
+    console.log('🗑️ Waiting for context menu and selecting Delete...');
     
-    // 4) Choose Delete from the context menu
-    console.log('🗑️ Selecting Delete from context menu...');
+    // Wait for the custom context menu to be visible
+    const contextMenu = page.locator('#mxv-context-menu');
+    await expect(contextMenu).toBeVisible({ timeout: 2000 });
     
-    // Look for the delete option in the context menu
-    // The context menu might be a native OS menu or a custom one
-    // Try to find it by text first
-    const deleteOption = page.locator('text=Delete').first();
-    
-    if (await deleteOption.isVisible()) {
-      await deleteOption.click();
-    } else {
-      // If text search doesn't work, try keyboard navigation
-      // Press 'D' for Delete (common shortcut)
-      await page.keyboard.press('D');
-    }
+    // Click the Delete item in the context menu
+    const deleteOption = contextMenu.locator('.mxv-context-item').filter({ hasText: 'Delete' });
+    await expect(deleteOption).toBeVisible();
+    await deleteOption.click();
     
     // 5) Ensure the confirmation modal appears
     console.log('🔍 Waiting for confirmation modal...');
@@ -246,21 +239,17 @@ test.describe('Songs - delete', () => {
     const wheelRow = page.locator('#search_results tbody tr').filter({ hasText: 'The Wheel (Back And Forth)' });
     await wheelRow.click({ button: 'right' });
     
-    // Wait for context menu to appear
-    await page.waitForTimeout(500);
+    // 4) Wait for custom context menu to appear and click Delete
+    console.log('🗑️ Waiting for context menu and selecting Delete...');
     
-    // 4) Choose Delete from the context menu
-    console.log('🗑️ Selecting Delete from context menu...');
+    // Wait for the custom context menu to be visible
+    const contextMenu = page.locator('#mxv-context-menu');
+    await expect(contextMenu).toBeVisible({ timeout: 2000 });
     
-    // Look for the delete option in the context menu
-    const deleteOption = page.locator('text=Delete').first();
-    
-    if (await deleteOption.isVisible()) {
-      await deleteOption.click();
-    } else {
-      // If text search doesn't work, try keyboard navigation
-      await page.keyboard.press('D');
-    }
+    // Click the Delete item in the context menu
+    const deleteOption = contextMenu.locator('.mxv-context-item').filter({ hasText: 'Delete' });
+    await expect(deleteOption).toBeVisible();
+    await deleteOption.click();
     
     // 5) Wait for the modal to appear
     console.log('🔍 Waiting for confirmation modal...');
