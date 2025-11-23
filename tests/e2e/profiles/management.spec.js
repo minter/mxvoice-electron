@@ -373,9 +373,13 @@ test.describe('Profile Management', () => {
       await expect(modal).toBeVisible();
       await nameInput.fill(name);
       await confirmButton.click();
-      // Wait for profile to appear in list (confirms creation completed - especially important on Windows)
-      await expect(page.locator(`.profile-item:has-text("${name}")`)).toBeVisible({ timeout: 10000 });
+      
+      // Wait for modal to close first (confirms creation request was processed)
       await expect(modal).not.toBeVisible({ timeout: 5000 });
+      
+      // Then wait for profile to appear in list (confirms list was refreshed)
+      // On Linux, the async loadProfiles() may take a moment to complete
+      await expect(page.locator(`.profile-item:has-text("${name}")`)).toBeVisible({ timeout: 10000 });
     }
     
     // Get all profile items in order
@@ -473,18 +477,25 @@ test.describe('Profile Switching and Isolation', () => {
     
     const confirmButton = page.locator('#confirm-create-btn');
     await confirmButton.click();
-    // Wait for profile to appear in list (confirms creation completed)
-    await expect(page.locator('.profile-item:has-text("Profile A")')).toBeVisible({ timeout: 10000 });
+    
+    // Wait for modal to close first (confirms creation request was processed)
     await expect(modal).not.toBeVisible({ timeout: 5000 });
+    
+    // Then wait for profile to appear in list (confirms list was refreshed)
+    // On Linux, the async loadProfiles() may take a moment to complete
+    await expect(page.locator('.profile-item:has-text("Profile A")')).toBeVisible({ timeout: 10000 });
 
     // Create Profile B
     await createButton.click();
     await expect(modal).toBeVisible();
     await nameInput.fill('Profile B');
     await confirmButton.click();
-    // Wait for profile to appear in list (confirms creation completed)
-    await expect(page.locator('.profile-item:has-text("Profile B")')).toBeVisible({ timeout: 10000 });
+    
+    // Wait for modal to close first
     await expect(modal).not.toBeVisible({ timeout: 5000 });
+    
+    // Then wait for profile to appear in list
+    await expect(page.locator('.profile-item:has-text("Profile B")')).toBeVisible({ timeout: 10000 });
     
     await app.close();
     
