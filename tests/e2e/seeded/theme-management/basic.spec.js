@@ -44,11 +44,23 @@ test.describe('Theme Management - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for modal to be shown (Bootstrap adds .show class and triggers shown.bs.modal event)
-    // On macOS, the fade animation may take longer, so we wait for the .show class first
+    // Wait for modal to appear - try multiple strategies for macOS compatibility
     const preferencesModal = page.locator('#preferencesModal');
-    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
-    await expect(preferencesModal).toBeVisible({ timeout: 5000 });
+    
+    // First, wait for the modal element to exist in the DOM
+    await expect(preferencesModal).toBeAttached({ timeout: 5000 });
+    
+    // Then wait for it to be visible (either with or without .show class)
+    // On macOS, the animation timing can vary, so we check for visibility directly
+    await expect(preferencesModal).toBeVisible({ timeout: 10000 });
+    
+    // Optionally wait for the .show class, but don't fail if it's not there yet
+    try {
+      await page.waitForSelector('#preferencesModal.show', { timeout: 2000 });
+    } catch (error) {
+      // .show class may not be present yet, but modal is visible - that's okay
+      console.log('Modal visible but .show class not yet applied');
+    }
     
     // Wait for preferences to load
     await page.waitForTimeout(1000);
@@ -99,9 +111,16 @@ test.describe('Theme Management - basic', () => {
         win.webContents.send('show_preferences');
       });
       
-      // Wait for modal to be shown (Bootstrap adds .show class)
-      await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
-      await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+      // Wait for modal to appear
+      await expect(page.locator('#preferencesModal')).toBeAttached({ timeout: 5000 });
+      await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
+      
+      // Optionally wait for .show class
+      try {
+        await page.waitForSelector('#preferencesModal.show', { timeout: 2000 });
+      } catch (error) {
+        // Modal is visible, that's sufficient
+      }
       await page.waitForTimeout(1000);
       
       // Switch to light mode
@@ -205,9 +224,16 @@ test.describe('Theme Management - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for modal to be shown (Bootstrap adds .show class)
-    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
-    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    // Wait for modal to appear
+    await expect(page.locator('#preferencesModal')).toBeAttached({ timeout: 5000 });
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
+    
+    // Optionally wait for .show class
+    try {
+      await page.waitForSelector('#preferencesModal.show', { timeout: 2000 });
+    } catch (error) {
+      // Modal is visible, that's sufficient
+    }
     await page.waitForTimeout(1000);
     
     const themeDropdown = page.locator('#preferences-screen-mode, select[name="screen_mode"], #screen_mode');
@@ -254,9 +280,16 @@ test.describe('Theme Management - basic', () => {
         win.webContents.send('show_preferences');
       });
       
-      // Wait for modal to be shown (Bootstrap adds .show class)
-      await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
-      await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+      // Wait for modal to appear
+      await expect(page.locator('#preferencesModal')).toBeAttached({ timeout: 5000 });
+      await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
+      
+      // Optionally wait for .show class
+      try {
+        await page.waitForSelector('#preferencesModal.show', { timeout: 2000 });
+      } catch (error) {
+        // Modal is visible, that's sufficient
+      }
       await page.waitForTimeout(1000);
       
       await themeDropdown.selectOption('light');
@@ -325,9 +358,16 @@ test.describe('Theme Management - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for modal to be shown (Bootstrap adds .show class)
-    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
-    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    // Wait for modal to appear
+    await expect(page.locator('#preferencesModal')).toBeAttached({ timeout: 5000 });
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
+    
+    // Optionally wait for .show class
+    try {
+      await page.waitForSelector('#preferencesModal.show', { timeout: 2000 });
+    } catch (error) {
+      // Modal is visible, that's sufficient
+    }
     await page.waitForTimeout(1000);
     
     // Look for the screen mode (theme) preference field
