@@ -1961,7 +1961,7 @@ function registerAllHandlers() {
         profileName: currentProfile
       });
       
-      const result = await profileBackupManager.createBackup(currentProfile);
+      const result = await profileBackupManager.createBackup(currentProfile, { mode: 'manual' });
       
       if (result.success) {
         debugLog?.info('Profile backup created successfully', { 

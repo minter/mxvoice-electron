@@ -82,7 +82,7 @@ function scheduleNextBackup(profileName, settings, interval) {
         profileName
       });
       
-      // Create backup if changed
+      // Create backup if changed (auto mode)
       const result = await profileBackupManager.createBackupIfChanged(profileName, settings);
       
       if (result.created) {

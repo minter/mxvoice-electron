@@ -513,9 +513,12 @@ function getProfileDirectory(profileName) {
 /**
  * Create a backup of a profile
  * @param {string} profileName - Profile name
+ * @param {Object} [options] - Options for backup creation
+ * @param {string} [options.mode] - Backup mode: 'manual' | 'auto' | 'pre-restore'
  * @returns {Promise<{success: boolean, backupId?: string, error?: string}>}
  */
-async function createBackup(profileName) {
+async function createBackup(profileName, options = {}) {
+  const backupMode = options.mode || 'manual';
   // Check if backup creation is already in progress for this profile
   if (backupCreationLocks.has(profileName)) {
     debugLog?.warn('Backup creation already in progress for profile', {
@@ -571,7 +574,8 @@ async function createBackup(profileName) {
         id: backupId,
         timestamp: Date.now(),
         size: size,
-        fileCount: fileCount
+        fileCount: fileCount,
+        mode: backupMode
       });
       
       // Update counts and hash
@@ -691,13 +695,14 @@ async function restoreBackup(profileName, backupId) {
       await copyDirectoryRecursive(profileDir, preRestorePath);
       const { size, fileCount } = await calculateBackupSize(preRestorePath);
       
-      // Add pre-restore backup to metadata
+      // Add pre-restore backup to metadata (explicit mode)
       await updateMetadata(profileName, (metadata) => {
         metadata.backups.unshift({
           id: preRestoreBackupId,
           timestamp: Date.now(),
           size: size,
-          fileCount: fileCount
+          fileCount: fileCount,
+          mode: 'pre-restore'
         });
         metadata.backupCount = metadata.backups.length;
         return metadata;
@@ -972,8 +977,8 @@ async function createBackupIfChanged(profileName, settings = {}) {
       return { success: true, created: false, reason: 'no changes' };
     }
     
-    // Create backup
-    const result = await createBackup(profileName);
+    // Create backup (auto mode)
+    const result = await createBackup(profileName, { mode: 'auto' });
     
     if (result.success && result.backupId) {
       // Update metadata with new hash

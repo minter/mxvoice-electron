@@ -118,12 +118,36 @@ function createBackupListItem(backup) {
   container.className = 'd-flex w-100 justify-content-between';
   
   const leftDiv = document.createElement('div');
+
   const h6 = document.createElement('h6');
-  h6.className = 'mb-1';
+  h6.className = 'mb-1 d-flex align-items-center gap-2';
   h6.textContent = formattedDate;
+
+  // Mode pill (manual / auto / pre-restore / unknown)
+  const mode = backup.mode || 'unknown';
+  const modePill = document.createElement('span');
+  modePill.className = 'badge rounded-pill';
+
+  if (mode === 'manual') {
+    modePill.classList.add('bg-primary');
+    modePill.textContent = 'Manual';
+  } else if (mode === 'auto') {
+    modePill.classList.add('bg-secondary');
+    modePill.textContent = 'Auto';
+  } else if (mode === 'pre-restore') {
+    modePill.classList.add('bg-warning', 'text-dark');
+    modePill.textContent = 'Pre-restore';
+  } else {
+    modePill.classList.add('bg-dark');
+    modePill.textContent = 'Unknown';
+  }
+
+  h6.appendChild(modePill);
+
   const small = document.createElement('small');
   small.className = 'text-muted';
   small.textContent = `${size} • ${backup.fileCount} files`;
+
   leftDiv.appendChild(h6);
   leftDiv.appendChild(small);
   
@@ -188,7 +212,7 @@ async function restoreBackup(backupId) {
       function: 'restoreBackup',
       backupId
     });
-    
+
     // Restore backup
     const result = await electronAPI.profile.restoreBackup(backupId);
     
@@ -200,7 +224,15 @@ async function restoreBackup(backupId) {
         'Restore Complete'
       );
       
-      // Reload the app
+      // IMPORTANT:
+      // Prevent the current window's beforeunload handler from saving profile state
+      // after the backup has been restored on disk but before the new window loads.
+      // Otherwise, the "old" DOM (pre-restore) could overwrite the restored state.json.
+      if (typeof window !== 'undefined') {
+        window.isRestoringProfileState = true;
+      }
+
+      // Reload the app to pick up restored profile directory
       window.location.reload();
     } else {
       error('Failed to restore backup', {
@@ -365,6 +397,78 @@ async function createBackupNow() {
         module: 'profile-backup',
         function: 'createBackupNow'
       });
+      return;
+    }
+
+    // First, ensure the current profile state (hotkeys, holding tank, etc.) is flushed to disk
+    // so that the backup represents the exact current UI state.
+    if (typeof window !== 'undefined' && !window.isRestoringProfileState) {
+      const hasProfileStateModule =
+        window.moduleRegistry &&
+        window.moduleRegistry.profileState &&
+        typeof window.moduleRegistry.profileState.saveProfileState === 'function';
+
+      if (hasProfileStateModule) {
+        info('Saving profile state before manual backup', {
+          module: 'profile-backup',
+          function: 'createBackupNow'
+        });
+
+        let saveResult = null;
+        try {
+          saveResult = await window.moduleRegistry.profileState.saveProfileState();
+        } catch (err) {
+          error('Error saving profile state before backup', {
+            module: 'profile-backup',
+            function: 'createBackupNow',
+            error: err.message
+          });
+        }
+
+        // If state save failed or was skipped, do NOT proceed with backup
+        if (!saveResult || saveResult.success === false || saveResult.skipped) {
+          const reason =
+            (saveResult && saveResult.error) ||
+            (saveResult && saveResult.skipped && 'Profile state save was skipped') ||
+            'Unknown error';
+
+          // More specific message when restoration lock is active
+          const message =
+            saveResult && saveResult.skipped
+              ? 'Cannot create a backup while your profile is still being restored. Please wait for the app to finish loading and then try again.'
+              : `Failed to save the current profile state before creating a backup: ${reason}`;
+
+          error('Aborting manual backup because profile state could not be saved', {
+            module: 'profile-backup',
+            function: 'createBackupNow',
+            reason
+          });
+
+          const { customConfirm } = await import('../utils/index.js');
+          await customConfirm(message, 'Backup Not Created');
+          return;
+        }
+      } else {
+        // When profile state module is not available (legacy/edge cases), we still allow
+        // the backup to proceed, but log a warning since we cannot guarantee exact UI state.
+        warn('Profile state module not available - proceeding with backup without explicit state save', {
+          module: 'profile-backup',
+          function: 'createBackupNow'
+        });
+      }
+    } else if (typeof window !== 'undefined' && window.isRestoringProfileState) {
+      // If a restoration is currently in progress, we should not attempt a backup at all
+      // because the on-disk state is in flux and not a reliable snapshot.
+      warn('Refusing to create backup while profile restoration is in progress', {
+        module: 'profile-backup',
+        function: 'createBackupNow'
+      });
+
+      const { customConfirm } = await import('../utils/index.js');
+      await customConfirm(
+        'Cannot create a backup while your profile is still being restored. Please wait for the app to finish loading and then try again.',
+        'Backup Not Created'
+      );
       return;
     }
     

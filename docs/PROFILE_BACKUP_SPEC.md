@@ -369,6 +369,12 @@ Backup settings are stored in profile preferences:
 
 2. **Manual Backups**: User can trigger immediate backup via menu
    - "Profile → Create Backup Now"
+   - Before creating the backup snapshot, the app explicitly saves the current
+     profile state (hotkeys, holding tank, tab names) via the profile state
+     module so that the backup reflects the exact current UI state
+   - If the profile state cannot be saved (for example, while a profile
+     restoration is still in progress), the backup is **not** created and the
+     user is shown a clear error message instead of a success notification
 
 3. **Before Critical Operations**: (Optional enhancement)
    - Before profile deletion
