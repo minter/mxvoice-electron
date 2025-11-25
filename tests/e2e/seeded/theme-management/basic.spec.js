@@ -47,9 +47,10 @@ test.describe('Theme Management - basic', () => {
     // Wait for modal to appear - Bootstrap modals use CSS transitions
     const preferencesModal = page.locator('#preferencesModal');
     
-    // Wait for Bootstrap modal to have 'show' class and be visible
-    // Bootstrap modals use CSS transitions, so we need to wait for both
-    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
+    // Robust waiting strategy: first ensure element exists, then wait for show class and visibility
+    // This handles race conditions where the modal might not be in DOM yet or preferences are still loading
+    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
+    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
     await expect(preferencesModal).toBeVisible({ timeout: 5000 });
     
     // Wait for preferences to load
@@ -102,7 +103,8 @@ test.describe('Theme Management - basic', () => {
       });
       
       // Wait for modal to appear - Bootstrap modals use CSS transitions
-      await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
+      await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
+      await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
       await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
       await page.waitForTimeout(1000);
       
@@ -208,7 +210,8 @@ test.describe('Theme Management - basic', () => {
     });
     
     // Wait for modal to appear - Bootstrap modals use CSS transitions
-    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
+    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
+    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
     await page.waitForTimeout(1000);
     
@@ -257,7 +260,8 @@ test.describe('Theme Management - basic', () => {
       });
       
       // Wait for modal to appear - Bootstrap modals use CSS transitions
-      await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
+      await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
+      await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
       await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
       await page.waitForTimeout(1000);
       
@@ -328,7 +332,8 @@ test.describe('Theme Management - basic', () => {
     });
     
     // Wait for modal to appear - Bootstrap modals use CSS transitions
-    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
+    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
+    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
     await page.waitForTimeout(1000);
     
