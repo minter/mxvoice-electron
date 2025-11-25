@@ -13,21 +13,23 @@ Runs after the app is packaged but before code signing. Handles macOS code signi
 - Required for macOS builds to work properly
 
 ### `sslSign.cjs`
-Custom signing script for Windows artifacts using SSL.com CodeSignTool. Configured via electron-builder's `signtoolOptions`.
+Custom signing script for Windows artifacts using Windows native signtool.exe with YubiKey smart card certificate. Configured via electron-builder's `signtoolOptions`.
 
 **Features:**
-- Signs Windows executables using SSL.com CodeSignTool
-- Generates TOTP codes for authentication
+- Signs Windows executables using native signtool.exe
+- Uses YubiKey smart card certificate for signing
+- Minimizes PIN entries by caching PIN for the session (`/sm` flag)
+- Auto-selects certificate or uses specified certificate name
 - Logs pre and post-signing file information
 - Works seamlessly with electron-builder's built-in signing process
 
 **Requirements:**
-- SSL.com CodeSignTool installed at `C:\tools\CodeSignTool`
-- Environment variables:
-  - `SSL_USERNAME`
-  - `SSL_CREDENTIAL_ID`
-  - `SSL_PASSWORD`
-  - `SSL_TOTP_SECRET`
+- Windows SDK with signtool.exe installed (auto-detected from common locations)
+- YubiKey with code signing certificate imported
+- Optional environment variables:
+  - `SIGNTOOL_PATH` - Custom path to signtool.exe (if not in standard location)
+  - `YUBIKEY_CERT_NAME` - Specific certificate name to use (optional, auto-selects if not provided)
+  - `YUBIKEY_PIN` - YubiKey PIN (optional, will prompt if not set - cached for session)
 
 ## Build Process Flow
 

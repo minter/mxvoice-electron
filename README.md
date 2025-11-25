@@ -253,31 +253,38 @@ npm run build:win
 
 This command will:
 - Build the Windows installer (`.exe`) in the `dist/` directory.
-- Automatically sign all executables and DLLs using SSL.com's CodeSignTool.
+- Automatically sign all executables and DLLs using Windows native signtool.exe with YubiKey certificate.
 - **Automatically calculate correct checksums** in `latest.yml` - no post-processing needed.
 
-#### Required Environment Variables
+#### Required Setup
 
-Before building, set the following environment variables (these are required for signing):
+Before building, ensure you have:
 
-- `SSL_USERNAME`: Your SSL.com RA username.
-- `SSL_CREDENTIAL_ID`: Your SSL.com credential ID.
-- `SSL_PASSWORD`: Your SSL.com RA password.
-- `SSL_TOTP_SECRET`: Your SSL.com TOTP secret (base64-encoded, for automated OTP).
+- **Windows SDK** installed (includes signtool.exe) - auto-detected from common locations
+- **YubiKey** with code signing certificate imported and accessible
+- **Optional environment variables** (for customization):
+  - `SIGNTOOL_PATH`: Custom path to signtool.exe (if not in standard location)
+  - `YUBIKEY_CERT_NAME`: Specific certificate name to use (optional, auto-selects if not provided)
+  - `YUBIKEY_PIN`: YubiKey PIN (optional, will prompt if not set - cached for session)
 
 Example (PowerShell):
 
 ```powershell
-$env:SSL_USERNAME="your_username"
-$env:SSL_CREDENTIAL_ID="your_credential_id"
-$env:SSL_PASSWORD="your_password"
-$env:SSL_TOTP_SECRET="your_base64_totp_secret"
+# Optional: specify custom signtool path
+$env:SIGNTOOL_PATH="C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+
+# Optional: specify certificate name (if multiple certificates available)
+$env:YUBIKEY_CERT_NAME="Your Certificate Name"
+
+# Optional: provide PIN (otherwise will prompt once per session)
+$env:YUBIKEY_PIN="your_pin"
 ```
 
 #### How the Signing Works
 
-- **Standard electron-builder Windows signing**: Uses `signAndEditExecutable: true` and `signDlls: true` for automatic signing
-- **SSL.com integration**: Signs all Windows executables and DLLs using SSL.com CodeSignTool via `signtoolOptions`
+- **Standard electron-builder Windows signing**: Uses `signAndEditExecutable: true` for automatic signing
+- **YubiKey smart card signing**: Uses Windows native signtool.exe with YubiKey certificate via `signtoolOptions`
+- **Minimized PIN entries**: PIN is cached for the session using `/sm` (smart card) flag
 - **Automatic checksums**: electron-builder calculates correct checksums automatically - no post-processing needed
 - **Comprehensive coverage**: All Windows artifacts are properly signed for consistent publisher trust
 
@@ -300,7 +307,7 @@ You should see "Successfully verified" if the signature is valid.
 
 To publish Windows releases, use your preferred workflow for uploading the signed installer to GitHub or your distribution platform.
 
-**Note:** The old certificate file-based signing is no longer used. All signing is handled via SSL.com credentials and the automated script.
+**Note:** Signing uses Windows native signtool.exe with YubiKey smart card certificate. The PIN is cached for the build session to minimize prompts.
 
 ## Dependencies and Architecture
 
