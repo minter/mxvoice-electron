@@ -51,9 +51,19 @@ export function deleteSong() {
                 const filePath = joinResult.data;
                 const delFile = await secureFileSystem.delete(filePath);
                 if (!delFile?.success) {
-                  debugLog?.warn('❌ Failed to delete file:', { module: 'song-management', function: 'deleteSong', error: delFile?.error });
+                  // Check if error is ENOENT (file not found) - this is acceptable
+                  const isENOENT = delFile?.error?.includes('ENOENT') || delFile?.error?.includes('no such file');
+                  if (isENOENT) {
+                    debugLog?.info('✅ File already deleted (not found):', { module: 'song-management', function: 'deleteSong', filePath: filePath });
+                  } else {
+                    debugLog?.warn('❌ Failed to delete file:', { module: 'song-management', function: 'deleteSong', error: delFile?.error, filePath: filePath });
+                  }
                 } else {
-                  debugLog?.info('✅ File deleted successfully', { module: 'song-management', function: 'deleteSong' });
+                  if (delFile.alreadyDeleted) {
+                    debugLog?.info('✅ File already deleted (not found):', { module: 'song-management', function: 'deleteSong', filePath: filePath });
+                  } else {
+                    debugLog?.info('✅ File deleted successfully', { module: 'song-management', function: 'deleteSong', filePath: filePath });
+                  }
                 }
               } else {
                 debugLog?.warn('❌ Path join failed:', { module: 'song-management', function: 'deleteSong', result: joinResult });
@@ -116,36 +126,18 @@ export async function removeFromHotkey() {
   
   if (songId) {
     debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'song-management', function: 'removeFromHotkey' });
-    return secureDatabase.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(result => {
-      const rows = result?.data || result;
-      const songRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-    
-      if (songRow) {
-        return customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`).then(confirmed => {
-        if (confirmed) {
-          debugLog?.info("Proceeding with removal from hotkey", { module: 'song-management', function: 'removeFromHotkey' });
-          // Clear the hotkey slot
-          document.getElementById('selected_row')?.removeAttribute('songid');
-          { const span = document.querySelector('#selected_row span'); if (span) span.textContent = ''; }
-          // Clear the selection
-          document.getElementById('selected_row')?.removeAttribute('id');
-          // Save the updated hotkeys to store and wait for completion
-          if (window.hotkeysModule?.saveHotkeysToStore) {
-            await window.hotkeysModule.saveHotkeysToStore();
-          } else if (typeof saveHotkeysToStore === 'function') {
-            await saveHotkeysToStore();
-          }
-          debugLog?.info("Hotkey cleared successfully", { module: 'song-management', function: 'removeFromHotkey' });
-          return { success: true, songId: songId, title: songRow.title };
-        } else {
-          return { success: false, error: 'User cancelled' };
-        }
-        });
-      } else {
-        debugLog?.error("Song not found in database for ID:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
-        // Still clear the hotkey even if song not found
+    const result = await secureDatabase.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]);
+    const rows = result?.data || result;
+    const songRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  
+    if (songRow) {
+      const confirmed = await customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`);
+      if (confirmed) {
+        debugLog?.info("Proceeding with removal from hotkey", { module: 'song-management', function: 'removeFromHotkey' });
+        // Clear the hotkey slot
         document.getElementById('selected_row')?.removeAttribute('songid');
-        { const span2 = document.querySelector('#selected_row span'); if (span2) span2.textContent = ''; }
+        { const span = document.querySelector('#selected_row span'); if (span) span.textContent = ''; }
+        // Clear the selection
         document.getElementById('selected_row')?.removeAttribute('id');
         // Save the updated hotkeys to store and wait for completion
         if (window.hotkeysModule?.saveHotkeysToStore) {
@@ -153,8 +145,25 @@ export async function removeFromHotkey() {
         } else if (typeof saveHotkeysToStore === 'function') {
           await saveHotkeysToStore();
         }
+        debugLog?.info("Hotkey cleared successfully", { module: 'song-management', function: 'removeFromHotkey' });
+        return { success: true, songId: songId, title: songRow.title };
+      } else {
+        return { success: false, error: 'User cancelled' };
       }
-    });
+    } else {
+      debugLog?.error("Song not found in database for ID:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
+      // Still clear the hotkey even if song not found
+      document.getElementById('selected_row')?.removeAttribute('songid');
+      { const span2 = document.querySelector('#selected_row span'); if (span2) span2.textContent = ''; }
+      document.getElementById('selected_row')?.removeAttribute('id');
+      // Save the updated hotkeys to store and wait for completion
+      if (window.hotkeysModule?.saveHotkeysToStore) {
+        await window.hotkeysModule.saveHotkeysToStore();
+      } else if (typeof saveHotkeysToStore === 'function') {
+        await saveHotkeysToStore();
+      }
+      return { success: true, songId: songId };
+    }
   } else {
     debugLog?.info("No songId found on selected row", { module: 'song-management', function: 'removeFromHotkey' });
   }

@@ -11,7 +11,10 @@
  * @module song-management
  */
 
-// Import debug logger
+import { saveEditedSong, saveNewSong, editSelectedSong, deleteSelectedSong, startAddNewSong } from './song-crud.js';
+import { deleteSong, removeFromHoldingTank, removeFromHotkey } from './song-removal.js';
+
+// Import debug logger (via global set up by renderer bootstrap)
 let debugLog = null;
 try {
   if (window.debugLog) {
@@ -20,9 +23,6 @@ try {
 } catch (error) {
   // Debug logger not available
 }
-
-import { saveEditedSong, saveNewSong, editSelectedSong, deleteSelectedSong, startAddNewSong } from './song-crud.js';
-import { deleteSong, removeFromHoldingTank, removeFromHotkey } from './song-removal.js';
 
 /**
  * Song Management Singleton

@@ -45,6 +45,7 @@ import {
   secureStore,
   secureDatabase,
   securePath,
+  secureFileSystem,
 } from '../adapters/secure-adapter.js';
 
 // Cache for music directory to avoid repeated IPC calls
@@ -228,7 +229,7 @@ function playSongWithFilename(filename, row, song_id) {
           const defaultPath = '.config/mxvoice/mp3';
           securePath
             .join(defaultPath, filename)
-            .then((result) => {
+            .then(async (result) => {
               if (!result.success || !result.data) {
                 getDebugLog()?.warn('Path join failed with default path', {
                   module: 'audio-manager',
@@ -239,6 +240,30 @@ function playSongWithFilename(filename, row, song_id) {
               }
               const joinedPath = result.data;
               const sound_path = [joinedPath];
+              
+              // Check if file exists before attempting to load
+              const fileExistsResult = await secureFileSystem.exists(joinedPath);
+              if (!fileExistsResult.success || !fileExistsResult.exists) {
+                getDebugLog()?.error('Audio file not found', {
+                  module: 'audio-manager',
+                  function: 'playSongWithFilename',
+                  song_id: song_id,
+                  filename: filename,
+                  filePath: joinedPath,
+                  title: row?.title,
+                  error: fileExistsResult.error || 'File does not exist'
+                });
+                // Show user-friendly error message
+                const now = document.getElementById('song_now_playing');
+                if (now) {
+                  const title = row?.title || filename;
+                  now.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> File not found: ${title}`;
+                  now.style.display = '';
+                  now.removeAttribute('songid');
+                }
+                return;
+              }
+              
               // Ensure E2E test mode/probe is initialized right before first playback
               if (window.electronTest?.isE2E && window.moduleRegistry?.audio?.ensureTestMode) {
                 window.moduleRegistry.audio.ensureTestMode();
@@ -432,7 +457,7 @@ function playSongWithFilename(filename, row, song_id) {
 
         securePath
           .join(musicDirectory, filename)
-          .then((result) => {
+          .then(async (result) => {
             if (!result.success || !result.data) {
               getDebugLog()?.warn('Path join failed', {
                 module: 'audio-manager',
@@ -444,6 +469,29 @@ function playSongWithFilename(filename, row, song_id) {
             
             const joinedPath = result.data;
             const sound_path = [joinedPath];
+            
+            // Check if file exists before attempting to load
+            const fileExistsResult = await secureFileSystem.exists(joinedPath);
+            if (!fileExistsResult.success || !fileExistsResult.exists) {
+              getDebugLog()?.error('Audio file not found', {
+                module: 'audio-manager',
+                function: 'playSongWithFilename',
+                song_id: song_id,
+                filename: filename,
+                filePath: joinedPath,
+                title: row?.title,
+                error: fileExistsResult.error || 'File does not exist'
+              });
+              // Show user-friendly error message
+              const now = document.getElementById('song_now_playing');
+              if (now) {
+                const title = row?.title || filename;
+                now.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> File not found: ${title}`;
+                now.style.display = '';
+                now.removeAttribute('songid');
+              }
+              return;
+            }
             
             // Ensure E2E test mode/probe is initialized right before first playback
             if (window.electronTest?.isE2E && window.moduleRegistry?.audio?.ensureTestMode) {

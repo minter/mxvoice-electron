@@ -126,7 +126,28 @@ export async function saveNewSong(event) {
       [title, artist, category, info, newFilename, duration, Math.floor(Date.now() / 1000)]
     );
     if (!insertSong?.success) {
-      debugLog?.warn('❌ Song insert failed:', { module: 'song-management', function: 'saveNewSong', error: insertSong?.error });
+      const isIOError = insertSong?.error?.toLowerCase().includes('i/o') || 
+                        insertSong?.error?.toLowerCase().includes('disk') ||
+                        insertSong?.error?.toLowerCase().includes('locked') ||
+                        insertSong?.error?.toLowerCase().includes('busy');
+      
+      if (isIOError) {
+        debugLog?.error('❌ Song insert failed - Database I/O error (disk may be busy or locked):', { 
+          module: 'song-management', 
+          function: 'saveNewSong', 
+          error: insertSong?.error,
+          title: title,
+          filename: newFilename
+        });
+      } else {
+        debugLog?.warn('❌ Song insert failed:', { 
+          module: 'song-management', 
+          function: 'saveNewSong', 
+          error: insertSong?.error,
+          title: title,
+          filename: newFilename
+        });
+      }
       return;
     }
     const copyRes = await secureFileSystem.copy(filename, newPath);

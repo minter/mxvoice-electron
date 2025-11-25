@@ -231,7 +231,27 @@ function registerAllHandlers() {
       
       return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
     } catch (error) {
-      debugLog?.error('Database execute error:', { module: 'ipc-handlers', function: 'database-execute', error: error.message });
+      // Provide more context for I/O errors
+      const isIOError = error.message?.toLowerCase().includes('i/o') || 
+                        error.message?.toLowerCase().includes('disk') ||
+                        error.message?.toLowerCase().includes('locked') ||
+                        error.message?.toLowerCase().includes('busy');
+      
+      const errorContext = {
+        module: 'ipc-handlers',
+        function: 'database-execute',
+        error: error.message,
+        sql: sql?.substring(0, 100), // Log first 100 chars of SQL for context
+        paramsCount: params?.length || 0,
+        isIOError: isIOError
+      };
+      
+      if (isIOError) {
+        debugLog?.error('Database I/O error (disk may be busy or locked):', errorContext);
+      } else {
+        debugLog?.error('Database execute error:', errorContext);
+      }
+      
       return { success: false, error: error.message };
     }
   });
@@ -358,7 +378,16 @@ function registerAllHandlers() {
       fs.unlinkSync(filePath);
       return { success: true };
     } catch (error) {
-      debugLog?.error('File delete error:', { module: 'ipc-handlers', function: 'file-delete', error: error.message });
+      // ENOENT means file doesn't exist - treat as success since goal is achieved
+      if (error.code === 'ENOENT') {
+        debugLog?.info('File already deleted (not found):', { 
+          module: 'ipc-handlers', 
+          function: 'file-delete', 
+          filePath: filePath 
+        });
+        return { success: true, alreadyDeleted: true };
+      }
+      debugLog?.error('File delete error:', { module: 'ipc-handlers', function: 'file-delete', error: error.message, filePath: filePath });
       return { success: false, error: error.message };
     }
   });

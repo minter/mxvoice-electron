@@ -433,9 +433,16 @@ test.describe('Profile Backups - basic', () => {
     expect(fs.existsSync(path.join(backupPath, 'hotkeys'))).toBe(true);
     expect(fs.existsSync(path.join(backupPath, 'holding-tank'))).toBe(true);
 
-    // Verify file contents match
+    // Verify state file contents are valid JSON and contain profile state structure.
+    // Since manual backups now save the live profile state before creating the backup,
+    // the backup's state.json will contain the full profile-state payload rather than
+    // the minimal test object written above.
     const backupState = JSON.parse(fs.readFileSync(path.join(backupPath, 'state.json'), 'utf8'));
-    expect(backupState).toEqual({ test: 'state' });
+    expect(typeof backupState).toBe('object');
+    expect(backupState).toHaveProperty('version');
+    expect(backupState).toHaveProperty('timestamp');
+    expect(backupState).toHaveProperty('hotkeys');
+    expect(backupState).toHaveProperty('holdingTank');
   });
 
   test('metadata file can be recovered from backup', async () => {
