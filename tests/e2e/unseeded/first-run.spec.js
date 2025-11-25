@@ -53,6 +53,8 @@ test.describe('First run flow', () => {
 
   test('creates DB, copies sample song, and shows first-run modal', async () => {
     // 1) First-run modal appears
+    // Robust waiting strategy: first ensure element exists, then wait for show class and visibility
+    await page.waitForSelector('#firstRunModal', { timeout: 10000, state: 'attached' });
     await page.waitForSelector('#firstRunModal.show', { timeout: 15000 });
     const firstRunModal = page.locator('#firstRunModal');
     await expect(firstRunModal).toBeVisible();
