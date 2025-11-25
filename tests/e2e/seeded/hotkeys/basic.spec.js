@@ -1880,6 +1880,8 @@ test.describe('Hotkeys - save & load', () => {
     });
 
   test('hotkey deletion persists across app restart', async () => {
+    // This test performs multiple app restarts, so it needs more time
+    test.setTimeout(120000); // 2 minutes
     // This test verifies the exact bug scenario:
     // 1. Add hotkeys to tab 1
     // 2. Quit (hotkeys get saved)

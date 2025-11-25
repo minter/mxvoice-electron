@@ -50,7 +50,9 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for modal to be visible
+    // Wait for Bootstrap modal to have 'show' class and be visible
+    // Bootstrap modals use CSS transitions, so we need to wait for both
+    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
     
     // Close modal via close button
@@ -65,6 +67,8 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
+    // Wait for Bootstrap modal to have 'show' class and be visible
+    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
     
     // Wait for preferences to be loaded (give time for loadPreferences to run)
@@ -101,6 +105,8 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
+    // Wait for Bootstrap modal to have 'show' class and be visible
+    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
     
     // Wait for preferences to be loaded
@@ -131,6 +137,8 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
+    // Wait for Bootstrap modal to have 'show' class and be visible
+    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
     
     // Wait for preferences to be loaded again
@@ -155,6 +163,8 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
+    // Wait for Bootstrap modal to have 'show' class and be visible
+    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
     
     // Wait for preferences to be loaded
@@ -186,6 +196,8 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
+    // Wait for Bootstrap modal to have 'show' class and be visible
+    await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
     
     // Wait for preferences to be loaded
