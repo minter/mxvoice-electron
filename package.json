@@ -20,10 +20,10 @@
     "release:mac:draft": "cross-env EP_DRAFT=true electron-builder --mac --universal --publish always",
     "release:mac:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --mac --universal --publish always",
     "release:mac": "electron-builder --mac --universal --publish always",
-    "release:win:draft": "cross-env EP_DRAFT=true electron-builder --win --publish always",
-    "release:win:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --win --publish always",
-    "release:win": "electron-builder --win --publish always",
-    "build:win": "electron-builder --win",
+    "release:win:draft": "cross-env EP_DRAFT=true electron-builder --win --publish never && node build/signAllWindows.cjs && electron-builder --win --publish always",
+    "release:win:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --win --publish never && node build/signAllWindows.cjs && electron-builder --win --publish always",
+    "release:win": "electron-builder --win --publish never && node build/signAllWindows.cjs && electron-builder --win --publish always",
+    "build:win": "electron-builder --win && node build/signAllWindows.cjs",
     "build:linux": "electron-builder --linux",
     "build:linux:deb": "electron-builder --linux deb",
     "build:linux:appimage": "electron-builder --linux AppImage",
@@ -116,10 +116,7 @@
         }
       ],
       "verifyUpdateCodeSignature": false,
-      "signAndEditExecutable": true,
-      "signtoolOptions": {
-        "sign": "build/sslSign.cjs"
-      }
+      "signAndEditExecutable": false
     },
     "linux": {
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",

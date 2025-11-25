@@ -1,5 +1,5 @@
 # Mx. Voice
-*Improv Audio Software — Version 4.0.1-pre.3*
+*Improv Audio Software — Version 4.1.1-pre.3*
 
 ## About
 
@@ -282,9 +282,21 @@ $env:YUBIKEY_PIN="your_pin"
 
 #### How the Signing Works
 
-- **Standard electron-builder Windows signing**: Uses `signAndEditExecutable: true` for automatic signing
-- **YubiKey smart card signing**: Uses Windows native signtool.exe with YubiKey certificate via `signtoolOptions`
-- **Minimized PIN entries**: PIN is cached for the session using `/sm` (smart card) flag
+The signing process uses a two-phase approach to ensure all files are properly signed:
+
+1. **Pre-Installer Signing** (`afterPack` hook):
+   - All files in `win-unpacked/` (main executable, DLLs, etc.) are signed in ONE batch command
+   - This happens BEFORE the installer is created, ensuring signed files are included in the installer
+   - **One PIN prompt** for all unpacked files
+
+2. **Post-Installer Signing** (`signAllWindows.cjs`):
+   - The installer and uninstaller are signed after creation
+   - **One PIN prompt** for installer/uninstaller
+
+**Key Benefits:**
+- **Batch signing**: All files signed in single signtool commands reduces PIN prompts from 10-12 to just 2
+- **Signed files in installer**: Files inside the installer are properly signed (not unsigned copies)
+- **YubiKey smart card**: Uses Windows native signtool.exe with YubiKey certificate from Windows certificate store
 - **Automatic checksums**: electron-builder calculates correct checksums automatically - no post-processing needed
 - **Comprehensive coverage**: All Windows artifacts are properly signed for consistent publisher trust
 
@@ -307,7 +319,7 @@ You should see "Successfully verified" if the signature is valid.
 
 To publish Windows releases, use your preferred workflow for uploading the signed installer to GitHub or your distribution platform.
 
-**Note:** Signing uses Windows native signtool.exe with YubiKey smart card certificate. The PIN is cached for the build session to minimize prompts.
+**Note:** Signing uses Windows native signtool.exe with YubiKey smart card certificate. You'll be prompted for your YubiKey PIN twice during the build: once for unpacked files, and once for the installer/uninstaller.
 
 ## Dependencies and Architecture
 
