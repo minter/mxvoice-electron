@@ -123,8 +123,12 @@ export class KeyboardManager {
           selected.classList.remove('active-hotkey', 'selected-row');
           this.logInfo('Hotkey assignment removed via Delete key', { hotkeyId: selected.id });
           if (window.hotkeysModule?.saveHotkeysToStore) {
-            window.hotkeysModule.saveHotkeysToStore();
-            this.logInfo('Hotkeys state saved after Delete');
+            // Await the save to ensure it completes before app quits
+            window.hotkeysModule.saveHotkeysToStore().then(() => {
+              this.logInfo('Hotkeys state saved after Delete');
+            }).catch(err => {
+              this.logError('Failed to save hotkeys after Delete', { error: err.message });
+            });
           }
           return;
         }

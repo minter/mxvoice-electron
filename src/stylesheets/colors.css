@@ -218,6 +218,114 @@ h6 a,
   background-color: var(--header-color);
 }
 
+/* Modal content background */
+.modal-content {
+  background-color: var(--panel-color) !important;
+  border-color: var(--card-border) !important;
+}
+
+/* Text muted styling for dark/light themes */
+.text-muted {
+  color: var(--card-text) !important;
+  opacity: 0.7;
+}
+
+.theme-dark .text-muted,
+.theme-auto .text-muted {
+  color: rgba(226, 226, 226, 0.7) !important;
+}
+
+.theme-light .text-muted {
+  color: rgba(33, 37, 41, 0.7) !important;
+}
+
+/* List group items (for backup restore list) */
+.list-group-item {
+  background-color: var(--panel-color) !important;
+  border-color: var(--card-border) !important;
+  color: var(--card-text) !important;
+}
+
+.list-group-item-action:hover {
+  background-color: var(--header-color) !important;
+  color: var(--card-text) !important;
+}
+
+.list-group-item-action:focus {
+  background-color: var(--header-color) !important;
+  color: var(--card-text) !important;
+}
+
+/* Form labels */
+.form-label {
+  color: var(--card-text) !important;
+}
+
+/* Form select (dropdown) */
+.theme-dark .form-select,
+.theme-auto .form-select {
+  background-color: var(--input-background) !important;
+  color: var(--input-text) !important;
+  border-color: var(--input-border) !important;
+}
+
+.theme-dark .form-select:focus,
+.theme-auto .form-select:focus {
+  background-color: var(--input-background) !important;
+  color: var(--input-text) !important;
+  border-color: #007bff !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
+
+/* Form check labels */
+.form-check-label {
+  color: var(--card-text) !important;
+}
+
+/* Form check inputs (checkboxes) */
+.theme-dark .form-check-input,
+.theme-auto .form-check-input {
+  background-color: var(--input-background) !important;
+  border-color: var(--input-border) !important;
+}
+
+.theme-dark .form-check-input:checked,
+.theme-auto .form-check-input:checked {
+  background-color: #007bff !important;
+  border-color: #007bff !important;
+}
+
+.theme-dark .form-check-input:focus,
+.theme-auto .form-check-input:focus {
+  border-color: #007bff !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
+
+/* Bootstrap 5 close button (btn-close) */
+.btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.theme-dark .btn-close,
+.theme-auto .btn-close {
+  filter: invert(0) grayscale(0) brightness(1);
+  opacity: 0.8;
+}
+
+.theme-dark .btn-close:hover,
+.theme-auto .btn-close:hover {
+  opacity: 1;
+}
+
+.theme-light .btn-close {
+  filter: invert(0) grayscale(0) brightness(0.5);
+  opacity: 0.8;
+}
+
+.theme-light .btn-close:hover {
+  opacity: 1;
+}
+
 #selected_row {
   color: white !important;
   background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;

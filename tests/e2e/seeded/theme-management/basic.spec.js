@@ -44,9 +44,11 @@ test.describe('Theme Management - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for modal to be shown (Bootstrap adds .show class and triggers shown.bs.modal event)
-    // On macOS, the fade animation may take longer, so we wait for the .show class first
+    // Wait for modal to appear - Bootstrap modals use CSS transitions
     const preferencesModal = page.locator('#preferencesModal');
+    
+    // Wait for Bootstrap modal to have 'show' class and be visible
+    // Bootstrap modals use CSS transitions, so we need to wait for both
     await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
     await expect(preferencesModal).toBeVisible({ timeout: 5000 });
     
@@ -99,7 +101,7 @@ test.describe('Theme Management - basic', () => {
         win.webContents.send('show_preferences');
       });
       
-      // Wait for modal to be shown (Bootstrap adds .show class)
+      // Wait for modal to appear - Bootstrap modals use CSS transitions
       await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
       await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
       await page.waitForTimeout(1000);
@@ -205,7 +207,7 @@ test.describe('Theme Management - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for modal to be shown (Bootstrap adds .show class)
+    // Wait for modal to appear - Bootstrap modals use CSS transitions
     await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
     await page.waitForTimeout(1000);
@@ -254,7 +256,7 @@ test.describe('Theme Management - basic', () => {
         win.webContents.send('show_preferences');
       });
       
-      // Wait for modal to be shown (Bootstrap adds .show class)
+      // Wait for modal to appear - Bootstrap modals use CSS transitions
       await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
       await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
       await page.waitForTimeout(1000);
@@ -325,7 +327,7 @@ test.describe('Theme Management - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for modal to be shown (Bootstrap adds .show class)
+    // Wait for modal to appear - Bootstrap modals use CSS transitions
     await page.waitForSelector('#preferencesModal.show', { timeout: 10000 });
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
     await page.waitForTimeout(1000);

@@ -12,7 +12,7 @@ async function setWindowTitle() {
       document.title = '\u200B'; // Zero-width space
     }
     // For other platforms, leave the default title from HTML file
-  } catch (error) {
+  } catch {
     // If platform detection fails, leave the default title from HTML file
   }
 }
@@ -107,7 +107,8 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     if (window.debugLog) {
       window.debugLog.error('Failed to load profile', { error: error.message });
     } else {
-      console.error('Failed to load profile:', error);
+      // Early initialization - debugLog not available yet
+      // Error will be logged when debugLog is available
     }
   }
 })();
@@ -228,6 +229,14 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     if (moduleRegistry.debugLog && !window.debugLog) {
       window.debugLog = moduleRegistry.debugLog;
       window.logInfo('Global debugLog made available');
+    }
+    
+    // Initialize profile backup module
+    if (moduleRegistry.profileBackup) {
+      window.logInfo('💾 Initializing profile backup module...');
+      moduleRegistry.profileBackup.initializeProfileBackup({
+        electronAPI: window.secureElectronAPI || window.electronAPI
+      });
     }
     
     // Initialize profile state persistence
@@ -380,6 +389,50 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
           }
         });
       }
+      
+      // Backup menu event listeners
+      // Remove existing listeners first to prevent duplicates
+      if (apiToUse && apiToUse.events && apiToUse.events.removeAllListeners) {
+        apiToUse.events.removeAllListeners('menu:create-backup');
+        apiToUse.events.removeAllListeners('menu:restore-backup');
+        apiToUse.events.removeAllListeners('menu:backup-settings');
+      }
+      
+      if (apiToUse && apiToUse.events && apiToUse.events.onCreateBackup) {
+        window.logInfo('💾 Setting up create backup event listener...');
+        apiToUse.events.onCreateBackup(async () => {
+          window.logInfo('💾 Create backup requested from menu');
+          if (moduleRegistry.profileBackup && moduleRegistry.profileBackup.createBackupNow) {
+            await moduleRegistry.profileBackup.createBackupNow();
+          } else {
+            window.logWarn('Profile backup module not available for create backup');
+          }
+        });
+      }
+      
+      if (apiToUse && apiToUse.events && apiToUse.events.onRestoreBackup) {
+        window.logInfo('📥 Setting up restore backup event listener...');
+        apiToUse.events.onRestoreBackup(async () => {
+          window.logInfo('📥 Restore backup requested from menu');
+          if (moduleRegistry.profileBackup && moduleRegistry.profileBackup.openBackupRestoreDialog) {
+            await moduleRegistry.profileBackup.openBackupRestoreDialog();
+          } else {
+            window.logWarn('Profile backup module not available for restore backup');
+          }
+        });
+      }
+      
+      if (apiToUse && apiToUse.events && apiToUse.events.onBackupSettings) {
+        window.logInfo('⚙️ Setting up backup settings event listener...');
+        apiToUse.events.onBackupSettings(async () => {
+          window.logInfo('⚙️ Backup settings requested from menu');
+          if (moduleRegistry.profileBackup && moduleRegistry.profileBackup.openBackupSettingsDialog) {
+            await moduleRegistry.profileBackup.openBackupSettingsDialog();
+          } else {
+            window.logWarn('Profile backup module not available for backup settings');
+          }
+        });
+      }
     }
     
     // Initialize function coordination system
@@ -401,14 +454,17 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logError('Function coordination initialization failed, but continuing...');
     } else {
       window.logInfo('Function coordination system initialized successfully');
-      
-      // Clear profile restoration lock now that app initialization is complete
-      // This allows profile state saves to proceed normally
-      if (moduleRegistry.profileState && moduleRegistry.profileState.clearProfileRestorationLock) {
-        moduleRegistry.profileState.clearProfileRestorationLock();
-        window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
-      }
-      
+    }
+
+    // Clear profile restoration lock now that app initialization is complete,
+    // even if function coordination failed. Saves must never remain blocked
+    // for the entire session just because coordination init had an issue.
+    if (moduleRegistry.profileState && moduleRegistry.profileState.clearProfileRestorationLock) {
+      moduleRegistry.profileState.clearProfileRestorationLock();
+      window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
+    }
+
+    if (coordinationSuccess) {
       // Bridge secure IPC events to renderer functions under context isolation
       try {
         if (window.secureElectronAPI && window.secureElectronAPI.events) {
@@ -779,7 +835,9 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (!window.scaleScrollable) {
         window.scaleScrollable = scaleFn;
       }
-    } catch {}
+    } catch {
+      // Ignore scaleScrollable initialization errors
+    }
 
   } catch (error) {
     window.logError('Error initializing event coordination:', error);

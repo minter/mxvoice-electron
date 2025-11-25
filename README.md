@@ -9,7 +9,7 @@ Thus, 20 years later, this project to rewrite the software in a more modern way.
 
 ## Developing
 
-Mx. Voice depends on Node.js and `yarn`. We recommend Node 18+.
+Mx. Voice depends on Node.js and `yarn`. Requires Node.js 22.12.0 or higher (22.18.0 recommended). The project uses `mise` for version management - see `.mise.toml`.
 
 Check out the [source code from Github](https://github.com/minter/mxvoice-electron/). Go into the `mxvoice-electron` folder.
 

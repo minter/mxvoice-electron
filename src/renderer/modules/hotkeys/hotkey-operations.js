@@ -40,13 +40,43 @@ function saveHotkeysToStore(options = {}) {
 
 /**
  * Load hotkeys from store
- * Loads saved hotkey state and populates UI
- * 
+ * Loads saved hotkey state and populates UI.
+ *
+ * IMPORTANT:
+ * - In the new profile architecture, hotkeys are persisted via profile-specific
+ *   state (profiles/<ProfileName>/state.json) managed by the profile-state module.
+ * - The legacy global store key "hotkeys" is ONLY used when no profile system
+ *   is active (pre-4.x / non-profile builds).
+ *
+ * This function is therefore a NO-OP when a profile API is available, to avoid
+ * leaking legacy/global hotkeys into profile-specific sessions.
+ *
  * @param {Object} options - Options object containing dependencies
  */
 function loadHotkeysFromStore(options = {}) {
-  const { electronAPI, store } = options;
-  
+  const { electronAPI } = options;
+
+  try {
+    // When profiles are active, profile-state is authoritative and we must not
+    // resurrect legacy global hotkeys HTML from the store.
+    const api = window.secureElectronAPI || window.electronAPI || electronAPI;
+    if (api && api.profile && typeof api.profile.getCurrent === 'function') {
+      window.debugLog?.info('Profile API detected - skipping legacy hotkeys store load (profile state is authoritative)', {
+        module: 'hotkey-operations',
+        function: 'loadHotkeysFromStore'
+      });
+      return;
+    }
+  } catch (error) {
+    // If anything goes wrong while checking for profile support, fall back to
+    // legacy behavior below rather than breaking startup.
+    window.debugLog?.warn('Error while checking profile API, continuing with legacy hotkeys store load', {
+      module: 'hotkey-operations',
+      function: 'loadHotkeysFromStore',
+      error: error?.message || 'Unknown error'
+    });
+  }
+
   if (electronAPI && electronAPI.store) {
     electronAPI.store.has("hotkeys").then(hasHotkeys => {
       if (hasHotkeys) {

@@ -10,7 +10,6 @@ import log from 'electron-log';
 import { getLogService } from './log-service.js';
 import * as profileManager from './profile-manager.js';
 import path from 'path';
-import os from 'os';
 import { fileURLToPath } from 'url';
 
 // Destructure from electron (handles both named and default exports)
@@ -27,6 +26,7 @@ let autoUpdater;
 let fileOperations;
 let debugLog;
 let getCurrentProfile;
+let autoBackupTimer;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -36,6 +36,7 @@ function initializeAppSetup(dependencies) {
   fileOperations = dependencies.fileOperations;
   debugLog = dependencies.debugLog;
   getCurrentProfile = dependencies.getCurrentProfile;
+  autoBackupTimer = dependencies.autoBackupTimer;
 }
 
 // Create the main window
@@ -200,7 +201,7 @@ function setupWindowStateSaving() {
   });
 
   // Save window state on close (non-blocking)
-  mainWindow.on('close', async (event) => {
+  mainWindow.on('close', async (_event) => {
     debugLog?.info('Window closing, saving window state...', {
       module: 'app-setup',
       function: 'setupWindowStateSaving'
@@ -585,6 +586,34 @@ function createApplicationMenu() {
             // Send message to renderer to handle current profile deletion
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu:delete-current-profile');
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: "Create Backup Now",
+          click: () => {
+            // Send message to renderer to handle backup creation
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:create-backup');
+            }
+          },
+        },
+        {
+          label: "Restore from Backup...",
+          click: () => {
+            // Send message to renderer to handle backup restore
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:restore-backup');
+            }
+          },
+        },
+        {
+          label: "Backup Settings...",
+          click: () => {
+            // Send message to renderer to handle backup settings
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:backup-settings');
             }
           },
         },
@@ -989,6 +1018,17 @@ function setupAppLifecycle() {
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
     mainWindow = null;
+  });
+  
+  // Stop backup timer before quit
+  app.on('before-quit', () => {
+    if (autoBackupTimer) {
+      autoBackupTimer.stopAutoBackupTimer();
+      debugLog?.info('Stopped auto-backup timer on app quit', {
+        module: 'app-setup',
+        function: 'setupAppLifecycle'
+      });
+    }
   });
 
   // Quit when all windows are closed.

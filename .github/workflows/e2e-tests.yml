@@ -28,23 +28,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22.x'
+          node-version: '22.18.0'
           cache: 'yarn'
 
       - name: Enable Corepack (Yarn reproducibility)
         run: corepack enable
-
-      - name: Cache node_modules
-        id: cache-node-modules
-        uses: actions/cache@v4
-        with:
-          key: modules-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
-          restore-keys: |
-            modules-${{ runner.os }}-
-          path: |
-            node_modules
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile --prefer-offline
@@ -54,11 +44,10 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
-      - name: Cache Playwright assets (optional)
-        if: always()
+      - name: Cache Playwright assets
         uses: actions/cache@v4
         with:
-          key: playwright-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          key: playwright-${{ runner.os }}-v1.55.1
           restore-keys: |
             playwright-${{ runner.os }}-
           path: |

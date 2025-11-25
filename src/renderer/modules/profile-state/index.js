@@ -964,8 +964,10 @@ export function initializeProfileState({ hotkeysModule, holdingTankModule } = {}
   if (holdingTankModule) holdingTankModuleRef = holdingTankModule;
   
   // Save state before window closes (for quit, not for profile switch)
+  // Note: beforeunload cannot reliably delay window close for async operations in Electron
+  // The main process will handle waiting for the save to complete
   window.addEventListener('beforeunload', (event) => {
-    debugLog?.info('[PROFILE-STATE] Window closing, saving profile state', { 
+    debugLog?.info('[PROFILE-STATE] Window closing, extracting profile state for save', { 
       module: 'profile-state',
       function: 'beforeunload'
     });
@@ -980,13 +982,16 @@ export function initializeProfileState({ hotkeysModule, holdingTankModule } = {}
       return;
     }
     
-    // Extract state immediately (synchronous)
+    // Extract state immediately (synchronous) - this is fast
     const state = extractProfileState();
     
-    // Send to main process for saving (fire and forget)
-    // The main process will handle the actual file write
+    // Store state for main process to save (main process will wait for save to complete)
+    window._pendingProfileStateSave = state;
+    
+    // Send message to main process that we have state ready to save
+    // Main process will wait for the save to complete before allowing window to close
     if (window.secureElectronAPI && window.secureElectronAPI.profile) {
-      // Get current profile name for explicit saving
+      // Fire and forget - main process will handle waiting
       window.secureElectronAPI.profile.getCurrent().then(currentProfileResult => {
         const currentProfile = currentProfileResult?.profile || 'unknown';
         return window.secureElectronAPI.profile.saveState(state, currentProfile);
