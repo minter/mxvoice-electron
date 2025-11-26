@@ -286,11 +286,29 @@ function hideCreateProfileModal() {
   clearError();
   
   // Clear form fields
-  document.getElementById('profile-name-input').value = '';
-  document.getElementById('profile-description-input').value = '';
+  const nameInput = document.getElementById('profile-name-input');
+  const descInput = document.getElementById('profile-description-input');
+  if (nameInput) nameInput.value = '';
+  if (descInput) descInput.value = '';
   
-  // Hide modal
-  document.getElementById('create-profile-modal').style.display = 'none';
+  // Hide modal - ensure it's definitely hidden
+  const modal = document.getElementById('create-profile-modal');
+  if (modal) {
+    // Set multiple properties to ensure it's hidden
+    modal.style.display = 'none';
+    modal.style.visibility = 'hidden';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.classList.remove('show');
+    
+    // Double-check after a brief delay to ensure it stays hidden
+    setTimeout(() => {
+      const modalCheck = document.getElementById('create-profile-modal');
+      if (modalCheck && modalCheck.style.display !== 'none') {
+        modalCheck.style.display = 'none';
+        modalCheck.style.visibility = 'hidden';
+      }
+    }, 50);
+  }
 }
 
 /**
@@ -333,8 +351,17 @@ async function createProfile() {
     const result = await window.launcherAPI.createProfile(name, description);
     
     if (result.success) {
-      // Hide modal
+      // Hide modal first, before any async operations
       hideCreateProfileModal();
+      
+      // Ensure modal is hidden by waiting a brief moment
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Double-check modal is hidden (defensive check)
+      const modal = document.getElementById('create-profile-modal');
+      if (modal && modal.style.display !== 'none') {
+        hideCreateProfileModal();
+      }
       
       // Reload profiles to include the new one
       await loadProfiles();
