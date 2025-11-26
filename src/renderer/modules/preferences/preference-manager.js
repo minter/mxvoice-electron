@@ -28,16 +28,61 @@ function initializePreferenceManager(options = {}) {
    */
   async function openPreferencesModal() {
     try {
+      // Wait for Bootstrap to be ready
+      await waitForBootstrap();
+      
       // Load preferences first, then show modal
       await loadPreferences();
+      
+      // Small delay to ensure DOM is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { showModal } = await import('../ui/bootstrap-adapter.js');
       showModal('#preferencesModal');
+      
+      // Wait a bit for the modal to actually appear
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       debugLog?.error('Failed to open preferences modal', {
         function: 'openPreferencesModal',
-        error: error.message
+        error: error.message,
+        stack: error.stack
       });
     }
+  }
+  
+  /**
+   * Wait for Bootstrap to be available
+   * @returns {Promise<void>}
+   */
+  function waitForBootstrap(maxWait = 5000) {
+    return new Promise((resolve, reject) => {
+      const startTime = Date.now();
+      
+      const checkBootstrap = () => {
+        const bs = (typeof window !== 'undefined' ? window.bootstrap : undefined) || 
+                   (typeof bootstrap !== 'undefined' ? bootstrap : undefined);
+        
+        if (bs && bs.Modal) {
+          resolve();
+          return;
+        }
+        
+        if (Date.now() - startTime > maxWait) {
+          debugLog?.warn('Bootstrap not ready after timeout', {
+            function: 'waitForBootstrap',
+            maxWait
+          });
+          // Resolve anyway - the fallback in showModal will handle it
+          resolve();
+          return;
+        }
+        
+        setTimeout(checkBootstrap, 100);
+      };
+      
+      checkBootstrap();
+    });
   }
   
   /**

@@ -4,19 +4,53 @@
 let debugLog = null;
 try {
   debugLog = window.debugLog || null;
-} catch (_) {}
+} catch {
+  // Debug logger not available in this context
+}
 
 export function showModal(selector, options = { backdrop: true, keyboard: true }) {
   const element = document.querySelector(selector);
-  if (!element) return;
+  if (!element) {
+    debugLog?.warn('Modal element not found', { selector });
+    return;
+  }
   // Access bootstrap bundle from global; add defensive guard and extra logs
   const bs = (typeof window !== 'undefined' ? window.bootstrap : undefined) || (typeof bootstrap !== 'undefined' ? bootstrap : undefined);
   if (!bs || !bs.Modal) {
     debugLog?.warn('Bootstrap Modal not available on window.bootstrap');
+    // Fallback: manually add show class and make visible if Bootstrap isn't ready
+    element.classList.add('show');
+    element.style.display = 'block';
+    element.setAttribute('aria-hidden', 'false');
+    element.setAttribute('aria-modal', 'true');
+    // Add backdrop if needed
+    if (options.backdrop !== false) {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop fade show';
+      backdrop.id = `${selector.replace('#', '')}-backdrop`;
+      document.body.appendChild(backdrop);
+      document.body.classList.add('modal-open');
+    }
     return;
   }
-  const instance = bs.Modal.getOrCreateInstance(element, options);
-  instance.show();
+  try {
+    const instance = bs.Modal.getOrCreateInstance(element, options);
+    instance.show();
+  } catch (error) {
+    debugLog?.error('Failed to show modal', { selector, error: error.message });
+    // Fallback: manually show the modal
+    element.classList.add('show');
+    element.style.display = 'block';
+    element.setAttribute('aria-hidden', 'false');
+    element.setAttribute('aria-modal', 'true');
+    if (options.backdrop !== false) {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop fade show';
+      backdrop.id = `${selector.replace('#', '')}-backdrop`;
+      document.body.appendChild(backdrop);
+      document.body.classList.add('modal-open');
+    }
+  }
 }
 
 export function hideModal(selector) {
