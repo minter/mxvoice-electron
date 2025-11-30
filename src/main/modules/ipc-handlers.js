@@ -1632,6 +1632,72 @@ function registerAllHandlers() {
     }
   });
 
+  // Profile: Set multiple preferences atomically (prevents race conditions)
+  ipcMain.handle('profile:set-preferences', async (event, preferencesObject) => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const profileName = mainModule.getCurrentProfile();
+      
+      debugLog?.info('[PROFILE-PREF] Setting multiple preferences atomically', {
+        module: 'ipc-handlers',
+        function: 'profile:set-preferences',
+        profileName,
+        keys: Object.keys(preferencesObject || {})
+      });
+      
+      const currentPreferences = await profileManager.loadProfilePreferences(profileName);
+      
+      debugLog?.info('[PROFILE-PREF] Current preferences before update', {
+        module: 'ipc-handlers',
+        function: 'profile:set-preferences',
+        profileName,
+        currentFadeOut: currentPreferences?.fade_out_seconds,
+        currentKeys: Object.keys(currentPreferences || {})
+      });
+      
+      // Merge new preferences into current preferences
+      const updatedPreferences = {
+        ...currentPreferences,
+        ...preferencesObject
+      };
+      
+      debugLog?.info('[PROFILE-PREF] Saving updated preferences atomically', {
+        module: 'ipc-handlers',
+        function: 'profile:set-preferences',
+        profileName,
+        preferenceCount: Object.keys(preferencesObject || {}).length,
+        newFadeOut: updatedPreferences.fade_out_seconds,
+        allNewValues: preferencesObject
+      });
+      
+      const saveResult = await profileManager.saveProfilePreferences(profileName, updatedPreferences);
+      
+      debugLog?.info('[PROFILE-PREF] Save completed', {
+        module: 'ipc-handlers',
+        function: 'profile:set-preferences',
+        profileName,
+        saveSuccess: saveResult,
+        savedFadeOut: updatedPreferences.fade_out_seconds
+      });
+      
+      debugLog?.info('[PROFILE-PREF] Multiple preferences saved successfully', { 
+        module: 'ipc-handlers',
+        function: 'profile:set-preferences',
+        profileName
+      });
+      
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('[PROFILE-PREF] Error setting multiple profile preferences', { 
+        module: 'ipc-handlers',
+        function: 'profile:set-preferences',
+        error: error.message,
+        stack: error.stack
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
   // Profile: Get all preferences
   ipcMain.handle('profile:get-all-preferences', async () => {
     try {

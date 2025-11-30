@@ -130,8 +130,8 @@ test.describe('Preferences - basic', () => {
     // Wait for modal to close (indicates save has been triggered)
     await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
     
-    // Give a moment for async save operations to complete
-    await page.waitForTimeout(500);
+    // Give a moment for async save operations to complete and file system to sync
+    await page.waitForTimeout(1000);
     
     // Reopen modal to verify changes persisted
     await app.evaluate(async ({ BrowserWindow }) => {

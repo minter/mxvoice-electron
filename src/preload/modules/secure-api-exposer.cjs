@@ -446,6 +446,7 @@ const secureElectronAPI = {
     saveStateBeforeSwitch: (state, profileName) => ipcRenderer.invoke('profile:save-state-before-switch', state, profileName),
     getPreference: (key) => ipcRenderer.invoke('profile:get-preference', key),
     setPreference: (key, value) => ipcRenderer.invoke('profile:set-preference', key, value),
+    setPreferences: (preferencesObject) => ipcRenderer.invoke('profile:set-preferences', preferencesObject),
     getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences'),
     createProfile: (name, description) => ipcRenderer.invoke('profile:create', name, description),
     duplicateProfile: (sourceName, targetName, description) => ipcRenderer.invoke('profile:duplicate', sourceName, targetName, description),

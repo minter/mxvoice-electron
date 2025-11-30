@@ -124,6 +124,9 @@ export async function getAllProfilePreferences(electronAPI) {
   return await electronAPI.profile.getAllPreferences();
 }
 
+// Export constants as named exports for easier importing
+export { GLOBAL_PREFERENCES, PROFILE_PREFERENCES };
+
 export default {
   getPreference,
   setPreference,

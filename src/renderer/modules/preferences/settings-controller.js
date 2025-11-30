@@ -79,18 +79,75 @@ function initializeSettingsController(options = {}) {
       debugLog?.info("[PREFS-SAVE] Preferences to save", { preferences });
       
       // Save all preferences (using adapter to route to profile or global as appropriate)
+      // IMPORTANT: Profile preferences must be saved sequentially to avoid race conditions
+      // where multiple saves overwrite each other. Global preferences can be saved in parallel.
       try {
-        const results = await Promise.all([
-          setPreferenceViaAdapter("database_directory", preferences.database_directory, electronAPI),
-          setPreferenceViaAdapter("music_directory", preferences.music_directory, electronAPI),
-          setPreferenceViaAdapter("hotkey_directory", preferences.hotkey_directory, electronAPI),
-          setPreferenceViaAdapter("fade_out_seconds", preferences.fade_out_seconds, electronAPI),
-          setPreferenceViaAdapter("debug_log_enabled", preferences.debug_log_enabled, electronAPI),
-          setPreferenceViaAdapter("prerelease_updates", preferences.prerelease_updates, electronAPI),
-          setPreferenceViaAdapter("screen_mode", preferences.screen_mode, electronAPI)
-        ]);
+        // Import the preference adapter to check which preferences are profile vs global
+        const { PROFILE_PREFERENCES } = await import('./profile-preference-adapter.js');
         
-        debugLog?.info("[PREFS-SAVE] Save results", { results });
+        // Separate profile and global preferences
+        const profilePrefs = [];
+        const globalPrefs = [];
+        
+        const allPrefs = [
+          { key: "database_directory", value: preferences.database_directory },
+          { key: "music_directory", value: preferences.music_directory },
+          { key: "hotkey_directory", value: preferences.hotkey_directory },
+          { key: "fade_out_seconds", value: preferences.fade_out_seconds },
+          { key: "debug_log_enabled", value: preferences.debug_log_enabled },
+          { key: "prerelease_updates", value: preferences.prerelease_updates },
+          { key: "screen_mode", value: preferences.screen_mode }
+        ];
+        
+        allPrefs.forEach(pref => {
+          if (PROFILE_PREFERENCES.includes(pref.key)) {
+            profilePrefs.push(pref);
+          } else {
+            globalPrefs.push(pref);
+          }
+        });
+        
+        // Save global preferences in parallel (no race condition)
+        const globalResults = await Promise.all(
+          globalPrefs.map(pref => setPreferenceViaAdapter(pref.key, pref.value, electronAPI))
+        );
+        
+        // Save profile preferences atomically in a single operation to avoid race conditions
+        let profileResults = [];
+        if (profilePrefs.length > 0 && electronAPI?.profile?.setPreferences) {
+          // Use atomic save for all profile preferences at once
+          const profilePrefsObject = {};
+          profilePrefs.forEach(pref => {
+            profilePrefsObject[pref.key] = pref.value;
+          });
+          debugLog?.info("[PREFS-SAVE] Saving profile preferences atomically", { 
+            profilePrefs: profilePrefsObject,
+            keys: Object.keys(profilePrefsObject)
+          });
+          const atomicResult = await electronAPI.profile.setPreferences(profilePrefsObject);
+          debugLog?.info("[PREFS-SAVE] Atomic save result", { 
+            success: atomicResult?.success,
+            error: atomicResult?.error
+          });
+          // Create individual results for each preference for consistency
+          profilePrefs.forEach(() => {
+            profileResults.push(atomicResult);
+          });
+        } else if (profilePrefs.length > 0) {
+          debugLog?.warn("[PREFS-SAVE] Atomic save not available, falling back to sequential", {
+            hasProfileAPI: !!electronAPI?.profile,
+            hasSetPreferences: !!electronAPI?.profile?.setPreferences
+          });
+          // Fallback: save profile preferences sequentially if atomic save not available
+          for (const pref of profilePrefs) {
+            const result = await setPreferenceViaAdapter(pref.key, pref.value, electronAPI);
+            profileResults.push(result);
+          }
+        }
+        
+        const results = [...globalResults, ...profileResults];
+        
+        debugLog?.info("[PREFS-SAVE] Save results", { results, profileCount: profilePrefs.length, globalCount: globalPrefs.length });
         
         // Update audio module's music directory cache if it changed
         if (preferences.music_directory && window.moduleRegistry?.audio?.updateMusicDirectoryCache) {
