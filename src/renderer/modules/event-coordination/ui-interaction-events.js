@@ -304,11 +304,16 @@ export default class UIInteractionEvents {
     // Preferences modal shown event
     const preferencesModalShownHandler = (event) => {
       try {
-        // Use the new preference system instead of duplicating logic
-        if (window.loadPreferences) {
-          window.loadPreferences();
-        } else {
-          this.debugLog?.warn('loadPreferences function not available, preferences may not load correctly');
+        // NOTE: Preferences are already loaded by openPreferencesModal() before showing the modal.
+        // Reloading them here creates a race condition where preferences might be reloaded
+        // before a save operation completes, causing the modal to show stale values.
+        // The automatic reload has been disabled to fix test failures and race conditions.
+        
+        // Just focus the first input field for better UX
+        const firstInput = document.querySelector('#preferencesModal input, #preferencesModal select');
+        if (firstInput && typeof firstInput.focus === 'function') {
+          // Small delay to ensure modal animation completes
+          setTimeout(() => firstInput.focus(), 100);
         }
       } catch (error) {
         this.debugLog?.error('Error in preferences modal shown handler:', error);

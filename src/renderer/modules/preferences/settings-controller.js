@@ -45,13 +45,25 @@ function initializeSettingsController(options = {}) {
     debugLog?.info("[PREFS-SAVE] Saving preferences", { function: "savePreferences" });
     event.preventDefault();
     
+    // IMPORTANT: Capture form values IMMEDIATELY before any async operations
+    // This prevents race conditions where the DOM might be modified during async operations
+    const formValues = {
+      database_directory: document.getElementById('preferences-database-directory')?.value || '',
+      music_directory: document.getElementById('preferences-song-directory')?.value || '',
+      hotkey_directory: document.getElementById('preferences-hotkey-directory')?.value || '',
+      fade_out_seconds: parseInt(document.getElementById('preferences-fadeout-seconds')?.value) || 3,
+      debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
+      prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
+      screen_mode: document.getElementById('preferences-screen-mode')?.value || 'auto'
+    };
+    
+    debugLog?.info("[PREFS-SAVE] Captured form values", { 
+      function: "savePreferences",
+      formValues 
+    });
+    
     // Use new store API for saving preferences
     if (electronAPI && electronAPI.store) {
-      // Get current values from form
-      const dbDir = (document.getElementById('preferences-database-directory')?.value) || '';
-      const musicDir = (document.getElementById('preferences-song-directory')?.value) || '';
-      const hotkeyDir = (document.getElementById('preferences-hotkey-directory')?.value) || '';
-      
       // Validate that critical directory preferences are not being cleared
       // Only save if the value is non-empty OR if it was already empty
       const validateDirectory = async (key) => {
@@ -67,13 +79,13 @@ function initializeSettingsController(options = {}) {
       
       const preferences = {
         // Only update directory if new value is non-empty OR current value is already empty
-        database_directory: dbDir || currentDbDir,
-        music_directory: musicDir || currentMusicDir,
-        hotkey_directory: hotkeyDir || currentHotkeyDir,
-        fade_out_seconds: parseInt(document.getElementById('preferences-fadeout-seconds')?.value) || 3,
-        debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
-        prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
-        screen_mode: (document.getElementById('preferences-screen-mode')?.value) || 'auto'
+        database_directory: formValues.database_directory || currentDbDir,
+        music_directory: formValues.music_directory || currentMusicDir,
+        hotkey_directory: formValues.hotkey_directory || currentHotkeyDir,
+        fade_out_seconds: formValues.fade_out_seconds,
+        debug_log_enabled: formValues.debug_log_enabled,
+        prerelease_updates: formValues.prerelease_updates,
+        screen_mode: formValues.screen_mode
       };
       
       debugLog?.info("[PREFS-SAVE] Preferences to save", { preferences });
@@ -217,15 +229,15 @@ function initializeSettingsController(options = {}) {
         } catch {}
       }
     } else {
-      // Fallback to legacy store access
+      // Fallback to legacy store access - use captured form values
       const preferences = {
-        database_directory: (document.getElementById('preferences-database-directory')?.value) || '',
-        music_directory: (document.getElementById('preferences-song-directory')?.value) || '',
-        hotkey_directory: (document.getElementById('preferences-hotkey-directory')?.value) || '',
-        fade_out_seconds: (document.getElementById('preferences-fadeout-seconds')?.value) || '',
-        debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
-        prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
-        screen_mode: (document.getElementById('preferences-screen-mode')?.value) || 'auto'
+        database_directory: formValues.database_directory,
+        music_directory: formValues.music_directory,
+        hotkey_directory: formValues.hotkey_directory,
+        fade_out_seconds: formValues.fade_out_seconds,
+        debug_log_enabled: formValues.debug_log_enabled,
+        prerelease_updates: formValues.prerelease_updates,
+        screen_mode: formValues.screen_mode
       };
       await savePreferencesLegacy(preferences);
       
