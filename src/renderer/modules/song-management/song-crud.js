@@ -41,41 +41,15 @@ export async function saveEditedSong(event) {
     );
     if (!result?.success) {
       debugLog?.warn('Edit update failed', { module: 'song-management', function: 'saveEditedSong', error: result?.error });
-      return;
-    }
-    debugLog?.info('Song updated successfully', { 
-      module: 'song-management', 
-      function: 'saveEditedSong', 
-      songId,
-      title,
-      artist
-    });
-    
-    // Wait a brief moment to ensure database write is complete
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Refresh search results - try multiple methods to ensure it works
-    const omni = document.getElementById('omni_search');
-    if (omni) {
-      // Preserve current search term if it exists, or use the title
-      const currentSearch = omni.value?.trim() || title;
-      omni.value = currentSearch;
-      
-      // Trigger search update - try multiple approaches
-      if (typeof searchData === 'function') {
-        searchData();
-      } else if (typeof window.searchData === 'function') {
-        window.searchData();
-      } else if (window.moduleRegistry?.search?.searchData) {
-        window.moduleRegistry.search.searchData();
-      } else {
-        // Fallback: trigger input event to trigger live search
-        omni.dispatchEvent(new Event('input', { bubbles: true }));
-        omni.dispatchEvent(new Event('keyup', { bubbles: true }));
-      }
     }
   } catch (error) {
     debugLog?.error('Edit update error', { module: 'song-management', function: 'saveEditedSong', error: error?.message });
+  }
+
+  const omni = document.getElementById('omni_search');
+  if (omni) omni.value = title;
+  if (typeof searchData === 'function') {
+    searchData();
   }
 }
 

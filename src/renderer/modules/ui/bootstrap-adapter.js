@@ -4,198 +4,31 @@
 let debugLog = null;
 try {
   debugLog = window.debugLog || null;
-} catch {
-  // Debug logger not available in this context
-}
-
-// Initialize modal close button handlers as a fallback
-// This ensures modals can close even if Bootstrap's data-bs-dismiss doesn't work
-let modalCloseHandlersInitialized = false;
-function ensureModalCloseHandlers() {
-  if (modalCloseHandlersInitialized) return;
-  modalCloseHandlersInitialized = true;
-  
-  // Use event delegation to handle all data-bs-dismiss="modal" clicks
-  // Ensure modals close reliably even if Bootstrap's dismiss doesn't work
-  document.addEventListener('click', (event) => {
-    const target = event.target.closest('[data-bs-dismiss="modal"]');
-    if (!target) return;
-    
-    // Find the modal this button belongs to
-    const modal = target.closest('.modal');
-    if (!modal || !modal.classList.contains('show')) return;
-    
-    // Immediately hide the modal
-    const modalId = modal.id;
-    if (modalId) {
-      hideModal(`#${modalId}`);
-    } else {
-      // Direct hide without selector
-      const bs = (typeof window !== 'undefined' ? window.bootstrap : undefined) || 
-                 (typeof bootstrap !== 'undefined' ? bootstrap : undefined);
-      if (bs && bs.Modal) {
-        try {
-          const instance = bs.Modal.getInstance(modal);
-          if (instance) {
-            instance.hide();
-          }
-        } catch {
-          // Fallback to manual hide
-        }
-      }
-      // Always ensure it's hidden manually as well
-      modal.classList.remove('show');
-      modal.setAttribute('aria-hidden', 'true');
-      const backdrop = document.querySelector('.modal-backdrop');
-      if (backdrop) {
-        backdrop.classList.remove('show');
-        setTimeout(() => backdrop.remove(), 150);
-      }
-      document.body.classList.remove('modal-open');
-      setTimeout(() => {
-        modal.style.display = 'none';
-      }, 150);
-    }
-  }, true); // Use capture phase to handle before Bootstrap
-}
+} catch (_) {}
 
 export function showModal(selector, options = { backdrop: true, keyboard: true }) {
   const element = document.querySelector(selector);
-  if (!element) {
-    debugLog?.warn('Modal element not found', { selector });
-    return;
-  }
-  
-  // Ensure close button handlers are set up
-  ensureModalCloseHandlers();
-  
-  // Helper to manually show modal (fallback)
-  const manuallyShowModal = () => {
-    element.classList.add('show');
-    element.style.display = 'block';
-    element.setAttribute('aria-hidden', 'false');
-    element.setAttribute('aria-modal', 'true');
-    // Remove fade class temporarily to prevent transition delays
-    element.classList.remove('fade');
-    // Re-add fade after a microtask to allow display to settle
-    setTimeout(() => {
-      element.classList.add('fade');
-      element.classList.add('show');
-    }, 10);
-    
-    // Add backdrop if needed
-    if (options.backdrop !== false) {
-      // Remove existing backdrop if present
-      const existingBackdrop = document.querySelector('.modal-backdrop');
-      if (existingBackdrop) {
-        existingBackdrop.remove();
-      }
-      const backdrop = document.createElement('div');
-      backdrop.className = 'modal-backdrop fade show';
-      backdrop.id = `${selector.replace('#', '')}-backdrop`;
-      document.body.appendChild(backdrop);
-      document.body.classList.add('modal-open');
-    }
-  };
-  
+  if (!element) return;
   // Access bootstrap bundle from global; add defensive guard and extra logs
   const bs = (typeof window !== 'undefined' ? window.bootstrap : undefined) || (typeof bootstrap !== 'undefined' ? bootstrap : undefined);
   if (!bs || !bs.Modal) {
     debugLog?.warn('Bootstrap Modal not available on window.bootstrap');
-    manuallyShowModal();
     return;
   }
-  
-  try {
-    const instance = bs.Modal.getOrCreateInstance(element, options);
-    
-    // Set up close button handlers for this specific modal
-    const closeButtons = element.querySelectorAll('[data-bs-dismiss="modal"]');
-    const closeHandler = () => {
-      hideModal(selector);
-    };
-    closeButtons.forEach(btn => {
-      btn.addEventListener('click', closeHandler);
-    });
-    
-    // Call Bootstrap's show first to let it initialize properly
-    instance.show();
-    
-    // On Mac CI, Bootstrap sometimes delays adding the show class due to CSS transitions
-    // Wait one frame to see if Bootstrap adds it, then add it if still missing
-    // This ensures it appears without interfering with Bootstrap's hide mechanism
-    requestAnimationFrame(() => {
-      // Only add if Bootstrap hasn't added it yet and modal isn't being hidden
-      if (!element.classList.contains('show') && element.getAttribute('aria-hidden') !== 'true') {
-        element.classList.add('show');
-        element.setAttribute('aria-hidden', 'false');
-        element.setAttribute('aria-modal', 'true');
-      }
-    });
-    
-  } catch (error) {
-    debugLog?.error('Failed to show modal', { selector, error: error.message });
-    manuallyShowModal();
-  }
+  const instance = bs.Modal.getOrCreateInstance(element, options);
+  instance.show();
 }
 
 export function hideModal(selector) {
   const element = document.querySelector(selector);
   if (!element) return;
-  
-  // Helper to manually hide modal (fallback)
-  const manuallyHideModal = () => {
-    element.classList.remove('show');
-    element.setAttribute('aria-hidden', 'true');
-    element.removeAttribute('aria-modal');
-    // Hide after a brief delay to allow fade transition
-    setTimeout(() => {
-      element.style.display = 'none';
-    }, 150);
-    
-    // Remove backdrop
-    const backdrop = document.querySelector('.modal-backdrop');
-    if (backdrop) {
-      backdrop.classList.remove('show');
-      setTimeout(() => {
-        if (backdrop.parentNode) {
-          backdrop.parentNode.removeChild(backdrop);
-        }
-      }, 150);
-    }
-    document.body.classList.remove('modal-open');
-  };
-  
   const bs = (typeof window !== 'undefined' ? window.bootstrap : undefined) || (typeof bootstrap !== 'undefined' ? bootstrap : undefined);
   if (!bs || !bs.Modal) {
     debugLog?.warn('Bootstrap Modal not available on window.bootstrap');
-    manuallyHideModal();
     return;
   }
-  
-  try {
-    const instance = bs.Modal.getOrCreateInstance(element);
-    
-    // Call Bootstrap's hide
-    instance.hide();
-    
-    // Immediately remove show class to ensure modal hides
-    // Bootstrap's hide() uses CSS transitions which can be delayed
-    element.classList.remove('show');
-    element.setAttribute('aria-hidden', 'true');
-    
-    // Ensure it stays hidden after transitions complete
-    setTimeout(() => {
-      if (element.classList.contains('show')) {
-        debugLog?.warn('Show class was re-added after Bootstrap hide(), removing manually', { selector });
-        manuallyHideModal();
-      }
-    }, 300);
-    
-  } catch (error) {
-    debugLog?.error('Failed to hide modal', { selector, error: error.message });
-    manuallyHideModal();
-  }
+  const instance = bs.Modal.getOrCreateInstance(element);
+  instance.hide();
 }
 
 export function hideAllModals() {

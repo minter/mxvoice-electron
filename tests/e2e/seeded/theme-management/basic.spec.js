@@ -44,17 +44,12 @@ test.describe('Theme Management - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for modal to appear - Bootstrap modals use CSS transitions
+    // Wait for modal to be visible
     const preferencesModal = page.locator('#preferencesModal');
+    await expect(preferencesModal).toBeVisible({ timeout: 10000 });
     
-    // Robust waiting strategy: first ensure element exists, then wait for show class and visibility
-    // This handles race conditions where the modal might not be in DOM yet or preferences are still loading
-    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-    await expect(preferencesModal).toBeVisible({ timeout: 5000 });
-    
-    // Wait for preferences to load
-    await page.waitForTimeout(1000);
+    // Wait for preferences to be loaded by waiting for a form field to have a value
+    await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
     
     // 3) Find the theme dropdown (screen_mode preference)
     const themeDropdown = page.locator('#preferences-screen-mode, select[name="screen_mode"], #screen_mode');
@@ -102,11 +97,11 @@ test.describe('Theme Management - basic', () => {
         win.webContents.send('show_preferences');
       });
       
-      // Wait for modal to appear - Bootstrap modals use CSS transitions
-      await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-      await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-      await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
-      await page.waitForTimeout(1000);
+      // Wait for modal to be visible
+      await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
+      
+      // Wait for preferences to be loaded by waiting for a form field to have a value
+      await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
       
       // Switch to light mode
       await themeDropdown.selectOption('light');
@@ -209,11 +204,11 @@ test.describe('Theme Management - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for modal to appear - Bootstrap modals use CSS transitions
-    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(1000);
+    // Wait for modal to be visible
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
+    
+    // Wait for preferences to be loaded by waiting for a form field to have a value
+    await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
     
     const themeDropdown = page.locator('#preferences-screen-mode, select[name="screen_mode"], #screen_mode');
     if (await themeDropdown.isVisible()) {
@@ -259,11 +254,11 @@ test.describe('Theme Management - basic', () => {
         win.webContents.send('show_preferences');
       });
       
-      // Wait for modal to appear - Bootstrap modals use CSS transitions
-      await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-      await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-      await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
-      await page.waitForTimeout(1000);
+      // Wait for modal to be visible
+      await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
+      
+      // Wait for preferences to be loaded by waiting for a form field to have a value
+      await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
       
       await themeDropdown.selectOption('light');
       await page.waitForTimeout(500);
@@ -331,11 +326,11 @@ test.describe('Theme Management - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for modal to appear - Bootstrap modals use CSS transitions
-    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(1000);
+    // Wait for modal to be visible
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
+    
+    // Wait for preferences to be loaded by waiting for a form field to have a value
+    await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
     
     // Look for the screen mode (theme) preference field
     const screenModeField = page.locator('#preferences-screen-mode, select[name="screen_mode"], #screen_mode');

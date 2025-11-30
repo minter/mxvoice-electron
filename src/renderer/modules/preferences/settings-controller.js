@@ -44,10 +44,6 @@ function initializeSettingsController(options = {}) {
   async function savePreferences(event) {
     debugLog?.info("[PREFS-SAVE] Saving preferences", { function: "savePreferences" });
     event.preventDefault();
-    try {
-      const { hideModal } = await import('../ui/bootstrap-adapter.js');
-      hideModal('#preferencesModal');
-    } catch {}
     
     // Use new store API for saving preferences
     if (electronAPI && electronAPI.store) {
@@ -143,6 +139,12 @@ function initializeSettingsController(options = {}) {
             data: { successCount, totalPreferences: 7, results }
           });
         }
+        
+        // Close modal after save operations complete
+        try {
+          const { hideModal } = await import('../ui/bootstrap-adapter.js');
+          hideModal('#preferencesModal');
+        } catch {}
       } catch (error) {
         debugLog?.error('Failed to save preferences', { 
           function: "savePreferences",
@@ -150,6 +152,12 @@ function initializeSettingsController(options = {}) {
         });
         // Fallback to legacy store access
         await savePreferencesLegacy(preferences);
+        
+        // Close modal even if save failed
+        try {
+          const { hideModal } = await import('../ui/bootstrap-adapter.js');
+          hideModal('#preferencesModal');
+        } catch {}
       }
     } else {
       // Fallback to legacy store access
@@ -162,7 +170,13 @@ function initializeSettingsController(options = {}) {
         prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
         screen_mode: (document.getElementById('preferences-screen-mode')?.value) || 'auto'
       };
-      savePreferencesLegacy(preferences);
+      await savePreferencesLegacy(preferences);
+      
+      // Close modal after legacy save completes
+      try {
+        const { hideModal } = await import('../ui/bootstrap-adapter.js');
+        hideModal('#preferencesModal');
+      } catch {}
     }
   }
   

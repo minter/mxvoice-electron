@@ -50,12 +50,8 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for Bootstrap modal to have 'show' class and be visible
-    // Bootstrap modals use CSS transitions, so we need to wait for both
-    // Robust waiting strategy: first ensure element exists, then wait for show class and visibility
-    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    // Wait for modal to be visible - Playwright's toBeVisible() handles Bootstrap transitions
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
     
     // Close modal via close button
     await page.locator('#preferencesModal .btn-close').click();
@@ -69,14 +65,11 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for Bootstrap modal to have 'show' class and be visible
-    // Robust waiting strategy: first ensure element exists, then wait for show class and visibility
-    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    // Wait for modal to be visible
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
     
-    // Wait for preferences to be loaded (give time for loadPreferences to run)
-    await page.waitForTimeout(1000);
+    // Wait for preferences to be loaded by waiting for a form field to have a value
+    await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
     
     // Check that all form fields exist
     await expect(page.locator('#preferences-database-directory')).toBeVisible();
@@ -109,14 +102,11 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for Bootstrap modal to have 'show' class and be visible
-    // Robust waiting strategy: first ensure element exists, then wait for show class and visibility
-    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    // Wait for modal to be visible
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
     
-    // Wait for preferences to be loaded
-    await page.waitForTimeout(1000);
+    // Wait for preferences to be loaded by waiting for a form field to have a value
+    await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
     
     // Modify fade out seconds
     const fadeInput = page.locator('#preferences-fadeout-seconds');
@@ -126,16 +116,22 @@ test.describe('Preferences - basic', () => {
     await fadeInput.clear();
     await fadeInput.fill(newValue);
     
+    // Verify the value was actually set before saving
+    await expect(fadeInput).toHaveValue(newValue);
+    
     // Toggle debug logging
     const debugCheckbox = page.locator('#preferences-debug-log-enabled');
     const originalDebugState = await debugCheckbox.isChecked();
     await debugCheckbox.setChecked(!originalDebugState);
     
-    // Save preferences
-    await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
+    // Save preferences by clicking the Save button (same as user would do)
+    await page.locator('#preferencesSubmitButton').click();
     
-    // Modal should close after saving
+    // Wait for modal to close (indicates save has been triggered)
     await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
+    
+    // Give a moment for async save operations to complete
+    await page.waitForTimeout(500);
     
     // Reopen modal to verify changes persisted
     await app.evaluate(async ({ BrowserWindow }) => {
@@ -143,14 +139,11 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for Bootstrap modal to have 'show' class and be visible
-    // Robust waiting strategy: first ensure element exists, then wait for show class and visibility
-    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    // Wait for modal to be visible
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
     
-    // Wait for preferences to be loaded again
-    await page.waitForTimeout(1000);
+    // Wait for preferences to be loaded by waiting for a form field to have a value
+    await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
     
     // Verify changes persisted
     const savedFadeValue = await page.locator('#preferences-fadeout-seconds').inputValue();
@@ -171,14 +164,11 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for Bootstrap modal to have 'show' class and be visible
-    // Robust waiting strategy: first ensure element exists, then wait for show class and visibility
-    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    // Wait for modal to be visible
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
     
-    // Wait for preferences to be loaded
-    await page.waitForTimeout(1000);
+    // Wait for preferences to be loaded by waiting for a form field to have a value
+    await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
     
     // Check that directory picker buttons exist using simpler text-based selectors
     const dbPickerBtn = page.locator('button:has-text("Choose Location")').first();
@@ -206,14 +196,11 @@ test.describe('Preferences - basic', () => {
       win.webContents.send('show_preferences');
     });
     
-    // Wait for Bootstrap modal to have 'show' class and be visible
-    // Robust waiting strategy: first ensure element exists, then wait for show class and visibility
-    await page.waitForSelector('#preferencesModal', { timeout: 10000, state: 'attached' });
-    await page.waitForSelector('#preferencesModal.show', { timeout: 15000 });
-    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    // Wait for modal to be visible
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 10000 });
     
-    // Wait for preferences to be loaded
-    await page.waitForTimeout(1000);
+    // Wait for preferences to be loaded by waiting for a form field to have a value
+    await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
     
     // Check modal accessibility
     const modal = page.locator('#preferencesModal');
