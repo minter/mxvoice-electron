@@ -30,6 +30,10 @@ function initializePreferenceManager(options = {}) {
     try {
       // Load preferences first, then show modal
       await loadPreferences();
+      
+      // Wait for Bootstrap to be available before showing modal
+      await waitForBootstrap();
+      
       const { showModal } = await import('../ui/bootstrap-adapter.js');
       showModal('#preferencesModal');
     } catch (error) {
@@ -38,6 +42,39 @@ function initializePreferenceManager(options = {}) {
         error: error.message
       });
     }
+  }
+  
+  /**
+   * Wait for Bootstrap to be available
+   * @returns {Promise<void>}
+   */
+  function waitForBootstrap(maxWait = 5000) {
+    return new Promise((resolve) => {
+      const startTime = Date.now();
+      
+      const checkBootstrap = () => {
+        const bs = (typeof window !== 'undefined' ? window.bootstrap : undefined) || 
+                   (typeof bootstrap !== 'undefined' ? bootstrap : undefined);
+        
+        if (bs && bs.Modal) {
+          resolve();
+          return;
+        }
+        
+        if (Date.now() - startTime > maxWait) {
+          debugLog?.warn('Bootstrap not ready after timeout, proceeding anyway', {
+            function: 'waitForBootstrap',
+            maxWait
+          });
+          resolve();
+          return;
+        }
+        
+        setTimeout(checkBootstrap, 50);
+      };
+      
+      checkBootstrap();
+    });
   }
   
   /**
