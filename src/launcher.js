@@ -16,9 +16,39 @@ let latestLoadProfilesRequestId = 0;
 
 // Wait for the secure API to be available
 window.addEventListener('DOMContentLoaded', async () => {
+  // Wait for launcher API to be ready (especially important on Windows)
+  await waitForLauncherAPI();
+  
   await loadProfiles();
   setupEventListeners();
 });
+
+/**
+ * Wait for launcher API to be available
+ * @returns {Promise<void>}
+ */
+function waitForLauncherAPI(maxWait = 5000) {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    
+    const checkAPI = () => {
+      if (window.launcherAPI && typeof window.launcherAPI.getProfiles === 'function') {
+        resolve();
+        return;
+      }
+      
+      if (Date.now() - startTime > maxWait) {
+        console.warn('Launcher API not ready after timeout, proceeding anyway');
+        resolve();
+        return;
+      }
+      
+      setTimeout(checkAPI, 50);
+    };
+    
+    checkAPI();
+  });
+}
 
 /**
  * Load profiles from main process
@@ -26,6 +56,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function loadProfiles() {
   const requestId = ++latestLoadProfilesRequestId;
   try {
+    // Ensure launcherAPI is available
+    if (!window.launcherAPI || typeof window.launcherAPI.getProfiles !== 'function') {
+      throw new Error('Launcher API not available');
+    }
+    
     const result = await window.launcherAPI.getProfiles();
     if (requestId !== latestLoadProfilesRequestId) {
       return;
@@ -62,6 +97,7 @@ async function loadProfiles() {
     if (requestId !== latestLoadProfilesRequestId) {
       return;
     }
+    console.error('Error loading profiles:', error);
     showError(`Error loading profiles: ${error.message}`);
     // Still show the UI even if there was an error
     document.getElementById('loading-state').style.display = 'none';
