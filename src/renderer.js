@@ -59,6 +59,74 @@ window.logError = async (message, context) => {
   await debugLogger.error(message, context);
 };
 
+// Set up an early, lightweight IPC bridge for preferences so that
+// 'show_preferences' events are handled even if full coordination/
+// module loading is still in progress. This avoids races where the
+// main process sends 'show_preferences' shortly after startup.
+(function setupEarlyPreferencesBridge(maxWait = 5000) {
+  try {
+    const start = Date.now();
+
+    const trySetup = () => {
+      try {
+        const api = window.secureElectronAPI;
+        if (api && api.events && typeof api.events.onShowPreferences === 'function') {
+          api.events.onShowPreferences(() => {
+            try {
+              const callStart = Date.now();
+
+              const invokeWhenReady = () => {
+                try {
+                  const openFn =
+                    (typeof window.openPreferencesModal === 'function'
+                      ? window.openPreferencesModal
+                      : window.moduleRegistry?.preferences?.openPreferencesModal) || null;
+
+                  if (openFn) {
+                    openFn();
+                    return;
+                  }
+
+                  if (Date.now() - callStart < maxWait) {
+                    setTimeout(invokeWhenReady, 50);
+                  } else {
+                    window.logWarn('openPreferencesModal not available before timeout in early bridge handler');
+                  }
+                } catch (handlerError) {
+                  window.logError('Error handling show_preferences in early bridge (deferred)', handlerError);
+                }
+              };
+
+              invokeWhenReady();
+            } catch (handlerErrorOuter) {
+              window.logError('Error scheduling show_preferences handling in early bridge', handlerErrorOuter);
+            }
+          });
+
+          window.logInfo('Early preferences IPC bridge initialized');
+          return;
+        }
+
+        if (Date.now() - start < maxWait) {
+          setTimeout(trySetup, 50);
+        } else {
+          window.logWarn('Timed out waiting for secureElectronAPI in early preferences bridge');
+        }
+      } catch {
+        // Swallow and retry until timeout; renderer may still be initializing
+        if (Date.now() - start < maxWait) {
+          setTimeout(trySetup, 50);
+        }
+      }
+    };
+
+    trySetup();
+  } catch {
+    // If something goes wrong here, the later, full bridge setup
+    // in the module loader will still attempt to wire events.
+  }
+})();
+
 // Module registry to avoid window pollution
 const moduleRegistry = {};
 
@@ -529,17 +597,10 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
             }
           });
         }
-        
-        // Preferences → openPreferencesModal (if available)
-        if (typeof window.secureElectronAPI.events.onShowPreferences === 'function') {
-          window.secureElectronAPI.events.onShowPreferences(() => {
-            if (typeof window.openPreferencesModal === 'function') {
-              window.openPreferencesModal();
-            } else {
-              window.logWarn('openPreferencesModal not yet available when show_preferences fired');
-            }
-          });
-        }
+
+        // NOTE: Preferences 'show_preferences' IPC is wired by an early bridge
+        // near the top of this file to avoid race conditions where the event
+        // fires before full module loading/coordination has completed.
 
         // Edit selected song → editSelectedSong
         if (typeof window.secureElectronAPI.events.onEditSelectedSong === 'function') {
