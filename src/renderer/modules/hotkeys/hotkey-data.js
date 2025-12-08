@@ -57,6 +57,15 @@ function populateHotkeys(fkeys, title, options = {}) {
 function setLabelFromSongId(song_id, element, options = {}) {
   const { electronAPI, db, saveHotkeysToStore, fallbackSetLabelFromSongId } = options;
   
+  window.debugLog?.info('[HOTKEY-SWAP] setLabelFromSongId called', {
+    module: 'hotkey-data',
+    function: 'setLabelFromSongId',
+    song_id: song_id,
+    element_id: element?.id,
+    element_songid_before: element?.getAttribute?.('songid'),
+    hasElement: !!element
+  });
+  
   // Use new database API for getting song by ID
   if (electronAPI && electronAPI.database) {
     electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
@@ -69,21 +78,89 @@ function setLabelFromSongId(song_id, element, options = {}) {
         // Handle swapping
         const other = document.querySelector(`.hotkeys.active li[songid="${song_id}"]`);
         if (other && other !== element) {
+          window.debugLog?.info('[HOTKEY-SWAP] Swap detected - another hotkey already has this song', {
+            module: 'hotkey-data',
+            function: 'setLabelFromSongId',
+            song_id: song_id,
+            target_element_id: element?.id,
+            target_element_songid_before: element?.getAttribute?.('songid'),
+            other_element_id: other.id,
+            other_element_songid_before: other.getAttribute('songid'),
+            title: title
+          });
+          
           const otherSpan = other.querySelector('span');
           const elemSpan = element?.querySelector?.('span');
           if (otherSpan && elemSpan) {
             const tmp = elemSpan.textContent || '';
             elemSpan.textContent = otherSpan.textContent || '';
             otherSpan.textContent = tmp;
+            window.debugLog?.debug('[HOTKEY-SWAP] Swapped text content between elements', {
+              module: 'hotkey-data',
+              function: 'setLabelFromSongId',
+              target_id: element?.id,
+              other_id: other.id
+            });
           }
+          
           // Get the songid from the element (li), not the span - songid is stored on the li element
           const destId = element?.getAttribute?.('songid');
-          if (destId) other.setAttribute('songid', destId); else other.removeAttribute('songid');
+          window.debugLog?.info('[HOTKEY-SWAP] About to swap songid attributes', {
+            module: 'hotkey-data',
+            function: 'setLabelFromSongId',
+            destId: destId,
+            destId_source: 'element (li)',
+            target_element_id: element?.id,
+            other_element_id: other.id,
+            new_song_id: song_id
+          });
+          
+          if (destId) {
+            other.setAttribute('songid', destId);
+            window.debugLog?.info('[HOTKEY-SWAP] Set songid on other element', {
+              module: 'hotkey-data',
+              function: 'setLabelFromSongId',
+              other_element_id: other.id,
+              songid_set_to: destId
+            });
+          } else {
+            other.removeAttribute('songid');
+            window.debugLog?.warn('[HOTKEY-SWAP] Removed songid from other element (destId was null/undefined)', {
+              module: 'hotkey-data',
+              function: 'setLabelFromSongId',
+              other_element_id: other.id,
+              destId: destId,
+              target_element_id: element?.id,
+              target_element_has_songid: element?.hasAttribute?.('songid')
+            });
+          }
           element?.setAttribute?.('songid', song_id);
+          
+          window.debugLog?.info('[HOTKEY-SWAP] Swap complete', {
+            module: 'hotkey-data',
+            function: 'setLabelFromSongId',
+            target_element_id: element?.id,
+            target_element_songid_after: element?.getAttribute?.('songid'),
+            other_element_id: other.id,
+            other_element_songid_after: other.getAttribute('songid')
+          });
         } else if (element) {
+          window.debugLog?.debug('[HOTKEY-SWAP] No swap needed - setting label directly', {
+            module: 'hotkey-data',
+            function: 'setLabelFromSongId',
+            element_id: element.id,
+            song_id: song_id,
+            title: title
+          });
           const span = element.querySelector('span');
           if (span) span.textContent = `${title} by ${artist} (${time})`;
           element.setAttribute('songid', song_id);
+          window.debugLog?.debug('[HOTKEY-SWAP] Label set and songid assigned', {
+            module: 'hotkey-data',
+            function: 'setLabelFromSongId',
+            element_id: element.id,
+            songid_after: element.getAttribute('songid')
+          });
         }
         if (saveHotkeysToStore) {
           saveHotkeysToStore();
@@ -111,6 +188,16 @@ function setLabelFromSongId(song_id, element, options = {}) {
  */
 function fallbackSetLabelFromSongId(song_id, element, options = {}) {
   const { electronAPI, saveHotkeysToStore } = options;
+  
+  window.debugLog?.info('[HOTKEY-SWAP] fallbackSetLabelFromSongId called', {
+    module: 'hotkey-data',
+    function: 'fallbackSetLabelFromSongId',
+    song_id: song_id,
+    element_id: element?.id,
+    element_songid_before: element?.getAttribute?.('songid'),
+    hasElement: !!element
+  });
+  
   if (electronAPI && electronAPI.database) {
     electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
       if (result.success && result.data.length > 0) {
@@ -120,21 +207,89 @@ function fallbackSetLabelFromSongId(song_id, element, options = {}) {
         const time = row.time || "[??:??]";
         const other2 = document.querySelector(`.hotkeys.active li[songid="${song_id}"]`);
         if (other2 && other2 !== element) {
+          window.debugLog?.info('[HOTKEY-SWAP] Fallback: Swap detected - another hotkey already has this song', {
+            module: 'hotkey-data',
+            function: 'fallbackSetLabelFromSongId',
+            song_id: song_id,
+            target_element_id: element?.id,
+            target_element_songid_before: element?.getAttribute?.('songid'),
+            other_element_id: other2.id,
+            other_element_songid_before: other2.getAttribute('songid'),
+            title: title
+          });
+          
           const otherSpan2 = other2.querySelector('span');
           const elemSpan2 = element?.querySelector?.('span');
           if (otherSpan2 && elemSpan2) {
             const tmp2 = elemSpan2.textContent || '';
             elemSpan2.textContent = otherSpan2.textContent || '';
             otherSpan2.textContent = tmp2;
+            window.debugLog?.debug('[HOTKEY-SWAP] Fallback: Swapped text content between elements', {
+              module: 'hotkey-data',
+              function: 'fallbackSetLabelFromSongId',
+              target_id: element?.id,
+              other_id: other2.id
+            });
           }
+          
           // Get the songid from the element (li), not the span - songid is stored on the li element
           const destId2 = element?.getAttribute?.('songid');
-          if (destId2) other2.setAttribute('songid', destId2); else other2.removeAttribute('songid');
+          window.debugLog?.info('[HOTKEY-SWAP] Fallback: About to swap songid attributes', {
+            module: 'hotkey-data',
+            function: 'fallbackSetLabelFromSongId',
+            destId2: destId2,
+            destId2_source: 'element (li)',
+            target_element_id: element?.id,
+            other_element_id: other2.id,
+            new_song_id: song_id
+          });
+          
+          if (destId2) {
+            other2.setAttribute('songid', destId2);
+            window.debugLog?.info('[HOTKEY-SWAP] Fallback: Set songid on other element', {
+              module: 'hotkey-data',
+              function: 'fallbackSetLabelFromSongId',
+              other_element_id: other2.id,
+              songid_set_to: destId2
+            });
+          } else {
+            other2.removeAttribute('songid');
+            window.debugLog?.warn('[HOTKEY-SWAP] Fallback: Removed songid from other element (destId2 was null/undefined)', {
+              module: 'hotkey-data',
+              function: 'fallbackSetLabelFromSongId',
+              other_element_id: other2.id,
+              destId2: destId2,
+              target_element_id: element?.id,
+              target_element_has_songid: element?.hasAttribute?.('songid')
+            });
+          }
           element?.setAttribute?.('songid', song_id);
+          
+          window.debugLog?.info('[HOTKEY-SWAP] Fallback: Swap complete', {
+            module: 'hotkey-data',
+            function: 'fallbackSetLabelFromSongId',
+            target_element_id: element?.id,
+            target_element_songid_after: element?.getAttribute?.('songid'),
+            other_element_id: other2.id,
+            other_element_songid_after: other2.getAttribute('songid')
+          });
         } else if (element) {
+          window.debugLog?.debug('[HOTKEY-SWAP] Fallback: No swap needed - setting label directly', {
+            module: 'hotkey-data',
+            function: 'fallbackSetLabelFromSongId',
+            element_id: element.id,
+            song_id: song_id,
+            title: title
+          });
           const span2 = element.querySelector('span');
           if (span2) span2.textContent = `${title} by ${artist} (${time})`;
           element.setAttribute('songid', song_id);
+          window.debugLog?.debug('[HOTKEY-SWAP] Fallback: Label set and songid assigned', {
+            module: 'hotkey-data',
+            function: 'fallbackSetLabelFromSongId',
+            element_id: element.id,
+            songid_after: element.getAttribute('songid')
+          });
         }
         if (saveHotkeysToStore) saveHotkeysToStore();
       }
