@@ -76,7 +76,8 @@ function setLabelFromSongId(song_id, element, options = {}) {
             elemSpan.textContent = otherSpan.textContent || '';
             otherSpan.textContent = tmp;
           }
-          const destId = elemSpan?.getAttribute?.('songid');
+          // Get the songid from the element (li), not the span - songid is stored on the li element
+          const destId = element?.getAttribute?.('songid');
           if (destId) other.setAttribute('songid', destId); else other.removeAttribute('songid');
           element?.setAttribute?.('songid', song_id);
         } else if (element) {
@@ -126,7 +127,8 @@ function fallbackSetLabelFromSongId(song_id, element, options = {}) {
             elemSpan2.textContent = otherSpan2.textContent || '';
             otherSpan2.textContent = tmp2;
           }
-          const destId2 = elemSpan2?.getAttribute?.('songid');
+          // Get the songid from the element (li), not the span - songid is stored on the li element
+          const destId2 = element?.getAttribute?.('songid');
           if (destId2) other2.setAttribute('songid', destId2); else other2.removeAttribute('songid');
           element?.setAttribute?.('songid', song_id);
         } else if (element) {
