@@ -227,27 +227,36 @@ test.describe('Profile Management', () => {
     await expect(modal).toBeVisible();
     await nameInput.fill('Alice');
     await confirmButton.click();
-    // Wait for profile to appear in list (confirms creation completed)
-    await expect(page.locator('.profile-item:has-text("Alice")')).toBeVisible({ timeout: 10000 });
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
+    // Wait for profile to appear in list (confirms creation was successful and modal is closed)
+    // Use data-profile-name attribute for more reliable matching
+    await expect(page.locator('.profile-item[data-profile-name="Alice"]')).toBeVisible({ timeout: 10000 });
+    // Verify modal is closed (should be closed by the time profile appears)
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
+    // Small wait to ensure DOM has settled before creating next profile
+    await page.waitForTimeout(100);
     
     // Create "Bob" profile
     await createButton.click();
     await expect(modal).toBeVisible();
     await nameInput.fill('Bob');
     await confirmButton.click();
-    // Wait for profile to appear in list (confirms creation completed)
-    await expect(page.locator('.profile-item:has-text("Bob")')).toBeVisible({ timeout: 10000 });
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
+    // Wait for profile to appear in list (confirms creation was successful and modal is closed)
+    await expect(page.locator('.profile-item[data-profile-name="Bob"]')).toBeVisible({ timeout: 10000 });
+    // Verify modal is closed (should be closed by the time profile appears)
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
+    // Small wait to ensure DOM has settled before creating next profile
+    await page.waitForTimeout(100);
     
     // Create "Charlie" profile
     await createButton.click();
     await expect(modal).toBeVisible();
     await nameInput.fill('Charlie');
     await confirmButton.click();
-    // Wait for profile to appear in list (confirms creation completed)
-    await expect(page.locator('.profile-item:has-text("Charlie")')).toBeVisible({ timeout: 10000 });
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
+    // Wait for profile to appear in list (confirms creation was successful and modal is closed)
+    // Use data-profile-name attribute for more reliable matching
+    await expect(page.locator('.profile-item[data-profile-name="Charlie"]')).toBeVisible({ timeout: 10000 });
+    // Verify modal is closed (should be closed by the time profile appears)
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
     
     // Now test search
     const searchInput = page.locator('#profile-search');
