@@ -374,12 +374,13 @@ test.describe('Profile Management', () => {
       await nameInput.fill(name);
       await confirmButton.click();
       
-      // Wait for modal to close first (confirms creation request was processed)
-      await expect(modal).not.toBeVisible({ timeout: 5000 });
-      
-      // Then wait for profile to appear in list (confirms list was refreshed)
-      // On Linux, the async loadProfiles() may take a moment to complete
+      // Wait for profile to appear in list (confirms creation was successful and modal is closed)
+      // On Mac, waiting for the profile first is more reliable than waiting for modal visibility
+      // because the profile appearing confirms both creation success and modal closure
       await expect(page.locator(`.profile-item:has-text("${name}")`)).toBeVisible({ timeout: 10000 });
+      
+      // Verify modal is closed (should be closed by the time profile appears)
+      await expect(modal).not.toBeVisible({ timeout: 2000 });
     }
     
     // Get all profile items in order
