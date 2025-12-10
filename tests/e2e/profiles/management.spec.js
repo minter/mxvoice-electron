@@ -144,14 +144,16 @@ test.describe('Profile Management', () => {
     const confirmButton = page.locator('#confirm-create-btn');
     await confirmButton.click();
     
-    // Wait for modal to close
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
-    
-    // Verify new profile appears in the list
+    // Wait for profile to appear in list (confirms creation was successful and modal is closed)
+    // Waiting for the profile first is more reliable than waiting for modal visibility
+    // because the profile appearing confirms both creation success and modal closure
     const testProfile = page.locator('.profile-item[data-profile-name="Test User"]');
-    await expect(testProfile).toBeVisible();
+    await expect(testProfile).toBeVisible({ timeout: 10000 });
     await expect(testProfile).toContainText('Test User');
     await expect(testProfile).toContainText('Test profile for E2E testing');
+    
+    // Verify modal is closed (should be closed by the time profile appears)
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
     
     // Verify profile is auto-selected
     await expect(testProfile).toHaveClass(/selected/);
@@ -192,7 +194,11 @@ test.describe('Profile Management', () => {
     const confirmButton = page.locator('#confirm-create-btn');
     await confirmButton.click();
     
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
+    // Wait for profile to appear (confirms creation was successful and modal is closed)
+    await expect(page.locator('.profile-item[data-profile-name="Test User"]')).toBeVisible({ timeout: 10000 });
+    
+    // Verify modal is closed (should be closed by the time profile appears)
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
     
     // Now try to create another profile with the same name
     await createButton.click();
@@ -221,27 +227,36 @@ test.describe('Profile Management', () => {
     await expect(modal).toBeVisible();
     await nameInput.fill('Alice');
     await confirmButton.click();
-    // Wait for profile to appear in list (confirms creation completed)
-    await expect(page.locator('.profile-item:has-text("Alice")')).toBeVisible({ timeout: 10000 });
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
+    // Wait for profile to appear in list (confirms creation was successful and modal is closed)
+    // Use data-profile-name attribute for more reliable matching
+    await expect(page.locator('.profile-item[data-profile-name="Alice"]')).toBeVisible({ timeout: 10000 });
+    // Verify modal is closed (should be closed by the time profile appears)
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
+    // Small wait to ensure DOM has settled before creating next profile
+    await page.waitForTimeout(100);
     
     // Create "Bob" profile
     await createButton.click();
     await expect(modal).toBeVisible();
     await nameInput.fill('Bob');
     await confirmButton.click();
-    // Wait for profile to appear in list (confirms creation completed)
-    await expect(page.locator('.profile-item:has-text("Bob")')).toBeVisible({ timeout: 10000 });
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
+    // Wait for profile to appear in list (confirms creation was successful and modal is closed)
+    await expect(page.locator('.profile-item[data-profile-name="Bob"]')).toBeVisible({ timeout: 10000 });
+    // Verify modal is closed (should be closed by the time profile appears)
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
+    // Small wait to ensure DOM has settled before creating next profile
+    await page.waitForTimeout(100);
     
     // Create "Charlie" profile
     await createButton.click();
     await expect(modal).toBeVisible();
     await nameInput.fill('Charlie');
     await confirmButton.click();
-    // Wait for profile to appear in list (confirms creation completed)
-    await expect(page.locator('.profile-item:has-text("Charlie")')).toBeVisible({ timeout: 10000 });
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
+    // Wait for profile to appear in list (confirms creation was successful and modal is closed)
+    // Use data-profile-name attribute for more reliable matching
+    await expect(page.locator('.profile-item[data-profile-name="Charlie"]')).toBeVisible({ timeout: 10000 });
+    // Verify modal is closed (should be closed by the time profile appears)
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
     
     // Now test search
     const searchInput = page.locator('#profile-search');
@@ -374,12 +389,13 @@ test.describe('Profile Management', () => {
       await nameInput.fill(name);
       await confirmButton.click();
       
-      // Wait for modal to close first (confirms creation request was processed)
-      await expect(modal).not.toBeVisible({ timeout: 5000 });
-      
-      // Then wait for profile to appear in list (confirms list was refreshed)
-      // On Linux, the async loadProfiles() may take a moment to complete
+      // Wait for profile to appear in list (confirms creation was successful and modal is closed)
+      // On Mac, waiting for the profile first is more reliable than waiting for modal visibility
+      // because the profile appearing confirms both creation success and modal closure
       await expect(page.locator(`.profile-item:has-text("${name}")`)).toBeVisible({ timeout: 10000 });
+      
+      // Verify modal is closed (should be closed by the time profile appears)
+      await expect(modal).not.toBeVisible({ timeout: 2000 });
     }
     
     // Get all profile items in order
@@ -478,12 +494,13 @@ test.describe('Profile Switching and Isolation', () => {
     const confirmButton = page.locator('#confirm-create-btn');
     await confirmButton.click();
     
-    // Wait for modal to close first (confirms creation request was processed)
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
-    
-    // Then wait for profile to appear in list (confirms list was refreshed)
-    // On Linux, the async loadProfiles() may take a moment to complete
+    // Wait for profile to appear in list (confirms creation was successful and modal is closed)
+    // On Windows/Linux, waiting for the profile first is more reliable than waiting for modal visibility
+    // because the profile appearing confirms both creation success and modal closure
     await expect(page.locator('.profile-item:has-text("Profile A")')).toBeVisible({ timeout: 10000 });
+    
+    // Verify modal is closed (should be closed by the time profile appears)
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
 
     // Create Profile B
     await createButton.click();
@@ -491,11 +508,11 @@ test.describe('Profile Switching and Isolation', () => {
     await nameInput.fill('Profile B');
     await confirmButton.click();
     
-    // Wait for modal to close first
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
-    
-    // Then wait for profile to appear in list
+    // Wait for profile to appear in list (confirms creation was successful and modal is closed)
     await expect(page.locator('.profile-item:has-text("Profile B")')).toBeVisible({ timeout: 10000 });
+    
+    // Verify modal is closed (should be closed by the time profile appears)
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
     
     await app.close();
     
