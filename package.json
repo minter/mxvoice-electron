@@ -163,7 +163,7 @@
     "@octokit/rest": "^22.0.1",
     "animate.css": "^4.1.1",
     "bootstrap": "^5.3.8",
-    "dompurify": "^3.3.0",
+    "dompurify": "^3.3.1",
     "electron-log": "^5.4.3",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.7.3",
