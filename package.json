@@ -118,6 +118,10 @@
       "verifyUpdateCodeSignature": false,
       "signAndEditExecutable": false
     },
+    "nsis": {
+      "installerIcon": "src/assets/icons/mxvoice.ico",
+      "uninstallerIcon": "src/assets/icons/mxvoice.ico"
+    },
     "linux": {
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
       "category": "AudioVideo",
