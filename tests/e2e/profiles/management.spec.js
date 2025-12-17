@@ -383,23 +383,30 @@ test.describe('Profile Management', () => {
     
     const profileNames = ['Zebra', 'Apple', 'Middle'];
     
-    for (const name of profileNames) {
+    for (let i = 0; i < profileNames.length; i++) {
+      const name = profileNames[i];
+      const expectedCount = 1 + i + 1; // Default User + profiles created so far + this one
+      
       await createButton.click();
       await expect(modal).toBeVisible();
       await nameInput.fill(name);
       await confirmButton.click();
       
-      // Wait for profile to appear in list (confirms creation was successful and modal is closed)
-      // Use data-profile-name attribute for more reliable matching (consistent with other tests)
-      // On Mac CI, the data attribute is more reliable than :has-text() which depends on text rendering
-      await expect(page.locator(`.profile-item[data-profile-name="${name}"]`)).toBeVisible({ timeout: 10000 });
+      // Wait for modal to close first (indicates creation request was processed)
+      await expect(modal).not.toBeVisible({ timeout: 5000 });
       
-      // Verify modal is closed (should be closed by the time profile appears)
-      await expect(modal).not.toBeVisible({ timeout: 2000 });
+      // Wait for profile to appear in list (confirms creation was successful)
+      // Use data-profile-name attribute for more reliable matching (consistent with other tests)
+      // On Windows/Mac CI, the data attribute is more reliable than :has-text() which depends on text rendering
+      await expect(page.locator(`.profile-item[data-profile-name="${name}"]`)).toBeVisible({ timeout: 15000 });
+      
+      // Verify the profile list count has increased (confirms the list actually refreshed)
+      const profileItems = page.locator('.profile-item');
+      await expect(profileItems).toHaveCount(expectedCount, { timeout: 5000 });
       
       // Small wait to ensure DOM has settled before creating next profile
-      // This helps prevent race conditions on slower CI environments like Mac runners
-      await page.waitForTimeout(100);
+      // This helps prevent race conditions on slower CI environments
+      await page.waitForTimeout(200);
     }
     
     // Get all profile items in order
