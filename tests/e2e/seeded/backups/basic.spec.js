@@ -10,18 +10,26 @@ const __dirname = path.dirname(__filename);
 /**
  * Wait for backup to complete by checking for metadata file
  * @param {string} metadataFile - Path to backup-metadata.json
- * @param {number} timeout - Maximum time to wait in ms (default: 10000)
+ * @param {number} timeout - Maximum time to wait in ms (default: 45000)
+ * @param {number} expectedMinCount - Minimum expected backup count (optional)
  * @returns {Promise<void>}
  */
-async function waitForBackupCompletion(metadataFile, timeout = 10000) {
+async function waitForBackupCompletion(metadataFile, timeout = 45000, expectedMinCount = null) {
   const startTime = Date.now();
   while (Date.now() - startTime < timeout) {
     if (fs.existsSync(metadataFile)) {
       try {
         const data = fs.readFileSync(metadataFile, 'utf8');
         const metadata = JSON.parse(data);
-        if (metadata && metadata.backups && Array.isArray(metadata.backups) && metadata.backups.length > 0) {
-          return; // Backup completed successfully
+        if (metadata && metadata.backups && Array.isArray(metadata.backups)) {
+          // If expectedMinCount is provided, wait for count to reach that value
+          if (expectedMinCount !== null) {
+            if (metadata.backups.length >= expectedMinCount) {
+              return; // Backup count reached expected minimum
+            }
+          } else if (metadata.backups.length > 0) {
+            return; // Backup completed successfully (at least one backup exists)
+          }
         }
       } catch (error) {
         // File exists but not valid yet, keep waiting
@@ -73,7 +81,10 @@ async function createBackupAndWait(app, page, backupDir, profileDir = null) {
   await page.waitForTimeout(500);
 
   // Wait for backup to complete (metadata file updated with new backup)
-  await waitForBackupCompletion(metadataFile, 15000);
+  // Use longer timeout on CI environments (45 seconds) as file operations can be slow
+  // Check for backup count to increase, which confirms the backup was actually created
+  const expectedBackupCount = initialBackupCount + 1;
+  await waitForBackupCompletion(metadataFile, 45000, expectedBackupCount);
 
   // Verify backup count increased
   const finalMetadata = JSON.parse(fs.readFileSync(metadataFile, 'utf8'));
