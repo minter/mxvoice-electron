@@ -390,12 +390,16 @@ test.describe('Profile Management', () => {
       await confirmButton.click();
       
       // Wait for profile to appear in list (confirms creation was successful and modal is closed)
-      // On Mac, waiting for the profile first is more reliable than waiting for modal visibility
-      // because the profile appearing confirms both creation success and modal closure
-      await expect(page.locator(`.profile-item:has-text("${name}")`)).toBeVisible({ timeout: 10000 });
+      // Use data-profile-name attribute for more reliable matching (consistent with other tests)
+      // On Mac CI, the data attribute is more reliable than :has-text() which depends on text rendering
+      await expect(page.locator(`.profile-item[data-profile-name="${name}"]`)).toBeVisible({ timeout: 10000 });
       
       // Verify modal is closed (should be closed by the time profile appears)
       await expect(modal).not.toBeVisible({ timeout: 2000 });
+      
+      // Small wait to ensure DOM has settled before creating next profile
+      // This helps prevent race conditions on slower CI environments like Mac runners
+      await page.waitForTimeout(100);
     }
     
     // Get all profile items in order
