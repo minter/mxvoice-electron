@@ -137,6 +137,14 @@ test.describe('Songs - delete', () => {
     console.log('🔒 Waiting for modal to close...');
     await expect(confirmationModal).not.toBeVisible({ timeout: 5000 });
     
+    // Wait for modal backdrop to be removed (Bootstrap modals have fade animations)
+    // The backdrop can block interactions even after the modal is hidden
+    const backdrop = page.locator('.modal-backdrop');
+    await expect(backdrop).not.toBeVisible({ timeout: 5000 });
+    
+    // Additional small wait to ensure all modal cleanup is complete
+    await page.waitForTimeout(300);
+    
     // 9) Do a search for "Anthrax" again
     console.log('🔍 Searching for "Anthrax" again to verify deletion...');
     
