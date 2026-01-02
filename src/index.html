@@ -46,7 +46,9 @@
   <body>
     <div class="container-fluid">
 
-      <div id="top-row" class="row g-0 flex-nowrap">
+      <!-- Traditional View (default) -->
+      <div id="traditional-view" style="display: flex; flex-direction: column;">
+        <div id="top-row" class="row g-0 flex-nowrap">
 
         <!-- Begin Holding Tank -->
 
@@ -278,7 +280,122 @@
 
         <!-- End Hotkeys -->
 
+        </div>
       </div>
+      <!-- End Traditional View -->
+
+      <!-- Soundboard View (hidden by default) -->
+      <div id="soundboard-view" style="display: none; flex-direction: column; height: 100vh;">
+        <div class="row g-0 flex-nowrap" style="flex: 1; overflow: hidden;">
+          <!-- Main Grid Area -->
+          <div class="col" id="soundboard-main-area" style="display: flex; flex-direction: column;">
+            <div class="card rounded-0 h-100">
+              <h6 class="card-header rounded-0">
+                <div class="header-button">
+                  <i class="fas fa-th"></i> Soundboard
+                </div>
+                <div class="icon-bar">
+                  <a href="#" id="soundboard-load-btn" onclick="openSoundboardFile()" data-bs-toggle="tooltip" data-bs-placement="top" title="Load Soundboard File">
+                    <i class="far fa-sm fa-folder-open"></i>
+                  </a>
+                  <a href="#" id="soundboard-save-btn" onclick="saveSoundboardFile()" data-bs-toggle="tooltip" data-bs-placement="top" title="Save Soundboard To File">
+                    <i class="far fa-sm fa-save"></i>
+                  </a>
+                  <a href="#" id="soundboard-rename-btn" onclick="renameSoundboardTab()" data-bs-toggle="tooltip" data-bs-placement="top" title="Rename Soundboard Tab">
+                    <i class="far fa-sm fa-edit"></i>
+                  </a>
+                  <a href="#" id="soundboard-clear-btn" onclick="clearSoundboard()" data-bs-toggle="tooltip" data-bs-placement="top" title="Clear Soundboard">
+                    <i class="far fa-sm fa-trash-alt"></i>
+                  </a>
+                  <a href="#" id="soundboard-search-toggle" data-bs-toggle="tooltip" data-bs-placement="top" title="Toggle Search Panel">
+                    <i class="fas fa-sm fa-search"></i>
+                  </a>
+                </div>
+              </h6>
+              <ul class="nav nav-tabs nav-fill" id="soundboard_tabs" role="tablist">
+                <li class="nav-item">
+                  <a class="nav-link active" role="tab" data-bs-toggle="tab" href="#soundboard_list_1">1</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" role="tab" data-bs-toggle="tab" href="#soundboard_list_2">2</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" role="tab" data-bs-toggle="tab" href="#soundboard_list_3">3</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" role="tab" data-bs-toggle="tab" href="#soundboard_list_4">4</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" role="tab" data-bs-toggle="tab" href="#soundboard_list_5">5</a>
+                </li>
+              </ul>
+              <div class="card-body" style="flex: 1; overflow: auto;">
+                <div id="soundboard-tab-content" class="tab-content h-100">
+                  <div id="soundboard_list_1" class="tab-pane fade show active" role="tabpanel">
+                    <div id="soundboard-grid-1" class="soundboard-grid"></div>
+                  </div>
+                  <div id="soundboard_list_2" class="tab-pane fade" role="tabpanel">
+                    <div id="soundboard-grid-2" class="soundboard-grid"></div>
+                  </div>
+                  <div id="soundboard_list_3" class="tab-pane fade" role="tabpanel">
+                    <div id="soundboard-grid-3" class="soundboard-grid"></div>
+                  </div>
+                  <div id="soundboard_list_4" class="tab-pane fade" role="tabpanel">
+                    <div id="soundboard-grid-4" class="soundboard-grid"></div>
+                  </div>
+                  <div id="soundboard_list_5" class="tab-pane fade" role="tabpanel">
+                    <div id="soundboard-grid-5" class="soundboard-grid"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Search Panel (collapsible) -->
+          <div class="col-auto" id="soundboard-search-panel" style="width: 350px; transition: width 0.3s;">
+            <div class="card rounded-0 h-100">
+              <h6 class="card-header rounded-0">
+                <div class="header-button">
+                  <i class="fas fa-search"></i> Search
+                </div>
+              </h6>
+              <div class="card-body">
+                <form id="soundboard-search-form" onsubmit="searchData();return false;">
+                  <div class="input-group mb-3">
+                    <select class="form-select" id="soundboard-category-select"></select>
+                    <input type="text" class="form-control" placeholder="Enter search term..." id="soundboard-omni-search">
+                    <button type="reset" id="soundboard-reset-button" class="btn btn-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Reset Search"><i class="fas fa-sm fa-times"></i></button>
+                    <button type="button" id="soundboard-advanced-search-button" class="btn btn-primary" data-bs-toggle="tooltip" data-bs-placement="top" title="Advanced Search"><i class="fas fa-sm fa-plus"></i></button>
+                  </div>
+                  <div class="row g-2" id="soundboard-advanced-search" style="display:none;">
+                    <div class="col">
+                      <input type="text" id="soundboard-artist-search" class="form-control" placeholder="Artist">
+                    </div>
+                    <div class="col">
+                      <input type="text" id="soundboard-info-search" class="form-control" placeholder="Info">
+                    </div>
+                  </div>
+                </form>
+                <div class="table-wrapper-scroll-y my-custom-scrollbar" style="max-height: calc(100vh - 300px);">
+                  <div id="soundboard-search-results">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>Artist</th>
+                          <th>Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- End Soundboard View -->
 
       <!-- Waveform container positioned above the player panel -->
       <div id="waveform-container" class="row g-0 flex-nowrap">

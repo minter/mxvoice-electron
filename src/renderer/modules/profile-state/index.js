@@ -130,6 +130,98 @@ function extractHotkeyTabs() {
 }
 
 /**
+ * Extract all soundboard tabs state
+ * @returns {Array} Array of soundboard tab states
+ */
+function extractSoundboardTabs() {
+  const tabs = [];
+  
+  debugLog?.info('[PROFILE-STATE] Starting soundboard tabs extraction', {
+    module: 'profile-state',
+    function: 'extractSoundboardTabs'
+  });
+  
+  // Iterate through all 5 soundboard tabs
+  for (let tabNum = 1; tabNum <= 5; tabNum++) {
+    const tabContent = document.getElementById(`soundboard_list_${tabNum}`);
+    const tabLink = document.querySelector(`#soundboard_tabs .nav-item:nth-child(${tabNum}) a`);
+    const gridContainer = document.getElementById(`soundboard-grid-${tabNum}`);
+    
+    debugLog?.info(`[PROFILE-STATE] Checking soundboard tab ${tabNum}`, {
+      module: 'profile-state',
+      function: 'extractSoundboardTabs',
+      tabNum,
+      hasTabContent: !!tabContent,
+      hasTabLink: !!tabLink,
+      hasGridContainer: !!gridContainer
+    });
+    
+    if (!tabContent || !tabLink || !gridContainer) {
+      debugLog?.warn(`[PROFILE-STATE] Missing soundboard tab elements for tab ${tabNum}`, {
+        module: 'profile-state',
+        function: 'extractSoundboardTabs',
+        tabNum,
+        hasTabContent: !!tabContent,
+        hasTabLink: !!tabLink,
+        hasGridContainer: !!gridContainer
+      });
+      continue;
+    }
+    
+    const buttons = {};
+    let hasData = false;
+    
+    // Extract all buttons from this tab's grid
+    const buttonElements = gridContainer.querySelectorAll('.soundboard-button');
+    buttonElements.forEach((button) => {
+      const songId = button.getAttribute('songid');
+      if (songId) {
+        const position = button.getAttribute('data-button-index');
+        if (position !== null) {
+          // Calculate row-col from index
+          const index = parseInt(position, 10);
+          const columns = parseInt(getComputedStyle(gridContainer).getPropertyValue('--grid-columns')) || 6;
+          const row = Math.floor(index / columns);
+          const col = index % columns;
+          const key = `${row}-${col}`;
+          buttons[key] = songId;
+          hasData = true;
+        }
+      }
+    });
+    
+    // Get tab name (if customized)
+    const tabName = tabLink.textContent.trim();
+    const isCustomName = !/^\d$/.test(tabName);
+    
+    debugLog?.info(`[PROFILE-STATE] Extracted soundboard tab ${tabNum}`, {
+      module: 'profile-state',
+      function: 'extractSoundboardTabs',
+      tabNum,
+      tabName,
+      isCustomName,
+      buttonCount: Object.keys(buttons).length,
+      hasData
+    });
+    
+    tabs.push({
+      tabNumber: tabNum,
+      tabName: isCustomName ? tabName : null,
+      buttons: hasData ? buttons : {}
+    });
+  }
+  
+  debugLog?.info('[PROFILE-STATE] Soundboard extraction complete', {
+    module: 'profile-state',
+    function: 'extractSoundboardTabs',
+    totalTabs: tabs.length,
+    tabsWithData: tabs.filter(t => Object.keys(t.buttons).length > 0).length
+  });
+  
+  return tabs;
+}
+
+/**
  * Extract all holding tank tabs state
  * @returns {Array} Array of holding tank tab states
  */
@@ -200,12 +292,14 @@ export function extractProfileState() {
     version: '1.0.0',
     timestamp: Date.now(),
     hotkeys: extractHotkeyTabs(),
-    holdingTank: extractHoldingTankTabs()
+    holdingTank: extractHoldingTankTabs(),
+    soundboard: extractSoundboardTabs()
   };
   
-  // Calculate actual data counts for debugging
-  const hotkeyCount = state.hotkeys.reduce((sum, tab) => sum + Object.keys(tab.hotkeys).length, 0);
-  const holdingTankCount = state.holdingTank.reduce((sum, tab) => sum + tab.songIds.length, 0);
+    // Calculate actual data counts for debugging
+    const hotkeyCount = state.hotkeys.reduce((sum, tab) => sum + Object.keys(tab.hotkeys).length, 0);
+    const holdingTankCount = state.holdingTank.reduce((sum, tab) => sum + tab.songIds.length, 0);
+    const soundboardCount = state.soundboard.reduce((sum, tab) => sum + Object.keys(tab.buttons).length, 0);
   
   debugLog?.info('[PROFILE-STATE] Extracted profile state - SUMMARY', { 
     module: 'profile-state',
@@ -599,6 +693,136 @@ async function restoreHoldingTankTabs(holdingTankTabs, holdingTankModule) {
   if (firstTab) {
     firstTab.click();
   }
+  
+  debugLog?.info('[PROFILE-STATE] Holding tank restoration complete', {
+    module: 'profile-state',
+    function: 'restoreHoldingTankTabs'
+  });
+}
+
+/**
+ * Restore soundboard tabs from state
+ * @param {Array} soundboardTabs - Array of soundboard tab states
+ * @param {Object} soundboardModule - Soundboard module instance
+ * @returns {Promise<void>}
+ */
+export async function restoreSoundboardTabs(soundboardTabs, soundboardModule) {
+  if (!soundboardTabs || !Array.isArray(soundboardTabs)) {
+    debugLog?.warn('[PROFILE-STATE] Invalid soundboard tabs data', {
+      module: 'profile-state',
+      function: 'restoreSoundboardTabs'
+    });
+    return;
+  }
+  
+  debugLog?.info('[PROFILE-STATE] Restoring soundboard tabs', {
+    module: 'profile-state',
+    function: 'restoreSoundboardTabs',
+    tabCount: soundboardTabs.length
+  });
+  
+  for (const tab of soundboardTabs) {
+    const tabNumber = tab.tabNumber;
+    const tabContent = document.getElementById(`soundboard_list_${tabNumber}`);
+    const tabLink = document.querySelector(`#soundboard_tabs .nav-item:nth-child(${tabNumber}) a`);
+    const gridContainer = document.getElementById(`soundboard-grid-${tabNumber}`);
+    
+    if (!tabContent || !tabLink || !gridContainer) {
+      debugLog?.warn('[PROFILE-STATE] Missing soundboard tab elements', {
+        module: 'profile-state',
+        function: 'restoreSoundboardTabs',
+        tabNumber,
+        hasTabContent: !!tabContent,
+        hasTabLink: !!tabLink,
+        hasGridContainer: !!gridContainer
+      });
+      continue;
+    }
+    
+    // Set custom tab name if exists
+    const tabName = tab.tabName;
+    if (tabName) {
+      tabLink.textContent = tabName;
+    }
+    
+    // Restore each button in this tab
+    for (const [position, songId] of Object.entries(tab.buttons || {})) {
+      debugLog?.info('[PROFILE-STATE] Restoring soundboard button', {
+        module: 'profile-state',
+        function: 'restoreSoundboardTabs',
+        tabNumber,
+        position,
+        songId
+      });
+      
+      try {
+        // Validate that song still exists in database
+        const songResult = await window.secureElectronAPI.database.query(
+          'SELECT * FROM mrvoice WHERE id = ?',
+          [songId]
+        );
+        
+        if (songResult.success && songResult.data && songResult.data.length > 0) {
+          const row = songResult.data[0];
+          
+          // Find button by position
+          const [rowNum, colNum] = position.split('-').map(Number);
+          const columns = parseInt(getComputedStyle(gridContainer).getPropertyValue('--grid-columns')) || 6;
+          const buttonIndex = rowNum * columns + colNum;
+          const button = gridContainer.querySelector(`.soundboard-button[data-button-index="${buttonIndex}"]`);
+          
+          if (button && soundboardModule && typeof soundboardModule.setLabelFromSongId === 'function') {
+            await soundboardModule.setLabelFromSongId(songId, button);
+            
+            debugLog?.info('[PROFILE-STATE] Soundboard button restored successfully', {
+              module: 'profile-state',
+              function: 'restoreSoundboardTabs',
+              tabNumber,
+              position,
+              songId,
+              title: row.title
+            });
+          } else {
+            debugLog?.warn('[PROFILE-STATE] Soundboard button element not found or module method unavailable', {
+              module: 'profile-state',
+              function: 'restoreSoundboardTabs',
+              tabNumber,
+              position,
+              buttonIndex,
+              hasButton: !!button,
+              hasModule: !!soundboardModule
+            });
+          }
+        } else {
+          debugLog?.warn('[PROFILE-STATE] Skipping deleted song in soundboard restore', { 
+            module: 'profile-state',
+            function: 'restoreSoundboardTabs',
+            songId,
+            position
+          });
+        }
+      } catch (error) {
+        debugLog?.error('[PROFILE-STATE] Error restoring soundboard button', { 
+          module: 'profile-state',
+          function: 'restoreSoundboardTabs',
+          position,
+          songId,
+          error: error.message
+        });
+      }
+    }
+  }
+  
+  // Switch back to first tab
+  const firstTab = document.querySelector('#soundboard_tabs .nav-item:first-child a');
+  if (firstTab) {
+    firstTab.click();
+  }
+  
+  debugLog?.info('[PROFILE-STATE] Soundboard restoration complete', {
+    module: 'profile-state',
+    function: 'restoreSoundboardTabs'
+  });
 }
 
 /**
@@ -746,11 +970,21 @@ export async function loadProfileState(options = {}) {
       state.holdingTank = [];
     }
     
+    // Ensure soundboard array exists
+    if (!Array.isArray(state.soundboard)) {
+      debugLog?.warn('[PROFILE-STATE] State missing soundboard array, initializing empty', {
+        module: 'profile-state',
+        function: 'loadProfileState'
+      });
+      state.soundboard = [];
+    }
+    
     // Validate that state has some content (not completely empty)
     const hasHotkeys = state.hotkeys.some(tab => tab.hotkeys && Object.keys(tab.hotkeys).length > 0);
     const hasHoldingTank = state.holdingTank.some(tab => tab.songIds && tab.songIds.length > 0);
+    const hasSoundboard = state.soundboard.some(tab => tab.buttons && Object.keys(tab.buttons).length > 0);
     
-    if (!hasHotkeys && !hasHoldingTank) {
+    if (!hasHotkeys && !hasHoldingTank && !hasSoundboard) {
       debugLog?.warn('[PROFILE-STATE] State file exists but contains no data (empty profile)', {
         module: 'profile-state',
         function: 'loadProfileState',
@@ -801,6 +1035,23 @@ export async function loadProfileState(options = {}) {
         function: 'loadProfileState',
         hasHotkeys: !!state.hotkeys,
         hasModule: !!hotkeysModule
+      });
+    }
+    
+    // Restore soundboard
+    if (state.soundboard && window.moduleRegistry?.soundboard) {
+      debugLog?.info('[PROFILE-STATE] Restoring soundboard from state', { 
+        module: 'profile-state',
+        function: 'loadProfileState',
+        tabCount: state.soundboard.length
+      });
+      await restoreSoundboardTabs(state.soundboard, window.moduleRegistry.soundboard);
+    } else {
+      debugLog?.warn('[PROFILE-STATE] Skipping soundboard restore', {
+        module: 'profile-state',
+        function: 'loadProfileState',
+        hasSoundboard: !!state.soundboard,
+        hasModule: !!window.moduleRegistry?.soundboard
       });
     }
     
@@ -1010,7 +1261,8 @@ export function initializeProfileState({ hotkeysModule, holdingTankModule } = {}
     saveProfileState,
     loadProfileState,
     switchProfileWithSave,
-    clearProfileRestorationLock
+    clearProfileRestorationLock,
+    restoreSoundboardTabs
   };
 }
 
@@ -1020,6 +1272,7 @@ export default {
   saveProfileState,
   loadProfileState,
   switchProfileWithSave,
-  clearProfileRestorationLock
+  clearProfileRestorationLock,
+  restoreSoundboardTabs
 };
 

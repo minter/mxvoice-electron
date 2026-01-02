@@ -91,11 +91,17 @@ export class KeyboardManager {
    */
   async registerDefaultShortcuts() {
     try {
-      // Register F1-F12 hotkeys in the registry
+      // Register F1-F12 hotkeys in the registry (only active in traditional view)
       for (let i = 1; i <= 12; i++) {
         const fkey = `f${i}`;
         this.shortcutRegistry.registerShortcut(fkey, 
-          () => this.hotkeyBindings.handleFunctionKey(fkey),
+          () => {
+            // Check current view - only handle F-keys in traditional view
+            const currentView = window.moduleRegistry?.viewManager?.getCurrentView?.() || 'traditional';
+            if (currentView === 'traditional') {
+              this.hotkeyBindings.handleFunctionKey(fkey);
+            }
+          },
           {
             category: 'hotkeys',
             description: `Play song from hotkey ${fkey.toUpperCase()}`,

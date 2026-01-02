@@ -524,6 +524,19 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logInfo('Function coordination system initialized successfully');
     }
 
+    // Reinitialize soundboard module with full dependencies
+    if (moduleRegistry.soundboard && typeof moduleRegistry.soundboard.reinitializeSoundboard === 'function') {
+      window.logInfo('Reinitializing soundboard module with dependencies...');
+      await moduleRegistry.soundboard.reinitializeSoundboard({
+        electronAPI: window.electronAPI,
+        db: window.db,
+        store: window.store,
+        debugLog: window.debugLog || debugLogger,
+        soundboardModule: moduleRegistry.soundboard
+      });
+      window.logInfo('Soundboard module reinitialized successfully');
+    }
+
     // Clear profile restoration lock now that app initialization is complete,
     // even if function coordination failed. Saves must never remain blocked
     // for the entire session just because coordination init had an issue.
@@ -557,6 +570,24 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               window.populateHotkeys(fkeys, title);
             } else {
               window.logWarn('populateHotkeys not yet available when fkey_load fired');
+            }
+          });
+        }
+
+        // Soundboard load → restoreSoundboardTabs
+        if (typeof window.secureElectronAPI.events.onSoundboardLoad === 'function') {
+          window.secureElectronAPI.events.onSoundboardLoad((soundboardData) => {
+            if (window.moduleRegistry?.soundboard && window.moduleRegistry?.profileState) {
+              // Restore soundboard from file data
+              const soundboard = window.moduleRegistry.soundboard;
+              const profileState = window.moduleRegistry.profileState;
+              if (soundboardData && soundboardData.pages) {
+                profileState.restoreSoundboardTabs(soundboardData.pages, soundboard).catch(err => {
+                  window.logError('Error restoring soundboard from file', err);
+                });
+              }
+            } else {
+              window.logWarn('Soundboard module not yet available when soundboard_load fired');
             }
           });
         }
