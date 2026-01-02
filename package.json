@@ -1,7 +1,7 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "4.1.1-pre.5",
+  "version": "4.1.1-pre.6",
   "description": "Improv Audio Software",
   "type": "module",
   "repository": "https://github.com/minter/mxvoice-electron",
