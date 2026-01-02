@@ -110,9 +110,39 @@ export class KeyboardManager {
         );
       }
 
-      // Register Delete/Backspace for hotkey removal
+      // Register Delete/Backspace for removal operations
       this.shortcutRegistry.registerShortcut(['del', 'backspace'], () => {
-        // Find the selected row using either the ID or the class for consistency
+        // Check current view - handle soundboard buttons differently
+        const currentView = window.moduleRegistry?.viewManager?.getCurrentView?.() || 'traditional';
+        
+        if (currentView === 'soundboard') {
+          // In soundboard view, check if a button is focused
+          const focusedButton = document.activeElement;
+          if (focusedButton && focusedButton.classList.contains('soundboard-button')) {
+            const songId = focusedButton.getAttribute('songid');
+            if (songId) {
+              this.logInfo('Delete key triggered for soundboard button');
+              // Clear button
+              focusedButton.removeAttribute('songid');
+              const placeholder = focusedButton.querySelector('.soundboard-button-placeholder');
+              const songInfo = focusedButton.querySelector('.soundboard-button-info');
+              if (placeholder) placeholder.style.display = 'block';
+              if (songInfo) {
+                songInfo.style.display = 'none';
+                songInfo.innerHTML = '';
+              }
+              // Save soundboard state
+              if (window.moduleRegistry?.soundboard?.saveSoundboardToStore) {
+                window.moduleRegistry.soundboard.saveSoundboardToStore();
+              }
+              return;
+            }
+          }
+          // No focused button with a song, do nothing
+          return;
+        }
+        
+        // Traditional view: Find the selected row using either the ID or the class for consistency
         const selected = document.querySelector('#selected_row, .selected-row');
 
         if (!selected) {
@@ -169,7 +199,7 @@ export class KeyboardManager {
         
       }, {
         category: 'global',
-        description: 'Remove selected item (song, hotkey, or holding tank item)',
+        description: 'Remove selected item (song, hotkey, holding tank item, or soundboard button)',
         context: 'global'
       });
 

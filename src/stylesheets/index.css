@@ -1002,11 +1002,26 @@ legend {
   outline-offset: 2px;
 }
 
+.soundboard-button.active,
+.soundboard-button.selected {
+  background-color: rgba(var(--primary-color-rgb, 0, 123, 255), 0.15);
+  border-color: var(--primary-color);
+  border-width: 3px;
+  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb, 0, 123, 255), 0.2);
+}
+
 .soundboard-button.playing {
   border-color: var(--primary-color);
   background-color: var(--primary-color);
   color: white;
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.soundboard-button.playing.active,
+.soundboard-button.playing.selected {
+  /* When playing, the playing style takes precedence */
+  background-color: var(--primary-color);
+  border-width: 3px;
 }
 
 @keyframes pulse {

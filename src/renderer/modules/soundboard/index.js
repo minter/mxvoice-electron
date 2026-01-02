@@ -171,10 +171,20 @@ class SoundboardModule {
     // Event delegation for soundboard buttons (click, double-click, drag)
     const soundboardTabContent = document.getElementById('soundboard-tab-content');
     if (soundboardTabContent) {
-      // Click to play
+      // Click to select/focus button
       soundboardTabContent.addEventListener('click', (event) => {
         const button = event.target.closest('.soundboard-button');
         if (button) {
+          // Remove active/selected class from all buttons in this tab
+          const allButtons = soundboardTabContent.querySelectorAll('.soundboard-button');
+          allButtons.forEach(btn => btn.classList.remove('active', 'selected'));
+          
+          // Add active class to clicked button
+          button.classList.add('active', 'selected');
+          
+          // Focus the button for keyboard navigation
+          button.focus();
+          
           const songId = button.getAttribute('songid');
           if (songId) {
             debugLog?.info(`Soundboard button clicked: Playing song ID ${songId}`, {
@@ -371,7 +381,24 @@ class SoundboardModule {
         event.preventDefault();
         if (focusedIndex !== -1) {
           const currentButton = focusableButtons[focusedIndex];
-          if (currentButton && currentButton.getAttribute('songid')) {
+          const songId = currentButton?.getAttribute('songid');
+          if (songId) {
+            // Check if this song is currently playing
+            const nowPlaying = document.getElementById('song_now_playing');
+            const currentlyPlayingSongId = nowPlaying?.getAttribute('songid');
+            
+            if (currentlyPlayingSongId === songId) {
+              // Stop playback if this song is currently playing
+              if (typeof window.stopPlaying === 'function') {
+                window.stopPlaying(false); // Immediate stop
+              } else if (window.moduleRegistry?.audio?.stopPlaying) {
+                window.moduleRegistry.audio.stopPlaying(false);
+              }
+              // Also remove playing class from all buttons
+              const allButtons = document.querySelectorAll('.soundboard-button');
+              allButtons.forEach(btn => btn.classList.remove('playing'));
+            }
+            
             // Clear button
             currentButton.removeAttribute('songid');
             const placeholder = currentButton.querySelector('.soundboard-button-placeholder');
@@ -407,12 +434,18 @@ class SoundboardModule {
     }
 
     if (newIndex >= 0 && newIndex < focusableButtons.length) {
+      // Remove active class from all buttons
+      focusableButtons.forEach(btn => btn.classList.remove('active', 'selected'));
+      // Add active class to newly focused button
+      focusableButtons[newIndex].classList.add('active', 'selected');
       focusableButtons[newIndex].focus();
       event.preventDefault();
     } else if (newIndex < 0) {
       // Wrap around to the last row
       newIndex = focusableButtons.length + newIndex;
       if (newIndex >= 0 && newIndex < focusableButtons.length) {
+        focusableButtons.forEach(btn => btn.classList.remove('active', 'selected'));
+        focusableButtons[newIndex].classList.add('active', 'selected');
         focusableButtons[newIndex].focus();
         event.preventDefault();
       }
@@ -420,6 +453,8 @@ class SoundboardModule {
       // Wrap around to the first row
       newIndex = newIndex - focusableButtons.length;
       if (newIndex >= 0 && newIndex < focusableButtons.length) {
+        focusableButtons.forEach(btn => btn.classList.remove('active', 'selected'));
+        focusableButtons[newIndex].classList.add('active', 'selected');
         focusableButtons[newIndex].focus();
         event.preventDefault();
       }
