@@ -1097,21 +1097,32 @@ legend {
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* Search Panel Toggle Icon */
+#soundboard-search-panel-toggle i + i {
+  margin-left: 2px;
+}
+
 /* Search Panel Styles */
 #soundboard-search-panel {
+  width: 350px;
+  min-width: 350px;
+  max-width: 350px;
   border-left: 1px solid var(--card-border);
-  transition: width 0.3s ease, opacity 0.3s ease;
+  transition: width 0.3s ease-in-out, min-width 0.3s ease-in-out, max-width 0.3s ease-in-out, opacity 0.3s ease-in-out, border-width 0.3s ease-in-out;
+  overflow: hidden;
+  opacity: 1;
 }
 
 #soundboard-search-panel.collapsed {
-  width: 0 !important;
-  overflow: hidden;
+  width: 0;
+  min-width: 0;
+  max-width: 0;
   opacity: 0;
-  border: none;
+  border-left-width: 0;
 }
 
-#soundboard-main-area.full-width {
-  flex: 1;
+#soundboard-main-area {
+  transition: flex 0.3s ease-in-out;
 }
 
 /* Responsive adjustments */

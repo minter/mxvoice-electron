@@ -312,10 +312,31 @@ class SoundboardModule {
     // Search panel toggle button
     const searchPanelToggleButton = document.getElementById('soundboard-search-panel-toggle');
     if (searchPanelToggleButton) {
-      searchPanelToggleButton.addEventListener('click', () => {
+      debugLog?.info('Setting up search panel toggle button listener', {
+        module: 'soundboard',
+        function: 'setupEventListeners'
+      });
+      searchPanelToggleButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        debugLog?.info('Search panel toggle button clicked', {
+          module: 'soundboard',
+          function: 'setupEventListeners'
+        });
         if (typeof this.toggleSearchPanel === 'function') {
           this.toggleSearchPanel();
+        } else {
+          debugLog?.error('toggleSearchPanel is not a function', {
+            module: 'soundboard',
+            function: 'setupEventListeners',
+            type: typeof this.toggleSearchPanel
+          });
         }
+      });
+    } else {
+      debugLog?.warn('Search panel toggle button not found', {
+        module: 'soundboard',
+        function: 'setupEventListeners'
       });
     }
 

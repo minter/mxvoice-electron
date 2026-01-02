@@ -307,8 +307,9 @@
                   <a href="#" id="soundboard-clear-btn" onclick="clearSoundboard()" data-bs-toggle="tooltip" data-bs-placement="top" title="Clear Soundboard">
                     <i class="far fa-sm fa-trash-alt"></i>
                   </a>
-                  <a href="#" id="soundboard-search-toggle" data-bs-toggle="tooltip" data-bs-placement="top" title="Toggle Search Panel">
+                  <a href="#" id="soundboard-search-panel-toggle" data-bs-toggle="tooltip" data-bs-placement="top" title="Hide Search Panel">
                     <i class="fas fa-sm fa-search"></i>
+                    <i class="fas fa-sm fa-chevron-right" id="soundboard-search-toggle-chevron"></i>
                   </a>
                 </div>
               </h6>
@@ -351,7 +352,7 @@
             </div>
           </div>
           <!-- Search Panel (collapsible) -->
-          <div class="col-auto" id="soundboard-search-panel" style="width: 350px; transition: width 0.3s;">
+          <div class="col-auto" id="soundboard-search-panel">
             <div class="card rounded-0 h-100">
               <h6 class="card-header rounded-0">
                 <div class="header-button">

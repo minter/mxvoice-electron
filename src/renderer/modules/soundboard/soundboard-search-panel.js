@@ -38,13 +38,8 @@ async function initializeSearchPanel() {
   // Load saved panel state (open/closed)
   loadPanelState();
   
-  // Setup toggle button (note: ID is soundboard-search-panel-toggle in HTML)
-  const toggleButton = document.getElementById('soundboard-search-panel-toggle');
-  if (toggleButton) {
-    toggleButton.addEventListener('click', () => {
-      toggleSearchPanel();
-    });
-  }
+  // Note: Toggle button event listener is set up in soundboard/index.js
+  // to avoid duplicate listeners
   
   // Initialize search functionality (always set up, doesn't require search module)
   await setupSearchIntegration();
@@ -385,40 +380,92 @@ function setupSearchResultsDragDrop() {
   // The drop handlers are already set up in soundboard-ui module
 }
 
+// Debounce toggle to prevent rapid toggling
+let toggleTimeout = null;
+
 /**
  * Toggle search panel visibility
  */
 function toggleSearchPanel() {
+  // Debounce rapid clicks
+  if (toggleTimeout) {
+    debugLog?.warn('Toggle debounced - too rapid', {
+      module: 'soundboard-search-panel',
+      function: 'toggleSearchPanel'
+    });
+    return;
+  }
+  
+  toggleTimeout = setTimeout(() => {
+    toggleTimeout = null;
+  }, 300);
+  
+  debugLog?.info('Toggling search panel', {
+    module: 'soundboard-search-panel',
+    function: 'toggleSearchPanel'
+  });
+  
   const searchPanel = document.getElementById('soundboard-search-panel');
-  const gridContainer = document.getElementById('soundboard-grid');
+  const mainArea = document.getElementById('soundboard-main-area');
   
   if (!searchPanel) {
+    debugLog?.warn('Search panel element not found', {
+      module: 'soundboard-search-panel',
+      function: 'toggleSearchPanel'
+    });
     return;
   }
   
   const isOpen = !searchPanel.classList.contains('collapsed');
+  const toggleButton = document.getElementById('soundboard-search-panel-toggle');
+  const chevron = document.getElementById('soundboard-search-toggle-chevron');
+  
+  debugLog?.info('Current panel state', {
+    module: 'soundboard-search-panel',
+    function: 'toggleSearchPanel',
+    isOpen,
+    willCollapse: isOpen
+  });
   
   if (isOpen) {
     // Collapse panel
     searchPanel.classList.add('collapsed');
-    if (gridContainer) {
-      gridContainer.classList.add('full-width');
+    if (mainArea) {
+      mainArea.classList.add('full-width');
+    }
+    // Update icon to show left chevron (to reveal panel from right)
+    if (chevron) {
+      chevron.classList.remove('fa-chevron-right');
+      chevron.classList.add('fa-chevron-left');
+    }
+    if (toggleButton) {
+      toggleButton.setAttribute('title', 'Show Search Panel');
     }
   } else {
     // Expand panel
     searchPanel.classList.remove('collapsed');
-    if (gridContainer) {
-      gridContainer.classList.remove('full-width');
+    if (mainArea) {
+      mainArea.classList.remove('full-width');
+    }
+    // Update icon to show right chevron (to collapse panel to right)
+    if (chevron) {
+      chevron.classList.remove('fa-chevron-left');
+      chevron.classList.add('fa-chevron-right');
+    }
+    if (toggleButton) {
+      toggleButton.setAttribute('title', 'Hide Search Panel');
     }
   }
   
   // Save panel state
   savePanelState();
   
-  // Update grid layout after panel toggle
-  if (window.moduleRegistry?.soundboard?.updateGridLayout) {
-    window.moduleRegistry.soundboard.updateGridLayout();
-  }
+  // Update grid layout after panel toggle with a small delay to allow transition
+  setTimeout(() => {
+    if (window.moduleRegistry?.soundboard?.updateGridLayout) {
+      window.moduleRegistry.soundboard.updateGridLayout();
+    }
+  }, 50);
 }
 
 /**
@@ -428,10 +475,33 @@ function loadPanelState() {
   // Panel state is loaded from profile state
   // Default to open (for setup)
   const searchPanel = document.getElementById('soundboard-search-panel');
+  const chevron = document.getElementById('soundboard-search-toggle-chevron');
+  const toggleButton = document.getElementById('soundboard-search-panel-toggle');
+  
   if (searchPanel) {
     // Check profile state for saved panel state
     // For now, default to open
-    searchPanel.classList.remove('collapsed');
+    const isCollapsed = searchPanel.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+      // Panel is collapsed, show left chevron (to reveal from right)
+      if (chevron) {
+        chevron.classList.remove('fa-chevron-right');
+        chevron.classList.add('fa-chevron-left');
+      }
+      if (toggleButton) {
+        toggleButton.setAttribute('title', 'Show Search Panel');
+      }
+    } else {
+      // Panel is open, show right chevron (to collapse to right)
+      if (chevron) {
+        chevron.classList.remove('fa-chevron-left');
+        chevron.classList.add('fa-chevron-right');
+      }
+      if (toggleButton) {
+        toggleButton.setAttribute('title', 'Hide Search Panel');
+      }
+    }
   }
 }
 
