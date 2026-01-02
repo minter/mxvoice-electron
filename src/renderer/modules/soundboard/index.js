@@ -73,6 +73,7 @@ class SoundboardModule {
       this.initializeGrid = soundboardGrid.initializeGrid.bind(this);
       this.setupGrid = soundboardGrid.setupGrid.bind(this);
       this.updateGridLayout = soundboardGrid.updateGridLayout.bind(this);
+      this.ensureGridButtonsForTab = soundboardGrid.ensureGridButtonsForTab.bind(this);
       this.initializeSearchPanel = soundboardSearchPanel.initializeSearchPanel.bind(this);
       this.toggleSearchPanel = soundboardSearchPanel.toggleSearchPanel.bind(this);
     } catch (error) {

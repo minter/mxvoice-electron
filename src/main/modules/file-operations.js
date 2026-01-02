@@ -271,16 +271,25 @@ function loadSoundboardFile() {
           const fileContent = fs.readFileSync(filename, 'utf8');
           const soundboardData = JSON.parse(fileContent);
           
-          // Validate structure
-          if (!soundboardData.version || !soundboardData.pages || !Array.isArray(soundboardData.pages)) {
-            throw new Error('Invalid soundboard file format');
+          // Validate structure (support both old format with 'pages' array and new format with single 'page')
+          if (!soundboardData.version) {
+            throw new Error('Invalid soundboard file format: missing version');
+          }
+          
+          const hasPages = soundboardData.pages && Array.isArray(soundboardData.pages);
+          const hasPage = soundboardData.page && (soundboardData.page.tabNumber || soundboardData.page.pageNumber);
+          
+          if (!hasPages && !hasPage) {
+            throw new Error('Invalid soundboard file format: must have either "pages" array or "page" object');
           }
           
           debugLog?.info('📁 Main process: Sending soundboard_load with:', { 
             module: 'file-operations', 
             function: 'loadSoundboardFile', 
             version: soundboardData.version,
-            pageCount: soundboardData.pages.length
+            hasPages: hasPages,
+            hasPage: hasPage,
+            pageCount: hasPages ? soundboardData.pages.length : 1
           });
           
           mainWindow.webContents.send('soundboard_load', soundboardData);

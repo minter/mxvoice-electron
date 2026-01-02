@@ -706,111 +706,241 @@ async function restoreHoldingTankTabs(holdingTankTabs, holdingTankModule) {
  * @param {Object} soundboardModule - Soundboard module instance
  * @returns {Promise<void>}
  */
+/**
+ * Helper function to restore a single tab into a specific position
+ * @param {Object} tab - Tab data to restore
+ * @param {number} tabNumber - Target tab number
+ * @param {Object} soundboardModule - Soundboard module instance
+ */
+async function restoreTabIntoPosition(tab, tabNumber, soundboardModule) {
+  const tabContent = document.getElementById(`soundboard_list_${tabNumber}`);
+  const tabLink = document.querySelector(`#soundboard_tabs .nav-item:nth-child(${tabNumber}) a`);
+  const gridContainer = document.getElementById(`soundboard-grid-${tabNumber}`);
+  
+  if (!tabContent || !tabLink || !gridContainer) {
+    debugLog?.warn('[PROFILE-STATE] Missing soundboard tab elements', {
+      module: 'profile-state',
+      function: 'restoreTabIntoPosition',
+      tabNumber,
+      hasTabContent: !!tabContent,
+      hasTabLink: !!tabLink,
+      hasGridContainer: !!gridContainer
+    });
+    return;
+  }
+  
+  // Ensure grid is initialized - update layout to set columns and create buttons
+  if (soundboardModule && typeof soundboardModule.updateGridLayout === 'function') {
+    soundboardModule.updateGridLayout();
+  } else if (window.moduleRegistry?.soundboard?.updateGridLayout) {
+    window.moduleRegistry.soundboard.updateGridLayout();
+  }
+  
+  // Wait a moment for grid to update
+  await new Promise(resolve => setTimeout(resolve, 50));
+  
+  // Set custom tab name if exists
+  const tabName = tab.tabName;
+  if (tabName) {
+    tabLink.textContent = tabName;
+  }
+  
+  // Restore each button in this tab
+  for (const [position, songId] of Object.entries(tab.buttons || {})) {
+    debugLog?.info('[PROFILE-STATE] Restoring soundboard button', {
+      module: 'profile-state',
+      function: 'restoreTabIntoPosition',
+      tabNumber,
+      position,
+      songId
+    });
+    
+    try {
+      // Validate that song still exists in database
+      const songResult = await window.secureElectronAPI.database.query(
+        'SELECT * FROM mrvoice WHERE id = ?',
+        [songId]
+      );
+      
+      if (songResult.success && songResult.data && songResult.data.length > 0) {
+        const row = songResult.data[0];
+        
+        // Find button by position
+        const [rowNum, colNum] = position.split('-').map(Number);
+        const columns = parseInt(getComputedStyle(gridContainer).getPropertyValue('--grid-columns')) || 6;
+        const buttonIndex = rowNum * columns + colNum;
+        let button = gridContainer.querySelector(`.soundboard-button[data-button-index="${buttonIndex}"]`);
+        
+        // If button doesn't exist, ensure grid has enough buttons
+        if (!button) {
+          debugLog?.info('[PROFILE-STATE] Button not found, ensuring grid has enough buttons', {
+            module: 'profile-state',
+            function: 'restoreTabIntoPosition',
+            tabNumber,
+            buttonIndex,
+            columns,
+            currentButtonCount: gridContainer.querySelectorAll('.soundboard-button').length
+          });
+          
+          // Ensure grid has enough buttons
+          if (soundboardModule && typeof soundboardModule.ensureGridButtonsForTab === 'function') {
+            soundboardModule.ensureGridButtonsForTab(tabNumber, columns);
+          } else if (window.moduleRegistry?.soundboard?.ensureGridButtonsForTab) {
+            window.moduleRegistry.soundboard.ensureGridButtonsForTab(tabNumber, columns);
+          }
+          
+          // Try to find button again
+          button = gridContainer.querySelector(`.soundboard-button[data-button-index="${buttonIndex}"]`);
+        }
+        
+        if (button && soundboardModule && typeof soundboardModule.setLabelFromSongId === 'function') {
+          await soundboardModule.setLabelFromSongId(songId, button);
+          
+          debugLog?.info('[PROFILE-STATE] Soundboard button restored successfully', {
+            module: 'profile-state',
+            function: 'restoreTabIntoPosition',
+            tabNumber,
+            position,
+            songId,
+            title: row.title
+          });
+        } else {
+          debugLog?.warn('[PROFILE-STATE] Soundboard button element not found or module method unavailable', {
+            module: 'profile-state',
+            function: 'restoreTabIntoPosition',
+            tabNumber,
+            position,
+            buttonIndex,
+            hasButton: !!button,
+            hasModule: !!soundboardModule
+          });
+        }
+      } else {
+        debugLog?.warn('[PROFILE-STATE] Skipping deleted song in soundboard restore', { 
+          module: 'profile-state',
+          function: 'restoreTabIntoPosition',
+          songId,
+          position
+        });
+      }
+    } catch (error) {
+      debugLog?.error('[PROFILE-STATE] Error restoring soundboard button', { 
+        module: 'profile-state',
+        function: 'restoreTabIntoPosition',
+        position,
+        songId,
+        error: error.message
+      });
+    }
+  }
+}
+
 export async function restoreSoundboardTabs(soundboardTabs, soundboardModule) {
-  if (!soundboardTabs || !Array.isArray(soundboardTabs)) {
+  // Handle backward compatibility: support both old format (pages array) and new format (single page)
+  let tabsToRestore = [];
+  
+  if (Array.isArray(soundboardTabs)) {
+    // Old format: array of tabs - restore all (for profile state)
+    tabsToRestore = soundboardTabs;
+    debugLog?.info('[PROFILE-STATE] Restoring soundboard tabs from array (profile state)', {
+      module: 'profile-state',
+      function: 'restoreSoundboardTabs',
+      tabCount: tabsToRestore.length
+    });
+  } else if (soundboardTabs && soundboardTabs.page) {
+    // New format: single page object (from file) - restore into active tab
+    // Normalize pageNumber to tabNumber for consistency
+    const page = soundboardTabs.page;
+    if (page.pageNumber && !page.tabNumber) {
+      page.tabNumber = page.pageNumber;
+    }
+    tabsToRestore = [page];
+    debugLog?.info('[PROFILE-STATE] Restoring soundboard from file (single page) into active tab', {
+      module: 'profile-state',
+      function: 'restoreSoundboardTabs'
+    });
+  } else if (soundboardTabs && soundboardTabs.pages && Array.isArray(soundboardTabs.pages)) {
+    // Old file format: pages array - use first page for active tab
+    const firstPage = soundboardTabs.pages[0];
+    if (firstPage && firstPage.pageNumber && !firstPage.tabNumber) {
+      firstPage.tabNumber = firstPage.pageNumber;
+    }
+    tabsToRestore = soundboardTabs.pages.length > 0 ? [firstPage] : [];
+    debugLog?.info('[PROFILE-STATE] Restoring soundboard from old file format (pages array), using first page', {
+      module: 'profile-state',
+      function: 'restoreSoundboardTabs',
+      pageCount: soundboardTabs.pages.length
+    });
+  } else {
     debugLog?.warn('[PROFILE-STATE] Invalid soundboard tabs data', {
+      module: 'profile-state',
+      function: 'restoreSoundboardTabs',
+      dataType: typeof soundboardTabs,
+      isArray: Array.isArray(soundboardTabs)
+    });
+    return;
+  }
+  
+  if (tabsToRestore.length === 0) {
+    debugLog?.warn('[PROFILE-STATE] No tabs to restore', {
       module: 'profile-state',
       function: 'restoreSoundboardTabs'
     });
     return;
   }
   
-  debugLog?.info('[PROFILE-STATE] Restoring soundboard tabs', {
+  // If restoring from file (single page), restore into active tab only
+  const isFileLoad = !Array.isArray(soundboardTabs) && (soundboardTabs.page || (soundboardTabs.pages && soundboardTabs.pages.length > 0));
+  
+  if (isFileLoad) {
+    // File load: restore into active tab
+    const activeLink = document.querySelector('#soundboard_tabs .nav-link.active');
+    if (!activeLink) {
+      debugLog?.warn('[PROFILE-STATE] No active soundboard tab found for file restore', {
+        module: 'profile-state',
+        function: 'restoreSoundboardTabs'
+      });
+      return;
+    }
+    
+    const href = activeLink.getAttribute('href');
+    if (!href || !href.startsWith('#')) {
+      debugLog?.warn('[PROFILE-STATE] Invalid active tab href', {
+        module: 'profile-state',
+        function: 'restoreSoundboardTabs',
+        href
+      });
+      return;
+    }
+    
+    const tabId = href.substring(1);
+    const tabMatch = tabId.match(/soundboard_list_(\d+)/);
+    if (!tabMatch) {
+      debugLog?.warn('[PROFILE-STATE] Could not parse tab number from tab ID', {
+        module: 'profile-state',
+        function: 'restoreSoundboardTabs',
+        tabId
+      });
+      return;
+    }
+    
+    const activeTabNum = parseInt(tabMatch[1], 10);
+    const tab = tabsToRestore[0];
+    
+    // Restore into active tab
+    await restoreTabIntoPosition(tab, activeTabNum, soundboardModule);
+    return;
+  }
+  
+  // Profile state load: restore all tabs
+  debugLog?.info('[PROFILE-STATE] Restoring all soundboard tabs (profile state)', {
     module: 'profile-state',
     function: 'restoreSoundboardTabs',
-    tabCount: soundboardTabs.length
+    tabCount: tabsToRestore.length
   });
   
-  for (const tab of soundboardTabs) {
-    const tabNumber = tab.tabNumber;
-    const tabContent = document.getElementById(`soundboard_list_${tabNumber}`);
-    const tabLink = document.querySelector(`#soundboard_tabs .nav-item:nth-child(${tabNumber}) a`);
-    const gridContainer = document.getElementById(`soundboard-grid-${tabNumber}`);
-    
-    if (!tabContent || !tabLink || !gridContainer) {
-      debugLog?.warn('[PROFILE-STATE] Missing soundboard tab elements', {
-        module: 'profile-state',
-        function: 'restoreSoundboardTabs',
-        tabNumber,
-        hasTabContent: !!tabContent,
-        hasTabLink: !!tabLink,
-        hasGridContainer: !!gridContainer
-      });
-      continue;
-    }
-    
-    // Set custom tab name if exists
-    const tabName = tab.tabName;
-    if (tabName) {
-      tabLink.textContent = tabName;
-    }
-    
-    // Restore each button in this tab
-    for (const [position, songId] of Object.entries(tab.buttons || {})) {
-      debugLog?.info('[PROFILE-STATE] Restoring soundboard button', {
-        module: 'profile-state',
-        function: 'restoreSoundboardTabs',
-        tabNumber,
-        position,
-        songId
-      });
-      
-      try {
-        // Validate that song still exists in database
-        const songResult = await window.secureElectronAPI.database.query(
-          'SELECT * FROM mrvoice WHERE id = ?',
-          [songId]
-        );
-        
-        if (songResult.success && songResult.data && songResult.data.length > 0) {
-          const row = songResult.data[0];
-          
-          // Find button by position
-          const [rowNum, colNum] = position.split('-').map(Number);
-          const columns = parseInt(getComputedStyle(gridContainer).getPropertyValue('--grid-columns')) || 6;
-          const buttonIndex = rowNum * columns + colNum;
-          const button = gridContainer.querySelector(`.soundboard-button[data-button-index="${buttonIndex}"]`);
-          
-          if (button && soundboardModule && typeof soundboardModule.setLabelFromSongId === 'function') {
-            await soundboardModule.setLabelFromSongId(songId, button);
-            
-            debugLog?.info('[PROFILE-STATE] Soundboard button restored successfully', {
-              module: 'profile-state',
-              function: 'restoreSoundboardTabs',
-              tabNumber,
-              position,
-              songId,
-              title: row.title
-            });
-          } else {
-            debugLog?.warn('[PROFILE-STATE] Soundboard button element not found or module method unavailable', {
-              module: 'profile-state',
-              function: 'restoreSoundboardTabs',
-              tabNumber,
-              position,
-              buttonIndex,
-              hasButton: !!button,
-              hasModule: !!soundboardModule
-            });
-          }
-        } else {
-          debugLog?.warn('[PROFILE-STATE] Skipping deleted song in soundboard restore', { 
-            module: 'profile-state',
-            function: 'restoreSoundboardTabs',
-            songId,
-            position
-          });
-        }
-      } catch (error) {
-        debugLog?.error('[PROFILE-STATE] Error restoring soundboard button', { 
-          module: 'profile-state',
-          function: 'restoreSoundboardTabs',
-          position,
-          songId,
-          error: error.message
-        });
-      }
-    }
+  for (const tab of tabsToRestore) {
+    await restoreTabIntoPosition(tab, tab.tabNumber, soundboardModule);
   }
   
   // Switch back to first tab

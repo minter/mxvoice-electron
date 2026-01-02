@@ -578,11 +578,11 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         if (typeof window.secureElectronAPI.events.onSoundboardLoad === 'function') {
           window.secureElectronAPI.events.onSoundboardLoad((soundboardData) => {
             if (window.moduleRegistry?.soundboard && window.moduleRegistry?.profileState) {
-              // Restore soundboard from file data
+              // Restore soundboard from file data (supports both old and new formats)
               const soundboard = window.moduleRegistry.soundboard;
               const profileState = window.moduleRegistry.profileState;
-              if (soundboardData && soundboardData.pages) {
-                profileState.restoreSoundboardTabs(soundboardData.pages, soundboard).catch(err => {
+              if (soundboardData) {
+                profileState.restoreSoundboardTabs(soundboardData, soundboard).catch(err => {
                   window.logError('Error restoring soundboard from file', err);
                 });
               }

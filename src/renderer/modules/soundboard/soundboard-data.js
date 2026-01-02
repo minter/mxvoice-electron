@@ -23,6 +23,99 @@ let soundboardModuleRef = null;
 import { secureFileDialog, secureDatabase } from '../adapters/secure-adapter.js';
 
 /**
+ * Extract active soundboard tab state from DOM
+ * @returns {Object|null} Active tab state or null if not found
+ */
+function extractActiveSoundboardTab() {
+  // Find the active tab
+  const activeLink = document.querySelector('#soundboard_tabs .nav-link.active');
+  if (!activeLink) {
+    debugLog?.warn('No active soundboard tab found', {
+      module: 'soundboard-data',
+      function: 'extractActiveSoundboardTab'
+    });
+    return null;
+  }
+  
+  const href = activeLink.getAttribute('href');
+  if (!href || !href.startsWith('#')) {
+    debugLog?.warn('Invalid active tab href', {
+      module: 'soundboard-data',
+      function: 'extractActiveSoundboardTab',
+      href
+    });
+    return null;
+  }
+  
+  const tabId = href.substring(1);
+  const tabMatch = tabId.match(/soundboard_list_(\d+)/);
+  if (!tabMatch) {
+    debugLog?.warn('Could not parse tab number from tab ID', {
+      module: 'soundboard-data',
+      function: 'extractActiveSoundboardTab',
+      tabId
+    });
+    return null;
+  }
+  
+  const tabNum = parseInt(tabMatch[1], 10);
+  const tabContent = document.getElementById(tabId);
+  const gridContainer = document.getElementById(`soundboard-grid-${tabNum}`);
+  
+  if (!tabContent || !gridContainer) {
+    debugLog?.warn('Missing soundboard tab elements for active tab', {
+      module: 'soundboard-data',
+      function: 'extractActiveSoundboardTab',
+      tabNum,
+      hasTabContent: !!tabContent,
+      hasGridContainer: !!gridContainer
+    });
+    return null;
+  }
+  
+  const buttons = {};
+  let hasData = false;
+  
+  // Extract all buttons from this tab's grid
+  const buttonElements = gridContainer.querySelectorAll('.soundboard-button');
+  buttonElements.forEach((button) => {
+    const songId = button.getAttribute('songid');
+    if (songId) {
+      const position = button.getAttribute('data-button-index');
+      if (position !== null) {
+        // Calculate row-col from index
+        const index = parseInt(position, 10);
+        const columns = parseInt(getComputedStyle(gridContainer).getPropertyValue('--grid-columns')) || 6;
+        const row = Math.floor(index / columns);
+        const col = index % columns;
+        const key = `${row}-${col}`;
+        buttons[key] = songId;
+        hasData = true;
+      }
+    }
+  });
+  
+  // Get tab name (if customized)
+  const tabName = activeLink.textContent.trim();
+  const isCustomName = !/^\d$/.test(tabName);
+  
+  debugLog?.info('Extracted active soundboard tab', {
+    module: 'soundboard-data',
+    function: 'extractActiveSoundboardTab',
+    tabNum,
+    tabName: isCustomName ? tabName : null,
+    buttonCount: Object.keys(buttons).length,
+    hasData
+  });
+  
+  return {
+    tabNumber: tabNum,
+    tabName: isCustomName ? tabName : null,
+    buttons: hasData ? buttons : {}
+  };
+}
+
+/**
  * Extract all soundboard tabs state from DOM
  * @returns {Array} Array of soundboard tab states
  */
@@ -96,103 +189,173 @@ function extractSoundboardTabs() {
 }
 
 /**
- * Restore soundboard tabs from state
- * @param {Array} tabs - Array of tab states
+ * Restore soundboard tab from state into the active tab
+ * @param {Object|Array} tabData - Single tab state object or array of tabs (for backward compatibility)
  */
-async function restoreSoundboardTabs(tabs) {
-  if (!tabs || !Array.isArray(tabs)) {
-    debugLog?.warn('Invalid soundboard tabs data', {
+async function restoreSoundboardTabs(tabData) {
+  // Handle backward compatibility: support both old format (pages array) and new format (single page)
+  let tab = null;
+  
+  if (Array.isArray(tabData)) {
+    // Old format: array of tabs - use first tab
+    if (tabData.length > 0) {
+      tab = tabData[0];
+      debugLog?.info('Restoring soundboard from old format (pages array), using first page', {
+        module: 'soundboard-data',
+        function: 'restoreSoundboardTabs',
+        pageCount: tabData.length
+      });
+    } else {
+      debugLog?.warn('Empty tabs array provided', {
+        module: 'soundboard-data',
+        function: 'restoreSoundboardTabs'
+      });
+      return;
+    }
+  } else if (tabData && tabData.page) {
+    // New format: single page object
+    tab = tabData.page;
+    // Normalize pageNumber to tabNumber for consistency
+    if (tab.pageNumber && !tab.tabNumber) {
+      tab.tabNumber = tab.pageNumber;
+    }
+    debugLog?.info('Restoring soundboard from new format (single page)', {
+      module: 'soundboard-data',
+      function: 'restoreSoundboardTabs'
+    });
+  } else if (tabData && (tabData.tabNumber || tabData.pageNumber)) {
+    // Direct tab object
+    tab = tabData;
+    // Normalize pageNumber to tabNumber for consistency
+    if (tab.pageNumber && !tab.tabNumber) {
+      tab.tabNumber = tab.pageNumber;
+    }
+    debugLog?.info('Restoring soundboard from direct tab object', {
+      module: 'soundboard-data',
+      function: 'restoreSoundboardTabs'
+    });
+  } else {
+    debugLog?.warn('Invalid soundboard tab data', {
+      module: 'soundboard-data',
+      function: 'restoreSoundboardTabs',
+      dataType: typeof tabData,
+      isArray: Array.isArray(tabData)
+    });
+    return;
+  }
+  
+  // Find the active tab
+  const activeLink = document.querySelector('#soundboard_tabs .nav-link.active');
+  if (!activeLink) {
+    debugLog?.warn('No active soundboard tab found for restore', {
       module: 'soundboard-data',
       function: 'restoreSoundboardTabs'
     });
     return;
   }
   
-  debugLog?.info('Restoring soundboard tabs', {
+  const href = activeLink.getAttribute('href');
+  if (!href || !href.startsWith('#')) {
+    debugLog?.warn('Invalid active tab href', {
+      module: 'soundboard-data',
+      function: 'restoreSoundboardTabs',
+      href
+    });
+    return;
+  }
+  
+  const tabId = href.substring(1);
+  const tabMatch = tabId.match(/soundboard_list_(\d+)/);
+  if (!tabMatch) {
+    debugLog?.warn('Could not parse tab number from tab ID', {
+      module: 'soundboard-data',
+      function: 'restoreSoundboardTabs',
+      tabId
+    });
+    return;
+  }
+  
+  const activeTabNum = parseInt(tabMatch[1], 10);
+  const tabContent = document.getElementById(tabId);
+  const gridContainer = document.getElementById(`soundboard-grid-${activeTabNum}`);
+  
+  if (!tabContent || !gridContainer) {
+    debugLog?.warn('Missing soundboard tab elements for active tab', {
+      module: 'soundboard-data',
+      function: 'restoreSoundboardTabs',
+      activeTabNum,
+      hasTabContent: !!tabContent,
+      hasGridContainer: !!gridContainer
+    });
+    return;
+  }
+  
+  // Restore tab name if provided
+  if (tab.tabName) {
+    activeLink.textContent = tab.tabName;
+  }
+  
+  // Get current column count to calculate button index from position
+  const columns = parseInt(getComputedStyle(gridContainer).getPropertyValue('--grid-columns')) || 6;
+  
+  debugLog?.info('Restoring soundboard tab into active tab', {
     module: 'soundboard-data',
     function: 'restoreSoundboardTabs',
-    tabCount: tabs.length
+    activeTabNum,
+    buttonCount: Object.keys(tab.buttons || {}).length
   });
   
-  for (const tab of tabs) {
-    const tabContent = document.getElementById(`soundboard_list_${tab.tabNumber}`);
-    const tabLink = document.querySelector(`#soundboard_tabs .nav-item:nth-child(${tab.tabNumber}) a`);
+  // Restore buttons
+  for (const [position, songId] of Object.entries(tab.buttons || {})) {
+    // Validate song exists in database using secureDatabase
+    const result = await secureDatabase.query(
+      'SELECT * FROM mrvoice WHERE id = ?',
+      [songId]
+    );
     
-    if (!tabContent || !tabLink) {
-      continue;
-    }
-    
-    // Restore tab name
-    if (tab.tabName) {
-      tabLink.textContent = tab.tabName;
-    }
-    
-    // Restore buttons
-    // Get grid container to calculate button index
-    const gridContainer = document.getElementById(`soundboard-grid-${tab.tabNumber}`);
-    if (!gridContainer) {
-      debugLog?.warn(`Grid container not found for tab ${tab.tabNumber}`, {
+    if (!result.success || !result.data || result.data.length === 0) {
+      debugLog?.warn('Song not found in database, skipping', {
         module: 'soundboard-data',
         function: 'restoreSoundboardTabs',
-        tabNumber: tab.tabNumber
+        songId,
+        position
       });
       continue;
     }
     
-    // Get current column count to calculate button index from position
-    const columns = parseInt(gridContainer.style.getPropertyValue('--grid-columns')) || 6;
+    // Find button by position - position is stored as "row-col"
+    let buttonIndex;
+    if (position.includes('-')) {
+      // Position is in "row-col" format
+      const [row, col] = position.split('-').map(Number);
+      buttonIndex = row * columns + col;
+    } else {
+      // Position is already an index
+      buttonIndex = parseInt(position, 10);
+    }
     
-    for (const [position, songId] of Object.entries(tab.buttons || {})) {
-      // Validate song exists in database using secureDatabase
-      const result = await secureDatabase.query(
-        'SELECT * FROM mrvoice WHERE id = ?',
-        [songId]
-      );
-      
-      if (!result.success || !result.data || result.data.length === 0) {
-        debugLog?.warn('Song not found in database, skipping', {
-          module: 'soundboard-data',
-          function: 'restoreSoundboardTabs',
-          songId,
-          position
-        });
-        continue;
-      }
-      
-      // Find button by position - position is stored as "row-col" or as index
-      let buttonIndex;
-      if (position.includes('-')) {
-        // Position is in "row-col" format
-        const [row, col] = position.split('-').map(Number);
-        buttonIndex = row * columns + col;
+    const button = gridContainer.querySelector(`.soundboard-button[data-button-index="${buttonIndex}"]`);
+    if (button) {
+      button.setAttribute('songid', songId);
+      // Use the bound method from the module instance
+      if (this && typeof this.setLabelFromSongId === 'function') {
+        await this.setLabelFromSongId(songId, button);
       } else {
-        // Position is already an index
-        buttonIndex = parseInt(position, 10);
-      }
-      
-      const button = gridContainer.querySelector(`.soundboard-button[data-button-index="${buttonIndex}"]`);
-      if (button) {
-        button.setAttribute('songid', songId);
-        // Use the bound method from the module instance
-        if (this && typeof this.setLabelFromSongId === 'function') {
-          await this.setLabelFromSongId(songId, button);
-        } else {
-          // Fallback to direct call if not bound
-          const soundboard = window.moduleRegistry?.soundboard;
-          if (soundboard && typeof soundboard.setLabelFromSongId === 'function') {
-            await soundboard.setLabelFromSongId(songId, button);
-          }
+        // Fallback to direct call if not bound
+        const soundboard = window.moduleRegistry?.soundboard;
+        if (soundboard && typeof soundboard.setLabelFromSongId === 'function') {
+          await soundboard.setLabelFromSongId(songId, button);
         }
-      } else {
-        debugLog?.warn(`Button not found at index ${buttonIndex} for position ${position}`, {
-          module: 'soundboard-data',
-          function: 'restoreSoundboardTabs',
-          tabNumber: tab.tabNumber,
-          position,
-          buttonIndex,
-          columns
-        });
       }
+    } else {
+      debugLog?.warn(`Button not found at index ${buttonIndex} for position ${position}`, {
+        module: 'soundboard-data',
+        function: 'restoreSoundboardTabs',
+        activeTabNum,
+        position,
+        buttonIndex,
+        columns
+      });
     }
   }
 }
@@ -363,6 +526,7 @@ async function openSoundboardFile() {
 
 /**
  * Save soundboard file
+ * Saves only the currently active tab (matching hotkeys/holding tank behavior)
  */
 async function saveSoundboardFile() {
   debugLog?.info('Saving soundboard file', {
@@ -370,18 +534,25 @@ async function saveSoundboardFile() {
     function: 'saveSoundboardFile'
   });
   
-  // Extract current soundboard state
-  const tabs = extractSoundboardTabs();
+  // Extract only the active tab
+  const activeTab = extractActiveSoundboardTab();
+  if (!activeTab) {
+    debugLog?.warn('No active tab to save', {
+      module: 'soundboard-data',
+      function: 'saveSoundboardFile'
+    });
+    return;
+  }
   
-  // Build JSON structure
+  // Build JSON structure (single page format, matching hotkeys pattern)
   const soundboardData = {
     version: '1.0.0',
     created: new Date().toISOString(),
-    pages: tabs.map(tab => ({
-      pageNumber: tab.tabNumber,
-      tabName: tab.tabName,
-      buttons: tab.buttons
-    })),
+    page: {
+      pageNumber: activeTab.tabNumber,
+      tabName: activeTab.tabName,
+      buttons: activeTab.buttons
+    },
     metadata: {
       description: '',
       lastModified: new Date().toISOString()
@@ -393,7 +564,9 @@ async function saveSoundboardFile() {
     await secureFileDialog.saveSoundboardFile(soundboardData);
     debugLog?.info('Soundboard file saved', {
       module: 'soundboard-data',
-      function: 'saveSoundboardFile'
+      function: 'saveSoundboardFile',
+      tabNumber: activeTab.tabNumber,
+      buttonCount: Object.keys(activeTab.buttons).length
     });
   } catch (error) {
     debugLog?.error('Error saving soundboard file', {
@@ -469,6 +642,7 @@ async function reinitializeSoundboardData(deps) {
 
 export {
   extractSoundboardTabs,
+  extractActiveSoundboardTab,
   restoreSoundboardTabs,
   setLabelFromSongId,
   saveSoundboardToStore,
