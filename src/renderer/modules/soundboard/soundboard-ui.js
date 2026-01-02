@@ -22,23 +22,41 @@ let soundboardModuleRef = null;
  * Handle dropping songs into soundboard buttons
  * Following the same pattern as hotkeyDrop in hotkey-ui.js
  * @param {Event} event - The drop event
+ * @param {HTMLElement} button - The button element that was dropped on (optional, will use event.currentTarget if not provided)
  * @param {Object} options - Additional options (for compatibility)
  */
-function soundboardButtonDrop(event, options = {}) {
+function soundboardButtonDrop(event, button = null, options = {}) {
   event.preventDefault();
   const songId = event.dataTransfer.getData('text');
-  const target = event.currentTarget;
+  // Use provided button, or fall back to currentTarget, or try to find it from event.target
+  const target = button || event.currentTarget || event.target.closest('.soundboard-button');
   
-  if (!songId || songId === 'null' || songId === 'undefined') {
-    debugLog?.warn('soundboardButtonDrop aborted: no valid song ID', {
+  if (!target) {
+    debugLog?.warn('soundboardButtonDrop aborted: no target button found', {
       module: 'soundboard-ui',
       function: 'soundboardButtonDrop'
     });
     return;
   }
   
+  if (!songId || songId === 'null' || songId === 'undefined') {
+    debugLog?.warn('soundboardButtonDrop aborted: no valid song ID', {
+      module: 'soundboard-ui',
+      function: 'soundboardButtonDrop',
+      songId
+    });
+    return;
+  }
+  
   // Remove drop target styling
   target.classList.remove('drop-target');
+  
+  debugLog?.info('Dropping song onto soundboard button', {
+    module: 'soundboard-ui',
+    function: 'soundboardButtonDrop',
+    songId,
+    buttonIndex: target.getAttribute('data-button-index')
+  });
   
   // Save function to call after setLabelFromSongId completes
   // Use 'this' when bound to SoundboardModule instance, fallback to window

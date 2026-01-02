@@ -11,7 +11,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch {
   // Debug logger not available
 }
 
@@ -195,15 +195,24 @@ class SoundboardModule {
         }
       });
 
-      // Double-click to edit assignment (TBD)
+      // Double-click to play
       soundboardTabContent.addEventListener('dblclick', (event) => {
         const button = event.target.closest('.soundboard-button');
         if (button) {
-          debugLog?.info('Soundboard button double-clicked (edit TBD)', {
-            module: 'soundboard',
-            function: 'setupEventListeners',
-            buttonId: button.id
-          });
+          const songId = button.getAttribute('songid');
+          if (songId) {
+            debugLog?.info(`Soundboard button double-clicked: Playing song ID ${songId}`, {
+              module: 'soundboard',
+              function: 'setupEventListeners',
+              songId
+            });
+            // Use the bound method from soundboard-events
+            if (this.playSongFromButton) {
+              this.playSongFromButton(songId, button);
+            } else if (window.moduleRegistry?.audio?.playSongFromId) {
+              window.moduleRegistry.audio.playSongFromId(songId);
+            }
+          }
         }
       });
 
@@ -246,7 +255,8 @@ class SoundboardModule {
         const button = event.target.closest('.soundboard-button');
         if (button) {
           button.classList.remove('drop-target');
-          this.soundboardButtonDrop(event);
+          // Pass the button element to the drop handler
+          this.soundboardButtonDrop(event, button);
         }
       });
 
@@ -298,6 +308,9 @@ class SoundboardModule {
       });
     }
 
+    // ESC is handled globally by Mousetrap via navigation-shortcuts module
+    // No need for custom handler - the existing global ESC binding works in all views
+
     debugLog?.info('✅ Soundboard event listeners set up', {
       module: 'soundboard',
       function: 'setupEventListeners'
@@ -336,13 +349,19 @@ class SoundboardModule {
         break;
       case 'Enter':
       case ' ': // Space key
+        event.preventDefault();
         if (focusedIndex !== -1) {
-          const songId = focusableButtons[focusedIndex].getAttribute('songid');
-          if (songId && window.moduleRegistry?.audio?.playSongFromId) {
-            window.moduleRegistry.audio.playSongFromId(songId);
+          const button = focusableButtons[focusedIndex];
+          const songId = button.getAttribute('songid');
+          if (songId) {
+            // Use the bound playSongFromButton method which handles stopping current song
+            if (this.playSongFromButton) {
+              this.playSongFromButton(songId, button);
+            } else if (window.moduleRegistry?.audio?.playSongFromId) {
+              window.moduleRegistry.audio.playSongFromId(songId);
+            }
           }
         }
-        event.preventDefault();
         return;
       case 'Tab':
         // Allow default tab behavior
@@ -366,6 +385,23 @@ class SoundboardModule {
           }
         }
         return;
+      case 'Escape': {
+        event.preventDefault();
+        if (focusedIndex !== -1) {
+          focusableButtons[focusedIndex].blur();
+        }
+        // Stop playing audio (ESC = immediate stop, Shift+ESC = fade out)
+        // Use window.stopPlaying which is registered globally and works in all views
+        if (typeof window.stopPlaying === 'function') {
+          window.stopPlaying(event.shiftKey); // Shift+ESC = fade out, ESC = immediate
+        } else if (window.moduleRegistry?.audio?.stopPlaying) {
+          window.moduleRegistry.audio.stopPlaying(event.shiftKey);
+        }
+        // Remove playing class from all buttons
+        const allButtons = document.querySelectorAll('.soundboard-button');
+        allButtons.forEach(btn => btn.classList.remove('playing'));
+        return;
+      }
       default:
         return;
     }
@@ -395,7 +431,7 @@ class SoundboardModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     try {
       debugLog?.info('Initializing Soundboard Module via standardized init()', {
         module: 'soundboard',

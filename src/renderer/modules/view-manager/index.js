@@ -178,6 +178,14 @@ class ViewManager {
     }
     if (soundboardView) {
       soundboardView.style.display = 'flex';
+      // Make soundboard view focusable to receive keyboard events
+      soundboardView.setAttribute('tabindex', '-1');
+      // Focus the view container so it can receive keyboard events
+      soundboardView.focus();
+      debugLog?.info('Soundboard view focused for keyboard events', {
+        module: 'view-manager',
+        function: 'switchToSoundboardView'
+      });
     }
 
     this.currentView = 'soundboard';

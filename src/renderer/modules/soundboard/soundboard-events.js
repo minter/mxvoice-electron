@@ -20,13 +20,15 @@ try {
 let electronAPI = null;
 let audioModule = null;
 let soundboardModuleRef = null;
+let sharedState = null;
 
 /**
  * Play song from soundboard button
+ * Stops any currently playing song first (one-shot mode)
  * @param {string} songId - Song ID to play
  * @param {HTMLElement} button - Button element that was clicked
  */
-function playSongFromButton(songId, button) {
+async function playSongFromButton(songId, button) {
   if (!songId) {
     debugLog?.warn('No song ID provided to playSongFromButton', {
       module: 'soundboard-events',
@@ -35,13 +37,15 @@ function playSongFromButton(songId, button) {
     return;
   }
   
-  debugLog?.info('Playing song from soundboard button', {
+  debugLog?.info('Playing song from soundboard button (one-shot mode)', {
     module: 'soundboard-events',
     function: 'playSongFromButton',
     songId
   });
   
-  // Use audio module to play song
+  // Match traditional view behavior: Just call playSongFromId directly
+  // playSongFromId handles stopping the old sound internally (see audio-manager.js lines 688-692)
+  // This is exactly what double-click on hotkeys, F-keys, and play button do in traditional view
   if (audioModule && typeof audioModule.playSongFromId === 'function') {
     audioModule.playSongFromId(songId);
   } else if (window.moduleRegistry?.audio && typeof window.moduleRegistry.audio.playSongFromId === 'function') {
@@ -232,6 +236,18 @@ async function reinitializeSoundboardEvents(deps) {
   }
   if (deps.soundboardModule) {
     soundboardModuleRef = deps.soundboardModule;
+  }
+  // Import sharedState for clearing sound
+  if (!sharedState) {
+    try {
+      sharedState = (await import('../shared-state.js')).default;
+    } catch (error) {
+      debugLog?.warn('Could not import sharedState in reinitialize', {
+        module: 'soundboard-events',
+        function: 'reinitializeSoundboardEvents',
+        error: error.message
+      });
+    }
   }
 }
 
