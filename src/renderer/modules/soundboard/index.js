@@ -134,7 +134,14 @@ class SoundboardModule {
 
     // Initialize search panel
     if (typeof this.initializeSearchPanel === 'function') {
-      this.initializeSearchPanel();
+      // Initialize search panel asynchronously
+      this.initializeSearchPanel().catch(error => {
+        debugLog?.error('Failed to initialize search panel', {
+          module: 'soundboard',
+          function: 'setupSoundboard',
+          error: error.message
+        });
+      });
     }
 
     // Setup event listeners (using class method, not external function)
@@ -464,7 +471,7 @@ class SoundboardModule {
 
     // Restore search panel state
     if (typeof this.initializeSearchPanel === 'function') {
-      this.initializeSearchPanel();
+      await this.initializeSearchPanel();
     }
   }
 
