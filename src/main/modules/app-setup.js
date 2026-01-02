@@ -465,6 +465,18 @@ function createApplicationMenu() {
         },
         { type: "separator" },
         {
+          label: "Soundboard Mode",
+          accelerator: "CommandOrControl+B",
+          id: "toggle_soundboard_mode",
+          type: "checkbox",
+          click: (menuItem) => {
+            if (mainWindow) {
+              mainWindow.webContents.send('view:toggle-soundboard-mode');
+            }
+          },
+        },
+        { type: "separator" },
+        {
           label: "Start a New Session",
           click: () => {
             closeAllTabs();
@@ -918,6 +930,18 @@ function showAboutDialog() {
     // Register new handlers
     ipcMain.on('about:close-window', closeHandler);
     ipcMain.on('about:open-external', openExternalHandler);
+    
+    // View toggle handler
+    ipcMain.on('view:toggle-soundboard-mode', () => {
+      if (mainWindow) {
+        mainWindow.webContents.send('view:toggle-soundboard-mode');
+      }
+    });
+    
+    // View menu state update handler
+    ipcMain.on('view:update-menu-state', (event, currentView) => {
+      updateViewMenuState(currentView);
+    });
 
     // Clean up handlers when window closes
     aboutWindow.on('closed', () => {
@@ -987,6 +1011,30 @@ function toggleAdvancedSearch() {
 function closeAllTabs() {
   if (mainWindow) {
     mainWindow.webContents.send("close_all_tabs");
+  }
+}
+
+function updateViewMenuState(currentView) {
+  try {
+    const menu = Menu.getApplicationMenu();
+    if (menu) {
+      const soundboardMenuItem = menu.getMenuItemById('toggle_soundboard_mode');
+      if (soundboardMenuItem) {
+        soundboardMenuItem.checked = currentView === 'soundboard';
+        debugLog?.info('Updated view menu state', {
+          module: 'app-setup',
+          function: 'updateViewMenuState',
+          currentView,
+          checked: soundboardMenuItem.checked
+        });
+      }
+    }
+  } catch (error) {
+    debugLog?.error('Error updating view menu state', {
+      module: 'app-setup',
+      function: 'updateViewMenuState',
+      error: error.message
+    });
   }
 }
 

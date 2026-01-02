@@ -687,8 +687,36 @@ function playSongFromId(song_id) {
 
   const sound = sharedState.get('sound');
   if (sound) {
+    // Stop playback first, then unload
+    // This ensures audio stops even if the sound is in an inconsistent state
+    try {
+      if (sound.stop && typeof sound.stop === 'function') {
+        sound.stop();
+      }
+    } catch (error) {
+      getDebugLog()?.warn('Error stopping sound in playSongFromId', {
+        module: 'audio-manager',
+        function: 'playSongFromId',
+        error: error.message
+      });
+    }
     sound.off('fade');
     sound.unload();
+    // Clear from sharedState immediately to prevent the new sound from being stopped
+    sharedState.set('sound', null);
+    
+    // Also use Howler's global stop() as a fallback to ensure ALL sounds stop
+    if (typeof window !== 'undefined' && window.Howler && typeof window.Howler.stop === 'function') {
+      try {
+        window.Howler.stop();
+      } catch (error) {
+        getDebugLog()?.warn('Error calling Howler.stop() in playSongFromId', {
+          module: 'audio-manager',
+          function: 'playSongFromId',
+          error: error.message
+        });
+      }
+    }
   }
 
   secureDatabase
