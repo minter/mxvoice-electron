@@ -56,4 +56,26 @@ await viewManager.reinitializeViewManager({
 - `currentView`: Current active view ('traditional' | 'soundboard')
 - View preference persisted per profile
 - State preservation when switching views
+- Automatic initialization of soundboard grid when switching to soundboard view
+
+## View Switching Behavior
+
+**When switching TO soundboard view:**
+1. Traditional view hidden (`display: none`)
+2. Soundboard view shown (`display: flex`)
+3. Soundboard grid layout initialized/updated
+4. Search panel state restored from profile
+5. View preference saved to profile
+
+**When switching FROM soundboard view:**
+1. Soundboard state saved to profile (button assignments, tab states)
+2. Soundboard view hidden
+3. Traditional view restored
+4. View preference saved to profile
+
+## Keyboard Shortcuts
+
+View switching is triggered via menu shortcuts (handled by main process):
+- Default shortcut available in View menu
+- IPC event: `view:toggle-soundboard-mode`
 
