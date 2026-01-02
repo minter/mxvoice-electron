@@ -406,7 +406,7 @@ class HotkeysModule {
                 elemSpan.textContent = otherSpan.textContent || '';
                 otherSpan.textContent = tmp;
               }
-              const destId = elemSpan?.getAttribute?.('songid');
+              const destId = element?.getAttribute?.('songid');
               if (destId) other.setAttribute('songid', destId);
               else other.removeAttribute('songid');
               element?.setAttribute?.('songid', song_id);
@@ -456,7 +456,7 @@ class HotkeysModule {
                 elemSpan2.textContent = otherSpan2.textContent || '';
                 otherSpan2.textContent = tmp2;
               }
-              const destId2 = elemSpan2?.getAttribute?.('songid');
+              const destId2 = element?.getAttribute?.('songid');
               if (destId2) other2.setAttribute('songid', destId2);
               else other2.removeAttribute('songid');
               element?.setAttribute?.('songid', song_id);
