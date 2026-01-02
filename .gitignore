@@ -109,7 +109,8 @@ build/node_gyp_bins
 # Electron build artifacts
 out/
 dist/
-build/
+# Note: build/ directory contains scripts (afterPack.js, publishWindows.cjs, etc.) and should be tracked
+# Node-gyp build artifacts in build/ are already ignored above (build/Release, build/config.gypi, etc.)
 *.dmg
 *.pkg
 *.exe
