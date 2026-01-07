@@ -132,12 +132,14 @@ test.describe('Profile Management', () => {
     const modal = page.locator('#create-profile-modal');
     await expect(modal).toBeVisible();
     
-    // Fill in profile name
+    // Fill in profile name - click first to ensure focus (modal uses 100ms setTimeout for focus)
     const nameInput = page.locator('#profile-name-input');
+    await nameInput.click();
     await nameInput.fill('Test User');
     
     // Fill in description (optional)
     const descInput = page.locator('#profile-description-input');
+    await descInput.click();
     await descInput.fill('Test profile for E2E testing');
     
     // Click create button
@@ -189,6 +191,7 @@ test.describe('Profile Management', () => {
     await expect(modal).toBeVisible();
     
     const nameInput = page.locator('#profile-name-input');
+    await nameInput.click();
     await nameInput.fill('Test User');
     
     const confirmButton = page.locator('#confirm-create-btn');
@@ -204,6 +207,7 @@ test.describe('Profile Management', () => {
     await createButton.click();
     await expect(modal).toBeVisible();
     
+    await nameInput.click();
     await nameInput.fill('Test User');
     await confirmButton.click();
     
@@ -225,6 +229,7 @@ test.describe('Profile Management', () => {
     // Create "Alice" profile
     await createButton.click();
     await expect(modal).toBeVisible();
+    await nameInput.click();
     await nameInput.fill('Alice');
     await confirmButton.click();
     // Wait for profile to appear in list (confirms creation was successful and modal is closed)
@@ -238,6 +243,7 @@ test.describe('Profile Management', () => {
     // Create "Bob" profile
     await createButton.click();
     await expect(modal).toBeVisible();
+    await nameInput.click();
     await nameInput.fill('Bob');
     await confirmButton.click();
     // Wait for profile to appear in list (confirms creation was successful and modal is closed)
@@ -250,6 +256,7 @@ test.describe('Profile Management', () => {
     // Create "Charlie" profile
     await createButton.click();
     await expect(modal).toBeVisible();
+    await nameInput.click();
     await nameInput.fill('Charlie');
     await confirmButton.click();
     // Wait for profile to appear in list (confirms creation was successful and modal is closed)
@@ -325,8 +332,9 @@ test.describe('Profile Management', () => {
     const modal = page.locator('#create-profile-modal');
     await expect(modal).toBeVisible();
     
-    // Fill in some data
+    // Fill in some data - click first to ensure focus (modal uses 100ms setTimeout for focus)
     const nameInput = page.locator('#profile-name-input');
+    await nameInput.click();
     await nameInput.fill('Cancelled Profile');
     
     // Click cancel
@@ -393,6 +401,10 @@ test.describe('Profile Management', () => {
       // Wait for the input to be ready and visible before filling
       await expect(nameInput).toBeVisible();
       await expect(nameInput).toBeEditable();
+      
+      // Click on the input first to ensure focus - the modal uses a 100ms setTimeout
+      // to focus the input, which can cause race conditions on slower CI environments
+      await nameInput.click();
       await nameInput.fill(name);
       
       // Verify the input has the correct value before clicking confirm
@@ -509,6 +521,7 @@ test.describe('Profile Switching and Isolation', () => {
     await expect(modal).toBeVisible();
     
     const nameInput = page.locator('#profile-name-input');
+    await nameInput.click();
     await nameInput.fill('Profile A');
     
     const confirmButton = page.locator('#confirm-create-btn');
@@ -525,6 +538,7 @@ test.describe('Profile Switching and Isolation', () => {
     // Create Profile B
     await createButton.click();
     await expect(modal).toBeVisible();
+    await nameInput.click();
     await nameInput.fill('Profile B');
     await confirmButton.click();
     
