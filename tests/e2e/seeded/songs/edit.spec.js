@@ -145,13 +145,26 @@ test.describe('Songs - edit', () => {
     // 8) Modify the form fields
     console.log('✏️ Modifying song fields...');
     
-    // Change fields for Anthrax
-    await page.locator('#song-form-title').fill('Got The Time (Edited)');
-    await page.locator('#song-form-artist').fill('Anthrax (Edited)');
-    await page.locator('#song-form-category').selectOption({ label: 'Running In' });
-    await page.locator('#song-form-info').fill('Edited Countdown Info');
+    // Change fields for Anthrax - click before fill to ensure focus on each field
+    // This prevents race conditions on slower CI environments (Mac/Windows)
+    const titleInput = page.locator('#song-form-title');
+    await titleInput.click();
+    await titleInput.fill('Got The Time (Edited)');
+    await expect(titleInput).toHaveValue('Got The Time (Edited)');
     
-    console.log('✅ Song fields modified');
+    const artistInput = page.locator('#song-form-artist');
+    await artistInput.click();
+    await artistInput.fill('Anthrax (Edited)');
+    await expect(artistInput).toHaveValue('Anthrax (Edited)');
+    
+    await page.locator('#song-form-category').selectOption({ label: 'Running In' });
+    
+    const infoInput = page.locator('#song-form-info');
+    await infoInput.click();
+    await infoInput.fill('Edited Countdown Info');
+    await expect(infoInput).toHaveValue('Edited Countdown Info');
+    
+    console.log('✅ Song fields modified and verified');
     
     // 9) Submit the form by clicking the Save button
     console.log('💾 Clicking Save button...');
@@ -317,11 +330,15 @@ test.describe('Songs - edit', () => {
     // 7) Modify the form fields
     console.log('✏️ Modifying song fields...');
     
-    // Change the title
-    await page.locator('#song-form-title').fill('Eat It (Modified)');
+    // Change the title - click before fill to ensure focus
+    const titleInput = page.locator('#song-form-title');
+    await titleInput.click();
+    await titleInput.fill('Eat It (Modified)');
     
-    // Change the artist
-    await page.locator('#song-form-artist').fill('Weird Al (Modified)');
+    // Change the artist - click before fill to ensure focus
+    const artistInput = page.locator('#song-form-artist');
+    await artistInput.click();
+    await artistInput.fill('Weird Al (Modified)');
     
     // Change the category
     await page.locator('#song-form-category').selectOption({ label: 'Game' });
