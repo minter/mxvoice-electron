@@ -26,13 +26,17 @@ import { secureFileSystem, secureDatabase, securePath, secureStore } from '../ad
  */
 export async function saveEditedSong(event) {
   event.preventDefault();
-  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
   debugLog?.info("Starting edit process", { module: 'song-management', function: 'saveEditedSong' });
+
+  // Read form values BEFORE hiding modal to ensure values are captured on all platforms
   const songId = (document.getElementById('song-form-songid') || {}).value || '';
   const title = (document.getElementById('song-form-title') || {}).value || '';
   const artist = (document.getElementById('song-form-artist') || {}).value || '';
   const info = (document.getElementById('song-form-info') || {}).value || '';
   const category = (document.getElementById('song-form-category') || {}).value || '';
+
+  // Hide modal after capturing values
+  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
 
   try {
     const result = await secureDatabase.execute(

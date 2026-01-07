@@ -389,16 +389,25 @@ test.describe('Profile Management', () => {
       
       await createButton.click();
       await expect(modal).toBeVisible();
+      
+      // Wait for the input to be ready and visible before filling
+      await expect(nameInput).toBeVisible();
+      await expect(nameInput).toBeEditable();
       await nameInput.fill(name);
+      
+      // Verify the input has the correct value before clicking confirm
+      // This helps catch any fill() issues on slower CI environments
+      await expect(nameInput).toHaveValue(name);
+      
       await confirmButton.click();
-      
-      // Wait for modal to close first (indicates creation request was processed)
-      await expect(modal).not.toBeVisible({ timeout: 5000 });
-      
-      // Wait for profile to appear in list (confirms creation was successful)
+
+      // Wait for profile to appear in list first (confirms creation was successful)
       // Use data-profile-name attribute for more reliable matching (consistent with other tests)
       // On Windows/Mac CI, the data attribute is more reliable than :has-text() which depends on text rendering
       await expect(page.locator(`.profile-item[data-profile-name="${name}"]`)).toBeVisible({ timeout: 15000 });
+
+      // Verify modal is closed (should be closed by the time profile appears)
+      await expect(modal).not.toBeVisible({ timeout: 2000 });
       
       // Verify the profile list count has increased (confirms the list actually refreshed)
       const profileItems = page.locator('.profile-item');

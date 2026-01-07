@@ -9,13 +9,8 @@ import { scaleScrollable } from '../utils/index.js';
 let debugLog = null;
 try { 
   debugLog = window.debugLog || null; 
-} catch (error) {
-  // Fallback to prevent initialization failure
-  console.warn('Failed to access window.debugLog during UI manager initialization', { 
-    module: 'ui-manager', 
-    function: 'ui-manager-init',
-    error: error?.message || 'Unknown error' 
-  });
+} catch {
+  // debugLog not available yet during early initialization - this is expected
 }
 
 export default function initializeUIManager(options = {}) {

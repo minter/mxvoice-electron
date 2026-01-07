@@ -52,8 +52,11 @@ function waitForLauncherAPI(maxWait = 5000) {
 
 /**
  * Load profiles from main process
+ * @param {Object} options - Optional configuration
+ * @param {boolean} options.forceRender - Force render even if another request is pending
  */
-async function loadProfiles() {
+async function loadProfiles(options = {}) {
+  const { forceRender = false } = options;
   const requestId = ++latestLoadProfilesRequestId;
   try {
     // Ensure launcherAPI is available
@@ -62,7 +65,11 @@ async function loadProfiles() {
     }
     
     const result = await window.launcherAPI.getProfiles();
-    if (requestId !== latestLoadProfilesRequestId) {
+    
+    // Skip render if a newer request has been made, unless forceRender is set
+    // This prevents stale data from overwriting newer data, but ensures
+    // profile creation always renders its result
+    if (!forceRender && requestId !== latestLoadProfilesRequestId) {
       return;
     }
     
@@ -75,13 +82,16 @@ async function loadProfiles() {
       document.getElementById('loading-state').style.display = 'none';
       document.getElementById('profile-content').style.display = 'block';
       
-      // Focus the search field now that it's visible
-      setTimeout(() => {
-        const searchField = document.getElementById('profile-search');
-        if (searchField) {
-          searchField.focus();
-        }
-      }, 100);
+      // Focus the search field now that it's visible (only on initial load)
+      // Skip focus if forceRender is set as we're likely in a profile operation
+      if (!forceRender) {
+        setTimeout(() => {
+          const searchField = document.getElementById('profile-search');
+          if (searchField) {
+            searchField.focus();
+          }
+        }, 100);
+      }
       
       // Auto-select first profile if only one exists
       if (profiles.length === 1) {
@@ -94,7 +104,7 @@ async function loadProfiles() {
       document.getElementById('profile-content').style.display = 'block';
     }
   } catch (error) {
-    if (requestId !== latestLoadProfilesRequestId) {
+    if (!forceRender && requestId !== latestLoadProfilesRequestId) {
       return;
     }
     console.error('Error loading profiles:', error);
@@ -373,7 +383,9 @@ async function createProfile() {
       hideCreateProfileModal();
       
       // Reload profiles to include the new one
-      await loadProfiles();
+      // Use forceRender to ensure the new profile is displayed even if
+      // there's a race condition with other loadProfiles calls
+      await loadProfiles({ forceRender: true });
       
       // Auto-select the newly created profile
       selectProfile(name);
