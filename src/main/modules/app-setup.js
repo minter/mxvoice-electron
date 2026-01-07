@@ -826,7 +826,7 @@ function showAboutDialog() {
       document.addEventListener('DOMContentLoaded', () => {
         // Check if aboutAPI is available
         if (!window.aboutAPI) {
-          console.error('aboutAPI is not available! Preload script may not have loaded.');
+          // aboutAPI not available - preload script may not have loaded
           return;
         }
 

@@ -6,6 +6,16 @@
  * - Global preferences (directories, debug logging)
  */
 
+// Get debugLog from global scope (initialized early in renderer bootstrap)
+let debugLog = null;
+try {
+  if (typeof window !== 'undefined' && window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch {
+  // debugLog not available yet - will use fallback logging
+}
+
 const GLOBAL_PREFERENCES = [
   'database_directory',
   'music_directory',
@@ -34,14 +44,21 @@ const PROFILE_PREFERENCES = [
 export async function getPreference(key, electronAPI) {
   // Validate electronAPI
   if (!electronAPI) {
-    console.error('[PREF-ADAPTER] electronAPI is undefined');
+    debugLog?.error('[PREF-ADAPTER] electronAPI is undefined', { 
+      module: 'profile-preference-adapter', 
+      function: 'getPreference' 
+    });
     return { success: false, error: 'electronAPI is undefined' };
   }
   
   if (GLOBAL_PREFERENCES.includes(key)) {
     // Use global store for directories
     if (!electronAPI.store) {
-      console.error('[PREF-ADAPTER] electronAPI.store is undefined');
+      debugLog?.error('[PREF-ADAPTER] electronAPI.store is undefined', { 
+        module: 'profile-preference-adapter', 
+        function: 'getPreference',
+        key 
+      });
       return { success: false, error: 'electronAPI.store is undefined' };
     }
     return await electronAPI.store.get(key);
@@ -53,16 +70,28 @@ export async function getPreference(key, electronAPI) {
       if (electronAPI.store) {
         return await electronAPI.store.get(key);
       } else {
-        console.error('[PREF-ADAPTER] Neither electronAPI.profile nor electronAPI.store is available');
+        debugLog?.error('[PREF-ADAPTER] Neither electronAPI.profile nor electronAPI.store is available', { 
+          module: 'profile-preference-adapter', 
+          function: 'getPreference',
+          key 
+        });
         return { success: false, error: 'No preference API available' };
       }
     }
     return await electronAPI.profile.getPreference(key);
   } else {
     // Unknown preference, try global store as fallback
-    console.warn(`Unknown preference key: ${key}, using global store`);
+    debugLog?.warn(`Unknown preference key: ${key}, using global store`, { 
+      module: 'profile-preference-adapter', 
+      function: 'getPreference',
+      key 
+    });
     if (!electronAPI.store) {
-      console.error('[PREF-ADAPTER] electronAPI.store is undefined for fallback');
+      debugLog?.error('[PREF-ADAPTER] electronAPI.store is undefined for fallback', { 
+        module: 'profile-preference-adapter', 
+        function: 'getPreference',
+        key 
+      });
       return { success: false, error: 'electronAPI.store is undefined' };
     }
     return await electronAPI.store.get(key);
@@ -79,14 +108,22 @@ export async function getPreference(key, electronAPI) {
 export async function setPreference(key, value, electronAPI) {
   // Validate electronAPI
   if (!electronAPI) {
-    console.error('[PREF-ADAPTER] electronAPI is undefined in setPreference');
+    debugLog?.error('[PREF-ADAPTER] electronAPI is undefined in setPreference', { 
+      module: 'profile-preference-adapter', 
+      function: 'setPreference',
+      key 
+    });
     return { success: false, error: 'electronAPI is undefined' };
   }
   
   if (GLOBAL_PREFERENCES.includes(key)) {
     // Use global store for directories
     if (!electronAPI.store) {
-      console.error('[PREF-ADAPTER] electronAPI.store is undefined in setPreference');
+      debugLog?.error('[PREF-ADAPTER] electronAPI.store is undefined in setPreference', { 
+        module: 'profile-preference-adapter', 
+        function: 'setPreference',
+        key 
+      });
       return { success: false, error: 'electronAPI.store is undefined' };
     }
     return await electronAPI.store.set(key, value);
@@ -95,20 +132,36 @@ export async function setPreference(key, value, electronAPI) {
     if (!electronAPI.profile) {
       // During app initialization, profile API may not be ready yet
       // Fall back to global store temporarily
-      console.warn(`[PREF-ADAPTER] Profile API not available for ${key}, falling back to global store`);
+      debugLog?.warn(`[PREF-ADAPTER] Profile API not available for ${key}, falling back to global store`, { 
+        module: 'profile-preference-adapter', 
+        function: 'setPreference',
+        key 
+      });
       if (electronAPI.store) {
         return await electronAPI.store.set(key, value);
       } else {
-        console.error('[PREF-ADAPTER] Neither electronAPI.profile nor electronAPI.store is available in setPreference');
+        debugLog?.error('[PREF-ADAPTER] Neither electronAPI.profile nor electronAPI.store is available in setPreference', { 
+          module: 'profile-preference-adapter', 
+          function: 'setPreference',
+          key 
+        });
         return { success: false, error: 'No preference API available' };
       }
     }
     return await electronAPI.profile.setPreference(key, value);
   } else {
     // Unknown preference, try global store as fallback
-    console.warn(`[PREF-ADAPTER] Unknown preference key: ${key}, using global store`);
+    debugLog?.warn(`[PREF-ADAPTER] Unknown preference key: ${key}, using global store`, { 
+      module: 'profile-preference-adapter', 
+      function: 'setPreference',
+      key 
+    });
     if (!electronAPI.store) {
-      console.error('[PREF-ADAPTER] electronAPI.store is undefined for fallback in setPreference');
+      debugLog?.error('[PREF-ADAPTER] electronAPI.store is undefined for fallback in setPreference', { 
+        module: 'profile-preference-adapter', 
+        function: 'setPreference',
+        key 
+      });
       return { success: false, error: 'electronAPI.store is undefined' };
     }
     return await electronAPI.store.set(key, value);
