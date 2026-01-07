@@ -389,7 +389,16 @@ test.describe('Profile Management', () => {
       
       await createButton.click();
       await expect(modal).toBeVisible();
+      
+      // Wait for the input to be ready and visible before filling
+      await expect(nameInput).toBeVisible();
+      await expect(nameInput).toBeEditable();
       await nameInput.fill(name);
+      
+      // Verify the input has the correct value before clicking confirm
+      // This helps catch any fill() issues on slower CI environments
+      await expect(nameInput).toHaveValue(name);
+      
       await confirmButton.click();
 
       // Wait for profile to appear in list first (confirms creation was successful)
