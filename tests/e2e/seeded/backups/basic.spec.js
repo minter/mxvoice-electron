@@ -378,6 +378,8 @@ test.describe('Profile Backups - basic', () => {
     // Modify settings
     await enabledCheckbox.setChecked(!originalEnabled);
     await intervalSelect.selectOption('3600000'); // 1 hour
+    // Click first to ensure focus before clear/fill
+    await maxCountInput.click();
     await maxCountInput.clear();
     await maxCountInput.fill('10');
 

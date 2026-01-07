@@ -113,6 +113,8 @@ test.describe('Preferences - basic', () => {
     const originalValue = await fadeInput.inputValue();
     const newValue = originalValue === '2' ? '3' : '2';
     
+    // Click first to ensure focus before clear/fill
+    await fadeInput.click();
     await fadeInput.clear();
     await fadeInput.fill(newValue);
     

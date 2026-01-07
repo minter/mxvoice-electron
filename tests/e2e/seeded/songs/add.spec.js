@@ -212,8 +212,10 @@ test.describe('Songs - add', () => {
     // Change category from "Game" to "Running In"
     await page.locator('#song-form-category').selectOption({ label: 'Running In' });
     
-    // Change Info field from blank to "Test"
-    await page.locator('#song-form-info').fill('Test');
+    // Change Info field from blank to "Test" - click first to ensure focus
+    const infoInput = page.locator('#song-form-info');
+    await infoInput.click();
+    await infoInput.fill('Test');
     
     // 6) Submit the form by clicking the Add button
     await page.locator('#songFormSubmitButton').click();
@@ -844,8 +846,9 @@ test.describe('Songs - add', () => {
     await categorySelect.selectOption('--NEW--');
     await page.waitForTimeout(500);
     
-    // Fill in the new category description
+    // Fill in the new category description - click first to ensure focus
     const newCategoryInput = page.locator('#bulk-song-form-new-category');
+    await newCategoryInput.click();
     await newCategoryInput.fill('Another Category');
     await page.waitForTimeout(500);
     

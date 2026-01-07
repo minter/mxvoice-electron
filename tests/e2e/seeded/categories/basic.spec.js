@@ -790,7 +790,8 @@ test.describe('Categories - management', () => {
       // Verify the input field contains "Running In"
       await expect(editInput).toHaveValue('Running In');
       
-      // Clear the input field and type "Edited Running In"
+      // Clear the input field and type "Edited Running In" - click first to ensure focus
+      await editInput.click();
       await editInput.clear();
       await editInput.fill('Edited Running In');
       
