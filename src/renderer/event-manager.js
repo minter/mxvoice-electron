@@ -65,6 +65,7 @@ class EventManager {
     this.setupFileOperations();
     this.setupHoldingTankOperations();
     this.setupHotkeyOperations();
+    this.setupSoundboardOperations();
     this.setupPreferencesOperations();
     this.setupUpdateOperations();
     this.setupDynamicElements();
@@ -158,7 +159,63 @@ class EventManager {
       saveHotkeyBtn.removeAttribute('onclick');
     }
 
+    // Soundboard file operations
+    const openSoundboardBtn = document.querySelector('[onclick="openSoundboardFile()"]');
+    if (openSoundboardBtn) {
+      openSoundboardBtn.addEventListener('click', () => {
+        if (window.openSoundboardFile) {
+          window.openSoundboardFile();
+        } else {
+          this.debugLog.warn('openSoundboardFile function not available', { function: "setupFileOperations" });
+        }
+      });
+      openSoundboardBtn.removeAttribute('onclick');
+    }
+
+    const saveSoundboardBtn = document.querySelector('[onclick="saveSoundboardFile()"]');
+    if (saveSoundboardBtn) {
+      saveSoundboardBtn.addEventListener('click', () => {
+        if (window.saveSoundboardFile) {
+          window.saveSoundboardFile();
+        } else {
+          this.debugLog.warn('saveSoundboardFile function not available', { function: "setupFileOperations" });
+        }
+      });
+      saveSoundboardBtn.removeAttribute('onclick');
+    }
+
     this.debugLog.info('File operation event listeners set up', { function: "setupFileOperations" });
+  }
+
+  /**
+   * Setup soundboard operation buttons
+   */
+  setupSoundboardOperations() {
+    const renameSoundboardBtn = document.querySelector('[onclick="renameSoundboardTab()"]');
+    if (renameSoundboardBtn) {
+      renameSoundboardBtn.addEventListener('click', () => {
+        if (window.renameSoundboardTab) {
+          window.renameSoundboardTab();
+        } else {
+          this.debugLog.warn('renameSoundboardTab function not available', { function: "setupSoundboardOperations" });
+        }
+      });
+      renameSoundboardBtn.removeAttribute('onclick');
+    }
+
+    const clearSoundboardBtn = document.querySelector('[onclick="clearSoundboard()"]');
+    if (clearSoundboardBtn) {
+      clearSoundboardBtn.addEventListener('click', () => {
+        if (window.clearSoundboard) {
+          window.clearSoundboard();
+        } else {
+          this.debugLog.warn('clearSoundboard function not available', { function: "setupSoundboardOperations" });
+        }
+      });
+      clearSoundboardBtn.removeAttribute('onclick');
+    }
+
+    this.debugLog.info('Soundboard operation event listeners set up', { function: "setupSoundboardOperations" });
   }
 
   /**

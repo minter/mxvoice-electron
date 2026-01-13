@@ -26,7 +26,9 @@ export const moduleConfig = [
   { name: 'ui', path: '../ui/index.js', required: true },
   { name: 'debugLog', path: '../debug-log/index.js', required: false },
   { name: 'database', path: '../database/index.js', required: false },
-  { name: 'cleanup', path: '../cleanup/index.js', required: false }
+  { name: 'cleanup', path: '../cleanup/index.js', required: false },
+  { name: 'viewManager', path: '../view-manager/index.js', required: false },
+  { name: 'soundboard', path: '../soundboard/index.js', required: false }
 ];
 
 export default moduleConfig;

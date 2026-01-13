@@ -120,6 +120,30 @@ function registerAllHandlers() {
     return await fileOperations.saveHoldingTankFile(holdingTankArray);
   });
 
+  ipcMain.handle('open-soundboard-file', async () => {
+    return await fileOperations.loadSoundboardFile();
+  });
+
+  ipcMain.handle('save-soundboard-file', async (event, soundboardData) => {
+    return fileOperations.saveSoundboardFile(soundboardData);
+  });
+
+  ipcMain.handle('soundboard:save-file', async (event, soundboardData) => {
+    return fileOperations.saveSoundboardFile(soundboardData);
+  });
+
+  ipcMain.on('view:update-menu-state', (event, currentView) => {
+    // Update menu state based on current view
+    if (mainWindow) {
+      // This will be handled by app-setup.js menu update
+      debugLog?.info('View menu state update requested', {
+        module: 'ipc-handlers',
+        function: 'view:update-menu-state',
+        currentView
+      });
+    }
+  });
+
   // App operations
   // Note: restart-and-install-new-version handler is defined later with enhanced error handling
 
