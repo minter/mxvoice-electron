@@ -185,7 +185,7 @@
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "cross-env": "^10.1.0",
-    "electron": "^39.2.7",
+    "electron": "^40.0.0",
     "electron-builder": "26.4.0",
     "electron-reload": "^1.5.0",
     "eslint": "^9.39.2",
