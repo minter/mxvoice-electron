@@ -2448,10 +2448,10 @@ music-metadata@11.10.6:
     uint8array-extras "^1.5.0"
     win-guid "^0.1.3"
 
-n-readlines@^3.4.0:
-  version "3.4.0"
-  resolved "https://registry.yarnpkg.com/n-readlines/-/n-readlines-3.4.0.tgz#c6c88e63b55af44a396be70de996d28df06f2348"
-  integrity sha512-KZAak+qhAy+IN0aYO1HyRXCZIrowJ12p04BCXPhbEy3HFmVVZ23tDLWrr7oVEZw1sNkJNlzx1RETVf44ZodADQ==
+n-readlines@^3.4.1:
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/n-readlines/-/n-readlines-3.4.1.tgz#4146a8f8b2ae648dab655decd5340c343ed46bba"
+  integrity sha512-YDD8i8DiykXn4eXs8Xtuki5bIJ0gwBGeGLpTvPbRrfxnfyPTU6DRk03ISBMARpH75emKoLuE/IP9ycGetd9q/Q==
 
 natural-compare@^1.4.0:
   version "1.4.0"
