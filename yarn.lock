@@ -2432,10 +2432,10 @@ ms@^2.1.3:
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#574c8138ce1d2b5861f0b44579dbadd60c6615b2"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
 
-music-metadata@11.11.0:
-  version "11.11.0"
-  resolved "https://registry.yarnpkg.com/music-metadata/-/music-metadata-11.11.0.tgz#2cb770d2a7492fde8494ffc913eec3b53509a39b"
-  integrity sha512-OTlsv/FiCr+c4+fC6t9j/GTC/m1KKc3QtOTYHVEvvGLDLpPdtgf32pB7JXJ/Xi8qdIxwwh2PR8J/1t0QL1BxWQ==
+music-metadata@11.11.2:
+  version "11.11.2"
+  resolved "https://registry.yarnpkg.com/music-metadata/-/music-metadata-11.11.2.tgz#d9ffc8b79f7437b34d2e02b09ef6b72227bfe0cb"
+  integrity sha512-tJx+lsDg1bGUOxojKKj12BIvccBBUcVa6oWrvOchCF0WAQ9E5t/hK35ILp1z3wWrUSYtgg57LfRbvVMkxGIyzA==
   dependencies:
     "@borewit/text-codec" "^0.2.1"
     "@tokenizer/token" "^0.3.0"
@@ -2446,7 +2446,7 @@ music-metadata@11.11.0:
     strtok3 "^10.3.4"
     token-types "^6.1.2"
     uint8array-extras "^1.5.0"
-    win-guid "^0.2.0"
+    win-guid "^0.2.1"
 
 n-readlines@^3.4.1:
   version "3.4.1"
@@ -3319,10 +3319,10 @@ which@^5.0.0:
   dependencies:
     isexe "^3.1.1"
 
-win-guid@^0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/win-guid/-/win-guid-0.2.0.tgz#63180c34e127f72ada4f4d9cdad5b132d3f0384a"
-  integrity sha512-iekGhWzFQSunvE87ndXxoa6UgyQbkL4MmbYTFhQnk94pVsAW89mWnvW1zI3JMnypUm8jykJaITudspoR8NrRBQ==
+win-guid@^0.2.1:
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/win-guid/-/win-guid-0.2.1.tgz#576915ba5e10bf92ec6a32b71ab06b5f75403fc0"
+  integrity sha512-gEIQU4mkgl2OPeoNrWflcJFJ3Ae2BPd4eCsHHA/XikslkIVms/nHhvnvzIZV7VLmBvtFlDOzLt9rrZT+n6D67A==
 
 word-wrap@^1.2.5:
   version "1.2.5"
