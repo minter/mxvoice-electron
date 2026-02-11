@@ -30,33 +30,10 @@ try {
  * @param {boolean} fadeOut - Whether to fade out the audio
  */
 function stopPlaying(fadeOut = false) {
-  debugLog?.info('stopPlaying called with parameters', { 
-    module: 'audio-controller',
-    function: 'stopPlaying',
-    fadeOut: fadeOut,
-    typeof_fadeOut: typeof fadeOut,
-    argumentsLength: arguments.length
-  });
   const sound = sharedState.get('sound');
   const autoplay = sharedState.get('autoplay');
   const holdingTankMode = sharedState.get('holdingTankMode');
   const globalAnimation = sharedState.get('globalAnimation');
-  
-  debugLog?.info('🔍 sound object:', { 
-    module: 'audio-controller',
-    function: 'stopPlaying',
-    sound: sound
-  });
-  debugLog?.info('🔍 autoplay:', { 
-    module: 'audio-controller',
-    function: 'stopPlaying',
-    autoplay: autoplay
-  });
-  debugLog?.info('🔍 holdingTankMode:', { 
-    module: 'audio-controller',
-    function: 'stopPlaying',
-    holdingTankMode: holdingTankMode
-  });
   
   // Cancel any ongoing animation frame to prevent memory leaks
   if (globalAnimation) {
@@ -65,10 +42,6 @@ function stopPlaying(fadeOut = false) {
   }
   
   if (sound) {
-    debugLog?.info('🔍 Sound exists, stopping...', { 
-      module: 'audio-controller',
-      function: 'stopPlaying'
-    });
     if (autoplay && holdingTankMode === "playlist") {
       const np = document.querySelector('.now_playing');
       if (np) np.classList.remove('now_playing');
@@ -87,7 +60,19 @@ function stopPlaying(fadeOut = false) {
             result: result
           });
           // Fallback to immediate stop
+          try {
+            if (sound.stop && typeof sound.stop === 'function') {
+              sound.stop();
+            }
+          } catch (error) {
+            debugLog?.warn('Error stopping sound in fade fallback', {
+              module: 'audio-controller',
+              function: 'stopPlaying',
+              error: error.message
+            });
+          }
           sound.unload();
+          sharedState.set('sound', null);
           resetUIState();
           return;
         }
@@ -126,7 +111,21 @@ function stopPlaying(fadeOut = false) {
             function: 'stopPlaying'
           });
           if (sound) {
+            // Stop before unloading
+            try {
+              if (sound.stop && typeof sound.stop === 'function') {
+                sound.stop();
+              }
+            } catch (error) {
+              debugLog?.warn('Error stopping sound during fade', {
+                module: 'audio-controller',
+                function: 'stopPlaying',
+                error: error.message
+              });
+            }
             sound.unload();
+            // Clear from sharedState
+            sharedState.set('sound', null);
             resetUIState();
           }
         });
@@ -147,23 +146,104 @@ function stopPlaying(fadeOut = false) {
           error: error.message
         });
         // Fallback to immediate stop
+        try {
+          if (sound.stop && typeof sound.stop === 'function') {
+            sound.stop();
+          }
+        } catch (error) {
+          debugLog?.warn('Error stopping sound in fade error handler', {
+            module: 'audio-controller',
+            function: 'stopPlaying',
+            error: error.message
+          });
+        }
         sound.unload();
+        sharedState.set('sound', null);
         resetUIState();
       });
     } else {
-      debugLog?.info('Taking immediate stop path', { 
-        module: 'audio-controller',
-        function: 'stopPlaying',
-        fadeOut: fadeOut
-      });
-      sound.unload();
+      // Stop playback first - check if actually playing using Howler's playing() method
+      // This is more reliable than checking _state, which can be inconsistent
+      try {
+        const isActuallyPlaying = sound.playing && typeof sound.playing === 'function' ? sound.playing() : false;
+        
+        if (isActuallyPlaying || sound.stop) {
+          // Stop all playing instances - Howler's stop() stops all sounds
+          if (sound.stop && typeof sound.stop === 'function') {
+            sound.stop();
+          }
+          
+          // Also stop any individual sound instances in _sounds array if they exist
+          if (sound._sounds && Array.isArray(sound._sounds)) {
+            sound._sounds.forEach((snd) => {
+              try {
+                if (snd && snd.stop && typeof snd.stop === 'function') {
+                  snd.stop();
+                }
+              } catch (err) {
+                debugLog?.warn('Error stopping individual sound instance', {
+                  module: 'audio-controller',
+                  function: 'stopPlaying',
+                  error: err.message
+                });
+              }
+            });
+          }
+        }
+      } catch (error) {
+        debugLog?.warn('Error stopping sound', {
+          module: 'audio-controller',
+          function: 'stopPlaying',
+          error: error.message
+        });
+      }
+      
+      // Unload the sound
+      try {
+        if (sound.unload && typeof sound.unload === 'function') {
+          sound.unload();
+        }
+      } catch (error) {
+        debugLog?.warn('Error unloading sound', {
+          module: 'audio-controller',
+          function: 'stopPlaying',
+          error: error.message
+        });
+      }
+      
+      // Use Howler's global stop() to ensure ALL sounds stop
+      // This handles edge cases where sound object is stale but audio is still playing
+      if (typeof window !== 'undefined' && window.Howler && typeof window.Howler.stop === 'function') {
+        try {
+          window.Howler.stop();
+        } catch (error) {
+          debugLog?.warn('Error calling Howler.stop()', {
+            module: 'audio-controller',
+            function: 'stopPlaying',
+            error: error.message
+          });
+        }
+      }
+      
+      // Clear sound from sharedState to prevent processing the same unloaded sound again
+      sharedState.set('sound', null);
       resetUIState();
     }
   } else {
-    debugLog?.info('🔍 No sound object found in shared state', { 
-      module: 'audio-controller',
-      function: 'stopPlaying'
-    });
+    // Fallback: Use Howler's global stop() method to stop all sounds
+    // This handles cases where the sound object is missing but audio is still playing
+    if (typeof window !== 'undefined' && window.Howler && typeof window.Howler.stop === 'function') {
+      try {
+        window.Howler.stop();
+      } catch (error) {
+        debugLog?.warn('Error calling Howler.stop()', {
+          module: 'audio-controller',
+          function: 'stopPlaying',
+          error: error.message
+        });
+      }
+    }
+    
     resetUIState();
   }
 }
@@ -174,36 +254,12 @@ function stopPlaying(fadeOut = false) {
  * @param {boolean} fadeOut - Whether to fade out the audio
  */
 function pausePlaying(fadeOut = false) {
-  debugLog?.info('🔍 pausePlaying called with fadeOut:', { 
-    module: 'audio-controller',
-    function: 'pausePlaying',
-    fadeOut: fadeOut
-  });
   const sound = sharedState.get('sound');
   const globalAnimation = sharedState.get('globalAnimation');
   
-  debugLog?.info('🔍 sound object:', { 
-    module: 'audio-controller',
-    function: 'pausePlaying',
-    sound: sound
-  });
-  debugLog?.info('🔍 sound.playing():', { 
-    module: 'audio-controller',
-    function: 'pausePlaying',
-    playing: sound ? sound.playing() : 'no sound'
-  });
-  
   if (sound) {
-    debugLog?.info('🔍 Sound exists, toggling play/pause...', { 
-      module: 'audio-controller',
-      function: 'pausePlaying'
-    });
     toggle_play_button();
     if (sound.playing()) {
-      debugLog?.info('🔍 Sound is playing, pausing...', { 
-        module: 'audio-controller',
-        function: 'pausePlaying'
-      });
       
       // Cancel animation frame to prevent memory leaks
       if (globalAnimation) {
@@ -241,19 +297,10 @@ function pausePlaying(fadeOut = false) {
         sound.pause();
       }
     } else {
-      debugLog?.info('🔍 Sound is paused, playing...', { 
-        module: 'audio-controller',
-        function: 'pausePlaying'
-      });
       sound.play();
       document.getElementById('song_spinner')?.classList.add('fa-spin');
       document.querySelector('#progress_bar .progress-bar')?.classList.add('progress-bar-animated', 'progress-bar-striped');
     }
-  } else {
-    debugLog?.info('🔍 No sound object found in shared state', { 
-      module: 'audio-controller',
-      function: 'pausePlaying'
-    });
   }
 }
 
@@ -261,7 +308,7 @@ function pausePlaying(fadeOut = false) {
  * Reset UI state after audio changes
  */
 function resetUIState() {
-  debugLog?.info('🔍 resetUIState called', { 
+  debugLog?.debug('resetUIState called', { 
     module: 'audio-controller',
     function: 'resetUIState'
   });
@@ -292,10 +339,6 @@ function resetUIState() {
  * Toggle play button state
  */
 function toggle_play_button() {
-  debugLog?.info('🔍 toggle_play_button called', { 
-    module: 'audio-controller',
-    function: 'toggle_play_button'
-  });
   document.getElementById('play_button')?.classList.toggle('d-none');
   document.getElementById('pause_button')?.classList.toggle('d-none');
 }
@@ -306,7 +349,7 @@ function toggle_play_button() {
  * @param {boolean} bool - Whether to enable loop mode
  */
 function loop_on(bool) {
-  debugLog?.info('🔍 loop_on called with bool:', { 
+  debugLog?.debug('loop_on called', { 
     module: 'audio-controller',
     function: 'loop_on',
     bool: bool
