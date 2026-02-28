@@ -240,6 +240,120 @@ function saveHoldingTankFile(holdingTankArray) {
   })
 }
 
+// Load soundboard file
+function loadSoundboardFile() {
+  if (!mainWindow) {
+    debugLog?.error('❌ mainWindow is not available', { module: 'file-operations', function: 'loadSoundboardFile' });
+    return Promise.reject(new Error('mainWindow not available'));
+  }
+  
+  return new Promise((resolve, reject) => {
+    debugLog?.info("Loading soundboard file", { module: 'file-operations', function: 'loadSoundboardFile' });
+    dialog.showOpenDialog(mainWindow, {
+      buttonLabel: 'Open',
+      filters: [
+        { name: 'Mx. Voice Soundboard Files', extensions: ['mxb'] }
+      ],
+      defaultPath: store.get('hotkey_directory'),
+      message: 'Select your Mx. Voice soundboard file',
+      properties: ['openFile']
+    }).then(result => {
+      if (result.canceled == true) {
+        debugLog?.info('Silently exiting soundboard load', { module: 'file-operations', function: 'loadSoundboardFile' });
+        resolve({ success: false, canceled: true });
+        return;
+      }
+      else {
+        const filename = result.filePaths[0];
+        debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'loadSoundboardFile', filename: filename });
+        
+        try {
+          const fileContent = fs.readFileSync(filename, 'utf8');
+          const soundboardData = JSON.parse(fileContent);
+          
+          // Validate structure (support both old format with 'pages' array and new format with single 'page')
+          if (!soundboardData.version) {
+            throw new Error('Invalid soundboard file format: missing version');
+          }
+          
+          const hasPages = soundboardData.pages && Array.isArray(soundboardData.pages);
+          const hasPage = soundboardData.page && (soundboardData.page.tabNumber || soundboardData.page.pageNumber);
+          
+          if (!hasPages && !hasPage) {
+            throw new Error('Invalid soundboard file format: must have either "pages" array or "page" object');
+          }
+          
+          debugLog?.info('📁 Main process: Sending soundboard_load with:', { 
+            module: 'file-operations', 
+            function: 'loadSoundboardFile', 
+            version: soundboardData.version,
+            hasPages: hasPages,
+            hasPage: hasPage,
+            pageCount: hasPages ? soundboardData.pages.length : 1
+          });
+          
+          mainWindow.webContents.send('soundboard_load', soundboardData);
+          resolve({ success: true, soundboardData });
+        } catch (err) {
+          debugLog?.error('Error parsing soundboard file:', { module: 'file-operations', function: 'loadSoundboardFile', error: err });
+          reject(err);
+        }
+      }
+    }).catch(err => {
+      debugLog?.error('Error loading soundboard file:', { module: 'file-operations', function: 'loadSoundboardFile', error: err });
+      reject(err);
+    });
+  });
+}
+
+// Save soundboard file
+function saveSoundboardFile(soundboardData) {
+  if (!mainWindow) {
+    debugLog?.error('❌ mainWindow is not available', { module: 'file-operations', function: 'saveSoundboardFile' });
+    return;
+  }
+  
+  dialog.showSaveDialog(mainWindow, {
+    buttonLabel: 'Save',
+    filters: [
+      { name: 'Mx. Voice Soundboard Files', extensions: ['mxb'] }
+    ],
+    defaultPath: store.get('hotkey_directory'),
+    message: 'Save your Mx. Voice soundboard file'
+  }).then(result => {
+    if (result.canceled == true) {
+      debugLog?.info('Silently exiting soundboard save', { module: 'file-operations', function: 'saveSoundboardFile' });
+      return;
+    }
+    else {
+      const filename = result.filePath;
+      debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'saveSoundboardFile', filename: filename });
+      
+      try {
+        // Ensure metadata is up to date
+        if (!soundboardData.metadata) {
+          soundboardData.metadata = {};
+        }
+        soundboardData.metadata.lastModified = new Date().toISOString();
+        
+        // Write JSON file with indentation
+        fs.writeFileSync(filename, JSON.stringify(soundboardData, null, 2), 'utf8');
+        
+        debugLog?.info(`Soundboard file saved successfully to ${filename}`, { 
+          module: 'file-operations', 
+          function: 'saveSoundboardFile', 
+          filename: filename,
+          pageCount: soundboardData.pages?.length || 0
+        });
+      } catch (err) {
+        debugLog?.error('Error saving soundboard file:', { module: 'file-operations', function: 'saveSoundboardFile', error: err });
+      }
+    }
+  }).catch(err => {
+    debugLog?.error('Error in save soundboard dialog:', { module: 'file-operations', function: 'saveSoundboardFile', error: err });
+  });
+}
+
 // Add directory dialog
 function addDirectoryDialog() {
   debugLog?.info("Adding directory of songs", { module: 'file-operations', function: 'addDirectoryDialog' });
@@ -319,6 +433,8 @@ export {
   loadHoldingTankFile,
   saveHotkeysFile,
   saveHoldingTankFile,
+  loadSoundboardFile,
+  saveSoundboardFile,
   addDirectoryDialog,
   addFileDialog,
   migrateOldPreferences,
@@ -332,6 +448,8 @@ export default {
   loadHoldingTankFile,
   saveHotkeysFile,
   saveHoldingTankFile,
+  loadSoundboardFile,
+  saveSoundboardFile,
   addDirectoryDialog,
   addFileDialog,
   migrateOldPreferences,

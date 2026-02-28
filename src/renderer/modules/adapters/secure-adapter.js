@@ -965,6 +965,44 @@ export const secureFileDialog = {
       });
       return { success: false, error: error.message };
     }
+  },
+
+  openSoundboardFile: async () => {
+    try {
+      if (window.secureElectronAPI?.fileOperations?.openSoundboardFile) {
+        return await window.secureElectronAPI.fileOperations.openSoundboardFile();
+      }
+      if (window.electronAPI?.openSoundboardFile) {
+        return await window.electronAPI.openSoundboardFile();
+      }
+      throw new Error('No soundboard file open API available');
+    } catch (error) {
+      debugLog?.error('Open soundboard file failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileDialog.openSoundboardFile', 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
+  },
+
+  saveSoundboardFile: async (soundboardData) => {
+    try {
+      if (window.secureElectronAPI?.fileOperations?.saveSoundboardFile) {
+        return await window.secureElectronAPI.fileOperations.saveSoundboardFile(soundboardData);
+      }
+      if (window.electronAPI?.saveSoundboardFile) {
+        return await window.electronAPI.saveSoundboardFile(soundboardData);
+      }
+      throw new Error('No soundboard file save API available');
+    } catch (error) {
+      debugLog?.error('Save soundboard file failed:', { 
+        module: 'secure-adapter', 
+        function: 'secureFileDialog.saveSoundboardFile', 
+        error: error.message 
+      });
+      return { success: false, error: error.message };
+    }
   }
 };
 
