@@ -448,7 +448,7 @@ if (process.platform === "darwin" || process.platform === "win32") {
   }
   
   // Log final auto-updater configuration
-  debugLog.info('Auto-updater configuration completed', { 
+  debugLog.info('Auto-updater configuration completed', {
     function: "auto-updater setup",
     platform: process.platform,
     arch: process.arch,
@@ -456,63 +456,11 @@ if (process.platform === "darwin" || process.platform === "win32") {
     provider: currentVersion.startsWith('4.') ? 'github' : 'custom',
     allowPrerelease: autoUpdater.allowPrerelease,
     autoDownload: autoUpdater.autoDownload,
-    hasAutoUpdater: !!autoUpdater,
-    autoUpdaterType: typeof autoUpdater,
     electronVersion: process.versions.electron,
     nodeVersion: process.versions.node,
-    timestamp: new Date().toISOString(),
-    userDataPath: app.getPath('userData'),
-    appPath: app.getAppPath(),
-    storePath: store.path,
-    cwd: process.cwd(),
-    env: {
-      NODE_ENV: process.env.NODE_ENV,
-      TEST_AUTO_UPDATE: process.env.TEST_AUTO_UPDATE,
-      TEST_UPDATE_VERSION: process.env.TEST_UPDATE_VERSION
-    },
-    memory: {
-      heapUsed: process.memoryUsage().heapUsed,
-      heapTotal: process.memoryUsage().heapTotal,
-      external: process.memoryUsage().external
-    },
-    uptime: process.uptime(),
-    pid: process.pid,
-    versions: {
-      chrome: process.versions.chrome,
-      node: process.versions.node,
-      electron: process.versions.electron
-    },
-    buildInfo: {
-      isDev: process.env.NODE_ENV === 'development',
-      isTest: process.env.TEST_AUTO_UPDATE === 'true',
-      hasTestVersion: !!process.env.TEST_UPDATE_VERSION
-    },
-    systemInfo: {
-      platform: process.platform,
-      arch: process.arch,
-      version: process.version,
-      release: process.release
-    },
-    electronInfo: {
-      isPackaged: app.isPackaged,
-      appPath: app.getAppPath(),
-      exePath: app.getPath('exe'),
-      appName: app.getName(),
-      appVersion: app.getVersion()
-    },
-    autoUpdaterInfo: {
-      hasLogger: !!autoUpdater.logger,
-      loggerType: typeof autoUpdater.logger,
-      hasSetFeedURL: typeof autoUpdater.setFeedURL === 'function',
-      hasCheckForUpdates: typeof autoUpdater.checkForUpdates === 'function',
-      hasAllowPrerelease: 'allowPrerelease' in autoUpdater,
-      hasAutoDownload: 'autoDownload' in autoUpdater,
-      hasGetFeedURL: typeof autoUpdater.getFeedURL === 'function',
-      hasQuitAndInstall: typeof autoUpdater.quitAndInstall === 'function',
-      hasOn: typeof autoUpdater.on === 'function',
-      hasRemoveAllListeners: typeof autoUpdater.removeAllListeners === 'function',
-      hasCheckForUpdatesAndNotify: typeof autoUpdater.checkForUpdatesAndNotify === 'function'
-    }
+    isPackaged: app.isPackaged,
+    isDev: process.env.NODE_ENV === 'development',
+    timestamp: new Date().toISOString()
   });
 }
 
@@ -1034,14 +982,9 @@ function setupApp() {
   });
 
   autoUpdater.on('download-progress', (progress) => {
-    try { 
-      // Send IPC event and dispatch custom event in renderer
+    try {
+      // Send IPC event - ipc-bridge dispatches custom event in renderer
       mainWindow?.webContents.send('update_download_progress', progress || {});
-      mainWindow?.webContents.executeJavaScript(`
-        window.dispatchEvent(new CustomEvent('mxvoice:update-download-progress', { 
-          detail: ${JSON.stringify(progress || {})} 
-        }));
-      `);
     } catch (error) {
       debugLog.warn('Failed to send update download progress to renderer', { 
         module: 'main', 
@@ -1059,15 +1002,10 @@ function setupApp() {
 
   autoUpdater.on('update-downloaded', (info) => {
     updateState.downloaded = true;
-    try { 
-      // Send IPC event and dispatch custom event in renderer
+    try {
+      // Send IPC event - ipc-bridge dispatches custom event in renderer
       const version = info?.version || '';
-      mainWindow?.webContents.send('update_ready', version); 
-      mainWindow?.webContents.executeJavaScript(`
-        window.dispatchEvent(new CustomEvent('mxvoice:update-ready', { 
-          detail: ${JSON.stringify(version)} 
-        }));
-      `);
+      mainWindow?.webContents.send('update_ready', version);
     } catch (error) {
       debugLog.warn('Failed to send update ready to renderer', { 
         module: 'main', 

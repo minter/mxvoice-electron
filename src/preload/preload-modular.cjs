@@ -8,7 +8,6 @@
  */
 
 const { ipcRenderer, contextBridge } = require('electron');
-const { Howl, Howler } = require('howler');
 const log = require('electron-log');
 
 // Import preload modules
