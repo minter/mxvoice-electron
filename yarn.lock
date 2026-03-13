@@ -1336,10 +1336,10 @@ electron-util@^1.0.0:
     electron-is-dev "^3.0.1"
     new-github-issue-url "^1.1.0"
 
-electron@^41.0.0:
-  version "41.0.0"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-41.0.0.tgz#5c5dcc8f38f7a53700ccd24c2abda962fa9a1d2b"
-  integrity sha512-U7QueSj1cFj9QM0Qamgh/MK08662FVK555iMfapqU7mcAmIm4A8bZuZptpjMXrT4JNAMGjgWu9sOeO1+RPCJNw==
+electron@^41.0.2:
+  version "41.0.2"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-41.0.2.tgz#bfe2b9fa1782afe5566df9947fa822ad81b3b450"
+  integrity sha512-raotm/aO8kOs1jD8SI8ssJ7EKciQOY295AOOprl1TxW7B0At8m5Ae7qNU1xdMxofiHMR8cNEGi9PKD3U+yT/mA==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^24.9.0"
