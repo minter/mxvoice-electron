@@ -2316,10 +2316,10 @@ node-gyp@^11.2.0:
     tinyglobby "^0.2.12"
     which "^5.0.0"
 
-node-sqlite3-wasm@^0.8.54:
-  version "0.8.54"
-  resolved "https://registry.yarnpkg.com/node-sqlite3-wasm/-/node-sqlite3-wasm-0.8.54.tgz#b22695bccc92991a1424d49b2f516663af056484"
-  integrity sha512-kGveOnfghdKZbQdDitloHVGBZ1LloRHnLSsjWjd+hZYnHdnk0jA0iN6DpvdHHSwlgeiZX0mNJ7BQfbK9HPtBdw==
+node-sqlite3-wasm@^0.8.55:
+  version "0.8.55"
+  resolved "https://registry.yarnpkg.com/node-sqlite3-wasm/-/node-sqlite3-wasm-0.8.55.tgz#2e36514ce39b24437a378d4ed08e12bb0d6d66bc"
+  integrity sha512-C2m7JzZgKiv9XVZ1ts9oPmS56PCvyHeQffTOF2KNO2TVZzq5IW2s+NFeEZn+eP6bnAuD2We/O9cOJSjQVf7Xxw==
 
 nopt@^8.0.0:
   version "8.1.0"
