@@ -178,8 +178,7 @@
     "n-readlines": "^3.4.1",
     "node-sqlite3-wasm": "^0.8.55",
     "uuid": "^13.0.0",
-    "wavesurfer.js": "^7.12.4",
-    "yarn": "^1.22.22"
+    "wavesurfer.js": "^7.12.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -191,7 +190,6 @@
     "node-abi": "4.28.0",
     "playwright": "^1.55.1"
   },
-  "packageManager": "yarn@1.22.22",
   "engines": {
     "node": ">=22.12.0"
   }
