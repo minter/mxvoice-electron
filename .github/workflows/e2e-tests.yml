@@ -31,16 +31,13 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22.18.0'
-          cache: 'yarn'
-
-      - name: Enable Corepack (Yarn reproducibility)
-        run: corepack enable
+          cache: 'npm'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile --prefer-offline
+        run: npm ci
 
       - name: Install Playwright runtime
-        run: yarn test:install
+        run: npm run test:install
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
@@ -59,13 +56,13 @@ jobs:
       # and main overrides userData early. No extra env needed here.
       - name: Run Playwright tests (Linux with xvfb)
         if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" -- yarn test
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" -- npm test
         env:
           CI: true
       
       - name: Run Playwright tests (macOS/Windows)
         if: runner.os != 'Linux'
-        run: yarn test
+        run: npm test
         env:
           CI: true
 
