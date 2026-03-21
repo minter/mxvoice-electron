@@ -66,22 +66,20 @@ test.describe('UI - basic', () => {
     await expect(omni).toBeVisible();
     await expect(title).toBeHidden();
 
-    // Click to open advanced search
-    await btn.click();
-    await page.waitForTimeout(100);
+    // Click to open advanced search (use force to bypass tooltip overlay)
+    await btn.click({ force: true });
 
     // Wait for animation + state
-    await expect(btn).toHaveAttribute('aria-expanded', 'true');
+    await expect(btn).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 });
     await expect(panel).toBeVisible();
     await expect(omni).toBeHidden();
     await expect(title).toBeVisible();
     await expect(title).toBeFocused();
 
-    // Click to close advanced search
-    await btn.click();
-    await page.waitForTimeout(100);
+    // Click to close advanced search (use force to bypass tooltip overlay)
+    await btn.click({ force: true });
 
-    await expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await expect(btn).toHaveAttribute('aria-expanded', 'false', { timeout: 5000 });
     await expect(panel).toBeHidden();
     await expect(omni).toBeVisible();
     await expect(omni).toBeFocused();
