@@ -81,6 +81,10 @@ test.describe('UI - basic', () => {
     await expect(title).toBeVisible();
     await expect(title).toBeFocused();
 
+    // Wait for the open animation to fully complete before toggling back
+    // (toggleAdvancedSearch uses animateCSS which is async)
+    await page.waitForTimeout(500);
+
     // Toggle back to close
     await page.evaluate(() => window.toggleAdvancedSearch());
 
