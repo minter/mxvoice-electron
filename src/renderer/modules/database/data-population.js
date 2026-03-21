@@ -126,67 +126,112 @@ async function addToHoldingTank(song_id, element) {
 
 /**
  * Populate holding tank with song IDs
- * Adds songs to the holding tank UI based on song IDs
- * 
+ * Fetches all songs in a single batch query and adds them to the holding tank UI
+ *
  * @param {Array} songIds - Array of song IDs to add
  * @returns {Promise<{success: boolean, added?: number, skipped?: number, error?: string}>}
  */
 async function populateHoldingTank(songIds) {
-  debugLog?.info('populateHoldingTank called with song IDs', { 
+  debugLog?.info('populateHoldingTank called with song IDs', {
     module: 'data-population',
     function: 'populateHoldingTank',
     songIds: songIds
   });
-  
+
   if (!songIds || songIds.length === 0) {
-    debugLog?.warn('No song IDs provided to populateHoldingTank', { 
+    debugLog?.warn('No song IDs provided to populateHoldingTank', {
       module: 'data-population',
       function: 'populateHoldingTank'
     });
     return Promise.resolve({ success: false, error: 'No song IDs provided' });
   }
-  
+
   Dom.empty('.holding_tank.active');
-  
+
+  // Filter to valid IDs
+  const validIds = songIds.filter(id => id && id.trim()).map(id => id.trim());
+
+  if (validIds.length === 0) {
+    return { success: true, added: 0, skipped: songIds.length };
+  }
+
+  // Batch query: fetch all songs in one query instead of N individual queries
+  const placeholders = validIds.map(() => '?').join(', ');
+  let songsMap = new Map();
+  try {
+    const result = await secureDatabase.query(
+      `SELECT * FROM mrvoice WHERE id IN (${placeholders})`,
+      validIds
+    );
+    const rows = result?.data || result || [];
+    if (Array.isArray(rows)) {
+      rows.forEach(row => songsMap.set(String(row.id), row));
+    }
+  } catch (error) {
+    debugLog?.error('Batch query for holding tank songs failed', {
+      module: 'data-population',
+      function: 'populateHoldingTank',
+      error: error?.message
+    });
+    return { success: false, error: error?.message };
+  }
+
   let addedCount = 0;
   let skippedCount = 0;
-  
-  // Process all songs and wait for them to complete
-  const addPromises = songIds.map(async (songId) => {
-    if (songId && songId.trim()) {
-      debugLog?.info('Adding song ID to holding tank', { 
+  const currentFontSize = 11;
+  const targetEl = Dom.$('.holding_tank.active');
+
+  // Add songs in original order, using the pre-fetched data
+  for (const songId of validIds) {
+    const row = songsMap.get(songId);
+    if (!row) {
+      debugLog?.info('Song not found in database (likely deleted)', {
         module: 'data-population',
         function: 'populateHoldingTank',
         songId: songId
       });
-      
-      const result = await addToHoldingTank(songId.trim(), Dom.$('.holding_tank.active'));
-      if (result.success) {
-        addedCount++;
-      } else if (result.skipped) {
-        skippedCount++;
-      }
-      return result;
-    } else {
-      debugLog?.warn('Skipping empty or invalid song ID', { 
-        module: 'data-population',
-        function: 'populateHoldingTank',
-        songId: songId
-      });
-      return { skipped: true };
+      skippedCount++;
+      continue;
     }
-  });
-  
-  await Promise.all(addPromises);
-  
-  debugLog?.info('Holding tank population completed', { 
+
+    const title = row.title || "[Unknown Title]";
+    const artist = row.artist || "[Unknown Artist]";
+    const time = row.time || "[??:??]";
+
+    const existing_song = document.querySelector(`.holding_tank.active .list-group-item[songid="${songId}"]`);
+    let song_row;
+    if (existing_song) {
+      song_row = existing_song;
+    } else {
+      song_row = document.createElement("li");
+      song_row.style.fontSize = `${currentFontSize}px`;
+      song_row.className = "song list-group-item context-menu";
+      song_row.setAttribute("draggable", "true");
+      song_row.addEventListener('dragstart', songDrag);
+      song_row.setAttribute("songid", songId);
+      song_row.textContent = `${title} by ${artist} (${time})`;
+    }
+
+    if (targetEl) {
+      const ul = targetEl.querySelector('ul.active');
+      (ul || targetEl).appendChild(song_row);
+    }
+
+    addedCount++;
+  }
+
+  if (typeof window.saveHoldingTankToStore === 'function') {
+    window.saveHoldingTankToStore();
+  }
+
+  debugLog?.info('Holding tank population completed', {
     module: 'data-population',
     function: 'populateHoldingTank',
     totalRequested: songIds.length,
     added: addedCount,
     skipped: skippedCount
   });
-  
+
   scaleScrollable();
   return { success: true, added: addedCount, skipped: skippedCount };
 }

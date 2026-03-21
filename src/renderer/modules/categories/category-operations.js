@@ -222,53 +222,35 @@ async function addNewCategory(description) {
     if (!description || typeof description !== 'string' || description.trim() === '') {
       throw new Error('Invalid description: must be a non-empty string');
     }
-    
+
     let code = description.replace(/\s/g, "").slice(0, 4).toUpperCase();
-    
+
     // Ensure we have a valid code
     if (!code || code.length === 0) {
       throw new Error('Failed to generate category code from description');
     }
-    
+
     if (!window.secureElectronAPI || !window.secureElectronAPI.database) {
       throw new Error('Database not available');
     }
-    
-    // Check for code collision and generate unique code
-    const checkCode = async (baseCode, loopCount = 1) => {
-      if (loopCount > 10) {
-        throw new Error('Too many code collision attempts');
-      }
-      
-      const testCode = loopCount === 1 ? baseCode : `${baseCode}${loopCount}`;
-      
-      const result = await window.secureElectronAPI.database.query(
-        "SELECT * FROM categories WHERE code = ?",
-        [testCode]
-      );
-      
-      if (result.success && result.data && result.data.length > 0) {
-        return await checkCode(baseCode, loopCount + 1);
-      } else {
-        return testCode;
-      }
-    };
-    
-    const finalCode = await checkCode(code);
-    
+
+    // Find unique code with a single query instead of recursive individual lookups
+    const { findUniqueCategoryCode } = await import('./category-data.js');
+    const finalCode = await findUniqueCategoryCode(code);
+
     // Ensure we have a valid final code
     if (!finalCode || typeof finalCode !== 'string' || finalCode.trim() === '') {
       throw new Error('Failed to generate valid category code');
     }
-    
+
     // Use the working database-execute method with the correct object format
     const result = await window.secureElectronAPI.database.execute(
       "INSERT INTO categories (code, description) VALUES (?, ?)",
       [finalCode, description]
     );
-    
+
     if (result.success) {
-      debugLog?.info('New category added successfully', { 
+      debugLog?.info('New category added successfully', {
         module: 'category-operations',
         function: 'addNewCategory',
         code: finalCode,
@@ -276,7 +258,7 @@ async function addNewCategory(description) {
       });
       return result;
     } else {
-      debugLog?.warn('Failed to add category', { 
+      debugLog?.warn('Failed to add category', {
         module: 'category-operations',
         function: 'addNewCategory',
         description: description,
@@ -285,7 +267,7 @@ async function addNewCategory(description) {
       throw new Error(result.error);
     }
   } catch (error) {
-    debugLog?.warn('Database API error', { 
+    debugLog?.warn('Database API error', {
       module: 'category-operations',
       function: 'addNewCategory',
       description: description,

@@ -17,6 +17,7 @@ try {
 
 // Import secure adapters
 import { secureFileSystem, secureDatabase, securePath, secureStore } from '../adapters/secure-adapter.js';
+import { populateCategorySelect, findUniqueCategoryCode, refreshCategories } from '../categories/category-data.js';
 
 /**
  * Saves an edited song to the database
@@ -83,20 +84,15 @@ export async function saveNewSong(event) {
     if (category == "--NEW--") {
       const description = (document.getElementById('song-form-new-category') || {}).value || '';
       const baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-      const findUniqueCode = async (base, index = 1) => {
-        const test = index === 1 ? base : `${base}${index}`;
-        const check = await secureDatabase.query("SELECT 1 FROM categories WHERE code = ?", [test]);
-        const exists = Array.isArray(check?.data || check) && (check.data || check).length > 0;
-        return exists ? findUniqueCode(base, index + 1) : test;
-      };
-      const finalCode = await findUniqueCode(baseCode);
+      const finalCode = await findUniqueCategoryCode(baseCode);
       const insert = await secureDatabase.execute("INSERT INTO categories VALUES (?, ?)", [finalCode, description]);
       if (!insert?.success) {
         debugLog?.warn('Category insert failed', { module: 'song-management', function: 'saveNewSong', error: insert?.error });
         return;
       }
       debugLog?.info(`Added new category`, { module: 'song-management', function: 'saveNewSong', code: finalCode });
-      if (typeof populateCategorySelect === 'function') populateCategorySelect();
+      await refreshCategories();
+      if (typeof window.populateCategorySelect === 'function') window.populateCategorySelect();
       if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
       category = finalCode;
     }
@@ -202,20 +198,9 @@ export async function editSelectedSong() {
     if (infoEl) infoEl.value = songInfo.info || '';
     if (durEl) durEl.value = songInfo.time || '';
 
-    // Load categories securely and populate select
+    // Load categories from cache and populate select
     const catSelect = document.getElementById('song-form-category');
-    if (catSelect) catSelect.innerHTML = '';
-    const catResult = await secureDatabase.query("SELECT * FROM categories ORDER BY description ASC");
-    const categories = (catResult?.data || catResult) || [];
-    if (Array.isArray(categories)) {
-      categories.forEach(row => {
-        const opt = document.createElement('option');
-        if (row.code === songInfo.category) opt.setAttribute('selected','selected');
-        opt.value = row.code;
-        opt.textContent = row.description;
-        catSelect?.appendChild(opt);
-      });
-    }
+    await populateCategorySelect(catSelect, songInfo.category, { addNewOption: false });
 
     // Prepare and show modal
     const editForm = document.querySelector('#songFormModal form');
@@ -349,34 +334,11 @@ export async function startAddNewSong(filename, metadata = null) {
     if (addTitle) addTitle.textContent = 'Add New Song';
     const addBtn = document.getElementById('songFormSubmitButton');
     if (addBtn) addBtn.textContent = 'Add';
-    // Ensure category select element reference exists
+    // Populate categories from cache for the add flow
     const catSelect = document.getElementById('song-form-category');
-    // Populate categories for the add flow
     try {
-      if (catSelect) catSelect.innerHTML = '';
-      if (window.secureElectronAPI?.database?.query) {
-        const catResult = await window.secureElectronAPI.database.query("SELECT * FROM categories ORDER BY description ASC");
-        const rows = (catResult?.data || catResult) || [];
-        if (Array.isArray(rows)) {
-          rows.forEach(row => {
-            const opt = document.createElement('option');
-            opt.value = row.code;
-            opt.textContent = row.description;
-            catSelect?.appendChild(opt);
-          });
-        }
-      }
-      // Add new category option separator and entry
+      await populateCategorySelect(catSelect);
       if (catSelect) {
-        const sep = document.createElement('option');
-        sep.value = '';
-        sep.disabled = true;
-        sep.textContent = '-----------------------';
-        catSelect.appendChild(sep);
-        const newOpt = document.createElement('option');
-        newOpt.value = '--NEW--';
-        newOpt.textContent = 'ADD NEW CATEGORY...';
-        catSelect.appendChild(newOpt);
         catSelect.dispatchEvent(new Event('change', { bubbles: true }));
       }
     } catch (err) {

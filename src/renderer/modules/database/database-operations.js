@@ -156,38 +156,17 @@ async function deleteCategory(code, description) {
 async function addNewCategory(description) {
   try {
     let code = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-    
-    debugLog?.debug('Adding new category', { 
+
+    debugLog?.debug('Adding new category', {
       module: 'database-operations',
       function: 'addNewCategory',
       description: description,
       baseCode: code
     });
 
-    // Check for code collision and generate unique code
-    const checkCode = async (baseCode, loopCount = 1) => {
-      const testCode = loopCount === 1 ? baseCode : `${baseCode}${loopCount}`;
-      
-      const result = await secureDatabase.query(
-        "SELECT * FROM categories WHERE code = ?",
-        [testCode]
-      );
-      
-      const data = result.data || result;
-      if (data && data.length > 0) {
-        debugLog?.debug(`Code collision found for ${testCode}`, { 
-          module: 'database-operations',
-          function: 'addNewCategory',
-          testCode: testCode,
-          loopCount: loopCount
-        });
-        return checkCode(baseCode, loopCount + 1);
-      } else {
-        return testCode;
-      }
-    };
-    
-    const finalCode = await checkCode(code);
+    // Find unique code with a single query instead of recursive individual lookups
+    const { findUniqueCategoryCode } = await import('../categories/category-data.js');
+    const finalCode = await findUniqueCategoryCode(code);
     
     debugLog?.info(`Adding category ${finalCode} :: ${description}`, { 
       module: 'database-operations',
