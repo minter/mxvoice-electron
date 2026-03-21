@@ -141,13 +141,17 @@ test.describe('First run flow', () => {
     expect(fs.existsSync(path.join(dbDir, 'mxvoice.db'))).toBeTruthy();
     expect(fs.existsSync(path.join(musicDir, 'PatrickShort-CSzRockBumper.mp3'))).toBeTruthy();
     expect(fs.existsSync(hotkeysDir)).toBeTruthy();
-    // Config file may not be flushed yet on Windows; poll for up to 5 seconds
+    // Config file may not be flushed yet on Windows; poll for up to 10 seconds
     let configExists = false;
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 50; i++) {
       if (fs.existsSync(configPath)) { configExists = true; break; }
       await page.waitForTimeout(200);
     }
-    expect(configExists).toBeTruthy();
+    if (!configExists) {
+      // Debug: list what IS in the directory
+      const files = fs.existsSync(userDataDir) ? fs.readdirSync(userDataDir) : ['<dir missing>'];
+      throw new Error(`config.json not found at ${configPath} after 10s. Dir contents: ${files.join(', ')}`);
+    }
     const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     expect(cfg.first_run_completed).toBe(true);
     expect(cfg.database_directory).toBe(dbDir);

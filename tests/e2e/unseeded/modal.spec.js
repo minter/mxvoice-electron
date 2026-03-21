@@ -12,7 +12,8 @@ test.describe('First run modal behavior', () => {
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const userDataDir = path.join(__dirname, '../../fixtures/test-user-data');
+  // Use a SEPARATE directory from first-run.spec.js to avoid parallel conflicts
+  const userDataDir = path.join(__dirname, '../../fixtures/test-user-data-modal');
   // For first run, database_directory defaults to userData root (not userData/data)
   const dbDir = userDataDir;
   const musicDir = path.join(userDataDir, 'mp3');

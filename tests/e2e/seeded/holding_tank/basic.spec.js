@@ -31,6 +31,29 @@ test.describe('Holding Tank - basic', () => {
     await closeApp(app);
   });
 
+  // Dismiss any leftover modal backdrops from previous tests (e.g. rename prompts)
+  test.beforeEach(async () => {
+    if (!page) return;
+    try {
+      // Press Escape to close any open modal
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      // Force-remove any stuck backdrop via DOM
+      await page.evaluate(() => {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.querySelectorAll('.modal.show').forEach(el => {
+          el.classList.remove('show');
+          el.style.display = 'none';
+        });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+      });
+    } catch {
+      // Page might not be ready yet — ignore
+    }
+  });
+
   test('holding tank UI elements are visible and functional', async () => {
     // Verify holding tank column is visible
     await expect(page.locator('#holding-tank-column')).toBeVisible();
@@ -152,6 +175,7 @@ test.describe('Holding Tank - basic', () => {
   });
 
   test('tab renaming functionality with various submission methods', async () => {
+    test.slow(); // Opens/closes 5 modals sequentially — needs extra time on CI
     // Click on Tab 1, verify that the label is "1"
     const tab1 = page.locator('#holding_tank_tabs a[href="#holding_tank_1"]');
     await tab1.click();
