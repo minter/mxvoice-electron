@@ -9,14 +9,14 @@ Thus, 20 years later, this project to rewrite the software in a more modern way.
 
 ## Developing
 
-Mx. Voice depends on Node.js and `yarn`. Requires Node.js 22.12.0 or higher (22.18.0 recommended). The project uses `mise` for version management - see `.mise.toml`.
+Mx. Voice depends on Node.js. Requires Node.js 22.12.0 or higher (22.18.0 recommended). The project uses `mise` for version management - see `.mise.toml`.
 
 Check out the [source code from Github](https://github.com/minter/mxvoice-electron/). Go into the `mxvoice-electron` folder.
 
 The first time that you run the software in development mode, you will need to install the dependencies. Do that by running:
 
 ```bash
-yarn install
+npm install
 ```
 
 This should install any required node modules in the `node_modules` subdirectory. Please report any problems installing dependencies.
@@ -24,7 +24,7 @@ This should install any required node modules in the `node_modules` subdirectory
 Once your node dependencies are installed, you can run the currently-checked-out code in development mode with:
 
 ```bash
-yarn start
+npm start
 ```
 
 That should launch the app onto your desktop!
@@ -41,22 +41,22 @@ This project uses Playwright with first-class Electron support. Each test suite 
 
 ```bash
 # Run all tests (comprehensive E2E coverage)
-unset ELECTRON_RUN_AS_NODE && yarn test
+unset ELECTRON_RUN_AS_NODE && npm test
 
 # Interactive test runner UI
-unset ELECTRON_RUN_AS_NODE && yarn test:ui
+unset ELECTRON_RUN_AS_NODE && npm test:ui
 
 # Headed mode (see windows during tests)
-unset ELECTRON_RUN_AS_NODE && yarn test:headed
+unset ELECTRON_RUN_AS_NODE && npm test:headed
 
 # Debug mode
-unset ELECTRON_RUN_AS_NODE && yarn test:debug
+unset ELECTRON_RUN_AS_NODE && npm test:debug
 
 # View the HTML report from the last run
-yarn test:report
+npm test:report
 
 # Optional: manual smoke test (excluded from default runs)
-unset ELECTRON_RUN_AS_NODE && yarn playwright test tests/e2e/smoke.spec.js
+unset ELECTRON_RUN_AS_NODE && npx playwright test tests/e2e/smoke.spec.js
 ```
 
 **Why?** IDEs like VS Code and Cursor often set `ELECTRON_RUN_AS_NODE=1`, which prevents Electron from launching its GUI. Tests require the full GUI application.
@@ -73,8 +73,8 @@ The app follows a modern Electron architecture with context isolation enabled an
   - Responsibilities: create window/menu, initialize store/DB, secure IPC, auto-updater
   - See `src/main/README.md`
 
-- `src/preload/` (Preload, context isolated)
-  - Entry: `src/preload/preload-modular.js`
+- `src/preload/` (Preload, sandboxed + context isolated)
+  - Source: `src/preload/preload-modular.cjs` (bundled to `preload-bundle.cjs` by esbuild)
   - Exposes vetted APIs via `contextBridge` as `window.secureElectronAPI` (and a compatibility `window.electronAPI`)
   - Bridges events from main to renderer
   - See `src/preload/README.md`
@@ -87,9 +87,12 @@ The app follows a modern Electron architecture with context isolation enabled an
   - See `src/renderer/README.md`
 
 ### Security model
+- Sandbox: ON (preload bundled via esbuild, can only `require('electron')`)
 - Context Isolation: ON
 - No direct Node.js access in renderer; all privileged operations go through preload‑exposed secure APIs
+- Named IPC operations only — no raw SQL or arbitrary queries from renderer
 - IPC handlers validate inputs on the main side
+- DOMPurify sanitization on dynamic HTML rendering
 
 ### Database
 - Uses the `node-sqlite3-wasm` WebAssembly module for cross-platform compatibility
@@ -114,7 +117,7 @@ The app follows a modern Electron architecture with context isolation enabled an
 - Main process logs via structured DebugLog; renderer logs via the DebugLog module
 - Bootstrap 5 is bundled via `bootstrap.bundle.min.js` and accessed using the adapter; prefer `data-bs-*` attributes in HTML
 - Auto-updater logs show markdown processing status for release notes
-- Use `yarn test:headed` to see the app during test execution
+- Use `npm test:headed` to see the app during test execution
 
 
 ## Building, Signing, and Releasing
@@ -125,37 +128,37 @@ The following build scripts are available:
 
 ```bash
 # Development
-yarn start                    # Start the app in development mode
+npm start                    # Start the app in development mode
 
 # macOS Builds
-yarn build:mac:universal     # Build universal macOS app (x64 + ARM64)
-yarn build:mac:arm64         # Build ARM64-only macOS app
+npm run build:mac:universal     # Build universal macOS app (x64 + ARM64)
+npm run build:mac:arm64         # Build ARM64-only macOS app
 
 # Windows Builds  
-yarn build:win               # Build Windows installer
+npm run build:win               # Build Windows installer
 
 # Linux Builds
-yarn build:linux             # Build all Linux formats
-yarn build:linux:deb         # Build Debian package
-yarn build:linux:appimage    # Build AppImage
+npm run build:linux             # Build all Linux formats
+npm run build:linux:deb         # Build Debian package
+npm run build:linux:appimage    # Build AppImage
 
 # Publishing (GitHub Actions)
-yarn release:mac             # Publish macOS stable build to GitHub
-yarn release:mac:prerelease  # Publish macOS prerelease to GitHub
-yarn release:mac:draft       # Publish macOS draft to GitHub
-yarn release:win             # Publish Windows stable build to GitHub
-yarn release:win:prerelease  # Publish Windows prerelease to GitHub
-yarn release:win:draft       # Publish Windows draft to GitHub
-yarn release:linux           # Publish Linux stable build to GitHub
-yarn release:linux:prerelease # Publish Linux prerelease to GitHub
-yarn release:linux:draft     # Publish Linux draft to GitHub
+npm run release:mac             # Publish macOS stable build to GitHub
+npm run release:mac:prerelease  # Publish macOS prerelease to GitHub
+npm run release:mac:draft       # Publish macOS draft to GitHub
+npm run release:win             # Publish Windows stable build to GitHub
+npm run release:win:prerelease  # Publish Windows prerelease to GitHub
+npm run release:win:draft       # Publish Windows draft to GitHub
+npm run release:linux           # Publish Linux stable build to GitHub
+npm run release:linux:prerelease # Publish Linux prerelease to GitHub
+npm run release:linux:draft     # Publish Linux draft to GitHub
 
 # Local builds (no publishing)
-yarn pack                    # Build without publishing
-yarn dist                    # Build all platforms locally
+npm pack                    # Build without publishing
+npm run dist                    # Build all platforms locally
 
 # Utility scripts
-yarn fix:checksums          # Manually fix checksums in latest.yml
+npm run fix:checksums          # Manually fix checksums in latest.yml
 ```
 
 ### macOS
@@ -165,12 +168,12 @@ yarn fix:checksums          # Manually fix checksums in latest.yml
 **Universal Mac builds (x64 + ARM64) are built locally:**
 
 ```bash
-yarn build:mac:universal
+npm run build:mac:universal
 ```
 
 This creates universal builds (x64 + ARM64) in your `dist/` directory. For ARM64-only builds:
 ```bash
-yarn build:mac:arm64
+npm run build:mac:arm64
 ```
 
 **To release to GitHub:**
@@ -182,9 +185,9 @@ yarn build:mac:arm64
 
 2. **Or use the release scripts directly:**
    ```bash
-   yarn release:mac:prerelease  # For prerelease builds
-   yarn release:mac             # For stable releases
-   yarn release:mac:draft       # For draft releases
+   npm run release:mac:prerelease  # For prerelease builds
+   npm run release:mac             # For stable releases
+   npm run release:mac:draft       # For draft releases
    ```
 
 #### Auto-Update Support
@@ -216,18 +219,18 @@ To build Linux packages:
 
 ```bash
 # Build all Linux formats (AppImage and deb)
-yarn build:linux
+npm run build:linux
 
 # Build specific formats
-yarn build:linux:deb         # Debian package
-yarn build:linux:appimage    # AppImage
+npm run build:linux:deb         # Debian package
+npm run build:linux:appimage    # AppImage
 ```
 
 **To release to GitHub:**
 ```bash
-yarn release:linux:prerelease  # For prerelease builds
-yarn release:linux             # For stable releases
-yarn release:linux:draft       # For draft releases
+npm run release:linux:prerelease  # For prerelease builds
+npm run release:linux             # For stable releases
+npm run release:linux:draft       # For draft releases
 ```
 
 #### Linux Package Details
@@ -244,7 +247,7 @@ yarn release:linux:draft       # For draft releases
 To build and sign the Windows installer, use:
 
 ```bash
-yarn build:win
+npm run build:win
 ```
 or
 ```bash
