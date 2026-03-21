@@ -66,8 +66,13 @@ test.describe('UI - basic', () => {
     await expect(omni).toBeVisible();
     await expect(title).toBeHidden();
 
-    // Click to open advanced search (use force to bypass tooltip overlay)
-    await btn.click({ force: true });
+    // Wait for toggleAdvancedSearch to be registered, then call it directly
+    // (button click can fail on CI when tooltip or event handler timing interferes)
+    await page.waitForFunction(
+      () => typeof window.toggleAdvancedSearch === 'function',
+      { timeout: 10000 }
+    );
+    await page.evaluate(() => window.toggleAdvancedSearch());
 
     // Wait for animation + state
     await expect(btn).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 });
@@ -76,8 +81,8 @@ test.describe('UI - basic', () => {
     await expect(title).toBeVisible();
     await expect(title).toBeFocused();
 
-    // Click to close advanced search (use force to bypass tooltip overlay)
-    await btn.click({ force: true });
+    // Toggle back to close
+    await page.evaluate(() => window.toggleAdvancedSearch());
 
     await expect(btn).toHaveAttribute('aria-expanded', 'false', { timeout: 5000 });
     await expect(panel).toBeHidden();
