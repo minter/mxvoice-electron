@@ -851,7 +851,7 @@ function setupApp() {
     profileManager.initializeProfileManager({ debugLog });
     
     // Initialize profile backup manager
-    profileBackupManager.initializeProfileBackupManager({ debugLog });
+    await profileBackupManager.initializeProfileBackupManager({ debugLog });
     
     // Initialize auto-backup timer
     autoBackupTimer.initializeAutoBackupTimer({ debugLog });

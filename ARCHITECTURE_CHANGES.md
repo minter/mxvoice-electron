@@ -73,6 +73,14 @@ Added DOMPurify sanitization and safe DOM methods to all `innerHTML` sites that 
 
 Remaining safe `innerHTML` usages (clearing with `= ''`, static HTML) are unchanged.
 
+### 6. Async File I/O Migration (commit 426735b)
+
+Replaced all 21 synchronous fs calls in `profile-backup-manager.js` (`existsSync`, `mkdirSync`, `rmSync`) with async equivalents (`fs.promises.access`, `fs.promises.mkdir`, `fs.promises.rm`). Backup operations no longer block the main Electron process.
+
+Added `pathExists()` async helper. Simplified idempotent operations (recursive mkdir, force rm). Removed unused `promisify` import and replaced `promisify()` wrappers with direct `fs.promises` calls.
+
+**Files changed:** `src/main/modules/profile-backup-manager.js`, `src/main/index-modular.js`
+
 ---
 
 ## Open Concerns
@@ -91,21 +99,11 @@ Modern Electron supports `sandbox: true` with `contextBridge`-based preload scri
 
 **Recommendation:** Test enabling sandbox; refactor preload if needed.
 
-#### 2. Synchronous File I/O Blocking Main Process
-
-**File:** `src/main/modules/profile-backup-manager.js` (1026 lines, ~22 sync calls)
-
-Uses `fs.existsSync()`, `fs.mkdirSync()`, `fs.rmSync()`, and a `while (fs.existsSync(lockPath))` polling loop that mixes synchronous `existsSync` with an async 100ms sleep. The sync calls block the main Electron process during backup operations. Note: `unlink` calls in this file already use async `fs.promises.unlink`.
-
-**Key locations:** Lines 50-51, 163 (sync polling loop), 275, 328, 456, 485-486, 538, 548-549, 677, 694, 713-714, 718, 754, 759, 823-824, 870
-
-**Recommendation:** Migrate to `fs.promises` with `async`/`await` throughout.
-
 ---
 
 ### High
 
-#### 3. Pervasive Swallowed Errors
+#### 2. Pervasive Swallowed Errors
 
 **~24 empty `catch` blocks and ~10 `.catch(() => {})` across the renderer.**
 
@@ -119,7 +117,7 @@ Notable locations:
 
 **Recommendation:** Add `debugLog?.warn()` to catch blocks. Keep intentional ones (lazy imports, benign fallbacks) but document why.
 
-#### 4. Event Listener Memory Leak Risk
+#### 3. Event Listener Memory Leak Risk
 
 **130 `addEventListener` calls vs 12 `removeEventListener` calls** across `src/renderer`.
 
@@ -130,7 +128,7 @@ Worst offenders:
 
 **Recommendation:** Implement `AbortController`-based cleanup or explicit teardown functions for component lifecycle management.
 
-#### 5. No Unit Tests
+#### 4. No Unit Tests
 
 Only E2E tests exist (123 tests, ~2.7 min). No unit tests for:
 - Named IPC database handlers
@@ -145,7 +143,7 @@ Only E2E tests exist (123 tests, ~2.7 min). No unit tests for:
 
 ### Medium
 
-#### 6. Freeform State Management
+#### 5. Freeform State Management
 
 **File:** `src/renderer/modules/shared-state.js`
 
@@ -153,7 +151,7 @@ Clean observer pattern implementation, but allows direct mutation with no valida
 
 **Recommendation:** Add type validation for known keys; consider `Object.freeze()` on returned values.
 
-#### 7. Code Duplication
+#### 6. Code Duplication
 
 Repeated patterns across modules:
 - Error logging boilerplate
@@ -166,7 +164,7 @@ Repeated patterns across modules:
 
 ### Low
 
-#### 8. Module Coupling
+#### 7. Module Coupling
 
 95 renderer modules with no circular dependency detection. Global `window.debugLog` and `window.electronTest` scattered throughout. Modules reference each other via `window.*` globals rather than explicit imports.
 
