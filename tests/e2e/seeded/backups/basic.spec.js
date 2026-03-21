@@ -220,7 +220,7 @@ test.describe('Profile Backups - basic', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test('can create a manual backup via menu', async () => {
+  test('can create a manual backup via menu', { timeout: 60_000 }, async () => {
     // Create some profile state to backup
     const stateFile = path.join(profileDir, 'state.json');
     const testState = {

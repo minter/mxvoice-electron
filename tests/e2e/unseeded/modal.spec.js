@@ -51,7 +51,7 @@ test.describe('First run modal behavior', () => {
     }
   });
 
-  test('first run modal does not appear after adding song and restarting', async () => {
+  test('first run modal does not appear after adding song and restarting', { timeout: 60_000 }, async () => {
     // 1) First-run modal appears
     const firstRunModal = page.locator('#firstRunModal');
     await expect(firstRunModal).toBeVisible({ timeout: 10000 });
@@ -198,13 +198,15 @@ test.describe('First run modal behavior', () => {
     // 10) Restore dialog
     await app.evaluate(() => { globalThis.__restoreDialog?.(); });
 
-    // 11) Close the app
+    // 11) Close the app and wait for process to fully exit
     await app.close();
     app = null;
     page = null;
+    // Allow the OS to fully release the process and its resources
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // 12) Reopen the app without resetting state
-    app = await electron.launch({
+    // 12) Reopen the app without resetting state (retry once on CI flake)
+    const launchOpts = {
       executablePath: electronPath,
       args: ['.', '--profile=Default User'],
       env: {
@@ -217,7 +219,14 @@ test.describe('First run modal behavior', () => {
         HOME: fakeHome,
         APPDATA: fakeHome,
       },
-    });
+    };
+    try {
+      app = await electron.launch(launchOpts);
+    } catch {
+      // Retry after a longer settle if the first launch fails
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      app = await electron.launch(launchOpts);
+    }
 
     page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');

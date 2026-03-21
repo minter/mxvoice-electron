@@ -104,15 +104,18 @@ test.describe('Categories - management', () => {
     try {
       // Wait for the page to be fully loaded
       await testPage.waitForLoadState('networkidle');
-      
+
+      // Wait for the openCategoriesModal function to be registered on window
+      // (FunctionRegistry may still be initializing after networkidle)
+      await testPage.waitForFunction(
+        () => typeof window.openCategoriesModal === 'function',
+        { timeout: 15000 }
+      );
+
       // Call the openCategoriesModal function directly through the page context
       // This simulates what happens when the menu is selected
       await testPage.evaluate(() => {
-        if (typeof window.openCategoriesModal === 'function') {
-          window.openCategoriesModal();
-        } else {
-          throw new Error('openCategoriesModal function not available');
-        }
+        window.openCategoriesModal();
       });
       
       // Wait for the modal to appear
