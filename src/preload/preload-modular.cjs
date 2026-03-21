@@ -8,19 +8,17 @@
  */
 
 const { ipcRenderer, contextBridge } = require('electron');
-const log = require('electron-log');
 
 // Import preload modules
 const ipcBridge = require('./modules/ipc-bridge.cjs');
 const secureApiExposer = require('./modules/secure-api-exposer.cjs');
 
-// Initialize debug logger using electron-log directly
-// Don't use electron-store in preload context as it causes issues
+// IPC-based logger — sends log messages to main process (sandbox-safe)
 const debugLog = {
-  info: (message, context) => log.info(message, context),
-  error: (message, context) => log.error(message, context),
-  warn: (message, context) => log.warn(message, context),
-  debug: (message, context) => log.debug(message, context)
+  info: (message, context) => ipcRenderer.send('preload-log', 'info', message, context),
+  error: (message, context) => ipcRenderer.send('preload-log', 'error', message, context),
+  warn: (message, context) => ipcRenderer.send('preload-log', 'warn', message, context),
+  debug: (message, context) => ipcRenderer.send('preload-log', 'debug', message, context)
 };
 
   // Note: Console override removed for security - use debug logger instead

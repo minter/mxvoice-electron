@@ -308,18 +308,8 @@ const secureElectronAPI = {
     },
     
     onAddDialogLoad: (callback) => {
-      const handler = async (_event, filename) => {
-        try {
-          const mm = await import('music-metadata');
-          const metadata = await mm.parseFile(filename);
-          callback(filename, metadata);
-        } catch (err) {
-          // Fallback: provide filename without metadata
-          if (debugLog && typeof debugLog.warn === 'function') {
-            debugLog.warn('Failed to parse metadata for file', { module: 'secure-api-exposer', function: 'onAddDialogLoad', error: err?.message, filename });
-          }
-          callback(filename);
-        }
+      const handler = (_event, filename, metadata) => {
+        callback(filename, metadata || null);
       };
       ipcRenderer.on('add_dialog_load', handler);
       return () => ipcRenderer.removeListener('add_dialog_load', handler);

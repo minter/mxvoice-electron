@@ -11,6 +11,7 @@ const { dialog, app } = electron;
 import fs from 'fs';
 import path from 'path';
 import readlines from 'n-readlines';
+import { parseFile as parseAudioMetadata } from 'music-metadata';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -271,7 +272,7 @@ function addFileDialog() {
     ],
     message: 'Choose audio file to add to Mx. Voice',
     properties: ['openFile']
-  }).then(result => {
+  }).then(async result => {
     if (result.canceled == true) {
       debugLog?.info('Silently exiting add file', { module: 'file-operations', function: 'addFileDialog' });
       return;
@@ -279,7 +280,14 @@ function addFileDialog() {
     else {
       const filename = result.filePaths[0];
       debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'addFileDialog', filename: filename });
-      mainWindow.webContents.send('add_dialog_load', filename);
+      // Parse audio metadata in main process (preload cannot access fs in sandbox mode)
+      let metadata = null;
+      try {
+        metadata = await parseAudioMetadata(filename);
+      } catch (err) {
+        debugLog?.warn('Failed to parse audio metadata', { module: 'file-operations', function: 'addFileDialog', error: err?.message, filename });
+      }
+      mainWindow.webContents.send('add_dialog_load', filename, metadata);
     }
   }).catch(err => {
     debugLog?.error('Error adding file:', { module: 'file-operations', function: 'addFileDialog', error: err });

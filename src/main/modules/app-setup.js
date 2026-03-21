@@ -58,8 +58,8 @@ function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScr
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, '../../preload/preload-modular.cjs'),
-      sandbox: false, // Keep false for now as we're using preload scripts
+      preload: path.join(__dirname, '../../preload/preload-bundle.cjs'),
+      sandbox: true,
       webSecurity: true,
       allowRunningInsecureContent: false,
       // Enhanced security settings
@@ -795,7 +795,7 @@ function showAboutDialog() {
       backgroundColor,
       autoHideMenuBar: true,
       webPreferences: {
-        sandbox: false, // Required for preload script
+        sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
         preload: path.join(__dirname, '../../preload/about-preload.cjs')

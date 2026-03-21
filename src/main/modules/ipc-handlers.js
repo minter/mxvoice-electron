@@ -54,6 +54,13 @@ function initializeIpcHandlers(dependencies) {
 
 // Register all IPC handlers
 function registerAllHandlers() {
+  // Preload logging — fire-and-forget via ipcRenderer.send (sandbox-safe)
+  ipcMain.on('preload-log', (_event, level, message, context) => {
+    if (debugLog && typeof debugLog[level] === 'function') {
+      debugLog[level](message, context);
+    }
+  });
+
   // Logs API (centralized log service)
   ipcMain.handle('logs:write', async (_event, payload) => {
     try {
@@ -2382,6 +2389,7 @@ function registerAllHandlers() {
 
   // Remove all handlers (for cleanup)
 function removeAllHandlers() {
+  ipcMain.removeAllListeners('preload-log');
   // Legacy handlers
   ipcMain.removeHandler('get-app-path');
   ipcMain.removeHandler('show-directory-picker');
