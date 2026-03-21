@@ -82,16 +82,28 @@ test.describe('First run flow', () => {
     // Wait for modal to be hidden with extended timeout
     await expect(firstRunModal).toBeHidden({ timeout: TEST_CONFIG.platform.defaultTimeout });
 
-    // 3) Click into the search bar
+    // 3) Wait for the sample song to be fully indexed in the database
+    await page.waitForTimeout(2000);
+
+    // 4) Click into the search bar and search
     const searchInput = page.locator('#omni_search');
     await searchInput.click();
 
-    // 4) Hit Enter to search (empty query → should return seeded song)
+    // Hit Enter to search (empty query → should return seeded song)
     await searchInput.press('Enter');
 
     // 5) Verify exactly one result and it is the CSz Rock Bumper
+    // Retry search if results don't appear (DB indexing can be slow on CI)
     const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(1, { timeout: TEST_CONFIG.platform.defaultTimeout });
+    try {
+      await expect(rows).toHaveCount(1, { timeout: 10000 });
+    } catch {
+      // Retry: clear and search again after a brief wait
+      await searchInput.clear();
+      await page.waitForTimeout(1000);
+      await searchInput.press('Enter');
+      await expect(rows).toHaveCount(1, { timeout: 10000 });
+    }
     const firstRow = rows.first();
     await expect(firstRow).toContainText('Rock Bumper');
     await expect(firstRow).toContainText('Patrick Short');

@@ -90,9 +90,9 @@ test.describe('Preferences - basic', () => {
     expect(hotkeyDir).toBeTruthy();
     expect(fadeSeconds).toBeTruthy();
     
-    // Close modal
+    // Close modal (wait for Bootstrap fade animation to complete)
     await page.locator('#preferencesModal .btn-close').click();
-    await expect(page.locator('#preferencesModal')).not.toBeVisible();
+    await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 10000 });
   });
 
   test('preferences can be modified and saved', async () => {
@@ -154,9 +154,9 @@ test.describe('Preferences - basic', () => {
     expect(savedFadeValue).toBe(newValue);
     expect(savedDebugState).toBe(!originalDebugState);
     
-    // Close modal
+    // Close modal (wait for Bootstrap fade animation to complete)
     await page.locator('#preferencesModal .btn-close').click();
-    await expect(page.locator('#preferencesModal')).not.toBeVisible();
+    await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 10000 });
   });
 
   test('directory picker buttons are present and functional', async () => {

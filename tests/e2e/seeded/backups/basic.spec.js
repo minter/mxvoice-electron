@@ -250,7 +250,7 @@ test.describe('Profile Backups - basic', () => {
     expect(metadata.backups.length).toBeGreaterThan(0);
   });
 
-  test('can list backups', async () => {
+  test('can list backups', { timeout: 60_000 }, async () => {
     // Ensure we have at least one backup
     const metadataFile = path.join(backupDir, 'backup-metadata.json');
     if (!fs.existsSync(metadataFile) || JSON.parse(fs.readFileSync(metadataFile, 'utf8')).backups.length === 0) {

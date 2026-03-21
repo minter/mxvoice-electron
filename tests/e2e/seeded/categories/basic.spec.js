@@ -212,13 +212,15 @@ test.describe('Categories - management', () => {
       // Wait for the page to be fully loaded
       await testPage.waitForLoadState('networkidle');
       
+      // Wait for the openCategoriesModal function to be registered on window
+      await testPage.waitForFunction(
+        () => typeof window.openCategoriesModal === 'function',
+        { timeout: 15000 }
+      );
+
       // Open the categories management modal
       await testPage.evaluate(() => {
-        if (typeof window.openCategoriesModal === 'function') {
-          window.openCategoriesModal();
-        } else {
-          throw new Error('openCategoriesModal function not available');
-        }
+        window.openCategoriesModal();
       });
       
       // Wait for the modal to appear
@@ -360,13 +362,15 @@ test.describe('Categories - management', () => {
       // Wait for the page to be fully loaded
       await testPage.waitForLoadState('networkidle');
       
+      // Wait for the openCategoriesModal function to be registered on window
+      await testPage.waitForFunction(
+        () => typeof window.openCategoriesModal === 'function',
+        { timeout: 15000 }
+      );
+
       // Open the categories management modal
       await testPage.evaluate(() => {
-        if (typeof window.openCategoriesModal === 'function') {
-          window.openCategoriesModal();
-        } else {
-          throw new Error('openCategoriesModal function not available');
-        }
+        window.openCategoriesModal();
       });
       
       // Wait for the modal to appear
@@ -725,13 +729,15 @@ test.describe('Categories - management', () => {
       // Wait for the page to be fully loaded
       await testPage.waitForLoadState('networkidle');
       
+      // Wait for the openCategoriesModal function to be registered on window
+      await testPage.waitForFunction(
+        () => typeof window.openCategoriesModal === 'function',
+        { timeout: 15000 }
+      );
+
       // Open the categories management modal
       await testPage.evaluate(() => {
-        if (typeof window.openCategoriesModal === 'function') {
-          window.openCategoriesModal();
-        } else {
-          throw new Error('openCategoriesModal function not available');
-        }
+        window.openCategoriesModal();
       });
       
       // Wait for the modal to appear

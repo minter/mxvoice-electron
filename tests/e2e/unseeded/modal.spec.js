@@ -202,10 +202,20 @@ test.describe('First run modal behavior', () => {
     await app.close();
     app = null;
     page = null;
-    // Allow the OS to fully release the process and its resources
-    await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // 12) Reopen the app without resetting state (retry once on CI flake)
+    // Allow the OS to fully release the process, ports, and file locks
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Remove any Electron/Chromium lock files that could prevent a clean relaunch
+    const lockFiles = ['lockfile', 'SingletonLock', 'SingletonSocket', 'SingletonCookie'];
+    for (const lf of lockFiles) {
+      const lockPath = path.join(userDataDir, lf);
+      if (fs.existsSync(lockPath)) {
+        try { fs.rmSync(lockPath, { force: true }); } catch { /* best effort */ }
+      }
+    }
+
+    // 12) Reopen the app without resetting state (retry with increasing settle on CI)
     const launchOpts = {
       executablePath: electronPath,
       args: ['.', '--profile=Default User'],
@@ -220,12 +230,18 @@ test.describe('First run modal behavior', () => {
         APPDATA: fakeHome,
       },
     };
-    try {
-      app = await electron.launch(launchOpts);
-    } catch {
-      // Retry after a longer settle if the first launch fails
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      app = await electron.launch(launchOpts);
+    let launchAttempts = 0;
+    const maxAttempts = 3;
+    while (launchAttempts < maxAttempts) {
+      try {
+        app = await electron.launch(launchOpts);
+        break;
+      } catch (err) {
+        launchAttempts++;
+        if (launchAttempts >= maxAttempts) throw err;
+        // Progressively longer settle between retries
+        await new Promise(resolve => setTimeout(resolve, 2000 * launchAttempts));
+      }
     }
 
     page = await app.firstWindow();
