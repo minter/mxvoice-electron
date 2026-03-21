@@ -81,6 +81,17 @@ Added `pathExists()` async helper. Simplified idempotent operations (recursive m
 
 **Files changed:** `src/main/modules/profile-backup-manager.js`, `src/main/index-modular.js`
 
+### 7. Event Listener Leak Fixes (commit e4c3a75)
+
+Added `AbortController`-based lifecycle management to the two modules with actual listener leaks. Previous controller is aborted before each re-initialization, preventing listener accumulation.
+
+| Module | Fix |
+|--------|-----|
+| `drag-drop/event-handlers.js` | Module-level AbortController; all holding tank + column header + drop zone listeners use `{ signal }` |
+| `hotkeys/hotkey-ui.js` | Module-level AbortController; drop, dragover, dragleave, and tab dblclick listeners use `{ signal }` |
+
+Event-coordination modules (`event-delegator.js`, `audio-control-events.js`, `search-events.js`, `ui-interaction-events.js`, `hotkeys-events.js`) already had proper Map-based cleanup with `detachEvents()` and were not modified.
+
 ---
 
 ## Open Concerns
@@ -103,7 +114,7 @@ Modern Electron supports `sandbox: true` with `contextBridge`-based preload scri
 
 ### High
 
-#### 2. Pervasive Swallowed Errors
+#### 2. Swallowed Errors
 
 **~24 empty `catch` blocks and ~10 `.catch(() => {})` across the renderer.**
 
@@ -117,18 +128,7 @@ Notable locations:
 
 **Recommendation:** Add `debugLog?.warn()` to catch blocks. Keep intentional ones (lazy imports, benign fallbacks) but document why.
 
-#### 3. Event Listener Memory Leak Risk
-
-**130 `addEventListener` calls vs 12 `removeEventListener` calls** across `src/renderer`.
-
-Worst offenders:
-- `modules/drag-drop/event-handlers.js` — 11 listeners added in `setupDragDropEventHandlers()` with no cleanup function
-- `modules/event-coordination/` — 51 listeners added vs 9 removed; teardown exists but is insufficient
-- `modules/hotkeys/` — Tab-scoped listeners that accumulate on tab switches
-
-**Recommendation:** Implement `AbortController`-based cleanup or explicit teardown functions for component lifecycle management.
-
-#### 4. No Unit Tests
+#### 3. No Unit Tests
 
 Only E2E tests exist (123 tests, ~2.7 min). No unit tests for:
 - Named IPC database handlers
@@ -143,7 +143,7 @@ Only E2E tests exist (123 tests, ~2.7 min). No unit tests for:
 
 ### Medium
 
-#### 5. Freeform State Management
+#### 4. Freeform State Management
 
 **File:** `src/renderer/modules/shared-state.js`
 
@@ -151,7 +151,7 @@ Clean observer pattern implementation, but allows direct mutation with no valida
 
 **Recommendation:** Add type validation for known keys; consider `Object.freeze()` on returned values.
 
-#### 6. Code Duplication
+#### 5. Code Duplication
 
 Repeated patterns across modules:
 - Error logging boilerplate
@@ -164,7 +164,7 @@ Repeated patterns across modules:
 
 ### Low
 
-#### 7. Module Coupling
+#### 6. Module Coupling
 
 95 renderer modules with no circular dependency detection. Global `window.debugLog` and `window.electronTest` scattered throughout. Modules reference each other via `window.*` globals rather than explicit imports.
 
