@@ -51,8 +51,6 @@ class DatabaseModule {
     this.deleteSong = databaseOperations.deleteSong;
     this.getSongById = databaseOperations.getSongById;
     this.addSongsByPath = databaseOperations.addSongsByPath;
-    this.executeQuery = databaseOperations.executeQuery;
-    this.executeStatement = databaseOperations.executeStatement;
   }
 
   /**
@@ -116,9 +114,7 @@ class DatabaseModule {
       saveNewSong: this.saveNewSong,
       deleteSong: this.deleteSong,
       getSongById: this.getSongById,
-      addSongsByPath: this.addSongsByPath,
-      executeQuery: this.executeQuery,
-      executeStatement: this.executeStatement
+      addSongsByPath: this.addSongsByPath
     };
   }
 
@@ -219,17 +215,6 @@ class DatabaseModule {
         results.databaseOperations.addSongsByPath = '❌ Function missing';
       }
 
-      if (typeof this.executeQuery === 'function') {
-        results.databaseOperations.executeQuery = '✅ Function exists';
-      } else {
-        results.databaseOperations.executeQuery = '❌ Function missing';
-      }
-
-      if (typeof this.executeStatement === 'function') {
-        results.databaseOperations.executeStatement = '✅ Function exists';
-      } else {
-        results.databaseOperations.executeStatement = '❌ Function missing';
-      }
     } catch (error) {
       results.databaseOperations.error = `❌ Error: ${error.message}`;
     }
@@ -268,8 +253,6 @@ export const saveNewSong = databaseModule.saveNewSong;
 export const deleteSong = databaseModule.deleteSong;
 export const getSongById = databaseModule.getSongById;
 export const addSongsByPath = databaseModule.addSongsByPath;
-export const executeQuery = databaseModule.executeQuery;
-export const executeStatement = databaseModule.executeStatement;
 
 // Default export for module loading - export the instance directly
 export default databaseModule; 

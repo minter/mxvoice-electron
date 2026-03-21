@@ -63,10 +63,7 @@ function getCategories() {
 function getCategoryByCode(code) {
   return new Promise((resolve, reject) => {
     if (window.secureElectronAPI && window.secureElectronAPI.database) {
-      window.secureElectronAPI.database.query(
-        "SELECT * FROM categories WHERE code = ?",
-        [code]
-      ).then(result => {
+      window.secureElectronAPI.database.getCategoryByCode(code).then(result => {
         if (result.success && result.data.length > 0) {
           debugLog?.info('Category retrieved successfully', { 
             module: 'category-operations',
@@ -169,10 +166,7 @@ function deleteCategory(code, description) {
         description: "Uncategorized"
       }).then(() => {
         // Update all songs in this category to "Uncategorized"
-        return window.secureElectronAPI.database.execute(
-          "UPDATE mrvoice SET category = ? WHERE category = ?",
-          ["UNC", code]
-        );
+        return window.secureElectronAPI.database.reassignSongCategory(code, "UNC");
       }).then(() => {
         // Delete the category
         return window.secureElectronAPI.database.deleteCategory(code, "Category deletion");
@@ -243,11 +237,8 @@ async function addNewCategory(description) {
       throw new Error('Failed to generate valid category code');
     }
 
-    // Use the working database-execute method with the correct object format
-    const result = await window.secureElectronAPI.database.execute(
-      "INSERT INTO categories (code, description) VALUES (?, ?)",
-      [finalCode, description]
-    );
+    // Use named operation to add category
+    const result = await window.secureElectronAPI.database.addCategory({code: finalCode, description});
 
     if (result.success) {
       debugLog?.info('New category added successfully', {

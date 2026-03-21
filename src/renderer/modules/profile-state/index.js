@@ -414,17 +414,14 @@ async function restoreHotkeyTabs(hotkeyTabs, hotkeysModule) {
         });
         try {
           // Validate that song still exists in database and get its info
-          const songResult = await window.secureElectronAPI.database.query(
-            'SELECT * FROM mrvoice WHERE id = ?',
-            [songId]
-          );
-          
+          const songResult = await window.secureElectronAPI.database.getSongById(songId);
+
           if (songResult.success && songResult.data && songResult.data.length > 0) {
             const row = songResult.data[0];
             const title = row.title || '[Unknown Title]';
             const artist = row.artist || '[Unknown Artist]';
             const time = row.time || '[??:??]';
-            
+
             // Find the element in this specific tab (not relying on .active)
             const tabContent = document.getElementById(`hotkeys_list_${tabNumber}`);
             const element = tabContent?.querySelector(`#${key}_hotkey`);
@@ -539,17 +536,14 @@ async function restoreHoldingTankTabs(holdingTankTabs, holdingTankModule) {
       for (const songId of songIds) {
         try {
           // Validate that song still exists in database and get its info
-          const songResult = await window.secureElectronAPI.database.query(
-            'SELECT * FROM mrvoice WHERE id = ?',
-            [songId]
-          );
-          
+          const songResult = await window.secureElectronAPI.database.getSongById(songId);
+
           if (songResult.success && songResult.data && songResult.data.length > 0) {
             const row = songResult.data[0];
             const title = row.title || '[Unknown Title]';
             const artist = row.artist || '[Unknown Artist]';
             const time = row.time || '[??:??]';
-            
+
             // Build DOM element directly (like addToHoldingTank but without the save)
             const song_row = document.createElement('li');
             song_row.style.fontSize = '11px';

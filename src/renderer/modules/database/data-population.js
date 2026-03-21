@@ -46,7 +46,7 @@ async function addToHoldingTank(song_id, element) {
       songId: song_id
     });
     
-    const result = await secureDatabase.query("SELECT * from mrvoice WHERE id = ?", [song_id]);
+    const result = await secureDatabase.getSongById(song_id);
     const data = result.data || result;
     
     if (data && data.length > 0) {
@@ -156,13 +156,9 @@ async function populateHoldingTank(songIds) {
   }
 
   // Batch query: fetch all songs in one query instead of N individual queries
-  const placeholders = validIds.map(() => '?').join(', ');
   let songsMap = new Map();
   try {
-    const result = await secureDatabase.query(
-      `SELECT * FROM mrvoice WHERE id IN (${placeholders})`,
-      validIds
-    );
+    const result = await secureDatabase.getSongsByIds(validIds);
     const rows = result?.data || result || [];
     if (Array.isArray(rows)) {
       rows.forEach(row => songsMap.set(String(row.id), row));

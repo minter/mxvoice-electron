@@ -101,10 +101,9 @@ export async function addSongsByPath(pathArray, category) {
     const joinRes = await securePath.join(musicDirectory, newFilename);
     const newPath = joinRes?.data || joinRes;
 
-    const insRes = await secureDatabase.execute(
-      "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)",
-      [title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000)]
-    );
+    const insRes = await secureDatabase.addSong({
+      title, artist, category, filename: newFilename, duration: durationString
+    });
 
     // Use lastInsertRowid from the insert result
     const lastId = insRes?.data?.lastInsertRowid || insRes?.lastInsertRowid || null;
@@ -245,7 +244,7 @@ export async function saveBulkUpload(event) {
     const baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
     try {
       const finalCode = await findUniqueCategoryCode(baseCode);
-      const ins = await secureDatabase.execute("INSERT INTO categories VALUES (?, ?)", [finalCode, description]);
+      const ins = await secureDatabase.addCategory({code: finalCode, description});
       if (ins?.success) {
         debugLog?.info('Added new row into database', { module: 'bulk-operations', function: 'saveBulkUpload', code: finalCode, description });
         await refreshCategories();

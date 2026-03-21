@@ -125,16 +125,22 @@ function populateCategoriesModal(preserveScroll = false) {
         if (container) {
           const rowDiv = document.createElement('div');
           rowDiv.className = 'row g-2 mb-3';
+          const safeCode = window.DOMPurify ? window.DOMPurify.sanitize(row.code) : row.code;
+          const safeDesc = window.DOMPurify ? window.DOMPurify.sanitize(row.description) : row.description;
           rowDiv.innerHTML = `
             <div class="col-sm-8">
-              <div catcode="${row.code}" class="category-description">${row.description}</div>
-              <input style="display: none;" type="text" class="form-control form-control-sm categoryDescription" catcode="${row.code}" id="categoryDescription-${row.code}" value="${row.description}" required>
+              <div catcode="${safeCode}" class="category-description">${safeDesc}</div>
+              <input style="display: none;" type="text" class="form-control form-control-sm categoryDescription" catcode="${safeCode}" id="categoryDescription-${safeCode}" value="${safeDesc}" required>
             </div>
             <div class="col-sm-4">
-              <a href="#" class="btn btn-primary btn-xs" onclick="editCategoryUI('${row.code}')">Edit</a>&nbsp;
-              <a class="delete_link btn btn-danger btn-xs" href="#" onclick="deleteCategory(event,'${row.code}','${row.description}')">Delete</a>
+              <a href="#" class="btn btn-primary btn-xs category-edit-btn" data-event-setup="true">Edit</a>&nbsp;
+              <a class="delete_link btn btn-danger btn-xs category-delete-btn" href="#" data-event-setup="true">Delete</a>
             </div>
           `;
+          const editBtn = rowDiv.querySelector('.category-edit-btn');
+          if (editBtn) editBtn.addEventListener('click', (e) => { e.preventDefault(); if (window.editCategoryUI) window.editCategoryUI(row.code); });
+          const deleteBtn = rowDiv.querySelector('.category-delete-btn');
+          if (deleteBtn) deleteBtn.addEventListener('click', (e) => { e.preventDefault(); if (window.deleteCategory) window.deleteCategory(e, row.code, row.description); });
           container.appendChild(rowDiv);
         }
       });

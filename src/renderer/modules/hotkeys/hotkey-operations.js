@@ -93,7 +93,7 @@ function loadHotkeysFromStore(options = {}) {
             });
           } else if (storedHotkeysHtml && typeof storedHotkeysHtml === 'string') {
             const column = document.getElementById('hotkeys-column');
-            if (column) column.innerHTML = storedHotkeysHtml;
+            if (column) column.innerHTML = window.DOMPurify ? window.DOMPurify.sanitize(storedHotkeysHtml) : storedHotkeysHtml;
             document.getElementById('selected_row')?.removeAttribute('id');
           }
         });

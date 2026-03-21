@@ -257,7 +257,11 @@ function playSongWithFilename(filename, row, song_id) {
                 const now = document.getElementById('song_now_playing');
                 if (now) {
                   const title = row?.title || filename;
-                  now.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> File not found: ${title}`;
+                  now.textContent = '';
+                  const icon = document.createElement('i');
+                  icon.className = 'fas fa-exclamation-triangle text-warning';
+                  now.appendChild(icon);
+                  now.appendChild(document.createTextNode(` File not found: ${title}`));
                   now.style.display = '';
                   now.removeAttribute('songid');
                 }
@@ -348,7 +352,12 @@ function playSongWithFilename(filename, row, song_id) {
                   }
                   const now = document.getElementById('song_now_playing');
                   if (now) {
-                    now.innerHTML = `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`;
+                    now.textContent = '';
+                    const nowIcon = document.createElement('i');
+                    nowIcon.id = 'song_spinner';
+                    nowIcon.className = 'fas fa-volume-up';
+                    now.appendChild(nowIcon);
+                    now.appendChild(document.createTextNode(` ${title} ${artist}`));
                     now.style.display = '';
                     now.setAttribute('songid', String(song_id));
                   }
@@ -486,7 +495,11 @@ function playSongWithFilename(filename, row, song_id) {
               const now = document.getElementById('song_now_playing');
               if (now) {
                 const title = row?.title || filename;
-                now.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> File not found: ${title}`;
+                now.textContent = '';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-exclamation-triangle text-warning';
+                now.appendChild(icon);
+                now.appendChild(document.createTextNode(` File not found: ${title}`));
                 now.style.display = '';
                 now.removeAttribute('songid');
               }
@@ -556,7 +569,12 @@ function playSongWithFilename(filename, row, song_id) {
                 }
                 const now = document.getElementById('song_now_playing');
                 if (now) {
-                  now.innerHTML = `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`;
+                  now.textContent = '';
+                  const nowIcon = document.createElement('i');
+                  nowIcon.id = 'song_spinner';
+                  nowIcon.className = 'fas fa-volume-up';
+                  now.appendChild(nowIcon);
+                  now.appendChild(document.createTextNode(` ${title} ${artist}`));
                   now.style.display = '';
                   now.setAttribute('songid', String(song_id));
                 }
@@ -692,7 +710,7 @@ function playSongFromId(song_id) {
   }
 
   secureDatabase
-    .query('SELECT * from mrvoice WHERE id = ?', [song_id])
+    .getSongById(song_id)
     .then((result) => {
       if (result.success && result.data.length > 0) {
         const row = result.data[0];

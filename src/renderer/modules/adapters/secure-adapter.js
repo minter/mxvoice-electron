@@ -24,98 +24,17 @@ try {
  */
 export const secureDatabase = {
   /**
-   * Execute a database query and return results
-   * @param {string} sql - SQL query string
-   * @param {Array} params - Query parameters
-   * @returns {Promise<Object>} Query results
-   */
-  query: async (sql, params = []) => {
-    try {
-      // Try secure API first
-      if (window.secureElectronAPI?.database?.query) {
-        const result = await window.secureElectronAPI.database.query(sql, params);
-        return result;
-      }
-      
-      // Fallback to legacy database if available
-      if (typeof window.db !== 'undefined' && window.db.prepare) {
-        const stmt = window.db.prepare(sql);
-        const rows = stmt.all(params);
-        return { success: true, data: rows };
-      }
-      
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Database query failed:', { 
-        module: 'secure-adapter', 
-        function: 'secureDatabase.query', 
-        sql, 
-        params, 
-        error: error.message 
-      });
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
-   * Execute a database statement (INSERT, UPDATE, DELETE)
-   * @param {string} sql - SQL statement string
-   * @param {Array} params - Statement parameters
-   * @returns {Promise<Object>} Execution result
-   */
-  execute: async (sql, params = []) => {
-    try {
-      // Try secure API first
-      if (window.secureElectronAPI?.database?.execute) {
-        const result = await window.secureElectronAPI.database.execute(sql, params);
-        return result;
-      }
-      
-      // Fallback to legacy database if available
-      if (typeof window.db !== 'undefined' && window.db.prepare) {
-        const stmt = window.db.prepare(sql);
-        const result = stmt.run(params);
-        return { success: true, changes: result.changes, lastInsertRowid: result.lastInsertRowid };
-      }
-      
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Database execute failed:', { 
-        module: 'secure-adapter', 
-        function: 'secureDatabase.execute', 
-        sql, 
-        params, 
-        error: error.message 
-      });
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
    * Get all categories from the database
    * @returns {Promise<Object>} Categories data
    */
   getCategories: async () => {
     try {
-      // Try secure API first
       if (window.secureElectronAPI?.database?.getCategories) {
         return await window.secureElectronAPI.database.getCategories();
       }
-      
-      // Fallback to legacy database if available
-      if (typeof window.db !== 'undefined' && window.db.prepare) {
-        const stmt = window.db.prepare("SELECT * FROM categories ORDER BY code");
-        const rows = stmt.all();
-        return { success: true, data: rows };
-      }
-      
       throw new Error('No database API available');
     } catch (error) {
-      debugLog?.error('Get categories failed:', { 
-        module: 'secure-adapter', 
-        function: 'secureDatabase.getCategories', 
-        error: error.message 
-      });
+      debugLog?.error('Get categories failed:', { module: 'secure-adapter', function: 'secureDatabase.getCategories', error: error.message });
       return { success: false, error: error.message };
     }
   },
@@ -127,36 +46,144 @@ export const secureDatabase = {
    */
   addSong: async (songData) => {
     try {
-      // Try secure API first
       if (window.secureElectronAPI?.database?.addSong) {
         return await window.secureElectronAPI.database.addSong(songData);
       }
-      
-      // Fallback to legacy database if available
-      if (typeof window.db !== 'undefined' && window.db.prepare) {
-        const stmt = window.db.prepare(
-          "INSERT INTO mrvoice (title, artist, info, time, category, filepath, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)"
-        );
-        const result = stmt.run([
-          songData.title || '',
-          songData.artist || '',
-          songData.info || '',
-          songData.time || '',
-          songData.category || '',
-          songData.filepath || '',
-          Math.floor(Date.now() / 1000)
-        ]);
-        return { success: true, lastInsertRowid: result.lastInsertRowid };
-      }
-      
       throw new Error('No database API available');
     } catch (error) {
-      debugLog?.error('Add song failed:', { 
-        module: 'secure-adapter', 
-        function: 'secureDatabase.addSong', 
-        songData, 
-        error: error.message 
-      });
+      debugLog?.error('Add song failed:', { module: 'secure-adapter', function: 'secureDatabase.addSong', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  getSongById: async (songId) => {
+    try {
+      if (window.secureElectronAPI?.database?.getSongById) {
+        return await window.secureElectronAPI.database.getSongById(songId);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Get song by ID failed:', { module: 'secure-adapter', function: 'secureDatabase.getSongById', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  getSongsByIds: async (ids) => {
+    try {
+      if (window.secureElectronAPI?.database?.getSongsByIds) {
+        return await window.secureElectronAPI.database.getSongsByIds(ids);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Get songs by IDs failed:', { module: 'secure-adapter', function: 'secureDatabase.getSongsByIds', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  searchSongs: async (searchParams) => {
+    try {
+      if (window.secureElectronAPI?.database?.searchSongs) {
+        return await window.secureElectronAPI.database.searchSongs(searchParams);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Search songs failed:', { module: 'secure-adapter', function: 'secureDatabase.searchSongs', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  updateSong: async (songData) => {
+    try {
+      if (window.secureElectronAPI?.database?.updateSong) {
+        return await window.secureElectronAPI.database.updateSong(songData);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Update song failed:', { module: 'secure-adapter', function: 'secureDatabase.updateSong', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  deleteSong: async (songId) => {
+    try {
+      if (window.secureElectronAPI?.database?.deleteSong) {
+        return await window.secureElectronAPI.database.deleteSong(songId);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Delete song failed:', { module: 'secure-adapter', function: 'secureDatabase.deleteSong', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  addCategory: async (categoryData) => {
+    try {
+      if (window.secureElectronAPI?.database?.addCategory) {
+        return await window.secureElectronAPI.database.addCategory(categoryData);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Add category failed:', { module: 'secure-adapter', function: 'secureDatabase.addCategory', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  updateCategory: async (code, description) => {
+    try {
+      if (window.secureElectronAPI?.database?.updateCategory) {
+        return await window.secureElectronAPI.database.updateCategory(code, description);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Update category failed:', { module: 'secure-adapter', function: 'secureDatabase.updateCategory', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  deleteCategory: async (code) => {
+    try {
+      if (window.secureElectronAPI?.database?.deleteCategory) {
+        return await window.secureElectronAPI.database.deleteCategory(code);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Delete category failed:', { module: 'secure-adapter', function: 'secureDatabase.deleteCategory', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  getCategoryByCode: async (code) => {
+    try {
+      if (window.secureElectronAPI?.database?.getCategoryByCode) {
+        return await window.secureElectronAPI.database.getCategoryByCode(code);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Get category by code failed:', { module: 'secure-adapter', function: 'secureDatabase.getCategoryByCode', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  reassignSongCategory: async (fromCode, toCode) => {
+    try {
+      if (window.secureElectronAPI?.database?.reassignSongCategory) {
+        return await window.secureElectronAPI.database.reassignSongCategory(fromCode, toCode);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Reassign song category failed:', { module: 'secure-adapter', function: 'secureDatabase.reassignSongCategory', error: error.message });
+      return { success: false, error: error.message };
+    }
+  },
+
+  findCategoryCodesLike: async (code, pattern) => {
+    try {
+      if (window.secureElectronAPI?.database?.findCategoryCodesLike) {
+        return await window.secureElectronAPI.database.findCategoryCodesLike(code, pattern);
+      }
+      throw new Error('No database API available');
+    } catch (error) {
+      debugLog?.error('Find category codes failed:', { module: 'secure-adapter', function: 'secureDatabase.findCategoryCodesLike', error: error.message });
       return { success: false, error: error.message };
     }
   }

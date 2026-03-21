@@ -26,7 +26,7 @@ export function deleteSong() {
   const songId = document.getElementById('selected_row')?.getAttribute('songid');
   if (songId) {
     debugLog?.info(`Preparing to delete song ${songId}`, { module: 'song-management', function: 'deleteSong' });
-    return secureDatabase.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(async (songResult) => {
+    return secureDatabase.getSongById(songId).then(async (songResult) => {
       const rows = songResult?.data || songResult;
       const songRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
       const filename = songRow?.filename;
@@ -34,7 +34,7 @@ export function deleteSong() {
       return customConfirm(`Are you sure you want to delete ${songRow?.title || 'this song'} from Mx. Voice permanently?`).then(async confirmed => {
       if (confirmed) {
         debugLog?.info("Proceeding with delete", { module: 'song-management', function: 'deleteSong' });
-          const delResult = await secureDatabase.execute("DELETE FROM mrvoice WHERE id = ?", [songId]);
+          const delResult = await secureDatabase.deleteSong(songId);
           if (!delResult?.success) {
             debugLog?.info("Error deleting song from database", { module: 'song-management', function: 'deleteSong', error: delResult?.error });
             return { success: false, error: delResult?.error || 'Database deletion failed' };
@@ -98,7 +98,7 @@ export function removeFromHoldingTank() {
   const songId = document.getElementById('selected_row')?.getAttribute('songid');
   if (songId) {
     debugLog?.info(`Preparing to remove song ${songId} from holding tank`, { module: 'song-management', function: 'removeFromHoldingTank' });
-    return secureDatabase.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(result => {
+    return secureDatabase.getSongById(songId).then(result => {
       const rows = result?.data || result;
       const songRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
     
@@ -126,7 +126,7 @@ export async function removeFromHotkey() {
   
   if (songId) {
     debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'song-management', function: 'removeFromHotkey' });
-    const result = await secureDatabase.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]);
+    const result = await secureDatabase.getSongById(songId);
     const rows = result?.data || result;
     const songRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
   

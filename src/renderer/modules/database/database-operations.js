@@ -39,10 +39,7 @@ async function editCategory(code, description) {
       description: description
     });
 
-    const result = await secureDatabase.execute(
-      "UPDATE categories SET description = ? WHERE code = ?",
-      [description, code]
-    );
+    const result = await secureDatabase.updateCategory(code, description);
 
     if (result.success !== false) {
       debugLog?.info(`Category ${code} updated successfully`, { 
@@ -91,43 +88,21 @@ async function deleteCategory(code, description) {
       description: description
     });
 
-    // First ensure "Uncategorized" category exists
-    await secureDatabase.execute(
-      "INSERT OR REPLACE INTO categories VALUES(?, ?)",
-      ["UNC", "Uncategorized"]
-    );
+    // The delete-category IPC handler handles ensuring UNC exists and reassigning songs
+    const result = await secureDatabase.deleteCategory(code);
 
-    // Update all songs in this category to "Uncategorized"
-    const updateResult = await secureDatabase.execute(
-      "UPDATE mrvoice SET category = ? WHERE category = ?",
-      ["UNC", code]
-    );
-
-    debugLog?.info(`Updated ${updateResult.changes || updateResult.data?.changes || 0} songs to uncategorized`, { 
-      module: 'database-operations',
-      function: 'deleteCategory',
-      code: code,
-      changes: updateResult.changes || updateResult.data?.changes
-    });
-
-    // Delete the category
-    const deleteResult = await secureDatabase.execute(
-      "DELETE FROM categories WHERE code = ?",
-      [code]
-    );
-
-    if (deleteResult.success !== false) {
-      debugLog?.info(`Category ${code} deleted successfully`, { 
+    if (result.success !== false) {
+      debugLog?.info(`Category ${code} deleted successfully`, {
         module: 'database-operations',
         function: 'deleteCategory',
         code: code,
         description: description,
-        changes: deleteResult.changes || deleteResult.data?.changes
+        changes: result.changes || result.data?.changes
       });
-      return deleteResult;
+      return result;
     } else {
-      const error = new Error(deleteResult.error || 'Failed to delete category');
-      debugLog?.warn('Failed to delete category', { 
+      const error = new Error(result.error || 'Failed to delete category');
+      debugLog?.warn('Failed to delete category', {
         module: 'database-operations',
         function: 'deleteCategory',
         code: code,
@@ -175,10 +150,7 @@ async function addNewCategory(description) {
       description: description
     });
     
-    const result = await secureDatabase.execute(
-      "INSERT INTO categories VALUES (?, ?)",
-      [finalCode, description]
-    );
+    const result = await secureDatabase.addCategory({ code: finalCode, description });
 
     if (result.success !== false) {
       debugLog?.info(`New category ${finalCode} added successfully`, { 
@@ -228,43 +200,50 @@ async function addNewCategory(description) {
  * @param {Object} songData - Song data object
  * @returns {Promise<Object>} - Result of the operation
  */
-function saveEditedSong(songData) {
-  return new Promise((resolve, reject) => {
-    if (window.secureElectronAPI && window.secureElectronAPI.database) {
-      window.secureElectronAPI.database.execute(
-        "UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?",
-        [songData.title, songData.artist, songData.category, songData.info, songData.id]
-      ).then(result => {
-        if (result.success) {
-          debugLog?.info(`Song ${songData.id} updated successfully`, { 
-            module: 'database-operations',
-            function: 'saveEditedSong',
-            songId: songData.id,
-            title: songData.title
-          });
-          resolve(result);
-        } else {
-          debugLog?.warn('Failed to update song', { 
-            module: 'database-operations',
-            function: 'saveEditedSong',
-            songId: songData.id,
-            error: result.error
-          });
-          reject(new Error(result.error));
-        }
-      }).catch(error => {
-        debugLog?.warn('Database API error', { 
-          module: 'database-operations',
-          function: 'saveEditedSong',
-          songId: songData.id,
-          error: error
-        });
-        reject(error);
+async function saveEditedSong(songData) {
+  try {
+    debugLog?.debug('Updating song', {
+      module: 'database-operations',
+      function: 'saveEditedSong',
+      songId: songData.id,
+      title: songData.title
+    });
+
+    const result = await secureDatabase.updateSong({
+      id: songData.id,
+      title: songData.title,
+      artist: songData.artist,
+      category: songData.category,
+      info: songData.info
+    });
+
+    if (result.success !== false) {
+      debugLog?.info(`Song ${songData.id} updated successfully`, {
+        module: 'database-operations',
+        function: 'saveEditedSong',
+        songId: songData.id,
+        title: songData.title
       });
+      return result;
     } else {
-      reject(new Error('Database not available'));
+      const error = new Error(result.error || 'Failed to update song');
+      debugLog?.warn('Failed to update song', {
+        module: 'database-operations',
+        function: 'saveEditedSong',
+        songId: songData.id,
+        error: error.message
+      });
+      throw error;
     }
-  });
+  } catch (error) {
+    debugLog?.error('Save edited song error', {
+      module: 'database-operations',
+      function: 'saveEditedSong',
+      songId: songData.id,
+      error: error.message
+    });
+    throw error;
+  }
 }
 
 /**
@@ -274,51 +253,51 @@ function saveEditedSong(songData) {
  * @param {Object} songData - Song data object
  * @returns {Promise<Object>} - Result of the operation
  */
-function saveNewSong(songData) {
-  return new Promise((resolve, reject) => {
-    if (window.secureElectronAPI && window.secureElectronAPI.database) {
-      window.secureElectronAPI.database.execute(
-        "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [
-          songData.title,
-          songData.artist,
-          songData.category,
-          songData.info,
-          songData.filename,
-          songData.duration,
-          Math.floor(Date.now() / 1000)
-        ]
-      ).then(result => {
-        if (result.success) {
-          debugLog?.info('New song added successfully', { 
-            module: 'database-operations',
-            function: 'saveNewSong',
-            title: songData.title,
-            artist: songData.artist
-          });
-          resolve(result);
-        } else {
-          debugLog?.warn('Failed to add song', { 
-            module: 'database-operations',
-            function: 'saveNewSong',
-            title: songData.title,
-            error: result.error
-          });
-          reject(new Error(result.error));
-        }
-      }).catch(error => {
-        debugLog?.warn('Database API error', { 
-          module: 'database-operations',
-          function: 'saveNewSong',
-          title: songData.title,
-          error: error
-        });
-        reject(error);
+async function saveNewSong(songData) {
+  try {
+    debugLog?.debug('Adding new song', {
+      module: 'database-operations',
+      function: 'saveNewSong',
+      title: songData.title,
+      artist: songData.artist
+    });
+
+    const result = await secureDatabase.addSong({
+      title: songData.title,
+      artist: songData.artist,
+      category: songData.category,
+      info: songData.info,
+      filename: songData.filename,
+      duration: songData.duration
+    });
+
+    if (result.success !== false) {
+      debugLog?.info('New song added successfully', {
+        module: 'database-operations',
+        function: 'saveNewSong',
+        title: songData.title,
+        artist: songData.artist
       });
+      return result;
     } else {
-      reject(new Error('Database not available'));
+      const error = new Error(result.error || 'Failed to add song');
+      debugLog?.warn('Failed to add song', {
+        module: 'database-operations',
+        function: 'saveNewSong',
+        title: songData.title,
+        error: error.message
+      });
+      throw error;
     }
-  });
+  } catch (error) {
+    debugLog?.error('Save new song error', {
+      module: 'database-operations',
+      function: 'saveNewSong',
+      title: songData.title,
+      error: error.message
+    });
+    throw error;
+  }
 }
 
 /**
@@ -328,42 +307,42 @@ function saveNewSong(songData) {
  * @param {string} songId - Song ID to delete
  * @returns {Promise<Object>} - Result of the operation
  */
-function deleteSong(songId) {
-  return new Promise((resolve, reject) => {
-    if (window.secureElectronAPI && window.secureElectronAPI.database) {
-      window.secureElectronAPI.database.execute(
-        "DELETE FROM mrvoice WHERE id = ?",
-        [songId]
-      ).then(result => {
-        if (result.success) {
-          debugLog?.info(`Song ${songId} deleted successfully`, { 
-            module: 'database-operations',
-            function: 'deleteSong',
-            songId: songId
-          });
-          resolve(result);
-        } else {
-          debugLog?.warn('Failed to delete song', { 
-            module: 'database-operations',
-            function: 'deleteSong',
-            songId: songId,
-            error: result.error
-          });
-          reject(new Error(result.error));
-        }
-      }).catch(error => {
-        debugLog?.warn('Database API error', { 
-          module: 'database-operations',
-          function: 'deleteSong',
-          songId: songId,
-          error: error
-        });
-        reject(error);
+async function deleteSong(songId) {
+  try {
+    debugLog?.debug('Deleting song', {
+      module: 'database-operations',
+      function: 'deleteSong',
+      songId: songId
+    });
+
+    const result = await secureDatabase.deleteSong(songId);
+
+    if (result.success !== false) {
+      debugLog?.info(`Song ${songId} deleted successfully`, {
+        module: 'database-operations',
+        function: 'deleteSong',
+        songId: songId
       });
+      return result;
     } else {
-      reject(new Error('Database not available'));
+      const error = new Error(result.error || 'Failed to delete song');
+      debugLog?.warn('Failed to delete song', {
+        module: 'database-operations',
+        function: 'deleteSong',
+        songId: songId,
+        error: error.message
+      });
+      throw error;
     }
-  });
+  } catch (error) {
+    debugLog?.error('Delete song error', {
+      module: 'database-operations',
+      function: 'deleteSong',
+      songId: songId,
+      error: error.message
+    });
+    throw error;
+  }
 }
 
 /**
@@ -373,46 +352,46 @@ function deleteSong(songId) {
  * @param {string} songId - Song ID to retrieve
  * @returns {Promise<Object>} - Result of the operation
  */
-function getSongById(songId) {
-  return new Promise((resolve, reject) => {
-    if (window.secureElectronAPI && window.secureElectronAPI.database) {
-      window.secureElectronAPI.database.query(
-        "SELECT * FROM mrvoice WHERE id = ?",
-        [songId]
-      ).then(result => {
-        if (result.success) {
-          if (result.data.length > 0) {
-            debugLog?.info(`Song ${songId} retrieved successfully`, { 
-              module: 'database-operations',
-              function: 'getSongById',
-              songId: songId
-            });
-            resolve(result);
-          } else {
-            reject(new Error('Song not found'));
-          }
-        } else {
-          debugLog?.warn('Failed to get song', { 
-            module: 'database-operations',
-            function: 'getSongById',
-            songId: songId,
-            error: result.error
-          });
-          reject(new Error(result.error));
-        }
-      }).catch(error => {
-        debugLog?.warn('Database API error', { 
+async function getSongById(songId) {
+  try {
+    debugLog?.debug('Getting song by ID', {
+      module: 'database-operations',
+      function: 'getSongById',
+      songId: songId
+    });
+
+    const result = await secureDatabase.getSongById(songId);
+
+    if (result.success !== false) {
+      if (result.data && (Array.isArray(result.data) ? result.data.length > 0 : true)) {
+        debugLog?.info(`Song ${songId} retrieved successfully`, {
           module: 'database-operations',
           function: 'getSongById',
-          songId: songId,
-          error: error
+          songId: songId
         });
-        reject(error);
-      });
+        return result;
+      } else {
+        throw new Error('Song not found');
+      }
     } else {
-      reject(new Error('Database not available'));
+      const error = new Error(result.error || 'Failed to get song');
+      debugLog?.warn('Failed to get song', {
+        module: 'database-operations',
+        function: 'getSongById',
+        songId: songId,
+        error: error.message
+      });
+      throw error;
     }
-  });
+  } catch (error) {
+    debugLog?.error('Get song by ID error', {
+      module: 'database-operations',
+      function: 'getSongById',
+      songId: songId,
+      error: error.message
+    });
+    throw error;
+  }
 }
 
 /**
@@ -494,99 +473,6 @@ function addSongsByPath(pathArray, category) {
   });
 }
 
-/**
- * Execute a custom database query
- * Allows execution of custom SQL queries
- * 
- * @param {string} sql - SQL query to execute
- * @param {Array} params - Query parameters
- * @returns {Promise<Object>} - Result of the operation
- */
-async function executeQuery(sql, params = []) {
-  try {
-    debugLog?.debug('Executing database query', { 
-      module: 'database-operations',
-      function: 'executeQuery',
-      sql: sql.substring(0, 50) + '...'
-    });
-
-    const result = await secureDatabase.query(sql, params);
-
-    if (result.success !== false) {
-      debugLog?.info('Query executed successfully', { 
-        module: 'database-operations',
-        function: 'executeQuery',
-        sql: sql.substring(0, 50) + '...'
-      });
-      return result;
-    } else {
-      const error = new Error(result.error || 'Query failed');
-      debugLog?.warn('Query failed', { 
-        module: 'database-operations',
-        function: 'executeQuery',
-        sql: sql.substring(0, 50) + '...',
-        error: error.message
-      });
-      throw error;
-    }
-  } catch (error) {
-    debugLog?.error('Execute query error', { 
-      module: 'database-operations',
-      function: 'executeQuery',
-      sql: sql.substring(0, 50) + '...',
-      error: error.message
-    });
-    throw error;
-  }
-}
-
-/**
- * Execute a custom database statement
- * Allows execution of custom SQL statements (INSERT, UPDATE, DELETE)
- * 
- * @param {string} sql - SQL statement to execute
- * @param {Array} params - Statement parameters
- * @returns {Promise<Object>} - Result of the operation
- */
-async function executeStatement(sql, params = []) {
-  try {
-    debugLog?.debug('Executing database statement', { 
-      module: 'database-operations',
-      function: 'executeStatement',
-      sql: sql.substring(0, 50) + '...'
-    });
-
-    const result = await secureDatabase.execute(sql, params);
-
-    if (result.success !== false) {
-      debugLog?.info('Statement executed successfully', { 
-        module: 'database-operations',
-        function: 'executeStatement',
-        sql: sql.substring(0, 50) + '...',
-        changes: result.changes || result.data?.changes
-      });
-      return result;
-    } else {
-      const error = new Error(result.error || 'Statement failed');
-      debugLog?.warn('Statement failed', { 
-        module: 'database-operations',
-        function: 'executeStatement',
-        sql: sql.substring(0, 50) + '...',
-        error: error.message
-      });
-      throw error;
-    }
-  } catch (error) {
-    debugLog?.error('Execute statement error', { 
-      module: 'database-operations',
-      function: 'executeStatement',
-      sql: sql.substring(0, 50) + '...',
-      error: error.message
-    });
-    throw error;
-  }
-}
-
 export {
   editCategory,
   deleteCategory,
@@ -595,9 +481,7 @@ export {
   saveNewSong,
   deleteSong,
   getSongById,
-  addSongsByPath,
-  executeQuery,
-  executeStatement
+  addSongsByPath
 };
 
 // Default export for module loading
@@ -609,7 +493,5 @@ export default {
   saveNewSong,
   deleteSong,
   getSongById,
-  addSongsByPath,
-  executeQuery,
-  executeStatement
-}; 
+  addSongsByPath
+};

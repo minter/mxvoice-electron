@@ -40,10 +40,7 @@ export async function saveEditedSong(event) {
   try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
 
   try {
-    const result = await secureDatabase.execute(
-      "UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?",
-      [title, artist, category, info, songId]
-    );
+    const result = await secureDatabase.updateSong({id: songId, title, artist, category, info});
     if (!result?.success) {
       debugLog?.warn('Edit update failed', { module: 'song-management', function: 'saveEditedSong', error: result?.error });
     }
@@ -85,7 +82,7 @@ export async function saveNewSong(event) {
       const description = (document.getElementById('song-form-new-category') || {}).value || '';
       const baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
       const finalCode = await findUniqueCategoryCode(baseCode);
-      const insert = await secureDatabase.execute("INSERT INTO categories VALUES (?, ?)", [finalCode, description]);
+      const insert = await secureDatabase.addCategory({code: finalCode, description});
       if (!insert?.success) {
         debugLog?.warn('Category insert failed', { module: 'song-management', function: 'saveNewSong', error: insert?.error });
         return;
@@ -121,10 +118,7 @@ export async function saveNewSong(event) {
       return;
     }
     const newPath = joinResult.data;
-    const insertSong = await secureDatabase.execute(
-      "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [title, artist, category, info, newFilename, duration, Math.floor(Date.now() / 1000)]
-    );
+    const insertSong = await secureDatabase.addSong({title, artist, category, info, filename: newFilename, duration});
     if (!insertSong?.success) {
       const isIOError = insertSong?.error?.toLowerCase().includes('i/o') || 
                         insertSong?.error?.toLowerCase().includes('disk') ||
@@ -178,7 +172,7 @@ export async function editSelectedSong() {
     }
 
     // Fetch song info using secure database adapter
-    const songResult = await secureDatabase.query("SELECT * FROM mrvoice WHERE id = ?", [songId]);
+    const songResult = await secureDatabase.getSongById(songId);
     const songRows = songResult?.data || songResult;
     const songInfo = Array.isArray(songRows) && songRows.length > 0 ? songRows[0] : null;
     if (!songInfo) {

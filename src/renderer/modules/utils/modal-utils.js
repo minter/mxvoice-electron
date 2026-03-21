@@ -15,15 +15,17 @@ export function customConfirm(message, title = 'Confirm') {
   return new Promise((resolve) => {
     const modal = document.createElement('div');
     modal.className = 'modal fade';
+    const safeTitle = window.DOMPurify ? window.DOMPurify.sanitize(title) : title;
+    const safeMessage = window.DOMPurify ? window.DOMPurify.sanitize(message) : message;
     modal.innerHTML = `
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">${title}</h5>
+            <h5 class="modal-title">${safeTitle}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <p>${message}</p>
+            <p>${safeMessage}</p>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
