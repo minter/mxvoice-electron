@@ -51,7 +51,8 @@ test.describe('First run modal behavior', () => {
     }
   });
 
-  test('first run modal does not appear after adding song and restarting', { timeout: 60_000 }, async () => {
+  test('first run modal does not appear after adding song and restarting', async () => {
+    test.slow(); // App restart with lock cleanup and retries needs extra time
     // 1) First-run modal appears
     const firstRunModal = page.locator('#firstRunModal');
     await expect(firstRunModal).toBeVisible({ timeout: 10000 });

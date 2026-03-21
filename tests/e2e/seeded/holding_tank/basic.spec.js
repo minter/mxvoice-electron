@@ -716,7 +716,8 @@ test.describe('Holding Tank - basic', () => {
     await expect(tab1Items.first()).toContainText('Anthrax');
   });
 
-  test('holding tank mode playback - single song only', { timeout: 90_000 }, async () => {
+  test('holding tank mode playback - single song only', async () => {
+    test.slow(); // Plays audio 3 times with long waits — triples the default timeout
     // Ensure storage (holding) mode is active
     const storageModeBtn = page.locator('#storage_mode_btn');
     const playlistModeBtn = page.locator('#playlist_mode_btn');

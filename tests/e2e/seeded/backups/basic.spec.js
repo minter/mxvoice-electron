@@ -220,7 +220,8 @@ test.describe('Profile Backups - basic', () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test('can create a manual backup via menu', { timeout: 60_000 }, async () => {
+  test('can create a manual backup via menu', async () => {
+    test.slow(); // Backup file I/O can be slow on CI — triples the default timeout
     // Create some profile state to backup
     const stateFile = path.join(profileDir, 'state.json');
     const testState = {
@@ -250,7 +251,8 @@ test.describe('Profile Backups - basic', () => {
     expect(metadata.backups.length).toBeGreaterThan(0);
   });
 
-  test('can list backups', { timeout: 60_000 }, async () => {
+  test('can list backups', async () => {
+    test.slow(); // Depends on backup creation which involves slow file I/O on CI
     // Ensure we have at least one backup
     const metadataFile = path.join(backupDir, 'backup-metadata.json');
     if (!fs.existsSync(metadataFile) || JSON.parse(fs.readFileSync(metadataFile, 'utf8')).backups.length === 0) {
