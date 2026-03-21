@@ -19,6 +19,10 @@ const __dirname = path.dirname(__filename);
 // Helper to detect if we're running in CI environment
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
+// Audio playback tests are timing-sensitive — run serially to avoid
+// flaky failures from CPU contention when other workers are active.
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Playback - basic', () => {
   let app; let page;
 

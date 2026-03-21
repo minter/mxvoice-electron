@@ -75,6 +75,11 @@ function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScr
     windowOptions.y = y;
   }
 
+  // Hide window during tests to prevent focus-stealing
+  if (process.env.APP_TEST_MODE === '1') {
+    windowOptions.show = false;
+  }
+
   // Create the browser window.
   const mainWindow = new BrowserWindow(windowOptions);
 

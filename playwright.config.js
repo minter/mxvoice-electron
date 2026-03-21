@@ -13,8 +13,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
-  // CI tip: set workers to 1 if your app uses a shared profile/port
-  workers: 1,
+  // Each test suite gets an isolated user-data directory, so parallel is safe.
+  // Use PWWORKERS env var to override (e.g. PWWORKERS=1 npm test for serial).
+  workers: parseInt(process.env.PWWORKERS, 10) || 4,
   globalSetup: 'tests/setup/global-setup.js',
   globalTeardown: 'tests/setup/global-teardown.js',
   // Exclude manual smoke tests from default runs; use yarn test:smoke to run them
