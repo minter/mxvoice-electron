@@ -137,11 +137,17 @@ test.describe('First run flow', () => {
     await expect(page.locator('#stop_button')).toBeDisabled();
     await expect(page.locator('#song_now_playing')).toBeHidden();
 
-    // Artifact checks
+    // Artifact checks — wait for Electron Store to flush config to disk (can be async on Windows)
     expect(fs.existsSync(path.join(dbDir, 'mxvoice.db'))).toBeTruthy();
     expect(fs.existsSync(path.join(musicDir, 'PatrickShort-CSzRockBumper.mp3'))).toBeTruthy();
     expect(fs.existsSync(hotkeysDir)).toBeTruthy();
-    expect(fs.existsSync(configPath)).toBeTruthy();
+    // Config file may not be flushed yet on Windows; poll for up to 5 seconds
+    let configExists = false;
+    for (let i = 0; i < 25; i++) {
+      if (fs.existsSync(configPath)) { configExists = true; break; }
+      await page.waitForTimeout(200);
+    }
+    expect(configExists).toBeTruthy();
     const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     expect(cfg.first_run_completed).toBe(true);
     expect(cfg.database_directory).toBe(dbDir);

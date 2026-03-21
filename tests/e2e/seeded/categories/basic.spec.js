@@ -4,6 +4,7 @@ import { TEST_CONFIG } from '../../../config/test-environment.js';
 
 test.describe('Categories - management', () => {
   test('category selector displays correct options in correct order', async () => {
+    test.slow(); // Launches a fresh Electron app — slow on Windows CI
     // Launch a fresh app instance for this test to ensure clean state
     let testApp, testPage;
     try {
@@ -93,6 +94,7 @@ test.describe('Categories - management', () => {
   });
 
   test('category management modal opens via menu and displays seeded categories', async () => {
+    test.slow(); // Launches a fresh Electron app — slow on Windows CI
     // Launch a fresh app instance for this test to ensure clean state
     let testApp, testPage;
     try {
@@ -200,6 +202,7 @@ test.describe('Categories - management', () => {
   });
 
   test('add new category functionality works correctly', async () => {
+    test.slow(); // Launches a fresh Electron app — slow on Windows CI
     // Launch a fresh app instance for this test to ensure clean state
     let testApp, testPage;
     try {
@@ -350,6 +353,7 @@ test.describe('Categories - management', () => {
   });
 
   test('category deletion functionality', async () => {
+    test.slow(); // Launches a fresh Electron app — slow on Windows CI
     // Launch a fresh app instance for this test to ensure clean state
     let testApp, testPage;
     try {
@@ -717,6 +721,7 @@ test.describe('Categories - management', () => {
   });
 
   test('category edit functionality', async () => {
+    test.slow(); // Launches a fresh Electron app — slow on Windows CI
     // Launch a fresh app instance for this test to ensure clean state
     let testApp, testPage;
     try {

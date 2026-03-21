@@ -22,8 +22,16 @@ test.describe('First run modal behavior', () => {
   const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
 
   test.beforeAll(async () => {
-    // Clean isolated userData
-    if (fs.existsSync(userDataDir)) fs.rmSync(userDataDir, { recursive: true, force: true });
+    // Clean isolated userData (retry on Windows where Chromium files may still be locked)
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        if (fs.existsSync(userDataDir)) fs.rmSync(userDataDir, { recursive: true, force: true });
+        break;
+      } catch (err) {
+        if (attempt === 4) throw err;
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
     fs.mkdirSync(userDataDir, { recursive: true });
 
     app = await electron.launch({
