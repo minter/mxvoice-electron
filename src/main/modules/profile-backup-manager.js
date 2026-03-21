@@ -283,7 +283,7 @@ async function readMetadataSafe(profileName) {
         
         // Validate backup structure
         if (!metadata.backups || !Array.isArray(metadata.backups)) {
-          throw new Error('Backup metadata also corrupted');
+          throw new Error('Backup metadata also corrupted', { cause: error });
         }
         
         // Restore from backup
@@ -468,7 +468,7 @@ async function updateMetadata(profileName, updateFn) {
       } catch (error) {
         retries--;
         if (retries === 0) {
-          throw new Error(`Failed to update metadata after retries: ${error.message}`);
+          throw new Error(`Failed to update metadata after retries: ${error.message}`, { cause: error });
         }
         
         // Exponential backoff on retry
