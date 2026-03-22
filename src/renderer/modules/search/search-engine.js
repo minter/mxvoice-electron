@@ -8,6 +8,7 @@
 // Import shared state
 import sharedState from '../shared-state.js';
 import Dom from '../dom-utils/index.js';
+import { getAdvancedSearchValues, hasActiveAdvancedFilters } from './search-form-utils.js';
 
 // Import debug logger
 let debugLog = null;
@@ -265,18 +266,7 @@ function triggerLiveSearch() {
     const hasSearchTerm = searchTerm.length >= 2;
     let hasAdvancedFilters = false;
 
-    const adv = document.getElementById('advanced-search');
-    if (adv && adv.offsetParent !== null) {
-      const title = (document.getElementById('title-search')?.value || '').trim();
-      const artist = (document.getElementById('artist-search')?.value || '').trim();
-      const info = (document.getElementById('info-search')?.value || '').trim();
-      const since = document.getElementById('date-search')?.value || '';
-      hasAdvancedFilters =
-        title.length > 0 ||
-        artist.length > 0 ||
-        info.length > 0 ||
-        since.length > 0;
-    }
+    hasAdvancedFilters = hasActiveAdvancedFilters();
 
     if (hasSearchTerm || hasAdvancedFilters) {
       if (typeof liveSearch.performLiveSearch === 'function') {

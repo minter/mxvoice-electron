@@ -750,9 +750,8 @@ class HotkeysModule {
    * @param {number} tab - Tab number to switch to
    */
   switchToHotkeyTab(tab) {
-    import('../ui/bootstrap-adapter.js')
-      .then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tab}) a`))
-      .catch(err => { this.debugLog?.warn('Failed to switch hotkey tab', { module: 'hotkeys', function: 'switchToHotkeyTab', tab, error: err?.message }); });
+    import('../ui/bootstrap-helpers.js')
+      .then(({ safeShowTab }) => safeShowTab(`#hotkey_tabs li:nth-child(${tab}) a`, { module: 'hotkeys', function: 'switchToHotkeyTab' }));
   }
 
   /**

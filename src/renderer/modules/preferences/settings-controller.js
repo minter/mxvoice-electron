@@ -7,6 +7,7 @@
  */
 
 import { setPreference as setPreferenceViaAdapter } from './profile-preference-adapter.js';
+import { safeHideModal } from '../ui/bootstrap-helpers.js';
 
 // Import debug logger from global scope (renderer initializes it early)
 let debugLog = null;
@@ -205,10 +206,7 @@ function initializeSettingsController(options = {}) {
         }
         
         // Close modal after save operations complete
-        try {
-          const { hideModal } = await import('../ui/bootstrap-adapter.js');
-          hideModal('#preferencesModal');
-        } catch (err) { debugLog?.warn('Failed to hide preferences modal', { function: 'savePreferences', error: err?.message }); }
+        safeHideModal('#preferencesModal', { function: 'savePreferences' });
       } catch (error) {
         debugLog?.error('Failed to save preferences', { 
           function: "savePreferences",
@@ -218,10 +216,7 @@ function initializeSettingsController(options = {}) {
         await savePreferencesLegacy(preferences);
         
         // Close modal even if save failed
-        try {
-          const { hideModal } = await import('../ui/bootstrap-adapter.js');
-          hideModal('#preferencesModal');
-        } catch (err) { debugLog?.warn('Failed to hide preferences modal (after error)', { function: 'savePreferences', error: err?.message }); }
+        safeHideModal('#preferencesModal', { function: 'savePreferences' });
       }
     } else {
       // Fallback to legacy store access - use captured form values
@@ -237,10 +232,7 @@ function initializeSettingsController(options = {}) {
       await savePreferencesLegacy(preferences);
       
       // Close modal after legacy save completes
-      try {
-        const { hideModal } = await import('../ui/bootstrap-adapter.js');
-        hideModal('#preferencesModal');
-      } catch (err) { debugLog?.warn('Failed to hide preferences modal (legacy)', { function: 'savePreferences', error: err?.message }); }
+      safeHideModal('#preferencesModal', { function: 'savePreferences' });
     }
   }
   

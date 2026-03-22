@@ -5,6 +5,8 @@
  * and user interactions. This module provides the UI-level operations for categories.
  */
 
+import { safeShowModal } from '../ui/bootstrap-helpers.js';
+
 // Import debug logger
 let debugLog = null;
 try {
@@ -184,15 +186,11 @@ function editCategoryUI(code) {
  */
 function openCategoriesModal() {
   populateCategoriesModal().then(() => {
-    import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#categoryManagementModal')).catch(err => {
-      debugLog?.warn('Failed to show categories modal', { module: 'categories', function: 'openCategoriesModal', error: err?.message });
-    });
+    safeShowModal('#categoryManagementModal', { module: 'categories', function: 'openCategoriesModal' });
   }).catch(error => {
     debugLog?.error('❌ Failed to open categories modal:', { module: 'categories', function: 'openCategoriesModal', error: error });
     // Still open the modal even if population fails
-    import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#categoryManagementModal')).catch(err => {
-      debugLog?.warn('Failed to show categories modal (fallback)', { module: 'categories', function: 'openCategoriesModal', error: err?.message });
-    });
+    safeShowModal('#categoryManagementModal', { module: 'categories', function: 'openCategoriesModal' });
   });
 }
 

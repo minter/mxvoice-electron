@@ -1,6 +1,8 @@
+import { safeShowModal, safeHideModal } from '../ui/bootstrap-helpers.js';
+
 /**
  * Bulk Operations Functions
- * 
+ *
  * Core functions for handling bulk import of songs from directories
  */
 
@@ -35,7 +37,7 @@ export async function showBulkAddModal(directory) {
   const catSel = document.getElementById('bulk-add-category');
   await populateCategorySelect(catSel);
 
-  try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#bulkAddModal'); } catch (err) { debugLog?.warn('Failed to show bulk add modal', { module: 'bulk-operations', function: 'showBulkAddModal', error: err?.message }); }
+  safeShowModal('#bulkAddModal', { module: 'bulk-operations', function: 'showBulkAddModal' });
 }
 
 /**
@@ -178,7 +180,7 @@ export async function addSongsByPath(pathArray, category) {
  */
 export async function saveBulkUpload(event) {
   event.preventDefault();
-  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#bulkAddModal'); } catch (err) { debugLog?.warn('Failed to hide bulk add modal', { module: 'bulk-operations', function: 'saveBulkUpload', error: err?.message }); }
+  safeHideModal('#bulkAddModal', { module: 'bulk-operations', function: 'saveBulkUpload' });
   const dirname = (document.getElementById('bulk-add-path') || {}).value || '';
 
   const walk = async (dir) => {

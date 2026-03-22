@@ -81,9 +81,8 @@ function allowHotkeyDrop(event) {
  * @param {number} tab - Tab number to switch to
  */
 function switchToHotkeyTab(tab) {
-  import('../ui/bootstrap-adapter.js')
-    .then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tab}) a`))
-    .catch(err => { debugLog?.warn('Failed to switch hotkey tab', { module: 'hotkey-ui', function: 'switchToHotkeyTab', tab, error: err?.message }); });
+  import('../ui/bootstrap-helpers.js')
+    .then(({ safeShowTab }) => safeShowTab(`#hotkey_tabs li:nth-child(${tab}) a`, { module: 'hotkey-ui', function: 'switchToHotkeyTab' }));
 }
 
 /**
@@ -187,9 +186,8 @@ function getActiveHotkeyTab() {
  */
 function setActiveHotkeyTab(tabNumber) {
   if (tabNumber >= 1 && tabNumber <= 5) {
-    import('../ui/bootstrap-adapter.js')
-      .then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tabNumber}) a`))
-      .catch(err => { debugLog?.warn('Failed to set active hotkey tab', { module: 'hotkey-ui', function: 'setActiveHotkeyTab', tabNumber, error: err?.message }); });
+    import('../ui/bootstrap-helpers.js')
+      .then(({ safeShowTab }) => safeShowTab(`#hotkey_tabs li:nth-child(${tabNumber}) a`, { module: 'hotkey-ui', function: 'setActiveHotkeyTab' }));
   }
 }
 

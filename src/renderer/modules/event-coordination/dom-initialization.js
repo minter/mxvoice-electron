@@ -452,10 +452,8 @@ export default class DOMInitialization {
 
           // Only show first run modal if database has <= 1 songs
           if (songCount <= 1) {
-            try {
-              const { showModal } = await import('../ui/bootstrap-adapter.js');
-              showModal('#firstRunModal');
-            } catch (err) { this.debugLog?.warn('Failed to show first run modal', { module: 'dom-initialization', error: err?.message }); }
+            const { safeShowModal } = await import('../ui/bootstrap-helpers.js');
+            safeShowModal('#firstRunModal', { module: 'dom-initialization' });
             this.debugLog?.info(
               'First run modal shown - database has <= 1 songs'
             );

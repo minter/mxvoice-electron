@@ -8,6 +8,7 @@
 
 // Import shared state
 import sharedState from '../shared-state.js';
+import { getAdvancedSearchValues, hasActiveAdvancedFilters } from './search-form-utils.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 import Dom from '../dom-utils/index.js';
 
@@ -115,18 +116,7 @@ function performLiveSearch(searchTerm) {
   const hasSearchTerm = searchTerm && searchTerm.length >= 2;
   let hasAdvancedFilters = false;
 
-  const adv = document.getElementById('advanced-search');
-  if (adv && adv.offsetParent !== null) {
-    const title = (document.getElementById('title-search')?.value || '').trim();
-    const artist = (document.getElementById('artist-search')?.value || '').trim();
-    const info = (document.getElementById('info-search')?.value || '').trim();
-    const since = document.getElementById('date-search')?.value || '';
-    hasAdvancedFilters =
-      title.length > 0 ||
-      artist.length > 0 ||
-      info.length > 0 ||
-      since.length > 0;
-  }
+  hasAdvancedFilters = hasActiveAdvancedFilters();
 
   if (!hasSearchTerm && !hasAdvancedFilters) {
     // Clear results if no search term and no advanced filters
@@ -152,13 +142,9 @@ function performLiveSearch(searchTerm) {
   };
 
   // Apply advanced search filters if advanced search is visible
-  if (adv && adv.offsetParent !== null) {
-    const title = (document.getElementById('title-search')?.value || '').trim();
-    const artist = (document.getElementById('artist-search')?.value || '').trim();
-    const info = (document.getElementById('info-search')?.value || '').trim();
-    const since = document.getElementById('date-search')?.value || '';
-
-    searchParams.advancedFilters = { title, artist, info, since };
+  const adv2 = document.getElementById('advanced-search');
+  if (adv2 && adv2.offsetParent !== null) {
+    searchParams.advancedFilters = getAdvancedSearchValues();
   } else {
     // Apply omni search filter
     if (searchTerm && searchTerm.length >= 2) {

@@ -32,6 +32,27 @@ class EventManager {
   }
 
   /**
+   * Migrate an inline onclick attribute to a proper event listener.
+   * Finds an element by its onclick value, replaces it with an addEventListener
+   * call that delegates to window[fnName], and removes the onclick attribute.
+   *
+   * @param {string} fnName - The global function name (e.g. 'openHotkeyFile')
+   * @param {string} callerContext - Logging context for which setup method called this
+   */
+  migrateOnclick(fnName, callerContext) {
+    const el = document.querySelector(`[onclick="${fnName}()"]`);
+    if (!el) return;
+    el.addEventListener('click', () => {
+      if (window[fnName]) {
+        window[fnName]();
+      } else {
+        this.debugLog.warn(`${fnName} function not available`, { function: callerContext });
+      }
+    });
+    el.removeAttribute('onclick');
+  }
+
+  /**
    * Initialize the event manager
    */
   initialize() {
@@ -108,55 +129,10 @@ class EventManager {
    * Setup file operation buttons
    */
   setupFileOperations() {
-    // Holding tank file operations
-    const openHoldingTankBtn = document.querySelector('[onclick="openHoldingTankFile()"]');
-    if (openHoldingTankBtn) {
-      openHoldingTankBtn.addEventListener('click', () => {
-        if (window.openHoldingTankFile) {
-          window.openHoldingTankFile();
-        } else {
-          this.debugLog.warn('openHoldingTankFile function not available', { function: "setupFileOperations" });
-        }
-      });
-      openHoldingTankBtn.removeAttribute('onclick');
-    }
-
-    const saveHoldingTankBtn = document.querySelector('[onclick="saveHoldingTankFile()"]');
-    if (saveHoldingTankBtn) {
-      saveHoldingTankBtn.addEventListener('click', () => {
-        if (window.saveHoldingTankFile) {
-          window.saveHoldingTankFile();
-        } else {
-          this.debugLog.warn('saveHoldingTankFile function not available', { function: "setupFileOperations" });
-        }
-      });
-      saveHoldingTankBtn.removeAttribute('onclick');
-    }
-
-    // Hotkey file operations
-    const openHotkeyBtn = document.querySelector('[onclick="openHotkeyFile()"]');
-    if (openHotkeyBtn) {
-      openHotkeyBtn.addEventListener('click', () => {
-        if (window.openHotkeyFile) {
-          window.openHotkeyFile();
-        } else {
-          this.debugLog.warn('openHotkeyFile function not available', { function: "setupFileOperations" });
-        }
-      });
-      openHotkeyBtn.removeAttribute('onclick');
-    }
-
-    const saveHotkeyBtn = document.querySelector('[onclick="saveHotkeyFile()"]');
-    if (saveHotkeyBtn) {
-      saveHotkeyBtn.addEventListener('click', () => {
-        if (window.saveHotkeyFile) {
-          window.saveHotkeyFile();
-        } else {
-          this.debugLog.warn('saveHotkeyFile function not available', { function: "setupFileOperations" });
-        }
-      });
-      saveHotkeyBtn.removeAttribute('onclick');
-    }
+    this.migrateOnclick('openHoldingTankFile', 'setupFileOperations');
+    this.migrateOnclick('saveHoldingTankFile', 'setupFileOperations');
+    this.migrateOnclick('openHotkeyFile', 'setupFileOperations');
+    this.migrateOnclick('saveHotkeyFile', 'setupFileOperations');
 
     this.debugLog.info('File operation event listeners set up', { function: "setupFileOperations" });
   }
@@ -165,29 +141,8 @@ class EventManager {
    * Setup holding tank operation buttons
    */
   setupHoldingTankOperations() {
-    const renameHoldingTankBtn = document.querySelector('[onclick="renameHoldingTankTab()"]');
-    if (renameHoldingTankBtn) {
-      renameHoldingTankBtn.addEventListener('click', () => {
-        if (window.renameHoldingTankTab) {
-          window.renameHoldingTankTab();
-        } else {
-          this.debugLog.warn('renameHoldingTankTab function not available', { function: "setupHoldingTankOperations" });
-        }
-      });
-      renameHoldingTankBtn.removeAttribute('onclick');
-    }
-
-    const clearHoldingTankBtn = document.querySelector('[onclick="clearHoldingTank()"]');
-    if (clearHoldingTankBtn) {
-      clearHoldingTankBtn.addEventListener('click', () => {
-        if (window.clearHoldingTank) {
-          window.clearHoldingTank();
-        } else {
-          this.debugLog.warn('clearHoldingTank function not available', { function: "setupHoldingTankOperations" });
-        }
-      });
-      clearHoldingTankBtn.removeAttribute('onclick');
-    }
+    this.migrateOnclick('renameHoldingTankTab', 'setupHoldingTankOperations');
+    this.migrateOnclick('clearHoldingTank', 'setupHoldingTankOperations');
 
     this.debugLog.info('Holding tank operation event listeners set up', { function: "setupHoldingTankOperations" });
   }
@@ -196,29 +151,8 @@ class EventManager {
    * Setup hotkey operation buttons
    */
   setupHotkeyOperations() {
-    const renameHotkeyBtn = document.querySelector('[onclick="renameHotkeyTab()"]');
-    if (renameHotkeyBtn) {
-      renameHotkeyBtn.addEventListener('click', () => {
-        if (window.renameHotkeyTab) {
-          window.renameHotkeyTab();
-        } else {
-          this.debugLog.warn('renameHotkeyTab function not available', { function: "setupHotkeyOperations" });
-        }
-      });
-      renameHotkeyBtn.removeAttribute('onclick');
-    }
-
-    const clearHotkeysBtn = document.querySelector('[onclick="clearHotkeys()"]');
-    if (clearHotkeysBtn) {
-      clearHotkeysBtn.addEventListener('click', () => {
-        if (window.clearHotkeys) {
-          window.clearHotkeys();
-        } else {
-          this.debugLog.warn('clearHotkeys function not available', { function: "setupHotkeyOperations" });
-        }
-      });
-      clearHotkeysBtn.removeAttribute('onclick');
-    }
+    this.migrateOnclick('renameHotkeyTab', 'setupHotkeyOperations');
+    this.migrateOnclick('clearHotkeys', 'setupHotkeyOperations');
 
     this.debugLog.info('Hotkey operation event listeners set up', { function: "setupHotkeyOperations" });
   }
@@ -253,17 +187,7 @@ class EventManager {
    * Setup update operation buttons
    */
   setupUpdateOperations() {
-    const installUpdateBtn = document.querySelector('[onclick="installUpdate()"]');
-    if (installUpdateBtn) {
-      installUpdateBtn.addEventListener('click', () => {
-        if (window.installUpdate) {
-          window.installUpdate();
-        } else {
-          this.debugLog.warn('installUpdate function not available', { function: "setupUpdateOperations" });
-        }
-      });
-      installUpdateBtn.removeAttribute('onclick');
-    }
+    this.migrateOnclick('installUpdate', 'setupUpdateOperations');
 
     this.debugLog.info('Update operation event listeners set up', { function: "setupUpdateOperations" });
   }

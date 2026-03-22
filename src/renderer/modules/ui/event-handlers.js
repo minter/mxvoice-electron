@@ -44,9 +44,8 @@ function initializeEventHandlers(options = {}) {
    * @param {number} tab - Tab number to switch to
    */
   function switchToHotkeyTab(tab) {
-    import('../ui/bootstrap-adapter.js')
-      .then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tab}) a`))
-      .catch(err => { debugLog?.warn('Failed to switch hotkey tab', { module: 'event-handlers', function: 'switchToHotkeyTab', tab, error: err?.message }); });
+    import('../ui/bootstrap-helpers.js')
+      .then(({ safeShowTab }) => safeShowTab(`#hotkey_tabs li:nth-child(${tab}) a`, { module: 'event-handlers', function: 'switchToHotkeyTab' }));
   }
   
   /**
