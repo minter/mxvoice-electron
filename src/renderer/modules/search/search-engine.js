@@ -264,9 +264,7 @@ function triggerLiveSearch() {
   const newTimeout = setTimeout(() => {
     // Check if we have either a search term or advanced search filters
     const hasSearchTerm = searchTerm.length >= 2;
-    let hasAdvancedFilters = false;
-
-    hasAdvancedFilters = hasActiveAdvancedFilters();
+    const hasAdvancedFilters = hasActiveAdvancedFilters();
 
     if (hasSearchTerm || hasAdvancedFilters) {
       if (typeof liveSearch.performLiveSearch === 'function') {

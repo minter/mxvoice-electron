@@ -114,9 +114,7 @@ function performLiveSearch(searchTerm) {
 
   // Check if we have either a search term or advanced search filters
   const hasSearchTerm = searchTerm && searchTerm.length >= 2;
-  let hasAdvancedFilters = false;
-
-  hasAdvancedFilters = hasActiveAdvancedFilters();
+  const hasAdvancedFilters = hasActiveAdvancedFilters();
 
   if (!hasSearchTerm && !hasAdvancedFilters) {
     // Clear results if no search term and no advanced filters
