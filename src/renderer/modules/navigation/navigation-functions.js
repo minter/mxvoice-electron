@@ -43,13 +43,13 @@ export function sendToHoldingTank() {
         if (result && result.success && typeof window.saveHoldingTankToStore === 'function') {
           window.saveHoldingTankToStore();
         }
-      }).catch(err => { debugLog?.warn('Failed to add to holding tank', { module: 'navigation', function: 'sendToHoldingTank', error: err?.message }); });
+      }).catch(err => { window.debugLog?.warn('Failed to add to holding tank', { module: 'navigation', function: 'sendToHoldingTank', error: err?.message }); });
     } else if (window.moduleRegistry?.holdingTank?.addToHoldingTank) {
       window.moduleRegistry.holdingTank.addToHoldingTank(songId, target).then(result => {
         if (result && result.success && window.moduleRegistry?.holdingTank?.saveHoldingTankToStore) {
           window.moduleRegistry.holdingTank.saveHoldingTankToStore();
         }
-      }).catch(err => { debugLog?.warn('Failed to add to holding tank (registry)', { module: 'navigation', function: 'sendToHoldingTank', error: err?.message }); });
+      }).catch(err => { window.debugLog?.warn('Failed to add to holding tank (registry)', { module: 'navigation', function: 'sendToHoldingTank', error: err?.message }); });
     }
   }
   return false;
