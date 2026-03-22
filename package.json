@@ -61,6 +61,10 @@
       "node_modules/node-sqlite3-wasm/dist/*.wasm"
     ],
     "afterPack": "build/afterPack.js",
+    "electronFuses": {
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
     "mac": {
       "forceCodeSigning": true,
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
