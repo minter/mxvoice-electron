@@ -37,7 +37,7 @@ export async function saveEditedSong(event) {
   const category = (document.getElementById('song-form-category') || {}).value || '';
 
   // Hide modal after capturing values
-  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
+  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch (err) { debugLog?.warn('Failed to hide song form modal', { module: 'song-management', function: 'saveEditedSong', error: err?.message }); }
 
   try {
     const result = await secureDatabase.updateSong({id: songId, title, artist, category, info});
@@ -63,7 +63,7 @@ export async function saveEditedSong(event) {
  */
 export async function saveNewSong(event) {
   event.preventDefault();
-  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
+  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch (err) { debugLog?.warn('Failed to hide song form modal', { module: 'song-management', function: 'saveNewSong', error: err?.message }); }
   debugLog?.info("Starting save process", { module: 'song-management', function: 'saveNewSong' });
   try {
     const filename = (document.getElementById('song-form-filename') || {}).value || '';
@@ -203,7 +203,7 @@ export async function editSelectedSong() {
     if (mTitle) mTitle.textContent = 'Edit This Song';
     const mBtn = document.getElementById('songFormSubmitButton');
     if (mBtn) mBtn.textContent = 'Save';
-    try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#songFormModal'); } catch {}
+    try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#songFormModal'); } catch (err) { debugLog?.warn('Failed to show song form modal', { module: 'song-management', function: 'editSelectedSong', error: err?.message }); }
   } catch (error) {
     debugLog?.error('Failed to open edit song modal', { module: 'song-management', function: 'editSelectedSong', error: error?.message });
   }
@@ -338,7 +338,7 @@ export async function startAddNewSong(filename, metadata = null) {
     } catch (err) {
       debugLog?.warn('Failed to populate categories for add modal', { module: 'song-management', function: 'startAddNewSong', error: err?.message });
     }
-    try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#songFormModal'); } catch {}
+    try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#songFormModal'); } catch (err) { debugLog?.warn('Failed to show song form modal', { module: 'song-management', function: 'startAddNewSong', error: err?.message }); }
   } catch (error) {
     debugLog?.error('Failed to open add new song modal', { module: 'song-management', function: 'startAddNewSong', error: error?.message });
   }

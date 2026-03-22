@@ -184,11 +184,15 @@ function editCategoryUI(code) {
  */
 function openCategoriesModal() {
   populateCategoriesModal().then(() => {
-    try { import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#categoryManagementModal')); } catch {}
+    import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#categoryManagementModal')).catch(err => {
+      debugLog?.warn('Failed to show categories modal', { module: 'categories', function: 'openCategoriesModal', error: err?.message });
+    });
   }).catch(error => {
     debugLog?.error('❌ Failed to open categories modal:', { module: 'categories', function: 'openCategoriesModal', error: error });
     // Still open the modal even if population fails
-    try { import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#categoryManagementModal')); } catch {}
+    import('../ui/bootstrap-adapter.js').then(({ showModal }) => showModal('#categoryManagementModal')).catch(err => {
+      debugLog?.warn('Failed to show categories modal (fallback)', { module: 'categories', function: 'openCategoriesModal', error: err?.message });
+    });
   });
 }
 

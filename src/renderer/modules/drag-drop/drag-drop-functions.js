@@ -111,7 +111,7 @@ export function holdingTankDrop(event) {
           window.saveHoldingTankToStore();
         }
       }
-    }).catch(() => {});
+    }).catch(err => { debugLog?.warn('Failed to add song to holding tank', { module: 'drag-drop-functions', function: 'holdingTankDrop', error: err?.message }); });
   } else {
     debugLog?.error('addToHoldingTank function not available', { 
       module: 'drag-drop-functions',

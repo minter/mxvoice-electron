@@ -80,7 +80,7 @@ export default class UIInteractionEvents {
       };
       window.addEventListener('mxvoice:show-modal', showModalListener);
       this.uiHandlers.set('mxvoiceShowModal', { element: window, event: 'mxvoice:show-modal', handler: showModalListener });
-    } catch {}
+    } catch (err) { this.debugLog?.warn('Failed to register show-modal listener', { module: 'ui-interaction-events', error: err?.message }); }
 
     try {
       const updateReleaseNotesListener = async (e) => {

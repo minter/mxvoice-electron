@@ -208,7 +208,7 @@ function initializeSettingsController(options = {}) {
         try {
           const { hideModal } = await import('../ui/bootstrap-adapter.js');
           hideModal('#preferencesModal');
-        } catch {}
+        } catch (err) { debugLog?.warn('Failed to hide preferences modal', { function: 'savePreferences', error: err?.message }); }
       } catch (error) {
         debugLog?.error('Failed to save preferences', { 
           function: "savePreferences",
@@ -221,7 +221,7 @@ function initializeSettingsController(options = {}) {
         try {
           const { hideModal } = await import('../ui/bootstrap-adapter.js');
           hideModal('#preferencesModal');
-        } catch {}
+        } catch (err) { debugLog?.warn('Failed to hide preferences modal (after error)', { function: 'savePreferences', error: err?.message }); }
       }
     } else {
       // Fallback to legacy store access - use captured form values
@@ -240,7 +240,7 @@ function initializeSettingsController(options = {}) {
       try {
         const { hideModal } = await import('../ui/bootstrap-adapter.js');
         hideModal('#preferencesModal');
-      } catch {}
+      } catch (err) { debugLog?.warn('Failed to hide preferences modal (legacy)', { function: 'savePreferences', error: err?.message }); }
     }
   }
   

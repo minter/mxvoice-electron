@@ -466,7 +466,7 @@ export function holdingTankDrop(event) {
       // Save holding tank state after adding
       saveHoldingTankToStore();
     }
-  }).catch(() => {});
+  }).catch(err => { debugLog?.warn('Failed to add song to holding tank (drop)', { module: 'holding-tank', function: 'holdingTankDrop', error: err?.message }); });
 }
 
 /**
@@ -481,7 +481,7 @@ export function sendToHoldingTank() {
         // Save holding tank state after adding
         saveHoldingTankToStore();
       }
-    }).catch(() => {});
+    }).catch(err => { debugLog?.warn('Failed to send song to holding tank', { module: 'holding-tank', function: 'sendToHoldingTank', error: err?.message }); });
   }
   return false;
 }

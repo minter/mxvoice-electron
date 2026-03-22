@@ -56,7 +56,7 @@ export default class DOMInitialization {
         };
         
         this.debugLog?.debug('Bootstrap tooltips initialized');
-      } catch {}
+      } catch (err) { this.debugLog?.warn('Failed to initialize Bootstrap tooltips', { module: 'dom-initialization', function: 'initializeDOMStructure', error: err?.message }); }
 
       // Set up hotkey and holding tank tabs (lines 684-694 from renderer.js)
       this.setupTabStructure();
@@ -455,7 +455,7 @@ export default class DOMInitialization {
             try {
               const { showModal } = await import('../ui/bootstrap-adapter.js');
               showModal('#firstRunModal');
-            } catch {}
+            } catch (err) { this.debugLog?.warn('Failed to show first run modal', { module: 'dom-initialization', error: err?.message }); }
             this.debugLog?.info(
               'First run modal shown - database has <= 1 songs'
             );
