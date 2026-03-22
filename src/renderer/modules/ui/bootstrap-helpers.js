@@ -5,6 +5,7 @@
  * Use these instead of manually writing try/catch import blocks.
  */
 
+// Intentional: debugLog may not exist yet during early module loading
 let debugLog = null;
 try { debugLog = window.debugLog || null; } catch (_) {}
 

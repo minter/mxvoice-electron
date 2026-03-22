@@ -81,6 +81,13 @@ class FunctionMonitor {
       this.healthCheckInterval = null;
     }
 
+    if (this.changeMonitorInterval) {
+      clearInterval(this.changeMonitorInterval);
+      this.changeMonitorInterval = null;
+    }
+
+    this.trackedFunctionNames = null;
+
     this.debugLog.info('Function monitoring stopped', { function: "stopMonitoring" });
   }
 
@@ -181,29 +188,35 @@ class FunctionMonitor {
    * Setup monitoring for function changes
    */
   setupFunctionChangeMonitoring() {
-    // Monitor for function additions/removals
-    const originalWindow = { ...window };
-    
-    setInterval(() => {
-      const currentFunctions = Object.keys(window).filter(key => typeof window[key] === 'function');
-      const originalFunctions = Object.keys(originalWindow).filter(key => typeof originalWindow[key] === 'function');
-      
-      const newFunctions = currentFunctions.filter(fn => !originalFunctions.includes(fn));
-      const removedFunctions = originalFunctions.filter(fn => !currentFunctions.includes(fn));
-      
+    // Snapshot only function names (not the entire window object) to avoid memory bloat
+    this.trackedFunctionNames = new Set(
+      Object.keys(window).filter(key => typeof window[key] === 'function')
+    );
+
+    this.changeMonitorInterval = setInterval(() => {
+      const currentFunctions = new Set(
+        Object.keys(window).filter(key => typeof window[key] === 'function')
+      );
+
+      const newFunctions = [...currentFunctions].filter(fn => !this.trackedFunctionNames.has(fn));
+      const removedFunctions = [...this.trackedFunctionNames].filter(fn => !currentFunctions.has(fn));
+
       if (newFunctions.length > 0) {
-        this.debugLog.info('New functions detected:', { 
+        this.debugLog.info('New functions detected:', {
           function: "setupFunctionChangeMonitoring",
           data: { newFunctions }
         });
       }
-      
+
       if (removedFunctions.length > 0) {
-        this.debugLog.warn('Functions removed:', { 
+        this.debugLog.warn('Functions removed:', {
           function: "setupFunctionChangeMonitoring",
           data: { removedFunctions }
         });
       }
+
+      // Update tracked set to reflect current state
+      this.trackedFunctionNames = currentFunctions;
     }, 10000); // Check every 10 seconds
   }
 

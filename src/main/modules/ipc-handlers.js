@@ -284,15 +284,45 @@ function registerAllHandlers() {
 
   ipcMain.handle('file-delete', async (event, filePath) => {
     try {
-      fs.unlinkSync(filePath);
+      // Security: Validate input
+      if (!filePath || typeof filePath !== 'string') {
+        throw new Error('Invalid file path');
+      }
+
+      // Security: Restrict to allowed directories (same pattern as file-read)
+      const allowedPaths = [
+        app.getPath('userData'),
+        app.getPath('documents'),
+        app.getPath('music'),
+        app.getPath('downloads'),
+        app.getPath('home')
+      ];
+
+      const resolvedPath = path.resolve(filePath);
+      const isAllowed = allowedPaths.some(allowedPath => {
+        const resolvedAllowedPath = path.resolve(allowedPath);
+        return resolvedPath.startsWith(resolvedAllowedPath);
+      });
+
+      if (!isAllowed) {
+        debugLog?.warn('File delete access denied', {
+          module: 'ipc-handlers',
+          function: 'file-delete',
+          filePath: filePath,
+          resolvedPath: resolvedPath
+        });
+        throw new Error('Access denied: File path not in allowed directories');
+      }
+
+      await fs.promises.unlink(resolvedPath);
       return { success: true };
     } catch (error) {
       // ENOENT means file doesn't exist - treat as success since goal is achieved
       if (error.code === 'ENOENT') {
-        debugLog?.info('File already deleted (not found):', { 
-          module: 'ipc-handlers', 
-          function: 'file-delete', 
-          filePath: filePath 
+        debugLog?.info('File already deleted (not found):', {
+          module: 'ipc-handlers',
+          function: 'file-delete',
+          filePath: filePath
         });
         return { success: true, alreadyDeleted: true };
       }

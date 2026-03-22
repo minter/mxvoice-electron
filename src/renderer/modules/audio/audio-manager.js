@@ -450,7 +450,7 @@ function playSongWithFilename(filename, row, song_id) {
                     window.electronTest.setAudioProbe(probe);
                   }
                 }
-              } catch (_) {}
+              } catch (_) {} // Intentional: E2E audio probe setup is best-effort; failures are non-critical
             })
             .catch((error) => {
               getDebugLog()?.warn('Path join error with default path', {
@@ -604,7 +604,7 @@ function playSongWithFilename(filename, row, song_id) {
                       isSilent(threshold = 1e-3) { return this.currentRMS() < threshold; }
                     };
                   }
-                } catch (_) {}
+                } catch (_) {} // Intentional: E2E audio probe setup is best-effort; failures are non-critical
               },
               onend: function () {
                 getDebugLog()?.info('Sound playback ended', {
@@ -647,9 +647,9 @@ function playSongWithFilename(filename, row, song_id) {
             
             try {
               if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
-                window.Howler.ctx.resume().catch(() => {});
+                window.Howler.ctx.resume().catch(() => {}); // Intentional: resume may reject if context is already closed
               }
-            } catch (_) {}
+            } catch (_) {} // Intentional: AudioContext resume in E2E is best-effort
             // Ensure probe exists in E2E once WebAudio context is available
             if (window.electronTest?.isE2E && !window.electronTest?.audioProbe) {
               createAndInstallProbe();

@@ -2,6 +2,7 @@
 // Centralizes Bootstrap JS API usage so code can call simple helpers
 
 let debugLog = null;
+// Intentional: debugLog may not exist yet during early module loading
 try {
   debugLog = window.debugLog || null;
 } catch (_) {}
