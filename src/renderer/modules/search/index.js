@@ -8,6 +8,7 @@
 // Import search sub-modules
 import * as searchEngine from './search-engine.js';
 import * as liveSearch from './live-search.js';
+import { getAdvancedSearchValues } from './search-form-utils.js';
 import * as advancedSearch from './advanced-search.js';
 
 // Import debug logger
@@ -116,10 +117,7 @@ class SearchModule {
     // Apply advanced search filters if advanced search is visible
     const adv = document.getElementById('advanced-search');
     if (adv && adv.offsetParent !== null) {
-      const title = (document.getElementById('title-search')?.value || '').trim();
-      const artist = (document.getElementById('artist-search')?.value || '').trim();
-      const info = (document.getElementById('info-search')?.value || '').trim();
-      const since = document.getElementById('date-search')?.value || '';
+      const { title, artist, info, since } = getAdvancedSearchValues();
 
       if (title.length) {
         querySegments.push("title LIKE ?");

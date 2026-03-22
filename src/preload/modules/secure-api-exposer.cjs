@@ -92,17 +92,20 @@ function sanitizeForIPC(value, depth = 0, seen = new WeakSet()) {
 const secureElectronAPI = {
   // Database operations - all go through secure IPC
   database: {
-    query: (sql, params) => ipcRenderer.invoke('database-query', sql, params),
-    execute: (sql, params) => ipcRenderer.invoke('database-execute', sql, params),
     getCategories: () => ipcRenderer.invoke('get-categories'),
-    getAllSongs: () => ipcRenderer.invoke('database-query', 'SELECT * FROM mrvoice ORDER BY category, info, title, artist', []),
     addSong: (songData) => ipcRenderer.invoke('add-song', songData),
     getSongById: (songId) => ipcRenderer.invoke('get-song-by-id', songId),
     deleteSong: (songId) => ipcRenderer.invoke('delete-song', songId),
     updateSong: (songData) => ipcRenderer.invoke('update-song', songData),
     addCategory: (categoryData) => ipcRenderer.invoke('add-category', categoryData),
     updateCategory: (code, description) => ipcRenderer.invoke('update-category', code, description),
-    deleteCategory: (code, description) => ipcRenderer.invoke('delete-category', code, description)
+    deleteCategory: (code, description) => ipcRenderer.invoke('delete-category', code, description),
+    searchSongs: (searchParams) => ipcRenderer.invoke('search-songs', searchParams),
+    getCategoryByCode: (code) => ipcRenderer.invoke('get-category-by-code', code),
+    getSongsByIds: (ids) => ipcRenderer.invoke('get-songs-by-ids', ids),
+    reassignSongCategory: (fromCode, toCode) => ipcRenderer.invoke('reassign-song-category', fromCode, toCode),
+    findCategoryCodesLike: (code, pattern) => ipcRenderer.invoke('find-category-codes-like', code, pattern),
+    countSongs: () => ipcRenderer.invoke('count-songs')
   },
   
   // Store operations - secure preference management
@@ -313,18 +316,8 @@ const secureElectronAPI = {
     },
     
     onAddDialogLoad: (callback) => {
-      const handler = async (_event, filename) => {
-        try {
-          const mm = await import('music-metadata');
-          const metadata = await mm.parseFile(filename);
-          callback(filename, metadata);
-        } catch (err) {
-          // Fallback: provide filename without metadata
-          if (debugLog && typeof debugLog.warn === 'function') {
-            debugLog.warn('Failed to parse metadata for file', { module: 'secure-api-exposer', function: 'onAddDialogLoad', error: err?.message, filename });
-          }
-          callback(filename);
-        }
+      const handler = (_event, filename, metadata) => {
+        callback(filename, metadata || null);
       };
       ipcRenderer.on('add_dialog_load', handler);
       return () => ipcRenderer.removeListener('add_dialog_load', handler);

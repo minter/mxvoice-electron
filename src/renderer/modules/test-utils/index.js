@@ -115,16 +115,17 @@ export function testDatabaseAPI() {
         results.tests.push({ name: 'getCategories', success: false, error: result.error });
       }
       
-      // Test database query
-      return window.secureElectronAPI.database.query('SELECT COUNT(*) as count FROM categories');
+      // Test database query via named operation
+      return window.secureElectronAPI.database.getCategories();
     }).then(result => {
       if (result.success) {
-        debugLog?.info('database query API works', { 
+        const categoryCount = Array.isArray(result.data) ? result.data.length : 0;
+        debugLog?.info('database query API works', {
           module: 'test-utils',
           function: 'testDatabaseAPI',
-          categoryCount: result.data[0].count
+          categoryCount: categoryCount
         });
-        results.tests.push({ name: 'databaseQuery', success: true, data: result.data[0].count });
+        results.tests.push({ name: 'databaseQuery', success: true, data: categoryCount });
       } else {
         debugLog?.warn('database query API failed', { 
           module: 'test-utils',

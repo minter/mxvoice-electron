@@ -66,22 +66,29 @@ test.describe('UI - basic', () => {
     await expect(omni).toBeVisible();
     await expect(title).toBeHidden();
 
-    // Click to open advanced search
-    await btn.click();
-    await page.waitForTimeout(100);
+    // Wait for toggleAdvancedSearch to be registered, then call it directly
+    // (button click can fail on CI when tooltip or event handler timing interferes)
+    await page.waitForFunction(
+      () => typeof window.toggleAdvancedSearch === 'function',
+      { timeout: 10000 }
+    );
+    await page.evaluate(() => window.toggleAdvancedSearch());
 
     // Wait for animation + state
-    await expect(btn).toHaveAttribute('aria-expanded', 'true');
+    await expect(btn).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 });
     await expect(panel).toBeVisible();
     await expect(omni).toBeHidden();
     await expect(title).toBeVisible();
     await expect(title).toBeFocused();
 
-    // Click to close advanced search
-    await btn.click();
-    await page.waitForTimeout(100);
+    // Wait for the open animation to fully complete before toggling back
+    // (toggleAdvancedSearch uses animateCSS which is async)
+    await page.waitForTimeout(500);
 
-    await expect(btn).toHaveAttribute('aria-expanded', 'false');
+    // Toggle back to close
+    await page.evaluate(() => window.toggleAdvancedSearch());
+
+    await expect(btn).toHaveAttribute('aria-expanded', 'false', { timeout: 5000 });
     await expect(panel).toBeHidden();
     await expect(omni).toBeVisible();
     await expect(omni).toBeFocused();

@@ -68,7 +68,7 @@ function setLabelFromSongId(song_id, element, options = {}) {
   
   // Use new database API for getting song by ID
   if (electronAPI && electronAPI.database) {
-    electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
+    electronAPI.database.getSongById(song_id).then(result => {
       if (result.success && result.data.length > 0) {
         const row = result.data[0];
         const title = row.title || "[Unknown Title]";
@@ -199,7 +199,7 @@ function fallbackSetLabelFromSongId(song_id, element, options = {}) {
   });
   
   if (electronAPI && electronAPI.database) {
-    electronAPI.database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
+    electronAPI.database.getSongById(song_id).then(result => {
       if (result.success && result.data.length > 0) {
         const row = result.data[0];
         const title = row.title || "[Unknown Title]";

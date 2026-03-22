@@ -12,7 +12,8 @@ test.describe('First run modal behavior', () => {
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const userDataDir = path.join(__dirname, '../../fixtures/test-user-data');
+  // Use a SEPARATE directory from first-run.spec.js to avoid parallel conflicts
+  const userDataDir = path.join(__dirname, '../../fixtures/test-user-data-modal');
   // For first run, database_directory defaults to userData root (not userData/data)
   const dbDir = userDataDir;
   const musicDir = path.join(userDataDir, 'mp3');
@@ -22,8 +23,16 @@ test.describe('First run modal behavior', () => {
   const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
 
   test.beforeAll(async () => {
-    // Clean isolated userData
-    if (fs.existsSync(userDataDir)) fs.rmSync(userDataDir, { recursive: true, force: true });
+    // Clean isolated userData (retry on Windows where Chromium files may still be locked)
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        if (fs.existsSync(userDataDir)) fs.rmSync(userDataDir, { recursive: true, force: true });
+        break;
+      } catch (err) {
+        if (attempt === 4) throw err;
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
     fs.mkdirSync(userDataDir, { recursive: true });
 
     app = await electron.launch({
@@ -52,6 +61,7 @@ test.describe('First run modal behavior', () => {
   });
 
   test('first run modal does not appear after adding song and restarting', async () => {
+    test.slow(); // App restart with lock cleanup and retries needs extra time
     // 1) First-run modal appears
     const firstRunModal = page.locator('#firstRunModal');
     await expect(firstRunModal).toBeVisible({ timeout: 10000 });
@@ -198,13 +208,25 @@ test.describe('First run modal behavior', () => {
     // 10) Restore dialog
     await app.evaluate(() => { globalThis.__restoreDialog?.(); });
 
-    // 11) Close the app
+    // 11) Close the app and wait for process to fully exit
     await app.close();
     app = null;
     page = null;
 
-    // 12) Reopen the app without resetting state
-    app = await electron.launch({
+    // Allow the OS to fully release the process, ports, and file locks
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Remove any Electron/Chromium lock files that could prevent a clean relaunch
+    const lockFiles = ['lockfile', 'SingletonLock', 'SingletonSocket', 'SingletonCookie'];
+    for (const lf of lockFiles) {
+      const lockPath = path.join(userDataDir, lf);
+      if (fs.existsSync(lockPath)) {
+        try { fs.rmSync(lockPath, { force: true }); } catch { /* best effort */ }
+      }
+    }
+
+    // 12) Reopen the app without resetting state (retry with increasing settle on CI)
+    const launchOpts = {
       executablePath: electronPath,
       args: ['.', '--profile=Default User'],
       env: {
@@ -217,7 +239,20 @@ test.describe('First run modal behavior', () => {
         HOME: fakeHome,
         APPDATA: fakeHome,
       },
-    });
+    };
+    let launchAttempts = 0;
+    const maxAttempts = 3;
+    while (launchAttempts < maxAttempts) {
+      try {
+        app = await electron.launch(launchOpts);
+        break;
+      } catch (err) {
+        launchAttempts++;
+        if (launchAttempts >= maxAttempts) throw err;
+        // Progressively longer settle between retries
+        await new Promise(resolve => setTimeout(resolve, 2000 * launchAttempts));
+      }
+    }
 
     page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');

@@ -8,6 +8,9 @@
  * - Element manipulation
  */
 
+// AbortController for cleaning up hotkey UI listeners on re-initialization
+let hotkeyUIAbortController = null;
+
 // Import debug logger
 let debugLog = null;
 try {
@@ -78,11 +81,8 @@ function allowHotkeyDrop(event) {
  * @param {number} tab - Tab number to switch to
  */
 function switchToHotkeyTab(tab) {
-  try {
-    import('../ui/bootstrap-adapter.js')
-      .then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tab}) a`))
-      .catch(() => {});
-  } catch {}
+  import('../ui/bootstrap-helpers.js')
+    .then(({ safeShowTab }) => safeShowTab(`#hotkey_tabs li:nth-child(${tab}) a`, { module: 'hotkey-ui', function: 'switchToHotkeyTab' }));
 }
 
 /**
@@ -108,6 +108,11 @@ async function renameHotkeyTab(options = {}) {
  * @param {Object} options - Additional options
  */
 function setupHotkeyEventListeners(options = {}) {
+  // Abort previous listeners before re-attaching
+  hotkeyUIAbortController?.abort();
+  hotkeyUIAbortController = new AbortController();
+  const { signal } = hotkeyUIAbortController;
+
   // Hotkey drop handlers
   document.querySelectorAll('.hotkeys li').forEach((li) => {
     li.addEventListener('drop', (event) => {
@@ -115,14 +120,14 @@ function setupHotkeyEventListeners(options = {}) {
       const data = (event.originalEvent || event).dataTransfer?.getData('text') || '';
       if (!data.length) return;
       hotkeyDrop((event.originalEvent || event), options);
-    });
+    }, { signal });
     li.addEventListener('dragover', (event) => {
       li.classList.add('drop_target');
       allowHotkeyDrop((event.originalEvent || event));
-    });
+    }, { signal });
     li.addEventListener('dragleave', (event) => {
       (event.currentTarget).classList.remove('drop_target');
-    });
+    }, { signal });
   });
 
   // Note: Click highlighting is now handled by event delegation in setupHotkeyHighlightDelegation()
@@ -135,7 +140,7 @@ function setupHotkeyEventListeners(options = {}) {
       if (e.target && e.target.closest('.nav-link')) {
         renameHotkeyTab?.(options);
       }
-    });
+    }, { signal });
   }
 
   debugLog?.info('Hotkeys event listeners set up', { 
@@ -181,11 +186,8 @@ function getActiveHotkeyTab() {
  */
 function setActiveHotkeyTab(tabNumber) {
   if (tabNumber >= 1 && tabNumber <= 5) {
-    try {
-      import('../ui/bootstrap-adapter.js')
-        .then(({ showTab }) => showTab(`#hotkey_tabs li:nth-child(${tabNumber}) a`))
-        .catch(() => {});
-    } catch {}
+    import('../ui/bootstrap-helpers.js')
+      .then(({ safeShowTab }) => safeShowTab(`#hotkey_tabs li:nth-child(${tabNumber}) a`, { module: 'hotkey-ui', function: 'setActiveHotkeyTab' }));
   }
 }
 
@@ -488,6 +490,14 @@ function setupHotkeyHighlightDelegation() {
 // Call this after hotkey lists are rendered/updated
 setupHotkeyHighlightDelegation();
 
+/**
+ * Clean up hotkey UI event listeners
+ */
+function cleanupHotkeyUIEventListeners() {
+  hotkeyUIAbortController?.abort();
+  hotkeyUIAbortController = null;
+}
+
 // Export all functions
 export {
   hotkeyDrop,
@@ -516,7 +526,8 @@ export {
   setHotkeyLabel,
   isHotkeyAssigned,
   getAssignedHotkeys,
-  getUnassignedHotkeys
+  getUnassignedHotkeys,
+  cleanupHotkeyUIEventListeners
 };
 
 // Default export for module loading
@@ -547,5 +558,6 @@ export default {
   setHotkeyLabel,
   isHotkeyAssigned,
   getAssignedHotkeys,
-  getUnassignedHotkeys
-}; 
+  getUnassignedHotkeys,
+  cleanupHotkeyUIEventListeners
+};

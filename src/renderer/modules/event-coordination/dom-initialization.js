@@ -56,7 +56,7 @@ export default class DOMInitialization {
         };
         
         this.debugLog?.debug('Bootstrap tooltips initialized');
-      } catch {}
+      } catch (err) { this.debugLog?.warn('Failed to initialize Bootstrap tooltips', { module: 'dom-initialization', function: 'initializeDOMStructure', error: err?.message }); }
 
       // Set up hotkey and holding tank tabs (lines 684-694 from renderer.js)
       this.setupTabStructure();
@@ -316,9 +316,9 @@ export default class DOMInitialization {
               try {
                 // Get song title for confirmation (same as the complex function)
                 let songTitle = 'this song';
-                if (window.electronAPI?.database?.query) {
+                if (window.electronAPI?.database?.getSongById) {
                   try {
-                    const result = await window.electronAPI.database.query('SELECT title FROM mrvoice WHERE ID = ?', [songid]);
+                    const result = await window.electronAPI.database.getSongById(songid);
                     if (result?.success && result.data?.[0]?.title) {
                       songTitle = result.data[0].title;
                     }
@@ -429,9 +429,7 @@ export default class DOMInitialization {
         try {
           // In seeded test environment, check if we have multiple songs
           if (this.electronAPI && this.electronAPI.database) {
-            const result = await this.electronAPI.database.query(
-              'SELECT count(*) as count from mrvoice WHERE 1'
-            );
+            const result = await this.electronAPI.database.countSongs();
             if (result.success && result.data.length > 0 && result.data[0].count > 1) {
               this.debugLog?.info('Seeded test environment detected with multiple songs - skipping first run modal');
               return;
@@ -444,9 +442,7 @@ export default class DOMInitialization {
 
       // Use new database API for song count
       if (this.electronAPI && this.electronAPI.database) {
-        const result = await this.electronAPI.database.query(
-          'SELECT count(*) as count from mrvoice WHERE 1'
-        );
+        const result = await this.electronAPI.database.countSongs();
         if (
           result.success &&
           result.data.length > 0
@@ -456,10 +452,8 @@ export default class DOMInitialization {
 
           // Only show first run modal if database has <= 1 songs
           if (songCount <= 1) {
-            try {
-              const { showModal } = await import('../ui/bootstrap-adapter.js');
-              showModal('#firstRunModal');
-            } catch {}
+            const { safeShowModal } = await import('../ui/bootstrap-helpers.js');
+            safeShowModal('#firstRunModal', { module: 'dom-initialization' });
             this.debugLog?.info(
               'First run modal shown - database has <= 1 songs'
             );

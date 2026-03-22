@@ -13,7 +13,6 @@
 
 import fs from 'fs';
 import path from 'path';
-import { promisify } from 'util';
 import electron from 'electron';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
@@ -27,6 +26,11 @@ const __dirname = path.dirname(__filename);
 
 let debugLog = null;
 
+// Async replacement for fs.existsSync — does not block the main process
+async function pathExists(p) {
+  try { await fs.promises.access(p); return true; } catch { return false; }
+}
+
 // Operation queue per profile to serialize metadata operations
 const metadataOperationQueue = new Map();
 
@@ -37,7 +41,7 @@ const backupCreationLocks = new Map();
  * Initialize the Profile Backup Manager
  * @param {Object} dependencies - Module dependencies
  */
-function initializeProfileBackupManager(dependencies) {
+async function initializeProfileBackupManager(dependencies) {
   debugLog = dependencies.debugLog;
   
   debugLog?.info('Profile Backup Manager initialized', { 
@@ -47,8 +51,8 @@ function initializeProfileBackupManager(dependencies) {
   
   // Ensure backup directory exists
   const backupDir = getBackupBaseDirectory();
-  if (!fs.existsSync(backupDir)) {
-    fs.mkdirSync(backupDir, { recursive: true });
+  if (!await pathExists(backupDir)) {
+    await fs.promises.mkdir(backupDir, { recursive: true });
     debugLog?.info('Created backup base directory', { 
       module: 'profile-backup-manager',
       path: backupDir 
@@ -160,7 +164,7 @@ async function withMetadataLock(profileName, operation) {
   const startTime = Date.now();
   
   // Wait for lock to be released
-  while (fs.existsSync(lockPath)) {
+  while (await pathExists(lockPath)) {
     if (Date.now() - startTime > maxWait) {
       throw new Error('Timeout waiting for metadata lock');
     }
@@ -272,14 +276,14 @@ async function readMetadataSafe(profileName) {
     return metadata;
   } catch (error) {
     // Primary file is corrupted or missing, try backup
-    if (fs.existsSync(backupPath)) {
+    if (await pathExists(backupPath)) {
       try {
         const backupData = await fs.promises.readFile(backupPath, 'utf8');
         const metadata = JSON.parse(backupData);
         
         // Validate backup structure
         if (!metadata.backups || !Array.isArray(metadata.backups)) {
-          throw new Error('Backup metadata also corrupted');
+          throw new Error('Backup metadata also corrupted', { cause: error });
         }
         
         // Restore from backup
@@ -325,10 +329,10 @@ async function rebuildMetadataFromDirectories(profileName) {
     backupCount: 0
   };
   
-  if (!fs.existsSync(backupDir)) {
+  if (!await pathExists(backupDir)) {
     return metadata;
   }
-  
+
   try {
     const entries = await fs.promises.readdir(backupDir, { withFileTypes: true });
     
@@ -453,7 +457,7 @@ async function updateMetadata(profileName, updateFn) {
         const backupPath = metadataPath + '.bak';
         
         // Create backup before write
-        if (fs.existsSync(metadataPath)) {
+        if (await pathExists(metadataPath)) {
           const currentData = await fs.promises.readFile(metadataPath, 'utf8');
           await fs.promises.writeFile(backupPath, currentData, 'utf8');
         }
@@ -464,7 +468,7 @@ async function updateMetadata(profileName, updateFn) {
       } catch (error) {
         retries--;
         if (retries === 0) {
-          throw new Error(`Failed to update metadata after retries: ${error.message}`);
+          throw new Error(`Failed to update metadata after retries: ${error.message}`, { cause: error });
         }
         
         // Exponential backoff on retry
@@ -481,12 +485,10 @@ async function updateMetadata(profileName, updateFn) {
  * @returns {Promise<void>}
  */
 async function copyDirectoryRecursive(src, dest) {
-  // Ensure destination directory exists
-  if (!fs.existsSync(dest)) {
-    fs.mkdirSync(dest, { recursive: true });
-  }
-  
-  const entries = await promisify(fs.readdir)(src, { withFileTypes: true });
+  // Ensure destination directory exists (recursive mkdir is idempotent)
+  await fs.promises.mkdir(dest, { recursive: true });
+
+  const entries = await fs.promises.readdir(src, { withFileTypes: true });
   
   for (const entry of entries) {
     const srcPath = path.join(src, entry.name);
@@ -495,7 +497,7 @@ async function copyDirectoryRecursive(src, dest) {
     if (entry.isDirectory()) {
       await copyDirectoryRecursive(srcPath, destPath);
     } else {
-      await promisify(fs.copyFile)(srcPath, destPath);
+      await fs.promises.copyFile(srcPath, destPath);
     }
   }
 }
@@ -535,19 +537,17 @@ async function createBackup(profileName, options = {}) {
   try {
     const profileDir = getProfileDirectory(profileName);
     
-    if (!fs.existsSync(profileDir)) {
+    if (!await pathExists(profileDir)) {
       return { success: false, error: 'Profile directory does not exist' };
     }
-    
+
     // Generate backup ID
     const backupId = generateBackupId();
     const backupDir = getBackupDirectory(profileName);
     const backupPath = path.join(backupDir, backupId);
-    
-    // Ensure backup directory exists
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
+
+    // Ensure backup directory exists (recursive mkdir is idempotent)
+    await fs.promises.mkdir(backupDir, { recursive: true });
     
     debugLog?.info('Creating backup', {
       module: 'profile-backup-manager',
@@ -674,10 +674,10 @@ async function restoreBackup(profileName, backupId) {
     const backupPath = path.join(backupDir, backupId);
     const profileDir = getProfileDirectory(profileName);
     
-    if (!fs.existsSync(backupPath)) {
+    if (!await pathExists(backupPath)) {
       return { success: false, error: 'Backup does not exist' };
     }
-    
+
     debugLog?.info('Restoring backup', {
       module: 'profile-backup-manager',
       function: 'restoreBackup',
@@ -686,12 +686,12 @@ async function restoreBackup(profileName, backupId) {
       backupPath,
       profileDir
     });
-    
+
     // Create pre-restore backup first (safety measure)
     const preRestoreBackupId = `pre-restore-${generateBackupId()}`;
     const preRestorePath = path.join(backupDir, preRestoreBackupId);
-    
-    if (fs.existsSync(profileDir)) {
+
+    if (await pathExists(profileDir)) {
       await copyDirectoryRecursive(profileDir, preRestorePath);
       const { size, fileCount } = await calculateBackupSize(preRestorePath);
       
@@ -709,13 +709,9 @@ async function restoreBackup(profileName, backupId) {
       });
     }
     
-    // Remove existing profile directory
-    if (fs.existsSync(profileDir)) {
-      fs.rmSync(profileDir, { recursive: true, force: true });
-    }
-    
-    // Restore from backup
-    fs.mkdirSync(profileDir, { recursive: true });
+    // Remove existing profile directory and restore from backup
+    await fs.promises.rm(profileDir, { recursive: true, force: true });
+    await fs.promises.mkdir(profileDir, { recursive: true });
     await copyDirectoryRecursive(backupPath, profileDir);
     
     debugLog?.info('Backup restored successfully', {
@@ -751,12 +747,12 @@ async function deleteBackup(profileName, backupId) {
     const backupDir = getBackupDirectory(profileName);
     const backupPath = path.join(backupDir, backupId);
     
-    if (!fs.existsSync(backupPath)) {
+    if (!await pathExists(backupPath)) {
       return { success: false, error: 'Backup does not exist' };
     }
-    
+
     // Remove backup directory
-    fs.rmSync(backupPath, { recursive: true, force: true });
+    await fs.promises.rm(backupPath, { recursive: true, force: true });
     
     // Update metadata
     await updateMetadata(profileName, (metadata) => {
@@ -820,8 +816,8 @@ async function cleanupOldBackups(profileName, maxCount, maxAge) {
     
     for (const backup of backupsToDelete) {
       const backupPath = path.join(backupDir, backup.id);
-      if (fs.existsSync(backupPath)) {
-        fs.rmSync(backupPath, { recursive: true, force: true });
+      if (await pathExists(backupPath)) {
+        await fs.promises.rm(backupPath, { recursive: true, force: true });
         deletedCount++;
       }
     }
@@ -867,10 +863,10 @@ async function calculateProfileHash(profileName) {
   try {
     const profileDir = getProfileDirectory(profileName);
     
-    if (!fs.existsSync(profileDir)) {
+    if (!await pathExists(profileDir)) {
       return null;
     }
-    
+
     const hash = crypto.createHash('sha256');
     
     async function hashDirectory(dirPath) {

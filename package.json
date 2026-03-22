@@ -12,8 +12,9 @@
     "email": "wade@wademinter.com"
   },
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder",
+    "build:preload": "esbuild src/preload/preload-modular.cjs --bundle --platform=node --external:electron --outfile=src/preload/preload-bundle.cjs --format=cjs",
+    "start": "npm run build:preload && electron .",
+    "build": "npm run build:preload && electron-builder",
     "build:mac": "electron-builder --mac",
     "build:mac:arm64": "electron-builder --mac --arm64",
     "build:mac:universal": "electron-builder --mac --universal",
@@ -33,7 +34,7 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "postinstall": "electron-builder install-app-deps",
-    "test": "playwright test",
+    "test": "npm run build:preload && playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
@@ -43,6 +44,8 @@
     "test:validate": "node tests/setup/test-runner.js",
     "test:isolate": "node tests/setup/verify-isolation.js",
     "test:run": "./tests/run-tests.sh",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -181,14 +184,18 @@
     "wavesurfer.js": "^7.12.4"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.58.2",
     "cross-env": "^10.1.0",
     "electron": "^41.0.3",
     "electron-builder": "26.8.1",
     "electron-reload": "^1.5.0",
-    "eslint": "^10.0.3",
+    "esbuild": "^0.27.4",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
     "node-abi": "4.28.0",
-    "playwright": "^1.55.1"
+    "playwright": "^1.55.1",
+    "vitest": "^4.1.0"
   },
   "engines": {
     "node": ">=22.12.0"

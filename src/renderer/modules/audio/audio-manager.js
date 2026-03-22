@@ -257,7 +257,11 @@ function playSongWithFilename(filename, row, song_id) {
                 const now = document.getElementById('song_now_playing');
                 if (now) {
                   const title = row?.title || filename;
-                  now.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> File not found: ${title}`;
+                  now.textContent = '';
+                  const icon = document.createElement('i');
+                  icon.className = 'fas fa-exclamation-triangle text-warning';
+                  now.appendChild(icon);
+                  now.appendChild(document.createTextNode(` File not found: ${title}`));
                   now.style.display = '';
                   now.removeAttribute('songid');
                 }
@@ -348,7 +352,12 @@ function playSongWithFilename(filename, row, song_id) {
                   }
                   const now = document.getElementById('song_now_playing');
                   if (now) {
-                    now.innerHTML = `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`;
+                    now.textContent = '';
+                    const nowIcon = document.createElement('i');
+                    nowIcon.id = 'song_spinner';
+                    nowIcon.className = 'fas fa-volume-up';
+                    now.appendChild(nowIcon);
+                    now.appendChild(document.createTextNode(` ${title} ${artist}`));
                     now.style.display = '';
                     now.setAttribute('songid', String(song_id));
                   }
@@ -441,7 +450,7 @@ function playSongWithFilename(filename, row, song_id) {
                     window.electronTest.setAudioProbe(probe);
                   }
                 }
-              } catch (_) {}
+              } catch (_) {} // Intentional: E2E audio probe setup is best-effort; failures are non-critical
             })
             .catch((error) => {
               getDebugLog()?.warn('Path join error with default path', {
@@ -486,7 +495,11 @@ function playSongWithFilename(filename, row, song_id) {
               const now = document.getElementById('song_now_playing');
               if (now) {
                 const title = row?.title || filename;
-                now.innerHTML = `<i class="fas fa-exclamation-triangle text-warning"></i> File not found: ${title}`;
+                now.textContent = '';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-exclamation-triangle text-warning';
+                now.appendChild(icon);
+                now.appendChild(document.createTextNode(` File not found: ${title}`));
                 now.style.display = '';
                 now.removeAttribute('songid');
               }
@@ -556,7 +569,12 @@ function playSongWithFilename(filename, row, song_id) {
                 }
                 const now = document.getElementById('song_now_playing');
                 if (now) {
-                  now.innerHTML = `<i id="song_spinner" class="fas fa-volume-up"></i> ${title} ${artist}`;
+                  now.textContent = '';
+                  const nowIcon = document.createElement('i');
+                  nowIcon.id = 'song_spinner';
+                  nowIcon.className = 'fas fa-volume-up';
+                  now.appendChild(nowIcon);
+                  now.appendChild(document.createTextNode(` ${title} ${artist}`));
                   now.style.display = '';
                   now.setAttribute('songid', String(song_id));
                 }
@@ -586,7 +604,7 @@ function playSongWithFilename(filename, row, song_id) {
                       isSilent(threshold = 1e-3) { return this.currentRMS() < threshold; }
                     };
                   }
-                } catch (_) {}
+                } catch (_) {} // Intentional: E2E audio probe setup is best-effort; failures are non-critical
               },
               onend: function () {
                 getDebugLog()?.info('Sound playback ended', {
@@ -629,9 +647,9 @@ function playSongWithFilename(filename, row, song_id) {
             
             try {
               if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
-                window.Howler.ctx.resume().catch(() => {});
+                window.Howler.ctx.resume().catch(() => {}); // Intentional: resume may reject if context is already closed
               }
-            } catch (_) {}
+            } catch (_) {} // Intentional: AudioContext resume in E2E is best-effort
             // Ensure probe exists in E2E once WebAudio context is available
             if (window.electronTest?.isE2E && !window.electronTest?.audioProbe) {
               createAndInstallProbe();
@@ -720,7 +738,7 @@ function playSongFromId(song_id) {
   }
 
   secureDatabase
-    .query('SELECT * from mrvoice WHERE id = ?', [song_id])
+    .getSongById(song_id)
     .then((result) => {
       if (result.success && result.data.length > 0) {
         const row = result.data[0];

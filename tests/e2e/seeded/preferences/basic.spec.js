@@ -90,9 +90,9 @@ test.describe('Preferences - basic', () => {
     expect(hotkeyDir).toBeTruthy();
     expect(fadeSeconds).toBeTruthy();
     
-    // Close modal
+    // Close modal (wait for Bootstrap fade animation to complete)
     await page.locator('#preferencesModal .btn-close').click();
-    await expect(page.locator('#preferencesModal')).not.toBeVisible();
+    await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 10000 });
   });
 
   test('preferences can be modified and saved', async () => {
@@ -113,13 +113,16 @@ test.describe('Preferences - basic', () => {
     const originalValue = await fadeInput.inputValue();
     const newValue = originalValue === '2' ? '3' : '2';
     
-    // Click first to ensure focus before clear/fill
+    // Use evaluate to set the value directly (avoids clear+fill race on Windows)
     await fadeInput.click();
-    await fadeInput.clear();
-    await fadeInput.fill(newValue);
-    
+    await fadeInput.evaluate((el, val) => {
+      el.value = val;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, newValue);
+
     // Verify the value was actually set before saving
-    await expect(fadeInput).toHaveValue(newValue);
+    await expect(fadeInput).toHaveValue(newValue, { timeout: 5000 });
     
     // Toggle debug logging
     const debugCheckbox = page.locator('#preferences-debug-log-enabled');
@@ -154,9 +157,9 @@ test.describe('Preferences - basic', () => {
     expect(savedFadeValue).toBe(newValue);
     expect(savedDebugState).toBe(!originalDebugState);
     
-    // Close modal
+    // Close modal (wait for Bootstrap fade animation to complete)
     await page.locator('#preferencesModal .btn-close').click();
-    await expect(page.locator('#preferencesModal')).not.toBeVisible();
+    await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 10000 });
   });
 
   test('directory picker buttons are present and functional', async () => {

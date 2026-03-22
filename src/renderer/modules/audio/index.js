@@ -74,7 +74,7 @@ class AudioModule {
       // Initialize music directory cache to reduce IPC overhead
       await this.initializeMusicDirectoryCache();
       
-      // In E2E, relax CSP slightly to allow file: media for WebAudio buffering
+      // Intentional: enableTestModeCSP only exists in E2E test builds; safe to ignore if absent
       try { enableTestModeCSP(); } catch (_) {}
 
       // In E2E test mode, set up the audio probe eagerly so tests can measure RMS

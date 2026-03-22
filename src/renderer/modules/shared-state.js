@@ -5,6 +5,25 @@
  * This replaces the need for global variables scattered across modules.
  */
 
+/** Valid state keys — any key not in this set will trigger a warning */
+const VALID_KEYS = new Set([
+  // Audio state
+  'sound',
+  'globalAnimation',
+  'wavesurfer',
+  'createWaveSurfer',
+  'autoplay',
+  'loop',
+  // UI state
+  'holdingTankMode',
+  'fontSize',
+  // Data state
+  'categories',
+  'searchTimeout',
+  // Legacy
+  'db',
+]);
+
 class SharedState {
   constructor() {
     this.state = {
@@ -14,38 +33,44 @@ class SharedState {
       wavesurfer: null,
       autoplay: false,
       loop: false,
-      
+
       // UI state
       holdingTankMode: "storage", // 'storage' or 'playlist'
       fontSize: 11,
-      
+
       // Data state
       categories: {},
-      
+
       // Legacy database reference (for fallback)
       db: null
     };
-    
+
     this.listeners = new Map();
   }
 
   /**
    * Get a state value
-   * 
+   *
    * @param {string} key - The state key to get
    * @returns {*} - The state value
    */
   get(key) {
+    if (!VALID_KEYS.has(key)) {
+      window.debugLog?.warn(`SharedState.get() called with unknown key: "${key}"`, { module: 'shared-state', function: 'get' });
+    }
     return this.state[key];
   }
 
   /**
    * Set a state value
-   * 
+   *
    * @param {string} key - The state key to set
    * @param {*} value - The value to set
    */
   set(key, value) {
+    if (!VALID_KEYS.has(key)) {
+      window.debugLog?.warn(`SharedState.set() called with unknown key: "${key}"`, { module: 'shared-state', function: 'set' });
+    }
     this.state[key] = value;
     this.notifyListeners(key, value);
   }
@@ -58,6 +83,9 @@ class SharedState {
    * @returns {Function} - Unsubscribe function
    */
   subscribe(key, callback) {
+    if (!VALID_KEYS.has(key)) {
+      window.debugLog?.warn(`SharedState.subscribe() called with unknown key: "${key}"`, { module: 'shared-state', function: 'subscribe' });
+    }
     if (!this.listeners.has(key)) {
       this.listeners.set(key, new Set());
     }

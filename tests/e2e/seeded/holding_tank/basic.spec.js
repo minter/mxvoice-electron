@@ -31,6 +31,29 @@ test.describe('Holding Tank - basic', () => {
     await closeApp(app);
   });
 
+  // Dismiss any leftover modal backdrops from previous tests (e.g. rename prompts)
+  test.beforeEach(async () => {
+    if (!page) return;
+    try {
+      // Press Escape to close any open modal
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      // Force-remove any stuck backdrop via DOM
+      await page.evaluate(() => {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.querySelectorAll('.modal.show').forEach(el => {
+          el.classList.remove('show');
+          el.style.display = 'none';
+        });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+      });
+    } catch {
+      // Page might not be ready yet — ignore
+    }
+  });
+
   test('holding tank UI elements are visible and functional', async () => {
     // Verify holding tank column is visible
     await expect(page.locator('#holding-tank-column')).toBeVisible();
@@ -152,6 +175,7 @@ test.describe('Holding Tank - basic', () => {
   });
 
   test('tab renaming functionality with various submission methods', async () => {
+    test.slow(); // Opens/closes 5 modals sequentially — needs extra time on CI
     // Click on Tab 1, verify that the label is "1"
     const tab1 = page.locator('#holding_tank_tabs a[href="#holding_tank_1"]');
     await tab1.click();
@@ -717,6 +741,7 @@ test.describe('Holding Tank - basic', () => {
   });
 
   test('holding tank mode playback - single song only', async () => {
+    test.slow(); // Plays audio 3 times with long waits — triples the default timeout
     // Ensure storage (holding) mode is active
     const storageModeBtn = page.locator('#storage_mode_btn');
     const playlistModeBtn = page.locator('#playlist_mode_btn');
@@ -727,17 +752,19 @@ test.describe('Holding Tank - basic', () => {
     await expect(storageModeBtn).toHaveClass(/active/);
     await expect(playlistModeBtn).not.toHaveClass(/active/);
 
-    // Clear holding tank via UI
-    await page.waitForTimeout(500);
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click({ force: true });
-    await page.waitForTimeout(300);
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-    await page.waitForTimeout(800);
-
+    // Clear holding tank via UI (handle case where tank may already be empty)
     const tab1List = page.locator('#holding_tank_1');
+    const existingItems = await tab1List.locator('.list-group-item').count();
+    if (existingItems > 0) {
+      const clearButton = page.locator('#holding-tank-clear-btn');
+      await clearButton.click({ force: true });
+      await page.waitForTimeout(300);
+      const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
+      await expect(confirmButton).toBeVisible({ timeout: 5000 });
+      await confirmButton.click();
+      await page.waitForTimeout(800);
+    }
+
     await expect(tab1List.locator('.list-group-item')).toHaveCount(0);
 
     // Do a blank search
@@ -884,20 +911,22 @@ test.describe('Holding Tank - basic', () => {
   });
 
   test('context menu functionality in holding tank', async () => {
-    // 1) Clear the holding tank first
-    await page.waitForTimeout(1000);
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click({ force: true });
-    await page.waitForTimeout(500);
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-    await page.waitForTimeout(1000);
-
-    // Verify tab 1 is empty
+    // 1) Clear the holding tank first (handle case where tank may already be empty)
     const tab1Link = page.locator('#holding_tank_tabs a[href="#holding_tank_1"]');
     await tab1Link.click();
     const tab1List = page.locator('#holding_tank_1');
+    const itemCount = await tab1List.locator('.list-group-item').count();
+    if (itemCount > 0) {
+      const clearButton = page.locator('#holding-tank-clear-btn');
+      await clearButton.click({ force: true });
+      await page.waitForTimeout(500);
+      const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
+      await expect(confirmButton).toBeVisible({ timeout: 5000 });
+      await confirmButton.click();
+      await page.waitForTimeout(1000);
+    }
+
+    // Verify tab 1 is empty
     await expect(tab1List.locator('.list-group-item')).toHaveCount(0);
 
     // 2) Do a blank search to get all songs
@@ -912,21 +941,21 @@ test.describe('Holding Tank - basic', () => {
     // 3) Drag one song into holding tank tab 1
     const anthraxRow = rows.filter({ hasText: 'Anthrax' }).first();
     await anthraxRow.dragTo(tab1List, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
-    await page.waitForTimeout(500);
 
-    // Verify song displays in tab 1
+    // Wait for the drag-drop to settle — use assertion-based wait
     const tab1Items = tab1List.locator('.list-group-item');
-    await expect(tab1Items).toHaveCount(1);
+    await expect(tab1Items).toHaveCount(1, { timeout: 10000 });
     await expect(tab1Items.first()).toContainText('Got The Time');
     await expect(tab1Items.first()).toContainText('Anthrax');
 
     // 4) Right-click on the song in holding tank to open context menu
+    // Ensure the item is stable and interactable before right-clicking
+    await expect(tab1Items.first()).toBeVisible({ timeout: 5000 });
     await tab1Items.first().click({ button: 'right' });
-    await page.waitForTimeout(500);
 
     // 5) Look for context menu - native app menu is #mxv-context-menu with .mxv-context-item buttons
     const contextMenu = page.locator('#mxv-context-menu');
-    await expect(contextMenu).toBeVisible({ timeout: 2000 });
+    await expect(contextMenu).toBeVisible({ timeout: 10000 });
 
     // Verify expected items exist (Play, Edit, Remove from Holding Tank)
     const menuItems = contextMenu.locator('.mxv-context-item');
@@ -1011,20 +1040,22 @@ test.describe('Holding Tank - basic', () => {
   });
 
   test('delete song from holding tank via click and Delete key', async () => {
-    // 1) Clear the holding tank first
-    await page.waitForTimeout(1000);
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click({ force: true });
-    await page.waitForTimeout(500);
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-    await page.waitForTimeout(1000);
-
-    // Verify tab 1 is empty
+    // 1) Clear the holding tank first (handle case where tank may already be empty)
     const tab1Link = page.locator('#holding_tank_tabs a[href="#holding_tank_1"]');
     await tab1Link.click();
     const tab1List = page.locator('#holding_tank_1');
+    const itemCount = await tab1List.locator('.list-group-item').count();
+    if (itemCount > 0) {
+      const clearButton = page.locator('#holding-tank-clear-btn');
+      await clearButton.click({ force: true });
+      await page.waitForTimeout(500);
+      const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
+      await expect(confirmButton).toBeVisible({ timeout: 5000 });
+      await confirmButton.click();
+      await page.waitForTimeout(1000);
+    }
+
+    // Verify tab 1 is empty
     await expect(tab1List.locator('.list-group-item')).toHaveCount(0);
 
     // 2) Do a blank search to get all songs

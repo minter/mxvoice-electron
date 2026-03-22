@@ -1,6 +1,8 @@
+import { safeShowModal, safeHideModal } from '../ui/bootstrap-helpers.js';
+
 /**
  * Song CRUD Operations
- * 
+ *
  * Handles creating, reading, updating, and deleting songs in the database
  * and managing the song form modal interface
  */
@@ -17,6 +19,7 @@ try {
 
 // Import secure adapters
 import { secureFileSystem, secureDatabase, securePath, secureStore } from '../adapters/secure-adapter.js';
+import { populateCategorySelect, findUniqueCategoryCode, refreshCategories } from '../categories/category-data.js';
 
 /**
  * Saves an edited song to the database
@@ -36,13 +39,10 @@ export async function saveEditedSong(event) {
   const category = (document.getElementById('song-form-category') || {}).value || '';
 
   // Hide modal after capturing values
-  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
+  safeHideModal('#songFormModal', { module: 'song-management', function: 'saveEditedSong' });
 
   try {
-    const result = await secureDatabase.execute(
-      "UPDATE mrvoice SET title = ?, artist = ?, category = ?, info = ? WHERE id = ?",
-      [title, artist, category, info, songId]
-    );
+    const result = await secureDatabase.updateSong({id: songId, title, artist, category, info});
     if (!result?.success) {
       debugLog?.warn('Edit update failed', { module: 'song-management', function: 'saveEditedSong', error: result?.error });
     }
@@ -65,7 +65,7 @@ export async function saveEditedSong(event) {
  */
 export async function saveNewSong(event) {
   event.preventDefault();
-  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#songFormModal'); } catch {}
+  safeHideModal('#songFormModal', { module: 'song-management', function: 'saveNewSong' });
   debugLog?.info("Starting save process", { module: 'song-management', function: 'saveNewSong' });
   try {
     const filename = (document.getElementById('song-form-filename') || {}).value || '';
@@ -83,20 +83,15 @@ export async function saveNewSong(event) {
     if (category == "--NEW--") {
       const description = (document.getElementById('song-form-new-category') || {}).value || '';
       const baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-      const findUniqueCode = async (base, index = 1) => {
-        const test = index === 1 ? base : `${base}${index}`;
-        const check = await secureDatabase.query("SELECT 1 FROM categories WHERE code = ?", [test]);
-        const exists = Array.isArray(check?.data || check) && (check.data || check).length > 0;
-        return exists ? findUniqueCode(base, index + 1) : test;
-      };
-      const finalCode = await findUniqueCode(baseCode);
-      const insert = await secureDatabase.execute("INSERT INTO categories VALUES (?, ?)", [finalCode, description]);
+      const finalCode = await findUniqueCategoryCode(baseCode);
+      const insert = await secureDatabase.addCategory({code: finalCode, description});
       if (!insert?.success) {
         debugLog?.warn('Category insert failed', { module: 'song-management', function: 'saveNewSong', error: insert?.error });
         return;
       }
       debugLog?.info(`Added new category`, { module: 'song-management', function: 'saveNewSong', code: finalCode });
-      if (typeof populateCategorySelect === 'function') populateCategorySelect();
+      await refreshCategories();
+      if (typeof window.populateCategorySelect === 'function') window.populateCategorySelect();
       if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
       category = finalCode;
     }
@@ -125,10 +120,7 @@ export async function saveNewSong(event) {
       return;
     }
     const newPath = joinResult.data;
-    const insertSong = await secureDatabase.execute(
-      "INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [title, artist, category, info, newFilename, duration, Math.floor(Date.now() / 1000)]
-    );
+    const insertSong = await secureDatabase.addSong({title, artist, category, info, filename: newFilename, duration});
     if (!insertSong?.success) {
       const isIOError = insertSong?.error?.toLowerCase().includes('i/o') || 
                         insertSong?.error?.toLowerCase().includes('disk') ||
@@ -182,7 +174,7 @@ export async function editSelectedSong() {
     }
 
     // Fetch song info using secure database adapter
-    const songResult = await secureDatabase.query("SELECT * FROM mrvoice WHERE id = ?", [songId]);
+    const songResult = await secureDatabase.getSongById(songId);
     const songRows = songResult?.data || songResult;
     const songInfo = Array.isArray(songRows) && songRows.length > 0 ? songRows[0] : null;
     if (!songInfo) {
@@ -202,20 +194,9 @@ export async function editSelectedSong() {
     if (infoEl) infoEl.value = songInfo.info || '';
     if (durEl) durEl.value = songInfo.time || '';
 
-    // Load categories securely and populate select
+    // Load categories from cache and populate select
     const catSelect = document.getElementById('song-form-category');
-    if (catSelect) catSelect.innerHTML = '';
-    const catResult = await secureDatabase.query("SELECT * FROM categories ORDER BY description ASC");
-    const categories = (catResult?.data || catResult) || [];
-    if (Array.isArray(categories)) {
-      categories.forEach(row => {
-        const opt = document.createElement('option');
-        if (row.code === songInfo.category) opt.setAttribute('selected','selected');
-        opt.value = row.code;
-        opt.textContent = row.description;
-        catSelect?.appendChild(opt);
-      });
-    }
+    await populateCategorySelect(catSelect, songInfo.category, { addNewOption: false });
 
     // Prepare and show modal
     const editForm = document.querySelector('#songFormModal form');
@@ -224,7 +205,7 @@ export async function editSelectedSong() {
     if (mTitle) mTitle.textContent = 'Edit This Song';
     const mBtn = document.getElementById('songFormSubmitButton');
     if (mBtn) mBtn.textContent = 'Save';
-    try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#songFormModal'); } catch {}
+    safeShowModal('#songFormModal', { module: 'song-management', function: 'editSelectedSong' });
   } catch (error) {
     debugLog?.error('Failed to open edit song modal', { module: 'song-management', function: 'editSelectedSong', error: error?.message });
   }
@@ -349,40 +330,17 @@ export async function startAddNewSong(filename, metadata = null) {
     if (addTitle) addTitle.textContent = 'Add New Song';
     const addBtn = document.getElementById('songFormSubmitButton');
     if (addBtn) addBtn.textContent = 'Add';
-    // Ensure category select element reference exists
+    // Populate categories from cache for the add flow
     const catSelect = document.getElementById('song-form-category');
-    // Populate categories for the add flow
     try {
-      if (catSelect) catSelect.innerHTML = '';
-      if (window.secureElectronAPI?.database?.query) {
-        const catResult = await window.secureElectronAPI.database.query("SELECT * FROM categories ORDER BY description ASC");
-        const rows = (catResult?.data || catResult) || [];
-        if (Array.isArray(rows)) {
-          rows.forEach(row => {
-            const opt = document.createElement('option');
-            opt.value = row.code;
-            opt.textContent = row.description;
-            catSelect?.appendChild(opt);
-          });
-        }
-      }
-      // Add new category option separator and entry
+      await populateCategorySelect(catSelect);
       if (catSelect) {
-        const sep = document.createElement('option');
-        sep.value = '';
-        sep.disabled = true;
-        sep.textContent = '-----------------------';
-        catSelect.appendChild(sep);
-        const newOpt = document.createElement('option');
-        newOpt.value = '--NEW--';
-        newOpt.textContent = 'ADD NEW CATEGORY...';
-        catSelect.appendChild(newOpt);
         catSelect.dispatchEvent(new Event('change', { bubbles: true }));
       }
     } catch (err) {
       debugLog?.warn('Failed to populate categories for add modal', { module: 'song-management', function: 'startAddNewSong', error: err?.message });
     }
-    try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#songFormModal'); } catch {}
+    safeShowModal('#songFormModal', { module: 'song-management', function: 'startAddNewSong' });
   } catch (error) {
     debugLog?.error('Failed to open add new song modal', { module: 'song-management', function: 'startAddNewSong', error: error?.message });
   }

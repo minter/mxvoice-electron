@@ -301,6 +301,87 @@ function filterCategories(filter) {
   });
 }
 
+/**
+ * Populate a <select> element with categories from the cache.
+ * Fetches from DB only if the cache is empty.
+ * Appends a separator and "ADD NEW CATEGORY..." option at the end.
+ *
+ * @param {HTMLSelectElement} selectEl - The select element to populate
+ * @param {string} [selectedCode] - Optional category code to pre-select
+ * @param {Object} [options] - Options
+ * @param {boolean} [options.addNewOption=true] - Whether to append the "ADD NEW CATEGORY..." option
+ */
+async function populateCategorySelect(selectEl, selectedCode, { addNewOption = true } = {}) {
+  if (!selectEl) return;
+  selectEl.innerHTML = '';
+
+  // Ensure cache is populated
+  let cats = sharedState.get('categories') || {};
+  if (Object.keys(cats).length === 0) {
+    try {
+      await loadCategories();
+      cats = sharedState.get('categories') || {};
+    } catch (err) {
+      debugLog?.warn('Failed to load categories for select', { module: 'categories', function: 'populateCategorySelect', error: err?.message });
+    }
+  }
+
+  // Build sorted entries and populate
+  const sorted = Object.entries(cats)
+    .map(([code, description]) => ({ code, description }))
+    .sort((a, b) => a.description.localeCompare(b.description));
+
+  for (const { code, description } of sorted) {
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = description;
+    if (code === selectedCode) opt.selected = true;
+    selectEl.appendChild(opt);
+  }
+
+  if (addNewOption) {
+    const sep = document.createElement('option');
+    sep.value = '';
+    sep.disabled = true;
+    sep.textContent = '-----------------------';
+    selectEl.appendChild(sep);
+    const addNew = document.createElement('option');
+    addNew.value = '--NEW--';
+    addNew.textContent = 'ADD NEW CATEGORY...';
+    selectEl.appendChild(addNew);
+  }
+}
+
+/**
+ * Find the next available unique category code for a given base string.
+ * Uses a single DB query instead of recursive individual lookups.
+ *
+ * @param {string} baseCode - The base code (e.g. "ROCK")
+ * @returns {Promise<string>} - A unique code (e.g. "ROCK", "ROCK2", "ROCK3")
+ */
+async function findUniqueCategoryCode(baseCode) {
+  if (!window.secureElectronAPI?.database?.findCategoryCodesLike) {
+    throw new Error('Database not available');
+  }
+
+  // Fetch all codes that start with the base code in one query
+  const result = await window.secureElectronAPI.database.findCategoryCodesLike(baseCode, `${baseCode}%`);
+
+  const existing = new Set();
+  if (result?.success && Array.isArray(result.data)) {
+    result.data.forEach(row => existing.add(row.code));
+  }
+
+  if (!existing.has(baseCode)) return baseCode;
+
+  for (let i = 2; i <= 100; i++) {
+    const candidate = `${baseCode}${i}`;
+    if (!existing.has(candidate)) return candidate;
+  }
+
+  throw new Error('Too many code collision attempts');
+}
+
 // Export individual functions for direct access
 export {
   loadCategories,
@@ -314,7 +395,9 @@ export {
   getCategoryCount,
   getCategoriesAsArray,
   getSortedCategories,
-  filterCategories
+  filterCategories,
+  populateCategorySelect,
+  findUniqueCategoryCode
 };
 
 // Default export for module loading
@@ -330,5 +413,7 @@ export default {
   getCategoryCount,
   getCategoriesAsArray,
   getSortedCategories,
-  filterCategories
+  filterCategories,
+  populateCategorySelect,
+  findUniqueCategoryCode
 }; 

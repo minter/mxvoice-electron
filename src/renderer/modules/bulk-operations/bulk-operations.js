@@ -1,6 +1,8 @@
+import { safeShowModal, safeHideModal } from '../ui/bootstrap-helpers.js';
+
 /**
  * Bulk Operations Functions
- * 
+ *
  * Core functions for handling bulk import of songs from directories
  */
 
@@ -18,6 +20,8 @@ try {
 // Import secure adapters
 import { secureFileSystem, secureDatabase, securePath, secureStore } from '../adapters/secure-adapter.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
+import sharedState from '../shared-state.js';
+import { populateCategorySelect, findUniqueCategoryCode, refreshCategories, getCategoryDescription } from '../categories/category-data.js';
 
 // Supported audio file extensions (lowercase)
 const SUPPORTED_AUDIO_EXTS = new Set([".mp3", ".mp4", ".m4a", ".wav", ".ogg", ".flac", ".aac"]);
@@ -31,39 +35,9 @@ export async function showBulkAddModal(directory) {
   const pathEl = document.getElementById('bulk-add-path');
   if (pathEl) pathEl.value = directory || '';
   const catSel = document.getElementById('bulk-add-category');
-  if (catSel) catSel.innerHTML = '';
-  try {
-    const result = await secureDatabase.query("SELECT * FROM categories ORDER BY description ASC");
-    const rows = result?.data || result || [];
-    if (Array.isArray(rows)) {
-      rows.forEach(row => {
-        if (typeof categories !== 'undefined') {
-          categories[row.code] = row.description;
-        }
-        if (catSel) {
-          const opt = document.createElement('option');
-          opt.value = row.code;
-          opt.textContent = row.description;
-          catSel.appendChild(opt);
-        }
-      });
-    }
-  } catch (_err) {
-    // ignore; modal can still open
-  }
-  if (catSel) {
-    const sep = document.createElement('option');
-    sep.value = '';
-    sep.disabled = true;
-    sep.textContent = '-----------------------';
-    catSel.appendChild(sep);
-    const addNew = document.createElement('option');
-    addNew.value = '--NEW--';
-    addNew.textContent = 'ADD NEW CATEGORY...';
-    catSel.appendChild(addNew);
-  }
+  await populateCategorySelect(catSel);
 
-  try { const { showModal } = await import('../ui/bootstrap-adapter.js'); showModal('#bulkAddModal'); } catch {}
+  safeShowModal('#bulkAddModal', { module: 'bulk-operations', function: 'showBulkAddModal' });
 }
 
 /**
@@ -129,88 +103,23 @@ export async function addSongsByPath(pathArray, category) {
     const joinRes = await securePath.join(musicDirectory, newFilename);
     const newPath = joinRes?.data || joinRes;
 
-    // Use direct database execute and then query for the ID instead of relying on lastInsertRowid
-    const insRes = await secureDatabase.execute(
-      "INSERT INTO mrvoice (title, artist, category, filename, time, modtime) VALUES (?, ?, ?, ?, ?, ?)",
-      [title, artist, category, newFilename, durationString, Math.floor(Date.now() / 1000)]
-    );
-    
-    // Debug the database response to see what we're getting
-    debugLog?.info('Database insert response:', { 
-      module: 'bulk-operations', 
-      function: 'addSongsByPath', 
-      insRes, 
-      insResType: typeof insRes,
-      hasData: !!insRes?.data,
-      dataType: typeof insRes?.data,
-      lastInsertRowid: insRes?.data?.lastInsertRowid,
-      changes: insRes?.data?.changes
+    const insRes = await secureDatabase.addSong({
+      title, artist, category, filename: newFilename, duration: durationString
     });
-    
-    // Since lastInsertRowid isn't working reliably, always query for the inserted song's ID
-    let lastId = null;
-    
-    try {
-      debugLog?.info('Querying for inserted song ID', { 
-        module: 'bulk-operations', 
+
+    // Use lastInsertRowid from the insert result
+    const lastId = insRes?.data?.lastInsertRowid || insRes?.lastInsertRowid || null;
+
+    if (!lastId) {
+      debugLog?.error('Failed to get valid song ID from insert result', {
+        module: 'bulk-operations',
         function: 'addSongsByPath',
         title,
         artist,
-        filename: newFilename
+        filename: newFilename,
+        insRes
       });
-      
-      const songQuery = await secureDatabase.query(
-        "SELECT id FROM mrvoice WHERE title = ? AND artist = ? AND filename = ? ORDER BY id DESC LIMIT 1",
-        [title, artist, newFilename]
-      );
-      
-      debugLog?.info('Song query result:', { 
-        module: 'bulk-operations', 
-        function: 'addSongsByPath', 
-        songQuery,
-        hasData: !!songQuery?.data,
-        dataLength: songQuery?.data?.length
-      });
-      
-      if (songQuery?.data && Array.isArray(songQuery.data) && songQuery.data.length > 0) {
-        lastId = songQuery.data[0].id;
-        debugLog?.info('Retrieved song ID from query:', { 
-          module: 'bulk-operations', 
-          function: 'addSongsByPath', 
-          lastId 
-        });
-      } else {
-        debugLog?.warn('Song query returned no results', { 
-          module: 'bulk-operations', 
-          function: 'addSongsByPath',
-          songQuery
-        });
-      }
-    } catch (queryError) {
-      debugLog?.error('Failed to query for song ID:', { 
-        module: 'bulk-operations', 
-        function: 'addSongsByPath', 
-        error: queryError?.message 
-      });
-    }
-    
-    debugLog?.info('Extracted lastId:', { 
-      module: 'bulk-operations', 
-      function: 'addSongsByPath', 
-      lastId, 
-      lastIdType: typeof lastId 
-    });
-    
-    // Only create the row if we have a valid ID
-    if (!lastId) {
-      debugLog?.error('Failed to get valid song ID for row creation:', { 
-        module: 'bulk-operations', 
-        function: 'addSongsByPath', 
-        title, 
-        artist, 
-        filename: newFilename 
-      });
-      return; // Skip creating this row
+      return;
     }
 
     debugLog?.info('Copying audio file', { module: 'bulk-operations', function: 'addSongsByPath', songSourcePath, newPath });
@@ -221,21 +130,8 @@ export async function addSongsByPath(pathArray, category) {
       debugLog?.info('File copied successfully', { module: 'bulk-operations', function: 'addSongsByPath', songSourcePath, newPath });
     }
 
-    // Get category description from database instead of relying on global categories object
-    let categoryLabel = category;
-    try {
-      const catResult = await secureDatabase.query("SELECT description FROM categories WHERE code = ?", [category]);
-      if (catResult?.data && Array.isArray(catResult.data) && catResult.data.length > 0) {
-        categoryLabel = catResult.data[0].description || category;
-      }
-    } catch (catError) {
-      debugLog?.warn('Failed to get category description, using code', { 
-        module: 'bulk-operations', 
-        function: 'addSongsByPath', 
-        category, 
-        error: catError?.message 
-      });
-    }
+    // Get category description from cache instead of per-song DB query
+    const categoryLabel = getCategoryDescription(category) || category;
 
     // Create row safely without interpreting user-controlled values as HTML
     const row = document.createElement('tr');
@@ -284,7 +180,7 @@ export async function addSongsByPath(pathArray, category) {
  */
 export async function saveBulkUpload(event) {
   event.preventDefault();
-  try { const { hideModal } = await import('../ui/bootstrap-adapter.js'); hideModal('#bulkAddModal'); } catch {}
+  safeHideModal('#bulkAddModal', { module: 'bulk-operations', function: 'saveBulkUpload' });
   const dirname = (document.getElementById('bulk-add-path') || {}).value || '';
 
   const walk = async (dir) => {
@@ -348,18 +244,13 @@ export async function saveBulkUpload(event) {
     const descriptionEl = document.getElementById('bulk-song-form-new-category');
     const description = descriptionEl?.value || '';
     const baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-    const findUnique = async (base, i = 1) => {
-      const test = i === 1 ? base : `${base}${i}`;
-      const existsRes = await secureDatabase.query("SELECT 1 FROM categories WHERE code = ?", [test]);
-      const exists = Array.isArray(existsRes?.data || existsRes) && (existsRes.data || existsRes).length > 0;
-      return exists ? findUnique(base, i + 1) : test;
-    };
     try {
-      const finalCode = await findUnique(baseCode);
-      const ins = await secureDatabase.execute("INSERT INTO categories VALUES (?, ?)", [finalCode, description]);
+      const finalCode = await findUniqueCategoryCode(baseCode);
+      const ins = await secureDatabase.addCategory({code: finalCode, description});
       if (ins?.success) {
         debugLog?.info('Added new row into database', { module: 'bulk-operations', function: 'saveBulkUpload', code: finalCode, description });
-        if (typeof populateCategorySelect === 'function') populateCategorySelect();
+        await refreshCategories();
+        if (typeof window.populateCategorySelect === 'function') window.populateCategorySelect();
         if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
         category = finalCode;
       } else {

@@ -2,6 +2,7 @@
 // Centralizes Bootstrap JS API usage so code can call simple helpers
 
 let debugLog = null;
+// Intentional: debugLog may not exist yet during early module loading
 try {
   debugLog = window.debugLog || null;
 } catch (_) {}
@@ -73,11 +74,18 @@ export function initTooltip(selector = '[data-bs-toggle="tooltip"]') {
     }
     
     // Create new tooltip instance with proper configuration
+    // Use 'hover' only (not 'hover focus') to prevent sticky tooltips on Windows
+    // where focus events can keep tooltips visible after the mouse leaves
     const tooltip = new bs.Tooltip(element, {
       delay: { show: delayMs, hide: 0 },
-      trigger: 'hover focus',
+      trigger: 'hover',
       boundary: 'viewport',
       fallbackPlacements: ['top', 'bottom', 'left', 'right']
+    });
+
+    // Safety net: force-hide tooltip on mouseleave to prevent sticky tooltips on Windows
+    element.addEventListener('mouseleave', () => {
+      tooltip.hide();
     });
     
     // Add special handling for file operation buttons to prevent tooltip after dialog

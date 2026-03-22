@@ -65,6 +65,7 @@ async function createLauncherWindow() {
   launcherWindow = new BrowserWindow({
     width: 550,
     height: 650,
+    show: process.env.APP_TEST_MODE !== '1',
     resizable: false,
     center: true,
     titleBarStyle: 'hiddenInset',

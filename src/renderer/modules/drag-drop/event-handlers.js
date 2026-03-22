@@ -21,16 +21,32 @@ try {
 // Import secure adapters
 import { secureStore } from '../adapters/secure-adapter.js';
 
+// AbortController for cleaning up drag-drop listeners on re-initialization
+let dragDropAbortController = null;
+
+/**
+ * Clean up all drag-drop event listeners
+ */
+export function cleanupDragDropEventHandlers() {
+  dragDropAbortController?.abort();
+  dragDropAbortController = null;
+}
+
 /**
  * Setup all drag and drop event handlers
  */
 export function setupDragDropEventHandlers() {
+  // Abort previous listeners before re-attaching
+  cleanupDragDropEventHandlers();
+  dragDropAbortController = new AbortController();
+  const { signal } = dragDropAbortController;
+
   // Hotkey drop handlers are owned by the hotkeys module to avoid duplicate bindings
 
   // Holding tank drop handlers - target the container and list items
   document.querySelectorAll('#holding_tank, .holding_tank li').forEach(target => {
     target.addEventListener('drop', (e) => {
-    debugLog?.info('Holding tank drop event triggered', { 
+    debugLog?.info('Holding tank drop event triggered', {
       module: 'drag-drop-event-handlers',
       function: 'setupDragDropEventHandlers'
     });
@@ -38,25 +54,25 @@ export function setupDragDropEventHandlers() {
       const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
       if (!dt || !dt.getData('text')?.length) return;
       holdingTankDrop(e);
-    });
+    }, { signal });
 
     target.addEventListener('dragover', (e) => {
-    debugLog?.info('Holding tank dragover event triggered', { 
+    debugLog?.info('Holding tank dragover event triggered', {
       module: 'drag-drop-event-handlers',
       function: 'setupDragDropEventHandlers'
     });
       allowHotkeyDrop(e);
       (e.target?.classList)?.add('dropzone');
-    });
+    }, { signal });
 
     target.addEventListener('dragleave', (e) => {
-    debugLog?.info('Holding tank dragleave event triggered', { 
+    debugLog?.info('Holding tank dragleave event triggered', {
       module: 'drag-drop-event-handlers',
       function: 'setupDragDropEventHandlers'
     });
       allowHotkeyDrop(e);
       (e.target?.classList)?.remove('dropzone');
-    });
+    }, { signal });
   });
 
   // Column drag and drop handlers - improved with better visual feedback
@@ -79,19 +95,20 @@ function setupColumnDragAndDrop() {
   createColumnDropZones();
 
   // Add drag and drop handlers to column HEADERS only (not entire columns)
+  const signal = dragDropAbortController?.signal;
   const columnHeaders = topRow.querySelectorAll('.col .card-header');
   columnHeaders.forEach(header => {
     // Make only the header draggable for column reordering
-    header.addEventListener('dragover', handleColumnDragOver);
-    header.addEventListener('dragleave', handleColumnDragLeave);
-    header.addEventListener('drop', handleColumnDrop);
-    
+    header.addEventListener('dragover', handleColumnDragOver, { signal });
+    header.addEventListener('dragleave', handleColumnDragLeave, { signal });
+    header.addEventListener('drop', handleColumnDrop, { signal });
+
     // Add drag start handler to the header
-    header.addEventListener('dragstart', handleColumnDragStart);
-    
+    header.addEventListener('dragstart', handleColumnDragStart, { signal });
+
     // Add drag end handler to clean up dragging state
-    header.addEventListener('dragend', handleColumnDragEnd);
-    
+    header.addEventListener('dragend', handleColumnDragEnd, { signal });
+
     // Make the header draggable instead of the entire column
     const column = header.closest('.col');
     if (column) {
@@ -102,9 +119,9 @@ function setupColumnDragAndDrop() {
   // Add handlers for the drop zones between columns
   const dropZones = topRow.querySelectorAll('.column-drop-zone');
   dropZones.forEach(zone => {
-    zone.addEventListener('dragover', handleDropZoneDragOver);
-    zone.addEventListener('dragleave', handleDropZoneDragLeave);
-    zone.addEventListener('drop', handleDropZoneDrop);
+    zone.addEventListener('dragover', handleDropZoneDragOver, { signal });
+    zone.addEventListener('dragleave', handleDropZoneDragLeave, { signal });
+    zone.addEventListener('drop', handleDropZoneDrop, { signal });
   });
 
   // After setting up drag and drop, refresh column order if it exists

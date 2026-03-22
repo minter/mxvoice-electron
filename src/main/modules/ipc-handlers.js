@@ -54,6 +54,13 @@ function initializeIpcHandlers(dependencies) {
 
 // Register all IPC handlers
 function registerAllHandlers() {
+  // Preload logging — fire-and-forget via ipcRenderer.send (sandbox-safe)
+  ipcMain.on('preload-log', (_event, level, message, context) => {
+    if (debugLog && typeof debugLog[level] === 'function') {
+      debugLog[level](message, context);
+    }
+  });
+
   // Logs API (centralized log service)
   ipcMain.handle('logs:write', async (_event, payload) => {
     try {
@@ -181,105 +188,7 @@ function registerAllHandlers() {
     mainWindow.webContents.send('show_preferences');
   });
 
-  // Database API handlers
-  ipcMain.handle('database-query', async (event, sql, params) => {
-    try {
-      debugLog?.info('Database query handler called', { 
-        module: 'ipc-handlers', 
-        function: 'database-query', 
-        sql, 
-        params, 
-        hasDb: !!db 
-      });
-      
-      if (!db) {
-        debugLog?.warn('Database not initialized in query handler', { 
-          module: 'ipc-handlers', 
-          function: 'database-query' 
-        });
-        throw new Error('Database not initialized');
-      }
-      
-      debugLog?.info('Database available, executing query', { 
-        module: 'ipc-handlers', 
-        function: 'database-query' 
-      });
-      
-      // For node-sqlite3-wasm, always use prepare/all for queries to ensure consistent results
-      let result;
-      debugLog?.info('Using prepared statement for query', { 
-        module: 'ipc-handlers', 
-        function: 'database-query',
-        hasParams: params && params.length > 0
-      });
-      
-      // Execute the actual query
-      const stmt = db.prepare(sql);
-      result = stmt.all(params || []);
-      stmt.finalize();
-      
-      debugLog?.info('Prepared statement result', { 
-        module: 'ipc-handlers', 
-        function: 'database-query', 
-        resultType: typeof result,
-        resultCount: Array.isArray(result) ? result.length : 'not array',
-        result: result
-      });
-      
-      debugLog?.info('Query successful, returning result', { 
-        module: 'ipc-handlers', 
-        function: 'database-query' 
-      });
-      return { success: true, data: result || [] };
-    } catch (error) {
-      debugLog?.error('Database query error', { 
-        module: 'ipc-handlers', 
-        function: 'database-query', 
-        error: error.message 
-      });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('database-execute', async (event, sql, params) => {
-    try {
-      if (!db) {
-        throw new Error('Database not initialized');
-      }
-      
-      // For node-sqlite3-wasm, always use prepare/run for consistent results
-      let result;
-      const stmt = db.prepare(sql);
-      result = stmt.run(params || []);
-      stmt.finalize();
-      
-      return { success: true, data: { changes: result.changes || 0, lastInsertRowid: result.lastInsertRowid || 0 } };
-    } catch (error) {
-      // Provide more context for I/O errors
-      const isIOError = error.message?.toLowerCase().includes('i/o') || 
-                        error.message?.toLowerCase().includes('disk') ||
-                        error.message?.toLowerCase().includes('locked') ||
-                        error.message?.toLowerCase().includes('busy');
-      
-      const errorContext = {
-        module: 'ipc-handlers',
-        function: 'database-execute',
-        error: error.message,
-        sql: sql?.substring(0, 100), // Log first 100 chars of SQL for context
-        paramsCount: params?.length || 0,
-        isIOError: isIOError
-      };
-      
-      if (isIOError) {
-        debugLog?.error('Database I/O error (disk may be busy or locked):', errorContext);
-      } else {
-        debugLog?.error('Database execute error:', errorContext);
-      }
-      
-      return { success: false, error: error.message };
-    }
-  });
-
+  // Named database API handlers
   ipcMain.handle('get-categories', async () => {
     try {
       if (!db) {
@@ -331,12 +240,12 @@ function registerAllHandlers() {
       
       // For node-sqlite3-wasm, use prepare/run for parameterized statements
       const stmt = db.prepare(`
-        INSERT INTO mrvoice (title, artist, category, filename, time, modtime)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
-      
-      const result = stmt.run([songData.title, songData.artist, songData.category, 
-                              songData.filename, songData.duration || '00:00', Math.floor(Date.now() / 1000)]);
+
+      const result = stmt.run([songData.title, songData.artist, songData.category,
+                              songData.info || '', songData.filename, songData.duration || '00:00', Math.floor(Date.now() / 1000)]);
       
       stmt.finalize();
       
@@ -399,15 +308,45 @@ function registerAllHandlers() {
 
   ipcMain.handle('file-delete', async (event, filePath) => {
     try {
-      fs.unlinkSync(filePath);
+      // Security: Validate input
+      if (!filePath || typeof filePath !== 'string') {
+        throw new Error('Invalid file path');
+      }
+
+      // Security: Restrict to allowed directories (same pattern as file-read)
+      const allowedPaths = [
+        app.getPath('userData'),
+        app.getPath('documents'),
+        app.getPath('music'),
+        app.getPath('downloads'),
+        app.getPath('home')
+      ];
+
+      const resolvedPath = path.resolve(filePath);
+      const isAllowed = allowedPaths.some(allowedPath => {
+        const resolvedAllowedPath = path.resolve(allowedPath);
+        return resolvedPath.startsWith(resolvedAllowedPath);
+      });
+
+      if (!isAllowed) {
+        debugLog?.warn('File delete access denied', {
+          module: 'ipc-handlers',
+          function: 'file-delete',
+          filePath: filePath,
+          resolvedPath: resolvedPath
+        });
+        throw new Error('Access denied: File path not in allowed directories');
+      }
+
+      await fs.promises.unlink(resolvedPath);
       return { success: true };
     } catch (error) {
       // ENOENT means file doesn't exist - treat as success since goal is achieved
       if (error.code === 'ENOENT') {
-        debugLog?.info('File already deleted (not found):', { 
-          module: 'ipc-handlers', 
-          function: 'file-delete', 
-          filePath: filePath 
+        debugLog?.info('File already deleted (not found):', {
+          module: 'ipc-handlers',
+          function: 'file-delete',
+          filePath: filePath
         });
         return { success: true, alreadyDeleted: true };
       }
@@ -1281,15 +1220,24 @@ function registerAllHandlers() {
       if (!songData || !songData.id) {
         throw new Error('Song data with ID is required');
       }
-      // For node-sqlite3-wasm, use prepare/run for parameterized statements
-      const stmt = db.prepare(`
-        UPDATE mrvoice 
-        SET title = ?, artist = ?, category = ?, info = ?, filename = ?, time = ?
-        WHERE id = ?
-      `);
-      
-      const result = stmt.run([songData.title, songData.artist, songData.category, 
-                              songData.info, songData.filename, songData.duration, songData.id]);
+      // Build UPDATE dynamically to only set provided fields
+      const setClauses = [];
+      const params = [];
+
+      if (songData.title !== undefined) { setClauses.push('title = ?'); params.push(songData.title); }
+      if (songData.artist !== undefined) { setClauses.push('artist = ?'); params.push(songData.artist); }
+      if (songData.category !== undefined) { setClauses.push('category = ?'); params.push(songData.category); }
+      if (songData.info !== undefined) { setClauses.push('info = ?'); params.push(songData.info); }
+      if (songData.filename !== undefined) { setClauses.push('filename = ?'); params.push(songData.filename); }
+      if (songData.duration !== undefined) { setClauses.push('time = ?'); params.push(songData.duration); }
+
+      if (setClauses.length === 0) {
+        throw new Error('No fields to update');
+      }
+
+      params.push(songData.id);
+      const stmt = db.prepare(`UPDATE mrvoice SET ${setClauses.join(', ')} WHERE id = ?`);
+      const result = stmt.run(params);
       
       stmt.finalize();
       
@@ -1350,12 +1298,20 @@ function registerAllHandlers() {
       if (!code) {
         throw new Error('Category code is required');
       }
-      
-      // First move all songs to "Uncategorized"
+      if (code === 'UNC') {
+        throw new Error('Cannot delete the Uncategorized (UNC) category');
+      }
+
+      // Ensure the UNC (Uncategorized) category exists
+      const upsertStmt = db.prepare('INSERT OR REPLACE INTO categories VALUES(?, ?)');
+      upsertStmt.run(['UNC', 'Uncategorized']);
+      upsertStmt.finalize();
+
+      // Move all songs from the deleted category to UNC
       const updateStmt = db.prepare('UPDATE mrvoice SET category = ? WHERE category = ?');
-      updateStmt.run(['UNCATEGORIZED', code]);
+      updateStmt.run(['UNC', code]);
       updateStmt.finalize();
-      
+
       // Then delete the category
       const deleteStmt = db.prepare('DELETE FROM categories WHERE code = ?');
       const result = deleteStmt.run([code]);
@@ -1364,6 +1320,174 @@ function registerAllHandlers() {
       return { success: true, data: { changes: result.changes || 0 } };
     } catch (error) {
       debugLog?.error('Delete category error:', { module: 'ipc-handlers', function: 'delete-category', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Named database operations — search, batch, and category helpers
+
+  ipcMain.handle('search-songs', async (event, searchParams) => {
+    try {
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
+      if (!searchParams || typeof searchParams !== 'object') {
+        throw new Error('Search parameters object is required');
+      }
+
+      const querySegments = [];
+      const queryParams = [];
+
+      // Category filter
+      if (searchParams.category && searchParams.category !== '*') {
+        querySegments.push('category = ?');
+        queryParams.push(searchParams.category);
+      }
+
+      if (searchParams.advancedFilters) {
+        // Advanced search mode
+        const { title, artist, info, since } = searchParams.advancedFilters;
+        if (title && title.length) {
+          querySegments.push('title LIKE ?');
+          queryParams.push(`%${title}%`);
+        }
+        if (artist && artist.length) {
+          querySegments.push('artist LIKE ?');
+          queryParams.push(`%${artist}%`);
+        }
+        if (info && info.length) {
+          querySegments.push('info LIKE ?');
+          queryParams.push(`%${info}%`);
+        }
+        if (since && since.length) {
+          let thresholdSeconds = null;
+          if (/^\d+$/.test(since)) {
+            const days = parseInt(since, 10);
+            thresholdSeconds = Math.floor(Date.now() / 1000) - (days * 86400);
+          } else {
+            const parsed = Date.parse(since);
+            if (!Number.isNaN(parsed)) {
+              thresholdSeconds = Math.floor(parsed / 1000);
+            }
+          }
+          if (thresholdSeconds !== null) {
+            querySegments.push('modtime >= ?');
+            queryParams.push(thresholdSeconds);
+          }
+        }
+      } else if (searchParams.searchTerm && searchParams.searchTerm.length) {
+        // Basic omni-search mode
+        querySegments.push('(title LIKE ? OR artist LIKE ? OR info LIKE ?)');
+        const term = `%${searchParams.searchTerm}%`;
+        queryParams.push(term, term, term);
+      }
+
+      let queryString = '';
+      if (querySegments.length > 0) {
+        queryString = ' WHERE ' + querySegments.join(' AND ');
+      }
+
+      const sql = 'SELECT * FROM mrvoice' + queryString + ' ORDER BY category,info,title,artist';
+      const stmt = db.prepare(sql);
+      const result = stmt.all(queryParams);
+      stmt.finalize();
+
+      return { success: true, data: result || [] };
+    } catch (error) {
+      debugLog?.error('Search songs error:', { module: 'ipc-handlers', function: 'search-songs', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('get-category-by-code', async (event, code) => {
+    try {
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
+      if (!code) {
+        throw new Error('Category code is required');
+      }
+      const stmt = db.prepare('SELECT * FROM categories WHERE code = ?');
+      const result = stmt.get(code);
+      stmt.finalize();
+      return { success: true, data: result ? [result] : [] };
+    } catch (error) {
+      debugLog?.error('Get category by code error:', { module: 'ipc-handlers', function: 'get-category-by-code', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('get-songs-by-ids', async (event, ids) => {
+    try {
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return { success: true, data: [] };
+      }
+      // Validate all IDs are numbers to prevent injection
+      const validIds = ids.filter(id => Number.isFinite(Number(id)));
+      if (validIds.length === 0) {
+        return { success: true, data: [] };
+      }
+      const placeholders = validIds.map(() => '?').join(',');
+      const stmt = db.prepare(`SELECT * FROM mrvoice WHERE id IN (${placeholders})`);
+      const result = stmt.all(validIds);
+      stmt.finalize();
+      return { success: true, data: result || [] };
+    } catch (error) {
+      debugLog?.error('Get songs by IDs error:', { module: 'ipc-handlers', function: 'get-songs-by-ids', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('reassign-song-category', async (event, fromCode, toCode) => {
+    try {
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
+      if (!fromCode || !toCode) {
+        throw new Error('Both source and target category codes are required');
+      }
+      const stmt = db.prepare('UPDATE mrvoice SET category = ? WHERE category = ?');
+      const result = stmt.run([toCode, fromCode]);
+      stmt.finalize();
+      return { success: true, data: { changes: result.changes || 0 } };
+    } catch (error) {
+      debugLog?.error('Reassign song category error:', { module: 'ipc-handlers', function: 'reassign-song-category', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('find-category-codes-like', async (event, code, pattern) => {
+    try {
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
+      if (!code) {
+        throw new Error('Category code is required');
+      }
+      const stmt = db.prepare('SELECT code FROM categories WHERE code = ? OR code LIKE ?');
+      const result = stmt.all([code, pattern || `${code}%`]);
+      stmt.finalize();
+      return { success: true, data: result || [] };
+    } catch (error) {
+      debugLog?.error('Find category codes error:', { module: 'ipc-handlers', function: 'find-category-codes-like', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('count-songs', async () => {
+    try {
+      if (!db) {
+        throw new Error('Database not initialized');
+      }
+      const stmt = db.prepare('SELECT count(*) as count FROM mrvoice');
+      const result = stmt.get();
+      stmt.finalize();
+      return { success: true, data: [result] };
+    } catch (error) {
+      debugLog?.error('Count songs error:', { module: 'ipc-handlers', function: 'count-songs', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -2322,6 +2446,7 @@ function registerAllHandlers() {
 
   // Remove all handlers (for cleanup)
 function removeAllHandlers() {
+  ipcMain.removeAllListeners('preload-log');
   // Legacy handlers
   ipcMain.removeHandler('get-app-path');
   ipcMain.removeHandler('show-directory-picker');
@@ -2339,8 +2464,6 @@ function removeAllHandlers() {
   ipcMain.removeHandler('edit-selected-song');
   ipcMain.removeHandler('manage-categories');
   ipcMain.removeHandler('show-preferences');
-  ipcMain.removeHandler('database-query');
-  ipcMain.removeHandler('database-execute');
   ipcMain.removeHandler('get-categories');
   ipcMain.removeHandler('add-song');
   ipcMain.removeHandler('file-read-legacy');
@@ -2373,6 +2496,12 @@ function removeAllHandlers() {
   ipcMain.removeHandler('add-category');
   ipcMain.removeHandler('update-category');
   ipcMain.removeHandler('delete-category');
+  ipcMain.removeHandler('search-songs');
+  ipcMain.removeHandler('get-category-by-code');
+  ipcMain.removeHandler('get-songs-by-ids');
+  ipcMain.removeHandler('reassign-song-category');
+  ipcMain.removeHandler('find-category-codes-like');
+  ipcMain.removeHandler('count-songs');
   ipcMain.removeHandler('path-dirname');
   ipcMain.removeHandler('path-basename');
   ipcMain.removeHandler('path-resolve');

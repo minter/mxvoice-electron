@@ -259,7 +259,7 @@ export function populateHoldingTank(songIds) {
  * Add a song to the holding tank
  */
 export function addToHoldingTank(song_id, element) {
-  return database.query("SELECT * from mrvoice WHERE id = ?", [song_id]).then(result => {
+  return database.getSongById(song_id).then(result => {
     if (result.success && result.data.length > 0) {
       const row = result.data[0];
       const title = row.title || "[Unknown Title]";
@@ -324,7 +324,7 @@ export function removeFromHoldingTank() {
       songId: songId
     });
     
-    return database.query("SELECT * FROM mrvoice WHERE ID = ?", [songId]).then(result => {
+    return database.getSongById(songId).then(result => {
       if (result.success && result.data.length > 0) {
         const songRow = result.data[0];
         
@@ -466,7 +466,7 @@ export function holdingTankDrop(event) {
       // Save holding tank state after adding
       saveHoldingTankToStore();
     }
-  }).catch(() => {});
+  }).catch(err => { debugLog?.warn('Failed to add song to holding tank (drop)', { module: 'holding-tank', function: 'holdingTankDrop', error: err?.message }); });
 }
 
 /**
@@ -481,7 +481,7 @@ export function sendToHoldingTank() {
         // Save holding tank state after adding
         saveHoldingTankToStore();
       }
-    }).catch(() => {});
+    }).catch(err => { debugLog?.warn('Failed to send song to holding tank', { module: 'holding-tank', function: 'sendToHoldingTank', error: err?.message }); });
   }
   return false;
 }

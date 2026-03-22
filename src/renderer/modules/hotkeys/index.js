@@ -304,7 +304,7 @@ class HotkeysModule {
               typeof storedHotkeysHtml === 'string'
             ) {
               const column = document.getElementById('hotkeys-column');
-              if (column) column.innerHTML = storedHotkeysHtml;
+              if (column) column.innerHTML = window.DOMPurify ? window.DOMPurify.sanitize(storedHotkeysHtml) : storedHotkeysHtml;
               document.getElementById('selected_row')?.removeAttribute('id');
             }
           });
@@ -386,7 +386,7 @@ class HotkeysModule {
     // Use new database API for getting song by ID
     if (this.electronAPI && this.electronAPI.database) {
       return this.electronAPI.database
-        .query('SELECT * from mrvoice WHERE id = ?', [song_id])
+        .getSongById(song_id)
         .then((result) => {
           if (result.success && result.data.length > 0) {
             const row = result.data[0];
@@ -438,7 +438,7 @@ class HotkeysModule {
   fallbackSetLabelFromSongId(song_id, element) {
     if (this.electronAPI?.database) {
       this.electronAPI.database
-        .query('SELECT * from mrvoice WHERE id = ?', [song_id])
+        .getSongById(song_id)
         .then((result) => {
           if (result.success && result.data.length > 0) {
             const row = result.data[0];
@@ -750,11 +750,8 @@ class HotkeysModule {
    * @param {number} tab - Tab number to switch to
    */
   switchToHotkeyTab(tab) {
-    try {
-      import('../ui/bootstrap-adapter.js').then(({ showTab }) =>
-        showTab(`#hotkey_tabs li:nth-child(${tab}) a`)
-      );
-    } catch {}
+    import('../ui/bootstrap-helpers.js')
+      .then(({ safeShowTab }) => safeShowTab(`#hotkey_tabs li:nth-child(${tab}) a`, { module: 'hotkeys', function: 'switchToHotkeyTab' }));
   }
 
   /**
@@ -826,9 +823,9 @@ class HotkeysModule {
         function: 'removeFromHotkey',
       });
       // Use secure database query to fetch title for confirmation
-      if (this.electronAPI?.database?.query) {
+      if (this.electronAPI?.database?.getSongById) {
         this.electronAPI.database
-          .query('SELECT title FROM mrvoice WHERE ID = ?', [songId])
+          .getSongById(songId)
           .then((result) => {
             const title =
               result?.success && result.data?.[0]?.title
