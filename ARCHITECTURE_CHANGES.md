@@ -149,28 +149,21 @@ Extracted shared helpers to consolidate repeated patterns:
 | `search-form-utils.js`: `getAdvancedSearchValues`/`hasActiveAdvancedFilters` | 4 identical 4-line form-reading blocks | 3 search files consolidated |
 | `event-manager.js`: `migrateOnclick()` | 9 identical 10-line onclick migration blocks | ~90 lines → ~9 lines |
 
+### 13. Unit Test Infrastructure + UNC Deletion Guard
+
+Added Vitest unit test framework (177 tests, ~240ms) covering SharedState, IPC database/store/category handlers, FunctionRegistry, secure adapter, bootstrap helpers, search form utils, and EventManager. CI workflow added (`.github/workflows/unit-tests.yml`).
+
+Unit tests uncovered a data integrity issue: `delete-category('UNC')` would delete the Uncategorized safety-net category that other deletions depend on. Added a guard in `ipc-handlers.js` to reject UNC deletion.
+
+**Files changed:** `package.json`, `vitest.config.js`, `.github/workflows/unit-tests.yml`, `src/main/modules/ipc-handlers.js`, plus 8 test files in `tests/unit/`
+
 ---
 
 ## Open Concerns
 
-### High
-
-#### 1. No Unit Tests
-
-Only E2E tests exist (123 tests, ~2.7 min). No unit tests for:
-- Named IPC database handlers
-- Secure adapter / preload bridge
-- Audio manager state machine
-- Module loader / function registry
-- Shared state / observer pattern
-
-**Recommendation:** Add unit tests for critical paths, especially the new named database operations and state management.
-
----
-
 ### Low
 
-#### 2. Module Coupling
+#### 1. Module Coupling
 
 95 renderer modules with no circular dependency detection. Global `window.debugLog` and `window.electronTest` scattered throughout. Modules reference each other via `window.*` globals rather than explicit imports.
 
@@ -179,6 +172,33 @@ Only E2E tests exist (123 tests, ~2.7 min). No unit tests for:
 ---
 
 ## Test Infrastructure
+
+### Unit Tests (Vitest)
+
+| Metric | Value |
+|--------|-------|
+| Total unit tests | 177 passing |
+| Local runtime | ~240ms |
+| CI platform | ubuntu-latest |
+| Framework | Vitest |
+| Config | `vitest.config.js` |
+
+**Modules covered:**
+
+| Test file | Module under test | Tests |
+|-----------|------------------|-------|
+| `shared-state.test.js` | SharedState observer pattern | 22 |
+| `ipc-handlers-db.test.js` | Named IPC database handlers (10 handlers) | 39 |
+| `ipc-handlers-store.test.js` | Store ops + category CRUD with UNC guard | 20 |
+| `function-registry.test.js` | FunctionRegistry module loader | 33 |
+| `secure-adapter.test.js` | Secure adapter (all 6 adapter groups) | 34 |
+| `bootstrap-helpers.test.js` | Safe modal/tab helpers | 6 |
+| `search-form-utils.test.js` | Advanced search form utilities | 10 |
+| `event-manager.test.js` | EventManager onclick migration | 12 |
+
+Audio manager/controller remain E2E-only (heavy Howler.js + DOM coupling).
+
+### E2E Tests (Playwright + Electron)
 
 | Metric | Value |
 |--------|-------|

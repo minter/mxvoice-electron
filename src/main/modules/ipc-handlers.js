@@ -1244,7 +1244,10 @@ function registerAllHandlers() {
       if (!code) {
         throw new Error('Category code is required');
       }
-      
+      if (code === 'UNC') {
+        throw new Error('Cannot delete the Uncategorized (UNC) category');
+      }
+
       // Ensure the UNC (Uncategorized) category exists
       const upsertStmt = db.prepare('INSERT OR REPLACE INTO categories VALUES(?, ?)');
       upsertStmt.run(['UNC', 'Uncategorized']);
