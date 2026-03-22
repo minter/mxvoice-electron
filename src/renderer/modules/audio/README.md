@@ -23,7 +23,7 @@ Available methods/functions:
 - Playback: `playSongFromId(songId)`, `playSongWithFilename(filename, row, songId)`, `playSelected()`
 - Autoplay: `autoplay_next()`, `cancel_autoplay()`
 - Controls: `stopPlaying(fadeOut = false)`, `pausePlaying(fadeOut = false)`
-- UI helpers: `resetUIState()`, `toggle_play_button()`, `loop_on(bool)`
+- UI helpers: `resetUIState()`, `showPlayButton()`, `showPauseButton()`, `loop_on(bool)`
 - Cache management: `initializeMusicDirectoryCache()`, `updateMusicDirectoryCache(newDirectory)`
 - Diagnostics: `test()`, `getInfo()`
 
@@ -97,7 +97,7 @@ Managed via `sharedState`:
 
 Extracted mappings:
 - `playSongFromId`, `playSelected`, `song_ended`, `autoplay_next`, `cancel_autoplay` → `audio-manager.js`
-- `stopPlaying`, `pausePlaying`, `resetUIState`, `toggle_play_button`, `loop_on` → `audio-controller.js`
+- `stopPlaying`, `pausePlaying`, `resetUIState`, `showPlayButton`, `showPauseButton`, `loop_on` → `audio-controller.js`
 
 ## Test Mode (E2E Only)
 
