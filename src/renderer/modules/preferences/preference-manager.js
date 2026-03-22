@@ -6,7 +6,7 @@
  * @module preference-manager
  */
 
-import { getPreference, setPreference } from './profile-preference-adapter.js';
+import { getPreference } from './profile-preference-adapter.js';
 
 /**
  * Initialize the preference manager
@@ -198,7 +198,7 @@ function initializePreferenceManager(options = {}) {
    * Load preferences using legacy store access
    * Fallback method when new API is not available
    */
-  async function loadPreferencesLegacy() {}
+  async function _loadPreferencesLegacy() {}
   
   /**
    * Get database directory preference
@@ -401,8 +401,6 @@ function initializePreferenceManager(options = {}) {
     getPrereleaseUpdates,
     getScreenMode
   };
-
-  const preferenceManagerInstance = PreferenceManager;
 
   return PreferenceManager;
 }

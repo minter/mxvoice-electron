@@ -51,7 +51,7 @@ import * as autoBackupTimer from './modules/auto-backup-timer.js';
 import * as launcherWindow from './modules/launcher-window.js';
 
 // Initialize Octokit for GitHub API (will be initialized after debugLog is available)
-let octokit;
+let _octokit;
 
 
 // Profile context - set via command line arg or launcher
@@ -281,7 +281,7 @@ debugLog.info('Main process starting...', {
 // Initialize Octokit for GitHub API now that debugLog is available
 import("@octokit/rest")
   .then(({ Octokit }) => {
-    octokit = new Octokit();
+    _octokit = new Octokit();
     debugLog.info('Octokit module loaded successfully', { 
       module: 'main', 
       function: 'Octokit initialization' 

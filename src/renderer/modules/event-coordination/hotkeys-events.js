@@ -11,13 +11,13 @@
  */
 
 // Import debug logger
-let debugLog = null;
+let _debugLog = null;
 try {
   // Try to get debug logger from global scope
   if (window.debugLog) {
-    debugLog = window.debugLog;
+    _debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 

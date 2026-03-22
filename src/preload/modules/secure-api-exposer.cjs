@@ -21,7 +21,7 @@ function truncateString(str) {
   try {
     const s = String(str);
     return s.length > MAX_STRING ? s.slice(0, MAX_STRING) + '…' : s;
-  } catch (e) {
+  } catch (_e) {
     return '[Unprintable]';
   }
 }

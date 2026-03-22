@@ -12,7 +12,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -81,7 +81,7 @@ function refreshCategories() {
  * @returns {Promise<boolean>} - True if valid, false otherwise
  */
 function validateCategoryCode(code) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     if (!code || typeof code !== 'string') {
       resolve(false);
       return;

@@ -45,7 +45,7 @@ class EventCoordination {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     try {
       this.debugLog?.info('Initializing event coordination module...');
 

@@ -114,6 +114,7 @@ export class EnvironmentSetup {
    */
   setupConsoleEnhancements() {
     // Store original console methods
+    /* eslint-disable no-console */
     const originalConsole = {
       log: console.log,
       warn: console.warn,
@@ -137,6 +138,7 @@ export class EnvironmentSetup {
       console.info = addTimestamp(originalConsole.info, 'ℹ️');
       console.warn = addTimestamp(originalConsole.warn, '⚠️');
       console.error = addTimestamp(originalConsole.error, '❌');
+      /* eslint-enable no-console */
 
       this.logInfo('Console enhancements enabled');
     }
@@ -184,7 +186,7 @@ export class EnvironmentSetup {
     try {
       const canvas = document.createElement('canvas');
       return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-    } catch (e) {
+    } catch (_e) {
       return false;
     }
   }
@@ -196,7 +198,7 @@ export class EnvironmentSetup {
   checkAsyncAwaitSupport() {
     try {
       return (async () => {})().constructor.name === 'AsyncFunction';
-    } catch (e) {
+    } catch (_e) {
       return false;
     }
   }
@@ -209,7 +211,7 @@ export class EnvironmentSetup {
     try {
       // Check if we're in a module context by trying to use import.meta
       return typeof import.meta !== 'undefined';
-    } catch (e) {
+    } catch (_e) {
       return false;
     }
   }

@@ -18,7 +18,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -45,7 +45,7 @@ class SearchModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     try {
       debugLog?.info('Search module initializing...', { 
         module: 'search', 
@@ -102,7 +102,7 @@ class SearchModule {
    * @param {boolean} isLiveSearch - Whether this is a live search
    * @returns {Object} - Object containing query string and parameters
    */
-  buildSearchQuery(searchTerm, isLiveSearch = false) {
+  buildSearchQuery(searchTerm, _isLiveSearch = false) {
     const queryParams = [];
     const querySegments = [];
     let queryString = "";

@@ -267,7 +267,7 @@ export class ShortcutRegistry {
     let enabledCount = 0;
     let disabledCount = 0;
 
-    for (const [key, config] of this.shortcuts) {
+    for (const [_key, config] of this.shortcuts) {
       // Count by category
       categories[config.category] = (categories[config.category] || 0) + 1;
       

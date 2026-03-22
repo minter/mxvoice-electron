@@ -18,7 +18,7 @@
  * @param {Object} options - Options object containing dependencies
  */
 function populateHotkeys(fkeys, title, options = {}) {
-  const { electronAPI, db, saveHotkeysToStore, setLabelFromSongId } = options;
+  const { setLabelFromSongId } = options;
   
   for (const key in fkeys) {
     if (fkeys[key]) {
@@ -28,7 +28,7 @@ function populateHotkeys(fkeys, title, options = {}) {
         if (setLabelFromSongId && el) {
           setLabelFromSongId(fkeys[key], el);
         }
-      } catch (err) {
+      } catch (_err) {
         window.debugLog?.info(`Error loading fkey ${key} (DB ID: ${fkeys[key]})`, { module: 'hotkey-data', function: 'populateHotkeys' });
       }
     } else {
@@ -55,7 +55,7 @@ function populateHotkeys(fkeys, title, options = {}) {
  * @param {Object} options - Options object containing dependencies
  */
 function setLabelFromSongId(song_id, element, options = {}) {
-  const { electronAPI, db, saveHotkeysToStore, fallbackSetLabelFromSongId } = options;
+  const { electronAPI, saveHotkeysToStore, fallbackSetLabelFromSongId } = options;
   
   window.debugLog?.info('[HOTKEY-SWAP] setLabelFromSongId called', {
     module: 'hotkey-data',
@@ -186,7 +186,7 @@ function setLabelFromSongId(song_id, element, options = {}) {
  * @param {jQuery} element - Hotkey element to update
  * @param {Object} options - Options object containing dependencies
  */
-function fallbackSetLabelFromSongId(song_id, element, options = {}) {
+function _fallbackSetLabelFromSongId(song_id, element, options = {}) {
   const { electronAPI, saveHotkeysToStore } = options;
   
   window.debugLog?.info('[HOTKEY-SWAP] fallbackSetLabelFromSongId called', {
@@ -345,7 +345,7 @@ function getHotkeyData() {
  * 
  * @returns {string} - Current hotkey tab title
  */
-function getHotkeyTitle() {
+function _getHotkeyTitle() {
   return document.querySelector('#hotkey_tabs li a.active')?.textContent || '';
 }
 

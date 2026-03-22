@@ -44,7 +44,7 @@ export default class DOMInitialization {
         
         // Add tooltip testing function for debugging
         window.testTooltips = async function() {
-          const { initTooltip, disposeAllTooltips, hideAllTooltips } = await import('../ui/bootstrap-adapter.js');
+          const { initTooltip, disposeAllTooltips } = await import('../ui/bootstrap-adapter.js');
           const log = window.debugLog || { info: () => {} };
           log.info('Testing tooltip behavior...', { module: 'dom-initialization', function: 'testTooltips' });
           log.info('1. Disposing all tooltips...', { module: 'dom-initialization', function: 'testTooltips' });
@@ -435,7 +435,7 @@ export default class DOMInitialization {
               return;
             }
           }
-        } catch (error) {
+        } catch (_error) {
           this.debugLog?.info('Could not check song count in test environment, proceeding with modal check');
         }
       }

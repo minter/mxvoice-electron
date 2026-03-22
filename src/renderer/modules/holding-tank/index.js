@@ -22,7 +22,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -34,15 +34,12 @@ const store = secureStore;
 const database = secureDatabase;
 import Dom from '../dom-utils/index.js';
 // Import secure adapters
-import { secureFileSystem, securePath, secureFileDialog } from '../adapters/secure-adapter.js';
-const fileSystem = secureFileSystem;
-const path = securePath;
+import { secureFileDialog } from '../adapters/secure-adapter.js';
 import { scaleScrollable } from '../utils/index.js';
 
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'
-let autoplay = false;
-let loop = false;
+let _autoplay = false;
 
 /**
  * Initialize the holding tank module
@@ -513,7 +510,7 @@ export function cancel_autoplay() {
     if (!(col && sel && col.contains(sel))) {
     // Only cancel autoplay if we're not in the holding tank
     if (holdingTankMode === "playlist") {
-      autoplay = false;
+      _autoplay = false;
       setHoldingTankMode("storage");
     }
     }

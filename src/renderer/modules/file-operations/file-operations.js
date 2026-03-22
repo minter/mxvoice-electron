@@ -12,12 +12,12 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
 // Import secure adapters
-import { secureFileSystem, secureFileDialog } from '../adapters/secure-adapter.js';
+import { secureFileDialog } from '../adapters/secure-adapter.js';
 
 /**
  * Opens a hotkey file using the modern electronAPI with fallback to legacy ipcRenderer

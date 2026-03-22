@@ -34,7 +34,7 @@ function createAndInstallProbe() {
         return probe;
       }
     }
-  } catch (error) {
+  } catch (_error) {
     // Silent fail in E2E mode
   }
   return null;
@@ -333,7 +333,7 @@ function playSongWithFilename(filename, row, song_id) {
                     module: 'audio-manager',
                     function: 'playSongWithFilename'
                   });
-                  const time = Math.round(sound.duration());
+                  const _time = Math.round(sound.duration());
                   sharedState.set(
                     'globalAnimation',
                     requestAnimationFrame(
@@ -450,7 +450,7 @@ function playSongWithFilename(filename, row, song_id) {
                     window.electronTest.setAudioProbe(probe);
                   }
                 }
-              } catch (_) {} // Intentional: E2E audio probe setup is best-effort; failures are non-critical
+              } catch (_) { /* best-effort E2E audio probe setup */ }
             })
             .catch((error) => {
               getDebugLog()?.warn('Path join error with default path', {
@@ -550,7 +550,7 @@ function playSongWithFilename(filename, row, song_id) {
                   module: 'audio-manager',
                   function: 'playSongWithFilename',
                 });
-                const time = Math.round(sound.duration());
+                const _time = Math.round(sound.duration());
                 sharedState.set(
                   'globalAnimation',
                   requestAnimationFrame(
@@ -604,7 +604,7 @@ function playSongWithFilename(filename, row, song_id) {
                       isSilent(threshold = 1e-3) { return this.currentRMS() < threshold; }
                     };
                   }
-                } catch (_) {} // Intentional: E2E audio probe setup is best-effort; failures are non-critical
+                } catch (_) { /* best-effort E2E audio probe setup */ }
               },
               onend: function () {
                 getDebugLog()?.info('Sound playback ended', {
@@ -649,7 +649,7 @@ function playSongWithFilename(filename, row, song_id) {
               if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
                 window.Howler.ctx.resume().catch(() => {}); // Intentional: resume may reject if context is already closed
               }
-            } catch (_) {} // Intentional: AudioContext resume in E2E is best-effort
+            } catch (_) { /* best-effort AudioContext resume in E2E */ }
             // Ensure probe exists in E2E once WebAudio context is available
             if (window.electronTest?.isE2E && !window.electronTest?.audioProbe) {
               createAndInstallProbe();

@@ -7,7 +7,7 @@
 
 // Intentional: debugLog may not exist yet during early module loading
 let debugLog = null;
-try { debugLog = window.debugLog || null; } catch (_) {}
+try { debugLog = window.debugLog || null; } catch (_) { /* debugLog may not exist during early module loading */ }
 
 /**
  * Safely show a Bootstrap modal.

@@ -36,7 +36,7 @@ class BulkOperationsModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     try {
       window.debugLog?.info('Bulk Operations module initializing...', { 
         module: 'bulk-operations', 

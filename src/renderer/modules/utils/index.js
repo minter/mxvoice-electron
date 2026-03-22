@@ -36,7 +36,7 @@ class UtilsModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} - Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     // Utils module is self-contained, no external dependencies needed
     return true;
   }

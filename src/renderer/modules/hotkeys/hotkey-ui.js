@@ -18,7 +18,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -31,7 +31,7 @@ import { songDrag } from '../drag-drop/drag-drop-functions.js';
  * @param {Event} event - The drop event
  * @param {Object} options - Additional options
  */
-function hotkeyDrop(event, options = {}) {
+function hotkeyDrop(event, _options = {}) {
   event.preventDefault();
   const song_id = event.dataTransfer.getData('text');
   const target = event.currentTarget;
@@ -90,7 +90,7 @@ function switchToHotkeyTab(tab) {
  * 
  * @param {Object} options - Additional options
  */
-async function renameHotkeyTab(options = {}) {
+async function renameHotkeyTab(_options = {}) {
   const currentName = document.querySelector('#hotkey_tabs .nav-link.active')?.textContent || '';
   const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
   if (newName && newName.trim() !== "") {
@@ -304,7 +304,7 @@ function clearAllHotkeyHighlighting() {
  * 
  * @param {Object} options - Additional options
  */
-function updateHotkeyDisplay(options = {}) {
+function updateHotkeyDisplay(_options = {}) {
   // Update hotkey labels and styling
   document.querySelectorAll('.hotkeys.active li').forEach((li) => {
     const songId = li.getAttribute('songid');

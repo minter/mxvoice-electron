@@ -24,7 +24,7 @@ export class HotkeyBindings {
    * @param {Object} options - Configuration options
    * @returns {boolean} - Success status
    */
-  initialize(options = {}) {
+  initialize(_options = {}) {
     try {
       this.logInfo('Initializing F1-F12 hotkey bindings...');
       

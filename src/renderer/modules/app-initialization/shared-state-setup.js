@@ -31,7 +31,7 @@ export class SharedStateSetup {
       set: (key, value) => {
         this.logWarn(`Shared state fallback set(${key}, ${value})`);
       },
-      subscribe: (key, callback) => {
+      subscribe: (key, _callback) => {
         this.logWarn(`Shared state fallback subscribe(${key})`);
         return () => {};
       }

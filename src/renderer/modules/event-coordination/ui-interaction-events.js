@@ -56,7 +56,7 @@ export default class UIInteractionEvents {
    * Modal interaction events (lines 1110-1112 from renderer.js)
    */
   attachModalEvents() {
-    const modalShowHandler = (event) => {
+    const modalShowHandler = (_event) => {
       try {
         // Hide other modals when one is shown using adapter
         import('../ui/bootstrap-adapter.js').then(({ hideAllModals }) => hideAllModals());
@@ -202,7 +202,7 @@ export default class UIInteractionEvents {
    */
   attachTabEvents() {
     // Hotkey tab double-click for renaming
-    const hotkeyTabDoubleClickHandler = (event) => {
+    const hotkeyTabDoubleClickHandler = (_event) => {
       try {
         if (window.renameHotkeyTab) {
           window.renameHotkeyTab();
@@ -215,7 +215,7 @@ export default class UIInteractionEvents {
     };
 
     // Holding tank tab double-click for renaming
-    const holdingTankTabDoubleClickHandler = (event) => {
+    const holdingTankTabDoubleClickHandler = (_event) => {
       try {
         if (window.renameHoldingTankTab) {
           window.renameHoldingTankTab();
@@ -251,7 +251,7 @@ export default class UIInteractionEvents {
    * Window events (lines 1168-1172 from renderer.js)
    */
   attachWindowEvents() {
-    const windowResizeHandler = (event) => {
+    const windowResizeHandler = (_event) => {
       try {
         if (window.scaleScrollable) {
           window.scaleScrollable();
@@ -274,7 +274,7 @@ export default class UIInteractionEvents {
    */
   attachFormEvents() {
     // Song form modal hidden event
-    const songFormModalHiddenHandler = (event) => {
+    const songFormModalHiddenHandler = (_event) => {
       try {
         const ids = [
           'song-form-category', 'song-form-title', 'song-form-new-category',
@@ -289,7 +289,7 @@ export default class UIInteractionEvents {
     };
 
     // Song form modal shown event
-    const songFormModalShownHandler = (event) => {
+    const songFormModalShownHandler = (_event) => {
       try {
         const title = document.getElementById('song-form-title');
         const info = document.getElementById('song-form-info');
@@ -302,7 +302,7 @@ export default class UIInteractionEvents {
     };
 
     // Preferences modal shown event
-    const preferencesModalShownHandler = (event) => {
+    const preferencesModalShownHandler = (_event) => {
       try {
         // NOTE: Preferences are already loaded by openPreferencesModal() before showing the modal.
         // Reloading them here creates a race condition where preferences might be reloaded
@@ -368,7 +368,7 @@ export default class UIInteractionEvents {
    * Confirmation modal events (lines 1236-1238 from renderer.js)
    */
   attachConfirmationEvents() {
-    const confirmationModalHiddenHandler = (event) => {
+    const confirmationModalHiddenHandler = (_event) => {
       try {
         if (window.restoreFocusToSearch) {
           window.restoreFocusToSearch();

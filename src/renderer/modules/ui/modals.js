@@ -15,7 +15,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -28,13 +28,13 @@ try {
  * @returns {Object} Modals interface
  */
 function initializeModals(options = {}) {
-  const { electronAPI, db, store } = options;
+  const { electronAPI: _electronAPI, db: _db, store: _store } = options;
   
   // DOM utilities (jQuery-free)
-  let Dom = null;
+  let _Dom = null;
   try {
     // Lazy import to avoid cyclic loads during bootstrap
-    import('../dom-utils/index.js').then(mod => { Dom = mod.default; }).catch(err => { debugLog?.warn('Failed to import DOM utilities for modals', { module: 'ui-modals', error: err?.message }); });
+    import('../dom-utils/index.js').then(mod => { _Dom = mod.default; }).catch(err => { debugLog?.warn('Failed to import DOM utilities for modals', { module: 'ui-modals', error: err?.message }); });
   } catch (error) {
     debugLog?.warn('Failed to import DOM utilities during modal initialization', { 
       module: 'ui-modals', 

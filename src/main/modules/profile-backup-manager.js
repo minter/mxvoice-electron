@@ -14,15 +14,12 @@
 import fs from 'fs';
 import path from 'path';
 import electron from 'electron';
-import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 
 // Destructure app from electron (handles both named and default exports)
 const { app } = electron;
 
-// Get __dirname equivalent for ES6 modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Note: __dirname/__filename equivalents removed — not currently needed in this module
 
 let debugLog = null;
 
@@ -144,7 +141,7 @@ async function writeMetadataAtomic(metadataPath, data) {
     // Cleanup temp file on failure
     try {
       await fs.promises.unlink(tempPath);
-    } catch (cleanupError) {
+    } catch (_cleanupError) {
       // Ignore cleanup errors
     }
     throw error;
@@ -195,7 +192,7 @@ async function withMetadataLock(profileName, operation) {
     // Remove lock on error
     try {
       await fs.promises.unlink(lockPath);
-    } catch (cleanupError) {
+    } catch (_cleanupError) {
       // Ignore cleanup errors
     }
     throw error;

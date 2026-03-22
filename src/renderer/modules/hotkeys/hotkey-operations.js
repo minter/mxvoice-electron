@@ -19,7 +19,7 @@ import { secureFileDialog } from '../adapters/secure-adapter.js';
  * @param {Object} options - Options object containing dependencies
  */
 function saveHotkeysToStore(options = {}) {
-  const { electronAPI, store } = options;
+  const { electronAPI } = options;
   
   const col = document.getElementById('hotkeys-column');
   const currentHtml = col ? col.innerHTML : '';
@@ -249,7 +249,7 @@ function getHotkeyElementFromActiveTab(hotkey) {
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  * @param {Object} options - Options object containing dependencies
  */
-function playSongFromHotkey(hotkey, options = {}) {
+function playSongFromHotkey(hotkey, _options = {}) {
   window.debugLog?.info("Getting song ID from hotkey " + hotkey + " in active tab", { module: 'hotkey-operations', function: 'playSongFromHotkey' });
   
   // Get hotkey element from active tab only
@@ -392,7 +392,7 @@ function importHotkeyConfig(config, options = {}) {
  * 
  * @returns {Object} - Backup configuration object
  */
-function backupHotkeyConfig() {
+function _backupHotkeyConfig() {
   return {
     hotkeys: exportHotkeyConfig(),
     timestamp: new Date().toISOString(),
@@ -407,7 +407,7 @@ function backupHotkeyConfig() {
  * @param {Object} backup - Backup configuration object
  * @param {Object} options - Options object containing dependencies
  */
-function restoreHotkeyConfig(backup, options = {}) {
+function _restoreHotkeyConfig(backup, options = {}) {
   if (!backup || !backup.hotkeys) {
     window.debugLog?.warn('❌ Invalid backup configuration', { module: 'hotkey-operations', function: 'restoreHotkeyConfig' });
     return;

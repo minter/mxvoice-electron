@@ -62,7 +62,7 @@ export default class SearchEvents {
    * Category select change events (lines 774-785 from renderer.js)
    */
   attachCategorySelectEvents() {
-    const categorySelectHandler = (event) => {
+    const categorySelectHandler = (_event) => {
       try {
         const select = document.getElementById('category_select');
         const category = select ? select.selectedIndex : 0;
@@ -117,7 +117,7 @@ export default class SearchEvents {
    * Date search change events (lines 787-795 from renderer.js)
    */
   attachDateSearchEvents() {
-    const dateSearchHandler = (event) => {
+    const dateSearchHandler = (_event) => {
       try {
         this.debugLog?.debug('Date search changed, calling searchData...');
         
@@ -161,7 +161,7 @@ export default class SearchEvents {
               clearTimeout(window.searchTimeout);
               window.searchTimeout = null;
             }
-          } catch {}
+          } catch { /* silently ignore timeout cleanup errors */ }
           event.preventDefault();
           event.stopPropagation();
           return false;
@@ -228,7 +228,7 @@ export default class SearchEvents {
    */
   attachLiveSearchEvents() {
     // Omni search input handler
-    const omniSearchInputHandler = (event) => {
+    const omniSearchInputHandler = (_event) => {
       try {
         this.debugLog?.debug('Omni search input changed, triggering live search...');
         
@@ -244,7 +244,7 @@ export default class SearchEvents {
     };
 
     // Category select change for live search
-    const categoryLiveSearchHandler = (event) => {
+    const categoryLiveSearchHandler = (_event) => {
       try {
         const searchTerm = (document.getElementById('omni_search')?.value || '').trim();
         this.debugLog?.debug('Category select changed, search term', searchTerm);
@@ -263,7 +263,7 @@ export default class SearchEvents {
     };
 
     // Advanced search fields live search
-    const advancedLiveSearchHandler = (event) => {
+    const advancedLiveSearchHandler = (_event) => {
       try {
         this.debugLog?.debug('Advanced search field changed');
         
@@ -363,7 +363,7 @@ export default class SearchEvents {
    * Reset button events (lines 898-911 from renderer.js)
    */
   attachResetButtonEvents() {
-    const resetButtonHandler = (event) => {
+    const resetButtonHandler = (_event) => {
       try {
         this.debugLog?.debug('Reset button clicked');
         
@@ -398,7 +398,7 @@ export default class SearchEvents {
    * Advanced search toggle events (lines 913-922 from renderer.js)
    */
   attachAdvancedSearchEvents() {
-    const advancedSearchButtonHandler = (event) => {
+    const advancedSearchButtonHandler = (_event) => {
       try {
         this.debugLog?.debug("Advanced search button clicked");
         

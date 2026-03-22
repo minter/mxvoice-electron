@@ -32,8 +32,8 @@ import initializeDebugLogger from './renderer/modules/debug-log/debug-logger.js'
 
 // Global instances - now managed by app-initialization module  
 let debugLogger = null;
-let sharedStateInstance = null;
-let sharedStateInitialized = false;
+let _sharedStateInstance = null;
+let _sharedStateInitialized = false;
 
 // Initialize debug logger early with basic configuration
 debugLogger = initializeDebugLogger({
@@ -205,8 +205,8 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     }
     
     // Get initialized instances for backward compatibility  
-    sharedStateInstance = AppInitialization.getSharedState();
-    sharedStateInitialized = AppInitialization.isInitialized();
+    _sharedStateInstance = AppInitialization.getSharedState();
+    _sharedStateInitialized = AppInitialization.isInitialized();
     
     // Debug logger already initialized early, no need to reinitialize
     

@@ -43,7 +43,7 @@ class ModuleLoader {
    * @param {Object} options - Loading options
    * @returns {Promise<Object>} - The loaded module
    */
-  async loadModule(modulePath, options = {}) {
+  async loadModule(modulePath, _options = {}) {
     this.ensureDebugLogger();
     
     try {

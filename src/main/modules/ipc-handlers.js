@@ -12,7 +12,6 @@ const { ipcMain, dialog, app } = electron;
 import path from 'path';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
-import Store from 'electron-store';
 import { pipeline } from 'stream/promises';
 import { createReadStream, createWriteStream } from 'fs';
 import os from 'os';
@@ -273,7 +272,7 @@ function registerAllHandlers() {
     }
   });
 
-  ipcMain.handle('file-get-user-data-path', async (event) => {
+  ipcMain.handle('file-get-user-data-path', async (_event) => {
     try {
       return { success: true, path: app.getPath('userData') };
     } catch (error) {
@@ -358,8 +357,8 @@ function registerAllHandlers() {
       try {
         const stats = fs.statSync(source);
         totalSize = stats.size;
-      } catch (statError) {
-        debugLog?.warn('Could not get file size for progress tracking', { 
+      } catch (_statError) {
+        debugLog?.warn('Could not get file size for progress tracking', {
           module: 'ipc-handlers', 
           function: 'copyFileStreaming',
           source
@@ -858,7 +857,7 @@ function registerAllHandlers() {
       // Fallback: Howler (loads audio to get accurate duration)
       if (!(durationSec > 0.5)) {
         await new Promise((resolve) => setImmediate(resolve));
-        durationSec = await new Promise((resolve, reject) => {
+        durationSec = await new Promise((resolve, _reject) => {
           const sound = new Howl({ src: [filePath], html5: true, preload: true });
           const cleanup = () => {
             try { 
@@ -876,7 +875,7 @@ function registerAllHandlers() {
               const d = Number(sound.duration());
               cleanup();
               resolve(isFinite(d) ? d : 0);
-            } catch (err) {
+            } catch (_err) {
               cleanup();
               resolve(0);
             }
@@ -1266,7 +1265,7 @@ function registerAllHandlers() {
     }
   });
 
-  ipcMain.handle('delete-category', async (event, code, description) => {
+  ipcMain.handle('delete-category', async (event, code, _description) => {
     try {
       if (!db) {
         throw new Error('Database not initialized');
@@ -2165,7 +2164,7 @@ function registerAllHandlers() {
   });
 
   // Profile Backup: Create backup
-  ipcMain.handle('profile:createBackup', async (event) => {
+  ipcMain.handle('profile:createBackup', async (_event) => {
     try {
       const mainModule = await import('../index-modular.js');
       const currentProfile = mainModule.getCurrentProfile();
@@ -2210,7 +2209,7 @@ function registerAllHandlers() {
   });
 
   // Profile Backup: List backups
-  ipcMain.handle('profile:listBackups', async (event) => {
+  ipcMain.handle('profile:listBackups', async (_event) => {
     try {
       const mainModule = await import('../index-modular.js');
       const currentProfile = mainModule.getCurrentProfile();
@@ -2239,7 +2238,7 @@ function registerAllHandlers() {
   });
 
   // Profile Backup: Get backup metadata
-  ipcMain.handle('profile:getBackupMetadata', async (event) => {
+  ipcMain.handle('profile:getBackupMetadata', async (_event) => {
     try {
       const mainModule = await import('../index-modular.js');
       const currentProfile = mainModule.getCurrentProfile();
@@ -2339,7 +2338,7 @@ function registerAllHandlers() {
   });
 
   // Profile Backup: Get backup settings
-  ipcMain.handle('profile:getBackupSettings', async (event) => {
+  ipcMain.handle('profile:getBackupSettings', async (_event) => {
     try {
       const mainModule = await import('../index-modular.js');
       const currentProfile = mainModule.getCurrentProfile();

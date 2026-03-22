@@ -24,14 +24,14 @@ export class DebugLoggerSetup {
       });
       await this.debugLogger.info('Debug logger initialized');
       return this.debugLogger;
-    } catch (error) {
+    } catch (_error) {
       // Create fallback logger
       this.debugLogger = {
-        log: (...args) => {},
-        warn: (...args) => {},
-        error: (...args) => {},
-        info: (...args) => {},
-        debug: (...args) => {},
+        log: (..._args) => {},
+        warn: (..._args) => {},
+        error: (..._args) => {},
+        info: (..._args) => {},
+        debug: (..._args) => {},
         isDebugEnabled: () => Promise.resolve(false),
         setDebugEnabled: () => Promise.resolve(false),
         getLogLevel: () => 2,

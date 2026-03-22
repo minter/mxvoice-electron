@@ -27,7 +27,7 @@ export function safeStringify(obj) {
       
       try {
         return JSON.stringify(obj, replacer);
-      } catch (secondError) {
+      } catch (_secondError) {
         return '[Object with circular references]';
       }
     }

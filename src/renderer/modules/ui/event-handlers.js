@@ -14,7 +14,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -27,7 +27,7 @@ try {
  * @returns {Object} Event Handlers interface
  */
 function initializeEventHandlers(options = {}) {
-  const { electronAPI, db, store } = options;
+  const { electronAPI, db: _db, store: _store } = options;
   
   /**
    * Toggle row selection

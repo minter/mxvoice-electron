@@ -12,7 +12,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -61,7 +61,7 @@ class CategoriesModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     debugLog?.info('Categories module initializing...', { module: 'categories', function: 'init' });
     
     try {

@@ -12,7 +12,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -129,7 +129,7 @@ class HotkeysModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     try {
       debugLog?.info('🎹 Initializing Hotkeys Module via standardized init()...', {
         module: 'hotkeys',
@@ -420,7 +420,7 @@ class HotkeysModule {
             return this.fallbackSetLabelFromSongId(song_id, element);
           }
         })
-        .catch((error) => {
+        .catch((_error) => {
           return this.fallbackSetLabelFromSongId(song_id, element);
         });
     } else {

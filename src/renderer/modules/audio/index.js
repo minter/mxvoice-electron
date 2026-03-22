@@ -8,7 +8,6 @@
 // Import audio sub-modules
 import * as audioManager from './audio-manager.js';
 import * as audioController from './audio-controller.js';
-import * as audioUtils from './audio-utils.js';
 import { enableTestModeCSP } from './audio-utils.js';
 import { installAudioProbe, createTestOscillator } from './audio-probe.js';
 
@@ -19,7 +18,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -61,7 +60,7 @@ class AudioModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     try {
       debugLog?.info('Audio module initializing...', { 
         module: 'audio', 
@@ -75,7 +74,7 @@ class AudioModule {
       await this.initializeMusicDirectoryCache();
       
       // Intentional: enableTestModeCSP only exists in E2E test builds; safe to ignore if absent
-      try { enableTestModeCSP(); } catch (_) {}
+      try { enableTestModeCSP(); } catch (_) { /* optional E2E helper, safe to ignore */ }
 
       // In E2E test mode, set up the audio probe eagerly so tests can measure RMS
       if (window.electronTest?.isE2E) {
