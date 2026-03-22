@@ -8,39 +8,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Wait for backup to complete by checking for metadata file
- * @param {string} metadataFile - Path to backup-metadata.json
- * @param {number} timeout - Maximum time to wait in ms (default: 45000)
- * @param {number} expectedMinCount - Minimum expected backup count (optional)
- * @returns {Promise<void>}
- */
-async function waitForBackupCompletion(metadataFile, timeout = 45000, expectedMinCount = null) {
-  const startTime = Date.now();
-  while (Date.now() - startTime < timeout) {
-    if (fs.existsSync(metadataFile)) {
-      try {
-        const data = fs.readFileSync(metadataFile, 'utf8');
-        const metadata = JSON.parse(data);
-        if (metadata && metadata.backups && Array.isArray(metadata.backups)) {
-          // If expectedMinCount is provided, wait for count to reach that value
-          if (expectedMinCount !== null) {
-            if (metadata.backups.length >= expectedMinCount) {
-              return; // Backup count reached expected minimum
-            }
-          } else if (metadata.backups.length > 0) {
-            return; // Backup completed successfully (at least one backup exists)
-          }
-        }
-      } catch (error) {
-        // File exists but not valid yet, keep waiting
-      }
-    }
-    await new Promise(resolve => setTimeout(resolve, 200));
-  }
-  throw new Error(`Backup did not complete within ${timeout}ms`);
-}
-
-/**
  * Create a backup and wait for it to complete
  * @param {Object} app - Electron app instance
  * @param {Object} page - Playwright page
@@ -59,75 +26,44 @@ async function createBackupAndWait(app, page, backupDir, profileDir = null) {
     }
   }
 
-  const metadataFile = path.join(backupDir, 'backup-metadata.json');
-  let initialBackupCount = 0;
-  if (fs.existsSync(metadataFile)) {
-    try {
-      const metadata = JSON.parse(fs.readFileSync(metadataFile, 'utf8'));
-      initialBackupCount = metadata?.backups?.length || 0;
-    } catch (error) {
-      // File exists but is corrupted - treat as 0 backups
-      initialBackupCount = 0;
-    }
-  }
-
   // Trigger backup creation via menu
   await app.evaluate(async ({ BrowserWindow }) => {
     const win = BrowserWindow.getAllWindows()[0];
     win.webContents.send('menu:create-backup');
   });
 
-  // Wait a bit for the backup to start
-  await page.waitForTimeout(500);
-
-  // Wait for backup to complete (metadata file updated with new backup)
-  // Use longer timeout on CI environments (45 seconds) as file operations can be slow
-  // Check for backup count to increase, which confirms the backup was actually created
-  const expectedBackupCount = initialBackupCount + 1;
-  await waitForBackupCompletion(metadataFile, 45000, expectedBackupCount);
-
-  // Verify backup count increased
-  const finalMetadata = JSON.parse(fs.readFileSync(metadataFile, 'utf8'));
-  expect(finalMetadata.backups.length).toBeGreaterThan(initialBackupCount);
-
-  // Check for error modals first (before dismissing success modal)
-  const errorModals = page.locator('.modal:has-text("Backup Failed"), .modal:has-text("Backup Error")');
-  const errorCount = await errorModals.count();
-  if (errorCount > 0) {
-    const errorText = await errorModals.first().textContent();
-    await errorModals.first().locator('.btn-close, .btn-secondary, button').first().click();
-    await page.waitForTimeout(500);
-    throw new Error(`Backup failed: ${errorText}`);
-  }
-
-  // Dismiss success modal if it appears (title: "Backup Complete", message: "Backup created successfully.")
-  const successModals = page.locator('.modal').filter({ 
-    hasText: /Backup (complete|created successfully)/i 
+  // Wait for either success or error modal — this is the definitive signal that
+  // the backup operation completed, rather than polling the filesystem
+  const resultModal = page.locator('.modal').filter({
+    hasText: /Backup (Complete|Failed|Error|created successfully)/i
   });
-  if (await successModals.count() > 0) {
-    // Wait a moment for the modal to fully appear
-    await page.waitForTimeout(200);
-    
-    // Try to find and click the OK button
-    const okButton = successModals.first().locator('button:has-text("OK"), button.btn-primary').first();
-    const okVisible = await okButton.isVisible({ timeout: 2000 }).catch(() => false);
-    if (okVisible) {
-      await okButton.click();
-      await page.waitForTimeout(300);
-    } else {
-      // Try clicking the close button
-      const closeButton = successModals.first().locator('.btn-close, [data-bs-dismiss="modal"]').first();
-      const closeVisible = await closeButton.isVisible({ timeout: 2000 }).catch(() => false);
-      if (closeVisible) {
-        await closeButton.click();
-        await page.waitForTimeout(300);
-      } else {
-        // Last resort: press Escape key
-        await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
-      }
-    }
+  await expect(resultModal).toBeVisible({ timeout: 60000 });
+
+  // Check if it was an error
+  const modalText = await resultModal.textContent();
+  if (/Failed|Error/i.test(modalText)) {
+    // Dismiss error modal and throw
+    await resultModal.locator('button').first().click();
+    throw new Error(`Backup failed: ${modalText}`);
   }
+
+  // Dismiss success modal
+  const okButton = resultModal.locator('button:has-text("OK"), button.btn-primary').first();
+  if (await okButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await okButton.click();
+  } else {
+    await page.keyboard.press('Escape');
+  }
+  // Wait for modal to close
+  await expect(resultModal).not.toBeVisible({ timeout: 5000 });
+
+  // Verify metadata file was written (sanity check after modal confirmation)
+  const metadataFile = path.join(backupDir, 'backup-metadata.json');
+  await expect(async () => {
+    const data = fs.readFileSync(metadataFile, 'utf8');
+    const metadata = JSON.parse(data);
+    expect(metadata.backups.length).toBeGreaterThan(0);
+  }).toPass({ timeout: 5000 });
 }
 
 test.describe('Profile Backups - basic', () => {

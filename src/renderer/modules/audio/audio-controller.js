@@ -194,17 +194,13 @@ function pausePlaying(fadeOut = false) {
   });
   
   if (sound) {
-    debugLog?.info('🔍 Sound exists, toggling play/pause...', { 
-      module: 'audio-controller',
-      function: 'pausePlaying'
-    });
-    toggle_play_button();
     if (sound.playing()) {
-      debugLog?.info('🔍 Sound is playing, pausing...', { 
+      debugLog?.info('🔍 Sound is playing, pausing...', {
         module: 'audio-controller',
         function: 'pausePlaying'
       });
-      
+      showPlayButton();
+
       // Cancel animation frame to prevent memory leaks
       if (globalAnimation) {
         cancelAnimationFrame(globalAnimation);
@@ -241,10 +237,11 @@ function pausePlaying(fadeOut = false) {
         sound.pause();
       }
     } else {
-      debugLog?.info('🔍 Sound is paused, playing...', { 
+      debugLog?.info('🔍 Sound is paused, resuming...', {
         module: 'audio-controller',
         function: 'pausePlaying'
       });
+      showPauseButton();
       sound.play();
       document.getElementById('song_spinner')?.classList.add('fa-spin');
       document.querySelector('#progress_bar .progress-bar')?.classList.add('progress-bar-animated', 'progress-bar-striped');
@@ -289,15 +286,39 @@ function resetUIState() {
 }
 
 /**
- * Toggle play button state
+ * Show the pause button (playing state)
+ */
+function showPauseButton() {
+  debugLog?.info('🔍 showPauseButton called', {
+    module: 'audio-controller',
+    function: 'showPauseButton'
+  });
+  document.getElementById('play_button')?.classList.add('d-none');
+  document.getElementById('pause_button')?.classList.remove('d-none');
+}
+
+/**
+ * Show the play button (paused/stopped state)
+ */
+function showPlayButton() {
+  debugLog?.info('🔍 showPlayButton called', {
+    module: 'audio-controller',
+    function: 'showPlayButton'
+  });
+  document.getElementById('play_button')?.classList.remove('d-none');
+  document.getElementById('pause_button')?.classList.add('d-none');
+}
+
+/**
+ * Toggle play button state (legacy wrapper - prefers explicit showPlayButton/showPauseButton)
  */
 function toggle_play_button() {
-  debugLog?.info('🔍 toggle_play_button called', { 
-    module: 'audio-controller',
-    function: 'toggle_play_button'
-  });
-  document.getElementById('play_button')?.classList.toggle('d-none');
-  document.getElementById('pause_button')?.classList.toggle('d-none');
+  const playButton = document.getElementById('play_button');
+  if (playButton?.classList.contains('d-none')) {
+    showPlayButton();
+  } else {
+    showPauseButton();
+  }
 }
 
 /**
@@ -324,6 +345,8 @@ export {
   pausePlaying,
   resetUIState,
   toggle_play_button,
+  showPlayButton,
+  showPauseButton,
   loop_on
 };
 
@@ -333,5 +356,7 @@ export default {
   pausePlaying,
   resetUIState,
   toggle_play_button,
+  showPlayButton,
+  showPauseButton,
   loop_on
 }; 

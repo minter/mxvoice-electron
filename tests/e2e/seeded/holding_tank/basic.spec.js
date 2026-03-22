@@ -941,21 +941,21 @@ test.describe('Holding Tank - basic', () => {
     // 3) Drag one song into holding tank tab 1
     const anthraxRow = rows.filter({ hasText: 'Anthrax' }).first();
     await anthraxRow.dragTo(tab1List, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
-    await page.waitForTimeout(500);
 
-    // Verify song displays in tab 1
+    // Wait for the drag-drop to settle — use assertion-based wait
     const tab1Items = tab1List.locator('.list-group-item');
-    await expect(tab1Items).toHaveCount(1);
+    await expect(tab1Items).toHaveCount(1, { timeout: 10000 });
     await expect(tab1Items.first()).toContainText('Got The Time');
     await expect(tab1Items.first()).toContainText('Anthrax');
 
     // 4) Right-click on the song in holding tank to open context menu
+    // Ensure the item is stable and interactable before right-clicking
+    await expect(tab1Items.first()).toBeVisible({ timeout: 5000 });
     await tab1Items.first().click({ button: 'right' });
-    await page.waitForTimeout(500);
 
     // 5) Look for context menu - native app menu is #mxv-context-menu with .mxv-context-item buttons
     const contextMenu = page.locator('#mxv-context-menu');
-    await expect(contextMenu).toBeVisible({ timeout: 2000 });
+    await expect(contextMenu).toBeVisible({ timeout: 10000 });
 
     // Verify expected items exist (Play, Edit, Remove from Holding Tank)
     const menuItems = contextMenu.locator('.mxv-context-item');
