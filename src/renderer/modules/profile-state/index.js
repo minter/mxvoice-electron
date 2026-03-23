@@ -64,7 +64,7 @@ function extractHotkeyTabs() {
     
     // Extract all 12 hotkeys from this tab
     for (let key = 1; key <= 12; key++) {
-      const element = tabContent.querySelector(`#f${key}_hotkey`);
+      const element = tabContent.querySelector(`[id^="f${key}_hotkey"]`);
       if (element) {
         const songId = element.getAttribute('songid');
         if (songId) {
@@ -424,7 +424,7 @@ async function restoreHotkeyTabs(hotkeyTabs, _hotkeysModule) {
 
             // Find the element in this specific tab (not relying on .active)
             const tabContent = document.getElementById(`hotkeys_list_${tabNumber}`);
-            const element = tabContent?.querySelector(`#${key}_hotkey`);
+            const element = tabContent?.querySelector(`[id^="${key}_hotkey"]`);
             
             if (element) {
               // Set the songid attribute

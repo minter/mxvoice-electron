@@ -262,7 +262,7 @@ export class DataPreloader {
                   // Apply to the live DOM
                   const currentTabContent = document.getElementById(`hotkeys_list_${tabNum}`);
                   if (currentTabContent) {
-                    const currentHotkeyElement = currentTabContent.querySelector(`#f${keyNum}_hotkey`);
+                    const currentHotkeyElement = currentTabContent.querySelector(`[id^="f${keyNum}_hotkey"]`);
                     if (currentHotkeyElement) {
                       currentHotkeyElement.setAttribute('songid', songId);
                       const songSpan = currentHotkeyElement.querySelector('span.song');

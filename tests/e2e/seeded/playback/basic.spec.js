@@ -836,17 +836,16 @@ test.describe('Playback - basic', () => {
     await hotkeyTab.click();
     await expect(hotkeyTab).toHaveClass(/active/);
     
-    // Clear all hotkeys by manually clearing the DOM
+    // Clear all hotkeys by manually clearing the DOM across all tabs
     await page.evaluate(() => {
       for (let tab = 1; tab <= 5; tab++) {
-        for (let key = 1; key <= 12; key++) {
-          const hotkey = document.getElementById(`f${key}_hotkey`);
-          if (hotkey) {
-            hotkey.removeAttribute('songid');
-            const span = hotkey.querySelector('.song');
-            if (span) span.textContent = '';
-          }
-        }
+        const tabContent = document.getElementById(`hotkeys_list_${tab}`);
+        if (!tabContent) continue;
+        tabContent.querySelectorAll('[id*="_hotkey"]').forEach(hotkey => {
+          hotkey.removeAttribute('songid');
+          const span = hotkey.querySelector('.song');
+          if (span) span.textContent = '';
+        });
       }
     });
     
@@ -863,7 +862,7 @@ test.describe('Playback - basic', () => {
     // Drag top song to key F1
     const topSongRow = rows.first();
     const activeTab = page.locator('#hotkeys_list_1');
-    const f1Hotkey = activeTab.locator('#f1_hotkey .song');
+    const f1Hotkey = activeTab.locator('[id^="f1_hotkey"] .song');
     
     await topSongRow.dragTo(f1Hotkey, {
       force: true,
@@ -1004,17 +1003,16 @@ test.describe('Playback - basic', () => {
     await hotkeyTab.click();
     await expect(hotkeyTab).toHaveClass(/active/);
     
-    // Clear all hotkeys by manually clearing the DOM
+    // Clear all hotkeys by manually clearing the DOM across all tabs
     await page.evaluate(() => {
       for (let tab = 1; tab <= 5; tab++) {
-        for (let key = 1; key <= 12; key++) {
-          const hotkey = document.getElementById(`f${key}_hotkey`);
-          if (hotkey) {
-            hotkey.removeAttribute('songid');
-            const span = hotkey.querySelector('.song');
-            if (span) span.textContent = '';
-          }
-        }
+        const tabContent = document.getElementById(`hotkeys_list_${tab}`);
+        if (!tabContent) continue;
+        tabContent.querySelectorAll('[id*="_hotkey"]').forEach(hotkey => {
+          hotkey.removeAttribute('songid');
+          const span = hotkey.querySelector('.song');
+          if (span) span.textContent = '';
+        });
       }
     });
     
@@ -1031,7 +1029,7 @@ test.describe('Playback - basic', () => {
     // Drag top song to key F1
     const topSongRow = rows.first();
     const activeTab = page.locator('#hotkeys_list_1');
-    const f1Hotkey = activeTab.locator('#f1_hotkey .song');
+    const f1Hotkey = activeTab.locator('[id^="f1_hotkey"] .song');
     
     await topSongRow.dragTo(f1Hotkey, {
       force: true,
@@ -1154,19 +1152,19 @@ test.describe('Playback - basic', () => {
     const activeTab = page.locator('#hotkeys_list_3');
     
     // F1 should contain "Got The Time" (song ID 1001)
-    const f1Hotkey = activeTab.locator('#f1_hotkey .song');
+    const f1Hotkey = activeTab.locator('[id^="f1_hotkey"] .song');
     await expect(f1Hotkey).toHaveText('Got The Time by Anthrax (0:06)');
     
     // F3 should contain "Theme From The Greatest American Hero" (song ID 1003)
-    const f3Hotkey = activeTab.locator('#f3_hotkey .song');
+    const f3Hotkey = activeTab.locator('[id^="f3_hotkey"] .song');
     await expect(f3Hotkey).toHaveText('Theme From The Greatest American Hero by Joey Scarbury (0:07)');
     
     // F4 should contain "The Wheel (Back And Forth)" (song ID 1002)
-    const f4Hotkey = activeTab.locator('#f4_hotkey .song');
+    const f4Hotkey = activeTab.locator('[id^="f4_hotkey"] .song');
     await expect(f4Hotkey).toHaveText('The Wheel (Back And Forth) by Edie Brickell (0:08)');
     
     // F12 should contain "We Are Family" (song ID 1004)
-    const f12Hotkey = activeTab.locator('#f12_hotkey .song');
+    const f12Hotkey = activeTab.locator('[id^="f12_hotkey"] .song');
     await expect(f12Hotkey).toHaveText('We Are Family by Sister Sledge (0:07)');
     
     // Verify the tab name is now "Intros"
@@ -1275,7 +1273,7 @@ test.describe('Playback - basic', () => {
       if (activeTab) {
         let clearedCount = 0;
         for (let key = 1; key <= 12; key++) {
-          const li = activeTab.querySelector(`#f${key}_hotkey`);
+          const li = activeTab.querySelector(`[id^="f${key}_hotkey"]`);
           if (li) {
             const hadSongId = li.hasAttribute('songid');
             li.removeAttribute('songid');
@@ -1299,19 +1297,19 @@ test.describe('Playback - basic', () => {
     
     // Check that all hotkeys are now empty
     for (let i = 1; i <= 12; i++) {
-      const hotkey = activeTab.locator(`#f${i}_hotkey .song`);
+      const hotkey = activeTab.locator(`[id^="f${i}_hotkey"] .song`);
       await expect(hotkey).toHaveText('');
     }
     
     // Additional verification: Check that songid attributes are removed
     for (let i = 1; i <= 12; i++) {
-      const hotkeyElement = await activeTab.locator(`#f${i}_hotkey`).elementHandle();
+      const hotkeyElement = await activeTab.locator(`[id^="f${i}_hotkey"]`).elementHandle();
       const songId = await hotkeyElement?.getAttribute('songid');
       expect(songId).toBeNull();
     }
     
         // Verify that empty hotkeys don't have visible text to click
-    const f1HotkeyAfterClear = activeTab.locator('#f1_hotkey .song');
+    const f1HotkeyAfterClear = activeTab.locator('[id^="f1_hotkey"] .song');
     await expect(f1HotkeyAfterClear).toHaveText('');
     
     // Ensure no playback is currently active

@@ -119,7 +119,7 @@ export function saveHotkeyFile() {
     
     if (activeTabContent) {
       // Look for hotkey element within the active tab content first
-      element = activeTabContent.querySelector(`#f${key}_hotkey`);
+      element = activeTabContent.querySelector(`[id^="f${key}_hotkey"]`);
       if (element) {
         songId = element.getAttribute('songid');
         debugLog?.info(`Hotkey ${key} found in active tab:`, { 
@@ -132,14 +132,15 @@ export function saveHotkeyFile() {
       }
     }
     
-    // Fallback to global search if not found in active tab
+    // Fallback to tab 1 if not found in active tab
     if (!element) {
-      element = document.getElementById(`f${key}_hotkey`);
+      const tab1 = document.getElementById('hotkeys_list_1');
+      element = tab1?.querySelector(`#f${key}_hotkey`);
       if (element) {
         songId = element.getAttribute('songid');
-        debugLog?.info(`Hotkey ${key} found globally (fallback):`, { 
+        debugLog?.info(`Hotkey ${key} found in tab 1 (fallback):`, {
           module: 'file-operations',
-          function: 'saveHotkeyFile', 
+          function: 'saveHotkeyFile',
           key: key,
           songId: songId,
           foundInActiveTab: false

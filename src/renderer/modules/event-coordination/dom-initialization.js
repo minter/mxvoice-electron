@@ -100,6 +100,10 @@ export default class DOMInitialization {
           const clone = baseHotkeys.cloneNode(true);
           clone.id = `hotkeys_list_${i}`;
           clone.classList.remove('show', 'active');
+          // Fix duplicate IDs: suffix cloned hotkey elements with _t{tabNum}
+          clone.querySelectorAll('[id$="_hotkey"]').forEach(el => {
+            el.id = el.id.replace('_hotkey', `_hotkey_t${i}`);
+          });
           hotkeysContainer.appendChild(clone);
         }
 
@@ -266,7 +270,7 @@ export default class DOMInitialization {
         event.preventDefault();
 
         // Check if this is a hotkey element
-        const hotkeyLi = event.target.closest('li[id$="_hotkey"]');
+        const hotkeyLi = event.target.closest('li[id*="_hotkey"]');
         if (hotkeyLi) {
           // Handle hotkey context menu
           window.debugLog?.info('Context menu triggered on hotkey element', { 
@@ -285,7 +289,7 @@ export default class DOMInitialization {
             const songid = hotkeyLi.getAttribute('songid');
             
             // Clear all previous hotkey highlighting FIRST (like left-click does)
-            document.querySelectorAll('[id$="_hotkey"]').forEach((item) => {
+            document.querySelectorAll('[id*="_hotkey"]').forEach((item) => {
               item.classList.remove('active-hotkey', 'selected-row');
             });
             window.currentSelectedHotkey = null;
