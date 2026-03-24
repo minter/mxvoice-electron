@@ -199,7 +199,7 @@
     "globals": "^17.4.0",
     "node-abi": "4.28.0",
     "playwright": "^1.55.1",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.1"
   },
   "engines": {
     "node": ">=22.12.0"
