@@ -166,10 +166,14 @@ class FunctionRegistry {
         openHoldingTankFile: 'openHoldingTankFile',
         saveHotkeyFile: 'saveHotkeyFile',
         saveHoldingTankFile: 'saveHoldingTankFile',
+        openSoundboardFile: 'openSoundboardFile',
+        saveSoundboardFile: 'saveSoundboardFile',
         openHotkeyFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
         openHoldingTankFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
         saveHotkeyFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
-        saveHoldingTankFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' })
+        saveHoldingTankFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+        openSoundboardFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' }),
+        saveSoundboardFileFallback: () => this.debugLog.warn('File operations not available', { function: 'fileOperationsFallback' })
       },
       audio: {
         playSongFromId: 'playSongFromId',
@@ -360,6 +364,14 @@ class FunctionRegistry {
       renameHoldingTankTab: 'renameHoldingTankTabWrapper',
       saveHoldingTankToStore: 'saveHoldingTankToStoreWrapper',
       holdingTankDrop: 'holdingTankDrop'
+    });
+
+    // Soundboard Functions
+    this.registerModule('soundboard', {
+      clearSoundboard: 'clearSoundboard',
+      renameSoundboardTab: 'renameSoundboardTab',
+      openSoundboardFile: 'openSoundboardFile',
+      saveSoundboardFile: 'saveSoundboardFile'
     });
 
     // Drag Drop Functions
