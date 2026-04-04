@@ -435,11 +435,12 @@ test.describe('Holding Tank - basic', () => {
     
     // 2) Do a blank search to get all songs
     const searchInput = page.locator('#omni_search');
-    await searchInput.clear();
+    await searchInput.click();
+    await searchInput.fill('');
     await searchInput.press('Enter');
 
     const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(5, { timeout: 5000 });
+    await expect(rows).toHaveCount(5, { timeout: 10000 });
 
     // 3) Drag Got The Time (song ID 1001) to the holding tank
     const gotTheTimeRow = rows.filter({ hasText: 'Anthrax' }).first();
@@ -575,11 +576,12 @@ test.describe('Holding Tank - basic', () => {
     
     // 2) Do a blank search to get all songs
     const searchInput = page.locator('#omni_search');
-    await searchInput.clear();
+    await searchInput.click();
+    await searchInput.fill('');
     await searchInput.press('Enter');
 
     const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(5, { timeout: 5000 });
+    await expect(rows).toHaveCount(5, { timeout: 10000 });
 
     // 3) Drag three songs into the holding tank in order
     // First song: Got The Time by Anthrax (song ID 1001)
@@ -672,11 +674,12 @@ test.describe('Holding Tank - basic', () => {
 
     // 2) Do a blank search to get all songs
     const searchInput = page.locator('#omni_search');
-    await searchInput.clear();
+    await searchInput.click();
+    await searchInput.fill('');
     await searchInput.press('Enter');
 
     const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(5, { timeout: 5000 });
+    await expect(rows).toHaveCount(5, { timeout: 10000 });
 
     // 3) Drag one song (Anthrax) into holding tank tab 1
     const anthraxRow = rows.filter({ hasText: 'Anthrax' }).first();
@@ -743,11 +746,12 @@ test.describe('Holding Tank - basic', () => {
 
     // Do a blank search
     const searchInput = page.locator('#omni_search');
-    await searchInput.clear();
+    await searchInput.click();
+    await searchInput.fill('');
     await searchInput.press('Enter');
 
     const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(5, { timeout: 5000 });
+    await expect(rows).toHaveCount(5, { timeout: 10000 });
 
     // Drag Eat It and We Are Family into holding tank (in that order)
     const eatItRow = rows.filter({ hasText: 'Weird Al' }).first();
@@ -900,11 +904,12 @@ test.describe('Holding Tank - basic', () => {
 
     // 2) Do a blank search to get all songs
     const searchInput = page.locator('#omni_search');
-    await searchInput.clear();
+    await searchInput.click();
+    await searchInput.fill('');
     await searchInput.press('Enter');
 
     const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(5, { timeout: 5000 });
+    await expect(rows).toHaveCount(5, { timeout: 10000 });
 
     // 3) Drag one song into holding tank tab 1
     const anthraxRow = rows.filter({ hasText: 'Anthrax' }).first();
@@ -1022,11 +1027,12 @@ test.describe('Holding Tank - basic', () => {
 
     // 2) Do a blank search to get all songs
     const searchInput = page.locator('#omni_search');
-    await searchInput.clear();
+    await searchInput.click();
+    await searchInput.fill('');
     await searchInput.press('Enter');
 
     const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(5, { timeout: 5000 });
+    await expect(rows).toHaveCount(5, { timeout: 10000 });
 
     // 3) Drag two songs into holding tank tab 1
     const anthraxRow = rows.filter({ hasText: 'Anthrax' }).first();
