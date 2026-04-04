@@ -131,13 +131,11 @@ function getLibraryPaths() {
   const profilesRegistry = path.join(userData, 'profiles.json');
   const configPath = store.path;
 
-  // Find the actual database file (could be mxvoice.db or mrvoice.db)
-  let dbPath = path.join(dbDir, 'mxvoice.db');
+  // Find the actual database file — prefer mrvoice.db (legacy) over mxvoice.db,
+  // matching the priority order in database-setup.js initializeMainDatabase()
+  let dbPath = path.join(dbDir, 'mrvoice.db');
   if (!fs.existsSync(dbPath)) {
-    const legacyPath = path.join(dbDir, 'mrvoice.db');
-    if (fs.existsSync(legacyPath)) {
-      dbPath = legacyPath;
-    }
+    dbPath = path.join(dbDir, 'mxvoice.db');
   }
 
   return { userData, musicDir, hotkeyDir, dbDir, dbPath, profilesDir, profilesRegistry, configPath };
