@@ -744,6 +744,7 @@ function createApplicationMenu() {
       );
     }
 
+    const name = app.name;
     application_menu.push({
       label: 'Help',
       role: 'help',
