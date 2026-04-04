@@ -23,6 +23,7 @@ import { v4 as uuidv4 } from 'uuid';
 import fileOperations from './file-operations.js';
 import * as profileManager from './profile-manager.js';
 import * as profileBackupManager from './profile-backup-manager.js';
+import * as libraryTransferManager from './library-transfer-manager.js';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -2406,10 +2407,84 @@ function registerAllHandlers() {
     }
   });
 
-  debugLog?.info('✅ Secure IPC handlers registered successfully', { 
-    module: 'ipc-handlers', 
+  // Library Transfer handlers
+  ipcMain.handle('library:export', async () => {
+    try {
+      const result = await dialog.showSaveDialog(mainWindow, {
+        buttonLabel: 'Export',
+        filters: [{ name: 'Mx. Voice Library', extensions: ['mxvlib'] }],
+        defaultPath: path.join(app.getPath('documents'), 'MxVoice-Library.mxvlib'),
+        message: 'Choose where to save your library export'
+      });
+
+      if (result.canceled) {
+        return { success: false, canceled: true };
+      }
+
+      const progressCallback = (progress) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('library:export-progress', progress);
+        }
+      };
+
+      return await libraryTransferManager.exportLibrary(result.filePath, progressCallback);
+    } catch (error) {
+      debugLog?.error('Library export handler error:', {
+        module: 'ipc-handlers', function: 'library:export', error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('library:import', async () => {
+    try {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        buttonLabel: 'Import',
+        filters: [{ name: 'Mx. Voice Library', extensions: ['mxvlib'] }],
+        message: 'Select a Mx. Voice library file to import',
+        properties: ['openFile']
+      });
+
+      if (result.canceled || !result.filePaths.length) {
+        return { success: false, canceled: true };
+      }
+
+      const archivePath = result.filePaths[0];
+      const validation = await libraryTransferManager.validateArchive(archivePath);
+      if (!validation.success) {
+        return validation;
+      }
+
+      return { success: true, archivePath, manifest: validation.manifest };
+    } catch (error) {
+      debugLog?.error('Library import handler error:', {
+        module: 'ipc-handlers', function: 'library:import', error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('library:import-confirm', async (_event, archivePath) => {
+    try {
+      const progressCallback = (progress) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('library:import-progress', progress);
+        }
+      };
+
+      return await libraryTransferManager.importLibrary(archivePath, progressCallback);
+    } catch (error) {
+      debugLog?.error('Library import confirm handler error:', {
+        module: 'ipc-handlers', function: 'library:import-confirm', error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  debugLog?.info('✅ Secure IPC handlers registered successfully', {
+    module: 'ipc-handlers',
     function: 'registerAllHandlers',
-    secureHandlersCount: 54
+    secureHandlersCount: 57
   });
 
   debugLog?.info('✅ All IPC handlers registered successfully (context isolation ready)', { 
@@ -2513,12 +2588,17 @@ function removeAllHandlers() {
   ipcMain.removeHandler('profile:getBackupSettings');
   ipcMain.removeHandler('profile:saveBackupSettings');
   
+  // Library Transfer handlers
+  ipcMain.removeHandler('library:export');
+  ipcMain.removeHandler('library:import');
+  ipcMain.removeHandler('library:import-confirm');
+
   // Remove legacy event listeners
   ipcMain.removeAllListeners('open-hotkey-file');
   ipcMain.removeAllListeners('save-hotkey-file');
   ipcMain.removeAllListeners('open-holding-tank-file');
   ipcMain.removeAllListeners('save-holding-tank-file');
-  
+
   debugLog?.info('IPC handlers removed successfully', { module: 'ipc-handlers', function: 'removeAllHandlers' });
 }
 

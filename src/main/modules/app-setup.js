@@ -622,6 +622,23 @@ function createApplicationMenu() {
             }
           },
         },
+        { type: "separator" },
+        {
+          label: "Export Library...",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:export-library');
+            }
+          },
+        },
+        {
+          label: "Import Library...",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:import-library');
+            }
+          },
+        },
       ],
     },
   ];
