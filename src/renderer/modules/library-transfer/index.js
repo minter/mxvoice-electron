@@ -220,10 +220,42 @@ async function startImport() {
 
   info('Starting library import', { module: 'library-transfer', function: 'startImport' });
 
+  // Listen for progress events so we can show the validation modal
+  // once the user selects a file (before the IPC call returns)
+  let validationModalShown = false;
+  if (importProgressCleanup) importProgressCleanup();
+  importProgressCleanup = electronAPI.library.onImportProgress(({ percent, message }) => {
+    if (!validationModalShown) {
+      validationModalShown = true;
+      resetProgressModal();
+      showProgressModal('Validating Library');
+    }
+    updateProgress({ percent, message });
+  });
+
   try {
     const result = await electronAPI.library.importLibrary();
 
-    if (result.canceled) return;
+    // Clean up validation progress listener
+    if (importProgressCleanup) {
+      importProgressCleanup();
+      importProgressCleanup = null;
+    }
+
+    if (result.canceled) {
+      // Hide modal in case it was shown before cancel
+      if (validationModalShown) {
+        const { hideModal } = await import('../ui/bootstrap-adapter.js');
+        hideModal('#libraryTransferModal');
+      }
+      return;
+    }
+
+    // Hide validation modal before showing error or confirmation
+    if (validationModalShown) {
+      const { hideModal } = await import('../ui/bootstrap-adapter.js');
+      hideModal('#libraryTransferModal');
+    }
 
     if (!result.success) {
       // Show error in the progress modal

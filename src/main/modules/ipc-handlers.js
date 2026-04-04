@@ -2450,6 +2450,15 @@ function registerAllHandlers() {
       }
 
       const archivePath = result.filePaths[0];
+
+      // Notify the renderer that validation is starting so it can show a loading modal
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('library:import-progress', {
+          percent: 0,
+          message: 'Validating library file...'
+        });
+      }
+
       const validation = await libraryTransferManager.validateArchive(archivePath);
       if (!validation.success) {
         return validation;

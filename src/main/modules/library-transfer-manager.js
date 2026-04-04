@@ -20,6 +20,7 @@ import os from 'os';
 import electron from 'electron';
 import archiver from 'archiver';
 import extractZip from 'extract-zip';
+import yauzl from 'yauzl';
 
 const { app } = electron;
 
@@ -302,7 +303,50 @@ async function exportLibrary(outputPath, progressCallback = () => {}) {
 }
 
 /**
- * Validate an archive and return its manifest
+ * Read a single entry from a zip archive by name using yauzl.
+ * Returns the entry contents as a string, or null if not found.
+ * @param {string} archivePath - Path to the zip file
+ * @param {string} entryName - Name of the entry to read (e.g. 'manifest.json')
+ * @returns {Promise<string|null>}
+ */
+function readZipEntry(archivePath, entryName) {
+  return new Promise((resolve, reject) => {
+    yauzl.open(archivePath, { lazyEntries: true }, (err, zipfile) => {
+      if (err) return reject(err);
+
+      let found = false;
+      zipfile.readEntry();
+
+      zipfile.on('entry', (entry) => {
+        if (entry.fileName === entryName) {
+          found = true;
+          zipfile.openReadStream(entry, (streamErr, readStream) => {
+            if (streamErr) return reject(streamErr);
+            const chunks = [];
+            readStream.on('data', (chunk) => chunks.push(chunk));
+            readStream.on('end', () => {
+              zipfile.close();
+              resolve(Buffer.concat(chunks).toString('utf-8'));
+            });
+            readStream.on('error', reject);
+          });
+        } else {
+          zipfile.readEntry();
+        }
+      });
+
+      zipfile.on('end', () => {
+        if (!found) resolve(null);
+      });
+
+      zipfile.on('error', reject);
+    });
+  });
+}
+
+/**
+ * Validate an archive and return its manifest.
+ * Only reads manifest.json from the zip — does not extract the full archive.
  * @param {string} archivePath - Path to the .mxvlib file
  * @returns {Promise<{success: boolean, manifest?: Object, error?: string}>}
  */
@@ -314,37 +358,28 @@ async function validateArchive(archivePath) {
       return { success: false, error: 'Archive file not found' };
     }
 
-    // Extract to temp directory to read manifest
-    const tempDir = path.join(os.tmpdir(), `mxvlib-validate-${Date.now()}`);
-    await fs.promises.mkdir(tempDir, { recursive: true });
+    // Read only the manifest entry from the zip (no full extraction)
+    const manifestContent = await readZipEntry(archivePath, 'manifest.json');
 
-    try {
-      await extractZip(archivePath, { dir: tempDir });
-
-      const manifestPath = path.join(tempDir, 'manifest.json');
-      if (!await pathExists(manifestPath)) {
-        return { success: false, error: 'Invalid archive: missing manifest.json' };
-      }
-
-      const manifest = JSON.parse(await fs.promises.readFile(manifestPath, 'utf-8'));
-
-      if (!manifest.version || manifest.version > MANIFEST_VERSION) {
-        return {
-          success: false,
-          error: `Archive was created by a newer version of Mx. Voice (manifest v${manifest.version}). Please update the application.`
-        };
-      }
-
-      // Get archive file size
-      const archiveStat = await fs.promises.stat(archivePath);
-      manifest.archiveSize = archiveStat.size;
-
-      debugLog?.info('Archive validated successfully', { ...logCtx, manifest });
-      return { success: true, manifest };
-    } finally {
-      // Clean up temp directory
-      await fs.promises.rm(tempDir, { recursive: true, force: true });
+    if (manifestContent === null) {
+      return { success: false, error: 'Invalid archive: missing manifest.json' };
     }
+
+    const manifest = JSON.parse(manifestContent);
+
+    if (!manifest.version || manifest.version > MANIFEST_VERSION) {
+      return {
+        success: false,
+        error: `Archive was created by a newer version of Mx. Voice (manifest v${manifest.version}). Please update the application.`
+      };
+    }
+
+    // Get archive file size
+    const archiveStat = await fs.promises.stat(archivePath);
+    manifest.archiveSize = archiveStat.size;
+
+    debugLog?.info('Archive validated successfully', { ...logCtx, manifest });
+    return { success: true, manifest };
   } catch (error) {
     debugLog?.error('Archive validation failed', { ...logCtx, error: error.message });
     return { success: false, error: `Invalid archive: ${error.message}` };
