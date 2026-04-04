@@ -19,7 +19,6 @@ import path from 'path';
 import os from 'os';
 import electron from 'electron';
 import archiver from 'archiver';
-import extractZip from 'extract-zip';
 import yauzl from 'yauzl';
 
 const { app } = electron;
@@ -345,6 +344,66 @@ function readZipEntry(archivePath, entryName) {
 }
 
 /**
+ * Extract a zip archive to a directory using yauzl, with progress reporting.
+ * @param {string} archivePath - Path to the zip file
+ * @param {string} destDir - Directory to extract into
+ * @param {Function} onProgress - Called with (entriesProcessed, totalEntries) after each entry
+ * @returns {Promise<void>}
+ */
+function extractZipWithProgress(archivePath, destDir, onProgress = () => {}) {
+  return new Promise((resolve, reject) => {
+    yauzl.open(archivePath, { lazyEntries: true }, (err, zipfile) => {
+      if (err) return reject(err);
+
+      const totalEntries = zipfile.entryCount;
+      let entriesProcessed = 0;
+
+      zipfile.readEntry();
+
+      zipfile.on('entry', (entry) => {
+        const destPath = path.join(destDir, entry.fileName);
+
+        // Prevent zip slip (path traversal)
+        if (!destPath.startsWith(destDir + path.sep) && destPath !== destDir) {
+          zipfile.readEntry();
+          return;
+        }
+
+        if (/\/$/.test(entry.fileName)) {
+          // Directory entry
+          fs.promises.mkdir(destPath, { recursive: true }).then(() => {
+            entriesProcessed++;
+            onProgress(entriesProcessed, totalEntries);
+            zipfile.readEntry();
+          }).catch(reject);
+        } else {
+          // File entry — ensure parent directory exists, then extract
+          fs.promises.mkdir(path.dirname(destPath), { recursive: true }).then(() => {
+            zipfile.openReadStream(entry, (streamErr, readStream) => {
+              if (streamErr) return reject(streamErr);
+
+              const writeStream = fs.createWriteStream(destPath);
+              readStream.pipe(writeStream);
+
+              writeStream.on('close', () => {
+                entriesProcessed++;
+                onProgress(entriesProcessed, totalEntries);
+                zipfile.readEntry();
+              });
+              writeStream.on('error', reject);
+              readStream.on('error', reject);
+            });
+          }).catch(reject);
+        }
+      });
+
+      zipfile.on('end', resolve);
+      zipfile.on('error', reject);
+    });
+  });
+}
+
+/**
  * Validate an archive and return its manifest.
  * Only reads manifest.json from the zip — does not extract the full archive.
  * @param {string} archivePath - Path to the .mxvlib file
@@ -409,14 +468,21 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
 
     progressCallback({ percent: 5, message: 'Extracting archive...' });
 
-    // Extract to temp directory
+    // Extract to temp directory with progress reporting
     const tempDir = path.join(os.tmpdir(), `mxvlib-import-${Date.now()}`);
     await fs.promises.mkdir(tempDir, { recursive: true });
 
     try {
-      await extractZip(archivePath, { dir: tempDir });
+      await extractZipWithProgress(archivePath, tempDir, (processed, total) => {
+        // Extraction spans 5%–50% of total progress
+        const extractPercent = 5 + Math.round((processed / total) * 45);
+        progressCallback({
+          percent: extractPercent,
+          message: `Extracting archive (${processed}/${total} entries)...`
+        });
+      });
 
-      progressCallback({ percent: 20, message: 'Preparing import...' });
+      progressCallback({ percent: 50, message: 'Preparing import...' });
 
       const userData = app.getPath('userData');
       const defaultMusicDir = path.join(userData, 'mp3');
@@ -426,7 +492,7 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       // Import database
       const extractedDb = path.join(tempDir, 'database', 'mxvoice.db');
       if (await pathExists(extractedDb)) {
-        progressCallback({ percent: 25, message: 'Importing database...' });
+        progressCallback({ percent: 55, message: 'Importing database...' });
 
         // Close existing database if open
         if (db && typeof db.close === 'function') {
@@ -446,7 +512,7 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       // Import music files
       const extractedMusic = path.join(tempDir, 'music');
       if (await pathExists(extractedMusic)) {
-        progressCallback({ percent: 30, message: 'Importing music files...' });
+        progressCallback({ percent: 60, message: 'Importing music files...' });
         await fs.promises.mkdir(defaultMusicDir, { recursive: true });
 
         const musicFiles = await fs.promises.readdir(extractedMusic);
@@ -457,7 +523,7 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
           const dest = path.join(defaultMusicDir, file);
           await fs.promises.copyFile(src, dest);
 
-          const musicPercent = 30 + Math.round(((i + 1) / totalMusic) * 30);
+          const musicPercent = 60 + Math.round(((i + 1) / totalMusic) * 15);
           progressCallback({ percent: musicPercent, message: `Importing music files (${i + 1}/${totalMusic})...` });
         }
         debugLog?.info('Music files imported', { ...logCtx, count: totalMusic });
@@ -466,7 +532,7 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       // Import profiles
       const extractedProfiles = path.join(tempDir, 'profiles');
       if (await pathExists(extractedProfiles)) {
-        progressCallback({ percent: 65, message: 'Importing profiles...' });
+        progressCallback({ percent: 78, message: 'Importing profiles...' });
         const targetProfilesDir = path.join(userData, 'profiles');
 
         // Remove existing profiles directory and replace
@@ -480,14 +546,14 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       // Import profiles registry
       const extractedRegistry = path.join(tempDir, 'profiles.json');
       if (await pathExists(extractedRegistry)) {
-        progressCallback({ percent: 75, message: 'Importing profile registry...' });
+        progressCallback({ percent: 83, message: 'Importing profile registry...' });
         await fs.promises.copyFile(extractedRegistry, path.join(userData, 'profiles.json'));
       }
 
       // Import hotkeys
       const extractedHotkeys = path.join(tempDir, 'hotkeys');
       if (await pathExists(extractedHotkeys)) {
-        progressCallback({ percent: 80, message: 'Importing hotkeys...' });
+        progressCallback({ percent: 87, message: 'Importing hotkeys...' });
         await fs.promises.mkdir(defaultHotkeyDir, { recursive: true });
 
         const hotkeyFiles = await fs.promises.readdir(extractedHotkeys);
@@ -503,7 +569,7 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       // Import config with path remapping
       const extractedConfig = path.join(tempDir, 'config.json');
       if (await pathExists(extractedConfig)) {
-        progressCallback({ percent: 90, message: 'Importing settings...' });
+        progressCallback({ percent: 93, message: 'Importing settings...' });
 
         try {
           const importedConfig = JSON.parse(await fs.promises.readFile(extractedConfig, 'utf-8'));
