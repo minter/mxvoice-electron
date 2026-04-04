@@ -186,8 +186,7 @@ test.describe('Holding Tank - basic', () => {
     await expect(renameInput).toBeVisible();
 
     // In the modal, change the name to "Storage"
-    await renameInput.clear();
-    await renameInput.type('Storage');
+    await renameInput.fill('Storage');
     
     // Click "OK"
     const okButton = page.locator('.modal:has(.prompt-input) .confirm-btn');
@@ -212,8 +211,7 @@ test.describe('Holding Tank - basic', () => {
     await expect(renameInput).toBeVisible();
 
     // In the modal, enter "Playlist"
-    await renameInput.clear();
-    await renameInput.type('Playlist');
+    await renameInput.fill('Playlist');
     
     // Click Ok
     await okButton.click();
@@ -238,8 +236,7 @@ test.describe('Holding Tank - basic', () => {
     await expect(renameInput).toBeVisible();
 
     // Enter "Queue" as the new name
-    await renameInput.clear();
-    await renameInput.type('Queue');
+    await renameInput.fill('Queue');
     
     // Click the Cancel button
     const cancelButton = page.locator('.modal:has(.prompt-input) .btn-secondary');
@@ -264,8 +261,7 @@ test.describe('Holding Tank - basic', () => {
     await expect(renameInput).toBeVisible();
 
     // Enter "Favorites" as the new title
-    await renameInput.clear();
-    await renameInput.type('Favorites');
+    await renameInput.fill('Favorites');
     
     // Click the Enter key inside the text field
     await renameInput.press('Enter');
@@ -289,8 +285,7 @@ test.describe('Holding Tank - basic', () => {
     await expect(renameInput).toBeVisible();
 
     // Enter "Archive" in the text field
-    await renameInput.clear();
-    await renameInput.type('Archive');
+    await renameInput.fill('Archive');
     
     // Press the escape key
     await page.keyboard.press('Escape');

@@ -413,8 +413,7 @@ test.describe('Hotkeys - save & load', () => {
     // Wait for modal to appear
     const renameInput = page.locator('.modal .prompt-input');
     await expect(renameInput).toBeVisible();
-    await renameInput.clear();
-    await renameInput.type('First');
+    await renameInput.fill('First');
     
     // Click "OK"
     const okButton = page.locator('.modal:has(.prompt-input) .confirm-btn');
@@ -435,8 +434,7 @@ test.describe('Hotkeys - save & load', () => {
     await expect(renameInput).toBeVisible();
 
     // In the modal, enter "Second"
-    await renameInput.clear();
-    await renameInput.type('Second');
+    await renameInput.fill('Second');
 
     // Click Ok
     await okButton.click();
@@ -457,8 +455,7 @@ test.describe('Hotkeys - save & load', () => {
     await expect(renameInput).toBeVisible();
 
     // Enter "Third" as the new name
-    await renameInput.clear();
-    await renameInput.type('Third');
+    await renameInput.fill('Third');
 
     // Click the Cancel button
     const cancelButton = page.locator('.modal:has(.prompt-input) .btn-secondary');
@@ -479,8 +476,7 @@ test.describe('Hotkeys - save & load', () => {
     await expect(renameInput).toBeVisible();
 
     // Enter "Fourth" as the new title
-    await renameInput.clear();
-    await renameInput.type('Fourth');
+    await renameInput.fill('Fourth');
 
     // Click the Enter key inside the text field
     await renameInput.press('Enter');
@@ -500,8 +496,7 @@ test.describe('Hotkeys - save & load', () => {
     await expect(renameInput).toBeVisible();
 
     // Enter "Fifth" in the text field
-    await renameInput.clear();
-    await renameInput.type('Fifth');
+    await renameInput.fill('Fifth');
 
     // Press the escape key
     await page.keyboard.press('Escape');
@@ -937,8 +932,7 @@ test.describe('Hotkeys - save & load', () => {
     await editButton.click();
     const renameInput = page.locator('.modal .prompt-input');
     await expect(renameInput).toBeVisible();
-    await renameInput.clear();
-    await renameInput.type('Testing');
+    await renameInput.fill('Testing');
 
     const okButton = page.locator('.modal:has(.prompt-input) .confirm-btn');
     await okButton.click();
