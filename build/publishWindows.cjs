@@ -52,6 +52,14 @@ if (fs.existsSync(blockMapPath)) {
   artifacts.push({ name: blockMapFile, path: blockMapPath });
 }
 
+// Include the update manifest (latest.yml) — required by electron-updater to discover new versions
+const latestYmlPath = path.join(distDir, "latest.yml");
+if (fs.existsSync(latestYmlPath)) {
+  artifacts.push({ name: "latest.yml", path: latestYmlPath });
+} else {
+  console.warn("[publishWindows] ⚠️  latest.yml not found in dist/ — auto-update discovery will not work");
+}
+
 console.log(`[publishWindows] Publishing to GitHub:`);
 console.log(`[publishWindows]   Owner: ${owner}`);
 console.log(`[publishWindows]   Repo: ${repo}`);
@@ -146,7 +154,9 @@ const octokit = new Octokit({ auth: token });
         name: artifact.name.replace(/\s+/g, "-"),
         data: fileContent,
         headers: {
-          "content-type": artifact.path.endsWith(".exe") ? "application/octet-stream" : "application/json",
+          "content-type": artifact.path.endsWith(".exe") ? "application/octet-stream"
+          : artifact.path.endsWith(".yml") ? "application/x-yaml"
+          : "application/octet-stream",
           "content-length": fileSize
         }
       });
