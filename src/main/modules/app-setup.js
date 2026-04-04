@@ -657,6 +657,12 @@ function createApplicationMenu() {
           role: 'about'
         },
         {
+          label: 'Documentation',
+          click: () => {
+            shell.openExternal('https://mxvoice.app/docs/');
+          }
+        },
+        {
           label: 'Release Notes',
           click: () => {
             shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
@@ -671,13 +677,13 @@ function createApplicationMenu() {
         {
           label: 'Export Logs',
           click: async () => {
-            try { 
-              await getLogService()?.exportLogs({ days: 7 }); 
+            try {
+              await getLogService()?.exportLogs({ days: 7 });
             } catch (error) {
-              debugLog.warn('Failed to export logs from menu', { 
-                module: 'app-setup', 
+              debugLog.warn('Failed to export logs from menu', {
+                module: 'app-setup',
                 function: 'exportLogs',
-                error: error?.message || 'Unknown error' 
+                error: error?.message || 'Unknown error'
               });
             }
           }
@@ -756,6 +762,12 @@ function createApplicationMenu() {
           }
         },
         {
+          label: 'Documentation',
+          click: () => {
+            shell.openExternal('https://mxvoice.app/docs/');
+          }
+        },
+        {
           label: 'Release Notes',
           click: () => {
             shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
@@ -770,13 +782,13 @@ function createApplicationMenu() {
         {
           label: 'Export Logs',
           click: async () => {
-            try { 
-              await getLogService()?.exportLogs({ days: 7 }); 
+            try {
+              await getLogService()?.exportLogs({ days: 7 });
             } catch (error) {
-              debugLog.warn('Failed to export logs from menu', { 
-                module: 'app-setup', 
+              debugLog.warn('Failed to export logs from menu', {
+                module: 'app-setup',
                 function: 'exportLogs',
-                error: error?.message || 'Unknown error' 
+                error: error?.message || 'Unknown error'
               });
             }
           }
@@ -810,7 +822,7 @@ function showAboutDialog() {
       parent: mainWindow,
       modal: true,
       width: 460,
-      height: 360,
+      height: 400,
       resizable: false,
       minimizable: false,
       maximizable: false,
@@ -875,6 +887,15 @@ function showAboutDialog() {
           });
         }
 
+        // Documentation link
+        const docsLink = document.getElementById('docs-link');
+        if (docsLink) {
+          docsLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.aboutAPI.openExternal('https://mxvoice.app/docs/');
+          });
+        }
+
         // Support link
         const supportLink = document.getElementById('support-link');
         if (supportLink) {
@@ -900,6 +921,10 @@ function showAboutDialog() {
       <div class="section">
         <div class="heading">Website</div>
         <a class="link" id="website-link" href="https://mxvoice.app/">https://mxvoice.app/</a>
+      </div>
+      <div class="section">
+        <div class="heading">Documentation</div>
+        <a class="link" id="docs-link" href="https://mxvoice.app/docs/">https://mxvoice.app/docs/</a>
       </div>
       <div class="section">
         <div class="heading">Support</div>
