@@ -48,6 +48,7 @@ import { initMainLogService } from './modules/log-service.js';
 import * as profileManager from './modules/profile-manager.js';
 import * as profileBackupManager from './modules/profile-backup-manager.js';
 import * as autoBackupTimer from './modules/auto-backup-timer.js';
+import * as libraryTransferManager from './modules/library-transfer-manager.js';
 import * as launcherWindow from './modules/launcher-window.js';
 
 // Initialize Octokit for GitHub API (will be initialized after debugLog is available)
@@ -711,6 +712,9 @@ async function initializeModules() {
   });
   
   fileOperations.initializeFileOperations(dependencies);
+
+  // Initialize library transfer manager (needs db and store which are now available)
+  libraryTransferManager.initializeLibraryTransferManager({ debugLog, db, store });
 }
 
 // Main window creation function

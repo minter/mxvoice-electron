@@ -411,6 +411,27 @@ async function loadWindowState(storeInstance = store, currentProfile = null) {
 function createApplicationMenu() {
   const application_menu = [
     {
+      label: "File",
+      submenu: [
+        {
+          label: "Export Library...",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:export-library');
+            }
+          },
+        },
+        {
+          label: "Import Library...",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:import-library');
+            }
+          },
+        },
+      ],
+    },
+    {
       label: "Edit",
       submenu: [
         {
@@ -700,28 +721,30 @@ function createApplicationMenu() {
       ]
     });
   } else {
-    application_menu[0].submenu.push(
-      {
-        type: 'separator'
-      },
-      {
-        label: 'Preferences',
-        click: () => {
-          mainWindow.webContents.send('show_preferences');
-        }
-      }
-    )
-    const name = app.name;
-
-    application_menu.unshift({
-      label: 'File',
-      submenu: [
+    // Add Preferences to Edit menu on Windows/Linux
+    const editMenu = application_menu.find(m => m.label === 'Edit');
+    if (editMenu) {
+      editMenu.submenu.push(
+        { type: 'separator' },
         {
-          role: 'quit'
+          label: 'Preferences',
+          click: () => {
+            mainWindow.webContents.send('show_preferences');
+          }
         }
-      ]
-    })
+      );
+    }
 
+    // Add quit to the File menu on Windows/Linux
+    const fileMenu = application_menu.find(m => m.label === 'File');
+    if (fileMenu) {
+      fileMenu.submenu.push(
+        { type: 'separator' },
+        { role: 'quit' }
+      );
+    }
+
+    const name = app.name;
     application_menu.push({
       label: 'Help',
       role: 'help',
