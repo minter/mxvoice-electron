@@ -141,7 +141,10 @@ test.describe('Profile Management', () => {
     const descInput = page.locator('#profile-description-input');
     await descInput.click();
     await descInput.fill('Test profile for E2E testing');
-    
+
+    // Verify the description was filled before submitting
+    await expect(descInput).toHaveValue('Test profile for E2E testing');
+
     // Click create button
     const confirmButton = page.locator('#confirm-create-btn');
     await confirmButton.click();
@@ -237,9 +240,7 @@ test.describe('Profile Management', () => {
     await expect(page.locator('.profile-item[data-profile-name="Alice"]')).toBeVisible({ timeout: 10000 });
     // Verify modal is closed (should be closed by the time profile appears)
     await expect(modal).not.toBeVisible({ timeout: 2000 });
-    // Small wait to ensure DOM has settled before creating next profile
-    await page.waitForTimeout(100);
-    
+
     // Create "Bob" profile
     await createButton.click();
     await expect(modal).toBeVisible();
@@ -250,9 +251,7 @@ test.describe('Profile Management', () => {
     await expect(page.locator('.profile-item[data-profile-name="Bob"]')).toBeVisible({ timeout: 10000 });
     // Verify modal is closed (should be closed by the time profile appears)
     await expect(modal).not.toBeVisible({ timeout: 2000 });
-    // Small wait to ensure DOM has settled before creating next profile
-    await page.waitForTimeout(100);
-    
+
     // Create "Charlie" profile
     await createButton.click();
     await expect(modal).toBeVisible();
@@ -268,20 +267,21 @@ test.describe('Profile Management', () => {
     // Now test search
     const searchInput = page.locator('#profile-search');
     
-    // Search for "Bob"
+    // Search for "Bob" and wait for filtering to take effect
     await searchInput.fill('Bob');
-    await page.waitForTimeout(500);
-    
+    await expect(page.locator('.profile-item[data-profile-name="Bob"]')).toBeVisible();
+    await expect(page.locator('.profile-item[data-profile-name="Alice"]')).not.toBeVisible({ timeout: 5000 });
+
     // Only Bob should be visible
     await expect(page.locator('.profile-item[data-profile-name="Bob"]')).toBeVisible();
     await expect(page.locator('.profile-item[data-profile-name="Alice"]')).not.toBeVisible();
     await expect(page.locator('.profile-item[data-profile-name="Charlie"]')).not.toBeVisible();
     await expect(page.locator('.profile-item[data-profile-name="Default User"]')).not.toBeVisible();
     
-    // Clear search
+    // Clear search and wait for all profiles to reappear
     await searchInput.fill('');
-    await page.waitForTimeout(500);
-    
+    await expect(page.locator('.profile-item[data-profile-name="Default User"]')).toBeVisible({ timeout: 5000 });
+
     // All profiles should be visible
     await expect(page.locator('.profile-item[data-profile-name="Default User"]')).toBeVisible();
     await expect(page.locator('.profile-item[data-profile-name="Alice"]')).toBeVisible();
@@ -297,10 +297,7 @@ test.describe('Profile Management', () => {
     // Verify launch button is enabled
     const launchButton = page.locator('#launch-btn');
     await expect(launchButton).toBeEnabled();
-    
-    // Wait a moment for UI to settle
-    await page.waitForTimeout(500);
-    
+
     // Set up a promise to wait for the new window before pressing Enter
     const windowPromise = app.waitForEvent('window', { timeout: 10000 });
     
@@ -425,9 +422,6 @@ test.describe('Profile Management', () => {
       const profileItems = page.locator('.profile-item');
       await expect(profileItems).toHaveCount(expectedCount, { timeout: 5000 });
       
-      // Small wait to ensure DOM has settled before creating next profile
-      // This helps prevent race conditions on slower CI environments
-      await page.waitForTimeout(200);
     }
     
     // Get all profile items in order

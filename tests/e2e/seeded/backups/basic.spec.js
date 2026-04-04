@@ -104,7 +104,7 @@ test.describe('Profile Backups - basic', () => {
     });
     await page.bringToFront();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
   });
 
   test.beforeEach(async () => {
@@ -205,10 +205,7 @@ test.describe('Profile Backups - basic', () => {
     // Wait for modal to be visible
     await expect(page.locator('#backupRestoreModal')).toBeVisible({ timeout: 5000 });
 
-    // Wait for backups to load
-    await page.waitForTimeout(1000);
-
-    // Verify backup list exists
+    // Verify backup list exists and has items
     const backupList = page.locator('#backup-restore-list');
     await expect(backupList).toBeVisible();
 
@@ -277,9 +274,6 @@ test.describe('Profile Backups - basic', () => {
     // Wait for modal to be visible
     await expect(page.locator('#backupSettingsModal')).toBeVisible({ timeout: 5000 });
 
-    // Wait for settings to load
-    await page.waitForTimeout(1000);
-
     // Verify form fields exist
     await expect(page.locator('#backup-settings-enabled')).toBeVisible();
     await expect(page.locator('#backup-settings-interval')).toBeVisible();
@@ -302,7 +296,9 @@ test.describe('Profile Backups - basic', () => {
     });
 
     await expect(page.locator('#backupSettingsModal')).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(1000);
+
+    // Wait for form fields to be ready
+    await expect(page.locator('#backup-settings-enabled')).toBeVisible();
 
     // Get original values
     const enabledCheckbox = page.locator('#backup-settings-enabled');
@@ -334,7 +330,9 @@ test.describe('Profile Backups - basic', () => {
     });
 
     await expect(page.locator('#backupSettingsModal')).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(1000);
+
+    // Wait for form fields to be ready
+    await expect(page.locator('#backup-settings-enabled')).toBeVisible();
 
     // Verify changes persisted
     const savedEnabled = await enabledCheckbox.isChecked();
@@ -454,7 +452,20 @@ test.describe('Profile Backups - basic', () => {
       const win = BrowserWindow.getAllWindows()[0];
       win.webContents.send('menu:create-backup');
     });
-    await page.waitForTimeout(2000);
+
+    // Wait for backup completion modal
+    const resultModal = page.locator('.modal').filter({
+      hasText: /Backup (Complete|Failed|Error|created successfully)/i
+    });
+    await expect(resultModal).toBeVisible({ timeout: 60000 });
+    // Dismiss the modal
+    const okBtn = resultModal.locator('button:has-text("OK"), button.btn-primary').first();
+    if (await okBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await okBtn.click();
+    } else {
+      await page.keyboard.press('Escape');
+    }
+    await expect(resultModal).not.toBeVisible({ timeout: 5000 });
 
     // Open restore dialog
     await app.evaluate(async ({ BrowserWindow }) => {
@@ -463,10 +474,10 @@ test.describe('Profile Backups - basic', () => {
     });
 
     await expect(page.locator('#backupRestoreModal')).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(1000);
 
     // Verify backup items are displayed
     const backupItems = page.locator('#backup-restore-list .list-group-item');
+    await expect(backupItems.first()).toBeVisible({ timeout: 10000 });
     const count = await backupItems.count();
     expect(count).toBeGreaterThan(0);
 
@@ -540,7 +551,20 @@ test.describe('Profile Backups - basic', () => {
       const win = BrowserWindow.getAllWindows()[0];
       win.webContents.send('menu:create-backup');
     });
-    await page.waitForTimeout(2000);
+
+    // Wait for backup completion modal
+    const backupResultModal = page.locator('.modal').filter({
+      hasText: /Backup (Complete|Failed|Error|created successfully)/i
+    });
+    await expect(backupResultModal).toBeVisible({ timeout: 60000 });
+    // Dismiss the modal
+    const dismissBtn = backupResultModal.locator('button:has-text("OK"), button.btn-primary').first();
+    if (await dismissBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await dismissBtn.click();
+    } else {
+      await page.keyboard.press('Escape');
+    }
+    await expect(backupResultModal).not.toBeVisible({ timeout: 5000 });
 
     // Verify backup directory structure
     expect(fs.existsSync(backupDir)).toBe(true);

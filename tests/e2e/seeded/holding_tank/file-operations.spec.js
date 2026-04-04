@@ -33,7 +33,7 @@ test.describe('Holding Tank - file operations', () => {
     await page.bringToFront();
     await page.click('body');
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1500);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
 
     // Create a temp directory for test files
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-tank-test-'));
@@ -51,12 +51,11 @@ test.describe('Holding Tank - file operations', () => {
     if (!page) return;
     try {
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(300);
       await page.evaluate(() => {
         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
         document.querySelectorAll('.modal.show').forEach(el => {
           el.classList.remove('show');
-          el.style.display = 'none';
+          el.style.display = '';
         });
         document.body.classList.remove('modal-open');
         document.body.style.removeProperty('overflow');
@@ -88,13 +87,9 @@ test.describe('Holding Tank - file operations', () => {
     // Click the load holding tank button
     await page.locator('#holding-tank-load-btn').click();
 
-    // Wait for the holding_tank_load IPC to be processed
-    await page.waitForTimeout(2000);
-
-    // Verify the holding tank has items
+    // Wait for the holding_tank_load IPC to process (file I/O + DB lookup + DOM population)
     const tankItems = page.locator('#holding_tank_1 li[songid]');
-    const count = await tankItems.count();
-    expect(count).toBeGreaterThanOrEqual(3);
+    await expect(tankItems).toHaveCount(3, { timeout: 10000 });
 
     // Verify specific song IDs are present
     const songIds = await page.evaluate(() => {
@@ -113,7 +108,7 @@ test.describe('Holding Tank - file operations', () => {
     // First ensure we have items in the holding tank (from previous test or add some)
     // Add songs to holding tank via drag-drop
     await performEmptySearch(page);
-    await page.waitForTimeout(1000);
+    await expect(page.locator('#search_results tbody tr')).not.toHaveCount(0, { timeout: 5000 });
 
     // Drop a song into the holding tank
     await page.evaluate(({ songId }) => {
@@ -125,7 +120,8 @@ test.describe('Holding Tank - file operations', () => {
         bubbles: true, cancelable: true, dataTransfer,
       }));
     }, { songId: '1004' });
-    await page.waitForTimeout(1500);
+    // Wait for the drop to be processed by checking the item appeared
+    await expect(page.locator('#holding_tank_1 li[songid="1004"]')).toBeAttached({ timeout: 5000 });
 
     // Set up save dialog stub
     const outputPath = path.join(tempDir, 'saved-tank.hld');
@@ -143,8 +139,10 @@ test.describe('Holding Tank - file operations', () => {
     // Click the save holding tank button
     await page.locator('#holding-tank-save-btn').click();
 
-    // Wait for file to be written
-    await page.waitForTimeout(2000);
+    // Wait for file to be written by polling for its existence
+    await expect(async () => {
+      expect(fs.existsSync(outputPath)).toBe(true);
+    }).toPass({ timeout: 5000 });
 
     // Verify the file was created
     expect(fs.existsSync(outputPath)).toBe(true);
@@ -184,9 +182,8 @@ test.describe('Holding Tank - file operations', () => {
 
     // Click load button
     await page.locator('#holding-tank-load-btn').click();
-    await page.waitForTimeout(1000);
 
-    // Verify count is unchanged
+    // Brief wait for the canceled dialog round-trip, then verify count is unchanged
     const countAfter = await page.locator('#holding_tank_1 li').count();
     expect(countAfter).toBe(countBefore);
 
@@ -214,7 +211,6 @@ test.describe('Holding Tank - file operations', () => {
 
     // Click load
     await page.locator('#holding-tank-load-btn').click();
-    await page.waitForTimeout(2000);
 
     // The app should not crash — verify it's still responsive
     await expect(page.locator('#holding-tank-column')).toBeVisible();

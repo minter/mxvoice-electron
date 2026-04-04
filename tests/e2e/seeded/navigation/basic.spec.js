@@ -1,5 +1,5 @@
 import { _electron as electron, test, expect } from '@playwright/test';
-import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
+import { launchSeededApp, closeApp, waitForAppReady } from '../../../utils/seeded-launch.js';
 
 test.describe('Navigation - basic', () => {
   let app; let page;
@@ -15,21 +15,8 @@ test.describe('Navigation - basic', () => {
     }
     
     ({ app, page } = await launchSeededApp(electron, 'navigation'));
-    
-    // Ensure window is visible and focused for reliable input
-    await app.evaluate(async ({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      win.show();
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    });
-    await page.bringToFront();
-    await page.click('body');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(500);
 
-    // Give app time to initialize
-    await page.waitForTimeout(1500);
+    await waitForAppReady(page, app);
   });
 
   test.afterAll(async () => {
@@ -49,8 +36,7 @@ test.describe('Navigation - basic', () => {
     
     // 2) Press Tab key
     await page.keyboard.press('Tab');
-    await page.waitForTimeout(200);
-    
+
     // 3) Verify focus moved to hotkeys area
     // The Tab key should trigger sendToHotkeys() function
     const hotkeysColumn = page.locator('#hotkeys-column');
@@ -82,8 +68,7 @@ test.describe('Navigation - basic', () => {
     
     // 2) Press Shift+Tab key
     await page.keyboard.press('Shift+Tab');
-    await page.waitForTimeout(200);
-    
+
     // 3) Verify focus moved to holding tank area
     // The Shift+Tab key should trigger sendToHoldingTank() function
     const holdingTankColumn = page.locator('#holding-tank-column');
@@ -109,16 +94,14 @@ test.describe('Navigation - basic', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('The');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     // 2) Verify we have search results
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(3, { timeout: 5000 });
     
     // 3) Press Tab to select first row (this should trigger the Tab key handler)
     await page.keyboard.press('Tab');
-    await page.waitForTimeout(200);
-    
+
     // 4) Verify first row is selected
     const firstRow = rows.first();
     const firstRowId = await firstRow.getAttribute('id');
@@ -126,8 +109,7 @@ test.describe('Navigation - basic', () => {
     
     // 5) Press down arrow to select next row
     await page.keyboard.press('ArrowDown');
-    await page.waitForTimeout(200);
-    
+
     // 6) Verify second row is selected
     const secondRow = rows.nth(1);
     const secondRowId = await secondRow.getAttribute('id');
@@ -135,8 +117,7 @@ test.describe('Navigation - basic', () => {
     
     // 7) Press up arrow to select previous row
     await page.keyboard.press('ArrowUp');
-    await page.waitForTimeout(200);
-    
+
     // 8) Verify first row is selected again
     const firstRowIdAfterUp = await firstRow.getAttribute('id');
     expect(firstRowIdAfterUp).toBe('selected_row');
@@ -151,16 +132,14 @@ test.describe('Navigation - basic', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('Eat It');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     // 2) Verify we have search results
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
-    
+
     // 3) Press Tab to select the row
     await page.keyboard.press('Tab');
-    await page.waitForTimeout(200);
-    
+
     // 4) Verify row is selected
     const songRow = rows.first();
     const rowId = await songRow.getAttribute('id');
@@ -168,16 +147,14 @@ test.describe('Navigation - basic', () => {
     
     // 5) Press Enter to play the song
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     // 6) Verify song starts playing
     await expect(page.locator('#pause_button')).toBeVisible();
     await expect(page.locator('#play_button')).not.toBeVisible();
     
     // 7) Stop playback
     await page.locator('#stop_button').click();
-    await page.waitForTimeout(500);
-    
+
     console.log('✅ Enter key plays selected song');
   });
 
@@ -188,39 +165,34 @@ test.describe('Navigation - basic', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('Weird Al');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
-    
+
     // 2) Select the song and start playing
     const songRow = rows.first();
     await songRow.dblclick();
-    await page.waitForTimeout(1000);
-    
+
     // 3) Verify song is playing
     await expect(page.locator('#pause_button')).toBeVisible();
-    
+
     // 4) Press Space to pause
     await page.keyboard.press(' ');
-    await page.waitForTimeout(500);
-    
+
     // 5) Verify song is paused
     await expect(page.locator('#play_button')).toBeVisible();
     await expect(page.locator('#pause_button')).not.toBeVisible();
     
     // 6) Press Space again to resume
     await page.keyboard.press(' ');
-    await page.waitForTimeout(500);
-    
+
     // 7) Verify song is playing again
     await expect(page.locator('#pause_button')).toBeVisible();
     await expect(page.locator('#play_button')).not.toBeVisible();
     
     // 8) Stop playback
     await page.locator('#stop_button').click();
-    await page.waitForTimeout(500);
-    
+
     console.log('✅ Space key toggles play/pause');
   });
 
@@ -231,23 +203,20 @@ test.describe('Navigation - basic', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('Edie Brickell');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
-    
+
     // 2) Start playback
     const songRow = rows.first();
     await songRow.dblclick();
-    await page.waitForTimeout(1000);
-    
+
     // 3) Verify song is playing
     await expect(page.locator('#pause_button')).toBeVisible();
-    
+
     // 4) Press Escape to stop
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
-    
+
     // 5) Verify playback stopped
     await expect(page.locator('#play_button')).toBeVisible();
     await expect(page.locator('#pause_button')).not.toBeVisible();
@@ -262,23 +231,20 @@ test.describe('Navigation - basic', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('Sister Sledge');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
-    
+
     // 2) Start playback
     const songRow = rows.first();
     await songRow.dblclick();
-    await page.waitForTimeout(1000);
-    
+
     // 3) Verify song is playing
     await expect(page.locator('#pause_button')).toBeVisible();
-    
+
     // 4) Press Shift+Escape for fade out stop
     await page.keyboard.press('Shift+Escape');
-    await page.waitForTimeout(500);
-    
+
     // 5) Verify playback stopped
     await expect(page.locator('#play_button')).toBeVisible();
     await expect(page.locator('#pause_button')).not.toBeVisible();
@@ -293,8 +259,7 @@ test.describe('Navigation - basic', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('Anthrax');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
     
@@ -302,7 +267,6 @@ test.describe('Navigation - basic', () => {
     const songRow = rows.first();
     const f1Hotkey = page.locator('#hotkeys_list_1 #f1_hotkey .song');
     await songRow.dragTo(f1Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await page.waitForTimeout(500);
 
     // If drag-and-drop didn't work (common on Linux xvfb), assign directly via JS
     const f1Text = await f1Hotkey.textContent();
@@ -315,7 +279,6 @@ test.describe('Navigation - basic', () => {
           window.setLabelFromSongId(songId, target);
         }
       });
-      await page.waitForTimeout(500);
     }
 
     // 3) Verify song is assigned to F1
@@ -323,16 +286,14 @@ test.describe('Navigation - basic', () => {
     
     // 4) Press F1 to play the hotkey
     await page.keyboard.press('F1');
-    await page.waitForTimeout(1000);
-    
+
     // 5) Verify song starts playing
     await expect(page.locator('#pause_button')).toBeVisible();
     await expect(page.locator('#play_button')).not.toBeVisible();
     
     // 6) Stop playback
     await page.locator('#stop_button').click();
-    await page.waitForTimeout(500);
-    
+
     console.log('✅ F1-F12 function keys work for hotkeys');
   });
 
@@ -350,18 +311,16 @@ test.describe('Navigation - basic', () => {
     
     // 3) Press Enter to submit search
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     // 4) Verify search executed (should find no results for "XyZ123NoMatch")
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(0, { timeout: 5000 });
-    
+
     // 5) Clear search and test with valid term
     await searchInput.clear();
     await searchInput.fill('The');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     // 6) Verify search found results
     await expect(rows).toHaveCount(3, { timeout: 5000 });
     
@@ -373,23 +332,17 @@ test.describe('Navigation - basic', () => {
     
     // 1) Test Alt key opens menu bar
     await page.keyboard.press('Alt');
-    
-    // Wait for menu to be accessible
-    await page.waitForTimeout(500);
-    
+
     // 2) Test arrow key navigation through menu items
     // Press right arrow to move through top-level menus
     await page.keyboard.press('ArrowRight');
-    await page.waitForTimeout(200);
-    
+
     // Press down arrow to open submenu
     await page.keyboard.press('ArrowDown');
-    await page.waitForTimeout(200);
-    
+
     // 3) Test Escape key closes menu
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
-    
+
     // Verify menu is no longer active
     const menuActive = await page.evaluate(() => {
       const activeElement = document.activeElement;

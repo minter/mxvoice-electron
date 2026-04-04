@@ -38,7 +38,7 @@ test.describe('Playback - fade out', () => {
     await page.bringToFront();
     await page.click('body');
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1500);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
   });
 
   test.afterAll(async () => {
@@ -52,7 +52,6 @@ test.describe('Playback - fade out', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('Eat It');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
@@ -64,7 +63,6 @@ test.describe('Playback - fade out', () => {
 
     // Wait for playback to start
     await expect(page.locator('#pause_button')).toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(1000);
 
     if (!isCI) {
       await waitForAudible(page);
@@ -177,13 +175,13 @@ test.describe('Playback - fade out', () => {
     // Start playback
     await startPlayback();
 
-    // Wait a moment so timer advances
-    await page.waitForTimeout(2000);
+    // Wait for timer to advance
+    const timer = page.locator('#timer');
+    await expect(timer).not.toHaveText('0:00', { timeout: 5000 });
 
     // Get the timer value before pausing
-    const timerBeforePause = await page.locator('#timer').textContent();
+    const timerBeforePause = await timer.textContent();
     console.log('Timer before pause:', timerBeforePause);
-    expect(timerBeforePause).not.toBe('0:00');
 
     // Resume playback by clicking play
     const playButton = page.locator('#play_button');
@@ -191,7 +189,7 @@ test.describe('Playback - fade out', () => {
 
     // Pause (regular, no fade for simplicity)
     await pauseButton.click();
-    await page.waitForTimeout(500);
+    await expect(playButton).toBeVisible({ timeout: 5000 });
 
     // Verify timer did not reset to 0:00 (song position preserved)
     const timerAfterPause = await page.locator('#timer').textContent();

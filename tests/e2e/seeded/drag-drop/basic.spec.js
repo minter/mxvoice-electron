@@ -25,7 +25,7 @@ test.describe('Drag & Drop - basic', () => {
     await page.bringToFront();
     await page.click('body');
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1500);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
   });
 
   test.afterAll(async () => {
@@ -35,7 +35,6 @@ test.describe('Drag & Drop - basic', () => {
   test('song rows are draggable', async () => {
     // Populate search results
     await performEmptySearch(page);
-    await page.waitForTimeout(1000);
 
     // Verify song rows exist and have songid attributes
     const rows = page.locator('#search_results tbody tr');
@@ -55,7 +54,6 @@ test.describe('Drag & Drop - basic', () => {
   test('drag song to hotkey slot assigns it', async () => {
     // Ensure search results are populated
     await performEmptySearch(page);
-    await page.waitForTimeout(1000);
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows.first()).toBeVisible({ timeout: 5000 });
@@ -85,9 +83,6 @@ test.describe('Drag & Drop - basic', () => {
       target.dispatchEvent(dropEvent);
     }, { songId });
 
-    // Wait for the drop handler to process
-    await page.waitForTimeout(1000);
-
     // Verify the hotkey slot now has the song assigned
     const newSongId = await f1Hotkey.getAttribute('songid');
     expect(newSongId).toBe(songId);
@@ -96,7 +91,6 @@ test.describe('Drag & Drop - basic', () => {
   test('drag song to holding tank adds it', async () => {
     // Ensure search results are populated
     await performEmptySearch(page);
-    await page.waitForTimeout(1000);
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows.first()).toBeVisible({ timeout: 5000 });
@@ -125,9 +119,6 @@ test.describe('Drag & Drop - basic', () => {
       target.dispatchEvent(dropEvent);
     }, { songId });
 
-    // Wait for the drop handler to process
-    await page.waitForTimeout(1500);
-
     // Verify the holding tank now has one more item
     const newCount = await holdingTankList.locator('li').count();
     expect(newCount).toBeGreaterThan(initialCount);
@@ -136,7 +127,6 @@ test.describe('Drag & Drop - basic', () => {
   test('drag song replaces existing hotkey assignment', async () => {
     // Ensure search results are populated
     await performEmptySearch(page);
-    await page.waitForTimeout(1000);
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows.first()).toBeVisible({ timeout: 5000 });
@@ -153,8 +143,6 @@ test.describe('Drag & Drop - basic', () => {
         bubbles: true, cancelable: true, dataTransfer,
       }));
     }, { songId: firstSongId });
-
-    await page.waitForTimeout(1000);
 
     // Verify F2 has the first song
     const f2Hotkey = page.locator('#hotkeys_list_1 #f2_hotkey');
@@ -174,11 +162,11 @@ test.describe('Drag & Drop - basic', () => {
       }));
     }, { songId: secondSongId });
 
-    await page.waitForTimeout(1000);
-
     // Verify F2 now has the second song (replaced)
-    f2SongId = await f2Hotkey.getAttribute('songid');
-    expect(f2SongId).toBe(secondSongId);
+    await expect(async () => {
+      f2SongId = await f2Hotkey.getAttribute('songid');
+      expect(f2SongId).toBe(secondSongId);
+    }).toPass({ timeout: 5000 });
   });
 
   test('drop with no song ID is ignored', async () => {
@@ -194,8 +182,6 @@ test.describe('Drag & Drop - basic', () => {
         bubbles: true, cancelable: true, dataTransfer,
       }));
     });
-
-    await page.waitForTimeout(500);
 
     // Verify the hotkey slot was not changed
     const afterSongId = await f3Hotkey.getAttribute('songid');
@@ -252,8 +238,6 @@ test.describe('Drag & Drop - basic', () => {
         electronAPI.profile.setPreference('column_order', newOrder);
       }
     });
-
-    await page.waitForTimeout(500);
 
     // Verify the new column order in DOM
     const newOrder = await getColumnOrder();

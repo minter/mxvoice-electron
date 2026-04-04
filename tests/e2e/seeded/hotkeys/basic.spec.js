@@ -1,5 +1,5 @@
 import { _electron as electron, test, expect } from '@playwright/test';
-import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
+import { launchSeededApp, closeApp, clearModalBackdrop } from '../../../utils/seeded-launch.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'fs';
@@ -35,47 +35,12 @@ test.describe('Hotkeys - save & load', () => {
     await page.bringToFront();
     await page.click('body');
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(500);
-  
-    // Give app time to initialize
-    await page.waitForTimeout(1500);
-    
-    // Ensure function registry is properly set up for hotkey loading
-    await page.evaluate(async () => {
-      // Wait for function coordination to be available
-      let attempts = 0;
-      const maxAttempts = 10;
-      
-      while (attempts < maxAttempts) {
-        if (window.moduleRegistry?.hotkeys && typeof window.populateHotkeys === 'function') {
-          console.log('✅ Function registry properly set up for hotkeys');
-          break;
-        }
-        
-        // Try to manually set up the function registry if needed
-        if (window.moduleRegistry?.hotkeys && !window.populateHotkeys) {
-          console.log('🔄 Manually setting up populateHotkeys function...');
-          const hotkeysModule = window.moduleRegistry.hotkeys;
-          if (hotkeysModule.getAllHotkeyFunctions) {
-            const functions = hotkeysModule.getAllHotkeyFunctions();
-            if (functions.populateHotkeys) {
-              window.populateHotkeys = functions.populateHotkeys;
-              console.log('✅ Manually registered populateHotkeys function');
-              break;
-            }
-          }
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        attempts++;
-      }
-      
-      if (attempts >= maxAttempts) {
-        console.warn('⚠️ Function registry setup incomplete after maximum attempts');
-      }
-    });
-    
-    await page.waitForTimeout(1000);
+
+    // Wait for function registry to be properly set up for hotkey loading
+    await page.waitForFunction(
+      () => window.moduleRegistry?.hotkeys && typeof window.populateHotkeys === 'function',
+      { timeout: 15000 }
+    );
   });
 
   test.beforeEach(async () => {
@@ -84,8 +49,7 @@ test.describe('Hotkeys - save & load', () => {
       // Ensure Tab 1 is active
       const tab1 = page.locator('#hotkey_tabs a[href="#hotkeys_list_1"]');
       await tab1.click();
-      await page.waitForTimeout(500);
-      
+
       // Clear all hotkeys in all tabs by manually clearing the DOM
       await page.evaluate(() => {
         // Clear all tabs (1-5)
@@ -121,8 +85,7 @@ test.describe('Hotkeys - save & load', () => {
           }
         });
       });
-      
-      await page.waitForTimeout(500);
+
       console.log('✅ Hotkey state reset before test');
     } catch (error) {
       console.log(`⚠️ Could not reset hotkey state: ${error.message}`);
@@ -136,10 +99,7 @@ test.describe('Hotkeys - save & load', () => {
   test('hotkeys UI elements are visible and functional', async () => {
     // Verify hotkeys column is visible
     await expect(page.locator('#hotkeys-column')).toBeVisible();
-    
-    // Wait a bit for the app to fully load
-    await page.waitForTimeout(1000);
-    
+
     // Verify hotkeys header is visible
     const header = page.locator('#hotkeys-column .card-header');
     await expect(header).toBeVisible();
@@ -260,10 +220,7 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    
-    // Wait for search results to appear
-    await page.waitForTimeout(1000);
-    
+
     // Verify we get all 5 seeded songs
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
@@ -287,10 +244,7 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    // Wait for assignment to complete
-    await page.waitForTimeout(500);
-    
+
     // Verify F1 now has the correct song content
     const f1Song = activeTab.locator('[id^="f1_hotkey"] .song');
     await expect(f1Song).toHaveText('We Are Family by Sister Sledge (0:07)');
@@ -324,10 +278,7 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    
-    // Wait for search results to appear
-    await page.waitForTimeout(1000);
-    
+
     // Verify we get all 5 seeded songs
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
@@ -350,18 +301,14 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Drag Got The Time to F2
     await gotTheTimeRow.dragTo(f2HotkeyTab1, {
       force: true,
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Validate F1 and F2 in Tab 1 have songs
     await expect(f1HotkeyTab1).toHaveText('We Are Family by Sister Sledge (0:07)');
     await expect(f2HotkeyTab1).toHaveText('Got The Time by Anthrax (0:06)');
@@ -381,9 +328,7 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Validate F1 in Tab 2 has Eat It
     await expect(f1HotkeyTab2).toHaveText('Eat It by Weird Al Yankovic (0:06)');
     
@@ -398,10 +343,7 @@ test.describe('Hotkeys - save & load', () => {
     // try clicking the button with more robust event handling
     const clearButton = page.locator('#hotkey-clear-btn');
     await clearButton.click();
-    
-    // Wait for confirmation modal to appear
-    await page.waitForTimeout(1000);
-    
+
     // Debug: Check what modals are visible
     const visibleModals = page.locator('.modal:visible');
     const modalCount = await visibleModals.count();
@@ -423,10 +365,10 @@ test.describe('Hotkeys - save & load', () => {
     console.log(`About to click button with text: "${buttonText}"`);
     
     await confirmButton.click();
-    
+
     // Wait for modal to close and clear operation to complete
-    await page.waitForTimeout(2000);
-    
+    await expect(confirmButton).not.toBeVisible({ timeout: 5000 });
+
     // Debug: Check what happened to the hotkey elements
     const f1HotkeyAfterClear = page.locator('#hotkeys_list_2 #f1_hotkey_t2 .song');
     const f1TextAfterClear = await f1HotkeyAfterClear.textContent();
@@ -467,22 +409,19 @@ test.describe('Hotkeys - save & load', () => {
     // Click the Edit button in the toolbar (it's an icon with onclick, not a button with text)
     const editButton = page.locator('#hotkey-rename-btn');
     await editButton.click();
-    
+
     // Wait for modal to appear
-    await page.waitForTimeout(500);
-    
-    // In the modal, change the name to "First"
     const renameInput = page.locator('.modal .prompt-input');
+    await expect(renameInput).toBeVisible();
     await renameInput.clear();
     await renameInput.type('First');
     
     // Click "OK"
     const okButton = page.locator('.modal:has(.prompt-input) .confirm-btn');
     await okButton.click();
-    
-    // Wait for modal to close
-    await page.waitForTimeout(500);
-    
+    await expect(renameInput).not.toBeVisible({ timeout: 5000 });
+    await clearModalBackdrop(page);
+
     // Verify that the label for the first tab is now "First"
     await expect(tab1).toHaveText('First');
     
@@ -493,20 +432,17 @@ test.describe('Hotkeys - save & load', () => {
     
     // Click the edit button
     await editButton.click();
-    
-    // Wait for modal to appear
-    await page.waitForTimeout(500);
-    
+    await expect(renameInput).toBeVisible();
+
     // In the modal, enter "Second"
     await renameInput.clear();
     await renameInput.type('Second');
-    
+
     // Click Ok
     await okButton.click();
-    
-    // Wait for modal to close
-    await page.waitForTimeout(500);
-    
+    await expect(renameInput).not.toBeVisible({ timeout: 5000 });
+    await clearModalBackdrop(page);
+
     // Validate that the label for the first tab is still "First" and the label for the second tab is "Second"
     await expect(tab1).toHaveText('First');
     await expect(tab2).toHaveText('Second');
@@ -518,21 +454,18 @@ test.describe('Hotkeys - save & load', () => {
     
     // Click Edit in the toolbar
     await editButton.click();
-    
-    // Wait for modal to appear
-    await page.waitForTimeout(500);
-    
+    await expect(renameInput).toBeVisible();
+
     // Enter "Third" as the new name
     await renameInput.clear();
     await renameInput.type('Third');
-    
+
     // Click the Cancel button
     const cancelButton = page.locator('.modal:has(.prompt-input) .btn-secondary');
     await cancelButton.click();
-    
-    // Wait for modal to close
-    await page.waitForTimeout(500);
-    
+    await expect(renameInput).not.toBeVisible({ timeout: 5000 });
+    await clearModalBackdrop(page);
+
     // Validate that the label for this tab is still "3"
     await expect(tab3).toHaveText('3');
     
@@ -543,20 +476,17 @@ test.describe('Hotkeys - save & load', () => {
     
     // Click the Edit button
     await editButton.click();
-    
-    // Wait for modal to appear
-    await page.waitForTimeout(500);
-    
+    await expect(renameInput).toBeVisible();
+
     // Enter "Fourth" as the new title
     await renameInput.clear();
     await renameInput.type('Fourth');
-    
+
     // Click the Enter key inside the text field
     await renameInput.press('Enter');
-    
-    // Wait for modal to close
-    await page.waitForTimeout(500);
-    
+    await expect(renameInput).not.toBeVisible({ timeout: 5000 });
+    await clearModalBackdrop(page);
+
     // Validate that the label is now "Fourth"
     await expect(tab4).toHaveText('Fourth');
     
@@ -567,20 +497,17 @@ test.describe('Hotkeys - save & load', () => {
     
     // Click Edit
     await editButton.click();
-    
-    // Wait for modal to appear
-    await page.waitForTimeout(500);
-    
+    await expect(renameInput).toBeVisible();
+
     // Enter "Fifth" in the text field
     await renameInput.clear();
     await renameInput.type('Fifth');
-    
+
     // Press the escape key
     await page.keyboard.press('Escape');
-    
-    // Wait for modal to close
-    await page.waitForTimeout(500);
-    
+    await expect(renameInput).not.toBeVisible({ timeout: 5000 });
+    await clearModalBackdrop(page);
+
     // Validate that the label is still "5"
     await expect(tab5).toHaveText('5');
     
@@ -608,10 +535,7 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    
-    // Wait for search results to appear
-    await page.waitForTimeout(1000);
-    
+
     // Verify we get all 5 seeded songs
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
@@ -634,10 +558,7 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    // Wait for assignment to complete
-    await page.waitForTimeout(500);
-    
+
     // Verify F2 now has the correct song content
     const f2Song = activeTab.locator('[id^="f2_hotkey"] .song');
     await expect(f2Song).toHaveText('Got The Time by Anthrax (0:06)');
@@ -650,10 +571,7 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    
-    // Wait for search results to appear
-    await page.waitForTimeout(1000);
-    
+
     // Verify we get all 5 seeded songs
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
@@ -673,9 +591,7 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Verify F1 now has "We Are Family"
     await expect(f1Hotkey).toHaveText('We Are Family by Sister Sledge (0:07)');
     
@@ -688,9 +604,7 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Verify F2 now has "Got The Time"
     await expect(f2Hotkey).toHaveText('Got The Time by Anthrax (0:06)');
     
@@ -701,9 +615,7 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Verify F1 now has "Eat It" (replacing "We Are Family")
     await expect(f1Hotkey).toHaveText('Eat It by Weird Al Yankovic (0:06)');
     
@@ -734,9 +646,7 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Verify F1 is now blank
     await expect(f1Hotkey).toHaveText('');
     
@@ -763,10 +673,7 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    
-    // Wait for search results to appear
-    await page.waitForTimeout(1000);
-    
+
     // Verify we get all 5 seeded songs
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
@@ -781,19 +688,14 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Validate F5 in Tab 1 has We Are Family
     await expect(f5HotkeyTab1).toHaveText('We Are Family by Sister Sledge (0:07)');
-    
+
     // Click on Tab 2
     const tab2 = page.locator('#hotkey_tabs a[href="#hotkeys_list_2"]');
     await tab2.click();
-    
-    // Wait for tab switch
-    await page.waitForTimeout(500);
-    
+
     // Validate that Tab 2 is now active
     await expect(tab2).toHaveClass(/active/);
     await expect(page.locator('#hotkeys_list_2')).toHaveClass(/show/);
@@ -814,18 +716,13 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Validate F2 in Tab 2 has Got The Time
     await expect(f2HotkeyTab2).toHaveText('Got The Time by Anthrax (0:06)');
-    
+
     // Click on Tab 1
     await tab1.click();
-    
-    // Wait for tab switch
-    await page.waitForTimeout(500);
-    
+
     // Validate that Tab 1 is now active
     await expect(tab1).toHaveClass(/active/);
     await expect(page.locator('#hotkeys_list_1')).toHaveClass(/show/);
@@ -836,10 +733,7 @@ test.describe('Hotkeys - save & load', () => {
     // Click on Tab 3
     const tab3 = page.locator('#hotkey_tabs a[href="#hotkeys_list_3"]');
     await tab3.click();
-    
-    // Wait for tab switch
-    await page.waitForTimeout(500);
-    
+
     // Validate that Tab 3 is now active
     await expect(tab3).toHaveClass(/active/);
     await expect(page.locator('#hotkeys_list_3')).toHaveClass(/show/);
@@ -863,10 +757,7 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    
-    // Wait for search results to appear
-    await page.waitForTimeout(1000);
-    
+
     // Verify we get all 5 seeded songs
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
@@ -892,12 +783,10 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Validate F1 has We Are Family
     await expect(f1Hotkey).toHaveText('We Are Family by Sister Sledge (0:07)');
-    
+
     // Drag Got The Time to F3
     const gotTheTimeRow = rows.nth(1); // Second song should be Got The Time
     const f3Hotkey = activeTab1.locator('[id^="f3_hotkey"] .song');
@@ -907,25 +796,17 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    
-    await page.waitForTimeout(500);
-    
+
     // Validate F3 has Got The Time
     await expect(f3Hotkey).toHaveText('Got The Time by Anthrax (0:06)');
-    
+
     // Click on Eat It in the search results (should be the 4th song)
     const eatItRow = rows.nth(3); // 4th song should be Eat It
     await eatItRow.click();
-    
-    // Wait for selection to register
-    await page.waitForTimeout(500);
-    
+
     // Press the Tab key
     await page.keyboard.press('Tab');
-    
-    // Wait for assignment to complete
-    await page.waitForTimeout(500);
-    
+
     // Validate that Eat It is now in F2 (next available hotkey after F1)
     const f2Hotkey = activeTab1.locator('[id^="f2_hotkey"] .song');
     await expect(f2Hotkey).toHaveText('Eat It by Weird Al Yankovic (0:06)');
@@ -969,16 +850,13 @@ test.describe('Hotkeys - save & load', () => {
     // 2) Click the Load button to trigger the file picker
     const loadButton = page.locator('#hotkey-load-btn');
     await loadButton.click();
-    
-    // 3) Wait for the file to be loaded and processed
-    await page.waitForTimeout(2000);
-    
+
     // 4) Verify the hotkey assignments match the test file
     const activeTab = page.locator('#hotkeys_list_1');
-    
+
     // F1 should contain "Got The Time" (song ID 1001)
     const f1Hotkey = activeTab.locator('[id^="f1_hotkey"] .song');
-    await expect(f1Hotkey).toHaveText('Got The Time by Anthrax (0:06)');
+    await expect(f1Hotkey).toHaveText('Got The Time by Anthrax (0:06)', { timeout: 5000 });
     
     // F2 should be empty
     const f2Hotkey = activeTab.locator('[id^="f2_hotkey"] .song');
@@ -1019,8 +897,7 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
     
@@ -1041,36 +918,32 @@ test.describe('Hotkeys - save & load', () => {
     const activeTab2 = page.locator('#hotkeys_list_2');
     const f1Hotkey = activeTab2.locator('[id^="f1_hotkey"] .song');
     await gotTheTimeRow.dragTo(f1Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await page.waitForTimeout(500);
     await expect(f1Hotkey).toHaveText('Got The Time by Anthrax (0:06)');
-    
+
     // 4) Drag We Are Family to F5 (song ID 1004) - find it by searching for "Sister Sledge"
     const weAreFamilyRow = rows.filter({ hasText: 'Sister Sledge' }).first();
     const f5Hotkey = activeTab2.locator('[id^="f5_hotkey"] .song');
     await weAreFamilyRow.dragTo(f5Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await page.waitForTimeout(500);
     await expect(f5Hotkey).toHaveText('We Are Family by Sister Sledge (0:07)');
-    
+
     // 5) Drag Eat It to F8 (song ID 1005) - find it by searching for "Weird Al"
     const eatItRow = rows.filter({ hasText: 'Weird Al' }).first();
     const f8Hotkey = activeTab2.locator('[id^="f8_hotkey"] .song');
     await eatItRow.dragTo(f8Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await page.waitForTimeout(500);
     await expect(f8Hotkey).toHaveText('Eat It by Weird Al Yankovic (0:06)');
-    
+
     // 6) Rename the tab to "Testing"
     const editButton = page.locator('#hotkey-rename-btn');
     await editButton.click();
-    await page.waitForTimeout(500);
-    
     const renameInput = page.locator('.modal .prompt-input');
+    await expect(renameInput).toBeVisible();
     await renameInput.clear();
     await renameInput.type('Testing');
-    
+
     const okButton = page.locator('.modal:has(.prompt-input) .confirm-btn');
     await okButton.click();
-    await page.waitForTimeout(500);
-    
+    await expect(renameInput).not.toBeVisible();
+
     await expect(tab2).toHaveText('Testing');
     
     // 7) Override the file picker to specify save location
@@ -1155,9 +1028,18 @@ test.describe('Hotkeys - save & load', () => {
     });
     console.log('Save function info:', saveFunctionInfo);
     
-    // 9) Wait for the file to be saved
-    await page.waitForTimeout(2000);
-    
+    // 9) Wait for the file to be saved by checking the directory
+    await page.waitForFunction(async (dir) => {
+      if (window.secureElectronAPI?.fileSystem?.readdir) {
+        try {
+          const result = await window.secureElectronAPI.fileSystem.readdir(dir);
+          const files = Array.isArray(result) ? result : result?.data || [];
+          return files.some(f => f.includes('testing.mrv'));
+        } catch { return false; }
+      }
+      return false;
+    }, hotkeyDir, { timeout: 10000 });
+
     // Debug: Check if the file exists and list directory contents
     console.log('Checking if file was saved...');
     const directoryContents = await page.evaluate(async (dir) => {
@@ -1261,8 +1143,7 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
     
@@ -1280,9 +1161,8 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 }, 
       targetPosition: { x: 20, y: 20 } 
     });
-    await page.waitForTimeout(500);
     await expect(f1HotkeyTab1).toHaveText('We Are Family by Sister Sledge (0:07)');
-    
+
     console.log('✅ Step 2: Dragged "We Are Family" to F1 on Tab 1');
     
     // Step 3: Go to Tab 3
@@ -1303,9 +1183,8 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 }, 
       targetPosition: { x: 20, y: 20 } 
     });
-    await page.waitForTimeout(500);
     await expect(f1HotkeyTab3).toHaveText('Got The Time by Anthrax (0:06)');
-    
+
     console.log('✅ Step 4: Dragged "Got The Time" to F1 on Tab 3');
     
     // Step 5: Double-click F1 on Tab 3 - should play "Got The Time"
@@ -1359,8 +1238,7 @@ test.describe('Hotkeys - save & load', () => {
     // Double-click F1 on Tab 3 - try clicking the li element directly
     const f1HotkeyLi = tab3Content.locator('[id^="f1_hotkey"]');
     await f1HotkeyLi.dblclick();
-    await page.waitForTimeout(500);
-    
+
     // Check which song was played
     playedSongId = await page.evaluate(() => window.lastPlayedSongId);
     console.log(`Double-click played song ID: ${playedSongId}`);
@@ -1413,8 +1291,7 @@ test.describe('Hotkeys - save & load', () => {
     
     // Press F1 key
     await page.keyboard.press('F1');
-    await page.waitForTimeout(500);
-    
+
     // Check which song was played
     playedSongId = await page.evaluate(() => window.lastPlayedSongId);
     console.log(`F1 key press played song ID: ${playedSongId}`);
@@ -1461,8 +1338,7 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-    
+
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
     
@@ -1471,9 +1347,8 @@ test.describe('Hotkeys - save & load', () => {
     const activeTab = page.locator('#hotkeys_list_1');
     const f1Hotkey = activeTab.locator('[id^="f1_hotkey"] .song');
     await gotTheTimeRow.dragTo(f1Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await page.waitForTimeout(500);
     await expect(f1Hotkey).toHaveText('Got The Time by Anthrax (0:06)');
-    
+
     // 3) Drag Got The Time from F1 over into the Holding Tank area
     const holdingTankArea = page.locator('#holding-tank-column');
     await expect(holdingTankArea).toBeVisible();
@@ -1529,8 +1404,7 @@ test.describe('Hotkeys - save & load', () => {
     // Drag the hotkey song to the active holding tank pane
     console.log('Attempting to drag hotkey to active holding tank pane...');
     await f1Hotkey.dragTo(activeHoldingTankPane, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
-    await page.waitForTimeout(1000);
-    
+
     // Debug: Check holding tank structure after drag
     console.log('Checking holding tank structure after drag...');
     const holdingTankAfter = await page.evaluate(() => {
@@ -1580,14 +1454,13 @@ test.describe('Hotkeys - save & load', () => {
     
     const loadButton = page.locator('#hotkey-load-btn');
     await loadButton.click();
-    await page.waitForTimeout(2000);
-    
+
     // Step 3: Verify that these songs from test-environment.js are in the proper spots
     const activeTab1 = page.locator('#hotkeys_list_1');
-    
+
     // F1: Got The Time
     const f1Hotkey = activeTab1.locator('[id^="f1_hotkey"] .song');
-    await expect(f1Hotkey).toHaveText('Got The Time by Anthrax (0:06)');
+    await expect(f1Hotkey).toHaveText('Got The Time by Anthrax (0:06)', { timeout: 5000 });
     
     // F3: Greatest American Hero
     const f3Hotkey = activeTab1.locator('[id^="f3_hotkey"] .song');
@@ -1622,10 +1495,9 @@ test.describe('Hotkeys - save & load', () => {
     }, hotkeyFile2);
     
     await loadButton.click();
-    await page.waitForTimeout(2000);
-    
+
     // Step 7: Verify that tab 3 is now titled "Outros"
-    await expect(tab3).toHaveText('Outros');
+    await expect(tab3).toHaveText('Outros', { timeout: 5000 });
     
     // Step 8: Verify that the following songs are in the following keys
     const activeTab3 = page.locator('#hotkeys_list_3');
@@ -1685,7 +1557,6 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
 
     // Drag the first song to F1 hotkey in Tab 1
     const rows = page.locator('#search_results tbody tr');
@@ -1699,12 +1570,10 @@ test.describe('Hotkeys - save & load', () => {
       sourcePosition: { x: 10, y: 10 },
       targetPosition: { x: 20, y: 20 }
     });
-    await page.waitForTimeout(500);
     await expect(f1HotkeySong).toHaveText(/.+/); // Should have song text
 
     // Click the F1 hotkey row
     await f1HotkeyLi.click();
-    await page.waitForTimeout(200);
 
     // Check that the row is highlighted (by class)
     const hasHighlight = await f1HotkeyLi.evaluate(el =>
@@ -1714,7 +1583,6 @@ test.describe('Hotkeys - save & load', () => {
 
     // Press Delete
     await page.keyboard.press('Delete');
-    await page.waitForTimeout(300);
 
     // Verify the assignment is removed and highlight is gone
     await expect(f1HotkeySong).toHaveText('');
@@ -1728,7 +1596,6 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
@@ -1737,14 +1604,12 @@ test.describe('Hotkeys - save & load', () => {
     const activeTab = page.locator('#hotkeys_list_1');
     const f1Hotkey = activeTab.locator('[id^="f1_hotkey"] .song');
     await anthraxRow.dragTo(f1Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await page.waitForTimeout(500);
 
     await expect(f1Hotkey).toContainText('Got The Time');
     await expect(f1Hotkey).toContainText('Anthrax');
 
     // Dismiss any tooltips/overlays
     await searchInput.click();
-    await page.waitForTimeout(300);
 
     // Get the expected now playing text from the hotkey (title and artist only)
     const hotkeyText = (await f1Hotkey.textContent()).trim();
@@ -1755,24 +1620,12 @@ test.describe('Hotkeys - save & load', () => {
     const f1HotkeyLi = activeTab.locator('[id^="f1_hotkey"]');
     const box = await f1HotkeyLi.boundingBox();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
-    await page.waitForTimeout(500);
-
-
 
     const contextMenu = page.locator('#mxv-context-menu');
-    try {
-      await expect(contextMenu).toBeVisible({ timeout: 2000 });
-    } catch (e) {
-      // If not visible, log computed style
-      const display = await contextMenu.evaluate(el => getComputedStyle(el).display);
-      const zIndex = await contextMenu.evaluate(el => getComputedStyle(el).zIndex);
-      console.log('Menu display:', display, 'z-index:', zIndex);
-      throw e;
-    }
+    await expect(contextMenu).toBeVisible({ timeout: 2000 });
     const playBtn = contextMenu.locator('button:has-text("Play")');
     await expect(playBtn).toBeVisible();
     await playBtn.click();
-    await page.waitForTimeout(300);
 
     // Assert that the now playing bar contains the expected song (title and artist only)
     const songNowPlaying = page.locator('#song_now_playing');
@@ -1783,7 +1636,6 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
@@ -1792,43 +1644,30 @@ test.describe('Hotkeys - save & load', () => {
     const activeTab = page.locator('#hotkeys_list_1');
     const f2Hotkey = activeTab.locator('[id^="f2_hotkey"] .song');
     await sisterSledgeRow.dragTo(f2Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await page.waitForTimeout(500);
 
     await expect(f2Hotkey).toContainText('We Are Family');
     await expect(f2Hotkey).toContainText('Sister Sledge');
 
     // Dismiss any tooltips/overlays
     await searchInput.click();
-    await page.waitForTimeout(300);
 
     // Right-click the <li> using mouse coordinates
     const f2HotkeyLi = activeTab.locator('[id^="f2_hotkey"]');
     const box = await f2HotkeyLi.boundingBox();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
-    await page.waitForTimeout(500);
-
-
 
     const contextMenu = page.locator('#mxv-context-menu');
-    try {
-      await expect(contextMenu).toBeVisible({ timeout: 2000 });
-    } catch (e) {
-      const display = await contextMenu.evaluate(el => getComputedStyle(el).display);
-      const zIndex = await contextMenu.evaluate(el => getComputedStyle(el).zIndex);
-      console.log('Menu display:', display, 'z-index:', zIndex);
-      throw e;
-    }
+    await expect(contextMenu).toBeVisible({ timeout: 2000 });
     const editBtn = contextMenu.locator('button:has-text("Edit")');
     await expect(editBtn).toBeVisible();
     await editBtn.click();
-    await page.waitForTimeout(300);
 
     const editModal = page.locator('#songFormModal');
     await expect(editModal).toBeVisible({ timeout: 5000 });
     const closeBtn = editModal.locator('.btn-close, .close, .cancel').first();
     if (await closeBtn.isVisible()) {
       await closeBtn.click();
-      await page.waitForTimeout(200);
+      await expect(editModal).not.toBeVisible();
     }
   });
 
@@ -1836,7 +1675,6 @@ test.describe('Hotkeys - save & load', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
@@ -1845,36 +1683,24 @@ test.describe('Hotkeys - save & load', () => {
     const activeTab = page.locator('#hotkeys_list_1');
     const f3Hotkey = activeTab.locator('[id^="f3_hotkey"] .song');
     await weirdAlRow.dragTo(f3Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await page.waitForTimeout(500);
 
     await expect(f3Hotkey).toContainText('Eat It');
     await expect(f3Hotkey).toContainText('Weird Al');
 
     // Dismiss any tooltips/overlays
     await searchInput.click();
-    await page.waitForTimeout(300);
 
     // Right-click the <li> using mouse coordinates
     const f3HotkeyLi = activeTab.locator('[id^="f3_hotkey"]');
     const box = await f3HotkeyLi.boundingBox();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
-    await page.waitForTimeout(500);
-
-
 
     const contextMenu = page.locator('#mxv-context-menu');
-    try {
-      await expect(contextMenu).toBeVisible({ timeout: 2000 });
-    } catch (e) {
-      const display = await contextMenu.evaluate(el => getComputedStyle(el).display);
-      const zIndex = await contextMenu.evaluate(el => getComputedStyle(el).zIndex);
-      console.log('Menu display:', display, 'z-index:', zIndex);
-      throw e;
-    }
+    await expect(contextMenu).toBeVisible({ timeout: 2000 });
     const removeButton = contextMenu.locator('button:has-text("Remove from Hotkey")');
     await expect(removeButton).toBeVisible();
     await removeButton.click();
-    await page.waitForTimeout(300);
+
     // Verify the assignment is removed (same as Delete key test)
     await expect(activeTab.locator('[id^="f3_hotkey"] .song')).toHaveCount(0);
     });
@@ -1917,18 +1743,19 @@ test.describe('Hotkeys - save & load', () => {
       await testPage.bringToFront();
       await testPage.click('body');
       await testPage.waitForLoadState('domcontentloaded');
-      await testPage.waitForTimeout(2000); // Give app time to initialize
-      
+      await testPage.waitForFunction(
+        () => window.moduleRegistry?.hotkeys && typeof window.populateHotkeys === 'function',
+        { timeout: 15000 }
+      );
+
       // Ensure we're on Tab 1
       const tab1 = testPage.locator('#hotkey_tabs a[href="#hotkeys_list_1"]');
       await tab1.click();
-      await testPage.waitForTimeout(500);
-      
+
       // Load search results
       const searchInput = testPage.locator('#omni_search');
       await searchInput.clear();
       await searchInput.press('Enter');
-      await testPage.waitForTimeout(1000);
 
       const rows = testPage.locator('#search_results tbody tr');
       await expect(rows).toHaveCount(5, { timeout: 5000 });
@@ -1938,42 +1765,36 @@ test.describe('Hotkeys - save & load', () => {
       const f1Hotkey = activeTab.locator('[id^="f1_hotkey"] .song');
       const f2Hotkey = activeTab.locator('[id^="f2_hotkey"] .song');
       const f3Hotkey = activeTab.locator('[id^="f3_hotkey"] .song');
-      
+
       // Drag first song to F1
       await rows.nth(0).dragTo(f1Hotkey, {
         force: true,
         sourcePosition: { x: 10, y: 10 },
         targetPosition: { x: 20, y: 20 }
       });
-      await testPage.waitForTimeout(300);
-      
+
       // Drag second song to F2
       await rows.nth(1).dragTo(f2Hotkey, {
         force: true,
         sourcePosition: { x: 10, y: 10 },
         targetPosition: { x: 20, y: 20 }
       });
-      await testPage.waitForTimeout(300);
-      
+
       // Drag third song to F3
       await rows.nth(2).dragTo(f3Hotkey, {
         force: true,
         sourcePosition: { x: 10, y: 10 },
         targetPosition: { x: 20, y: 20 }
       });
-      await testPage.waitForTimeout(500);
-      
+
       // Verify hotkeys were assigned
+      await expect(f1Hotkey).not.toHaveText('');
+      await expect(f2Hotkey).not.toHaveText('');
+      await expect(f3Hotkey).not.toHaveText('');
       const f1Text = await f1Hotkey.textContent();
       const f2Text = await f2Hotkey.textContent();
       const f3Text = await f3Hotkey.textContent();
-      expect(f1Text?.trim()).not.toBe('');
-      expect(f2Text?.trim()).not.toBe('');
-      expect(f3Text?.trim()).not.toBe('');
       console.log('✅ Hotkeys assigned - F1:', f1Text, 'F2:', f2Text, 'F3:', f3Text);
-      
-      // Wait for save to complete
-      await testPage.waitForTimeout(1000);
       
       // Close the app (hotkeys should be saved)
       await closeApp(testApp);
@@ -2003,8 +1824,11 @@ test.describe('Hotkeys - save & load', () => {
       
       testPage = await testApp.firstWindow();
       await testPage.waitForLoadState('domcontentloaded');
-      await testPage.waitForTimeout(2000); // Give app time to initialize and load state
-      
+      await testPage.waitForFunction(
+        () => window.moduleRegistry?.hotkeys,
+        { timeout: 15000 }
+      );
+
       // Ensure window is visible and focused
       await testApp.evaluate(async ({ BrowserWindow }) => {
         const win = BrowserWindow.getAllWindows()[0];
@@ -2014,56 +1838,49 @@ test.describe('Hotkeys - save & load', () => {
       });
       await testPage.bringToFront();
       await testPage.click('body');
-      await testPage.waitForTimeout(1000);
-      
+
       // Verify hotkeys loaded correctly
       const activeTabAfterFirstRestart = testPage.locator('#hotkeys_list_1');
       const f1AfterFirstRestart = activeTabAfterFirstRestart.locator('[id^="f1_hotkey"] .song');
       const f2AfterFirstRestart = activeTabAfterFirstRestart.locator('[id^="f2_hotkey"] .song');
       const f3AfterFirstRestart = activeTabAfterFirstRestart.locator('[id^="f3_hotkey"] .song');
-      
-      await testPage.waitForTimeout(1500); // Wait for hotkeys to load
-      
+
+      // Wait for hotkeys to load by checking that they have content
+      await expect(f1AfterFirstRestart).not.toHaveText('', { timeout: 10000 });
+
       const f1TextAfterFirstRestart = await f1AfterFirstRestart.textContent();
       const f2TextAfterFirstRestart = await f2AfterFirstRestart.textContent();
       const f3TextAfterFirstRestart = await f3AfterFirstRestart.textContent();
       console.log('🔍 After first restart - F1:', f1TextAfterFirstRestart, 'F2:', f2TextAfterFirstRestart, 'F3:', f3TextAfterFirstRestart);
-      
+
       // Verify hotkeys are still there (baseline check)
       expect(f1TextAfterFirstRestart?.trim()).not.toBe('');
       expect(f2TextAfterFirstRestart?.trim()).not.toBe('');
       expect(f3TextAfterFirstRestart?.trim()).not.toBe('');
       console.log('✅ Hotkeys loaded correctly after first restart');
-      
+
       // ========================================
       // PART 3: Delete all hotkeys from tab 1
       // ========================================
-      
+
       // Ensure we're on Tab 1
       const tab1AfterRestart = testPage.locator('#hotkey_tabs a[href="#hotkeys_list_1"]');
       await tab1AfterRestart.click();
-      await testPage.waitForTimeout(500);
-      
+
       // Delete F1 hotkey
       const f1HotkeyLi = activeTabAfterFirstRestart.locator('[id^="f1_hotkey"]');
       await f1HotkeyLi.click();
-      await testPage.waitForTimeout(200);
       await testPage.keyboard.press('Delete');
-      await testPage.waitForTimeout(300);
       
       // Delete F2 hotkey
       const f2HotkeyLi = activeTabAfterFirstRestart.locator('[id^="f2_hotkey"]');
       await f2HotkeyLi.click();
-      await testPage.waitForTimeout(200);
       await testPage.keyboard.press('Delete');
-      await testPage.waitForTimeout(300);
-      
+
       // Delete F3 hotkey
       const f3HotkeyLi = activeTabAfterFirstRestart.locator('[id^="f3_hotkey"]');
       await f3HotkeyLi.click();
-      await testPage.waitForTimeout(200);
       await testPage.keyboard.press('Delete');
-      await testPage.waitForTimeout(300);
       
       // Verify all hotkeys are cleared in the DOM
       await expect(f1AfterFirstRestart).toHaveText('');
@@ -2085,10 +1902,7 @@ test.describe('Hotkeys - save & load', () => {
           }
         }
       });
-      
-      // Additional wait to ensure save completes
-      await testPage.waitForTimeout(1000);
-      
+
       // Close the app (deletions should now be saved)
       await closeApp(testApp);
       console.log('✅ App closed (deletions should be saved)');
@@ -2117,8 +1931,11 @@ test.describe('Hotkeys - save & load', () => {
       
       testPage = await testApp.firstWindow();
       await testPage.waitForLoadState('domcontentloaded');
-      await testPage.waitForTimeout(2000); // Give app time to initialize and load state
-      
+      await testPage.waitForFunction(
+        () => window.moduleRegistry?.hotkeys,
+        { timeout: 15000 }
+      );
+
       // Ensure window is visible and focused
       await testApp.evaluate(async ({ BrowserWindow }) => {
         const win = BrowserWindow.getAllWindows()[0];
@@ -2128,15 +1945,12 @@ test.describe('Hotkeys - save & load', () => {
       });
       await testPage.bringToFront();
       await testPage.click('body');
-      await testPage.waitForTimeout(1000);
-      
+
       // CRITICAL ASSERTION: Verify deletions persisted
       const activeTabAfterSecondRestart = testPage.locator('#hotkeys_list_1');
       const f1AfterSecondRestart = activeTabAfterSecondRestart.locator('[id^="f1_hotkey"] .song');
       const f2AfterSecondRestart = activeTabAfterSecondRestart.locator('[id^="f2_hotkey"] .song');
       const f3AfterSecondRestart = activeTabAfterSecondRestart.locator('[id^="f3_hotkey"] .song');
-      
-      await testPage.waitForTimeout(1500); // Wait for hotkeys to load
       
       const f1TextAfterSecondRestart = await f1AfterSecondRestart.textContent();
       const f2TextAfterSecondRestart = await f2AfterSecondRestart.textContent();

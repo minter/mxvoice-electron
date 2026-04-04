@@ -20,7 +20,7 @@ test.describe('Songs - edit', () => {
     console.log('🔄 Refreshing page to clear search cache after database reset...');
     await page.reload();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
     console.log('✅ Page refreshed and ready');
   });
 
@@ -47,12 +47,10 @@ test.describe('Songs - edit', () => {
 
     // Ensure page is fully ready and clear any prior filters/state
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(300);
     try {
       const resetBtn = page.locator('#reset_button');
       if (await resetBtn.count()) {
         await resetBtn.click();
-        await page.waitForTimeout(300);
       }
     } catch {}
 
@@ -63,31 +61,31 @@ test.describe('Songs - edit', () => {
       await input.click();
       await input.fill('');
       await input.press('Enter');
-      await page.waitForTimeout(1000);
-      // Give a little more time if still empty
-      if ((await preRows.count()) === 0) {
-        await page.waitForTimeout(1000);
+      // Wait for results to appear if DB is ready
+      try {
+        await expect(preRows.first()).toBeVisible({ timeout: 5000 });
+      } catch {
+        // DB may not be ready yet, continue
       }
     } catch {}
     await searchInput.click();
     await searchInput.fill('Anthrax');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1200);
-    
+
     const rows = page.locator('#search_results tbody tr');
     // If first attempt returns 0 (e.g., lingering filters), reset and retry once
-    if ((await rows.count()) === 0) {
+    try {
+      await expect(rows).toHaveCount(1, { timeout: 5000 });
+    } catch {
       try {
         const resetBtn = page.locator('#reset_button');
         if (await resetBtn.count()) {
           await resetBtn.click();
-          await page.waitForTimeout(300);
         }
       } catch {}
       await searchInput.click();
       await searchInput.fill('Anthrax');
       await searchInput.press('Enter');
-      await page.waitForTimeout(1200);
     }
     await expect(rows).toHaveCount(1, { timeout: 8000 });
     
@@ -103,10 +101,7 @@ test.describe('Songs - edit', () => {
     // Find the specific row with the Anthrax song and right-click on it
     const rowToEdit = page.locator('#search_results tbody tr').filter({ hasText: 'Anthrax' });
     await rowToEdit.click({ button: 'right' });
-    
-    // Wait for context menu to appear
-    await page.waitForTimeout(500);
-    
+
     // 4) Choose Edit from the context menu
     console.log('✏️ Selecting Edit from context menu...');
     
@@ -184,10 +179,7 @@ test.describe('Songs - edit', () => {
     await searchInput.click();
     await searchInput.fill('Anthrax');
     await searchInput.press('Enter');
-    
-    // Wait for search results to update
-    await page.waitForTimeout(1000);
-    
+
     // 12) Verify the updated song appears with new values
     const updatedRows = page.locator('#search_results tbody tr');
     await expect(updatedRows).toHaveCount(1, { timeout: 5000 });
@@ -221,10 +213,7 @@ test.describe('Songs - edit', () => {
     await searchInput.click();
     await searchInput.fill('Weird Al');
     await searchInput.press('Enter');
-    
-    // Wait for search results
-    await page.waitForTimeout(1000);
-    
+
     // 2) Verify exactly one song is returned
     const rows = page.locator('#search_results tbody tr');
     const rowCount = await rows.count();
@@ -247,7 +236,6 @@ test.describe('Songs - edit', () => {
     
     // Wait for context menu to appear and stabilize
     console.log('⏳ Waiting for context menu to appear...');
-    await page.waitForTimeout(1000);
     
     // 4) Choose Edit from the context menu
     console.log('✏️ Selecting Edit from context menu...');
@@ -273,8 +261,6 @@ test.describe('Songs - edit', () => {
       const editOption = page.locator('.mxv-context-item').filter({ hasText: 'Edit' });
       console.log(`🔍 Edit option found: ${await editOption.count() > 0}`);
       
-      // Wait a bit more and check visibility again
-      await page.waitForTimeout(500);
       const isEditVisible = await editOption.isVisible();
       console.log(`🔍 Edit option visible: ${isEditVisible}`);
       
@@ -363,10 +349,7 @@ test.describe('Songs - edit', () => {
     await searchInput.click();
     await searchInput.fill('Weird Al');
     await searchInput.press('Enter');
-    
-    // Wait for search results to update
-    await page.waitForTimeout(1000);
-    
+
     // 11) Verify the row values are unchanged
     const updatedRows = page.locator('#search_results tbody tr');
     await expect(updatedRows).toHaveCount(1, { timeout: 5000 });

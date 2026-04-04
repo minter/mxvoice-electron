@@ -87,7 +87,6 @@ test.describe('Profile Lifecycle', () => {
 
     await expect(page.locator(`.profile-item[data-profile-name="${name}"]`)).toBeVisible({ timeout: 10000 });
     await expect(modal).not.toBeVisible({ timeout: 2000 });
-    await page.waitForTimeout(100);
   }
 
   /**
@@ -139,15 +138,15 @@ test.describe('Profile Lifecycle', () => {
       }, 'ToDelete');
     }
 
-    await page.waitForTimeout(500);
-
     // Reload profile list to reflect the deletion
     await page.evaluate(() => {
       if (typeof window.loadProfiles === 'function') {
         window.loadProfiles();
       }
     });
-    await page.waitForTimeout(500);
+
+    // Wait for the deleted profile to disappear from the UI
+    await expect(page.locator('.profile-item[data-profile-name="ToDelete"]')).toHaveCount(0, { timeout: 10000 });
 
     // Verify profile count decreased
     const countAfter = await page.locator('.profile-item').count();
@@ -199,8 +198,8 @@ test.describe('Profile Lifecycle', () => {
     // Launch into Original
     const mainWindow = await launchProfile('Original');
 
-    // Wait for the app to fully initialize (event listeners need time)
-    await mainWindow.waitForTimeout(3000);
+    // Wait for the app to fully initialize (moduleRegistry must be available)
+    await mainWindow.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
 
     // Call the duplicate function directly via evaluate (more reliable than menu IPC)
     await mainWindow.evaluate(async () => {
@@ -224,9 +223,15 @@ test.describe('Profile Lifecycle', () => {
     console.log('Duplicate result:', result);
     expect(result?.success).toBe(true);
 
-    // Verify the duplicate was created by checking the profiles directory
-    await mainWindow.waitForTimeout(1000);
-    const profilesExist = fs.existsSync(path.join(userDataDir, 'profiles', 'CopyOfOriginal'));
+    // Poll for the duplicate profile directory to be created on disk
+    let profilesExist = false;
+    for (let i = 0; i < 20; i++) {
+      if (fs.existsSync(path.join(userDataDir, 'profiles', 'CopyOfOriginal'))) {
+        profilesExist = true;
+        break;
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
     expect(profilesExist).toBe(true);
 
     // Verify the new profile has a preferences.json
@@ -241,8 +246,8 @@ test.describe('Profile Lifecycle', () => {
     // Launch into Default User
     const mainWindow = await launchProfile('Default User');
 
-    // Wait for full initialization
-    await mainWindow.waitForTimeout(3000);
+    // Wait for full initialization (moduleRegistry must be available)
+    await mainWindow.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
 
     // Verify we're running as Default User
     const currentProfile = await mainWindow.evaluate(async () => {

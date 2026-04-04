@@ -69,13 +69,13 @@ test.describe('First run flow', () => {
       // Try pressing Escape as a fallback
       if (await firstRunModal.isVisible()) {
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
+        await expect(firstRunModal).not.toBeVisible({ timeout: 1000 }).catch(() => {});
       }
-      
+
       // Try clicking outside the modal
       if (await firstRunModal.isVisible()) {
         await page.mouse.click(100, 100); // Click outside modal
-        await page.waitForTimeout(500);
+        await expect(firstRunModal).not.toBeVisible({ timeout: 1000 }).catch(() => {});
       }
     }
     
@@ -83,7 +83,7 @@ test.describe('First run flow', () => {
     await expect(firstRunModal).toBeHidden({ timeout: TEST_CONFIG.platform.defaultTimeout });
 
     // 3) Wait for the sample song to be fully indexed in the database
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
 
     // 4) Click into the search bar and search
     const searchInput = page.locator('#omni_search');
@@ -98,9 +98,8 @@ test.describe('First run flow', () => {
     try {
       await expect(rows).toHaveCount(1, { timeout: 10000 });
     } catch {
-      // Retry: clear and search again after a brief wait
+      // Retry: clear and search again
       await searchInput.clear();
-      await page.waitForTimeout(1000);
       await searchInput.press('Enter');
       await expect(rows).toHaveCount(1, { timeout: 10000 });
     }

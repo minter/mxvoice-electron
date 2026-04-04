@@ -24,12 +24,9 @@ test.describe('Categories - management', () => {
       // Click on the category selector to open the dropdown
       await categorySelect.click();
       
-      // Wait a moment for the dropdown to fully open
-      await testPage.waitForTimeout(500);
-      
       // Get all option elements
       const options = categorySelect.locator('option');
-      
+
       // Verify we have the expected number of options (1 for "All Categories" + 5 seeded categories)
       const expectedOptionCount = 1 + TEST_CONFIG.schema.categories.length;
       await expect(options).toHaveCount(expectedOptionCount);
@@ -120,27 +117,21 @@ test.describe('Categories - management', () => {
         window.openCategoriesModal();
       });
       
-      // Wait for the modal to appear
-      await testPage.waitForTimeout(1000);
-      
       // Verify the modal appears
       const modal = testPage.locator('#categoryManagementModal');
-      await expect(modal).toBeVisible();
-      
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
       // Verify the modal title is correct
       const modalTitle = modal.locator('.modal-title');
       await expect(modalTitle).toHaveText('Manage Categories');
-      
+
       // Wait for the categories to be populated and verify they exist
       const categoryList = modal.locator('#categoryList');
       await expect(categoryList).toBeVisible();
-      
+
       // Wait for the expected number of category rows to appear
       const categoryRows = categoryList.locator('.row');
       await expect(categoryRows).toHaveCount(TEST_CONFIG.schema.categories.length, { timeout: 10000 });
-      
-      // Additional wait to ensure all elements are fully rendered
-      await testPage.waitForTimeout(2000);
       
       // Verify each seeded category is present with correct description
       for (let i = 0; i < TEST_CONFIG.schema.categories.length; i++) {
@@ -226,13 +217,10 @@ test.describe('Categories - management', () => {
         window.openCategoriesModal();
       });
       
-      // Wait for the modal to appear
-      await testPage.waitForTimeout(1000);
-      
       // Verify the modal appears
       const modal = testPage.locator('#categoryManagementModal');
-      await expect(modal).toBeVisible();
-      
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
       // Locate the new category input field and add button
       const newCategoryInput = modal.locator('#newCategoryDescription');
       const addButton = modal.locator('form[onsubmit="addNewCategory(event)"] button[type="submit"]');
@@ -245,9 +233,6 @@ test.describe('Categories - management', () => {
       
       // Click the Add button
       await addButton.click();
-      
-      // Wait for the category to be added and the modal to refresh
-      await testPage.waitForTimeout(2000);
       
       // Re-read the list of categories in the modal
       const categoryList = modal.locator('#categoryList');
@@ -300,12 +285,9 @@ test.describe('Categories - management', () => {
       const categorySelect = testPage.locator('#category_select');
       await categorySelect.click();
       
-      // Wait a moment for the dropdown to fully open
-      await testPage.waitForTimeout(500);
-      
       // Get all option elements
       const options = categorySelect.locator('option');
-      
+
       // We should now have 7 options (1 for "All Categories" + 6 categories)
       await expect(options).toHaveCount(7, { timeout: 10000 });
       
@@ -377,28 +359,22 @@ test.describe('Categories - management', () => {
         window.openCategoriesModal();
       });
       
-      // Wait for the modal to appear
-      await testPage.waitForTimeout(1000);
-      
       // Verify the modal appears
       const modal = testPage.locator('#categoryManagementModal');
-      await expect(modal).toBeVisible();
-      
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
       // Verify the modal title is correct
       const modalTitle = modal.locator('.modal-title');
       await expect(modalTitle).toHaveText('Manage Categories');
-      
-      // Wait for the categories to be populated
-      await testPage.waitForTimeout(1000);
-      
+
       // Verify the category list container exists
       const categoryList = modal.locator('#categoryList');
       await expect(categoryList).toBeVisible();
-      
+
       // Verify we have exactly 5 category rows (the seeded categories)
       const categoryRows = categoryList.locator('.row');
       await expect(categoryRows).toHaveCount(5, { timeout: 10000 });
-      
+
       // Verify each seeded category is present with correct description
       for (let i = 0; i < TEST_CONFIG.schema.categories.length; i++) {
         const category = TEST_CONFIG.schema.categories[i];
@@ -445,9 +421,6 @@ test.describe('Categories - management', () => {
       // Click the Delete button for "Running In"
       await runningInDeleteButton.click();
       
-      // Wait for the confirmation modal to appear
-      await testPage.waitForTimeout(500);
-      
       // Look for the dynamically created confirmation modal
       const confirmationModal = testPage.locator('.modal').filter({ hasText: 'Are you sure you want to delete "Running In"' }).first();
       
@@ -469,9 +442,6 @@ test.describe('Categories - management', () => {
       
       // Click the Confirm button
       await confirmButton.click();
-      
-      // Wait for the confirmation modal to close and the category list to refresh
-      await testPage.waitForTimeout(2000);
       
       // Verify the confirmation modal is no longer visible
       await expect(confirmationModal).not.toBeVisible();
@@ -514,12 +484,9 @@ test.describe('Categories - management', () => {
       const categorySelect = testPage.locator('#category_select');
       await categorySelect.click();
       
-      // Wait a moment for the dropdown to fully open
-      await testPage.waitForTimeout(500);
-      
       // Get all option elements
       const options = categorySelect.locator('option');
-      
+
       // We should now have 6 options (1 for "All Categories" + 4 remaining categories)
       await expect(options).toHaveCount(6, { timeout: 10000 });
       
@@ -551,18 +518,12 @@ test.describe('Categories - management', () => {
         }
       });
       
-      // Wait for the modal to appear
-      await testPage.waitForTimeout(1000);
-      
       // Verify the modal appears
-      await expect(modal).toBeVisible();
-      
-      // Wait for the categories to be populated
-      await testPage.waitForTimeout(1000);
-      
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
       // Verify the category list container exists
       await expect(categoryList).toBeVisible();
-      
+
       // We should now have 5 categories (4 original + 1 Uncategorized)
       const reopenedCategoryRows = categoryList.locator('.row');
       await expect(reopenedCategoryRows).toHaveCount(5, { timeout: 10000 });
@@ -590,9 +551,6 @@ test.describe('Categories - management', () => {
       // Click the Delete button for "Running Out"
       await runningOutDeleteButton.click();
       
-      // Wait for the confirmation modal to appear
-      await testPage.waitForTimeout(500);
-      
       // Look for the dynamically created confirmation modal
       const runningOutConfirmationModal = testPage.locator('.modal').filter({ hasText: 'Are you sure you want to delete "Running Out"' }).first();
       
@@ -614,9 +572,6 @@ test.describe('Categories - management', () => {
       
       // Click the Confirm button
       await runningOutConfirmButton.click();
-      
-      // Wait for the confirmation modal to close and the category list to refresh
-      await testPage.waitForTimeout(2000);
       
       // Verify the confirmation modal is no longer visible
       await expect(runningOutConfirmationModal).not.toBeVisible();
@@ -659,12 +614,9 @@ test.describe('Categories - management', () => {
       const finalCategorySelect = testPage.locator('#category_select');
       await finalCategorySelect.click();
       
-      // Wait a moment for the dropdown to fully open
-      await testPage.waitForTimeout(500);
-      
       // Get all option elements
       const finalOptions = finalCategorySelect.locator('option');
-      
+
       // We should now have 5 options (1 for "All Categories" + 4 remaining categories)
       await expect(finalOptions).toHaveCount(5, { timeout: 10000 });
       
@@ -698,9 +650,6 @@ test.describe('Categories - management', () => {
       
       // Select "Uncategorized" by value on the native select (fires change event)
       await finalCategorySelectForSearch.selectOption('UNC');
-      
-      // Wait for the search to execute and results to appear
-      await testPage.waitForTimeout(1000);
       
       // Verify that the search results area shows one song
       const searchResults = testPage.locator('#search_results tbody tr');
@@ -745,28 +694,22 @@ test.describe('Categories - management', () => {
         window.openCategoriesModal();
       });
       
-      // Wait for the modal to appear
-      await testPage.waitForTimeout(1000);
-      
       // Verify the modal appears
       const modal = testPage.locator('#categoryManagementModal');
-      await expect(modal).toBeVisible();
-      
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
       // Verify the modal title is correct
       const modalTitle = modal.locator('.modal-title');
       await expect(modalTitle).toHaveText('Manage Categories');
-      
-      // Wait for the categories to be populated
-      await testPage.waitForTimeout(1000);
-      
+
       // Verify the category list container exists
       const categoryList = modal.locator('#categoryList');
       await expect(categoryList).toBeVisible();
-      
+
       // Verify we have exactly 5 category rows (the seeded categories)
       const categoryRows = categoryList.locator('.row');
       await expect(categoryRows).toHaveCount(5, { timeout: 10000 });
-      
+
       // Find the "Running In" category row and click its Edit button
       let runningInRow = null;
       let runningInEditButton = null;
@@ -789,9 +732,6 @@ test.describe('Categories - management', () => {
       
       // Click the Edit button for "Running In"
       await runningInEditButton.click();
-      
-      // Wait for the edit mode to activate
-      await testPage.waitForTimeout(500);
       
       // The description should now be hidden and an input field should be visible
       const descriptionElement = runningInRow.locator('.category-description');
@@ -817,9 +757,6 @@ test.describe('Categories - management', () => {
       
       // Submit the form to save the changes
       await categoryForm.evaluate(form => form.dispatchEvent(new Event('submit')));
-      
-      // Wait for the save to complete and UI to refresh
-      await testPage.waitForTimeout(2000);
       
       // Re-read the modal DOM after save to avoid stale references
       const refreshedCategoryList = modal.locator('#categoryList');
@@ -848,12 +785,9 @@ test.describe('Categories - management', () => {
       const categorySelect = testPage.locator('#category_select');
       await categorySelect.click();
       
-      // Wait a moment for the dropdown to fully open
-      await testPage.waitForTimeout(500);
-      
       // Get all option elements
       const options = categorySelect.locator('option');
-      
+
       // We should still have 6 options (1 for "All Categories" + 5 categories)
       await expect(options).toHaveCount(6, { timeout: 10000 });
       

@@ -1,5 +1,5 @@
 import { _electron as electron, test, expect } from '@playwright/test';
-import { launchSeededApp, closeApp, performEmptySearch } from '../../../utils/seeded-launch.js';
+import { launchSeededApp, closeApp, performEmptySearch, clearModalBackdrop } from '../../../utils/seeded-launch.js';
 
 test.describe('Songs - menu operations', () => {
   let app; let page;
@@ -24,7 +24,7 @@ test.describe('Songs - menu operations', () => {
     await page.bringToFront();
     await page.click('body');
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1500);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
   });
 
   test.afterAll(async () => {
@@ -36,12 +36,11 @@ test.describe('Songs - menu operations', () => {
     if (!page) return;
     try {
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(300);
       await page.evaluate(() => {
         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
         document.querySelectorAll('.modal.show').forEach(el => {
           el.classList.remove('show');
-          el.style.display = 'none';
+          el.style.display = '';
         });
         document.body.classList.remove('modal-open');
         document.body.style.removeProperty('overflow');
@@ -72,7 +71,6 @@ test.describe('Songs - menu operations', () => {
   test('edit selected song via menu opens edit modal', async () => {
     // Populate search results and select a song
     await performEmptySearch(page);
-    await page.waitForTimeout(1000);
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows.first()).toBeVisible({ timeout: 5000 });
@@ -80,7 +78,6 @@ test.describe('Songs - menu operations', () => {
     // Click a song row to select it
     const targetRow = rows.filter({ hasText: 'Got The Time' });
     await targetRow.click();
-    await page.waitForTimeout(500);
 
     // Verify it's selected
     const selectedId = await targetRow.getAttribute('id');
@@ -104,7 +101,10 @@ test.describe('Songs - menu operations', () => {
 
     // Close the modal without saving
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    await expect(modal).not.toBeVisible({ timeout: 5000 }).catch(async () => {
+      await clearModalBackdrop(page);
+    });
+    await clearModalBackdrop(page);
   });
 
   test('edit via menu with no selection does nothing', async () => {
@@ -118,10 +118,8 @@ test.describe('Songs - menu operations', () => {
     await triggerSongsMenuItem('Edit Selected Song');
 
     // Modal should NOT appear (no song selected)
-    await page.waitForTimeout(1000);
     const modal = page.locator('#songFormModal');
-    const isVisible = await modal.isVisible();
-    expect(isVisible).toBe(false);
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
   });
 
   test('edit via menu and save changes persists', async () => {
@@ -129,12 +127,10 @@ test.describe('Songs - menu operations', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('Edie Brickell');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
     await rows.first().click();
-    await page.waitForTimeout(500);
 
     // Trigger Edit from menu
     await triggerSongsMenuItem('Edit Selected Song');
@@ -153,12 +149,10 @@ test.describe('Songs - menu operations', () => {
 
     // Wait for modal to close
     await expect(modal).not.toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(1000);
 
     // Search again to verify the change persisted
     await searchInput.fill('Edie Brickell');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
 
     // Verify the updated artist name appears
     await expect(page.locator('#search_results')).toContainText('Edie Brickell (Edited)');
@@ -169,14 +163,12 @@ test.describe('Songs - menu operations', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('Joey Scarbury');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
 
     // Select the song
     await rows.first().click();
-    await page.waitForTimeout(500);
 
     // Trigger Delete Selected Song from menu
     await triggerSongsMenuItem('Delete Selected Song');
@@ -192,12 +184,10 @@ test.describe('Songs - menu operations', () => {
 
     // Wait for modal to close and backdrop to clear
     await expect(confirmationModal).not.toBeVisible({ timeout: 5000 });
-    await page.waitForTimeout(500);
 
     // Verify the song is gone by searching again
     await searchInput.fill('Joey Scarbury');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
 
     // Should have 0 results
     const resultsAfter = page.locator('#search_results tbody tr');

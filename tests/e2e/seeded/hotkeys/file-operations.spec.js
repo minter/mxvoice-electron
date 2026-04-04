@@ -34,19 +34,12 @@ test.describe('Hotkeys - file operations', () => {
     await page.bringToFront();
     await page.click('body');
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1500);
 
-    // Ensure function registry is set up for hotkey loading
-    await page.evaluate(async () => {
-      let attempts = 0;
-      while (attempts < 10) {
-        if (window.moduleRegistry?.hotkeys && typeof window.populateHotkeys === 'function') {
-          break;
-        }
-        await new Promise(r => setTimeout(r, 300));
-        attempts++;
-      }
-    });
+    // Wait for function registry to be properly set up for hotkey loading
+    await page.waitForFunction(
+      () => window.moduleRegistry?.hotkeys && typeof window.populateHotkeys === 'function',
+      { timeout: 15000 }
+    );
 
     // Create a temp directory for test files
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-hotkey-test-'));
@@ -96,10 +89,8 @@ test.describe('Hotkeys - file operations', () => {
     await page.locator('#hotkey-load-btn').click();
 
     // Wait for the fkey_load IPC to be processed
-    await page.waitForTimeout(2000);
-
-    // Verify F1 has song 1001 assigned
     const f1Hotkey = page.locator('#hotkeys_list_1 #f1_hotkey');
+    await expect(f1Hotkey).toHaveAttribute('songid', '1001', { timeout: 5000 });
     const f1SongId = await f1Hotkey.getAttribute('songid');
     expect(f1SongId).toBe('1001');
 
@@ -122,7 +113,6 @@ test.describe('Hotkeys - file operations', () => {
   test('save hotkeys to .mrv file writes correct format', async () => {
     // First, assign some songs to hotkeys via drag-drop evaluate
     await performEmptySearch(page);
-    await page.waitForTimeout(1000);
 
     // Assign song 1002 to F5 in active tab
     await page.evaluate(({ songId }) => {
@@ -134,7 +124,9 @@ test.describe('Hotkeys - file operations', () => {
         bubbles: true, cancelable: true, dataTransfer,
       }));
     }, { songId: '1002' });
-    await page.waitForTimeout(1000);
+
+    // Wait for the drop to be processed
+    await expect(page.locator('#hotkeys_list_1 #f5_hotkey')).toHaveAttribute('songid', '1002', { timeout: 5000 });
 
     // Set up save dialog stub
     const outputPath = path.join(tempDir, 'saved-hotkeys.mrv');
@@ -153,10 +145,7 @@ test.describe('Hotkeys - file operations', () => {
     await page.locator('#hotkey-save-btn').click();
 
     // Wait for file to be written
-    await page.waitForTimeout(2000);
-
-    // Verify the file was created
-    expect(fs.existsSync(outputPath)).toBe(true);
+    await expect.poll(() => fs.existsSync(outputPath), { timeout: 10000 }).toBe(true);
 
     // Read and verify the file content
     const content = fs.readFileSync(outputPath, 'utf-8');
@@ -195,7 +184,6 @@ test.describe('Hotkeys - file operations', () => {
 
     // Click load button
     await page.locator('#hotkey-load-btn').click();
-    await page.waitForTimeout(1000);
 
     // Verify F1 is unchanged
     const f1After = await page.locator('#hotkeys_list_1 #f1_hotkey').getAttribute('songid');

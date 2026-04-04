@@ -24,7 +24,7 @@ export default defineConfig({
   // Each test suite gets an isolated user-data directory, so parallel is safe.
   // CI: serialize to avoid resource contention on constrained runners.
   // Local: use PWWORKERS env var to override (e.g. PWWORKERS=1 npm test for serial).
-  workers: isCI ? 1 : (parseInt(process.env.PWWORKERS, 10) || 4),
+  workers: isCI ? 2 : (parseInt(process.env.PWWORKERS, 10) || 4),
   globalSetup: 'tests/setup/global-setup.js',
   globalTeardown: 'tests/setup/global-teardown.js',
   snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}{ext}',

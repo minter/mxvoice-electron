@@ -43,7 +43,7 @@ test.describe('Profile Backups - restore', () => {
     });
     await page.bringToFront();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1500);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
   });
 
   test.afterAll(async () => {
@@ -55,12 +55,11 @@ test.describe('Profile Backups - restore', () => {
     if (!page) return;
     try {
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(300);
       await page.evaluate(() => {
         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
         document.querySelectorAll('.modal.show').forEach(el => {
           el.classList.remove('show');
-          el.style.display = 'none';
+          el.style.display = '';
         });
         document.body.classList.remove('modal-open');
         document.body.style.removeProperty('overflow');
@@ -201,9 +200,14 @@ test.describe('Profile Backups - restore', () => {
       return await api.profile.restoreBackup(bid);
     }, backupId);
 
-    await page.waitForTimeout(1000);
-
     // Read metadata again — should have more backups (pre-restore backup created)
+    await expect(async () => {
+      const metadataAfter = JSON.parse(
+        fs.readFileSync(path.join(backupDir, 'backup-metadata.json'), 'utf8')
+      );
+      expect(metadataAfter.backups.length).toBeGreaterThan(countBefore);
+    }).toPass({ timeout: 5000 });
+
     const metadataAfter = JSON.parse(
       fs.readFileSync(path.join(backupDir, 'backup-metadata.json'), 'utf8')
     );
