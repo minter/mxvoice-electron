@@ -344,11 +344,43 @@ function readZipEntry(archivePath, entryName) {
 }
 
 /**
+ * Characters illegal in Windows filenames. Matches the pattern used by the
+ * sanitize-filename IPC handler in ipc-handlers.js.
+ */
+const ILLEGAL_FILENAME_CHARS = /[<>:"/\\|?*]/g;
+
+/**
+ * Sanitize a zip entry path for the current platform.
+ * On Windows, replaces illegal characters in each path segment with '_'.
+ * Returns { sanitized, wasRenamed } so callers can track renames.
+ */
+function sanitizeEntryPath(entryFileName) {
+  if (process.platform !== 'win32') {
+    return { sanitized: entryFileName, wasRenamed: false };
+  }
+
+  // Split into segments, sanitize each filename part (not the separators)
+  const segments = entryFileName.split('/');
+  let wasRenamed = false;
+  const sanitizedSegments = segments.map((seg) => {
+    if (seg === '') return seg; // trailing slash for directories
+    const clean = seg.replace(ILLEGAL_FILENAME_CHARS, '_');
+    if (clean !== seg) wasRenamed = true;
+    return clean;
+  });
+
+  return { sanitized: sanitizedSegments.join('/'), wasRenamed };
+}
+
+/**
  * Extract a zip archive to a directory using yauzl, with progress reporting.
+ * Sanitizes filenames for the current platform and continues past per-file errors.
  * @param {string} archivePath - Path to the zip file
  * @param {string} destDir - Directory to extract into
  * @param {Function} onProgress - Called with (entriesProcessed, totalEntries) after each entry
- * @returns {Promise<void>}
+ * @returns {Promise<{renamedFiles: Map<string,string>, errors: Array<{entry: string, error: string}>}>}
+ *   renamedFiles maps original zip entry name → sanitized name (only entries that changed)
+ *   errors lists entries that could not be extracted
  */
 function extractZipWithProgress(archivePath, destDir, onProgress = () => {}) {
   return new Promise((resolve, reject) => {
@@ -357,47 +389,70 @@ function extractZipWithProgress(archivePath, destDir, onProgress = () => {}) {
 
       const totalEntries = zipfile.entryCount;
       let entriesProcessed = 0;
+      const renamedFiles = new Map();
+      const errors = [];
+
+      function advance() {
+        entriesProcessed++;
+        onProgress(entriesProcessed, totalEntries);
+        zipfile.readEntry();
+      }
+
+      function handleEntryError(entryName, entryErr) {
+        debugLog?.warn('Failed to extract entry, skipping', {
+          module: 'library-transfer-manager',
+          function: 'extractZipWithProgress',
+          entry: entryName,
+          error: entryErr.message
+        });
+        errors.push({ entry: entryName, error: entryErr.message });
+        advance();
+      }
 
       zipfile.readEntry();
 
       zipfile.on('entry', (entry) => {
-        const destPath = path.join(destDir, entry.fileName);
+        const { sanitized, wasRenamed } = sanitizeEntryPath(entry.fileName);
+        if (wasRenamed) {
+          renamedFiles.set(entry.fileName, sanitized);
+        }
+
+        const destPath = path.join(destDir, sanitized);
 
         // Prevent zip slip (path traversal)
-        if (!destPath.startsWith(destDir + path.sep) && destPath !== destDir) {
-          zipfile.readEntry();
+        const normalizedDest = path.resolve(destPath);
+        const normalizedDir = path.resolve(destDir);
+        if (!normalizedDest.startsWith(normalizedDir + path.sep) && normalizedDest !== normalizedDir) {
+          advance();
           return;
         }
 
         if (/\/$/.test(entry.fileName)) {
           // Directory entry
-          fs.promises.mkdir(destPath, { recursive: true }).then(() => {
-            entriesProcessed++;
-            onProgress(entriesProcessed, totalEntries);
-            zipfile.readEntry();
-          }).catch(reject);
+          fs.promises.mkdir(destPath, { recursive: true })
+            .then(advance)
+            .catch((dirErr) => handleEntryError(entry.fileName, dirErr));
         } else {
           // File entry — ensure parent directory exists, then extract
           fs.promises.mkdir(path.dirname(destPath), { recursive: true }).then(() => {
             zipfile.openReadStream(entry, (streamErr, readStream) => {
-              if (streamErr) return reject(streamErr);
+              if (streamErr) {
+                handleEntryError(entry.fileName, streamErr);
+                return;
+              }
 
               const writeStream = fs.createWriteStream(destPath);
               readStream.pipe(writeStream);
 
-              writeStream.on('close', () => {
-                entriesProcessed++;
-                onProgress(entriesProcessed, totalEntries);
-                zipfile.readEntry();
-              });
-              writeStream.on('error', reject);
-              readStream.on('error', reject);
+              writeStream.on('close', advance);
+              writeStream.on('error', (writeErr) => handleEntryError(entry.fileName, writeErr));
+              readStream.on('error', (readErr) => handleEntryError(entry.fileName, readErr));
             });
-          }).catch(reject);
+          }).catch((mkdirErr) => handleEntryError(entry.fileName, mkdirErr));
         }
       });
 
-      zipfile.on('end', resolve);
+      zipfile.on('end', () => resolve({ renamedFiles, errors }));
       zipfile.on('error', reject);
     });
   });
@@ -473,14 +528,28 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
     await fs.promises.mkdir(tempDir, { recursive: true });
 
     try {
-      await extractZipWithProgress(archivePath, tempDir, (processed, total) => {
-        // Extraction spans 5%–50% of total progress
-        const extractPercent = 5 + Math.round((processed / total) * 45);
-        progressCallback({
-          percent: extractPercent,
-          message: `Extracting archive (${processed}/${total} entries)...`
+      const { renamedFiles, errors: extractErrors } = await extractZipWithProgress(
+        archivePath, tempDir, (processed, total) => {
+          // Extraction spans 5%–50% of total progress
+          const extractPercent = 5 + Math.round((processed / total) * 45);
+          progressCallback({
+            percent: extractPercent,
+            message: `Extracting archive (${processed}/${total} entries)...`
+          });
+        }
+      );
+
+      if (extractErrors.length > 0) {
+        debugLog?.warn('Some entries could not be extracted', {
+          ...logCtx, errorCount: extractErrors.length, errors: extractErrors
         });
-      });
+      }
+      if (renamedFiles.size > 0) {
+        debugLog?.info('Sanitized filenames for platform compatibility', {
+          ...logCtx, renamedCount: renamedFiles.size,
+          renames: Object.fromEntries(renamedFiles)
+        });
+      }
 
       progressCallback({ percent: 50, message: 'Preparing import...' });
 
@@ -507,6 +576,39 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
         const targetDbPath = path.join(defaultDbDir, 'mxvoice.db');
         await fs.promises.copyFile(extractedDb, targetDbPath);
         debugLog?.info('Database imported', { ...logCtx, targetDbPath });
+
+        // Update database filenames for any music files that were renamed during extraction
+        // (e.g., colons replaced with underscores on Windows)
+        const musicRenames = new Map();
+        for (const [original, sanitized] of renamedFiles) {
+          if (original.startsWith('music/')) {
+            const origName = path.basename(original);
+            const sanitizedName = path.basename(sanitized);
+            musicRenames.set(origName, sanitizedName);
+          }
+        }
+
+        if (musicRenames.size > 0) {
+          try {
+            const { Database } = await import('node-sqlite3-wasm');
+            const importedDb = new Database(targetDbPath);
+            let updatedCount = 0;
+            for (const [origName, sanitizedName] of musicRenames) {
+              const stmt = importedDb.prepare('UPDATE mrvoice SET filename = ? WHERE filename = ?');
+              const result = stmt.run([sanitizedName, origName]);
+              updatedCount += result.changes || 0;
+              stmt.finalize();
+            }
+            importedDb.close();
+            debugLog?.info('Updated sanitized filenames in database', {
+              ...logCtx, renamedCount: musicRenames.size, updatedRows: updatedCount
+            });
+          } catch (dbFixErr) {
+            debugLog?.warn('Could not update sanitized filenames in database', {
+              ...logCtx, error: dbFixErr.message
+            });
+          }
+        }
       }
 
       // Import music files
