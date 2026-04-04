@@ -1795,7 +1795,13 @@ function registerAllHandlers() {
       });
       
       const saveResult = await profileManager.saveProfilePreferences(profileName, updatedPreferences);
-      
+
+      // Sync prerelease_updates to the global store so the auto-updater picks it up
+      // (auto-updater reads from store.get('prerelease_updates'), not profile preferences)
+      if ('prerelease_updates' in preferencesObject) {
+        store.set('prerelease_updates', preferencesObject.prerelease_updates);
+      }
+
       debugLog?.info('[PROFILE-PREF] Save completed', {
         module: 'ipc-handlers',
         function: 'profile:set-preferences',
@@ -1803,8 +1809,8 @@ function registerAllHandlers() {
         saveSuccess: saveResult,
         savedFadeOut: updatedPreferences.fade_out_seconds
       });
-      
-      debugLog?.info('[PROFILE-PREF] Multiple preferences saved successfully', { 
+
+      debugLog?.info('[PROFILE-PREF] Multiple preferences saved successfully', {
         module: 'ipc-handlers',
         function: 'profile:set-preferences',
         profileName
