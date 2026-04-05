@@ -662,3 +662,147 @@ test.describe('Audio Enhancements - database migration', () => {
     console.log('✅ Database migration verified: new columns exist with correct defaults');
   });
 });
+
+test.describe('Audio Enhancements - holding tank mode persistence', () => {
+  let app; let page;
+
+  test.beforeAll(async () => {
+    try {
+      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
+      await resetTestEnvironment();
+    } catch (error) {
+      console.log(`⚠️ Could not reset test environment: ${error.message}`);
+    }
+
+    ({ app, page } = await launchSeededApp(electron, 'audio-mode-persist'));
+
+    await app.evaluate(async ({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      win.show();
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    });
+    await page.bringToFront();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
+  });
+
+  test.afterAll(async () => {
+    await closeApp(app);
+  });
+
+  test('defaults to storage mode on fresh start', async () => {
+    // Storage button should be active by default
+    const storageBtn = page.locator('#storage_mode_btn');
+    await expect(storageBtn).toHaveClass(/active/);
+
+    const playlistBtn = page.locator('#playlist_mode_btn');
+    await expect(playlistBtn).not.toHaveClass(/active/);
+
+    // Shared state should reflect storage mode
+    const mode = await page.evaluate(() => window.sharedState?.get('holdingTankMode'));
+    expect(mode).toBe('storage');
+
+    console.log('✅ Defaults to storage mode');
+  });
+
+  test('switching to playlist mode updates UI and shared state', async () => {
+    // Click playlist mode button
+    await page.locator('#playlist_mode_btn').click();
+
+    // Wait for mode to take effect
+    await expect(page.locator('#playlist_mode_btn')).toHaveClass(/active/, { timeout: 3000 });
+    await expect(page.locator('#storage_mode_btn')).not.toHaveClass(/active/);
+
+    // Shared state should reflect playlist mode
+    const mode = await page.evaluate(() => window.sharedState?.get('holdingTankMode'));
+    expect(mode).toBe('playlist');
+
+    // Autoplay should be enabled
+    const autoplay = await page.evaluate(() => window.sharedState?.get('autoplay'));
+    expect(autoplay).toBe(true);
+
+    console.log('✅ Playlist mode UI and shared state updated');
+  });
+
+  test('playlist mode is saved to profile preferences', async () => {
+    // The previous test set playlist mode — verify it was persisted
+    const savedMode = await page.evaluate(async () => {
+      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      if (electronAPI?.profile?.getPreference) {
+        const result = await electronAPI.profile.getPreference('holding_tank_mode');
+        return result?.value;
+      }
+      return null;
+    });
+
+    expect(savedMode).toBe('playlist');
+    console.log('✅ Playlist mode saved to profile preferences');
+  });
+
+  test('initHoldingTank restores saved mode from profile preferences', async () => {
+    // Switch back to storage mode first (to prove restoration works)
+    await page.locator('#storage_mode_btn').click();
+    await expect(page.locator('#storage_mode_btn')).toHaveClass(/active/, { timeout: 3000 });
+
+    // Manually set the preference to playlist (simulating a previous session's save)
+    await page.evaluate(async () => {
+      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      if (electronAPI?.profile?.setPreference) {
+        await electronAPI.profile.setPreference('holding_tank_mode', 'playlist');
+      }
+    });
+
+    // Call initHoldingTank to simulate what happens on app startup
+    const result = await page.evaluate(async () => {
+      if (window.moduleRegistry?.holdingTank?.initHoldingTank) {
+        return await window.moduleRegistry.holdingTank.initHoldingTank();
+      }
+      return null;
+    });
+
+    expect(result).not.toBeNull();
+    expect(result.success).toBe(true);
+    expect(result.mode).toBe('playlist');
+
+    // UI should now show playlist mode
+    await expect(page.locator('#playlist_mode_btn')).toHaveClass(/active/, { timeout: 3000 });
+    await expect(page.locator('#storage_mode_btn')).not.toHaveClass(/active/);
+
+    // Shared state should reflect playlist
+    const mode = await page.evaluate(() => window.sharedState?.get('holdingTankMode'));
+    expect(mode).toBe('playlist');
+
+    console.log('✅ initHoldingTank restores playlist mode from profile preferences');
+  });
+
+  test('switching back to storage mode persists correctly', async () => {
+    // Switch to storage
+    await page.locator('#storage_mode_btn').click();
+    await expect(page.locator('#storage_mode_btn')).toHaveClass(/active/, { timeout: 3000 });
+
+    // Verify it was saved
+    const savedMode = await page.evaluate(async () => {
+      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      if (electronAPI?.profile?.getPreference) {
+        const result = await electronAPI.profile.getPreference('holding_tank_mode');
+        return result?.value;
+      }
+      return null;
+    });
+
+    expect(savedMode).toBe('storage');
+
+    // Restore from preferences to verify round-trip
+    const result = await page.evaluate(async () => {
+      if (window.moduleRegistry?.holdingTank?.initHoldingTank) {
+        return await window.moduleRegistry.holdingTank.initHoldingTank();
+      }
+      return null;
+    });
+
+    expect(result.mode).toBe('storage');
+
+    console.log('✅ Storage mode round-trip persistence verified');
+  });
+});
