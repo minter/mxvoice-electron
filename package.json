@@ -123,7 +123,7 @@
         }
       ],
       "verifyUpdateCodeSignature": false,
-      "signAndEditExecutable": false
+      "signAndEditExecutable": true
     },
     "nsis": {
       "installerIcon": "src/assets/icons/mxvoice.ico",

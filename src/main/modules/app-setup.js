@@ -54,6 +54,7 @@ function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScr
   const windowOptions = {
     width,
     height,
+    icon: path.join(__dirname, '../../assets/icons/mxvoice.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
