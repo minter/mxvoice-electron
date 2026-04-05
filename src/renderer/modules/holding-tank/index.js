@@ -36,6 +36,7 @@ import Dom from '../dom-utils/index.js';
 // Import secure adapters
 import { secureFileDialog } from '../adapters/secure-adapter.js';
 import { scaleScrollable } from '../utils/index.js';
+import { getPreference } from '../preferences/profile-preference-adapter.js';
 
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'
@@ -50,25 +51,28 @@ export function initHoldingTank() {
     function: 'initHoldingTank'
   });
   
-  // Load saved mode or default to storage
-  return store.has("holding_tank_mode").then(hasMode => {
-    if (hasMode) {
-      return store.get("holding_tank_mode").then(mode => {
-        holdingTankMode = mode;
-        setHoldingTankMode(holdingTankMode);
-        return { success: true, mode: holdingTankMode };
-      });
+  // Load saved mode from profile-aware preference store
+  const electronAPI = window.secureElectronAPI || window.electronAPI;
+  return getPreference('holding_tank_mode', electronAPI).then(result => {
+    if (result.success && result.value) {
+      holdingTankMode = result.value;
     } else {
       holdingTankMode = "storage"; // Default to storage mode
-      setHoldingTankMode(holdingTankMode);
-      return { success: true, mode: holdingTankMode };
     }
+    if (typeof window.setHoldingTankMode === 'function') {
+      window.setHoldingTankMode(holdingTankMode);
+    }
+    return { success: true, mode: holdingTankMode };
   }).catch(error => {
-    debugLog?.warn('Failed to initialize holding tank', { 
+    debugLog?.warn('Failed to initialize holding tank', {
       module: 'holding-tank',
       function: 'initHoldingTank',
       error: error.message
     });
+    holdingTankMode = "storage";
+    if (typeof window.setHoldingTankMode === 'function') {
+      window.setHoldingTankMode(holdingTankMode);
+    }
     return { success: false, error: error.message };
   });
 }
@@ -511,7 +515,9 @@ export function cancel_autoplay() {
     // Only cancel autoplay if we're not in the holding tank
     if (holdingTankMode === "playlist") {
       _autoplay = false;
-      setHoldingTankMode("storage");
+      if (typeof window.setHoldingTankMode === 'function') {
+        window.setHoldingTankMode("storage");
+      }
     }
     }
   }

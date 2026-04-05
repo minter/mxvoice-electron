@@ -564,6 +564,14 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
     }
 
+    // Restore holding tank mode (playlist/storage) from profile preferences
+    // This runs after full initialization to ensure all UI elements and modules are ready
+    if (moduleRegistry.holdingTank?.initHoldingTank) {
+      moduleRegistry.holdingTank.initHoldingTank().then(result => {
+        window.logInfo(`Holding tank mode restored: ${result?.mode || 'storage'}`);
+      }).catch(() => {});
+    }
+
     // Bridge secure IPC events to renderer functions under context isolation.
     // This must run even if function coordination initialization fails so that
     // core UI actions like preferences and category management still work.

@@ -5,7 +5,7 @@
  */
 
 // Import drag and drop functions
-import { holdingTankDrop, allowHotkeyDrop } from './drag-drop-functions.js';
+import { holdingTankDrop, allowHotkeyDrop, holdingTankReorderDrop, holdingTankReorderDragOver, clearHoldingTankDropIndicators } from './drag-drop-functions.js';
 
 // Import debug logger
 let debugLog = null;
@@ -44,34 +44,38 @@ export function setupDragDropEventHandlers() {
   // Hotkey drop handlers are owned by the hotkeys module to avoid duplicate bindings
 
   // Holding tank drop handlers - target the container and list items
+  // Supports both external drops (add song) and internal reorder (move within tank)
   document.querySelectorAll('#holding_tank, .holding_tank li').forEach(target => {
     target.addEventListener('drop', (e) => {
-    debugLog?.info('Holding tank drop event triggered', {
-      module: 'drag-drop-event-handlers',
-      function: 'setupDragDropEventHandlers'
-    });
       (e.target?.classList)?.remove('dropzone');
+      clearHoldingTankDropIndicators();
       const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
       if (!dt || !dt.getData('text')?.length) return;
-      holdingTankDrop(e);
+
+      // Check if this is an internal reorder (drag from within the holding tank)
+      const sourceTabId = dt.getData('application/x-holding-tank-reorder');
+      if (sourceTabId) {
+        holdingTankReorderDrop(e);
+      } else {
+        holdingTankDrop(e);
+      }
     }, { signal });
 
     target.addEventListener('dragover', (e) => {
-    debugLog?.info('Holding tank dragover event triggered', {
-      module: 'drag-drop-event-handlers',
-      function: 'setupDragDropEventHandlers'
-    });
       allowHotkeyDrop(e);
-      (e.target?.classList)?.add('dropzone');
+      const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
+      // Use reorder indicator if dragging from within holding tank
+      if (dt?.types?.includes('application/x-holding-tank-reorder')) {
+        holdingTankReorderDragOver(e);
+      } else {
+        (e.target?.classList)?.add('dropzone');
+      }
     }, { signal });
 
     target.addEventListener('dragleave', (e) => {
-    debugLog?.info('Holding tank dragleave event triggered', {
-      module: 'drag-drop-event-handlers',
-      function: 'setupDragDropEventHandlers'
-    });
       allowHotkeyDrop(e);
       (e.target?.classList)?.remove('dropzone');
+      clearHoldingTankDropIndicators();
     }, { signal });
   });
 

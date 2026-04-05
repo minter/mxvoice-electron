@@ -143,7 +143,7 @@ export function songDrag(event) {
     : sourceElement?.closest?.('[songid]') || null;
   const songId = withSongId?.getAttribute?.('songid') || '';
 
-  debugLog?.info('Starting drag for song ID', { 
+  debugLog?.info('Starting drag for song ID', {
     module: 'drag-drop-functions',
     function: 'songDrag',
     songId: songId
@@ -158,4 +158,99 @@ export function songDrag(event) {
   }
 
   event.dataTransfer.setData("text", songId);
+
+  // Mark holding tank items for internal reorder detection
+  const holdingTankList = withSongId?.closest?.('.holding_tank');
+  if (holdingTankList) {
+    event.dataTransfer.setData("application/x-holding-tank-reorder", holdingTankList.id);
+  }
+}
+
+/**
+ * Handles reordering songs within the holding tank via drag and drop.
+ * Moves the dragged item to the new position (before or after the drop target).
+ *
+ * @param {DragEvent} event - The drop event
+ */
+export function holdingTankReorderDrop(event) {
+  event.preventDefault();
+  clearHoldingTankDropIndicators();
+
+  const songId = event.dataTransfer.getData("text");
+  const sourceTabId = event.dataTransfer.getData("application/x-holding-tank-reorder");
+  if (!songId || !sourceTabId) return;
+
+  // Find the source element in the source tab
+  const sourceTab = document.getElementById(sourceTabId);
+  if (!sourceTab) return;
+  const draggedItem = sourceTab.querySelector(`li[songid="${songId}"]`);
+  if (!draggedItem) return;
+
+  // Find the drop target <li> in the holding tank
+  const targetItem = event.target?.closest?.('.holding_tank li');
+  const targetList = event.target?.closest?.('.holding_tank');
+
+  if (!targetList) return;
+
+  // If dropped on the same item, do nothing
+  if (targetItem === draggedItem) return;
+
+  if (targetItem) {
+    // Determine insert position based on cursor Y relative to target midpoint
+    const rect = targetItem.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    if (event.clientY < midY) {
+      targetList.insertBefore(draggedItem, targetItem);
+    } else {
+      targetList.insertBefore(draggedItem, targetItem.nextSibling);
+    }
+  } else {
+    // Dropped on empty area of the list — append to end
+    targetList.appendChild(draggedItem);
+  }
+
+  // Save the new order
+  if (typeof window.saveHoldingTankToStore === 'function') {
+    window.saveHoldingTankToStore();
+  }
+
+  debugLog?.info('Holding tank item reordered', {
+    module: 'drag-drop-functions',
+    function: 'holdingTankReorderDrop',
+    songId
+  });
+}
+
+/**
+ * Handle dragover for holding tank reorder — shows a visual drop indicator.
+ *
+ * @param {DragEvent} event - The dragover event
+ */
+export function holdingTankReorderDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+
+  const targetItem = event.target?.closest?.('.holding_tank li');
+  if (!targetItem) return;
+
+  // Clear previous indicators
+  clearHoldingTankDropIndicators();
+
+  // Show indicator above or below based on cursor position
+  const rect = targetItem.getBoundingClientRect();
+  const midY = rect.top + rect.height / 2;
+  if (event.clientY < midY) {
+    targetItem.classList.add('holding-tank-drop-above');
+  } else {
+    targetItem.classList.add('holding-tank-drop-below');
+  }
+}
+
+/**
+ * Clear all holding tank drop indicators.
+ */
+export function clearHoldingTankDropIndicators() {
+  document.querySelectorAll('.holding-tank-drop-above, .holding-tank-drop-below').forEach(el => {
+    el.classList.remove('holding-tank-drop-above', 'holding-tank-drop-below');
+  });
 } 

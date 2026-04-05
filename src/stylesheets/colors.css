@@ -407,6 +407,15 @@ table td {
   border-bottom: 1px dotted black !important;
 }
 
+/* Holding tank reorder drop indicators */
+.holding-tank-drop-above {
+  border-top: 2px solid #007bff !important;
+}
+
+.holding-tank-drop-below {
+  border-bottom: 2px solid #007bff !important;
+}
+
 /* Column drag and drop styles */
 .column-drop-zone {
   width: 8px;

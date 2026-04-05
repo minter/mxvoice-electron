@@ -18,6 +18,7 @@ try {
 
 // Import secure adapters
 import { secureStore } from '../adapters/secure-adapter.js';
+import { setPreference } from '../preferences/profile-preference-adapter.js';
 
 /**
  * Mode Management Singleton
@@ -192,9 +193,10 @@ class ModeManagementModule {
       }
     }
 
-    // Save mode to store
+    // Save mode to profile-aware store
     try {
-      const result = await secureStore.set('holding_tank_mode', mode);
+      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const result = await setPreference('holding_tank_mode', mode, electronAPI);
       if (result.success) {
         debugLog?.info('Holding tank mode saved', {
           module: 'mode-management',
