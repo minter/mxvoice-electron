@@ -69,6 +69,7 @@ async function createLauncherWindow() {
     resizable: false,
     center: true,
     titleBarStyle: 'hiddenInset',
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

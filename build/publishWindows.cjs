@@ -3,6 +3,7 @@
 const { Octokit } = require("@octokit/rest");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 
 if (process.platform !== "win32") {
   console.log("[publishWindows] Skipping - not Windows platform");
@@ -52,9 +53,32 @@ if (fs.existsSync(blockMapPath)) {
   artifacts.push({ name: blockMapFile, path: blockMapPath });
 }
 
-// Include the update manifest (latest.yml) — required by electron-updater to discover new versions
+// Recalculate latest.yml checksums to match the signed installer
+// electron-builder generates latest.yml before signing, so the sha512 is stale
 const latestYmlPath = path.join(distDir, "latest.yml");
 if (fs.existsSync(latestYmlPath)) {
+  const installerData = fs.readFileSync(installerPath);
+  const newSha512 = crypto.createHash("sha512").update(installerData).digest("base64");
+  const newSize = installerData.length;
+
+  let latestYml = fs.readFileSync(latestYmlPath, "utf8");
+  const oldSha512Match = latestYml.match(/sha512: (.+)/);
+  if (oldSha512Match) {
+    const oldSha512 = oldSha512Match[1];
+    if (oldSha512 !== newSha512) {
+      console.log(`[publishWindows] Updating latest.yml sha512 to match signed installer`);
+      console.log(`[publishWindows]   Old: ${oldSha512}`);
+      console.log(`[publishWindows]   New: ${newSha512}`);
+      latestYml = latestYml.replace(new RegExp(oldSha512.replace(/[+/=]/g, "\\$&"), "g"), newSha512);
+    }
+  }
+  const oldSizeMatch = latestYml.match(/size: (\d+)/);
+  if (oldSizeMatch && parseInt(oldSizeMatch[1]) !== newSize) {
+    console.log(`[publishWindows] Updating latest.yml size: ${oldSizeMatch[1]} → ${newSize}`);
+    latestYml = latestYml.replace(/size: \d+/, `size: ${newSize}`);
+  }
+  fs.writeFileSync(latestYmlPath, latestYml, "utf8");
+
   artifacts.push({ name: "latest.yml", path: latestYmlPath });
 } else {
   console.warn("[publishWindows] ⚠️  latest.yml not found in dist/ — auto-update discovery will not work");
