@@ -278,9 +278,14 @@ export default class UIInteractionEvents {
       try {
         const ids = [
           'song-form-category', 'song-form-title', 'song-form-new-category',
-          'song-form-artist', 'song-form-info', 'song-form-duration'
+          'song-form-artist', 'song-form-info', 'song-form-duration',
+          'song-form-start-time', 'song-form-end-time'
         ];
         ids.forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
+        const volReset = document.getElementById('song-form-volume');
+        if (volReset) volReset.value = 100;
+        const volDisplayReset = document.getElementById('song-form-volume-display');
+        if (volDisplayReset) volDisplayReset.textContent = '100';
         const newCat = document.getElementById('SongFormNewCategory');
         if (newCat) newCat.style.display = 'none';
       } catch (error) {
@@ -356,7 +361,58 @@ export default class UIInteractionEvents {
       songFormCategory.addEventListener('change', songFormCategoryChangeHandler);
       this.uiHandlers.set('songFormCategoryChange', { element: songFormCategory, event: 'change', handler: songFormCategoryChangeHandler });
     }
-    
+    // Song form volume slider live display
+    const songFormVolume = document.getElementById('song-form-volume');
+    if (songFormVolume) {
+      const songFormVolumeHandler = (event) => {
+        const display = document.getElementById('song-form-volume-display');
+        if (display) display.textContent = event.target.value;
+      };
+      songFormVolume.addEventListener('input', songFormVolumeHandler);
+      this.uiHandlers.set('songFormVolumeInput', { element: songFormVolume, event: 'input', handler: songFormVolumeHandler });
+    }
+
+    // Song form start/end time validation - normalize on blur
+    const timeFieldHandler = (event) => {
+      const val = event.target.value.trim();
+      if (!val) return; // empty is fine (means "use default")
+      // If they entered just a number (no colon), treat as seconds
+      if (/^\d+$/.test(val)) {
+        const totalSec = parseInt(val, 10);
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        event.target.value = `${m}:${s.toString().padStart(2, '0')}`;
+        return;
+      }
+      // Validate MM:SS format
+      const match = val.match(/^(\d+):(\d{1,2})$/);
+      if (match) {
+        const m = parseInt(match[1], 10);
+        const s = parseInt(match[2], 10);
+        if (s > 59) {
+          // Auto-correct seconds > 59 by rolling into minutes
+          const totalSec = m * 60 + s;
+          const newM = Math.floor(totalSec / 60);
+          const newS = totalSec % 60;
+          event.target.value = `${newM}:${newS.toString().padStart(2, '0')}`;
+        } else {
+          // Normalize padding (e.g., "1:5" → "1:05")
+          event.target.value = `${m}:${s.toString().padStart(2, '0')}`;
+        }
+      } else {
+        // Invalid format - clear and mark invalid briefly
+        event.target.classList.add('is-invalid');
+        setTimeout(() => event.target.classList.remove('is-invalid'), 2000);
+      }
+    };
+    for (const id of ['song-form-start-time', 'song-form-end-time']) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('blur', timeFieldHandler);
+        this.uiHandlers.set(`${id}Blur`, { element: el, event: 'blur', handler: timeFieldHandler });
+      }
+    }
+
     // Trigger change event on page load
     const cat = document.getElementById('song-form-category');
     if (cat) cat.dispatchEvent(new Event('change'));

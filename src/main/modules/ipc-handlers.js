@@ -216,12 +216,13 @@ function registerAllHandlers() {
       
       // For node-sqlite3-wasm, use prepare/run for parameterized statements
       const stmt = db.prepare(`
-        INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime, volume, start_time, end_time)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       const result = stmt.run([songData.title, songData.artist, songData.category,
-                              songData.info || '', songData.filename, songData.duration || '00:00', Math.floor(Date.now() / 1000)]);
+                              songData.info || '', songData.filename, songData.duration || '00:00', Math.floor(Date.now() / 1000),
+                              songData.volume ?? 100, songData.start_time ?? null, songData.end_time ?? null]);
       
       stmt.finalize();
       
@@ -1206,6 +1207,9 @@ function registerAllHandlers() {
       if (songData.info !== undefined) { setClauses.push('info = ?'); params.push(songData.info); }
       if (songData.filename !== undefined) { setClauses.push('filename = ?'); params.push(songData.filename); }
       if (songData.duration !== undefined) { setClauses.push('time = ?'); params.push(songData.duration); }
+      if (songData.volume !== undefined) { setClauses.push('volume = ?'); params.push(songData.volume); }
+      if (songData.start_time !== undefined) { setClauses.push('start_time = ?'); params.push(songData.start_time); }
+      if (songData.end_time !== undefined) { setClauses.push('end_time = ?'); params.push(songData.end_time); }
 
       if (setClauses.length === 0) {
         throw new Error('No fields to update');

@@ -30,6 +30,7 @@
 
     <script src="../node_modules/mousetrap/mousetrap.min.js"></script>
     <script src="../node_modules/wavesurfer.js/dist/wavesurfer.min.js"></script>
+    <script src="../node_modules/wavesurfer.js/dist/plugins/regions.min.js"></script>
     <script src="../node_modules/howler/dist/howler.min.js"></script>
     <script src="../node_modules/dompurify/dist/purify.min.js"></script>
   </head>
@@ -465,6 +466,27 @@
                 </div>
               </div>
               <div class="row g-2 mb-3">
+                <label for="song-form-volume" class="col-form-label col-sm-3">Volume</label>
+                <div class="col-sm-7">
+                  <input type="range" class="form-range mousetrap" id="song-form-volume" min="0" max="100" value="100">
+                </div>
+                <div class="col-sm-2 text-end">
+                  <span id="song-form-volume-display">100</span>%
+                </div>
+              </div>
+              <div class="row g-2 mb-3">
+                <label for="song-form-start-time" class="col-form-label col-sm-3">Start</label>
+                <div class="col-sm-9">
+                  <input type="text" class="form-control form-control-sm" id="song-form-start-time" placeholder="0:00" pattern="[0-9]*:[0-5][0-9]">
+                </div>
+              </div>
+              <div class="row g-2 mb-3">
+                <label for="song-form-end-time" class="col-form-label col-sm-3">End</label>
+                <div class="col-sm-9">
+                  <input type="text" class="form-control form-control-sm" id="song-form-end-time" placeholder="End of track" pattern="[0-9]*:[0-5][0-9]">
+                </div>
+              </div>
+              <div class="row g-2 mb-3">
                 <label for="song-form-duration" class="col-form-label col-sm-3">Duration</label>
                 <div class="col-sm-9">
                   <input type="test" class="form-control form-control-sm" id="song-form-duration" disabled="disabled">
@@ -545,6 +567,15 @@
                     <input type="text" class="form-control" id="preferences-fadeout-seconds">
                   </div>
 
+                </div>
+                <div class="row g-2 mb-3">
+                  <label for="preferences-crossfade-seconds" class="col-sm-3 col-form-label">Crossfade (seconds)</label>
+                  <div class="col-sm-1">
+                    <input type="text" class="form-control" id="preferences-crossfade-seconds">
+                  </div>
+                  <div class="col-sm-8">
+                    <small class="form-text text-muted">Smooth transition between tracks in playlist mode (0 = off)</small>
+                  </div>
                 </div>
               </fieldset>
 

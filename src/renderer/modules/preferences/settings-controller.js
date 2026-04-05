@@ -48,6 +48,7 @@ function initializeSettingsController(options = {}) {
       music_directory: document.getElementById('preferences-song-directory')?.value || '',
       hotkey_directory: document.getElementById('preferences-hotkey-directory')?.value || '',
       fade_out_seconds: parseInt(document.getElementById('preferences-fadeout-seconds')?.value) || 3,
+      crossfade_seconds: parseInt(document.getElementById('preferences-crossfade-seconds')?.value) || 0,
       debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
       prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
       screen_mode: document.getElementById('preferences-screen-mode')?.value || 'auto'
@@ -79,11 +80,12 @@ function initializeSettingsController(options = {}) {
         music_directory: formValues.music_directory || currentMusicDir,
         hotkey_directory: formValues.hotkey_directory || currentHotkeyDir,
         fade_out_seconds: formValues.fade_out_seconds,
+        crossfade_seconds: formValues.crossfade_seconds,
         debug_log_enabled: formValues.debug_log_enabled,
         prerelease_updates: formValues.prerelease_updates,
         screen_mode: formValues.screen_mode
       };
-      
+
       debugLog?.info("[PREFS-SAVE] Preferences to save", { preferences });
       
       // Save all preferences (using adapter to route to profile or global as appropriate)
@@ -102,6 +104,7 @@ function initializeSettingsController(options = {}) {
           { key: "music_directory", value: preferences.music_directory },
           { key: "hotkey_directory", value: preferences.hotkey_directory },
           { key: "fade_out_seconds", value: preferences.fade_out_seconds },
+          { key: "crossfade_seconds", value: preferences.crossfade_seconds },
           { key: "debug_log_enabled", value: preferences.debug_log_enabled },
           { key: "prerelease_updates", value: preferences.prerelease_updates },
           { key: "screen_mode", value: preferences.screen_mode }
@@ -225,6 +228,7 @@ function initializeSettingsController(options = {}) {
         music_directory: formValues.music_directory,
         hotkey_directory: formValues.hotkey_directory,
         fade_out_seconds: formValues.fade_out_seconds,
+        crossfade_seconds: formValues.crossfade_seconds,
         debug_log_enabled: formValues.debug_log_enabled,
         prerelease_updates: formValues.prerelease_updates,
         screen_mode: formValues.screen_mode
@@ -248,6 +252,7 @@ function initializeSettingsController(options = {}) {
         store.set("music_directory", preferences.music_directory);
         store.set("hotkey_directory", preferences.hotkey_directory);
         store.set("fade_out_seconds", preferences.fade_out_seconds);
+        store.set("crossfade_seconds", preferences.crossfade_seconds);
         store.set("debug_log_enabled", preferences.debug_log_enabled);
         store.set("prerelease_updates", preferences.prerelease_updates);
         store.set("screen_mode", preferences.screen_mode);
@@ -274,6 +279,7 @@ function initializeSettingsController(options = {}) {
             ['music_directory', preferences.music_directory],
             ['hotkey_directory', preferences.hotkey_directory],
             ['fade_out_seconds', preferences.fade_out_seconds],
+            ['crossfade_seconds', preferences.crossfade_seconds],
             ['debug_log_enabled', preferences.debug_log_enabled],
             ['prerelease_updates', preferences.prerelease_updates],
             ['screen_mode', preferences.screen_mode]

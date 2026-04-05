@@ -37,12 +37,20 @@ function stopPlaying(fadeOut = false) {
     typeof_fadeOut: typeof fadeOut,
     argumentsLength: arguments.length
   });
+  // Clean up any outgoing crossfade sound
+  const outgoing = sharedState.get('outgoingSound');
+  if (outgoing) {
+    outgoing.off('fade');
+    outgoing.unload();
+    sharedState.set('outgoingSound', null);
+  }
+
   const sound = sharedState.get('sound');
   const autoplay = sharedState.get('autoplay');
   const holdingTankMode = sharedState.get('holdingTankMode');
   const globalAnimation = sharedState.get('globalAnimation');
-  
-  debugLog?.info('🔍 sound object:', { 
+
+  debugLog?.info('🔍 sound object:', {
     module: 'audio-controller',
     function: 'stopPlaying',
     sound: sound
