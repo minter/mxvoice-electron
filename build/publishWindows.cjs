@@ -69,7 +69,7 @@ if (fs.existsSync(latestYmlPath)) {
       console.log(`[publishWindows] Updating latest.yml sha512 to match signed installer`);
       console.log(`[publishWindows]   Old: ${oldSha512}`);
       console.log(`[publishWindows]   New: ${newSha512}`);
-      latestYml = latestYml.replace(new RegExp(oldSha512.replace(/[+/=]/g, "\\$&"), "g"), newSha512);
+      latestYml = latestYml.replaceAll(oldSha512, newSha512);
     }
   }
   const oldSizeMatch = latestYml.match(/size: (\d+)/);

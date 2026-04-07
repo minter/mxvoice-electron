@@ -135,7 +135,7 @@ export function createHowl(options = {}) {
     // Note: HTML5 Audio caps volume at 1.0, so per-track volume max is 100%
     if (typeof coerced.html5 === 'undefined') coerced.html5 = true; // HTML5 Audio mode
     if (typeof coerced.preload === 'undefined') coerced.preload = 'auto'; // Auto buffer management
-    coerced.format = ['mp3', 'ogg', 'm4a', 'aac', 'mp4', 'webm', 'wav', 'wma', 'flac']; // Support all common audio formats
+    coerced.format = ['mp3', 'ogg', 'm4a', 'mp4', 'wav', 'flac', 'opus', 'webm']; // Formats supported by Chromium HTML5 Audio
   }
   
   // Howl is global from index.html
