@@ -751,7 +751,7 @@ test.describe('Songs - add', () => {
   test('Bulk add all test songs to new category "Another Category"', async () => {
     // 1) Stub dialog in main to return the test-songs directory
     const testSongsDir = path.resolve(__dirname, '../../../fixtures/test-songs');
-    
+
     await app.evaluate(async ({ dialog }) => {
       const original = dialog.showOpenDialog;
       // Save a restorer for later
@@ -773,16 +773,16 @@ test.describe('Songs - add', () => {
 
       const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
         const menu = Menu.getApplicationMenu();
-        
+
         // Find the "Add All Songs In Directory" menu item in the Songs submenu
         const songsSubmenu = menu?.items?.find(item => item.label === 'Songs');
         const bulkAddItem = songsSubmenu?.submenu?.items?.find(item => item.label === 'Add All Songs In Directory');
-        
+
         if (!bulkAddItem) return { ok: false, reason: 'Add All Songs In Directory menu item not found' };
-        
+
         const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
         if (!win) return { ok: false, reason: 'No focused window' };
-        
+
         // @ts-ignore
         bulkAddItem.click({}, win, win.webContents);
         return { ok: true };
@@ -792,17 +792,17 @@ test.describe('Songs - add', () => {
         throw new Error(`Bulk menu item trigger failed: ${res.reason}`);
       }
     };
-    
+
     await triggerBulkMenuItem();
 
-    // 3) Wait for the bulk add modal to appear
-    await expect(page.locator('#bulkAddModal')).toBeVisible({ timeout: 10000 });
-    
-    // 4) Create a new "Running Out" category
-    // This will generate a code like "RUNN" but display "Running Out"
+    // 3) Wait for the bulk add modal to appear and its Bootstrap fade animation to complete.
+    // The modal has class "modal fade" so we wait for it to gain the "show" class,
+    // which Bootstrap adds after the fade-in animation finishes.
+    await expect(page.locator('#bulkAddModal.show')).toBeVisible({ timeout: 15000 });
+
+    // 4) Create a new category — wait for the dropdown to be populated with the --NEW-- option
     const categorySelect = page.locator('#bulk-add-category');
-    
-    // Always create new category for this test
+    await expect(categorySelect.locator('option[value="--NEW--"]')).toBeAttached({ timeout: 10000 });
     await categorySelect.selectOption('--NEW--');
 
     // Fill in the new category description - click first to ensure focus
@@ -810,29 +810,38 @@ test.describe('Songs - add', () => {
     await expect(newCategoryInput).toBeVisible({ timeout: 5000 });
     await newCategoryInput.click();
     await newCategoryInput.fill('Another Category');
-    
+
     // 5) Click "Add All" button
     await page.locator('#bulkAddSubmitButton').click();
-    
-    // 6) Wait for the modal to close
+
+    // 6) Wait for the modal to close (saveBulkUpload hides it immediately)
     await expect(page.locator('#bulkAddModal')).not.toBeVisible({ timeout: 10000 });
-    
-    // 7-8) Verify all 8 test songs appear in the "Another Category" category (including OGG file)
+
+    // 7) Wait for all 8 songs to be inserted into the results table.
+    // saveBulkUpload clears the tbody then calls addSongsByPath recursively,
+    // appending rows one at a time. We must wait for all 8 before searching,
+    // otherwise a search would clear the partially-populated table.
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(8, { timeout: 30000 });
+
+    // 8) Now do a search filtered to "Another Category" to verify the DB round-trip.
     // The category code will be "ANNO" (first 4 letters, no spaces, uppercase)
-    // but the UI displays "Another Category" (the description/name)
-    // so we select by the description in the dropdown
+    // but the UI displays "Another Category" (the description/name).
     const searchCategorySelect = page.locator('#category_select');
+
+    // Wait for the new category to appear in the search dropdown
+    await expect(searchCategorySelect.locator('option', { hasText: 'Another Category' }))
+      .toBeAttached({ timeout: 10000 });
     await searchCategorySelect.selectOption('Another Category');
 
-    // Clear any existing search terms
+    // Clear any existing search terms and trigger search
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('');
     await searchInput.press('Enter');
 
-    // Verify we have exactly 8 results (7 MP3s + 1 OGG)
-    const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(8, { timeout: 10000 });
-    
+    // Verify we still have exactly 8 results after the search round-trip
+    await expect(rows).toHaveCount(8, { timeout: 15000 });
+
     // **CRITICAL TEST**: Verify that category NAME is displayed, not category CODE
     // The category column should show "Another Category" (description), NOT "ANNO" (code)
     const firstRow = rows.first();
@@ -851,7 +860,7 @@ test.describe('Songs - add', () => {
       expect(rowCatText).not.toBe('ANNO'); // Should not be the category code
       expect(rowCatText.length).toBeGreaterThan(2); // Should have some meaningful content
     }
-    
+
     // Verify specific songs are present (using actual metadata from the files)
     await expect(page.locator('#search_results')).toContainText("Alice's Restaurant"); // OGG file
     await expect(page.locator('#search_results')).toContainText('Eat It');
@@ -861,13 +870,13 @@ test.describe('Songs - add', () => {
     await expect(page.locator('#search_results')).toContainText('Shame On You');
     await expect(page.locator('#search_results')).toContainText('The Wheel (Back and Forth)');
     await expect(page.locator('#search_results')).toContainText('We Are Family');
-    
+
     // 9) Restore dialog
     await app.evaluate(() => { globalThis.__restoreBulkDialog?.(); });
-    
+
     // 10) Verify test environment is clean
     console.log('Bulk add test completed successfully, verifying clean state...');
-    
+
     // Ensure modal is closed
     const modalStillVisible = await page.locator('#bulkAddModal').isVisible();
     if (modalStillVisible) {
