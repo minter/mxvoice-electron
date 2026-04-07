@@ -6,7 +6,7 @@
  * alternative to direct Node.js API exposure.
  */
 
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 // debugLog will be injected by the calling module
 let debugLog = null;
@@ -438,6 +438,12 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('menu:import-library', handler);
     },
 
+    onExternalFilesDrop: (callback) => {
+      const handler = (_event, files) => callback(files);
+      ipcRenderer.on('external-files-dropped', handler);
+      return () => ipcRenderer.removeListener('external-files-dropped', handler);
+    },
+
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
   },
   
@@ -488,7 +494,8 @@ const secureElectronAPI = {
     generateId: () => ipcRenderer.invoke('generate-id'),
     formatDuration: (seconds) => ipcRenderer.invoke('format-duration', seconds),
     validateAudioFile: (filePath) => ipcRenderer.invoke('validate-audio-file', filePath),
-    sanitizeFilename: (filename) => ipcRenderer.invoke('sanitize-filename', filename)
+    sanitizeFilename: (filename) => ipcRenderer.invoke('sanitize-filename', filename),
+    getPathForFile: (file) => webUtils.getPathForFile(file)
   },
   
   // Testing and debugging functions

@@ -23,7 +23,7 @@ import { songDrag } from '../drag-drop/drag-drop-functions.js';
 import { populateCategorySelect, findUniqueCategoryCode, refreshCategories, getCategoryDescription } from '../categories/category-data.js';
 
 // Supported audio file extensions (lowercase)
-const SUPPORTED_AUDIO_EXTS = new Set([".mp3", ".mp4", ".m4a", ".wav", ".ogg", ".flac", ".opus"]);
+export const SUPPORTED_AUDIO_EXTS = new Set([".mp3", ".mp4", ".m4a", ".wav", ".ogg", ".flac", ".opus"]);
 
 /**
  * Shows the bulk add modal with directory and category selection
@@ -37,6 +37,58 @@ export async function showBulkAddModal(directory) {
   await populateCategorySelect(catSel);
 
   safeShowModal('#bulkAddModal', { module: 'bulk-operations', function: 'showBulkAddModal' });
+}
+
+// Module-level state for file-list bulk import (set by showBulkAddFromFiles)
+let pendingBulkFiles = null;
+
+/**
+ * Shows the bulk add modal pre-populated with a list of file paths (from drag-drop).
+ * Hides the directory path field and shows a summary instead.
+ *
+ * @param {string[]} filePaths - Array of audio file paths to import
+ */
+export async function showBulkAddFromFiles(filePaths) {
+  pendingBulkFiles = filePaths;
+
+  const pathEl = document.getElementById('bulk-add-path');
+  const pathRow = pathEl?.closest('.row');
+  if (pathRow) pathRow.style.display = 'none';
+
+  // Show a summary of the files to import
+  let summaryEl = document.getElementById('bulk-add-file-summary');
+  if (!summaryEl) {
+    summaryEl = document.createElement('div');
+    summaryEl.id = 'bulk-add-file-summary';
+    summaryEl.className = 'row g-2 mb-3';
+
+    const label = document.createElement('label');
+    label.className = 'col-form-label col-sm-3';
+    label.textContent = 'Files';
+    summaryEl.appendChild(label);
+
+    const valueCol = document.createElement('div');
+    valueCol.className = 'col-sm-9 d-flex align-items-center';
+    const span = document.createElement('span');
+    span.id = 'bulk-add-file-count';
+    valueCol.appendChild(span);
+    summaryEl.appendChild(valueCol);
+
+    // Insert before the modal footer (after the path row's parent)
+    if (pathRow?.parentNode) {
+      pathRow.parentNode.insertBefore(summaryEl, pathRow.nextSibling);
+    }
+  }
+  summaryEl.style.display = '';
+  const countEl = document.getElementById('bulk-add-file-count');
+  if (countEl) {
+    countEl.textContent = `${filePaths.length} audio file${filePaths.length !== 1 ? 's' : ''} ready to import`;
+  }
+
+  const catSel = document.getElementById('bulk-add-category');
+  await populateCategorySelect(catSel);
+
+  safeShowModal('#bulkAddModal', { module: 'bulk-operations', function: 'showBulkAddFromFiles' });
 }
 
 /**
@@ -180,6 +232,28 @@ export async function addSongsByPath(pathArray, category) {
 export async function saveBulkUpload(event) {
   event.preventDefault();
   safeHideModal('#bulkAddModal', { module: 'bulk-operations', function: 'saveBulkUpload' });
+
+  // If we have pending files from a drag-drop, use them directly (skip directory walk)
+  const droppedFiles = pendingBulkFiles;
+  pendingBulkFiles = null;
+  resetBulkAddModalState();
+
+  if (droppedFiles && droppedFiles.length) {
+    const tbody = document.querySelector('#search_results tbody');
+    if (tbody) tbody.querySelectorAll('tr').forEach(tr => tr.remove());
+    const thead = document.querySelector('#search_results thead');
+    if (thead) thead.style.display = '';
+
+    let category = (document.getElementById('bulk-add-category') || {}).value || '';
+    if (category === '--NEW--') {
+      category = await handleNewCategoryCreation();
+      if (!category) return;
+    }
+
+    await addSongsByPath([...droppedFiles], category);
+    return;
+  }
+
   const dirname = (document.getElementById('bulk-add-path') || {}).value || '';
 
   const walk = async (dir) => {
@@ -239,31 +313,57 @@ export async function saveBulkUpload(event) {
 
   let category = (document.getElementById('bulk-add-category') || {}).value || '';
 
-  if (category == "--NEW--") {
-    const descriptionEl = document.getElementById('bulk-song-form-new-category');
-    const description = descriptionEl?.value || '';
-    const baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
-    try {
-      const finalCode = await findUniqueCategoryCode(baseCode);
-      const ins = await secureDatabase.addCategory({code: finalCode, description});
-      if (ins?.success) {
-        debugLog?.info('Added new row into database', { module: 'bulk-operations', function: 'saveBulkUpload', code: finalCode, description });
-        await refreshCategories();
-        if (typeof window.populateCategorySelect === 'function') window.populateCategorySelect();
-        if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
-        category = finalCode;
-      } else {
-        if (descriptionEl) descriptionEl.value = '';
-        alert(`Couldn't add a category named "${description}" - apparently one already exists!`);
-        return;
-      }
-    } catch (err) {
-      debugLog?.warn('Error adding new category for bulk upload', { module: 'bulk-operations', function: 'saveBulkUpload', error: err?.message });
-      if (descriptionEl) descriptionEl.value = '';
-      alert(`Error adding category: ${err?.message}`);
-      return;
-    }
+  if (category === '--NEW--') {
+    category = await handleNewCategoryCreation();
+    if (!category) return;
   }
 
   await addSongsByPath(songs, category);
+}
+
+/**
+ * Handle --NEW-- category creation from the bulk add modal.
+ * @returns {string|null} The new category code, or null if creation failed.
+ */
+async function handleNewCategoryCreation() {
+  const descriptionEl = document.getElementById('bulk-song-form-new-category');
+  const description = descriptionEl?.value || '';
+  const baseCode = description.replace(/\s/g, "").substr(0, 4).toUpperCase();
+  try {
+    const finalCode = await findUniqueCategoryCode(baseCode);
+    const ins = await secureDatabase.addCategory({code: finalCode, description});
+    if (ins?.success) {
+      debugLog?.info('Added new row into database', { module: 'bulk-operations', function: 'handleNewCategoryCreation', code: finalCode, description });
+      await refreshCategories();
+      if (typeof window.populateCategorySelect === 'function') window.populateCategorySelect();
+      if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
+      return finalCode;
+    } else {
+      if (descriptionEl) descriptionEl.value = '';
+      alert(`Couldn't add a category named "${description}" - apparently one already exists!`);
+      return null;
+    }
+  } catch (err) {
+    debugLog?.warn('Error adding new category for bulk upload', { module: 'bulk-operations', function: 'handleNewCategoryCreation', error: err?.message });
+    if (descriptionEl) descriptionEl.value = '';
+    alert(`Error adding category: ${err?.message}`);
+    return null;
+  }
+}
+
+/**
+ * Reset the bulk add modal to its default state (directory mode).
+ * Called when the modal is closed after a file-list import.
+ */
+export function resetBulkAddModalState() {
+  // Clear any pending file-list state
+  pendingBulkFiles = null;
+  // Show the path row again
+  const pathEl = document.getElementById('bulk-add-path');
+  const pathRow = pathEl?.closest('.row');
+  if (pathRow) pathRow.style.display = '';
+
+  // Hide the file summary
+  const summaryEl = document.getElementById('bulk-add-file-summary');
+  if (summaryEl) summaryEl.style.display = 'none';
 }

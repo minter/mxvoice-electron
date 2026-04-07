@@ -5,7 +5,7 @@
  * Includes event handlers for bulk operations UI
  */
 
-import { showBulkAddModal, addSongsByPath, saveBulkUpload } from './bulk-operations.js';
+import { showBulkAddModal, showBulkAddFromFiles, addSongsByPath, saveBulkUpload } from './bulk-operations.js';
 import { setupBulkEventHandlers } from './event-handlers.js';
 
 /**
@@ -17,6 +17,7 @@ class BulkOperationsModule {
   constructor() {
     // Bind all functions as methods
     this.showBulkAddModal = showBulkAddModal;
+    this.showBulkAddFromFiles = showBulkAddFromFiles;
     this.addSongsByPath = addSongsByPath;
     this.saveBulkUpload = saveBulkUpload;
   }
@@ -69,6 +70,7 @@ class BulkOperationsModule {
   getAllBulkOperations() {
     return {
       showBulkAddModal: this.showBulkAddModal,
+      showBulkAddFromFiles: this.showBulkAddFromFiles,
       addSongsByPath: this.addSongsByPath,
       saveBulkUpload: this.saveBulkUpload
     };
@@ -85,6 +87,7 @@ class BulkOperationsModule {
     // Test each function
     const functions = [
       'showBulkAddModal',
+      'showBulkAddFromFiles',
       'addSongsByPath',
       'saveBulkUpload'
     ];

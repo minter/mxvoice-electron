@@ -627,6 +627,17 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
           });
         }
 
+        // External file drop (dock/taskbar icon) → drag-drop module
+        if (typeof window.secureElectronAPI.events.onExternalFilesDrop === 'function') {
+          window.secureElectronAPI.events.onExternalFilesDrop((files) => {
+            if (window.moduleRegistry?.dragDrop?.handleExternalFileDrop) {
+              window.moduleRegistry.dragDrop.handleExternalFileDrop(files);
+            } else {
+              window.logWarn('handleExternalFileDrop not available when external-files-dropped fired');
+            }
+          });
+        }
+
         // Manage categories → openCategoriesModal
         if (typeof window.secureElectronAPI.events.onManageCategories === 'function') {
           window.secureElectronAPI.events.onManageCategories(() => {
