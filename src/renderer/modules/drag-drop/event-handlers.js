@@ -43,15 +43,21 @@ export function setupDragDropEventHandlers() {
 
   // Hotkey drop handlers are owned by the hotkeys module to avoid duplicate bindings
 
-  // Holding tank drop handlers - target the container and list items
-  // Supports both external drops (add song) and internal reorder (move within tank)
-  document.querySelectorAll('#holding_tank, .holding_tank li').forEach(target => {
-    target.addEventListener('drop', (e) => {
+  // Holding tank drop handlers — use event delegation on the container so that
+  // dynamically added list items are handled without rebinding listeners.
+  const holdingTankContainer = document.getElementById('holding_tank');
+  if (holdingTankContainer) {
+    holdingTankContainer.addEventListener('drop', (e) => {
       e.stopPropagation();
       (e.target?.classList)?.remove('dropzone');
-      clearHoldingTankDropIndicators();
+      // NOTE: Do NOT call clearHoldingTankDropIndicators() here — the drop
+      // handlers read the last indicated position first, then clear it
+      // themselves. Clearing here would wipe the position before they see it.
       const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
-      if (!dt || !dt.getData('text')?.length) return;
+      if (!dt || !dt.getData('text')?.length) {
+        clearHoldingTankDropIndicators();
+        return;
+      }
 
       // Check if this is an internal reorder (drag from within the holding tank)
       const sourceTabId = dt.getData('application/x-holding-tank-reorder');
@@ -62,23 +68,21 @@ export function setupDragDropEventHandlers() {
       }
     }, { signal });
 
-    target.addEventListener('dragover', (e) => {
+    holdingTankContainer.addEventListener('dragover', (e) => {
       allowHotkeyDrop(e);
-      const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
-      // Use reorder indicator if dragging from within holding tank
-      if (dt?.types?.includes('application/x-holding-tank-reorder')) {
-        holdingTankReorderDragOver(e);
-      } else {
-        (e.target?.classList)?.add('dropzone');
-      }
+      // Show insertion line indicator for both internal reorder and external drops
+      holdingTankReorderDragOver(e);
     }, { signal });
 
-    target.addEventListener('dragleave', (e) => {
+    holdingTankContainer.addEventListener('dragleave', (e) => {
       allowHotkeyDrop(e);
       (e.target?.classList)?.remove('dropzone');
-      clearHoldingTankDropIndicators();
+      // Only clear indicators if leaving the container entirely
+      if (!holdingTankContainer.contains(e.relatedTarget)) {
+        clearHoldingTankDropIndicators();
+      }
     }, { signal });
-  });
+  }
 
   // Column drag and drop handlers - improved with better visual feedback
   setupColumnDragAndDrop();

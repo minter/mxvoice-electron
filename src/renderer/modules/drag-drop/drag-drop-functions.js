@@ -73,39 +73,64 @@ export function hotkeyDrop(event) {
  * @param {Event} event - The drop event
  */
 export function holdingTankDrop(event) {
-  debugLog?.info('holdingTankDrop called', { 
+  debugLog?.info('holdingTankDrop called', {
     module: 'drag-drop-functions',
     function: 'holdingTankDrop',
     target: event.target,
     currentTarget: event.currentTarget
   });
-  
+
   event.preventDefault();
-  
+
   const songIdRaw = event.dataTransfer.getData("text");
   const songId = (songIdRaw && songIdRaw !== 'null' && songIdRaw !== 'undefined') ? songIdRaw : '';
-  debugLog?.info('Song ID from data transfer', { 
+  debugLog?.info('Song ID from data transfer', {
     module: 'drag-drop-functions',
     function: 'holdingTankDrop',
     songId: songId
   });
-  
+
   if (!songId) {
-    debugLog?.warn('No song ID found in data transfer', { 
+    debugLog?.warn('No song ID found in data transfer', {
       module: 'drag-drop-functions',
       function: 'holdingTankDrop'
     });
     return;
   }
-  
-  debugLog?.info('Calling addToHoldingTank with songId', { 
+
+  // Use the position captured by the last dragover indicator so the song
+  // lands exactly where the blue line was shown, even if the cursor shifted
+  // slightly between the last dragover and the drop event.
+  const indication = getLastDropIndication();
+  clearHoldingTankDropIndicators();
+  let insertTarget;
+  let insertPosition;
+  if (indication.item && indication.position) {
+    insertTarget = indication.item;
+    insertPosition = indication.position;
+  } else {
+    // Fallback: calculate from the drop event directly
+    const targetItem = event.target?.closest?.('.holding_tank li');
+    if (targetItem) {
+      const rect = targetItem.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      insertPosition = event.clientY < midY ? 'before' : 'after';
+      insertTarget = targetItem;
+    } else {
+      insertTarget = event.target;
+      insertPosition = 'append';
+    }
+  }
+
+  debugLog?.info('Calling addToHoldingTank with songId', {
     module: 'drag-drop-functions',
     function: 'holdingTankDrop',
-    songId: songId
+    songId: songId,
+    insertPosition: insertPosition
   });
-  
+
   if (typeof window.addToHoldingTank === 'function') {
-    window.addToHoldingTank(songId, event.target).then(result => {
+    window.addToHoldingTank(songId, insertTarget, insertPosition).then(result => {
       if (result && result.success) {
         if (typeof window.saveHoldingTankToStore === 'function') {
           window.saveHoldingTankToStore();
@@ -113,7 +138,7 @@ export function holdingTankDrop(event) {
       }
     }).catch(err => { debugLog?.warn('Failed to add song to holding tank', { module: 'drag-drop-functions', function: 'holdingTankDrop', error: err?.message }); });
   } else {
-    debugLog?.error('addToHoldingTank function not available', { 
+    debugLog?.error('addToHoldingTank function not available', {
       module: 'drag-drop-functions',
       function: 'holdingTankDrop'
     });
@@ -174,6 +199,9 @@ export function songDrag(event) {
  */
 export function holdingTankReorderDrop(event) {
   event.preventDefault();
+
+  // Capture the indicated position before clearing indicators
+  const indication = getLastDropIndication();
   clearHoldingTankDropIndicators();
 
   const songId = event.dataTransfer.getData("text");
@@ -186,9 +214,9 @@ export function holdingTankReorderDrop(event) {
   const draggedItem = sourceTab.querySelector(`li[songid="${songId}"]`);
   if (!draggedItem) return;
 
-  // Find the drop target <li> in the holding tank
-  const targetItem = event.target?.closest?.('.holding_tank li');
-  const targetList = event.target?.closest?.('.holding_tank');
+  // Use the stored indication from dragover, falling back to event.target
+  const targetItem = indication.item || event.target?.closest?.('.holding_tank li');
+  const targetList = (targetItem?.closest?.('.holding_tank')) || event.target?.closest?.('.holding_tank');
 
   if (!targetList) return;
 
@@ -196,10 +224,12 @@ export function holdingTankReorderDrop(event) {
   if (targetItem === draggedItem) return;
 
   if (targetItem) {
-    // Determine insert position based on cursor Y relative to target midpoint
-    const rect = targetItem.getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    if (event.clientY < midY) {
+    // Use stored position from dragover indicator, or calculate from cursor
+    const insertBefore = indication.position
+      ? indication.position === 'before'
+      : event.clientY < (targetItem.getBoundingClientRect().top + targetItem.getBoundingClientRect().height / 2);
+
+    if (insertBefore) {
       targetList.insertBefore(draggedItem, targetItem);
     } else {
       targetList.insertBefore(draggedItem, targetItem.nextSibling);
@@ -221,8 +251,15 @@ export function holdingTankReorderDrop(event) {
   });
 }
 
+// Track the last element that received a drop indicator to avoid querying the
+// entire document on every dragover event (fires 60+ times per second).
+// Also used by the drop handlers so the song lands exactly where the line was.
+let _lastIndicatedItem = null;
+let _lastIndicatedPosition = null; // 'before' | 'after'
+
 /**
- * Handle dragover for holding tank reorder — shows a visual drop indicator.
+ * Handle dragover for holding tank — shows a visual drop indicator line.
+ * Works for both internal reorder and external drops (from search).
  *
  * @param {DragEvent} event - The dragover event
  */
@@ -233,24 +270,56 @@ export function holdingTankReorderDragOver(event) {
   const targetItem = event.target?.closest?.('.holding_tank li');
   if (!targetItem) return;
 
-  // Clear previous indicators
+  // Determine above/below based on cursor position
+  const rect = targetItem.getBoundingClientRect();
+  const midY = rect.top + rect.height / 2;
+  const above = event.clientY < midY;
+
+  // Fast path: if indicator is already correct, skip DOM work
+  if (
+    _lastIndicatedItem === targetItem &&
+    targetItem.classList.contains(above ? 'holding-tank-drop-above' : 'holding-tank-drop-below')
+  ) {
+    return;
+  }
+
+  // Clear previous indicator (targeted, not a full document query)
   clearHoldingTankDropIndicators();
 
   // Show indicator above or below based on cursor position
-  const rect = targetItem.getBoundingClientRect();
-  const midY = rect.top + rect.height / 2;
-  if (event.clientY < midY) {
+  if (above) {
     targetItem.classList.add('holding-tank-drop-above');
   } else {
     targetItem.classList.add('holding-tank-drop-below');
   }
+  _lastIndicatedItem = targetItem;
+  _lastIndicatedPosition = above ? 'before' : 'after';
+}
+
+/**
+ * Return the last indicated drop target and position from dragover.
+ * Used by drop handlers so the song lands exactly where the blue line was,
+ * even if the cursor shifted slightly between the last dragover and the drop.
+ *
+ * @returns {{ item: Element|null, position: string|null }}
+ */
+export function getLastDropIndication() {
+  return { item: _lastIndicatedItem, position: _lastIndicatedPosition };
 }
 
 /**
  * Clear all holding tank drop indicators.
+ * Uses tracked element for fast removal; falls back to document query.
  */
 export function clearHoldingTankDropIndicators() {
-  document.querySelectorAll('.holding-tank-drop-above, .holding-tank-drop-below').forEach(el => {
-    el.classList.remove('holding-tank-drop-above', 'holding-tank-drop-below');
-  });
+  if (_lastIndicatedItem) {
+    _lastIndicatedItem.classList.remove('holding-tank-drop-above', 'holding-tank-drop-below');
+    _lastIndicatedItem = null;
+    _lastIndicatedPosition = null;
+  } else {
+    // Fallback: clear any stale indicators in the document
+    document.querySelectorAll('.holding-tank-drop-above, .holding-tank-drop-below').forEach(el => {
+      el.classList.remove('holding-tank-drop-above', 'holding-tank-drop-below');
+    });
+  }
 } 

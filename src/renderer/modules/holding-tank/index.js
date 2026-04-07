@@ -258,8 +258,11 @@ export function populateHoldingTank(songIds) {
 
 /**
  * Add a song to the holding tank
+ * @param {string} song_id - The song ID to add
+ * @param {Element|string} element - The target element or selector for insertion
+ * @param {string} [insertPosition='append'] - 'before', 'after', or 'append' (default)
  */
-export function addToHoldingTank(song_id, element) {
+export function addToHoldingTank(song_id, element, insertPosition) {
   return database.getSongById(song_id).then(result => {
     if (result.success && result.data.length > 0) {
       const row = result.data[0];
@@ -282,7 +285,13 @@ export function addToHoldingTank(song_id, element) {
       }
 
       const targetEl = element && element.nodeType ? element : Dom.$(element);
-      if (targetEl?.matches?.('li')) {
+
+      // Support precise insertion when a position is specified (from drop indicator)
+      if (insertPosition === 'before' && targetEl?.matches?.('li')) {
+        targetEl.parentNode.insertBefore(song_row, targetEl);
+      } else if (insertPosition === 'after' && targetEl?.matches?.('li')) {
+        targetEl.parentNode.insertBefore(song_row, targetEl.nextSibling);
+      } else if (targetEl?.matches?.('li')) {
         targetEl.insertAdjacentElement('afterend', song_row);
       } else if (targetEl?.matches?.('div')) {
         const ul = targetEl.querySelector('ul.active');
@@ -290,11 +299,11 @@ export function addToHoldingTank(song_id, element) {
       } else if (targetEl?.appendChild) {
         targetEl.appendChild(song_row);
       }
-      
+
       // Note: Save is now done by caller, not here, to avoid N saves during batch operations
       return { success: true, songId: song_id, title: title };
     } else {
-      debugLog?.warn('Failed to get song by ID', { 
+      debugLog?.warn('Failed to get song by ID', {
         module: 'holding-tank',
         function: 'addToHoldingTank',
         songId: song_id,
@@ -303,7 +312,7 @@ export function addToHoldingTank(song_id, element) {
       return { success: false, error: 'Song not found' };
     }
   }).catch(error => {
-    debugLog?.warn('Database API error', { 
+    debugLog?.warn('Database API error', {
       module: 'holding-tank',
       function: 'addToHoldingTank',
       songId: song_id,
