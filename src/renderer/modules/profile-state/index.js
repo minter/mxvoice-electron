@@ -448,9 +448,10 @@ async function restoreHotkeyTabs(hotkeyTabs, _hotkeysModule) {
               // Set the songid attribute
               element.setAttribute('songid', songId);
               
-              // Set the label text directly
-              const span = element.querySelector('span');
+              // Set the label text on the song span
+              const span = element.querySelector('span.song');
               if (span) {
+                span.setAttribute('songid', songId);
                 span.textContent = `${title} by ${artist} (${time})`;
               }
               
