@@ -18,6 +18,10 @@ try {
   // Debug logger not available
 }
 
+// Debounce timer for save operations
+let saveDebounceTimer = null;
+let pendingSaveResolvers = [];
+
 // Store module references for auto-save
 let _hotkeysModuleRef = null;
 let _holdingTankModuleRef = null;
@@ -257,7 +261,21 @@ export function extractProfileState() {
  * 
  * @returns {Promise<Object>} Result with success status
  */
-export async function saveProfileState() {
+export function saveProfileState() {
+  return new Promise((resolve) => {
+    pendingSaveResolvers.push(resolve);
+    if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = setTimeout(() => {
+      saveDebounceTimer = null;
+      const resolvers = pendingSaveResolvers.splice(0);
+      _saveProfileStateImmediate().then(result => {
+        resolvers.forEach(r => r(result));
+      });
+    }, 300);
+  });
+}
+
+async function _saveProfileStateImmediate() {
   try {
     // PROTECTION: Never save during restoration/initialization (race condition protection)
     if (window.isRestoringProfileState) {

@@ -700,6 +700,7 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
             sharedState.set('sound', sound);
             sharedState.set('trackStartTime', row?.start_time ?? null);
             sharedState.set('trackEndTime', row?.end_time ?? null);
+            sharedState.set('crossfadeTriggered', false);
 
             // Start playback with audio context resume and validation
             ensureAudioContextAndPlay(sound, song_id).then(playResult => {

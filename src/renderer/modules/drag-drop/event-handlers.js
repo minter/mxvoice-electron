@@ -47,6 +47,7 @@ export function setupDragDropEventHandlers() {
   // Supports both external drops (add song) and internal reorder (move within tank)
   document.querySelectorAll('#holding_tank, .holding_tank li').forEach(target => {
     target.addEventListener('drop', (e) => {
+      e.stopPropagation();
       (e.target?.classList)?.remove('dropzone');
       clearHoldingTankDropIndicators();
       const dt = e.dataTransfer || e.originalEvent?.dataTransfer;

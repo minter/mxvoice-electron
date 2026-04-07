@@ -367,6 +367,25 @@ export default class UIInteractionEvents {
       const songFormVolumeHandler = (event) => {
         const display = document.getElementById('song-form-volume-display');
         if (display) display.textContent = event.target.value;
+
+        // Live volume adjustment: if the song being edited is currently playing, update in real-time
+        try {
+          const formSongId = document.getElementById('song-form-songid')?.value;
+          const nowPlayingEl = document.getElementById('song_now_playing');
+          const nowPlayingSongId = nowPlayingEl?.getAttribute('songid');
+          if (formSongId && nowPlayingSongId && String(formSongId) === String(nowPlayingSongId)) {
+            import('../shared-state.js').then(sharedStateModule => {
+              const sharedState = sharedStateModule.default;
+              const sound = sharedState.get('sound');
+              if (sound && sound.playing()) {
+                const newTrackVolume = parseInt(event.target.value) / 100;
+                const masterVolume = (Number(document.getElementById('volume')?.value) || 0) / 100;
+                sound.volume(masterVolume * newTrackVolume);
+                sharedState.set('trackVolume', newTrackVolume);
+              }
+            }).catch(() => {});
+          }
+        } catch (_) { /* best-effort live volume */ }
       };
       songFormVolume.addEventListener('input', songFormVolumeHandler);
       this.uiHandlers.set('songFormVolumeInput', { element: songFormVolume, event: 'input', handler: songFormVolumeHandler });
