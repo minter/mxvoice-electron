@@ -1520,7 +1520,7 @@ function registerAllHandlers() {
         return { success: true, data: false };
       }
       const ext = path.extname(filePath).toLowerCase();
-      const validExtensions = ['.mp3', '.mp4', '.m4a', '.wav', '.ogg', '.flac'];
+      const validExtensions = ['.mp3', '.mp4', '.m4a', '.wav', '.ogg', '.flac', '.opus'];
       return { success: true, data: validExtensions.includes(ext) };
     } catch (error) {
       debugLog?.error('Validate audio file error:', { module: 'ipc-handlers', function: 'validate-audio-file', error: error.message });
