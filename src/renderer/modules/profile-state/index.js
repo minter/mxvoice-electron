@@ -571,9 +571,15 @@ async function restoreHoldingTankTabs(holdingTankTabs, _holdingTankModule) {
             song_row.setAttribute('songid', songId);
             song_row.textContent = `${title} by ${artist} (${time})`;
             
-            // Add drag event listener
+            // Add drag event listener (must match songDrag() behavior —
+            // set both 'text' and the reorder marker so internal reorder
+            // is detected instead of treating the drag as an external drop)
             song_row.addEventListener('dragstart', (e) => {
               e.dataTransfer.setData('text', songId);
+              const holdingTankList = e.currentTarget?.closest?.('.holding_tank');
+              if (holdingTankList) {
+                e.dataTransfer.setData('application/x-holding-tank-reorder', holdingTankList.id);
+              }
             });
             
             // Append to tab content

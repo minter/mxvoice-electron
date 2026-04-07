@@ -105,7 +105,7 @@ export function holdingTankDrop(event) {
   clearHoldingTankDropIndicators();
   let insertTarget;
   let insertPosition;
-  if (indication.item && indication.position) {
+  if (indication.item && indication.position && indication.item.isConnected) {
     insertTarget = indication.item;
     insertPosition = indication.position;
   } else {
@@ -132,6 +132,13 @@ export function holdingTankDrop(event) {
   if (typeof window.addToHoldingTank === 'function') {
     window.addToHoldingTank(songId, insertTarget, insertPosition).then(result => {
       if (result && result.success) {
+        // Flash the newly added item to confirm placement
+        const added = document.querySelector(`.holding_tank.active .list-group-item[songid="${songId}"]`);
+        if (added) {
+          added.classList.remove('holding-tank-flash');
+          void added.offsetWidth;
+          added.classList.add('holding-tank-flash');
+        }
         if (typeof window.saveHoldingTankToStore === 'function') {
           window.saveHoldingTankToStore();
         }
@@ -215,7 +222,7 @@ export function holdingTankReorderDrop(event) {
   if (!draggedItem) return;
 
   // Use the stored indication from dragover, falling back to event.target
-  const targetItem = indication.item || event.target?.closest?.('.holding_tank li');
+  const targetItem = (indication.item?.isConnected ? indication.item : null) || event.target?.closest?.('.holding_tank li');
   const targetList = (targetItem?.closest?.('.holding_tank')) || event.target?.closest?.('.holding_tank');
 
   if (!targetList) return;
@@ -238,6 +245,11 @@ export function holdingTankReorderDrop(event) {
     // Dropped on empty area of the list — append to end
     targetList.appendChild(draggedItem);
   }
+
+  // Flash the moved item to confirm placement
+  draggedItem.classList.remove('holding-tank-flash');
+  void draggedItem.offsetWidth;
+  draggedItem.classList.add('holding-tank-flash');
 
   // Save the new order
   if (typeof window.saveHoldingTankToStore === 'function') {
