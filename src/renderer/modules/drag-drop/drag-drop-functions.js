@@ -122,13 +122,6 @@ export function holdingTankDrop(event) {
     }
   }
 
-  debugLog?.info('Calling addToHoldingTank with songId', {
-    module: 'drag-drop-functions',
-    function: 'holdingTankDrop',
-    songId: songId,
-    insertPosition: insertPosition
-  });
-
   if (typeof window.addToHoldingTank === 'function') {
     window.addToHoldingTank(songId, insertTarget, insertPosition).then(result => {
       if (result && result.success) {
@@ -232,9 +225,10 @@ export function holdingTankReorderDrop(event) {
 
   if (targetItem) {
     // Use stored position from dragover indicator, or calculate from cursor
+    const targetRect = targetItem.getBoundingClientRect();
     const insertBefore = indication.position
       ? indication.position === 'before'
-      : event.clientY < (targetItem.getBoundingClientRect().top + targetItem.getBoundingClientRect().height / 2);
+      : event.clientY < (targetRect.top + targetRect.height / 2);
 
     if (insertBefore) {
       targetList.insertBefore(draggedItem, targetItem);
@@ -268,6 +262,10 @@ export function holdingTankReorderDrop(event) {
 // Also used by the drop handlers so the song lands exactly where the line was.
 let _lastIndicatedItem = null;
 let _lastIndicatedPosition = null; // 'before' | 'after'
+// Snapshot preserved across clearHoldingTankDropIndicators() so the drop
+// handler always sees the position even if dragleave fires first.
+let _snapshotItem = null;
+let _snapshotPosition = null;
 
 /**
  * Handle dragover for holding tank — shows a visual drop indicator line.
@@ -306,6 +304,10 @@ export function holdingTankReorderDragOver(event) {
   }
   _lastIndicatedItem = targetItem;
   _lastIndicatedPosition = above ? 'before' : 'after';
+  // Keep a snapshot so the drop handler can read the position even if
+  // dragleave fires (and clears the live tracking vars) before drop.
+  _snapshotItem = _lastIndicatedItem;
+  _snapshotPosition = _lastIndicatedPosition;
 }
 
 /**
@@ -316,7 +318,14 @@ export function holdingTankReorderDragOver(event) {
  * @returns {{ item: Element|null, position: string|null }}
  */
 export function getLastDropIndication() {
-  return { item: _lastIndicatedItem, position: _lastIndicatedPosition };
+  // Prefer live tracking vars, but fall back to snapshot in case
+  // dragleave cleared them before the drop handler ran.
+  const item = _lastIndicatedItem || _snapshotItem;
+  const position = _lastIndicatedPosition || _snapshotPosition;
+  // Clear the snapshot now that the drop handler has consumed it
+  _snapshotItem = null;
+  _snapshotPosition = null;
+  return { item, position };
 }
 
 /**
