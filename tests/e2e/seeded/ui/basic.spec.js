@@ -68,28 +68,22 @@ test.describe('UI - basic', () => {
     await expect(title).toBeVisible();
     await expect(title).toBeFocused();
 
-    // Wait for the open animation to fully complete before toggling back
-    // (toggleAdvancedSearch uses animateCSS which is async)
+    // Wait for the open animation (fadeInDown) to fully complete before toggling
+    // back. animateCSS adds animate__animated during the animation and removes it
+    // on animationend. Toggling while the animation is in flight causes conflicts.
     await page.waitForFunction(
-      () => !document.querySelector('#advanced-search')?.classList.contains('animating'),
+      () => !document.querySelector('#advanced-search')?.classList.contains('animate__animated'),
       { timeout: 5000 }
-    ).catch(() => { /* animating class may not exist; proceed */ });
-
-    // Toggle back to close
-    await btn.click();
-
-    // Wait for the close animation to complete
-    await page.waitForFunction(
-      () => document.querySelector('#advanced_search_button')?.getAttribute('aria-expanded') === 'false',
-      { timeout: 10000 }
     );
-    await page.waitForFunction(
-      () => !document.querySelector('#advanced-search')?.classList.contains('animating'),
-      { timeout: 5000 }
-    ).catch(() => { /* animating class may not exist; proceed */ });
 
+    // Toggle back to close (use evaluate, same as open — btn.click() can be
+    // intercepted by tooltip or animation overlay)
+    await page.evaluate(() => window.toggleAdvancedSearch());
+
+    // Wait for the close animation (fadeOutUp) to finish — Dom.hide is called
+    // inside the animateCSS .then() callback, so panel won't be hidden until done
     await expect(btn).toHaveAttribute('aria-expanded', 'false', { timeout: 5000 });
-    await expect(panel).toBeHidden();
+    await expect(panel).toBeHidden({ timeout: 5000 });
     await expect(omni).toBeVisible();
     await expect(omni).toBeFocused();
     await expect(title).toBeHidden();
