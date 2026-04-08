@@ -15,14 +15,6 @@ test.describe('Profile Backups - restore', () => {
   let backupDir;
 
   test.beforeAll(async () => {
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for backup restore tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-
     ({ app, page, userDataDir } = await launchSeededApp(electron, 'backup-restore'));
 
     profileDir = path.join(userDataDir, 'profiles', 'Default User');

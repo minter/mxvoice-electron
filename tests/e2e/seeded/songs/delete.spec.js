@@ -5,19 +5,10 @@ test.describe('Songs - delete', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    // Ensure clean test environment before each test sequence
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for songs delete tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-    
     ({ app, page } = await launchSeededApp(electron, 'songs-delete'));
-    
-    // After database reset, refresh the page to clear any cached search state
-    console.log('🔄 Refreshing page to clear search cache after database reset...');
+
+    // Refresh the page to clear any cached search state
+    console.log('🔄 Refreshing page to clear search cache...');
     await page.reload();
     await page.waitForLoadState('domcontentloaded');
     await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });

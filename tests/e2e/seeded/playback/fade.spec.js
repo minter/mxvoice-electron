@@ -18,14 +18,6 @@ test.describe('Playback - fade out', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for fade tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-
     ({ app, page } = await launchSeededApp(electron, 'fade'));
 
     // Ensure window is visible and focused

@@ -13,14 +13,6 @@ test.describe('Holding Tank - file operations', () => {
   let tempDir;
 
   test.beforeAll(async () => {
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for holding tank file-ops tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-
     ({ app, page, suiteRoot } = await launchSeededApp(electron, 'tank-fileops'));
 
     // Ensure window is visible and focused

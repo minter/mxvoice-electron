@@ -5,11 +5,6 @@ test.describe('Theme Management - basic', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-    } catch {}
-
     ({ app, page } = await launchSeededApp(electron, 'theme-management'));
 
     await app.evaluate(async ({ BrowserWindow }) => {

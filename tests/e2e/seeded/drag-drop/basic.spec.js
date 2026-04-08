@@ -5,14 +5,6 @@ test.describe('Drag & Drop - basic', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for drag-drop tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-
     ({ app, page } = await launchSeededApp(electron, 'drag-drop'));
 
     // Ensure window is visible and focused

@@ -5,14 +5,6 @@ test.describe('Songs - menu operations', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for menu operations tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-
     ({ app, page } = await launchSeededApp(electron, 'menu-ops'));
 
     await app.evaluate(async ({ BrowserWindow }) => {
