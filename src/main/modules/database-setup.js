@@ -18,8 +18,8 @@ const { Database, onRuntimeInitialized } = pkg;
 import initializeMainDebugLog from './debug-log.js';
 
 // Get __filename equivalent for ES6 modules (__dirname not currently used)
-const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename); // Currently unused
+const _filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(_filename); // Currently unused
 
 const store = new Store({ name: 'config' });
 

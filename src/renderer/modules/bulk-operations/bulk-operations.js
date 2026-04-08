@@ -13,18 +13,17 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
 // Import secure adapters
 import { secureFileSystem, secureDatabase, securePath, secureStore } from '../adapters/secure-adapter.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
-import sharedState from '../shared-state.js';
 import { populateCategorySelect, findUniqueCategoryCode, refreshCategories, getCategoryDescription } from '../categories/category-data.js';
 
 // Supported audio file extensions (lowercase)
-const SUPPORTED_AUDIO_EXTS = new Set([".mp3", ".mp4", ".m4a", ".wav", ".ogg", ".flac", ".aac"]);
+const SUPPORTED_AUDIO_EXTS = new Set([".mp3", ".mp4", ".m4a", ".wav", ".ogg", ".flac", ".opus"]);
 
 /**
  * Shows the bulk add modal with directory and category selection

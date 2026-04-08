@@ -31,7 +31,7 @@ function initializeSettingsController(options = {}) {
   // Prefer exposed API; fallback to secure API if only that exists
   const electronAPISource = (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null;
   const electronAPI = options.electronAPI || electronAPISource;
-  const { db, store } = options;
+  const { db: _db, store } = options;
   
   /**
    * Save preferences from the preferences modal

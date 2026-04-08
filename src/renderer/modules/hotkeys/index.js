@@ -12,7 +12,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -129,7 +129,7 @@ class HotkeysModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     try {
       debugLog?.info('🎹 Initializing Hotkeys Module via standardized init()...', {
         module: 'hotkeys',
@@ -327,7 +327,7 @@ class HotkeysModule {
 
     for (const key in fkeys) {
       const hotkeyElement = document.querySelector(
-        `.hotkeys.active #${key}_hotkey`
+        `.hotkeys.active [id^="${key}_hotkey"]`
       );
 
       if (fkeys[key]) {
@@ -420,7 +420,7 @@ class HotkeysModule {
             return this.fallbackSetLabelFromSongId(song_id, element);
           }
         })
-        .catch((error) => {
+        .catch((_error) => {
           return this.fallbackSetLabelFromSongId(song_id, element);
         });
     } else {
@@ -490,7 +490,7 @@ class HotkeysModule {
       if (activeTab) {
         let clearedCount = 0;
         for (let key = 1; key <= 12; key++) {
-          const li = activeTab.querySelector(`#f${key}_hotkey`);
+          const li = activeTab.querySelector(`[id^="f${key}_hotkey"]`);
           if (li) {
             const hadSongId = li.hasAttribute('songid');
             li.removeAttribute('songid');
@@ -563,27 +563,28 @@ class HotkeysModule {
       
       if (activeTabContent) {
         // Look for hotkey element within the active tab content first
-        element = activeTabContent.querySelector(`#f${key}_hotkey`);
+        element = activeTabContent.querySelector(`[id^="f${key}_hotkey"]`);
         if (element) {
           songId = element.getAttribute('songid');
-          debugLog?.info(`Hotkey ${key} found in active tab:`, { 
+          debugLog?.info(`Hotkey ${key} found in active tab:`, {
             module: 'hotkeys',
-            function: 'saveHotkeyFile', 
+            function: 'saveHotkeyFile',
             key: key,
             songId: songId,
             foundInActiveTab: true
           });
         }
       }
-      
-      // Fallback to global search if not found in active tab
+
+      // Fallback to tab 1 if not found in active tab
       if (!element) {
-        element = document.getElementById(`f${key}_hotkey`);
+        const tab1 = document.getElementById('hotkeys_list_1');
+        element = tab1?.querySelector(`#f${key}_hotkey`);
         if (element) {
           songId = element.getAttribute('songid');
-          debugLog?.info(`Hotkey ${key} found globally (fallback):`, { 
+          debugLog?.info(`Hotkey ${key} found in tab 1 (fallback):`, {
             module: 'hotkeys',
-            function: 'saveHotkeyFile', 
+            function: 'saveHotkeyFile',
             key: key,
             songId: songId,
             foundInActiveTab: false
@@ -621,7 +622,7 @@ class HotkeysModule {
     const activeTabContent = document.getElementById(tabId);
     if (!activeTabContent) return null;
     
-    return activeTabContent.querySelector(`#${hotkey}_hotkey`);
+    return activeTabContent.querySelector(`[id^="${hotkey}_hotkey"]`);
   }
 
   /**
@@ -788,7 +789,7 @@ class HotkeysModule {
       this.ui.clearAllHotkeyHighlighting();
     } else {
       // Fallback implementation
-      document.querySelectorAll('[id$="_hotkey"]').forEach((item) => {
+      document.querySelectorAll('[id*="_hotkey"]').forEach((item) => {
         item.classList.remove('active-hotkey', 'selected-row');
       });
       window.currentSelectedHotkey = null;

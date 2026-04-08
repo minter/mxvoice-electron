@@ -5,7 +5,7 @@
  */
 
 // Import drag and drop functions
-import { hotkeyDrop, holdingTankDrop, allowHotkeyDrop } from './drag-drop-functions.js';
+import { holdingTankDrop, allowHotkeyDrop } from './drag-drop-functions.js';
 
 // Import debug logger
 let debugLog = null;
@@ -14,7 +14,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 

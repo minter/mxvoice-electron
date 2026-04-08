@@ -24,7 +24,7 @@ export class NavigationShortcuts {
    * @param {Object} options - Configuration options
    * @returns {boolean} - Success status
    */
-  initialize(options = {}) {
+  initialize(_options = {}) {
     try {
       this.logInfo('Initializing navigation shortcuts...');
       
@@ -113,35 +113,35 @@ export class NavigationShortcuts {
       
       this.bindings.set("esc", {
         key: "esc",
-        handler: (event) => this.handleStopPlaying(false), // Explicitly pass false for fadeOut
+        handler: (_event) => this.handleStopPlaying(false), // Explicitly pass false for fadeOut
         context: 'global+search',
         description: 'Stop playing audio'
       });
 
       this.bindings.set("shift+esc", {
         key: "shift+esc",
-        handler: (event) => this.handleStopPlaying(true), // Explicitly pass true for fadeOut
+        handler: (_event) => this.handleStopPlaying(true), // Explicitly pass true for fadeOut
         context: 'global',
         description: 'Stop all audio'
       });
 
       this.bindings.set("space", {
         key: "space",
-        handler: (event) => this.handlePausePlaying(false), // Explicitly pass false for pauseAll
+        handler: (_event) => this.handlePausePlaying(false), // Explicitly pass false for pauseAll
         context: 'global',
         description: 'Pause/resume audio'
       });
 
       this.bindings.set("shift+space", {
         key: "shift+space",
-        handler: (event) => this.handlePausePlaying(true), // Explicitly pass true for pauseAll
+        handler: (_event) => this.handlePausePlaying(true), // Explicitly pass true for pauseAll
         context: 'global',
         description: 'Pause all audio'
       });
 
       this.bindings.set("return", {
         key: "return",
-        handler: (event) => this.handlePlaySelected(), // No arguments needed
+        handler: (_event) => this.handlePlaySelected(), // No arguments needed
         context: 'global',
         description: 'Play selected song'
       });

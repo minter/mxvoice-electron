@@ -41,11 +41,8 @@ Post-build script that signs the installer and uninstaller after they're created
   - `YUBIKEY_CERT_NAME` - Certificate subject name (alternative to thumbprint)
   - YubiKey PIN will be prompted once for all files
 
-### `sslSign.cjs` (Legacy)
-Previous signing script that signed files individually. Replaced by `signAllWindows.cjs` to reduce PIN prompts.
-
-### `afterSign.cjs` (Unused)
-Attempted to use electron-builder's `afterSign` hook, but it only runs if electron-builder performs signing. Since we disable `signAndEditExecutable`, this hook is skipped.
+### `win-sign-utils.cjs`
+Shared utilities for Windows code signing. Provides `findSigntool()` (signtool.exe path discovery), `buildSignCommand()` (certificate selection and command assembly), and `logCertInfo()` (log which cert method is active). Used by both `afterPack.js` and `signAllWindows.cjs`.
 
 ## Build Process Flow
 

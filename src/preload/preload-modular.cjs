@@ -175,6 +175,7 @@ try {
 }
 
 // Test function to verify modular preload is working
+// eslint-disable-next-line no-unused-vars
 function testModularPreload() {
   debugLog.debug('🧪 Testing Modular Preload...');
   

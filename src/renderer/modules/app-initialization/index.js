@@ -125,7 +125,7 @@ export class AppInitialization {
    * @param {Object} config - Shared state configuration
    * @returns {Promise<boolean>} Success status
    */
-  async initializeSharedState(config = {}) {
+  async initializeSharedState(_config = {}) {
     try {
       this.logInfo('🔗 Initializing shared state...');
       
@@ -151,7 +151,7 @@ export class AppInitialization {
    * @param {Object} config - Data preloader configuration
    * @returns {Promise<boolean>} Success status
    */
-  async preloadInitialData(config = {}) {
+  async preloadInitialData(_config = {}) {
     try {
       this.logInfo('📁 Preloading initial data...');
       

@@ -103,8 +103,44 @@ export async function launchSeededApp(electron, suffix = '') {
   return { app, page, userDataDir, suiteRoot, suiteDbDir, suiteMusicDir, suiteHotkeysDir };
 }
 
+/**
+ * Wait for the Electron app to be fully initialized and ready for interaction.
+ * Replaces arbitrary waitForTimeout calls in beforeAll blocks.
+ */
+export async function waitForAppReady(page, app) {
+  // Ensure window is visible and focused
+  await app.evaluate(async ({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    win.show();
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  });
+  await page.bringToFront();
+  await page.click('body');
+  await page.waitForLoadState('domcontentloaded');
+
+  // Wait for the app's module registry to be ready
+  await page.waitForFunction(
+    () => !!window.moduleRegistry,
+    { timeout: 15000 }
+  );
+}
+
 export async function closeApp(app) {
   if (app) await app.close();
+}
+
+/**
+ * Force-remove Bootstrap modal backdrops and reset body state.
+ * Call after modal close assertions to prevent stuck backdrops from blocking clicks.
+ */
+export async function clearModalBackdrop(page) {
+  await page.evaluate(() => {
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+  });
 }
 
 export async function performEmptySearch(page) {

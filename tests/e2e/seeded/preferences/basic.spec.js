@@ -1,5 +1,5 @@
 import { _electron as electron, test, expect } from '@playwright/test';
-import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
+import { launchSeededApp, closeApp, waitForAppReady } from '../../../utils/seeded-launch.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -8,27 +8,9 @@ test.describe('Preferences - basic', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    // Ensure clean test environment before each test sequence
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for preferences tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-    
     ({ app, page } = await launchSeededApp(electron, 'preferences'));
-    
-    // Ensure window is visible and focused for reliable input
-    await app.evaluate(async ({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      win.show();
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    });
-    await page.bringToFront();
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(500);
+
+    await waitForAppReady(page, app);
   });
 
   test.afterAll(async () => {
@@ -134,9 +116,6 @@ test.describe('Preferences - basic', () => {
     
     // Wait for modal to close (indicates save has been triggered)
     await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
-    
-    // Give a moment for async save operations to complete and file system to sync
-    await page.waitForTimeout(1000);
     
     // Reopen modal to verify changes persisted
     await app.evaluate(async ({ BrowserWindow }) => {

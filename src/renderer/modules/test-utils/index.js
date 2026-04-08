@@ -12,7 +12,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -612,7 +612,7 @@ export function testSecurityFeatures() {
         });
         results.tests.push({ name: 'requireBlocked', success: false });
       }
-    } catch (error) {
+    } catch (_error) {
       debugLog?.info('require() is blocked (security feature working)', { 
         module: 'test-utils',
         function: 'testSecurityFeatures'
@@ -634,7 +634,7 @@ export function testSecurityFeatures() {
         });
         results.tests.push({ name: 'processBlocked', success: false });
       }
-    } catch (error) {
+    } catch (_error) {
       debugLog?.info('process is blocked (security feature working)', { 
         module: 'test-utils',
         function: 'testSecurityFeatures'

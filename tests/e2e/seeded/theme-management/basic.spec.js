@@ -1,15 +1,10 @@
 import { _electron as electron, test, expect } from '@playwright/test';
-import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
+import { launchSeededApp, closeApp, clearModalBackdrop } from '../../../utils/seeded-launch.js';
 
 test.describe('Theme Management - basic', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-    } catch {}
-
     ({ app, page } = await launchSeededApp(electron, 'theme-management'));
 
     await app.evaluate(async ({ BrowserWindow }) => {
@@ -20,7 +15,7 @@ test.describe('Theme Management - basic', () => {
     });
     await page.bringToFront();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
   });
 
   test.afterAll(async () => {
@@ -64,17 +59,13 @@ test.describe('Theme Management - basic', () => {
       // 4) Test switching to Dark mode
       console.log('🧪 Testing switch to Dark mode...');
       await themeDropdown.selectOption('dark');
-      await page.waitForTimeout(500);
-      
+
       // Submit the form to apply changes
-      await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
-      
-      // Wait for modal to close
-      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
-      
-      // Wait for theme to apply
-      await page.waitForTimeout(1000);
-      
+      // Click Save to apply changes and close modal
+      await page.locator('#preferencesModal button:has-text("Save")').click();
+      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 10000 });
+      await clearModalBackdrop(page);
+
       // Check if theme changed
       const darkThemeApplied = await body.getAttribute('data-theme') || 
                               await body.getAttribute('class') || 
@@ -105,17 +96,13 @@ test.describe('Theme Management - basic', () => {
       
       // Switch to light mode
       await themeDropdown.selectOption('light');
-      await page.waitForTimeout(500);
-      
+
       // Submit form
-      await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
-      
-      // Wait for modal to close
-      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
-      
-      // Wait for theme to apply
-      await page.waitForTimeout(1000);
-      
+      // Click Save to apply changes and close modal
+      await page.locator('#preferencesModal button:has-text("Save")').click();
+      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 10000 });
+      await clearModalBackdrop(page);
+
       // Check if theme changed
       const lightThemeApplied = await body.getAttribute('data-theme') || 
                                await body.getAttribute('class') || 
@@ -135,14 +122,14 @@ test.describe('Theme Management - basic', () => {
       // Refresh the page
       await page.reload();
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(1000);
-      
-      const themeAfterReload = await body.getAttribute('data-theme') || 
-                              await body.getAttribute('class') || 
+      await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
+
+      const themeAfterReload = await body.getAttribute('data-theme') ||
+                              await body.getAttribute('class') ||
                               'default';
-      
+
       console.log('Theme after page reload:', themeAfterReload);
-      
+
       if (themeAfterReload.includes('light') || themeAfterReload.includes('theme-light')) {
         console.log('✅ Theme persistence working - Light theme maintained after reload');
       } else {
@@ -214,13 +201,13 @@ test.describe('Theme Management - basic', () => {
     if (await themeDropdown.isVisible()) {
       // Switch to dark theme
       await themeDropdown.selectOption('dark');
-      await page.waitForTimeout(500);
-      
+
       // Submit form
-      await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
-      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
-      await page.waitForTimeout(1000);
-      
+      // Click Save to apply changes and close modal
+      await page.locator('#preferencesModal button:has-text("Save")').click();
+      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 10000 });
+      await clearModalBackdrop(page);
+
       // Check if dark theme classes are applied
       const darkThemeClasses = await body.getAttribute('class');
       console.log('Dark theme classes:', darkThemeClasses);
@@ -261,12 +248,12 @@ test.describe('Theme Management - basic', () => {
       await expect(page.locator('#preferences-database-directory')).toHaveValue(/.+/, { timeout: 5000 });
       
       await themeDropdown.selectOption('light');
-      await page.waitForTimeout(500);
-      
-      await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
-      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
-      await page.waitForTimeout(1000);
-      
+
+      // Click Save to apply changes and close modal
+      await page.locator('#preferencesModal button:has-text("Save")').click();
+      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 10000 });
+      await clearModalBackdrop(page);
+
       // Check if light theme classes are applied
       const lightThemeClasses = await body.getAttribute('class');
       console.log('Light theme classes:', lightThemeClasses);
@@ -374,15 +361,13 @@ test.describe('Theme Management - basic', () => {
       // Change to a different theme
       const newTheme = currentValue === 'light' ? 'dark' : 'light';
       await screenModeField.selectOption(newTheme);
-      await page.waitForTimeout(500);
-      
+
       // Submit the form
-      await page.locator('#preferencesModal form').evaluate(form => form.dispatchEvent(new Event('submit')));
-      
-      // Wait for modal to close
-      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
-      await page.waitForTimeout(1000);
-      
+      // Click Save to apply changes and close modal
+      await page.locator('#preferencesModal button:has-text("Save")').click();
+      await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 10000 });
+      await clearModalBackdrop(page);
+
       // Verify theme actually changed
       const body = page.locator('body');
       const newThemeClasses = await body.getAttribute('class');
@@ -442,8 +427,8 @@ test.describe('Theme Management - basic', () => {
     // Reload the page
     await page.reload();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000);
-    
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
+
     // Check if theme persisted
     const themeAfterReload = await body.getAttribute('data-theme') || 
                             await body.getAttribute('class') || 

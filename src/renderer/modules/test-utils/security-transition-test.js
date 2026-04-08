@@ -12,7 +12,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available in secure context
 }
 
@@ -234,7 +234,7 @@ export function testSecurityTransition() {
           results.failed++;
           results.tests.push({ name: securityTest.name, success: false, error: 'Security vulnerability detected' });
         }
-      } catch (error) {
+      } catch (_error) {
         debugLog.info(`✅ ${securityTest.name} - properly secured (error thrown)`, { 
           module: 'test-utils', 
           function: 'testSecurityFeatures',

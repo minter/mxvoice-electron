@@ -12,7 +12,6 @@ const { ipcMain, dialog, app } = electron;
 import path from 'path';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
-import Store from 'electron-store';
 import { pipeline } from 'stream/promises';
 import { createReadStream, createWriteStream } from 'fs';
 import os from 'os';
@@ -24,6 +23,7 @@ import { v4 as uuidv4 } from 'uuid';
 import fileOperations from './file-operations.js';
 import * as profileManager from './profile-manager.js';
 import * as profileBackupManager from './profile-backup-manager.js';
+import * as libraryTransferManager from './library-transfer-manager.js';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -297,7 +297,7 @@ function registerAllHandlers() {
     }
   });
 
-  ipcMain.handle('file-get-user-data-path', async (event) => {
+  ipcMain.handle('file-get-user-data-path', async (_event) => {
     try {
       return { success: true, path: app.getPath('userData') };
     } catch (error) {
@@ -382,8 +382,8 @@ function registerAllHandlers() {
       try {
         const stats = fs.statSync(source);
         totalSize = stats.size;
-      } catch (statError) {
-        debugLog?.warn('Could not get file size for progress tracking', { 
+      } catch (_statError) {
+        debugLog?.warn('Could not get file size for progress tracking', {
           module: 'ipc-handlers', 
           function: 'copyFileStreaming',
           source
@@ -882,7 +882,7 @@ function registerAllHandlers() {
       // Fallback: Howler (loads audio to get accurate duration)
       if (!(durationSec > 0.5)) {
         await new Promise((resolve) => setImmediate(resolve));
-        durationSec = await new Promise((resolve, reject) => {
+        durationSec = await new Promise((resolve, _reject) => {
           const sound = new Howl({ src: [filePath], html5: true, preload: true });
           const cleanup = () => {
             try { 
@@ -900,7 +900,7 @@ function registerAllHandlers() {
               const d = Number(sound.duration());
               cleanup();
               resolve(isFinite(d) ? d : 0);
-            } catch (err) {
+            } catch (_err) {
               cleanup();
               resolve(0);
             }
@@ -1290,7 +1290,7 @@ function registerAllHandlers() {
     }
   });
 
-  ipcMain.handle('delete-category', async (event, code, description) => {
+  ipcMain.handle('delete-category', async (event, code, _description) => {
     try {
       if (!db) {
         throw new Error('Database not initialized');
@@ -1544,7 +1544,7 @@ function registerAllHandlers() {
         return { success: true, data: false };
       }
       const ext = path.extname(filePath).toLowerCase();
-      const validExtensions = ['.mp3', '.mp4', '.m4a', '.wav', '.ogg', '.flac'];
+      const validExtensions = ['.mp3', '.mp4', '.m4a', '.wav', '.ogg', '.flac', '.opus'];
       return { success: true, data: validExtensions.includes(ext) };
     } catch (error) {
       debugLog?.error('Validate audio file error:', { module: 'ipc-handlers', function: 'validate-audio-file', error: error.message });
@@ -1819,7 +1819,13 @@ function registerAllHandlers() {
       });
       
       const saveResult = await profileManager.saveProfilePreferences(profileName, updatedPreferences);
-      
+
+      // Sync prerelease_updates to the global store so the auto-updater picks it up
+      // (auto-updater reads from store.get('prerelease_updates'), not profile preferences)
+      if ('prerelease_updates' in preferencesObject) {
+        store.set('prerelease_updates', preferencesObject.prerelease_updates);
+      }
+
       debugLog?.info('[PROFILE-PREF] Save completed', {
         module: 'ipc-handlers',
         function: 'profile:set-preferences',
@@ -1827,8 +1833,8 @@ function registerAllHandlers() {
         saveSuccess: saveResult,
         savedFadeOut: updatedPreferences.fade_out_seconds
       });
-      
-      debugLog?.info('[PROFILE-PREF] Multiple preferences saved successfully', { 
+
+      debugLog?.info('[PROFILE-PREF] Multiple preferences saved successfully', {
         module: 'ipc-handlers',
         function: 'profile:set-preferences',
         profileName
@@ -2189,7 +2195,7 @@ function registerAllHandlers() {
   });
 
   // Profile Backup: Create backup
-  ipcMain.handle('profile:createBackup', async (event) => {
+  ipcMain.handle('profile:createBackup', async (_event) => {
     try {
       const mainModule = await import('../index-modular.js');
       const currentProfile = mainModule.getCurrentProfile();
@@ -2234,7 +2240,7 @@ function registerAllHandlers() {
   });
 
   // Profile Backup: List backups
-  ipcMain.handle('profile:listBackups', async (event) => {
+  ipcMain.handle('profile:listBackups', async (_event) => {
     try {
       const mainModule = await import('../index-modular.js');
       const currentProfile = mainModule.getCurrentProfile();
@@ -2263,7 +2269,7 @@ function registerAllHandlers() {
   });
 
   // Profile Backup: Get backup metadata
-  ipcMain.handle('profile:getBackupMetadata', async (event) => {
+  ipcMain.handle('profile:getBackupMetadata', async (_event) => {
     try {
       const mainModule = await import('../index-modular.js');
       const currentProfile = mainModule.getCurrentProfile();
@@ -2363,7 +2369,7 @@ function registerAllHandlers() {
   });
 
   // Profile Backup: Get backup settings
-  ipcMain.handle('profile:getBackupSettings', async (event) => {
+  ipcMain.handle('profile:getBackupSettings', async (_event) => {
     try {
       const mainModule = await import('../index-modular.js');
       const currentProfile = mainModule.getCurrentProfile();
@@ -2431,10 +2437,93 @@ function registerAllHandlers() {
     }
   });
 
-  debugLog?.info('✅ Secure IPC handlers registered successfully', { 
-    module: 'ipc-handlers', 
+  // Library Transfer handlers
+  ipcMain.handle('library:export', async () => {
+    try {
+      const result = await dialog.showSaveDialog(mainWindow, {
+        buttonLabel: 'Export',
+        filters: [{ name: 'Mx. Voice Library', extensions: ['mxvlib'] }],
+        defaultPath: path.join(app.getPath('documents'), 'MxVoice-Library.mxvlib'),
+        message: 'Choose where to save your library export'
+      });
+
+      if (result.canceled) {
+        return { success: false, canceled: true };
+      }
+
+      const progressCallback = (progress) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('library:export-progress', progress);
+        }
+      };
+
+      return await libraryTransferManager.exportLibrary(result.filePath, progressCallback);
+    } catch (error) {
+      debugLog?.error('Library export handler error:', {
+        module: 'ipc-handlers', function: 'library:export', error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('library:import', async () => {
+    try {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        buttonLabel: 'Import',
+        filters: [{ name: 'Mx. Voice Library', extensions: ['mxvlib'] }],
+        message: 'Select a Mx. Voice library file to import',
+        properties: ['openFile']
+      });
+
+      if (result.canceled || !result.filePaths.length) {
+        return { success: false, canceled: true };
+      }
+
+      const archivePath = result.filePaths[0];
+
+      // Notify the renderer that validation is starting so it can show a loading modal
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('library:import-progress', {
+          percent: 0,
+          message: 'Validating library file...'
+        });
+      }
+
+      const validation = await libraryTransferManager.validateArchive(archivePath);
+      if (!validation.success) {
+        return validation;
+      }
+
+      return { success: true, archivePath, manifest: validation.manifest };
+    } catch (error) {
+      debugLog?.error('Library import handler error:', {
+        module: 'ipc-handlers', function: 'library:import', error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('library:import-confirm', async (_event, archivePath) => {
+    try {
+      const progressCallback = (progress) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('library:import-progress', progress);
+        }
+      };
+
+      return await libraryTransferManager.importLibrary(archivePath, progressCallback);
+    } catch (error) {
+      debugLog?.error('Library import confirm handler error:', {
+        module: 'ipc-handlers', function: 'library:import-confirm', error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  debugLog?.info('✅ Secure IPC handlers registered successfully', {
+    module: 'ipc-handlers',
     function: 'registerAllHandlers',
-    secureHandlersCount: 54
+    secureHandlersCount: 57
   });
 
   debugLog?.info('✅ All IPC handlers registered successfully (context isolation ready)', { 
@@ -2538,12 +2627,17 @@ function removeAllHandlers() {
   ipcMain.removeHandler('profile:getBackupSettings');
   ipcMain.removeHandler('profile:saveBackupSettings');
   
+  // Library Transfer handlers
+  ipcMain.removeHandler('library:export');
+  ipcMain.removeHandler('library:import');
+  ipcMain.removeHandler('library:import-confirm');
+
   // Remove legacy event listeners
   ipcMain.removeAllListeners('open-hotkey-file');
   ipcMain.removeAllListeners('save-hotkey-file');
   ipcMain.removeAllListeners('open-holding-tank-file');
   ipcMain.removeAllListeners('save-holding-tank-file');
-  
+
   debugLog?.info('IPC handlers removed successfully', { module: 'ipc-handlers', function: 'removeAllHandlers' });
 }
 

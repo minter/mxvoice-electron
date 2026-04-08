@@ -7,8 +7,6 @@
  */
 
 // Import secure adapters for Phase 2 migration
-import { secureDatabase } from '../adapters/secure-adapter.js';
-
 // Import debug logger
 let debugLog = null;
 try {
@@ -16,12 +14,9 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
-
-// Import shared state
-import sharedState from '../shared-state.js';
 
 /**
  * Perform advanced search with multiple filters
@@ -30,7 +25,7 @@ import sharedState from '../shared-state.js';
  * @param {Object} filters - Search filters object
  * @returns {Promise<Array>} - Array of search results
  */
-async function performAdvancedSearch(filters) {
+async function performAdvancedSearch(_filters) {
   try {
     debugLog?.info("performAdvancedSearch called", { 
       module: 'advanced-search',

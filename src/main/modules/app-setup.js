@@ -54,6 +54,7 @@ function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScr
   const windowOptions = {
     width,
     height,
+    icon: path.join(__dirname, '../../assets/icons/mxvoice.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -411,6 +412,27 @@ async function loadWindowState(storeInstance = store, currentProfile = null) {
 function createApplicationMenu() {
   const application_menu = [
     {
+      label: "File",
+      submenu: [
+        {
+          label: "Export Library...",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:export-library');
+            }
+          },
+        },
+        {
+          label: "Import Library...",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:import-library');
+            }
+          },
+        },
+      ],
+    },
+    {
       label: "Edit",
       submenu: [
         {
@@ -648,6 +670,12 @@ function createApplicationMenu() {
           role: 'about'
         },
         {
+          label: 'Documentation',
+          click: () => {
+            shell.openExternal('https://mxvoice.app/docs/');
+          }
+        },
+        {
           label: 'Release Notes',
           click: () => {
             shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
@@ -662,13 +690,13 @@ function createApplicationMenu() {
         {
           label: 'Export Logs',
           click: async () => {
-            try { 
-              await getLogService()?.exportLogs({ days: 7 }); 
+            try {
+              await getLogService()?.exportLogs({ days: 7 });
             } catch (error) {
-              debugLog.warn('Failed to export logs from menu', { 
-                module: 'app-setup', 
+              debugLog.warn('Failed to export logs from menu', {
+                module: 'app-setup',
                 function: 'exportLogs',
-                error: error?.message || 'Unknown error' 
+                error: error?.message || 'Unknown error'
               });
             }
           }
@@ -712,28 +740,30 @@ function createApplicationMenu() {
       ]
     });
   } else {
-    application_menu[0].submenu.push(
-      {
-        type: 'separator'
-      },
-      {
-        label: 'Preferences',
-        click: () => {
-          mainWindow.webContents.send('show_preferences');
-        }
-      }
-    )
-    const name = app.name;
-
-    application_menu.unshift({
-      label: 'File',
-      submenu: [
+    // Add Preferences to Edit menu on Windows/Linux
+    const editMenu = application_menu.find(m => m.label === 'Edit');
+    if (editMenu) {
+      editMenu.submenu.push(
+        { type: 'separator' },
         {
-          role: 'quit'
+          label: 'Preferences',
+          click: () => {
+            mainWindow.webContents.send('show_preferences');
+          }
         }
-      ]
-    })
+      );
+    }
 
+    // Add quit to the File menu on Windows/Linux
+    const fileMenu = application_menu.find(m => m.label === 'File');
+    if (fileMenu) {
+      fileMenu.submenu.push(
+        { type: 'separator' },
+        { role: 'quit' }
+      );
+    }
+
+    const name = app.name;
     application_menu.push({
       label: 'Help',
       role: 'help',
@@ -742,6 +772,12 @@ function createApplicationMenu() {
           label: 'About ' + name,
           click: () => {
             showAboutDialog();
+          }
+        },
+        {
+          label: 'Documentation',
+          click: () => {
+            shell.openExternal('https://mxvoice.app/docs/');
           }
         },
         {
@@ -759,13 +795,13 @@ function createApplicationMenu() {
         {
           label: 'Export Logs',
           click: async () => {
-            try { 
-              await getLogService()?.exportLogs({ days: 7 }); 
+            try {
+              await getLogService()?.exportLogs({ days: 7 });
             } catch (error) {
-              debugLog.warn('Failed to export logs from menu', { 
-                module: 'app-setup', 
+              debugLog.warn('Failed to export logs from menu', {
+                module: 'app-setup',
                 function: 'exportLogs',
-                error: error?.message || 'Unknown error' 
+                error: error?.message || 'Unknown error'
               });
             }
           }
@@ -799,7 +835,7 @@ function showAboutDialog() {
       parent: mainWindow,
       modal: true,
       width: 460,
-      height: 360,
+      height: 400,
       resizable: false,
       minimizable: false,
       maximizable: false,
@@ -864,6 +900,15 @@ function showAboutDialog() {
           });
         }
 
+        // Documentation link
+        const docsLink = document.getElementById('docs-link');
+        if (docsLink) {
+          docsLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.aboutAPI.openExternal('https://mxvoice.app/docs/');
+          });
+        }
+
         // Support link
         const supportLink = document.getElementById('support-link');
         if (supportLink) {
@@ -889,6 +934,10 @@ function showAboutDialog() {
       <div class="section">
         <div class="heading">Website</div>
         <a class="link" id="website-link" href="https://mxvoice.app/">https://mxvoice.app/</a>
+      </div>
+      <div class="section">
+        <div class="heading">Documentation</div>
+        <a class="link" id="docs-link" href="https://mxvoice.app/docs/">https://mxvoice.app/docs/</a>
       </div>
       <div class="section">
         <div class="heading">Support</div>

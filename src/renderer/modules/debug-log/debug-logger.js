@@ -61,7 +61,7 @@ function initializeDebugLogger(options = {}) {
       } else {
         debugEnabledCache = true; // Default to enabled if no store available
       }
-    } catch (error) {
+    } catch (_error) {
       // Note: This is the fallback for when debug logging fails - avoid infinite recursion
       // In production, this should rarely be reached
       debugEnabledCache = true; // Default to enabled on error
@@ -94,7 +94,7 @@ function initializeDebugLogger(options = {}) {
         // In production, this should rarely be reached
         return false;
       }
-    } catch (error) {
+    } catch (_error) {
               // Note: This is the fallback for when debug logging fails - avoid infinite recursion
         // In production, this should rarely be reached
       return false;
@@ -151,12 +151,12 @@ function initializeDebugLogger(options = {}) {
    */
   function error(message, context = null) {
     if (currentLogLevel >= LOG_LEVELS.ERROR) {
-      const formattedMessage = formatLogMessage('ERROR', message, context);
+      formatLogMessage('ERROR', message, context);
               // Note: This is the fallback for when debug logging fails - avoid infinite recursion
         // In production, this should rarely be reached
-      try { 
-        electronAPI?.logs?.write('ERROR', message, context, { source: 'app' }); 
-      } catch (_) {
+      try {
+        electronAPI?.logs?.write('ERROR', message, context, { source: 'app' });
+      } catch (_e) {
         // Intentional fallback to prevent infinite recursion in debug logger
         // This catch block prevents the debug logger from crashing when logging fails
       }
@@ -173,10 +173,10 @@ function initializeDebugLogger(options = {}) {
     if (currentLogLevel >= LOG_LEVELS.WARN) {
       const formattedMessage = formatLogMessage('WARN', message, context);
       // Output to console for immediate visibility during development
-      console.warn(formattedMessage);
-      try { 
-        electronAPI?.logs?.write('WARN', message, context, { source: 'app' }); 
-      } catch (_) {
+      console.warn(formattedMessage); // eslint-disable-line no-console
+      try {
+        electronAPI?.logs?.write('WARN', message, context, { source: 'app' });
+      } catch (_e) {
         // Intentional fallback to prevent infinite recursion in debug logger
         // This catch block prevents the debug logger from crashing when logging fails
       }
@@ -195,10 +195,10 @@ function initializeDebugLogger(options = {}) {
       if (debugEnabled) {
         const formattedMessage = formatLogMessage('INFO', message, context);
         // Output to console for immediate visibility during development
-        console.info(formattedMessage);
-        try { 
-          electronAPI?.logs?.write('INFO', message, context, { source: 'app' }); 
-        } catch (_) {
+        console.info(formattedMessage); // eslint-disable-line no-console
+        try {
+          electronAPI?.logs?.write('INFO', message, context, { source: 'app' });
+        } catch (_e) {
           // Intentional fallback to prevent infinite recursion in debug logger
           // This catch block prevents the debug logger from crashing when logging fails
         }
@@ -216,12 +216,12 @@ function initializeDebugLogger(options = {}) {
     if (currentLogLevel >= LOG_LEVELS.DEBUG) {
       const debugEnabled = await isDebugEnabled();
       if (debugEnabled) {
-        const formattedMessage = formatLogMessage('DEBUG', message, context);
+        formatLogMessage('DEBUG', message, context);
         // Note: This is the fallback for when debug logging fails - avoid infinite recursion
         // In production, this should rarely be reached
-        try { 
-          electronAPI?.logs?.write('DEBUG', message, context, { source: 'app' }); 
-        } catch (_) {
+        try {
+          electronAPI?.logs?.write('DEBUG', message, context, { source: 'app' });
+        } catch (_e) {
           // Intentional fallback to prevent infinite recursion in debug logger
           // This catch block prevents the debug logger from crashing when logging fails
         }

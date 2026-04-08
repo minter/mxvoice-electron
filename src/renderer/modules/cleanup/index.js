@@ -44,7 +44,7 @@ function initializeCleanup(dependencies = {}) {
  * Handle beforeunload event
  * @param {Event} event - The beforeunload event
  */
-function handleBeforeUnload(event) {
+function handleBeforeUnload(_event) {
   debugLog?.info('Window closing, performing cleanup', {
     module: 'cleanup',
     function: 'handleBeforeUnload'

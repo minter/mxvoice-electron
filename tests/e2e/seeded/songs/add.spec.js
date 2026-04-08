@@ -11,15 +11,6 @@ test.describe('Songs - add', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    // Ensure clean test environment before each test sequence
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for songs tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-    
     ({ app, page } = await launchSeededApp(electron, 'songs'));
   });
 
@@ -31,16 +22,15 @@ test.describe('Songs - add', () => {
       if (modalVisible) {
         try {
           await page.locator('#songFormModal .btn-close').click();
-          await page.waitForTimeout(500);
+          await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
         } catch (e) {
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(500);
+          await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
         }
       }
-      
+
       // Wait for page to be ready
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(1000);
     } catch (error) {
       console.log('Setup cleanup failed, continuing:', error.message);
     }
@@ -121,57 +111,53 @@ test.describe('Songs - add', () => {
     const triggerMenuItem = async () => {
       // First, ensure the page is in a clean state
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(1000); // Give extra time for any async operations
-      
+
       // Verify the modal is not already visible
       const modalVisible = await page.locator('#songFormModal').isVisible();
       if (modalVisible) {
         console.log('Modal already visible, closing it first...');
         try {
           await page.locator('#songFormModal .btn-close').click();
-          await page.waitForTimeout(500);
+          await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
         } catch (e) {
           // If close button not found, try pressing Escape
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(500);
+          await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
         }
       }
-      
+
       const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
         const menu = Menu.getApplicationMenu();
-        
+
         // Find the "Add Song" menu item in the Songs submenu
         const songsSubmenu = menu?.items?.find(item => item.label === 'Songs');
         const addSongItem = songsSubmenu?.submenu?.items?.find(item => item.label === 'Add Song');
-        
+
         if (!addSongItem) return { ok: false, reason: 'Add Song menu item not found' };
-        
+
         const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
         if (!win) return { ok: false, reason: 'No focused window' };
-        
+
         // @ts-ignore
         addSongItem.click({}, win, win.webContents);
         return { ok: true };
       });
-      
+
       if (!res.ok) {
         throw new Error(`Menu item trigger failed: ${res.reason}`);
       }
-      
-      // Wait for the IPC message to be processed
-      await page.waitForTimeout(1000);
     };
-    
+
     await triggerMenuItem();
 
-    // 4) Since the modal is showing up, the IPC message worked! 
+    // 4) Since the modal is showing up, the IPC message worked!
     // Let's verify the modal content directly
-    
+
     // Wait for the modal to be visible with a longer timeout and retry logic
     let modalVisible = false;
     let attempts = 0;
     const maxAttempts = 3;
-    
+
     while (!modalVisible && attempts < maxAttempts) {
       attempts++;
       try {
@@ -184,15 +170,11 @@ test.describe('Songs - add', () => {
         if (attempts < maxAttempts) {
           console.log('Retrying menu trigger...');
           await triggerMenuItem();
-          await page.waitForTimeout(2000);
         } else {
           throw new Error(`Modal failed to appear after ${maxAttempts} attempts: ${error.message}`);
         }
       }
     }
-    
-    // Ensure the modal is fully loaded and interactive
-    await page.waitForTimeout(500);
     
     // Wait for the title to be populated
     await expect(page.locator('#songFormModalTitle')).toContainText('Add New Song', { timeout: 5000 });
@@ -224,20 +206,14 @@ test.describe('Songs - add', () => {
     await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
     
     // 8) Verify the song appears in the search results
-    
-    // Wait for the search results to update
-    await page.waitForTimeout(1000);
-    
+
     // Look for the new song in the search results
     await expect(page.locator('#search_results')).toContainText('Shame On You');
     await expect(page.locator('#search_results')).toContainText('Indigo Girls');
     await expect(page.locator('#search_results')).toContainText('Test');
     
     // 9) Verify the song file exists in the test music directory
-    
-    // Wait a bit longer for file operations to complete
-    await page.waitForTimeout(2000);
-    
+
     // Get the music directory from the store
     const musicDirResult = await page.evaluate(async () => {
       if (window.secureElectronAPI?.store?.get) {
@@ -309,10 +285,10 @@ test.describe('Songs - add', () => {
       console.log('Modal still visible after test, closing...');
       try {
         await page.locator('#songFormModal .btn-close').click();
-        await page.waitForTimeout(500);
+        await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
       } catch (e) {
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
+        await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
       }
     }
   });
@@ -369,53 +345,49 @@ test.describe('Songs - add', () => {
     const triggerMenuItemCancel = async () => {
       // First, ensure the page is in a clean state
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(1000);
-      
+
       // Verify the modal is not already visible
       const modalVisible = await page.locator('#songFormModal').isVisible();
       if (modalVisible) {
         console.log('Modal already visible, closing it first...');
         try {
           await page.locator('#songFormModal .btn-close').click();
-          await page.waitForTimeout(500);
+          await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
         } catch (e) {
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(500);
+          await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
         }
       }
-      
+
       const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
         const menu = Menu.getApplicationMenu();
-        
+
         // Find the "Add Song" menu item in the Songs submenu
         const songsSubmenu = menu?.items?.find(item => item.label === 'Songs');
         const addSongItem = songsSubmenu?.submenu?.items?.find(item => item.label === 'Add Song');
-        
+
         if (!addSongItem) return { ok: false, reason: 'Add Song menu item not found' };
-        
+
         const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
         if (!win) return { ok: false, reason: 'No focused window' };
-        
+
         // @ts-ignore
         addSongItem.click({}, win, win.webContents);
         return { ok: true };
       });
-      
+
       if (!res.ok) {
         throw new Error(`Menu item trigger failed: ${res.reason}`);
       }
-      
-      // Wait for the IPC message to be processed
-      await page.waitForTimeout(1000);
     };
-    
+
     await triggerMenuItemCancel();
 
     // 4) Wait for the modal to appear and verify John Lennon song info
     let modalVisible = false;
     let attempts = 0;
     const maxAttempts = 3;
-    
+
     while (!modalVisible && attempts < maxAttempts) {
       attempts++;
       try {
@@ -428,15 +400,11 @@ test.describe('Songs - add', () => {
         if (attempts < maxAttempts) {
           console.log('Retrying menu trigger for cancel test...');
           await triggerMenuItemCancel();
-          await page.waitForTimeout(2000);
         } else {
           throw new Error(`Modal failed to appear after ${maxAttempts} attempts: ${error.message}`);
         }
       }
     }
-    
-    // Ensure the modal is fully loaded and interactive
-    await page.waitForTimeout(500);
     
     // Wait for the title to be populated
     await expect(page.locator('#songFormModalTitle')).toContainText('Add New Song', { timeout: 5000 });
@@ -463,10 +431,7 @@ test.describe('Songs - add', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('Lennon');
     await searchInput.press('Enter');
-    
-    // Wait for search results to update
-    await page.waitForTimeout(1000);
-    
+
     // Verify no search results contain "Lennon"
     const searchResults = page.locator('#search_results');
     await expect(searchResults).not.toContainText('John Lennon');
@@ -543,10 +508,10 @@ test.describe('Songs - add', () => {
       console.log('Modal still visible after cancel test, closing...');
       try {
         await page.locator('#songFormModal .btn-close').click();
-        await page.waitForTimeout(500);
+        await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
       } catch (e) {
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
+        await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
       }
     }
   });
@@ -615,52 +580,49 @@ test.describe('Songs - add', () => {
     // 3) Trigger the menu item that opens the dialog
     const triggerMenuItem = async () => {
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(1000);
-      
+
       // Verify the modal is not already visible
       const modalVisible = await page.locator('#songFormModal').isVisible();
       if (modalVisible) {
         console.log('Modal already visible, closing it first...');
         try {
           await page.locator('#songFormModal .btn-close').click();
-          await page.waitForTimeout(500);
+          await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
         } catch (e) {
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(500);
+          await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
         }
       }
-      
+
       const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
         const menu = Menu.getApplicationMenu();
-        
+
         // Find the "Add Song" menu item in the Songs submenu
         const songsSubmenu = menu?.items?.find(item => item.label === 'Songs');
         const addSongItem = songsSubmenu?.submenu?.items?.find(item => item.label === 'Add Song');
-        
+
         if (!addSongItem) return { ok: false, reason: 'Add Song menu item not found' };
-        
+
         const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
         if (!win) return { ok: false, reason: 'No focused window' };
-        
+
         // @ts-ignore
         addSongItem.click({}, win, win.webContents);
         return { ok: true };
       });
-      
+
       if (!res.ok) {
         throw new Error(`Menu item trigger failed: ${res.reason}`);
       }
-      
-      await page.waitForTimeout(1000);
     };
-    
+
     await triggerMenuItem();
 
     // 4) Wait for the modal to appear with retry logic
     let modalVisible = false;
     let attempts = 0;
     const maxAttempts = 3;
-    
+
     while (!modalVisible && attempts < maxAttempts) {
       attempts++;
       try {
@@ -673,15 +635,11 @@ test.describe('Songs - add', () => {
         if (attempts < maxAttempts) {
           console.log('Retrying menu trigger for OGG file...');
           await triggerMenuItem();
-          await page.waitForTimeout(2000);
         } else {
           throw new Error(`Modal failed to appear after ${maxAttempts} attempts: ${error.message}`);
         }
       }
     }
-    
-    // Ensure the modal is fully loaded and interactive
-    await page.waitForTimeout(500);
     
     // Wait for the title to be populated
     await expect(page.locator('#songFormModalTitle')).toContainText('Add New Song', { timeout: 5000 });
@@ -702,14 +660,10 @@ test.describe('Songs - add', () => {
     await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
     
     // 7) Verify the song appears in the search results
-    await page.waitForTimeout(1000);
-    
     await expect(page.locator('#search_results')).toContainText("Alice's Restaurant");
     await expect(page.locator('#search_results')).toContainText('Arlo Guthrie');
     
     // 8) Verify the OGG file exists in the test music directory
-    await page.waitForTimeout(2000);
-    
     const musicDirResult = await page.evaluate(async () => {
       if (window.secureElectronAPI?.store?.get) {
         return await window.secureElectronAPI.store.get('music_directory');
@@ -777,10 +731,10 @@ test.describe('Songs - add', () => {
       console.log('Modal still visible after OGG test, closing...');
       try {
         await page.locator('#songFormModal .btn-close').click();
-        await page.waitForTimeout(500);
+        await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
       } catch (e) {
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
+        await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
       }
     }
   });
@@ -788,7 +742,7 @@ test.describe('Songs - add', () => {
   test('Bulk add all test songs to new category "Another Category"', async () => {
     // 1) Stub dialog in main to return the test-songs directory
     const testSongsDir = path.resolve(__dirname, '../../../fixtures/test-songs');
-    
+
     await app.evaluate(async ({ dialog }) => {
       const original = dialog.showOpenDialog;
       // Save a restorer for later
@@ -807,78 +761,78 @@ test.describe('Songs - add', () => {
     // 2) Trigger the "Add All Songs In Directory" menu item
     const triggerBulkMenuItem = async () => {
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(1000);
-      
+
       const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
         const menu = Menu.getApplicationMenu();
-        
+
         // Find the "Add All Songs In Directory" menu item in the Songs submenu
         const songsSubmenu = menu?.items?.find(item => item.label === 'Songs');
         const bulkAddItem = songsSubmenu?.submenu?.items?.find(item => item.label === 'Add All Songs In Directory');
-        
+
         if (!bulkAddItem) return { ok: false, reason: 'Add All Songs In Directory menu item not found' };
-        
+
         const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
         if (!win) return { ok: false, reason: 'No focused window' };
-        
+
         // @ts-ignore
         bulkAddItem.click({}, win, win.webContents);
         return { ok: true };
       });
-      
+
       if (!res.ok) {
         throw new Error(`Bulk menu item trigger failed: ${res.reason}`);
       }
-      
-      await page.waitForTimeout(1000);
     };
-    
+
     await triggerBulkMenuItem();
 
-    // 3) Wait for the bulk add modal to appear
-    await expect(page.locator('#bulkAddModal')).toBeVisible({ timeout: 10000 });
-    
-    // 4) Create a new "Running Out" category
-    // This will generate a code like "RUNN" but display "Running Out"
+    // 3) Wait for the bulk add modal to appear and its Bootstrap fade animation to complete.
+    // The modal has class "modal fade" so we wait for it to gain the "show" class,
+    // which Bootstrap adds after the fade-in animation finishes.
+    await expect(page.locator('#bulkAddModal.show')).toBeVisible({ timeout: 15000 });
+
+    // 4) Create a new category — wait for the dropdown to be populated with the --NEW-- option
     const categorySelect = page.locator('#bulk-add-category');
-    
-    // Always create new category for this test
+    await expect(categorySelect.locator('option[value="--NEW--"]')).toBeAttached({ timeout: 10000 });
     await categorySelect.selectOption('--NEW--');
-    await page.waitForTimeout(500);
-    
+
     // Fill in the new category description - click first to ensure focus
     const newCategoryInput = page.locator('#bulk-song-form-new-category');
+    await expect(newCategoryInput).toBeVisible({ timeout: 5000 });
     await newCategoryInput.click();
     await newCategoryInput.fill('Another Category');
-    await page.waitForTimeout(500);
-    
+
     // 5) Click "Add All" button
     await page.locator('#bulkAddSubmitButton').click();
-    
-    // 6) Wait for the modal to close
+
+    // 6) Wait for the modal to close (saveBulkUpload hides it immediately)
     await expect(page.locator('#bulkAddModal')).not.toBeVisible({ timeout: 10000 });
-    
-    // 7) Wait for bulk processing to complete
-    await page.waitForTimeout(3000);
-    
-    // 8) Verify all 8 test songs appear in the "Another Category" category (including OGG file)
+
+    // 7) Wait for all 8 songs to be inserted into the results table.
+    // saveBulkUpload clears the tbody then calls addSongsByPath recursively,
+    // appending rows one at a time. We must wait for all 8 before searching,
+    // otherwise a search would clear the partially-populated table.
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(8, { timeout: 30000 });
+
+    // 8) Now do a search filtered to "Another Category" to verify the DB round-trip.
     // The category code will be "ANNO" (first 4 letters, no spaces, uppercase)
-    // but the UI displays "Another Category" (the description/name)
-    // so we select by the description in the dropdown
+    // but the UI displays "Another Category" (the description/name).
     const searchCategorySelect = page.locator('#category_select');
+
+    // Wait for the new category to appear in the search dropdown
+    await expect(searchCategorySelect.locator('option', { hasText: 'Another Category' }))
+      .toBeAttached({ timeout: 10000 });
     await searchCategorySelect.selectOption('Another Category');
-    await page.waitForTimeout(1000);
-    
-    // Clear any existing search terms
+
+    // Clear any existing search terms and trigger search
     const searchInput = page.locator('#omni_search');
     await searchInput.fill('');
     await searchInput.press('Enter');
-    await page.waitForTimeout(1000);
-    
-    // Verify we have exactly 8 results (7 MP3s + 1 OGG)
-    const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(8, { timeout: 10000 });
-    
+
+    // Verify we still have exactly 8 results after the search round-trip
+    await expect(rows).toHaveCount(8, { timeout: 15000 });
+
     // **CRITICAL TEST**: Verify that category NAME is displayed, not category CODE
     // The category column should show "Another Category" (description), NOT "ANNO" (code)
     const firstRow = rows.first();
@@ -897,7 +851,7 @@ test.describe('Songs - add', () => {
       expect(rowCatText).not.toBe('ANNO'); // Should not be the category code
       expect(rowCatText.length).toBeGreaterThan(2); // Should have some meaningful content
     }
-    
+
     // Verify specific songs are present (using actual metadata from the files)
     await expect(page.locator('#search_results')).toContainText("Alice's Restaurant"); // OGG file
     await expect(page.locator('#search_results')).toContainText('Eat It');
@@ -907,23 +861,23 @@ test.describe('Songs - add', () => {
     await expect(page.locator('#search_results')).toContainText('Shame On You');
     await expect(page.locator('#search_results')).toContainText('The Wheel (Back and Forth)');
     await expect(page.locator('#search_results')).toContainText('We Are Family');
-    
+
     // 9) Restore dialog
     await app.evaluate(() => { globalThis.__restoreBulkDialog?.(); });
-    
+
     // 10) Verify test environment is clean
     console.log('Bulk add test completed successfully, verifying clean state...');
-    
+
     // Ensure modal is closed
     const modalStillVisible = await page.locator('#bulkAddModal').isVisible();
     if (modalStillVisible) {
       console.log('Bulk modal still visible after test, closing...');
       try {
         await page.locator('#bulkAddModal .btn-close').click();
-        await page.waitForTimeout(500);
+        await expect(page.locator('#bulkAddModal')).not.toBeVisible({ timeout: 5000 });
       } catch (e) {
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
+        await expect(page.locator('#bulkAddModal')).not.toBeVisible({ timeout: 5000 });
       }
     }
   });

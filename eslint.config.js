@@ -43,7 +43,7 @@ export default [
       },
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
       'no-console': 'warn',
       'no-debugger': 'warn',
       'no-undef': 'error',
@@ -63,6 +63,7 @@ export default [
       'test-results/**',
       'scripts/**',
       'tests/**',
+      'src/preload/preload-bundle.cjs',
       '*.log',
       'yarn.lock',
     ],

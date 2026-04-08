@@ -5,6 +5,7 @@ updates:
   schedule:
     interval: daily
     time: "10:00"
+  versioning-strategy: increase
   open-pull-requests-limit: 10
   ignore:
   - dependency-name: music-metadata

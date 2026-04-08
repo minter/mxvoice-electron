@@ -14,7 +14,7 @@
  * @returns {Promise} - Promise that resolves when animation completes
  */
 export function animateCSS(element, animation, speed = "", prefix = 'animate__') {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     const animationName = `${prefix}${animation} ${speed}`.trim();
     
     // Handle both element objects and selector strings

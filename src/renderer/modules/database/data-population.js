@@ -7,7 +7,7 @@
  */
 
 // Import secure adapters for Phase 2 migration
-import { secureDatabase, secureStore } from '../adapters/secure-adapter.js';
+import { secureDatabase } from '../adapters/secure-adapter.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 
 // Import debug logger
@@ -17,17 +17,11 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
-// Import shared state
-import sharedState from '../shared-state.js';
 import Dom from '../dom-utils/index.js';
-
-// Global variables
-let fontSize = 11;
-let categories = {};
 
 /**
  * Add song to holding tank

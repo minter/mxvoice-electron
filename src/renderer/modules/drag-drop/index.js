@@ -15,7 +15,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -52,7 +52,7 @@ class DragDropModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     try {
       debugLog?.info('Drag & Drop module initializing...', { 
         module: 'drag-drop', 

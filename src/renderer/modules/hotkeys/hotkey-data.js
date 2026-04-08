@@ -18,21 +18,25 @@
  * @param {Object} options - Options object containing dependencies
  */
 function populateHotkeys(fkeys, title, options = {}) {
-  const { electronAPI, db, saveHotkeysToStore, setLabelFromSongId } = options;
-  
+  const { setLabelFromSongId } = options;
+
+  // Scope to the active hotkey tab to avoid duplicate ID issues across tabs
+  const activeTab = document.querySelector('#hotkey-tab-content .tab-pane.active.show')
+    || document.getElementById('hotkeys_list_1');
+
   for (const key in fkeys) {
     if (fkeys[key]) {
       try {
-        const el = document.getElementById(`${key}_hotkey`);
+        const el = activeTab?.querySelector(`[id^="${key}_hotkey"]`);
         if (el) el.setAttribute('songid', fkeys[key]);
         if (setLabelFromSongId && el) {
           setLabelFromSongId(fkeys[key], el);
         }
-      } catch (err) {
+      } catch (_err) {
         window.debugLog?.info(`Error loading fkey ${key} (DB ID: ${fkeys[key]})`, { module: 'hotkey-data', function: 'populateHotkeys' });
       }
     } else {
-      const el = document.getElementById(`${key}_hotkey`);
+      const el = activeTab?.querySelector(`[id^="${key}_hotkey"]`);
       if (el) {
         el.removeAttribute('songid');
         const span = el.querySelector('span');
@@ -55,7 +59,7 @@ function populateHotkeys(fkeys, title, options = {}) {
  * @param {Object} options - Options object containing dependencies
  */
 function setLabelFromSongId(song_id, element, options = {}) {
-  const { electronAPI, db, saveHotkeysToStore, fallbackSetLabelFromSongId } = options;
+  const { electronAPI, saveHotkeysToStore, fallbackSetLabelFromSongId } = options;
   
   window.debugLog?.info('[HOTKEY-SWAP] setLabelFromSongId called', {
     module: 'hotkey-data',
@@ -186,7 +190,7 @@ function setLabelFromSongId(song_id, element, options = {}) {
  * @param {jQuery} element - Hotkey element to update
  * @param {Object} options - Options object containing dependencies
  */
-function fallbackSetLabelFromSongId(song_id, element, options = {}) {
+function _fallbackSetLabelFromSongId(song_id, element, options = {}) {
   const { electronAPI, saveHotkeysToStore } = options;
   
   window.debugLog?.info('[HOTKEY-SWAP] fallbackSetLabelFromSongId called', {
@@ -308,8 +312,11 @@ async function clearHotkeys(options = {}) {
   
   const confirmed = await customConfirm("Are you sure you want clear your hotkeys?");
   if (confirmed) {
+    // Scope to the active hotkey tab
+    const activeTab = document.querySelector('#hotkey-tab-content .tab-pane.active.show')
+      || document.getElementById('hotkeys_list_1');
     for (let key = 1; key <= 12; key++) {
-      const li = document.getElementById(`f${key}_hotkey`);
+      const li = activeTab?.querySelector(`[id^="f${key}_hotkey"]`);
       if (li) {
         li.removeAttribute('songid');
         const span = li.querySelector('span');
@@ -329,9 +336,12 @@ async function clearHotkeys(options = {}) {
  * @returns {Object} - Object containing hotkey data
  */
 function getHotkeyData() {
+  // Scope to the active hotkey tab
+  const activeTab = document.querySelector('#hotkey-tab-content .tab-pane.active.show')
+    || document.getElementById('hotkeys_list_1');
   const hotkeyData = {};
   for (let key = 1; key <= 12; key++) {
-    const songId = document.getElementById(`f${key}_hotkey`)?.getAttribute('songid');
+    const songId = activeTab?.querySelector(`[id^="f${key}_hotkey"]`)?.getAttribute('songid');
     if (songId) {
       hotkeyData[`f${key}`] = songId;
     }
@@ -345,7 +355,7 @@ function getHotkeyData() {
  * 
  * @returns {string} - Current hotkey tab title
  */
-function getHotkeyTitle() {
+function _getHotkeyTitle() {
   return document.querySelector('#hotkey_tabs li a.active')?.textContent || '';
 }
 
@@ -359,21 +369,25 @@ function getHotkeyTitle() {
  */
 function setHotkeyData(hotkeyData, title, options = {}) {
   const { setLabelFromSongId } = options;
-  
+
+  // Scope to the active hotkey tab
+  const activeTab = document.querySelector('#hotkey-tab-content .tab-pane.active.show')
+    || document.getElementById('hotkeys_list_1');
+
   // Clear existing hotkeys
   for (let key = 1; key <= 12; key++) {
-    const li = document.getElementById(`f${key}_hotkey`);
+    const li = activeTab?.querySelector(`[id^="f${key}_hotkey"]`);
     if (li) {
       li.removeAttribute('songid');
       const span = li.querySelector('span');
       if (span) span.textContent = '';
     }
   }
-  
+
   // Set new hotkey data
   for (const key in hotkeyData) {
     if (hotkeyData[key]) {
-      const el = document.getElementById(`${key}_hotkey`);
+      const el = activeTab?.querySelector(`[id^="${key}_hotkey"]`);
       if (el) el.setAttribute('songid', hotkeyData[key]);
       if (setLabelFromSongId && el) {
         setLabelFromSongId(hotkeyData[key], el);

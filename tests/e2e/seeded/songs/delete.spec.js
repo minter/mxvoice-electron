@@ -2,25 +2,21 @@ import { _electron as electron, test, expect } from '@playwright/test';
 import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
 
 test.describe('Songs - delete', () => {
+  // Tests are ordered: first test deletes Anthrax, second test verifies cancel preserves
+  // Edie Brickell, third test uses Weird Al. They share one app for performance but
+  // MUST run in declared order.
+  test.describe.configure({ mode: 'serial' });
+
   let app; let page;
 
   test.beforeAll(async () => {
-    // Ensure clean test environment before each test sequence
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for songs delete tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-    
     ({ app, page } = await launchSeededApp(electron, 'songs-delete'));
-    
-    // After database reset, refresh the page to clear any cached search state
-    console.log('🔄 Refreshing page to clear search cache after database reset...');
+
+    // Refresh the page to clear any cached search state
+    console.log('🔄 Refreshing page to clear search cache...');
     await page.reload();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
     console.log('✅ Page refreshed and ready');
   });
 
@@ -40,29 +36,18 @@ test.describe('Songs - delete', () => {
     await searchInput.click();
     await searchInput.fill('');
     await searchInput.press('Enter');
-    await page.waitForTimeout(2000);
-    
+
     // Verify we have songs in the database
     const initialRows = page.locator('#search_results tbody tr');
+    await expect(initialRows.first()).toBeVisible({ timeout: 10000 });
     const initialCount = await initialRows.count();
     console.log(`🔍 Initial database state: ${initialCount} songs`);
-    
-    if (initialCount === 0) {
-      console.log('⚠️ No songs found in database, waiting longer...');
-      await page.waitForTimeout(3000);
-      const retryCount = await initialRows.count();
-      console.log(`🔍 After retry: ${retryCount} songs`);
-    }
     
     // Now search for "Anthrax"
     console.log('🔍 Searching for "Anthrax"...');
     await searchInput.click();
     await searchInput.fill('Anthrax');
     await searchInput.press('Enter');
-    
-    // Wait for search results with more debugging
-    console.log('⏳ Waiting for search results...');
-    await page.waitForTimeout(3000);
     
     // Debug: Check what's in the search input
     const searchValue = await searchInput.inputValue();
@@ -142,19 +127,13 @@ test.describe('Songs - delete', () => {
     const backdrop = page.locator('.modal-backdrop');
     await expect(backdrop).not.toBeVisible({ timeout: 5000 });
     
-    // Additional small wait to ensure all modal cleanup is complete
-    await page.waitForTimeout(300);
-    
     // 9) Do a search for "Anthrax" again
     console.log('🔍 Searching for "Anthrax" again to verify deletion...');
     
     await searchInput.click();
     await searchInput.fill('Anthrax');
     await searchInput.press('Enter');
-    
-    // Wait for search results to update
-    await page.waitForTimeout(1000);
-    
+
     // 10) Ensure no rows are returned
     const updatedRows = page.locator('#search_results tbody tr');
     await expect(updatedRows).toHaveCount(0, { timeout: 5000 });
@@ -231,10 +210,7 @@ test.describe('Songs - delete', () => {
     await searchInput.click();
     await searchInput.fill(''); // Clear any previous search
     await searchInput.press('Enter');
-    
-    // Wait for search results
-    await page.waitForTimeout(1000);
-    
+
     // 2) Record the initial number of songs (avoid cross-test assumptions)
     const rows = page.locator('#search_results tbody tr');
     const initialCount = await rows.count();
@@ -290,10 +266,7 @@ test.describe('Songs - delete', () => {
     await searchInput.click();
     await searchInput.fill('Edie');
     await searchInput.press('Enter');
-    
-    // Wait for search results to update
-    await page.waitForTimeout(1000);
-    
+
     // 10) There should be one search result
     const edieRows = page.locator('#search_results tbody tr');
     await expect(edieRows).toHaveCount(1, { timeout: 5000 });
@@ -308,7 +281,7 @@ test.describe('Songs - delete', () => {
     await searchInput.click();
     await searchInput.fill('');
     await searchInput.press('Enter');
-    await page.waitForTimeout(500);
+    await expect(page.locator('#search_results tbody tr').first()).toBeVisible({ timeout: 5000 });
     const afterCancelCount = await page.locator('#search_results tbody tr').count();
     expect(afterCancelCount).toBe(initialCount);
 
@@ -382,10 +355,7 @@ test.describe('Songs - delete', () => {
     await searchInput.click();
     await searchInput.fill('Eat It');
     await searchInput.press('Enter');
-    
-    // Wait for search results
-    await page.waitForTimeout(1000);
-    
+
     // 2) Verify exactly one result is returned
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(1, { timeout: 5000 });
@@ -401,10 +371,7 @@ test.describe('Songs - delete', () => {
     
     const eatItRow = page.locator('#search_results tbody tr').filter({ hasText: 'Eat It' });
     await eatItRow.click();
-    
-    // Wait a moment for the selection to be established
-    await page.waitForTimeout(500);
-    
+
     // 4) Press the Delete key
     console.log('⌨️ Pressing Delete key...');
     

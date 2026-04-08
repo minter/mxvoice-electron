@@ -79,13 +79,13 @@ test.describe('First run modal behavior', () => {
       // Try pressing Escape as a fallback
       if (await firstRunModal.isVisible()) {
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
+        await expect(firstRunModal).not.toBeVisible({ timeout: 1000 }).catch(() => {});
       }
-      
+
       // Try clicking outside the modal
       if (await firstRunModal.isVisible()) {
         await page.mouse.click(100, 100); // Click outside modal
-        await page.waitForTimeout(500);
+        await expect(firstRunModal).not.toBeVisible({ timeout: 1000 }).catch(() => {});
       }
     }
     
@@ -145,7 +145,7 @@ test.describe('First run modal behavior', () => {
     const triggerMenuItem = async () => {
       // First, ensure the page is in a clean state
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(1000); // Give extra time for any async operations
+      await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
       
       // Verify the modal is not already visible
       const modalVisible = await page.locator('#songFormModal').isVisible();
@@ -153,14 +153,14 @@ test.describe('First run modal behavior', () => {
         console.log('Modal already visible, closing it first...');
         try {
           await page.locator('#songFormModal .btn-close').click();
-          await page.waitForTimeout(500);
+          await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 2000 });
         } catch (e) {
           // If close button not found, try pressing Escape
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(500);
+          await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 2000 }).catch(() => {});
         }
       }
-      
+
       const res = await app.evaluate(async ({ Menu, BrowserWindow }) => {
         const menu = Menu.getApplicationMenu();
         
@@ -182,10 +182,8 @@ test.describe('First run modal behavior', () => {
         throw new Error(`Menu item trigger failed: ${res.reason}`);
       }
       
-      // Wait for the IPC message to be processed
-      await page.waitForTimeout(1000);
     };
-    
+
     await triggerMenuItem();
 
     // 6) Wait for the modal to appear and verify song info
@@ -201,8 +199,7 @@ test.describe('First run modal behavior', () => {
     await expect(page.locator('#songFormModal')).not.toBeVisible({ timeout: 5000 });
     
     // 9) Verify the song appears in the search results
-    await page.waitForTimeout(1000);
-    await expect(page.locator('#search_results')).toContainText('Shame On You');
+    await expect(page.locator('#search_results')).toContainText('Shame On You', { timeout: 10000 });
     await expect(page.locator('#search_results')).toContainText('Indigo Girls');
 
     // 10) Restore dialog
@@ -257,9 +254,9 @@ test.describe('First run modal behavior', () => {
     page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
 
-    // 13) Wait a reasonable time and verify the first run modal does NOT appear
-    await page.waitForTimeout(3000);
-    
+    // 13) Wait for app to fully initialize, then verify the first run modal does NOT appear
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
+
     // The modal should not be visible
     const modalAfterRestart = page.locator('#firstRunModal');
     await expect(modalAfterRestart).not.toBeVisible();

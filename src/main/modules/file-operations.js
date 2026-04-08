@@ -382,7 +382,7 @@ function addFileDialog() {
   dialog.showOpenDialog(mainWindow, {
     buttonLabel: 'Add',
     filters: [
-      { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav', 'ogg'] }
+      { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav', 'ogg', 'flac', 'opus'] }
     ],
     message: 'Choose audio file to add to Mx. Voice',
     properties: ['openFile']

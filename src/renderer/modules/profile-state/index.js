@@ -14,13 +14,13 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
 // Store module references for auto-save
-let hotkeysModuleRef = null;
-let holdingTankModuleRef = null;
+let _hotkeysModuleRef = null;
+let _holdingTankModuleRef = null;
 
 /**
  * Extract all hotkey tabs state
@@ -64,7 +64,7 @@ function extractHotkeyTabs() {
     
     // Extract all 12 hotkeys from this tab
     for (let key = 1; key <= 12; key++) {
-      const element = tabContent.querySelector(`#f${key}_hotkey`);
+      const element = tabContent.querySelector(`[id^="f${key}_hotkey"]`);
       if (element) {
         const songId = element.getAttribute('songid');
         if (songId) {
@@ -448,7 +448,7 @@ export async function saveProfileState() {
  * @param {Object} hotkeysModule - Hotkeys module instance
  * @returns {Promise<void>}
  */
-async function restoreHotkeyTabs(hotkeyTabs, hotkeysModule) {
+async function restoreHotkeyTabs(hotkeyTabs, _hotkeysModule) {
   debugLog?.info('[PROFILE-STATE] restoreHotkeyTabs called', {
     module: 'profile-state',
     function: 'restoreHotkeyTabs',
@@ -518,7 +518,7 @@ async function restoreHotkeyTabs(hotkeyTabs, hotkeysModule) {
 
             // Find the element in this specific tab (not relying on .active)
             const tabContent = document.getElementById(`hotkeys_list_${tabNumber}`);
-            const element = tabContent?.querySelector(`#${key}_hotkey`);
+            const element = tabContent?.querySelector(`[id^="${key}_hotkey"]`);
             
             if (element) {
               // Set the songid attribute
@@ -587,7 +587,7 @@ async function restoreHotkeyTabs(hotkeyTabs, hotkeysModule) {
  * @param {Object} holdingTankModule - Holding tank module instance
  * @returns {Promise<void>}
  */
-async function restoreHoldingTankTabs(holdingTankTabs, holdingTankModule) {
+async function restoreHoldingTankTabs(holdingTankTabs, _holdingTankModule) {
   debugLog?.info('[PROFILE-STATE] restoreHoldingTankTabs called', {
     module: 'profile-state',
     function: 'restoreHoldingTankTabs',
@@ -1335,13 +1335,13 @@ export function initializeProfileState({ hotkeysModule, holdingTankModule } = {}
   });
   
   // Store module references for auto-save
-  if (hotkeysModule) hotkeysModuleRef = hotkeysModule;
-  if (holdingTankModule) holdingTankModuleRef = holdingTankModule;
+  if (hotkeysModule) _hotkeysModuleRef = hotkeysModule;
+  if (holdingTankModule) _holdingTankModuleRef = holdingTankModule;
   
   // Save state before window closes (for quit, not for profile switch)
   // Note: beforeunload cannot reliably delay window close for async operations in Electron
   // The main process will handle waiting for the save to complete
-  window.addEventListener('beforeunload', (event) => {
+  window.addEventListener('beforeunload', (_event) => {
     debugLog?.info('[PROFILE-STATE] Window closing, extracting profile state for save', { 
       module: 'profile-state',
       function: 'beforeunload'

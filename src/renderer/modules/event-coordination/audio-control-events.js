@@ -77,7 +77,7 @@ export default class AudioControlEvents {
     };
 
     // Play button handler
-    const playButtonHandler = (event) => {
+    const playButtonHandler = (_event) => {
       try {
         this.debugLog?.debug('Play button clicked');
         this.debugLog?.debug('window.pausePlaying function', typeof window.pausePlaying);
@@ -175,7 +175,7 @@ export default class AudioControlEvents {
     };
 
     // Mute button handler
-    const muteButtonHandler = (event) => {
+    const muteButtonHandler = (_event) => {
       try {
         this.debugLog?.debug('Mute button clicked');
         
@@ -287,7 +287,7 @@ export default class AudioControlEvents {
    * Loop control events (lines 1073-1104 from renderer.js)
    */
   attachLoopControlEvents() {
-    const loopButtonHandler = (event) => {
+    const loopButtonHandler = (_event) => {
       try {
         this.debugLog?.debug('Loop button clicked');
         this.debugLog?.debug('window.loop_on function', typeof window.loop_on);
@@ -334,7 +334,7 @@ export default class AudioControlEvents {
    * Waveform display toggle events (lines 1106-1108 from renderer.js)
    */
   attachWaveformDisplayEvents() {
-    const waveformButtonHandler = (event) => {
+    const waveformButtonHandler = (_event) => {
       try {
         if (window.toggleWaveform) {
           window.toggleWaveform();

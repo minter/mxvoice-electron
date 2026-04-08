@@ -21,7 +21,7 @@ function truncateString(str) {
   try {
     const s = String(str);
     return s.length > MAX_STRING ? s.slice(0, MAX_STRING) + '…' : s;
-  } catch (e) {
+  } catch (_e) {
     return '[Unprintable]';
   }
 }
@@ -433,13 +433,25 @@ const secureElectronAPI = {
       ipcRenderer.on('menu:backup-settings', handler);
       return () => ipcRenderer.removeListener('menu:backup-settings', handler);
     },
-    
+
     onViewToggleSoundboardMode: (callback) => {
       const handler = (_event, ...args) => callback(...args);
       ipcRenderer.on('view:toggle-soundboard-mode', handler);
       return () => ipcRenderer.removeListener('view:toggle-soundboard-mode', handler);
     },
-    
+
+    onExportLibrary: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:export-library', handler);
+      return () => ipcRenderer.removeListener('menu:export-library', handler);
+    },
+
+    onImportLibrary: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:import-library', handler);
+      return () => ipcRenderer.removeListener('menu:import-library', handler);
+    },
+
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
   },
   
@@ -467,7 +479,24 @@ const secureElectronAPI = {
     getBackupSettings: () => ipcRenderer.invoke('profile:getBackupSettings'),
     saveBackupSettings: (settings) => ipcRenderer.invoke('profile:saveBackupSettings', settings)
   },
-  
+
+  // Library transfer functions
+  library: {
+    exportLibrary: () => ipcRenderer.invoke('library:export'),
+    importLibrary: () => ipcRenderer.invoke('library:import'),
+    confirmImport: (archivePath) => ipcRenderer.invoke('library:import-confirm', archivePath),
+    onExportProgress: (callback) => {
+      const handler = (_event, data) => callback(data);
+      ipcRenderer.on('library:export-progress', handler);
+      return () => ipcRenderer.removeListener('library:export-progress', handler);
+    },
+    onImportProgress: (callback) => {
+      const handler = (_event, data) => callback(data);
+      ipcRenderer.on('library:import-progress', handler);
+      return () => ipcRenderer.removeListener('library:import-progress', handler);
+    }
+  },
+
   // Utility functions
   utils: {
     generateId: () => ipcRenderer.invoke('generate-id'),
@@ -533,6 +562,7 @@ function exposeSecureAPI(injectedDebugLog) {
         utils: secureElectronAPI.utils,
         testing: secureElectronAPI.testing,
         profile: secureElectronAPI.profile,
+        library: secureElectronAPI.library,
         // Provide logs under legacy namespace for compatibility with existing renderer code
         logs: secureElectronAPI.logs
       });

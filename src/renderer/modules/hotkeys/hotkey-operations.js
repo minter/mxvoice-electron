@@ -19,7 +19,7 @@ import { secureFileDialog } from '../adapters/secure-adapter.js';
  * @param {Object} options - Options object containing dependencies
  */
 function saveHotkeysToStore(options = {}) {
-  const { electronAPI, store } = options;
+  const { electronAPI } = options;
   
   const col = document.getElementById('hotkeys-column');
   const currentHtml = col ? col.innerHTML : '';
@@ -147,7 +147,7 @@ function saveHotkeyFile() {
     
     if (activeTabContent) {
       // Look for hotkey element within the active tab content first
-      element = activeTabContent.querySelector(`#f${key}_hotkey`);
+      element = activeTabContent.querySelector(`[id^="f${key}_hotkey"]`);
       if (element) {
         songId = element.getAttribute('songid');
         window.debugLog?.info(`Hotkey ${key} found in active tab:`, { 
@@ -160,14 +160,15 @@ function saveHotkeyFile() {
       }
     }
     
-    // Fallback to global search if not found in active tab
+    // Fallback to tab 1 if not found in active tab
     if (!element) {
-      element = document.getElementById(`f${key}_hotkey`);
+      const tab1 = document.getElementById('hotkeys_list_1');
+      element = tab1?.querySelector(`#f${key}_hotkey`);
       if (element) {
         songId = element.getAttribute('songid');
-        window.debugLog?.info(`Hotkey ${key} found globally (fallback):`, { 
-          module: 'hotkey-operations', 
-          function: 'saveHotkeyFile', 
+        window.debugLog?.info(`Hotkey ${key} found in tab 1 (fallback):`, {
+          module: 'hotkey-operations',
+          function: 'saveHotkeyFile',
           key: key,
           songId: songId,
           foundInActiveTab: false
@@ -239,7 +240,7 @@ function getHotkeyElementFromActiveTab(hotkey) {
   const activeTabContent = document.getElementById(tabId);
   if (!activeTabContent) return null;
   
-  return activeTabContent.querySelector(`#${hotkey}_hotkey`);
+  return activeTabContent.querySelector(`[id^="${hotkey}_hotkey"]`);
 }
 
 /**
@@ -249,7 +250,7 @@ function getHotkeyElementFromActiveTab(hotkey) {
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  * @param {Object} options - Options object containing dependencies
  */
-function playSongFromHotkey(hotkey, options = {}) {
+function playSongFromHotkey(hotkey, _options = {}) {
   window.debugLog?.info("Getting song ID from hotkey " + hotkey + " in active tab", { module: 'hotkey-operations', function: 'playSongFromHotkey' });
   
   // Get hotkey element from active tab only
@@ -328,8 +329,10 @@ function exportHotkeyConfig() {
     timestamp: new Date().toISOString()
   };
   
+  const activeTab = document.querySelector('#hotkey-tab-content .tab-pane.active.show')
+    || document.getElementById('hotkeys_list_1');
   for (let key = 1; key <= 12; key++) {
-    const songId = document.getElementById(`f${key}_hotkey`)?.getAttribute('songid');
+    const songId = activeTab?.querySelector(`[id^="f${key}_hotkey"]`)?.getAttribute('songid');
     if (songId) {
       config.hotkeys[`f${key}`] = songId;
     }
@@ -353,23 +356,27 @@ function importHotkeyConfig(config, options = {}) {
     return;
   }
   
+  // Scope to the active hotkey tab
+  const activeTab = document.querySelector('#hotkey-tab-content .tab-pane.active.show')
+    || document.getElementById('hotkeys_list_1');
+
   // Clear existing hotkeys
   for (let key = 1; key <= 12; key++) {
-    const li = document.getElementById(`f${key}_hotkey`);
+    const li = activeTab?.querySelector(`[id^="f${key}_hotkey"]`);
     if (li) {
       li.removeAttribute('songid');
       const span = li.querySelector('span');
       if (span) span.textContent = '';
     }
   }
-  
+
   // Apply imported configuration
   for (const key in config.hotkeys) {
     if (config.hotkeys[key]) {
-      document.getElementById(`${key}_hotkey`)?.setAttribute('songid', config.hotkeys[key]);
-      if (setLabelFromSongId) {
-        const el = document.getElementById(`${key}_hotkey`);
-        if (el) setLabelFromSongId(config.hotkeys[key], el);
+      const el = activeTab?.querySelector(`[id^="${key}_hotkey"]`);
+      if (el) el.setAttribute('songid', config.hotkeys[key]);
+      if (setLabelFromSongId && el) {
+        setLabelFromSongId(config.hotkeys[key], el);
       }
     }
   }
@@ -392,7 +399,7 @@ function importHotkeyConfig(config, options = {}) {
  * 
  * @returns {Object} - Backup configuration object
  */
-function backupHotkeyConfig() {
+function _backupHotkeyConfig() {
   return {
     hotkeys: exportHotkeyConfig(),
     timestamp: new Date().toISOString(),
@@ -407,7 +414,7 @@ function backupHotkeyConfig() {
  * @param {Object} backup - Backup configuration object
  * @param {Object} options - Options object containing dependencies
  */
-function restoreHotkeyConfig(backup, options = {}) {
+function _restoreHotkeyConfig(backup, options = {}) {
   if (!backup || !backup.hotkeys) {
     window.debugLog?.warn('❌ Invalid backup configuration', { module: 'hotkey-operations', function: 'restoreHotkeyConfig' });
     return;
@@ -427,9 +434,11 @@ function clearHotkeyConfig(options = {}) {
   
   window.debugLog?.info('🧹 Clearing hotkey configuration...', { module: 'hotkey-operations', function: 'clearHotkeyConfig' });
   
-  // Clear all hotkey assignments
+  // Clear all hotkey assignments in the active tab
+  const activeTab = document.querySelector('#hotkey-tab-content .tab-pane.active.show')
+    || document.getElementById('hotkeys_list_1');
   for (let key = 1; key <= 12; key++) {
-    const li = document.getElementById(`f${key}_hotkey`);
+    const li = activeTab?.querySelector(`[id^="f${key}_hotkey"]`);
     if (li) {
       li.removeAttribute('songid');
       const span = li.querySelector('span');

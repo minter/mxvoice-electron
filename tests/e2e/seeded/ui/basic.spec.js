@@ -1,5 +1,5 @@
 import { _electron as electron, test, expect } from '@playwright/test';
-import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
+import { launchSeededApp, closeApp, waitForAppReady } from '../../../utils/seeded-launch.js';
 
 // UI tests: keep to pure UI wiring and states; avoid keyboard/playback/search flows covered elsewhere
 
@@ -7,22 +7,9 @@ test.describe('UI - basic', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-    } catch {}
-
     ({ app, page } = await launchSeededApp(electron, 'ui'));
 
-    await app.evaluate(async ({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
-      win.show();
-      if (win.isMinimized()) win.restore();
-      win.focus();
-    });
-    await page.bringToFront();
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(500);
+    await waitForAppReady(page, app);
   });
 
   test.afterAll(async () => {
@@ -81,15 +68,22 @@ test.describe('UI - basic', () => {
     await expect(title).toBeVisible();
     await expect(title).toBeFocused();
 
-    // Wait for the open animation to fully complete before toggling back
-    // (toggleAdvancedSearch uses animateCSS which is async)
-    await page.waitForTimeout(500);
+    // Wait for the open animation (fadeInDown) to fully complete before toggling
+    // back. animateCSS adds animate__animated during the animation and removes it
+    // on animationend. Toggling while the animation is in flight causes conflicts.
+    await page.waitForFunction(
+      () => !document.querySelector('#advanced-search')?.classList.contains('animate__animated'),
+      { timeout: 5000 }
+    );
 
-    // Toggle back to close
+    // Toggle back to close (use evaluate, same as open — btn.click() can be
+    // intercepted by tooltip or animation overlay)
     await page.evaluate(() => window.toggleAdvancedSearch());
 
+    // Wait for the close animation (fadeOutUp) to finish — Dom.hide is called
+    // inside the animateCSS .then() callback, so panel won't be hidden until done
     await expect(btn).toHaveAttribute('aria-expanded', 'false', { timeout: 5000 });
-    await expect(panel).toBeHidden();
+    await expect(panel).toBeHidden({ timeout: 5000 });
     await expect(omni).toBeVisible();
     await expect(omni).toBeFocused();
     await expect(title).toBeHidden();
@@ -106,7 +100,10 @@ test.describe('UI - basic', () => {
 
     // Toggle ON: should show waveform and button should get 'active' class
     await button.click();
-    await page.waitForTimeout(500); // Wait for fade-in animation to complete
+    await page.waitForFunction(
+      () => !document.querySelector('#waveform')?.classList.contains('hidden'),
+      { timeout: 5000 }
+    );
     const afterFirstToggleHidden = await waveform.evaluate((el) => el.classList.contains('hidden'));
     const buttonActive = await button.evaluate((el) => el.classList.contains('active'));
     console.log('After first toggle - hidden:', afterFirstToggleHidden, 'button active:', buttonActive);
@@ -115,8 +112,11 @@ test.describe('UI - basic', () => {
 
     // Toggle OFF: should hide waveform and button should lose 'active' class
     await button.click();
-    // Wait much longer for fade-out animation to complete and hidden class to be added
-    await page.waitForTimeout(2000); // Increased timeout for fade-out animation
+    // Wait for fade-out animation to complete and hidden class to be added
+    await page.waitForFunction(
+      () => document.querySelector('#waveform')?.classList.contains('hidden'),
+      { timeout: 5000 }
+    );
     const afterSecondToggleHidden = await waveform.evaluate((el) => el.classList.contains('hidden'));
     const buttonActiveAfter = await button.evaluate((el) => el.classList.contains('active'));
     console.log('After second toggle - hidden:', afterSecondToggleHidden, 'button active:', buttonActiveAfter);
@@ -134,7 +134,6 @@ test.describe('UI - basic', () => {
       const win = BrowserWindow.getAllWindows()[0];
       win.setSize(900, 600);
     });
-    await page.waitForTimeout(200);
 
     // Assert critical regions still visible/attached
     await expect(page.locator('#omni_search')).toBeVisible();
@@ -147,7 +146,6 @@ test.describe('UI - basic', () => {
       const win = BrowserWindow.getAllWindows()[0];
       win.setSize(1200, 800);
     });
-    await page.waitForTimeout(200);
 
     // Regions remain visible/attached
     await expect(page.locator('#omni_search')).toBeVisible();

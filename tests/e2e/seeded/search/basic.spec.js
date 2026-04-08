@@ -6,15 +6,6 @@ test.describe('Search - basic', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    // Ensure clean test environment before each test sequence
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for search tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-    
     ({ app, page } = await launchSeededApp(electron, 'search'));
   });
 
@@ -35,7 +26,7 @@ test.describe('Search - basic', () => {
     
     // Wait for the page to be fully ready
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
   
     // Optional: make animations instant in tests (prevents flakiness)
     await page.addStyleTag({ content: `
@@ -71,8 +62,6 @@ test.describe('Search - basic', () => {
       });
       if (!res.ok) throw new Error(`Menu item trigger failed: ${res.reason || 'Unknown error'}`);
       
-      // Wait a moment for the click to be processed
-      await page.waitForTimeout(500);
     };
   
     // First toggle
@@ -97,7 +86,6 @@ test.describe('Search - basic', () => {
         if (attempts < maxAttempts) {
           console.log('Retrying menu trigger...');
           await triggerMenuItem();
-          await page.waitForTimeout(1000);
         } else {
           throw new Error(`aria-expanded failed to change after ${maxAttempts} attempts: ${error.message}`);
         }
@@ -184,9 +172,7 @@ test.describe('Search - basic', () => {
   test('advanced search by artist', async () => {
     // 1) Click advanced search button
     await page.locator('#advanced_search_button').click();
-    // 2) Wait 2 seconds for animation/DOM stabilization
-    await page.waitForTimeout(2000);
-    // 3) Ensure artist field is visible
+    // 2) Ensure artist field is visible
     const artistInput = page.locator('#artist-search');
     await expect(artistInput).toBeVisible();
     // 4) Type Anthrax into artist field (live search should filter results)
@@ -206,8 +192,6 @@ test.describe('Search - basic', () => {
   test('reset with X and filter by Game category → 2 results', async () => {
     // Click the X reset button to clear any prior filters
     await page.locator('#reset_button').click();
-    // Human-ish pacing
-    await page.waitForTimeout(250);
 
     // Select the Game category (try by visible label first, then by value)
     const catSelect = page.locator('#category_select');
@@ -227,7 +211,6 @@ test.describe('Search - basic', () => {
   test('with Game selected, typing "Brickell" reduces results to 1', async () => {
     // Reset first
     await page.locator('#reset_button').click();
-    await page.waitForTimeout(250);
 
     // Select Game category
     const catSelect = page.locator('#category_select');
@@ -258,11 +241,9 @@ test.describe('Search - basic', () => {
   test('advanced date filter: past week → 4, past 3 months → 5', async () => {
     // Reset to a clean state
     await page.locator('#reset_button').click();
-    await page.waitForTimeout(250);
 
     // Open advanced search
     await page.locator('#advanced_search_button').click();
-    await page.waitForTimeout(500);
     await expect(page.locator('#advanced-search')).toBeVisible();
 
     // Choose "Added Past Week" (value 7)
@@ -283,7 +264,6 @@ test.describe('Search - basic', () => {
   test('live search with keystrokes', async () => {
     // Reset to a clean state
     await page.locator('#reset_button').click();
-    await page.waitForTimeout(250);
 
     // Go to the search bar
     const searchBar = page.locator('#omni_search');
@@ -292,13 +272,8 @@ test.describe('Search - basic', () => {
 
     // Send keystrokes "T", "h", "e" one by one
     await searchBar.type('T', { delay: 100 });
-    await page.waitForTimeout(200); // Wait for live search to process
-    
     await searchBar.type('h', { delay: 100 });
-    await page.waitForTimeout(200); // Wait for live search to process
-    
     await searchBar.type('e', { delay: 100 });
-    await page.waitForTimeout(500); // Wait for live search to process
 
     // Validate that there are three songs returned
     const rows = page.locator('#search_results tbody tr');
@@ -311,7 +286,6 @@ test.describe('Search - basic', () => {
 
     // Add an additional "m" keystroke (giving "Them")
     await searchBar.type('m', { delay: 100 });
-    await page.waitForTimeout(500); // Wait for live search to process
 
     // Validate that there is now one result
     await expect(rows).toHaveCount(1, { timeout: 5000 });
@@ -327,7 +301,6 @@ test.describe('Search - basic', () => {
   test('live search with category filter', async () => {
     // Reset to a clean state
     await page.locator('#reset_button').click();
-    await page.waitForTimeout(250);
 
     // Start with a blank search
     const searchBar = page.locator('#omni_search');
@@ -339,17 +312,11 @@ test.describe('Search - basic', () => {
     await catSelect.selectOption({ label: 'Game' }).catch(async () => {
       await catSelect.selectOption('GAME');
     });
-    await page.waitForTimeout(500); // Wait for category filter to apply
 
     // Send keystrokes "T", "h", "e" into the search bar
     await searchBar.type('T', { delay: 100 });
-    await page.waitForTimeout(200); // Wait for live search to process
-    
     await searchBar.type('h', { delay: 100 });
-    await page.waitForTimeout(200); // Wait for live search to process
-    
     await searchBar.type('e', { delay: 100 });
-    await page.waitForTimeout(500); // Wait for live search to process
 
     // Validate that there are two results: Got The Time, and The Wheel (Back And Forth)
     const rows = page.locator('#search_results tbody tr');
@@ -361,10 +328,7 @@ test.describe('Search - basic', () => {
 
     // Add the keystrokes " ", "w" (giving "The w")
     await searchBar.type(' ', { delay: 100 });
-    await page.waitForTimeout(200); // Wait for live search to process
-    
     await searchBar.type('w', { delay: 100 });
-    await page.waitForTimeout(500); // Wait for live search to process
 
     // Validate that there is one result - The Wheel (Back And Forth)
     await expect(rows).toHaveCount(1, { timeout: 5000 });

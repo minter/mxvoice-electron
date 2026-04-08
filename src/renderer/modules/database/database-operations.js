@@ -9,7 +9,7 @@
  */
 
 // Import secure adapters for Phase 2 migration
-import { secureDatabase, securePath, secureFileSystem, secureStore } from '../adapters/secure-adapter.js';
+import { secureDatabase } from '../adapters/secure-adapter.js';
 
 // Import debug logger
 let debugLog = null;
@@ -18,7 +18,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -449,8 +449,8 @@ function addSongsByPath(pathArray, category) {
       info: '',
       filename: newFilename,
       duration: durationString
-    }).then(result => {
-      debugLog?.info(`Song added to database: ${title}`, { 
+    }).then(_result => {
+      debugLog?.info(`Song added to database: ${title}`, {
         module: 'database-operations',
         function: 'addSongsByPath',
         title: title,

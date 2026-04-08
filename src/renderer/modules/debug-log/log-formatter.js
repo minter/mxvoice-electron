@@ -14,11 +14,11 @@ import { safeStringify } from './utils.js';
  * @returns {Object} Log formatter interface
  */
 function initializeLogFormatter(options = {}) {
-  const { 
-    showTimestamp = true, 
-    showLevel = true, 
+  const {
+    showTimestamp: _showTimestamp = true,
+    showLevel: _showLevel = true,
     timestampFormat = 'ISO',
-    maxContextLength = 200
+    maxContextLength: _maxContextLength = 200
   } = options;
 
   /**

@@ -32,7 +32,10 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
 
     await page.bringToFront();
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(
+      () => window.moduleRegistry?.hotkeys,
+      { timeout: 15000 }
+    );
   });
 
   test.afterAll(async () => {
@@ -43,7 +46,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
     // Ensure Tab 1 is active
     const tab1 = page.locator('#hotkey_tabs a[href="#hotkeys_list_1"]');
     await tab1.click();
-    await page.waitForTimeout(500);
 
     // Clear all hotkeys in Tab 1
     await page.evaluate(() => {
@@ -57,8 +59,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
         }
       }
     });
-
-    await page.waitForTimeout(500);
   });
 
   test('songid should persist when assigning duplicate songs in same tab', async () => {
@@ -75,7 +75,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
       }
     });
 
-    await page.waitForTimeout(500);
 
     // Verify F6 has songid
     const f6SongIdAfterFirst = await page.evaluate(() => {
@@ -97,8 +96,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
       }
     });
 
-    await page.waitForTimeout(500);
-
     // Step 3: Now assign song 1003 (same as F6) to F1 - this triggers the swap logic
     console.log('📌 Step 3: Assigning song 1003 to F1 (triggers swap logic with F6)');
     await page.evaluate(() => {
@@ -109,8 +106,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
         hotkeysModule.setLabelFromSongId('1003', f1);
       }
     });
-
-    await page.waitForTimeout(500);
 
     // Step 4: Verify BOTH F1 and F6 maintain their songid attributes
     const results = await page.evaluate(() => {
@@ -155,8 +150,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
       }
     });
 
-    await page.waitForTimeout(500);
-
     // Setup: Assign song 1005 to F7
     await page.evaluate(() => {
       const hotkeysModule = window.moduleRegistry?.hotkeys;
@@ -166,8 +159,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
       }
     });
 
-    await page.waitForTimeout(500);
-
     // Now assign song 1005 (same as F7) to F2 - this should trigger swap
     await page.evaluate(() => {
       const hotkeysModule = window.moduleRegistry?.hotkeys;
@@ -176,8 +167,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
         hotkeysModule.setLabelFromSongId('1005', f2);
       }
     });
-
-    await page.waitForTimeout(500);
 
     // Verify both hotkeys still have valid songids after the swap
     const songIds = await page.evaluate(() => {
@@ -218,8 +207,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
       }
     });
 
-    await page.waitForTimeout(500);
-
     // Then assign different songs to F6 and F12
     await page.evaluate(() => {
       const hotkeysModule = window.moduleRegistry?.hotkeys;
@@ -234,8 +221,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
         hotkeysModule.setLabelFromSongId('1003', f12);
       }
     });
-
-    await page.waitForTimeout(500);
 
     // Verify initial state
     const beforeSave = await page.evaluate(() => {
@@ -263,8 +248,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
       }
     });
 
-    await page.waitForTimeout(500);
-
     // Step 3: Clear ALL hotkeys (simulating a fresh start)
     await page.evaluate(() => {
       for (let key = 1; key <= 12; key++) {
@@ -278,8 +261,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
       }
       console.log('🧹 Cleared all hotkeys');
     });
-
-    await page.waitForTimeout(500);
 
     // Verify all cleared
     const afterClear = await page.evaluate(() => {
@@ -306,8 +287,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
         console.log('✅ Profile state restored');
       }
     });
-
-    await page.waitForTimeout(1000);
 
     // Step 5: Verify all songids were restored
     const afterRestore = await page.evaluate(() => {
@@ -362,8 +341,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
       }
     }, { songId: songA });
 
-    await page.waitForTimeout(1000);
-
     // Step 2: Setup F1 with Song B - DIFFERENT song!
     console.log(`📌 Step 2: Assigning Song B (id=${songB}) to F1`);
     await page.evaluate(({ songId }) => {
@@ -373,8 +350,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
         hotkeysModule.setLabelFromSongId(songId, f1);
       }
     }, { songId: songB });
-
-    await page.waitForTimeout(1000);
 
     // Verify both hotkeys have songs before the swap
     const beforeSwap = await page.evaluate(() => {
@@ -401,8 +376,6 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
         hotkeysModule.setLabelFromSongId(songId, f1);
       }
     }, { songId: songA });
-
-    await page.waitForTimeout(1000);
 
     // Step 4: Verify swap completed correctly
     const afterSwap = await page.evaluate(() => {

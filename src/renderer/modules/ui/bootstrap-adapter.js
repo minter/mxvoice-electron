@@ -5,7 +5,7 @@ let debugLog = null;
 // Intentional: debugLog may not exist yet during early module loading
 try {
   debugLog = window.debugLog || null;
-} catch (_) {}
+} catch (_) { /* debugLog may not exist during early module loading */ }
 
 export function showModal(selector, options = { backdrop: true, keyboard: true }) {
   const element = document.querySelector(selector);

@@ -29,7 +29,7 @@ export function initializeUI(options = {}) {
   const manager = uiManager({ electronAPI, db, store });
   const handlers = eventHandlers({ electronAPI, db, store });
   const uiControls = controls({ electronAPI, db, store });
-  const modalOps = modals({ electronAPI, db, store });
+  const _modalOps = modals({ electronAPI, db, store });
   
   return {
     // UI Manager functions

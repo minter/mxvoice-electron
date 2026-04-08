@@ -18,7 +18,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 
@@ -31,7 +31,7 @@ import { songDrag } from '../drag-drop/drag-drop-functions.js';
  * @param {Event} event - The drop event
  * @param {Object} options - Additional options
  */
-function hotkeyDrop(event, options = {}) {
+function hotkeyDrop(event, _options = {}) {
   event.preventDefault();
   const song_id = event.dataTransfer.getData('text');
   const target = event.currentTarget;
@@ -90,7 +90,7 @@ function switchToHotkeyTab(tab) {
  * 
  * @param {Object} options - Additional options
  */
-async function renameHotkeyTab(options = {}) {
+async function renameHotkeyTab(_options = {}) {
   const currentName = document.querySelector('#hotkey_tabs .nav-link.active')?.textContent || '';
   const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
   if (newName && newName.trim() !== "") {
@@ -161,6 +161,10 @@ function initHotkeyTabs() {
     const clone = base.cloneNode(true);
     clone.id = `hotkeys_list_${i}`;
     clone.classList.remove('show','active');
+    // Fix duplicate IDs: suffix cloned hotkey elements with _t{tabNum}
+    clone.querySelectorAll('[id$="_hotkey"]').forEach(el => {
+      el.id = el.id.replace('_hotkey', `_hotkey_t${i}`);
+    });
     const container = document.getElementById('hotkey-tab-content');
     container?.appendChild(clone);
   }
@@ -219,18 +223,18 @@ function getHotkeyElementFromActiveTab(hotkey) {
   const activeTabContent = getActiveHotkeyTabContent();
   if (!activeTabContent) return null;
   
-  return activeTabContent.querySelector(`#${hotkey}_hotkey`);
+  return activeTabContent.querySelector(`[id^="${hotkey}_hotkey"]`);
 }
 
 /**
  * Get hotkey element
- * Returns the jQuery element for a specific hotkey
- * 
+ * Returns the element for a specific hotkey in the active tab
+ *
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
- * @returns {jQuery} - Hotkey element
+ * @returns {Element|null} - Hotkey element
  */
 function getHotkeyElement(hotkey) {
-  return document.querySelector(`.hotkeys.active #${hotkey}_hotkey`);
+  return document.querySelector(`.hotkeys.active [id^="${hotkey}_hotkey"]`);
 }
 
 /**
@@ -275,7 +279,7 @@ function clearHotkeyHighlighting() {
  */
 function clearAllHotkeyHighlighting() {
   // Clear highlighting from all hotkey elements across all tabs
-  const hotkeyElements = document.querySelectorAll('[id$="_hotkey"]');
+  const hotkeyElements = document.querySelectorAll('[id*="_hotkey"]');
   let clearedCount = 0;
   
   hotkeyElements.forEach((item) => {
@@ -304,7 +308,7 @@ function clearAllHotkeyHighlighting() {
  * 
  * @param {Object} options - Additional options
  */
-function updateHotkeyDisplay(options = {}) {
+function updateHotkeyDisplay(_options = {}) {
   // Update hotkey labels and styling
   document.querySelectorAll('.hotkeys.active li').forEach((li) => {
     const songId = li.getAttribute('songid');
@@ -346,7 +350,7 @@ function createHotkeyElement(hotkey) {
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  */
 function removeHotkeyElement(hotkey) {
-  const el = document.getElementById(`${hotkey}_hotkey`);
+  const el = getHotkeyElementFromActiveTab(hotkey);
   el?.parentElement?.removeChild(el);
 }
 
@@ -381,7 +385,7 @@ function setHotkeySongId(hotkey, songId) {
  * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
  */
 function clearHotkeySongId(hotkey) {
-  const el = document.getElementById(`${hotkey}_hotkey`);
+  const el = getHotkeyElementFromActiveTab(hotkey);
   if (el) {
     el.removeAttribute('songid');
     el.textContent = '';
@@ -396,7 +400,7 @@ function clearHotkeySongId(hotkey) {
  * @returns {string} - Hotkey label
  */
 function getHotkeyLabel(hotkey) {
-  return document.getElementById(`${hotkey}_hotkey`)?.textContent || '';
+  return getHotkeyElementFromActiveTab(hotkey)?.textContent || '';
 }
 
 /**
@@ -407,7 +411,7 @@ function getHotkeyLabel(hotkey) {
  * @param {string} label - Label to set
  */
 function setHotkeyLabel(hotkey, label) {
-  const el = document.getElementById(`${hotkey}_hotkey`);
+  const el = getHotkeyElementFromActiveTab(hotkey);
   if (el) el.textContent = label;
 }
 

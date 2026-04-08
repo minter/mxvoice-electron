@@ -8,7 +8,7 @@
 // Import shared state
 import sharedState from '../shared-state.js';
 import Dom from '../dom-utils/index.js';
-import { getAdvancedSearchValues, hasActiveAdvancedFilters } from './search-form-utils.js';
+import { hasActiveAdvancedFilters } from './search-form-utils.js';
 
 // Import debug logger
 let debugLog = null;
@@ -17,7 +17,7 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (error) {
+} catch (_error) {
   // Debug logger not available
 }
 

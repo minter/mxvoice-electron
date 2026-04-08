@@ -32,8 +32,8 @@ import initializeDebugLogger from './renderer/modules/debug-log/debug-logger.js'
 
 // Global instances - now managed by app-initialization module  
 let debugLogger = null;
-let sharedStateInstance = null;
-let sharedStateInitialized = false;
+let _sharedStateInstance = null;
+let _sharedStateInitialized = false;
 
 // Initialize debug logger early with basic configuration
 debugLogger = initializeDebugLogger({
@@ -205,8 +205,8 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     }
     
     // Get initialized instances for backward compatibility  
-    sharedStateInstance = AppInitialization.getSharedState();
-    sharedStateInitialized = AppInitialization.isInitialized();
+    _sharedStateInstance = AppInitialization.getSharedState();
+    _sharedStateInitialized = AppInitialization.isInitialized();
     
     // Debug logger already initialized early, no need to reinitialize
     
@@ -307,6 +307,14 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       });
     }
     
+    // Initialize library transfer module
+    if (moduleRegistry.libraryTransfer) {
+      window.logInfo('📦 Initializing library transfer module...');
+      moduleRegistry.libraryTransfer.initializeLibraryTransfer({
+        electronAPI: window.secureElectronAPI || window.electronAPI
+      });
+    }
+
     // Initialize profile state persistence
     if (moduleRegistry.profileState) {
       window.logInfo('🔄 Initializing profile state persistence...');
@@ -498,6 +506,30 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
             await moduleRegistry.profileBackup.openBackupSettingsDialog();
           } else {
             window.logWarn('Profile backup module not available for backup settings');
+          }
+        });
+      }
+
+      if (apiToUse && apiToUse.events && apiToUse.events.onExportLibrary) {
+        window.logInfo('📦 Setting up export library event listener...');
+        apiToUse.events.onExportLibrary(async () => {
+          window.logInfo('📦 Export library requested from menu');
+          if (moduleRegistry.libraryTransfer && moduleRegistry.libraryTransfer.startExport) {
+            await moduleRegistry.libraryTransfer.startExport();
+          } else {
+            window.logWarn('Library transfer module not available for export');
+          }
+        });
+      }
+
+      if (apiToUse && apiToUse.events && apiToUse.events.onImportLibrary) {
+        window.logInfo('📦 Setting up import library event listener...');
+        apiToUse.events.onImportLibrary(async () => {
+          window.logInfo('📦 Import library requested from menu');
+          if (moduleRegistry.libraryTransfer && moduleRegistry.libraryTransfer.startImport) {
+            await moduleRegistry.libraryTransfer.startImport();
+          } else {
+            window.logWarn('Library transfer module not available for import');
           }
         });
       }

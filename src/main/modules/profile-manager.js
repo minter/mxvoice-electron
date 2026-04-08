@@ -15,14 +15,11 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import electron from 'electron';
-import { fileURLToPath } from 'url';
 
 // Destructure app from electron (handles both named and default exports)
 const { app } = electron;
 
-// Get __dirname equivalent for ES6 modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Note: __dirname/__filename equivalents removed — not currently needed in this module
 
 let debugLog = null;
 

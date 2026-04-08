@@ -22,15 +22,14 @@ export async function rms(page) {
  * @returns {Promise<void>}
  */
 export async function waitForSilence(page, threshold = 1e-3, timeout = 5000) {
-  const startTime = Date.now();
-  while (Date.now() - startTime < timeout) {
-    const currentRMS = await rms(page);
-    if (currentRMS < threshold) {
-      return;
-    }
-    await page.waitForTimeout(100);
-  }
-  throw new Error(`Audio did not become silent within ${timeout}ms`);
+  await page.waitForFunction(
+    (thresh) => {
+      const get = window.electronTest?.getAudioProbe || (() => window.electronTest?.audioProbe ?? null);
+      return (get()?.currentRMS?.() ?? 0) < thresh;
+    },
+    threshold,
+    { timeout, polling: 100 }
+  );
 }
 
 /**
@@ -41,15 +40,14 @@ export async function waitForSilence(page, threshold = 1e-3, timeout = 5000) {
  * @returns {Promise<void>}
  */
 export async function waitForAudible(page, threshold = 3e-3, timeout = 5000) {
-  const startTime = Date.now();
-  while (Date.now() - startTime < timeout) {
-    const currentRMS = await rms(page);
-    if (currentRMS > threshold) {
-      return;
-    }
-    await page.waitForTimeout(100);
-  }
-  throw new Error(`Audio did not become audible within ${timeout}ms`);
+  await page.waitForFunction(
+    (thresh) => {
+      const get = window.electronTest?.getAudioProbe || (() => window.electronTest?.audioProbe ?? null);
+      return (get()?.currentRMS?.() ?? 0) > thresh;
+    },
+    threshold,
+    { timeout, polling: 100 }
+  );
 }
 
 /**
