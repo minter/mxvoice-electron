@@ -19,8 +19,51 @@ vi.mock('../../../src/renderer/modules/ui/bootstrap-helpers.js', () => ({
   safeHideModal: vi.fn(),
 }));
 
-// Mock window APIs
+// Provide a minimal DOM stub (test environment is node, not jsdom)
 globalThis.window = globalThis.window || {};
+
+// Simple element factory for testing
+function makeElement(tag, attrs = {}) {
+  const el = {
+    _tag: tag,
+    _children: [],
+    id: attrs.id || '',
+    style: {},
+    offsetParent: {},  // non-null = "visible"
+    getAttribute: vi.fn(() => null),
+    click: vi.fn(),
+  };
+  return el;
+}
+
+const domElements = {};
+
+globalThis.document = {
+  createElement: vi.fn((tag) => makeElement(tag)),
+  querySelector: vi.fn((selector) => {
+    // Support #id selectors
+    if (selector.startsWith('#')) {
+      return domElements[selector.slice(1)] || null;
+    }
+    return null;
+  }),
+  querySelectorAll: vi.fn(() => []),
+  documentElement: {
+    getAttribute: vi.fn(() => null),
+  },
+  body: {
+    appendChild: vi.fn((el) => {
+      if (el.id) domElements[el.id] = el;
+    }),
+    removeChild: vi.fn((el) => {
+      if (el.id) delete domElements[el.id];
+    }),
+  },
+};
+
+globalThis.getComputedStyle = vi.fn(() => ({ position: 'static' }));
+globalThis.requestAnimationFrame = vi.fn((cb) => cb());
+
 window.debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 const mockGetPreference = vi.fn();
