@@ -4,6 +4,7 @@ const { Octokit } = require("@octokit/rest");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const { execFileSync } = require("child_process");
 
 if (process.platform !== "win32") {
   console.log("[publishWindows] Skipping - not Windows platform");
@@ -49,8 +50,33 @@ const blockMapFile = installerFile + ".blockmap";
 const blockMapPath = path.join(distDir, blockMapFile);
 
 const artifacts = [{ name: installerFile, path: installerPath }];
-if (fs.existsSync(blockMapPath)) {
-  artifacts.push({ name: blockMapFile, path: blockMapPath });
+
+// Regenerate the blockmap from the signed installer.
+// electron-builder generates the blockmap before code signing, so its block
+// hashes describe the unsigned binary.  electron-updater would then use the
+// stale blockmap for a differential download, reassemble a file whose sha512
+// doesn't match the signed installer, and report a checksum mismatch.
+// Re-running app-builder blockmap against the signed exe fixes this.
+try {
+  const appBuilderBin = path.join(
+    process.cwd(), "node_modules", "app-builder-bin",
+    process.platform, `app-builder_${process.arch === "x64" ? "amd64" : process.arch}`
+  );
+  if (fs.existsSync(appBuilderBin)) {
+    console.log(`[publishWindows] Regenerating blockmap from signed installer...`);
+    execFileSync(appBuilderBin, [
+      "blockmap",
+      "--input", installerPath,
+      "--output", blockMapPath,
+      "--compression", "gzip"
+    ]);
+    console.log(`[publishWindows] ✅ Blockmap regenerated for signed installer`);
+    artifacts.push({ name: blockMapFile, path: blockMapPath });
+  } else {
+    console.warn(`[publishWindows] ⚠️  app-builder not found at ${appBuilderBin} — skipping blockmap`);
+  }
+} catch (err) {
+  console.warn(`[publishWindows] ⚠️  Failed to regenerate blockmap: ${err.message} — skipping blockmap`);
 }
 
 // Recalculate latest.yml checksums to match the signed installer
