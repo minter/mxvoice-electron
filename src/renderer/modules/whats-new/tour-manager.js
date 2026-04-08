@@ -179,6 +179,49 @@ export class TourManager {
       this.currentSteps = null;
     };
 
+    /**
+     * Transition to a step: run postAction on current, preAction on target,
+     * then move Driver.js. This ensures async actions complete before
+     * Driver.js positions the popover.
+     */
+    const transitionTo = async (targetIndex) => {
+      // PostAction for current step
+      const currentStep = activeSteps[currentStepIndex];
+      if (currentStep && currentStep.postAction) {
+        await this.executeAction(currentStep.postAction);
+        await this.waitForDomSettle();
+      }
+
+      // PreAction for target step
+      const targetStep = activeSteps[targetIndex];
+      if (targetStep && targetStep.preAction) {
+        await this.executeAction(targetStep.preAction);
+        await this.waitForDomSettle();
+      }
+
+      // Runtime skip check after preAction
+      if (targetStep && this.shouldSkipStep(targetStep)) {
+        window.debugLog?.info(`Skipping tour step "${targetStep.title}" — element not found`, {
+          module: 'whats-new',
+          function: 'launchTour',
+        });
+        if (targetStep.postAction) {
+          await this.executeAction(targetStep.postAction);
+          await this.waitForDomSettle();
+        }
+        // Skip forward or backward depending on direction
+        const direction = targetIndex > currentStepIndex ? 1 : -1;
+        const nextTarget = targetIndex + direction;
+        if (nextTarget >= 0 && nextTarget < activeSteps.length) {
+          await transitionTo(nextTarget);
+        }
+        return;
+      }
+
+      currentStepIndex = targetIndex;
+      this.activeDriver.moveTo(targetIndex);
+    };
+
     this.activeDriver = driver({
       showProgress: true,
       steps: driverSteps,
@@ -186,42 +229,39 @@ export class TourManager {
       nextBtnText: 'Next',
       prevBtnText: 'Previous',
       doneBtnText: 'Done',
-      onHighlightStarted: async (_el, step, opts) => {
-        currentStepIndex = opts.index;
-        const tourStep = activeSteps[opts.index];
-        // Execute preAction before highlighting (e.g., open a modal)
-        if (tourStep && tourStep.preAction) {
-          await this.executeAction(tourStep.preAction);
-          await this.waitForDomSettle();
-        }
-        // Runtime skip check — if element still missing after preAction, skip ahead
-        if (tourStep && this.shouldSkipStep(tourStep)) {
-          window.debugLog?.info(`Skipping tour step "${tourStep.title}" — element not found after preAction`, {
-            module: 'whats-new',
-            function: 'launchTour',
-          });
-          if (tourStep.postAction) {
-            await this.executeAction(tourStep.postAction);
-            await this.waitForDomSettle();
-          }
-          this.activeDriver.moveNext();
+      // Intercept Next/Prev to run pre/post actions before Driver.js moves
+      onNextClick: async () => {
+        const nextIndex = currentStepIndex + 1;
+        if (nextIndex < activeSteps.length) {
+          await transitionTo(nextIndex);
+        } else {
+          // Last step — close the tour
+          const driverRef = this.activeDriver;
+          await this.cleanupFromStep(activeSteps, currentStepIndex);
+          await onComplete();
+          if (driverRef) driverRef.destroy();
         }
       },
-      onDeselected: async (_el, step, opts) => {
-        const tourStep = activeSteps[opts.index];
-        if (tourStep && tourStep.postAction) {
-          await this.executeAction(tourStep.postAction);
-          await this.waitForDomSettle();
+      onPrevClick: async () => {
+        const prevIndex = currentStepIndex - 1;
+        if (prevIndex >= 0) {
+          await transitionTo(prevIndex);
         }
       },
       onDestroyStarted: async () => {
         await this.cleanupFromStep(activeSteps, currentStepIndex);
-        // Driver.js requires destroy() to finalize — must call before nulling activeDriver
         const driverRef = this.activeDriver;
         await onComplete();
         if (driverRef) driverRef.destroy();
       },
     });
+
+    // Run preAction for the first step BEFORE starting the tour
+    const firstStep = activeSteps[0];
+    if (firstStep && firstStep.preAction) {
+      await this.executeAction(firstStep.preAction);
+      await this.waitForDomSettle();
+    }
 
     this.activeDriver.drive();
   }
