@@ -58,10 +58,7 @@ const artifacts = [{ name: installerFile, path: installerPath }];
 // doesn't match the signed installer, and report a checksum mismatch.
 // Re-running app-builder blockmap against the signed exe fixes this.
 try {
-  const appBuilderBin = path.join(
-    process.cwd(), "node_modules", "app-builder-bin",
-    process.platform, `app-builder_${process.arch === "x64" ? "amd64" : process.arch}`
-  );
+  const { appBuilderPath: appBuilderBin } = require("app-builder-bin");
   if (fs.existsSync(appBuilderBin)) {
     console.log(`[publishWindows] Regenerating blockmap from signed installer...`);
     execFileSync(appBuilderBin, [
