@@ -54,6 +54,29 @@
   border-left-color: #28a745 !important;
 }
 
+/* What's New tour - light theme */
+.whats-new-popover.driver-popover-light {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+}
+
+.whats-new-popover.driver-popover-light .driver-popover-title {
+  color: #1a1a2e;
+}
+
+.whats-new-popover.driver-popover-light .driver-popover-description {
+  color: #555;
+}
+
+.whats-new-popover.driver-popover-light .driver-popover-progress-text {
+  color: #888;
+}
+
+.whats-new-popover.driver-popover-light .driver-popover-prev-btn {
+  border-color: #ddd;
+  color: #555;
+}
+
 /* Dark theme specific overrides (for backward compatibility) */
 @media (prefers-color-scheme: dark) {
   .theme-auto {
@@ -70,6 +93,29 @@
     --input-border: #505050;
     --input-text: rgb(226, 226, 226);
   }
+}
+
+/* What's New tour - dark theme */
+.whats-new-popover.driver-popover-dark {
+  background: #2d2d44;
+  border: 1px solid #3d3d5c;
+}
+
+.whats-new-popover.driver-popover-dark .driver-popover-title {
+  color: #e0e0e0;
+}
+
+.whats-new-popover.driver-popover-dark .driver-popover-description {
+  color: #a0a0b0;
+}
+
+.whats-new-popover.driver-popover-dark .driver-popover-progress-text {
+  color: #666;
+}
+
+.whats-new-popover.driver-popover-dark .driver-popover-prev-btn {
+  border-color: #3d3d5c;
+  color: #a0a0b0;
 }
 
 /* Dark theme specific form styling */
