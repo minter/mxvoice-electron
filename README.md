@@ -343,6 +343,7 @@ To publish Windows releases, use your preferred workflow for uploading the signe
 - **UI Framework**: Bootstrap 5 with custom adapter (no jQuery required)
 - **Audio**: Howler.js for audio playback, WaveSurfer.js for waveform visualization
 - **Hotkeys**: Mousetrap for keyboard shortcut binding
+- **Guided Tours**: Driver.js for "What's New" feature tours
 - **Auto-updates**: `electron-updater` with GitHub provider support
 - **Audio Metadata**: `music-metadata` for extracting audio file metadata
 - **Logging**: Structured DebugLog system with file rotation and export via `electron-log`
