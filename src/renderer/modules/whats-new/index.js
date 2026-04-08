@@ -69,7 +69,7 @@ export async function initWhatsNew() {
   try {
     const shouldRun = await tourManager.shouldAutoTrigger();
     if (shouldRun) {
-      const version = await window.secureElectronAPI.app.getVersion();
+      const version = await tourManager.getAppVersion();
       window.debugLog?.info(`Auto-triggering What's New tour for ${version}`, {
         module: 'whats-new',
         function: 'initWhatsNew',

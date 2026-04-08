@@ -5,6 +5,17 @@ import { driver } from '../../../../node_modules/driver.js/dist/driver.js.mjs';
  * Loads tour data, checks profile preferences, executes pre/post actions,
  * and drives the tour UI.
  */
+/**
+ * Unwrap IPC response objects that return { success, data/value }.
+ */
+function unwrap(result) {
+  if (result && typeof result === 'object') {
+    if ('data' in result) return result.data;
+    if ('value' in result) return result.value;
+  }
+  return result;
+}
+
 export class TourManager {
   constructor(tourData) {
     this.tourData = tourData;
@@ -17,18 +28,22 @@ export class TourManager {
     return this.tourData.tours[version] || null;
   }
 
+  async getAppVersion() {
+    return unwrap(await window.secureElectronAPI.app.getVersion());
+  }
+
   async shouldAutoTrigger() {
-    const version = await window.secureElectronAPI.app.getVersion();
+    const version = await this.getAppVersion();
     const tour = this.getTourForVersion(version);
     if (!tour) return false;
 
-    const toursSeen = await window.secureElectronAPI.profile.getPreference('tours_seen');
+    const toursSeen = unwrap(await window.secureElectronAPI.profile.getPreference('tours_seen'));
     const seen = Array.isArray(toursSeen) ? toursSeen : [];
     return !seen.includes(version);
   }
 
   async markTourSeen(version) {
-    const toursSeen = await window.secureElectronAPI.profile.getPreference('tours_seen');
+    const toursSeen = unwrap(await window.secureElectronAPI.profile.getPreference('tours_seen'));
     const seen = Array.isArray(toursSeen) ? toursSeen : [];
     if (!seen.includes(version)) {
       seen.push(version);
