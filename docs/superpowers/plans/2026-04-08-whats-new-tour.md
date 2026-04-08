@@ -70,18 +70,18 @@ git commit -m "chore: add driver.js dependency for What's New tour feature"
 
 - [ ] **Step 1: Create the tours.json file**
 
-This is the data-driven config holding tour steps per version. Start with a placeholder tour for the current version. The actual steps will be populated when features are finalized — what matters now is the schema.
+This is the data-driven config holding tour steps per version. The version key must match `package.json` exactly — currently `4.3.0-pre.1` for development, update to `4.3.0` at release time.
 
 ```json
 {
   "tours": {
-    "4.3.0": {
+    "4.3.0-pre.1": {
       "title": "What's New in 4.3.0",
       "steps": [
         {
           "element": "#song-form-volume",
           "title": "Per-Track Volume",
-          "description": "You can now adjust volume for individual tracks in the edit dialog.",
+          "description": "Adjust volume for individual tracks. Changes apply in real-time if the track is currently playing.",
           "side": "right",
           "align": "center",
           "preAction": {
@@ -91,12 +91,13 @@ This is the data-driven config holding tour steps per version. Start with a plac
           "postAction": {
             "type": "closeModal",
             "target": "#songFormModal"
-          }
+          },
+          "skipIfMissing": true
         },
         {
           "element": "#song-form-start-time",
-          "title": "Custom Start & End Times",
-          "description": "Set start and end times to play just a portion of a track.",
+          "title": "Start & End Trim Points",
+          "description": "Set custom start and end times to play just a portion of a track. Enter times as MM:SS.",
           "side": "right",
           "align": "center",
           "preAction": {
@@ -106,12 +107,41 @@ This is the data-driven config holding tour steps per version. Start with a plac
           "postAction": {
             "type": "closeModal",
             "target": "#songFormModal"
+          },
+          "skipIfMissing": true
+        },
+        {
+          "element": "#holding-tank-column",
+          "title": "Drag to Reorder",
+          "description": "Drag songs up and down in the holding tank to reorder them. A position indicator shows where the track will land.",
+          "side": "right",
+          "align": "center"
+        },
+        {
+          "element": "#file-drop-overlay",
+          "title": "Drag & Drop Import",
+          "description": "Drag audio files from Finder or Explorer directly into the app window to import them.",
+          "side": "bottom",
+          "align": "center",
+          "preAction": {
+            "type": "function",
+            "name": "showFileDropOverlay"
+          },
+          "postAction": {
+            "type": "function",
+            "name": "hideFileDropOverlay"
           }
+        },
+        {
+          "element": null,
+          "title": "Crossfade Between Tracks",
+          "description": "Head to Preferences → Audio Controls to set a crossfade duration for smooth transitions between tracks in playlist mode."
         }
       ]
     }
   }
 }
+```
 ```
 
 - [ ] **Step 2: Commit**
@@ -874,6 +904,22 @@ export async function showWhatsNew() {
     });
   }
 }
+
+/**
+ * Briefly shows the file drop overlay so the tour can highlight it.
+ */
+tourManager.registerHelper('showFileDropOverlay', async () => {
+  const overlay = document.getElementById('file-drop-overlay');
+  if (overlay) overlay.classList.add('active');
+});
+
+/**
+ * Hides the file drop overlay after the tour step.
+ */
+tourManager.registerHelper('hideFileDropOverlay', async () => {
+  const overlay = document.getElementById('file-drop-overlay');
+  if (overlay) overlay.classList.remove('active');
+});
 
 export { tourManager };
 ```
