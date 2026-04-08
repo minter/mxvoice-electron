@@ -670,6 +670,14 @@ function createApplicationMenu() {
           }
         },
         {
+          label: "What's New",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:whats-new');
+            }
+          }
+        },
+        {
           label: 'Contact Support…',
           click: () => {
             shell.openExternal('mailto:support@mxvoice.app?subject=' + encodeURIComponent('Mx. Voice Support Request'));
@@ -772,6 +780,14 @@ function createApplicationMenu() {
           label: 'Release Notes',
           click: () => {
             shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+          }
+        },
+        {
+          label: "What's New",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:whats-new');
+            }
           }
         },
         {
