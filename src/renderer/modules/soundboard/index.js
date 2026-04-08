@@ -1,0 +1,611 @@
+/**
+ * Soundboard Module Index
+ *
+ * This module serves as the main entry point for all soundboard-related functionality
+ * in the MxVoice Electron application.
+ */
+
+// Import debug logger
+let debugLog = null;
+try {
+  if (window.debugLog) {
+    debugLog = window.debugLog;
+  }
+} catch {
+  // Debug logger not available
+}
+
+// Import soundboard sub-modules
+import * as soundboardGrid from './soundboard-grid.js';
+import * as soundboardData from './soundboard-data.js';
+import * as soundboardUI from './soundboard-ui.js';
+import * as soundboardEvents from './soundboard-events.js';
+import * as soundboardSearchPanel from './soundboard-search-panel.js';
+
+/**
+ * Soundboard Module Class
+ *
+ * Provides comprehensive soundboard management functionality including:
+ * - Grid layout and button management
+ * - Drag & drop button assignment
+ * - File import/export for soundboard configurations
+ * - Tab management for multiple soundboard pages
+ * - State persistence for soundboard state
+ */
+class SoundboardModule {
+  constructor(options = {}) {
+    this.electronAPI = options.electronAPI;
+    this.db = null;
+    this.store = null;
+
+    // Initialize sub-modules
+    this.grid = soundboardGrid;
+    this.data = soundboardData;
+    this.ui = soundboardUI;
+    this.events = soundboardEvents;
+    this.searchPanel = soundboardSearchPanel;
+
+    // Check if sub-modules are properly loaded
+    if (!soundboardGrid || !soundboardData || !soundboardUI || !soundboardEvents || !soundboardSearchPanel) {
+      debugLog?.error('Soundboard sub-modules not properly loaded', {
+        module: 'soundboard',
+        function: 'constructor'
+      });
+      throw new Error('Soundboard sub-modules not properly loaded');
+    }
+
+    // Bind methods from sub-modules
+    try {
+      this.saveSoundboardToStore = soundboardData.saveSoundboardToStore.bind(this);
+      this.loadSoundboardFromStore = soundboardData.loadSoundboardFromStore.bind(this);
+      this.openSoundboardFile = soundboardData.openSoundboardFile.bind(this);
+      this.saveSoundboardFile = soundboardData.saveSoundboardFile.bind(this);
+      this.extractSoundboardTabs = soundboardData.extractSoundboardTabs.bind(this);
+      this.restoreSoundboardTabs = soundboardData.restoreSoundboardTabs.bind(this);
+      this.setLabelFromSongId = soundboardData.setLabelFromSongId.bind(this);
+      this.clearSoundboard = soundboardData.clearSoundboard.bind(this);
+      this.soundboardButtonDrop = soundboardUI.soundboardButtonDrop.bind(this);
+      this.allowSoundboardButtonDrop = soundboardUI.allowSoundboardButtonDrop.bind(this);
+      this.switchToSoundboardTab = soundboardUI.switchToSoundboardTab.bind(this);
+      this.renameSoundboardTab = soundboardUI.renameSoundboardTab.bind(this);
+      this.playSongFromButton = soundboardEvents.playSongFromButton.bind(this);
+      // Note: setupEventListeners and handleKeyboardNavigation are now class methods, not bound
+      this.initializeGrid = soundboardGrid.initializeGrid.bind(this);
+      this.setupGrid = soundboardGrid.setupGrid.bind(this);
+      this.updateGridLayout = soundboardGrid.updateGridLayout.bind(this);
+      this.ensureGridButtonsForTab = soundboardGrid.ensureGridButtonsForTab.bind(this);
+      this.initializeSearchPanel = soundboardSearchPanel.initializeSearchPanel.bind(this);
+      this.toggleSearchPanel = soundboardSearchPanel.toggleSearchPanel.bind(this);
+    } catch (error) {
+      debugLog?.error('Error binding soundboard functions', {
+        module: 'soundboard',
+        function: 'constructor',
+        error: error.message
+      });
+      throw error;
+    }
+
+    // Initialize the module
+    this.initSoundboard();
+  }
+
+  /**
+   * Initialize soundboard module
+   * Sets up initial state and loads saved soundboard
+   */
+  initSoundboard() {
+    debugLog?.info('Initializing Soundboard Module', {
+      module: 'soundboard',
+      function: 'initSoundboard'
+    });
+
+    // Wait for DOM to be ready before setting up
+    const setup = () => {
+      this.setupSoundboard();
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setup);
+    } else {
+      // DOM already ready, but wait a bit for all elements to be available
+      setTimeout(setup, 100);
+    }
+  }
+
+  /**
+   * Setup soundboard after DOM is ready
+   */
+  setupSoundboard() {
+    // Check if soundboard view elements exist before initializing
+    const soundboardView = document.getElementById('soundboard-view');
+    if (!soundboardView) {
+      debugLog?.warn('Soundboard view not found in DOM, deferring initialization', {
+        module: 'soundboard',
+        function: 'setupSoundboard'
+      });
+      // Retry after a short delay
+      setTimeout(() => this.setupSoundboard(), 200);
+      return;
+    }
+
+    // Initialize grid layout
+    if (typeof this.initializeGrid === 'function') {
+      this.initializeGrid();
+    }
+
+    // Initialize search panel
+    if (typeof this.initializeSearchPanel === 'function') {
+      // Initialize search panel asynchronously
+      this.initializeSearchPanel().catch(error => {
+        debugLog?.error('Failed to initialize search panel', {
+          module: 'soundboard',
+          function: 'setupSoundboard',
+          error: error.message
+        });
+      });
+    }
+
+    // Setup event listeners (using class method, not external function)
+    this.setupEventListeners();
+
+    // Load saved soundboard from store
+    if (typeof this.loadSoundboardFromStore === 'function') {
+      this.loadSoundboardFromStore();
+    }
+
+    debugLog?.info('Soundboard Module initialized', {
+      module: 'soundboard',
+      function: 'setupSoundboard'
+    });
+  }
+
+  /**
+   * Setup all event listeners for soundboard
+   * Following the same pattern as HotkeysModule.setupEventListeners()
+   */
+  setupEventListeners() {
+    debugLog?.info('Setting up soundboard event listeners', {
+      module: 'soundboard',
+      function: 'setupEventListeners'
+    });
+
+    // Event delegation for soundboard buttons (click, double-click, drag)
+    const soundboardTabContent = document.getElementById('soundboard-tab-content');
+    if (soundboardTabContent) {
+      // Click to select/focus button
+      soundboardTabContent.addEventListener('click', (event) => {
+        const button = event.target.closest('.soundboard-button');
+        if (button) {
+          // Remove active/selected class from all buttons in this tab
+          const allButtons = soundboardTabContent.querySelectorAll('.soundboard-button');
+          allButtons.forEach(btn => btn.classList.remove('active', 'selected'));
+          
+          // Add active class to clicked button
+          button.classList.add('active', 'selected');
+          
+          // Focus the button for keyboard navigation
+          button.focus();
+          
+          const songId = button.getAttribute('songid');
+          if (songId) {
+            debugLog?.info(`Soundboard button clicked: Playing song ID ${songId}`, {
+              module: 'soundboard',
+              function: 'setupEventListeners',
+              songId
+            });
+            if (window.moduleRegistry?.audio?.playSongFromId) {
+              window.moduleRegistry.audio.playSongFromId(songId);
+            } else {
+              debugLog?.warn('Audio module not available to play song', {
+                module: 'soundboard',
+                function: 'setupEventListeners',
+                songId
+              });
+            }
+          }
+        }
+      });
+
+      // Double-click to play
+      soundboardTabContent.addEventListener('dblclick', (event) => {
+        const button = event.target.closest('.soundboard-button');
+        if (button) {
+          const songId = button.getAttribute('songid');
+          if (songId) {
+            debugLog?.info(`Soundboard button double-clicked: Playing song ID ${songId}`, {
+              module: 'soundboard',
+              function: 'setupEventListeners',
+              songId
+            });
+            // Use the bound method from soundboard-events
+            if (this.playSongFromButton) {
+              this.playSongFromButton(songId, button);
+            } else if (window.moduleRegistry?.audio?.playSongFromId) {
+              window.moduleRegistry.audio.playSongFromId(songId);
+            }
+          }
+        }
+      });
+
+      // Right-click context menu (TBD)
+      soundboardTabContent.addEventListener('contextmenu', (event) => {
+        const button = event.target.closest('.soundboard-button');
+        if (button) {
+          event.preventDefault();
+          debugLog?.info('Soundboard button right-clicked (context menu TBD)', {
+            module: 'soundboard',
+            function: 'setupEventListeners',
+            buttonId: button.id
+          });
+        }
+      });
+
+      // Drag start - allow dragging filled buttons
+      soundboardTabContent.addEventListener('dragstart', (event) => {
+        const button = event.target.closest('.soundboard-button.filled-button');
+        if (button && button.hasAttribute('songid')) {
+          event.dataTransfer.setData('text/plain', button.getAttribute('songid'));
+          event.dataTransfer.effectAllowed = 'move';
+          debugLog?.info('Soundboard button dragstart', {
+            module: 'soundboard',
+            function: 'setupEventListeners',
+            songId: button.getAttribute('songid')
+          });
+        } else {
+          event.preventDefault(); // Prevent dragging empty buttons
+        }
+      });
+
+      // Keyboard navigation
+      soundboardTabContent.addEventListener('keydown', (event) => {
+        this.handleKeyboardNavigation(event);
+      });
+
+      // Drag and drop events
+      soundboardTabContent.addEventListener('drop', (event) => {
+        const button = event.target.closest('.soundboard-button');
+        if (button) {
+          button.classList.remove('drop-target');
+          // Pass the button element to the drop handler
+          this.soundboardButtonDrop(event, button);
+        }
+      });
+
+      soundboardTabContent.addEventListener('dragover', (event) => {
+        const button = event.target.closest('.soundboard-button');
+        if (button) {
+          this.allowSoundboardButtonDrop(event);
+        }
+      });
+
+      soundboardTabContent.addEventListener('dragleave', (event) => {
+        const button = event.target.closest('.soundboard-button');
+        if (button) {
+          button.classList.remove('drop-target');
+        }
+      });
+    }
+
+    // Tab click events
+    const soundboardTabs = document.getElementById('soundboard_tabs');
+    if (soundboardTabs) {
+      soundboardTabs.addEventListener('click', (event) => {
+        const tabLink = event.target.closest('.nav-link');
+        if (tabLink) {
+          const tabNum = parseInt(tabLink.textContent, 10);
+          if (!isNaN(tabNum) && typeof this.switchToSoundboardTab === 'function') {
+            this.switchToSoundboardTab(tabNum);
+            this.updateGridLayout(); // Update layout when tab changes
+          }
+        }
+      });
+
+      // Double-click to rename tab
+      soundboardTabs.addEventListener('dblclick', (event) => {
+        const tabLink = event.target.closest('.nav-link');
+        if (tabLink && typeof this.renameSoundboardTab === 'function') {
+          this.renameSoundboardTab();
+        }
+      });
+    }
+
+    // Search panel toggle button
+    const searchPanelToggleButton = document.getElementById('soundboard-search-panel-toggle');
+    if (searchPanelToggleButton) {
+      debugLog?.info('Setting up search panel toggle button listener', {
+        module: 'soundboard',
+        function: 'setupEventListeners'
+      });
+      searchPanelToggleButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        debugLog?.info('Search panel toggle button clicked', {
+          module: 'soundboard',
+          function: 'setupEventListeners'
+        });
+        if (typeof this.toggleSearchPanel === 'function') {
+          this.toggleSearchPanel();
+        } else {
+          debugLog?.error('toggleSearchPanel is not a function', {
+            module: 'soundboard',
+            function: 'setupEventListeners',
+            type: typeof this.toggleSearchPanel
+          });
+        }
+      });
+    } else {
+      debugLog?.warn('Search panel toggle button not found', {
+        module: 'soundboard',
+        function: 'setupEventListeners'
+      });
+    }
+
+    // ESC is handled globally by Mousetrap via navigation-shortcuts module
+    // No need for custom handler - the existing global ESC binding works in all views
+
+    debugLog?.info('✅ Soundboard event listeners set up', {
+      module: 'soundboard',
+      function: 'setupEventListeners'
+    });
+  }
+
+  /**
+   * Handle keyboard navigation within the soundboard grid
+   * @param {KeyboardEvent} event - The keyboard event
+   */
+  handleKeyboardNavigation(event) {
+    const activeTabContent = document.querySelector('#soundboard-tab-content .tab-pane.active');
+    if (!activeTabContent) return;
+
+    const focusableButtons = Array.from(activeTabContent.querySelectorAll('.soundboard-button'));
+    if (focusableButtons.length === 0) return;
+
+    let focusedIndex = focusableButtons.findIndex(btn => btn === document.activeElement);
+    let newIndex = focusedIndex;
+
+    const gridContainer = activeTabContent.querySelector('.soundboard-grid-container');
+    const columns = parseInt(gridContainer?.style.getPropertyValue('--grid-columns')) || 6;
+
+    switch (event.key) {
+      case 'ArrowUp':
+        newIndex = focusedIndex - columns;
+        break;
+      case 'ArrowDown':
+        newIndex = focusedIndex + columns;
+        break;
+      case 'ArrowLeft':
+        newIndex = focusedIndex - 1;
+        break;
+      case 'ArrowRight':
+        newIndex = focusedIndex + 1;
+        break;
+      case 'Enter':
+      case ' ': // Space key
+        event.preventDefault();
+        if (focusedIndex !== -1) {
+          const button = focusableButtons[focusedIndex];
+          const songId = button.getAttribute('songid');
+          if (songId) {
+            // Use the bound playSongFromButton method which handles stopping current song
+            if (this.playSongFromButton) {
+              this.playSongFromButton(songId, button);
+            } else if (window.moduleRegistry?.audio?.playSongFromId) {
+              window.moduleRegistry.audio.playSongFromId(songId);
+            }
+          }
+        }
+        return;
+      case 'Tab':
+        // Allow default tab behavior
+        return;
+      case 'Delete':
+      case 'Backspace':
+        event.preventDefault();
+        if (focusedIndex !== -1) {
+          const currentButton = focusableButtons[focusedIndex];
+          const songId = currentButton?.getAttribute('songid');
+          if (songId) {
+            // Check if this song is currently playing
+            const nowPlaying = document.getElementById('song_now_playing');
+            const currentlyPlayingSongId = nowPlaying?.getAttribute('songid');
+            
+            if (currentlyPlayingSongId === songId) {
+              // Stop playback if this song is currently playing
+              if (typeof window.stopPlaying === 'function') {
+                window.stopPlaying(false); // Immediate stop
+              } else if (window.moduleRegistry?.audio?.stopPlaying) {
+                window.moduleRegistry.audio.stopPlaying(false);
+              }
+              // Also remove playing class from all buttons
+              const allButtons = document.querySelectorAll('.soundboard-button');
+              allButtons.forEach(btn => btn.classList.remove('playing'));
+            }
+            
+            // Clear button
+            currentButton.removeAttribute('songid');
+            const placeholder = currentButton.querySelector('.soundboard-button-placeholder');
+            const songInfo = currentButton.querySelector('.soundboard-button-info');
+            if (placeholder) placeholder.style.display = 'block';
+            if (songInfo) {
+              songInfo.style.display = 'none';
+              songInfo.innerHTML = '';
+            }
+            this.saveSoundboardToStore();
+          }
+        }
+        return;
+      case 'Escape': {
+        event.preventDefault();
+        if (focusedIndex !== -1) {
+          focusableButtons[focusedIndex].blur();
+        }
+        // Stop playing audio (ESC = immediate stop, Shift+ESC = fade out)
+        // Use window.stopPlaying which is registered globally and works in all views
+        if (typeof window.stopPlaying === 'function') {
+          window.stopPlaying(event.shiftKey); // Shift+ESC = fade out, ESC = immediate
+        } else if (window.moduleRegistry?.audio?.stopPlaying) {
+          window.moduleRegistry.audio.stopPlaying(event.shiftKey);
+        }
+        // Remove playing class from all buttons
+        const allButtons = document.querySelectorAll('.soundboard-button');
+        allButtons.forEach(btn => btn.classList.remove('playing'));
+        return;
+      }
+      default:
+        return;
+    }
+
+    if (newIndex >= 0 && newIndex < focusableButtons.length) {
+      // Remove active class from all buttons
+      focusableButtons.forEach(btn => btn.classList.remove('active', 'selected'));
+      // Add active class to newly focused button
+      focusableButtons[newIndex].classList.add('active', 'selected');
+      focusableButtons[newIndex].focus();
+      event.preventDefault();
+    } else if (newIndex < 0) {
+      // Wrap around to the last row
+      newIndex = focusableButtons.length + newIndex;
+      if (newIndex >= 0 && newIndex < focusableButtons.length) {
+        focusableButtons.forEach(btn => btn.classList.remove('active', 'selected'));
+        focusableButtons[newIndex].classList.add('active', 'selected');
+        focusableButtons[newIndex].focus();
+        event.preventDefault();
+      }
+    } else if (newIndex >= focusableButtons.length) {
+      // Wrap around to the first row
+      newIndex = newIndex - focusableButtons.length;
+      if (newIndex >= 0 && newIndex < focusableButtons.length) {
+        focusableButtons.forEach(btn => btn.classList.remove('active', 'selected'));
+        focusableButtons[newIndex].classList.add('active', 'selected');
+        focusableButtons[newIndex].focus();
+        event.preventDefault();
+      }
+    }
+  }
+
+  /**
+   * Initialize the module (standardized method)
+   * @param {Object} dependencies - Module dependencies
+   * @returns {Promise<boolean>} Success status
+   */
+  async init(_dependencies = {}) {
+    try {
+      debugLog?.info('Initializing Soundboard Module via standardized init()', {
+        module: 'soundboard',
+        function: 'init'
+      });
+
+      // Call the existing initialization logic
+      this.initSoundboard();
+
+      debugLog?.info('Soundboard Module initialized successfully via init()', {
+        module: 'soundboard',
+        function: 'init'
+      });
+      return true;
+    } catch (error) {
+      debugLog?.error('Failed to initialize Soundboard Module via init()', {
+        module: 'soundboard',
+        function: 'init',
+        error: error.message
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Reinitialize with dependencies
+   */
+  async reinitializeSoundboard(deps) {
+    if (deps.electronAPI) {
+      this.electronAPI = deps.electronAPI;
+    }
+    if (deps.db) {
+      this.db = deps.db;
+    }
+    if (deps.store) {
+      this.store = deps.store;
+    }
+    if (deps.debugLog) {
+      debugLog = deps.debugLog;
+    }
+
+    // Reinitialize sub-modules with dependencies
+    if (soundboardData.reinitializeSoundboardData) {
+      await soundboardData.reinitializeSoundboardData(deps);
+    }
+    if (soundboardGrid.reinitializeSoundboardGrid) {
+      await soundboardGrid.reinitializeSoundboardGrid(deps);
+    }
+    if (soundboardUI.reinitializeSoundboardUI) {
+      await soundboardUI.reinitializeSoundboardUI(deps);
+    }
+    if (soundboardEvents.reinitializeSoundboardEvents) {
+      await soundboardEvents.reinitializeSoundboardEvents(deps);
+    }
+    if (soundboardSearchPanel.reinitializeSoundboardSearchPanel) {
+      await soundboardSearchPanel.reinitializeSoundboardSearchPanel(deps);
+    }
+  }
+
+  /**
+   * Initialize view when switching to soundboard mode
+   */
+  async initializeView() {
+    debugLog?.info('Initializing soundboard view', {
+      module: 'soundboard',
+      function: 'initializeView'
+    });
+
+    // Update grid layout for current window size
+    if (typeof this.updateGridLayout === 'function') {
+      this.updateGridLayout();
+    }
+
+    // Restore search panel state
+    if (typeof this.initializeSearchPanel === 'function') {
+      await this.initializeSearchPanel();
+    }
+  }
+
+  /**
+   * Save soundboard state
+   */
+  async saveState() {
+    debugLog?.info('Saving soundboard state', {
+      module: 'soundboard',
+      function: 'saveState'
+    });
+
+    if (typeof this.saveSoundboardToStore === 'function') {
+      await this.saveSoundboardToStore();
+    }
+  }
+
+  /**
+   * Restore soundboard state
+   */
+  async restoreState() {
+    debugLog?.info('Restoring soundboard state', {
+      module: 'soundboard',
+      function: 'restoreState'
+    });
+
+    if (typeof this.loadSoundboardFromStore === 'function') {
+      await this.loadSoundboardFromStore();
+    }
+
+    // Update grid layout after restoring
+    if (typeof this.updateGridLayout === 'function') {
+      this.updateGridLayout();
+    }
+  }
+}
+
+// Create singleton instance
+const soundboard = new SoundboardModule();
+
+// Export singleton as default and named export
+export default soundboard;
+export { soundboard };
+

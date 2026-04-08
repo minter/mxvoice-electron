@@ -50,6 +50,42 @@ export function openHotkeyFile() {
 }
 
 /**
+ * Opens a soundboard file using the modern electronAPI with fallback to legacy ipcRenderer
+ */
+export function openSoundboardFile() {
+  debugLog?.info("Opening soundboard file", { module: 'file-operations', function: 'openSoundboardFile' });
+  
+  // Hide any visible tooltips before opening file dialog
+  if (window.hideAllTooltips) {
+    window.hideAllTooltips();
+  }
+  
+  return secureFileDialog.openSoundboardFile();
+}
+
+/**
+ * Saves a soundboard file using the modern electronAPI with fallback to legacy ipcRenderer
+ */
+export async function saveSoundboardFile() {
+  debugLog?.info("Saving soundboard file", { module: 'file-operations', function: 'saveSoundboardFile' });
+  
+  // Hide any visible tooltips before opening file dialog
+  if (window.hideAllTooltips) {
+    window.hideAllTooltips();
+  }
+  
+  // Get soundboard data from module
+  if (window.moduleRegistry?.soundboard) {
+    const soundboard = window.moduleRegistry.soundboard;
+    if (typeof soundboard.saveSoundboardFile === 'function') {
+      return await soundboard.saveSoundboardFile();
+    }
+  }
+  
+  debugLog?.warn('Soundboard module not available for save', { module: 'file-operations', function: 'saveSoundboardFile' });
+}
+
+/**
  * Opens a holding tank file using the modern electronAPI with fallback to legacy ipcRenderer
  */
 export function openHoldingTankFile() {
