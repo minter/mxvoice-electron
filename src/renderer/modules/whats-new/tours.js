@@ -44,6 +44,16 @@ export default {
           postAction: { type: 'function', name: 'hideFileDropOverlay' },
         },
         {
+          element: '#multiSongImportModal .modal-content',
+          title: 'Fine-tune Imports',
+          description: 'When importing 2 to 20 songs, you can now fine-tune the title, artist, and category for each track before they are added to your library.',
+          side: 'bottom',
+          align: 'center',
+          preAction: { type: 'function', name: 'openMultiSongImport' },
+          postAction: { type: 'closeModal', target: '#multiSongImportModal' },
+          skipIfMissing: true,
+        },
+        {
           element: '#preferences-crossfade-seconds',
           title: 'Crossfade Between Tracks',
           description: 'Set a crossfade duration for smooth transitions between tracks in playlist mode.',
