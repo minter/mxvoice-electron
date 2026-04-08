@@ -199,7 +199,10 @@ export class TourManager {
       },
       onDestroyStarted: async () => {
         await this.cleanupFromStep(activeSteps, currentStepIndex);
+        // Driver.js requires destroy() to finalize — must call before nulling activeDriver
+        const driverRef = this.activeDriver;
         await onComplete();
+        if (driverRef) driverRef.destroy();
       },
     });
 
