@@ -138,6 +138,6 @@ echo ""
 echo -e "${YELLOW}The new profiles2 implementation uses: $NEW_USER_DATA${NC}"
 echo ""
 echo "You can now start the app to test the new profile launcher:"
-echo "  yarn start"
+echo "  npm start"
 echo ""
 

@@ -144,7 +144,7 @@ To test the profile launcher:
 
 ```bash
 # Start normally - should show launcher
-yarn start
+npm start
 
 # Start with specific profile - skips launcher
 electron . --profile="Bob"

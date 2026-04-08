@@ -7,12 +7,18 @@ This directory contains the modular main process for the Electron app. The entry
 ```text
 src/main/
 ├── modules/
-│   ├── app-setup.js        # Window/menu/app lifecycle, UI commands → renderer
-│   ├── ipc-handlers.js     # Secure IPC: database, file system, store, audio, path, os, app, logs
-│   ├── file-operations.js  # User dialogs + hotkey/holding-tank import/export, prefs migration
-│   ├── debug-log.js        # Main-process DebugLog (uses electron-store & electron-log)
-│   └── log-service.js      # Centralized log sink: daily file, retention, export, IPC endpoints
-├── index-modular.js        # Coordinator: store, DB init, updater, modules init, createWindow
+│   ├── app-setup.js              # Window/menu/app lifecycle, UI commands → renderer
+│   ├── auto-backup-timer.js      # Automatic periodic database backup scheduling
+│   ├── database-setup.js         # SQLite WebAssembly database initialization and schema
+│   ├── debug-log.js              # Main-process DebugLog (uses electron-store & electron-log)
+│   ├── file-operations.js        # User dialogs + hotkey/holding-tank import/export, prefs migration
+│   ├── ipc-handlers.js           # Secure IPC: database, file system, store, audio, path, os, app, logs
+│   ├── launcher-window.js        # Profile launcher window creation and management
+│   ├── library-transfer-manager.js # Library import/export with archiver/extract-zip
+│   ├── log-service.js            # Centralized log sink: daily file, retention, export, IPC endpoints
+│   ├── profile-backup-manager.js # Profile backup and restore operations
+│   └── profile-manager.js        # Profile CRUD, switching, and data isolation
+├── index-modular.js              # Coordinator: store, DB init, updater, modules init, createWindow
 └── README.md
 ```
 

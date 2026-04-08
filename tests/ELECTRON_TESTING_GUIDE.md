@@ -20,12 +20,12 @@
 
 ### Running Tests
 ```bash
-yarn test            # All tests
-yarn test:smoke      # Minimal boot check
-yarn test:ui         # Interactive UI mode
-yarn test:headed     # Headed runs
-yarn test:debug      # Debug mode
-yarn test:report     # Open HTML report
+npm test            # All tests
+npm run test:smoke  # Minimal boot check
+npm run test:ui     # Interactive UI mode
+npm run test:headed # Headed runs
+npm run test:debug  # Debug mode
+npm run test:report # Open HTML report
 ```
 
 ### How Suites Launch the App
@@ -83,12 +83,12 @@ Some playback tests perform real audio checks using renderer tap helpers (`rms(p
 
 Tip: To mimic CI locally, run with `CI=true`:
 ```bash
-CI=true yarn test
+CI=true npm test
 ```
 
 ### Troubleshooting
 - If you see your real data, ensure the suite sets `APP_TEST_MODE=1`, `E2E_USER_DATA_DIR`, and temp `HOME/APPDATA`.
-- Use `yarn test:ui` or `yarn test:headed` to inspect UI state live.
+- Use `npm run test:ui` or `npm run test:headed` to inspect UI state live.
 
 ### References
 - Playwright Electron: https://playwright.dev/docs/api/class-electron

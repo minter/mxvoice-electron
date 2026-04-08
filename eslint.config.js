@@ -65,7 +65,7 @@ export default [
       'tests/**',
       'src/preload/preload-bundle.cjs',
       '*.log',
-      'yarn.lock',
+      'package-lock.json',
     ],
   },
   {

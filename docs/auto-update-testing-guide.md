@@ -16,7 +16,7 @@ The auto-updater now supports two providers:
 
 **Steps**:
 1. Set environment variable: `export TEST_AUTO_UPDATE=true`
-2. Start the app: `yarn start`
+2. Start the app: `npm start`
 3. Check the logs for these messages:
    ```
    Using custom server for version 3.x.x
@@ -36,7 +36,7 @@ The auto-updater now supports two providers:
 
 **Steps**:
 1. Set environment variable: `export TEST_AUTO_UPDATE=true`
-2. Start the app: `yarn start`
+2. Start the app: `npm start`
 3. Check the logs for these messages:
    ```
    Using GitHub provider for version 4.x.x
@@ -102,7 +102,7 @@ The auto-updater now supports two providers:
 ```bash
 # Test auto-update scenarios
 export TEST_AUTO_UPDATE=true
-yarn start
+npm start
 ```
 
 ### Comprehensive Testing
@@ -111,7 +111,7 @@ yarn start
 export TEST_AUTO_UPDATE=true
 export TEST_V3_1_5=true
 export TEST_V4_0_0=true
-yarn start
+npm start
 ```
 
 ## Monitoring and Validation

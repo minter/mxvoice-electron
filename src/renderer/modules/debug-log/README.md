@@ -9,6 +9,7 @@ debug-log/
 ├── index.js              # Main module entry point
 ├── debug-logger.js       # Core logging functionality
 ├── log-formatter.js      # Message and context formatting
+├── utils.js              # Logging utility helpers
 └── README.md            # This documentation
 ```
 

@@ -6,13 +6,15 @@ The UI module provides all user interface functionality for the MxVoice applicat
 
 ```
 ui/
-├── index.js          # Main module entry point
-├── ui-manager.js     # Core UI management functions
-├── event-handlers.js # UI event handling functions
-├── controls.js       # UI control functions
-├── modals.js         # Modal operations
+├── index.js             # Main module entry point
+├── ui-manager.js        # Core UI management functions
+├── event-handlers.js    # UI event handling functions
+├── controls.js          # UI control functions
+├── modals.js            # Modal operations
 ├── bootstrap-adapter.js # Bootstrap 5 helpers (modal/tab/tooltip)
-└── README.md         # This documentation
+├── bootstrap-helpers.js # Safe modal/tab wrappers with error handling
+├── function-registry.js # Function names and fallbacks for global registry
+└── README.md            # This documentation
 ```
 
 ## Features

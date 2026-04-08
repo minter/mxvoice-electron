@@ -1,111 +1,89 @@
-# Multi-Architecture Build Workflow
+# Build and Release Workflow
 
-This document explains how to build and release Mx. Voice for both ARM64 and x64 architectures using separate build processes.
+This document explains how to build and release Mx. Voice for macOS (Universal) and Windows.
 
-## Overview
+## macOS Universal Builds
 
-Since universal builds can have compatibility issues with certain native modules, we use a multi-architecture approach:
+Mx. Voice creates "Universal" builds that run natively on both Intel (x64) and Apple Silicon (ARM64) Macs. This is handled in a single build pass using `electron-builder`.
 
-1. **x64 builds** are built on GitHub Actions (macos-13 runner)
-2. **ARM64 builds** are built locally on your ARM Mac
-3. **Update files are merged** to create a single `latest-mac.yml` that includes both architectures
+### Local build (macOS)
 
-## Workflow Steps
-
-### 1. Build ARM64 Locally
+Universal builds are currently performed manually on a macOS development machine.
 
 ```bash
-# Build ARM64 version locally with release metadata
-# Version is automatically read from package.json
-yarn build:mac:arm64:release
+# Build the universal DMG and Zip locally
+npm run build:mac:universal
 ```
 
-This will:
-- Build the ARM64 version using `yarn build:mac:arm64`
-- Create or update the `dist/latest-mac.yml` file for ARM64
-- Prepare for merging with x64 builds
+### Release to GitHub (macOS)
 
-### 2. Build x64 on GitHub Actions
-
-1. Go to your GitHub repository
-2. Navigate to Actions → Build and Release macOS x64 App
-3. Click "Run workflow"
-4. The version is automatically read from `package.json`
-5. Set `is_prerelease` to `true` if building a prerelease
-6. Click "Run workflow"
-
-The workflow will:
-- Build x64 version on GitHub Actions
-- Publish the release to GitHub
-- Upload artifacts including `dist/latest-mac.yml`
-
-### 3. Download x64 latest-mac.yml
-
-1. After the GitHub Actions build completes
-2. Go to the workflow run
-3. Download the `macos-x64-signed-build` artifact
-4. Extract and locate the `dist/latest-mac.yml` file
-
-### 4. Merge the Update Files
+To build and publish a release directly to GitHub:
 
 ```bash
-# Place the x64 latest-mac.yml in your dist/ directory
-# Then run the merge script
-yarn merge:latest-mac
+# Stable release
+npm run release:mac
+
+# Prerelease (beta/alpha)
+npm run release:mac:prerelease
+
+# Draft release
+npm run release:mac:draft
 ```
 
-This creates `dist/latest-mac-merged.yml` with both architectures.
+The release scripts automatically:
 
-### 5. Upload Merged File
+1. Build for both architectures.
+2. Create a universal binary.
+3. Package as DMG and Zip.
+4. Sign and notarize (requires valid Apple Developer certificates).
+5. Upload artifacts to the specified GitHub release.
 
-Upload the merged `latest-mac-merged.yml` to your GitHub release to replace the x64-only version.
+---
 
-## Benefits
+## Windows Builds
 
-✅ **Reliable builds** - Each architecture builds in its native environment
-✅ **No update conflicts** - Single `latest-mac.yml` file includes both architectures
-✅ **Better compatibility** - Each architecture builds in its optimal environment
-✅ **Simpler debugging** - Each build process is independent
+Windows builds include a two-phase signing process to ensure all components (executables and DLLs) are properly signed using a YubiKey.
 
-## Troubleshooting
+### Local build (Windows)
 
-### ARM64 Build Fails
-- Check that you have the correct signing certificates
-- Ensure all dependencies are installed
-- Check the build logs for specific errors
-
-### x64 Build Fails on GitHub Actions
-- Check the workflow logs
-- Verify secrets are configured correctly
-- Ensure the runner has sufficient resources
-
-### Merge Fails
-- Verify both `latest-mac.yml` files exist
-- Check that the version numbers match
-- Ensure `js-yaml` dependency is installed
-
-## File Structure
-
-```
-dist/
-├── Mx. Voice-{version}-arm64.dmg        # ARM64 DMG (local build)
-├── Mx. Voice-{version}-arm64.zip        # ARM64 ZIP (local build)
-├── latest-mac.yml                        # ARM64 update info (local build)
-├── latest-mac-merged.yml                 # Combined update info (after merge)
-└── [x64 files will be here after GitHub Actions build]
+```bash
+# Build and sign the Windows installer
+npm run build:win
 ```
 
-**Note**: `{version}` is automatically read from `package.json` (e.g., `4.0.1-pre.3`).
+### Release to GitHub (Windows)
 
-## Version Management
+```bash
+# Stable release
+npm run release:win
 
-- Version is automatically read from `package.json`
-- No environment variable configuration needed
-- `BUILD_DIR` - Build output directory (defaults to `dist`)
+# Prerelease
+npm run release:win:prerelease
 
-## Next Steps
+# Draft release
+npm run release:win:draft
+```
 
-After implementing this workflow, you can:
-1. **Automate the merge process** with additional scripts
-2. **Add validation** to ensure both architectures are properly included
-3. **Create a GitHub Action** that automatically merges the files after both builds complete
+The Windows release process:
+
+1. Packages the app into `win-unpacked`.
+2. Signs all unpacked files (batch process via `afterPack.js`).
+3. Creates the NSIS installer.
+4. Signs the installer and uninstaller via `signAllWindows.cjs`.
+5. Uploads to GitHub via `publishWindows.cjs`.
+
+---
+
+## Prerequisites
+
+### macOS
+
+- Xcode Command Line Tools.
+- Valid Apple Developer ID Application & Installer certificates in your Keychain.
+- `APPLE_ID` and `APPLE_PASSWORD` (app-specific password) environment variables for notarization.
+
+### Windows
+
+- Windows SDK (specifically `signtool.exe`).
+- YubiKey with a valid Code Signing certificate.
+- See `docs/windows-code-signing-configuration.md` for detailed setup and environment variable configuration.

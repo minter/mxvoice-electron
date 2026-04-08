@@ -67,6 +67,26 @@ Manages all IPC (Inter-Process Communication) between main and renderer processe
 
 Provides centralized logging service for file persistence and export.
 
+### auto-backup-timer.js
+
+Handles automatic periodic database backup scheduling. Configurable backup intervals with timer management.
+
+### launcher-window.js
+
+Creates and manages the profile launcher window. Handles profile selection UI before the main application window opens.
+
+### library-transfer-manager.js
+
+Manages library import and export operations. Uses `archiver` for creating backup archives and `extract-zip` for restoring them.
+
+### profile-backup-manager.js
+
+Handles profile backup and restore operations including database and configuration files.
+
+### profile-manager.js
+
+Profile CRUD operations, switching between profiles, and ensuring data isolation between profiles.
+
 ## Usage
 
 All modules are initialized in `src/main/index-modular.js` and dependencies are injected as needed.
