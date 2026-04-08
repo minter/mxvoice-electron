@@ -48,10 +48,19 @@ test.describe("What's New Tour", () => {
   });
 
   test('Tour can be dismissed with close button', async () => {
+    // Launch a fresh tour
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('tours_seen', []);
+      if (window.moduleRegistry?.whatsNew?.showWhatsNew) {
+        await window.moduleRegistry.whatsNew.showWhatsNew();
+      }
+    });
+
+    const popover = page.locator('.driver-popover');
+    await expect(popover).toBeVisible({ timeout: 5000 });
+
     const closeBtn = page.locator('.driver-popover-close-btn');
-    if (await closeBtn.isVisible()) {
-      await closeBtn.click();
-    }
+    await closeBtn.click();
 
     const overlay = page.locator('.driver-overlay');
     await expect(overlay).not.toBeVisible({ timeout: 3000 });
