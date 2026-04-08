@@ -1,3 +1,5 @@
+import { MULTI_SONG_THRESHOLD } from '../bulk-operations/multi-song-import.js';
+
 /**
  * Tour definitions keyed by app version.
  * Update the version key to match package.json exactly at release time.
@@ -42,6 +44,16 @@ export default {
           align: 'center',
           preAction: { type: 'function', name: 'showFileDropOverlay' },
           postAction: { type: 'function', name: 'hideFileDropOverlay' },
+        },
+        {
+          element: '#multiSongImportModal .modal-content',
+          title: 'Fine-tune Your Imports',
+          description: `When importing 2 to ${MULTI_SONG_THRESHOLD} tracks, you can now adjust the title, artist, and category for each individual track before saving them to your library.`,
+          side: 'bottom',
+          align: 'center',
+          preAction: { type: 'function', name: 'openMultiSongImportTour' },
+          postAction: { type: 'closeModal', target: '#multiSongImportModal' },
+          skipIfMissing: true,
         },
         {
           element: '#preferences-crossfade-seconds',
