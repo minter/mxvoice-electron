@@ -2,6 +2,11 @@ import { _electron as electron, test, expect } from '@playwright/test';
 import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
 
 test.describe('Songs - delete', () => {
+  // Tests are ordered: first test deletes Anthrax, second test verifies cancel preserves
+  // Edie Brickell, third test uses Weird Al. They share one app for performance but
+  // MUST run in declared order.
+  test.describe.configure({ mode: 'serial' });
+
   let app; let page;
 
   test.beforeAll(async () => {
