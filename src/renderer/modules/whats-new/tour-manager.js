@@ -153,7 +153,11 @@ export class TourManager {
       return;
     }
 
-    const activeSteps = tour.steps.filter((step) => !this.shouldSkipStep(step));
+    // Only pre-filter steps that have NO preAction — steps with preActions
+    // may create/show their target elements, so defer skip checks to runtime.
+    const activeSteps = tour.steps.filter(
+      (step) => step.preAction || !this.shouldSkipStep(step),
+    );
     if (activeSteps.length === 0) {
       window.debugLog?.info('All tour steps skipped (elements missing)', {
         module: 'whats-new',
@@ -185,9 +189,22 @@ export class TourManager {
       onHighlightStarted: async (_el, step, opts) => {
         currentStepIndex = opts.index;
         const tourStep = activeSteps[opts.index];
+        // Execute preAction before highlighting (e.g., open a modal)
         if (tourStep && tourStep.preAction) {
           await this.executeAction(tourStep.preAction);
           await this.waitForDomSettle();
+        }
+        // Runtime skip check — if element still missing after preAction, skip ahead
+        if (tourStep && this.shouldSkipStep(tourStep)) {
+          window.debugLog?.info(`Skipping tour step "${tourStep.title}" — element not found after preAction`, {
+            module: 'whats-new',
+            function: 'launchTour',
+          });
+          if (tourStep.postAction) {
+            await this.executeAction(tourStep.postAction);
+            await this.waitForDomSettle();
+          }
+          this.activeDriver.moveNext();
         }
       },
       onDeselected: async (_el, step, opts) => {

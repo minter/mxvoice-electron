@@ -6,7 +6,8 @@ const tourManager = new TourManager(tourData);
 // ─── Register helper functions ────────────────────────────────────────
 
 tourManager.registerHelper('openEditForFirstSong', async () => {
-  const result = await window.secureElectronAPI.database.searchSongs('', { limit: 1 });
+  // Search with no filters to get all songs, take the first one
+  const result = await window.secureElectronAPI.database.searchSongs({});
   const rows = result?.data || result;
   if (!Array.isArray(rows) || rows.length === 0) return;
 
