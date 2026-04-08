@@ -533,6 +533,18 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
           }
         });
       }
+
+      if (apiToUse && apiToUse.events && apiToUse.events.onWhatsNew) {
+        window.logInfo('🆕 Setting up What\'s New event listener...');
+        apiToUse.events.onWhatsNew(async () => {
+          window.logInfo('🆕 What\'s New requested from menu');
+          if (moduleRegistry.whatsNew && moduleRegistry.whatsNew.showWhatsNew) {
+            await moduleRegistry.whatsNew.showWhatsNew();
+          } else {
+            window.logWarn('What\'s New module not available');
+          }
+        });
+      }
     }
     
     // Initialize function coordination system
@@ -807,6 +819,11 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logInfo('Module-dependent functions called successfully!');
     } catch (error) {
       window.logError('Error calling module-dependent functions', error);
+    }
+
+    // Auto-trigger What's New tour if applicable
+    if (moduleRegistry.whatsNew && moduleRegistry.whatsNew.initWhatsNew) {
+      await moduleRegistry.whatsNew.initWhatsNew();
     }
 
     // Set up keyboard shortcuts using the keyboard manager module
