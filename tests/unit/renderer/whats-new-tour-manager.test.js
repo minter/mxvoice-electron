@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+// Mock tours.json for index.js
+vi.mock('../../../src/renderer/modules/whats-new/tours.json', () => ({
+  default: {
+    tours: {
+      '4.3.0': {
+        title: "What's New in 4.3.0",
+        steps: [{ element: '#some-element', title: 'Feature A', description: 'Description of A' }],
+      },
+    },
+  },
+}));
+
 // Mock driver.js
 vi.mock('driver.js', () => {
   const mockDriverInstance = {
@@ -84,6 +96,9 @@ const { TourManager } = await import(
   '../../../src/renderer/modules/whats-new/tour-manager.js'
 );
 const { __mockInstance: mockDriver } = await import('driver.js');
+const { initWhatsNew, showWhatsNew } = await import(
+  '../../../src/renderer/modules/whats-new/index.js'
+);
 
 describe('TourManager', () => {
   let manager;
@@ -261,5 +276,47 @@ describe('TourManager', () => {
       await expect(manager.executeAction(null)).resolves.toBeUndefined();
       await expect(manager.executeAction(undefined)).resolves.toBeUndefined();
     });
+  });
+});
+
+describe('initWhatsNew', () => {
+  it('launches tour when version has unseen tour', async () => {
+    mockGetVersion.mockResolvedValue('4.3.0');
+    mockGetPreference.mockResolvedValue([]);
+
+    const el = document.createElement('div');
+    el.id = 'some-element';
+    document.body.appendChild(el);
+
+    await initWhatsNew();
+    expect(mockDriver.drive).toHaveBeenCalled();
+
+    document.body.removeChild(el);
+  });
+
+  it('does not launch tour when version already seen', async () => {
+    mockGetVersion.mockResolvedValue('4.3.0');
+    mockGetPreference.mockResolvedValue(['4.3.0']);
+    mockDriver.drive.mockClear();
+
+    await initWhatsNew();
+    expect(mockDriver.drive).not.toHaveBeenCalled();
+  });
+});
+
+describe('showWhatsNew', () => {
+  it('launches tour for current version regardless of seen state', async () => {
+    mockGetVersion.mockResolvedValue('4.3.0');
+    mockGetPreference.mockResolvedValue(['4.3.0']);
+    mockDriver.drive.mockClear();
+
+    const el = document.createElement('div');
+    el.id = 'some-element';
+    document.body.appendChild(el);
+
+    await showWhatsNew();
+    expect(mockDriver.drive).toHaveBeenCalled();
+
+    document.body.removeChild(el);
   });
 });
