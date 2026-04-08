@@ -1,4 +1,4 @@
-import { driver } from 'driver.js';
+import { driver } from '../../../../node_modules/driver.js/dist/driver.js.mjs';
 
 /**
  * Manages "What's New" guided tours using Driver.js.

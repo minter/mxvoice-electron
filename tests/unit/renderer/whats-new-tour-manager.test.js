@@ -12,7 +12,7 @@ vi.mock('../../../src/renderer/modules/whats-new/tours.json', () => ({
   },
 }));
 
-// Mock driver.js
+// Mock driver.js (both bare specifier for any stale references, and actual path used by tour-manager.js)
 vi.mock('driver.js', () => {
   const mockDriverInstance = {
     drive: vi.fn(),

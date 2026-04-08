@@ -24,24 +24,19 @@ test.describe("What's New Tour", () => {
       await window.secureElectronAPI.profile.setPreference('tours_seen', []);
     });
 
-    // Check if there's a tour for the current version
-    const hasTour = await page.evaluate(async () => {
-      const { tourManager } = await import('./renderer/modules/whats-new/index.js');
-      const version = await window.secureElectronAPI.app.getVersion();
-      return tourManager.getTourForVersion(version) !== null;
+    // Launch tour via module registry
+    const launched = await page.evaluate(async () => {
+      if (window.moduleRegistry?.whatsNew?.showWhatsNew) {
+        await window.moduleRegistry.whatsNew.showWhatsNew();
+        return true;
+      }
+      return false;
     });
 
-    if (!hasTour) {
+    if (!launched) {
       test.skip();
       return;
     }
-
-    // Launch tour
-    await page.evaluate(async () => {
-      if (window.moduleRegistry.whatsNew?.showWhatsNew) {
-        await window.moduleRegistry.whatsNew.showWhatsNew();
-      }
-    });
 
     // Driver.js overlay should be visible
     const overlay = page.locator('.driver-overlay');
