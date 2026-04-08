@@ -1,4 +1,4 @@
-import tourData from './tours.json';
+import tourData from './tours.js';
 import { TourManager } from './tour-manager.js';
 
 const tourManager = new TourManager(tourData);

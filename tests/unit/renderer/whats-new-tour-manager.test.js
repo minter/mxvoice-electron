@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// Mock tours.json for index.js
-vi.mock('../../../src/renderer/modules/whats-new/tours.json', () => ({
+// Mock tours.js for index.js
+vi.mock('../../../src/renderer/modules/whats-new/tours.js', () => ({
   default: {
     tours: {
       '4.3.0': {
