@@ -21,16 +21,98 @@ try {
 import { secureFileSystem, secureDatabase, securePath, secureStore } from '../adapters/secure-adapter.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 import { populateCategorySelect, findUniqueCategoryCode, refreshCategories, getCategoryDescription } from '../categories/category-data.js';
+import { showMultiSongImport, MULTI_SONG_THRESHOLD } from './multi-song-import.js';
 
 // Supported audio file extensions (lowercase)
 export const SUPPORTED_AUDIO_EXTS = new Set([".mp3", ".mp4", ".m4a", ".wav", ".ogg", ".flac", ".opus"]);
 
 /**
- * Shows the bulk add modal with directory and category selection
+ * Shows the bulk add modal with directory and category selection.
+ * Performs a directory walk first to determine if it should route to
+ * the Multi-Song Import modal instead.
  * 
  * @param {string} directory - The directory path to pre-populate
  */
 export async function showBulkAddModal(directory) {
+  if (!directory) return;
+
+  debugLog?.info('showBulkAddModal called, checking song count...', { 
+    module: 'bulk-operations', 
+    function: 'showBulkAddModal', 
+    directory 
+  });
+
+  // Recursive walk function (reused from saveBulkUpload logic conceptually)
+  const getSongs = async (dir) => {
+    let results = [];
+    try {
+      const readdirResult = await secureFileSystem.readdir(dir);
+      const entries = Array.isArray(readdirResult)
+        ? readdirResult
+        : (Array.isArray(readdirResult?.data) ? readdirResult.data : null);
+      if (!entries) return results;
+      
+      for (const fileEntry of entries) {
+        if (typeof fileEntry === 'string' && fileEntry.startsWith('.')) continue;
+        const fullPath = `${dir}/${fileEntry}`;
+        try {
+          const statResult = await secureFileSystem.stat(fullPath);
+          const isDir = (!!statResult?.isDirectory) || (typeof statResult?.isDirectory === 'function' && statResult.isDirectory());
+          const isFile = (!!statResult?.isFile) || (typeof statResult?.isFile === 'function' && statResult.isFile());
+          
+          if (isDir) {
+            results = results.concat(await getSongs(fullPath));
+          } else if (isFile) {
+            const extRes = await securePath.extname(fullPath);
+            const ext = extRes?.data || extRes || '';
+            if (SUPPORTED_AUDIO_EXTS.has(ext.toLowerCase())) {
+              results.push(fullPath);
+            }
+          }
+        } catch (_e) {}
+      }
+    } catch (_e) {}
+    return results;
+  };
+
+  const songs = await getSongs(directory);
+
+  if (!songs.length) {
+    alert('No supported audio files found in the selected directory.');
+    return;
+  }
+
+  // Routing based on threshold
+  if (songs.length === 1) {
+    debugLog?.info('Single song in directory, routing to startAddNewSong', { count: 1 });
+    let metadata = null;
+    try {
+      const metaRes = await window.secureElectronAPI?.audio?.getMetadata?.(songs[0]);
+      if (metaRes?.success && metaRes.data) {
+        const d = metaRes.data;
+        metadata = {
+          common: { title: d.title || '', artist: d.artist || '' },
+          format: { duration: d.duration || 0 }
+        };
+      }
+    } catch (_e) {}
+
+    if (window.moduleRegistry?.songManagement?.startAddNewSong) {
+      window.moduleRegistry.songManagement.startAddNewSong(songs[0], metadata);
+    } else if (typeof window.startAddNewSong === 'function') {
+      window.startAddNewSong(songs[0], metadata);
+    }
+    return;
+  }
+
+  if (songs.length <= MULTI_SONG_THRESHOLD) {
+    debugLog?.info('Directory count within threshold, routing to showMultiSongImport', { count: songs.length });
+    showMultiSongImport(songs);
+    return;
+  }
+
+  // Above threshold: Show the standard bulk add modal
+  debugLog?.info('Directory count above threshold, showing bulk add modal', { count: songs.length });
   const pathEl = document.getElementById('bulk-add-path');
   if (pathEl) pathEl.value = directory || '';
   const catSel = document.getElementById('bulk-add-category');
@@ -49,6 +131,54 @@ let pendingBulkFiles = null;
  * @param {string[]} filePaths - Array of audio file paths to import
  */
 export async function showBulkAddFromFiles(filePaths) {
+  if (!filePaths || !filePaths.length) return;
+
+  // 1. If only one file, use the standard single-song add flow
+  if (filePaths.length === 1) {
+    debugLog?.info('Single file dropped, routing to startAddNewSong', {
+      module: 'bulk-operations',
+      function: 'showBulkAddFromFiles'
+    });
+    
+    // Attempt to get metadata before showing modal
+    let metadata = null;
+    try {
+      const metaRes = await window.secureElectronAPI?.audio?.getMetadata?.(filePaths[0]);
+      if (metaRes?.success && metaRes.data) {
+        const d = metaRes.data;
+        metadata = {
+          common: { title: d.title || '', artist: d.artist || '' },
+          format: { duration: d.duration || 0 }
+        };
+      }
+    } catch (_e) {}
+
+    if (window.moduleRegistry?.songManagement?.startAddNewSong) {
+      window.moduleRegistry.songManagement.startAddNewSong(filePaths[0], metadata);
+    } else if (typeof window.startAddNewSong === 'function') {
+      window.startAddNewSong(filePaths[0], metadata);
+    }
+    return;
+  }
+
+  // 2. If between 2 and MULTI_SONG_THRESHOLD, use the new Multi-Song Import modal
+  if (filePaths.length <= MULTI_SONG_THRESHOLD) {
+    debugLog?.info('Multiple files dropped (within threshold), routing to showMultiSongImport', {
+      module: 'bulk-operations',
+      function: 'showBulkAddFromFiles',
+      count: filePaths.length
+    });
+    showMultiSongImport(filePaths);
+    return;
+  }
+
+  // 3. Otherwise, use the standard bulk add flow (one category for all)
+  debugLog?.info('Multiple files dropped (above threshold), using bulk add modal', {
+    module: 'bulk-operations',
+    function: 'showBulkAddFromFiles',
+    count: filePaths.length
+  });
+
   pendingBulkFiles = filePaths;
 
   const pathEl = document.getElementById('bulk-add-path');
@@ -239,6 +369,8 @@ export async function saveBulkUpload(event) {
   resetBulkAddModalState();
 
   if (droppedFiles && droppedFiles.length) {
+    // Note: showBulkAddFromFiles already handles routing for dropped files.
+    // This block is a fallback/safety.
     const tbody = document.querySelector('#search_results tbody');
     if (tbody) tbody.querySelectorAll('tr').forEach(tr => tr.remove());
     const thead = document.querySelector('#search_results thead');
@@ -306,6 +438,45 @@ export async function saveBulkUpload(event) {
 
   const songs = await walk(dirname);
 
+  if (!songs.length) {
+    alert('No supported audio files found in the selected directory.');
+    return;
+  }
+
+  // Routing based on threshold for directory imports
+  if (songs.length === 1) {
+    // Single song from directory -> startAddNewSong
+    let metadata = null;
+    try {
+      const metaRes = await window.secureElectronAPI?.audio?.getMetadata?.(songs[0]);
+      if (metaRes?.success && metaRes.data) {
+        const d = metaRes.data;
+        metadata = {
+          common: { title: d.title || '', artist: d.artist || '' },
+          format: { duration: d.duration || 0 }
+        };
+      }
+    } catch (_e) {}
+
+    if (window.moduleRegistry?.songManagement?.startAddNewSong) {
+      window.moduleRegistry.songManagement.startAddNewSong(songs[0], metadata);
+    } else if (typeof window.startAddNewSong === 'function') {
+      window.startAddNewSong(songs[0], metadata);
+    }
+    return;
+  }
+
+  if (songs.length <= MULTI_SONG_THRESHOLD) {
+    debugLog?.info('Directory import (within threshold), routing to showMultiSongImport', {
+      module: 'bulk-operations',
+      function: 'saveBulkUpload',
+      count: songs.length
+    });
+    showMultiSongImport(songs);
+    return;
+  }
+
+  // Above threshold: Proceed with simple bulk add (one category for all)
   const tbody = document.querySelector('#search_results tbody');
   if (tbody) tbody.querySelectorAll('tr').forEach(tr => tr.remove());
   const thead = document.querySelector('#search_results thead');

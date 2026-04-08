@@ -63,6 +63,17 @@ unset ELECTRON_RUN_AS_NODE && npx playwright test tests/e2e/smoke.spec.js
 
 For details on test isolation, per‑suite environments, CI behavior, and complete coverage breakdown, see `docs/TESTING_SETUP_SUMMARY.md`.
 
+## Configuration
+
+### Import Thresholds
+The application uses an intelligent routing system when importing multiple audio files. You can tune the "Middle Path" threshold in:
+- `src/renderer/modules/bulk-operations/multi-song-import.js` -> `MULTI_SONG_THRESHOLD` (Default: `20`)
+
+**Routing Logic:**
+- **1 Song**: Individual Add Modal (manual metadata entry).
+- **2 to N Songs**: Multi-Song Import Modal (scrollable list with per-song metadata fine-tuning).
+- **> N Songs**: Traditional Bulk Add Modal (assigns one category to all files).
+
 ## Architecture Overview
 
 The app follows a modern Electron architecture with context isolation enabled and a modular codebase:

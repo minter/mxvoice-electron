@@ -118,7 +118,10 @@ function extractAudioFiles(dataTransfer) {
 }
 
 /**
- * Route validated file paths to the correct add-song flow
+ * Route validated file paths to the correct add-song flow.
+ * Delegates to showBulkAddFromFiles which handles threshold-based routing
+ * (1 song = single add, 2-20 songs = multi-import, >20 songs = bulk add).
+ *
  * @param {string[]} filePaths - Array of valid audio file paths
  */
 async function routeFiles(filePaths) {
@@ -131,59 +134,20 @@ async function routeFiles(filePaths) {
     return;
   }
 
-  if (filePaths.length === 1) {
-    // Single file — parse metadata then trigger the Add Song modal
-    debugLog?.info('File drop: single file, opening add-song modal', {
-      module: 'file-drop-handler',
-      function: 'routeFiles',
-      path: filePaths[0]
-    });
+  debugLog?.info(`File drop: routing ${filePaths.length} file(s) to bulk-operations`, {
+    module: 'file-drop-handler',
+    function: 'routeFiles'
+  });
 
-    // getMetadata returns flat { title, artist, duration } but startAddNewSong
-    // expects the nested music-metadata shape { common: { title, artist }, format: { duration } }
-    let metadata = null;
-    try {
-      const metaRes = await window.secureElectronAPI?.audio?.getMetadata?.(filePaths[0]);
-      if (metaRes?.success && metaRes.data) {
-        const d = metaRes.data;
-        metadata = {
-          common: { title: d.title || '', artist: d.artist || '' },
-          format: { duration: d.duration || 0 }
-        };
-      }
-    } catch (_e) {
-      // Proceed without metadata
-    }
-
-    // Use the same path as the file-dialog flow
-    if (window.moduleRegistry?.songManagement?.startAddNewSong) {
-      window.moduleRegistry.songManagement.startAddNewSong(filePaths[0], metadata);
-    } else if (typeof window.startAddNewSong === 'function') {
-      window.startAddNewSong(filePaths[0], metadata);
-    } else {
-      debugLog?.warn('startAddNewSong not available for file drop', {
-        module: 'file-drop-handler',
-        function: 'routeFiles'
-      });
-    }
+  if (window.moduleRegistry?.bulkOperations?.showBulkAddFromFiles) {
+    window.moduleRegistry.bulkOperations.showBulkAddFromFiles(filePaths);
+  } else if (typeof window.showBulkAddFromFiles === 'function') {
+    window.showBulkAddFromFiles(filePaths);
   } else {
-    // Multiple files — open the bulk-add modal pre-populated with file list
-    debugLog?.info('File drop: multiple files, opening bulk-add modal', {
+    debugLog?.warn('showBulkAddFromFiles not available for file drop', {
       module: 'file-drop-handler',
-      function: 'routeFiles',
-      count: filePaths.length
+      function: 'routeFiles'
     });
-
-    if (window.moduleRegistry?.bulkOperations?.showBulkAddFromFiles) {
-      window.moduleRegistry.bulkOperations.showBulkAddFromFiles(filePaths);
-    } else if (typeof window.showBulkAddFromFiles === 'function') {
-      window.showBulkAddFromFiles(filePaths);
-    } else {
-      debugLog?.warn('showBulkAddFromFiles not available for file drop', {
-        module: 'file-drop-handler',
-        function: 'routeFiles'
-      });
-    }
   }
 }
 

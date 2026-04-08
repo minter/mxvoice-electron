@@ -6,6 +6,7 @@
  */
 
 import { showBulkAddModal, showBulkAddFromFiles, addSongsByPath, saveBulkUpload } from './bulk-operations.js';
+import { showMultiSongImport, setMultiSongThreshold } from './multi-song-import.js';
 import { setupBulkEventHandlers } from './event-handlers.js';
 
 /**
@@ -18,6 +19,8 @@ class BulkOperationsModule {
     // Bind all functions as methods
     this.showBulkAddModal = showBulkAddModal;
     this.showBulkAddFromFiles = showBulkAddFromFiles;
+    this.showMultiSongImport = showMultiSongImport;
+    this.setMultiSongThreshold = setMultiSongThreshold;
     this.addSongsByPath = addSongsByPath;
     this.saveBulkUpload = saveBulkUpload;
   }

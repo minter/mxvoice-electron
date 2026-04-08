@@ -37,7 +37,7 @@ test.describe('File Drop — external file import', () => {
 
   test.beforeEach(async () => {
     // Close any open modals before each test
-    for (const modalId of ['#songFormModal', '#bulkAddModal']) {
+    for (const modalId of ['#songFormModal', '#bulkAddModal', '#multiSongImportModal']) {
       const visible = await page.locator(modalId).isVisible();
       if (visible) {
         try {
@@ -76,7 +76,7 @@ test.describe('File Drop — external file import', () => {
     expect(filenameVal).toContain('IndigoGirls-ShameOnYou.mp3');
   });
 
-  test('multiple audio files drop opens Bulk Add modal with file count', async () => {
+  test('multiple audio files drop opens Multi-Song Import modal', async () => {
     const fixtures = path.resolve(__dirname, '../../../fixtures/test-songs');
     const files = [
       path.join(fixtures, 'IndigoGirls-ShameOnYou.mp3'),
@@ -90,18 +90,17 @@ test.describe('File Drop — external file import', () => {
       }
     }, files);
 
-    // Wait for the Bulk Add modal
-    await expect(page.locator('#bulkAddModal')).toBeVisible({ timeout: 10000 });
+    // Wait for the Multi-Song Import modal (count is 3, which is <= 20)
+    const modal = page.locator('#multiSongImportModal');
+    await expect(modal).toBeVisible({ timeout: 10000 });
 
     // Verify the file count summary is displayed
-    const summary = page.locator('#bulk-add-file-count');
-    await expect(summary).toHaveText(/3 audio files ready to import/);
+    const summary = page.locator('#multi-song-import-count');
+    await expect(summary).toHaveText(/3 songs ready to import/);
 
-    // Verify the directory path row is hidden
-    const pathField = page.locator('#bulk-add-path');
-    const pathRow = pathField.locator('..');
-    // The path input's parent row should be hidden
-    await expect(pathField).not.toBeVisible();
+    // Verify song rows are rendered
+    const rows = modal.locator('.song-import-row');
+    await expect(rows).toHaveCount(3);
   });
 
   test('non-audio files drop shows toast notification', async () => {
@@ -124,45 +123,32 @@ test.describe('File Drop — external file import', () => {
     // Neither modal should be open
     await expect(page.locator('#songFormModal')).not.toBeVisible();
     await expect(page.locator('#bulkAddModal')).not.toBeVisible();
+    await expect(page.locator('#multiSongImportModal')).not.toBeVisible();
   });
 
-  test('bulk add modal resets to directory mode after cancel', async () => {
+  test('multi-song import modal resets after cancel', async () => {
     const fixtures = path.resolve(__dirname, '../../../fixtures/test-songs');
     const files = [
       path.join(fixtures, 'IndigoGirls-ShameOnYou.mp3'),
       path.join(fixtures, 'JohnLennon-NobodyToldMe.mp3'),
     ];
 
-    // Drop files to open bulk add in file-list mode
+    // Drop files to open multi-song import
     await page.evaluate(async (filePaths) => {
       if (window.moduleRegistry?.dragDrop?.handleExternalFileDrop) {
         window.moduleRegistry.dragDrop.handleExternalFileDrop(filePaths);
       }
     }, files);
 
-    await expect(page.locator('#bulkAddModal')).toBeVisible({ timeout: 10000 });
+    const modal = page.locator('#multiSongImportModal');
+    await expect(modal).toBeVisible({ timeout: 10000 });
 
     // Verify file summary is shown
-    await expect(page.locator('#bulk-add-file-count')).toHaveText(/2 audio files/);
+    await expect(page.locator('#multi-song-import-count')).toHaveText(/2 songs ready to import/);
 
     // Cancel the modal
-    await page.locator('#bulkAddModal .btn-secondary').click();
-    await expect(page.locator('#bulkAddModal')).not.toBeVisible({ timeout: 5000 });
-
-    // Now open the bulk add modal via the normal directory flow
-    await page.evaluate(() => {
-      if (window.moduleRegistry?.bulkOperations?.showBulkAddModal) {
-        window.moduleRegistry.bulkOperations.showBulkAddModal('/some/directory');
-      }
-    });
-
-    await expect(page.locator('#bulkAddModal')).toBeVisible({ timeout: 10000 });
-
-    // The directory path field should be visible again
-    await expect(page.locator('#bulk-add-path')).toBeVisible();
-
-    // The file summary should be hidden
-    await expect(page.locator('#bulk-add-file-count')).not.toBeVisible();
+    await modal.locator('.btn-secondary').click();
+    await expect(modal).not.toBeVisible({ timeout: 5000 });
   });
 
   test('drop is ignored when a modal is already open', async () => {
