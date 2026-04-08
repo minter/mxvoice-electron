@@ -281,6 +281,9 @@ tests/**/secrets/
 # IDE and editor files
 .vscode/
 .idea/
+
+# Superpowers brainstorming session files
+.superpowers/
 *.swp
 *.swo
 *~
