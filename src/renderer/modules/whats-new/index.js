@@ -64,6 +64,20 @@ tourManager.registerHelper('hideFileDropOverlay', async () => {
   if (overlay) overlay.classList.remove('active');
 });
 
+/**
+ * Opens the Preferences modal and scrolls to the crossfade control.
+ */
+tourManager.registerHelper('openPreferencesAndScrollToCrossfade', async () => {
+  const { safeShowModal } = await import('../ui/bootstrap-helpers.js');
+  await safeShowModal('#preferencesModal', { module: 'whats-new', function: 'openPreferencesAndScrollToCrossfade' });
+  // Wait for modal animation to complete
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  const crossfadeEl = document.getElementById('preferences-crossfade-seconds');
+  if (crossfadeEl) {
+    crossfadeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
+
 // ─── Public API ───────────────────────────────────────────────────────
 
 export async function initWhatsNew() {
