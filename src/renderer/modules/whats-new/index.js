@@ -64,16 +64,6 @@ tourManager.registerHelper('hideFileDropOverlay', async () => {
   if (overlay) overlay.classList.remove('active');
 });
 
-tourManager.registerHelper('openMultiSongImport', async () => {
-  if (window.moduleRegistry?.bulkOperations?.showMultiSongImport) {
-    // Show with some mock data for the tour
-    await window.moduleRegistry.bulkOperations.showMultiSongImport([
-      '/tour/mock/track1.mp3',
-      '/tour/mock/track2.mp3'
-    ]);
-  }
-});
-
 /**
  * Opens the Preferences modal and scrolls to the crossfade control.
  */
