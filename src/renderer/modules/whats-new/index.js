@@ -87,7 +87,7 @@ export async function initWhatsNew() {
 
 export async function showWhatsNew() {
   try {
-    const version = await window.secureElectronAPI.app.getVersion();
+    const version = await tourManager.getAppVersion();
     const tour = tourManager.getTourForVersion(version);
 
     if (tour) {
@@ -97,11 +97,10 @@ export async function showWhatsNew() {
       });
       await tourManager.launchTour(version, { markSeen: false });
     } else {
-      window.debugLog?.info(`No tour for ${version}, opening release notes`, {
+      window.debugLog?.info(`No tour defined for version ${version}`, {
         module: 'whats-new',
         function: 'showWhatsNew',
       });
-      window.open('https://github.com/minter/mxvoice-electron/releases/', '_blank');
     }
   } catch (error) {
     window.debugLog?.error('Failed to show What\'s New tour', {
