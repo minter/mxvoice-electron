@@ -438,6 +438,12 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('menu:import-library', handler);
     },
 
+    onWhatsNew: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:whats-new', handler);
+      return () => ipcRenderer.removeListener('menu:whats-new', handler);
+    },
+
     onExternalFilesDrop: (callback) => {
       const handler = (_event, files) => callback(files);
       ipcRenderer.on('external-files-dropped', handler);
