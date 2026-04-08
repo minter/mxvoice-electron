@@ -30,11 +30,11 @@ TEST_SCENARIOS.forEach((scenario, index) => {
 
 console.log('\n🚀 Testing Commands:');
 console.log('\n  Test 3.x behavior (custom server):');
-console.log('    export TEST_V3_1_5=true && yarn start');
+console.log('    export TEST_V3_1_5=true && npm start');
 console.log('\n  Test 4.x behavior (GitHub provider):');
-console.log('    export TEST_V4_0_0=true && yarn start');
+console.log('    export TEST_V4_0_0=true && npm start');
 console.log('\n  Test both scenarios:');
-console.log('    export TEST_V3_1_5=true TEST_V4_0_0=true && yarn start');
+console.log('    export TEST_V3_1_5=true TEST_V4_0_0=true && npm start');
 
 console.log('\n📊 Expected Log Messages:');
 console.log('\n  3.x (Custom Server):');

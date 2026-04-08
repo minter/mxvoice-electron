@@ -1,4 +1,4 @@
-// This smoke test is retained for manual runs via `yarn test:smoke`.
+// This smoke test is retained for manual runs via `npm run test:smoke`.
 // It is intentionally excluded from CI's default suite by moving it under `tests/e2e/unseeded/`.
 import { _electron as electron, test, expect } from '@playwright/test';
 import electronPath from 'electron';

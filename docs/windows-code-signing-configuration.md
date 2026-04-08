@@ -101,7 +101,7 @@ Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -like "*Your Name
 
 ### Build Command
 ```bash
-yarn build:win
+npm run build:win
 ```
 
 ### Process Flow
@@ -256,17 +256,17 @@ The signing scripts output detailed information about:
 
 ### Prerelease Builds
 ```bash
-yarn release:win:prerelease
+npm run release:win:prerelease
 ```
 
 ### Stable Releases
 ```bash
-yarn release:win
+npm run release:win
 ```
 
 ### Draft Releases
 ```bash
-yarn release:win:draft
+npm run release:win:draft
 ```
 
 All release commands automatically handle signing and publishing to GitHub.
@@ -343,7 +343,7 @@ $env:YUBIKEY_CERT_THUMBPRINT="YOUR_CERTIFICATE_THUMBPRINT"
 
 ```bash
 # Test build (local only)
-yarn build:win
+npm run build:win
 
 # Verify signatures
 signtool verify /pa "dist\YourApp Setup X.X.X.exe"

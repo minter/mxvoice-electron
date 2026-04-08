@@ -48,17 +48,17 @@ mxvoice-electron/
 
 ```bash
 # Core testing (remember to unset ELECTRON_RUN_AS_NODE on macOS/Linux)
-unset ELECTRON_RUN_AS_NODE && yarn test                    # Run all tests
-unset ELECTRON_RUN_AS_NODE && yarn test:ui                # Interactive test runner
-unset ELECTRON_RUN_AS_NODE && yarn test:headed            # See browser during tests
-unset ELECTRON_RUN_AS_NODE && yarn test:debug             # Debug mode with breakpoints
-yarn test:report            # View test results (no unset needed)
+unset ELECTRON_RUN_AS_NODE && npm test                    # Run all tests
+unset ELECTRON_RUN_AS_NODE && npm run test:ui                # Interactive test runner
+unset ELECTRON_RUN_AS_NODE && npm run test:headed            # See browser during tests
+unset ELECTRON_RUN_AS_NODE && npm run test:debug             # Debug mode with breakpoints
+npm run test:report            # View test results (no unset needed)
 
 # Setup
-yarn test:install           # Install Playwright browsers
+npm run test:install           # Install Playwright browsers
 
 # Specific test runs
-unset ELECTRON_RUN_AS_NODE && yarn playwright test tests/e2e/smoke.spec.js
+unset ELECTRON_RUN_AS_NODE && npx playwright test tests/e2e/smoke.spec.js
 
 # Note: The test:smoke script is deprecated; use the main test command instead
 ```
@@ -168,25 +168,25 @@ test('example', async () => {
 ### **Test Structure**
 - **`unseeded/first-run.spec.js`** — First‑run flow (no pre‑seeded DB)
 - **`seeded/*`** — Feature suites against seeded data
-- Manual: **`smoke.spec.js`** — Basic boot verification (excluded from default runs; use `yarn test:smoke`)
+- Manual: **`smoke.spec.js`** — Basic boot verification (excluded from default runs; use `npm run test:smoke`)
 
 ## 🚀 Getting Started
 
 ### **1. Install Playwright**
 ```bash
-yarn test:install
+npm run test:install
 ```
 
 ### **2. Run Tests**
 ```bash
 # Tests launch your app automatically!
 # Remember to unset ELECTRON_RUN_AS_NODE on macOS/Linux
-unset ELECTRON_RUN_AS_NODE && yarn test
+unset ELECTRON_RUN_AS_NODE && npm test
 ```
 
 ### **3. View Results**
 ```bash
-yarn test:report
+npm run test:report
 ```
 
 ## 🔍 Development Workflow
@@ -217,13 +217,13 @@ test.describe('Feature Tests', () => {
 ### **Debugging Tests**
 ```bash
 # See browser during tests
-yarn test:headed
+npm run test:headed
 
 # Interactive test runner
-yarn test:ui
+npm run test:ui
 
 # Debug mode
-yarn test:debug
+npm run test:debug
 ```
 
 ## 🎉 Success Summary
@@ -239,8 +239,8 @@ yarn test:debug
 
 ## 🚀 Next Steps
 
-1. **Run the tests**: `unset ELECTRON_RUN_AS_NODE && yarn test`
-2. **Explore the test runner**: `unset ELECTRON_RUN_AS_NODE && yarn test:ui`
+1. **Run the tests**: `unset ELECTRON_RUN_AS_NODE && npm test`
+2. **Explore the test runner**: `unset ELECTRON_RUN_AS_NODE && npm run test:ui`
 3. **Add more specific tests** for your app's features
 4. **Integrate with CI/CD** for automated testing
 

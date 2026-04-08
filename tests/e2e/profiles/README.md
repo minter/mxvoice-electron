@@ -93,16 +93,16 @@ Tests use `app.windows()` to manage both windows during profile switching scenar
 
 ```bash
 # Run all profile tests
-unset ELECTRON_RUN_AS_NODE && yarn test tests/e2e/profiles/
+unset ELECTRON_RUN_AS_NODE && npm test -- tests/e2e/profiles/
 
 # Run specific test
-unset ELECTRON_RUN_AS_NODE && yarn test tests/e2e/profiles/management.spec.js
+unset ELECTRON_RUN_AS_NODE && npm test -- tests/e2e/profiles/management.spec.js
 
 # Run with UI mode for debugging
-unset ELECTRON_RUN_AS_NODE && yarn test:ui tests/e2e/profiles/
+unset ELECTRON_RUN_AS_NODE && npm run test:ui -- tests/e2e/profiles/
 
 # Run in headed mode to watch the launcher
-unset ELECTRON_RUN_AS_NODE && yarn test:headed tests/e2e/profiles/
+unset ELECTRON_RUN_AS_NODE && npm run test:headed -- tests/e2e/profiles/
 ```
 
 ## Debugging Tips
@@ -112,7 +112,7 @@ unset ELECTRON_RUN_AS_NODE && yarn test:headed tests/e2e/profiles/
 Run tests in headed mode to see the launcher window:
 
 ```bash
-unset ELECTRON_RUN_AS_NODE && yarn test:headed tests/e2e/profiles/management.spec.js
+unset ELECTRON_RUN_AS_NODE && npm run test:headed -- tests/e2e/profiles/management.spec.js
 ```
 
 ### Inspect Test Data

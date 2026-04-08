@@ -13,12 +13,12 @@ This directory contains the test suite for Mx. Voice Electron application.
 ## Running Tests
 
 ```bash
-yarn test            # All tests
-yarn test:smoke      # Minimal boot check
-yarn test:ui         # Interactive UI mode
-yarn test:headed     # Headed runs
-yarn test:debug      # Debug mode
-yarn test:report     # Open HTML report
+npm test            # All tests
+npm run test:smoke  # Minimal boot check
+npm run test:ui     # Interactive UI mode
+npm run test:headed # Headed runs
+npm run test:debug  # Debug mode
+npm run test:report # Open HTML report
 ```
 
 ## Windows-Specific Considerations
