@@ -183,19 +183,36 @@ export class TourManager {
      * Transition to a step: run postAction on current, preAction on target,
      * then move Driver.js. This ensures async actions complete before
      * Driver.js positions the popover.
+     *
+     * Optimization: if the current step's postAction closes a modal and the
+     * target step's preAction reopens the same modal, skip both to avoid
+     * a visible close/reopen flicker.
      */
     const transitionTo = async (targetIndex) => {
-      // PostAction for current step
       const currentStep = activeSteps[currentStepIndex];
-      if (currentStep && currentStep.postAction) {
-        await this.executeAction(currentStep.postAction);
+      const targetStep = activeSteps[targetIndex];
+
+      // Check if post/pre actions cancel out (e.g., close then reopen same modal)
+      const postAction = currentStep?.postAction;
+      const preAction = targetStep?.preAction;
+      const actionsRedundant = postAction && preAction
+        && postAction.type === 'closeModal' && preAction.type === 'openModal'
+        && postAction.target === preAction.target;
+      // Also check function-based: same named helper on consecutive steps
+      const sameFunctionHelper = postAction && preAction
+        && preAction.type === 'function' && currentStep?.preAction?.type === 'function'
+        && preAction.name === currentStep.preAction.name;
+      const skipBoth = actionsRedundant || sameFunctionHelper;
+
+      // PostAction for current step (unless redundant with next preAction)
+      if (currentStep && postAction && !skipBoth) {
+        await this.executeAction(postAction);
         await this.waitForDomSettle();
       }
 
-      // PreAction for target step
-      const targetStep = activeSteps[targetIndex];
-      if (targetStep && targetStep.preAction) {
-        await this.executeAction(targetStep.preAction);
+      // PreAction for target step (unless redundant with previous postAction)
+      if (targetStep && preAction && !skipBoth) {
+        await this.executeAction(preAction);
         await this.waitForDomSettle();
       }
 
