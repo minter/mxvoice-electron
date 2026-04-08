@@ -4,6 +4,15 @@
 
 The Test Functions Module contains all testing utilities for the MxVoice application. These functions are used for testing various APIs and features during development and migration phases.
 
+## Structure
+
+```
+test-utils/
+├── index.js                    # Main module entry point
+├── security-transition-test.js # Security feature validation tests
+└── README.md                   # This documentation
+```
+
 ## Functions
 
 ### `testPhase2Migrations()`

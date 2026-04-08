@@ -9,6 +9,7 @@ The search module is organized into several sub-modules:
 - **search-engine.js** - Core search functionality
 - **live-search.js** - Real-time search with debouncing
 - **advanced-search.js** - Advanced search interface management
+- **search-form-utils.js** - Search form helper utilities
 - **index.js** - Main module interface and coordination
 
 ## Features
@@ -39,7 +40,7 @@ The search module is organized into several sub-modules:
 import search from './modules/search/index.js';
 
 // Named bindings also exported
-import { searchData, performLiveSearch, toggleAdvancedSearch } from './modules/search/index.js';
+import { searchData, performLiveSearch, performAdvancedSearch } from './modules/search/index.js';
 ```
 
 ### Basic Search
@@ -65,8 +66,8 @@ search.triggerLiveSearch();
 ### Advanced Search
 
 ```javascript
-// Toggle advanced search interface
-toggleAdvancedSearch();
+// Perform advanced search with filters
+performAdvancedSearch(filters);
 ```
 
 ### Query Building
@@ -82,11 +83,12 @@ console.log(query.queryParams);
 
 ```
 search/
-├── index.js           # Main module interface
-├── search-engine.js   # Core search functionality
-├── live-search.js     # Live search implementation
-├── advanced-search.js # Advanced search UI management
-└── README.md         # This documentation
+├── index.js             # Main module interface
+├── search-engine.js     # Core search functionality
+├── live-search.js       # Live search implementation
+├── advanced-search.js   # Advanced search UI management
+├── search-form-utils.js # Search form helper utilities
+└── README.md            # This documentation
 ```
 
 ## Dependencies
@@ -123,8 +125,8 @@ Performs a live search with the given search term.
 **Parameters:**
 - `searchTerm` (string) - The search term to search for
 
-### toggleAdvancedSearch()
-Toggles the advanced search interface visibility.
+### performAdvancedSearch(filters)
+Performs an advanced search with the provided filter criteria.
 
 ### clearSearchResults()
 Clears all search results from the UI.

@@ -5,11 +5,12 @@ Coordinates DOM event handler modules and ensures correct initialization order.
 ### Structure
 ```
 event-coordination/
-├── index.js                # Coordinator class
+├── index.js                  # Coordinator class
 ├── search-events.js
 ├── audio-control-events.js
-├── ui-interaction-events.js
-├── hotkeys-events.js       # Hotkey event handling
+├── ui-interaction-events.js  # Modals, tabs, UI interactions, release note sanitization
+├── hotkeys-events.js         # Hotkey event handling
+├── hotkeys-events.md         # Hotkey event documentation
 ├── dom-initialization.js
 ├── event-delegator.js
 └── README.md

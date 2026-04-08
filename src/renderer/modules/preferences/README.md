@@ -6,10 +6,11 @@ The Preferences module provides all preferences and settings functionality for t
 
 ```
 preferences/
-├── index.js              # Main module entry point
-├── preference-manager.js # Preference UI management
-├── settings-controller.js # Settings saving and management
-└── README.md            # This documentation
+├── index.js                      # Main module entry point
+├── preference-manager.js         # Preference UI management
+├── settings-controller.js        # Settings saving and management
+├── profile-preference-adapter.js # Adapts preferences for profile-aware storage
+└── README.md                     # This documentation
 ```
 
 ## Features

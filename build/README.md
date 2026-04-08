@@ -41,6 +41,9 @@ Post-build script that signs the installer and uninstaller after they're created
   - `YUBIKEY_CERT_NAME` - Certificate subject name (alternative to thumbprint)
   - YubiKey PIN will be prompted once for all files
 
+### `publishWindows.cjs`
+Publishes signed Windows builds to GitHub releases. Handles uploading the signed installer and associated files after the signing process is complete. Supports `--draft` and `--prerelease` flags.
+
 ### `win-sign-utils.cjs`
 Shared utilities for Windows code signing. Provides `findSigntool()` (signtool.exe path discovery), `buildSignCommand()` (certificate selection and command assembly), and `logCertInfo()` (log which cert method is active). Used by both `afterPack.js` and `signAllWindows.cjs`.
 
@@ -58,7 +61,7 @@ The Windows signing is configured in `package.json`:
 
 ```json
 "win": {
-  "signAndEditExecutable": false
+  "signAndEditExecutable": true
 },
 "scripts": {
   "build:win": "electron-builder --win && node build/signAllWindows.cjs"

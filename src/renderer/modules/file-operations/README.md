@@ -7,6 +7,7 @@ File import/export for hotkeys and holding tank, directory picking, and update i
 file-operations/
 ├── file-operations.js   # open/save hotkey/holding tank
 ├── system-operations.js # pickDirectory, installUpdate
+├── function-registry.js # Function names and fallbacks for global registry
 ├── index.js             # Singleton with bound methods
 └── README.md
 ```

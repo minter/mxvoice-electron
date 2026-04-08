@@ -1,5 +1,5 @@
 # Mx. Voice
-*Improv Audio Software — Version 4.1.1-pre.3*
+*Improv Audio Software*
 
 ## About
 
@@ -44,16 +44,16 @@ This project uses Playwright with first-class Electron support. Each test suite 
 unset ELECTRON_RUN_AS_NODE && npm test
 
 # Interactive test runner UI
-unset ELECTRON_RUN_AS_NODE && npm test:ui
+unset ELECTRON_RUN_AS_NODE && npm run test:ui
 
 # Headed mode (see windows during tests)
-unset ELECTRON_RUN_AS_NODE && npm test:headed
+unset ELECTRON_RUN_AS_NODE && npm run test:headed
 
 # Debug mode
-unset ELECTRON_RUN_AS_NODE && npm test:debug
+unset ELECTRON_RUN_AS_NODE && npm run test:debug
 
 # View the HTML report from the last run
-npm test:report
+npm run test:report
 
 # Optional: manual smoke test (excluded from default runs)
 unset ELECTRON_RUN_AS_NODE && npx playwright test tests/e2e/smoke.spec.js
@@ -104,7 +104,7 @@ The app follows a modern Electron architecture with context isolation enabled an
 ### Module system
 - All code uses ES Modules (`import`/`export`)
 - All imports must include `.js` extensions
-- See `.cursorrules` for detailed module patterns and requirements
+- See module READMEs for detailed patterns and requirements
 
 ### Useful paths
 - Assets: `src/assets/` (see `src/assets/README.md`)
@@ -158,7 +158,8 @@ npm pack                    # Build without publishing
 npm run dist                    # Build all platforms locally
 
 # Utility scripts
-npm run fix:checksums          # Manually fix checksums in latest.yml
+npm run lint                   # Run ESLint
+npm run lint:fix               # Run ESLint with auto-fix
 ```
 
 ### macOS
@@ -330,16 +331,18 @@ To publish Windows releases, use your preferred workflow for uploading the signe
 - **Database**: `node-sqlite3-wasm` - SQLite WebAssembly module for cross-platform database support
 - **UI Framework**: Bootstrap 5 with custom adapter (no jQuery required)
 - **Audio**: Howler.js for audio playback, WaveSurfer.js for waveform visualization
-- **Markdown**: `markdown-it` for processing GitHub release notes
+- **Hotkeys**: Mousetrap for keyboard shortcut binding
 - **Auto-updates**: `electron-updater` with GitHub provider support
-- **Logging**: Structured DebugLog system with file rotation and export
+- **Audio Metadata**: `music-metadata` for extracting audio file metadata
+- **Logging**: Structured DebugLog system with file rotation and export via `electron-log`
+- **Sanitization**: DOMPurify for safe HTML rendering of release notes
 
 ### Optimized Package List
 The package.json has been cleaned up to remove orphaned dependencies. All remaining packages are actively used:
 - FontAwesome for UI icons
 - Bootstrap for responsive UI components
 - node-sqlite3-wasm for cross-platform database
-- Markdown processing for release notes
+- DOMPurify for HTML sanitization of release notes
 - Audio libraries for playback and visualization
 - Electron utilities for development and production builds
 

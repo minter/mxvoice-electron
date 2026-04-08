@@ -7,6 +7,7 @@ The Utils module provides utility functions for the MxVoice Electron application
 ```
 utils/
 ├── animation-utils.js    # CSS animation utilities
+├── layout-utils.js       # Layout calculation utilities
 ├── modal-utils.js        # Modal dialog utilities
 ├── validation-utils.js   # Data validation utilities
 ├── index.js             # Main module entry point
