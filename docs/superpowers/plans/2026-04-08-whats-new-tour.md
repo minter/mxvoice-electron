@@ -4,7 +4,7 @@
 
 **Goal:** Add a per-profile "What's New" guided walkthrough using Driver.js that auto-triggers after updates and is replayable from the app menu.
 
-**Architecture:** A new `whats-new` renderer module with three files: `tours.json` (data), `tour-manager.js` (engine), and `index.js` (public API). Integrates with existing profile preferences for per-profile tracking, the app menu for on-demand access, and the bootstrap sequence for auto-trigger. Driver.js handles overlay/highlight/popover rendering with adaptive light/dark theming.
+**Architecture:** A new `whats-new` renderer module with three files: `tours.js` (data), `tour-manager.js` (engine), and `index.js` (public API). Integrates with existing profile preferences for per-profile tracking, the app menu for on-demand access, and the bootstrap sequence for auto-trigger. Driver.js handles overlay/highlight/popover rendering with adaptive light/dark theming.
 
 **Tech Stack:** Driver.js ^1.4.0, Bootstrap 5 (existing), vanilla JS ES modules, Electron IPC (existing patterns)
 
@@ -16,7 +16,7 @@
 
 | Action | Path | Responsibility |
 |--------|------|----------------|
-| Create | `src/renderer/modules/whats-new/tours.json` | Tour step definitions keyed by version |
+| Create | `src/renderer/modules/whats-new/tours.js` | Tour step definitions keyed by version |
 | Create | `src/renderer/modules/whats-new/tour-manager.js` | Tour engine: load data, check prefs, run Driver.js, execute pre/post actions |
 | Create | `src/renderer/modules/whats-new/index.js` | Public API: `initWhatsNew()`, `showWhatsNew()` |
 | Modify | `src/stylesheets/index.css` | Driver.js popover theme overrides (light) |
@@ -66,9 +66,9 @@ git commit -m "chore: add driver.js dependency for What's New tour feature"
 ### Task 2: Create Tour Data File
 
 **Files:**
-- Create: `src/renderer/modules/whats-new/tours.json`
+- Create: `src/renderer/modules/whats-new/tours.js`
 
-- [ ] **Step 1: Create the tours.json file**
+- [ ] **Step 1: Create the tours.js file**
 
 This is the data-driven config holding tour steps per version. The version key must match `package.json` exactly — currently `4.3.0-pre.1` for development, update to `4.3.0` at release time.
 
@@ -147,7 +147,7 @@ This is the data-driven config holding tour steps per version. The version key m
 - [ ] **Step 2: Commit**
 
 ```bash
-git add src/renderer/modules/whats-new/tours.json
+git add src/renderer/modules/whats-new/tours.js
 git commit -m "feat: add tour data file for What's New walkthrough"
 ```
 
@@ -463,7 +463,7 @@ export class TourManager {
 
   /**
    * Convert tour JSON steps to Driver.js step format.
-   * @param {Array} steps - Steps from tours.json
+   * @param {Array} steps - Steps from tours.js
    * @returns {Array} Driver.js-compatible step objects
    */
   buildDriverSteps(steps) {
@@ -485,7 +485,7 @@ export class TourManager {
 
   /**
    * Check whether a step should be skipped because its target element is missing.
-   * @param {object} step - Step from tours.json
+   * @param {object} step - Step from tours.js
    * @returns {boolean}
    */
   shouldSkipStep(step) {
@@ -508,7 +508,7 @@ export class TourManager {
 
   /**
    * Execute a pre or post action.
-   * @param {object|null} action - Action definition from tours.json
+   * @param {object|null} action - Action definition from tours.js
    */
   async executeAction(action) {
     if (!action) return;
@@ -566,7 +566,7 @@ export class TourManager {
 
   /**
    * Clean up all pending postActions when the tour is dismissed mid-way.
-   * @param {Array} steps - The original tour steps from tours.json
+   * @param {Array} steps - The original tour steps from tours.js
    * @param {number} currentIndex - The index of the step where dismiss happened
    */
   async cleanupFromStep(steps, currentIndex) {
@@ -688,7 +688,7 @@ Append these tests to the existing test file:
 
 ```javascript
 // At the top of the file, add this mock before the TourManager import:
-vi.mock('../../../src/renderer/modules/whats-new/tours.json', () => ({
+vi.mock('../../../src/renderer/modules/whats-new/tours.js', () => ({
   default: {
     tours: {
       '4.3.0': {
@@ -753,7 +753,7 @@ describe('showWhatsNew', () => {
 });
 ```
 
-Note: The above tests need the imports restructured. Since this is appended to the same file, the mocks from Task 3 are already in scope. The `initWhatsNew`/`showWhatsNew` import must be placed after the tours.json mock is registered.
+Note: The above tests need the imports restructured. Since this is appended to the same file, the mocks from Task 3 are already in scope. The `initWhatsNew`/`showWhatsNew` import must be placed after the tours.js mock is registered.
 
 - [ ] **Step 2: Run the tests**
 
@@ -781,7 +781,7 @@ git commit -m "test: add unit tests for What's New public API (initWhatsNew, sho
 - [ ] **Step 1: Write the public API module**
 
 ```javascript
-import tourData from './tours.json';
+import tourData from './tours.js';
 import { TourManager } from './tour-manager.js';
 
 const tourManager = new TourManager(tourData);

@@ -15,7 +15,7 @@ A per-profile "What's New" guided walkthrough that highlights new features after
 
 ## Tour Data Model
 
-Tour definitions live in `src/renderer/modules/whats-new/tours.json`. Each release version maps to an array of steps:
+Tour definitions live in `src/renderer/modules/whats-new/tours.js`. Each release version maps to an array of steps:
 
 ```json
 {
@@ -103,7 +103,7 @@ Tour completion state is stored in profile preferences using the existing `secur
 }
 ```
 
-An array of version strings for which the tour has been completed or dismissed. Checking whether to auto-trigger is a simple `!toursSeen.includes(currentVersion)` against the keys in `tours.json`.
+An array of version strings for which the tour has been completed or dismissed. Checking whether to auto-trigger is a simple `!toursSeen.includes(currentVersion)` against the keys in `tours.js`.
 
 ## Trigger Logic
 
@@ -113,7 +113,7 @@ Runs during the app bootstrap sequence, after DOM initialization and after the `
 
 1. Read `tours_seen` from profile preferences (default: `[]`).
 2. Get the current app version.
-3. Check if `tours.json` has an entry for this version.
+3. Check if `tours.js` has an entry for this version.
 4. If a tour exists AND the version is not in `tours_seen` → launch the tour.
 5. On tour completion or dismissal → append the version to `tours_seen` and save.
 
@@ -148,12 +148,12 @@ Each step follows this sequence:
 
 New module at `src/renderer/modules/whats-new/`:
 
-### `tours.json`
+### `tours.js`
 Tour data as described above.
 
 ### `tour-manager.js`
 The tour engine. Responsibilities:
-- Load and parse `tours.json`.
+- Load and parse `tours.js`.
 - Check profile preferences for `tours_seen`.
 - Create and configure the Driver.js instance with adaptive theming.
 - Execute `preAction`/`postAction` sequences with DOM settle waits.
@@ -222,7 +222,7 @@ Implemented via a CSS class on the Driver.js popover container (e.g., `.driver-p
 
 ## Version Matching
 
-Version matching is **exact** — a tour entry for `"4.3.0"` triggers only for version `4.3.0`, not `4.3.1`. If a patch release has noteworthy changes, it gets its own tour entry in `tours.json`.
+Version matching is **exact** — a tour entry for `"4.3.0"` triggers only for version `4.3.0`, not `4.3.1`. If a patch release has noteworthy changes, it gets its own tour entry in `tours.js`.
 
 ## Edge Cases
 
