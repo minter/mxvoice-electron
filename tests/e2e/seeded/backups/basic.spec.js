@@ -74,15 +74,6 @@ test.describe('Profile Backups - basic', () => {
   let backupDir;
 
   test.beforeAll(async () => {
-    // Ensure clean test environment
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for backup tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-
     ({ app, page, userDataDir } = await launchSeededApp(electron, 'backups'));
 
     // Calculate profile and backup directories

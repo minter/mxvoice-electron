@@ -5,15 +5,6 @@ test.describe('Navigation - basic', () => {
   let app; let page;
 
   test.beforeAll(async () => {
-    // Ensure clean test environment before each test sequence
-    try {
-      const { resetTestEnvironment } = await import('../../../utils/test-environment-manager.js');
-      await resetTestEnvironment();
-      console.log('✅ Test environment reset for navigation tests');
-    } catch (error) {
-      console.log(`⚠️ Could not reset test environment: ${error.message}`);
-    }
-    
     ({ app, page } = await launchSeededApp(electron, 'navigation'));
 
     await waitForAppReady(page, app);
@@ -23,68 +14,75 @@ test.describe('Navigation - basic', () => {
     await closeApp(app);
   });
 
-  test('tab key navigation sends to hotkeys', async () => {
-    // Test that Tab key sends focus to hotkeys area
-    
-    // 1) Start with search input focused
+  test('tab key sends selected song to hotkeys', async () => {
+    // 1) Search for a song and select it
     const searchInput = page.locator('#omni_search');
-    await searchInput.click();
-    await searchInput.focus();
-    
-    // Verify search input has focus
-    await expect(searchInput).toBeFocused();
-    
-    // 2) Press Tab key
+    await searchInput.fill('Anthrax');
+    await searchInput.press('Enter');
+
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(1, { timeout: 5000 });
+
+    // 2) Select the row (Tab from search selects first row)
+    await page.keyboard.press('Tab');
+    const selectedRow = page.locator('#selected_row');
+    await expect(selectedRow).toBeVisible({ timeout: 5000 });
+
+    // 3) Verify the selected row has a songid attribute
+    const songId = await selectedRow.getAttribute('songid');
+    expect(songId).toBeTruthy();
+
+    // 4) Press Tab again to send the selected song to hotkeys
     await page.keyboard.press('Tab');
 
-    // 3) Verify focus moved to hotkeys area
-    // The Tab key should trigger sendToHotkeys() function
-    const hotkeysColumn = page.locator('#hotkeys-column');
-    const isHotkeysFocused = await page.evaluate(() => {
-      const active = document.activeElement;
-      return active.closest('#hotkeys-column') !== null;
+    // 5) Verify the song was assigned to the first empty hotkey slot
+    // sendToHotkeys() finds the first <li> without a songid and assigns it
+    const hotkeySlot = page.locator('.hotkeys.active li[songid]').first();
+    await expect(hotkeySlot).toHaveAttribute('songid', songId, { timeout: 5000 });
+
+    // Clean up: remove the hotkey assignment
+    await page.evaluate(() => {
+      document.querySelectorAll('.hotkeys.active li[songid]').forEach(li => {
+        li.removeAttribute('songid');
+        const span = li.querySelector('.song');
+        if (span) span.textContent = '';
+      });
     });
-    
-    // Note: The current implementation may not actually move focus,
-    // but it should trigger the sendToHotkeys function
-    console.log('Tab key pressed - sendToHotkeys should have been called');
-    
-    // Verify that the hotkeys column is visible and accessible
-    await expect(hotkeysColumn).toBeVisible();
-    
-    console.log('✅ Tab key navigation to hotkeys works');
+
+    // Reset search
+    await page.locator('#reset_button').click();
   });
 
-  test('shift+tab key navigation sends to holding tank', async () => {
-    // Test that Shift+Tab key sends focus to holding tank area
-    
-    // 1) Start with search input focused
+  test('shift+tab key sends selected song to holding tank', async () => {
+    // 1) Search for a song and select it
     const searchInput = page.locator('#omni_search');
-    await searchInput.click();
-    await searchInput.focus();
-    
-    // Verify search input has focus
-    await expect(searchInput).toBeFocused();
-    
-    // 2) Press Shift+Tab key
+    await searchInput.fill('Edie Brickell');
+    await searchInput.press('Enter');
+
+    const rows = page.locator('#search_results tbody tr');
+    await expect(rows).toHaveCount(1, { timeout: 5000 });
+
+    // 2) Select the row
+    await page.keyboard.press('Tab');
+    const selectedRow = page.locator('#selected_row');
+    await expect(selectedRow).toBeVisible({ timeout: 5000 });
+
+    // 3) Count holding tank items before
+    const holdingTankItems = page.locator('.holding_tank.active li');
+    const countBefore = await holdingTankItems.count();
+
+    // 4) Press Shift+Tab to send to holding tank
     await page.keyboard.press('Shift+Tab');
 
-    // 3) Verify focus moved to holding tank area
-    // The Shift+Tab key should trigger sendToHoldingTank() function
-    const holdingTankColumn = page.locator('#holding-tank-column');
-    const isHoldingTankFocused = await page.evaluate(() => {
-      const active = document.activeElement;
-      return active.closest('#holding-tank-column') !== null;
-    });
-    
-    // Note: The current implementation may not actually move focus,
-    // but it should trigger the sendToHoldingTank function
-    console.log('Shift+Tab key pressed - sendToHoldingTank should have been called');
-    
-    // Verify that the holding tank column is visible and accessible
-    await expect(holdingTankColumn).toBeVisible();
-    
-    console.log('✅ Shift+Tab key navigation to holding tank works');
+    // 5) Verify a new item was added to the holding tank
+    await expect(holdingTankItems).toHaveCount(countBefore + 1, { timeout: 5000 });
+
+    // 6) Verify the new item contains the song
+    const lastItem = holdingTankItems.last();
+    await expect(lastItem).toContainText('Edie Brickell', { timeout: 5000 });
+
+    // Reset search
+    await page.locator('#reset_button').click();
   });
 
   test('arrow key navigation in search results', async () => {
