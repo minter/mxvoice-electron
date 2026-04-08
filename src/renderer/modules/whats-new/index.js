@@ -113,3 +113,5 @@ export async function showWhatsNew() {
 }
 
 export { tourManager };
+
+export default { initWhatsNew, showWhatsNew, tourManager };
