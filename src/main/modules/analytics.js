@@ -43,6 +43,8 @@ export function createAnalytics({ store, debugLog, appVersion }) {
   }
 
   function init() {
+    if (initialized) return;
+
     // Get or create device ID
     deviceId = store.get('analytics_device_id');
     if (!deviceId) {
@@ -105,6 +107,8 @@ export function createAnalytics({ store, debugLog, appVersion }) {
   async function shutdown() {
     if (client) {
       await client.shutdown();
+      client = null;
+      initialized = false;
       debugLog.info('Analytics shut down', {
         module: 'analytics',
         function: 'shutdown',
