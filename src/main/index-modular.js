@@ -244,7 +244,9 @@ const defaults = {
   database_directory: app.getPath('userData'),
   fade_out_seconds: 2,
   debug_log_enabled: true,
-  first_run_completed: false
+  first_run_completed: false,
+  analytics_device_id: '',
+  analytics_opt_out: false
 }
 
 // Use a stable config file name and explicit project directory to ensure
