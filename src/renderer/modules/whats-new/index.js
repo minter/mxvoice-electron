@@ -88,6 +88,27 @@ tourManager.registerHelper('openPreferencesAndScrollToCrossfade', async () => {
   }
 });
 
+/**
+ * Opens the Preferences modal (if not already open) and scrolls to the
+ * analytics opt-out toggle. Safe to call when arriving from a previous
+ * preferences-related tour step — skips the show + animation wait if the
+ * modal is already visible.
+ */
+tourManager.registerHelper('openPreferencesAndScrollToAnalytics', async () => {
+  const modal = document.getElementById('preferencesModal');
+  const alreadyOpen = modal?.classList.contains('show');
+  if (!alreadyOpen) {
+    const { safeShowModal } = await import('../ui/bootstrap-helpers.js');
+    await safeShowModal('#preferencesModal', { module: 'whats-new', function: 'openPreferencesAndScrollToAnalytics' });
+    // Wait for modal animation to complete
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  const analyticsEl = document.getElementById('preferences-analytics-enabled');
+  if (analyticsEl) {
+    analyticsEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+});
+
 // ─── Public API ───────────────────────────────────────────────────────
 
 export async function initWhatsNew() {

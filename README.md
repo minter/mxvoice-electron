@@ -348,6 +348,7 @@ To publish Windows releases, use your preferred workflow for uploading the signe
 - **Audio Metadata**: `music-metadata` for extracting audio file metadata
 - **Logging**: Structured DebugLog system with file rotation and export via `electron-log`
 - **Sanitization**: DOMPurify for safe HTML rendering of release notes
+- **Analytics**: `posthog-node` for anonymous, opt-out product analytics (main-process only; disabled in dev/test unless `ANALYTICS_ENABLED=1`)
 
 ### Optimized Package List
 The package.json has been cleaned up to remove orphaned dependencies. All remaining packages are actively used:
