@@ -31,7 +31,6 @@ function getCategories() {
             module: 'category-operations',
             function: 'getCategories'
           });
-          window.secureElectronAPI?.analytics?.trackEvent?.('category_browsed');
           resolve(result);
         } else {
           debugLog?.warn('Failed to get categories', { 
