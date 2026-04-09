@@ -11,7 +11,7 @@ import { PostHog } from 'posthog-node';
 import { v4 as uuidv4 } from 'uuid';
 
 // PostHog project API key (client-side keys are public by design)
-const POSTHOG_API_KEY = 'phc_PLACEHOLDER';
+const POSTHOG_API_KEY = 'phc_qJdKChSMdVxUjNJZyx7dnTaeti64Vd2F5R2rvM8iDXkH';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 /**
