@@ -50,6 +50,9 @@ import * as profileBackupManager from './modules/profile-backup-manager.js';
 import * as autoBackupTimer from './modules/auto-backup-timer.js';
 import * as libraryTransferManager from './modules/library-transfer-manager.js';
 import * as launcherWindow from './modules/launcher-window.js';
+import { createAnalytics } from './modules/analytics.js';
+
+const appStartTime = Date.now();
 
 // Initialize Octokit for GitHub API (will be initialized after debugLog is available)
 let _octokit;
@@ -649,11 +652,38 @@ function checkOldConfig() {
   }
 }
 
-// Track user (analytics placeholder)
-function trackUser() {
-  // Placeholder for user tracking/analytics
-  debugLog.info('User tracking initialized', { 
-    function: "trackUser" 
+// Initialize analytics
+let analytics = null;
+
+function initializeAnalytics() {
+  const appVersion = app.getVersion();
+  analytics = createAnalytics({ store, debugLog, appVersion });
+  analytics.init();
+
+  // Track app launch
+  analytics.trackEvent('app_launched', {
+    os: process.platform,
+    arch: process.arch,
+    electron_version: process.versions.electron,
+  });
+
+  // Track uncaught errors
+  process.on('uncaughtException', (error) => {
+    if (analytics) {
+      analytics.trackEvent('app_error', {
+        error_message: error.message,
+        stack_trace: error.stack,
+      });
+    }
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    if (analytics) {
+      analytics.trackEvent('app_error', {
+        error_message: reason instanceof Error ? reason.message : String(reason),
+        stack_trace: reason instanceof Error ? reason.stack : undefined,
+      });
+    }
   });
 }
 
@@ -691,7 +721,9 @@ async function initializeModules() {
     updateState,
     logService,
     getCurrentProfile,
-    autoBackupTimer
+    autoBackupTimer,
+    analytics,
+    appStartTime
   };
 
   // Initialize each module
@@ -774,8 +806,7 @@ const createWindow = async () => {
     // Create the menu
     appSetup.createApplicationMenu();
 
-    // Track user
-    trackUser();
+    // Analytics already initialized in app ready handler
   } catch (error) {
     debugLog?.error('Failed to create main window', { 
       function: "createWindow",
@@ -852,7 +883,10 @@ function setupApp() {
   // initialization and is ready to create browser windows.
   app.on('ready', async () => {
     debugLog.info('Electron app ready event fired', { function: "app ready event" });
-    
+
+    // Initialize analytics (before other modules so it can track errors)
+    initializeAnalytics();
+
     // Initialize profile manager
     profileManager.initializeProfileManager({ debugLog });
     
