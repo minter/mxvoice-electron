@@ -145,3 +145,73 @@ function stripHtml(html) {
     .replace(/&#39;/g, "'")
     .trim();
 }
+
+export async function main(argv, env, cwd) {
+  const args = argv.slice(2);
+  const dryRun = args.includes('--dry-run');
+  const send = args.includes('--send');
+  const resendFlag = args.indexOf('--resend');
+  const resendId = resendFlag !== -1 ? args[resendFlag + 1] : null;
+
+  if (!dryRun && !send) {
+    console.error('Usage: publish-announcements.mjs [--dry-run | --send] [--resend <id>]');
+    process.exit(1);
+  }
+
+  const announcementsDir = path.join(cwd, 'announcements');
+  const manifestPath = path.join(announcementsDir, 'manifest.json');
+  const sentPath = path.join(announcementsDir, 'sent.json');
+
+  const items = readAnnouncements(announcementsDir);
+  console.log(`Read ${items.length} announcement(s)`);
+
+  const manifest = buildManifest(items);
+  const ledger = loadSentLedger(sentPath);
+  if (resendId) {
+    ledger.sent = ledger.sent.filter(e => e.id !== resendId);
+    console.log(`Removed '${resendId}' from ledger for resend`);
+  }
+
+  const toSend = items.filter(item => item.email && !isAlreadySent(ledger, item.id));
+  console.log(`${toSend.length} new email-flagged announcement(s) to send`);
+
+  if (dryRun) {
+    console.log('--- DRY RUN ---');
+    console.log('Would write manifest.json:');
+    console.log(JSON.stringify(manifest, null, 2));
+    for (const item of toSend) {
+      const rendered = renderEmail(item);
+      console.log(`\n--- Would send: ${item.id} ---`);
+      console.log(`Subject: ${rendered.subject}`);
+      console.log(`HTML length: ${rendered.html.length}`);
+      console.log(`Text preview: ${rendered.text.slice(0, 200)}`);
+    }
+    return;
+  }
+
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+  console.log(`Wrote ${manifestPath}`);
+
+  const config = resolveMailgunConfig(env);
+  console.log(`Mailgun mode: ${config.mode}`);
+  for (const item of toSend) {
+    const rendered = renderEmail(item);
+    const result = await sendToMailgun(config, rendered);
+    if (!result.ok) {
+      console.error(`FAIL ${item.id}: ${result.status} ${result.body}`);
+      process.exit(2);
+    }
+    console.log(`SENT ${item.id} (${result.status})`);
+    appendSent(ledger, item.id);
+  }
+
+  saveSentLedger(sentPath, ledger);
+  console.log(`Wrote ${sentPath}`);
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main(process.argv, process.env, process.cwd()).catch(err => {
+    console.error(err);
+    process.exit(3);
+  });
+}
