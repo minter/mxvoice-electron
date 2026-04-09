@@ -1,7 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
+import os from 'os';
 import { readAnnouncements, buildManifest } from '../../../scripts/publish-announcements.mjs';
+import { loadSentLedger, isAlreadySent, appendSent, saveSentLedger } from '../../../scripts/publish-announcements.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.join(__dirname, '../../fixtures/announcements');
@@ -55,5 +58,42 @@ describe('publish-announcements script', () => {
       expect(second.audience.min_version).toBe('4.0.0');
       expect(second.path).toBe('announcements/2026-02-01-second.md');
     });
+  });
+});
+
+describe('sent ledger', () => {
+  let tmpPath;
+  beforeEach(() => { tmpPath = path.join(os.tmpdir(), `sent-${Date.now()}.json`); });
+  afterEach(() => { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); });
+
+  it('returns empty sent list if file does not exist', () => {
+    expect(loadSentLedger(tmpPath).sent).toEqual([]);
+  });
+
+  it('loads existing sent ledger from file', () => {
+    fs.writeFileSync(tmpPath, JSON.stringify({ sent: [{ id: 'a', sent_at: '2026-01-01T00:00:00Z' }] }));
+    const ledger = loadSentLedger(tmpPath);
+    expect(ledger.sent).toHaveLength(1);
+  });
+
+  it('isAlreadySent returns true for known ids', () => {
+    const ledger = { sent: [{ id: 'a' }] };
+    expect(isAlreadySent(ledger, 'a')).toBe(true);
+    expect(isAlreadySent(ledger, 'b')).toBe(false);
+  });
+
+  it('appendSent adds an entry with timestamp', () => {
+    const ledger = { sent: [] };
+    appendSent(ledger, 'new-id');
+    expect(ledger.sent).toHaveLength(1);
+    expect(ledger.sent[0].id).toBe('new-id');
+    expect(ledger.sent[0].sent_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('saveSentLedger writes the ledger to disk', () => {
+    const ledger = { sent: [{ id: 'z', sent_at: '2026-01-01T00:00:00Z' }] };
+    saveSentLedger(tmpPath, ledger);
+    const reloaded = JSON.parse(fs.readFileSync(tmpPath, 'utf8'));
+    expect(reloaded.sent[0].id).toBe('z');
   });
 });

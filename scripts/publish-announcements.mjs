@@ -50,3 +50,22 @@ export function buildManifest(items) {
     }),
   };
 }
+
+export function loadSentLedger(sentJsonPath) {
+  if (!fs.existsSync(sentJsonPath)) return { sent: [] };
+  const raw = fs.readFileSync(sentJsonPath, 'utf8');
+  const parsed = JSON.parse(raw);
+  return { sent: Array.isArray(parsed.sent) ? parsed.sent : [] };
+}
+
+export function isAlreadySent(ledger, id) {
+  return ledger.sent.some(entry => entry.id === id);
+}
+
+export function appendSent(ledger, id) {
+  ledger.sent.push({ id, sent_at: new Date().toISOString() });
+}
+
+export function saveSentLedger(sentJsonPath, ledger) {
+  fs.writeFileSync(sentJsonPath, JSON.stringify(ledger, null, 2) + '\n');
+}
