@@ -53,7 +53,7 @@ describe('analytics module', () => {
 
   describe('init', () => {
     it('generates a device ID on first init when none exists', () => {
-      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0' });
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 
       expect(mockStore.set).toHaveBeenCalledWith('analytics_device_id', 'test-uuid-1234');
@@ -61,7 +61,7 @@ describe('analytics module', () => {
 
     it('reuses existing device ID if already stored', () => {
       storeData.analytics_device_id = 'existing-device-id';
-      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0' });
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 
       expect(mockStore.set).not.toHaveBeenCalledWith('analytics_device_id', expect.anything());
@@ -71,7 +71,7 @@ describe('analytics module', () => {
   describe('trackEvent', () => {
     it('sends event to PostHog when opted in', () => {
       storeData.analytics_opt_out = false;
-      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0' });
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 
       analytics.trackEvent('song_played', { trigger_method: 'hotkey' });
@@ -88,7 +88,7 @@ describe('analytics module', () => {
 
     it('does not send event when opted out', () => {
       storeData.analytics_opt_out = true;
-      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0' });
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 
       analytics.trackEvent('song_played', { trigger_method: 'hotkey' });
@@ -97,7 +97,7 @@ describe('analytics module', () => {
     });
 
     it('does not send event before init is called', () => {
-      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0' });
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
 
       analytics.trackEvent('song_played', { trigger_method: 'hotkey' });
 
@@ -107,7 +107,7 @@ describe('analytics module', () => {
 
   describe('opt-out', () => {
     it('setOptOut(true) persists to store and suppresses events', () => {
-      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0' });
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 
       analytics.setOptOut(true);
@@ -120,7 +120,7 @@ describe('analytics module', () => {
 
     it('setOptOut(false) re-enables tracking', () => {
       storeData.analytics_opt_out = true;
-      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0' });
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 
       analytics.setOptOut(false);
@@ -131,7 +131,7 @@ describe('analytics module', () => {
 
     it('getOptOutStatus returns current state', () => {
       storeData.analytics_opt_out = true;
-      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0' });
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 
       expect(analytics.getOptOutStatus()).toBe(true);
@@ -140,7 +140,7 @@ describe('analytics module', () => {
 
   describe('scrubStackTrace', () => {
     it('removes absolute file paths from stack traces', () => {
-      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0' });
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 
       analytics.trackEvent('app_error', {
@@ -155,12 +155,40 @@ describe('analytics module', () => {
 
   describe('shutdown', () => {
     it('flushes PostHog client on shutdown', async () => {
-      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0' });
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 
       await analytics.shutdown();
 
       expect(mockShutdown).toHaveBeenCalled();
+    });
+  });
+
+  describe('dev mode gating', () => {
+    it('disables analytics when not packaged and ANALYTICS_ENABLED is not set', () => {
+      const originalEnv = process.env.ANALYTICS_ENABLED;
+      delete process.env.ANALYTICS_ENABLED;
+
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: false });
+      analytics.init();
+
+      analytics.trackEvent('song_played', {});
+      expect(mockCapture).not.toHaveBeenCalled();
+
+      process.env.ANALYTICS_ENABLED = originalEnv;
+    });
+
+    it('enables analytics when not packaged but ANALYTICS_ENABLED=1 is set', () => {
+      const originalEnv = process.env.ANALYTICS_ENABLED;
+      process.env.ANALYTICS_ENABLED = '1';
+
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: false });
+      analytics.init();
+
+      analytics.trackEvent('song_played', {});
+      expect(mockCapture).toHaveBeenCalled();
+
+      process.env.ANALYTICS_ENABLED = originalEnv;
     });
   });
 });

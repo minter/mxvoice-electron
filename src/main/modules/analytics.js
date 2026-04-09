@@ -23,11 +23,12 @@ const POSTHOG_HOST = 'https://us.i.posthog.com';
  * @param {string} options.appVersion - current app version string
  * @returns {Object} analytics interface
  */
-export function createAnalytics({ store, debugLog, appVersion }) {
+export function createAnalytics({ store, debugLog, appVersion, isPackaged }) {
   let client = null;
   let deviceId = null;
   let optedOut = false;
   let initialized = false;
+  let disabled = false;
 
   /**
    * Scrub absolute file paths from a stack trace string.
@@ -44,6 +45,16 @@ export function createAnalytics({ store, debugLog, appVersion }) {
 
   function init() {
     if (initialized) return;
+
+    // Only run analytics in packaged builds unless ANALYTICS_ENABLED=1 is set
+    if (!isPackaged && process.env.ANALYTICS_ENABLED !== '1') {
+      disabled = true;
+      debugLog.info('Analytics disabled (dev/test mode). Set ANALYTICS_ENABLED=1 to override.', {
+        module: 'analytics',
+        function: 'init',
+      });
+      return;
+    }
 
     // Get or create device ID
     deviceId = store.get('analytics_device_id');
@@ -72,7 +83,7 @@ export function createAnalytics({ store, debugLog, appVersion }) {
   }
 
   function trackEvent(name, properties = {}) {
-    if (!initialized || optedOut || !client) return;
+    if (disabled || !initialized || optedOut || !client) return;
 
     // Scrub stack traces in error events
     const scrubbed = { ...properties };

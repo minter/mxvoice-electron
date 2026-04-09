@@ -658,7 +658,7 @@ let analytics = null;
 
 function initializeAnalytics() {
   const appVersion = app.getVersion();
-  analytics = createAnalytics({ store, debugLog, appVersion });
+  analytics = createAnalytics({ store, debugLog, appVersion, isPackaged: app.isPackaged });
   analytics.init();
 
   // Track app launch
