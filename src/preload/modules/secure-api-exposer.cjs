@@ -491,6 +491,13 @@ const secureElectronAPI = {
     sanitizeFilename: (filename) => ipcRenderer.invoke('sanitize-filename', filename)
   },
   
+  // Analytics
+  analytics: {
+    trackEvent: (name, properties) => ipcRenderer.invoke('analytics:track-event', name, properties),
+    getOptOutStatus: () => ipcRenderer.invoke('analytics:get-opt-out-status'),
+    setOptOut: (value) => ipcRenderer.invoke('analytics:set-opt-out', value),
+  },
+
   // Testing and debugging functions
   testing: {
     testModularPreload: () => {
@@ -547,7 +554,8 @@ function exposeSecureAPI(injectedDebugLog) {
         profile: secureElectronAPI.profile,
         library: secureElectronAPI.library,
         // Provide logs under legacy namespace for compatibility with existing renderer code
-        logs: secureElectronAPI.logs
+        logs: secureElectronAPI.logs,
+        analytics: secureElectronAPI.analytics
       });
       
       if (debugLog && typeof debugLog.info === 'function') {
