@@ -661,11 +661,24 @@ function initializeAnalytics() {
   analytics = createAnalytics({ store, debugLog, appVersion, isPackaged: app.isPackaged });
   analytics.init();
 
+  // Count profiles for launch event
+  let profileCount = 0;
+  try {
+    const profilesDir = path.join(app.getPath('userData'), 'profiles');
+    if (fs.existsSync(profilesDir)) {
+      profileCount = fs.readdirSync(profilesDir, { withFileTypes: true })
+        .filter(entry => entry.isDirectory()).length;
+    }
+  } catch {
+    // Ignore — profiles dir may not exist yet on first run
+  }
+
   // Track app launch
   analytics.trackEvent('app_launched', {
     os: process.platform,
     arch: process.arch,
     electron_version: process.versions.electron,
+    profile_count: profileCount,
   });
 
   // Track uncaught errors
