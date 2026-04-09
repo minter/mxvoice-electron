@@ -153,6 +153,11 @@ export async function main(argv, env, cwd) {
   const resendFlag = args.indexOf('--resend');
   const resendId = resendFlag !== -1 ? args[resendFlag + 1] : null;
 
+  if (resendFlag !== -1 && !resendId) {
+    console.error('Error: --resend requires an <id> argument');
+    process.exit(1);
+  }
+
   if (!dryRun && !send) {
     console.error('Usage: publish-announcements.mjs [--dry-run | --send] [--resend <id>]');
     process.exit(1);
@@ -199,6 +204,7 @@ export async function main(argv, env, cwd) {
     const result = await sendToMailgun(config, rendered);
     if (!result.ok) {
       console.error(`FAIL ${item.id}: ${result.status} ${result.body}`);
+      saveSentLedger(sentPath, ledger);
       process.exit(2);
     }
     console.log(`SENT ${item.id} (${result.status})`);
