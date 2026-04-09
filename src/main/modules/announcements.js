@@ -39,7 +39,7 @@ export function createAnnouncements({ store, debugLog, manifestUrl, bodyUrlBase,
   async function fetchBody(relativePath) {
     const cacheKey = BODY_CACHE_KEY_PREFIX + relativePath;
     const cached = store.get(cacheKey);
-    if (cached) return cached;
+    if (cached != null) return cached;
     try {
       const url = (bodyUrlBase || '') + relativePath;
       const res = await fetch(url, { cache: 'no-store' });
