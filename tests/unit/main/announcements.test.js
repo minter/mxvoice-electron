@@ -51,3 +51,74 @@ describe('announcements module - fetchManifest', () => {
     expect(await ann.fetchManifest()).toBeNull();
   });
 });
+
+describe('announcements module - fetchBody', () => {
+  beforeEach(() => {
+    storeData = {};
+    globalThis.fetch = vi.fn();
+  });
+
+  it('fetches and caches an announcement body', async () => {
+    globalThis.fetch.mockResolvedValue({ ok: true, status: 200, text: async () => '---\ntitle: T\n---\nBody.' });
+    const ann = createAnnouncements({
+      store: mockStore, debugLog: mockDebugLog,
+      manifestUrl: 'https://example.com/m.json', bodyUrlBase: 'https://example.com/',
+    });
+    const body = await ann.fetchBody('announcements/test.md');
+    expect(body).toContain('Body.');
+    expect(globalThis.fetch).toHaveBeenCalledWith('https://example.com/announcements/test.md', expect.any(Object));
+  });
+
+  it('returns cached body without network call on second fetch', async () => {
+    globalThis.fetch.mockResolvedValue({ ok: true, status: 200, text: async () => 'body' });
+    const ann = createAnnouncements({
+      store: mockStore, debugLog: mockDebugLog,
+      manifestUrl: 'https://example.com/m.json', bodyUrlBase: 'https://example.com/',
+    });
+    await ann.fetchBody('announcements/x.md');
+    globalThis.fetch.mockClear();
+    const second = await ann.fetchBody('announcements/x.md');
+    expect(second).toBe('body');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('announcements module - subscribeEmail', () => {
+  beforeEach(() => {
+    storeData = {};
+    globalThis.fetch = vi.fn();
+  });
+
+  const mailgun = { apiKey: 'key-abc', domain: 'mg.example.com', listAddress: 'list@mg.example.com' };
+
+  it('returns ok with code "subscribed" on 200', async () => {
+    globalThis.fetch.mockResolvedValue({ ok: true, status: 200, text: async () => '{}' });
+    const ann = createAnnouncements({ store: mockStore, debugLog: mockDebugLog, manifestUrl: 'https://example.com/m.json', mailgun });
+    const result = await ann.subscribeEmail('a@b.com', {});
+    expect(result.ok).toBe(true);
+    expect(result.code).toBe('subscribed');
+  });
+
+  it('treats 400 "already exists" as ok with code "already_subscribed"', async () => {
+    globalThis.fetch.mockResolvedValue({ ok: false, status: 400, text: async () => '{"message":"Address already exists"}' });
+    const ann = createAnnouncements({ store: mockStore, debugLog: mockDebugLog, manifestUrl: 'https://example.com/m.json', mailgun });
+    const result = await ann.subscribeEmail('a@b.com', {});
+    expect(result.ok).toBe(true);
+    expect(result.code).toBe('already_subscribed');
+  });
+
+  it('returns ok=false code "network_error" on fetch rejection', async () => {
+    globalThis.fetch.mockRejectedValue(new Error('offline'));
+    const ann = createAnnouncements({ store: mockStore, debugLog: mockDebugLog, manifestUrl: 'https://example.com/m.json', mailgun });
+    const result = await ann.subscribeEmail('a@b.com', {});
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('network_error');
+  });
+
+  it('returns ok=false code "not_configured" when mailgun missing', async () => {
+    const ann = createAnnouncements({ store: mockStore, debugLog: mockDebugLog, manifestUrl: 'https://example.com/m.json' });
+    const result = await ann.subscribeEmail('a@b.com', {});
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('not_configured');
+  });
+});
