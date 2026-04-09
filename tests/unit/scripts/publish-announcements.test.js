@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -6,6 +6,7 @@ import os from 'os';
 import { readAnnouncements, buildManifest } from '../../../scripts/publish-announcements.mjs';
 import { loadSentLedger, isAlreadySent, appendSent, saveSentLedger } from '../../../scripts/publish-announcements.mjs';
 import { renderEmail } from '../../../scripts/publish-announcements.mjs';
+import { resolveMailgunConfig, sendToMailgun } from '../../../scripts/publish-announcements.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.join(__dirname, '../../fixtures/announcements');
@@ -116,5 +117,50 @@ describe('email rendering', () => {
     const { text } = renderEmail(item);
     expect(text).not.toContain('<');
     expect(text).toContain('Heading');
+  });
+});
+
+describe('resolveMailgunConfig', () => {
+  it('defaults to sandbox mode', () => {
+    expect(resolveMailgunConfig({}).mode).toBe('sandbox');
+  });
+  it('uses production when MAILGUN_MODE=production', () => {
+    expect(resolveMailgunConfig({ MAILGUN_MODE: 'production' }).mode).toBe('production');
+  });
+  it('uses sandbox when MAILGUN_MODE=sandbox', () => {
+    expect(resolveMailgunConfig({ MAILGUN_MODE: 'sandbox' }).mode).toBe('sandbox');
+  });
+});
+
+describe('sendToMailgun', () => {
+  let fetchMock;
+  beforeEach(() => {
+    fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '{}' });
+    globalThis.fetch = fetchMock;
+  });
+  afterEach(() => { delete globalThis.fetch; });
+
+  const baseConfig = {
+    apiKey: 'key-abc',
+    sandboxDomain: 'sandbox-xyz.mailgun.org',
+    sandboxListAddress: 'test@sandbox-xyz.mailgun.org',
+    productionDomain: 'mg.example.com',
+    productionListAddress: 'list@mg.example.com',
+    fromAddress: 'Mx. Voice <a@mg.example.com>',
+  };
+
+  it('sends to sandbox domain in sandbox mode', async () => {
+    const result = await sendToMailgun({ ...baseConfig, mode: 'sandbox' }, { subject: 'S', html: '<p>H</p>', text: 'T' });
+    expect(result.ok).toBe(true);
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toContain('sandbox-xyz.mailgun.org');
+    expect(options.headers.Authorization).toMatch(/^Basic /);
+  });
+
+  it('sends to production domain in production mode', async () => {
+    await sendToMailgun({ ...baseConfig, mode: 'production' }, { subject: 'S', html: '<p>H</p>', text: 'T' });
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toContain('mg.example.com');
+    expect(url).not.toContain('sandbox');
   });
 });

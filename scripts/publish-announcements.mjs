@@ -86,6 +86,45 @@ export function renderEmail(item) {
   return { subject: item.title, html, text };
 }
 
+export function resolveMailgunConfig(env) {
+  const mode = env.MAILGUN_MODE === 'production' ? 'production' : 'sandbox';
+  return {
+    mode,
+    apiKey: env.MAILGUN_API_KEY || '',
+    productionDomain: env.MAILGUN_DOMAIN || '',
+    productionListAddress: env.MAILGUN_LIST_ADDRESS || '',
+    sandboxDomain: env.MAILGUN_SANDBOX_DOMAIN || '',
+    sandboxListAddress: env.MAILGUN_SANDBOX_LIST_ADDRESS || '',
+    fromAddress: env.MAILGUN_FROM || `Mx. Voice <announcements@${env.MAILGUN_DOMAIN || 'example.com'}>`,
+  };
+}
+
+export async function sendToMailgun(config, rendered) {
+  const domain = config.mode === 'production' ? config.productionDomain : config.sandboxDomain;
+  const listAddress = config.mode === 'production' ? config.productionListAddress : config.sandboxListAddress;
+  if (!domain || !listAddress || !config.apiKey) {
+    return { ok: false, status: 0, body: 'missing Mailgun configuration' };
+  }
+  const url = `https://api.mailgun.net/v3/${domain}/messages`;
+  const auth = Buffer.from(`api:${config.apiKey}`).toString('base64');
+  const form = new URLSearchParams();
+  form.append('from', config.fromAddress);
+  form.append('to', listAddress);
+  form.append('subject', rendered.subject);
+  form.append('html', rendered.html);
+  form.append('text', rendered.text);
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: form.toString(),
+  });
+  const body = await res.text();
+  return { ok: res.ok, status: res.status, body };
+}
+
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
