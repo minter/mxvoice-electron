@@ -34,6 +34,7 @@ let autoUpdater;
 let debugLog;
 let logService;
 let updateState;
+let analytics;
 
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
@@ -45,6 +46,7 @@ function initializeIpcHandlers(dependencies) {
   debugLog = dependencies.debugLog;
   logService = dependencies.logService;
   updateState = dependencies.updateState || { downloaded: false };
+  analytics = dependencies.analytics;
   
   // Initialize file operations module
   fileOperations.initializeFileOperations(dependencies);
@@ -1066,6 +1068,9 @@ function registerAllHandlers() {
       );
       
       await Promise.race([downloadPromise, timeoutPromise]);
+      if (analytics) {
+        analytics.trackEvent('auto_update_action', { action: 'accepted' });
+      }
       return { success: true, message: 'Download started' };
     } catch (error) {
       const errorMessage = error?.message || error?.toString() || 'Download failed';
@@ -2503,10 +2508,47 @@ function registerAllHandlers() {
   debugLog?.info('✅ Secure IPC handlers registered successfully', {
     module: 'ipc-handlers',
     function: 'registerAllHandlers',
-    secureHandlersCount: 57
+    secureHandlersCount: 60
   });
 
-  debugLog?.info('✅ All IPC handlers registered successfully (context isolation ready)', { 
+  // Analytics handlers
+  ipcMain.handle('analytics:track-event', async (event, name, properties) => {
+    try {
+      if (analytics) {
+        analytics.trackEvent(name, properties || {});
+      }
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Analytics track-event error', { module: 'ipc-handlers', function: 'analytics:track-event', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('analytics:get-opt-out-status', async () => {
+    try {
+      if (analytics) {
+        return { success: true, value: analytics.getOptOutStatus() };
+      }
+      return { success: true, value: false };
+    } catch (error) {
+      debugLog?.error('Analytics get-opt-out error', { module: 'ipc-handlers', function: 'analytics:get-opt-out-status', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('analytics:set-opt-out', async (event, value) => {
+    try {
+      if (analytics) {
+        analytics.setOptOut(!!value);
+      }
+      return { success: true };
+    } catch (error) {
+      debugLog?.error('Analytics set-opt-out error', { module: 'ipc-handlers', function: 'analytics:set-opt-out', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  debugLog?.info('✅ All IPC handlers registered successfully (context isolation ready)', {
     module: 'ipc-handlers', 
     function: 'registerAllHandlers',
     note: 'Using secure handlers only - legacy handlers removed for security'
@@ -2611,6 +2653,11 @@ function removeAllHandlers() {
   ipcMain.removeHandler('library:export');
   ipcMain.removeHandler('library:import');
   ipcMain.removeHandler('library:import-confirm');
+
+  // Analytics handlers
+  ipcMain.removeHandler('analytics:track-event');
+  ipcMain.removeHandler('analytics:get-opt-out-status');
+  ipcMain.removeHandler('analytics:set-opt-out');
 
   // Remove legacy event listeners
   ipcMain.removeAllListeners('open-hotkey-file');

@@ -51,12 +51,17 @@ function initializeSettingsController(options = {}) {
       crossfade_seconds: parseInt(document.getElementById('preferences-crossfade-seconds')?.value) || 0,
       debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
       prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
-      screen_mode: document.getElementById('preferences-screen-mode')?.value || 'auto'
+      screen_mode: document.getElementById('preferences-screen-mode')?.value || 'auto',
+      analytics_enabled: !!document.getElementById('preferences-analytics-enabled')?.checked
     };
     
-    debugLog?.info("[PREFS-SAVE] Captured form values", { 
+    debugLog?.info("[PREFS-SAVE] Captured form values", {
       function: "savePreferences",
-      formValues 
+      formValues
+    });
+
+    window.secureElectronAPI?.analytics?.trackEvent?.('preferences_changed', {
+      setting_names: Object.keys(formValues),
     });
     
     // Use new store API for saving preferences
@@ -208,6 +213,12 @@ function initializeSettingsController(options = {}) {
           });
         }
         
+        // Handle analytics opt-out separately (uses analytics API, not store)
+        const analyticsAPI = electronAPI?.analytics || window.secureElectronAPI?.analytics;
+        if (analyticsAPI) {
+          await analyticsAPI.setOptOut(!formValues.analytics_enabled);
+        }
+
         // Close modal after save operations complete
         safeHideModal('#preferencesModal', { function: 'savePreferences' });
       } catch (error) {

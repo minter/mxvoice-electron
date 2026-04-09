@@ -1001,15 +1001,15 @@ async function autoplay_next() {
       // Clear any existing highlighting and highlight the new playing track
       document.getElementById('selected_row')?.removeAttribute('id');
       next_song.id = 'selected_row';
-
       // Read crossfade preference for playlist transitions (cached in sharedState)
       let crossfadeOpts = {};
       const crossfadeSeconds = sharedState.get('crossfadeSeconds') || 0;
       if (crossfadeSeconds > 0) {
         crossfadeOpts = { crossfade: true, crossfadeSeconds };
       }
-
+      window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'playlist_autoplay' });
       playSongFromId(next_song.getAttribute('songid'), crossfadeOpts);
+
       next_song.classList.add('now_playing');
     } else {
       getDebugLog()?.info('End of playlist reached', {

@@ -81,6 +81,7 @@ export function deleteSong() {
           if (typeof saveHoldingTankToStore === 'function') saveHoldingTankToStore();
           if (typeof saveHotkeysToStore === 'function') saveHotkeysToStore();
 
+          window.secureElectronAPI?.analytics?.trackEvent?.('song_deleted');
           return { success: true, songId: songId, title: songRow?.title };
       } else {
         return { success: false, error: 'User cancelled' };

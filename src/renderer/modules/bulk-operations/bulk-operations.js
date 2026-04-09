@@ -303,6 +303,7 @@ export async function addSongsByPath(pathArray, category) {
       return;
     }
 
+    window.secureElectronAPI?.analytics?.trackEvent?.('song_added', { method: 'bulk' });
     debugLog?.info('Copying audio file', { module: 'bulk-operations', function: 'addSongsByPath', songSourcePath, newPath });
     const copyRes = await secureFileSystem.copy(songSourcePath, newPath);
     if (!copyRes?.success) {

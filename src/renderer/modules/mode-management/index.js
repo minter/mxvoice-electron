@@ -126,6 +126,8 @@ class ModeManagementModule {
       holding?.classList.remove('holding-tank-storage-mode');
       holding?.classList.add('holding-tank-playlist-mode');
 
+      window.secureElectronAPI?.analytics?.trackEvent?.('playlist_used', { action: 'activated' });
+
       this.autoplay = true;
       // Update shared state for autoplay
       if (window.sharedState) {

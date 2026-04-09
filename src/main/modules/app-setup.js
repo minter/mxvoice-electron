@@ -27,6 +27,8 @@ let fileOperations;
 let debugLog;
 let getCurrentProfile;
 let autoBackupTimer;
+let analytics;
+let appStartTime;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -37,6 +39,8 @@ function initializeAppSetup(dependencies) {
   debugLog = dependencies.debugLog;
   getCurrentProfile = dependencies.getCurrentProfile;
   autoBackupTimer = dependencies.autoBackupTimer;
+  analytics = dependencies.analytics;
+  appStartTime = dependencies.appStartTime;
 }
 
 // Create the main window
@@ -1090,8 +1094,23 @@ function setupAppLifecycle() {
     mainWindow = null;
   });
   
-  // Stop backup timer before quit
-  app.on('before-quit', () => {
+  // Shutdown analytics and stop backup timer before quit
+  app.on('before-quit', async () => {
+    // Track app close with session duration
+    if (analytics) {
+      const startTime = appStartTime || Date.now();
+      const sessionDuration = Math.floor((Date.now() - startTime) / 1000);
+      analytics.trackEvent('app_closed', { session_duration_seconds: sessionDuration });
+      try {
+        await analytics.shutdown();
+      } catch (err) {
+        debugLog?.error('Analytics shutdown error', {
+          module: 'app-setup',
+          function: 'before-quit',
+          error: err.message,
+        });
+      }
+    }
     if (autoBackupTimer) {
       autoBackupTimer.stopAutoBackupTimer();
       debugLog?.info('Stopped auto-backup timer on app quit', {
