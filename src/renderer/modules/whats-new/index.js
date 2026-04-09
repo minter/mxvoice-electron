@@ -109,6 +109,18 @@ tourManager.registerHelper('openPreferencesAndScrollToAnalytics', async () => {
   }
 });
 
+// Handle the tour's "Subscribe for email updates" link click
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    if (target && target.id === 'tour-subscribe-link') {
+      e.preventDefault();
+      window.secureElectronAPI?.analytics?.trackEvent?.('announcement_cta_clicked', { source: 'tour_final_step' });
+      window.mxvoiceAnnouncements?.openSubscribe?.();
+    }
+  });
+}
+
 // ─── Public API ───────────────────────────────────────────────────────
 
 export async function initWhatsNew() {

@@ -674,6 +674,12 @@ function createApplicationMenu() {
           }
         },
         {
+          label: 'Get Email Updates…',
+          click: () => {
+            mainWindow?.webContents.send('announcements:open-subscribe');
+          }
+        },
+        {
           label: "What's New",
           click: () => {
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -784,6 +790,12 @@ function createApplicationMenu() {
           label: 'Release Notes',
           click: () => {
             shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+          }
+        },
+        {
+          label: 'Get Email Updates…',
+          click: () => {
+            mainWindow?.webContents.send('announcements:open-subscribe');
           }
         },
         {
