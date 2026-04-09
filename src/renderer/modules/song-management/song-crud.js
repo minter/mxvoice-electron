@@ -148,7 +148,7 @@ export async function saveNewSong(event) {
       }
       return;
     }
-    window.secureElectronAPI?.analytics?.trackEvent?.('song_added');
+    window.secureElectronAPI?.analytics?.trackEvent?.('song_added', { method: 'single' });
     const copyRes = await secureFileSystem.copy(filename, newPath);
     if (!copyRes?.success) {
       debugLog?.warn('❌ Failed to copy file:', { module: 'song-management', function: 'saveNewSong', error: copyRes?.error });
