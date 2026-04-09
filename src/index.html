@@ -28,12 +28,24 @@
 
     <link rel="stylesheet" href="stylesheets/colors.css">
 
+    <!-- Driver.js CSS for guided tours -->
+    <link rel="stylesheet" href="../node_modules/driver.js/dist/driver.css">
+
     <script src="../node_modules/mousetrap/mousetrap.min.js"></script>
     <script src="../node_modules/wavesurfer.js/dist/wavesurfer.min.js"></script>
+    <script src="../node_modules/wavesurfer.js/dist/plugins/regions.min.js"></script>
     <script src="../node_modules/howler/dist/howler.min.js"></script>
     <script src="../node_modules/dompurify/dist/purify.min.js"></script>
   </head>
   <body>
+    <!-- File drop overlay — shown when audio files are dragged over the window -->
+    <div id="file-drop-overlay">
+      <div class="file-drop-overlay-content">
+        <i class="fas fa-file-audio fa-3x"></i>
+        <div>Drop audio files to import</div>
+      </div>
+    </div>
+
     <div class="container-fluid">
 
       <div id="top-row" class="row g-0 flex-nowrap">
@@ -420,6 +432,38 @@
       </div>
     </div>
 
+    <div class="modal fade" id="multiSongImportModal" role="dialog" data-bs-backdrop="static">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title">Multi-Song Import</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-2 mb-3 align-items-center multi-import-header">
+              <label for="multi-import-global-category" class="col-sm-3 col-form-label fw-bold text-start">Set Category for All Songs</label>
+              <div class="col-sm-6">
+                <select class="form-control form-control-sm" id="multi-import-global-category">
+                </select>
+              </div>
+              <div class="col-sm-3">
+                <small class="text-muted">Use this to set a default for the list</small>
+              </div>
+            </div>
+
+            <div id="multi-song-import-list">
+              <!-- Song rows will be injected here -->
+            </div>
+          </div>
+          <div class="modal-footer">
+            <span id="multi-song-import-count" class="me-auto text-muted"></span>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" id="multiSongImportSubmitButton" class="btn btn-success btn-sm">Import All Songs</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal fade" id="songFormModal" tabindex="-1" role="dialog" >
       <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -462,6 +506,27 @@
                 <label for="song-form-info" class="col-form-label col-sm-3">Info</label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control form-control-sm" id="song-form-info">
+                </div>
+              </div>
+              <div class="row g-2 mb-3">
+                <label for="song-form-volume" class="col-form-label col-sm-3">Volume</label>
+                <div class="col-sm-7">
+                  <input type="range" class="form-range mousetrap" id="song-form-volume" min="0" max="100" value="100">
+                </div>
+                <div class="col-sm-2 text-end">
+                  <span id="song-form-volume-display">100</span>%
+                </div>
+              </div>
+              <div class="row g-2 mb-3">
+                <label for="song-form-start-time" class="col-form-label col-sm-3">Start</label>
+                <div class="col-sm-9">
+                  <input type="text" class="form-control form-control-sm" id="song-form-start-time" placeholder="0:00" pattern="[0-9]*:[0-5][0-9]">
+                </div>
+              </div>
+              <div class="row g-2 mb-3">
+                <label for="song-form-end-time" class="col-form-label col-sm-3">End</label>
+                <div class="col-sm-9">
+                  <input type="text" class="form-control form-control-sm" id="song-form-end-time" placeholder="End of track" pattern="[0-9]*:[0-5][0-9]">
                 </div>
               </div>
               <div class="row g-2 mb-3">
@@ -546,6 +611,15 @@
                   </div>
 
                 </div>
+                <div class="row g-2 mb-3">
+                  <label for="preferences-crossfade-seconds" class="col-sm-3 col-form-label">Crossfade (seconds)</label>
+                  <div class="col-sm-1">
+                    <input type="text" class="form-control" id="preferences-crossfade-seconds">
+                  </div>
+                  <div class="col-sm-8">
+                    <small class="form-text text-muted">Smooth transition between tracks in playlist mode (0 = off)</small>
+                  </div>
+                </div>
               </fieldset>
 
               <fieldset>
@@ -576,6 +650,21 @@
                       </label>
                     </div>
                     <small class="form-text text-muted">By default, only stable releases are shown. Enable this to receive beta and alpha updates.</small>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Privacy</legend>
+                <div class="row g-2 mb-3">
+                  <div class="col-sm-9 offset-sm-3">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" role="switch" id="preferences-analytics-enabled" checked>
+                      <label class="form-check-label" for="preferences-analytics-enabled">
+                        Send anonymous usage data
+                      </label>
+                    </div>
+                    <small class="form-text text-muted">Helps improve Mx. Voice. No personal data is collected.</small>
                   </div>
                 </div>
               </fieldset>
@@ -635,7 +724,7 @@
           <div class="modal-body">
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-warning btn-sm" data-bs-dismiss="modal">Later</button>
+            <button type="button" class="btn btn-warning btn-sm" data-bs-dismiss="modal" id="updateLaterBtn">Later</button>
             <button type="button" class="btn btn-success btn-sm" id="installNowBtn" onclick="startUpdateProcess()" title="Install the update now">Install Now</button>
           </div>
         </div>
@@ -862,6 +951,16 @@
             <button type="button" class="btn btn-danger btn-sm" id="libraryImportConfirmBtn">Import and Replace</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Analytics consent banner (shown on first run) -->
+    <div id="analytics-consent-banner" class="alert alert-info alert-dismissible fade d-none" role="alert" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1060; max-width: 600px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+      <strong>Usage Analytics</strong><br>
+      Mx. Voice collects anonymous usage data to help improve the app &mdash; things like which features are used and crash reports. No personal information is collected. You can disable this anytime in Preferences.
+      <div class="mt-2">
+        <button type="button" class="btn btn-primary btn-sm me-2" id="analytics-consent-ok">OK</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="analytics-consent-disable">Disable Analytics</button>
       </div>
     </div>
 

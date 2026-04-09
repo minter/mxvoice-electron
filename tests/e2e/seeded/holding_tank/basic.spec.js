@@ -543,14 +543,15 @@ test.describe('Holding Tank - basic', () => {
 
   test('drag and drop reordering in holding tank', async () => {
     // 1) Clear the holding tank first
+    // Clean up any leftover modal state from previous tests
+    await clearModalBackdrop(page);
+
     // Dismiss tooltip by focusing search input
     const preClearSearchInput = page.locator('#omni_search');
     await preClearSearchInput.click();
 
     const clearButton = page.locator('#holding-tank-clear-btn');
-
-    // Try to click with force to bypass any tooltip interference
-    await clearButton.click({ force: true });
+    await clearButton.click();
 
     // Click Confirm in the modal
     const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
@@ -559,6 +560,7 @@ test.describe('Holding Tank - basic', () => {
 
     // Wait for modal to close and clear operation to complete
     await expect(confirmButton).not.toBeVisible();
+    await clearModalBackdrop(page);
     
     // Verify holding tank is now empty
     const activeTab = page.locator('#holding_tank_1');
@@ -607,11 +609,32 @@ test.describe('Holding Tank - basic', () => {
     console.log('✅ Initial order: Got The Time, We Are Family, Eat It');
     
     // 5) Take the first song and drag it below the bottom of the last song
-    const firstSong = holdingTankItems.first();
-    const lastSong = holdingTankItems.nth(2);
-    
-    // Drag the first song to below the last song
-    await firstSong.dragTo(lastSong, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 70 } });
+    // Use page.evaluate() to dispatch proper HTML5 drag events with dataTransfer,
+    // because Playwright's dragTo doesn't reliably carry custom dataTransfer types
+    await page.evaluate(() => {
+      const list = document.querySelector('#holding_tank_1');
+      const items = list.querySelectorAll('.list-group-item');
+      const firstItem = items[0];
+      const lastItem = items[2];
+      const songId = firstItem.getAttribute('songid');
+      const tabId = list.id;
+
+      // Dispatch dragstart on the first item
+      const dt = new DataTransfer();
+      dt.setData('text', songId);
+      dt.setData('application/x-holding-tank-reorder', tabId);
+      const dragStartEvent = new DragEvent('dragstart', { dataTransfer: dt, bubbles: true });
+      firstItem.dispatchEvent(dragStartEvent);
+
+      // Dispatch drop on the last item (below midpoint to insert after)
+      const rect = lastItem.getBoundingClientRect();
+      const dropEvent = new DragEvent('drop', {
+        dataTransfer: dt,
+        bubbles: true,
+        clientY: rect.bottom - 1 // Below midpoint to trigger insert-after
+      });
+      lastItem.dispatchEvent(dropEvent);
+    });
 
     // 6) Verify the new order: Second, Third, First
     await expect(holdingTankItems).toHaveCount(3);
@@ -650,12 +673,20 @@ test.describe('Holding Tank - basic', () => {
 
   test('holding tank tab isolation across tabs', async () => {
     // 1) Clear the holding tank first
+    // Clean up any leftover modal state from previous tests
+    await clearModalBackdrop(page);
+
+    // Dismiss tooltip by focusing search input
+    const searchInputDismiss = page.locator('#omni_search');
+    await searchInputDismiss.click();
+
     const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click({ force: true });
+    await clearButton.click();
     const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
     await expect(confirmButton).toBeVisible({ timeout: 5000 });
     await confirmButton.click();
     await expect(confirmButton).not.toBeVisible();
+    await clearModalBackdrop(page);
 
     // Verify tab 1 is empty
     const tab1Link = page.locator('#holding_tank_tabs a[href="#holding_tank_1"]');
@@ -722,11 +753,12 @@ test.describe('Holding Tank - basic', () => {
     await expect(playlistModeBtn).not.toHaveClass(/active/);
 
     // Clear holding tank via UI (handle case where tank may already be empty)
+    await clearModalBackdrop(page);
     const tab1List = page.locator('#holding_tank_1');
     const existingItems = await tab1List.locator('.list-group-item').count();
     if (existingItems > 0) {
       const clearButton = page.locator('#holding-tank-clear-btn');
-      await clearButton.click({ force: true });
+      await clearButton.click();
       const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
       await expect(confirmButton).toBeVisible({ timeout: 5000 });
       await confirmButton.click();
@@ -877,13 +909,14 @@ test.describe('Holding Tank - basic', () => {
 
   test('context menu functionality in holding tank', async () => {
     // 1) Clear the holding tank first (handle case where tank may already be empty)
+    await clearModalBackdrop(page);
     const tab1Link = page.locator('#holding_tank_tabs a[href="#holding_tank_1"]');
     await tab1Link.click();
     const tab1List = page.locator('#holding_tank_1');
     const itemCount = await tab1List.locator('.list-group-item').count();
     if (itemCount > 0) {
       const clearButton = page.locator('#holding-tank-clear-btn');
-      await clearButton.click({ force: true });
+      await clearButton.click();
       const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
       await expect(confirmButton).toBeVisible({ timeout: 5000 });
       await confirmButton.click();
@@ -1000,13 +1033,14 @@ test.describe('Holding Tank - basic', () => {
 
   test('delete song from holding tank via click and Delete key', async () => {
     // 1) Clear the holding tank first (handle case where tank may already be empty)
+    await clearModalBackdrop(page);
     const tab1Link = page.locator('#holding_tank_tabs a[href="#holding_tank_1"]');
     await tab1Link.click();
     const tab1List = page.locator('#holding_tank_1');
     const itemCount = await tab1List.locator('.list-group-item').count();
     if (itemCount > 0) {
       const clearButton = page.locator('#holding-tank-clear-btn');
-      await clearButton.click({ force: true });
+      await clearButton.click();
       const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
       await expect(confirmButton).toBeVisible({ timeout: 5000 });
       await confirmButton.click();
@@ -1079,8 +1113,9 @@ test.describe('Holding Tank - basic', () => {
     console.log('🧪 Testing bug: double-click playback in holding tank tab 4');
     
     // 1) Clear the holding tank first to ensure clean state
+    await clearModalBackdrop(page);
     const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click({ force: true });
+    await clearButton.click();
     const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
     await expect(confirmButton).toBeVisible({ timeout: 5000 });
     await confirmButton.click();

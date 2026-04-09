@@ -50,6 +50,9 @@ import * as profileBackupManager from './modules/profile-backup-manager.js';
 import * as autoBackupTimer from './modules/auto-backup-timer.js';
 import * as libraryTransferManager from './modules/library-transfer-manager.js';
 import * as launcherWindow from './modules/launcher-window.js';
+import { createAnalytics } from './modules/analytics.js';
+
+const appStartTime = Date.now();
 
 // Initialize Octokit for GitHub API (will be initialized after debugLog is available)
 let _octokit;
@@ -217,6 +220,33 @@ async function copyFileStreaming(source, destination, progressCallback = null) {
   }
 }
 
+// Supported audio extensions for file drop filtering (main process copy)
+const SUPPORTED_AUDIO_EXTS_MAIN = new Set(['.mp3', '.mp4', '.m4a', '.wav', '.ogg', '.flac', '.opus']);
+
+// Pending files from open-file events (macOS dock drop) that arrive before the window is ready
+const pendingOpenFiles = [];
+let pendingOpenFileTimer = null;
+
+/**
+ * Flush pending open-file paths to the renderer once the window is ready
+ */
+function flushPendingOpenFiles() {
+  const files = pendingOpenFiles.splice(0);
+  const valid = files.filter(f => SUPPORTED_AUDIO_EXTS_MAIN.has(path.extname(f).toLowerCase()));
+  if (!valid.length) return;
+  if (!mainWindow?.webContents) return;
+  mainWindow.webContents.send('external-files-dropped', valid);
+}
+
+// macOS: files dropped on the dock icon (or double-clicked when app is default handler)
+// This event fires once per file, so we batch with a short timer.
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  pendingOpenFiles.push(filePath);
+  clearTimeout(pendingOpenFileTimer);
+  pendingOpenFileTimer = setTimeout(() => flushPendingOpenFiles(), 200);
+});
+
 // Single-instance lock - prevent multiple app instances from running
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -226,11 +256,19 @@ if (!gotTheLock) {
   app.quit();
 } else {
   // Handle second instance attempts - focus the existing window
-  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
-    // Someone tried to run a second instance, focus our existing window instead
+  // On Windows, files dropped on the .exe shortcut arrive as argv entries
+  app.on('second-instance', (_event, commandLine, _workingDirectory) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
+
+      // Check for file paths in argv (Windows file drop on shortcut)
+      const droppedFiles = commandLine.slice(1).filter(arg =>
+        !arg.startsWith('-') && SUPPORTED_AUDIO_EXTS_MAIN.has(path.extname(arg).toLowerCase())
+      );
+      if (droppedFiles.length && mainWindow.webContents) {
+        mainWindow.webContents.send('external-files-dropped', droppedFiles);
+      }
     }
   });
 }
@@ -244,7 +282,10 @@ const defaults = {
   database_directory: app.getPath('userData'),
   fade_out_seconds: 2,
   debug_log_enabled: true,
-  first_run_completed: false
+  first_run_completed: false,
+  analytics_device_id: '',
+  analytics_opt_out: false,
+  analytics_banner_shown: false
 }
 
 // Use a stable config file name and explicit project directory to ensure
@@ -647,12 +688,72 @@ function checkOldConfig() {
   }
 }
 
-// Track user (analytics placeholder)
-function trackUser() {
-  // Placeholder for user tracking/analytics
-  debugLog.info('User tracking initialized', { 
-    function: "trackUser" 
+// Initialize analytics
+let analytics = null;
+
+function initializeAnalytics() {
+  const appVersion = app.getVersion();
+  analytics = createAnalytics({ store, debugLog, appVersion, isPackaged: app.isPackaged });
+  analytics.init();
+
+  // Count profiles for launch event
+  let profileCount = 0;
+  try {
+    const profilesDir = path.join(app.getPath('userData'), 'profiles');
+    if (fs.existsSync(profilesDir)) {
+      profileCount = fs.readdirSync(profilesDir, { withFileTypes: true })
+        .filter(entry => entry.isDirectory()).length;
+    }
+  } catch {
+    // Ignore — profiles dir may not exist yet on first run
+  }
+
+  // Track app launch
+  analytics.trackEvent('app_launched', {
+    os: process.platform,
+    arch: process.arch,
+    electron_version: process.versions.electron,
+    profile_count: profileCount,
   });
+
+  // Track uncaught errors
+  process.on('uncaughtException', (error) => {
+    if (analytics) {
+      analytics.trackEvent('app_error', {
+        error_message: error.message,
+        stack_trace: error.stack,
+      });
+    }
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    if (analytics) {
+      analytics.trackEvent('app_error', {
+        error_message: reason instanceof Error ? reason.message : String(reason),
+        stack_trace: reason instanceof Error ? reason.stack : undefined,
+      });
+    }
+  });
+}
+
+// Track library size after database is available
+function trackLibraryStats() {
+  if (!analytics || !db) return;
+  try {
+    const songResult = db.exec('SELECT count(*) as count FROM mrvoice');
+    const songCount = songResult[0]?.values[0]?.[0] || 0;
+    const catResult = db.exec('SELECT count(*) as count FROM categories');
+    const categoryCount = catResult[0]?.values[0]?.[0] || 0;
+    analytics.trackEvent('library_stats', {
+      song_count: songCount,
+      category_count: categoryCount,
+    });
+  } catch (error) {
+    debugLog.warn('Failed to track library stats', {
+      function: 'trackLibraryStats',
+      error: error.message,
+    });
+  }
 }
 
 // Initialize all modules with dependencies
@@ -689,7 +790,9 @@ async function initializeModules() {
     updateState,
     logService,
     getCurrentProfile,
-    autoBackupTimer
+    autoBackupTimer,
+    analytics,
+    appStartTime
   };
 
   // Initialize each module
@@ -763,6 +866,9 @@ const createWindow = async () => {
     // Initialize modules with dependencies AFTER mainWindow is created
     await initializeModules();
 
+    // Track library stats now that DB is available
+    trackLibraryStats();
+
     // Set up window state saving now that store is available
     appSetup.setupWindowStateSaving();
 
@@ -772,8 +878,7 @@ const createWindow = async () => {
     // Create the menu
     appSetup.createApplicationMenu();
 
-    // Track user
-    trackUser();
+    // Analytics already initialized in app ready handler
   } catch (error) {
     debugLog?.error('Failed to create main window', { 
       function: "createWindow",
@@ -801,7 +906,10 @@ const createWindow = async () => {
       
       // Initialize basic modules without database
       await initializeModules();
-      
+
+      // Track library stats now that DB is available
+      trackLibraryStats();
+
       // Set up window state saving now that store is available
       appSetup.setupWindowStateSaving();
       
@@ -834,7 +942,10 @@ function setupApp() {
       const shouldAllowPrereleases = newValue || isCurrentlyPrerelease;
       
       autoUpdater.allowPrerelease = shouldAllowPrereleases;
-      debugLog.info(`Auto-updater prerelease setting updated`, { 
+      if (newValue && analytics) {
+        analytics.trackEvent('auto_update_action', { action: 'prerelease_opted_in' });
+      }
+      debugLog.info(`Auto-updater prerelease setting updated`, {
         function: "preference-change",
         prereleaseEnabled: shouldAllowPrereleases,
         userPreference: newValue,
@@ -850,7 +961,10 @@ function setupApp() {
   // initialization and is ready to create browser windows.
   app.on('ready', async () => {
     debugLog.info('Electron app ready event fired', { function: "app ready event" });
-    
+
+    // Initialize analytics (before other modules so it can track errors)
+    initializeAnalytics();
+
     // Initialize profile manager
     profileManager.initializeProfileManager({ debugLog });
     

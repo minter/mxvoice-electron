@@ -675,6 +675,7 @@ class HotkeysModule {
           function: 'playSongFromHotkey',
           song_id: song_id,
         });
+        window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'hotkey' });
         window.playSongFromId(song_id);
       } else {
         debugLog?.error(

@@ -63,8 +63,10 @@ export default class EventDelegator {
     };
     const dblHandler = (event) => {
       const row = event.target && event.target.closest('tbody tr.song');
-      if (row && table.contains(row) && window.playSelected)
+      if (row && table.contains(row) && window.playSelected) {
+        window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'search_result' });
         window.playSelected();
+      }
     };
     table.addEventListener('click', clickHandler);
     table.addEventListener('contextmenu', contextHandler);
@@ -117,8 +119,13 @@ export default class EventDelegator {
       ) {
         li.classList.add('now_playing');
         if (window.sharedState) window.sharedState.set('autoplay', true);
+        window.secureElectronAPI?.analytics?.trackEvent?.('playlist_used', { action: 'play' });
       }
-      if (window.playSelected) window.playSelected();
+      if (window.playSelected) {
+        const method = (window.getHoldingTankMode && window.getHoldingTankMode() === 'playlist') ? 'playlist' : 'holding_tank';
+        window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: method });
+        window.playSelected();
+      }
     };
 
     // Attach delegated events to ALL holding tank containers (all tabs)

@@ -54,6 +54,29 @@
   border-left-color: #28a745 !important;
 }
 
+/* What's New tour - light theme */
+.whats-new-popover.driver-popover-light {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+}
+
+.whats-new-popover.driver-popover-light .driver-popover-title {
+  color: #1a1a2e;
+}
+
+.whats-new-popover.driver-popover-light .driver-popover-description {
+  color: #555;
+}
+
+.whats-new-popover.driver-popover-light .driver-popover-progress-text {
+  color: #888;
+}
+
+.whats-new-popover.driver-popover-light .driver-popover-prev-btn {
+  border-color: #ddd;
+  color: #555;
+}
+
 /* Dark theme specific overrides (for backward compatibility) */
 @media (prefers-color-scheme: dark) {
   .theme-auto {
@@ -70,6 +93,29 @@
     --input-border: #505050;
     --input-text: rgb(226, 226, 226);
   }
+}
+
+/* What's New tour - dark theme */
+.whats-new-popover.driver-popover-dark {
+  background: #2d2d44;
+  border: 1px solid #3d3d5c;
+}
+
+.whats-new-popover.driver-popover-dark .driver-popover-title {
+  color: #e0e0e0;
+}
+
+.whats-new-popover.driver-popover-dark .driver-popover-description {
+  color: #a0a0b0;
+}
+
+.whats-new-popover.driver-popover-dark .driver-popover-progress-text {
+  color: #666;
+}
+
+.whats-new-popover.driver-popover-dark .driver-popover-prev-btn {
+  border-color: #3d3d5c;
+  color: #a0a0b0;
 }
 
 /* Dark theme specific form styling */
@@ -407,6 +453,29 @@ table td {
   border-bottom: 1px dotted black !important;
 }
 
+/* Holding tank reorder drop indicators — use box-shadow instead of border
+   so the indicator line doesn't shift item layout during drag */
+.holding-tank-drop-above {
+  box-shadow: inset 0 2px 0 #007bff !important;
+}
+
+.holding-tank-drop-below {
+  box-shadow: inset 0 -2px 0 #007bff !important;
+}
+
+/* Flash animation for newly dropped holding tank items.
+   Uses box-shadow inset overlay so it renders on top of the
+   theme's !important background-color on .list-group-item. */
+@keyframes holding-tank-flash {
+  0%   { box-shadow: inset 0 0 0 100px rgba(0, 123, 255, 0.45); }
+  40%  { box-shadow: inset 0 0 0 100px rgba(0, 123, 255, 0.1); }
+  60%  { box-shadow: inset 0 0 0 100px rgba(0, 123, 255, 0.25); }
+  100% { box-shadow: none; }
+}
+.holding-tank-flash {
+  animation: holding-tank-flash 1s ease-out;
+}
+
 /* Column drag and drop styles */
 .column-drop-zone {
   width: 8px;
@@ -452,7 +521,32 @@ table td {
   box-shadow: 0 0 8px rgba(var(--highlight-color-rgb), 0.3);
 }
 
+/* File drop overlay — shown when audio files are dragged from OS into the window */
+#file-drop-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.6);
+  border: 3px dashed rgba(var(--highlight-color-rgb), 0.7);
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
 
+#file-drop-overlay.active {
+  display: flex;
+}
+
+.file-drop-overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.5rem;
+  color: white;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
 
 .context-menu-list {
   background: var(--context-menu-list);
