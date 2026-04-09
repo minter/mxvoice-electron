@@ -891,6 +891,9 @@ let eventCoordination = null;
  * On first run, displays a fixed-position banner offering OK or Disable.
  */
 async function showAnalyticsBannerIfNeeded() {
+  // Don't show banner during E2E tests
+  if (window.electronTest?.isE2E) return;
+
   const api = window.secureElectronAPI || window.electronAPI;
   if (!api?.store) return;
 
