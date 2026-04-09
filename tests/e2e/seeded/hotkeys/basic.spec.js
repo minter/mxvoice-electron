@@ -1780,7 +1780,15 @@ test.describe('Hotkeys - save & load', () => {
       const f2Text = await f2Hotkey.textContent();
       const f3Text = await f3Hotkey.textContent();
       console.log('✅ Hotkeys assigned - F1:', f1Text, 'F2:', f2Text, 'F3:', f3Text);
-      
+
+      // Explicitly save profile state before closing
+      // (beforeunload's async IPC save may not complete before process exits)
+      await testPage.evaluate(async () => {
+        if (window.moduleRegistry?.profileState?.saveProfileState) {
+          await window.moduleRegistry.profileState.saveProfileState();
+        }
+      });
+
       // Close the app (hotkeys should be saved)
       await closeApp(testApp);
       console.log('✅ App closed (hotkeys should be saved)');

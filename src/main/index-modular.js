@@ -220,6 +220,33 @@ async function copyFileStreaming(source, destination, progressCallback = null) {
   }
 }
 
+// Supported audio extensions for file drop filtering (main process copy)
+const SUPPORTED_AUDIO_EXTS_MAIN = new Set(['.mp3', '.mp4', '.m4a', '.wav', '.ogg', '.flac', '.opus']);
+
+// Pending files from open-file events (macOS dock drop) that arrive before the window is ready
+const pendingOpenFiles = [];
+let pendingOpenFileTimer = null;
+
+/**
+ * Flush pending open-file paths to the renderer once the window is ready
+ */
+function flushPendingOpenFiles() {
+  const files = pendingOpenFiles.splice(0);
+  const valid = files.filter(f => SUPPORTED_AUDIO_EXTS_MAIN.has(path.extname(f).toLowerCase()));
+  if (!valid.length) return;
+  if (!mainWindow?.webContents) return;
+  mainWindow.webContents.send('external-files-dropped', valid);
+}
+
+// macOS: files dropped on the dock icon (or double-clicked when app is default handler)
+// This event fires once per file, so we batch with a short timer.
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  pendingOpenFiles.push(filePath);
+  clearTimeout(pendingOpenFileTimer);
+  pendingOpenFileTimer = setTimeout(() => flushPendingOpenFiles(), 200);
+});
+
 // Single-instance lock - prevent multiple app instances from running
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -229,11 +256,19 @@ if (!gotTheLock) {
   app.quit();
 } else {
   // Handle second instance attempts - focus the existing window
-  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
-    // Someone tried to run a second instance, focus our existing window instead
+  // On Windows, files dropped on the .exe shortcut arrive as argv entries
+  app.on('second-instance', (_event, commandLine, _workingDirectory) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
+
+      // Check for file paths in argv (Windows file drop on shortcut)
+      const droppedFiles = commandLine.slice(1).filter(arg =>
+        !arg.startsWith('-') && SUPPORTED_AUDIO_EXTS_MAIN.has(path.extname(arg).toLowerCase())
+      );
+      if (droppedFiles.length && mainWindow.webContents) {
+        mainWindow.webContents.send('external-files-dropped', droppedFiles);
+      }
     }
   });
 }

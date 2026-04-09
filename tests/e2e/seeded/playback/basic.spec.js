@@ -1131,14 +1131,8 @@ test.describe('Playback - basic', () => {
     console.log('🔧 Clicking confirm button...');
     await confirmButton.click();
 
-    // Debug: Check if modal is still visible after click
-    const modalStillVisible = await page.locator('.modal:visible').count();
-    console.log(`🔍 Debug: Modal still visible after confirm click: ${modalStillVisible}`);
-    
-    if (modalStillVisible > 0) {
-      const modalText = await page.locator('.modal:visible').first().textContent();
-      console.log(`🔍 Debug: Modal content after confirm click: "${modalText}"`);
-    }
+    // Wait for confirmation modal to dismiss after clicking confirm
+    await expect(confirmButton).not.toBeVisible({ timeout: 5000 });
     
     // Debug: Check what the clearing logic actually did
     console.log('🔍 Debug: Checking what happened after clearing...');

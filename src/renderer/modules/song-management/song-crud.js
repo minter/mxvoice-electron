@@ -22,6 +22,70 @@ import { secureFileSystem, secureDatabase, securePath, secureStore } from '../ad
 import { populateCategorySelect, findUniqueCategoryCode, refreshCategories } from '../categories/category-data.js';
 
 /**
+ * Parse a MM:SS string into total seconds. Returns null if empty/invalid.
+ * @param {string} mmss - Time string like "1:30" or "0:45"
+ * @returns {number|null}
+ */
+function parseMMSS(mmss) {
+  if (!mmss || !mmss.trim()) return null;
+  const val = mmss.trim();
+  // Handle bare number (seconds only) as fallback
+  if (/^\d+$/.test(val)) return parseInt(val, 10);
+  // Handle MM:SS format
+  const parts = val.split(':');
+  if (parts.length !== 2) return null;
+  const minutes = parseInt(parts[0], 10);
+  const seconds = parseInt(parts[1], 10);
+  if (isNaN(minutes) || isNaN(seconds) || minutes < 0 || seconds < 0 || seconds > 59) return null;
+  return minutes * 60 + seconds;
+}
+
+/**
+ * Format seconds into MM:SS string. Returns empty string if null/undefined.
+ * @param {number|null} totalSeconds
+ * @returns {string}
+ */
+function formatMMSS(totalSeconds) {
+  if (totalSeconds == null) return '';
+  const secs = Math.round(totalSeconds);
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Show validation error on the start/end time fields.
+ * Highlights both fields and shows a message that auto-clears.
+ */
+function showTimeValidationError() {
+  const startEl = document.getElementById('song-form-start-time');
+  const endEl = document.getElementById('song-form-end-time');
+  if (startEl) startEl.classList.add('is-invalid');
+  if (endEl) endEl.classList.add('is-invalid');
+
+  // Add or update feedback message after the end time field
+  let feedback = document.getElementById('song-form-time-feedback');
+  if (!feedback && endEl) {
+    feedback = document.createElement('div');
+    feedback.id = 'song-form-time-feedback';
+    feedback.className = 'invalid-feedback';
+    feedback.style.display = 'block';
+    endEl.parentNode.appendChild(feedback);
+  }
+  if (feedback) {
+    feedback.textContent = 'Start time must be before end time';
+    feedback.style.display = 'block';
+  }
+
+  // Auto-clear after 3 seconds
+  setTimeout(() => {
+    if (startEl) startEl.classList.remove('is-invalid');
+    if (endEl) endEl.classList.remove('is-invalid');
+    if (feedback) feedback.style.display = 'none';
+  }, 3000);
+}
+
+/**
  * Saves an edited song to the database
  * Updates song information and refreshes the search results
  * 
@@ -37,12 +101,22 @@ export async function saveEditedSong(event) {
   const artist = (document.getElementById('song-form-artist') || {}).value || '';
   const info = (document.getElementById('song-form-info') || {}).value || '';
   const category = (document.getElementById('song-form-category') || {}).value || '';
+  const volume = parseInt(document.getElementById('song-form-volume')?.value) || 100;
+  const startTime = parseMMSS(document.getElementById('song-form-start-time')?.value);
+  const endTime = parseMMSS(document.getElementById('song-form-end-time')?.value);
+
+  // Validate start < end if both are set
+  if (startTime != null && endTime != null && startTime >= endTime) {
+    debugLog?.warn('Start time must be less than end time', { module: 'song-management', function: 'saveEditedSong' });
+    showTimeValidationError();
+    return;
+  }
 
   // Hide modal after capturing values
   safeHideModal('#songFormModal', { module: 'song-management', function: 'saveEditedSong' });
 
   try {
-    const result = await secureDatabase.updateSong({id: songId, title, artist, category, info});
+    const result = await secureDatabase.updateSong({id: songId, title, artist, category, info, volume, start_time: startTime, end_time: endTime});
     if (!result?.success) {
       debugLog?.warn('Edit update failed', { module: 'song-management', function: 'saveEditedSong', error: result?.error });
     } else {
@@ -99,6 +173,9 @@ export async function saveNewSong(event) {
     }
 
     const duration = (document.getElementById('song-form-duration') || {}).value || '';
+    const volume = parseInt(document.getElementById('song-form-volume')?.value) || 100;
+    const startTime = parseMMSS(document.getElementById('song-form-start-time')?.value);
+    const endTime = parseMMSS(document.getElementById('song-form-end-time')?.value);
     let uuid;
     if (window.secureElectronAPI?.utils?.generateId) {
       const uuidResult = await window.secureElectronAPI.utils.generateId();
@@ -122,7 +199,7 @@ export async function saveNewSong(event) {
       return;
     }
     const newPath = joinResult.data;
-    const insertSong = await secureDatabase.addSong({title, artist, category, info, filename: newFilename, duration});
+    const insertSong = await secureDatabase.addSong({title, artist, category, info, filename: newFilename, duration, volume, start_time: startTime, end_time: endTime});
     if (!insertSong?.success) {
       const isIOError = insertSong?.error?.toLowerCase().includes('i/o') || 
                         insertSong?.error?.toLowerCase().includes('disk') ||
@@ -196,6 +273,17 @@ export async function editSelectedSong() {
     if (artistEl) artistEl.value = songInfo.artist || '';
     if (infoEl) infoEl.value = songInfo.info || '';
     if (durEl) durEl.value = songInfo.time || '';
+    const volEl = document.getElementById('song-form-volume');
+    if (volEl) volEl.value = songInfo.volume ?? 100;
+    const volDisplay = document.getElementById('song-form-volume-display');
+    if (volDisplay) volDisplay.textContent = songInfo.volume ?? 100;
+    const startEl = document.getElementById('song-form-start-time');
+    if (startEl) startEl.value = formatMMSS(songInfo.start_time);
+    const endEl = document.getElementById('song-form-end-time');
+    if (endEl) {
+      endEl.value = formatMMSS(songInfo.end_time);
+      endEl.placeholder = songInfo.time || 'End of track';
+    }
 
     // Load categories from cache and populate select
     const catSelect = document.getElementById('song-form-category');
@@ -233,6 +321,14 @@ export async function startAddNewSong(filename, metadata = null) {
     // Reset any previous values
     const idEl2 = document.getElementById('song-form-songid');
     if (idEl2) idEl2.value = '';
+    const volEl2 = document.getElementById('song-form-volume');
+    if (volEl2) volEl2.value = 100;
+    const volDisplay2 = document.getElementById('song-form-volume-display');
+    if (volDisplay2) volDisplay2.textContent = '100';
+    const startEl2 = document.getElementById('song-form-start-time');
+    if (startEl2) startEl2.value = '';
+    const endEl2 = document.getElementById('song-form-end-time');
+    if (endEl2) endEl2.value = '';
     if (filename) {
       const fileEl = document.getElementById('song-form-filename');
       if (fileEl) fileEl.value = filename;
@@ -343,6 +439,15 @@ export async function startAddNewSong(filename, metadata = null) {
     } catch (err) {
       debugLog?.warn('Failed to populate categories for add modal', { module: 'song-management', function: 'startAddNewSong', error: err?.message });
     }
+    // Set end time placeholder to show track duration
+    const endPlaceholder = document.getElementById('song-form-end-time');
+    const durField = document.getElementById('song-form-duration');
+    if (endPlaceholder && durField?.value) {
+      endPlaceholder.placeholder = durField.value;
+    } else if (endPlaceholder) {
+      endPlaceholder.placeholder = 'End of track';
+    }
+
     safeShowModal('#songFormModal', { module: 'song-management', function: 'startAddNewSong' });
   } catch (error) {
     debugLog?.error('Failed to open add new song modal', { module: 'song-management', function: 'startAddNewSong', error: error?.message });

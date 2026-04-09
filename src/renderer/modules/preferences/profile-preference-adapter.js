@@ -28,6 +28,7 @@ const PROFILE_PREFERENCES = [
   'font_size',
   'column_order',
   'fade_out_seconds',
+  'crossfade_seconds',
   'prerelease_updates',
   'holding_tank_mode',
   'window_state',

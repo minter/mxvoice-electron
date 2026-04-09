@@ -549,6 +549,18 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
           }
         });
       }
+
+      if (apiToUse && apiToUse.events && apiToUse.events.onWhatsNew) {
+        window.logInfo('🆕 Setting up What\'s New event listener...');
+        apiToUse.events.onWhatsNew(async () => {
+          window.logInfo('🆕 What\'s New requested from menu');
+          if (moduleRegistry.whatsNew && moduleRegistry.whatsNew.showWhatsNew) {
+            await moduleRegistry.whatsNew.showWhatsNew();
+          } else {
+            window.logWarn('What\'s New module not available');
+          }
+        });
+      }
     }
     
     // Initialize function coordination system
@@ -578,6 +590,14 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     if (moduleRegistry.profileState && moduleRegistry.profileState.clearProfileRestorationLock) {
       moduleRegistry.profileState.clearProfileRestorationLock();
       window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
+    }
+
+    // Restore holding tank mode (playlist/storage) from profile preferences
+    // This runs after full initialization to ensure all UI elements and modules are ready
+    if (moduleRegistry.holdingTank?.initHoldingTank) {
+      moduleRegistry.holdingTank.initHoldingTank().then(result => {
+        window.logInfo(`Holding tank mode restored: ${result?.mode || 'storage'}`);
+      }).catch(() => {});
     }
 
     // Bridge secure IPC events to renderer functions under context isolation.
@@ -631,6 +651,17 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               window.moduleRegistry.bulkOperations.showBulkAddModal(dirname);
             } else {
               window.logWarn('showBulkAddModal not available when bulk_add_dialog_load fired');
+            }
+          });
+        }
+
+        // External file drop (dock/taskbar icon) → drag-drop module
+        if (typeof window.secureElectronAPI.events.onExternalFilesDrop === 'function') {
+          window.secureElectronAPI.events.onExternalFilesDrop((files) => {
+            if (window.moduleRegistry?.dragDrop?.handleExternalFileDrop) {
+              window.moduleRegistry.dragDrop.handleExternalFileDrop(files);
+            } else {
+              window.logWarn('handleExternalFileDrop not available when external-files-dropped fired');
             }
           });
         }
@@ -804,6 +835,11 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logInfo('Module-dependent functions called successfully!');
     } catch (error) {
       window.logError('Error calling module-dependent functions', error);
+    }
+
+    // Auto-trigger What's New tour if applicable
+    if (moduleRegistry.whatsNew && moduleRegistry.whatsNew.initWhatsNew) {
+      await moduleRegistry.whatsNew.initWhatsNew();
     }
 
     // Set up keyboard shortcuts using the keyboard manager module
