@@ -868,7 +868,10 @@ function setupApp() {
       const shouldAllowPrereleases = newValue || isCurrentlyPrerelease;
       
       autoUpdater.allowPrerelease = shouldAllowPrereleases;
-      debugLog.info(`Auto-updater prerelease setting updated`, { 
+      if (newValue && analytics) {
+        analytics.trackEvent('auto_update_action', { action: 'prerelease_opted_in' });
+      }
+      debugLog.info(`Auto-updater prerelease setting updated`, {
         function: "preference-change",
         prereleaseEnabled: shouldAllowPrereleases,
         userPreference: newValue,

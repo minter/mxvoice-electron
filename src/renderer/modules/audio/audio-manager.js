@@ -727,7 +727,6 @@ function playSongFromId(song_id) {
         }
 
         playSongWithFilename(filename, row, song_id);
-        window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'direct' });
       } else {
         getDebugLog()?.error('No song found with ID or query failed', {
           module: 'audio-manager',
@@ -834,6 +833,7 @@ function autoplay_next() {
       // Clear any existing highlighting and highlight the new playing track
       document.getElementById('selected_row')?.removeAttribute('id');
       next_song.id = 'selected_row';
+      window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'playlist_autoplay' });
       playSongFromId(next_song.getAttribute('songid'));
       next_song.classList.add('now_playing');
     } else {

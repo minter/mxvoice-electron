@@ -1258,5 +1258,10 @@ document.addEventListener('DOMContentLoaded', function() {
       handleDuplicateProfileSubmit();
     }
   });
+
+  // Track update deferral when user clicks "Later" on the update modal
+  document.getElementById('updateLaterBtn')?.addEventListener('click', () => {
+    window.secureElectronAPI?.analytics?.trackEvent?.('auto_update_action', { action: 'deferred' });
+  });
 });
 
