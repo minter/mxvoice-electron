@@ -524,6 +524,9 @@ const secureElectronAPI = {
     subscribe: (email, vars) => ipcRenderer.invoke('announcements:subscribe', email, vars),
   },
 
+  // Platform string (darwin/win32/linux) — exposed synchronously for audience filtering
+  platform: process.platform,
+
   // Testing and debugging functions
   testing: {
     testModularPreload: () => {
@@ -583,7 +586,8 @@ function exposeSecureAPI(injectedDebugLog) {
         // Provide logs under legacy namespace for compatibility with existing renderer code
         logs: secureElectronAPI.logs,
         analytics: secureElectronAPI.analytics,
-        announcements: secureElectronAPI.announcements
+        announcements: secureElectronAPI.announcements,
+        platform: secureElectronAPI.platform
       });
       
       if (debugLog && typeof debugLog.info === 'function') {

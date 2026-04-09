@@ -17,7 +17,10 @@ function trackEvent(name, properties) {
 }
 
 function unwrap(response) {
-  if (response && typeof response === 'object' && 'value' in response) return response.value;
+  if (response && typeof response === 'object') {
+    if ('data' in response) return response.data;
+    if ('value' in response) return response.value;
+  }
   return response;
 }
 
@@ -28,24 +31,45 @@ export async function initAnnouncements() {
     // Resolve app version and platform
     const versionResponse = await window.secureElectronAPI?.app?.getVersion?.();
     const appVersion = (typeof versionResponse === 'string' ? versionResponse : unwrap(versionResponse)) || '0.0.0';
-    const platform = window.secureElectronAPI?.platform || (navigator.platform?.toLowerCase().includes('mac') ? 'darwin' : 'unknown');
+    const platform = window.secureElectronAPI?.platform || 'unknown';
     const ctx = { version: appVersion, platform };
 
     // Construct components
     const subscribeDialog = createSubscribeDialog({ fetcher, trackEvent, appVersion, platform });
     let panel; // forward declared so bell's onClick can reference it
     const bell = createBell({ onClick: () => panel?.open() });
+
+    // Recompute the bell badge based on current seen state. Called by components
+    // after marking items seen so the badge updates immediately instead of waiting
+    // for the next 6h refresh cycle.
+    async function refreshBadge() {
+      const manifest = await fetcher.getManifest();
+      if (!manifest || !Array.isArray(manifest.announcements)) {
+        bell.updateBadge(0);
+        return;
+      }
+      const now = new Date();
+      const visible = manifest.announcements.filter(a =>
+        passesAudienceFilter(a, ctx) && !isExpired(a, now)
+      );
+      const seenIds = await seenTracking.getSeen();
+      const unread = visible.filter(a => !seenIds.includes(a.id));
+      bell.updateBadge(unread.length);
+    }
+
     const banner = createBanner({
       seenTracking,
       onClick: () => panel?.open(),
       trackEvent,
+      refreshBadge,
     });
-    const urgentModal = createUrgentModal({ fetcher, seenTracking, trackEvent });
+    const urgentModal = createUrgentModal({ fetcher, seenTracking, trackEvent, refreshBadge });
     panel = createPanel({
       fetcher,
       seenTracking,
       onCtaClick: () => subscribeDialog.open(),
       trackEvent,
+      refreshBadge,
     });
 
     // Expose public API for other modules (help menu IPC, tour, release modal CTA)
@@ -56,6 +80,7 @@ export async function initAnnouncements() {
 
     // Wire the "open subscribe" IPC event from the main process (Help menu item)
     window.secureElectronAPI?.events?.onOpenSubscribe?.(() => {
+      trackEvent('announcement_cta_clicked', { source: 'help_menu' });
       subscribeDialog.open();
     });
 

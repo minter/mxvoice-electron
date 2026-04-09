@@ -1,7 +1,7 @@
 /**
  * Feature-severity top banner. One at a time, dismissible.
  */
-export function createBanner({ seenTracking, onClick, trackEvent }) {
+export function createBanner({ seenTracking, onClick, trackEvent, refreshBadge }) {
   const bannerEl = document.getElementById('announcements-banner');
   const textEl = document.getElementById('announcements-banner-text');
   const closeBtn = document.getElementById('announcements-banner-close');
@@ -36,6 +36,7 @@ export function createBanner({ seenTracking, onClick, trackEvent }) {
       e.stopPropagation();
       if (currentItem) {
         await seenTracking.markSeen(currentItem.id);
+        if (refreshBadge) await refreshBadge();
         trackEvent('announcement_dismissed', { id: currentItem.id, severity: currentItem.severity, source: 'banner_x' });
       }
       hide();

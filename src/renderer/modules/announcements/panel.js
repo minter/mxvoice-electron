@@ -8,7 +8,7 @@
 import { safeShowModal, safeHideModal } from '../ui/bootstrap-helpers.js';
 import { renderMarkdownInto, buildAnnouncementListItem } from './dom-utils.js';
 
-export function createPanel({ fetcher, seenTracking, onCtaClick, trackEvent }) {
+export function createPanel({ fetcher, seenTracking, onCtaClick, trackEvent, refreshBadge }) {
   const listEl = document.getElementById('announcements-list');
   const detailEl = document.getElementById('announcements-detail');
   const emptyEl = document.getElementById('announcements-empty');
@@ -38,6 +38,7 @@ export function createPanel({ fetcher, seenTracking, onCtaClick, trackEvent }) {
         await showDetail(item);
         await seenTracking.markSeen(item.id);
         node.classList.remove('unread');
+        if (refreshBadge) await refreshBadge();
         trackEvent('announcement_viewed', { id: item.id, severity: item.severity, source: 'panel' });
       });
       listEl.appendChild(node);
@@ -75,7 +76,14 @@ export function createPanel({ fetcher, seenTracking, onCtaClick, trackEvent }) {
     if (listEl) listEl.classList.add('d-none');
   }
 
-  function open() { safeShowModal('#announcementsPanel'); }
+  function open() {
+    if (detailEl) {
+      detailEl.classList.add('d-none');
+      detailEl.replaceChildren();
+    }
+    if (listEl) listEl.classList.remove('d-none');
+    safeShowModal('#announcementsPanel');
+  }
   function close() { safeHideModal('#announcementsPanel'); }
 
   return { render, open, close };

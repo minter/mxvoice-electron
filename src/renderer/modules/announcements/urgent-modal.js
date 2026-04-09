@@ -4,7 +4,7 @@
 import { safeShowModal, safeHideModal } from '../ui/bootstrap-helpers.js';
 import { renderMarkdownInto } from './dom-utils.js';
 
-export function createUrgentModal({ fetcher, seenTracking, trackEvent }) {
+export function createUrgentModal({ fetcher, seenTracking, trackEvent, refreshBadge }) {
   const titleEl = document.getElementById('announcements-urgent-title');
   const bodyEl = document.getElementById('announcements-urgent-body');
   const okBtn = document.getElementById('announcements-urgent-ok');
@@ -31,6 +31,7 @@ export function createUrgentModal({ fetcher, seenTracking, trackEvent }) {
       const item = queue.shift();
       if (item) {
         await seenTracking.markSeen(item.id);
+        if (refreshBadge) await refreshBadge();
         trackEvent('announcement_dismissed', { id: item.id, severity: item.severity, source: 'urgent_got_it' });
       }
       safeHideModal('#announcementsUrgentModal');
