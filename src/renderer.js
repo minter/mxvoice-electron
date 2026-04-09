@@ -1,3 +1,19 @@
+// Track renderer errors via analytics
+window.addEventListener('error', (event) => {
+  window.secureElectronAPI?.analytics?.trackEvent?.('renderer_error', {
+    error_message: event.message,
+    stack_trace: event.error?.stack,
+  });
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason;
+  window.secureElectronAPI?.analytics?.trackEvent?.('renderer_error', {
+    error_message: reason instanceof Error ? reason.message : String(reason),
+    stack_trace: reason instanceof Error ? reason.stack : undefined,
+  });
+});
+
 // Set window title based on platform (macOS HIG compliance)
 // On macOS, window title should be empty; on other platforms, use default from HTML
 async function setWindowTitle() {
