@@ -727,6 +727,7 @@ function playSongFromId(song_id) {
         }
 
         playSongWithFilename(filename, row, song_id);
+        window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'direct' });
       } else {
         getDebugLog()?.error('No song found with ID or query failed', {
           module: 'audio-manager',

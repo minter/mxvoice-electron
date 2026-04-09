@@ -54,9 +54,13 @@ function initializeSettingsController(options = {}) {
       analytics_enabled: !!document.getElementById('preferences-analytics-enabled')?.checked
     };
     
-    debugLog?.info("[PREFS-SAVE] Captured form values", { 
+    debugLog?.info("[PREFS-SAVE] Captured form values", {
       function: "savePreferences",
-      formValues 
+      formValues
+    });
+
+    window.secureElectronAPI?.analytics?.trackEvent?.('preferences_changed', {
+      setting_names: Object.keys(formValues),
     });
     
     // Use new store API for saving preferences

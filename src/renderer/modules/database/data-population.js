@@ -85,11 +85,12 @@ async function addToHoldingTank(song_id, element) {
       if (typeof window.saveHoldingTankToStore === 'function') {
         window.saveHoldingTankToStore();
       } else {
-        debugLog?.warn('saveHoldingTankToStore function not available', { 
+        debugLog?.warn('saveHoldingTankToStore function not available', {
           module: 'data-population',
           function: 'addToHoldingTank'
         });
       }
+      window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'add' });
       
       debugLog?.info('Song added to holding tank successfully', { 
         module: 'data-population',

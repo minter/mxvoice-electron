@@ -150,8 +150,9 @@ function searchData() {
       }
       
       if (result.success) {
+        window.secureElectronAPI?.analytics?.trackEvent?.('search_performed', { result_count: result.data?.length || 0 });
         const tbody = document.querySelector('#search_results tbody');
-        
+
         // Remove loading indicator
         const loadingIndicator = document.getElementById('search-loading-indicator');
         if (loadingIndicator) {

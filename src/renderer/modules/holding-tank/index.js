@@ -339,6 +339,7 @@ export function removeFromHoldingTank() {
             document.getElementById('selected_row')?.removeAttribute('id');
             // Save the updated holding tank to store
             saveHoldingTankToStore();
+            window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'remove' });
             return { success: true, songId: songId, title: songRow.title };
           } else {
             return { success: false, error: 'User cancelled' };
@@ -423,6 +424,7 @@ export async function clearHoldingTank() {
   if (confirmed) {
     Dom.empty('.holding_tank.active');
     saveHoldingTankToStore();
+    window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'clear' });
     return { success: true };
   } else {
     return { success: false, error: 'User cancelled' };

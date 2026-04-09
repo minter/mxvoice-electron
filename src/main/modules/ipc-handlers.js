@@ -1067,6 +1067,9 @@ function registerAllHandlers() {
       );
       
       await Promise.race([downloadPromise, timeoutPromise]);
+      if (analytics) {
+        analytics.trackEvent('auto_update_action', { action: 'accepted' });
+      }
       return { success: true, message: 'Download started' };
     } catch (error) {
       const errorMessage = error?.message || error?.toString() || 'Download failed';
