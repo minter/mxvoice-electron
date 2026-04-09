@@ -701,6 +701,26 @@ function initializeAnalytics() {
   });
 }
 
+// Track library size after database is available
+function trackLibraryStats() {
+  if (!analytics || !db) return;
+  try {
+    const songResult = db.exec('SELECT count(*) as count FROM mrvoice');
+    const songCount = songResult[0]?.values[0]?.[0] || 0;
+    const catResult = db.exec('SELECT count(*) as count FROM categories');
+    const categoryCount = catResult[0]?.values[0]?.[0] || 0;
+    analytics.trackEvent('library_stats', {
+      song_count: songCount,
+      category_count: categoryCount,
+    });
+  } catch (error) {
+    debugLog.warn('Failed to track library stats', {
+      function: 'trackLibraryStats',
+      error: error.message,
+    });
+  }
+}
+
 // Initialize all modules with dependencies
 async function initializeModules() {
   debugLog.info('Starting module initialization', { function: "initializeModules", hasDb: !!db, dbType: typeof db });
@@ -811,6 +831,9 @@ const createWindow = async () => {
     // Initialize modules with dependencies AFTER mainWindow is created
     await initializeModules();
 
+    // Track library stats now that DB is available
+    trackLibraryStats();
+
     // Set up window state saving now that store is available
     appSetup.setupWindowStateSaving();
 
@@ -848,7 +871,10 @@ const createWindow = async () => {
       
       // Initialize basic modules without database
       await initializeModules();
-      
+
+      // Track library stats now that DB is available
+      trackLibraryStats();
+
       // Set up window state saving now that store is available
       appSetup.setupWindowStateSaving();
       

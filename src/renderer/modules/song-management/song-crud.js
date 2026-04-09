@@ -45,6 +45,8 @@ export async function saveEditedSong(event) {
     const result = await secureDatabase.updateSong({id: songId, title, artist, category, info});
     if (!result?.success) {
       debugLog?.warn('Edit update failed', { module: 'song-management', function: 'saveEditedSong', error: result?.error });
+    } else {
+      window.secureElectronAPI?.analytics?.trackEvent?.('song_edited');
     }
   } catch (error) {
     debugLog?.error('Edit update error', { module: 'song-management', function: 'saveEditedSong', error: error?.message });
@@ -146,6 +148,7 @@ export async function saveNewSong(event) {
       }
       return;
     }
+    window.secureElectronAPI?.analytics?.trackEvent?.('song_added');
     const copyRes = await secureFileSystem.copy(filename, newPath);
     if (!copyRes?.success) {
       debugLog?.warn('❌ Failed to copy file:', { module: 'song-management', function: 'saveNewSong', error: copyRes?.error });
