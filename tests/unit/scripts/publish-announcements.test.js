@@ -5,6 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import { readAnnouncements, buildManifest } from '../../../scripts/publish-announcements.mjs';
 import { loadSentLedger, isAlreadySent, appendSent, saveSentLedger } from '../../../scripts/publish-announcements.mjs';
+import { renderEmail } from '../../../scripts/publish-announcements.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.join(__dirname, '../../fixtures/announcements');
@@ -95,5 +96,25 @@ describe('sent ledger', () => {
     saveSentLedger(tmpPath, ledger);
     const reloaded = JSON.parse(fs.readFileSync(tmpPath, 'utf8'));
     expect(reloaded.sent[0].id).toBe('z');
+  });
+});
+
+describe('email rendering', () => {
+  it('wraps rendered markdown body in the template', () => {
+    const item = { id: 'test', title: 'Test Title', body: 'Hello **world**.' };
+    const { subject, html, text } = renderEmail(item);
+    expect(subject).toBe('Test Title');
+    expect(html).toContain('<strong>world</strong>');
+    expect(html).toContain('Test Title');
+    expect(html).toContain('%unsubscribe_url%');
+    expect(text).toContain('Hello');
+    expect(text).toContain('world');
+  });
+
+  it('text version strips tags', () => {
+    const item = { id: 't', title: 'T', body: '# Heading\n\nParagraph.' };
+    const { text } = renderEmail(item);
+    expect(text).not.toContain('<');
+    expect(text).toContain('Heading');
   });
 });

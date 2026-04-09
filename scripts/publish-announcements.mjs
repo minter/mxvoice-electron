@@ -6,6 +6,11 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import { marked } from 'marked';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const scriptDir = path.dirname(__filename);
 
 export function readAnnouncements(dir) {
   if (!fs.existsSync(dir)) return [];
@@ -68,4 +73,36 @@ export function appendSent(ledger, id) {
 
 export function saveSentLedger(sentJsonPath, ledger) {
   fs.writeFileSync(sentJsonPath, JSON.stringify(ledger, null, 2) + '\n');
+}
+
+export function renderEmail(item) {
+  const templatePath = path.join(scriptDir, 'email-template.html');
+  const template = fs.readFileSync(templatePath, 'utf8');
+  const bodyHtml = marked.parse(item.body);
+  const html = template
+    .replace(/\{\{title\}\}/g, escapeHtml(item.title))
+    .replace(/\{\{body\}\}/g, bodyHtml);
+  const text = stripHtml(bodyHtml);
+  return { subject: item.title, html, text };
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function stripHtml(html) {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
 }
