@@ -35,6 +35,7 @@ let debugLog;
 let logService;
 let updateState;
 let analytics;
+let announcements;
 
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
@@ -47,6 +48,7 @@ function initializeIpcHandlers(dependencies) {
   logService = dependencies.logService;
   updateState = dependencies.updateState || { downloaded: false };
   analytics = dependencies.analytics;
+  announcements = dependencies.announcements;
   
   // Initialize file operations module
   fileOperations.initializeFileOperations(dependencies);
@@ -2544,6 +2546,40 @@ function registerAllHandlers() {
       return { success: true };
     } catch (error) {
       debugLog?.error('Analytics set-opt-out error', { module: 'ipc-handlers', function: 'analytics:set-opt-out', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Announcements handlers
+  ipcMain.handle('announcements:get-manifest', async () => {
+    try {
+      if (!announcements) return { success: true, value: null };
+      const manifest = await announcements.fetchManifest();
+      return { success: true, value: manifest };
+    } catch (error) {
+      debugLog?.error('Announcements get-manifest error', { module: 'ipc-handlers', function: 'announcements:get-manifest', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('announcements:get-body', async (event, relativePath) => {
+    try {
+      if (!announcements) return { success: true, value: null };
+      const body = await announcements.fetchBody(relativePath);
+      return { success: true, value: body };
+    } catch (error) {
+      debugLog?.error('Announcements get-body error', { module: 'ipc-handlers', function: 'announcements:get-body', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('announcements:subscribe', async (event, email, vars) => {
+    try {
+      if (!announcements) return { success: true, value: { ok: false, code: 'not_configured', message: 'Subscription unavailable.' } };
+      const result = await announcements.subscribeEmail(email, vars || {});
+      return { success: true, value: result };
+    } catch (error) {
+      debugLog?.error('Announcements subscribe error', { module: 'ipc-handlers', function: 'announcements:subscribe', error: error.message });
       return { success: false, error: error.message };
     }
   });
