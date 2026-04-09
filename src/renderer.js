@@ -870,6 +870,37 @@ import EventCoordination from './renderer/modules/event-coordination/index.js';
 // Global event coordination instance
 let eventCoordination = null;
 
+/**
+ * Show analytics consent banner if not yet shown to the user.
+ * On first run, displays a fixed-position banner offering OK or Disable.
+ */
+async function showAnalyticsBannerIfNeeded() {
+  const api = window.secureElectronAPI || window.electronAPI;
+  if (!api?.store) return;
+
+  const result = await api.store.get('analytics_banner_shown');
+  if (result.success && result.value) return;
+
+  const banner = document.getElementById('analytics-consent-banner');
+  if (!banner) return;
+
+  banner.classList.remove('d-none');
+  banner.classList.add('show');
+
+  document.getElementById('analytics-consent-ok')?.addEventListener('click', async () => {
+    banner.classList.add('d-none');
+    await api.store.set('analytics_banner_shown', true);
+  });
+
+  document.getElementById('analytics-consent-disable')?.addEventListener('click', async () => {
+    banner.classList.add('d-none');
+    await api.store.set('analytics_banner_shown', true);
+    if (api.analytics) {
+      await api.analytics.setOptOut(true);
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
   try {
     // Initialize DOM-dependent features from app-initialization module
@@ -933,10 +964,13 @@ document.addEventListener('DOMContentLoaded', async function () {
       // Ignore scaleScrollable initialization errors
     }
 
+    // Show analytics consent banner if not yet shown
+    await showAnalyticsBannerIfNeeded();
+
   } catch (error) {
     window.logError('Error initializing event coordination:', error);
     window.logError('Falling back to basic initialization');
-    
+
     // Minimal fallback initialization if event coordination fails
     const progress = document.getElementById('audio_progress'); if (progress) progress.style.width = '0%';
     const thead = document.querySelector('#search_results thead'); if (thead) thead.style.display = 'none';

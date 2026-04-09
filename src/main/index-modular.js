@@ -249,7 +249,8 @@ const defaults = {
   debug_log_enabled: true,
   first_run_completed: false,
   analytics_device_id: '',
-  analytics_opt_out: false
+  analytics_opt_out: false,
+  analytics_banner_shown: false
 }
 
 // Use a stable config file name and explicit project directory to ensure

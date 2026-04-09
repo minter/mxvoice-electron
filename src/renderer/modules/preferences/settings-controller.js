@@ -50,7 +50,8 @@ function initializeSettingsController(options = {}) {
       fade_out_seconds: parseInt(document.getElementById('preferences-fadeout-seconds')?.value) || 3,
       debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
       prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
-      screen_mode: document.getElementById('preferences-screen-mode')?.value || 'auto'
+      screen_mode: document.getElementById('preferences-screen-mode')?.value || 'auto',
+      analytics_enabled: !!document.getElementById('preferences-analytics-enabled')?.checked
     };
     
     debugLog?.info("[PREFS-SAVE] Captured form values", { 
@@ -205,6 +206,12 @@ function initializeSettingsController(options = {}) {
           });
         }
         
+        // Handle analytics opt-out separately (uses analytics API, not store)
+        const analyticsAPI = electronAPI?.analytics || window.secureElectronAPI?.analytics;
+        if (analyticsAPI) {
+          await analyticsAPI.setOptOut(!formValues.analytics_enabled);
+        }
+
         // Close modal after save operations complete
         safeHideModal('#preferencesModal', { function: 'savePreferences' });
       } catch (error) {
