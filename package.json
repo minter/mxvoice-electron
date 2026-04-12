@@ -113,7 +113,7 @@
     },
     "win": {
       "icon": "src/assets/icons/mxvoice.ico",
-      "artifactName": "Mx. Voice Setup ${version}.${ext}",
+      "artifactName": "Mx.-Voice-Setup-${version}.${ext}",
       "target": [
         {
           "target": "nsis",
