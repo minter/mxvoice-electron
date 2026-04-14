@@ -399,6 +399,7 @@ test.describe('Holding Tank - basic', () => {
 
     // Wait for modal to close and clear operation to complete
     await expect(confirmButton).not.toBeVisible();
+    await clearModalBackdrop(page);
 
     // Verify holding tank is now empty
     const loadTestActiveTab = page.locator('#holding_tank_1');
@@ -561,7 +562,7 @@ test.describe('Holding Tank - basic', () => {
     // Wait for modal to close and clear operation to complete
     await expect(confirmButton).not.toBeVisible();
     await clearModalBackdrop(page);
-    
+
     // Verify holding tank is now empty
     const activeTab = page.locator('#holding_tank_1');
     const holdingTankItems = activeTab.locator('.list-group-item');
@@ -763,6 +764,7 @@ test.describe('Holding Tank - basic', () => {
       await expect(confirmButton).toBeVisible({ timeout: 5000 });
       await confirmButton.click();
       await expect(confirmButton).not.toBeVisible();
+      await clearModalBackdrop(page);
     }
 
     await expect(tab1List.locator('.list-group-item')).toHaveCount(0);
@@ -921,6 +923,7 @@ test.describe('Holding Tank - basic', () => {
       await expect(confirmButton).toBeVisible({ timeout: 5000 });
       await confirmButton.click();
       await expect(confirmButton).not.toBeVisible();
+      await clearModalBackdrop(page);
     }
 
     // Verify tab 1 is empty
@@ -1045,6 +1048,7 @@ test.describe('Holding Tank - basic', () => {
       await expect(confirmButton).toBeVisible({ timeout: 5000 });
       await confirmButton.click();
       await expect(confirmButton).not.toBeVisible();
+      await clearModalBackdrop(page);
     }
 
     // Verify tab 1 is empty
@@ -1120,7 +1124,8 @@ test.describe('Holding Tank - basic', () => {
     await expect(confirmButton).toBeVisible({ timeout: 5000 });
     await confirmButton.click();
     await expect(confirmButton).not.toBeVisible();
-    
+    await clearModalBackdrop(page);
+
     // Verify that the active tab (tab 1) is empty after clearing
     // Note: Clear only affects the active tab, not all tabs
     const activeTab = page.locator('#holding_tank_1');

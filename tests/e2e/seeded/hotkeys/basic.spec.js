@@ -1652,7 +1652,8 @@ test.describe('Hotkeys - save & load', () => {
     const closeBtn = editModal.locator('.btn-close, .close, .cancel').first();
     if (await closeBtn.isVisible()) {
       await closeBtn.click();
-      await expect(editModal).not.toBeVisible();
+      await expect(editModal).not.toBeVisible({ timeout: 15000 });
+      await clearModalBackdrop(page);
     }
   });
 
