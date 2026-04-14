@@ -198,7 +198,7 @@
     "electron-reload": "^1.5.0",
     "esbuild": "^0.28.0",
     "eslint": "^10.2.0",
-    "globals": "^17.4.0",
+    "globals": "^17.5.0",
     "node-abi": "4.28.0",
     "playwright": "^1.59.0",
     "vitest": "^4.1.4"
