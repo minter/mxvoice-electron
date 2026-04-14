@@ -69,6 +69,15 @@ audioModule.playSelected();
 - Secure adapters: `secureStore`, `secureDatabase`, `securePath` from `../adapters/secure-adapter.js`
 - Shared state: central state via `../shared-state.js`
 
+## Per-Track Audio Enhancements
+
+Songs can store per-track audio settings in the database:
+- **Per-track volume** (`volume`): Individual volume level (0-100) applied during playback
+- **Start/end trim** (`start_time`, `end_time`): Trim points for playback; playback begins at `start_time` and ends at `end_time`
+- **Crossfade**: Smooth crossfade transitions between songs in playlist mode; duration is configurable via Preferences (`crossfade_seconds`)
+
+When a song has trim points, WaveSurfer displays a visual region overlay showing the active playback range.
+
 ## Audio state management
 
 Managed via `sharedState`:
@@ -78,6 +87,9 @@ Managed via `sharedState`:
 - `holdingTankMode`: 'storage' or 'playlist'
 - `globalAnimation`: requestAnimationFrame handle for progress updates
 - `wavesurfer`: optional waveform instance
+- `trackStartTime`: current track's start trim point (or null)
+- `trackEndTime`: current track's end trim point (or null)
+- `crossfadeTriggered`: whether crossfade has been triggered for current track
 
 ## Error handling
 

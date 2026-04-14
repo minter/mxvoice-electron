@@ -135,6 +135,7 @@ The module manages the following preference keys:
 
 ### Profile-Specific Preferences
 - `fade_out_seconds` - Audio fade out duration in seconds
+- `crossfade_seconds` - Crossfade duration between songs in playlist mode (0 to disable)
 - `screen_mode` - Screen display mode ('auto', 'light', or 'dark')
 - `prerelease_updates` - Include prerelease updates (beta/alpha versions)
 

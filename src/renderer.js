@@ -1,3 +1,19 @@
+// Track renderer errors via analytics
+window.addEventListener('error', (event) => {
+  window.secureElectronAPI?.analytics?.trackEvent?.('renderer_error', {
+    error_message: event.message,
+    stack_trace: event.error?.stack,
+  });
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason;
+  window.secureElectronAPI?.analytics?.trackEvent?.('renderer_error', {
+    error_message: reason instanceof Error ? reason.message : String(reason),
+    stack_trace: reason instanceof Error ? reason.stack : undefined,
+  });
+});
+
 // Set window title based on platform (macOS HIG compliance)
 // On macOS, window title should be empty; on other platforms, use default from HTML
 async function setWindowTitle() {
@@ -533,6 +549,18 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
           }
         });
       }
+
+      if (apiToUse && apiToUse.events && apiToUse.events.onWhatsNew) {
+        window.logInfo('🆕 Setting up What\'s New event listener...');
+        apiToUse.events.onWhatsNew(async () => {
+          window.logInfo('🆕 What\'s New requested from menu');
+          if (moduleRegistry.whatsNew && moduleRegistry.whatsNew.showWhatsNew) {
+            await moduleRegistry.whatsNew.showWhatsNew();
+          } else {
+            window.logWarn('What\'s New module not available');
+          }
+        });
+      }
     }
     
     // Initialize function coordination system
@@ -562,6 +590,14 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     if (moduleRegistry.profileState && moduleRegistry.profileState.clearProfileRestorationLock) {
       moduleRegistry.profileState.clearProfileRestorationLock();
       window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
+    }
+
+    // Restore holding tank mode (playlist/storage) from profile preferences
+    // This runs after full initialization to ensure all UI elements and modules are ready
+    if (moduleRegistry.holdingTank?.initHoldingTank) {
+      moduleRegistry.holdingTank.initHoldingTank().then(result => {
+        window.logInfo(`Holding tank mode restored: ${result?.mode || 'storage'}`);
+      }).catch(() => {});
     }
 
     // Bridge secure IPC events to renderer functions under context isolation.
@@ -615,6 +651,17 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               window.moduleRegistry.bulkOperations.showBulkAddModal(dirname);
             } else {
               window.logWarn('showBulkAddModal not available when bulk_add_dialog_load fired');
+            }
+          });
+        }
+
+        // External file drop (dock/taskbar icon) → drag-drop module
+        if (typeof window.secureElectronAPI.events.onExternalFilesDrop === 'function') {
+          window.secureElectronAPI.events.onExternalFilesDrop((files) => {
+            if (window.moduleRegistry?.dragDrop?.handleExternalFileDrop) {
+              window.moduleRegistry.dragDrop.handleExternalFileDrop(files);
+            } else {
+              window.logWarn('handleExternalFileDrop not available when external-files-dropped fired');
             }
           });
         }
@@ -790,6 +837,11 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logError('Error calling module-dependent functions', error);
     }
 
+    // Auto-trigger What's New tour if applicable
+    if (moduleRegistry.whatsNew && moduleRegistry.whatsNew.initWhatsNew) {
+      await moduleRegistry.whatsNew.initWhatsNew();
+    }
+
     // Set up keyboard shortcuts using the keyboard manager module
     try {
       window.logInfo('Initializing keyboard manager...');
@@ -870,6 +922,40 @@ import EventCoordination from './renderer/modules/event-coordination/index.js';
 // Global event coordination instance
 let eventCoordination = null;
 
+/**
+ * Show analytics consent banner if not yet shown to the user.
+ * On first run, displays a fixed-position banner offering OK or Disable.
+ */
+async function showAnalyticsBannerIfNeeded() {
+  // Don't show banner during E2E tests
+  if (window.electronTest?.isE2E) return;
+
+  const api = window.secureElectronAPI || window.electronAPI;
+  if (!api?.store) return;
+
+  const result = await api.store.get('analytics_banner_shown');
+  if (result.success && result.value) return;
+
+  const banner = document.getElementById('analytics-consent-banner');
+  if (!banner) return;
+
+  banner.classList.remove('d-none');
+  banner.classList.add('show');
+
+  document.getElementById('analytics-consent-ok')?.addEventListener('click', async () => {
+    banner.classList.add('d-none');
+    await api.store.set('analytics_banner_shown', true);
+  });
+
+  document.getElementById('analytics-consent-disable')?.addEventListener('click', async () => {
+    banner.classList.add('d-none');
+    await api.store.set('analytics_banner_shown', true);
+    if (api.analytics) {
+      await api.analytics.setOptOut(true);
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
   try {
     // Initialize DOM-dependent features from app-initialization module
@@ -933,10 +1019,13 @@ document.addEventListener('DOMContentLoaded', async function () {
       // Ignore scaleScrollable initialization errors
     }
 
+    // Show analytics consent banner if not yet shown
+    await showAnalyticsBannerIfNeeded();
+
   } catch (error) {
     window.logError('Error initializing event coordination:', error);
     window.logError('Falling back to basic initialization');
-    
+
     // Minimal fallback initialization if event coordination fails
     const progress = document.getElementById('audio_progress'); if (progress) progress.style.width = '0%';
     const thead = document.querySelector('#search_results thead'); if (thead) thead.style.display = 'none';
@@ -1207,6 +1296,11 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       handleDuplicateProfileSubmit();
     }
+  });
+
+  // Track update deferral when user clicks "Later" on the update modal
+  document.getElementById('updateLaterBtn')?.addEventListener('click', () => {
+    window.secureElectronAPI?.analytics?.trackEvent?.('auto_update_action', { action: 'deferred' });
   });
 });
 

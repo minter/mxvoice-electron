@@ -14,6 +14,13 @@ const VALID_KEYS = new Set([
   'createWaveSurfer',
   'autoplay',
   'loop',
+  'trackVolume',
+  'trackStartTime',
+  'trackEndTime',
+  'outgoingSound',
+  'crossfadeTriggered',
+  'crossfadeSeconds',
+  'wavesurferRegions',
   // UI state
   'holdingTankMode',
   'fontSize',

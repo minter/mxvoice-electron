@@ -98,6 +98,7 @@ export default class HotkeysEvents {
               song_id: song_id,
               tab_id: hotkeysContainer.id
             });
+            window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'hotkey' });
             window.playSongFromId(song_id);
           } else {
             this.debugLog?.warn('Cannot play song - missing song_id or playSongFromId function', {
