@@ -233,11 +233,6 @@ export class NavigationShortcuts {
    */
   handleStopPlaying(fadeOut = false) {
     try {
-      this.logDebug('Stop playing requested', {
-        fadeOut: fadeOut,
-        argumentsLength: arguments.length
-      });
-      
       if (window.stopPlaying && typeof window.stopPlaying === 'function') {
         window.stopPlaying(fadeOut);
       } else {

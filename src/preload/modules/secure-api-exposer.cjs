@@ -194,6 +194,8 @@ const secureElectronAPI = {
     saveHotkeyFile: (data) => ipcRenderer.invoke('save-hotkey-file', data),
     openHoldingTankFile: () => ipcRenderer.invoke('open-holding-tank-file'),
     saveHoldingTankFile: (data) => ipcRenderer.invoke('save-holding-tank-file', data),
+    openSoundboardFile: () => ipcRenderer.invoke('open-soundboard-file'),
+    saveSoundboardFile: (data) => ipcRenderer.invoke('save-soundboard-file', data),
     pickDirectory: (defaultPath) => ipcRenderer.invoke('pick-directory', defaultPath),
     // Auto-update operations - Three-stage process
     checkForUpdate: () => {
@@ -299,6 +301,12 @@ const secureElectronAPI = {
       const handler = (_event, ...args) => callback(...args);
       ipcRenderer.on('holding_tank_load', handler);
       return () => ipcRenderer.removeListener('holding_tank_load', handler);
+    },
+    
+    onSoundboardLoad: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('soundboard_load', handler);
+      return () => ipcRenderer.removeListener('soundboard_load', handler);
     },
     
     onBulkAddDialogLoad: (callback) => {
@@ -426,6 +434,12 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('menu:backup-settings', handler);
     },
 
+    onViewToggleSoundboardMode: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('view:toggle-soundboard-mode', handler);
+      return () => ipcRenderer.removeListener('view:toggle-soundboard-mode', handler);
+    },
+
     onExportLibrary: (callback) => {
       const handler = (_event, ...args) => callback(...args);
       ipcRenderer.on('menu:export-library', handler);
@@ -516,6 +530,8 @@ function exposeSecureAPI(injectedDebugLog) {
         openHotkeyFile: secureElectronAPI.fileOperations.openHotkeyFile,
         saveHotkeyFile: secureElectronAPI.fileOperations.saveHotkeyFile,
         openHoldingTankFile: secureElectronAPI.fileOperations.openHoldingTankFile,
+        openSoundboardFile: secureElectronAPI.fileOperations.openSoundboardFile,
+        saveSoundboardFile: secureElectronAPI.fileOperations.saveSoundboardFile,
         saveHoldingTankFile: secureElectronAPI.fileOperations.saveHoldingTankFile,
         getAppPath: secureElectronAPI.app.getPath,
         showDirectoryPicker: secureElectronAPI.app.showDirectoryPicker,
@@ -535,6 +551,7 @@ function exposeSecureAPI(injectedDebugLog) {
         onAddDialogLoad: secureElectronAPI.events.onAddDialogLoad,
         onDisplayReleaseNotes: secureElectronAPI.events.onDisplayReleaseNotes,
         onSwitchProfile: secureElectronAPI.events.onSwitchProfile,
+        onViewToggleSoundboardMode: secureElectronAPI.events.onViewToggleSoundboardMode,
         removeAllListeners: secureElectronAPI.events.removeAllListeners,
         database: secureElectronAPI.database,
         fileSystem: secureElectronAPI.fileSystem,

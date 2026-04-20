@@ -81,15 +81,23 @@ export class HotkeyBindings {
       for (let i = 1; i <= 12; i++) {
         const fkey = `f${i}`;
         
-        // Global F-key binding
+        // Global F-key binding (only active in traditional view)
         Mousetrap.bind(fkey, () => {
-          this.handleFunctionKey(fkey);
+          // Check current view - only handle F-keys in traditional view
+          const currentView = window.moduleRegistry?.viewManager?.getCurrentView?.() || 'traditional';
+          if (currentView === 'traditional') {
+            this.handleFunctionKey(fkey);
+          }
         });
         
-        // Search field F-key binding (if search field exists)
+        // Search field F-key binding (if search field exists, only in traditional view)
         if (this.searchField) {
           Mousetrap(this.searchField).bind(fkey, () => {
-            this.handleFunctionKey(fkey);
+            // Check current view - only handle F-keys in traditional view
+            const currentView = window.moduleRegistry?.viewManager?.getCurrentView?.() || 'traditional';
+            if (currentView === 'traditional') {
+              this.handleFunctionKey(fkey);
+            }
           });
         }
         
