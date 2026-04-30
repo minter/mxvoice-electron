@@ -379,9 +379,11 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                     now.style.display = '';
                     now.setAttribute('songid', String(song_id));
                   }
-                  document
-                    .getElementById('play_button')
-                    ?.classList.add('d-none');
+                  const playBtn = document.getElementById('play_button');
+                  if (playBtn) {
+                    playBtn.classList.add('d-none');
+                    playBtn.removeAttribute('disabled');
+                  }
                   document
                     .getElementById('pause_button')
                     ?.classList.remove('d-none');
@@ -645,7 +647,11 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                   now.style.display = '';
                   now.setAttribute('songid', String(song_id));
                 }
-                document.getElementById('play_button')?.classList.add('d-none');
+                const playBtn = document.getElementById('play_button');
+                if (playBtn) {
+                  playBtn.classList.add('d-none');
+                  playBtn.removeAttribute('disabled');
+                }
                 document
                   .getElementById('pause_button')
                   ?.classList.remove('d-none');

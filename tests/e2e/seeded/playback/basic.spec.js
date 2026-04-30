@@ -178,7 +178,9 @@ test.describe('Playback - basic', () => {
     // Verify play button is visible again (not pause button)
     await expect(playButton).toBeVisible();
     await expect(pauseButton).not.toBeVisible();
-    
+    // Play button must be enabled so the user can resume playback
+    await expect(playButton).toBeEnabled();
+
     // Resume playback and let it play for 3 seconds
     await playButton.click();
     
@@ -906,6 +908,14 @@ test.describe('Playback - basic', () => {
     // Wait for playback to establish and verify time advancement
     const timeElapsed = page.locator('#timer');
     await expect(timeElapsed).not.toHaveText('0:00', { timeout: 5000 });
+
+    // Pause via the on-screen pause button — this path doesn't go through
+    // toggleSelectedRow, so it would have left play_button stuck disabled
+    // before the fix in audio-manager (regression guard for hotkey pause).
+    await pauseButton.click();
+    await expect(playButton).toBeVisible({ timeout: 5000 });
+    await expect(pauseButton).not.toBeVisible();
+    await expect(playButton).toBeEnabled();
 
     // Stop playback
     const stopButton = page.locator('#stop_button');

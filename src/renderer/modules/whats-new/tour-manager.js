@@ -33,6 +33,10 @@ export class TourManager {
   }
 
   async shouldAutoTrigger() {
+    // Suppress in E2E — the Driver.js overlay intercepts pointer events
+    // and would block test interactions.
+    if (window.electronTest?.isE2E) return false;
+
     const version = await this.getAppVersion();
     const tour = this.getTourForVersion(version);
     if (!tour) return false;
