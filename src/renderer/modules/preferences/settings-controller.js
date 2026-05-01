@@ -201,15 +201,16 @@ function initializeSettingsController(options = {}) {
           }
         }
         
-        if (successCount === 7) {
-          debugLog?.info('[PREFS-SAVE] All preferences saved successfully', { 
+        const totalPreferences = allPrefs.length;
+        if (successCount === totalPreferences) {
+          debugLog?.info('[PREFS-SAVE] All preferences saved successfully', {
             function: "savePreferences",
-            data: { successCount, totalPreferences: 7 }
+            data: { successCount, totalPreferences }
           });
         } else {
-          debugLog?.warn('[PREFS-SAVE] Some preferences failed to save', { 
+          debugLog?.warn('[PREFS-SAVE] Some preferences failed to save', {
             function: "savePreferences",
-            data: { successCount, totalPreferences: 7, results }
+            data: { successCount, totalPreferences, results }
           });
         }
         
@@ -306,10 +307,11 @@ function initializeSettingsController(options = {}) {
           }
           
           const successCount = results.filter(result => result.success).length;
-          if (successCount === 7) {
-            debugLog?.info('All preferences saved successfully using electronAPI.store', { 
+          const totalPreferences = ops.length;
+          if (successCount === totalPreferences) {
+            debugLog?.info('All preferences saved successfully using electronAPI.store', {
               function: "savePreferencesLegacy",
-              data: { successCount, totalPreferences: 7 }
+              data: { successCount, totalPreferences }
             });
             
             // Apply new theme immediately if screen mode preference changed
@@ -323,9 +325,9 @@ function initializeSettingsController(options = {}) {
               }
             }
           } else {
-            debugLog?.warn('Some preferences failed to save', { 
+            debugLog?.warn('Some preferences failed to save', {
               function: "savePreferencesLegacy",
-            data: { successCount, totalPreferences: 7, results }
+              data: { successCount, totalPreferences, results }
             });
           }
         } catch (error) {

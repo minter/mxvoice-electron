@@ -271,6 +271,7 @@ function playSongFromHotkey(hotkey, _options = {}) {
     document.getElementById('selected_row')?.removeAttribute('id');
     // Hotkey playback should not affect holding tank mode
     // Just play the song without changing autoplay state
+    window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'hotkey' });
     if (typeof playSongFromId === 'function') {
       playSongFromId(song_id);
     }

@@ -2514,7 +2514,10 @@ function registerAllHandlers() {
   // Analytics handlers
   ipcMain.handle('analytics:track-event', async (event, name, properties) => {
     try {
-      if (analytics) {
+      // Skip events fired before the user has seen the consent banner.
+      // Mirrors the gate around app_launched in main/index-modular.js so
+      // renderer-side handlers (errors, etc.) don't leak events on first run.
+      if (analytics && store.get('analytics_banner_shown')) {
         analytics.trackEvent(name, properties || {});
       }
       return { success: true };

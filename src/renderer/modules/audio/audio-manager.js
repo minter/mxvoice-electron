@@ -1013,10 +1013,12 @@ async function autoplay_next() {
       if (crossfadeSeconds > 0) {
         crossfadeOpts = { crossfade: true, crossfadeSeconds };
       }
+      // Mark the new track as now_playing before kicking off async playback so
+      // updateTimeTracker / triggerEarlyCrossfade can't read a stale .now_playing
+      // and target the wrong sibling while the new sound is still loading.
+      next_song.classList.add('now_playing');
       window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'playlist_autoplay' });
       playSongFromId(next_song.getAttribute('songid'), crossfadeOpts);
-
-      next_song.classList.add('now_playing');
     } else {
       getDebugLog()?.info('End of playlist reached', {
         module: 'audio-manager',

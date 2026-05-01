@@ -1094,9 +1094,22 @@ function setupAppLifecycle() {
     mainWindow = null;
   });
   
-  // Shutdown analytics and stop backup timer before quit
-  app.on('before-quit', async () => {
-    // Track app close with session duration
+  // Shutdown analytics and stop backup timer before quit.
+  // Electron does not await async before-quit handlers, so block the quit,
+  // do the async work, then re-issue the quit with a flag to skip this handler.
+  let shutdownComplete = false;
+  app.on('before-quit', async (event) => {
+    if (shutdownComplete) return;
+    event.preventDefault();
+
+    if (autoBackupTimer) {
+      autoBackupTimer.stopAutoBackupTimer();
+      debugLog?.info('Stopped auto-backup timer on app quit', {
+        module: 'app-setup',
+        function: 'setupAppLifecycle'
+      });
+    }
+
     if (analytics) {
       const startTime = appStartTime || Date.now();
       const sessionDuration = Math.floor((Date.now() - startTime) / 1000);
@@ -1111,13 +1124,9 @@ function setupAppLifecycle() {
         });
       }
     }
-    if (autoBackupTimer) {
-      autoBackupTimer.stopAutoBackupTimer();
-      debugLog?.info('Stopped auto-backup timer on app quit', {
-        module: 'app-setup',
-        function: 'setupAppLifecycle'
-      });
-    }
+
+    shutdownComplete = true;
+    app.quit();
   });
 
   // Quit when all windows are closed.
