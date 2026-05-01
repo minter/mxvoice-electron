@@ -256,11 +256,8 @@ export class TourManager {
         if (nextIndex < activeSteps.length) {
           await transitionTo(nextIndex);
         } else {
-          // Last step — close the tour
-          const driverRef = this.activeDriver;
-          await this.cleanupFromStep(activeSteps, currentStepIndex);
-          await onComplete();
-          if (driverRef) driverRef.destroy();
+          // Last step — trigger destroy; cleanup happens in onDestroyStarted.
+          if (this.activeDriver) this.activeDriver.destroy();
         }
       },
       onPrevClick: async () => {
@@ -270,10 +267,20 @@ export class TourManager {
         }
       },
       onDestroyStarted: async () => {
-        await this.cleanupFromStep(activeSteps, currentStepIndex);
+        // Driver.js calls this when destroy() begins (overlay click, Escape,
+        // or our own programmatic destroy from the last step). The callback
+        // prevents auto-teardown — we must call destroy() at the end to finalize
+        // (remove overlay/popover). Re-entry is guarded so cleanup runs once.
+        if (this._tourClosing) return;
+        this._tourClosing = true;
         const driverRef = this.activeDriver;
-        await onComplete();
-        if (driverRef) driverRef.destroy();
+        try {
+          await this.cleanupFromStep(activeSteps, currentStepIndex);
+          await onComplete();
+          if (driverRef) driverRef.destroy();
+        } finally {
+          this._tourClosing = false;
+        }
       },
     });
 

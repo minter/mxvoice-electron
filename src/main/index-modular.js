@@ -708,13 +708,18 @@ function initializeAnalytics() {
     // Ignore — profiles dir may not exist yet on first run
   }
 
-  // Track app launch
-  analytics.trackEvent('app_launched', {
-    os: process.platform,
-    arch: process.arch,
-    electron_version: process.versions.electron,
-    profile_count: profileCount,
-  });
+  // Track app launch — but skip on the very first run before the user has
+  // seen the consent banner. Otherwise the first event fires before the user
+  // has a chance to opt out. The next launch (after banner dismissal) tracks
+  // normally; opt-out is enforced inside trackEvent for all subsequent calls.
+  if (store.get('analytics_banner_shown')) {
+    analytics.trackEvent('app_launched', {
+      os: process.platform,
+      arch: process.arch,
+      electron_version: process.versions.electron,
+      profile_count: profileCount,
+    });
+  }
 
   // Track uncaught errors
   process.on('uncaughtException', (error) => {

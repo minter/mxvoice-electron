@@ -879,6 +879,15 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     window.logError('Error loading modules', error);
     window.logError('Error stack', error.stack);
     window.logError('Error message', error.message);
+    // Ensure the profile restoration lock is cleared even if init threw before
+    // reaching the normal clear path. Otherwise saves stay blocked all session.
+    try {
+      if (moduleRegistry?.profileState?.clearProfileRestorationLock) {
+        moduleRegistry.profileState.clearProfileRestorationLock();
+      } else if (window.isRestoringProfileState) {
+        window.isRestoringProfileState = false;
+      }
+    } catch (_e) {}
   }
 })();
 

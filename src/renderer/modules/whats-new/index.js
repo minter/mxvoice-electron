@@ -66,10 +66,11 @@ tourManager.registerHelper('hideFileDropOverlay', async () => {
 
 tourManager.registerHelper('openMultiSongImportTour', async () => {
   if (window.moduleRegistry?.bulkOperations?.showMultiSongImport) {
-    // Show with mock data for demonstration
+    // Pre-built demo data — bypasses metadata IPC so the modal renders
+    // populated rows instantly without touching the filesystem.
     await window.moduleRegistry.bulkOperations.showMultiSongImport([
-      '/tour/mock/track1.mp3',
-      '/tour/mock/track2.mp3'
+      { filePath: '__tour_demo_1__', title: 'Opening Theme', artist: 'House Band', duration: '2:30' },
+      { filePath: '__tour_demo_2__', title: 'Closing Music', artist: 'House Band', duration: '1:45' }
     ]);
   }
 });
