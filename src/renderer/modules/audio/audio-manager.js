@@ -808,6 +808,18 @@ async function playSongFromId(song_id, options = {}) {
     // Only unload immediately if not crossfading
     sound.off('fade');
     sound.unload();
+    if (sharedState.get('sound') === sound) {
+      sharedState.set('sound', null);
+    }
+  }
+
+  const outgoingSound = sharedState.get('outgoingSound');
+  if (outgoingSound && !options.crossfade) {
+    outgoingSound.off('fade');
+    outgoingSound.unload();
+    if (sharedState.get('outgoingSound') === outgoingSound) {
+      sharedState.set('outgoingSound', null);
+    }
   }
 
   secureDatabase

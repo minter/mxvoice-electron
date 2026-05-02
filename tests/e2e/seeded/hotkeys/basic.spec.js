@@ -1,5 +1,10 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import { launchSeededApp, closeApp, clearModalBackdrop } from '../../../utils/seeded-launch.js';
+import {
+  waitForAudible,
+  waitForSilence,
+  stabilize
+} from '../../../utils/audio-helpers.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'fs';
@@ -9,6 +14,7 @@ import electronPath from 'electron';
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
 test.describe('Hotkeys - save & load', () => {
   let app; let page;
@@ -241,6 +247,81 @@ test.describe('Hotkeys - save & load', () => {
     await expect(f1Song).toHaveText('We Are Family by Sister Sledge (0:07)');
     
     console.log('✅ Successfully dragged "We Are Family" to F1 hotkey');
+  });
+
+  test('stop button stops playback started from keyboard hotkey', async () => {
+    const tab1 = page.locator('#hotkey_tabs a[href="#hotkeys_list_1"]');
+    await tab1.click();
+    await expect(tab1).toHaveClass(/active/);
+
+    await page.evaluate(() => {
+      const f1 = document.querySelector('#hotkeys_list_1 [id^="f1_hotkey"]');
+      if (!f1) throw new Error('F1 hotkey not found');
+      f1.setAttribute('songid', '1005');
+      const song = f1.querySelector('.song');
+      if (song) song.textContent = 'Eat It by Weird Al Yankovic (0:06)';
+    });
+
+    await page.keyboard.press('F1');
+
+    await expect(page.locator('#pause_button')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#stop_button')).toBeEnabled();
+    await expect(page.locator('#song_now_playing')).toHaveAttribute('songid', '1005');
+
+    if (!isCI) {
+      await waitForAudible(page);
+    }
+
+    await page.locator('#stop_button').click();
+
+    await expect(page.locator('#stop_button')).toBeDisabled({ timeout: 5000 });
+    await expect(page.locator('#pause_button')).not.toBeVisible();
+    await expect(page.locator('#play_button')).toBeVisible();
+    await expect(page.locator('#song_now_playing')).not.toHaveAttribute('songid');
+    await expect(page.locator('#timer')).toHaveText('0:00');
+    await expect(page.locator('#duration')).toHaveText('0:00');
+
+    if (!isCI) {
+      await stabilize(page, 150);
+      await waitForSilence(page);
+    }
+  });
+
+  test('previous fade stop does not reset later hotkey playback', async () => {
+    const tab1 = page.locator('#hotkey_tabs a[href="#hotkeys_list_1"]');
+    await tab1.click();
+    await expect(tab1).toHaveClass(/active/);
+
+    await page.evaluate(() => {
+      const assignments = [
+        ['f1', '1005', 'Eat It by Weird Al Yankovic (0:06)'],
+        ['f2', '1002', 'The Wheel (Back And Forth) by Edie Brickell (0:08)'],
+      ];
+
+      for (const [key, songId, label] of assignments) {
+        const hotkey = document.querySelector(`#hotkeys_list_1 [id^="${key}_hotkey"]`);
+        if (!hotkey) throw new Error(`${key.toUpperCase()} hotkey not found`);
+        hotkey.setAttribute('songid', songId);
+        const song = hotkey.querySelector('.song');
+        if (song) song.textContent = label;
+      }
+    });
+
+    await page.keyboard.press('F1');
+    await expect(page.locator('#song_now_playing')).toHaveAttribute('songid', '1005');
+
+    await page.keyboard.press('Shift+Escape');
+    await page.keyboard.press('F2');
+    await expect(page.locator('#song_now_playing')).toHaveAttribute('songid', '1002');
+
+    await page.waitForTimeout(3500);
+    await expect(page.locator('#song_now_playing')).toHaveAttribute('songid', '1002');
+    await expect(page.locator('#pause_button')).toBeVisible();
+    await expect(page.locator('#stop_button')).toBeEnabled();
+
+    await page.locator('#stop_button').click();
+    await expect(page.locator('#stop_button')).toBeDisabled({ timeout: 5000 });
+    await expect(page.locator('#song_now_playing')).not.toHaveAttribute('songid');
   });
 
   /*
