@@ -417,4 +417,111 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
     console.log('✅ REGRESSION TEST PASSED: Swap preserved songid correctly');
     console.log(`   F6 correctly received Song B (id=${songB}) with proper songid attribute`);
   });
+
+  test('REGRESSION: drag after clear+replace must not resurrect the previous song', async () => {
+    // Bug scenario from user video: profile-state restoration stamped the inner
+    // <span class="song"> with songid in addition to the <li>. Subsequent
+    // clear/replace updated only the <li>, leaving a stale songid on the span.
+    // songDrag reads its source element (the span) first, so a drag started
+    // after a clear+replace transmitted the OLD song's id and the drop "restored" it.
+    //
+    // Invariant the fix establishes: the <li> is the single source of truth for
+    // songid; the inner span must never carry it.
+
+    const oldSongA = '1001';
+    const oldSongB = '1002';
+    const newSongX = '1003';
+    const newSongY = '1004';
+
+    // Step 1: Simulate a stale post-restore state directly — pre-stamp F1 and F2
+    // spans with songid as pre-fix restoreHotkeyTabs would have done.
+    await page.evaluate(({ a, b }) => {
+      const f1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
+      const f2 = document.querySelector('#hotkeys_list_1 #f2_hotkey');
+      f1.setAttribute('songid', a);
+      f2.setAttribute('songid', b);
+      f1.querySelector('span.song').setAttribute('songid', a);
+      f2.querySelector('span.song').setAttribute('songid', b);
+      f1.querySelector('span.song').textContent = 'Old A';
+      f2.querySelector('span.song').textContent = 'Old B';
+    }, { a: oldSongA, b: oldSongB });
+
+    // Step 2: User clears hotkeys (mimics clearHotkeys: drops li songid + span text only).
+    await page.evaluate(() => {
+      const tabContent = document.getElementById('hotkeys_list_1');
+      for (let key = 1; key <= 12; key++) {
+        const li = tabContent?.querySelector(`#f${key}_hotkey`);
+        if (li) {
+          li.removeAttribute('songid');
+          const span = li.querySelector('span.song');
+          if (span) span.textContent = '';
+        }
+      }
+    });
+
+    // Step 3: User assigns new songs to F1 and F2.
+    await page.evaluate(async ({ x, y }) => {
+      const hotkeysModule = window.moduleRegistry?.hotkeys;
+      const f1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
+      const f2 = document.querySelector('#hotkeys_list_1 #f2_hotkey');
+      await hotkeysModule.setLabelFromSongId(x, f1);
+      await hotkeysModule.setLabelFromSongId(y, f2);
+    }, { x: newSongX, y: newSongY });
+
+    await page.waitForFunction(({ x, y }) => {
+      const f1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
+      const f2 = document.querySelector('#hotkeys_list_1 #f2_hotkey');
+      return f1?.getAttribute('songid') === x && f2?.getAttribute('songid') === y;
+    }, { x: newSongX, y: newSongY });
+
+    // Step 4: Simulate a dragstart on F2's span. The id transmitted to the
+    // drop handler must be the NEW song's id, not the stale OLD one.
+    const transmitted = await page.evaluate(() => {
+      const span = document.querySelector('#hotkeys_list_1 #f2_hotkey > span.song');
+      let captured = null;
+      const fakeDataTransfer = {
+        setData: (type, value) => { if (type === 'text') captured = value; }
+      };
+      const evt = new Event('dragstart', { bubbles: true });
+      Object.defineProperty(evt, 'dataTransfer', { value: fakeDataTransfer });
+      Object.defineProperty(evt, 'currentTarget', { value: span });
+      Object.defineProperty(evt, 'target', { value: span });
+      // songDrag is exposed globally via the function registry
+      if (typeof window.songDrag === 'function') window.songDrag(evt);
+      return captured;
+    });
+
+    expect(transmitted).toBe(newSongY);
+    expect(transmitted).not.toBe(oldSongB);
+
+    // Step 5: Run through the actual drop flow (F2 dragged onto F1).
+    // F1 must end up with the new Y; F2 must end up with the new X.
+    // Pre-fix path would land oldSongB on F1 instead.
+    await page.evaluate(async ({ id }) => {
+      const hotkeysModule = window.moduleRegistry?.hotkeys;
+      const f1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
+      await hotkeysModule.setLabelFromSongId(id, f1);
+    }, { id: newSongY });
+
+    await page.waitForFunction(({ y }) => {
+      const f1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
+      return f1?.getAttribute('songid') === y;
+    }, { y: newSongY });
+
+    const final = await page.evaluate(() => {
+      const f1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
+      const f2 = document.querySelector('#hotkeys_list_1 #f2_hotkey');
+      return {
+        f1_songid: f1?.getAttribute('songid'),
+        f2_songid: f2?.getAttribute('songid')
+      };
+    });
+
+    expect(final.f1_songid).toBe(newSongY);
+    expect(final.f2_songid).toBe(newSongX);
+    expect(final.f1_songid).not.toBe(oldSongA);
+    expect(final.f1_songid).not.toBe(oldSongB);
+    expect(final.f2_songid).not.toBe(oldSongA);
+    expect(final.f2_songid).not.toBe(oldSongB);
+  });
 });
