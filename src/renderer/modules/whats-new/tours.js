@@ -6,7 +6,7 @@ import { MULTI_SONG_THRESHOLD } from '../bulk-operations/multi-song-import.js';
  */
 export default {
   tours: {
-    '4.3.0-pre.2': {
+    '4.3.0': {
       title: "What's New in 4.3.0",
       steps: [
         {

@@ -25,7 +25,17 @@ export class TourManager {
   }
 
   getTourForVersion(version) {
-    return this.tourData.tours[version] || null;
+    if (!version) return null;
+
+    const exactTour = this.tourData.tours[version];
+    if (exactTour) return exactTour;
+
+    const baseVersion = String(version).split('-')[0];
+    if (baseVersion && baseVersion !== version) {
+      return this.tourData.tours[baseVersion] || null;
+    }
+
+    return null;
   }
 
   async getAppVersion() {
@@ -148,6 +158,16 @@ export class TourManager {
   }
 
   async launchTour(version, { markSeen = true } = {}) {
+    if (this.activeDriver) {
+      const previousDriver = this.activeDriver;
+      previousDriver.destroy();
+      await this.waitForDomSettle();
+      if (this.activeDriver === previousDriver) {
+        this.activeDriver = null;
+        this.currentSteps = null;
+      }
+    }
+
     const tour = this.getTourForVersion(version);
     if (!tour) {
       window.debugLog?.info(`No tour found for version ${version}`, {

@@ -141,6 +141,13 @@ describe('TourManager', () => {
       expect(tour.steps).toHaveLength(2);
     });
 
+    it('falls back from prerelease app version to base release tour', () => {
+      const tour = manager.getTourForVersion('4.3.0-pre.2');
+      expect(tour).toBeDefined();
+      expect(tour.title).toBe("What's New in 4.3.0");
+      expect(tour.steps).toHaveLength(2);
+    });
+
     it('returns null for a version with no tour', () => {
       const tour = manager.getTourForVersion('9.9.9');
       expect(tour).toBeNull();
@@ -172,6 +179,13 @@ describe('TourManager', () => {
     it('treats null tours_seen as empty array', async () => {
       mockGetVersion.mockResolvedValue('4.3.0');
       mockGetPreference.mockResolvedValue(null);
+      const result = await manager.shouldAutoTrigger();
+      expect(result).toBe(true);
+    });
+
+    it('auto-triggers prerelease versions that share a base release tour', async () => {
+      mockGetVersion.mockResolvedValue('4.3.0-pre.2');
+      mockGetPreference.mockResolvedValue([]);
       const result = await manager.shouldAutoTrigger();
       expect(result).toBe(true);
     });
@@ -275,6 +289,24 @@ describe('TourManager', () => {
     it('does nothing for null/undefined action', async () => {
       await expect(manager.executeAction(null)).resolves.toBeUndefined();
       await expect(manager.executeAction(undefined)).resolves.toBeUndefined();
+    });
+  });
+
+  describe('launchTour', () => {
+    it('destroys an active tour before launching another one', async () => {
+      const existingDriver = { destroy: vi.fn() };
+      manager.activeDriver = existingDriver;
+
+      const el = document.createElement('div');
+      el.id = 'some-element';
+      document.body.appendChild(el);
+
+      await manager.launchTour('4.3.0', { markSeen: false });
+
+      expect(existingDriver.destroy).toHaveBeenCalled();
+      expect(mockDriver.drive).toHaveBeenCalled();
+
+      document.body.removeChild(el);
     });
   });
 });
