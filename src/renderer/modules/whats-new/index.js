@@ -3,6 +3,36 @@ import { TourManager } from './tour-manager.js';
 
 const tourManager = new TourManager(tourData);
 
+function showNoTourToast(version) {
+  const existing = document.getElementById('whats-new-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'whats-new-toast';
+  toast.textContent = `No What's New tour available for version ${version}.`;
+  Object.assign(toast.style, {
+    position: 'fixed',
+    top: '1rem',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: '10001',
+    padding: '0.5rem 1.25rem',
+    borderRadius: '0.375rem',
+    background: 'rgba(0, 0, 0, 0.85)',
+    color: 'white',
+    fontSize: '0.9rem',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+    opacity: '0',
+    transition: 'opacity 0.2s ease',
+  });
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => { toast.style.opacity = '1'; });
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 200);
+  }, 3000);
+}
+
 // ─── Register helper functions ────────────────────────────────────────
 
 tourManager.registerHelper('openEditForFirstSong', async () => {
@@ -148,6 +178,7 @@ export async function showWhatsNew() {
         module: 'whats-new',
         function: 'showWhatsNew',
       });
+      showNoTourToast(version);
     }
   } catch (error) {
     window.debugLog?.error('Failed to show What\'s New tour', {
