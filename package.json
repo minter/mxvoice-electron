@@ -1,171 +1,14 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "4.3.0-pre.2",
+  "version": "4.3.0-pre.1",
   "description": "Improv Audio Software",
   "type": "module",
   "repository": "https://github.com/minter/mxvoice-electron",
   "main": "src/main/index-modular.js",
-  "keywords": [],
   "author": {
     "name": "H. Wade Minter",
     "email": "wade@wademinter.com"
-  },
-  "scripts": {
-    "build:preload": "esbuild src/preload/preload-modular.cjs --bundle --platform=node --external:electron --outfile=src/preload/preload-bundle.cjs --format=cjs",
-    "start": "npm run build:preload && electron .",
-    "build": "npm run build:preload && electron-builder",
-    "build:mac": "electron-builder --mac",
-    "build:mac:arm64": "electron-builder --mac --arm64",
-    "build:mac:universal": "electron-builder --mac --universal",
-    "release:mac:draft": "cross-env EP_DRAFT=true electron-builder --mac --universal --publish always",
-    "release:mac:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --mac --universal --publish always",
-    "release:mac": "electron-builder --mac --universal --publish always",
-    "release:win:draft": "electron-builder --win --publish never && node build/signAllWindows.cjs && node build/publishWindows.cjs --draft",
-    "release:win:prerelease": "electron-builder --win --publish never && node build/signAllWindows.cjs && node build/publishWindows.cjs --prerelease",
-    "release:win": "electron-builder --win --publish never && node build/signAllWindows.cjs && node build/publishWindows.cjs",
-    "build:win": "electron-builder --win && node build/signAllWindows.cjs",
-    "build:linux": "electron-builder --linux",
-    "build:linux:deb": "electron-builder --linux deb",
-    "build:linux:appimage": "electron-builder --linux AppImage",
-    "release:linux:draft": "cross-env EP_DRAFT=true electron-builder --linux --publish always",
-    "release:linux:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --linux --publish always",
-    "release:linux": "electron-builder --linux --publish always",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "postinstall": "electron-builder install-app-deps",
-    "test": "npm run build:preload && playwright test",
-    "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed",
-    "test:debug": "playwright test --debug",
-    "test:report": "playwright show-report",
-    "test:install": "playwright install",
-    "test:smoke": "playwright test tests/e2e/smoke.spec.js",
-    "test:validate": "node tests/setup/test-runner.js",
-    "test:isolate": "node tests/setup/verify-isolation.js",
-    "test:run": "./tests/run-tests.sh",
-    "test:unit": "vitest run",
-    "test:unit:watch": "vitest",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
-  },
-  "build": {
-    "appId": "com.electron.mx.-voice",
-    "productName": "Mx. Voice",
-    "copyright": "Copyright © 2025 Wade Minter and Andrew Berkowitz",
-    "npmRebuild": false,
-    "nodeGypRebuild": false,
-    "buildDependenciesFromSource": false,
-    "asar": true,
-    "asarUnpack": [
-      "node_modules/node-sqlite3-wasm/dist/*.wasm"
-    ],
-    "afterPack": "build/afterPack.js",
-    "electronFuses": {
-      "enableEmbeddedAsarIntegrityValidation": true,
-      "onlyLoadAppFromAsar": true
-    },
-    "mac": {
-      "forceCodeSigning": true,
-      "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
-      "category": "public.app-category.music",
-      "icon": "src/assets/icons/mxvoice",
-      "darkModeSupport": true,
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "notarize": true,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
-      "mergeASARs": false,
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "universal"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "universal"
-          ]
-        }
-      ]
-    },
-    "dmg": {
-      "icon": "src/assets/icons/dmg-image.icns",
-      "background": "src/assets/images/dmg-background-image.png",
-      "contents": [
-        {
-          "x": 180,
-          "y": 340
-        },
-        {
-          "x": 450,
-          "y": 340,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ],
-      "sign": false,
-      "format": "UDZO"
-    },
-    "win": {
-      "icon": "src/assets/icons/mxvoice.ico",
-      "artifactName": "Mx.-Voice-Setup-${version}.${ext}",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "verifyUpdateCodeSignature": false,
-      "signAndEditExecutable": true
-    },
-    "nsis": {
-      "installerIcon": "src/assets/icons/mxvoice.ico",
-      "uninstallerIcon": "src/assets/icons/mxvoice.ico"
-    },
-    "linux": {
-      "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
-      "category": "AudioVideo",
-      "icon": "src/assets/icons/mxvoice-square.png",
-      "synopsis": "Improv Audio Software",
-      "description": "Professional audio software for improvisation and live performance",
-      "vendor": "Wade Minter",
-      "maintainer": "H. Wade Minter <wade@wademinter.com>",
-      "target": [
-        "AppImage",
-        "deb"
-      ]
-    },
-    "deb": {
-      "maintainer": "H. Wade Minter <wade@wademinter.com>",
-      "priority": "optional",
-      "depends": [
-        "libgtk-3-0",
-        "libnss3",
-        "libx11-xcb1",
-        "libxss1",
-        "libasound2",
-        "libxtst6"
-      ]
-    },
-    "appImage": {
-      "category": "AudioVideo",
-      "synopsis": "Professional audio software for improvisation and live performance",
-      "description": "Mx. Voice is professional audio software for improvisation and live performance. Create and manage audio clips, organize them into categories, and trigger them with customizable hotkeys."
-    },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "minter",
-        "repo": "mxvoice-electron",
-        "releaseType": "release"
-      }
-    ]
   },
   "license": "MIT",
   "dependencies": {
@@ -189,20 +32,6 @@
     "posthog-node": "^5.29.1",
     "uuid": "^14.0.0",
     "wavesurfer.js": "^7.12.6"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.59.1",
-    "cross-env": "^10.1.0",
-    "electron": "^41.4.0",
-    "electron-builder": "26.8.1",
-    "electron-reload": "^1.5.0",
-    "esbuild": "^0.28.0",
-    "eslint": "^10.2.1",
-    "globals": "^17.5.0",
-    "node-abi": "4.28.0",
-    "playwright": "^1.59.0",
-    "vitest": "^4.1.5"
   },
   "engines": {
     "node": ">=22.12.0"
