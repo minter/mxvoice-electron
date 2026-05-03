@@ -28,6 +28,7 @@ function saveHotkeysToStore(options = {}) {
       electronAPI.store.set("hotkeys", currentHtml).then(result => {
         if (result.success) {
           window.debugLog?.info('✅ Hotkeys saved to store successfully', { module: 'hotkey-operations', function: 'saveHotkeysToStore' });
+          window.secureElectronAPI?.analytics?.trackEvent?.('hotkey_configured');
         } else {
           window.debugLog?.warn('❌ Failed to save hotkeys to store:', result.error, { module: 'hotkey-operations', function: 'saveHotkeysToStore' });
         }
@@ -270,6 +271,7 @@ function playSongFromHotkey(hotkey, _options = {}) {
     document.getElementById('selected_row')?.removeAttribute('id');
     // Hotkey playback should not affect holding tank mode
     // Just play the song without changing autoplay state
+    window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'hotkey' });
     if (typeof playSongFromId === 'function') {
       playSongFromId(song_id);
     }

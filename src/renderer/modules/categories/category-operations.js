@@ -27,7 +27,7 @@ function getCategories() {
     if (window.secureElectronAPI && window.secureElectronAPI.database) {
       window.secureElectronAPI.database.getCategories().then(result => {
         if (result.success) {
-          debugLog?.info('Categories retrieved successfully', { 
+          debugLog?.info('Categories retrieved successfully', {
             module: 'category-operations',
             function: 'getCategories'
           });

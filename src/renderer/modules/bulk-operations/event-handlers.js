@@ -1,8 +1,10 @@
 /**
  * Bulk Operations Event Handlers
- * 
+ *
  * Handles UI event handlers for bulk operations functionality
  */
+
+import { resetBulkAddModalState } from './bulk-operations.js';
 
 // Import debug logger
 let debugLog = null;
@@ -44,6 +46,8 @@ export function setupBulkEventHandlers() {
     bulkModal.addEventListener('hidden.bs.modal', function () {
       if (newCatRow) newCatRow.style.display = 'none';
       if (newCatInput) newCatInput.value = '';
+      // Reset file-drop state so the next open shows the correct mode
+      resetBulkAddModalState();
     });
   }
 

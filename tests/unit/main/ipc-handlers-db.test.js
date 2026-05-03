@@ -77,7 +77,10 @@ beforeAll(async () => {
       time TEXT,
       modtime INTEGER,
       publisher TEXT,
-      md5 TEXT
+      md5 TEXT,
+      volume INTEGER DEFAULT 100,
+      start_time REAL DEFAULT NULL,
+      end_time REAL DEFAULT NULL
     );
   `);
 

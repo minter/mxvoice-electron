@@ -79,8 +79,10 @@ The Windows release process:
 ### macOS
 
 - Xcode Command Line Tools.
-- Valid Apple Developer ID Application & Installer certificates in your Keychain.
-- `APPLE_ID` and `APPLE_PASSWORD` (app-specific password) environment variables for notarization.
+- A valid `Developer ID Application` certificate in your login keychain with its private key.
+- For notarization with electron-builder, either:
+  - `APPLE_API_KEY`, `APPLE_API_KEY_ID`, and `APPLE_API_ISSUER`, or
+  - `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID`.
 
 ### Windows
 

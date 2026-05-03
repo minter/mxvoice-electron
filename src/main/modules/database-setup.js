@@ -179,7 +179,8 @@ async function initializeMainDatabase() {
       // Setup database schema and indexes
       await setupDatabaseSchema(dbInstance);
       setupDatabaseIndexes(dbInstance);
-      
+      migrateDatabase(dbInstance);
+
       debugLog?.info('Database initialization completed successfully', {
         module: 'database-setup',
         function: 'initializeMainDatabase',
@@ -203,7 +204,8 @@ async function initializeMainDatabase() {
       // Create basic tables for testing
       await setupDatabaseSchema(dbInstance);
       setupDatabaseIndexes(dbInstance);
-      
+      migrateDatabase(dbInstance);
+
       return dbInstance;
     } catch (fallbackError) {
       debugLog?.error('Fallback database creation failed:', { module: 'database-setup', function: 'initializeMainDatabase', error: fallbackError.message, stack: fallbackError.stack });
@@ -296,6 +298,39 @@ function setupDatabaseIndexes(db) {
 
 
 /**
+ * Run database migrations for new columns
+ * Each ALTER TABLE is wrapped in try/catch to be idempotent (column may already exist)
+ */
+function migrateDatabase(db) {
+  const migrations = [
+    { sql: 'ALTER TABLE mrvoice ADD COLUMN volume INTEGER DEFAULT 100', name: 'volume' },
+    { sql: 'ALTER TABLE mrvoice ADD COLUMN start_time REAL DEFAULT NULL', name: 'start_time' },
+    { sql: 'ALTER TABLE mrvoice ADD COLUMN end_time REAL DEFAULT NULL', name: 'end_time' },
+  ];
+
+  for (const migration of migrations) {
+    try {
+      const stmt = db.prepare(migration.sql);
+      stmt.run();
+      stmt.finalize();
+      debugLog?.info(`Migration: added column ${migration.name}`, { module: 'database-setup', function: 'migrateDatabase' });
+    } catch (error) {
+      // "duplicate column name" is expected on subsequent launches — silent.
+      // Anything else (locked db, missing table, WASM error) is unexpected and
+      // would cause INSERT/UPDATE to silently store nulls — surface it.
+      const msg = String(error?.message || error || '');
+      if (!/duplicate column/i.test(msg)) {
+        debugLog?.warn(`Migration for column ${migration.name} failed: ${msg}`, {
+          module: 'database-setup',
+          function: 'migrateDatabase',
+          column: migration.name,
+        });
+      }
+    }
+  }
+}
+
+/**
  * Get the current database instance
  */
 function getMainDatabase() {
@@ -312,5 +347,6 @@ export default {
   initializeMainDatabase,
   setupDatabaseSchema,
   setupDatabaseIndexes,
+  migrateDatabase,
   getMainDatabase
 };

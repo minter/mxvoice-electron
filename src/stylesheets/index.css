@@ -948,3 +948,69 @@ legend {
   top: -1px;
 }
 /* End profile indicator styles */
+
+/* ── What's New Tour (Driver.js) ─────────────────────────────────── */
+.whats-new-popover {
+  font-family: inherit;
+  border-radius: 8px;
+  padding: 16px;
+  max-width: 320px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.whats-new-popover .driver-popover-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.whats-new-popover .driver-popover-description {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.whats-new-popover .driver-popover-progress-text {
+  font-size: 12px;
+}
+
+.whats-new-popover .driver-popover-navigation button {
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.whats-new-popover .driver-popover-next-btn,
+.whats-new-popover .driver-popover-close-btn {
+  background: #6c63ff;
+  border: none;
+  color: #fff;
+}
+
+.whats-new-popover .driver-popover-prev-btn {
+  background: none;
+  border: 1px solid;
+}
+
+/* Multi-Song Import Modal Styles */
+.multi-import-header {
+  background-color: var(--header-color);
+  border: 1px solid var(--card-border);
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.song-import-row:last-child {
+  border-bottom: none !important;
+}
+
+.song-import-row input.is-invalid,
+.song-import-row input.is-invalid:focus,
+.song-import-row select.is-invalid,
+.song-import-row select.is-invalid:focus {
+  border: 2px solid #ff4d4d !important;
+  background-color: rgba(220, 53, 69, 0.1) !important;
+  background-image: none !important;
+  box-shadow: 0 0 0 0.25rem rgba(255, 77, 77, 0.25) !important;
+  outline: none !important;
+}

@@ -6,7 +6,7 @@
  * alternative to direct Node.js API exposure.
  */
 
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 // debugLog will be injected by the calling module
 let debugLog = null;
@@ -438,6 +438,18 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('menu:import-library', handler);
     },
 
+    onWhatsNew: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:whats-new', handler);
+      return () => ipcRenderer.removeListener('menu:whats-new', handler);
+    },
+
+    onExternalFilesDrop: (callback) => {
+      const handler = (_event, files) => callback(files);
+      ipcRenderer.on('external-files-dropped', handler);
+      return () => ipcRenderer.removeListener('external-files-dropped', handler);
+    },
+
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
   },
   
@@ -488,9 +500,17 @@ const secureElectronAPI = {
     generateId: () => ipcRenderer.invoke('generate-id'),
     formatDuration: (seconds) => ipcRenderer.invoke('format-duration', seconds),
     validateAudioFile: (filePath) => ipcRenderer.invoke('validate-audio-file', filePath),
-    sanitizeFilename: (filename) => ipcRenderer.invoke('sanitize-filename', filename)
+    sanitizeFilename: (filename) => ipcRenderer.invoke('sanitize-filename', filename),
+    getPathForFile: (file) => webUtils.getPathForFile(file)
   },
   
+  // Analytics
+  analytics: {
+    trackEvent: (name, properties) => ipcRenderer.invoke('analytics:track-event', name, properties),
+    getOptOutStatus: () => ipcRenderer.invoke('analytics:get-opt-out-status'),
+    setOptOut: (value) => ipcRenderer.invoke('analytics:set-opt-out', value),
+  },
+
   // Testing and debugging functions
   testing: {
     testModularPreload: () => {
@@ -547,7 +567,8 @@ function exposeSecureAPI(injectedDebugLog) {
         profile: secureElectronAPI.profile,
         library: secureElectronAPI.library,
         // Provide logs under legacy namespace for compatibility with existing renderer code
-        logs: secureElectronAPI.logs
+        logs: secureElectronAPI.logs,
+        analytics: secureElectronAPI.analytics
       });
       
       if (debugLog && typeof debugLog.info === 'function') {

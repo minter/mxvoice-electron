@@ -1,7 +1,7 @@
 {
   "name": "mxvoice",
   "productName": "Mx. Voice",
-  "version": "4.2.1",
+  "version": "4.3.0-pre.3",
   "description": "Improv Audio Software",
   "type": "module",
   "repository": "https://github.com/minter/mxvoice-electron",
@@ -21,10 +21,10 @@
     "release:mac:draft": "cross-env EP_DRAFT=true electron-builder --mac --universal --publish always",
     "release:mac:prerelease": "cross-env EP_PRE_RELEASE=true electron-builder --mac --universal --publish always",
     "release:mac": "electron-builder --mac --universal --publish always",
-    "release:win:draft": "electron-builder --win --publish never && node build/signAllWindows.cjs && node build/publishWindows.cjs --draft",
-    "release:win:prerelease": "electron-builder --win --publish never && node build/signAllWindows.cjs && node build/publishWindows.cjs --prerelease",
-    "release:win": "electron-builder --win --publish never && node build/signAllWindows.cjs && node build/publishWindows.cjs",
-    "build:win": "electron-builder --win && node build/signAllWindows.cjs",
+    "release:win:draft": "electron-builder --win --publish never && node build/verifyWindowsIcon.cjs && node build/signAllWindows.cjs && node build/publishWindows.cjs --draft",
+    "release:win:prerelease": "electron-builder --win --publish never && node build/verifyWindowsIcon.cjs && node build/signAllWindows.cjs && node build/publishWindows.cjs --prerelease",
+    "release:win": "electron-builder --win --publish never && node build/verifyWindowsIcon.cjs && node build/signAllWindows.cjs && node build/publishWindows.cjs",
+    "build:win": "electron-builder --win && node build/verifyWindowsIcon.cjs && node build/signAllWindows.cjs",
     "build:linux": "electron-builder --linux",
     "build:linux:deb": "electron-builder --linux deb",
     "build:linux:appimage": "electron-builder --linux AppImage",
@@ -76,7 +76,6 @@
       "notarize": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "identity": "E31B13B9566B95D1BC1F46F0C3B2FA6C739356CB",
       "mergeASARs": false,
       "target": [
         {
@@ -127,7 +126,8 @@
     },
     "nsis": {
       "installerIcon": "src/assets/icons/mxvoice.ico",
-      "uninstallerIcon": "src/assets/icons/mxvoice.ico"
+      "uninstallerIcon": "src/assets/icons/mxvoice.ico",
+      "include": "build/installer.nsh"
     },
     "linux": {
       "artifactName": "Mx.-Voice-${version}-${arch}.${ext}",
@@ -171,21 +171,23 @@
   "license": "MIT",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
-    "archiver": "^7.0.1",
     "@octokit/rest": "^22.0.1",
     "animate.css": "^4.1.1",
+    "archiver": "^7.0.1",
     "bootstrap": "^5.3.8",
     "dompurify": "^3.4.2",
+    "driver.js": "^1.4.0",
     "electron-log": "^5.4.3",
-    "extract-zip": "^2.0.1",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.3",
     "electron-util": "^1.0.0",
+    "extract-zip": "^2.0.1",
     "howler": "^2.2.3",
     "mousetrap": "^1.6.5",
     "music-metadata": "11.12.3",
     "n-readlines": "^3.4.1",
     "node-sqlite3-wasm": "^0.8.56",
+    "posthog-node": "^5.29.1",
     "uuid": "^14.0.0",
     "wavesurfer.js": "^7.12.6"
   },

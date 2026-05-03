@@ -27,6 +27,8 @@ let fileOperations;
 let debugLog;
 let getCurrentProfile;
 let autoBackupTimer;
+let analytics;
+let appStartTime;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -37,6 +39,8 @@ function initializeAppSetup(dependencies) {
   debugLog = dependencies.debugLog;
   getCurrentProfile = dependencies.getCurrentProfile;
   autoBackupTimer = dependencies.autoBackupTimer;
+  analytics = dependencies.analytics;
+  appStartTime = dependencies.appStartTime;
 }
 
 // Create the main window
@@ -670,6 +674,14 @@ function createApplicationMenu() {
           }
         },
         {
+          label: "What's New",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:whats-new');
+            }
+          }
+        },
+        {
           label: 'Contact Support…',
           click: () => {
             shell.openExternal('mailto:support@mxvoice.app?subject=' + encodeURIComponent('Mx. Voice Support Request'));
@@ -772,6 +784,14 @@ function createApplicationMenu() {
           label: 'Release Notes',
           click: () => {
             shell.openExternal(`https://github.com/minter/mxvoice-electron/releases/`);
+          }
+        },
+        {
+          label: "What's New",
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:whats-new');
+            }
           }
         },
         {
@@ -1074,8 +1094,14 @@ function setupAppLifecycle() {
     mainWindow = null;
   });
   
-  // Stop backup timer before quit
-  app.on('before-quit', () => {
+  // Shutdown analytics and stop backup timer before quit.
+  // Electron does not await async before-quit handlers, so block the quit,
+  // do the async work, then re-issue the quit with a flag to skip this handler.
+  let shutdownComplete = false;
+  app.on('before-quit', async (event) => {
+    if (shutdownComplete) return;
+    event.preventDefault();
+
     if (autoBackupTimer) {
       autoBackupTimer.stopAutoBackupTimer();
       debugLog?.info('Stopped auto-backup timer on app quit', {
@@ -1083,6 +1109,24 @@ function setupAppLifecycle() {
         function: 'setupAppLifecycle'
       });
     }
+
+    if (analytics) {
+      const startTime = appStartTime || Date.now();
+      const sessionDuration = Math.floor((Date.now() - startTime) / 1000);
+      analytics.trackEvent('app_closed', { session_duration_seconds: sessionDuration });
+      try {
+        await analytics.shutdown();
+      } catch (err) {
+        debugLog?.error('Analytics shutdown error', {
+          module: 'app-setup',
+          function: 'before-quit',
+          error: err.message,
+        });
+      }
+    }
+
+    shutdownComplete = true;
+    app.quit();
   });
 
   // Quit when all windows are closed.
