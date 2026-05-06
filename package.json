@@ -199,7 +199,7 @@
     "esbuild": "^0.28.0",
     "eslint": "^10.2.1",
     "globals": "^17.5.0",
-    "node-abi": "4.28.0",
+    "node-abi": "4.30.0",
     "playwright": "^1.59.0",
     "vitest": "^4.1.5"
   },
