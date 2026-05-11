@@ -18,10 +18,12 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import electron from 'electron';
-import archiver from 'archiver';
+import { createRequire } from 'module';
 import yauzl from 'yauzl';
 
 const { app } = electron;
+const require = createRequire(import.meta.url);
+const { ZipArchive } = require('archiver');
 
 const MANIFEST_VERSION = 1;
 
@@ -208,7 +210,7 @@ async function exportLibrary(outputPath, progressCallback = () => {}) {
 
     // Create archive
     const output = fs.createWriteStream(outputPath);
-    const archive = archiver('zip', { zlib: { level: 5 } });
+    const archive = new ZipArchive({ zlib: { level: 5 } });
 
     const archivePromise = new Promise((resolve, reject) => {
       output.on('close', () => resolve());
