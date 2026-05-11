@@ -28,7 +28,7 @@ src/preload/
 
 - `secure-api-exposer.cjs`
   - Exposes `secureElectronAPI` via `contextBridge.exposeInMainWorld`
-  - Namespaces: `database`, `store`, `fileSystem`, `path`, `os`, `audio`, `app`, `fileOperations`, `ui`, `events`, `utils`, `logs`, `testing`
+  - Namespaces: `database`, `store`, `fileSystem`, `path`, `os`, `audio`, `app`, `fileOperations`, `ui`, `events`, `utils`, `logs`, `testing`, `analytics`, `profile`
   - Database operations use named IPC handlers only — no raw SQL
   - Logs API:
     - `logs.write(level, message, context?, meta?)` → forwards to main; payload is sanitized for IPC

@@ -786,44 +786,29 @@ test.describe('Songs - add', () => {
 
     await triggerBulkMenuItem();
 
-    // 3) Wait for the bulk add modal to appear and its Bootstrap fade animation to complete.
-    // The modal has class "modal fade" so we wait for it to gain the "show" class,
-    // which Bootstrap adds after the fade-in animation finishes.
-    await expect(page.locator('#bulkAddModal.show')).toBeVisible({ timeout: 15000 });
+    // 3) Wait for the multi-song import modal (8 songs is within the threshold)
+    const modal = page.locator('#multiSongImportModal');
+    await expect(modal).toBeVisible({ timeout: 15000 });
 
-    // 4) Create a new category — wait for the dropdown to be populated with the --NEW-- option
-    const categorySelect = page.locator('#bulk-add-category');
-    await expect(categorySelect.locator('option[value="--NEW--"]')).toBeAttached({ timeout: 10000 });
-    await categorySelect.selectOption('--NEW--');
+    // 4) Create a new category using the global selector
+    const globalCatSelect = page.locator('#multi-import-global-category');
+    // For simplicity in this existing test, let's just pick an existing empty category.
+    // 'Running Out' has 0 songs in the seed data.
+    await globalCatSelect.selectOption({ label: 'Running Out' });
 
-    // Fill in the new category description - click first to ensure focus
-    const newCategoryInput = page.locator('#bulk-song-form-new-category');
-    await expect(newCategoryInput).toBeVisible({ timeout: 5000 });
-    await newCategoryInput.click();
-    await newCategoryInput.fill('Another Category');
+    // 5) Click "Import All Songs" button
+    await page.locator('#multiSongImportSubmitButton').click();
 
-    // 5) Click "Add All" button
-    await page.locator('#bulkAddSubmitButton').click();
-
-    // 6) Wait for the modal to close (saveBulkUpload hides it immediately)
-    await expect(page.locator('#bulkAddModal')).not.toBeVisible({ timeout: 10000 });
+    // 6) Wait for the modal to close
+    await expect(modal).not.toBeVisible({ timeout: 10000 });
 
     // 7) Wait for all 8 songs to be inserted into the results table.
-    // saveBulkUpload clears the tbody then calls addSongsByPath recursively,
-    // appending rows one at a time. We must wait for all 8 before searching,
-    // otherwise a search would clear the partially-populated table.
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(8, { timeout: 30000 });
 
-    // 8) Now do a search filtered to "Another Category" to verify the DB round-trip.
-    // The category code will be "ANNO" (first 4 letters, no spaces, uppercase)
-    // but the UI displays "Another Category" (the description/name).
+    // 8) Now do a search filtered to "Running Out" to verify the DB round-trip.
     const searchCategorySelect = page.locator('#category_select');
-
-    // Wait for the new category to appear in the search dropdown
-    await expect(searchCategorySelect.locator('option', { hasText: 'Another Category' }))
-      .toBeAttached({ timeout: 10000 });
-    await searchCategorySelect.selectOption('Another Category');
+    await searchCategorySelect.selectOption('Running Out');
 
     // Clear any existing search terms and trigger search
     const searchInput = page.locator('#omni_search');
@@ -834,13 +819,13 @@ test.describe('Songs - add', () => {
     await expect(rows).toHaveCount(8, { timeout: 15000 });
 
     // **CRITICAL TEST**: Verify that category NAME is displayed, not category CODE
-    // The category column should show "Another Category" (description), NOT "ANNO" (code)
+    // The category column should show "Running Out" (description), NOT "RNOUT" (code)
     const firstRow = rows.first();
     const categoryCell = firstRow.locator('td').first();
     const catText = await categoryCell.textContent();
 
-    // Should not be the category code "ANNO" and should contain some category-like text
-    expect(catText).not.toBe('ANNO');
+    // Should not be the category code "RNOUT" and should contain some category-like text
+    expect(catText).not.toBe('RNOUT');
     expect(catText.length).toBeGreaterThan(2); // Should have some meaningful content
 
     // Verify all rows show the category name (not code)
@@ -848,7 +833,7 @@ test.describe('Songs - add', () => {
       const row = rows.nth(i);
       const catCell = row.locator('td').first();
       const rowCatText = await catCell.textContent();
-      expect(rowCatText).not.toBe('ANNO'); // Should not be the category code
+      expect(rowCatText).not.toBe('RNOUT'); // Should not be the category code
       expect(rowCatText.length).toBeGreaterThan(2); // Should have some meaningful content
     }
 
@@ -868,16 +853,18 @@ test.describe('Songs - add', () => {
     // 10) Verify test environment is clean
     console.log('Bulk add test completed successfully, verifying clean state...');
 
-    // Ensure modal is closed
-    const modalStillVisible = await page.locator('#bulkAddModal').isVisible();
-    if (modalStillVisible) {
-      console.log('Bulk modal still visible after test, closing...');
-      try {
-        await page.locator('#bulkAddModal .btn-close').click();
-        await expect(page.locator('#bulkAddModal')).not.toBeVisible({ timeout: 5000 });
-      } catch (e) {
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#bulkAddModal')).not.toBeVisible({ timeout: 5000 });
+    // Ensure modals are closed
+    for (const modalId of ['#bulkAddModal', '#multiSongImportModal']) {
+      const modalStillVisible = await page.locator(modalId).isVisible();
+      if (modalStillVisible) {
+        console.log(`${modalId} still visible after test, closing...`);
+        try {
+          await page.locator(`${modalId} .btn-close`).click();
+          await expect(page.locator(modalId)).not.toBeVisible({ timeout: 5000 });
+        } catch (e) {
+          await page.keyboard.press('Escape');
+          await expect(page.locator(modalId)).not.toBeVisible({ timeout: 5000 });
+        }
       }
     }
   });

@@ -6,13 +6,21 @@ Handles drag and drop functionality for songs and columns in the application.
 
 ```
 src/renderer/modules/drag-drop/
-├── drag-drop-functions.js  # songDrag
+├── drag-drop-functions.js  # songDrag, hotkeyDrop, holdingTankDrop
 ├── event-handlers.js       # Event setup and column reordering
+├── file-drop-handler.js    # OS file drop (Finder/Explorer) import
 ├── index.js               # Module exports
 └── README.md              # This file
 ```
 
 ## Features
+
+### OS File Drop Import
+- **File drop from Finder/Explorer**: Drag audio files from the OS onto the app window to import
+- **Visual drop overlay**: Full-window overlay appears when files are dragged over the app
+- **Audio filtering**: Only supported audio formats are accepted (mp3, wav, ogg, flac, m4a, etc.)
+- **Smart routing**: Files are routed to the appropriate import flow based on count (single add, multi-song import, or bulk add)
+- **Debounced drag events**: Prevents overlay flicker when moving between child elements
 
 ### Song Drag & Drop
 - **songDrag(event)**: Initiates drag for songs with song ID data

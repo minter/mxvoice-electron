@@ -10,6 +10,7 @@ import sharedState from '../shared-state.js';
 import { howlerUtils, createHowl } from './audio-utils.js';
 import { createProbeFromHowler } from './audio-probe.js';
 import { resetUIState } from './audio-controller.js';
+import { getPreference } from '../preferences/profile-preference-adapter.js';
 
 // Import debug logger - use lazy getter for proper initialization timing
 function getDebugLog() {
@@ -191,7 +192,7 @@ function updateMusicDirectoryCache(newDirectory) {
  * @param {Object} row - The database row data
  * @param {string} song_id - The database ID of the song
  */
-function playSongWithFilename(filename, row, song_id) {
+function playSongWithFilename(filename, row, song_id, options = {}) {
   getDebugLog()?.info('Playing song', {
     module: 'audio-manager',
     function: 'playSongWithFilename',
@@ -294,10 +295,13 @@ function playSongWithFilename(filename, row, song_id) {
             });
           }
               
-              const sound = createHowl({
+              const masterVolume = (Number(document.getElementById('volume')?.value) || 0) / 100;
+              const trackVolume = (row?.volume ?? 100) / 100;
+              sharedState.set('trackVolume', trackVolume);
+
+              let sound = createHowl({
                 src: sound_path,
-                volume:
-                  (Number(document.getElementById('volume')?.value) || 0) / 100,
+                volume: masterVolume * trackVolume,
                 mute:
                   document
                     .getElementById('mute_button')
@@ -306,8 +310,8 @@ function playSongWithFilename(filename, row, song_id) {
                   getDebugLog()?.info('Sound fully loaded', {
                     module: 'audio-manager',
                     function: 'playSongWithFilename',
-                    duration: sound.duration(),
-                    state: sound.state()
+                    duration: this.duration(),
+                    state: this.state()
                   });
                 },
                 onloaderror: function (id, error) {
@@ -337,7 +341,7 @@ function playSongWithFilename(filename, row, song_id) {
                   sharedState.set(
                     'globalAnimation',
                     requestAnimationFrame(
-                      howlerUtils.updateTimeTracker.bind(this)
+                      howlerUtils.updateTimeTracker.bind(howlerUtils)
                     )
                   );
                   const title = row.title || '';
@@ -349,6 +353,20 @@ function playSongWithFilename(filename, row, song_id) {
                   }
                   if (wavesurfer) {
                     wavesurfer.load(sound_path);
+                    // Draw trim region markers if start/end points are set
+                    const regionsPlugin = sharedState.get('wavesurferRegions');
+                    if (regionsPlugin && (row?.start_time > 0 || row?.end_time != null)) {
+                      wavesurfer.once('ready', () => {
+                        regionsPlugin.clearRegions();
+                        regionsPlugin.addRegion({
+                          start: row?.start_time ?? 0,
+                          end: row?.end_time ?? wavesurfer.getDuration(),
+                          color: 'rgba(0, 123, 255, 0.2)',
+                          drag: false,
+                          resize: false,
+                        });
+                      });
+                    }
                   }
                   const now = document.getElementById('song_now_playing');
                   if (now) {
@@ -361,9 +379,11 @@ function playSongWithFilename(filename, row, song_id) {
                     now.style.display = '';
                     now.setAttribute('songid', String(song_id));
                   }
-                  document
-                    .getElementById('play_button')
-                    ?.classList.add('d-none');
+                  const playBtn = document.getElementById('play_button');
+                  if (playBtn) {
+                    playBtn.classList.add('d-none');
+                    playBtn.removeAttribute('disabled');
+                  }
                   document
                     .getElementById('pause_button')
                     ?.classList.remove('d-none');
@@ -393,16 +413,19 @@ function playSongWithFilename(filename, row, song_id) {
                   }
                 },
               });
-              
+
               sharedState.set('sound', sound);
-              
+              sharedState.set('trackStartTime', row?.start_time ?? null);
+              sharedState.set('trackEndTime', row?.end_time ?? null);
+              sharedState.set('crossfadeTriggered', false);
+
               getDebugLog()?.info('About to start playback', {
                 module: 'audio-manager',
                 function: 'playSongWithFilename',
                 soundState: sound.state(),
                 src: sound_path
               });
-              
+
               // Start playback with audio context resume and validation
               ensureAudioContextAndPlay(sound, song_id).then(playResult => {
                 if (playResult === undefined) {
@@ -412,6 +435,8 @@ function playSongWithFilename(filename, row, song_id) {
                     song_id: song_id,
                     soundState: sound.state()
                   });
+                } else if (row?.start_time != null && row.start_time > 0) {
+                  sound.seek(row.start_time);
                 }
               }).catch(error => {
                 getDebugLog()?.error('Error during playback start', {
@@ -421,7 +446,7 @@ function playSongWithFilename(filename, row, song_id) {
                   error: error.message
                 });
               });
-              
+
               // Resume suspended audio context in E2E mode (additional check)
               if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
                 window.Howler.ctx.resume().catch(() => {});
@@ -510,11 +535,37 @@ function playSongWithFilename(filename, row, song_id) {
             if (window.electronTest?.isE2E && window.moduleRegistry?.audio?.ensureTestMode) {
               window.moduleRegistry.audio.ensureTestMode();
             }
-            
-            const sound = createHowl({
+
+            const masterVolume2 = (Number(document.getElementById('volume')?.value) || 0) / 100;
+            const trackVolume2 = (row?.volume ?? 100) / 100;
+            sharedState.set('trackVolume', trackVolume2);
+            const targetVolume2 = masterVolume2 * trackVolume2;
+            const shouldCrossfade2 = !!options.crossfade;
+            const crossfadeMs2 = shouldCrossfade2 ? (options.crossfadeSeconds || 3) * 1000 : 0;
+
+            // Handle outgoing sound for crossfade
+            if (shouldCrossfade2) {
+              const outgoing = sharedState.get('sound');
+              if (outgoing && outgoing.playing()) {
+                sharedState.set('outgoingSound', outgoing);
+                outgoing.off('fade');
+                outgoing.on('fade', () => {
+                  outgoing.unload();
+                  if (sharedState.get('outgoingSound') === outgoing) {
+                    sharedState.set('outgoingSound', null);
+                  }
+                });
+                outgoing.fade(outgoing.volume(), 0, crossfadeMs2);
+              } else if (outgoing) {
+                outgoing.unload();
+              }
+              const oldAnim = sharedState.get('globalAnimation');
+              if (oldAnim) cancelAnimationFrame(oldAnim);
+            }
+
+            let sound = createHowl({
               src: sound_path,
-              volume:
-                (Number(document.getElementById('volume')?.value) || 0) / 100,
+              volume: shouldCrossfade2 ? 0 : targetVolume2,
               mute:
                 document
                   .getElementById('mute_button')
@@ -523,8 +574,8 @@ function playSongWithFilename(filename, row, song_id) {
                 getDebugLog()?.info('Sound fully loaded', {
                   module: 'audio-manager',
                   function: 'playSongWithFilename',
-                  duration: sound.duration(),
-                  state: sound.state()
+                  duration: this.duration(),
+                  state: this.state()
                 });
               },
               onloaderror: function (id, error) {
@@ -550,6 +601,10 @@ function playSongWithFilename(filename, row, song_id) {
                   module: 'audio-manager',
                   function: 'playSongWithFilename',
                 });
+                // Fade in if crossfading
+                if (shouldCrossfade2 && crossfadeMs2 > 0) {
+                  sound.fade(0, targetVolume2, crossfadeMs2);
+                }
                 const _time = Math.round(sound.duration());
                 sharedState.set(
                   'globalAnimation',
@@ -566,6 +621,20 @@ function playSongWithFilename(filename, row, song_id) {
                 }
                 if (wavesurfer) {
                   wavesurfer.load(sound_path);
+                  // Draw trim region markers if start/end points are set
+                  const regionsPlugin2 = sharedState.get('wavesurferRegions');
+                  if (regionsPlugin2 && (row?.start_time > 0 || row?.end_time != null)) {
+                    wavesurfer.once('ready', () => {
+                      regionsPlugin2.clearRegions();
+                      regionsPlugin2.addRegion({
+                        start: row?.start_time ?? 0,
+                        end: row?.end_time ?? wavesurfer.getDuration(),
+                        color: 'rgba(0, 123, 255, 0.2)',
+                        drag: false,
+                        resize: false,
+                      });
+                    });
+                  }
                 }
                 const now = document.getElementById('song_now_playing');
                 if (now) {
@@ -578,7 +647,11 @@ function playSongWithFilename(filename, row, song_id) {
                   now.style.display = '';
                   now.setAttribute('songid', String(song_id));
                 }
-                document.getElementById('play_button')?.classList.add('d-none');
+                const playBtn = document.getElementById('play_button');
+                if (playBtn) {
+                  playBtn.classList.add('d-none');
+                  playBtn.removeAttribute('disabled');
+                }
                 document
                   .getElementById('pause_button')
                   ?.classList.remove('d-none');
@@ -611,6 +684,12 @@ function playSongWithFilename(filename, row, song_id) {
                   module: 'audio-manager',
                   function: 'playSongWithFilename',
                 });
+                // If this sound is no longer the active sound (crossfade already
+                // started the next track), just unload quietly
+                if (sharedState.get('sound') !== sound) {
+                  sound.unload();
+                  return;
+                }
                 song_ended();
                 const loop = sharedState.get('loop');
                 const autoplay = sharedState.get('autoplay');
@@ -625,7 +704,10 @@ function playSongWithFilename(filename, row, song_id) {
             });
             
             sharedState.set('sound', sound);
-            
+            sharedState.set('trackStartTime', row?.start_time ?? null);
+            sharedState.set('trackEndTime', row?.end_time ?? null);
+            sharedState.set('crossfadeTriggered', false);
+
             // Start playback with audio context resume and validation
             ensureAudioContextAndPlay(sound, song_id).then(playResult => {
               if (playResult === undefined) {
@@ -635,6 +717,8 @@ function playSongWithFilename(filename, row, song_id) {
                   song_id: song_id,
                   soundState: sound.state()
                 });
+              } else if (row?.start_time != null && row.start_time > 0) {
+                sound.seek(row.start_time);
               }
             }).catch(error => {
               getDebugLog()?.error('Error during playback start', {
@@ -644,7 +728,7 @@ function playSongWithFilename(filename, row, song_id) {
                 error: error.message
               });
             });
-            
+
             try {
               if (window.electronTest?.isE2E && window.Howler?.usingWebAudio && window.Howler?.ctx?.state === 'suspended') {
                 window.Howler.ctx.resume().catch(() => {}); // Intentional: resume may reject if context is already closed
@@ -686,12 +770,16 @@ function playSongWithFilename(filename, row, song_id) {
  * Play a song from its database ID
  *
  * @param {string} song_id - The database ID of the song to play
+ * @param {Object} options - Playback options
+ * @param {boolean} options.crossfade - Whether to crossfade from current track
+ * @param {number} options.crossfadeSeconds - Crossfade duration in seconds
  */
-function playSongFromId(song_id) {
+async function playSongFromId(song_id, options = {}) {
   getDebugLog()?.info('Playing song from ID', {
     module: 'audio-manager',
     function: 'playSongFromId',
-    song_id: song_id
+    song_id: song_id,
+    crossfade: options.crossfade || false
   });
 
   if (!song_id) {
@@ -703,10 +791,35 @@ function playSongFromId(song_id) {
     return;
   }
 
+  // Cache crossfade preference for the time tracker to use synchronously
+  if (!options.crossfade) {
+    try {
+      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const cfResult = await getPreference('crossfade_seconds', electronAPI);
+      const cfSeconds = (cfResult?.success && cfResult?.value) ? parseFloat(cfResult.value) : 0;
+      sharedState.set('crossfadeSeconds', isNaN(cfSeconds) ? 0 : cfSeconds);
+    } catch (_e) {
+      sharedState.set('crossfadeSeconds', 0);
+    }
+  }
+
   const sound = sharedState.get('sound');
-  if (sound) {
+  if (sound && !options.crossfade) {
+    // Only unload immediately if not crossfading
     sound.off('fade');
     sound.unload();
+    if (sharedState.get('sound') === sound) {
+      sharedState.set('sound', null);
+    }
+  }
+
+  const outgoingSound = sharedState.get('outgoingSound');
+  if (outgoingSound && !options.crossfade) {
+    outgoingSound.off('fade');
+    outgoingSound.unload();
+    if (sharedState.get('outgoingSound') === outgoingSound) {
+      sharedState.set('outgoingSound', null);
+    }
   }
 
   secureDatabase
@@ -726,7 +839,7 @@ function playSongFromId(song_id) {
           return;
         }
 
-        playSongWithFilename(filename, row, song_id);
+        playSongWithFilename(filename, row, song_id, options);
       } else {
         getDebugLog()?.error('No song found with ID or query failed', {
           module: 'audio-manager',
@@ -795,9 +908,82 @@ function song_ended() {
 }
 
 /**
+ * Handle song end triggered by reaching the end trim point.
+ * sound.stop() doesn't fire onend, so this replicates the onend logic.
+ */
+function songEndedFromTrimPoint() {
+  getDebugLog()?.info('Song ended from trim point', {
+    module: 'audio-manager',
+    function: 'songEndedFromTrimPoint'
+  });
+  song_ended();
+  const loop = sharedState.get('loop');
+  const autoplay = sharedState.get('autoplay');
+  const holdingTankMode = sharedState.get('holdingTankMode');
+  const nowPlayingEl = document.getElementById('song_now_playing');
+  const currentSongId = nowPlayingEl?.getAttribute('songid');
+  if (loop && currentSongId) {
+    playSongFromId(currentSongId);
+  } else if (autoplay && holdingTankMode === 'playlist') {
+    autoplay_next();
+  }
+}
+
+// Register on window so audio-utils.js can call it
+window.songEndedFromTrimPoint = songEndedFromTrimPoint;
+
+/**
+ * Trigger early crossfade when remaining time drops below crossfade duration.
+ * Called from updateTimeTracker in playlist mode.
+ * @param {number} remaining - Seconds remaining in current track
+ */
+function triggerEarlyCrossfade(remaining) {
+  try {
+    const crossfadeSeconds = sharedState.get('crossfadeSeconds') || 0;
+    if (crossfadeSeconds <= 0 || remaining > crossfadeSeconds) return;
+
+    // Mark as triggered so we don't fire again for this track
+    sharedState.set('crossfadeTriggered', true);
+
+    getDebugLog()?.info('Early crossfade triggered', {
+      module: 'audio-manager',
+      function: 'triggerEarlyCrossfade',
+      remaining,
+      crossfadeSeconds
+    });
+
+    // Find the next song in the holding tank playlist
+    const now_playing = document.querySelector('.now_playing');
+    if (!now_playing) return;
+    const next_song = now_playing.nextElementSibling;
+    if (!next_song) return;
+
+    const nextSongId = next_song.getAttribute('songid');
+    if (!nextSongId) return;
+
+    // Update UI: move highlighting to the next song
+    now_playing.classList.remove('now_playing');
+    document.getElementById('selected_row')?.removeAttribute('id');
+    next_song.id = 'selected_row';
+    next_song.classList.add('now_playing');
+
+    // Play next song with crossfade
+    playSongFromId(nextSongId, { crossfade: true, crossfadeSeconds });
+  } catch (_e) {
+    getDebugLog()?.warn('Error in triggerEarlyCrossfade', {
+      module: 'audio-manager',
+      function: 'triggerEarlyCrossfade',
+      error: _e?.message
+    });
+  }
+}
+
+window.triggerEarlyCrossfade = triggerEarlyCrossfade;
+
+/**
  * Autoplay next song in playlist
  */
-function autoplay_next() {
+async function autoplay_next() {
   const autoplay = sharedState.get('autoplay');
   const holdingTankMode = sharedState.get('holdingTankMode');
 
@@ -833,8 +1019,18 @@ function autoplay_next() {
       // Clear any existing highlighting and highlight the new playing track
       document.getElementById('selected_row')?.removeAttribute('id');
       next_song.id = 'selected_row';
-      playSongFromId(next_song.getAttribute('songid'));
+      // Read crossfade preference for playlist transitions (cached in sharedState)
+      let crossfadeOpts = {};
+      const crossfadeSeconds = sharedState.get('crossfadeSeconds') || 0;
+      if (crossfadeSeconds > 0) {
+        crossfadeOpts = { crossfade: true, crossfadeSeconds };
+      }
+      // Mark the new track as now_playing before kicking off async playback so
+      // updateTimeTracker / triggerEarlyCrossfade can't read a stale .now_playing
+      // and target the wrong sibling while the new sound is still loading.
       next_song.classList.add('now_playing');
+      window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'playlist_autoplay' });
+      playSongFromId(next_song.getAttribute('songid'), crossfadeOpts);
     } else {
       getDebugLog()?.info('End of playlist reached', {
         module: 'audio-manager',

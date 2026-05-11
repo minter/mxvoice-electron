@@ -9,10 +9,12 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vites
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { createRequire } from 'module';
 
 // ── Stubs for Electron APIs ───────────────────────────────────────────
 
 let testUserData;
+const require = createRequire(import.meta.url);
 
 const fakeApp = {
   getPath: vi.fn((name) => {
@@ -210,10 +212,10 @@ describe('validateArchive', () => {
 
   it('rejects archive missing manifest.json', async () => {
     // Create a valid zip but without manifest.json using archiver
-    const archiver = (await import('archiver')).default;
+    const { ZipArchive } = require('archiver');
     const noManifestPath = path.join(testUserData, 'no-manifest.mxvlib');
     const output = fs.createWriteStream(noManifestPath);
-    const archive = archiver('zip');
+    const archive = new ZipArchive();
 
     const done = new Promise((resolve) => output.on('close', resolve));
     archive.pipe(output);

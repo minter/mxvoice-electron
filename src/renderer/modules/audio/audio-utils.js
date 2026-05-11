@@ -44,7 +44,7 @@ export const howlerUtils = {
     const sound = sharedState.get('sound');
     const globalAnimation = sharedState.get('globalAnimation');
     let wavesurfer = sharedState.get('wavesurfer');
-    
+
     if (!sound || !howlerUtils.isLoaded(sound)) {
       if (globalAnimation) {
         cancelAnimationFrame(globalAnimation);
@@ -55,25 +55,62 @@ export const howlerUtils = {
       }
       return;
     }
-    
-    const self = this;
+
     const seek = sound.seek() || 0;
-    const remaining = self.duration() - seek;
-    const currentTime = howlerUtils.formatTime(Math.round(seek));
-    const remainingTime = howlerUtils.formatTime(Math.round(remaining));
-    const percent_elapsed = seek / self.duration();
+    const totalDuration = sound.duration() || 0;
+
+    // Wait for duration to be available before computing progress
+    if (totalDuration <= 0) {
+      const newAnimation = requestAnimationFrame(
+        howlerUtils.updateTimeTracker.bind(howlerUtils)
+      );
+      sharedState.set('globalAnimation', newAnimation);
+      return;
+    }
+
+    // End-point detection: stop playback when reaching the end trim point
+    const endTime = sharedState.get('trackEndTime');
+    if (endTime != null && seek >= endTime) {
+      sound.stop();
+      // sound.stop() doesn't fire onend, so trigger end logic manually
+      if (typeof window.songEndedFromTrimPoint === 'function') {
+        window.songEndedFromTrimPoint();
+      }
+      return;
+    }
+
+    // Calculate progress relative to trimmed range
+    const startTime = sharedState.get('trackStartTime') ?? 0;
+    const effectiveEnd = endTime ?? totalDuration;
+    const effectiveDuration = effectiveEnd - startTime;
+    const effectiveSeek = seek - startTime;
+    const remaining = effectiveEnd - seek;
+    const currentTime = howlerUtils.formatTime(Math.round(Math.max(0, effectiveSeek)));
+    const remainingTime = howlerUtils.formatTime(Math.round(Math.max(0, remaining)));
+    const percent_elapsed = effectiveDuration > 0 ? (effectiveSeek / effectiveDuration) : 0;
     const progressBar = document.getElementById('audio_progress');
-    if (progressBar) progressBar.style.width = ((percent_elapsed * 100) || 0) + '%';
-    if (!isNaN(percent_elapsed) && wavesurfer) {
-      wavesurfer.seekTo(percent_elapsed);
+    if (progressBar) progressBar.style.width = (Math.min(percent_elapsed * 100, 100) || 0) + '%';
+    // Sync wavesurfer with full-track position (not trimmed) for accurate waveform display
+    const fullPercent = seek / totalDuration;
+    if (!isNaN(fullPercent) && wavesurfer) {
+      wavesurfer.seekTo(Math.min(fullPercent, 1));
     }
     const timer = document.getElementById('timer');
     const duration = document.getElementById('duration');
     if (timer) timer.textContent = currentTime;
     if (duration) duration.textContent = `-${remainingTime}`;
-    
+
+    // Early crossfade trigger: start next track before current one ends
+    if (!sharedState.get('crossfadeTriggered') && remaining > 0) {
+      const autoplay = sharedState.get('autoplay');
+      const holdingTankMode = sharedState.get('holdingTankMode');
+      if (autoplay && holdingTankMode === 'playlist' && typeof window.triggerEarlyCrossfade === 'function') {
+        window.triggerEarlyCrossfade(remaining);
+      }
+    }
+
     const newAnimation = requestAnimationFrame(
-      howlerUtils.updateTimeTracker.bind(self)
+      howlerUtils.updateTimeTracker.bind(howlerUtils)
     );
     sharedState.set('globalAnimation', newAnimation);
   },
@@ -95,6 +132,7 @@ export function createHowl(options = {}) {
   } else {
     // Production: Use HTML5 Audio for true streaming with local files
     // HTML5 Audio handles file:// URLs better and can start playing faster
+    // Note: HTML5 Audio caps volume at 1.0, so per-track volume max is 100%
     if (typeof coerced.html5 === 'undefined') coerced.html5 = true; // HTML5 Audio mode
     if (typeof coerced.preload === 'undefined') coerced.preload = 'auto'; // Auto buffer management
     coerced.format = ['mp3', 'ogg', 'm4a', 'mp4', 'wav', 'flac', 'opus', 'webm']; // Formats supported by Chromium HTML5 Audio

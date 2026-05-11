@@ -14,7 +14,8 @@ The holding tank operates in two distinct modes:
 - ✅ Add/remove songs from holding tank
 - ✅ Save/load holding tank data to/from store
 - ✅ Drag and drop functionality
-- ✅ Mode switching (storage vs playlist)
+- ✅ Drag-to-reorder songs within the holding tank
+- ✅ Mode switching (storage vs playlist) with persistence across sessions
 - ✅ File import/export
 - ✅ Tab management
 - ✅ Autoplay management

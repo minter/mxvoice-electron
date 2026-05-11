@@ -7,6 +7,7 @@
 
 import { songDrag } from './drag-drop-functions.js';
 import { setupDragDropEventHandlers } from './event-handlers.js';
+import { setupFileDropHandlers, handleExternalFileDrop } from './file-drop-handler.js';
 
 // Import debug logger
 let debugLog = null;
@@ -28,6 +29,7 @@ class DragDropModule {
   constructor() {
     // Bind all functions as methods (excluding hotkeyDrop, allowHotkeyDrop, and holdingTankDrop which are handled by their respective modules)
     this.songDrag = songDrag;
+    this.handleExternalFileDrop = handleExternalFileDrop;
     // Note: columnDrag is now handled programmatically in event-handlers.js
   }
 
@@ -35,12 +37,15 @@ class DragDropModule {
    * Initialize the drag and drop module
    */
   initializeDragDrop() {
-    // Setup event handlers for drag and drop
+    // Setup event handlers for internal drag and drop
     setupDragDropEventHandlers();
-    
+
+    // Setup event handlers for external file drops (OS → app window)
+    setupFileDropHandlers();
+
     // Note: Functions are now registered through the function registry system
     // to prevent duplicate registration warnings
-    debugLog?.info('Drag & Drop Module initialized', { 
+    debugLog?.info('Drag & Drop Module initialized', {
       module: 'drag-drop',
       function: 'initializeDragDrop',
       note: 'Functions registered through function registry system'

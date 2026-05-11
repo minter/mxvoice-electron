@@ -18,6 +18,10 @@ try {
   // Debug logger not available
 }
 
+// Debounce timer for save operations
+let saveDebounceTimer = null;
+let pendingSaveResolvers = [];
+
 // Store module references for auto-save
 let _hotkeysModuleRef = null;
 let _holdingTankModuleRef = null;
@@ -257,7 +261,21 @@ export function extractProfileState() {
  * 
  * @returns {Promise<Object>} Result with success status
  */
-export async function saveProfileState() {
+export function saveProfileState() {
+  return new Promise((resolve) => {
+    pendingSaveResolvers.push(resolve);
+    if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = setTimeout(() => {
+      saveDebounceTimer = null;
+      const resolvers = pendingSaveResolvers.splice(0);
+      _saveProfileStateImmediate().then(result => {
+        resolvers.forEach(r => r(result));
+      });
+    }, 300);
+  });
+}
+
+async function _saveProfileStateImmediate() {
   try {
     // PROTECTION: Never save during restoration/initialization (race condition protection)
     if (window.isRestoringProfileState) {
@@ -430,8 +448,10 @@ async function restoreHotkeyTabs(hotkeyTabs, _hotkeysModule) {
               // Set the songid attribute
               element.setAttribute('songid', songId);
               
-              // Set the label text directly
-              const span = element.querySelector('span');
+              // Set the label text on the song span. The songid lives on the
+              // li only — putting it on the span as well creates a stale value
+              // that survives clear/replace and resurfaces as the dragged id.
+              const span = element.querySelector('span.song');
               if (span) {
                 span.textContent = `${title} by ${artist} (${time})`;
               }
@@ -552,9 +572,15 @@ async function restoreHoldingTankTabs(holdingTankTabs, _holdingTankModule) {
             song_row.setAttribute('songid', songId);
             song_row.textContent = `${title} by ${artist} (${time})`;
             
-            // Add drag event listener
+            // Add drag event listener (must match songDrag() behavior —
+            // set both 'text' and the reorder marker so internal reorder
+            // is detected instead of treating the drag as an external drop)
             song_row.addEventListener('dragstart', (e) => {
               e.dataTransfer.setData('text', songId);
+              const holdingTankList = e.currentTarget?.closest?.('.holding_tank');
+              if (holdingTankList) {
+                e.dataTransfer.setData('application/x-holding-tank-reorder', holdingTankList.id);
+              }
             });
             
             // Append to tab content
@@ -927,7 +953,8 @@ export async function switchProfileWithSave() {
     
     // Now switch profiles (this will close the window and relaunch)
     await window.secureElectronAPI.profile.switchProfile();
-    
+    window.secureElectronAPI?.analytics?.trackEvent?.('profile_switched');
+
     return { success: true };
   } catch (error) {
     debugLog?.error('[PROFILE-STATE] Error during profile switch', {

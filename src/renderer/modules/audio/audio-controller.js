@@ -37,12 +37,20 @@ function stopPlaying(fadeOut = false) {
     typeof_fadeOut: typeof fadeOut,
     argumentsLength: arguments.length
   });
+  // Clean up any outgoing crossfade sound
+  const outgoing = sharedState.get('outgoingSound');
+  if (outgoing) {
+    outgoing.off('fade');
+    outgoing.unload();
+    sharedState.set('outgoingSound', null);
+  }
+
   const sound = sharedState.get('sound');
   const autoplay = sharedState.get('autoplay');
   const holdingTankMode = sharedState.get('holdingTankMode');
   const globalAnimation = sharedState.get('globalAnimation');
-  
-  debugLog?.info('🔍 sound object:', { 
+
+  debugLog?.info('🔍 sound object:', {
     module: 'audio-controller',
     function: 'stopPlaying',
     sound: sound
@@ -88,6 +96,9 @@ function stopPlaying(fadeOut = false) {
           });
           // Fallback to immediate stop
           sound.unload();
+          if (sharedState.get('sound') === sound) {
+            sharedState.set('sound', null);
+          }
           resetUIState();
           return;
         }
@@ -126,8 +137,12 @@ function stopPlaying(fadeOut = false) {
             function: 'stopPlaying'
           });
           if (sound) {
+            const isCurrentSound = sharedState.get('sound') === sound;
             sound.unload();
-            resetUIState();
+            if (isCurrentSound) {
+              sharedState.set('sound', null);
+              resetUIState();
+            }
           }
         });
         
@@ -148,6 +163,9 @@ function stopPlaying(fadeOut = false) {
         });
         // Fallback to immediate stop
         sound.unload();
+        if (sharedState.get('sound') === sound) {
+          sharedState.set('sound', null);
+        }
         resetUIState();
       });
     } else {
@@ -157,6 +175,9 @@ function stopPlaying(fadeOut = false) {
         fadeOut: fadeOut
       });
       sound.unload();
+      if (sharedState.get('sound') === sound) {
+        sharedState.set('sound', null);
+      }
       resetUIState();
     }
   } else {

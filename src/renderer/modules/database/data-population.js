@@ -30,7 +30,7 @@ import Dom from '../dom-utils/index.js';
  * @param {string} song_id - The song ID to add
  * @param {Element|string} element - The element to add the song to (or selector)
  */
-async function addToHoldingTank(song_id, element) {
+async function addToHoldingTank(song_id, element, insertPosition) {
   try {
     const currentFontSize = 11; // Default font size since getFontSize was removed
     
@@ -73,7 +73,11 @@ async function addToHoldingTank(song_id, element) {
       }
 
       const targetEl = element && element.nodeType ? element : Dom.$(element);
-      if (targetEl?.matches?.('li')) {
+      if (insertPosition === 'before' && targetEl?.matches?.('li')) {
+        targetEl.parentNode.insertBefore(song_row, targetEl);
+      } else if (insertPosition === 'after' && targetEl?.matches?.('li')) {
+        targetEl.parentNode.insertBefore(song_row, targetEl.nextSibling);
+      } else if (targetEl?.matches?.('li')) {
         targetEl.insertAdjacentElement('afterend', song_row);
       } else if (targetEl?.matches?.('div')) {
         const ul = targetEl.querySelector('ul.active');
@@ -85,11 +89,12 @@ async function addToHoldingTank(song_id, element) {
       if (typeof window.saveHoldingTankToStore === 'function') {
         window.saveHoldingTankToStore();
       } else {
-        debugLog?.warn('saveHoldingTankToStore function not available', { 
+        debugLog?.warn('saveHoldingTankToStore function not available', {
           module: 'data-population',
           function: 'addToHoldingTank'
         });
       }
+      window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'add' });
       
       debugLog?.info('Song added to holding tank successfully', { 
         module: 'data-population',

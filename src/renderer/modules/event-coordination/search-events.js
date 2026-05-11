@@ -77,7 +77,8 @@ export default class SearchEvents {
         });
         
         this.debugLog?.debug('Category select changed, calling searchData...');
-        
+        window.secureElectronAPI?.analytics?.trackEvent?.('category_browsed');
+
         if (window.searchData) {
           window.searchData();
           this.debugLog?.info('searchData called successfully from category change');

@@ -150,14 +150,16 @@ export default class AudioControlEvents {
     const volumeChangeHandler = (event) => {
       try {
         this.debugLog?.debug('Volume changed');
-        const volume = (Number(event.target?.value) || 0) / 100;
-        this.debugLog?.debug('New volume', volume);
-        
+        const masterVolume = (Number(event.target?.value) || 0) / 100;
+
         // Get sound from shared state
         if (this.electronAPI && this.electronAPI.store) {
           // Import shared state to get sound object
           import('../shared-state.js').then(sharedStateModule => {
             const sharedState = sharedStateModule.default;
+            const trackVolume = sharedState.get('trackVolume') ?? 1;
+            const volume = masterVolume * trackVolume;
+            this.debugLog?.debug('New volume (master * track)', { masterVolume, trackVolume, volume });
             const sound = sharedState.get('sound');
             if (sound) {
               this.debugLog?.debug('Setting volume on sound object');

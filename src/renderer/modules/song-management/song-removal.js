@@ -75,12 +75,18 @@ export function deleteSong() {
 
           // Remove song anywhere it appears
           document.querySelectorAll(`.holding_tank .list-group-item[songid="${songId}"]`).forEach(el => el.remove());
-          document.querySelectorAll(`.hotkeys li span[songid="${songId}"]`).forEach(el => el.remove());
-          document.querySelectorAll(`.hotkeys li [songid="${songId}"]`).forEach(el => el.removeAttribute('id'));
+          // Clear the hotkey slot in-place: keep the li and its draggable span,
+          // just drop the songid and label so the slot stays usable.
+          document.querySelectorAll(`.hotkeys li[songid="${songId}"]`).forEach(li => {
+            li.removeAttribute('songid');
+            const span = li.querySelector('span.song');
+            if (span) span.textContent = '';
+          });
           document.querySelectorAll(`#search_results tr[songid="${songId}"]`).forEach(el => el.remove());
           if (typeof saveHoldingTankToStore === 'function') saveHoldingTankToStore();
           if (typeof saveHotkeysToStore === 'function') saveHotkeysToStore();
 
+          window.secureElectronAPI?.analytics?.trackEvent?.('song_deleted');
           return { success: true, songId: songId, title: songRow?.title };
       } else {
         return { success: false, error: 'User cancelled' };

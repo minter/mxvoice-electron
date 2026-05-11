@@ -96,11 +96,12 @@ function initializePreferenceManager(options = {}) {
     // Use adapter for loading preferences (routes to profile or global as appropriate)
     if (currentAPI && currentAPI.store) {
       try {
-        const [dbDir, musicDir, hotkeyDir, fadeSeconds, debugLogPref, prereleasePref, screenModePref] = await Promise.all([
+        const [dbDir, musicDir, hotkeyDir, fadeSeconds, crossfadeSeconds, debugLogPref, prereleasePref, screenModePref] = await Promise.all([
           getPreference("database_directory", currentAPI),
           getPreference("music_directory", currentAPI),
           getPreference("hotkey_directory", currentAPI),
           getPreference("fade_out_seconds", currentAPI),
+          getPreference("crossfade_seconds", currentAPI),
           getPreference("debug_log_enabled", currentAPI),
           getPreference("prerelease_updates", currentAPI),
           getPreference("screen_mode", currentAPI)
@@ -146,11 +147,18 @@ function initializePreferenceManager(options = {}) {
             });
           }
         }
-        if (fadeSeconds.success) { 
-          const el = document.getElementById('preferences-fadeout-seconds'); 
+        if (fadeSeconds.success) {
+          const el = document.getElementById('preferences-fadeout-seconds');
           if (el) {
             el.value = fadeSeconds.value || '3';
             debugLog?.info('[PREFS-LOAD] Set fade seconds field', { value: fadeSeconds.value, finalValue: el.value });
+          }
+        }
+        if (crossfadeSeconds.success) {
+          const el = document.getElementById('preferences-crossfade-seconds');
+          if (el) {
+            el.value = crossfadeSeconds.value || '0';
+            debugLog?.info('[PREFS-LOAD] Set crossfade seconds field', { value: crossfadeSeconds.value, finalValue: el.value });
           }
         }
         if (debugLogPref.success) { 
@@ -174,8 +182,25 @@ function initializePreferenceManager(options = {}) {
             debugLog?.info('[PREFS-LOAD] Set screen mode field', { value: screenModePref.value, finalValue: el.value });
           }
         }
+        // Load analytics opt-out status
+        const analyticsAPI = currentAPI?.analytics;
+        if (analyticsAPI) {
+          try {
+            const analyticsResult = await analyticsAPI.getOptOutStatus();
+            if (analyticsResult.success) {
+              const el = document.getElementById('preferences-analytics-enabled');
+              if (el) {
+                // The checkbox is "enabled" but the store tracks "opt_out", so invert
+                el.checked = !analyticsResult.value;
+                debugLog?.info('[PREFS-LOAD] Set analytics enabled field', { optedOut: analyticsResult.value, checked: el.checked });
+              }
+            }
+          } catch (error) {
+            debugLog?.warn('[PREFS-LOAD] Could not load analytics preference', { error: error.message });
+          }
+        }
       } catch (error) {
-        debugLog?.error('Failed to load preferences', { 
+        debugLog?.error('Failed to load preferences', {
           function: "loadPreferences",
           error: error.message,
           stack: error.stack

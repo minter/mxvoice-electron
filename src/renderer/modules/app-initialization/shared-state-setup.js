@@ -78,6 +78,12 @@ export class SharedStateSetup {
         const waveformElement = document.getElementById('waveform');
         if (waveformElement && typeof WaveSurfer !== 'undefined' && !this.sharedStateInstance.get('wavesurfer')) {
           this.logInfo('Creating WaveSurfer instance...');
+          const plugins = [];
+          let regionsPlugin = null;
+          if (typeof WaveSurfer.Regions !== 'undefined') {
+            regionsPlugin = WaveSurfer.Regions.create();
+            plugins.push(regionsPlugin);
+          }
           const wavesurfer = WaveSurfer.create({
             container: "#waveform",
             waveColor: "#e9ecef",
@@ -87,8 +93,10 @@ export class SharedStateSetup {
             cursorWidth: 0,
             responsive: true,
             height: 100,
+            plugins,
           });
           this.sharedStateInstance.set('wavesurfer', wavesurfer);
+          this.sharedStateInstance.set('wavesurferRegions', regionsPlugin);
           return wavesurfer;
         }
         return this.sharedStateInstance.get('wavesurfer');

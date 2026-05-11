@@ -15,6 +15,13 @@ song-management/
 - Default export: singleton instance
 - Methods: `saveEditedSong`, `saveNewSong`, `editSelectedSong`, `deleteSelectedSong`, `deleteSong`, `removeFromHoldingTank`, `removeFromHotkey`, `startAddNewSong`
 
+## Song Fields
+
+Songs include the following audio enhancement fields (managed via the song form):
+- `volume` — Per-track volume level (0-100, default 100)
+- `start_time` — Playback start trim point in seconds (optional)
+- `end_time` — Playback end trim point in seconds (optional)
+
 ## Usage
 ```javascript
 import songs from './modules/song-management/index.js';

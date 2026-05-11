@@ -99,6 +99,7 @@ function initializeControls(options = {}) {
     if (Dom.hasClass('#waveform', 'hidden')) {
       Dom.removeClass('#waveform', 'hidden');
       Dom.addClass('#waveform_button', 'active');
+      window.secureElectronAPI?.analytics?.trackEvent?.('waveform_viewed');
       animateCSS('#waveform', 'fadeInUp').then(() => {
         // Create WaveSurfer when waveform becomes visible
         if (window.sharedState && window.sharedState.get('createWaveSurfer')) {

@@ -355,6 +355,7 @@ async function confirmImport() {
       info('Library import complete, restarting', {
         module: 'library-transfer', function: 'confirmImport'
       });
+      window.secureElectronAPI?.analytics?.trackEvent?.('library_imported', { song_count: result.songCount || 0 });
 
       // Prevent stale state from being saved
       if (typeof window !== 'undefined') {
