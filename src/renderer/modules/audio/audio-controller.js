@@ -96,6 +96,9 @@ function stopPlaying(fadeOut = false) {
           });
           // Fallback to immediate stop
           sound.unload();
+          if (sharedState.get('sound') === sound) {
+            sharedState.set('sound', null);
+          }
           resetUIState();
           return;
         }
@@ -134,8 +137,12 @@ function stopPlaying(fadeOut = false) {
             function: 'stopPlaying'
           });
           if (sound) {
+            const isCurrentSound = sharedState.get('sound') === sound;
             sound.unload();
-            resetUIState();
+            if (isCurrentSound) {
+              sharedState.set('sound', null);
+              resetUIState();
+            }
           }
         });
         
@@ -156,6 +163,9 @@ function stopPlaying(fadeOut = false) {
         });
         // Fallback to immediate stop
         sound.unload();
+        if (sharedState.get('sound') === sound) {
+          sharedState.set('sound', null);
+        }
         resetUIState();
       });
     } else {
@@ -165,6 +175,9 @@ function stopPlaying(fadeOut = false) {
         fadeOut: fadeOut
       });
       sound.unload();
+      if (sharedState.get('sound') === sound) {
+        sharedState.set('sound', null);
+      }
       resetUIState();
     }
   } else {

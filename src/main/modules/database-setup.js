@@ -314,8 +314,18 @@ function migrateDatabase(db) {
       stmt.run();
       stmt.finalize();
       debugLog?.info(`Migration: added column ${migration.name}`, { module: 'database-setup', function: 'migrateDatabase' });
-    } catch (_error) {
-      // Column already exists — expected on subsequent launches
+    } catch (error) {
+      // "duplicate column name" is expected on subsequent launches — silent.
+      // Anything else (locked db, missing table, WASM error) is unexpected and
+      // would cause INSERT/UPDATE to silently store nulls — surface it.
+      const msg = String(error?.message || error || '');
+      if (!/duplicate column/i.test(msg)) {
+        debugLog?.warn(`Migration for column ${migration.name} failed: ${msg}`, {
+          module: 'database-setup',
+          function: 'migrateDatabase',
+          column: migration.name,
+        });
+      }
     }
   }
 }

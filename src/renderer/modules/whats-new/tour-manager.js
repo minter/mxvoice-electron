@@ -25,7 +25,17 @@ export class TourManager {
   }
 
   getTourForVersion(version) {
-    return this.tourData.tours[version] || null;
+    if (!version) return null;
+
+    const exactTour = this.tourData.tours[version];
+    if (exactTour) return exactTour;
+
+    const baseVersion = String(version).split('-')[0];
+    if (baseVersion && baseVersion !== version) {
+      return this.tourData.tours[baseVersion] || null;
+    }
+
+    return null;
   }
 
   async getAppVersion() {
@@ -33,6 +43,10 @@ export class TourManager {
   }
 
   async shouldAutoTrigger() {
+    // Suppress in E2E — the Driver.js overlay intercepts pointer events
+    // and would block test interactions.
+    if (window.electronTest?.isE2E) return false;
+
     const version = await this.getAppVersion();
     const tour = this.getTourForVersion(version);
     if (!tour) return false;
@@ -144,6 +158,16 @@ export class TourManager {
   }
 
   async launchTour(version, { markSeen = true } = {}) {
+    if (this.activeDriver) {
+      const previousDriver = this.activeDriver;
+      previousDriver.destroy();
+      await this.waitForDomSettle();
+      if (this.activeDriver === previousDriver) {
+        this.activeDriver = null;
+        this.currentSteps = null;
+      }
+    }
+
     const tour = this.getTourForVersion(version);
     if (!tour) {
       window.debugLog?.info(`No tour found for version ${version}`, {
@@ -252,11 +276,8 @@ export class TourManager {
         if (nextIndex < activeSteps.length) {
           await transitionTo(nextIndex);
         } else {
-          // Last step — close the tour
-          const driverRef = this.activeDriver;
-          await this.cleanupFromStep(activeSteps, currentStepIndex);
-          await onComplete();
-          if (driverRef) driverRef.destroy();
+          // Last step — trigger destroy; cleanup happens in onDestroyStarted.
+          if (this.activeDriver) this.activeDriver.destroy();
         }
       },
       onPrevClick: async () => {
@@ -266,10 +287,20 @@ export class TourManager {
         }
       },
       onDestroyStarted: async () => {
-        await this.cleanupFromStep(activeSteps, currentStepIndex);
+        // Driver.js calls this when destroy() begins (overlay click, Escape,
+        // or our own programmatic destroy from the last step). The callback
+        // prevents auto-teardown — we must call destroy() at the end to finalize
+        // (remove overlay/popover). Re-entry is guarded so cleanup runs once.
+        if (this._tourClosing) return;
+        this._tourClosing = true;
         const driverRef = this.activeDriver;
-        await onComplete();
-        if (driverRef) driverRef.destroy();
+        try {
+          await this.cleanupFromStep(activeSteps, currentStepIndex);
+          await onComplete();
+          if (driverRef) driverRef.destroy();
+        } finally {
+          this._tourClosing = false;
+        }
       },
     });
 

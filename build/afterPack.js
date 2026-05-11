@@ -63,6 +63,28 @@ function codesignFile(filePath, identity, entitlements, verbose = false) {
   execFileSync("codesign", args, { stdio: verbose ? "inherit" : "ignore" });
 }
 
+function discoverMacSigningIdentity() {
+  try {
+    const output = execFileSync("security", ["find-identity", "-v", "-p", "codesigning"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+
+    const lines = output.split("\n");
+    for (const line of lines) {
+      const match = line.match(/"([^"]+)"/);
+      const identity = match?.[1];
+      if (identity?.startsWith("Developer ID Application:")) {
+        return identity;
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 export default async function afterPack(context) {
   const { electronPlatformName, appOutDir, packager } = context;
 
@@ -140,7 +162,8 @@ export default async function afterPack(context) {
   const identity =
     macOpts.identity ||
     process.env.CSC_NAME ||
-    process.env.CSC_IDENTITY;
+    process.env.CSC_IDENTITY ||
+    discoverMacSigningIdentity();
 
   if (!identity) {
     if (verbose) console.log("[afterPack] no signing identity configured; skipping nested signing");

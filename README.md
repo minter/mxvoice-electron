@@ -61,7 +61,7 @@ unset ELECTRON_RUN_AS_NODE && npx playwright test tests/e2e/smoke.spec.js
 
 **Why?** IDEs like VS Code and Cursor often set `ELECTRON_RUN_AS_NODE=1`, which prevents Electron from launching its GUI. Tests require the full GUI application.
 
-For details on test isolation, per‑suite environments, CI behavior, and complete coverage breakdown, see `docs/TESTING_SETUP_SUMMARY.md`.
+For details on test isolation, per‑suite environments, CI behavior, and complete coverage breakdown, see `tests/README.md` and `tests/ELECTRON_TESTING_GUIDE.md`.
 
 ## Configuration
 

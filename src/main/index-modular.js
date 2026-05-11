@@ -37,6 +37,13 @@ if (process.env.APP_TEST_MODE === '1' || E2E_USER_DATA_DIR) {
     // Ignore directory creation errors
   }
   app.setPath('userData', testUserData);
+
+  // Prevent macOS keychain prompts from blocking Playwright runs when HOME is
+  // isolated to a temp directory for test sandboxing.
+  if (process.platform === 'darwin') {
+    app.commandLine.appendSwitch('use-mock-keychain');
+    app.commandLine.appendSwitch('password-store', 'basic');
+  }
 }
 
 // Import main process modules
@@ -50,7 +57,6 @@ import * as profileBackupManager from './modules/profile-backup-manager.js';
 import * as autoBackupTimer from './modules/auto-backup-timer.js';
 import * as libraryTransferManager from './modules/library-transfer-manager.js';
 import * as launcherWindow from './modules/launcher-window.js';
-import { createAnalytics } from './modules/analytics.js';
 import { createAnnouncements } from './modules/announcements.js';
 
 const appStartTime = Date.now();
@@ -692,10 +698,28 @@ function checkOldConfig() {
 // Initialize analytics
 let analytics = null;
 
-function initializeAnalytics() {
+async function initializeAnalytics() {
+  if (!app.isPackaged && process.env.ANALYTICS_ENABLED !== '1') {
+    debugLog.info('Skipping analytics module load in dev/test mode', {
+      function: 'initializeAnalytics'
+    });
+    analytics = null;
+    return;
+  }
+
   const appVersion = app.getVersion();
-  analytics = createAnalytics({ store, debugLog, appVersion, isPackaged: app.isPackaged });
-  analytics.init();
+  try {
+    const { createAnalytics } = await import('./modules/analytics.js');
+    analytics = createAnalytics({ store, debugLog, appVersion, isPackaged: app.isPackaged });
+    analytics.init();
+  } catch (error) {
+    analytics = null;
+    debugLog.warn('Analytics module unavailable; continuing without analytics', {
+      function: 'initializeAnalytics',
+      error: error.message
+    });
+    return;
+  }
 
   // Count profiles for launch event
   let profileCount = 0;
@@ -709,13 +733,18 @@ function initializeAnalytics() {
     // Ignore — profiles dir may not exist yet on first run
   }
 
-  // Track app launch
-  analytics.trackEvent('app_launched', {
-    os: process.platform,
-    arch: process.arch,
-    electron_version: process.versions.electron,
-    profile_count: profileCount,
-  });
+  // Track app launch — but skip on the very first run before the user has
+  // seen the consent banner. Otherwise the first event fires before the user
+  // has a chance to opt out. The next launch (after banner dismissal) tracks
+  // normally; opt-out is enforced inside trackEvent for all subsequent calls.
+  if (store.get('analytics_banner_shown')) {
+    analytics.trackEvent('app_launched', {
+      os: process.platform,
+      arch: process.arch,
+      electron_version: process.versions.electron,
+      profile_count: profileCount,
+    });
+  }
 
   // Track uncaught errors
   process.on('uncaughtException', (error) => {
@@ -984,7 +1013,7 @@ function setupApp() {
     debugLog.info('Electron app ready event fired', { function: "app ready event" });
 
     // Initialize analytics (before other modules so it can track errors)
-    initializeAnalytics();
+    await initializeAnalytics();
 
     // Initialize profile manager
     profileManager.initializeProfileManager({ debugLog });

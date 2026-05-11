@@ -379,9 +379,11 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                     now.style.display = '';
                     now.setAttribute('songid', String(song_id));
                   }
-                  document
-                    .getElementById('play_button')
-                    ?.classList.add('d-none');
+                  const playBtn = document.getElementById('play_button');
+                  if (playBtn) {
+                    playBtn.classList.add('d-none');
+                    playBtn.removeAttribute('disabled');
+                  }
                   document
                     .getElementById('pause_button')
                     ?.classList.remove('d-none');
@@ -645,7 +647,11 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                   now.style.display = '';
                   now.setAttribute('songid', String(song_id));
                 }
-                document.getElementById('play_button')?.classList.add('d-none');
+                const playBtn = document.getElementById('play_button');
+                if (playBtn) {
+                  playBtn.classList.add('d-none');
+                  playBtn.removeAttribute('disabled');
+                }
                 document
                   .getElementById('pause_button')
                   ?.classList.remove('d-none');
@@ -802,6 +808,18 @@ async function playSongFromId(song_id, options = {}) {
     // Only unload immediately if not crossfading
     sound.off('fade');
     sound.unload();
+    if (sharedState.get('sound') === sound) {
+      sharedState.set('sound', null);
+    }
+  }
+
+  const outgoingSound = sharedState.get('outgoingSound');
+  if (outgoingSound && !options.crossfade) {
+    outgoingSound.off('fade');
+    outgoingSound.unload();
+    if (sharedState.get('outgoingSound') === outgoingSound) {
+      sharedState.set('outgoingSound', null);
+    }
   }
 
   secureDatabase
@@ -1007,10 +1025,12 @@ async function autoplay_next() {
       if (crossfadeSeconds > 0) {
         crossfadeOpts = { crossfade: true, crossfadeSeconds };
       }
+      // Mark the new track as now_playing before kicking off async playback so
+      // updateTimeTracker / triggerEarlyCrossfade can't read a stale .now_playing
+      // and target the wrong sibling while the new sound is still loading.
+      next_song.classList.add('now_playing');
       window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'playlist_autoplay' });
       playSongFromId(next_song.getAttribute('songid'), crossfadeOpts);
-
-      next_song.classList.add('now_playing');
     } else {
       getDebugLog()?.info('End of playlist reached', {
         module: 'audio-manager',

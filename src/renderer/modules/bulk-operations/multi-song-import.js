@@ -32,15 +32,23 @@ try {
 } catch (_e) {}
 
 /**
- * Shows the Multi-Song Import modal pre-populated with song data
- * 
- * @param {string[]} filePaths - Array of audio file paths to import
+ * Shows the Multi-Song Import modal pre-populated with song data.
+ *
+ * Accepts either an array of file path strings (parses metadata via IPC) or
+ * an array of pre-built song objects (used by the What's New tour to show the
+ * modal without touching the filesystem).
+ *
+ * @param {string[]|Array<{filePath:string,title:string,artist?:string,info?:string,category?:string,duration?:string}>} items
  */
-export async function showMultiSongImport(filePaths) {
+export async function showMultiSongImport(items) {
+  const filePaths = items;
+  const isPrebuilt = Array.isArray(items) && items.length > 0 && typeof items[0] === 'object';
+
   debugLog?.info('Opening Multi-Song Import modal', {
     module: 'multi-song-import',
     function: 'showMultiSongImport',
-    count: filePaths.length
+    count: items.length,
+    prebuilt: isPrebuilt
   });
 
   const listContainer = document.getElementById('multi-song-import-list');
@@ -60,6 +68,24 @@ export async function showMultiSongImport(filePaths) {
   // Populate global category selector
   await populateCategorySelect(globalCatSelect);
   globalCatSelect.value = ''; // Default to none
+
+  if (isPrebuilt) {
+    pendingSongs = items.map((s) => ({
+      filePath: s.filePath,
+      title: s.title || '',
+      artist: s.artist || '',
+      info: s.info || '',
+      category: s.category || '',
+      duration: s.duration || ''
+    }));
+    renderSongList();
+    countEl.textContent = `${items.length} song${items.length !== 1 ? 's' : ''} ready to import`;
+    // Disable submit during demo — the tour postAction closes the modal.
+    const submitBtn = document.getElementById('multiSongImportSubmitButton');
+    if (submitBtn) submitBtn.onclick = (e) => { e.preventDefault(); };
+    safeShowModal('#multiSongImportModal', { module: 'multi-song-import', function: 'showMultiSongImport' });
+    return;
+  }
 
   // Process files to get initial metadata
   const songDataPromises = filePaths.map(async (filePath) => {

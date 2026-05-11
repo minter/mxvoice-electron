@@ -163,9 +163,16 @@ export function songDrag(event) {
   const sourceElement = (event.currentTarget instanceof Element)
     ? event.currentTarget
     : (event.target instanceof Element ? event.target : null);
-  const withSongId = sourceElement?.hasAttribute?.('songid')
-    ? sourceElement
-    : sourceElement?.closest?.('[songid]') || null;
+  // The hotkey <li> is the single source of truth for songid; the inner
+  // <span class="song"> must never be trusted (legacy state could leave a
+  // stale id on it). Always read from the <li> when the source is that span.
+  const isHotkeySpan = sourceElement?.tagName === 'SPAN'
+    && sourceElement.classList?.contains('song');
+  const withSongId = isHotkeySpan
+    ? sourceElement.closest('li[songid]')
+    : (sourceElement?.hasAttribute?.('songid')
+        ? sourceElement
+        : sourceElement?.closest?.('[songid]') || null);
   const songId = withSongId?.getAttribute?.('songid') || '';
 
   debugLog?.info('Starting drag for song ID', {

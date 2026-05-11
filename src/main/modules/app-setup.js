@@ -1106,9 +1106,22 @@ function setupAppLifecycle() {
     mainWindow = null;
   });
   
-  // Shutdown analytics and stop backup timer before quit
-  app.on('before-quit', async () => {
-    // Track app close with session duration
+  // Shutdown analytics and stop backup timer before quit.
+  // Electron does not await async before-quit handlers, so block the quit,
+  // do the async work, then re-issue the quit with a flag to skip this handler.
+  let shutdownComplete = false;
+  app.on('before-quit', async (event) => {
+    if (shutdownComplete) return;
+    event.preventDefault();
+
+    if (autoBackupTimer) {
+      autoBackupTimer.stopAutoBackupTimer();
+      debugLog?.info('Stopped auto-backup timer on app quit', {
+        module: 'app-setup',
+        function: 'setupAppLifecycle'
+      });
+    }
+
     if (analytics) {
       const startTime = appStartTime || Date.now();
       const sessionDuration = Math.floor((Date.now() - startTime) / 1000);
@@ -1123,20 +1136,18 @@ function setupAppLifecycle() {
         });
       }
     }
-    if (autoBackupTimer) {
-      autoBackupTimer.stopAutoBackupTimer();
-      debugLog?.info('Stopped auto-backup timer on app quit', {
-        module: 'app-setup',
-        function: 'setupAppLifecycle'
-      });
-    }
+
+    shutdownComplete = true;
+    app.quit();
   });
 
   // Quit when all windows are closed.
   app.on('window-all-closed', () => {
     // On OS X it is common for applications and their menu bar
-    // to stay active until the user quits explicitly with Cmd + Q
-    if (process.platform !== 'darwin') {
+    // to stay active until the user quits explicitly with Cmd + Q.
+    // In test mode, always quit so Playwright's app.close() can exit cleanly.
+    const inTestMode = process.env.APP_TEST_MODE === '1' || !!process.env.E2E_USER_DATA_DIR;
+    if (process.platform !== 'darwin' || inTestMode) {
       app.quit();
     }
   });

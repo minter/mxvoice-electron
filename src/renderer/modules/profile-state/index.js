@@ -448,10 +448,11 @@ async function restoreHotkeyTabs(hotkeyTabs, _hotkeysModule) {
               // Set the songid attribute
               element.setAttribute('songid', songId);
               
-              // Set the label text on the song span
+              // Set the label text on the song span. The songid lives on the
+              // li only — putting it on the span as well creates a stale value
+              // that survives clear/replace and resurfaces as the dragged id.
               const span = element.querySelector('span.song');
               if (span) {
-                span.setAttribute('songid', songId);
                 span.textContent = `${title} by ${artist} (${time})`;
               }
               

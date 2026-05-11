@@ -321,3 +321,5 @@ Thumbs.db
 # =============================================================================
 
 .worktrees/
+# Claude Code local settings and state
+.claude/

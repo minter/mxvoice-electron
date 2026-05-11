@@ -198,7 +198,7 @@ const octokit = new Octokit({ auth: token });
         owner,
         repo,
         release_id: release.id,
-        name: artifact.name.replace(/\s+/g, "-"),
+        name: artifact.name,
         data: fileContent,
         headers: {
           "content-type": artifact.path.endsWith(".exe") ? "application/octet-stream"

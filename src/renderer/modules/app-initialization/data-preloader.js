@@ -267,7 +267,6 @@ export class DataPreloader {
                       currentHotkeyElement.setAttribute('songid', songId);
                       const songSpan = currentHotkeyElement.querySelector('span.song');
                       if (songSpan) {
-                        songSpan.setAttribute('songid', songId);
                         songSpan.textContent = songText;
                       }
                       totalMigrated++;
