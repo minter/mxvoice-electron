@@ -1132,8 +1132,10 @@ function setupAppLifecycle() {
   // Quit when all windows are closed.
   app.on('window-all-closed', () => {
     // On OS X it is common for applications and their menu bar
-    // to stay active until the user quits explicitly with Cmd + Q
-    if (process.platform !== 'darwin') {
+    // to stay active until the user quits explicitly with Cmd + Q.
+    // In test mode, always quit so Playwright's app.close() can exit cleanly.
+    const inTestMode = process.env.APP_TEST_MODE === '1' || !!process.env.E2E_USER_DATA_DIR;
+    if (process.platform !== 'darwin' || inTestMode) {
       app.quit();
     }
   });

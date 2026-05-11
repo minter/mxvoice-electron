@@ -42,6 +42,7 @@ if (process.env.APP_TEST_MODE === '1' || E2E_USER_DATA_DIR) {
   // isolated to a temp directory for test sandboxing.
   if (process.platform === 'darwin') {
     app.commandLine.appendSwitch('use-mock-keychain');
+    app.commandLine.appendSwitch('password-store', 'basic');
   }
 }
 
