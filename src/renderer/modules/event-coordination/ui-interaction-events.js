@@ -168,6 +168,7 @@ export default class UIInteractionEvents {
           });
           modalFooter.prepend(cta);
         }
+      }
       };
       window.addEventListener('mxvoice:update-release-notes', updateReleaseNotesListener);
       this.uiHandlers.set('mxvoiceUpdateReleaseNotes', { element: window, event: 'mxvoice:update-release-notes', handler: updateReleaseNotesListener });
