@@ -82,7 +82,7 @@ export function renderEmail(item) {
   const html = template
     .replace(/\{\{title\}\}/g, escapeHtml(item.title))
     .replace(/\{\{body\}\}/g, bodyHtml);
-  const text = stripHtml(bodyHtml);
+  const text = markdownToText(item.body);
   return { subject: item.title, html, text };
 }
 
@@ -134,15 +134,18 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-function stripHtml(html) {
-  return html
-    .replace(/<[^>]+>/g, '')
+function markdownToText(md) {
+  return String(md)
+    .replace(/```[\s\S]*?```/g, (m) => m.replace(/```/g, '').trim())
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*>\s?/gm, '')
     .replace(/\s+/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
     .trim();
 }
 
