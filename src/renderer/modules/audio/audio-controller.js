@@ -275,6 +275,28 @@ function pausePlaying(fadeOut = false) {
   }
 }
 
+function getSelectedHotkeyElement() {
+  const currentHotkeyId = window.currentSelectedHotkey;
+  const currentHotkey =
+    currentHotkeyId ? document.getElementById(currentHotkeyId) : null;
+
+  if (currentHotkey?.getAttribute('songid')) {
+    return currentHotkey;
+  }
+
+  return document.querySelector(
+    '.hotkeys .list-group-item.active-hotkey.selected-row[songid]'
+  );
+}
+
+function getPlaybackSelectionSongId() {
+  return (
+    document.getElementById('selected_row')?.getAttribute('songid') ||
+    getSelectedHotkeyElement()?.getAttribute('songid') ||
+    null
+  );
+}
+
 /**
  * Reset UI state after audio changes
  */
@@ -299,7 +321,7 @@ function resetUIState() {
   document.getElementById('pause_button')?.classList.add('d-none');
   document.getElementById('song_spinner')?.classList.remove('fa-spin');
   document.querySelector('#progress_bar .progress-bar')?.classList.remove('progress-bar-animated', 'progress-bar-striped');
-  if (!document.getElementById('selected_row')) {
+  if (!getPlaybackSelectionSongId()) {
     const playBtn = document.getElementById('play_button');
     if (playBtn) playBtn.setAttribute('disabled', 'true');
   }
@@ -364,6 +386,7 @@ function loop_on(bool) {
 export {
   stopPlaying,
   pausePlaying,
+  getPlaybackSelectionSongId,
   resetUIState,
   toggle_play_button,
   showPlayButton,
@@ -375,6 +398,7 @@ export {
 export default {
   stopPlaying,
   pausePlaying,
+  getPlaybackSelectionSongId,
   resetUIState,
   toggle_play_button,
   showPlayButton,

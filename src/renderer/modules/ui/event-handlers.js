@@ -34,6 +34,10 @@ function initializeEventHandlers(options = {}) {
    * @param {HTMLElement} row - The row element to toggle
    */
   function toggleSelectedRow(row) {
+    document
+      .querySelectorAll('[id*="_hotkey"]')
+      .forEach((item) => item.classList.remove('active-hotkey', 'selected-row'));
+    window.currentSelectedHotkey = null;
     document.getElementById('selected_row')?.removeAttribute('id');
     if (row && row instanceof Element) row.id = 'selected_row';
     document.getElementById('play_button')?.removeAttribute('disabled');

@@ -277,9 +277,17 @@ test.describe('Hotkeys - save & load', () => {
     await expect(page.locator('#stop_button')).toBeDisabled({ timeout: 5000 });
     await expect(page.locator('#pause_button')).not.toBeVisible();
     await expect(page.locator('#play_button')).toBeVisible();
+    await expect(page.locator('#play_button')).toBeEnabled();
     await expect(page.locator('#song_now_playing')).not.toHaveAttribute('songid');
     await expect(page.locator('#timer')).toHaveText('0:00');
     await expect(page.locator('#duration')).toHaveText('0:00');
+
+    await page.locator('#play_button').click();
+    await expect(page.locator('#pause_button')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#song_now_playing')).toHaveAttribute('songid', '1005');
+
+    await page.locator('#stop_button').click();
+    await expect(page.locator('#stop_button')).toBeDisabled({ timeout: 5000 });
 
     if (!isCI) {
       await stabilize(page, 150);

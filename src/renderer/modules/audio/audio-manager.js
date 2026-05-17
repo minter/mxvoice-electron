@@ -9,7 +9,7 @@
 import sharedState from '../shared-state.js';
 import { howlerUtils, createHowl } from './audio-utils.js';
 import { createProbeFromHowler } from './audio-probe.js';
-import { resetUIState } from './audio-controller.js';
+import { getPlaybackSelectionSongId, resetUIState } from './audio-controller.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 
 // Import debug logger - use lazy getter for proper initialization timing
@@ -874,9 +874,7 @@ function playSelected() {
     function: 'playSelected'
   });
 
-  const song_id = document
-    .getElementById('selected_row')
-    ?.getAttribute('songid');
+  const song_id = getPlaybackSelectionSongId();
 
   // Only clear the now_playing class if the selected row is from the search panel
   // (not from the holding tank/playlist)

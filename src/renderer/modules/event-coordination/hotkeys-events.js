@@ -86,6 +86,11 @@ export default class HotkeysEvents {
         // Clear any existing selection
         document.querySelector('.now_playing')?.classList.remove('now_playing');
         document.getElementById('selected_row')?.removeAttribute('id');
+        document
+          .querySelectorAll('[id*="_hotkey"]')
+          .forEach((item) => item.classList.remove('active-hotkey', 'selected-row'));
+        li.classList.add('active-hotkey', 'selected-row');
+        window.currentSelectedHotkey = li.id;
 
         // Get song ID and play
         const span = li.querySelector('span');
