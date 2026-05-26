@@ -58,6 +58,7 @@ import * as autoBackupTimer from './modules/auto-backup-timer.js';
 import * as libraryTransferManager from './modules/library-transfer-manager.js';
 import * as launcherWindow from './modules/launcher-window.js';
 import { createAnnouncements } from './modules/announcements.js';
+import { selfHealDirectoryPreferences } from './modules/preferences-self-heal.js';
 
 const appStartTime = Date.now();
 
@@ -321,11 +322,15 @@ async function getDebugPreference() {
 const debugLog = initializeMainDebugLog({ store, getDebugPreference });
 
 // Add immediate logging now that debugLog is available
-debugLog.info('Main process starting...', { 
-  module: 'main', 
+debugLog.info('Main process starting...', {
+  module: 'main',
   function: 'bootstrap',
-  timestamp: new Date().toISOString() 
+  timestamp: new Date().toISOString()
 });
+
+// 4.3.1: restore directory prefs that may have been wiped by the
+// pre-4.3.1 preferences-save bug. Strict no-op for valid configs.
+selfHealDirectoryPreferences({ store, app, debugLog });
 
 // Initialize Octokit for GitHub API now that debugLog is available
 import("@octokit/rest")

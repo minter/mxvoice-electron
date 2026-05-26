@@ -269,6 +269,11 @@ function playSongFromHotkey(hotkey, _options = {}) {
     // Unhighlight any selected tracks in holding tank or playlist
     document.querySelector('.now_playing')?.classList.remove('now_playing');
     document.getElementById('selected_row')?.removeAttribute('id');
+    document
+      .querySelectorAll('[id*="_hotkey"]')
+      .forEach((item) => item.classList.remove('active-hotkey', 'selected-row'));
+    hotkeyElement?.classList.add('active-hotkey', 'selected-row');
+    window.currentSelectedHotkey = hotkeyElement?.id || null;
     // Hotkey playback should not affect holding tank mode
     // Just play the song without changing autoplay state
     window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'hotkey' });
