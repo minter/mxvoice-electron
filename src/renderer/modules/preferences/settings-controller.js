@@ -6,7 +6,10 @@
  * @module settings-controller
  */
 
-import { setPreference as setPreferenceViaAdapter } from './profile-preference-adapter.js';
+import {
+  setPreference as setPreferenceViaAdapter,
+  getPreference as getPreferenceViaAdapter
+} from './profile-preference-adapter.js';
 import { safeHideModal } from '../ui/bootstrap-helpers.js';
 
 // Import debug logger from global scope (renderer initializes it early)
@@ -32,6 +35,33 @@ function initializeSettingsController(options = {}) {
   const electronAPISource = (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null;
   const electronAPI = options.electronAPI || electronAPISource;
   const { db: _db, store } = options;
+
+  function preserveDirectoryPreferences(formValues, currentValues) {
+    const directoryKeys = ['database_directory', 'music_directory', 'hotkey_directory'];
+    const preferences = {};
+
+    directoryKeys.forEach((key) => {
+      const nextValue = formValues[key];
+      const currentValue = currentValues[key];
+
+      if (typeof nextValue === 'string' && nextValue.trim() !== '') {
+        preferences[key] = nextValue;
+        return;
+      }
+
+      preferences[key] = currentValue || '';
+
+      if (currentValue) {
+        debugLog?.warn('[PREFS-SAVE] Blank directory field detected, preserving existing value', {
+          function: 'preserveDirectoryPreferences',
+          key,
+          preservedValue: currentValue
+        });
+      }
+    });
+
+    return preferences;
+  }
   
   /**
    * Save preferences from the preferences modal
@@ -69,8 +99,8 @@ function initializeSettingsController(options = {}) {
       // Validate that critical directory preferences are not being cleared
       // Only save if the value is non-empty OR if it was already empty
       const validateDirectory = async (key) => {
-        const current = await getPreference(key, electronAPI);
-        return current.success ? current.value : '';
+        const current = await getPreferenceViaAdapter(key, electronAPI);
+        return current?.success ? current.value : '';
       };
       
       const [currentDbDir, currentMusicDir, currentHotkeyDir] = await Promise.all([
@@ -79,11 +109,14 @@ function initializeSettingsController(options = {}) {
         validateDirectory('hotkey_directory')
       ]);
       
+      const preservedDirectories = preserveDirectoryPreferences(formValues, {
+        database_directory: currentDbDir,
+        music_directory: currentMusicDir,
+        hotkey_directory: currentHotkeyDir
+      });
+
       const preferences = {
-        // Only update directory if new value is non-empty OR current value is already empty
-        database_directory: formValues.database_directory || currentDbDir,
-        music_directory: formValues.music_directory || currentMusicDir,
-        hotkey_directory: formValues.hotkey_directory || currentHotkeyDir,
+        ...preservedDirectories,
         fade_out_seconds: formValues.fade_out_seconds,
         crossfade_seconds: formValues.crossfade_seconds,
         debug_log_enabled: formValues.debug_log_enabled,
@@ -259,24 +292,41 @@ function initializeSettingsController(options = {}) {
    */
   async function savePreferencesLegacy(preferences) {
     try {
+      const safePreferences = {
+        ...preferences,
+        database_directory: preferences.database_directory || await getPreference('database_directory') || '',
+        music_directory: preferences.music_directory || await getPreference('music_directory') || '',
+        hotkey_directory: preferences.hotkey_directory || await getPreference('hotkey_directory') || ''
+      };
+
+      ['database_directory', 'music_directory', 'hotkey_directory'].forEach((key) => {
+        if (!preferences[key] && safePreferences[key]) {
+          debugLog?.warn('[PREFS-SAVE] Legacy save received blank directory field, preserving existing value', {
+            function: 'savePreferencesLegacy',
+            key,
+            preservedValue: safePreferences[key]
+          });
+        }
+      });
+
       if (store) {
-        store.set("database_directory", preferences.database_directory);
-        store.set("music_directory", preferences.music_directory);
-        store.set("hotkey_directory", preferences.hotkey_directory);
-        store.set("fade_out_seconds", preferences.fade_out_seconds);
-        store.set("crossfade_seconds", preferences.crossfade_seconds);
-        store.set("debug_log_enabled", preferences.debug_log_enabled);
-        store.set("prerelease_updates", preferences.prerelease_updates);
-        store.set("screen_mode", preferences.screen_mode);
+        store.set("database_directory", safePreferences.database_directory);
+        store.set("music_directory", safePreferences.music_directory);
+        store.set("hotkey_directory", safePreferences.hotkey_directory);
+        store.set("fade_out_seconds", safePreferences.fade_out_seconds);
+        store.set("crossfade_seconds", safePreferences.crossfade_seconds);
+        store.set("debug_log_enabled", safePreferences.debug_log_enabled);
+        store.set("prerelease_updates", safePreferences.prerelease_updates);
+        store.set("screen_mode", safePreferences.screen_mode);
         debugLog?.info('Preferences saved using legacy method', { 
           function: "savePreferencesLegacy",
-          data: { preferences }
+          data: { preferences: safePreferences }
         });
         
         // Apply new theme immediately if screen mode preference changed
         if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
           try {
-            const newScreenMode = preferences.screen_mode;
+            const newScreenMode = safePreferences.screen_mode;
             await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
             debugLog?.info('Theme applied immediately after legacy preference save', { newTheme: newScreenMode });
           } catch (themeError) {
@@ -287,14 +337,14 @@ function initializeSettingsController(options = {}) {
         // Legacy store not available, use electronAPI.store
         try {
           const ops = [
-            ['database_directory', preferences.database_directory],
-            ['music_directory', preferences.music_directory],
-            ['hotkey_directory', preferences.hotkey_directory],
-            ['fade_out_seconds', preferences.fade_out_seconds],
-            ['crossfade_seconds', preferences.crossfade_seconds],
-            ['debug_log_enabled', preferences.debug_log_enabled],
-            ['prerelease_updates', preferences.prerelease_updates],
-            ['screen_mode', preferences.screen_mode]
+            ['database_directory', safePreferences.database_directory],
+            ['music_directory', safePreferences.music_directory],
+            ['hotkey_directory', safePreferences.hotkey_directory],
+            ['fade_out_seconds', safePreferences.fade_out_seconds],
+            ['crossfade_seconds', safePreferences.crossfade_seconds],
+            ['debug_log_enabled', safePreferences.debug_log_enabled],
+            ['prerelease_updates', safePreferences.prerelease_updates],
+            ['screen_mode', safePreferences.screen_mode]
           ];
           const results = [];
           for (const [key, val] of ops) {
@@ -317,7 +367,7 @@ function initializeSettingsController(options = {}) {
             // Apply new theme immediately if screen mode preference changed
             if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
               try {
-                const newScreenMode = preferences.screen_mode;
+                const newScreenMode = safePreferences.screen_mode;
                 await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
                 debugLog?.info('Theme applied immediately after electronAPI.store save', { newTheme: newScreenMode });
               } catch (themeError) {

@@ -115,4 +115,131 @@ test.describe("What's New Tour", () => {
       await closeBtn.click();
     }
   });
+
+  test('tour-opened preferences preserve shared directory settings on save', async () => {
+    const originalDirectories = await page.evaluate(async () => {
+      const [database, music, hotkey] = await Promise.all([
+        window.secureElectronAPI.store.get('database_directory'),
+        window.secureElectronAPI.store.get('music_directory'),
+        window.secureElectronAPI.store.get('hotkey_directory')
+      ]);
+
+      return {
+        database: database.value,
+        music: music.value,
+        hotkey: hotkey.value
+      };
+    });
+
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('tours_seen', []);
+      if (window.moduleRegistry?.whatsNew?.showWhatsNew) {
+        await window.moduleRegistry.whatsNew.showWhatsNew();
+      }
+    });
+
+    for (let step = 0; step < 8; step += 1) {
+      if (await page.locator('#preferencesModal').isVisible()) {
+        break;
+      }
+
+      const nextBtn = page.locator('.driver-popover-next-btn');
+      await expect(nextBtn).toBeVisible({ timeout: 5000 });
+      await nextBtn.click();
+      await page.waitForTimeout(500);
+    }
+
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#preferences-database-directory')).toHaveValue(originalDirectories.database, { timeout: 5000 });
+    await expect(page.locator('#preferences-song-directory')).toHaveValue(originalDirectories.music, { timeout: 5000 });
+    await expect(page.locator('#preferences-hotkey-directory')).toHaveValue(originalDirectories.hotkey, { timeout: 5000 });
+
+    const closeBtn = page.locator('.driver-popover-close-btn');
+    if (await closeBtn.isVisible()) {
+      await closeBtn.click();
+      await expect(page.locator('.driver-overlay')).not.toBeVisible({ timeout: 5000 });
+    }
+
+    await page.locator('#preferencesSubmitButton').click();
+    await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
+
+    const savedDirectories = await page.evaluate(async () => {
+      const [database, music, hotkey] = await Promise.all([
+        window.secureElectronAPI.store.get('database_directory'),
+        window.secureElectronAPI.store.get('music_directory'),
+        window.secureElectronAPI.store.get('hotkey_directory')
+      ]);
+
+      return {
+        database: database.value,
+        music: music.value,
+        hotkey: hotkey.value
+      };
+    });
+
+    expect(savedDirectories).toEqual(originalDirectories);
+
+  });
+
+  test('blank directory inputs do not wipe shared settings on save', async () => {
+    const originalDirectories = await page.evaluate(async () => {
+      const [database, music, hotkey] = await Promise.all([
+        window.secureElectronAPI.store.get('database_directory'),
+        window.secureElectronAPI.store.get('music_directory'),
+        window.secureElectronAPI.store.get('hotkey_directory')
+      ]);
+
+      return {
+        database: database.value,
+        music: music.value,
+        hotkey: hotkey.value
+      };
+    });
+
+    await page.evaluate(async () => {
+      if (typeof window.openPreferencesModal === 'function') {
+        await window.openPreferencesModal();
+      } else if (window.moduleRegistry?.preferences?.openPreferencesModal) {
+        await window.moduleRegistry.preferences.openPreferencesModal();
+      }
+    });
+
+    await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#preferences-database-directory')).toHaveValue(originalDirectories.database, { timeout: 5000 });
+
+    await page.locator('#preferences-database-directory').evaluate((el) => {
+      el.value = '';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await page.locator('#preferences-song-directory').evaluate((el) => {
+      el.value = '';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await page.locator('#preferences-hotkey-directory').evaluate((el) => {
+      el.value = '';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    await page.locator('#preferencesSubmitButton').click();
+    await expect(page.locator('#preferencesModal')).not.toBeVisible({ timeout: 5000 });
+
+    const savedDirectories = await page.evaluate(async () => {
+      const [database, music, hotkey] = await Promise.all([
+        window.secureElectronAPI.store.get('database_directory'),
+        window.secureElectronAPI.store.get('music_directory'),
+        window.secureElectronAPI.store.get('hotkey_directory')
+      ]);
+
+      return {
+        database: database.value,
+        music: music.value,
+        hotkey: hotkey.value
+      };
+    });
+
+    expect(savedDirectories).toEqual(originalDirectories);
+  });
 });

@@ -52,6 +52,7 @@ const domElements = {};
 
 globalThis.document = {
   createElement: vi.fn((tag) => makeElement(tag)),
+  getElementById: vi.fn((id) => domElements[id] || null),
   querySelector: vi.fn((selector) => {
     // Support #id selectors
     if (selector.startsWith('#')) {
@@ -96,9 +97,10 @@ const { TourManager } = await import(
   '../../../src/renderer/modules/whats-new/tour-manager.js'
 );
 const { __mockInstance: mockDriver } = await import('driver.js');
-const { initWhatsNew, showWhatsNew } = await import(
+const { initWhatsNew, showWhatsNew, tourManager } = await import(
   '../../../src/renderer/modules/whats-new/index.js'
 );
+const { safeShowModal } = await import('../../../src/renderer/modules/ui/bootstrap-helpers.js');
 
 describe('TourManager', () => {
   let manager;
@@ -131,6 +133,7 @@ describe('TourManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     manager = new TourManager(sampleTours);
+    window.openPreferencesModal = vi.fn().mockResolvedValue(undefined);
   });
 
   describe('getTourForVersion', () => {
@@ -308,6 +311,40 @@ describe('TourManager', () => {
 
       document.body.removeChild(el);
     });
+  });
+});
+
+describe('whats-new preference helpers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.openPreferencesModal = vi.fn().mockResolvedValue(undefined);
+    domElements.preferencesModal = {
+      classList: {
+        contains: vi.fn(() => false),
+      }
+    };
+    domElements['preferences-crossfade-seconds'] = {
+      scrollIntoView: vi.fn(),
+    };
+    domElements['preferences-analytics-enabled'] = {
+      scrollIntoView: vi.fn(),
+    };
+  });
+
+  it('opens preferences through openPreferencesModal for crossfade helper', async () => {
+    await tourManager.helpers.openPreferencesAndScrollToCrossfade();
+
+    expect(window.openPreferencesModal).toHaveBeenCalledTimes(1);
+    expect(safeShowModal).not.toHaveBeenCalled();
+    expect(domElements['preferences-crossfade-seconds'].scrollIntoView).toHaveBeenCalled();
+  });
+
+  it('opens preferences through openPreferencesModal for analytics helper when modal is closed', async () => {
+    await tourManager.helpers.openPreferencesAndScrollToAnalytics();
+
+    expect(window.openPreferencesModal).toHaveBeenCalledTimes(1);
+    expect(safeShowModal).not.toHaveBeenCalled();
+    expect(domElements['preferences-analytics-enabled'].scrollIntoView).toHaveBeenCalled();
   });
 });
 

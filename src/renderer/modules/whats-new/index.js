@@ -109,8 +109,18 @@ tourManager.registerHelper('openMultiSongImportTour', async () => {
  * Opens the Preferences modal and scrolls to the crossfade control.
  */
 tourManager.registerHelper('openPreferencesAndScrollToCrossfade', async () => {
-  const { safeShowModal } = await import('../ui/bootstrap-helpers.js');
-  await safeShowModal('#preferencesModal', { module: 'whats-new', function: 'openPreferencesAndScrollToCrossfade' });
+  const openPreferences =
+    (typeof window.openPreferencesModal === 'function'
+      ? window.openPreferencesModal
+      : window.moduleRegistry?.preferences?.openPreferencesModal) || null;
+
+  if (openPreferences) {
+    await openPreferences();
+  } else {
+    const { safeShowModal } = await import('../ui/bootstrap-helpers.js');
+    await safeShowModal('#preferencesModal', { module: 'whats-new', function: 'openPreferencesAndScrollToCrossfade:fallback' });
+  }
+
   // Wait for modal animation to complete
   await new Promise((resolve) => setTimeout(resolve, 400));
   const crossfadeEl = document.getElementById('preferences-crossfade-seconds');
@@ -129,8 +139,18 @@ tourManager.registerHelper('openPreferencesAndScrollToAnalytics', async () => {
   const modal = document.getElementById('preferencesModal');
   const alreadyOpen = modal?.classList.contains('show');
   if (!alreadyOpen) {
-    const { safeShowModal } = await import('../ui/bootstrap-helpers.js');
-    await safeShowModal('#preferencesModal', { module: 'whats-new', function: 'openPreferencesAndScrollToAnalytics' });
+    const openPreferences =
+      (typeof window.openPreferencesModal === 'function'
+        ? window.openPreferencesModal
+        : window.moduleRegistry?.preferences?.openPreferencesModal) || null;
+
+    if (openPreferences) {
+      await openPreferences();
+    } else {
+      const { safeShowModal } = await import('../ui/bootstrap-helpers.js');
+      await safeShowModal('#preferencesModal', { module: 'whats-new', function: 'openPreferencesAndScrollToAnalytics:fallback' });
+    }
+
     // Wait for modal animation to complete
     await new Promise((resolve) => setTimeout(resolve, 400));
   }
