@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import os from 'os';
-import { readAnnouncements, buildManifest } from '../../../scripts/publish-announcements.mjs';
+import { readAnnouncements, validateAnnouncements, buildManifest } from '../../../scripts/publish-announcements.mjs';
 import { loadSentLedger, isAlreadySent, appendSent, saveSentLedger } from '../../../scripts/publish-announcements.mjs';
 import { renderEmail } from '../../../scripts/publish-announcements.mjs';
 import { resolveMailgunConfig, sendToMailgun } from '../../../scripts/publish-announcements.mjs';
@@ -34,6 +34,13 @@ describe('publish-announcements script', () => {
       const items = readAnnouncements(fixturesDir);
       const first = items.find(a => a.id === '2026-01-01-first');
       expect(first).toBeDefined();
+    });
+
+    it('throws on duplicate announcement ids', () => {
+      expect(() => validateAnnouncements([
+        { id: 'dup', path: 'announcements/one.md' },
+        { id: 'dup', path: 'announcements/two.md' },
+      ])).toThrow(/Duplicate announcement id "dup"/);
     });
   });
 

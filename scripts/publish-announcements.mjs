@@ -34,6 +34,18 @@ export function readAnnouncements(dir) {
   });
 }
 
+export function validateAnnouncements(items) {
+  const seenIds = new Map();
+  for (const item of items) {
+    if (!item?.id) continue;
+    if (seenIds.has(item.id)) {
+      const firstPath = seenIds.get(item.id);
+      throw new Error(`Duplicate announcement id "${item.id}" in ${firstPath} and ${item.path}`);
+    }
+    seenIds.set(item.id, item.path);
+  }
+}
+
 export function buildManifest(items) {
   const sorted = [...items].sort((a, b) =>
     new Date(b.published).getTime() - new Date(a.published).getTime()
@@ -171,6 +183,7 @@ export async function main(argv, env, cwd) {
   const sentPath = path.join(announcementsDir, 'sent.json');
 
   const items = readAnnouncements(announcementsDir);
+  validateAnnouncements(items);
   console.log(`Read ${items.length} announcement(s)`);
 
   const manifest = buildManifest(items);

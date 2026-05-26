@@ -151,6 +151,13 @@ describe('TourManager', () => {
       expect(tour.steps).toHaveLength(2);
     });
 
+    it('falls back from patch release app version to matching major.minor tour', () => {
+      const tour = manager.getTourForVersion('4.3.1');
+      expect(tour).toBeDefined();
+      expect(tour.title).toBe("What's New in 4.3.0");
+      expect(tour.steps).toHaveLength(2);
+    });
+
     it('returns null for a version with no tour', () => {
       const tour = manager.getTourForVersion('9.9.9');
       expect(tour).toBeNull();
@@ -188,6 +195,13 @@ describe('TourManager', () => {
 
     it('auto-triggers prerelease versions that share a base release tour', async () => {
       mockGetVersion.mockResolvedValue('4.3.0-pre.2');
+      mockGetPreference.mockResolvedValue([]);
+      const result = await manager.shouldAutoTrigger();
+      expect(result).toBe(true);
+    });
+
+    it('auto-triggers patch releases that share a major.minor tour', async () => {
+      mockGetVersion.mockResolvedValue('4.3.1');
       mockGetPreference.mockResolvedValue([]);
       const result = await manager.shouldAutoTrigger();
       expect(result).toBe(true);

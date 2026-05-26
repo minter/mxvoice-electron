@@ -8,6 +8,10 @@ const SUPPORTED_SCHEMA_VERSION = 1;
 const MANIFEST_CACHE_KEY = 'announcements_manifest_cache';
 const BODY_CACHE_KEY_PREFIX = 'announcements_body_cache__';
 
+function getManifestGeneration(store) {
+  return store.get(MANIFEST_CACHE_KEY)?.generated_at || null;
+}
+
 export function createAnnouncements({ store, debugLog, manifestUrl, bodyUrlBase, mailgun }) {
   async function fetchManifest() {
     try {
@@ -39,13 +43,16 @@ export function createAnnouncements({ store, debugLog, manifestUrl, bodyUrlBase,
   async function fetchBody(relativePath) {
     const cacheKey = BODY_CACHE_KEY_PREFIX + relativePath;
     const cached = store.get(cacheKey);
-    if (cached != null) return cached;
+    const manifestGeneratedAt = getManifestGeneration(store);
+    if (cached && typeof cached === 'object' && cached.body && cached.manifestGeneratedAt === manifestGeneratedAt) {
+      return cached.body;
+    }
     try {
       const url = (bodyUrlBase || '') + relativePath;
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      store.set(cacheKey, text);
+      store.set(cacheKey, { body: text, manifestGeneratedAt });
       return text;
     } catch (err) {
       debugLog.warn('Announcements: body fetch failed', {

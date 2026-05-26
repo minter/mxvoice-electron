@@ -30,6 +30,8 @@ jobs:
         run: npm ci
 
       - name: Publish announcements
+        id: publish_announcements
+        continue-on-error: true
         env:
           MAILGUN_MODE: production
           MAILGUN_API_KEY: ${{ secrets.MAILGUN_API_KEY }}
@@ -39,6 +41,7 @@ jobs:
         run: node scripts/publish-announcements.mjs --send
 
       - name: Commit updated manifest and ledger
+        if: always()
         run: |
           if [[ -n "$(git status --porcelain announcements/manifest.json announcements/sent.json)" ]]; then
             git config user.name "github-actions[bot]"
@@ -49,3 +52,7 @@ jobs:
           else
             echo "No manifest or ledger changes to commit."
           fi
+
+      - name: Fail job if publish step failed
+        if: steps.publish_announcements.outcome == 'failure'
+        run: exit 1

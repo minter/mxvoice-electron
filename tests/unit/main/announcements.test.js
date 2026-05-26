@@ -59,6 +59,7 @@ describe('announcements module - fetchBody', () => {
   });
 
   it('fetches and caches an announcement body', async () => {
+    storeData.announcements_manifest_cache = { generated_at: '2026-04-09T00:00:00Z' };
     globalThis.fetch.mockResolvedValue({ ok: true, status: 200, text: async () => '---\ntitle: T\n---\nBody.' });
     const ann = createAnnouncements({
       store: mockStore, debugLog: mockDebugLog,
@@ -67,9 +68,14 @@ describe('announcements module - fetchBody', () => {
     const body = await ann.fetchBody('announcements/test.md');
     expect(body).toContain('Body.');
     expect(globalThis.fetch).toHaveBeenCalledWith('https://example.com/announcements/test.md', expect.any(Object));
+    expect(mockStore.set).toHaveBeenCalledWith(
+      'announcements_body_cache__announcements/test.md',
+      { body: '---\ntitle: T\n---\nBody.', manifestGeneratedAt: '2026-04-09T00:00:00Z' }
+    );
   });
 
   it('returns cached body without network call on second fetch', async () => {
+    storeData.announcements_manifest_cache = { generated_at: '2026-04-09T00:00:00Z' };
     globalThis.fetch.mockResolvedValue({ ok: true, status: 200, text: async () => 'body' });
     const ann = createAnnouncements({
       store: mockStore, debugLog: mockDebugLog,
@@ -80,6 +86,22 @@ describe('announcements module - fetchBody', () => {
     const second = await ann.fetchBody('announcements/x.md');
     expect(second).toBe('body');
     expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refetches body when the manifest generation changes', async () => {
+    storeData.announcements_manifest_cache = { generated_at: '2026-04-09T00:00:00Z' };
+    globalThis.fetch.mockResolvedValue({ ok: true, status: 200, text: async () => 'new-body' });
+    storeData['announcements_body_cache__announcements/x.md'] = {
+      body: 'old-body',
+      manifestGeneratedAt: '2026-04-01T00:00:00Z',
+    };
+    const ann = createAnnouncements({
+      store: mockStore, debugLog: mockDebugLog,
+      manifestUrl: 'https://example.com/m.json', bodyUrlBase: 'https://example.com/',
+    });
+    const body = await ann.fetchBody('announcements/x.md');
+    expect(body).toBe('new-body');
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 });
 

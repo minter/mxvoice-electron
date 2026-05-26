@@ -16,6 +16,14 @@ function unwrap(result) {
   return result;
 }
 
+function parseVersion(version) {
+  const [major = 0, minor = 0, patch = 0] = String(version || '')
+    .split('-')[0]
+    .split('.')
+    .map((part) => parseInt(part, 10) || 0);
+  return { major, minor, patch };
+}
+
 export class TourManager {
   constructor(tourData) {
     this.tourData = tourData;
@@ -33,6 +41,18 @@ export class TourManager {
     const baseVersion = String(version).split('-')[0];
     if (baseVersion && baseVersion !== version) {
       return this.tourData.tours[baseVersion] || null;
+    }
+
+    const requested = parseVersion(baseVersion);
+    const compatibleTours = Object.entries(this.tourData.tours)
+      .filter(([tourVersion]) => {
+        const candidate = parseVersion(tourVersion);
+        return candidate.major === requested.major && candidate.minor === requested.minor;
+      })
+      .sort((a, b) => parseVersion(b[0]).patch - parseVersion(a[0]).patch);
+
+    if (compatibleTours.length > 0) {
+      return compatibleTours[0][1];
     }
 
     return null;
