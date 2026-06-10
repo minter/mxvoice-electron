@@ -320,7 +320,13 @@ const secureElectronAPI = {
       ipcRenderer.on('display_release_notes', handler);
       return () => ipcRenderer.removeListener('display_release_notes', handler);
     },
-    
+
+    onOpenSubscribe: (callback) => {
+      const handler = () => callback();
+      ipcRenderer.on('announcements:open-subscribe', handler);
+      return () => ipcRenderer.removeListener('announcements:open-subscribe', handler);
+    },
+
     // Font size events
     onIncreaseFontSize: (callback) => {
       const handler = (_event, ...args) => callback(...args);
@@ -511,6 +517,16 @@ const secureElectronAPI = {
     setOptOut: (value) => ipcRenderer.invoke('analytics:set-opt-out', value),
   },
 
+  // Announcements
+  announcements: {
+    getManifest: () => ipcRenderer.invoke('announcements:get-manifest'),
+    getBody: (relativePath) => ipcRenderer.invoke('announcements:get-body', relativePath),
+    subscribe: (email, vars) => ipcRenderer.invoke('announcements:subscribe', email, vars),
+  },
+
+  // Platform string (darwin/win32/linux) — exposed synchronously for audience filtering
+  platform: process.platform,
+
   // Testing and debugging functions
   testing: {
     testModularPreload: () => {
@@ -554,6 +570,7 @@ function exposeSecureAPI(injectedDebugLog) {
         onBulkAddDialogLoad: secureElectronAPI.events.onBulkAddDialogLoad,
         onAddDialogLoad: secureElectronAPI.events.onAddDialogLoad,
         onDisplayReleaseNotes: secureElectronAPI.events.onDisplayReleaseNotes,
+        onOpenSubscribe: secureElectronAPI.events.onOpenSubscribe,
         onSwitchProfile: secureElectronAPI.events.onSwitchProfile,
         removeAllListeners: secureElectronAPI.events.removeAllListeners,
         database: secureElectronAPI.database,
@@ -568,7 +585,9 @@ function exposeSecureAPI(injectedDebugLog) {
         library: secureElectronAPI.library,
         // Provide logs under legacy namespace for compatibility with existing renderer code
         logs: secureElectronAPI.logs,
-        analytics: secureElectronAPI.analytics
+        analytics: secureElectronAPI.analytics,
+        announcements: secureElectronAPI.announcements,
+        platform: secureElectronAPI.platform
       });
       
       if (debugLog && typeof debugLog.info === 'function') {

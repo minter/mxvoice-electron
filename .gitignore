@@ -153,6 +153,8 @@ tests/fixtures/**
 !tests/fixtures/test-holding-tank/**
 !tests/fixtures/test-hotkeys/
 !tests/fixtures/test-hotkeys/**
+!tests/fixtures/announcements/
+!tests/fixtures/announcements/**
 tests/test-results/
 tests/playwright-report/
 
@@ -224,6 +226,8 @@ tests/**/isolation.lock
 # Re-include curated test song fixtures (override broader ignores above)
 !tests/fixtures/test-songs/
 !tests/fixtures/test-songs/**
+!tests/fixtures/announcements/
+!tests/fixtures/announcements/**
 
 # Test backup and archive files
 tests/**/*.backup

@@ -47,7 +47,9 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "announcements:publish:dry-run": "node scripts/publish-announcements.mjs --dry-run",
+    "announcements:publish": "node scripts/publish-announcements.mjs --send"
   },
   "build": {
     "appId": "com.electron.mx.-voice",
@@ -182,7 +184,9 @@
     "electron-updater": "^6.8.3",
     "electron-util": "^1.0.0",
     "extract-zip": "^2.0.1",
+    "gray-matter": "^4.0.3",
     "howler": "^2.2.3",
+    "marked": "^18.0.0",
     "mousetrap": "^1.6.5",
     "music-metadata": "11.12.3",
     "n-readlines": "^3.4.1",

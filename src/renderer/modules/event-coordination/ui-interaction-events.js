@@ -144,7 +144,31 @@ export default class UIInteractionEvents {
             this.debugLog?.error('Failed to sanitize HTML, falling back to plain text:', error);
             modalBody.textContent = decodedNotes;
           }
+
+        // Append subscribe CTA to modal footer (idempotent — only add once)
+        const modalFooter = document.querySelector('#newReleaseModal .modal-footer');
+        if (modalFooter && !modalFooter.querySelector('.announcements-release-cta')) {
+          const cta = document.createElement('a');
+          cta.href = '#';
+          cta.classList.add('announcements-release-cta', 'text-muted', 'small', 'me-auto');
+          const icon = document.createElement('span');
+          icon.setAttribute('aria-hidden', 'true');
+          icon.textContent = '📧 ';
+          const label = document.createElement('span');
+          label.textContent = 'Want release news by email? ';
+          const strong = document.createElement('strong');
+          strong.textContent = 'Subscribe';
+          cta.appendChild(icon);
+          cta.appendChild(label);
+          cta.appendChild(strong);
+          cta.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.secureElectronAPI?.analytics?.trackEvent?.('announcement_cta_clicked', { source: 'release_modal_footer' });
+            window.mxvoiceAnnouncements?.openSubscribe?.();
+          });
+          modalFooter.prepend(cta);
         }
+      }
       };
       window.addEventListener('mxvoice:update-release-notes', updateReleaseNotesListener);
       this.uiHandlers.set('mxvoiceUpdateReleaseNotes', { element: window, event: 'mxvoice:update-release-notes', handler: updateReleaseNotesListener });

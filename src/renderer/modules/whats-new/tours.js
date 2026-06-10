@@ -74,6 +74,10 @@ export default {
           postAction: { type: 'closeModal', target: '#preferencesModal' },
           skipIfMissing: true,
         },
+        {
+          title: 'Stay in the loop',
+          description: "Want to hear about new releases and important updates? <a href=\"#\" id=\"tour-subscribe-link\">Subscribe for email updates</a> \u2014 totally optional, unsubscribe any time.",
+        },
       ],
     },
   },

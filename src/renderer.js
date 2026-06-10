@@ -170,6 +170,9 @@ import AppBootstrap from './renderer/modules/app-bootstrap/index.js';
 // Import app initialization module for centralized initialization
 import AppInitialization from './renderer/modules/app-initialization/index.js';
 
+// Import announcements module for in-app announcement system
+import { initAnnouncements } from './renderer/modules/announcements/index.js';
+
 // Load and display current profile
 (async function loadProfileIndicator() {
   try {
@@ -840,6 +843,13 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     // Auto-trigger What's New tour if applicable
     if (moduleRegistry.whatsNew && moduleRegistry.whatsNew.initWhatsNew) {
       await moduleRegistry.whatsNew.initWhatsNew();
+    }
+
+    // Initialize in-app announcements system
+    try {
+      await initAnnouncements();
+    } catch (announcementsError) {
+      window.logWarn('Announcements init failed (non-fatal)', { error: announcementsError?.message });
     }
 
     // Set up keyboard shortcuts using the keyboard manager module

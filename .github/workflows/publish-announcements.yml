@@ -1,0 +1,58 @@
+name: Publish Announcements
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'announcements/**.md'
+      - 'scripts/publish-announcements.mjs'
+      - 'scripts/email-template.html'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish announcements
+        id: publish_announcements
+        continue-on-error: true
+        env:
+          MAILGUN_MODE: production
+          MAILGUN_API_KEY: ${{ secrets.MAILGUN_API_KEY }}
+          MAILGUN_DOMAIN: ${{ vars.MAILGUN_DOMAIN }}
+          MAILGUN_LIST_ADDRESS: ${{ vars.MAILGUN_LIST_ADDRESS }}
+          MAILGUN_FROM: ${{ vars.MAILGUN_FROM }}
+        run: node scripts/publish-announcements.mjs --send
+
+      - name: Commit updated manifest and ledger
+        if: always()
+        run: |
+          if [[ -n "$(git status --porcelain announcements/manifest.json announcements/sent.json)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add announcements/manifest.json announcements/sent.json
+            git commit -m "chore: publish announcements [skip ci]"
+            git push
+          else
+            echo "No manifest or ledger changes to commit."
+          fi
+
+      - name: Fail job if publish step failed
+        if: steps.publish_announcements.outcome == 'failure'
+        run: exit 1

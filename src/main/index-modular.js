@@ -57,6 +57,7 @@ import * as profileBackupManager from './modules/profile-backup-manager.js';
 import * as autoBackupTimer from './modules/auto-backup-timer.js';
 import * as libraryTransferManager from './modules/library-transfer-manager.js';
 import * as launcherWindow from './modules/launcher-window.js';
+import { createAnnouncements } from './modules/announcements.js';
 import { selfHealDirectoryPreferences } from './modules/preferences-self-heal.js';
 
 const appStartTime = Date.now();
@@ -770,6 +771,25 @@ async function initializeAnalytics() {
   });
 }
 
+// Initialize announcements
+let announcements = null;
+announcements = createAnnouncements({
+  store,
+  debugLog,
+  manifestUrl: 'https://raw.githubusercontent.com/minter/mxvoice-electron/main/announcements/manifest.json',
+  bodyUrlBase: 'https://raw.githubusercontent.com/minter/mxvoice-electron/main/',
+  mailgun: {
+    apiKey: process.env.MAILGUN_API_KEY || '',
+    domain: process.env.MAILGUN_DOMAIN || '',
+    listAddress: process.env.MAILGUN_LIST_ADDRESS || '',
+  },
+});
+
+// Non-blocking manifest fetch 3 seconds after startup
+setTimeout(() => { announcements.fetchManifest().catch(() => {}); }, 3000);
+// Periodic refresh every 6 hours
+setInterval(() => { announcements.fetchManifest().catch(() => {}); }, 6 * 60 * 60 * 1000);
+
 // Track library size after database is available
 function trackLibraryStats() {
   if (!analytics || !db) return;
@@ -826,6 +846,7 @@ async function initializeModules() {
     getCurrentProfile,
     autoBackupTimer,
     analytics,
+    announcements,
     appStartTime
   };
 
