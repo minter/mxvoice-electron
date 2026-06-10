@@ -138,15 +138,32 @@ test.describe("What's New Tour", () => {
       }
     });
 
+    // Advance through the tour until the Preferences modal opens. Each "Next"
+    // click kicks off an async transition (modal open/close + DOM-settle waits)
+    // during which Driver.js keeps the Next button clickable and the popover on
+    // the *current* step. A fixed delay races under CI load: if the transition
+    // outlasts the delay, the loop clicks Next again and overshoots the
+    // preferences step (eventually tearing the tour down, which closes the
+    // modal). Instead, wait for a deterministic signal that the transition
+    // finished — the popover title advancing, or the modal appearing — before
+    // re-evaluating, so we never click Next mid-transition.
+    const popoverTitle = page.locator('.driver-popover-title');
     for (let step = 0; step < 8; step += 1) {
       if (await page.locator('#preferencesModal').isVisible()) {
         break;
       }
 
+      const previousTitle = await popoverTitle.textContent();
       const nextBtn = page.locator('.driver-popover-next-btn');
       await expect(nextBtn).toBeVisible({ timeout: 5000 });
       await nextBtn.click();
-      await page.waitForTimeout(500);
+
+      await expect
+        .poll(async () => {
+          if (await page.locator('#preferencesModal').isVisible()) return '__modal__';
+          return popoverTitle.textContent();
+        }, { timeout: 15_000 })
+        .not.toBe(previousTitle);
     }
 
     await expect(page.locator('#preferencesModal')).toBeVisible({ timeout: 5000 });
