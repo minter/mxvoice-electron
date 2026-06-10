@@ -179,7 +179,7 @@
     "driver.js": "^1.4.0",
     "electron-log": "^5.4.4",
     "electron-store": "^11.0.2",
-    "electron-updater": "^6.8.3",
+    "electron-updater": "^6.8.9",
     "electron-util": "^1.0.0",
     "extract-zip": "^2.0.1",
     "howler": "^2.2.3",
