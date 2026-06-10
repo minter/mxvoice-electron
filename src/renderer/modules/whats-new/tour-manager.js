@@ -30,6 +30,10 @@ export class TourManager {
     this.helpers = {};
     this.activeDriver = null;
     this.currentSteps = null;
+    // Re-entrancy guard: true while a step transition (async pre/post actions
+    // + Driver.js move) is in flight. Prevents fast/double Next/Prev clicks
+    // from running transitions concurrently and overshooting steps.
+    this._transitioning = false;
   }
 
   getTourForVersion(version) {
@@ -233,54 +237,65 @@ export class TourManager {
      * a visible close/reopen flicker.
      */
     const transitionTo = async (targetIndex) => {
-      const currentStep = activeSteps[currentStepIndex];
-      const targetStep = activeSteps[targetIndex];
+      // Mark a transition as in flight. Nested recursive calls (the skip path
+      // below) see wasTransitioning === true and must NOT clear the flag when
+      // they finish — only the outermost call clears it.
+      const wasTransitioning = this._transitioning;
+      this._transitioning = true;
+      try {
+        const currentStep = activeSteps[currentStepIndex];
+        const targetStep = activeSteps[targetIndex];
 
-      // Check if post/pre actions cancel out (e.g., close then reopen same modal)
-      const postAction = currentStep?.postAction;
-      const preAction = targetStep?.preAction;
-      const actionsRedundant = postAction && preAction
-        && postAction.type === 'closeModal' && preAction.type === 'openModal'
-        && postAction.target === preAction.target;
-      // Also check function-based: same named helper on consecutive steps
-      const sameFunctionHelper = postAction && preAction
-        && preAction.type === 'function' && currentStep?.preAction?.type === 'function'
-        && preAction.name === currentStep.preAction.name;
-      const skipBoth = actionsRedundant || sameFunctionHelper;
+        // Check if post/pre actions cancel out (e.g., close then reopen same modal)
+        const postAction = currentStep?.postAction;
+        const preAction = targetStep?.preAction;
+        const actionsRedundant = postAction && preAction
+          && postAction.type === 'closeModal' && preAction.type === 'openModal'
+          && postAction.target === preAction.target;
+        // Also check function-based: same named helper on consecutive steps
+        const sameFunctionHelper = postAction && preAction
+          && preAction.type === 'function' && currentStep?.preAction?.type === 'function'
+          && preAction.name === currentStep.preAction.name;
+        const skipBoth = actionsRedundant || sameFunctionHelper;
 
-      // PostAction for current step (unless redundant with next preAction)
-      if (currentStep && postAction && !skipBoth) {
-        await this.executeAction(postAction);
-        await this.waitForDomSettle();
-      }
-
-      // PreAction for target step (unless redundant with previous postAction)
-      if (targetStep && preAction && !skipBoth) {
-        await this.executeAction(preAction);
-        await this.waitForDomSettle();
-      }
-
-      // Runtime skip check after preAction
-      if (targetStep && this.shouldSkipStep(targetStep)) {
-        window.debugLog?.info(`Skipping tour step "${targetStep.title}" — element not found`, {
-          module: 'whats-new',
-          function: 'launchTour',
-        });
-        if (targetStep.postAction) {
-          await this.executeAction(targetStep.postAction);
+        // PostAction for current step (unless redundant with next preAction)
+        if (currentStep && postAction && !skipBoth) {
+          await this.executeAction(postAction);
           await this.waitForDomSettle();
         }
-        // Skip forward or backward depending on direction
-        const direction = targetIndex > currentStepIndex ? 1 : -1;
-        const nextTarget = targetIndex + direction;
-        if (nextTarget >= 0 && nextTarget < activeSteps.length) {
-          await transitionTo(nextTarget);
-        }
-        return;
-      }
 
-      currentStepIndex = targetIndex;
-      this.activeDriver.moveTo(targetIndex);
+        // PreAction for target step (unless redundant with previous postAction)
+        if (targetStep && preAction && !skipBoth) {
+          await this.executeAction(preAction);
+          await this.waitForDomSettle();
+        }
+
+        // Runtime skip check after preAction
+        if (targetStep && this.shouldSkipStep(targetStep)) {
+          window.debugLog?.info(`Skipping tour step "${targetStep.title}" — element not found`, {
+            module: 'whats-new',
+            function: 'launchTour',
+          });
+          if (targetStep.postAction) {
+            await this.executeAction(targetStep.postAction);
+            await this.waitForDomSettle();
+          }
+          // Skip forward or backward depending on direction. This recursive
+          // call is intentionally not gated by the click guard — it continues
+          // the same in-flight transition rather than starting a new one.
+          const direction = targetIndex > currentStepIndex ? 1 : -1;
+          const nextTarget = targetIndex + direction;
+          if (nextTarget >= 0 && nextTarget < activeSteps.length) {
+            await transitionTo(nextTarget);
+          }
+          return;
+        }
+
+        currentStepIndex = targetIndex;
+        this.activeDriver.moveTo(targetIndex);
+      } finally {
+        if (!wasTransitioning) this._transitioning = false;
+      }
     };
 
     this.activeDriver = driver({
@@ -292,6 +307,9 @@ export class TourManager {
       doneBtnText: 'Done',
       // Intercept Next/Prev to run pre/post actions before Driver.js moves
       onNextClick: async () => {
+        // Ignore clicks while a transition is mid-flight, otherwise a fast or
+        // double click could overshoot steps or destroy the tour early.
+        if (this._transitioning) return;
         const nextIndex = currentStepIndex + 1;
         if (nextIndex < activeSteps.length) {
           await transitionTo(nextIndex);
@@ -301,6 +319,7 @@ export class TourManager {
         }
       },
       onPrevClick: async () => {
+        if (this._transitioning) return;
         const prevIndex = currentStepIndex - 1;
         if (prevIndex >= 0) {
           await transitionTo(prevIndex);
@@ -324,11 +343,18 @@ export class TourManager {
       },
     });
 
-    // Run preAction for the first step BEFORE starting the tour
+    // Run preAction for the first step BEFORE starting the tour. Guard it too
+    // so any Next/Prev click that races first-step setup is ignored until the
+    // step is displayed.
     const firstStep = activeSteps[0];
     if (firstStep && firstStep.preAction) {
-      await this.executeAction(firstStep.preAction);
-      await this.waitForDomSettle();
+      this._transitioning = true;
+      try {
+        await this.executeAction(firstStep.preAction);
+        await this.waitForDomSettle();
+      } finally {
+        this._transitioning = false;
+      }
     }
 
     this.activeDriver.drive();

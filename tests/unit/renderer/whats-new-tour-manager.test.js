@@ -17,6 +17,7 @@ vi.mock('driver.js', () => {
   const mockDriverInstance = {
     drive: vi.fn(),
     destroy: vi.fn(),
+    moveTo: vi.fn(),
     isActive: vi.fn(() => false),
   };
   return {
@@ -96,7 +97,7 @@ window.secureElectronAPI = {
 const { TourManager } = await import(
   '../../../src/renderer/modules/whats-new/tour-manager.js'
 );
-const { __mockInstance: mockDriver } = await import('driver.js');
+const { __mockInstance: mockDriver, driver: mockDriverFactory } = await import('driver.js');
 const { initWhatsNew, showWhatsNew, tourManager } = await import(
   '../../../src/renderer/modules/whats-new/index.js'
 );
@@ -306,6 +307,112 @@ describe('TourManager', () => {
     it('does nothing for null/undefined action', async () => {
       await expect(manager.executeAction(null)).resolves.toBeUndefined();
       await expect(manager.executeAction(undefined)).resolves.toBeUndefined();
+    });
+  });
+
+  describe('transition re-entrancy guard', () => {
+    function appendEls(ids) {
+      ids.forEach((id) => {
+        const el = document.createElement('div');
+        el.id = id;
+        document.body.appendChild(el);
+      });
+      return () => ids.forEach((id) => {
+        const el = domElements[id];
+        if (el) document.body.removeChild(el);
+      });
+    }
+
+    function lastDriverConfig() {
+      return mockDriverFactory.mock.calls.at(-1)[0];
+    }
+
+    it('ignores a Next click while a transition is already running', async () => {
+      const cleanup = appendEls(['s0', 's1', 's2']);
+      let resolveSlow;
+      const slowCalls = [];
+      const tours = {
+        tours: {
+          '4.3.0': {
+            title: 't',
+            steps: [
+              { element: '#s0', title: 'A', description: 'a' },
+              {
+                element: '#s1',
+                title: 'B',
+                description: 'b',
+                preAction: { type: 'function', name: 'slow' },
+              },
+              { element: '#s2', title: 'C', description: 'c' },
+            ],
+          },
+        },
+      };
+      const m = new TourManager(tours);
+      m.registerHelper('slow', () => {
+        slowCalls.push(1);
+        return new Promise((resolve) => { resolveSlow = resolve; });
+      });
+
+      await m.launchTour('4.3.0', { markSeen: false });
+      const cfg = lastDriverConfig();
+
+      // First Next click: starts transition to step 1, blocks on slow preAction.
+      const p1 = cfg.onNextClick();
+      await Promise.resolve();
+      // Second Next click while the first transition is mid-flight.
+      await cfg.onNextClick();
+
+      // The guard should have prevented the second click from starting a
+      // concurrent transition (which would call the slow helper again).
+      expect(slowCalls.length).toBe(1);
+
+      resolveSlow();
+      await p1;
+
+      // Only one step advance should have happened.
+      expect(mockDriver.moveTo).toHaveBeenCalledTimes(1);
+      expect(mockDriver.moveTo).toHaveBeenCalledWith(1);
+
+      cleanup();
+    });
+
+    it('does not block the recursive skip path for runtime-skipped steps', async () => {
+      // s1 has a preAction (so it survives pre-filtering) but its element is
+      // absent at runtime, forcing the recursive skip-forward inside
+      // transitionTo. The guard must not block that recursion.
+      const cleanup = appendEls(['s0', 's2']);
+      const tours = {
+        tours: {
+          '4.3.0': {
+            title: 't',
+            steps: [
+              { element: '#s0', title: 'A', description: 'a' },
+              {
+                element: '#missing-s1',
+                title: 'B',
+                description: 'b',
+                skipIfMissing: true,
+                preAction: { type: 'function', name: 'noop' },
+              },
+              { element: '#s2', title: 'C', description: 'c' },
+            ],
+          },
+        },
+      };
+      const m = new TourManager(tours);
+      m.registerHelper('noop', () => Promise.resolve());
+
+      await m.launchTour('4.3.0', { markSeen: false });
+      const cfg = lastDriverConfig();
+
+      await cfg.onNextClick();
+
+      // Step 1 is skipped at runtime; the tour should land on step 2.
+      expect(mockDriver.moveTo).toHaveBeenCalledTimes(1);
+      expect(mockDriver.moveTo).toHaveBeenCalledWith(2);
+
+      cleanup();
     });
   });
 
