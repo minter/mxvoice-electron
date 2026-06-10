@@ -50,12 +50,27 @@ jobs:
       # path.txt unwritten, so require('electron') throws ENOENT before any
       # test runs. Provision the binary once, sequentially, up front.
       - name: Install Electron binary
-        run: node node_modules/electron/install.js
+        shell: bash
+        run: |
+          node node_modules/electron/install.js
+          echo "--- electron state after install.js ---"
+          ls -la node_modules/electron/ || true
+          echo "path.txt:"; cat node_modules/electron/path.txt || echo "MISSING after install"
+        env:
+          DEBUG: '@electron/get:*'
 
       - name: Install Playwright runtime
         run: npm run test:install
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Verify Electron binary before tests
+        shell: bash
+        run: |
+          echo "--- electron state right before tests ---"
+          ls -la node_modules/electron/ || true
+          echo "path.txt:"; cat node_modules/electron/path.txt || echo "MISSING before tests"
+          node -e "console.log('resolved electron:', require('electron'))" || echo "require(electron) FAILED"
 
       - name: Cache Playwright assets
         uses: actions/cache@v4
