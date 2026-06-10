@@ -37,6 +37,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Electron binary
+        uses: actions/cache@v4
+        with:
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          path: |
+            ~/Library/Caches/electron
+            ~/AppData/Local/electron/Cache
+
+      # Electron's own postinstall downloads + extracts the binary via an
+      # unawaited promise; on CI runners the process exits after the download
+      # resolves but before extraction writes path.txt, so require('electron')
+      # throws ENOENT before any test runs. Provision deterministically instead.
+      - name: Install Electron binary
+        run: node build/ci-install-electron.cjs
+
       - name: Install Playwright runtime
         run: npm run test:install
         env:
