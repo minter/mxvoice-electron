@@ -37,6 +37,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Electron binary
+        uses: actions/cache@v4
+        with:
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          path: |
+            ~/Library/Caches/electron
+            ~/AppData/Local/electron/Cache
+
+      # Electron 42.3.x moved binary provisioning to a lazy on-require download.
+      # Under Playwright's parallel workers that download races and leaves
+      # path.txt unwritten, so require('electron') throws ENOENT before any
+      # test runs. Provision the binary once, sequentially, up front.
+      - name: Install Electron binary
+        run: node node_modules/electron/install.js
+
       - name: Install Playwright runtime
         run: npm run test:install
         env:
