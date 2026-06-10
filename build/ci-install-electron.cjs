@@ -22,7 +22,6 @@ const fs = require('fs');
 const path = require('path');
 const childProcess = require('child_process');
 const { downloadArtifact } = require('@electron/get');
-const extract = require('extract-zip');
 
 const electronDir = path.dirname(require.resolve('electron/package.json'));
 const { version } = require(path.join(electronDir, 'package.json'));
@@ -93,9 +92,21 @@ async function main() {
   });
   trace(`downloadArtifact resolved: ${zipPath} (exists=${fs.existsSync(zipPath)})`);
 
-  trace('calling extract...');
-  await extract(zipPath, { dir: distDir });
-  trace('extract resolved');
+  // Extract synchronously. extract-zip's async extraction is silently
+  // abandoned on some CI Node builds (the event loop drains mid-extract and
+  // the process exits 0 without unzipping), so use a blocking native unzip.
+  fs.mkdirSync(distDir, { recursive: true });
+  trace('extracting (sync)...');
+  if (process.platform === 'win32') {
+    // bsdtar ships with Windows 10+ and handles zip archives.
+    childProcess.execFileSync('tar', ['-xf', zipPath, '-C', distDir], { stdio: 'inherit' });
+  } else if (process.platform === 'darwin') {
+    // ditto preserves the symlinks/permissions inside Electron.app.
+    childProcess.execFileSync('ditto', ['-x', '-k', zipPath, distDir], { stdio: 'inherit' });
+  } else {
+    childProcess.execFileSync('unzip', ['-q', '-o', zipPath, '-d', distDir], { stdio: 'inherit' });
+  }
+  trace('extract complete');
 
   // Move bundled type definitions up, mirroring electron/install.js.
   const srcTypeDef = path.join(distDir, 'electron.d.ts');
