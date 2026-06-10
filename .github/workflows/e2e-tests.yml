@@ -52,6 +52,16 @@ jobs:
       - name: Install Electron binary
         run: node build/ci-install-electron.cjs
 
+      - name: Dump electron provision log
+        if: always()
+        shell: bash
+        run: |
+          echo "--- electron-provision.log ---"
+          cat electron-provision.log || echo "(no log)"
+          echo "--- node_modules/electron ---"
+          ls -la node_modules/electron/ || true
+          echo "path.txt: $(cat node_modules/electron/path.txt 2>&1)"
+
       - name: Install Playwright runtime
         run: npm run test:install
         env:
