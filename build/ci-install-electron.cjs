@@ -3,20 +3,16 @@
  * Deterministically provision the Electron binary for CI.
  *
  * Electron's own postinstall (node_modules/electron/install.js) downloads and
- * extracts the binary via an UNAWAITED top-level promise:
+ * extracts the binary with extract-zip. On the GitHub runners' Node build the
+ * async extraction is silently abandoned: the event loop drains mid-extract and
+ * the process exits 0 without unzipping, so node_modules/electron/path.txt is
+ * never written and require('electron') throws ENOENT at test time. Under
+ * Playwright's parallel workers each worker then races the lazy re-download and
+ * the E2E suite dies before any test runs.
  *
- *   downloadArtifact(...).then(extractFile).catch(...)
- *
- * On GitHub's runners the node process exits as soon as the download resolves —
- * before extractFile() unzips the binary and writes path.txt. The result is an
- * install that "succeeds" (exit 0) but leaves node_modules/electron/path.txt
- * missing, so require('electron') throws ENOENT at test time. Under Playwright's
- * parallel workers each worker then races the lazy re-download and the E2E suite
- * dies before any test runs.
- *
- * This script performs the same download + extract, but AWAITS every step, so
- * the process cannot exit until path.txt is written. It then verifies the result
- * and exits non-zero if provisioning failed.
+ * This script downloads via @electron/get (which works), then extracts with a
+ * blocking native unzip so there is no event loop to abandon. It verifies the
+ * binary and path.txt exist and exits non-zero if provisioning failed.
  */
 const fs = require('fs');
 const path = require('path');
@@ -25,20 +21,6 @@ const { downloadArtifact } = require('@electron/get');
 
 const electronDir = path.dirname(require.resolve('electron/package.json'));
 const { version } = require(path.join(electronDir, 'package.json'));
-
-// --- debug instrumentation (synchronous, truncation-proof) ---
-const LOG = path.join(process.cwd(), 'electron-provision.log');
-function trace(msg) {
-  const line = `[${new Date().toISOString()}] ${msg}\n`;
-  try { fs.appendFileSync(LOG, line); } catch {}
-  process.stderr.write(line);
-}
-try { fs.writeFileSync(LOG, ''); } catch {}
-process.on('exit', (code) => trace(`process exit event, code=${code}`));
-process.on('beforeExit', (code) => trace(`process beforeExit event, code=${code}`));
-process.on('unhandledRejection', (err) => { trace(`unhandledRejection: ${err && err.stack || err}`); process.exitCode = 1; });
-process.on('uncaughtException', (err) => { trace(`uncaughtException: ${err && err.stack || err}`); process.exitCode = 1; });
-trace(`start: node ${process.version}, platform=${process.platform}, arch=${process.arch}`);
 
 function getPlatformPath(platform) {
   switch (platform) {
@@ -82,7 +64,6 @@ async function main() {
   }
 
   console.log(`Provisioning Electron ${version} for ${platform}-${arch}...`);
-  trace('calling downloadArtifact...');
   const zipPath = await downloadArtifact({
     version,
     artifactName: 'electron',
@@ -90,13 +71,9 @@ async function main() {
     arch,
     checksums: require(path.join(electronDir, 'checksums.json'))
   });
-  trace(`downloadArtifact resolved: ${zipPath} (exists=${fs.existsSync(zipPath)})`);
 
-  // Extract synchronously. extract-zip's async extraction is silently
-  // abandoned on some CI Node builds (the event loop drains mid-extract and
-  // the process exits 0 without unzipping), so use a blocking native unzip.
+  // Extract synchronously (see file header for why extract-zip is avoided here).
   fs.mkdirSync(distDir, { recursive: true });
-  trace('extracting (sync)...');
   if (process.platform === 'win32') {
     // bsdtar ships with Windows 10+ and handles zip archives.
     childProcess.execFileSync('tar', ['-xf', zipPath, '-C', distDir], { stdio: 'inherit' });
@@ -106,7 +83,6 @@ async function main() {
   } else {
     childProcess.execFileSync('unzip', ['-q', '-o', zipPath, '-d', distDir], { stdio: 'inherit' });
   }
-  trace('extract complete');
 
   // Move bundled type definitions up, mirroring electron/install.js.
   const srcTypeDef = path.join(distDir, 'electron.d.ts');
