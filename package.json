@@ -186,7 +186,7 @@
     "mousetrap": "^1.6.5",
     "music-metadata": "11.13.0",
     "n-readlines": "^3.4.1",
-    "node-sqlite3-wasm": "^0.8.58",
+    "node-sqlite3-wasm": "^0.8.59",
     "posthog-node": "^5.38.7",
     "uuid": "^14.0.1",
     "wavesurfer.js": "^7.12.8"
