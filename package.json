@@ -199,7 +199,7 @@
     "electron-builder": "26.15.3",
     "electron-reload": "^1.5.0",
     "esbuild": "^0.28.1",
-    "eslint": "^10.5.0",
+    "eslint": "^10.6.0",
     "globals": "^17.7.0",
     "node-abi": "4.31.0",
     "playwright": "^1.61.1",
