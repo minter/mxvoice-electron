@@ -189,7 +189,7 @@
     "node-sqlite3-wasm": "^0.8.59",
     "posthog-node": "^5.39.4",
     "uuid": "^14.0.1",
-    "wavesurfer.js": "^7.12.8"
+    "wavesurfer.js": "^7.12.9"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
