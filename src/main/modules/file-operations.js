@@ -18,6 +18,34 @@ let mainWindow;
 let store;
 let debugLog;
 
+function parseHotkeyFileLines(lines) {
+  const hotkeys = {};
+  let title = '';
+  const errors = [];
+
+  lines.forEach((rawLine, index) => {
+    const line = String(rawLine).trim();
+    if (!line) return;
+    const separator = line.indexOf('::');
+    if (separator < 0) {
+      errors.push(`Line ${index + 1}: missing :: separator`);
+      return;
+    }
+    const key = line.slice(0, separator).trim().toLowerCase();
+    const value = line.slice(separator + 2).trim();
+    if (/^f(?:[1-9]|1[0-2])$/.test(key)) {
+      if (value && !/^\d+$/.test(value)) errors.push(`Line ${index + 1}: invalid song ID for ${key}`);
+      else hotkeys[key] = value;
+    } else if (key === 'tab_name') {
+      title = value.replaceAll('_', ' ');
+    } else {
+      errors.push(`Line ${index + 1}: unknown key "${key || '(empty)'}"`);
+    }
+  });
+
+  return { hotkeys, title, errors };
+}
+
 // Initialize the module with dependencies
 function initializeFileOperations(dependencies) {
   mainWindow = dependencies.mainWindow;
@@ -61,23 +89,19 @@ function loadHotkeysFile() {
       else {
         const filename = result.filePaths[0];
         debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'loadHotkeysFile', filename: filename });
-        const line_reader = new readlines(filename);
-        let title;
-
+        const lineReader = new readlines(filename);
+        const lines = [];
         let line;
-         
-        while ((line = line_reader.next())) {
-          const lineStr = line.toString().trim();
-          debugLog?.info('📁 Reading line:', { module: 'file-operations', function: 'loadHotkeysFile', line: lineStr });
-          let [key, val] = lineStr.split('::');
-          debugLog?.info('📁 Parsed key:', { module: 'file-operations', function: 'loadHotkeysFile', key: key, value: val });
-          if (/^\D\d+$/.test(key)) {
-            fkey_mapping[key] = val;
-            debugLog?.info('📁 Added to fkey_mapping:', { module: 'file-operations', function: 'loadHotkeysFile', key: key, value: val });
-          } else {
-            title = val.replace('_', ' ')
-            debugLog?.info('📁 Set title to:', { module: 'file-operations', function: 'loadHotkeysFile', title: title });
-          }
+        while ((line = lineReader.next())) lines.push(line.toString());
+        const parsed = parseHotkeyFileLines(lines);
+        Object.assign(fkey_mapping, parsed.hotkeys);
+        const title = parsed.title;
+        if (parsed.errors.length) {
+          const error = `Invalid hotkey file:\n${parsed.errors.join('\n')}`;
+          debugLog?.warn(error, { module: 'file-operations', function: 'loadHotkeysFile', filename });
+          dialog.showErrorBox('Could not import hotkeys', error);
+          resolve({ success: false, error, validationErrors: parsed.errors });
+          return;
         }
         debugLog?.info('📁 Main process: Sending fkey_load with:', { module: 'file-operations', function: 'loadHotkeysFile', fkey_mapping: fkey_mapping, title: title });
         debugLog?.info('📁 fkey_mapping type:', { module: 'file-operations', function: 'loadHotkeysFile', type: typeof fkey_mapping });
@@ -330,7 +354,8 @@ export {
   addDirectoryDialog,
   addFileDialog,
   migrateOldPreferences,
-  testFileOperations
+  testFileOperations,
+  parseHotkeyFileLines
 };
 
 // Default export for module loading
@@ -343,5 +368,6 @@ export default {
   addDirectoryDialog,
   addFileDialog,
   migrateOldPreferences,
-  testFileOperations
-}; 
+  testFileOperations,
+  parseHotkeyFileLines
+};

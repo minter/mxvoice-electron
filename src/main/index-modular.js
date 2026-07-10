@@ -11,7 +11,7 @@
 // Add immediate logging to see if the file is being loaded
 // Note: debugLog will be initialized later in this file
 
-import { app } from 'electron';
+import { app, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { pipeline } from 'stream/promises';
@@ -583,8 +583,8 @@ async function initializeMainDatabaseWrapper() {
       function: "initializeMainDatabaseWrapper",
       error: error.message 
     });
-    // Don't re-throw - let the app continue without database
     db = null;
+    throw error;
   }
 }
 
@@ -920,46 +920,11 @@ const createWindow = async () => {
       stack: error.stack
     });
     
-    // Create a minimal window even if database fails
-    try {
-      const windowState = await appSetup.loadWindowState(store, currentProfile);
-      const windowOptions = windowState ? {
-        width: windowState.width || defaults.browser_width,
-        height: windowState.height || defaults.browser_height,
-        x: windowState.x,
-        y: windowState.y,
-        isMaximized: windowState.isMaximized,
-        isFullScreen: windowState.isFullScreen,
-        displayId: windowState.displayId
-      } : {
-        width: store.get('browser_width') || defaults.browser_width,
-        height: store.get('browser_height') || defaults.browser_height
-      };
-
-      mainWindow = appSetup.createWindow(windowOptions);
-      
-      // Initialize basic modules without database
-      await initializeModules();
-
-      // Track library stats now that DB is available
-      trackLibraryStats();
-
-      // Set up window state saving now that store is available
-      appSetup.setupWindowStateSaving();
-      
-      // Create the menu
-      appSetup.createApplicationMenu();
-      
-      debugLog?.info('Created minimal window despite database initialization failure', { 
-        function: "createWindow" 
-      });
-    } catch (fallbackError) {
-      debugLog?.error('Failed to create even minimal window', { 
-        function: "createWindow",
-        error: fallbackError.message 
-      });
-      app.quit();
-    }
+    dialog.showErrorBox(
+      'Mx. Voice could not open your library',
+      `Your persistent library database could not be opened. No temporary database was created, so your data remains untouched.\n\n${error.message}`
+    );
+    app.quit();
   }
 };
 

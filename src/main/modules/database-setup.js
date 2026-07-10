@@ -28,6 +28,10 @@ const debugLog = initializeMainDebugLog({ store });
 
 let dbInstance = null;
 
+function isTestDatabaseFallbackAllowed(env = process.env) {
+  return env.APP_TEST_MODE === '1' || !!env.E2E_USER_DATA_DIR || !!env.APP_TEST_USER_DATA_DIR;
+}
+
 /**
  * Initialize SQLite WebAssembly runtime
  */
@@ -195,8 +199,13 @@ async function initializeMainDatabase() {
       return dbInstance;
   } catch (error) {
     debugLog?.error('Error initializing database:', { module: 'database-setup', function: 'initializeMainDatabase', error: error.message, stack: error.stack });
-    
-    // Fallback: create a test database in memory
+
+    const allowInMemoryFallback = isTestDatabaseFallbackAllowed();
+    if (!allowInMemoryFallback) {
+      throw new Error(`Unable to open the persistent library database: ${error.message}`, { cause: error });
+    }
+
+    // Tests may use an in-memory fallback to keep failure-path tests isolated.
     debugLog?.info('Creating fallback in-memory database for testing', { module: 'database-setup', function: 'initializeMainDatabase' });
     try {
       dbInstance = new Database(':memory:');
@@ -210,9 +219,7 @@ async function initializeMainDatabase() {
     } catch (fallbackError) {
       debugLog?.error('Fallback database creation failed:', { module: 'database-setup', function: 'initializeMainDatabase', error: fallbackError.message, stack: fallbackError.stack });
       
-      // Last resort: return null and let the app continue without database
-      debugLog?.warn('Returning null database instance - app will continue without database functionality', { module: 'database-setup', function: 'initializeMainDatabase' });
-      return null;
+      throw new Error(`Test database fallback failed: ${fallbackError.message}`, { cause: fallbackError });
     }
   }
 }
@@ -339,7 +346,8 @@ function getMainDatabase() {
 
 export {
   initializeMainDatabase,
-  getMainDatabase
+  getMainDatabase,
+  isTestDatabaseFallbackAllowed
 };
 
 // Default export for module loading
@@ -348,5 +356,6 @@ export default {
   setupDatabaseSchema,
   setupDatabaseIndexes,
   migrateDatabase,
-  getMainDatabase
+  getMainDatabase,
+  isTestDatabaseFallbackAllowed
 };
