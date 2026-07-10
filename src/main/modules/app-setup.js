@@ -9,6 +9,7 @@ import electron from 'electron';
 import log from 'electron-log';
 import { getLogService } from './log-service.js';
 import * as profileManager from './profile-manager.js';
+import { isAllowedAboutExternalUrl } from './about-external-url.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -971,6 +972,22 @@ function showAboutDialog() {
     };
 
     const openExternalHandler = (event, url) => {
+      if (event.sender !== aboutWindow.webContents) {
+        debugLog?.warn('Rejected external URL request from unexpected sender', {
+          module: 'app-setup',
+          function: 'showAboutDialog',
+          url
+        });
+        return;
+      }
+      if (!isAllowedAboutExternalUrl(url)) {
+        debugLog?.warn('Rejected unapproved About window URL', {
+          module: 'app-setup',
+          function: 'showAboutDialog',
+          url
+        });
+        return;
+      }
       debugLog?.info('Opening external URL from about dialog', { 
         module: 'app-setup', 
         function: 'showAboutDialog',
@@ -1209,4 +1226,4 @@ export default {
   setupWindowStateSaving,
   saveWindowState,
   loadWindowState
-}; 
+};
