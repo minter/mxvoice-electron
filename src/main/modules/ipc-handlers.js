@@ -36,6 +36,37 @@ let logService;
 let updateState;
 let analytics;
 
+function isPathInside(candidatePath, allowedPath) {
+  const relative = path.relative(path.resolve(allowedPath), path.resolve(candidatePath));
+  return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
+}
+
+async function canonicalizeForAuthorization(filePath) {
+  const resolvedPath = path.resolve(filePath);
+  try {
+    return await fsPromises.realpath(resolvedPath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    const realParent = await fsPromises.realpath(path.dirname(resolvedPath));
+    return path.join(realParent, path.basename(resolvedPath));
+  }
+}
+
+async function isPathAllowed(filePath, allowedPaths) {
+  const canonicalPath = await canonicalizeForAuthorization(filePath);
+  const canonicalAllowedPaths = await Promise.all(allowedPaths.map(async allowedPath => {
+    try {
+      return await fsPromises.realpath(path.resolve(allowedPath));
+    } catch {
+      return path.resolve(allowedPath);
+    }
+  }));
+  return {
+    canonicalPath,
+    allowed: canonicalAllowedPaths.some(allowedPath => isPathInside(canonicalPath, allowedPath))
+  };
+}
+
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
   mainWindow = dependencies.mainWindow;
@@ -302,10 +333,7 @@ function registerAllHandlers() {
       ];
 
       const resolvedPath = path.resolve(filePath);
-      const isAllowed = allowedPaths.some(allowedPath => {
-        const resolvedAllowedPath = path.resolve(allowedPath);
-        return resolvedPath.startsWith(resolvedAllowedPath);
-      });
+      const { canonicalPath, allowed: isAllowed } = await isPathAllowed(resolvedPath, allowedPaths);
 
       if (!isAllowed) {
         debugLog?.warn('File delete access denied', {
@@ -317,7 +345,7 @@ function registerAllHandlers() {
         throw new Error('Access denied: File path not in allowed directories');
       }
 
-      await fs.promises.unlink(resolvedPath);
+      await fs.promises.unlink(canonicalPath);
       return { success: true };
     } catch (error) {
       // ENOENT means file doesn't exist - treat as success since goal is achieved
@@ -700,10 +728,7 @@ function registerAllHandlers() {
       ];
       
       const resolvedPath = path.resolve(filePath);
-      const isAllowed = allowedPaths.some(allowedPath => {
-        const resolvedAllowedPath = path.resolve(allowedPath);
-        return resolvedPath.startsWith(resolvedAllowedPath);
-      });
+      const { canonicalPath, allowed: isAllowed } = await isPathAllowed(resolvedPath, allowedPaths);
       
       if (!isAllowed) {
         debugLog?.warn('File access denied', { 
@@ -715,7 +740,7 @@ function registerAllHandlers() {
         throw new Error(`Access denied: File path not in allowed directories`);
       }
       
-      const data = await fs.promises.readFile(resolvedPath, 'utf8');
+      const data = await fs.promises.readFile(canonicalPath, 'utf8');
       return { success: true, data };
     } catch (error) {
       debugLog?.error('Secure file read error:', { 
@@ -2691,4 +2716,4 @@ export default {
   registerAllHandlers,
   removeAllHandlers,
   testIpcHandlers
-}; 
+};

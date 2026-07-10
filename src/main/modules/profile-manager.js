@@ -88,6 +88,10 @@ function sanitizeProfileName(name) {
   return name.replace(/[^a-zA-Z0-9\s\-_]/g, '').trim();
 }
 
+function getProfileDirectoryKey(name) {
+  return sanitizeProfileName(name).toLocaleLowerCase('en-US');
+}
+
 /**
  * Get the default profile preferences structure
  * @returns {Object} Default preferences object
@@ -265,6 +269,21 @@ function validateProfileName(name) {
   if (existingProfile) {
     return { valid: false, error: 'Profile name already exists' };
   }
+
+  const directoryKey = getProfileDirectoryKey(trimmedName);
+  if (!directoryKey) {
+    return { valid: false, error: 'Profile name must contain at least one letter, number, space, hyphen, or underscore' };
+  }
+
+  const directoryCollision = profiles.find(p =>
+    getProfileDirectoryKey(p.name) === directoryKey
+  );
+  if (directoryCollision) {
+    return {
+      valid: false,
+      error: `Profile name conflicts with existing profile "${directoryCollision.name}"`
+    };
+  }
   
   return { valid: true };
 }
@@ -298,24 +317,18 @@ function createProfile(profileName, description = '') {
       dirExistsBefore: fs.existsSync(profileDir)
     });
     
-    // Check if directory already exists (shouldn't happen but log it)
+    // Never remove an existing directory here. It may belong to another profile
+    // whose display name sanitizes to the same filesystem name, or contain data
+    // left behind after an interrupted registry write.
     if (fs.existsSync(profileDir)) {
-      const existingContents = fs.readdirSync(profileDir);
-      debugLog?.warn('Profile directory already exists when creating new profile', { 
+      debugLog?.warn('Refusing to overwrite existing profile directory', {
         module: 'profile-manager', 
         function: 'createProfile',
         profileName,
         profileDir,
-        existingContents
+        sanitizedName: sanitizeProfileName(profileName)
       });
-      
-      // Delete the existing directory to ensure clean slate
-      fs.rmSync(profileDir, { recursive: true, force: true });
-      debugLog?.info('Removed existing profile directory', { 
-        module: 'profile-manager', 
-        function: 'createProfile',
-        profileDir
-      });
+      return { success: false, error: 'A profile directory with this name already exists' };
     }
     
     // Create fresh profile directory
@@ -828,4 +841,3 @@ export {
   getProfilesDirectory,
   sanitizeProfileName
 };
-

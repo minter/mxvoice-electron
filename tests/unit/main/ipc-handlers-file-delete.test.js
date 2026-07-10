@@ -53,6 +53,7 @@ vi.mock('music-metadata', () => ({ parseFile: vi.fn() }));
 
 // Track fs.promises.unlink calls
 const unlinkMock = vi.fn();
+const realpathMock = vi.fn(async value => value);
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal();
   return {
@@ -63,6 +64,7 @@ vi.mock('fs', async (importOriginal) => {
         ...actual.promises,
         unlink: unlinkMock,
         readFile: actual.promises?.readFile ?? vi.fn(),
+        realpath: realpathMock,
       },
       existsSync: actual.existsSync,
       readFileSync: actual.readFileSync,
@@ -76,6 +78,7 @@ vi.mock('fs', async (importOriginal) => {
     promises: {
       ...actual.promises,
       unlink: unlinkMock,
+      realpath: realpathMock,
     },
   };
 });
@@ -122,6 +125,7 @@ function invoke(channel, ...args) {
 describe('file-delete handler', () => {
   beforeAll(() => {
     unlinkMock.mockReset();
+    realpathMock.mockClear();
   });
 
   it('rejects null/undefined file path', async () => {
@@ -154,6 +158,24 @@ describe('file-delete handler', () => {
     expect(res.success).toBe(false);
     expect(res.error).toMatch(/access denied/i);
     expect(unlinkMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects sibling paths that merely share an allowed prefix', async () => {
+    const res = await invoke('file-delete', '/Users/testuser2/private.txt');
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/access denied/i);
+    expect(unlinkMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a symlink that resolves outside the allowed directories', async () => {
+    realpathMock.mockImplementation(async value =>
+      value === '/Users/testuser/Music/linked-secret' ? '/etc/secret' : value
+    );
+    const res = await invoke('file-delete', '/Users/testuser/Music/linked-secret');
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/access denied/i);
+    expect(unlinkMock).not.toHaveBeenCalled();
+    realpathMock.mockImplementation(async value => value);
   });
 
   it('allows deletion of files in userData directory', async () => {
