@@ -5,7 +5,7 @@
  * with various paths to verify the allowedPaths whitelist, input validation,
  * and ENOENT handling.
  */
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import path from 'path';
 import pkg from 'node-sqlite3-wasm';
 
@@ -54,6 +54,8 @@ vi.mock('music-metadata', () => ({ parseFile: vi.fn() }));
 // Track fs.promises.unlink calls
 const unlinkMock = vi.fn();
 const realpathMock = vi.fn(async value => value);
+const readdirMock = vi.fn();
+const statMock = vi.fn();
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal();
   return {
@@ -79,8 +81,58 @@ vi.mock('fs', async (importOriginal) => {
       ...actual.promises,
       unlink: unlinkMock,
       realpath: realpathMock,
+      readdir: readdirMock,
+      stat: statMock,
     },
   };
+});
+
+describe('restricted filesystem capabilities', () => {
+  beforeEach(() => {
+    readdirMock.mockReset();
+    statMock.mockReset();
+    realpathMock.mockImplementation(async value => value);
+  });
+
+  it('rejects copy destinations outside the managed music directory', async () => {
+    const res = await invoke('file-copy', '/tmp/source.mp3', '/Users/testuser/Documents/source.mp3');
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/destination.*managed music directory/i);
+  });
+
+  it('rejects unsupported copy source types', async () => {
+    const res = await invoke('file-copy', '/tmp/source.txt', '/Users/testuser/Music/source.txt');
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/supported audio/i);
+  });
+
+  it('restricts existence checks to the managed music directory', async () => {
+    const denied = await invoke('file-exists', '/Users/testuser/Documents/notes.txt');
+    expect(denied.success).toBe(false);
+    expect(denied.error).toMatch(/access denied/i);
+    const allowed = await invoke('file-exists', '/Users/testuser/Music/missing.mp3');
+    expect(allowed.success).toBe(true);
+    expect(allowed.exists).toBe(false);
+  });
+
+  it('scans recursively while excluding hidden, unsupported, and symlink entries', async () => {
+    const file = name => ({ name, isFile: () => true, isDirectory: () => false, isSymbolicLink: () => false });
+    const directory = name => ({ name, isFile: () => false, isDirectory: () => true, isSymbolicLink: () => false });
+    const symlink = name => ({ name, isFile: () => false, isDirectory: () => false, isSymbolicLink: () => true });
+    statMock.mockResolvedValue({ isDirectory: () => true });
+    readdirMock.mockImplementation(async dir => dir === '/selected/nested'
+      ? [file('child.flac')]
+      : [file('song.mp3'), file('notes.txt'), file('.hidden.wav'), directory('nested'), symlink('linked.wav')]);
+    const res = await invoke('library:scan-audio-directory', '/selected');
+    expect(res).toEqual({ success: true, data: ['/selected/song.mp3', '/selected/nested/child.flac'] });
+  });
+
+  it('rejects audio scans when the selected path is not a directory', async () => {
+    statMock.mockResolvedValue({ isDirectory: () => false });
+    const res = await invoke('library:scan-audio-directory', '/selected/file.mp3');
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/not a directory/i);
+  });
 });
 
 // ── Setup ─────────────────────────────────────────────────────────────
@@ -107,7 +159,7 @@ beforeAll(async () => {
   initializeIpcHandlers({
     mainWindow: { webContents: { send: vi.fn() } },
     db,
-    store: { get: vi.fn(), set: vi.fn(), has: vi.fn(), delete: vi.fn(), clear: vi.fn() },
+    store: { get: vi.fn(key => key === 'music_directory' ? '/Users/testuser/Music' : undefined), set: vi.fn(), has: vi.fn(), delete: vi.fn(), clear: vi.fn() },
     audioInstances: new Map(),
     autoUpdater: null,
     debugLog: mockDebugLog,
@@ -123,7 +175,7 @@ function invoke(channel, ...args) {
 // ── Tests ─────────────────────────────────────────────────────────────
 
 describe('file-delete handler', () => {
-  beforeAll(() => {
+  beforeEach(() => {
     unlinkMock.mockReset();
     realpathMock.mockClear();
   });
@@ -178,22 +230,6 @@ describe('file-delete handler', () => {
     realpathMock.mockImplementation(async value => value);
   });
 
-  it('allows deletion of files in userData directory', async () => {
-    unlinkMock.mockResolvedValueOnce(undefined);
-    const filePath = '/Users/testuser/Library/Application Support/MxVoice/temp.txt';
-    const res = await invoke('file-delete', filePath);
-    expect(res.success).toBe(true);
-    expect(unlinkMock).toHaveBeenCalledWith(path.resolve(filePath));
-  });
-
-  it('allows deletion of files in home directory', async () => {
-    unlinkMock.mockResolvedValueOnce(undefined);
-    const filePath = '/Users/testuser/some-file.txt';
-    const res = await invoke('file-delete', filePath);
-    expect(res.success).toBe(true);
-    expect(unlinkMock).toHaveBeenCalledWith(path.resolve(filePath));
-  });
-
   it('allows deletion of files in music directory', async () => {
     unlinkMock.mockResolvedValueOnce(undefined);
     const filePath = '/Users/testuser/Music/old-track.mp3';
@@ -202,11 +238,18 @@ describe('file-delete handler', () => {
     expect(unlinkMock).toHaveBeenCalledWith(path.resolve(filePath));
   });
 
+  it('rejects deletion outside the configured music directory', async () => {
+    const res = await invoke('file-delete', '/Users/testuser/Documents/notes.txt');
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/access denied/i);
+    expect(unlinkMock).not.toHaveBeenCalled();
+  });
+
   it('treats ENOENT as success (file already gone)', async () => {
     const enoent = new Error('ENOENT');
     enoent.code = 'ENOENT';
     unlinkMock.mockRejectedValueOnce(enoent);
-    const filePath = '/Users/testuser/Documents/gone.txt';
+    const filePath = '/Users/testuser/Music/gone.txt';
     const res = await invoke('file-delete', filePath);
     expect(res.success).toBe(true);
     expect(res.alreadyDeleted).toBe(true);
@@ -216,7 +259,7 @@ describe('file-delete handler', () => {
     const eacces = new Error('Permission denied');
     eacces.code = 'EACCES';
     unlinkMock.mockRejectedValueOnce(eacces);
-    const filePath = '/Users/testuser/Documents/locked.txt';
+    const filePath = '/Users/testuser/Music/locked.txt';
     const res = await invoke('file-delete', filePath);
     expect(res.success).toBe(false);
     expect(res.error).toMatch(/permission denied/i);

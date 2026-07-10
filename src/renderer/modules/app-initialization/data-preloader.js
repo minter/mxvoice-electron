@@ -111,57 +111,27 @@ export class DataPreloader {
         return false;
       }
       
-      // Check if profile state file exists
-      const dirResult = await electronAPI.profile.getDirectory('state');
-      if (!dirResult.success) {
-        return false;
-      }
-      
-      const stateFileResult = await electronAPI.path.join(dirResult.directory, 'state.json');
-      if (!stateFileResult.success) {
-        return false;
-      }
-      
-      const existsResult = await electronAPI.fileSystem.exists(stateFileResult.data);
+      const migrationData = await electronAPI.profile.getLegacyMigrationData();
+      if (!migrationData.success) return false;
       
       // If state file already exists, mark migration as completed and skip
-      if (existsResult.exists) {
+      if (migrationData.stateExists) {
         this.logInfo('State file exists for Default User, marking migration as completed');
         // Mark migration as done so we don't check again
         await electronAPI.profile.setPreference('migration_completed', true);
         return false;
       }
       
-      // State file doesn't exist - check if we have legacy HTML in global config.json
-      // We need to read config.json directly because profile store deletes hotkeys/holding_tank
-      const userDataResult = await electronAPI.fileSystem.getUserDataPath();
-      if (!userDataResult.success) {
-        return false;
-      }
-      
-      const configPathResult = await electronAPI.path.join(userDataResult.path, 'config.json');
-      if (!configPathResult.success) {
-        return false;
-      }
-      
-      const configExistsResult = await electronAPI.fileSystem.exists(configPathResult.data);
-      if (!configExistsResult.success || !configExistsResult.exists) {
+      if (!migrationData.configExists) {
         this.logInfo('No global config.json found, no migration needed');
         // Mark migration as done so we don't check again
         await electronAPI.profile.setPreference('migration_completed', true);
         return false;
       }
       
-      // Read config.json directly
-      const configReadResult = await electronAPI.fileSystem.read(configPathResult.data);
-      if (!configReadResult.success) {
-        return false;
-      }
-      
       try {
-        const config = JSON.parse(configReadResult.data);
-        const hasHotkeys = config.hotkeys && typeof config.hotkeys === 'string' && config.hotkeys.includes('songid=');
-        const hasHoldingTank = config.holding_tank && typeof config.holding_tank === 'string' && config.holding_tank.includes('songid=');
+        const hasHotkeys = migrationData.hotkeys?.includes('songid=');
+        const hasHoldingTank = migrationData.holdingTank?.includes('songid=');
         
         if (hasHotkeys || hasHoldingTank) {
           this.logInfo('ONE-TIME MIGRATION: Default User upgrading from pre-4.1, will load legacy data from global config.json');
@@ -209,28 +179,12 @@ export class DataPreloader {
         // Unwrap the result if it's wrapped in {success: true, value: ...}
         storedHotkeysHtml = result?.value || result;
       } else {
-        // Store doesn't have it - read from config.json directly (migration scenario)
+        // Store doesn't have it - request only the legacy migration fields.
         const electronAPI = window.secureElectronAPI || window.electronAPI;
-        const userDataResult = await electronAPI.fileSystem.getUserDataPath();
-        
-        if (userDataResult.success) {
-          const configPathResult = await electronAPI.path.join(userDataResult.path, 'config.json');
-          
-          if (configPathResult.success) {
-            const configReadResult = await electronAPI.fileSystem.read(configPathResult.data);
-            
-            if (configReadResult.success) {
-              try {
-                const config = JSON.parse(configReadResult.data);
-                storedHotkeysHtml = config.hotkeys;
-                if (storedHotkeysHtml) {
-                  this.logInfo("Loaded hotkeys from config.json for migration");
-                }
-              } catch (parseError) {
-                this.logError('Error parsing config.json for hotkeys', parseError);
-              }
-            }
-          }
+        const migrationData = await electronAPI.profile.getLegacyMigrationData();
+        if (migrationData.success) {
+          storedHotkeysHtml = migrationData.hotkeys;
+          if (storedHotkeysHtml) this.logInfo("Loaded hotkeys from config.json for migration");
         }
       }
       
@@ -319,28 +273,12 @@ export class DataPreloader {
         // Unwrap the result if it's wrapped in {success: true, value: ...}
         storedHoldingTankHtml = result?.value || result;
       } else {
-        // Store doesn't have it - read from config.json directly (migration scenario)
+        // Store doesn't have it - request only the legacy migration fields.
         const electronAPI = window.secureElectronAPI || window.electronAPI;
-        const userDataResult = await electronAPI.fileSystem.getUserDataPath();
-        
-        if (userDataResult.success) {
-          const configPathResult = await electronAPI.path.join(userDataResult.path, 'config.json');
-          
-          if (configPathResult.success) {
-            const configReadResult = await electronAPI.fileSystem.read(configPathResult.data);
-            
-            if (configReadResult.success) {
-              try {
-                const config = JSON.parse(configReadResult.data);
-                storedHoldingTankHtml = config.holding_tank;
-                if (storedHoldingTankHtml) {
-                  this.logInfo("Loaded holding tank from config.json for migration");
-                }
-              } catch (parseError) {
-                this.logError('Error parsing config.json for holding tank', parseError);
-              }
-            }
-          }
+        const migrationData = await electronAPI.profile.getLegacyMigrationData();
+        if (migrationData.success) {
+          storedHoldingTankHtml = migrationData.holdingTank;
+          if (storedHoldingTankHtml) this.logInfo("Loaded holding tank from config.json for migration");
         }
       }
       

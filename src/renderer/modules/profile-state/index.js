@@ -302,52 +302,13 @@ async function _saveProfileStateImmediate() {
       hasData: hasData
     });
     
-    // Get profile-specific directory
-    const result = await window.secureElectronAPI.profile.getDirectory('state');
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to get profile directory');
-    }
-    
-    const stateDir = result.directory;
-    const stateFileResult = await window.secureElectronAPI.path.join(stateDir, 'state.json');
-    const stateFile = stateFileResult.success ? stateFileResult.data : null;
-    
-    if (!stateFile) {
-      throw new Error('Failed to build state file path');
-    }
-    
-    // Ensure directory exists
-    await window.secureElectronAPI.fileSystem.mkdir(stateDir);
-    
-    // BACKUP: Always backup existing state before overwriting
-    const existsResult = await window.secureElectronAPI.fileSystem.exists(stateFile);
-    if (existsResult.success && existsResult.data) {
-      const backupFileResult = await window.secureElectronAPI.path.join(stateDir, 'state.json.backup');
-      if (backupFileResult.success) {
-        const backupFile = backupFileResult.data;
-        const readResult = await window.secureElectronAPI.fileSystem.read(stateFile);
-        if (readResult.success && readResult.data) {
-          await window.secureElectronAPI.fileSystem.write(backupFile, readResult.data);
-          debugLog?.info('[PROFILE-STATE] Created backup of existing state', {
-            module: 'profile-state',
-            function: 'saveProfileState',
-            backupFile: backupFile
-          });
-        }
-      }
-    }
-    
-    // Write state file
-    const writeResult = await window.secureElectronAPI.fileSystem.write(
-      stateFile,
-      JSON.stringify(state, null, 2)
-    );
+    const writeResult = await window.secureElectronAPI.profile.saveState(state);
     
     if (writeResult.success) {
       debugLog?.info('[PROFILE-STATE] Profile state saved successfully', { 
         module: 'profile-state',
         function: 'saveProfileState',
-        stateFile: stateFile,
+        profile: 'current',
         hotkeyCount: hotkeyCount,
         holdingTankCount: holdingTankCount,
         hasData: hasData
@@ -645,72 +606,17 @@ export async function loadProfileState(options = {}) {
       profile: currentProfile
     });
     
-    // Get profile-specific directory
-    const dirResult = await window.secureElectronAPI.profile.getDirectory('state');
-    if (!dirResult.success) {
-      window.isRestoringProfileState = false;
-      debugLog?.info('[PROFILE-STATE] No profile directory found, skipping state load', { 
-        module: 'profile-state',
-        function: 'loadProfileState',
-        profile: currentProfile
-      });
-      return { success: true, loaded: false };
-    }
-    
-    const stateDir = dirResult.directory;
-    debugLog?.info('[PROFILE-STATE] Profile directory found', { 
-      module: 'profile-state',
-      function: 'loadProfileState',
-      profile: currentProfile,
-      stateDir
-    });
-    
-    const stateFileResult = await window.secureElectronAPI.path.join(stateDir, 'state.json');
-    const stateFile = stateFileResult.success ? stateFileResult.data : null;
-    
-    if (!stateFile) {
-      window.isRestoringProfileState = false;
-      debugLog?.error('[PROFILE-STATE] Failed to build state file path', {
-        module: 'profile-state',
-        function: 'loadProfileState',
-        profile: currentProfile,
-        error: stateFileResult.error
-      });
-      return { success: false, error: 'Failed to build state file path' };
-    }
-    
-    debugLog?.info('[PROFILE-STATE] Checking for state file', { 
-      module: 'profile-state',
-      function: 'loadProfileState',
-      profile: currentProfile,
-      stateFile
-    });
-    
-    // Check if state file exists
-    const existsResult = await window.secureElectronAPI.fileSystem.exists(stateFile);
-    if (!existsResult.success || !existsResult.exists) {
+    const readResult = await window.secureElectronAPI.profile.loadState();
+    if (!readResult.success) throw new Error(readResult.error || 'Failed to load profile state');
+    if (!readResult.loaded) {
       window.isRestoringProfileState = false;
       debugLog?.info('[PROFILE-STATE] No state file found, starting fresh', { 
         module: 'profile-state',
         function: 'loadProfileState',
         profile: currentProfile,
-        stateFile: stateFile,
-        existsResult: existsResult
+        loaded: false
       });
       return { success: true, loaded: false };
-    }
-    
-    debugLog?.info('[PROFILE-STATE] State file exists, reading contents', { 
-      module: 'profile-state',
-      function: 'loadProfileState',
-      profile: currentProfile,
-      stateFile
-    });
-    
-    // Read state file
-    const readResult = await window.secureElectronAPI.fileSystem.read(stateFile);
-    if (!readResult.success) {
-      throw new Error(readResult.error || 'Failed to read state file');
     }
     
     // Handle empty or invalid state files
@@ -719,7 +625,7 @@ export async function loadProfileState(options = {}) {
       debugLog?.warn('[PROFILE-STATE] State file is empty, treating as no state', {
         module: 'profile-state',
         function: 'loadProfileState',
-        stateFile: stateFile
+        profile: currentProfile
       });
       return { success: true, loaded: false };
     }
@@ -774,8 +680,7 @@ export async function loadProfileState(options = {}) {
       debugLog?.warn('[PROFILE-STATE] State file exists but contains no data (empty profile)', {
         module: 'profile-state',
         function: 'loadProfileState',
-        profile: currentProfile,
-        stateFile
+        profile: currentProfile
       });
       // Still return success but mark as not loaded so UI shows empty state
       window.isRestoringProfileState = false;
@@ -786,7 +691,6 @@ export async function loadProfileState(options = {}) {
       module: 'profile-state',
       function: 'loadProfileState',
       profile: currentProfile,
-      stateFile,
       version: state.version,
       timestamp: state.timestamp,
       hotkeyTabs: state.hotkeys?.length || 0,
@@ -1043,4 +947,3 @@ export default {
   switchProfileWithSave,
   clearProfileRestorationLock
 };
-

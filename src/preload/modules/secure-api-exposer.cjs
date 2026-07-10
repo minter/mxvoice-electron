@@ -120,15 +120,10 @@ const secureElectronAPI = {
   
   // File system operations - secure file access with validation
   fileSystem: {
-    read: (filePath) => ipcRenderer.invoke('file-read', filePath),
-    write: (filePath, data) => ipcRenderer.invoke('file-write', filePath, data),
     exists: (filePath) => ipcRenderer.invoke('file-exists', filePath),
     delete: (filePath) => ipcRenderer.invoke('file-delete', filePath),
     copy: (sourcePath, destPath) => ipcRenderer.invoke('file-copy', sourcePath, destPath),
-    mkdir: (dirPath, options) => ipcRenderer.invoke('file-mkdir', dirPath, options),
-    readdir: (dirPath) => ipcRenderer.invoke('fs-readdir', dirPath),
-    stat: (filePath) => ipcRenderer.invoke('fs-stat', filePath),
-    getUserDataPath: () => ipcRenderer.invoke('file-get-user-data-path')
+    scanAudioDirectory: (rootPath) => ipcRenderer.invoke('library:scan-audio-directory', rootPath)
   },
   
   // Path operations - secure path manipulation
@@ -460,6 +455,8 @@ const secureElectronAPI = {
     switchProfile: () => ipcRenderer.invoke('profile:switch'),
     switchToProfile: (name) => ipcRenderer.invoke('profile:switch-to', name),
     saveState: (state, profileName) => ipcRenderer.invoke('profile:save-state', state, profileName),
+    loadState: () => ipcRenderer.invoke('profile:load-state'),
+    getLegacyMigrationData: () => ipcRenderer.invoke('profile:get-legacy-migration-data'),
     saveStateBeforeSwitch: (state, profileName) => ipcRenderer.invoke('profile:save-state-before-switch', state, profileName),
     getPreference: (key) => ipcRenderer.invoke('profile:get-preference', key),
     setPreference: (key, value) => ipcRenderer.invoke('profile:set-preference', key, value),

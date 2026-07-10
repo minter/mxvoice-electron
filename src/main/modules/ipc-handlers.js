@@ -35,6 +35,7 @@ let debugLog;
 let logService;
 let updateState;
 let analytics;
+const SUPPORTED_AUDIO_EXTENSIONS = new Set(['.mp3', '.mp4', '.m4a', '.wav', '.ogg', '.flac', '.opus']);
 
 function isPathInside(candidatePath, allowedPath) {
   const relative = path.relative(path.resolve(allowedPath), path.resolve(candidatePath));
@@ -277,41 +278,16 @@ function registerAllHandlers() {
     }
   });
 
-  // File System API handlers (INSECURE - kept for backward compatibility)
-  ipcMain.handle('file-read-legacy', async (event, filePath) => {
-    try {
-      const data = fs.readFileSync(filePath, 'utf8');
-      return { success: true, data };
-    } catch (error) {
-      debugLog?.error('File read error:', { module: 'ipc-handlers', function: 'file-read-legacy', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('file-write', async (event, filePath, data) => {
-    try {
-      fs.writeFileSync(filePath, data, 'utf8');
-      return { success: true };
-    } catch (error) {
-      debugLog?.error('File write error:', { module: 'ipc-handlers', function: 'file-write', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
   ipcMain.handle('file-exists', async (event, filePath) => {
     try {
-      return { success: true, exists: fs.existsSync(filePath) };
+      if (!filePath || typeof filePath !== 'string') throw new Error('Invalid file path');
+      const musicDirectory = store.get('music_directory');
+      if (!musicDirectory || !isPathInside(filePath, musicDirectory)) {
+        throw new Error('Access denied: Path must be inside the managed music directory');
+      }
+      return { success: true, exists: fs.existsSync(path.resolve(filePath)) };
     } catch (error) {
       debugLog?.error('File exists error:', { module: 'ipc-handlers', function: 'file-exists', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('file-get-user-data-path', async (_event) => {
-    try {
-      return { success: true, path: app.getPath('userData') };
-    } catch (error) {
-      debugLog?.error('Get user data path error:', { module: 'ipc-handlers', function: 'file-get-user-data-path', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -324,13 +300,9 @@ function registerAllHandlers() {
       }
 
       // Security: Restrict to allowed directories (same pattern as file-read)
-      const allowedPaths = [
-        app.getPath('userData'),
-        app.getPath('documents'),
-        app.getPath('music'),
-        app.getPath('downloads'),
-        app.getPath('home')
-      ];
+      const musicDirectory = store.get('music_directory');
+      if (!musicDirectory) throw new Error('Music directory is not configured');
+      const allowedPaths = [musicDirectory];
 
       const resolvedPath = path.resolve(filePath);
       const { canonicalPath, allowed: isAllowed } = await isPathAllowed(resolvedPath, allowedPaths);
@@ -473,31 +445,17 @@ function registerAllHandlers() {
 
   ipcMain.handle('file-copy', async (event, sourcePath, destPath) => {
     try {
+      if (!sourcePath || !destPath || !SUPPORTED_AUDIO_EXTENSIONS.has(path.extname(sourcePath).toLowerCase())) {
+        throw new Error('Only supported audio files can be imported');
+      }
+      const musicDirectory = store.get('music_directory');
+      if (!musicDirectory || !isPathInside(destPath, musicDirectory)) {
+        throw new Error('Access denied: Destination must be inside the managed music directory');
+      }
       // Use streaming for better memory efficiency with large files
       return await copyFileStreaming(sourcePath, destPath);
     } catch (error) {
       debugLog?.error('File copy error:', { module: 'ipc-handlers', function: 'file-copy', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  // File copy with progress tracking for large files
-  ipcMain.handle('file-copy-with-progress', async (event, sourcePath, destPath) => {
-    try {
-      const result = await copyFileStreaming(sourcePath, destPath);
-      return result;
-    } catch (error) {
-      debugLog?.error('File copy with progress error:', { module: 'ipc-handlers', function: 'file-copy-with-progress', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('file-mkdir', async (event, dirPath, options = {}) => {
-    try {
-      fs.mkdirSync(dirPath, { recursive: true, ...options });
-      return { success: true };
-    } catch (error) {
-      debugLog?.error('Directory creation error:', { module: 'ipc-handlers', function: 'file-mkdir', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -680,28 +638,34 @@ function registerAllHandlers() {
     }
   });
 
-  // File system operations
-  ipcMain.handle('fs-readdir', async (event, dirPath) => {
+  ipcMain.handle('library:scan-audio-directory', async (_event, rootPath) => {
     try {
-      return fs.readdirSync(dirPath);
-    } catch (error) {
-      debugLog?.error('File system readdir error:', { module: 'ipc-handlers', function: 'fs-readdir', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
+      if (!rootPath || typeof rootPath !== 'string') throw new Error('Invalid directory path');
+      const canonicalRoot = await fsPromises.realpath(path.resolve(rootPath));
+      const rootStats = await fsPromises.stat(canonicalRoot);
+      if (!rootStats.isDirectory()) throw new Error('Selected path is not a directory');
 
-  ipcMain.handle('fs-stat', async (event, filePath) => {
-    try {
-      const stats = fs.statSync(filePath);
-      return {
-        isFile: stats.isFile(),
-        isDirectory: stats.isDirectory(),
-        size: stats.size,
-        mtime: stats.mtime,
-        ctime: stats.ctime
+      const audioFiles = [];
+      const visit = async directory => {
+        const entries = await fsPromises.readdir(directory, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.name.startsWith('.')) continue;
+          const entryPath = path.join(directory, entry.name);
+          if (entry.isSymbolicLink()) continue;
+          if (entry.isDirectory()) await visit(entryPath);
+          else if (entry.isFile() && SUPPORTED_AUDIO_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+            audioFiles.push(entryPath);
+          }
+        }
       };
+      await visit(canonicalRoot);
+      return { success: true, data: audioFiles };
     } catch (error) {
-      debugLog?.error('File system stat error:', { module: 'ipc-handlers', function: 'fs-stat', error: error.message });
+      debugLog?.error('Audio directory scan error', {
+        module: 'ipc-handlers',
+        function: 'library:scan-audio-directory',
+        error: error.message
+      });
       return { success: false, error: error.message };
     }
   });
@@ -710,49 +674,6 @@ function registerAllHandlers() {
   // SECURE IPC HANDLERS FOR CONTEXT ISOLATION
   // ===============================================
   
-  // Enhanced secure file operations with validation
-  ipcMain.handle('file-read', async (event, filePath) => {
-    try {
-      // Security: Validate input
-      if (!filePath || typeof filePath !== 'string') {
-        throw new Error('Invalid file path');
-      }
-      
-      // Security: Restrict to allowed directories
-      const allowedPaths = [
-        app.getPath('userData'),
-        app.getPath('documents'),
-        app.getPath('music'),
-        app.getPath('downloads'),
-        app.getPath('home')
-      ];
-      
-      const resolvedPath = path.resolve(filePath);
-      const { canonicalPath, allowed: isAllowed } = await isPathAllowed(resolvedPath, allowedPaths);
-      
-      if (!isAllowed) {
-        debugLog?.warn('File access denied', { 
-          module: 'ipc-handlers', 
-          function: 'file-read-secure', 
-          filePath: filePath,
-          resolvedPath: resolvedPath
-        });
-        throw new Error(`Access denied: File path not in allowed directories`);
-      }
-      
-      const data = await fs.promises.readFile(canonicalPath, 'utf8');
-      return { success: true, data };
-    } catch (error) {
-      debugLog?.error('Secure file read error:', { 
-        module: 'ipc-handlers', 
-        function: 'file-read-secure', 
-        error: error.message,
-        filePath: filePath 
-      });
-      return { success: false, error: error.message };
-    }
-  });
-
   // Additional path operations for secure API
   ipcMain.handle('path-dirname', async (event, filePath) => {
     try {
@@ -1597,6 +1518,54 @@ function registerAllHandlers() {
       return { success: true, directory };
     } catch (error) {
       debugLog?.error('Get profile directory error:', { module: 'ipc-handlers', function: 'profile:get-directory', error: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile:load-state', async () => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const stateFile = path.join(mainModule.getProfileDirectory('state'), 'state.json');
+      try {
+        const data = await fsPromises.readFile(stateFile, 'utf8');
+        return { success: true, loaded: true, data };
+      } catch (error) {
+        if (error.code === 'ENOENT') return { success: true, loaded: false };
+        throw error;
+      }
+    } catch (error) {
+      debugLog?.error('Load profile state error', {
+        module: 'ipc-handlers',
+        function: 'profile:load-state',
+        error: error.message
+      });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('profile:get-legacy-migration-data', async () => {
+    try {
+      const mainModule = await import('../index-modular.js');
+      const stateFile = path.join(mainModule.getProfileDirectory('state'), 'state.json');
+      const configFile = path.join(app.getPath('userData'), 'config.json');
+      const stateExists = fs.existsSync(stateFile);
+      if (!fs.existsSync(configFile)) {
+        return { success: true, stateExists, configExists: false, hotkeys: null, holdingTank: null };
+      }
+      const config = JSON.parse(await fsPromises.readFile(configFile, 'utf8'));
+      return {
+        success: true,
+        stateExists,
+        configExists: true,
+        hotkeys: typeof config.hotkeys === 'string' ? config.hotkeys : null,
+        holdingTank: typeof config.holding_tank === 'string' ? config.holding_tank : null
+      };
+    } catch (error) {
+      debugLog?.error('Legacy migration data error', {
+        module: 'ipc-handlers',
+        function: 'profile:get-legacy-migration-data',
+        error: error.message
+      });
       return { success: false, error: error.message };
     }
   });
@@ -2605,12 +2574,11 @@ function removeAllHandlers() {
   ipcMain.removeHandler('show-preferences');
   ipcMain.removeHandler('get-categories');
   ipcMain.removeHandler('add-song');
-  ipcMain.removeHandler('file-read-legacy');
-  ipcMain.removeHandler('file-write');
   ipcMain.removeHandler('file-exists');
   ipcMain.removeHandler('file-delete');
   ipcMain.removeHandler('file-copy');
-  ipcMain.removeHandler('file-mkdir');
+  ipcMain.removeHandler('profile:load-state');
+  ipcMain.removeHandler('profile:get-legacy-migration-data');
   ipcMain.removeHandler('store-get');
   ipcMain.removeHandler('store-set');
   ipcMain.removeHandler('store-delete');
@@ -2624,11 +2592,8 @@ function removeAllHandlers() {
   ipcMain.removeHandler('path-join');
   ipcMain.removeHandler('path-parse');
   ipcMain.removeHandler('path-extname');
-  ipcMain.removeHandler('fs-readdir');
-  ipcMain.removeHandler('fs-stat');
   
   // Secure API handlers
-  ipcMain.removeHandler('file-read');
   ipcMain.removeHandler('get-song-by-id');
   ipcMain.removeHandler('delete-song');
   ipcMain.removeHandler('update-song');

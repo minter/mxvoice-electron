@@ -194,6 +194,13 @@ export const secureDatabase = {
  * Provides secure file system access through IPC calls
  */
 export const secureFileSystem = {
+  scanAudioDirectory: async (rootPath) => {
+    try {
+      return await window.secureElectronAPI.fileSystem.scanAudioDirectory(rootPath);
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
   /**
    * Read a file and return its contents
    * @param {string} filePath - Path to the file

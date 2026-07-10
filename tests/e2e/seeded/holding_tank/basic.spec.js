@@ -3,6 +3,7 @@ import { launchSeededApp, closeApp, clearModalBackdrop } from '../../../utils/se
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rms, waitForAudible, waitForSilence, stabilize } from '../../../utils/audio-helpers.js';
+import fs from 'node:fs';
 
 // Helper to detect if we're running in CI environment
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
@@ -488,34 +489,10 @@ test.describe('Holding Tank - basic', () => {
     await saveButton.click();
     
     // 7) Wait for the file to be saved by polling for its content
-    await expect(async () => {
-      const result = await page.evaluate(async (filePath) => {
-        if (window.secureElectronAPI?.fileSystem?.read) {
-          const res = await window.secureElectronAPI.fileSystem.read(filePath);
-          return res?.success && res.data ? res.data : null;
-        }
-        return null;
-      }, saveFilePath);
-      expect(result).toBeTruthy();
-    }).toPass({ timeout: 5000 });
+    await expect.poll(() => fs.existsSync(saveFilePath), { timeout: 5000 }).toBe(true);
 
     // 8) Read the file back from disk to verify content
-    const fileContent = await page.evaluate(async (filePath) => {
-      if (window.secureElectronAPI?.fileSystem?.read) {
-        try {
-          const result = await window.secureElectronAPI.fileSystem.read(filePath);
-          if (result?.success && result.data) {
-            return result.data;
-          } else {
-            return null;
-          }
-        } catch (err) {
-          return null;
-        }
-      } else {
-        return null;
-      }
-    }, saveFilePath);
+    const fileContent = fs.readFileSync(saveFilePath, 'utf8');
     
     console.log('File content result:', fileContent);
     
@@ -1233,5 +1210,4 @@ test.describe('Holding Tank - basic', () => {
     }
   });
 });
-
 

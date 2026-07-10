@@ -42,40 +42,8 @@ export async function showBulkAddModal(directory) {
     directory 
   });
 
-  // Recursive walk function (reused from saveBulkUpload logic conceptually)
-  const getSongs = async (dir) => {
-    let results = [];
-    try {
-      const readdirResult = await secureFileSystem.readdir(dir);
-      const entries = Array.isArray(readdirResult)
-        ? readdirResult
-        : (Array.isArray(readdirResult?.data) ? readdirResult.data : null);
-      if (!entries) return results;
-      
-      for (const fileEntry of entries) {
-        if (typeof fileEntry === 'string' && fileEntry.startsWith('.')) continue;
-        const fullPath = `${dir}/${fileEntry}`;
-        try {
-          const statResult = await secureFileSystem.stat(fullPath);
-          const isDir = (!!statResult?.isDirectory) || (typeof statResult?.isDirectory === 'function' && statResult.isDirectory());
-          const isFile = (!!statResult?.isFile) || (typeof statResult?.isFile === 'function' && statResult.isFile());
-          
-          if (isDir) {
-            results = results.concat(await getSongs(fullPath));
-          } else if (isFile) {
-            const extRes = await securePath.extname(fullPath);
-            const ext = extRes?.data || extRes || '';
-            if (SUPPORTED_AUDIO_EXTS.has(ext.toLowerCase())) {
-              results.push(fullPath);
-            }
-          }
-        } catch (_e) {}
-      }
-    } catch (_e) {}
-    return results;
-  };
-
-  const songs = await getSongs(directory);
+  const scanResult = await secureFileSystem.scanAudioDirectory(directory);
+  const songs = scanResult?.success && Array.isArray(scanResult.data) ? scanResult.data : [];
 
   if (!songs.length) {
     alert('No supported audio files found in the selected directory.');
@@ -389,52 +357,9 @@ export async function saveBulkUpload(event) {
 
   const dirname = (document.getElementById('bulk-add-path') || {}).value || '';
 
-  const walk = async (dir) => {
-    let results = [];
-    try {
-      const readdirResult = await secureFileSystem.readdir(dir);
-      const entries = Array.isArray(readdirResult)
-        ? readdirResult
-        : (Array.isArray(readdirResult?.data) ? readdirResult.data : null);
-      if (!entries) {
-        debugLog?.warn('Failed to read directory', { module: 'bulk-operations', function: 'saveBulkUpload', dir, error: readdirResult?.error });
-        return results;
-      }
-      for (const fileEntry of entries) {
-        // Skip hidden/system entries like .DS_Store
-        if (typeof fileEntry === 'string' && fileEntry.startsWith('.')) {
-          continue;
-        }
-        const fullPath = `${dir}/${fileEntry}`;
-        try {
-          const statResult = await secureFileSystem.stat(fullPath);
-          // Normalize stat shape from secure API
-          const isDir = (!!statResult?.isDirectory) || (typeof statResult?.isDirectory === 'function' && statResult.isDirectory());
-          const isFile = (!!statResult?.isFile) || (typeof statResult?.isFile === 'function' && statResult.isFile());
-          if (isDir || isFile) {
-            if (isDir) {
-              results = results.concat(await walk(fullPath));
-            } else if (isFile) {
-              const parseRes = await securePath.parse(fullPath);
-              if (!parseRes.success || !parseRes.data) continue;
-              const pathData = parseRes.data;
-              if (SUPPORTED_AUDIO_EXTS.has(pathData.ext.toLowerCase())) {
-                results.push(fullPath);
-              }
-            } else {
-              debugLog?.warn('Unknown stat shape for entry', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, stat: statResult });
-            }
-          } else {
-            debugLog?.warn('Failed to get file stats', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, error: statResult?.error });
-          }
-        } catch (error) {
-          debugLog?.warn('File stat error', { module: 'bulk-operations', function: 'saveBulkUpload', file: fullPath, error: error?.message });
-        }
-      }
-    } catch (error) {
-      debugLog?.warn('Directory read error', { module: 'bulk-operations', function: 'saveBulkUpload', dir, error: error?.message });
-    }
-    return results;
+  const walk = async dir => {
+    const result = await secureFileSystem.scanAudioDirectory(dir);
+    return result?.success && Array.isArray(result.data) ? result.data : [];
   };
 
   const songs = await walk(dirname);

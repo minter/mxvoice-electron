@@ -1103,36 +1103,11 @@ test.describe('Hotkeys - save & load', () => {
     console.log('Save function info:', saveFunctionInfo);
     
     // 9) Wait for the file to be saved by checking the directory
-    await page.waitForFunction(async (dir) => {
-      if (window.secureElectronAPI?.fileSystem?.readdir) {
-        try {
-          const result = await window.secureElectronAPI.fileSystem.readdir(dir);
-          const files = Array.isArray(result) ? result : result?.data || [];
-          return files.some(f => f.includes('testing.mrv'));
-        } catch { return false; }
-      }
-      return false;
-    }, hotkeyDir, { timeout: 10000 });
+    await expect.poll(() => fs.existsSync(saveFilePath), { timeout: 10000 }).toBe(true);
 
     // Debug: Check if the file exists and list directory contents
     console.log('Checking if file was saved...');
-    const directoryContents = await page.evaluate(async (dir) => {
-      if (window.secureElectronAPI?.fileSystem?.readdir) {
-        try {
-          const result = await window.secureElectronAPI.fileSystem.readdir(dir);
-          if (Array.isArray(result)) {
-            return result;
-          } else if (result?.success && result.data) {
-            return result.data;
-          } else {
-            return null;
-          }
-        } catch (err) {
-          return null;
-        }
-      }
-      return null;
-    }, hotkeyDir);
+    const directoryContents = fs.readdirSync(hotkeyDir);
     
     if (directoryContents) {
       console.log('Files in hotkey directory:', directoryContents);
@@ -1149,28 +1124,7 @@ test.describe('Hotkeys - save & load', () => {
     // 10) Read the file back from disk to verify content
     console.log('Attempting to read file:', saveFilePath);
     
-    // Try reading the file using the secure API
-    const fileContent = await page.evaluate(async (filePath) => {
-      if (window.secureElectronAPI?.fileSystem?.read) {
-        try {
-          console.log('Calling secureElectronAPI.fileSystem.read with path:', filePath);
-          const result = await window.secureElectronAPI.fileSystem.read(filePath);
-          console.log('read result:', result);
-          if (result?.success && result.data) {
-            return result.data;
-          } else {
-            console.log('read failed - no success or data:', result);
-            return null;
-          }
-        } catch (err) {
-          console.log('read error:', err);
-          return null;
-        }
-      } else {
-        console.log('secureElectronAPI.fileSystem.read not available');
-        return null;
-      }
-    }, saveFilePath);
+    const fileContent = fs.readFileSync(saveFilePath, 'utf8');
     
     console.log('File content result:', fileContent);
     

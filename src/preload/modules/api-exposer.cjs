@@ -79,14 +79,10 @@ const electronAPI = {
   
   // File system operations (new API for gradual migration)
   fileSystem: {
-    read: (filePath) => ipcRenderer.invoke('file-read', filePath),
-    write: (filePath, data) => ipcRenderer.invoke('file-write', filePath, data),
     exists: (filePath) => ipcRenderer.invoke('file-exists', filePath),
     delete: (filePath) => ipcRenderer.invoke('file-delete', filePath),
     copy: (sourcePath, destPath) => ipcRenderer.invoke('file-copy', sourcePath, destPath),
-    mkdir: (dirPath, options) => ipcRenderer.invoke('file-mkdir', dirPath, options),
-    readdir: (dirPath) => ipcRenderer.invoke('fs-readdir', dirPath),
-    stat: (filePath) => ipcRenderer.invoke('fs-stat', filePath)
+    scanAudioDirectory: (rootPath) => ipcRenderer.invoke('library:scan-audio-directory', rootPath)
   },
   
   // Path operations (new API for gradual migration)
@@ -179,4 +175,4 @@ export default {
   setupGlobalExposure,
   setDatabaseInstance,
   testApiExposer
-}; 
+};
