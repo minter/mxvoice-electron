@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 
-const preloadSources = [
-  'src/preload/modules/api-exposer.cjs',
-  'src/preload/modules/secure-api-exposer.cjs'
-];
+const preloadSources = ['src/preload/modules/secure-api-exposer.cjs'];
 
 describe('preload filesystem capability surface', () => {
   it.each(preloadSources)('does not expose generic filesystem methods in %s', source => {

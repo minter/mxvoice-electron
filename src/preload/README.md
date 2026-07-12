@@ -16,7 +16,6 @@ src/preload/
 ├── modules/
 │   ├── ipc-bridge.cjs          # Registers inbound events from main → renderer callbacks
 │   ├── secure-api-exposer.cjs  # Exposes `secureElectronAPI` and legacy `electronAPI` via contextBridge
-│   └── api-exposer.cjs         # Legacy/global exposure helper (kept for migration)
 ├── preload-modular.cjs         # Coordinator: register IPC handlers, expose secure API
 ├── preload-bundle.cjs          # Generated bundle (gitignored)
 ├── about-preload.cjs           # Minimal API for About dialog
@@ -41,10 +40,6 @@ src/preload/
   - Registers handlers for events sent from main (e.g., `display_release_notes`, `update_download_progress`)
   - For context isolation, UI events are dispatched as CustomEvents on window
   - Exports: `registerIpcHandlers`, `removeIpcHandlers`, `getIpcHandlers`, `testIpcBridge`
-
-- `api-exposer.cjs` (legacy helper)
-  - Provides `electronAPI` and legacy globals for non-isolated contexts
-  - Kept for migration/backward compatibility; modern apps should prefer `secure-api-exposer.cjs`
 
 ### Coordinator (`preload-modular.cjs`)
 - IPC-based logging (sends messages to main process via `ipcRenderer.send`)
