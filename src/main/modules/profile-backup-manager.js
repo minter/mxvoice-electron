@@ -21,6 +21,7 @@ import {
   getProfileDirectory
 } from './profile-paths.js';
 import { createBackupMetadataCoordinator } from './backup-metadata-coordinator.js';
+import { createBackupMetadataStore } from './backup-metadata-store.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -38,6 +39,14 @@ const metadataCoordinator = createBackupMetadataCoordinator({
   fs,
   getMetadataPath: getBackupMetadataPath,
   pathExists,
+  getDebugLog: () => debugLog
+});
+const metadataStore = createBackupMetadataStore({
+  fs,
+  getMetadataPath: getBackupMetadataPath,
+  pathExists,
+  coordinator: metadataCoordinator,
+  rebuildMetadata: (profileName) => rebuildMetadataFromDirectories(profileName),
   getDebugLog: () => debugLog
 });
 
@@ -121,62 +130,7 @@ async function queueMetadataOperation(profileName, operation) {
  * @returns {Promise<Object>} Metadata object
  */
 async function readMetadataSafe(profileName) {
-  const metadataPath = getBackupMetadataPath(profileName);
-  const backupPath = metadataPath + '.bak';
-  
-  try {
-    // Try to read primary file
-    const data = await fs.promises.readFile(metadataPath, 'utf8');
-    const metadata = JSON.parse(data);
-    
-    // Validate structure
-    if (!metadata.backups || !Array.isArray(metadata.backups)) {
-      throw new Error('Invalid metadata structure');
-    }
-    
-    // Backup is valid, create/update .bak file
-    await fs.promises.writeFile(backupPath, data, 'utf8');
-    
-    return metadata;
-  } catch (error) {
-    // Primary file is corrupted or missing, try backup
-    if (await pathExists(backupPath)) {
-      try {
-        const backupData = await fs.promises.readFile(backupPath, 'utf8');
-        const metadata = JSON.parse(backupData);
-        
-        // Validate backup structure
-        if (!metadata.backups || !Array.isArray(metadata.backups)) {
-          throw new Error('Backup metadata also corrupted', { cause: error });
-        }
-        
-        // Restore from backup
-        await fs.promises.writeFile(metadataPath, backupData, 'utf8');
-        debugLog?.warn('Restored metadata from backup file', { 
-          module: 'profile-backup-manager',
-          function: 'readMetadataSafe',
-          profileName 
-        });
-        
-        return metadata;
-      } catch (backupError) {
-        debugLog?.error('Both metadata and backup are corrupted', { 
-          module: 'profile-backup-manager',
-          function: 'readMetadataSafe',
-          profileName, 
-          error: backupError.message 
-        });
-      }
-    }
-    
-    // Last resort: rebuild from backup directories
-    debugLog?.warn('Rebuilding metadata from backup directories', { 
-      module: 'profile-backup-manager',
-      function: 'readMetadataSafe',
-      profileName 
-    });
-    return await rebuildMetadataFromDirectories(profileName);
-  }
+  return metadataStore.readSafe(profileName);
 }
 
 /**
@@ -300,46 +254,7 @@ async function calculateBackupSize(backupPath) {
  * @returns {Promise<Object>} Updated metadata
  */
 async function updateMetadata(profileName, updateFn) {
-  return queueMetadataOperation(profileName, async () => {
-    let retries = 3;
-    
-    while (retries > 0) {
-      try {
-        // Read current metadata
-        const metadata = await readMetadataSafe(profileName);
-        
-        // Apply update function
-        const updated = updateFn(metadata);
-        
-        // Validate updated metadata
-        if (!updated.backups || !Array.isArray(updated.backups)) {
-          throw new Error('Updated metadata has invalid structure');
-        }
-        
-        // Atomic write
-        const metadataPath = getBackupMetadataPath(profileName);
-        const backupPath = metadataPath + '.bak';
-        
-        // Create backup before write
-        if (await pathExists(metadataPath)) {
-          const currentData = await fs.promises.readFile(metadataPath, 'utf8');
-          await fs.promises.writeFile(backupPath, currentData, 'utf8');
-        }
-        
-        await writeMetadataAtomic(metadataPath, updated);
-        
-        return updated;
-      } catch (error) {
-        retries--;
-        if (retries === 0) {
-          throw new Error(`Failed to update metadata after retries: ${error.message}`, { cause: error });
-        }
-        
-        // Exponential backoff on retry
-        await new Promise(resolve => setTimeout(resolve, 100 * (4 - retries)));
-      }
-    }
-  });
+  return metadataStore.update(profileName, updateFn);
 }
 
 /**
