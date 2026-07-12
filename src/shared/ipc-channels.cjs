@@ -119,7 +119,6 @@ const IPC = deepFreeze({
     GET_CURRENT: 'profile:get-current',
     GET_DIRECTORY: 'profile:get-directory',
     LOAD_STATE: 'profile:load-state',
-    GET_LEGACY_MIGRATION_DATA: 'profile:get-legacy-migration-data',
     SAVE_STATE: 'profile:save-state',
     GET_PREFERENCE: 'profile:get-preference',
     SET_PREFERENCE: 'profile:set-preference',

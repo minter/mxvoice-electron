@@ -603,10 +603,6 @@ async function loadProfilePreferences(profileName) {
     const data = fs.readFileSync(preferencesPath, 'utf8');
     let preferences = JSON.parse(data);
     
-    // Clean up deprecated keys that should be in state.json (NOT window_state - that's a valid preference now)
-    delete preferences.hotkeys;
-    delete preferences.holding_tank;
-    
     // Unwrap any corrupted nested success objects
     for (const key of Object.keys(preferences)) {
       preferences[key] = unwrapValue(preferences[key]);

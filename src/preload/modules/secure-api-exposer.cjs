@@ -456,7 +456,6 @@ const secureElectronAPI = {
     switchToProfile: (name) => ipcRenderer.invoke(IPC.PROFILE.SWITCH_TO, name),
     saveState: (state, profileName) => ipcRenderer.invoke(IPC.PROFILE.SAVE_STATE, state, profileName),
     loadState: () => ipcRenderer.invoke(IPC.PROFILE.LOAD_STATE),
-    getLegacyMigrationData: () => ipcRenderer.invoke(IPC.PROFILE.GET_LEGACY_MIGRATION_DATA),
     saveStateBeforeSwitch: (state, profileName) => ipcRenderer.invoke(IPC.PROFILE.SAVE_STATE_BEFORE_SWITCH, state, profileName),
     getPreference: (key) => ipcRenderer.invoke(IPC.PROFILE.GET_PREFERENCE, key),
     setPreference: (key, value) => ipcRenderer.invoke(IPC.PROFILE.SET_PREFERENCE, key, value),

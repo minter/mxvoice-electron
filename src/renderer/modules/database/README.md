@@ -1,6 +1,6 @@
 ## Database Module
 
-Unified interface for UI data population, store persistence, and DB CRUD.
+Unified interface for database-backed UI operations and CRUD.
 
 ### Structure
 ```
@@ -29,12 +29,11 @@ const song = await db.getSongById('123');
 ```
 
 ## Function groups
-- Data population: category select, hotkeys, holding tank, labels, modals
-- Store operations: `requestProfileStateSave`, `requestProfileStateSave`
+
 - UI ops: `scaleScrollable`
 - CRUD: categories, songs, bulk, query/statement execution
 
 ## Notes
 - Logs through DebugLog if available
-- Uses Electron secure APIs where available, with legacy fallbacks
-- UI-facing helpers (e.g., hotkey/holding tank population) create DOM nodes programmatically and set text via `textContent` to avoid XSS. Drag events are wired using `addEventListener` rather than inline attributes.
+- Uses the context-isolated secure database API.
+- Hotkey and holding-tank rendering is owned by their respective modules.

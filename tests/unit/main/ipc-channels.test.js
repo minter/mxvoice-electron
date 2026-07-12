@@ -26,7 +26,7 @@ describe('IPC channel manifest', () => {
   });
 
   it('covers the known surface size', () => {
-    // 107 channels registered by ipc-handlers.js (post get-app-path removal)
-    expect(allValues().length).toBe(107);
+    // Keep this explicit so intentional IPC surface changes are reviewed.
+    expect(allValues().length).toBe(106);
   });
 });

@@ -6,7 +6,6 @@
 import electron from 'electron';
 const { ipcMain, app } = electron;
 import path from 'path';
-import fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import * as profileManager from '../profile-manager.js';
 import ipcChannels from '../../../shared/ipc-channels.cjs';
@@ -52,32 +51,6 @@ export function register(deps) {
       debugLog?.error('Load profile state error', {
         module: 'ipc-handlers',
         function: 'profile:load-state',
-        error: error.message
-      });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle(IPC.PROFILE.GET_LEGACY_MIGRATION_DATA, async () => {
-    try {
-      const stateFile = path.join(getProfileDirectory('state'), 'state.json');
-      const configFile = path.join(app.getPath('userData'), 'config.json');
-      const stateExists = fs.existsSync(stateFile);
-      if (!fs.existsSync(configFile)) {
-        return { success: true, stateExists, configExists: false, hotkeys: null, holdingTank: null };
-      }
-      const config = JSON.parse(await fsPromises.readFile(configFile, 'utf8'));
-      return {
-        success: true,
-        stateExists,
-        configExists: true,
-        hotkeys: typeof config.hotkeys === 'string' ? config.hotkeys : null,
-        holdingTank: typeof config.holding_tank === 'string' ? config.holding_tank : null
-      };
-    } catch (error) {
-      debugLog?.error('Legacy migration data error', {
-        module: 'ipc-handlers',
-        function: 'profile:get-legacy-migration-data',
         error: error.message
       });
       return { success: false, error: error.message };
