@@ -271,8 +271,7 @@ async function saveWindowState(window) {
     };
 
     // Check if a profile is active
-    const mainModule = await import('../index-modular.js');
-    const currentProfile = mainModule.getCurrentProfile();
+    const currentProfile = getCurrentProfile?.();
     
     if (currentProfile && profileManager) {
       // Save to profile-specific preferences
