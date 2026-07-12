@@ -12,8 +12,6 @@ const { ipcMain, dialog, app } = electron;
 import path from 'path';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
-import { pipeline } from 'stream/promises';
-import { createReadStream, createWriteStream } from 'fs';
 import os from 'os';
 import { Howl, Howler } from 'howler';
 import { parseFile as parseAudioFile } from 'music-metadata';
@@ -24,6 +22,7 @@ import fileOperations from './file-operations.js';
 import * as profileManager from './profile-manager.js';
 import * as profileBackupManager from './profile-backup-manager.js';
 import * as libraryTransferManager from './library-transfer-manager.js';
+import { isSupportedAudioFile, copyFileStreaming } from './file-utils.js';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -35,7 +34,6 @@ let debugLog;
 let logService;
 let updateState;
 let analytics;
-const SUPPORTED_AUDIO_EXTENSIONS = new Set(['.mp3', '.mp4', '.m4a', '.wav', '.ogg', '.flac', '.opus']);
 
 function isPathInside(candidatePath, allowedPath) {
   const relative = path.relative(path.resolve(allowedPath), path.resolve(candidatePath));
@@ -334,118 +332,9 @@ function registerAllHandlers() {
     }
   });
 
-  // Streaming file copy function for large files with progress tracking
-  async function copyFileStreaming(source, destination, progressCallback = null) {
-    let sourceStream = null;
-    let destStream = null;
-    
-    try {
-      // Validate source file exists
-      if (!fs.existsSync(source)) {
-        throw new Error(`Source file does not exist: ${source}`);
-      }
-      
-      // Ensure destination directory exists
-      const destDir = path.dirname(destination);
-      if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
-      }
-      
-      sourceStream = createReadStream(source);
-      destStream = createWriteStream(destination);
-      
-      let bytesCopied = 0;
-      let totalSize = 0;
-      
-      // Get file size for progress tracking
-      try {
-        const stats = fs.statSync(source);
-        totalSize = stats.size;
-      } catch (_statError) {
-        debugLog?.warn('Could not get file size for progress tracking', {
-          module: 'ipc-handlers', 
-          function: 'copyFileStreaming',
-          source
-        });
-      }
-      
-      // Track progress if callback provided and we have total size
-      if (progressCallback && totalSize > 0) {
-        sourceStream.on('data', (chunk) => {
-          bytesCopied += chunk.length;
-          const progress = Math.round((bytesCopied / totalSize) * 100);
-          progressCallback(progress, bytesCopied, totalSize);
-        });
-      }
-      
-      // Handle stream errors
-      sourceStream.on('error', (error) => {
-        debugLog?.error('Source stream error:', { 
-          module: 'ipc-handlers', 
-          function: 'copyFileStreaming', 
-          error: error.message,
-          source
-        });
-      });
-      
-      destStream.on('error', (error) => {
-        debugLog?.error('Destination stream error:', { 
-          module: 'ipc-handlers', 
-          function: 'copyFileStreaming', 
-          error: error.message,
-          destination
-        });
-      });
-      
-      await pipeline(sourceStream, destStream);
-      
-      if (progressCallback) {
-        progressCallback(100, totalSize, totalSize);
-      }
-      
-      return { success: true, bytesCopied: totalSize };
-    } catch (error) {
-      // Clean up partial file if it exists
-      try {
-        if (fs.existsSync(destination)) {
-          fs.unlinkSync(destination);
-          debugLog?.info('Cleaned up partial destination file', { 
-            module: 'ipc-handlers', 
-            function: 'copyFileStreaming',
-            destination
-          });
-        }
-      } catch (cleanupError) {
-        debugLog?.warn('Failed to clean up partial file', { 
-          module: 'ipc-handlers', 
-          function: 'copyFileStreaming',
-          error: cleanupError.message,
-          destination
-        });
-      }
-      
-      debugLog?.error('Streaming file copy error:', { 
-        module: 'ipc-handlers', 
-        function: 'copyFileStreaming', 
-        error: error.message,
-        source,
-        destination
-      });
-      return { success: false, error: error.message };
-    } finally {
-      // Ensure streams are properly closed
-      if (sourceStream && !sourceStream.destroyed) {
-        sourceStream.destroy();
-      }
-      if (destStream && !destStream.destroyed) {
-        destStream.destroy();
-      }
-    }
-  }
-
   ipcMain.handle('file-copy', async (event, sourcePath, destPath) => {
     try {
-      if (!sourcePath || !destPath || !SUPPORTED_AUDIO_EXTENSIONS.has(path.extname(sourcePath).toLowerCase())) {
+      if (!sourcePath || !destPath || !isSupportedAudioFile(sourcePath)) {
         throw new Error('Only supported audio files can be imported');
       }
       const musicDirectory = store.get('music_directory');
@@ -453,7 +342,7 @@ function registerAllHandlers() {
         throw new Error('Access denied: Destination must be inside the managed music directory');
       }
       // Use streaming for better memory efficiency with large files
-      return await copyFileStreaming(sourcePath, destPath);
+      return await copyFileStreaming(sourcePath, destPath, { debugLog });
     } catch (error) {
       debugLog?.error('File copy error:', { module: 'ipc-handlers', function: 'file-copy', error: error.message });
       return { success: false, error: error.message };
@@ -643,7 +532,7 @@ function registerAllHandlers() {
           const entryPath = path.join(directory, entry.name);
           if (entry.isSymbolicLink()) continue;
           if (entry.isDirectory()) await visit(entryPath);
-          else if (entry.isFile() && SUPPORTED_AUDIO_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+          else if (entry.isFile() && isSupportedAudioFile(entry.name)) {
             audioFiles.push(entryPath);
           }
         }
@@ -1464,9 +1353,7 @@ function registerAllHandlers() {
       if (!filePath || typeof filePath !== 'string') {
         return { success: true, data: false };
       }
-      const ext = path.extname(filePath).toLowerCase();
-      const validExtensions = ['.mp3', '.mp4', '.m4a', '.wav', '.ogg', '.flac', '.opus'];
-      return { success: true, data: validExtensions.includes(ext) };
+      return { success: true, data: isSupportedAudioFile(filePath) };
     } catch (error) {
       debugLog?.error('Validate audio file error:', { module: 'ipc-handlers', function: 'validate-audio-file', error: error.message });
       return { success: false, error: error.message };
