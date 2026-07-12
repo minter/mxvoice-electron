@@ -5,6 +5,8 @@
  * Provides optimized event delegation for dynamic content.
  */
 
+import sharedState from '../shared-state.js';
+
 export default class EventDelegator {
   constructor(dependencies = {}) {
     this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
@@ -118,7 +120,7 @@ export default class EventDelegator {
         window.getHoldingTankMode() === 'playlist'
       ) {
         li.classList.add('now_playing');
-        if (window.sharedState) window.sharedState.set('autoplay', true);
+        sharedState.set('autoplay', true);
         window.secureElectronAPI?.analytics?.trackEvent?.('playlist_used', { action: 'play' });
       }
       if (window.playSelected) {

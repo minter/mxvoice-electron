@@ -17,6 +17,7 @@ try {
 }
 
 import { setPreference } from '../preferences/profile-preference-adapter.js';
+import sharedState from '../shared-state.js';
 
 /**
  * Mode Management Singleton
@@ -91,9 +92,7 @@ class ModeManagementModule {
     this.holdingTankMode = mode;
 
     // Update shared state for audio manager to read
-    if (window.sharedState) {
-      window.sharedState.set('holdingTankMode', mode);
-    }
+    sharedState.set('holdingTankMode', mode);
 
     // Update button states
     if (mode === 'storage') {
@@ -107,9 +106,7 @@ class ModeManagementModule {
 
       this.autoplay = false;
       // Update shared state for autoplay
-      if (window.sharedState) {
-        window.sharedState.set('autoplay', false);
-      }
+      sharedState.set('autoplay', false);
 
       document
         .querySelectorAll('.now_playing')
@@ -128,17 +125,14 @@ class ModeManagementModule {
 
       this.autoplay = true;
       // Update shared state for autoplay
-      if (window.sharedState) {
-        window.sharedState.set('autoplay', true);
-      }
+      sharedState.set('autoplay', true);
 
       // Restore the speaker icon and playlist state if there's a track currently playing
       let currentSongId = document
         .getElementById('song_now_playing')
         ?.getAttribute('songid');
 
-      // Check for sound in both possible locations
-      const sound = window.sharedState?.get('sound') || window.sound;
+      const sound = sharedState.get('sound');
       let isCurrentlyPlaying = sound && sound.playing && sound.playing();
       let isPaused = sound && !isCurrentlyPlaying; // Track is loaded but not playing
 
@@ -151,11 +145,7 @@ class ModeManagementModule {
           isCurrentlyPlaying: isCurrentlyPlaying,
           isPaused: isPaused,
           hasSound: !!sound,
-          soundSource: sound
-            ? window.sharedState?.get('sound')
-              ? 'sharedState'
-              : 'window'
-            : 'none',
+          soundSource: sound ? 'sharedState' : 'none',
         }
       );
 

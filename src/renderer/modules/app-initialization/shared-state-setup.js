@@ -13,48 +13,6 @@ export class SharedStateSetup {
   }
 
   /**
-   * Helper function to get shared state with fallback
-   * @returns {Object} Shared state instance or fallback
-   */
-  getSharedState() {
-    if (this.sharedStateInstance && this.sharedStateInitialized) {
-      return this.sharedStateInstance;
-    }
-    
-    // Fallback: create a minimal shared state if not initialized
-    this.logWarn('Shared state not initialized, using fallback');
-    return {
-      get: (key) => {
-        this.logWarn(`Shared state fallback get(${key})`);
-        return null;
-      },
-      set: (key, value) => {
-        this.logWarn(`Shared state fallback set(${key}, ${value})`);
-      },
-      subscribe: (key, _callback) => {
-        this.logWarn(`Shared state fallback subscribe(${key})`);
-        return () => {};
-      }
-    };
-  }
-
-  /**
-   * Function to check shared state health
-   * @returns {Object} Health status object
-   */
-  checkSharedStateHealth() {
-    const health = {
-      initialized: this.sharedStateInitialized,
-      instance: !!this.sharedStateInstance,
-      windowSharedState: !!window.sharedState,
-      windowGetSharedState: !!window.getSharedState
-    };
-    
-    this.logDebug('Shared State Health Check', health);
-    return health;
-  }
-
-  /**
    * Initialize shared state with proper error handling and state management
    * @returns {Promise<boolean>} Success status
    */
@@ -108,11 +66,6 @@ export class SharedStateSetup {
       this.sharedStateInstance.set('fontSize', 11);
       this.sharedStateInstance.set('categories', {}); // Changed from [] to {} for proper category lookup
       this.sharedStateInstance.set('searchTimeout', null);
-      
-      // Make shared state available globally for modules
-      window.sharedState = this.sharedStateInstance;
-      window.getSharedState = this.getSharedState.bind(this);
-      window.checkSharedStateHealth = this.checkSharedStateHealth.bind(this);
       
       this.sharedStateInitialized = true;
       this.logInfo('Shared state initialized with default values');

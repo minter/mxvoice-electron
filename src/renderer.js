@@ -57,8 +57,6 @@ import {
 
 // Global instances - now managed by app-initialization module  
 let debugLogger = null;
-let _sharedStateInstance = null;
-let _sharedStateInitialized = false;
 
 // Initialize debug logger early with basic configuration
 debugLogger = initializeDebugLogger({
@@ -225,9 +223,9 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       throw new Error('Application initialization failed');
     }
     
-    // Get initialized instances for backward compatibility  
-    _sharedStateInstance = AppInitialization.getSharedState();
-    _sharedStateInitialized = AppInitialization.isInitialized();
+    if (window.electronTest?.isE2E) {
+      window.sharedState = AppInitialization.getSharedState();
+    }
     
     // Debug logger already initialized early, no need to reinitialize
     

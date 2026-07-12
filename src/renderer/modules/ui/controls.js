@@ -9,6 +9,7 @@
 
 import Dom from '../dom-utils/index.js';
 import { animateCSS, scaleScrollable } from '../utils/index.js';
+import sharedState from '../shared-state.js';
 
 // Import debug logger
 let debugLog = null;
@@ -102,9 +103,7 @@ function initializeControls(options = {}) {
       window.secureElectronAPI?.analytics?.trackEvent?.('waveform_viewed');
       animateCSS('#waveform', 'fadeInUp').then(() => {
         // Create WaveSurfer when waveform becomes visible
-        if (window.sharedState && window.sharedState.get('createWaveSurfer')) {
-          window.sharedState.get('createWaveSurfer')();
-        }
+        sharedState.get('createWaveSurfer')?.();
       });
     } else {
       Dom.removeClass('#waveform_button', 'active');
@@ -185,4 +184,4 @@ export {
 };
 
 // Default export for module loading
-export default initializeControls; 
+export default initializeControls;
