@@ -53,6 +53,24 @@ describe('HoldingTankState', () => {
     expect(state.toSnapshot()[1].songIds).toEqual([]);
   });
 
+  it('notifies once for a batch and isolates subscriber failures', () => {
+    const state = new HoldingTankState();
+    const listener = vi.fn();
+    state.subscribe(() => { throw new Error('render failed'); });
+    state.subscribe(listener);
+    state.batch(() => {
+      state.add(1, '17');
+      state.add(1, '18');
+      state.renameTab(1, 'Preset');
+    });
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener.mock.calls[0][0][0]).toEqual({
+      tabNumber: 1,
+      tabName: 'Preset',
+      songIds: ['17', '18']
+    });
+  });
+
   it('rejects invalid direct mutations and ignores invalid snapshot tabs', () => {
     const state = new HoldingTankState([{ tabNumber: 8, songIds: ['17'] }]);
     expect(() => state.add(0, '17')).toThrow(RangeError);

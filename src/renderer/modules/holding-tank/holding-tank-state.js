@@ -22,6 +22,8 @@ export class HoldingTankState {
   constructor(snapshot = []) {
     this.tabs = Array.from({ length: TAB_COUNT }, (_, index) => createTab(index + 1));
     this.listeners = new Set();
+    this.batchDepth = 0;
+    this.batchChanged = false;
     this.loadFromSnapshot(snapshot, { notify: false });
   }
 
@@ -29,6 +31,20 @@ export class HoldingTankState {
     if (typeof listener !== 'function') throw new TypeError('listener must be a function');
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  batch(operation) {
+    if (typeof operation !== 'function') throw new TypeError('operation must be a function');
+    this.batchDepth += 1;
+    try {
+      return operation();
+    } finally {
+      this.batchDepth -= 1;
+      if (this.batchDepth === 0 && this.batchChanged) {
+        this.batchChanged = false;
+        this.#emit();
+      }
+    }
   }
 
   add(tabNumber, songId, index) {
@@ -119,8 +135,26 @@ export class HoldingTankState {
   }
 
   #notify() {
+    if (this.batchDepth > 0) {
+      this.batchChanged = true;
+      return;
+    }
+    this.#emit();
+  }
+
+  #emit() {
     const snapshot = this.toSnapshot();
-    for (const listener of this.listeners) listener(snapshot);
+    for (const listener of this.listeners) {
+      try {
+        listener(snapshot);
+      } catch (error) {
+        globalThis.window?.debugLog?.error('Holding tank state subscriber failed', {
+          module: 'holding-tank-state',
+          function: 'notify',
+          error: error.message
+        });
+      }
+    }
   }
 }
 

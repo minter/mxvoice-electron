@@ -93,8 +93,10 @@ export async function restoreHoldingTankSnapshot(snapshot) {
     const rows = result?.data || result || [];
     if (!Array.isArray(rows)) throw new Error('Failed to load holding tank metadata');
     rows.forEach(row => songsById.set(String(row.id), row));
-    songIds.filter(songId => !songsById.has(String(songId)))
-      .forEach(songId => holdingTankState.clearSong(songId));
+    holdingTankState.batch(() => {
+      songIds.filter(songId => !songsById.has(String(songId)))
+        .forEach(songId => holdingTankState.clearSong(songId));
+    });
   }
 
   for (const tab of holdingTankState.toSnapshot()) {
