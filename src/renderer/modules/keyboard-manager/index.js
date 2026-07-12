@@ -117,6 +117,7 @@ export class KeyboardManager {
         // Case 1: Hotkey removal
         if (selected.closest('#hotkey-tab-content')) {
           this.logInfo('Delete key triggered for a hotkey');
+          window.hotkeysModule?.clearHotkeyElement?.(selected);
           selected.removeAttribute('songid');
           const span = selected.querySelector('span');
           if (span) span.textContent = '';

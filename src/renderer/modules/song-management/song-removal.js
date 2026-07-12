@@ -77,6 +77,7 @@ export function deleteSong() {
           document.querySelectorAll(`.holding_tank .list-group-item[songid="${songId}"]`).forEach(el => el.remove());
           // Clear the hotkey slot in-place: keep the li and its draggable span,
           // just drop the songid and label so the slot stays usable.
+          window.hotkeysModule?.clearSong?.(songId);
           document.querySelectorAll(`.hotkeys li[songid="${songId}"]`).forEach(li => {
             li.removeAttribute('songid');
             const span = li.querySelector('span.song');
@@ -141,7 +142,9 @@ export async function removeFromHotkey() {
       if (confirmed) {
         debugLog?.info("Proceeding with removal from hotkey", { module: 'song-management', function: 'removeFromHotkey' });
         // Clear the hotkey slot
-        document.getElementById('selected_row')?.removeAttribute('songid');
+        const selectedHotkey = document.getElementById('selected_row');
+        window.hotkeysModule?.clearHotkeyElement?.(selectedHotkey);
+        selectedHotkey?.removeAttribute('songid');
         { const span = document.querySelector('#selected_row span'); if (span) span.textContent = ''; }
         // Clear the selection
         document.getElementById('selected_row')?.removeAttribute('id');
@@ -159,7 +162,9 @@ export async function removeFromHotkey() {
     } else {
       debugLog?.error("Song not found in database for ID:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
       // Still clear the hotkey even if song not found
-      document.getElementById('selected_row')?.removeAttribute('songid');
+      const selectedHotkey = document.getElementById('selected_row');
+      window.hotkeysModule?.clearHotkeyElement?.(selectedHotkey);
+      selectedHotkey?.removeAttribute('songid');
       { const span2 = document.querySelector('#selected_row span'); if (span2) span2.textContent = ''; }
       document.getElementById('selected_row')?.removeAttribute('id');
       // Save the updated hotkeys to store and wait for completion
@@ -173,4 +178,4 @@ export async function removeFromHotkey() {
   } else {
     debugLog?.info("No songId found on selected row", { module: 'song-management', function: 'removeFromHotkey' });
   }
-} 
+}

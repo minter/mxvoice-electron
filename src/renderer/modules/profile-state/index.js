@@ -200,10 +200,11 @@ export function extractProfileState() {
     function: 'extractProfileState'
   });
   
+  const hotkeySnapshot = _hotkeysModuleRef?.getHotkeySnapshot?.();
   const state = {
     version: '1.0.0',
     timestamp: Date.now(),
-    hotkeys: extractHotkeyTabs(),
+    hotkeys: hotkeySnapshot || extractHotkeyTabs(),
     holdingTank: extractHoldingTankTabs()
   };
   
@@ -347,6 +348,8 @@ async function restoreHotkeyTabs(hotkeyTabs, _hotkeysModule) {
     });
     return;
   }
+
+  _hotkeysModule?.loadHotkeySnapshot?.(hotkeyTabs);
   
   for (const tabState of hotkeyTabs) {
     const { tabNumber, tabName, hotkeys } = tabState;
@@ -461,6 +464,10 @@ async function restoreHotkeyTabs(hotkeyTabs, _hotkeysModule) {
   if (firstTab) {
     firstTab.click();
   }
+
+  // Deleted songs are intentionally skipped above, so recapture the rendered
+  // result to keep the model aligned with what the user can actually trigger.
+  _hotkeysModule?.syncStateFromDom?.();
   
   debugLog?.info('[PROFILE-STATE] Hotkey restoration complete', {
     module: 'profile-state',

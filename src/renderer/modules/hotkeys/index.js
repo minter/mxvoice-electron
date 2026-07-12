@@ -20,6 +20,7 @@ try {
 import * as hotkeyData from './hotkey-data.js';
 import * as hotkeyOperations from './hotkey-operations.js';
 import * as hotkeyUI from './hotkey-ui.js';
+import HotkeyState from './hotkey-state.js';
 
 // Import secure adapters for UI operations
 import { secureFileDialog } from '../adapters/secure-adapter.js';
@@ -40,6 +41,7 @@ class HotkeysModule {
     // Remove legacy db/store usage in secure context
     this.db = null;
     this.store = null;
+    this.state = new HotkeyState();
 
     // Initialize sub-modules
     this.data = hotkeyData;
@@ -79,17 +81,12 @@ class HotkeysModule {
       this.openHotkeyFile = hotkeyOperations.openHotkeyFile.bind(this);
       this.saveHotkeyFile = hotkeyOperations.saveHotkeyFile.bind(this);
       this.playSongFromHotkey = hotkeyOperations.playSongFromHotkey.bind(this);
-      this.sendToHotkeys = hotkeyOperations.sendToHotkeys.bind(this);
       this.hotkeyDrop = hotkeyUI.hotkeyDrop.bind(this);
       this.allowHotkeyDrop = hotkeyUI.allowHotkeyDrop.bind(this);
       this.switchToHotkeyTab = hotkeyUI.switchToHotkeyTab.bind(this);
-      this.renameHotkeyTab = hotkeyUI.renameHotkeyTab.bind(this);
       // removeFromHotkey is implemented directly in this class
       this.exportHotkeyConfig = hotkeyOperations.exportHotkeyConfig.bind(this);
-      this.importHotkeyConfig = hotkeyOperations.importHotkeyConfig.bind(this);
-      this.clearHotkeyConfig = hotkeyOperations.clearHotkeyConfig.bind(this);
       this.getHotkeyConfig = hotkeyOperations.getHotkeyConfig.bind(this);
-      this.setHotkeyConfig = hotkeyOperations.setHotkeyConfig.bind(this);
     } catch (error) {
       debugLog?.error('❌ Error binding hotkey functions:', error, {
         module: 'hotkeys',
@@ -224,7 +221,7 @@ class HotkeysModule {
     if (window.isRestoringProfileState) {
       return;
     }
-    
+
     // When profiles are active, save to profile state instead
     if (window.moduleRegistry && window.moduleRegistry.profileState) {
       debugLog?.info('Saving hotkeys to profile state', {
@@ -277,6 +274,93 @@ class HotkeysModule {
   }
 
   /**
+   * Synchronize the model from the existing hotkey UI.
+   * This is temporary compatibility glue while mutation entry points migrate
+   * to HotkeyState one by one.
+   */
+  syncStateFromDom() {
+    const snapshot = [];
+    for (let tabNumber = 1; tabNumber <= 5; tabNumber++) {
+      const tabContent = document.getElementById(`hotkeys_list_${tabNumber}`);
+      const tabLink = document.querySelector(`#hotkey_tabs .nav-item:nth-child(${tabNumber}) a`);
+      const hotkeys = {};
+
+      for (let keyNumber = 1; keyNumber <= 12; keyNumber++) {
+        const songId = tabContent
+          ?.querySelector(`[id^="f${keyNumber}_hotkey"]`)
+          ?.getAttribute('songid');
+        if (songId) hotkeys[`f${keyNumber}`] = songId;
+      }
+
+      const displayedName = tabLink?.textContent?.trim() || String(tabNumber);
+      snapshot.push({
+        tabNumber,
+        tabName: /^\d$/.test(displayedName) ? null : displayedName,
+        hotkeys
+      });
+    }
+    this.state.loadFromSnapshot(snapshot, { notify: false });
+    return this.state.toSnapshot();
+  }
+
+  getHotkeySnapshot() {
+    return this.state.toSnapshot();
+  }
+
+  loadHotkeySnapshot(snapshot) {
+    this.state.loadFromSnapshot(snapshot, { notify: false });
+  }
+
+  getActiveTabNumber() {
+    return Number(document.querySelector('.hotkeys.show.active')?.id?.match(/^hotkeys_list_(\d)$/)?.[1]) || 1;
+  }
+
+  getHotkeyLocation(element) {
+    const tabMatch = element?.closest?.('.hotkeys')?.id?.match(/^hotkeys_list_(\d)$/);
+    const hotkeyId = element?.dataset?.originalHotkeyId || element?.id;
+    const keyMatch = hotkeyId?.match(/^(f(?:[1-9]|1[0-2]))_hotkey/i);
+    if (!tabMatch || !keyMatch) return null;
+    return { tabNumber: Number(tabMatch[1]), key: keyMatch[1].toLowerCase() };
+  }
+
+  assignHotkey(element, songId) {
+    const location = this.getHotkeyLocation(element);
+    if (!location) return false;
+    return this.state.assign(location.tabNumber, location.key, songId);
+  }
+
+  clearHotkeyElement(element) {
+    const location = this.getHotkeyLocation(element);
+    if (!location) return false;
+    return this.state.clear(location.tabNumber, location.key);
+  }
+
+  clearSong(songId) {
+    return this.state.clearSong(songId);
+  }
+
+  importHotkeyConfig(config) {
+    return hotkeyOperations.importHotkeyConfig(config, {
+      setLabelFromSongId: this.setLabelFromSongId.bind(this),
+      saveHotkeysToStore: this.saveHotkeysToStore.bind(this),
+      clearTab: () => this.state.clearTab(this.getActiveTabNumber()),
+      assignHotkey: this.assignHotkey.bind(this),
+      renameTab: (name) => this.state.renameTab(this.getActiveTabNumber(), name)
+    });
+  }
+
+  setHotkeyConfig(config) {
+    return this.importHotkeyConfig(config);
+  }
+
+  clearHotkeyConfig() {
+    return hotkeyOperations.clearHotkeyConfig({
+      saveHotkeysToStore: this.saveHotkeysToStore.bind(this),
+      clearTab: () => this.state.clearTab(this.getActiveTabNumber())
+    });
+  }
+
+  /**
    * Load hotkeys from store
    * Loads saved hotkey state and populates UI
    */
@@ -305,6 +389,7 @@ class HotkeysModule {
             ) {
               const column = document.getElementById('hotkeys-column');
               if (column) column.innerHTML = window.DOMPurify ? window.DOMPurify.sanitize(storedHotkeysHtml) : storedHotkeysHtml;
+              this.syncStateFromDom();
               document.getElementById('selected_row')?.removeAttribute('id');
             }
           });
@@ -325,6 +410,10 @@ class HotkeysModule {
       return;
     }
 
+    const activeTab = document.querySelector('.hotkeys.show.active');
+    const tabNumber = Number(activeTab?.id?.match(/^hotkeys_list_(\d)$/)?.[1]);
+    if (tabNumber) this.state.clearTab(tabNumber);
+
     for (const key in fkeys) {
       const hotkeyElement = document.querySelector(
         `.hotkeys.active [id^="${key}_hotkey"]`
@@ -332,6 +421,7 @@ class HotkeysModule {
 
       if (fkeys[key]) {
         try {
+          this.assignHotkey(hotkeyElement, fkeys[key]);
           if (hotkeyElement) hotkeyElement.setAttribute('songid', fkeys[key]);
           this.setLabelFromSongId(fkeys[key], hotkeyElement);
         } catch (err) {
@@ -352,6 +442,7 @@ class HotkeysModule {
     if (title) {
       const active = document.querySelector('#hotkey_tabs li a.active');
       if (active) active.textContent = title;
+      if (tabNumber) this.state.renameTab(tabNumber, title);
     }
     
     // Save after all hotkeys populated (single save instead of N saves during loading)
@@ -383,6 +474,7 @@ class HotkeysModule {
    * @param {jQuery} element - Hotkey element to update
    */
   setLabelFromSongId(song_id, element) {
+    this.assignHotkey(element, song_id);
     // Use new database API for getting song by ID
     if (this.electronAPI && this.electronAPI.database) {
       return this.electronAPI.database
@@ -488,6 +580,8 @@ class HotkeysModule {
       debugLog?.info('🔍 Active tab found:', { activeTab: !!activeTab, tabId: activeTab?.id });
       
       if (activeTab) {
+        const tabNumber = Number(activeTab.id.match(/^hotkeys_list_(\d)$/)?.[1]);
+        if (tabNumber) this.state.clearTab(tabNumber);
         let clearedCount = 0;
         for (let key = 1; key <= 12; key++) {
           const li = activeTab.querySelector(`[id^="f${key}_hotkey"]`);
@@ -725,6 +819,7 @@ class HotkeysModule {
       return;
     }
     if (target && song_id) {
+      this.assignHotkey(target, song_id);
       target.setAttribute('songid', song_id);
       this.setLabelFromSongId(song_id, target);
       // Save hotkeys state after assignment
@@ -776,6 +871,8 @@ class HotkeysModule {
     if (newName && newName.trim() !== '') {
       const active = document.querySelector('#hotkey_tabs .nav-link.active');
       if (active) active.textContent = newName;
+      const tabNumber = Number(active?.getAttribute('href')?.match(/^#hotkeys_list_(\d)$/)?.[1]);
+      if (tabNumber) this.state.renameTab(tabNumber, newName);
       this.saveHotkeysToStore();
       return { success: true, newName: newName };
     } else {
@@ -848,6 +945,7 @@ class HotkeysModule {
                 });
                 const selected = document.getElementById('selected_row');
                 if (selected) {
+                  this.clearHotkeyElement(selected);
                   selected.removeAttribute('songid');
                   const span = selected.querySelector('span');
                   if (span) span.textContent = '';
@@ -872,6 +970,7 @@ class HotkeysModule {
               if (confirmed) {
                 const selected = document.getElementById('selected_row');
                 if (selected) {
+                  this.clearHotkeyElement(selected);
                   selected.removeAttribute('songid');
                   const span = selected.querySelector('span');
                   if (span) span.textContent = '';
@@ -892,6 +991,7 @@ class HotkeysModule {
           if (confirmed) {
             const selected = document.getElementById('selected_row');
             if (selected) {
+              this.clearHotkeyElement(selected);
               selected.removeAttribute('songid');
               const span = selected.querySelector('span');
               if (span) span.textContent = '';
@@ -969,16 +1069,7 @@ class HotkeysModule {
     debugLog?.debug('populateHotkeysWrapper called', { fkeys, title });
     try {
       debugLog?.info('About to call populateHotkeys...');
-      // Call the working implementation from hotkey-data.js
-      hotkeyData.populateHotkeys(fkeys, title, {
-        electronAPI: window.electronAPI,
-        setLabelFromSongId: (songId, element) => {
-          if (window.setLabelFromSongId) {
-            window.setLabelFromSongId(songId, element);
-          }
-        },
-        fallbackSetLabelFromSongId: this.fallbackSetLabelFromSongId.bind(this),
-      });
+      this.populateHotkeys(fkeys, title);
       debugLog?.info('populateHotkeys completed successfully');
       return true;
     } catch (error) {

@@ -48,6 +48,7 @@ export class HotkeyBindings {
           return;
         }
         // Remove song assignment
+        window.hotkeysModule?.clearHotkeyElement?.(selected);
         selected.removeAttribute('songid');
         const span = selected.querySelector('span');
         if (span) span.textContent = '';

@@ -340,6 +340,7 @@ export default class DOMInitialization {
                   // Use the same direct approach as delete keypress (no ID manipulation needed)
                   const element = document.getElementById('selected_row'); // This is our hotkeyLi
                   if (element) {
+                    window.hotkeysModule?.clearHotkeyElement?.(element);
                     element.removeAttribute('songid');
                     const span = element.querySelector('span');
                     if (span) span.textContent = '';

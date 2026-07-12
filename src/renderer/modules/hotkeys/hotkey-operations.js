@@ -356,7 +356,7 @@ function exportHotkeyConfig() {
  * @param {Object} options - Options object containing dependencies
  */
 function importHotkeyConfig(config, options = {}) {
-  const { setLabelFromSongId, saveHotkeysToStore } = options;
+  const { setLabelFromSongId, saveHotkeysToStore, clearTab, assignHotkey, renameTab } = options;
   
   if (!config || !config.hotkeys) {
     window.debugLog?.warn('❌ Invalid hotkey configuration', { module: 'hotkey-operations', function: 'importHotkeyConfig' });
@@ -366,6 +366,7 @@ function importHotkeyConfig(config, options = {}) {
   // Scope to the active hotkey tab
   const activeTab = document.querySelector('#hotkey-tab-content .tab-pane.active.show')
     || document.getElementById('hotkeys_list_1');
+  clearTab?.();
 
   // Clear existing hotkeys
   for (let key = 1; key <= 12; key++) {
@@ -381,6 +382,7 @@ function importHotkeyConfig(config, options = {}) {
   for (const key in config.hotkeys) {
     if (config.hotkeys[key]) {
       const el = activeTab?.querySelector(`[id^="${key}_hotkey"]`);
+      assignHotkey?.(el, config.hotkeys[key]);
       if (el) el.setAttribute('songid', config.hotkeys[key]);
       if (setLabelFromSongId && el) {
         setLabelFromSongId(config.hotkeys[key], el);
@@ -392,6 +394,7 @@ function importHotkeyConfig(config, options = {}) {
   if (config.title) {
     const link = document.querySelector('#hotkey_tabs li a.active');
     if (link) link.textContent = config.title;
+    renameTab?.(config.title);
   }
   
   // Save to store
@@ -437,13 +440,14 @@ function _restoreHotkeyConfig(backup, options = {}) {
  * @param {Object} options - Options object containing dependencies
  */
 function clearHotkeyConfig(options = {}) {
-  const { saveHotkeysToStore } = options;
+  const { saveHotkeysToStore, clearTab } = options;
   
   window.debugLog?.info('🧹 Clearing hotkey configuration...', { module: 'hotkey-operations', function: 'clearHotkeyConfig' });
   
   // Clear all hotkey assignments in the active tab
   const activeTab = document.querySelector('#hotkey-tab-content .tab-pane.active.show')
     || document.getElementById('hotkeys_list_1');
+  clearTab?.();
   for (let key = 1; key <= 12; key++) {
     const li = activeTab?.querySelector(`[id^="f${key}_hotkey"]`);
     if (li) {
