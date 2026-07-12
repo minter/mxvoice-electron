@@ -13,9 +13,10 @@ import { getPlaybackSelectionSongId, resetUIState } from './audio-controller.js'
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 import { resolveAudioSource } from './audio-source-resolver.js';
 import { showMissingAudioFile } from './playback-error-presenter.js';
-import { prepareCrossfadeTransition, startCrossfadeIn } from './crossfade-transition.js';
+import { prepareCrossfadeTransition } from './crossfade-transition.js';
 import { presentPlaybackStarted } from './playback-ui-presenter.js';
 import { createPlaybackSound } from './playback-sound-factory.js';
+import { handlePlaybackStarted } from './playback-start.js';
 import {
   calculatePlaybackVolume,
   determinePlaybackCompletionAction,
@@ -295,43 +296,21 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                   ?.classList.contains('active') || false,
               debugLog: getDebugLog(),
               onPlay: function () {
-                // Fade in if crossfading
-                if (shouldCrossfade2 && crossfadeMs2 > 0) {
-                  startCrossfadeIn({ sound, targetVolume: targetVolume2, durationMs: crossfadeMs2 });
-                }
-                const _time = Math.round(sound.duration());
-                sharedState.set(
-                  'globalAnimation',
-                  requestAnimationFrame(
-                    howlerUtils.updateTimeTracker.bind(this)
-                  )
-                );
-                presentPlaybackStarted({
-                  songId: song_id,
-                  row,
-                  source: sound_path,
-                  sharedState
+                handlePlaybackStarted({
+                  sound,
+                  howlerContext: this,
+                  crossfade: shouldCrossfade2,
+                  targetVolume: targetVolume2,
+                  durationMs: crossfadeMs2,
+                  sharedState,
+                  requestAnimationFrame,
+                  updateTimeTracker: howlerUtils.updateTimeTracker,
+                  presentPlayback: presentPlaybackStarted,
+                  presentation: { songId: song_id, row, source: sound_path, sharedState },
+                  ensureAudioProbe: window.electronTest?.isE2E && !window.electronTest?.audioProbe
+                    ? createAndInstallProbe
+                    : null
                 });
-
-                // E2E: ensure probe is attached once WebAudio is active
-                try {
-                  if (window.electronTest?.isE2E && !window.electronTest?.audioProbe && window.Howler?.usingWebAudio && window.Howler?.masterGain && window.Howler?.ctx) {
-                    const ctx = window.Howler.ctx;
-                    const analyser = new AnalyserNode(ctx, { fftSize: 2048 });
-                    analyser.smoothingTimeConstant = 0.2;
-                    window.Howler.masterGain.connect(analyser);
-                    if (!window.electronTest) window.electronTest = {};
-                    window.electronTest.audioProbe = {
-                      currentRMS() {
-                        const buf = new Float32Array(analyser.fftSize);
-                        analyser.getFloatTimeDomainData(buf);
-                        let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
-                        return Math.sqrt(sum / buf.length);
-                      },
-                      isSilent(threshold = 1e-3) { return this.currentRMS() < threshold; }
-                    };
-                  }
-                } catch (_) { /* best-effort E2E audio probe setup */ }
               },
               onEnd: function () {
                 // If this sound is no longer the active sound (crossfade already
