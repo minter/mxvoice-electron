@@ -23,6 +23,7 @@ import {
 import { createBackupMetadataCoordinator } from './backup-metadata-coordinator.js';
 import { createBackupMetadataStore } from './backup-metadata-store.js';
 import { createBackupDirectoryScanner } from './backup-directory-scanner.js';
+import { createBackupFileOperations } from './backup-file-operations.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -51,6 +52,7 @@ const directoryScanner = createBackupDirectoryScanner({
   writeMetadata: (metadataPath, data) => metadataCoordinator.writeAtomic(metadataPath, data),
   getDebugLog: () => debugLog
 });
+const backupFiles = createBackupFileOperations({ fs, path });
 const metadataStore = createBackupMetadataStore({
   fs,
   getMetadataPath: getBackupMetadataPath,
@@ -178,21 +180,7 @@ async function updateMetadata(profileName, updateFn) {
  * @returns {Promise<void>}
  */
 async function copyDirectoryRecursive(src, dest) {
-  // Ensure destination directory exists (recursive mkdir is idempotent)
-  await fs.promises.mkdir(dest, { recursive: true });
-
-  const entries = await fs.promises.readdir(src, { withFileTypes: true });
-  
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-    
-    if (entry.isDirectory()) {
-      await copyDirectoryRecursive(srcPath, destPath);
-    } else {
-      await fs.promises.copyFile(srcPath, destPath);
-    }
-  }
+  return backupFiles.copyDirectory(src, dest);
 }
 
 /**
@@ -393,7 +381,7 @@ async function restoreBackup(profileName, backupId) {
     }
     
     // Remove existing profile directory and restore from backup
-    await fs.promises.rm(profileDir, { recursive: true, force: true });
+    await backupFiles.removeDirectory(profileDir);
     await fs.promises.mkdir(profileDir, { recursive: true });
     await copyDirectoryRecursive(backupPath, profileDir);
     
@@ -435,7 +423,7 @@ async function deleteBackup(profileName, backupId) {
     }
 
     // Remove backup directory
-    await fs.promises.rm(backupPath, { recursive: true, force: true });
+    await backupFiles.removeDirectory(backupPath);
     
     // Update metadata
     await updateMetadata(profileName, (metadata) => {
@@ -500,7 +488,7 @@ async function cleanupOldBackups(profileName, maxCount, maxAge) {
     for (const backup of backupsToDelete) {
       const backupPath = path.join(backupDir, backup.id);
       if (await pathExists(backupPath)) {
-        await fs.promises.rm(backupPath, { recursive: true, force: true });
+        await backupFiles.removeDirectory(backupPath);
         deletedCount++;
       }
     }
