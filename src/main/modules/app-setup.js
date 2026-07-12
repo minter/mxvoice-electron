@@ -30,6 +30,10 @@ let getCurrentProfile;
 let autoBackupTimer;
 let analytics;
 let appStartTime;
+let isQuitting = false;
+let shutdownComplete = false;
+let windowStateSaveTimeout = null;
+let closePreparationPromise = null;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -137,10 +141,10 @@ function setupWindowStateSaving() {
   });
 
   // Use debounced save for frequent events (move/resize)
-  let saveTimeout = null;
   const debouncedSave = () => {
-    if (saveTimeout) clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
+    if (windowStateSaveTimeout) clearTimeout(windowStateSaveTimeout);
+    windowStateSaveTimeout = setTimeout(() => {
+      windowStateSaveTimeout = null;
       saveWindowState(mainWindow).catch(err => {
         debugLog?.error('Error in debounced window state save', {
           module: 'app-setup',
@@ -213,7 +217,7 @@ function setupWindowStateSaving() {
 
   let closeSaveComplete = false;
   mainWindow.on('close', async (event) => {
-    if (closeSaveComplete) return;
+    if (isQuitting || closeSaveComplete) return;
     event.preventDefault();
     debugLog?.info('Window closing, saving window state...', {
       module: 'app-setup',
@@ -221,15 +225,7 @@ function setupWindowStateSaving() {
     });
     
     try {
-      // Clear any pending debounced saves
-      if (saveTimeout) clearTimeout(saveTimeout);
-      
-      if (!mainWindow.webContents.isDestroyed()) {
-        await mainWindow.webContents.executeJavaScript(
-          'window.moduleRegistry?.profileState?.flushProfileState?.()'
-        );
-      }
-      await saveWindowState(mainWindow);
+      await prepareMainWindowForClose();
       
       debugLog?.info('Window state saved on close', {
         module: 'app-setup',
@@ -247,6 +243,37 @@ function setupWindowStateSaving() {
     }
   });
 
+}
+
+/**
+ * Flush renderer state and persist the main window state before it closes.
+ * Reuses an in-flight preparation so close and quit events cannot overlap saves.
+ */
+function prepareMainWindowForClose() {
+  if (closePreparationPromise) return closePreparationPromise;
+
+  const preparation = (async () => {
+    if (windowStateSaveTimeout) {
+      clearTimeout(windowStateSaveTimeout);
+      windowStateSaveTimeout = null;
+    }
+
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+
+    if (!mainWindow.webContents.isDestroyed()) {
+      await mainWindow.webContents.executeJavaScript(
+        'window.moduleRegistry?.profileState?.flushProfileState?.()'
+      );
+    }
+    await saveWindowState(mainWindow);
+  })();
+  closePreparationPromise = preparation;
+  const clearPreparation = () => {
+    if (closePreparationPromise === preparation) closePreparationPromise = null;
+  };
+  preparation.then(clearPreparation, clearPreparation);
+
+  return preparation;
 }
 
 /**
@@ -1122,10 +1149,25 @@ function setupAppLifecycle() {
   // Shutdown analytics and stop backup timer before quit.
   // Electron does not await async before-quit handlers, so block the quit,
   // do the async work, then re-issue the quit with a flag to skip this handler.
-  let shutdownComplete = false;
   app.on('before-quit', async (event) => {
     if (shutdownComplete) return;
     event.preventDefault();
+    if (isQuitting) return;
+    isQuitting = true;
+
+    try {
+      await prepareMainWindowForClose();
+      debugLog?.info('Window and profile state saved on app quit', {
+        module: 'app-setup',
+        function: 'before-quit'
+      });
+    } catch (err) {
+      debugLog?.error('Error saving state on app quit', {
+        module: 'app-setup',
+        function: 'before-quit',
+        error: err.message
+      });
+    }
 
     if (autoBackupTimer) {
       autoBackupTimer.stopAutoBackupTimer();
