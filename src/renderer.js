@@ -45,6 +45,7 @@ if (document.readyState === 'loading') {
 
 // Import debug logger for centralized logging
 import initializeDebugLogger from './renderer/modules/debug-log/debug-logger.js';
+import setupMainProcessEventBridge from './renderer/modules/event-coordination/main-process-events.js';
 
 // Global instances - now managed by app-initialization module  
 let debugLogger = null;
@@ -580,177 +581,14 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     }
 
     // Bridge secure IPC events to renderer functions under context isolation.
-    // This must run even if function coordination initialization fails so that
-    // core UI actions like preferences and category management still work.
+    // This runs even when function coordination initialization fails.
     try {
-      if (window.secureElectronAPI && window.secureElectronAPI.events) {
-        // Holding tank load → holding-tank state and renderer
-        if (typeof window.secureElectronAPI.events.onHoldingTankLoad === 'function') {
-          window.secureElectronAPI.events.onHoldingTankLoad((songIds) => {
-            if (moduleRegistry.holdingTank?.populateHoldingTank) {
-              moduleRegistry.holdingTank.populateHoldingTank(songIds).catch(error => {
-                window.logError('Error populating holding tank:', error);
-              });
-            } else {
-              window.logWarn('Holding tank module not yet available when holding_tank_load fired');
-            }
-          });
-        }
-
-        // Hotkey load → populateHotkeys
-        if (typeof window.secureElectronAPI.events.onFkeyLoad === 'function') {
-          window.secureElectronAPI.events.onFkeyLoad((fkeys, title) => {
-            if (typeof window.populateHotkeys === 'function') {
-              window.populateHotkeys(fkeys, title);
-            } else {
-              window.logWarn('populateHotkeys not yet available when fkey_load fired');
-            }
-          });
-        }
-
-        // Add file dialog → startAddNewSong
-        if (typeof window.secureElectronAPI.events.onAddDialogLoad === 'function') {
-          window.secureElectronAPI.events.onAddDialogLoad((filename, metadata) => {
-            if (typeof window.startAddNewSong === 'function') {
-              window.startAddNewSong(filename, metadata);
-            } else if (window.moduleRegistry?.songManagement?.startAddNewSong) {
-              window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
-            } else {
-              window.logWarn('startAddNewSong not available when add_dialog_load fired');
-            }
-          });
-        }
-
-        // Bulk add dialog → showBulkAddModal
-        if (typeof window.secureElectronAPI.events.onBulkAddDialogLoad === 'function') {
-          window.secureElectronAPI.events.onBulkAddDialogLoad((dirname) => {
-            if (typeof window.showBulkAddModal === 'function') {
-              window.showBulkAddModal(dirname);
-            } else if (window.moduleRegistry?.bulkOperations?.showBulkAddModal) {
-              window.moduleRegistry.bulkOperations.showBulkAddModal(dirname);
-            } else {
-              window.logWarn('showBulkAddModal not available when bulk_add_dialog_load fired');
-            }
-          });
-        }
-
-        // External file drop (dock/taskbar icon) → drag-drop module
-        if (typeof window.secureElectronAPI.events.onExternalFilesDrop === 'function') {
-          window.secureElectronAPI.events.onExternalFilesDrop((files) => {
-            if (window.moduleRegistry?.dragDrop?.handleExternalFileDrop) {
-              window.moduleRegistry.dragDrop.handleExternalFileDrop(files);
-            } else {
-              window.logWarn('handleExternalFileDrop not available when external-files-dropped fired');
-            }
-          });
-        }
-
-        // Manage categories → openCategoriesModal
-        if (typeof window.secureElectronAPI.events.onManageCategories === 'function') {
-          window.secureElectronAPI.events.onManageCategories(() => {
-            if (typeof window.openCategoriesModal === 'function') {
-              window.openCategoriesModal();
-            } else {
-              window.logWarn('openCategoriesModal not yet available when manage_categories fired');
-            }
-          });
-        }
-
-        // NOTE: Preferences 'show_preferences' IPC is wired by an early bridge
-        // near the top of this file to avoid race conditions where the event
-        // fires before full module loading/coordination has completed.
-
-        // Edit selected song → editSelectedSong
-        if (typeof window.secureElectronAPI.events.onEditSelectedSong === 'function') {
-          window.secureElectronAPI.events.onEditSelectedSong(() => {
-            if (typeof window.editSelectedSong === 'function') {
-              window.editSelectedSong();
-            } else if (window.moduleRegistry?.ui?.editSelectedSong) {
-              window.moduleRegistry.ui.editSelectedSong();
-            } else if (window.moduleRegistry?.songManagement?.editSelectedSong) {
-              window.moduleRegistry.songManagement.editSelectedSong();
-            } else {
-              window.logWarn('editSelectedSong not available when edit_selected_song fired');
-            }
-          });
-        }
-
-        // Delete selected song → deleteSelectedSong
-        if (typeof window.secureElectronAPI.events.onDeleteSelectedSong === 'function') {
-          window.secureElectronAPI.events.onDeleteSelectedSong(() => {
-            if (typeof window.deleteSelectedSong === 'function') {
-              window.deleteSelectedSong();
-            } else if (window.moduleRegistry?.ui?.deleteSelectedSong) {
-              window.moduleRegistry.ui.deleteSelectedSong();
-            } else if (window.moduleRegistry?.songManagement?.deleteSelectedSong) {
-              window.moduleRegistry.songManagement.deleteSelectedSong();
-            } else {
-              window.logWarn('deleteSelectedSong not available when delete_selected_song fired');
-            }
-          });
-        }
-
-        // Font size events → UI controls
-        if (typeof window.secureElectronAPI.events.onIncreaseFontSize === 'function') {
-          window.secureElectronAPI.events.onIncreaseFontSize(() => {
-            if (typeof window.increaseFontSize === 'function') {
-              window.increaseFontSize();
-            } else if (window.moduleRegistry?.ui?.increaseFontSize) {
-              window.moduleRegistry.ui.increaseFontSize();
-            } else {
-              window.logWarn('increaseFontSize not available when increase_font_size fired');
-            }
-          });
-        }
-        if (typeof window.secureElectronAPI.events.onDecreaseFontSize === 'function') {
-          window.secureElectronAPI.events.onDecreaseFontSize(() => {
-            if (typeof window.decreaseFontSize === 'function') {
-              window.decreaseFontSize();
-            } else if (window.moduleRegistry?.ui?.decreaseFontSize) {
-              window.moduleRegistry.ui.decreaseFontSize();
-            } else {
-              window.logWarn('decreaseFontSize not available when decrease_font_size fired');
-            }
-          });
-        }
-
-        // UI toggles
-        if (typeof window.secureElectronAPI.events.onToggleWaveform === 'function') {
-          window.secureElectronAPI.events.onToggleWaveform(() => {
-            if (typeof window.toggleWaveform === 'function') {
-              window.toggleWaveform();
-            } else if (window.moduleRegistry?.ui?.toggleWaveform) {
-              window.moduleRegistry.ui.toggleWaveform();
-            } else {
-              window.logWarn('toggleWaveform not available when toggle_wave_form fired');
-            }
-          });
-        }
-        if (typeof window.secureElectronAPI.events.onToggleAdvancedSearch === 'function') {
-          window.secureElectronAPI.events.onToggleAdvancedSearch(() => {
-            if (typeof window.toggleAdvancedSearch === 'function') {
-              window.toggleAdvancedSearch();
-            } else if (window.moduleRegistry?.ui?.toggleAdvancedSearch) {
-              window.moduleRegistry.ui.toggleAdvancedSearch();
-            } else {
-              window.logWarn('toggleAdvancedSearch not available when toggle_advanced_search fired');
-            }
-          });
-        }
-
-        // Close all tabs → UI manager closeAllTabs (Start A New Session)
-        if (typeof window.secureElectronAPI.events.onCloseAllTabs === 'function') {
-          window.secureElectronAPI.events.onCloseAllTabs(() => {
-            if (typeof window.closeAllTabs === 'function') {
-              window.closeAllTabs();
-            } else if (window.moduleRegistry?.ui?.closeAllTabs) {
-              window.moduleRegistry.ui.closeAllTabs();
-            } else {
-              window.logWarn('closeAllTabs not available when close_all_tabs fired');
-            }
-          });
-        }
-      }
+      setupMainProcessEventBridge({
+        electronAPI: window.secureElectronAPI,
+        moduleRegistry,
+        logWarn: window.logWarn,
+        logError: window.logError
+      });
     } catch (bridgeError) {
       window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });
     }
