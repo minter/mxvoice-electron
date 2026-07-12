@@ -217,11 +217,6 @@ class HotkeysModule {
    * When profiles are active, saves to profile state instead of global store
    */
   async saveHotkeysToStore() {
-    // Skip save if currently restoring profile state
-    if (window.isRestoringProfileState) {
-      return;
-    }
-
     // When profiles are active, save to profile state instead
     if (window.moduleRegistry && window.moduleRegistry.profileState) {
       debugLog?.info('Saving hotkeys to profile state', {

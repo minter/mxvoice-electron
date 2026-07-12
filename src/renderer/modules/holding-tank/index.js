@@ -161,15 +161,6 @@ export function initHoldingTank() {
  * When profiles are active, saves to profile state instead of global store
  */
 export function saveHoldingTankToStore() {
-  // Skip save if currently restoring profile state
-  if (window.isRestoringProfileState) {
-    debugLog?.info('Skipping holding tank save - profile state restoration in progress', {
-      module: 'holding-tank',
-      function: 'saveHoldingTankToStore'
-    });
-    return Promise.resolve({ success: true, skipped: true });
-  }
-
   // When profiles are active, save to profile state instead
   if (window.moduleRegistry && window.moduleRegistry.profileState) {
     debugLog?.info('Saving holding tank to profile state', {
