@@ -12,7 +12,6 @@ const { ipcMain, dialog, app } = electron;
 import path from 'path';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
-import os from 'os';
 import { Howl, Howler } from 'howler';
 import { parseFile as parseAudioFile } from 'music-metadata';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,6 +22,9 @@ import * as profileManager from './profile-manager.js';
 import * as profileBackupManager from './profile-backup-manager.js';
 import * as libraryTransferManager from './library-transfer-manager.js';
 import { isSupportedAudioFile, copyFileStreaming } from './file-utils.js';
+import { isPathInside, canonicalizeForAuthorization } from './ipc/guards.js';
+import * as storeHandlers from './ipc/store-handlers.js';
+import * as pathOsHandlers from './ipc/path-os-handlers.js';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -37,37 +39,6 @@ let logService;
 let updateState;
 let analytics;
 
-function isPathInside(candidatePath, allowedPath) {
-  const relative = path.relative(path.resolve(allowedPath), path.resolve(candidatePath));
-  return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
-}
-
-async function canonicalizeForAuthorization(filePath) {
-  const resolvedPath = path.resolve(filePath);
-  try {
-    return await fsPromises.realpath(resolvedPath);
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-    const realParent = await fsPromises.realpath(path.dirname(resolvedPath));
-    return path.join(realParent, path.basename(resolvedPath));
-  }
-}
-
-async function isPathAllowed(filePath, allowedPaths) {
-  const canonicalPath = await canonicalizeForAuthorization(filePath);
-  const canonicalAllowedPaths = await Promise.all(allowedPaths.map(async allowedPath => {
-    try {
-      return await fsPromises.realpath(path.resolve(allowedPath));
-    } catch {
-      return path.resolve(allowedPath);
-    }
-  }));
-  return {
-    canonicalPath,
-    allowed: canonicalAllowedPaths.some(allowedPath => isPathInside(canonicalPath, allowedPath))
-  };
-}
-
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
   mainWindow = dependencies.mainWindow;
@@ -81,15 +52,32 @@ function initializeIpcHandlers(dependencies) {
   logService = dependencies.logService;
   updateState = dependencies.updateState || { downloaded: false };
   analytics = dependencies.analytics;
-  
+
   // Initialize file operations module
   fileOperations.initializeFileOperations(dependencies);
-  
-  registerAllHandlers();
+
+  const deps = {
+    mainWindow,
+    getDb,
+    getCurrentProfile,
+    getProfileDirectory,
+    store,
+    audioInstances,
+    autoUpdater,
+    debugLog,
+    logService,
+    updateState,
+    analytics,
+  };
+
+  registerAllHandlers(deps);
 }
 
 // Register all IPC handlers
-function registerAllHandlers() {
+function registerAllHandlers(deps) {
+  storeHandlers.register(deps);
+  pathOsHandlers.register(deps);
+
   // Preload logging — fire-and-forget via ipcRenderer.send (sandbox-safe)
   ipcMain.on('preload-log', (_event, level, message, context) => {
     if (debugLog && typeof debugLog[level] === 'function') {
@@ -297,7 +285,7 @@ function registerAllHandlers() {
       const allowedPaths = [musicDirectory];
 
       const resolvedPath = path.resolve(filePath);
-      const { canonicalPath, allowed: isAllowed } = await isPathAllowed(resolvedPath, allowedPaths);
+      const { canonicalPath, allowed: isAllowed } = await canonicalizeForAuthorization(resolvedPath, allowedPaths);
 
       if (!isAllowed) {
         debugLog?.warn('File delete access denied', {
@@ -339,58 +327,6 @@ function registerAllHandlers() {
       return await copyFileStreaming(sourcePath, destPath, { debugLog });
     } catch (error) {
       debugLog?.error('File copy error:', { module: 'ipc-handlers', function: 'file-copy', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  // Store API handlers
-  ipcMain.handle('store-get', async (event, key) => {
-    try {
-      const value = store.get(key);
-      debugLog?.info('Store get', { module: 'ipc-handlers', function: 'store-get', key, valueType: typeof value });
-      return { success: true, value };
-    } catch (error) {
-      debugLog?.error('Store get error:', { module: 'ipc-handlers', function: 'store-get', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('store-set', async (event, key, value) => {
-    try {
-      debugLog?.info('Store set', { module: 'ipc-handlers', function: 'store-set', key, valueType: typeof value });
-      store.set(key, value);
-      const verify = store.get(key);
-      return { success: true, value: verify };
-    } catch (error) {
-      debugLog?.error('Store set error:', { module: 'ipc-handlers', function: 'store-set', key, error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('store-delete', async (event, key) => {
-    try {
-      store.delete(key);
-      return { success: true };
-    } catch (error) {
-      debugLog?.error('Store delete error:', { module: 'ipc-handlers', function: 'store-delete', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('store-has', async (event, key) => {
-    try {
-      return { success: true, has: store.has(key) };
-    } catch (error) {
-      debugLog?.error('Store has error:', { module: 'ipc-handlers', function: 'store-has', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('store-keys', async () => {
-    try {
-      return { success: true, keys: Object.keys(store.store) };
-    } catch (error) {
-      debugLog?.error('Store keys error:', { module: 'ipc-handlers', function: 'store-keys', error: error.message });
       return { success: false, error: error.message };
     }
   });
@@ -480,37 +416,6 @@ function registerAllHandlers() {
     }
   });
 
-  // Path operations
-  ipcMain.handle('path-join', async (event, ...paths) => {
-    try {
-      const joinedPath = path.join(...paths);
-      return { success: true, data: joinedPath };
-    } catch (error) {
-      debugLog?.error('Path join error:', { module: 'ipc-handlers', function: 'path-join', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('path-parse', async (event, filePath) => {
-    try {
-      const parsedPath = path.parse(filePath);
-      return { success: true, data: parsedPath };
-    } catch (error) {
-      debugLog?.error('Path parse error:', { module: 'ipc-handlers', function: 'path-parse', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('path-extname', async (event, filePath) => {
-    try {
-      const ext = path.extname(filePath);
-      return { success: true, data: ext };
-    } catch (error) {
-      debugLog?.error('Path extname error:', { module: 'ipc-handlers', function: 'path-extname', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
   ipcMain.handle('library:scan-audio-directory', async (_event, rootPath) => {
     try {
       if (!rootPath || typeof rootPath !== 'string') throw new Error('Invalid directory path');
@@ -547,89 +452,6 @@ function registerAllHandlers() {
   // SECURE IPC HANDLERS FOR CONTEXT ISOLATION
   // ===============================================
   
-  // Additional path operations for secure API
-  ipcMain.handle('path-dirname', async (event, filePath) => {
-    try {
-      if (!filePath || typeof filePath !== 'string') {
-        throw new Error('Invalid file path');
-      }
-      return { success: true, data: path.dirname(filePath) };
-    } catch (error) {
-      debugLog?.error('Path dirname error:', { module: 'ipc-handlers', function: 'path-dirname', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('path-basename', async (event, filePath, ext) => {
-    try {
-      if (!filePath || typeof filePath !== 'string') {
-        throw new Error('Invalid file path');
-      }
-      return { success: true, data: path.basename(filePath, ext) };
-    } catch (error) {
-      debugLog?.error('Path basename error:', { module: 'ipc-handlers', function: 'path-basename', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('path-resolve', async (event, ...paths) => {
-    try {
-      return { success: true, data: path.resolve(...paths) };
-    } catch (error) {
-      debugLog?.error('Path resolve error:', { module: 'ipc-handlers', function: 'path-resolve', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('path-normalize', async (event, filePath) => {
-    try {
-      if (!filePath || typeof filePath !== 'string') {
-        throw new Error('Invalid file path');
-      }
-      return { success: true, data: path.normalize(filePath) };
-    } catch (error) {
-      debugLog?.error('Path normalize error:', { module: 'ipc-handlers', function: 'path-normalize', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  // OS operations for secure API
-  ipcMain.handle('os-homedir', async () => {
-    try {
-      return { success: true, data: os.homedir() };
-    } catch (error) {
-      debugLog?.error('OS homedir error:', { module: 'ipc-handlers', function: 'os-homedir', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('os-platform', async () => {
-    try {
-      return { success: true, data: os.platform() };
-    } catch (error) {
-      debugLog?.error('OS platform error:', { module: 'ipc-handlers', function: 'os-platform', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('os-arch', async () => {
-    try {
-      return { success: true, data: os.arch() };
-    } catch (error) {
-      debugLog?.error('OS arch error:', { module: 'ipc-handlers', function: 'os-arch', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('os-tmpdir', async () => {
-    try {
-      return { success: true, data: os.tmpdir() };
-    } catch (error) {
-      debugLog?.error('OS tmpdir error:', { module: 'ipc-handlers', function: 'os-tmpdir', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
   // Enhanced audio operations for secure API
   ipcMain.handle('audio-resume', async (event, soundId) => {
     try {
@@ -1292,17 +1114,6 @@ function registerAllHandlers() {
       return { success: true, data: [result] };
     } catch (error) {
       debugLog?.error('Count songs error:', { module: 'ipc-handlers', function: 'count-songs', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  // Store operations enhancement
-  ipcMain.handle('store-clear', async () => {
-    try {
-      store.clear();
-      return { success: true };
-    } catch (error) {
-      debugLog?.error('Store clear error:', { module: 'ipc-handlers', function: 'store-clear', error: error.message });
       return { success: false, error: error.message };
     }
   });
