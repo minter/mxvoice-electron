@@ -14,6 +14,7 @@ import { getPreference } from '../preferences/profile-preference-adapter.js';
 import { resolveAudioSource } from './audio-source-resolver.js';
 import { showMissingAudioFile } from './playback-error-presenter.js';
 import { prepareCrossfadeTransition, startCrossfadeIn } from './crossfade-transition.js';
+import { presentPlaybackStarted } from './playback-ui-presenter.js';
 import {
   calculatePlaybackVolume,
   determinePlaybackCompletionAction,
@@ -332,52 +333,12 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                     howlerUtils.updateTimeTracker.bind(this)
                   )
                 );
-                const title = row.title || '';
-                let artist = row.artist || '';
-                artist = artist.length ? 'by ' + artist : artist;
-                let wavesurfer = sharedState.get('wavesurfer');
-                if (!wavesurfer && sharedState.get('createWaveSurfer')) {
-                  wavesurfer = sharedState.get('createWaveSurfer')();
-                }
-                if (wavesurfer) {
-                  wavesurfer.load(sound_path);
-                  // Draw trim region markers if start/end points are set
-                  const regionsPlugin2 = sharedState.get('wavesurferRegions');
-                  if (regionsPlugin2 && (row?.start_time > 0 || row?.end_time != null)) {
-                    wavesurfer.once('ready', () => {
-                      regionsPlugin2.clearRegions();
-                      regionsPlugin2.addRegion({
-                        start: row?.start_time ?? 0,
-                        end: row?.end_time ?? wavesurfer.getDuration(),
-                        color: 'rgba(0, 123, 255, 0.2)',
-                        drag: false,
-                        resize: false,
-                      });
-                    });
-                  }
-                }
-                const now = document.getElementById('song_now_playing');
-                if (now) {
-                  now.textContent = '';
-                  const nowIcon = document.createElement('i');
-                  nowIcon.id = 'song_spinner';
-                  nowIcon.className = 'fas fa-volume-up';
-                  now.appendChild(nowIcon);
-                  now.appendChild(document.createTextNode(` ${title} ${artist}`));
-                  now.style.display = '';
-                  now.setAttribute('songid', String(song_id));
-                }
-                const playBtn = document.getElementById('play_button');
-                if (playBtn) {
-                  playBtn.classList.add('d-none');
-                  playBtn.removeAttribute('disabled');
-                }
-                document
-                  .getElementById('pause_button')
-                  ?.classList.remove('d-none');
-                document
-                  .getElementById('stop_button')
-                  ?.removeAttribute('disabled');
+                presentPlaybackStarted({
+                  songId: song_id,
+                  row,
+                  source: sound_path,
+                  sharedState
+                });
 
                 // E2E: ensure probe is attached once WebAudio is active
                 try {
