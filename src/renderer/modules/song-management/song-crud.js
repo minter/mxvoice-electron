@@ -244,6 +244,9 @@ export async function saveNewSong(event) {
     const copyRes = await secureFileSystem.copy(filename, newPath);
     if (!copyRes?.success) {
       debugLog?.warn('❌ Failed to copy file:', { module: 'song-management', function: 'saveNewSong', error: copyRes?.error });
+      const insertedId = insertSong?.data?.lastInsertRowid || insertSong?.lastInsertRowid;
+      if (insertedId) await secureDatabase.deleteSong(insertedId);
+      return;
     } else {
       debugLog?.info('✅ File copied successfully', { module: 'song-management', function: 'saveNewSong' });
     }

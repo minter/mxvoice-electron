@@ -281,6 +281,8 @@ export async function addSongsByPath(pathArray, category) {
     const copyRes = await secureFileSystem.copy(songSourcePath, newPath);
     if (!copyRes?.success) {
       debugLog?.warn('Failed to copy file', { module: 'bulk-operations', function: 'addSongsByPath', songSourcePath, newPath, error: copyRes?.error });
+      await secureDatabase.deleteSong(lastId);
+      return;
     } else {
       debugLog?.info('File copied successfully', { module: 'bulk-operations', function: 'addSongsByPath', songSourcePath, newPath });
     }

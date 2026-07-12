@@ -1,0 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+const fields=new Map();function field(value=''){return{value,focus:vi.fn(),addEventListener:vi.fn()};} globalThis.alert=vi.fn();globalThis.bootstrap={Modal:vi.fn(()=>({show:vi.fn()}))};globalThis.window={secureElectronAPI:{profile:{createProfile:vi.fn()}},logError:vi.fn(),logInfo:vi.fn()};globalThis.document={getElementById:id=>fields.get(id)};
+const profiles=await import('../../../src/renderer/modules/profiles/profile-ui-controller.js');
+describe('profile UI validation',()=>{beforeEach(()=>{vi.clearAllMocks();fields.set('newProfileName',field(''));fields.set('newProfileDescription',field(''));});
+it('rejects blank and invalid profile names before IPC',async()=>{await profiles.handleNewProfileSubmit();expect(alert).toHaveBeenCalledWith('Profile name is required');fields.get('newProfileName').value='bad:name';await profiles.handleNewProfileSubmit();expect(window.secureElectronAPI.profile.createProfile).not.toHaveBeenCalled();});});
