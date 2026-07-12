@@ -636,6 +636,8 @@ async function saveProfilePreferences(profileName, preferences) {
  * Duplicate an existing profile
  */
 async function duplicateProfile(sourceProfileName, targetProfileName, description) {
+  let targetDir = null;
+  let targetDirectoryCreated = false;
   try {
     // Prevent duplication of Default User
     if (sourceProfileName === 'Default User') {
@@ -661,7 +663,7 @@ async function duplicateProfile(sourceProfileName, targetProfileName, descriptio
     // Get profile directories
     const profilesDir = getProfilesDirectory();
     const sourceDir = getProfileDirectory(sourceProfileName);
-    const targetDir = getProfileDirectory(targetProfileName);
+    targetDir = getProfileDirectory(targetProfileName);
     
     debugLog?.info('Profile directory paths', { 
       module: 'profile-manager', 
@@ -688,6 +690,7 @@ async function duplicateProfile(sourceProfileName, targetProfileName, descriptio
       targetDir 
     });
     fs.mkdirSync(targetDir, { recursive: true });
+    targetDirectoryCreated = true;
     
     // Copy all files from source to target directory using a more robust method
     const copyDirectoryRecursive = async (src, dest) => {
@@ -775,6 +778,18 @@ async function duplicateProfile(sourceProfileName, targetProfileName, descriptio
     
     return { success: true };
   } catch (error) {
+    if (targetDirectoryCreated && targetDir) {
+      try {
+        fs.rmSync(targetDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        debugLog?.error('Failed to clean up partial profile duplicate', {
+          module: 'profile-manager',
+          function: 'duplicateProfile',
+          targetDir,
+          error: cleanupError.message
+        });
+      }
+    }
     debugLog?.error('Failed to duplicate profile', { 
       module: 'profile-manager', 
       function: 'duplicateProfile',

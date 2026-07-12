@@ -223,18 +223,24 @@ async function startImport() {
   // Listen for progress events so we can show the validation modal
   // once the user selects a file (before the IPC call returns)
   let validationModalShown = false;
+  let validationModalPromise = null;
   if (importProgressCleanup) importProgressCleanup();
   importProgressCleanup = electronAPI.library.onImportProgress(({ percent, message }) => {
     if (!validationModalShown) {
       validationModalShown = true;
       resetProgressModal();
-      showProgressModal('Validating Library');
+      validationModalPromise = showProgressModal('Validating Library');
     }
     updateProgress({ percent, message });
   });
 
   try {
     const result = await electronAPI.library.importLibrary();
+
+    // Ensure modal setup completes before attempting to hide or repurpose it.
+    if (validationModalPromise) {
+      await validationModalPromise;
+    }
 
     // Clean up validation progress listener
     if (importProgressCleanup) {
