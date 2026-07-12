@@ -41,6 +41,7 @@ import HoldingTankState from './holding-tank-state.js';
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'
 let _autoplay = false;
+let moduleRegistry = {};
 const holdingTankState = new HoldingTankState();
 
 export function getHoldingTankSnapshot() {
@@ -185,10 +186,10 @@ export function initHoldingTank() {
 
 /** Save holding-tank model state to the active profile. */
 export function requestProfileStateSave() {
-  if (!window.moduleRegistry?.profileState) {
+  if (!moduleRegistry.profileState) {
     return Promise.reject(new Error('Profile state module is unavailable'));
   }
-  return window.moduleRegistry.profileState.saveProfileState();
+  return moduleRegistry.profileState.saveProfileState();
 }
 
 /**
@@ -556,7 +557,7 @@ function requestProfileStateSaveWrapper() {
 }
 
 /**
- * Wrapper for clearHoldingTank - handles async operations for Function Registry
+ * Wrapper for clearHoldingTank used by HTML-compatible callers.
  */
 function clearHoldingTankWrapper() {
   clearHoldingTank().catch(error => {
@@ -565,7 +566,7 @@ function clearHoldingTankWrapper() {
 }
 
 /**
- * Wrapper for renameHoldingTankTab - handles async operations for Function Registry  
+ * Wrapper for renameHoldingTankTab used by HTML-compatible callers.
  */
 function renameHoldingTankTabWrapper() {
   renameHoldingTankTab().catch(error => {
@@ -574,7 +575,7 @@ function renameHoldingTankTabWrapper() {
 }
 
 // Export all functions
-export default {
+const holdingTankModule = {
   initHoldingTank,
   requestProfileStateSave,
   populateHoldingTank,
@@ -589,7 +590,7 @@ export default {
   renameHoldingTankTab,
   cancel_autoplay,
   scaleScrollable,
-  // Wrapper functions for Function Registry HTML compatibility
+  // Wrapper functions for HTML compatibility
   clearHoldingTankWrapper,
   renameHoldingTankTabWrapper,
   requestProfileStateSaveWrapper,
@@ -602,3 +603,11 @@ export default {
   moveHoldingTankItem,
   restoreHoldingTankSnapshot
 };
+
+function initializeHoldingTank(options = {}) {
+  moduleRegistry = options.moduleRegistry || {};
+  return holdingTankModule;
+}
+
+export { initializeHoldingTank };
+export default initializeHoldingTank;
