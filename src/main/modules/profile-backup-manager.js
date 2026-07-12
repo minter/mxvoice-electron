@@ -20,6 +20,7 @@ import {
   getBackupMetadataPath,
   getProfileDirectory
 } from './profile-paths.js';
+import { createBackupMetadataCoordinator } from './backup-metadata-coordinator.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -30,11 +31,15 @@ async function pathExists(p) {
   try { await fs.promises.access(p); return true; } catch { return false; }
 }
 
-// Operation queue per profile to serialize metadata operations
-const metadataOperationQueue = new Map();
-
 // Backup creation locks per profile to prevent duplicate backups
 const backupCreationLocks = new Map();
+
+const metadataCoordinator = createBackupMetadataCoordinator({
+  fs,
+  getMetadataPath: getBackupMetadataPath,
+  pathExists,
+  getDebugLog: () => debugLog
+});
 
 /**
  * Initialize the Profile Backup Manager
@@ -87,35 +92,7 @@ function generateBackupId() {
  * @returns {Promise<void>}
  */
 async function writeMetadataAtomic(metadataPath, data) {
-  const tempPath = metadataPath + '.tmp';
-  
-  try {
-    // Write to temp file
-    await fs.promises.writeFile(tempPath, JSON.stringify(data, null, 2), 'utf8');
-    
-    // Verify temp file exists and is readable
-    await fs.promises.access(tempPath, fs.constants.F_OK | fs.constants.R_OK);
-    
-    // Atomic rename (this is atomic on most filesystems)
-    await fs.promises.rename(tempPath, metadataPath);
-    
-    // Verify final file exists
-    await fs.promises.access(metadataPath, fs.constants.F_OK | fs.constants.R_OK);
-    
-    debugLog?.debug('Metadata written atomically', {
-      module: 'profile-backup-manager',
-      function: 'writeMetadataAtomic',
-      metadataPath
-    });
-  } catch (error) {
-    // Cleanup temp file on failure
-    try {
-      await fs.promises.unlink(tempPath);
-    } catch (_cleanupError) {
-      // Ignore cleanup errors
-    }
-    throw error;
-  }
+  return metadataCoordinator.writeAtomic(metadataPath, data);
 }
 
 /**
@@ -125,48 +102,7 @@ async function writeMetadataAtomic(metadataPath, data) {
  * @returns {Promise<any>}
  */
 async function withMetadataLock(profileName, operation) {
-  const lockPath = getBackupMetadataPath(profileName) + '.lock';
-  const maxWait = 5000; // 5 seconds max wait
-  const checkInterval = 100; // Check every 100ms
-  const startTime = Date.now();
-  
-  // Wait for lock to be released
-  while (await pathExists(lockPath)) {
-    if (Date.now() - startTime > maxWait) {
-      throw new Error('Timeout waiting for metadata lock');
-    }
-    await new Promise(resolve => setTimeout(resolve, checkInterval));
-  }
-  
-  // Create lock file
-  try {
-    await fs.promises.writeFile(lockPath, process.pid.toString(), 'utf8');
-    
-    try {
-      // Execute operation
-      return await operation();
-    } finally {
-      // Always remove lock
-      try {
-        await fs.promises.unlink(lockPath);
-      } catch (error) {
-        // Log but don't throw - lock cleanup failure is non-critical
-        debugLog?.warn('Failed to remove metadata lock', { 
-          module: 'profile-backup-manager',
-          function: 'withMetadataLock',
-          error: error.message 
-        });
-      }
-    }
-  } catch (error) {
-    // Remove lock on error
-    try {
-      await fs.promises.unlink(lockPath);
-    } catch (_cleanupError) {
-      // Ignore cleanup errors
-    }
-    throw error;
-  }
+  return metadataCoordinator.withLock(profileName, operation);
 }
 
 /**
@@ -176,46 +112,7 @@ async function withMetadataLock(profileName, operation) {
  * @returns {Promise<any>}
  */
 async function queueMetadataOperation(profileName, operation) {
-  if (!metadataOperationQueue.has(profileName)) {
-    metadataOperationQueue.set(profileName, []);
-  }
-  
-  const queue = metadataOperationQueue.get(profileName);
-  
-  return new Promise((resolve, reject) => {
-    queue.push({ operation, resolve, reject });
-    
-    // Process queue if this is the first item
-    if (queue.length === 1) {
-      processMetadataQueue(profileName);
-    }
-  });
-}
-
-/**
- * Process metadata operation queue
- * @param {string} profileName - Profile name
- */
-async function processMetadataQueue(profileName) {
-  const queue = metadataOperationQueue.get(profileName);
-  
-  while (queue.length > 0) {
-    const { operation, resolve, reject } = queue[0];
-    
-    try {
-      const result = await withMetadataLock(profileName, operation);
-      resolve(result);
-    } catch (error) {
-      reject(error);
-    } finally {
-      queue.shift();
-    }
-  }
-  
-  // Clean up empty queue
-  if (queue.length === 0) {
-    metadataOperationQueue.delete(profileName);
-  }
+  return metadataCoordinator.queueOperation(profileName, operation);
 }
 
 /**
