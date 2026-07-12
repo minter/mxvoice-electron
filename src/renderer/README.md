@@ -4,11 +4,6 @@ This directory contains renderer-wide infrastructure used by the feature modules
 
 ### Key files
 
-- `module-loader.js`
-  - Dynamic ES module loader used for ad‑hoc imports
-  - Caches loaded modules, tracks loaded set, exposes info/clear APIs
-  - Exports: default singleton plus named helpers (`loadModule`, `getModule`, ...)
-
 - `function-registry.js`
   - Central registry that exposes selected module functions on `window` for HTML/legacy bindings
   - Supports fallbacks, module‑registry wiring, and validation of required functions
