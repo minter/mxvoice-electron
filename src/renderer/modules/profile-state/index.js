@@ -349,6 +349,15 @@ async function restoreHotkeyTabs(hotkeyTabs, _hotkeysModule) {
     return;
   }
 
+  if (_hotkeysModule?.restoreHotkeySnapshot) {
+    await _hotkeysModule.restoreHotkeySnapshot(hotkeyTabs);
+    debugLog?.info('[PROFILE-STATE] Hotkey restoration complete', {
+      module: 'profile-state',
+      function: 'restoreHotkeyTabs'
+    });
+    return;
+  }
+
   _hotkeysModule?.loadHotkeySnapshot?.(hotkeyTabs);
   
   for (const tabState of hotkeyTabs) {

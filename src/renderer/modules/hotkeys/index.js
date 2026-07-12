@@ -311,6 +311,45 @@ class HotkeysModule {
     this.state.loadFromSnapshot(snapshot, { notify: false });
   }
 
+  async restoreHotkeySnapshot(snapshot) {
+    this.loadHotkeySnapshot(snapshot);
+    const songIds = [...new Set(this.state.toSnapshot().flatMap(tab => Object.values(tab.hotkeys)))];
+    const songsById = new Map();
+
+    if (songIds.length > 0) {
+      const result = await this.electronAPI?.database?.getSongsByIds?.(songIds);
+      const rows = result?.data || result || [];
+      if (!Array.isArray(rows)) throw new Error(result?.error || 'Failed to load hotkey song metadata');
+      rows.forEach(row => songsById.set(String(row.id), row));
+      this.state.batch(() => {
+        songIds.filter(songId => !songsById.has(String(songId)))
+          .forEach(songId => this.state.clearSong(songId));
+      });
+    }
+
+    for (const tab of this.state.toSnapshot()) {
+      const tabLink = document.querySelector(`#hotkey_tabs .nav-item:nth-child(${tab.tabNumber}) a`);
+      if (tabLink) tabLink.textContent = tab.tabName || String(tab.tabNumber);
+      const tabContent = document.getElementById(`hotkeys_list_${tab.tabNumber}`);
+      for (let keyNumber = 1; keyNumber <= 12; keyNumber++) {
+        const key = `f${keyNumber}`;
+        const element = tabContent?.querySelector(`[id^="${key}_hotkey"]`);
+        if (!element) continue;
+        const songId = tab.hotkeys[key];
+        const row = songId ? songsById.get(String(songId)) : null;
+        const span = element.querySelector('span.song');
+        if (songId && row) {
+          element.setAttribute('songid', songId);
+          if (span) span.textContent = `${row.title || '[Unknown Title]'} by ${row.artist || '[Unknown Artist]'} (${row.time || '[??:??]'})`;
+        } else {
+          element.removeAttribute('songid');
+          if (span) span.textContent = '';
+        }
+      }
+    }
+    return this.state.toSnapshot();
+  }
+
   getActiveTabNumber() {
     return Number(document.querySelector('.hotkeys.show.active')?.id?.match(/^hotkeys_list_(\d)$/)?.[1]) || 1;
   }
