@@ -300,18 +300,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     // Make module registry available for debugging and development
     window.moduleRegistry = moduleRegistry;
     
-    // Make holding tank module available for keyboard shortcuts
-    if (moduleRegistry.holdingTank) {
-      window.holdingTank = moduleRegistry.holdingTank;
-      window.logInfo('Holding tank module made available on window object');
-    }
-    
-    // Make hotkeys module available
-    if (moduleRegistry.hotkeys) {
-      window.hotkeysModule = moduleRegistry.hotkeys;
-      window.logInfo('Hotkeys module made available on window object');
-    }
-    
     // Ensure window.debugLog is available for modules
     if (moduleRegistry.debugLog && !window.debugLog) {
       window.debugLog = moduleRegistry.debugLog;
@@ -626,7 +614,8 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         debugLog: window.debugLog || debugLogger,
         electronAPI: window.electronAPI,
         db: window.db,
-        store: window.store
+        store: window.store,
+        moduleRegistry
       });
       
       // Initialize and set up keyboard shortcuts

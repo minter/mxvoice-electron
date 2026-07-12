@@ -117,12 +117,12 @@ export class KeyboardManager {
         // Case 1: Hotkey removal
         if (selected.closest('#hotkey-tab-content')) {
           this.logInfo('Delete key triggered for a hotkey');
-          window.moduleRegistry?.hotkeys?.clearHotkeyElement?.(selected);
+          this.dependencies.moduleRegistry?.hotkeys?.clearHotkeyElement?.(selected);
           selected.classList.remove('active-hotkey', 'selected-row');
           this.logInfo('Hotkey assignment removed via Delete key', { hotkeyId: selected.id });
-          if (window.moduleRegistry?.hotkeys?.requestProfileStateSave) {
+          if (this.dependencies.moduleRegistry?.hotkeys?.requestProfileStateSave) {
             // Await the save to ensure it completes before app quits
-            window.moduleRegistry?.hotkeys.requestProfileStateSave().then(() => {
+            this.dependencies.moduleRegistry.hotkeys.requestProfileStateSave().then(() => {
               this.logInfo('Hotkeys state saved after Delete');
             }).catch(err => {
               this.logError('Failed to save hotkeys after Delete', { error: err.message });
@@ -135,8 +135,8 @@ export class KeyboardManager {
         if (selected.closest('#holding-tank-column')) {
           this.logInfo('Delete key triggered for the holding tank');
           // The holding tank also uses the .selected-row class for selection
-          if (window.holdingTank?.removeSelected) {
-            window.holdingTank.removeSelected();
+          if (this.dependencies.moduleRegistry?.holdingTank?.removeSelected) {
+            this.dependencies.moduleRegistry.holdingTank.removeSelected();
           } else {
             this.logWarn('holdingTank.removeSelected function not found');
           }
