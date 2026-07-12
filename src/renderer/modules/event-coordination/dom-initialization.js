@@ -340,16 +340,13 @@ export default class DOMInitialization {
                   // Use the same direct approach as delete keypress (no ID manipulation needed)
                   const element = document.getElementById('selected_row'); // This is our hotkeyLi
                   if (element) {
-                    window.hotkeysModule?.clearHotkeyElement?.(element);
-                    element.removeAttribute('songid');
-                    const span = element.querySelector('span');
-                    if (span) span.textContent = '';
+                    window.moduleRegistry?.hotkeys?.clearHotkeyElement?.(element);
                     element.classList.remove('active-hotkey', 'selected-row');
                     window.currentSelectedHotkey = null;
                     
                     // Save hotkeys state
-                    if (window.hotkeysModule?.saveHotkeysToStore) {
-                      window.hotkeysModule.saveHotkeysToStore();
+                    if (window.moduleRegistry?.hotkeys?.requestProfileStateSave) {
+                      window.moduleRegistry?.hotkeys.requestProfileStateSave();
                       window.debugLog?.info('Hotkeys state saved after context menu removal');
                     }
                     

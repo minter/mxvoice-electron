@@ -161,7 +161,7 @@ class FunctionMonitor {
       bulkOperations: ['showBulkAddModal', 'addSongsByPath', 'saveBulkUpload'],
       categories: ['populateCategorySelect', 'openCategoriesModal', 'addNewCategory', 'saveCategories', 'editCategoryUI', 'deleteCategoryUI'],
       hotkeys: ['playSongFromHotkey', 'switchToHotkeyTab', 'populateHotkeys', 'setLabelFromSongId', 'sendToHotkeys', 'hotkeyDrop', 'allowHotkeyDrop', 'removeFromHotkey'],
-      holdingTank: ['clearHoldingTank', 'renameHoldingTankTab', 'saveHoldingTankToStore', 'holdingTankDrop'],
+      holdingTank: ['clearHoldingTank', 'renameHoldingTankTab', 'requestProfileStateSave', 'holdingTankDrop'],
       dragDrop: ['songDrag'],
       songManagement: ['saveEditedSong', 'saveNewSong', 'editSelectedSong', 'deleteSelectedSong', 'deleteSong', 'removeFromHoldingTank', 'removeFromHotkey']
     };

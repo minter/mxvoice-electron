@@ -45,7 +45,7 @@ hotkeys/
 ## Core Functions
 
 ### Core Functions
-- `saveHotkeysToStore()` - Compatibility name that saves current model snapshots to profile state
+- `requestProfileStateSave()` - Compatibility name that saves current model snapshots to profile state
 - `initHotkeys()` - Initialize hotkey module
 
 ### Data Management (3)
@@ -87,7 +87,7 @@ const hotkeys = new HotkeysModule({
 
 ```javascript
 // Save hotkeys to the active profile state
-hotkeys.saveHotkeysToStore();
+hotkeys.requestProfileStateSave();
 
 // Clear all hotkeys
 hotkeys.clearHotkeys();

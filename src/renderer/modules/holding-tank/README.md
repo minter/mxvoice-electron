@@ -54,7 +54,7 @@ initHoldingTank().then(result => {
 });
 ```
 
-#### `saveHoldingTankToStore()`
+#### `requestProfileStateSave()`
 Compatibility name that saves the authoritative model snapshot to the active profile.
 
 **Returns:** Promise<{success: boolean, error?: string}>

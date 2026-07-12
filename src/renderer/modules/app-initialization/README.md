@@ -156,9 +156,9 @@ The module maintains full backward compatibility with existing code:
 - `window.getSharedState()` - Shared state accessor
 - `window.checkSharedStateHealth()` - Health checker
 
-### Store Operations
-- `window.saveHoldingTankToStore()` - Save holding tank HTML
-- `window.saveHotkeysToStore()` - Save hotkeys HTML
+### Profile State Operations
+- `window.moduleRegistry.hotkeys.requestProfileStateSave()` - Request persistence of the current hotkey and holding-tank models
+- `window.moduleRegistry.holdingTank.requestProfileStateSave()` - Request the same shared profile-state save from holding-tank workflows
 
 ## Error Handling
 

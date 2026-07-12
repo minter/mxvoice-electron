@@ -68,6 +68,10 @@ export function renameHoldingTankStateTab(tabNumber, name) {
   return holdingTankState.renameTab(tabNumber, name);
 }
 
+export function moveHoldingTankItem(sourceTabNumber, sourceIndex, targetTabNumber, targetIndex) {
+  return holdingTankState.move(sourceTabNumber, sourceIndex, targetTabNumber, targetIndex);
+}
+
 export async function restoreHoldingTankSnapshot(snapshot) {
   loadHoldingTankSnapshot(snapshot);
   const songIds = [...new Set(holdingTankState.toSnapshot().flatMap(tab => tab.songIds))];
@@ -142,7 +146,7 @@ export function initHoldingTank() {
 }
 
 /** Save holding-tank model state to the active profile. */
-export function saveHoldingTankToStore() {
+export function requestProfileStateSave() {
   if (!window.moduleRegistry?.profileState) {
     return Promise.reject(new Error('Profile state module is unavailable'));
   }
@@ -197,7 +201,7 @@ export function populateHoldingTank(songIds) {
   // Wait for all additions to complete, then save
   return Promise.all(addPromises).then(() => {
     // Save after all songs added (single save instead of N saves during loading)
-    saveHoldingTankToStore();
+    requestProfileStateSave();
     
     scaleScrollable();
     debugLog?.info('populateHoldingTank completed successfully', { 
@@ -307,7 +311,7 @@ export function removeFromHoldingTank() {
             // Clear the selection
             document.getElementById('selected_row')?.removeAttribute('id');
             // Save the updated holding tank to store
-            saveHoldingTankToStore();
+            requestProfileStateSave();
             window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'remove' });
             return { success: true, songId: songId, title: songRow.title };
           } else {
@@ -361,7 +365,7 @@ export function removeSelected() {
       // Clear the selection
       document.getElementById('selected_row')?.removeAttribute('id');
       // Save the updated holding tank to store
-      saveHoldingTankToStore();
+      requestProfileStateSave();
       
       debugLog?.info('Song removed from holding tank successfully', { 
         module: 'holding-tank',
@@ -394,7 +398,7 @@ export async function clearHoldingTank() {
   if (confirmed) {
     Dom.empty('.holding_tank.active');
     commitRenderedHoldingTankOrder();
-    saveHoldingTankToStore();
+    requestProfileStateSave();
     window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'clear' });
     return { success: true };
   } else {
@@ -434,7 +438,7 @@ export function holdingTankDrop(event) {
   addToHoldingTank(event.dataTransfer.getData("text"), event.target).then(result => {
     if (result && result.success) {
       // Save holding tank state after adding
-      saveHoldingTankToStore();
+      requestProfileStateSave();
     }
   }).catch(err => { debugLog?.warn('Failed to add song to holding tank (drop)', { module: 'holding-tank', function: 'holdingTankDrop', error: err?.message }); });
 }
@@ -449,7 +453,7 @@ export function sendToHoldingTank() {
     addToHoldingTank(song_id, target).then(result => {
       if (result && result.success) {
         // Save holding tank state after adding
-        saveHoldingTankToStore();
+        requestProfileStateSave();
       }
     }).catch(err => { debugLog?.warn('Failed to send song to holding tank', { module: 'holding-tank', function: 'sendToHoldingTank', error: err?.message }); });
   }
@@ -467,7 +471,7 @@ export async function renameHoldingTankTab() {
     const tabNumber = Number(document.querySelector('#holding_tank_tabs .nav-link.active')
       ?.getAttribute('href')?.match(/^#holding_tank_(\d)$/)?.[1]);
     if (tabNumber) holdingTankState.renameTab(tabNumber, newName);
-    saveHoldingTankToStore();
+    requestProfileStateSave();
     return { success: true, newName: newName };
   } else {
     return { success: false, error: 'Invalid name' };
@@ -496,11 +500,11 @@ export function cancel_autoplay() {
 }
 
 /**
- * Wrapper for saveHoldingTankToStore - includes state updates for Function Registry
+ * Wrapper for requestProfileStateSave - includes state updates for Function Registry
  */
-function saveHoldingTankToStoreWrapper() {
+function requestProfileStateSaveWrapper() {
   debugLog?.info('Saving holding tank to store and refreshing display');
-  saveHoldingTankToStore().then(() => {
+  requestProfileStateSave().then(() => {
     debugLog?.info('Holding tank saved successfully');
     // Optionally adjust layout without repopulating
     try { 
@@ -508,7 +512,7 @@ function saveHoldingTankToStoreWrapper() {
     } catch (error) {
       debugLog?.warn('Failed to scale scrollable elements after saving', { 
         module: 'holding-tank', 
-        function: 'saveHoldingTankToStoreWrapper',
+        function: 'requestProfileStateSaveWrapper',
         error: error?.message || 'Unknown error' 
       });
     }
@@ -538,7 +542,7 @@ function renameHoldingTankTabWrapper() {
 // Export all functions
 export default {
   initHoldingTank,
-  saveHoldingTankToStore,
+  requestProfileStateSave,
   populateHoldingTank,
   addToHoldingTank,
   removeFromHoldingTank,
@@ -554,11 +558,12 @@ export default {
   // Wrapper functions for Function Registry HTML compatibility
   clearHoldingTankWrapper,
   renameHoldingTankTabWrapper,
-  saveHoldingTankToStoreWrapper,
+  requestProfileStateSaveWrapper,
   getHoldingTankSnapshot,
   loadHoldingTankSnapshot,
   commitRenderedHoldingTankOrder,
   clearSongFromHoldingTankState,
   renameHoldingTankStateTab,
+  moveHoldingTankItem,
   restoreHoldingTankSnapshot
 };

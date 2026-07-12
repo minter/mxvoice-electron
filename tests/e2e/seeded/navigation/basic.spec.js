@@ -272,9 +272,8 @@ test.describe('Navigation - basic', () => {
       await page.evaluate(() => {
         const songId = '1001'; // Got The Time by Anthrax
         const target = document.querySelector('#hotkeys_list_1 #f1_hotkey .song');
-        if (target && window.setLabelFromSongId) {
-          target.setAttribute('songid', songId);
-          window.setLabelFromSongId(songId, target);
+        if (target && window.moduleRegistry?.hotkeys?.setLabelFromSongId) {
+          window.moduleRegistry.hotkeys.setLabelFromSongId(songId, target);
         }
       });
     }

@@ -117,15 +117,12 @@ export class KeyboardManager {
         // Case 1: Hotkey removal
         if (selected.closest('#hotkey-tab-content')) {
           this.logInfo('Delete key triggered for a hotkey');
-          window.hotkeysModule?.clearHotkeyElement?.(selected);
-          selected.removeAttribute('songid');
-          const span = selected.querySelector('span');
-          if (span) span.textContent = '';
+          window.moduleRegistry?.hotkeys?.clearHotkeyElement?.(selected);
           selected.classList.remove('active-hotkey', 'selected-row');
           this.logInfo('Hotkey assignment removed via Delete key', { hotkeyId: selected.id });
-          if (window.hotkeysModule?.saveHotkeysToStore) {
+          if (window.moduleRegistry?.hotkeys?.requestProfileStateSave) {
             // Await the save to ensure it completes before app quits
-            window.hotkeysModule.saveHotkeysToStore().then(() => {
+            window.moduleRegistry?.hotkeys.requestProfileStateSave().then(() => {
               this.logInfo('Hotkeys state saved after Delete');
             }).catch(err => {
               this.logError('Failed to save hotkeys after Delete', { error: err.message });

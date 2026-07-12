@@ -358,7 +358,7 @@ class FunctionRegistry {
     this.registerModule('holdingTank', {
       clearHoldingTank: 'clearHoldingTankWrapper',
       renameHoldingTankTab: 'renameHoldingTankTabWrapper',
-      saveHoldingTankToStore: 'saveHoldingTankToStoreWrapper',
+      requestProfileStateSave: 'requestProfileStateSaveWrapper',
       holdingTankDrop: 'holdingTankDrop'
     });
 

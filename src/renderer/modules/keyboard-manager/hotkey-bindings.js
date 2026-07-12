@@ -48,15 +48,12 @@ export class HotkeyBindings {
           return;
         }
         // Remove song assignment
-        window.hotkeysModule?.clearHotkeyElement?.(selected);
-        selected.removeAttribute('songid');
-        const span = selected.querySelector('span');
-        if (span) span.textContent = '';
+        window.moduleRegistry?.hotkeys?.clearHotkeyElement?.(selected);
         selected.classList.remove('active-hotkey', 'selected-row');
         window.debugLog?.info('Hotkey assignment removed via Delete key', { hotkeyId: selected.id });
         // Save updated hotkeys if needed - await to ensure save completes before app quits
-        if (window.hotkeysModule && typeof window.hotkeysModule.saveHotkeysToStore === 'function') {
-          window.hotkeysModule.saveHotkeysToStore().then(() => {
+        if (window.moduleRegistry?.hotkeys && typeof window.moduleRegistry?.hotkeys.requestProfileStateSave === 'function') {
+          window.moduleRegistry?.hotkeys.requestProfileStateSave().then(() => {
             window.debugLog?.info('Hotkeys state saved after Delete');
           }).catch(err => {
             window.debugLog?.error('Failed to save hotkeys after Delete', { error: err.message });

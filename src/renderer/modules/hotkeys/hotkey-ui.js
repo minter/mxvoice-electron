@@ -38,29 +38,16 @@ function hotkeyDrop(event, _options = {}) {
   
   // Save function to call after setLabelFromSongId completes
   const saveFunction = () => {
-    if (this && this.saveHotkeysToStore) {
-      this.saveHotkeysToStore();
-    } else if (window.saveHotkeysToStore) {
-      window.saveHotkeysToStore();
-    }
+    this?.requestProfileStateSave?.();
   };
   
-  // Use the module instance's setLabelFromSongId method if available (when bound to HotkeysModule)
-  // Otherwise fall back to global function
-  if (this && this.setLabelFromSongId) {
+  if (this?.setLabelFromSongId) {
     // Call setLabelFromSongId and save after completion
     const result = this.setLabelFromSongId(song_id, target);
     if (result && result instanceof Promise) {
       result.then(() => saveFunction()).catch(() => saveFunction());
     } else {
       // If not a promise, save immediately
-      setTimeout(saveFunction, 100);
-    }
-  } else if (window.setLabelFromSongId) {
-    const result = window.setLabelFromSongId(song_id, target);
-    if (result && result instanceof Promise) {
-      result.then(() => saveFunction()).catch(() => saveFunction());
-    } else {
       setTimeout(saveFunction, 100);
     }
   }

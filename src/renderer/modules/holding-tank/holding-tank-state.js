@@ -76,6 +76,22 @@ export class HoldingTankState {
     return true;
   }
 
+  move(sourceTabNumber, sourceIndex, targetTabNumber, targetIndex) {
+    const source = getValidTab(this.tabs, sourceTabNumber).songIds;
+    const target = getValidTab(this.tabs, targetTabNumber).songIds;
+    if (!Number.isInteger(sourceIndex) || sourceIndex < 0 || sourceIndex >= source.length) {
+      throw new RangeError('sourceIndex must identify an existing song');
+    }
+    if (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex > target.length) {
+      throw new RangeError('targetIndex must be a valid insertion position');
+    }
+    const [songId] = source.splice(sourceIndex, 1);
+    const adjustedIndex = source === target && targetIndex > sourceIndex ? targetIndex - 1 : targetIndex;
+    target.splice(adjustedIndex, 0, songId);
+    this.#notify();
+    return songId;
+  }
+
   clearTab(tabNumber) {
     const tab = getValidTab(this.tabs, tabNumber);
     if (tab.songIds.length === 0) return false;

@@ -34,10 +34,9 @@ export function hotkeyDrop(event) {
     return;
   }
   const target = event.currentTarget;
-  if (target && target.setAttribute) target.setAttribute('songid', song_id);
-  
-  if (typeof window.setLabelFromSongId === 'function') {
-    window.setLabelFromSongId(song_id, target);
+
+  if (window.moduleRegistry?.hotkeys?.setLabelFromSongId) {
+    window.moduleRegistry.hotkeys.setLabelFromSongId(song_id, target);
   } else {
     debugLog?.warn('setLabelFromSongId function not available', { 
       module: 'drag-drop-functions',
@@ -47,14 +46,14 @@ export function hotkeyDrop(event) {
   
   // Save hotkeys state after assignment
   // First try to use the hotkeys module's save function
-  if (window.moduleRegistry?.hotkeys?.saveHotkeysToStore) {
+  if (window.moduleRegistry?.hotkeys?.requestProfileStateSave) {
     debugLog?.info('Saving hotkeys via module registry', {
       module: 'drag-drop-functions',
       function: 'hotkeyDrop'
     });
-    window.moduleRegistry.hotkeys.saveHotkeysToStore();
+    window.moduleRegistry.hotkeys.requestProfileStateSave();
   } else {
-    debugLog?.error('No saveHotkeysToStore function available', {
+    debugLog?.error('No requestProfileStateSave function available', {
       module: 'drag-drop-functions',
       function: 'hotkeyDrop'
     });
@@ -116,8 +115,8 @@ export function holdingTankDrop(event) {
     }
   }
 
-  if (typeof window.addToHoldingTank === 'function') {
-    window.addToHoldingTank(songId, insertTarget, insertPosition).then(result => {
+  if (window.moduleRegistry?.holdingTank?.addToHoldingTank) {
+    window.moduleRegistry.holdingTank.addToHoldingTank(songId, insertTarget, insertPosition).then(result => {
       if (result && result.success) {
         // Flash the newly added item to confirm placement
         const added = document.querySelector(`.holding_tank.active .list-group-item[songid="${songId}"]`);
@@ -126,7 +125,7 @@ export function holdingTankDrop(event) {
           void added.offsetWidth;
           added.classList.add('holding-tank-flash');
         }
-        window.moduleRegistry?.holdingTank?.saveHoldingTankToStore?.();
+        window.moduleRegistry?.holdingTank?.requestProfileStateSave?.();
       }
     }).catch(err => { debugLog?.warn('Failed to add song to holding tank', { module: 'drag-drop-functions', function: 'holdingTankDrop', error: err?.message }); });
   } else {
@@ -222,12 +221,25 @@ export function holdingTankReorderDrop(event) {
   // If dropped on the same item, do nothing
   if (targetItem === draggedItem) return;
 
+  const sourceTabNumber = Number(sourceTab.id.match(/^holding_tank_(\d)$/)?.[1]);
+  const targetTabNumber = Number(targetList.id.match(/^holding_tank_(\d)$/)?.[1]);
+  const sourceIndex = [...sourceTab.children].indexOf(draggedItem);
+  let targetIndex = targetList.children.length;
+
   if (targetItem) {
     // Use stored position from dragover indicator, or calculate from cursor
     const targetRect = targetItem.getBoundingClientRect();
     const insertBefore = indication.position
       ? indication.position === 'before'
       : event.clientY < (targetRect.top + targetRect.height / 2);
+    targetIndex = [...targetList.children].indexOf(targetItem) + (insertBefore ? 0 : 1);
+
+    window.moduleRegistry?.holdingTank?.moveHoldingTankItem?.(
+      sourceTabNumber,
+      sourceIndex,
+      targetTabNumber,
+      targetIndex
+    );
 
     if (insertBefore) {
       targetList.insertBefore(draggedItem, targetItem);
@@ -235,6 +247,12 @@ export function holdingTankReorderDrop(event) {
       targetList.insertBefore(draggedItem, targetItem.nextSibling);
     }
   } else {
+    window.moduleRegistry?.holdingTank?.moveHoldingTankItem?.(
+      sourceTabNumber,
+      sourceIndex,
+      targetTabNumber,
+      targetIndex
+    );
     // Dropped on empty area of the list — append to end
     targetList.appendChild(draggedItem);
   }
@@ -244,9 +262,8 @@ export function holdingTankReorderDrop(event) {
   void draggedItem.offsetWidth;
   draggedItem.classList.add('holding-tank-flash');
 
-  // Save the new order
-  window.moduleRegistry?.holdingTank?.commitRenderedHoldingTankOrder?.();
-  window.moduleRegistry?.holdingTank?.saveHoldingTankToStore?.();
+  // Save the model order
+  window.moduleRegistry?.holdingTank?.requestProfileStateSave?.();
 
   debugLog?.info('Holding tank item reordered', {
     module: 'drag-drop-functions',

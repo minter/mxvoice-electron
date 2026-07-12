@@ -264,7 +264,7 @@ function exportHotkeyConfig() {
  * @param {Object} options - Options object containing dependencies
  */
 function importHotkeyConfig(config, options = {}) {
-  const { setLabelFromSongId, saveHotkeysToStore, clearTab, assignHotkey, renameTab } = options;
+  const { setLabelFromSongId, requestProfileStateSave, clearTab, assignHotkey, renameTab } = options;
   
   if (!config || !config.hotkeys) {
     window.debugLog?.warn('❌ Invalid hotkey configuration', { module: 'hotkey-operations', function: 'importHotkeyConfig' });
@@ -306,8 +306,8 @@ function importHotkeyConfig(config, options = {}) {
   }
   
   // Save to store
-  if (saveHotkeysToStore) {
-    saveHotkeysToStore();
+  if (requestProfileStateSave) {
+    requestProfileStateSave();
   }
 }
 
@@ -348,7 +348,7 @@ function _restoreHotkeyConfig(backup, options = {}) {
  * @param {Object} options - Options object containing dependencies
  */
 function clearHotkeyConfig(options = {}) {
-  const { saveHotkeysToStore, clearTab } = options;
+  const { requestProfileStateSave, clearTab } = options;
   
   window.debugLog?.info('🧹 Clearing hotkey configuration...', { module: 'hotkey-operations', function: 'clearHotkeyConfig' });
   
@@ -365,9 +365,9 @@ function clearHotkeyConfig(options = {}) {
     }
   }
   
-  // Save to store if saveHotkeysToStore is provided
-  if (saveHotkeysToStore) {
-    saveHotkeysToStore();
+  // Save to store if requestProfileStateSave is provided
+  if (requestProfileStateSave) {
+    requestProfileStateSave();
   }
   
   window.debugLog?.info('✅ Hotkey configuration cleared', { module: 'hotkey-operations', function: 'clearHotkeyConfig' });

@@ -1936,7 +1936,7 @@ test.describe('Hotkeys - save & load', () => {
       console.log('✅ All hotkeys deleted from DOM');
       
       // CRITICAL: Wait for save to complete
-      // With the fix, saveHotkeysToStore is async and should complete
+      // With the fix, requestProfileStateSave is async and should complete
       // We need to explicitly wait for any pending saves to complete
       // Try to trigger a save and wait for it to complete by calling saveProfileState directly
       await testPage.evaluate(async () => {

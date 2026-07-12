@@ -31,6 +31,18 @@ describe('HoldingTankState', () => {
     expect(state.replaceTab(1, ['18', '17', '18'])).toBe(false);
   });
 
+  it('moves songs within and between tabs by index', () => {
+    const state = new HoldingTankState([
+      { tabNumber: 1, songIds: ['17', '18', '19'] },
+      { tabNumber: 2, songIds: ['20'] }
+    ]);
+    state.move(1, 0, 1, 3);
+    expect(state.toSnapshot()[0].songIds).toEqual(['18', '19', '17']);
+    state.move(1, 1, 2, 1);
+    expect(state.toSnapshot()[0].songIds).toEqual(['18', '17']);
+    expect(state.toSnapshot()[1].songIds).toEqual(['20', '19']);
+  });
+
   it('clears and renames tabs without exposing internal arrays', () => {
     const state = new HoldingTankState([{ tabNumber: 1, songIds: ['17'] }]);
     const listener = vi.fn();

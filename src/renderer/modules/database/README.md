@@ -31,7 +31,7 @@ const song = await db.getSongById('123');
 
 ## Function groups
 - Data population: category select, hotkeys, holding tank, labels, modals
-- Store operations: `saveHoldingTankToStore`, `saveHotkeysToStore`
+- Store operations: `requestProfileStateSave`, `requestProfileStateSave`
 - UI ops: `scaleScrollable`
 - CRUD: categories, songs, bulk, query/statement execution
 

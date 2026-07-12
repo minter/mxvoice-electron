@@ -19,12 +19,7 @@ export function sendToHotkeys() {
     return false;
   }
   if (target && songId) {
-    target.setAttribute('songid', songId);
-    if (typeof window.setLabelFromSongId === 'function') {
-      window.setLabelFromSongId(songId, target);
-    } else if (window.moduleRegistry?.hotkeys?.setLabelFromSongId) {
-      window.moduleRegistry.hotkeys.setLabelFromSongId(songId, target);
-    }
+    window.moduleRegistry?.hotkeys?.setLabelFromSongId?.(songId, target);
   }
   return false;
 }
@@ -40,8 +35,8 @@ export function sendToHoldingTank() {
   if (songId) {
     if (window.moduleRegistry?.holdingTank?.addToHoldingTank) {
       window.moduleRegistry.holdingTank.addToHoldingTank(songId, target).then(result => {
-        if (result && result.success && window.moduleRegistry?.holdingTank?.saveHoldingTankToStore) {
-          window.moduleRegistry.holdingTank.saveHoldingTankToStore();
+        if (result && result.success && window.moduleRegistry?.holdingTank?.requestProfileStateSave) {
+          window.moduleRegistry.holdingTank.requestProfileStateSave();
         }
       }).catch(err => { window.debugLog?.warn('Failed to add to holding tank (registry)', { module: 'navigation', function: 'sendToHoldingTank', error: err?.message }); });
     }

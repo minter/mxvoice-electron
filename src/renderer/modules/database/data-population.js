@@ -87,7 +87,7 @@ async function addToHoldingTank(song_id, element, insertPosition) {
       }
       window.moduleRegistry?.holdingTank?.commitRenderedHoldingTankOrder?.();
       
-      window.moduleRegistry?.holdingTank?.saveHoldingTankToStore?.();
+      window.moduleRegistry?.holdingTank?.requestProfileStateSave?.();
       window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'add' });
       
       debugLog?.info('Song added to holding tank successfully', { 
@@ -210,7 +210,7 @@ async function populateHoldingTank(songIds) {
   }
 
   window.moduleRegistry?.holdingTank?.commitRenderedHoldingTankOrder?.();
-  window.moduleRegistry?.holdingTank?.saveHoldingTankToStore?.();
+  window.moduleRegistry?.holdingTank?.requestProfileStateSave?.();
 
   debugLog?.info('Holding tank population completed', {
     module: 'data-population',

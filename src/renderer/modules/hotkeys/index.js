@@ -195,22 +195,22 @@ class HotkeysModule {
   /**
    * Save hotkeys to profile state.
    */
-  async saveHotkeysToStore() {
+  async requestProfileStateSave() {
     if (window.moduleRegistry?.profileState) {
       debugLog?.info('Saving hotkeys to profile state', {
         module: 'hotkeys',
-        function: 'saveHotkeysToStore'
+        function: 'requestProfileStateSave'
       });
       try {
         await window.moduleRegistry.profileState.saveProfileState();
         debugLog?.info('Hotkeys saved to profile state successfully', {
           module: 'hotkeys',
-          function: 'saveHotkeysToStore'
+          function: 'requestProfileStateSave'
         });
       } catch (err) {
         debugLog?.error('Failed to save profile state from hotkeys', {
           module: 'hotkeys',
-          function: 'saveHotkeysToStore',
+          function: 'requestProfileStateSave',
           error: err.message
         });
       }
@@ -293,7 +293,11 @@ class HotkeysModule {
   clearHotkeyElement(element) {
     const location = this.getHotkeyLocation(element);
     if (!location) return false;
-    return this.state.clear(location.tabNumber, location.key);
+    const changed = this.state.clear(location.tabNumber, location.key);
+    element.removeAttribute('songid');
+    const span = element.querySelector('span.song');
+    if (span) span.textContent = '';
+    return changed;
   }
 
   clearSong(songId) {
@@ -307,7 +311,7 @@ class HotkeysModule {
   importHotkeyConfig(config) {
     return hotkeyOperations.importHotkeyConfig(config, {
       setLabelFromSongId: this.setLabelFromSongId.bind(this),
-      saveHotkeysToStore: this.saveHotkeysToStore.bind(this),
+      requestProfileStateSave: this.requestProfileStateSave.bind(this),
       clearTab: () => this.state.clearTab(this.getActiveTabNumber()),
       assignHotkey: this.assignHotkey.bind(this),
       renameTab: (name) => this.state.renameTab(this.getActiveTabNumber(), name)
@@ -320,7 +324,7 @@ class HotkeysModule {
 
   clearHotkeyConfig() {
     return hotkeyOperations.clearHotkeyConfig({
-      saveHotkeysToStore: this.saveHotkeysToStore.bind(this),
+      requestProfileStateSave: this.requestProfileStateSave.bind(this),
       clearTab: () => this.state.clearTab(this.getActiveTabNumber())
     });
   }
@@ -373,7 +377,7 @@ class HotkeysModule {
     }
     
     // Save after all hotkeys populated (single save instead of N saves during loading)
-    this.saveHotkeysToStore();
+    this.requestProfileStateSave();
   }
 
   /**
@@ -393,104 +397,35 @@ class HotkeysModule {
     return this._populateHotkeysImpl(fkeys, title);
   }
 
-  /**
-   * Set label from song ID
-   * Updates hotkey label with song information
-   *
-   * @param {string} song_id - Song ID
-   * @param {jQuery} element - Hotkey element to update
-   */
-  setLabelFromSongId(song_id, element) {
-    this.assignHotkey(element, song_id);
-    // Use new database API for getting song by ID
-    if (this.electronAPI && this.electronAPI.database) {
-      return this.electronAPI.database
-        .getSongById(song_id)
-        .then((result) => {
-          if (result.success && result.data.length > 0) {
-            const row = result.data[0];
-            const title = row.title || '[Unknown Title]';
-            const artist = row.artist || '[Unknown Artist]';
-            const time = row.time || '[??:??]';
-
-            // Handle swapping
-            const other = document.querySelector(
-              `.hotkeys.active li[songid="${song_id}"]`
-            );
-            if (other && other !== element) {
-              const otherSpan = other.querySelector('span');
-              const elemSpan = element?.querySelector?.('span');
-              if (otherSpan && elemSpan) {
-                const tmp = elemSpan.textContent || '';
-                elemSpan.textContent = otherSpan.textContent || '';
-                otherSpan.textContent = tmp;
-              }
-              const destId = element?.getAttribute?.('songid');
-              if (destId) other.setAttribute('songid', destId);
-              else other.removeAttribute('songid');
-              element?.setAttribute?.('songid', song_id);
-            } else if (element) {
-              const span = element.querySelector('span');
-              if (span) span.textContent = `${title} by ${artist} (${time})`;
-              element.setAttribute('songid', song_id);
-            }
-            // Note: Save is now done by caller, not here, to avoid N saves during batch operations
-          } else {
-            return this.fallbackSetLabelFromSongId(song_id, element);
-          }
-        })
-        .catch((_error) => {
-          return this.fallbackSetLabelFromSongId(song_id, element);
-        });
-    } else {
-      return this.fallbackSetLabelFromSongId(song_id, element) || Promise.resolve();
+  /** Fetch song metadata and render an assignment or swap. */
+  async setLabelFromSongId(songId, element) {
+    this.assignHotkey(element, songId);
+    if (!this.electronAPI?.database?.getSongById) {
+      throw new Error('Song lookup is unavailable');
     }
-  }
 
-  /**
-   * Fallback method for setting label from song ID
-   * Uses legacy database access
-   *
-   * @param {string} song_id - Song ID
-   * @param {jQuery} element - Hotkey element to update
-   */
-  fallbackSetLabelFromSongId(song_id, element) {
-    if (this.electronAPI?.database) {
-      this.electronAPI.database
-        .getSongById(song_id)
-        .then((result) => {
-          if (result.success && result.data.length > 0) {
-            const row = result.data[0];
-            const title = row.title || '[Unknown Title]';
-            const artist = row.artist || '[Unknown Artist]';
-            const time = row.time || '[??:??]';
-            const other2 = document.querySelector(
-              `.hotkeys.active li[songid="${song_id}"]`
-            );
-            if (other2 && other2 !== element) {
-              const otherSpan2 = other2.querySelector('span');
-              const elemSpan2 = element?.querySelector?.('span');
-              if (otherSpan2 && elemSpan2) {
-                const tmp2 = elemSpan2.textContent || '';
-                elemSpan2.textContent = otherSpan2.textContent || '';
-                otherSpan2.textContent = tmp2;
-              }
-              const destId2 = element?.getAttribute?.('songid');
-              if (destId2) other2.setAttribute('songid', destId2);
-              else other2.removeAttribute('songid');
-              element?.setAttribute?.('songid', song_id);
-            } else if (element) {
-              const span2 = element.querySelector('span');
-              if (span2) span2.textContent = `${title} by ${artist} (${time})`;
-              element.setAttribute('songid', song_id);
-            }
-            // Note: Save is now done by caller, not here, to avoid N saves during batch operations
-          }
-        })
-        .catch(() => {
-          /* ignore */
-        });
+    const result = await this.electronAPI.database.getSongById(songId);
+    const row = result?.success && result.data?.[0];
+    if (!row) throw new Error(result?.error || `Song ${songId} was not found`);
+
+    const other = document.querySelector(`.hotkeys.active li[songid="${songId}"]`);
+    if (other && other !== element) {
+      const otherSpan = other.querySelector('span.song');
+      const targetSpan = element?.querySelector?.('span.song');
+      if (otherSpan && targetSpan) {
+        [targetSpan.textContent, otherSpan.textContent] = [otherSpan.textContent || '', targetSpan.textContent || ''];
+      }
+      const displacedSongId = element?.getAttribute?.('songid');
+      if (displacedSongId) other.setAttribute('songid', displacedSongId);
+      else other.removeAttribute('songid');
+    } else if (element) {
+      const span = element.querySelector('span.song');
+      if (span) {
+        span.textContent = `${row.title || '[Unknown Title]'} by ${row.artist || '[Unknown Artist]'} (${row.time || '[??:??]'})`;
+      }
     }
+    element?.setAttribute?.('songid', songId);
+    return row;
   }
 
   /**
@@ -533,7 +468,7 @@ class HotkeysModule {
       } else {
         debugLog?.error('❌ No active hotkey tab found with selector .hotkeys.show.active', { module: 'hotkeys' });
       }
-      this.saveHotkeysToStore();
+      this.requestProfileStateSave();
     }
   }
 
@@ -750,7 +685,7 @@ class HotkeysModule {
       target.setAttribute('songid', song_id);
       this.setLabelFromSongId(song_id, target);
       // Save hotkeys state after assignment
-      this.saveHotkeysToStore();
+      this.requestProfileStateSave();
     }
     return false;
   }
@@ -800,7 +735,7 @@ class HotkeysModule {
       if (active) active.textContent = newName;
       const tabNumber = Number(active?.getAttribute('href')?.match(/^#hotkeys_list_(\d)$/)?.[1]);
       if (tabNumber) this.state.renameTab(tabNumber, newName);
-      this.saveHotkeysToStore();
+      this.requestProfileStateSave();
       return { success: true, newName: newName };
     } else {
       return { success: false, error: 'Invalid name' };
@@ -880,7 +815,7 @@ class HotkeysModule {
                   selected.classList.remove('active-hotkey', 'selected-row');
                   window.currentSelectedHotkey = null;
                 }
-                this.saveHotkeysToStore();
+                this.requestProfileStateSave();
                 debugLog?.info('Hotkey cleared successfully', {
                   module: 'hotkeys',
                   function: 'removeFromHotkey',
@@ -905,7 +840,7 @@ class HotkeysModule {
                   selected.classList.remove('active-hotkey', 'selected-row');
                   window.currentSelectedHotkey = null;
                 }
-                this.saveHotkeysToStore();
+                this.requestProfileStateSave();
                 return { success: true, songId: songId };
               } else {
                 return { success: false, cancelled: true };
@@ -926,7 +861,7 @@ class HotkeysModule {
               selected.classList.remove('active-hotkey', 'selected-row');
               window.currentSelectedHotkey = null;
             }
-            this.saveHotkeysToStore();
+            this.requestProfileStateSave();
             return { success: true, songId: songId };
           } else {
             return { success: false, cancelled: true };
@@ -951,7 +886,7 @@ class HotkeysModule {
   getAllHotkeyFunctions() {
     return {
       // Core functions - properly bound to maintain context
-      saveHotkeysToStore: this.saveHotkeysToStore.bind(this),
+      requestProfileStateSave: this.requestProfileStateSave.bind(this),
       initHotkeys: this.initHotkeys.bind(this),
 
       // Data management - properly bound to maintain context
@@ -1041,13 +976,13 @@ class HotkeysModule {
 
     // Test core functions
     try {
-      this.saveHotkeysToStore();
-      testResults.tests.saveHotkeysToStore = {
+      this.requestProfileStateSave();
+      testResults.tests.requestProfileStateSave = {
         status: 'PASS',
         message: 'Function executed successfully',
       };
     } catch (error) {
-      testResults.tests.saveHotkeysToStore = {
+      testResults.tests.requestProfileStateSave = {
         status: 'FAIL',
         message: error.message,
       };

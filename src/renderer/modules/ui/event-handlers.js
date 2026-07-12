@@ -48,7 +48,7 @@ function initializeEventHandlers(_options = {}) {
       if (link) link.textContent = newName;
       const tabNumber = Number(link?.getAttribute('href')?.match(/^#hotkeys_list_(\d)$/)?.[1]);
       window.moduleRegistry?.hotkeys?.renameHotkeyStateTab?.(tabNumber, newName);
-      window.moduleRegistry?.hotkeys?.saveHotkeysToStore?.();
+      window.moduleRegistry?.hotkeys?.requestProfileStateSave?.();
       return { success: true, newName: newName };
     } else {
       return { success: false, error: 'Invalid name' };
@@ -66,7 +66,7 @@ function initializeEventHandlers(_options = {}) {
       if (link) link.textContent = newName;
       const tabNumber = Number(link?.getAttribute('href')?.match(/^#holding_tank_(\d)$/)?.[1]);
       window.moduleRegistry?.holdingTank?.renameHoldingTankStateTab?.(tabNumber, newName);
-      window.moduleRegistry?.holdingTank?.saveHoldingTankToStore?.();
+      window.moduleRegistry?.holdingTank?.requestProfileStateSave?.();
       return { success: true, newName: newName };
     } else {
       return { success: false, error: 'Invalid name' };
