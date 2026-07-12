@@ -11,7 +11,7 @@ import { promises as fsPromises } from 'fs';
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 import { isSupportedAudioFile, copyFileStreaming } from '../file-utils.js';
-import { isPathInside, canonicalizeForAuthorization } from './guards.js';
+import { isPathInside, isPathAllowed } from './guards.js';
 
 export function register(deps) {
   const { store, debugLog } = deps;
@@ -43,7 +43,7 @@ export function register(deps) {
       const allowedPaths = [musicDirectory];
 
       const resolvedPath = path.resolve(filePath);
-      const { canonicalPath, allowed: isAllowed } = await canonicalizeForAuthorization(resolvedPath, allowedPaths);
+      const { canonicalPath, allowed: isAllowed } = await isPathAllowed(resolvedPath, allowedPaths);
 
       if (!isAllowed) {
         debugLog?.warn('File delete access denied', {

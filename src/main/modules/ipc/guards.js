@@ -1,14 +1,6 @@
 /**
  * Path authorization guards used by IPC handlers.
- * Moved verbatim from ipc-handlers.js — see that file's git history.
- *
- * Note: the original file had two functions:
- *   - `canonicalizeForAuthorization(filePath)` — single-arg realpath resolution helper.
- *   - `isPathAllowed(filePath, allowedPaths)` — the two-arg `{ canonicalPath, allowed }` check.
- * Per the ipc/ module contract, the two-arg check is exported here under the name
- * `canonicalizeForAuthorization`, and the single-arg realpath helper it depends on is kept
- * private under the name `canonicalizeRealpath` to avoid a naming collision. Bodies are
- * otherwise unchanged.
+ * Moved from ipc-handlers.js — see that file's git history.
  */
 
 import path from 'path';
@@ -30,7 +22,7 @@ async function canonicalizeRealpath(filePath) {
   }
 }
 
-export async function canonicalizeForAuthorization(filePath, allowedPaths) {
+export async function isPathAllowed(filePath, allowedPaths) {
   const canonicalPath = await canonicalizeRealpath(filePath);
   const canonicalAllowedPaths = await Promise.all(allowedPaths.map(async allowedPath => {
     try {
