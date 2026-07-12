@@ -201,11 +201,12 @@ export function extractProfileState() {
   });
   
   const hotkeySnapshot = _hotkeysModuleRef?.getHotkeySnapshot?.();
+  const holdingTankSnapshot = _holdingTankModuleRef?.getHoldingTankSnapshot?.();
   const state = {
     version: '1.0.0',
     timestamp: Date.now(),
     hotkeys: hotkeySnapshot || extractHotkeyTabs(),
-    holdingTank: extractHoldingTankTabs()
+    holdingTank: holdingTankSnapshot || extractHoldingTankTabs()
   };
   
   // Calculate actual data counts for debugging
@@ -504,6 +505,8 @@ async function restoreHoldingTankTabs(holdingTankTabs, _holdingTankModule) {
     });
     return;
   }
+
+  _holdingTankModule?.loadHoldingTankSnapshot?.(holdingTankTabs);
   
   for (const tabState of holdingTankTabs) {
     const { tabNumber, tabName, songIds } = tabState;
@@ -596,6 +599,7 @@ async function restoreHoldingTankTabs(holdingTankTabs, _holdingTankModule) {
   if (firstTab) {
     firstTab.click();
   }
+  _holdingTankModule?.syncHoldingTankStateFromDom?.();
 }
 
 /**

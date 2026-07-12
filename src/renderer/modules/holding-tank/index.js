@@ -37,10 +37,38 @@ import Dom from '../dom-utils/index.js';
 import { secureFileDialog } from '../adapters/secure-adapter.js';
 import { scaleScrollable } from '../utils/index.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
+import HoldingTankState from './holding-tank-state.js';
 
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'
 let _autoplay = false;
+const holdingTankState = new HoldingTankState();
+
+export function syncHoldingTankStateFromDom() {
+  const snapshot = [];
+  for (let tabNumber = 1; tabNumber <= 5; tabNumber++) {
+    const tabContent = document.getElementById(`holding_tank_${tabNumber}`);
+    const tabLink = document.querySelector(`#holding_tank_tabs .nav-item:nth-child(${tabNumber}) a`);
+    const displayedName = tabLink?.textContent?.trim() || String(tabNumber);
+    snapshot.push({
+      tabNumber,
+      tabName: /^\d$/.test(displayedName) ? null : displayedName,
+      songIds: [...(tabContent?.querySelectorAll('li.list-group-item[songid]') || [])]
+        .map(element => element.getAttribute('songid'))
+        .filter(Boolean)
+    });
+  }
+  holdingTankState.loadFromSnapshot(snapshot, { notify: false });
+  return holdingTankState.toSnapshot();
+}
+
+export function getHoldingTankSnapshot() {
+  return holdingTankState.toSnapshot();
+}
+
+export function loadHoldingTankSnapshot(snapshot) {
+  holdingTankState.loadFromSnapshot(snapshot, { notify: false });
+}
 
 /**
  * Initialize the holding tank module
@@ -90,6 +118,8 @@ export function saveHoldingTankToStore() {
     });
     return Promise.resolve({ success: true, skipped: true });
   }
+
+  syncHoldingTankStateFromDom();
   
   // When profiles are active, save to profile state instead
   if (window.moduleRegistry && window.moduleRegistry.profileState) {
@@ -165,6 +195,7 @@ export function loadHoldingTankFromStore() {
       return store.get("holding_tank").then(storedHtml => {
         if (storedHtml && typeof storedHtml === 'string') {
           Dom.html('#holding-tank-column', storedHtml);
+          syncHoldingTankStateFromDom();
           Dom.removeAttr('#selected_row', 'id');
           debugLog?.info('Holding tank loaded from store', { 
             module: 'holding-tank',
@@ -594,5 +625,8 @@ export default {
   // Wrapper functions for Function Registry HTML compatibility
   clearHoldingTankWrapper,
   renameHoldingTankTabWrapper,
-  saveHoldingTankToStoreWrapper
-}; 
+  saveHoldingTankToStoreWrapper,
+  getHoldingTankSnapshot,
+  loadHoldingTankSnapshot,
+  syncHoldingTankStateFromDom
+};
