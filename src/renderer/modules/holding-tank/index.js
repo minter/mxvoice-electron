@@ -166,9 +166,7 @@ export function initHoldingTank() {
     } else {
       holdingTankMode = "storage"; // Default to storage mode
     }
-    if (typeof window.setHoldingTankMode === 'function') {
-      window.setHoldingTankMode(holdingTankMode);
-    }
+    moduleRegistry.modeManagement?.setHoldingTankMode?.(holdingTankMode);
     return { success: true, mode: holdingTankMode };
   }).catch(error => {
     debugLog?.warn('Failed to initialize holding tank', {
@@ -177,9 +175,7 @@ export function initHoldingTank() {
       error: error.message
     });
     holdingTankMode = "storage";
-    if (typeof window.setHoldingTankMode === 'function') {
-      window.setHoldingTankMode(holdingTankMode);
-    }
+    moduleRegistry.modeManagement?.setHoldingTankMode?.(holdingTankMode);
     return { success: false, error: error.message };
   });
 }
@@ -526,9 +522,7 @@ export function cancel_autoplay() {
     // Only cancel autoplay if we're not in the holding tank
     if (holdingTankMode === "playlist") {
       _autoplay = false;
-      if (typeof window.setHoldingTankMode === 'function') {
-        window.setHoldingTankMode("storage");
-      }
+      moduleRegistry.modeManagement?.setHoldingTankMode?.("storage");
     }
     }
   }

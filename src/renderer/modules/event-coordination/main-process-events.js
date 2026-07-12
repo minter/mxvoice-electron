@@ -10,7 +10,6 @@ function callFirstAvailable(candidates, args, warn) {
 function setupMainProcessEventBridge({
   electronAPI,
   moduleRegistry = {},
-  globalTarget = globalThis.window || globalThis,
   logWarn = () => {},
   logError = () => {}
 }) {
@@ -32,15 +31,15 @@ function setupMainProcessEventBridge({
   });
 
   register('onFkeyLoad', (fkeys, title) => callFirstAvailable(
-    [globalTarget.populateHotkeys], [fkeys, title],
+    [moduleRegistry.hotkeys?.populateHotkeys?.bind(moduleRegistry.hotkeys)], [fkeys, title],
     () => logWarn('populateHotkeys not yet available when fkey_load fired')
   ));
   register('onAddDialogLoad', (filename, metadata) => callFirstAvailable(
-    [globalTarget.startAddNewSong, moduleRegistry.songManagement?.startAddNewSong], [filename, metadata],
+    [moduleRegistry.songManagement?.startAddNewSong], [filename, metadata],
     () => logWarn('startAddNewSong not available when add_dialog_load fired')
   ));
   register('onBulkAddDialogLoad', (dirname) => callFirstAvailable(
-    [globalTarget.showBulkAddModal, moduleRegistry.bulkOperations?.showBulkAddModal], [dirname],
+    [moduleRegistry.bulkOperations?.showBulkAddModal], [dirname],
     () => logWarn('showBulkAddModal not available when bulk_add_dialog_load fired')
   ));
   register('onExternalFilesDrop', (files) => callFirstAvailable(
@@ -48,15 +47,15 @@ function setupMainProcessEventBridge({
     () => logWarn('handleExternalFileDrop not available when external-files-dropped fired')
   ));
   register('onManageCategories', () => callFirstAvailable(
-    [globalTarget.openCategoriesModal], [],
+    [moduleRegistry.categories?.openCategoriesModal], [],
     () => logWarn('openCategoriesModal not yet available when manage_categories fired')
   ));
   register('onEditSelectedSong', () => callFirstAvailable(
-    [globalTarget.editSelectedSong, moduleRegistry.ui?.editSelectedSong, moduleRegistry.songManagement?.editSelectedSong], [],
+    [moduleRegistry.songManagement?.editSelectedSong], [],
     () => logWarn('editSelectedSong not available when edit_selected_song fired')
   ));
   register('onDeleteSelectedSong', () => callFirstAvailable(
-    [globalTarget.deleteSelectedSong, moduleRegistry.ui?.deleteSelectedSong, moduleRegistry.songManagement?.deleteSelectedSong], [],
+    [moduleRegistry.songManagement?.deleteSelectedSong], [],
     () => logWarn('deleteSelectedSong not available when delete_selected_song fired')
   ));
 
@@ -69,7 +68,7 @@ function setupMainProcessEventBridge({
   ];
   uiEvents.forEach(([eventName, commandName, channelName]) => {
     register(eventName, () => callFirstAvailable(
-      [globalTarget[commandName], moduleRegistry.ui?.[commandName]], [],
+      [moduleRegistry.ui?.[commandName]], [],
       () => logWarn(`${commandName} not available when ${channelName} fired`)
     ));
   });

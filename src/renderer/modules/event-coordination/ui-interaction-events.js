@@ -39,6 +39,8 @@ export default class UIInteractionEvents {
       // Form events
       this.attachFormEvents();
 
+      this.attachToolbarEvents();
+
       // Confirmation modal events
       this.attachConfirmationEvents();
 
@@ -48,6 +50,32 @@ export default class UIInteractionEvents {
     } catch (error) {
       this.debugLog?.error('Failed to attach UI interaction events:', error);
     }
+  }
+
+  attachToolbarEvents() {
+    const actions = {
+      storage_mode_btn: () => this.moduleRegistry.modeManagement?.setHoldingTankMode?.('storage'),
+      playlist_mode_btn: () => this.moduleRegistry.modeManagement?.setHoldingTankMode?.('playlist'),
+      'holding-tank-load-btn': () => this.moduleRegistry.fileOperations?.openHoldingTankFile?.(),
+      'holding-tank-save-btn': () => this.moduleRegistry.fileOperations?.saveHoldingTankFile?.(),
+      'holding-tank-rename-btn': () => this.moduleRegistry.holdingTank?.renameHoldingTankTab?.(),
+      'holding-tank-clear-btn': () => this.moduleRegistry.holdingTank?.clearHoldingTank?.(),
+      'hotkey-load-btn': () => this.moduleRegistry.fileOperations?.openHotkeyFile?.(),
+      'hotkey-save-btn': () => this.moduleRegistry.fileOperations?.saveHotkeyFile?.(),
+      'hotkey-rename-btn': () => this.moduleRegistry.hotkeys?.renameHotkeyTab?.(),
+      'hotkey-clear-btn': () => this.moduleRegistry.hotkeys?.clearHotkeys?.()
+    };
+
+    Object.entries(actions).forEach(([id, action]) => {
+      const element = document.getElementById(id);
+      if (!element) return;
+      const handler = (event) => {
+        event.preventDefault();
+        action();
+      };
+      element.addEventListener('click', handler);
+      this.uiHandlers.set(`toolbar:${id}`, { element, event: 'click', handler });
+    });
   }
 
   /**

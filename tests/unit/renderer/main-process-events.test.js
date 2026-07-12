@@ -13,7 +13,6 @@ function createHarness(overrides = {}) {
   const harness = {
     electronAPI: { events },
     moduleRegistry: {},
-    globalTarget: {},
     logWarn: vi.fn(),
     logError: vi.fn(),
     ...overrides
@@ -28,17 +27,14 @@ describe('main process event bridge', () => {
     expect(Object.keys(handlers)).toHaveLength(13);
   });
 
-  it('prefers a compatibility global before the module handler', () => {
-    const globalHandler = vi.fn();
+  it('routes song editing to the song management module', () => {
     const moduleHandler = vi.fn();
     const { handlers } = createHarness({
-      globalTarget: { editSelectedSong: globalHandler },
-      moduleRegistry: { ui: { editSelectedSong: moduleHandler } }
+      moduleRegistry: { songManagement: { editSelectedSong: moduleHandler } }
     });
 
     handlers.onEditSelectedSong();
-    expect(globalHandler).toHaveBeenCalledOnce();
-    expect(moduleHandler).not.toHaveBeenCalled();
+    expect(moduleHandler).toHaveBeenCalledOnce();
   });
 
   it('falls back to the registered module when no global exists', () => {
