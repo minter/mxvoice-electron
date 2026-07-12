@@ -114,7 +114,7 @@ export function removeFromHoldingTank() {
       debugLog?.info("Proceeding with removal from holding tank", { module: 'song-management', function: 'removeFromHoldingTank' });
       // Remove the selected row from the holding tank
       document.getElementById('selected_row')?.remove();
-      window.moduleRegistry?.holdingTank?.syncActiveHoldingTankStateFromDom?.();
+      window.moduleRegistry?.holdingTank?.commitRenderedHoldingTankOrder?.();
       // Clear the selection
       document.getElementById('selected_row')?.removeAttribute('id');
       // Save the updated holding tank to store

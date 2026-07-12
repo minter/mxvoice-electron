@@ -10,7 +10,7 @@ The migration described below has now been completed for both collections:
 - Profile saves serialize model snapshots; neither collection scrapes the DOM at save time.
 - Profile restore loads the models, batch-fetches song metadata, filters deleted songs, and renders all five tabs directly.
 - Restore no longer activates Bootstrap tabs or waits on animation timing.
-- Legacy HTML is read into the models only at the legacy-load compatibility boundary.
+- Legacy electron-store HTML persistence and migration paths have been removed; profile `state.json` is the only collection persistence format.
 - Core mutations, including swaps, reordering, clears, renames, deletion, and file population, update the models.
 - Unit coverage now exercises snapshot compatibility, mutation rules, batching, and subscriber isolation.
 

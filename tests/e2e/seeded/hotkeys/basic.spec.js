@@ -1730,9 +1730,19 @@ test.describe('Hotkeys - save & load', () => {
     await expect(removeButton).toBeVisible();
     await removeButton.click();
 
-    // Verify the assignment is removed (same as Delete key test)
-    await expect(activeTab.locator('[id^="f3_hotkey"] .song')).toHaveCount(0);
-    });
+    const confirmModal = page.locator('.modal.show').filter({ hasText: 'Are you sure you want to remove Eat It from this hotkey?' });
+    await expect(confirmModal).toBeVisible({ timeout: 5000 });
+    await confirmModal.getByRole('button', { name: 'Confirm' }).click();
+    await expect(confirmModal).not.toBeVisible({ timeout: 5000 });
+    await clearModalBackdrop(page);
+
+    // The context-menu handler temporarily changes the slot id to selected_row.
+    // Wait for it to restore the real f3 id, then verify the assignment is empty.
+    const restoredF3 = activeTab.locator('[id^="f3_hotkey"]');
+    await expect(restoredF3).toHaveCount(1);
+    await expect(restoredF3).not.toHaveAttribute('songid');
+    await expect(restoredF3.locator('.song')).toHaveText('');
+  });
 
   test('hotkey deletion persists across app restart', async () => {
     // This test performs multiple app restarts, so it needs more time

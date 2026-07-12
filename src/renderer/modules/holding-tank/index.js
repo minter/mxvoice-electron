@@ -28,9 +28,8 @@ try {
 
 // Use global electronAPI instead of importing services
 // Import secure adapters
-import { secureStore, secureDatabase } from '../adapters/secure-adapter.js';
+import { secureDatabase } from '../adapters/secure-adapter.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
-const store = secureStore;
 const database = secureDatabase;
 import Dom from '../dom-utils/index.js';
 // Import secure adapters
@@ -44,25 +43,7 @@ let holdingTankMode = "storage"; // 'storage' or 'playlist'
 let _autoplay = false;
 const holdingTankState = new HoldingTankState();
 
-export function syncHoldingTankStateFromDom() {
-  const snapshot = [];
-  for (let tabNumber = 1; tabNumber <= 5; tabNumber++) {
-    const tabContent = document.getElementById(`holding_tank_${tabNumber}`);
-    const tabLink = document.querySelector(`#holding_tank_tabs .nav-item:nth-child(${tabNumber}) a`);
-    const displayedName = tabLink?.textContent?.trim() || String(tabNumber);
-    snapshot.push({
-      tabNumber,
-      tabName: /^\d$/.test(displayedName) ? null : displayedName,
-      songIds: [...(tabContent?.querySelectorAll('li.list-group-item[songid]') || [])]
-        .map(element => element.getAttribute('songid'))
-        .filter(Boolean)
-    });
-  }
-  holdingTankState.loadFromSnapshot(snapshot, { notify: false });
-  return holdingTankState.toSnapshot();
-}
-
-export function syncActiveHoldingTankStateFromDom() {
+export function commitRenderedHoldingTankOrder() {
   const activeTab = document.querySelector('.holding_tank.active');
   const tabNumber = Number(activeTab?.id?.match(/^holding_tank_(\d)$/)?.[1]);
   if (!tabNumber) return false;
@@ -81,6 +62,10 @@ export function loadHoldingTankSnapshot(snapshot) {
 
 export function clearSongFromHoldingTankState(songId) {
   return holdingTankState.clearSong(songId);
+}
+
+export function renameHoldingTankStateTab(tabNumber, name) {
+  return holdingTankState.renameTab(tabNumber, name);
 }
 
 export async function restoreHoldingTankSnapshot(snapshot) {
@@ -156,115 +141,12 @@ export function initHoldingTank() {
   });
 }
 
-/**
- * Save holding tank data to store
- * When profiles are active, saves to profile state instead of global store
- */
+/** Save holding-tank model state to the active profile. */
 export function saveHoldingTankToStore() {
-  // When profiles are active, save to profile state instead
-  if (window.moduleRegistry && window.moduleRegistry.profileState) {
-    debugLog?.info('Saving holding tank to profile state', {
-      module: 'holding-tank',
-      function: 'saveHoldingTankToStore'
-    });
-    return window.moduleRegistry.profileState.saveProfileState().catch(err => {
-      debugLog?.error('Failed to save profile state from holding tank', {
-        module: 'holding-tank',
-        function: 'saveHoldingTankToStore',
-        error: err.message
-      });
-      return { success: false, error: err.message };
-    });
+  if (!window.moduleRegistry?.profileState) {
+    return Promise.reject(new Error('Profile state module is unavailable'));
   }
-  
-  // Legacy: save to global store for non-profile setups
-  const currentHtml = Dom.html('#holding-tank-column');
-  if (currentHtml.includes("mode-toggle")) {
-    return store.set("holding_tank", currentHtml).then(result => {
-      if (result.success) {
-        debugLog?.info('Holding tank saved to store', { 
-          module: 'holding-tank',
-          function: 'saveHoldingTankToStore'
-        });
-      } else {
-        debugLog?.warn('Failed to save holding tank', { 
-          module: 'holding-tank',
-          function: 'saveHoldingTankToStore',
-          error: result.error
-        });
-      }
-      return result;
-    }).catch(error => {
-      debugLog?.warn('Store save error', { 
-        module: 'holding-tank',
-        function: 'saveHoldingTankToStore',
-        error: error.message
-      });
-      return { success: false, error: error.message };
-    });
-  }
-  return Promise.resolve({ success: false, error: 'Invalid HTML format' });
-}
-
-/**
- * Load holding tank data from store
- */
-export function loadHoldingTankFromStore() {
-  // When profiles are active, holding tank state is managed by the profile-state
-  // module (profiles/<ProfileName>/state.json). The legacy global "holding_tank"
-  // store key must not override per-profile state, so we no-op in that case.
-  try {
-    const api = window.secureElectronAPI || window.electronAPI;
-    if (api && api.profile && typeof api.profile.getCurrent === 'function') {
-      debugLog?.info('Profile API detected - skipping legacy holding_tank store load (profile state is authoritative)', {
-        module: 'holding-tank',
-        function: 'loadHoldingTankFromStore'
-      });
-      return Promise.resolve({ success: true, skipped: true });
-    }
-  } catch (error) {
-    debugLog?.warn('Error while checking profile API, continuing with legacy holding_tank store load', {
-      module: 'holding-tank',
-      function: 'loadHoldingTankFromStore',
-      error: error.message
-    });
-  }
-
-  return store.has("holding_tank").then(hasHoldingTank => {
-    if (hasHoldingTank) {
-      return store.get("holding_tank").then(storedHtml => {
-        if (storedHtml && typeof storedHtml === 'string') {
-          Dom.html('#holding-tank-column', storedHtml);
-          syncHoldingTankStateFromDom();
-          Dom.removeAttr('#selected_row', 'id');
-          debugLog?.info('Holding tank loaded from store', { 
-            module: 'holding-tank',
-            function: 'loadHoldingTankFromStore'
-          });
-          return { success: true, data: storedHtml };
-        } else {
-          debugLog?.warn('Invalid holding tank data in store', { 
-            module: 'holding-tank',
-            function: 'loadHoldingTankFromStore'
-          });
-          return { success: false, error: 'Invalid data format' };
-        }
-      });
-    } else {
-      debugLog?.info('No holding tank data in store', { 
-        module: 'holding-tank',
-        function: 'loadHoldingTankFromStore'
-      });
-      return { success: true, data: null };
-    }
-  }).catch(error => {
-    debugLog?.warn('Store load error', { 
-      module: 'holding-tank',
-      function: 'loadHoldingTankFromStore',
-      error: error.message
-    });
-    return { success: false, error: error.message };
-  });
+  return window.moduleRegistry.profileState.saveProfileState();
 }
 
 /**
@@ -371,7 +253,7 @@ export function addToHoldingTank(song_id, element, insertPosition) {
         targetEl.appendChild(song_row);
       }
 
-      syncActiveHoldingTankStateFromDom();
+      commitRenderedHoldingTankOrder();
 
       // Note: Save is now done by caller, not here, to avoid N saves during batch operations
       return { success: true, songId: song_id, title: title };
@@ -421,7 +303,7 @@ export function removeFromHoldingTank() {
             // Remove the selected row from the holding tank
             const selected = document.getElementById('selected_row');
             if (selected) selected.parentElement?.removeChild(selected);
-            syncActiveHoldingTankStateFromDom();
+            commitRenderedHoldingTankOrder();
             // Clear the selection
             document.getElementById('selected_row')?.removeAttribute('id');
             // Save the updated holding tank to store
@@ -475,7 +357,7 @@ export function removeSelected() {
     const selected = document.getElementById('selected_row');
     if (selected) {
       selected.remove();
-      syncActiveHoldingTankStateFromDom();
+      commitRenderedHoldingTankOrder();
       // Clear the selection
       document.getElementById('selected_row')?.removeAttribute('id');
       // Save the updated holding tank to store
@@ -511,7 +393,7 @@ export async function clearHoldingTank() {
   const confirmed = await customConfirm("Are you sure you want clear your holding tank?");
   if (confirmed) {
     Dom.empty('.holding_tank.active');
-    syncActiveHoldingTankStateFromDom();
+    commitRenderedHoldingTankOrder();
     saveHoldingTankToStore();
     window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'clear' });
     return { success: true };
@@ -657,7 +539,6 @@ function renameHoldingTankTabWrapper() {
 export default {
   initHoldingTank,
   saveHoldingTankToStore,
-  loadHoldingTankFromStore,
   populateHoldingTank,
   addToHoldingTank,
   removeFromHoldingTank,
@@ -676,8 +557,8 @@ export default {
   saveHoldingTankToStoreWrapper,
   getHoldingTankSnapshot,
   loadHoldingTankSnapshot,
-  syncHoldingTankStateFromDom,
-  syncActiveHoldingTankStateFromDom,
+  commitRenderedHoldingTankOrder,
   clearSongFromHoldingTankState,
+  renameHoldingTankStateTab,
   restoreHoldingTankSnapshot
 };

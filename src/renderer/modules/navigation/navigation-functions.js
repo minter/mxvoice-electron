@@ -38,13 +38,7 @@ export function sendToHoldingTank() {
   const target = document.querySelector('.holding_tank.active');
   const songId = document.getElementById('selected_row')?.getAttribute('songid');
   if (songId) {
-    if (typeof window.addToHoldingTank === 'function') {
-      window.addToHoldingTank(songId, target).then(result => {
-        if (result && result.success && typeof window.saveHoldingTankToStore === 'function') {
-          window.saveHoldingTankToStore();
-        }
-      }).catch(err => { window.debugLog?.warn('Failed to add to holding tank', { module: 'navigation', function: 'sendToHoldingTank', error: err?.message }); });
-    } else if (window.moduleRegistry?.holdingTank?.addToHoldingTank) {
+    if (window.moduleRegistry?.holdingTank?.addToHoldingTank) {
       window.moduleRegistry.holdingTank.addToHoldingTank(songId, target).then(result => {
         if (result && result.success && window.moduleRegistry?.holdingTank?.saveHoldingTankToStore) {
           window.moduleRegistry.holdingTank.saveHoldingTankToStore();
@@ -75,4 +69,4 @@ export function selectPrev() {
   current.removeAttribute('id');
   const prev = current.previousElementSibling;
   if (prev) prev.id = 'selected_row';
-} 
+}

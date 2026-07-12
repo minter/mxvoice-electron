@@ -350,26 +350,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         window.logInfo('✅ Profile state restored successfully');
       } else {
         window.logInfo('ℹ️ No previous state found, starting fresh');
-        
-        // Check if we just loaded legacy HTML data that needs to be saved (one-time migration)
-        if (window._needsInitialStateSave) {
-          window.logInfo('💾 Saving initial profile state after 3.1.5 → 4.1 migration...');
-          
-          // Give the DOM a moment to settle
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          // Save the profile state to capture the migrated hotkeys/holding tank
-          await moduleRegistry.profileState.saveProfileState();
-          
-          // Mark migration as completed so it never runs again
-          await window.secureElectronAPI.profile.setPreference('migration_completed', true);
-          window.logInfo('✅ Migration marked as completed - will not run again');
-          
-          // Clear the flag
-          delete window._needsInitialStateSave;
-          
-          window.logInfo('✅ Migration state save complete');
-        }
       }
       
       // Set up profile event listeners
@@ -887,7 +867,9 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       } else if (window.isRestoringProfileState) {
         window.isRestoringProfileState = false;
       }
-    } catch (_e) {}
+    } catch (_error) {
+      // Preserve the original initialization error.
+    }
   }
 })();
 
@@ -1312,4 +1294,3 @@ document.addEventListener('DOMContentLoaded', function() {
     window.secureElectronAPI?.analytics?.trackEvent?.('auto_update_action', { action: 'deferred' });
   });
 });
-

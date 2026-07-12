@@ -26,27 +26,26 @@ The Hotkeys Module provides comprehensive F1-F12 hotkey functionality for quick 
 - Drag songs from search results to hotkeys
 - Intuitive user interface
 
-### 💾 Persistence (Profiles + Legacy Store)
-- **Profiles (current behavior):** Hotkeys are saved and restored via per-profile `state.json` handled by the Profile State module
-- **Legacy store (fallback):** Global Electron store key `hotkeys` is only used when no profile system is active
-- **Migration-aware:** Legacy data is migrated once for `Default User` and then profile state becomes authoritative
+### 💾 Persistence
+- `HotkeyState` is authoritative in memory.
+- Per-profile `state.json` is the only persistence path.
+- The DOM is rendered from model state and is never serialized as storage.
 
 ## Module Structure
 
 ```
 hotkeys/
 ├── index.js           # Main module class
-├── hotkey-data.js     # Data management functions
+├── hotkey-state.js    # Pure authoritative state model
 ├── hotkey-operations.js # File operations and playback
 ├── hotkey-ui.js       # UI operations and drag & drop
 └── README.md          # This documentation
 ```
 
-## Core Functions (12 total)
+## Core Functions
 
-### Core Functions (3)
-- `saveHotkeysToStore()` - Save current hotkey/holding tank layout (routes to profile state when profiles are active)
-- `loadHotkeysFromStore()` - Load *legacy* hotkey data from global store (NO-OP when profiles are active)
+### Core Functions
+- `saveHotkeysToStore()` - Compatibility name that saves current model snapshots to profile state
 - `initHotkeys()` - Initialize hotkey module
 
 ### Data Management (3)
@@ -84,14 +83,11 @@ const hotkeys = new HotkeysModule({
 });
 ```
 
-### Core Operations (legacy / non-profile builds)
+### Core Operations
 
 ```javascript
-// Save hotkeys (routes to profile state when profiles are enabled)
+// Save hotkeys to the active profile state
 hotkeys.saveHotkeysToStore();
-
-// Load legacy hotkeys from global store (no-op under profile system)
-hotkeys.loadHotkeysFromStore();
 
 // Clear all hotkeys
 hotkeys.clearHotkeys();
@@ -282,31 +278,9 @@ The module automatically sets up the following event listeners:
 ### Tab Events
 - Double-click on tab allows renaming
 
-## Store & Profile Integration
+## Profile Integration
 
-The module integrates with both the Electron store API and the profile state system:
-
-### Save Operations
-- **With profiles enabled:** hotkey/holding tank state is saved via the Profile State module to `profiles/<ProfileName>/state.json`
-- **Without profiles:** hotkey HTML is saved to the global Electron store key `hotkeys` (new-format HTML only)
-
-### Load Operations
-- **With profiles enabled:** state is restored exclusively from profile state; the global `hotkeys` key is ignored to prevent cross-profile leakage
-- **Without profiles:** legacy HTML is loaded from the global store and migrated if needed
-
-## Backward Compatibility
-
-The module maintains full backward compatibility:
-
-### Legacy API Support
-- Falls back to `ipcRenderer` for file operations
-- Uses legacy database access when needed
-- Supports old store format migration
-
-### Hybrid Approach
-- Tests modern API first
-- Falls back to legacy methods
-- Provides consistent interface
+Hotkey snapshots are saved by Profile State to `profiles/<ProfileName>/state.json` and restored through `restoreHotkeySnapshot()`.
 
 ## Testing
 
@@ -368,23 +342,13 @@ The module includes comprehensive error handling:
 
 ## Migration Guide
 
-### From Legacy Code
-1. Replace direct function calls with module methods
-2. Update event listener setup
-3. Test backward compatibility
-
-### To New API
-1. Use modern Electron API when available
-2. Implement hybrid approach
-3. Maintain legacy support
-
 ## Troubleshooting
 
 ### Common Issues
 
 #### Hotkeys Not Saving
-- Check store API availability
-- Verify HTML format compatibility
+- Check Profile State availability
+- Verify the hotkey model snapshot
 - Check console for errors
 
 #### Drag & Drop Not Working
@@ -436,4 +400,4 @@ When contributing to the hotkeys module:
 
 ## License
 
-This module is part of the Mx. Voice application and follows the same licensing terms. 
+This module is part of the Mx. Voice application and follows the same licensing terms.

@@ -53,12 +53,6 @@ export function hotkeyDrop(event) {
       function: 'hotkeyDrop'
     });
     window.moduleRegistry.hotkeys.saveHotkeysToStore();
-  } else if (typeof window.saveHotkeysToStore === 'function') {
-    debugLog?.info('Saving hotkeys via window function', {
-      module: 'drag-drop-functions',
-      function: 'hotkeyDrop'
-    });
-    window.saveHotkeysToStore();
   } else {
     debugLog?.error('No saveHotkeysToStore function available', {
       module: 'drag-drop-functions',
@@ -132,9 +126,7 @@ export function holdingTankDrop(event) {
           void added.offsetWidth;
           added.classList.add('holding-tank-flash');
         }
-        if (typeof window.saveHoldingTankToStore === 'function') {
-          window.saveHoldingTankToStore();
-        }
+        window.moduleRegistry?.holdingTank?.saveHoldingTankToStore?.();
       }
     }).catch(err => { debugLog?.warn('Failed to add song to holding tank', { module: 'drag-drop-functions', function: 'holdingTankDrop', error: err?.message }); });
   } else {
@@ -253,10 +245,8 @@ export function holdingTankReorderDrop(event) {
   draggedItem.classList.add('holding-tank-flash');
 
   // Save the new order
-  window.moduleRegistry?.holdingTank?.syncActiveHoldingTankStateFromDom?.();
-  if (typeof window.saveHoldingTankToStore === 'function') {
-    window.saveHoldingTankToStore();
-  }
+  window.moduleRegistry?.holdingTank?.commitRenderedHoldingTankOrder?.();
+  window.moduleRegistry?.holdingTank?.saveHoldingTankToStore?.();
 
   debugLog?.info('Holding tank item reordered', {
     module: 'drag-drop-functions',

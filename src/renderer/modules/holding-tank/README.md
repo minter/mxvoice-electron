@@ -55,14 +55,9 @@ initHoldingTank().then(result => {
 ```
 
 #### `saveHoldingTankToStore()`
-Saves the current holding tank state to the store.
+Compatibility name that saves the authoritative model snapshot to the active profile.
 
 **Returns:** Promise<{success: boolean, error?: string}>
-
-#### `loadHoldingTankFromStore()`
-Loads holding tank data from the store.
-
-**Returns:** Promise<{success: boolean, data?: string, error?: string}>
 
 ### Data Management
 
@@ -277,4 +272,4 @@ This module has been extracted from the main renderer.js file and includes:
 - Comprehensive documentation
 - Backward compatibility functions
 
-The module maintains compatibility with existing code while providing a cleaner, more maintainable interface. 
+The module maintains compatibility with existing code while providing a cleaner, more maintainable interface.

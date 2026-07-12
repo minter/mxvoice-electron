@@ -7,27 +7,12 @@
  * @module event-handlers
  */
 
-// Import debug logger
-let debugLog = null;
-try {
-  // Try to get debug logger from global scope
-  if (window.debugLog) {
-    debugLog = window.debugLog;
-  }
-} catch (_error) {
-  // Debug logger not available
-}
-
 /**
  * Initialize the Event Handlers module
  * @param {Object} options - Configuration options
- * @param {Object} options.electronAPI - Electron API reference
- * @param {Object} options.db - Database reference
- * @param {Object} options.store - Store reference
  * @returns {Object} Event Handlers interface
  */
-function initializeEventHandlers(options = {}) {
-  const { electronAPI, db: _db, store: _store } = options;
+function initializeEventHandlers(_options = {}) {
   
   /**
    * Toggle row selection
@@ -61,7 +46,9 @@ function initializeEventHandlers(options = {}) {
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#hotkey_tabs .nav-link.active');
       if (link) link.textContent = newName;
-      saveHotkeysToStore();
+      const tabNumber = Number(link?.getAttribute('href')?.match(/^#hotkeys_list_(\d)$/)?.[1]);
+      window.moduleRegistry?.hotkeys?.renameHotkeyStateTab?.(tabNumber, newName);
+      window.moduleRegistry?.hotkeys?.saveHotkeysToStore?.();
       return { success: true, newName: newName };
     } else {
       return { success: false, error: 'Invalid name' };
@@ -77,49 +64,12 @@ function initializeEventHandlers(options = {}) {
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#holding_tank_tabs .nav-link.active');
       if (link) link.textContent = newName;
-      window.moduleRegistry?.holdingTank?.syncHoldingTankStateFromDom?.();
-      saveHoldingTankToStore();
+      const tabNumber = Number(link?.getAttribute('href')?.match(/^#holding_tank_(\d)$/)?.[1]);
+      window.moduleRegistry?.holdingTank?.renameHoldingTankStateTab?.(tabNumber, newName);
+      window.moduleRegistry?.holdingTank?.saveHoldingTankToStore?.();
       return { success: true, newName: newName };
     } else {
       return { success: false, error: 'Invalid name' };
-    }
-  }
-  
-  /**
-   * Save hotkeys to store
-   */
-  function saveHotkeysToStore() {
-    const col = document.getElementById('hotkeys-column');
-    const currentHtml = col ? col.innerHTML : '';
-    if (currentHtml.includes("header-button")) {
-      if (electronAPI && electronAPI.store) {
-        electronAPI.store.set("hotkeys", currentHtml).catch(error => {
-          debugLog?.warn('Failed to save hotkeys', { 
-            module: 'ui-event-handlers',
-            function: 'saveHotkeysToStore',
-            error: error
-          });
-        });
-      }
-    }
-  }
-  
-  /**
-   * Save holding tank to store
-   */
-  function saveHoldingTankToStore() {
-    const col = document.getElementById('holding-tank-column');
-    const currentHtml = col ? col.innerHTML : '';
-    if (currentHtml.includes("mode-toggle")) {
-      if (electronAPI && electronAPI.store) {
-        electronAPI.store.set("holding_tank", currentHtml).catch(error => {
-          debugLog?.warn('Failed to save holding tank', { 
-            module: 'ui-event-handlers',
-            function: 'saveHoldingTankToStore',
-            error: error
-          });
-        });
-      }
     }
   }
   

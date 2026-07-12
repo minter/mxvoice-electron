@@ -19,7 +19,6 @@ try {
 
 // Import database sub-modules
 import dataPopulation from './data-population.js';
-import storeOperations from './store-operations.js';
 import uiOperations from './ui-operations.js';
 import databaseOperations from './database-operations.js';
 
@@ -37,9 +36,6 @@ class DatabaseModule {
     // Bind all functions from sub-modules as methods
     this.addToHoldingTank = dataPopulation.addToHoldingTank;
     this.populateHoldingTank = dataPopulation.populateHoldingTank;
-    
-    this.saveHoldingTankToStore = storeOperations.saveHoldingTankToStore;
-    this.saveHotkeysToStore = storeOperations.saveHotkeysToStore;
     
     this.scaleScrollable = uiOperations.scaleScrollable;
     
@@ -102,10 +98,6 @@ class DatabaseModule {
       addToHoldingTank: this.addToHoldingTank,
       populateHoldingTank: this.populateHoldingTank,
       
-      // Store operation functions
-      saveHoldingTankToStore: this.saveHoldingTankToStore,
-      saveHotkeysToStore: this.saveHotkeysToStore,
-      
       // Database operation functions
       editCategory: this.editCategory,
       deleteCategory: this.deleteCategory,
@@ -126,7 +118,6 @@ class DatabaseModule {
   test() {
     const results = {
       dataPopulation: {},
-      storeOperations: {},
       uiOperations: {},
       databaseOperations: {}
     };
@@ -146,23 +137,6 @@ class DatabaseModule {
       }
     } catch (error) {
       results.dataPopulation.error = `❌ Error: ${error.message}`;
-    }
-
-    // Test store operation functions
-    try {
-      if (typeof this.saveHoldingTankToStore === 'function') {
-        results.storeOperations.saveHoldingTankToStore = '✅ Function exists';
-      } else {
-        results.storeOperations.saveHoldingTankToStore = '❌ Function missing';
-      }
-
-      if (typeof this.saveHotkeysToStore === 'function') {
-        results.storeOperations.saveHotkeysToStore = '✅ Function exists';
-      } else {
-        results.storeOperations.saveHotkeysToStore = '❌ Function missing';
-      }
-    } catch (error) {
-      results.storeOperations.error = `❌ Error: ${error.message}`;
     }
 
     // Test database operation functions
@@ -243,8 +217,6 @@ const databaseModule = new DatabaseModule();
 // Export individual functions for backward compatibility
 export const addToHoldingTank = databaseModule.addToHoldingTank;
 export const populateHoldingTank = databaseModule.populateHoldingTank;
-export const saveHoldingTankToStore = databaseModule.saveHoldingTankToStore;
-export const saveHotkeysToStore = databaseModule.saveHotkeysToStore;
 export const editCategory = databaseModule.editCategory;
 export const deleteCategory = databaseModule.deleteCategory;
 export const addNewCategory = databaseModule.addNewCategory;
@@ -255,4 +227,4 @@ export const getSongById = databaseModule.getSongById;
 export const addSongsByPath = databaseModule.addSongsByPath;
 
 // Default export for module loading - export the instance directly
-export default databaseModule; 
+export default databaseModule;

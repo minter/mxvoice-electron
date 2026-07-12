@@ -90,8 +90,6 @@ export default function initializeUIManager(options = {}) {
           // Note: In the new profile architecture, hotkeys and holding_tank are auto-saved to state.json
           // This clears any legacy stored data. Profile preferences (font_size, column_order) are intentionally preserved.
           Promise.all([
-          secureStore.delete('holding_tank'),
-          secureStore.delete('hotkeys'),
           secureStore.delete('column_order'), // Legacy cleanup
           secureStore.delete('font-size'), // Legacy cleanup (old key)
           secureStore.delete('font_size') // Current key cleanup

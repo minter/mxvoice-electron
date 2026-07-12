@@ -85,16 +85,9 @@ async function addToHoldingTank(song_id, element, insertPosition) {
       } else if (targetEl?.appendChild) {
         targetEl.appendChild(song_row);
       }
-      window.moduleRegistry?.holdingTank?.syncActiveHoldingTankStateFromDom?.();
+      window.moduleRegistry?.holdingTank?.commitRenderedHoldingTankOrder?.();
       
-      if (typeof window.saveHoldingTankToStore === 'function') {
-        window.saveHoldingTankToStore();
-      } else {
-        debugLog?.warn('saveHoldingTankToStore function not available', {
-          module: 'data-population',
-          function: 'addToHoldingTank'
-        });
-      }
+      window.moduleRegistry?.holdingTank?.saveHoldingTankToStore?.();
       window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'add' });
       
       debugLog?.info('Song added to holding tank successfully', { 
@@ -216,10 +209,8 @@ async function populateHoldingTank(songIds) {
     addedCount++;
   }
 
-  if (typeof window.saveHoldingTankToStore === 'function') {
-    window.moduleRegistry?.holdingTank?.syncActiveHoldingTankStateFromDom?.();
-    window.saveHoldingTankToStore();
-  }
+  window.moduleRegistry?.holdingTank?.commitRenderedHoldingTankOrder?.();
+  window.moduleRegistry?.holdingTank?.saveHoldingTankToStore?.();
 
   debugLog?.info('Holding tank population completed', {
     module: 'data-population',

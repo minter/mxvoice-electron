@@ -367,32 +367,6 @@ function getHotkeySongId(hotkey) {
 }
 
 /**
- * Set hotkey song ID
- * Assigns a song ID to a hotkey in the active tab
- * 
- * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
- * @param {string} songId - Song ID to assign
- */
-function setHotkeySongId(hotkey, songId) {
-  const el = getHotkeyElementFromActiveTab(hotkey);
-  if (el) el.setAttribute('songid', songId);
-}
-
-/**
- * Clear hotkey song ID
- * Removes the song ID assignment from a hotkey
- * 
- * @param {string} hotkey - Hotkey identifier (e.g., 'f1', 'f2')
- */
-function clearHotkeySongId(hotkey) {
-  const el = getHotkeyElementFromActiveTab(hotkey);
-  if (el) {
-    el.removeAttribute('songid');
-    el.textContent = '';
-  }
-}
-
-/**
  * Get hotkey label
  * Returns the display label for a hotkey
  * 
@@ -524,8 +498,6 @@ export {
   createHotkeyElement,
   removeHotkeyElement,
   getHotkeySongId,
-  setHotkeySongId,
-  clearHotkeySongId,
   getHotkeyLabel,
   setHotkeyLabel,
   isHotkeyAssigned,
@@ -556,8 +528,6 @@ export default {
   createHotkeyElement,
   removeHotkeyElement,
   getHotkeySongId,
-  setHotkeySongId,
-  clearHotkeySongId,
   getHotkeyLabel,
   setHotkeyLabel,
   isHotkeyAssigned,

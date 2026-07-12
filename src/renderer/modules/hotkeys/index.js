@@ -17,7 +17,6 @@ try {
 }
 
 // Import hotkey sub-modules
-import * as hotkeyData from './hotkey-data.js';
 import * as hotkeyOperations from './hotkey-operations.js';
 import * as hotkeyUI from './hotkey-ui.js';
 import HotkeyState from './hotkey-state.js';
@@ -44,16 +43,14 @@ class HotkeysModule {
     this.state = new HotkeyState();
 
     // Initialize sub-modules
-    this.data = hotkeyData;
     this.operations = hotkeyOperations;
     this.ui = hotkeyUI;
 
     // Check if sub-modules are properly loaded
-    if (!hotkeyData || !hotkeyOperations || !hotkeyUI) {
+    if (!hotkeyOperations || !hotkeyUI) {
       debugLog?.error(
         '❌ Hotkeys sub-modules not properly loaded:',
         {
-          hotkeyData: !!hotkeyData,
           hotkeyOperations: !!hotkeyOperations,
           hotkeyUI: !!hotkeyUI,
         },
@@ -64,20 +61,6 @@ class HotkeysModule {
 
     // Delegate to sub-modules for functions with error handling
     try {
-      // Use the class's own saveHotkeysToStore implementation so that
-      // profile-aware persistence (profile-state → state.json) is used
-      // instead of the legacy global store path from hotkey-operations.
-      //
-      // For loading, we still delegate to hotkey-operations.loadHotkeysFromStore,
-      // which now no-ops when profiles are active.
-      this.loadHotkeysFromStore =
-        hotkeyOperations.loadHotkeysFromStore.bind(this);
-      // Use the class's own populateHotkeys method instead of the hotkeyData one
-      // this.populateHotkeys = hotkeyData.populateHotkeys.bind(this);
-      // Use the class's own setLabelFromSongId method instead of the hotkeyData one
-      // this.setLabelFromSongId = hotkeyData.setLabelFromSongId.bind(this);
-      // Use the class's own clearHotkeys method instead of the hotkeyData one
-      // this.clearHotkeys = hotkeyData.clearHotkeys.bind(this);
       this.openHotkeyFile = hotkeyOperations.openHotkeyFile.bind(this);
       this.saveHotkeyFile = hotkeyOperations.saveHotkeyFile.bind(this);
       this.playSongFromHotkey = hotkeyOperations.playSongFromHotkey.bind(this);
@@ -108,9 +91,6 @@ class HotkeysModule {
       module: 'hotkeys',
       function: 'initHotkeys',
     });
-
-    // Load saved hotkeys from store
-    this.loadHotkeysFromStore();
 
     // Event listeners are now handled by EventCoordination system
     // No need to call this.setupEventListeners() here
@@ -213,12 +193,10 @@ class HotkeysModule {
   }
 
   /**
-   * Save hotkeys to store
-   * When profiles are active, saves to profile state instead of global store
+   * Save hotkeys to profile state.
    */
   async saveHotkeysToStore() {
-    // When profiles are active, save to profile state instead
-    if (window.moduleRegistry && window.moduleRegistry.profileState) {
+    if (window.moduleRegistry?.profileState) {
       debugLog?.info('Saving hotkeys to profile state', {
         module: 'hotkeys',
         function: 'saveHotkeysToStore'
@@ -238,64 +216,7 @@ class HotkeysModule {
       }
       return;
     }
-    
-    // Legacy: save to global store for non-profile setups
-    const col = document.getElementById('hotkeys-column');
-    const currentHtml = col ? col.innerHTML : '';
-    if (currentHtml.includes('header-button')) {
-      if (this.electronAPI && this.electronAPI.store) {
-        try {
-          const result = await this.electronAPI.store.set('hotkeys', currentHtml);
-          if (result.success) {
-            debugLog?.info('✅ Hotkeys saved to store successfully', {
-              module: 'hotkeys',
-              function: 'saveHotkeysToStore',
-            });
-          } else {
-            debugLog?.warn(
-              '❌ Failed to save hotkeys to store:',
-              result.error,
-              { module: 'hotkeys', function: 'saveHotkeysToStore' }
-            );
-          }
-        } catch (error) {
-          debugLog?.warn('❌ Store save error:', error, {
-            module: 'hotkeys',
-            function: 'saveHotkeysToStore',
-          });
-        }
-      }
-    }
-  }
-
-  /**
-   * Synchronize the model from the existing hotkey UI.
-   * This is temporary compatibility glue while mutation entry points migrate
-   * to HotkeyState one by one.
-   */
-  syncStateFromDom() {
-    const snapshot = [];
-    for (let tabNumber = 1; tabNumber <= 5; tabNumber++) {
-      const tabContent = document.getElementById(`hotkeys_list_${tabNumber}`);
-      const tabLink = document.querySelector(`#hotkey_tabs .nav-item:nth-child(${tabNumber}) a`);
-      const hotkeys = {};
-
-      for (let keyNumber = 1; keyNumber <= 12; keyNumber++) {
-        const songId = tabContent
-          ?.querySelector(`[id^="f${keyNumber}_hotkey"]`)
-          ?.getAttribute('songid');
-        if (songId) hotkeys[`f${keyNumber}`] = songId;
-      }
-
-      const displayedName = tabLink?.textContent?.trim() || String(tabNumber);
-      snapshot.push({
-        tabNumber,
-        tabName: /^\d$/.test(displayedName) ? null : displayedName,
-        hotkeys
-      });
-    }
-    this.state.loadFromSnapshot(snapshot, { notify: false });
-    return this.state.toSnapshot();
+    throw new Error('Profile state module is unavailable');
   }
 
   getHotkeySnapshot() {
@@ -379,6 +300,10 @@ class HotkeysModule {
     return this.state.clearSong(songId);
   }
 
+  renameHotkeyStateTab(tabNumber, name) {
+    return this.state.renameTab(tabNumber, name);
+  }
+
   importHotkeyConfig(config) {
     return hotkeyOperations.importHotkeyConfig(config, {
       setLabelFromSongId: this.setLabelFromSongId.bind(this),
@@ -398,44 +323,6 @@ class HotkeysModule {
       saveHotkeysToStore: this.saveHotkeysToStore.bind(this),
       clearTab: () => this.state.clearTab(this.getActiveTabNumber())
     });
-  }
-
-  /**
-   * Load hotkeys from store
-   * Loads saved hotkey state and populates UI
-   */
-  loadHotkeysFromStore() {
-    if (this.electronAPI && this.electronAPI.store) {
-      this.electronAPI.store.has('hotkeys').then((hasHotkeys) => {
-        if (hasHotkeys) {
-          this.electronAPI.store.get('hotkeys').then((storedHotkeysHtml) => {
-            // Check if the stored HTML contains the old plain text header
-            if (
-              storedHotkeysHtml &&
-              typeof storedHotkeysHtml === 'string' &&
-              storedHotkeysHtml.includes('Hotkeys') &&
-              !storedHotkeysHtml.includes('header-button')
-            ) {
-              // This is the old HTML format, clear it so the new HTML loads
-              this.electronAPI.store.delete('hotkeys').then(() => {
-                debugLog?.info('Cleared old hotkeys HTML format', {
-                  module: 'hotkeys',
-                  function: 'loadHotkeysFromStore',
-                });
-              });
-            } else if (
-              storedHotkeysHtml &&
-              typeof storedHotkeysHtml === 'string'
-            ) {
-              const column = document.getElementById('hotkeys-column');
-              if (column) column.innerHTML = window.DOMPurify ? window.DOMPurify.sanitize(storedHotkeysHtml) : storedHotkeysHtml;
-              this.syncStateFromDom();
-              document.getElementById('selected_row')?.removeAttribute('id');
-            }
-          });
-        }
-      });
-    }
   }
 
   /**
@@ -1065,7 +952,6 @@ class HotkeysModule {
     return {
       // Core functions - properly bound to maintain context
       saveHotkeysToStore: this.saveHotkeysToStore.bind(this),
-      loadHotkeysFromStore: this.loadHotkeysFromStore.bind(this),
       initHotkeys: this.initHotkeys.bind(this),
 
       // Data management - properly bound to maintain context
@@ -1162,19 +1048,6 @@ class HotkeysModule {
       };
     } catch (error) {
       testResults.tests.saveHotkeysToStore = {
-        status: 'FAIL',
-        message: error.message,
-      };
-    }
-
-    try {
-      this.loadHotkeysFromStore();
-      testResults.tests.loadHotkeysFromStore = {
-        status: 'PASS',
-        message: 'Function executed successfully',
-      };
-    } catch (error) {
-      testResults.tests.loadHotkeysFromStore = {
         status: 'FAIL',
         message: error.message,
       };
