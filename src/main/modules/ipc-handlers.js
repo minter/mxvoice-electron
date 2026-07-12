@@ -38,7 +38,7 @@ let analytics;
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
   getMainWindow = dependencies.getMainWindow || (() => dependencies.mainWindow);
-  getDb = dependencies.getDb || (() => dependencies.db);
+  getDb = dependencies.getDb;
   getCurrentProfile = dependencies.getCurrentProfile;
   getProfileDirectory = dependencies.getProfileDirectory;
   store = dependencies.store;

@@ -76,7 +76,7 @@ beforeAll(async () => {
 
   initializeIpcHandlers({
     mainWindow: { webContents: { send: vi.fn() }, isDestroyed: () => false },
-    db: null,
+    getDb: () => null,
     store: mockStore,
     audioInstances: new Map(),
     autoUpdater: null,

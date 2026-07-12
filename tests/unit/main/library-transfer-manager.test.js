@@ -116,7 +116,7 @@ beforeEach(() => {
 
   initializeLibraryTransferManager({
     debugLog: mockDebugLog,
-    db: { close: vi.fn() },
+    getDb: () => ({ close: vi.fn() }),
     store: fakeStore,
   });
 });
@@ -247,7 +247,7 @@ describe('importLibrary', () => {
 
     initializeLibraryTransferManager({
       debugLog: mockDebugLog,
-      db: { close: vi.fn() },
+      getDb: () => ({ close: vi.fn() }),
       store: {
         get: vi.fn(() => undefined),
         path: importConfigPath,
@@ -321,7 +321,7 @@ describe('round-trip integrity', () => {
 
     initializeLibraryTransferManager({
       debugLog: mockDebugLog,
-      db: { close: vi.fn() },
+      getDb: () => ({ close: vi.fn() }),
       store: {
         get: vi.fn(() => undefined),
         path: importConfigPath,

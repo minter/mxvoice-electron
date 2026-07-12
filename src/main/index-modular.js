@@ -709,7 +709,6 @@ async function initializeModules() {
   const dependencies = {
     mainWindow,
     getMainWindow: () => mainWindow,
-    db, // legacy snapshot — prefer getDb()
     getDb: () => db,
     setDb: (next) => { db = next; },
     getProfileDirectory,
@@ -734,7 +733,7 @@ async function initializeModules() {
   });
   debugLog?.info('Module dependencies status', { 
     function: "initializeModules",
-    hasDb: !!dependencies.db,
+    hasDb: !!dependencies.getDb?.(),
     hasAutoUpdater: !!dependencies.autoUpdater,
     autoUpdaterType: typeof dependencies.autoUpdater
   });

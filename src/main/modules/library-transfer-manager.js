@@ -56,7 +56,7 @@ async function copyDirectoryRecursive(src, dest) {
  */
 function initializeLibraryTransferManager(dependencies) {
   debugLog = dependencies.debugLog;
-  getDb = dependencies.getDb || (() => dependencies.db);
+  getDb = dependencies.getDb;
   setDb = dependencies.setDb || (() => {});
   store = dependencies.store;
 

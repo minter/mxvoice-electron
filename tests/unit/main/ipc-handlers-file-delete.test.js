@@ -158,7 +158,7 @@ beforeAll(async () => {
 
   initializeIpcHandlers({
     mainWindow: { webContents: { send: vi.fn() } },
-    db,
+    getDb: () => db,
     store: { get: vi.fn(key => key === 'music_directory' ? '/Users/testuser/Music' : undefined), set: vi.fn(), has: vi.fn(), delete: vi.fn(), clear: vi.fn() },
     audioInstances: new Map(),
     autoUpdater: null,
