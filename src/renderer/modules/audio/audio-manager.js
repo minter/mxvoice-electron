@@ -13,6 +13,7 @@ import { getPlaybackSelectionSongId, resetUIState } from './audio-controller.js'
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 import { resolveAudioSource } from './audio-source-resolver.js';
 import { showMissingAudioFile } from './playback-error-presenter.js';
+import { prepareCrossfadeTransition, startCrossfadeIn } from './crossfade-transition.js';
 import {
   calculatePlaybackVolume,
   determinePlaybackCompletionAction,
@@ -275,22 +276,11 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
 
             // Handle outgoing sound for crossfade
             if (shouldCrossfade2) {
-              const outgoing = sharedState.get('sound');
-              if (outgoing && outgoing.playing()) {
-                sharedState.set('outgoingSound', outgoing);
-                outgoing.off('fade');
-                outgoing.on('fade', () => {
-                  outgoing.unload();
-                  if (sharedState.get('outgoingSound') === outgoing) {
-                    sharedState.set('outgoingSound', null);
-                  }
-                });
-                outgoing.fade(outgoing.volume(), 0, crossfadeMs2);
-              } else if (outgoing) {
-                outgoing.unload();
-              }
-              const oldAnim = sharedState.get('globalAnimation');
-              if (oldAnim) cancelAnimationFrame(oldAnim);
+              prepareCrossfadeTransition({
+                sharedState,
+                durationMs: crossfadeMs2,
+                cancelAnimationFrame
+              });
             }
 
             let sound = createHowl({
@@ -333,7 +323,7 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                 });
                 // Fade in if crossfading
                 if (shouldCrossfade2 && crossfadeMs2 > 0) {
-                  sound.fade(0, targetVolume2, crossfadeMs2);
+                  startCrossfadeIn({ sound, targetVolume: targetVolume2, durationMs: crossfadeMs2 });
                 }
                 const _time = Math.round(sound.duration());
                 sharedState.set(
