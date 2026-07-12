@@ -14,12 +14,35 @@ This directory contains the test suite for Mx. Voice Electron application.
 
 ```bash
 npm test            # All tests
+npm run test:unit   # Unit tests without a coverage report
+npm run test:unit:coverage # Unit tests with required coverage thresholds
+npm run test:no-skips # Reject skipped or fixme tests
 npm run test:smoke  # Minimal boot check
 npm run test:ui     # Interactive UI mode
 npm run test:headed # Headed runs
 npm run test:debug  # Debug mode
 npm run test:report # Open HTML report
 ```
+
+## CI Test Policy
+
+Pull requests and pushes to `main` must pass two independent test gates:
+
+1. **Unit and policy gate (Ubuntu)**
+   - Installs dependencies with `npm ci`.
+   - Builds the context-isolated preload bundle.
+   - Rejects all `test.skip`, `test.fixme`, `it.skip`, `describe.skip`, and equivalent skip directives under `tests/`.
+   - Runs `npm run test:unit:coverage`, which enforces the thresholds in `vitest.config.js`.
+   - Uploads the HTML coverage report for 14 days.
+2. **Electron E2E gate (macOS and Windows)**
+   - Runs the complete Playwright suite on both supported desktop platforms.
+   - Uploads reports, traces, screenshots, and videos when available.
+
+Coverage and E2E results are deliberately separate. Unit coverage measures deterministic code execution and failure paths; Playwright protects real Electron lifecycle, IPC, filesystem, audio-control, and DOM behavior. Passing one gate does not replace the other.
+
+Skipped tests are not allowed. If a scenario cannot run in a particular environment, keep the deterministic state/UI assertions active and condition only the environment-specific measurement, such as physical audio RMS. If that is not possible, replace the scenario with a lower-level contract test before merging.
+
+When coverage rises, raise the thresholds in `vitest.config.js` in the same change. Threshold reductions require an explicit explanation in the pull request.
 
 ## Windows-Specific Considerations
 
@@ -88,7 +111,7 @@ Audio tests use real audio measurements when running locally:
 - Volume relationship verification
 - Fade-out pattern analysis
 
-On CI environments, audio tests are skipped in favor of UI state verification.
+On CI environments, audio state and UI assertions still run; only physical RMS measurements that require an audio device are omitted.
 
 ## Troubleshooting
 

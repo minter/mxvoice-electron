@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   test:
-    name: Run unit tests
+    name: Unit tests and coverage policy
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -32,5 +32,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit tests
-        run: npm run test:unit
+      - name: Build preload bundle
+        run: npm run build:preload
+
+      - name: Enforce no-skipped-tests policy
+        run: npm run test:no-skips
+
+      - name: Run unit tests with required coverage thresholds
+        run: npm run test:unit:coverage
+
+      - name: Upload HTML coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage-html
+          path: coverage
+          if-no-files-found: warn
+          retention-days: 14

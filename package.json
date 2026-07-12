@@ -46,6 +46,7 @@
     "test:run": "./tests/run-tests.sh",
     "test:unit": "vitest run",
     "test:unit:coverage": "vitest run --coverage",
+    "test:no-skips": "node build/checkNoSkippedTests.cjs",
     "test:unit:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
