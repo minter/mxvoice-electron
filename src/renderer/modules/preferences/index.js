@@ -20,11 +20,11 @@ import settingsController from './settings-controller.js';
 function initializePreferences(options = {}) {
   const electronAPISource = (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null;
   const electronAPI = options.electronAPI || electronAPISource;
-  const { db, store } = options;
+  const { db, store, moduleRegistry } = options;
   
   // Initialize sub-modules
   const manager = preferenceManager({ electronAPI, db, store });
-  const controller = settingsController({ electronAPI, db, store });
+  const controller = settingsController({ electronAPI, db, store, moduleRegistry });
   
   return {
     // Preference Manager functions
@@ -51,33 +51,5 @@ function initializePreferences(options = {}) {
   };
 }
 
-// Create and export a singleton instance
-// Note: This will be re-initialized with proper dependencies when the module is loaded
-let preferencesModule = initializePreferences();
-
-// Function to re-initialize with proper dependencies
-function reinitializePreferences(options = {}) {
-  preferencesModule = initializePreferences(options);
-  return preferencesModule;
-}
-
-// Export individual functions for direct access
-export const openPreferencesModal = preferencesModule.openPreferencesModal;
-export const loadPreferences = preferencesModule.loadPreferences;
-export const savePreferences = preferencesModule.savePreferences;
-export const getPreference = preferencesModule.getPreference;
-export const setPreference = preferencesModule.setPreference;
-export const getDatabaseDirectory = preferencesModule.getDatabaseDirectory;
-export const getMusicDirectory = preferencesModule.getMusicDirectory;
-export const getHotkeyDirectory = preferencesModule.getHotkeyDirectory;
-export const getFadeOutSeconds = preferencesModule.getFadeOutSeconds;
-export const getDebugLogEnabled = preferencesModule.getDebugLogEnabled;
-export const getPrereleaseUpdates = preferencesModule.getPrereleaseUpdates;
-export const getScreenMode = preferencesModule.getScreenMode;
-export { reinitializePreferences };
-
-// Add reinitialize function to the default export
-preferencesModule.reinitializePreferences = reinitializePreferences;
-
-// Default export for module loading
-export default preferencesModule; 
+export { initializePreferences };
+export default initializePreferences;

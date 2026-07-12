@@ -34,7 +34,7 @@ function initializeSettingsController(options = {}) {
   // Prefer exposed API; fallback to secure API if only that exists
   const electronAPISource = (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null;
   const electronAPI = options.electronAPI || electronAPISource;
-  const { db: _db, store } = options;
+  const { db: _db, store, moduleRegistry = {} } = options;
 
   function preserveDirectoryPreferences(formValues, currentValues) {
     const directoryKeys = ['database_directory', 'music_directory', 'hotkey_directory'];
@@ -199,8 +199,8 @@ function initializeSettingsController(options = {}) {
         debugLog?.info("[PREFS-SAVE] Save results", { results, profileCount: profilePrefs.length, globalCount: globalPrefs.length });
         
         // Update audio module's music directory cache if it changed
-        if (preferences.music_directory && window.moduleRegistry?.audio?.updateMusicDirectoryCache) {
-          window.moduleRegistry.audio.updateMusicDirectoryCache(preferences.music_directory);
+        if (preferences.music_directory && moduleRegistry.audio?.updateMusicDirectoryCache) {
+          moduleRegistry.audio.updateMusicDirectoryCache(preferences.music_directory);
           debugLog?.info("[PREFS-SAVE] Updated audio module music directory cache", { 
             musicDirectory: preferences.music_directory 
           });
@@ -214,11 +214,11 @@ function initializeSettingsController(options = {}) {
         
         // Apply new theme immediately if screen mode preference changed
         // (do this regardless of other preferences succeeding)
-        if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
+        if (moduleRegistry.themeManagement?.setUserTheme) {
           try {
             const newScreenMode = preferences.screen_mode;
             debugLog?.info('Applying theme after preference change', { newTheme: newScreenMode });
-            await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
+            await moduleRegistry.themeManagement.setUserTheme(newScreenMode);
             debugLog?.info('Theme applied successfully', { newTheme: newScreenMode });
           } catch (themeError) {
             debugLog?.warn('Failed to apply theme', { error: themeError });
@@ -324,10 +324,10 @@ function initializeSettingsController(options = {}) {
         });
         
         // Apply new theme immediately if screen mode preference changed
-        if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
+        if (moduleRegistry.themeManagement?.setUserTheme) {
           try {
             const newScreenMode = safePreferences.screen_mode;
-            await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
+            await moduleRegistry.themeManagement.setUserTheme(newScreenMode);
             debugLog?.info('Theme applied immediately after legacy preference save', { newTheme: newScreenMode });
           } catch (themeError) {
             debugLog?.warn('Failed to apply theme after legacy preference save', { error: themeError });
@@ -365,10 +365,10 @@ function initializeSettingsController(options = {}) {
             });
             
             // Apply new theme immediately if screen mode preference changed
-            if (window.moduleRegistry?.themeManagement && window.moduleRegistry.themeManagement.setUserTheme) {
+            if (moduleRegistry.themeManagement?.setUserTheme) {
               try {
                 const newScreenMode = safePreferences.screen_mode;
-                await window.moduleRegistry.themeManagement.setUserTheme(newScreenMode);
+                await moduleRegistry.themeManagement.setUserTheme(newScreenMode);
                 debugLog?.info('Theme applied immediately after electronAPI.store save', { newTheme: newScreenMode });
               } catch (themeError) {
                 debugLog?.warn('Failed to apply theme after electronAPI.store save', { error: themeError });
