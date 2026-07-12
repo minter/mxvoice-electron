@@ -194,7 +194,7 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
     console.log('✅ TEST PASSED: songid preserved through swap at different positions');
   });
 
-  test.skip('songid should persist after profile state save and restore', async () => {
+  test('songid should persist after profile state save and restore', async () => {
     console.log('\n🧪 TEST: songid should survive profile state save/restore cycle');
 
     // Step 1: Assign songs to multiple hotkeys, ensuring proper swap scenario

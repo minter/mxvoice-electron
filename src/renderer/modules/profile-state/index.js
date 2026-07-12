@@ -185,7 +185,8 @@ async function _saveProfileStateImmediate() {
  */
 export async function loadProfileState(options = {}) {
   try {
-    const { hotkeysModule, holdingTankModule } = options;
+    const hotkeysModule = options.hotkeysModule || _hotkeysModuleRef;
+    const holdingTankModule = options.holdingTankModule || _holdingTankModuleRef;
     
     // Set restoration lock to prevent lifecycle saves during initialization
     window.isRestoringProfileState = true;

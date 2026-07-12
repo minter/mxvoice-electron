@@ -1,0 +1,10 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+const elements = new Map(); function element(){const classes=new Set(); return { classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x)}, style:{}, textContent:'', getAttribute:vi.fn(), setAttribute:vi.fn(), removeAttribute:vi.fn() };}
+globalThis.window = { debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }; globalThis.document = { getElementById: id => { if(!elements.has(id))elements.set(id,element()); return elements.get(id); }, querySelector: vi.fn(() => null), querySelectorAll: vi.fn(() => []) };
+const sharedState = (await import('../../../src/renderer/modules/shared-state.js')).default; const audio = await import('../../../src/renderer/modules/audio/audio-controller.js');
+describe('audio controller UI orchestration', () => {
+  beforeEach(() => { elements.clear(); vi.clearAllMocks(); document.querySelector.mockReset(); sharedState.reset(); });
+  it('toggles play/pause controls and loop state', () => { const play= document.getElementById('play_button'); play.classList.add('d-none'); audio.toggle_play_button(); expect(play.classList.contains('d-none')).toBe(false); expect(document.getElementById('pause_button').classList.contains('d-none')).toBe(true); audio.loop_on(true); expect(document.getElementById('loop_button').classList.contains('active')).toBe(true); audio.loop_on(false); expect(document.getElementById('loop_button').classList.contains('active')).toBe(false); });
+  it('prefers explicit selected rows when resolving playback IDs', () => { const row={ getAttribute:vi.fn(()=>'77') }; document.querySelector.mockReturnValue(row); expect(audio.getPlaybackSelectionSongId()).toBe('77'); });
+  it('resets playback transport UI', () => { audio.resetUIState(); expect(document.getElementById('duration').textContent).toBe('0:00'); expect(document.getElementById('audio_progress').style.width).toBe('0%'); expect(document.getElementById('play_button').classList.contains('d-none')).toBe(false); });
+});
