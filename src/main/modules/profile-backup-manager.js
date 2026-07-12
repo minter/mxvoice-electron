@@ -22,6 +22,7 @@ import {
 } from './profile-paths.js';
 import { createBackupMetadataCoordinator } from './backup-metadata-coordinator.js';
 import { createBackupMetadataStore } from './backup-metadata-store.js';
+import { createBackupDirectoryScanner } from './backup-directory-scanner.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -39,6 +40,15 @@ const metadataCoordinator = createBackupMetadataCoordinator({
   fs,
   getMetadataPath: getBackupMetadataPath,
   pathExists,
+  getDebugLog: () => debugLog
+});
+const directoryScanner = createBackupDirectoryScanner({
+  fs,
+  path,
+  getBackupDirectory,
+  getMetadataPath: getBackupMetadataPath,
+  pathExists,
+  writeMetadata: (metadataPath, data) => metadataCoordinator.writeAtomic(metadataPath, data),
   getDebugLog: () => debugLog
 });
 const metadataStore = createBackupMetadataStore({
@@ -139,82 +149,7 @@ async function readMetadataSafe(profileName) {
  * @returns {Promise<Object>} Rebuilt metadata
  */
 async function rebuildMetadataFromDirectories(profileName) {
-  const backupDir = getBackupDirectory(profileName);
-  const metadata = {
-    profileName: profileName,
-    backups: [],
-    lastBackup: null,
-    backupCount: 0
-  };
-  
-  if (!await pathExists(backupDir)) {
-    return metadata;
-  }
-
-  try {
-    const entries = await fs.promises.readdir(backupDir, { withFileTypes: true });
-    
-    for (const entry of entries) {
-      if (entry.isDirectory() && entry.name.startsWith('backup-')) {
-        const backupPath = path.join(backupDir, entry.name);
-        const stats = await fs.promises.stat(backupPath);
-        
-        // Extract timestamp from backup ID
-        const timestampMatch = entry.name.match(/backup-(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/);
-        let timestamp = stats.mtimeMs;
-        
-        if (timestampMatch) {
-          const [, year, month, day, hours, minutes, seconds, milliseconds] = timestampMatch;
-          const date = new Date(Date.UTC(
-            parseInt(year),
-            parseInt(month) - 1,
-            parseInt(day),
-            parseInt(hours),
-            parseInt(minutes),
-            parseInt(seconds),
-            parseInt(milliseconds)
-          ));
-          timestamp = date.getTime();
-        }
-        
-        // Calculate size and file count
-        const { size, fileCount } = await calculateBackupSize(backupPath);
-        
-        metadata.backups.push({
-          id: entry.name,
-          timestamp: timestamp,
-          size: size,
-          fileCount: fileCount
-        });
-      }
-    }
-    
-    // Sort by timestamp (newest first)
-    metadata.backups.sort((a, b) => b.timestamp - a.timestamp);
-    metadata.backupCount = metadata.backups.length;
-    metadata.lastBackup = metadata.backups.length > 0 ? metadata.backups[0].timestamp : null;
-    
-    // Save rebuilt metadata
-    const metadataPath = getBackupMetadataPath(profileName);
-    await writeMetadataAtomic(metadataPath, metadata);
-    
-    debugLog?.info('Rebuilt metadata from directories', {
-      module: 'profile-backup-manager',
-      function: 'rebuildMetadataFromDirectories',
-      profileName,
-      backupCount: metadata.backupCount
-    });
-    
-    return metadata;
-  } catch (error) {
-    debugLog?.error('Failed to rebuild metadata', {
-      module: 'profile-backup-manager',
-      function: 'rebuildMetadataFromDirectories',
-      profileName,
-      error: error.message
-    });
-    return metadata;
-  }
+  return directoryScanner.rebuildMetadata(profileName);
 }
 
 /**
@@ -223,28 +158,7 @@ async function rebuildMetadataFromDirectories(profileName) {
  * @returns {Promise<{size: number, fileCount: number}>}
  */
 async function calculateBackupSize(backupPath) {
-  let totalSize = 0;
-  let fileCount = 0;
-  
-  async function calculateRecursive(dirPath) {
-    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    
-    for (const entry of entries) {
-      const entryPath = path.join(dirPath, entry.name);
-      
-      if (entry.isDirectory()) {
-        await calculateRecursive(entryPath);
-      } else {
-        const stats = await fs.promises.stat(entryPath);
-        totalSize += stats.size;
-        fileCount++;
-      }
-    }
-  }
-  
-  await calculateRecursive(backupPath);
-  
-  return { size: totalSize, fileCount };
+  return directoryScanner.calculateSize(backupPath);
 }
 
 /**
