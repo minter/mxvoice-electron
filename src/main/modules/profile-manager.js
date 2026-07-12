@@ -12,6 +12,7 @@
  */
 
 import fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import electron from 'electron';
@@ -826,6 +827,98 @@ async function duplicateProfile(sourceProfileName, targetProfileName, descriptio
   }
 }
 
+/**
+ * Save a profile's hotkey/holding-tank state to its state.json,
+ * backing up the existing file first. Warns (but does not block) when
+ * an empty state would overwrite existing data — renderer-side
+ * protection is primary; this is backup logging.
+ * @param {string} profileName - Display name of the profile
+ * @param {Object} state - { hotkeys: [...], holdingTank: [...] }
+ * @param {Object} [options]
+ * @param {string} [options.reason] - Context string for logs (e.g. 'window-close', 'profile-switch')
+ * @returns {Promise<{success: boolean}>}
+ */
+async function saveProfileState(profileName, state, { reason = 'save' } = {}) {
+  if (!profileName) {
+    throw new Error('No profile name available for state save');
+  }
+
+  const sanitizedName = sanitizeProfileName(profileName);
+  const profileDir = path.join(getProfilesDirectory(), sanitizedName);
+  const stateFile = path.join(profileDir, 'state.json');
+
+  const hotkeyCount = state?.hotkeys?.reduce((sum, tab) => sum + Object.keys(tab.hotkeys || {}).length, 0) || 0;
+  const holdingTankCount = state?.holdingTank?.reduce((sum, tab) => sum + (tab.songIds?.length || 0), 0) || 0;
+  const hasData = hotkeyCount > 0 || holdingTankCount > 0;
+
+  debugLog?.info('Saving profile state', {
+    module: 'profile-manager',
+    function: 'saveProfileState',
+    reason,
+    profileName,
+    sanitizedName,
+    file: stateFile,
+    hotkeyCount,
+    holdingTankCount,
+    hasData
+  });
+
+  if (!hasData) {
+    try {
+      const existingState = JSON.parse(await fsPromises.readFile(stateFile, 'utf8'));
+      const existingHotkeyCount = existingState.hotkeys?.reduce((sum, tab) => sum + Object.keys(tab.hotkeys || {}).length, 0) || 0;
+      const existingHoldingTankCount = existingState.holdingTank?.reduce((sum, tab) => sum + (tab.songIds?.length || 0), 0) || 0;
+
+      if (existingHotkeyCount > 0 || existingHoldingTankCount > 0) {
+        debugLog?.warn('Saving empty state over existing data (renderer allowed this)', {
+          module: 'profile-manager',
+          function: 'saveProfileState',
+          reason,
+          profileName,
+          existingHotkeys: existingHotkeyCount,
+          existingHoldingTank: existingHoldingTankCount,
+          file: stateFile,
+          note: 'User may have cleared data intentionally'
+        });
+      }
+    } catch (readError) {
+      debugLog?.info('No existing state file or could not read it', {
+        module: 'profile-manager',
+        function: 'saveProfileState',
+        reason,
+        error: readError.message
+      });
+    }
+  }
+
+  await fsPromises.mkdir(profileDir, { recursive: true });
+
+  try {
+    const backupFile = path.join(profileDir, 'state.json.backup');
+    const existingData = await fsPromises.readFile(stateFile, 'utf8');
+    await fsPromises.writeFile(backupFile, existingData, 'utf8');
+  } catch (backupError) {
+    debugLog?.info('Could not create backup (file may not exist)', {
+      module: 'profile-manager',
+      function: 'saveProfileState',
+      reason,
+      error: backupError.message
+    });
+  }
+
+  await fsPromises.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
+
+  debugLog?.info('Profile state saved successfully', {
+    module: 'profile-manager',
+    function: 'saveProfileState',
+    reason,
+    profileName,
+    file: stateFile
+  });
+
+  return { success: true };
+}
+
 export {
   initializeProfileManager,
   getAvailableProfiles,
@@ -839,5 +932,6 @@ export {
   saveProfilePreferences,
   getDefaultPreferences,
   getProfilesDirectory,
-  sanitizeProfileName
+  sanitizeProfileName,
+  saveProfileState
 };
