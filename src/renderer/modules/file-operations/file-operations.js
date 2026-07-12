@@ -71,7 +71,7 @@ export function openHoldingTankFile() {
 
 /**
  * Saves the current hotkey configuration to a file
- * Collects song IDs from all active hotkey elements and saves them
+ * Delegates model-backed export to the hotkeys module
  */
 export function saveHotkeyFile() {
   debugLog?.info('Renderer starting saveHotkeyFile', { 
@@ -90,79 +90,14 @@ export function saveHotkeyFile() {
     saveBtn.dataset.tooltipSuppressUntil = Date.now() + 2000; // Suppress for 2 seconds
   }
   
-  // Find the active tab and its content
-  const activeLink = document.querySelector('#hotkey_tabs li a.active');
-  const activeText = activeLink ? (activeLink.textContent || '') : '';
-  
-  // Get the active tab content div
-  let activeTabContent = null;
-  if (activeLink) {
-    const href = activeLink.getAttribute('href');
-    if (href && href.startsWith('#')) {
-      const tabId = href.substring(1);
-      activeTabContent = document.getElementById(tabId);
-      debugLog?.info("Found active tab content:", { 
-        module: 'file-operations',
-        function: 'saveHotkeyFile', 
-        tabId: tabId,
-        tabContent: !!activeTabContent
-      });
-    }
-  }
-  
-  const hotkeyArray = [];
-  
-  // Collect song IDs from hotkey elements, prioritizing active tab content
-  for (let key = 1; key <= 12; key++) {
-    let element = null;
-    let songId = null;
-    
-    if (activeTabContent) {
-      // Look for hotkey element within the active tab content first
-      element = activeTabContent.querySelector(`[id^="f${key}_hotkey"]`);
-      if (element) {
-        songId = element.getAttribute('songid');
-        debugLog?.info(`Hotkey ${key} found in active tab:`, { 
-          module: 'file-operations',
-          function: 'saveHotkeyFile', 
-          key: key,
-          songId: songId,
-          foundInActiveTab: true
-        });
-      }
-    }
-    
-    // Fallback to tab 1 if not found in active tab
-    if (!element) {
-      const tab1 = document.getElementById('hotkeys_list_1');
-      element = tab1?.querySelector(`#f${key}_hotkey`);
-      if (element) {
-        songId = element.getAttribute('songid');
-        debugLog?.info(`Hotkey ${key} found in tab 1 (fallback):`, {
-          module: 'file-operations',
-          function: 'saveHotkeyFile',
-          key: key,
-          songId: songId,
-          foundInActiveTab: false
-        });
-      }
-    }
-    
-    hotkeyArray.push(songId || null);
-  }
-  
-  // Add the active tab name if it's not a numeric tab
-  if (!/^\d$/.test(activeText)) {
-    hotkeyArray.push(activeText);
-  }
-  
-  // Save using modern API with fallback
-  return secureFileDialog.saveHotkeyFile(hotkeyArray);
+  const hotkeys = window.moduleRegistry?.hotkeys;
+  if (!hotkeys?.saveHotkeyFile) throw new Error('Hotkeys module is unavailable');
+  return hotkeys.saveHotkeyFile();
 }
 
 /**
  * Saves the current holding tank configuration to a file
- * Collects song IDs from all active holding tank elements and saves them
+ * Delegates model-backed export to the holding-tank module
  */
 export function saveHoldingTankFile() {
   debugLog?.info('Renderer starting saveHoldingTankFile', { 
@@ -180,13 +115,7 @@ export function saveHoldingTankFile() {
   if (saveBtn) {
     saveBtn.dataset.tooltipSuppressUntil = Date.now() + 2000; // Suppress for 2 seconds
   }
-  const holdingTankArray = [];
-  
-  // Collect song IDs from all active holding tank items
-  document.querySelectorAll('.holding_tank.active .list-group-item').forEach(li => {
-    holdingTankArray.push(li.getAttribute('songid'));
-  });
-  
-  // Save using modern API with fallback
-  return secureFileDialog.saveHoldingTankFile(holdingTankArray);
-} 
+  const holdingTank = window.moduleRegistry?.holdingTank;
+  if (!holdingTank?.saveHoldingTankFile) throw new Error('Holding tank module is unavailable');
+  return holdingTank.saveHoldingTankFile();
+}

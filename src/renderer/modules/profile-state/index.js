@@ -259,14 +259,11 @@ export async function loadProfileState(options = {}) {
     const hasHoldingTank = state.holdingTank.some(tab => tab.songIds && tab.songIds.length > 0);
     
     if (!hasHotkeys && !hasHoldingTank) {
-      debugLog?.warn('[PROFILE-STATE] State file exists but contains no data (empty profile)', {
+      debugLog?.info('[PROFILE-STATE] Restoring empty collection state', {
         module: 'profile-state',
         function: 'loadProfileState',
         profile: currentProfile
       });
-      // Still return success but mark as not loaded so UI shows empty state
-      window.isRestoringProfileState = false;
-      return { success: true, loaded: false };
     }
     
     debugLog?.info('[PROFILE-STATE] Loaded profile state', { 

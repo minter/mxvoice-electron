@@ -70,6 +70,10 @@ export function clearActiveHoldingTankState() {
   return tabNumber ? holdingTankState.clearTab(tabNumber) : false;
 }
 
+function getActiveHoldingTankTabNumber() {
+  return Number(document.querySelector('.holding_tank.active')?.id?.match(/^holding_tank_(\d)$/)?.[1]) || 1;
+}
+
 function updateStateForInsertion(songId, targetEl, insertPosition, existingElement) {
   const targetTab = targetEl?.closest?.('.holding_tank') || document.querySelector('.holding_tank.active');
   const targetTabNumber = Number(targetTab?.id?.match(/^holding_tank_(\d)$/)?.[1]);
@@ -190,7 +194,7 @@ export function requestProfileStateSave() {
 /**
  * Populate holding tank with song IDs
  */
-export function populateHoldingTank(songIds) {
+export async function populateHoldingTank(songIds) {
   debugLog?.info('populateHoldingTank called with song IDs', { 
     module: 'holding-tank',
     function: 'populateHoldingTank',
@@ -213,38 +217,35 @@ export function populateHoldingTank(songIds) {
       module: 'holding-tank',
       function: 'populateHoldingTank'
     });
-    return Promise.resolve({ success: false, error: 'No song IDs provided' });
+    return { success: false, error: 'No song IDs provided' };
   }
-  
+
+  clearActiveHoldingTankState();
   Dom.empty('.holding_tank.active');
   debugLog?.info('Cleared active holding tank', { 
     module: 'holding-tank',
     function: 'populateHoldingTank'
   });
   
-  // Wait for all songs to be added
-  const addPromises = songIds.map((songId) => {
+  let addedCount = 0;
+  for (const songId of songIds) {
     debugLog?.info('Adding song ID to holding tank', { 
       module: 'holding-tank',
       function: 'populateHoldingTank',
       songId: songId
     });
-    return addToHoldingTank(songId, Dom.$('.holding_tank.active'));
+    const result = await addToHoldingTank(songId, Dom.$('.holding_tank.active'));
+    if (result?.success) addedCount += 1;
+  }
+
+  await requestProfileStateSave();
+  scaleScrollable();
+  debugLog?.info('populateHoldingTank completed successfully', {
+    module: 'holding-tank',
+    function: 'populateHoldingTank',
+    count: addedCount
   });
-  
-  // Wait for all additions to complete, then save
-  return Promise.all(addPromises).then(() => {
-    // Save after all songs added (single save instead of N saves during loading)
-    requestProfileStateSave();
-    
-    scaleScrollable();
-    debugLog?.info('populateHoldingTank completed successfully', { 
-      module: 'holding-tank',
-      function: 'populateHoldingTank',
-      count: songIds.length
-    });
-    return { success: true, count: songIds.length };
-  });
+  return { success: true, count: addedCount };
 }
 
 /**
@@ -457,10 +458,7 @@ export function saveHoldingTankFile() {
     module: 'holding-tank',
     function: 'saveHoldingTankFile'
   });
-  const holdingTankArray = [];
-  document.querySelectorAll('.holding_tank.active .list-group-item').forEach(el => {
-    holdingTankArray.push(el.getAttribute('songid'));
-  });
+  const holdingTankArray = holdingTankState.toSnapshot()[getActiveHoldingTankTabNumber() - 1]?.songIds || [];
   return secureFileDialog.saveHoldingTankFile(holdingTankArray);
 }
 

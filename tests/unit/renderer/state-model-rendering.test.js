@@ -62,6 +62,7 @@ globalThis.document = createFakeDocument();
 const { HotkeysModule } = await import('../../../src/renderer/modules/hotkeys/index.js');
 const { default: HotkeyState } = await import('../../../src/renderer/modules/hotkeys/hotkey-state.js');
 const { restoreHoldingTankSnapshot } = await import('../../../src/renderer/modules/holding-tank/index.js');
+const hotkeyOperations = await import('../../../src/renderer/modules/hotkeys/hotkey-operations.js');
 
 describe('state model rendering', () => {
   beforeEach(() => {
@@ -104,5 +105,18 @@ describe('state model rendering', () => {
     expect(document.getElementById('holding_tank_4').children).toHaveLength(1);
     expect(document.getElementById('holding_tank_4').children[0].textContent).toBe('Finale by Cast (1:00)');
     expect(snapshot[3].songIds).toEqual(['18']);
+  });
+
+  it('exports hotkey file data from the state model rather than rendered attributes', () => {
+    const config = hotkeyOperations.exportHotkeyConfig.call({
+      getActiveTabNumber: () => 2,
+      getHotkeySnapshot: () => [
+        { tabNumber: 1, tabName: null, hotkeys: {} },
+        { tabNumber: 2, tabName: 'Act Two', hotkeys: { f1: '17', f12: '18' } }
+      ]
+    });
+
+    expect(config.hotkeys).toEqual({ f1: '17', f12: '18' });
+    expect(config.title).toBe('Act Two');
   });
 });

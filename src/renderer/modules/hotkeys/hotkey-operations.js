@@ -28,106 +28,10 @@ function openHotkeyFile() {
  */
 function saveHotkeyFile() {
   window.debugLog?.info("Renderer starting saveHotkeyFile", { module: 'hotkey-operations', function: 'saveHotkeyFile' });
-  
-  // Find the active tab and its content
-  const activeLink = document.querySelector('#hotkey_tabs li a.active');
-  const activeText = activeLink ? (activeLink.textContent || '') : '';
-  
-  // Get the active tab content div
-  let activeTabContent = null;
-  if (activeLink) {
-    const href = activeLink.getAttribute('href');
-    if (href && href.startsWith('#')) {
-      const tabId = href.substring(1);
-      activeTabContent = document.getElementById(tabId);
-      window.debugLog?.info("Found active tab content:", { 
-        module: 'hotkey-operations', 
-        function: 'saveHotkeyFile', 
-        tabId: tabId,
-        tabContent: !!activeTabContent
-      });
-    }
-  }
-  
-  const hotkeyArray = [];
-  for (let key = 1; key <= 12; key++) {
-    let element = null;
-    let songId = null;
-    
-    if (activeTabContent) {
-      // Look for hotkey element within the active tab content first
-      element = activeTabContent.querySelector(`[id^="f${key}_hotkey"]`);
-      if (element) {
-        songId = element.getAttribute('songid');
-        window.debugLog?.info(`Hotkey ${key} found in active tab:`, { 
-          module: 'hotkey-operations', 
-          function: 'saveHotkeyFile', 
-          key: key,
-          songId: songId,
-          foundInActiveTab: true
-        });
-      }
-    }
-    
-    // Fallback to tab 1 if not found in active tab
-    if (!element) {
-      const tab1 = document.getElementById('hotkeys_list_1');
-      element = tab1?.querySelector(`#f${key}_hotkey`);
-      if (element) {
-        songId = element.getAttribute('songid');
-        window.debugLog?.info(`Hotkey ${key} found in tab 1 (fallback):`, {
-          module: 'hotkey-operations',
-          function: 'saveHotkeyFile',
-          key: key,
-          songId: songId,
-          foundInActiveTab: false
-        });
-      }
-    }
-    
-    // Ensure we always have a value, even if element is missing
-    const safeSongId = songId || null;
-    hotkeyArray.push(safeSongId);
-    
-    window.debugLog?.info(`Hotkey ${key} final data:`, { 
-      module: 'hotkey-operations', 
-      function: 'saveHotkeyFile', 
-      key: key,
-      element: !!element,
-      songId: safeSongId,
-      type: typeof safeSongId,
-      elementExists: !!element
-    });
-  }
-  
-  // Only add tab name if it's not a number and not empty
-  if (activeText && activeText.trim() && !/^\d+$/.test(activeText.trim())) {
-    hotkeyArray.push(activeText.trim());
-    window.debugLog?.info("Added tab name to hotkey array:", { 
-      module: 'hotkey-operations', 
-      function: 'saveHotkeyFile', 
-      tabName: activeText.trim()
-    });
-  } else {
-    window.debugLog?.info("No valid tab name to add:", { 
-      module: 'hotkey-operations', 
-      function: 'saveHotkeyFile', 
-      activeText: activeText,
-      isEmpty: !activeText || !activeText.trim(),
-      isNumber: activeText && /^\d+$/.test(activeText.trim())
-    });
-  }
-  
-  window.debugLog?.info("Final hotkey array:", { 
-    module: 'hotkey-operations', 
-    function: 'saveHotkeyFile', 
-    hotkeyArray: hotkeyArray,
-    length: hotkeyArray.length,
-    tabName: activeText,
-    activeTabContent: !!activeTabContent
-  });
-  
-  // Use secureFileDialog directly since this is bound to the hotkeys module
+  const tabNumber = this?.getActiveTabNumber?.() || 1;
+  const tab = this?.getHotkeySnapshot?.()?.[tabNumber - 1];
+  const hotkeyArray = Array.from({ length: 12 }, (_, index) => tab?.hotkeys?.[`f${index + 1}`] || null);
+  if (tab?.tabName) hotkeyArray.push(tab.tabName);
   secureFileDialog.saveHotkeyFile(hotkeyArray);
 }
 
@@ -238,22 +142,14 @@ function sendToHotkeys(options = {}) {
  * @returns {Object} - Hotkey configuration object
  */
 function exportHotkeyConfig() {
-  const config = {
-    hotkeys: {},
-    title: (document.querySelector('#hotkey_tabs li a.active')?.textContent) || '',
+  const tabNumber = this?.getActiveTabNumber?.() || 1;
+  const tab = this?.getHotkeySnapshot?.()?.[tabNumber - 1];
+  if (!tab) throw new Error('Hotkey state is unavailable');
+  return {
+    hotkeys: { ...tab.hotkeys },
+    title: tab.tabName || '',
     timestamp: new Date().toISOString()
   };
-  
-  const activeTab = document.querySelector('#hotkey-tab-content .tab-pane.active.show')
-    || document.getElementById('hotkeys_list_1');
-  for (let key = 1; key <= 12; key++) {
-    const songId = activeTab?.querySelector(`[id^="f${key}_hotkey"]`)?.getAttribute('songid');
-    if (songId) {
-      config.hotkeys[`f${key}`] = songId;
-    }
-  }
-  
-  return config;
 }
 
 /**
@@ -319,7 +215,7 @@ function importHotkeyConfig(config, options = {}) {
  */
 function _backupHotkeyConfig() {
   return {
-    hotkeys: exportHotkeyConfig(),
+    hotkeys: exportHotkeyConfig.call(this),
     timestamp: new Date().toISOString(),
     version: '1.0'
   };
@@ -380,7 +276,7 @@ function clearHotkeyConfig(options = {}) {
  * @returns {Object} - Current hotkey configuration
  */
 function getHotkeyConfig() {
-  return exportHotkeyConfig();
+  return exportHotkeyConfig.call(this);
 }
 
 /**
