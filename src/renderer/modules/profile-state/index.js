@@ -112,6 +112,18 @@ export function saveProfileState() {
   });
 }
 
+/** Flush any debounced collection save before a lifecycle transition. */
+export async function flushProfileState() {
+  if (saveDebounceTimer) {
+    clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = null;
+  }
+  const resolvers = pendingSaveResolvers.splice(0);
+  const result = await _saveProfileStateImmediate();
+  resolvers.forEach(resolve => resolve(result));
+  return result;
+}
+
 async function _saveProfileStateImmediate() {
   try {
     // PROTECTION: Never save during restoration/initialization (race condition protection)
@@ -467,51 +479,10 @@ export function initializeProfileState({ hotkeysModule, holdingTankModule } = {}
   if (hotkeysModule) _hotkeysModuleRef = hotkeysModule;
   if (holdingTankModule) _holdingTankModuleRef = holdingTankModule;
   
-  // Save state before window closes (for quit, not for profile switch)
-  // Note: beforeunload cannot reliably delay window close for async operations in Electron
-  // The main process will handle waiting for the save to complete
-  window.addEventListener('beforeunload', (_event) => {
-    debugLog?.info('[PROFILE-STATE] Window closing, extracting profile state for save', { 
-      module: 'profile-state',
-      function: 'beforeunload'
-    });
-    
-    // PROTECTION: Never save during restoration/initialization
-    if (window.isRestoringProfileState) {
-      debugLog?.warn('[PROFILE-STATE] Skipping save on window close - restoration in progress', {
-        module: 'profile-state',
-        function: 'beforeunload',
-        reason: 'restoration_lock_active'
-      });
-      return;
-    }
-    
-    // Extract state immediately (synchronous) - this is fast
-    const state = extractProfileState();
-    
-    // Store state for main process to save (main process will wait for save to complete)
-    window._pendingProfileStateSave = state;
-    
-    // Send message to main process that we have state ready to save
-    // Main process will wait for the save to complete before allowing window to close
-    if (window.secureElectronAPI && window.secureElectronAPI.profile) {
-      // Fire and forget - main process will handle waiting
-      window.secureElectronAPI.profile.getCurrent().then(currentProfileResult => {
-        const currentProfile = currentProfileResult?.profile || 'unknown';
-        return window.secureElectronAPI.profile.saveState(state, currentProfile);
-      }).catch(err => {
-        debugLog?.error('[PROFILE-STATE] Failed to save state on quit', {
-          module: 'profile-state',
-          function: 'beforeunload',
-          error: err.message
-        });
-      });
-    }
-  });
-  
   return {
     extractProfileState,
     saveProfileState,
+    flushProfileState,
     loadProfileState,
     switchProfileWithSave,
     clearProfileRestorationLock
@@ -522,6 +493,7 @@ export default {
   initializeProfileState,
   extractProfileState,
   saveProfileState,
+  flushProfileState,
   loadProfileState,
   switchProfileWithSave,
   clearProfileRestorationLock

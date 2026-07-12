@@ -273,7 +273,7 @@ export function register(deps) {
     }
   });
 
-  // Profile: Save state before switch (explicit save, not relying on beforeunload)
+  // Profile: Save state before switch (explicit save before the relaunch lifecycle)
   ipcMain.handle(IPC.PROFILE.SAVE_STATE_BEFORE_SWITCH, async (event, state, profileName) => {
     try {
       const name = profileName || getCurrentProfile();

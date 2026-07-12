@@ -225,9 +225,9 @@ async function restoreBackup(backupId) {
       );
       
       // IMPORTANT:
-      // Prevent the current window's beforeunload handler from saving profile state
+      // Prevent the close-time flush from saving the current in-memory state
       // after the backup has been restored on disk but before the new window loads.
-      // Otherwise, the "old" DOM (pre-restore) could overwrite the restored state.json.
+      // Otherwise, the pre-restore models could overwrite the restored state.json.
       if (typeof window !== 'undefined') {
         window.isRestoringProfileState = true;
       }
@@ -555,4 +555,3 @@ export default {
   restoreBackup,
   reinitializeProfileBackup
 };
-

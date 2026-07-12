@@ -211,8 +211,10 @@ function setupWindowStateSaving() {
     });
   });
 
-  // Save window state on close (non-blocking)
-  mainWindow.on('close', async (_event) => {
+  let closeSaveComplete = false;
+  mainWindow.on('close', async (event) => {
+    if (closeSaveComplete) return;
+    event.preventDefault();
     debugLog?.info('Window closing, saving window state...', {
       module: 'app-setup',
       function: 'setupWindowStateSaving'
@@ -222,7 +224,11 @@ function setupWindowStateSaving() {
       // Clear any pending debounced saves
       if (saveTimeout) clearTimeout(saveTimeout);
       
-      // Save window state (let renderer handle profile state via beforeunload)
+      if (!mainWindow.webContents.isDestroyed()) {
+        await mainWindow.webContents.executeJavaScript(
+          'window.moduleRegistry?.profileState?.flushProfileState?.()'
+        );
+      }
       await saveWindowState(mainWindow);
       
       debugLog?.info('Window state saved on close', {
@@ -235,6 +241,9 @@ function setupWindowStateSaving() {
         function: 'setupWindowStateSaving',
         error: err.message
       });
+    } finally {
+      closeSaveComplete = true;
+      if (!mainWindow.isDestroyed()) mainWindow.close();
     }
   });
 
