@@ -13,11 +13,13 @@
 
 import fs from 'fs';
 import path from 'path';
-import electron from 'electron';
 import crypto from 'crypto';
-
-// Destructure app from electron (handles both named and default exports)
-const { app } = electron;
+import {
+  getBackupBaseDirectory,
+  getBackupDirectory,
+  getBackupMetadataPath,
+  getProfileDirectory
+} from './profile-paths.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -61,38 +63,6 @@ async function initializeProfileBackupManager(dependencies) {
  * Get the base backup directory path
  * @returns {string} Path to profile-backups directory
  */
-function getBackupBaseDirectory() {
-  return path.join(app.getPath('userData'), 'profile-backups');
-}
-
-/**
- * Get the backup directory for a specific profile
- * @param {string} profileName - Profile name
- * @returns {string} Path to profile's backup directory
- */
-function getBackupDirectory(profileName) {
-  const sanitizedName = sanitizeProfileName(profileName);
-  return path.join(getBackupBaseDirectory(), sanitizedName);
-}
-
-/**
- * Get the backup metadata file path for a profile
- * @param {string} profileName - Profile name
- * @returns {string} Path to backup-metadata.json
- */
-function getBackupMetadataPath(profileName) {
-  return path.join(getBackupDirectory(profileName), 'backup-metadata.json');
-}
-
-/**
- * Sanitize profile name for filesystem safety
- * @param {string} name - Profile name
- * @returns {string} Sanitized name
- */
-function sanitizeProfileName(name) {
-  return name.replace(/[^a-zA-Z0-9\s\-_]/g, '').trim();
-}
-
 /**
  * Generate backup ID from timestamp
  * @returns {string} Backup ID in format backup-YYYY-MM-DDTHH-MM-SS-sssZ
@@ -497,16 +467,6 @@ async function copyDirectoryRecursive(src, dest) {
       await fs.promises.copyFile(srcPath, destPath);
     }
   }
-}
-
-/**
- * Get profile directory path (import from profile-manager or use direct path)
- * @param {string} profileName - Profile name
- * @returns {string} Profile directory path
- */
-function getProfileDirectory(profileName) {
-  const sanitizedName = sanitizeProfileName(profileName);
-  return path.join(app.getPath('userData'), 'profiles', sanitizedName);
 }
 
 /**
@@ -1016,4 +976,3 @@ export {
   hasProfileChanged,
   createBackupIfChanged
 };
-

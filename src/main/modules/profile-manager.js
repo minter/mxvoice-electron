@@ -15,10 +15,15 @@ import fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import path from 'path';
 import { promisify } from 'util';
-import electron from 'electron';
-
-// Destructure app from electron (handles both named and default exports)
-const { app } = electron;
+import {
+  getProfileDirectory,
+  getProfileDirectoryKey,
+  getProfilePreferencesPath,
+  getProfileRegistryPath,
+  getProfileStatePath,
+  getProfilesDirectory,
+  sanitizeProfileName
+} from './profile-paths.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -51,48 +56,6 @@ function initializeProfileManager(dependencies) {
  * Get the profiles directory path
  * @returns {string} Path to profiles directory
  */
-function getProfilesDirectory() {
-  return path.join(app.getPath('userData'), 'profiles');
-}
-
-/**
- * Get the profile registry file path
- * @returns {string} Path to profiles.json
- */
-function getProfileRegistryPath() {
-  return path.join(app.getPath('userData'), 'profiles.json');
-}
-
-/**
- * Get the profile preferences file path
- * @param {string} profileName - Name of the profile
- * @returns {string} Path to profile preferences file
- */
-function getProfilePreferencesPath(profileName) {
-  const safeProfileName = sanitizeProfileName(profileName);
-  return path.join(getProfilesDirectory(), safeProfileName, 'preferences.json');
-}
-
-/**
- * Sanitize profile name for filesystem safety
- * 
- * CRITICAL: This function MUST be used whenever constructing filesystem paths
- * for profile directories. Inconsistent sanitization causes state files to be
- * saved/loaded from wrong locations (e.g., "ComedySportz Saturday" vs "ComedySportzSaturday").
- * 
- * Use getProfileDirectory() from index-modular.js instead of manually constructing paths.
- * 
- * @param {string} name - Profile name
- * @returns {string} Sanitized name safe for filesystem (removes special chars, keeps spaces/hyphens/underscores)
- */
-function sanitizeProfileName(name) {
-  return name.replace(/[^a-zA-Z0-9\s\-_]/g, '').trim();
-}
-
-function getProfileDirectoryKey(name) {
-  return sanitizeProfileName(name).toLocaleLowerCase('en-US');
-}
-
 /**
  * Get the default profile preferences structure
  * @returns {Object} Default preferences object
@@ -307,7 +270,7 @@ function createProfile(profileName, description = '') {
     const registry = loadProfileRegistry();
     
     // Create profile directory
-    const profileDir = path.join(getProfilesDirectory(), sanitizeProfileName(profileName));
+    const profileDir = getProfileDirectory(profileName);
     
     debugLog?.info('Creating new profile', { 
       module: 'profile-manager', 
@@ -436,7 +399,7 @@ function deleteProfile(profileName) {
     
     // Remove profile directory FIRST (before updating registry)
     // This ensures we can't end up in a state where registry is updated but directory remains
-    const profileDir = path.join(getProfilesDirectory(), sanitizeProfileName(profileName));
+    const profileDir = getProfileDirectory(profileName);
     
     debugLog?.info('Attempting to delete profile directory', { 
       module: 'profile-manager', 
@@ -695,10 +658,10 @@ async function duplicateProfile(sourceProfileName, targetProfileName, descriptio
       return { success: false, error: nameValidation.error };
     }
     
-    // Get profiles directory
+    // Get profile directories
     const profilesDir = getProfilesDirectory();
-    const sourceDir = path.join(profilesDir, sanitizeProfileName(sourceProfileName));
-    const targetDir = path.join(profilesDir, sanitizeProfileName(targetProfileName));
+    const sourceDir = getProfileDirectory(sourceProfileName);
+    const targetDir = getProfileDirectory(targetProfileName);
     
     debugLog?.info('Profile directory paths', { 
       module: 'profile-manager', 
@@ -839,9 +802,9 @@ async function saveProfileState(profileName, state, { reason = 'save' } = {}) {
     throw new Error('No profile name available for state save');
   }
 
+  const profileDir = getProfileDirectory(profileName);
+  const stateFile = getProfileStatePath(profileName);
   const sanitizedName = sanitizeProfileName(profileName);
-  const profileDir = path.join(getProfilesDirectory(), sanitizedName);
-  const stateFile = path.join(profileDir, 'state.json');
 
   const hotkeyCount = state?.hotkeys?.reduce((sum, tab) => sum + Object.keys(tab.hotkeys || {}).length, 0) || 0;
   const holdingTankCount = state?.holdingTank?.reduce((sum, tab) => sum + (tab.songIds?.length || 0), 0) || 0;
