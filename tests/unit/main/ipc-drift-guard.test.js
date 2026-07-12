@@ -64,19 +64,41 @@ describe('IPC drift guard', () => {
     expect(extra, `registered but not in manifest: ${extra}`).toEqual([]);
   });
 
+  const preloadDir = 'src/preload/modules';
+  const preloadFiles = fs
+    .readdirSync(preloadDir)
+    .filter(f => f.endsWith('.cjs'))
+    .map(f => `${preloadDir}/${f}`);
+
   it('every preload manifest reference resolves and is registered', () => {
-    const src = fs.readFileSync('src/preload/modules/secure-api-exposer.cjs', 'utf8');
-    const refs = [...src.matchAll(/IPC\.([A-Z_]+)\.([A-Z_]+)/g)];
-    expect(refs.length).toBeGreaterThan(90);
-    for (const [, domain, name] of refs) {
-      const channel = IPC[domain]?.[name];
-      expect(channel, `IPC.${domain}.${name} not in manifest`).toBeDefined();
-      expect(registered.has(channel), `${channel} referenced by preload but never registered`).toBe(true);
+    let totalRefs = 0;
+    for (const file of preloadFiles) {
+      const src = fs.readFileSync(file, 'utf8');
+      const refs = [...src.matchAll(/IPC\.([A-Z0-9_]+)\.([A-Z0-9_]+)/g)];
+      totalRefs += refs.length;
+      for (const [, domain, name] of refs) {
+        const channel = IPC[domain]?.[name];
+        expect(channel, `IPC.${domain}.${name} not in manifest (${file})`).toBeDefined();
+        expect(registered.has(channel), `${channel} referenced by ${file} but never registered`).toBe(true);
+      }
     }
+    expect(totalRefs).toBeGreaterThan(90);
   });
 
   it('preload has no leftover invoke literals', () => {
-    const src = fs.readFileSync('src/preload/modules/secure-api-exposer.cjs', 'utf8');
-    expect(src.includes("ipcRenderer.invoke('")).toBe(false);
+    for (const file of preloadFiles) {
+      const src = fs.readFileSync(file, 'utf8');
+      expect(src.includes("ipcRenderer.invoke('"), `${file} has a leftover invoke literal`).toBe(false);
+    }
+  });
+
+  it('preload has no leftover send literals for manifest-managed channels', () => {
+    for (const file of preloadFiles) {
+      const src = fs.readFileSync(file, 'utf8');
+      const sendRefs = [...src.matchAll(/ipcRenderer\.send\('([^']+)'/g)];
+      for (const [, channel] of sendRefs) {
+        expect(manifestValues.has(channel), `${file} uses literal '${channel}' for a manifest-managed channel; use an IPC constant`).toBe(false);
+      }
+    }
   });
 });

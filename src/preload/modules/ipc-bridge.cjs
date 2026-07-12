@@ -11,13 +11,14 @@
  */
 
 const { ipcRenderer } = require('electron');
+const { IPC } = require('../../shared/ipc-channels.cjs');
 
 // IPC-based logger — sends log messages to main process (sandbox-safe)
 const debugLog = {
-  info: (message, context) => ipcRenderer.send('preload-log', 'info', message, context),
-  error: (message, context) => ipcRenderer.send('preload-log', 'error', message, context),
-  warn: (message, context) => ipcRenderer.send('preload-log', 'warn', message, context),
-  debug: (message, context) => ipcRenderer.send('preload-log', 'debug', message, context)
+  info: (message, context) => ipcRenderer.send(IPC.LOGGING.PRELOAD_LOG, 'info', message, context),
+  error: (message, context) => ipcRenderer.send(IPC.LOGGING.PRELOAD_LOG, 'error', message, context),
+  warn: (message, context) => ipcRenderer.send(IPC.LOGGING.PRELOAD_LOG, 'warn', message, context),
+  debug: (message, context) => ipcRenderer.send(IPC.LOGGING.PRELOAD_LOG, 'debug', message, context)
 };
 
 // IPC Event Handlers — only handlers that dispatch CustomEvents to the renderer
