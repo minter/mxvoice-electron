@@ -42,6 +42,7 @@ import HoldingTankState from './holding-tank-state.js';
 let holdingTankMode = "storage"; // 'storage' or 'playlist'
 let _autoplay = false;
 let moduleRegistry = {};
+let electronAPI = null;
 const holdingTankState = new HoldingTankState();
 
 export function getHoldingTankSnapshot() {
@@ -159,7 +160,6 @@ export function initHoldingTank() {
   });
   
   // Load saved mode from profile-aware preference store
-  const electronAPI = window.secureElectronAPI || window.electronAPI;
   return getPreference('holding_tank_mode', electronAPI).then(result => {
     if (result.success && result.value) {
       holdingTankMode = result.value;
@@ -200,7 +200,7 @@ export async function populateHoldingTank(songIds) {
     module: 'holding-tank',
     function: 'populateHoldingTank',
     songIds: songIds,
-    databaseAvailable: !!window.electronAPI?.database
+    databaseAvailable: !!electronAPI?.database
   });
   
   // Extend tooltip suppression during holding tank population to prevent tooltips
@@ -606,6 +606,7 @@ const holdingTankModule = {
 
 function initializeHoldingTank(options = {}) {
   moduleRegistry = options.moduleRegistry || {};
+  electronAPI = options.electronAPI || window.secureElectronAPI;
   return holdingTankModule;
 }
 

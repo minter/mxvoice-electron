@@ -195,7 +195,7 @@ class ModeManagementModule {
 
     // Save mode to profile-aware store
     try {
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const electronAPI = window.secureElectronAPI;
       const result = await setPreference('holding_tank_mode', mode, electronAPI);
       if (result.success) {
         debugLog?.info('Holding tank mode saved', {

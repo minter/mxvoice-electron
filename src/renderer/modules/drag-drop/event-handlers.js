@@ -144,7 +144,7 @@ function setupColumnDragAndDrop() {
  */
 async function refreshColumnOrderIfExists() {
   try {
-    const electronAPI = window.secureElectronAPI || window.electronAPI;
+    const electronAPI = window.secureElectronAPI;
     
     // Try profile preferences first
     if (electronAPI && electronAPI.profile) {
@@ -513,7 +513,7 @@ async function saveColumnOrder(columnOrder) {
   });
   
   try {
-    const electronAPI = window.secureElectronAPI || window.electronAPI;
+    const electronAPI = window.secureElectronAPI;
     if (!electronAPI || !electronAPI.profile) {
       debugLog?.warn('[COLUMN-ORDER] Profile API not available, falling back to global store', {
         module: 'drag-drop-event-handlers',
@@ -553,4 +553,4 @@ async function saveColumnOrder(columnOrder) {
       errorStack: error.stack
     });
   }
-} 
+}
