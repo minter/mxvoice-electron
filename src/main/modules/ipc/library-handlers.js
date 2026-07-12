@@ -11,12 +11,12 @@ import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { mainWindow, debugLog } = deps;
+  const { getMainWindow, debugLog } = deps;
 
   // Library Transfer handlers
   ipcMain.handle(IPC.LIBRARY.EXPORT, async () => {
     try {
-      const result = await dialog.showSaveDialog(mainWindow, {
+      const result = await dialog.showSaveDialog(getMainWindow(), {
         buttonLabel: 'Export',
         filters: [{ name: 'Mx. Voice Library', extensions: ['mxvlib'] }],
         defaultPath: path.join(app.getPath('documents'), 'MxVoice-Library.mxvlib'),
@@ -28,8 +28,9 @@ export function register(deps) {
       }
 
       const progressCallback = (progress) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('library:export-progress', progress);
+        const win = getMainWindow();
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('library:export-progress', progress);
         }
       };
 
@@ -44,7 +45,7 @@ export function register(deps) {
 
   ipcMain.handle(IPC.LIBRARY.IMPORT, async () => {
     try {
-      const result = await dialog.showOpenDialog(mainWindow, {
+      const result = await dialog.showOpenDialog(getMainWindow(), {
         buttonLabel: 'Import',
         filters: [{ name: 'Mx. Voice Library', extensions: ['mxvlib'] }],
         message: 'Select a Mx. Voice library file to import',
@@ -58,8 +59,9 @@ export function register(deps) {
       const archivePath = result.filePaths[0];
 
       // Notify the renderer that validation is starting so it can show a loading modal
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('library:import-progress', {
+      const win = getMainWindow();
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('library:import-progress', {
           percent: 0,
           message: 'Validating library file...'
         });
@@ -82,8 +84,9 @@ export function register(deps) {
   ipcMain.handle(IPC.LIBRARY.IMPORT_CONFIRM, async (_event, archivePath) => {
     try {
       const progressCallback = (progress) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('library:import-progress', progress);
+        const win = getMainWindow();
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('library:import-progress', progress);
         }
       };
 

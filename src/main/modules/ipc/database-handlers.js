@@ -9,7 +9,7 @@ import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { getDb, debugLog, mainWindow } = deps;
+  const { getDb, debugLog, getMainWindow } = deps;
 
   // Named database API handlers
   ipcMain.handle(IPC.DATABASE.GET_CATEGORIES, async () => {
@@ -138,7 +138,7 @@ export function register(deps) {
     try {
       // This handler sends a message to the renderer to trigger deletion
       // The actual deletion logic is handled in the renderer
-      mainWindow.webContents.send('delete_selected_song');
+      getMainWindow().webContents.send('delete_selected_song');
       return { success: true };
     } catch (error) {
       debugLog?.error('Delete selected song error:', { module: 'ipc-handlers', function: 'delete-selected-song', error: error.message });
@@ -150,7 +150,7 @@ export function register(deps) {
     try {
       // This handler sends a message to the renderer to trigger editing
       // The actual editing logic is handled in the renderer
-      mainWindow.webContents.send('edit_selected_song');
+      getMainWindow().webContents.send('edit_selected_song');
       return { success: true };
     } catch (error) {
       debugLog?.error('Edit selected song error:', { module: 'ipc-handlers', function: 'edit-selected-song', error: error.message });

@@ -23,7 +23,7 @@ import * as libraryHandlers from './ipc/library-handlers.js';
 import * as analyticsHandlers from './ipc/analytics-handlers.js';
 
 // Dependencies that will be injected
-let mainWindow;
+let getMainWindow = () => null;
 let getDb = () => null;
 let getCurrentProfile;
 let getProfileDirectory;
@@ -37,7 +37,7 @@ let analytics;
 
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
-  mainWindow = dependencies.mainWindow;
+  getMainWindow = dependencies.getMainWindow || (() => dependencies.mainWindow);
   getDb = dependencies.getDb || (() => dependencies.db);
   getCurrentProfile = dependencies.getCurrentProfile;
   getProfileDirectory = dependencies.getProfileDirectory;
@@ -53,7 +53,7 @@ function initializeIpcHandlers(dependencies) {
   fileOperations.initializeFileOperations(dependencies);
 
   const deps = {
-    mainWindow,
+    getMainWindow,
     getDb,
     getCurrentProfile,
     getProfileDirectory,

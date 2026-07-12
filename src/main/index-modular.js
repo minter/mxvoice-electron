@@ -708,6 +708,7 @@ async function initializeModules() {
 
   const dependencies = {
     mainWindow,
+    getMainWindow: () => mainWindow,
     db, // legacy snapshot — prefer getDb()
     getDb: () => db,
     setDb: (next) => { db = next; },

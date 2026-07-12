@@ -13,7 +13,7 @@ import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { getCurrentProfile, getProfileDirectory, store, debugLog, mainWindow } = deps;
+  const { getCurrentProfile, getProfileDirectory, store, debugLog, getMainWindow } = deps;
 
   // Profile handlers
   ipcMain.handle(IPC.PROFILE.GET_CURRENT, async () => {
@@ -284,8 +284,9 @@ export function register(deps) {
       }
 
       // Close main window and relaunch launcher
-      if (mainWindow) {
-        mainWindow.close();
+      const win = getMainWindow();
+      if (win) {
+        win.close();
       }
 
       // Relaunch the app without profile argument to show launcher
@@ -421,8 +422,9 @@ export function register(deps) {
       store.set('auto-select-profile', profileName);
 
       // Close main window and relaunch launcher
-      if (mainWindow) {
-        mainWindow.close();
+      const win = getMainWindow();
+      if (win) {
+        win.close();
       }
       app.relaunch({ args: [...process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')), `--profile=${profileName}`] });
       app.exit(0);

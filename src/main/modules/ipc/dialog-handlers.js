@@ -10,7 +10,7 @@ const { IPC } = ipcChannels;
 import fileOperations from '../file-operations.js';
 
 export function register(deps) {
-  const { debugLog, mainWindow } = deps;
+  const { debugLog, getMainWindow } = deps;
 
   ipcMain.handle(IPC.DIALOG.SHOW_DIRECTORY_PICKER, async (event, defaultPath) => {
     let path = dialog.showOpenDialogSync({
@@ -39,7 +39,7 @@ export function register(deps) {
 
   ipcMain.handle(IPC.DIALOG.SHOW_FILE_PICKER, async (event, options = {}) => {
     try {
-      const result = await dialog.showOpenDialog(mainWindow, options);
+      const result = await dialog.showOpenDialog(getMainWindow(), options);
       return { success: true, data: result };
     } catch (error) {
       debugLog?.error('Show file picker error:', { module: 'ipc-handlers', function: 'show-file-picker', error: error.message });
