@@ -190,7 +190,6 @@ const secureElectronAPI = {
     saveHotkeyFile: (data) => ipcRenderer.invoke(IPC.DIALOG.SAVE_HOTKEY_FILE, data),
     openHoldingTankFile: () => ipcRenderer.invoke(IPC.DIALOG.OPEN_HOLDING_TANK_FILE),
     saveHoldingTankFile: (data) => ipcRenderer.invoke(IPC.DIALOG.SAVE_HOLDING_TANK_FILE, data),
-    pickDirectory: (defaultPath) => ipcRenderer.invoke('pick-directory', defaultPath),
     // Auto-update operations - Three-stage process
     checkForUpdate: () => {
       debugLog.info('🔍 Preload: checkForUpdate called', { 
