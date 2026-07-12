@@ -64,6 +64,49 @@ export function clearSongFromHoldingTankState(songId) {
   return holdingTankState.clearSong(songId);
 }
 
+export function removeHoldingTankElement(element) {
+  const tab = element?.closest?.('.holding_tank');
+  const tabNumber = Number(tab?.id?.match(/^holding_tank_(\d)$/)?.[1]);
+  const items = tab ? [...tab.querySelectorAll('li.list-group-item[songid]')] : [];
+  const index = items.indexOf(element);
+  if (!tabNumber || index < 0) return null;
+  return holdingTankState.removeAt(tabNumber, index);
+}
+
+export function clearActiveHoldingTankState() {
+  const activeTab = document.querySelector('.holding_tank.active');
+  const tabNumber = Number(activeTab?.id?.match(/^holding_tank_(\d)$/)?.[1]);
+  return tabNumber ? holdingTankState.clearTab(tabNumber) : false;
+}
+
+function updateStateForInsertion(songId, targetEl, insertPosition, existingElement) {
+  const targetTab = targetEl?.closest?.('.holding_tank') || document.querySelector('.holding_tank.active');
+  const targetTabNumber = Number(targetTab?.id?.match(/^holding_tank_(\d)$/)?.[1]);
+  if (!targetTabNumber) return false;
+
+  const targetItems = [...targetTab.querySelectorAll('li.list-group-item[songid]')];
+  const targetItemIndex = targetEl?.matches?.('li') ? targetItems.indexOf(targetEl) : -1;
+  let targetIndex = targetItems.length;
+  if (targetItemIndex >= 0) {
+    targetIndex = insertPosition === 'before' ? targetItemIndex : targetItemIndex + 1;
+  }
+
+  if (existingElement) {
+    const sourceTab = existingElement.closest('.holding_tank');
+    const sourceTabNumber = Number(sourceTab?.id?.match(/^holding_tank_(\d)$/)?.[1]);
+    const sourceIndex = sourceTab
+      ? [...sourceTab.querySelectorAll('li.list-group-item[songid]')].indexOf(existingElement)
+      : -1;
+    if (sourceTabNumber && sourceIndex >= 0) {
+      holdingTankState.move(sourceTabNumber, sourceIndex, targetTabNumber, targetIndex);
+      return true;
+    }
+  }
+
+  holdingTankState.add(targetTabNumber, songId, targetIndex);
+  return true;
+}
+
 export function renameHoldingTankStateTab(tabNumber, name) {
   return holdingTankState.renameTab(tabNumber, name);
 }
@@ -243,6 +286,8 @@ export function addToHoldingTank(song_id, element, insertPosition) {
 
       const targetEl = element && element.nodeType ? element : Dom.$(element);
 
+      updateStateForInsertion(song_id, targetEl, insertPosition, existing_song);
+
       // Support precise insertion when a position is specified (from drop indicator)
       if (insertPosition === 'before' && targetEl?.matches?.('li')) {
         targetEl.parentNode.insertBefore(song_row, targetEl);
@@ -256,8 +301,6 @@ export function addToHoldingTank(song_id, element, insertPosition) {
       } else if (targetEl?.appendChild) {
         targetEl.appendChild(song_row);
       }
-
-      commitRenderedHoldingTankOrder();
 
       // Note: Save is now done by caller, not here, to avoid N saves during batch operations
       return { success: true, songId: song_id, title: title };
@@ -306,8 +349,10 @@ export function removeFromHoldingTank() {
             });
             // Remove the selected row from the holding tank
             const selected = document.getElementById('selected_row');
-            if (selected) selected.parentElement?.removeChild(selected);
-            commitRenderedHoldingTankOrder();
+            if (selected) {
+              removeHoldingTankElement(selected);
+              selected.remove();
+            }
             // Clear the selection
             document.getElementById('selected_row')?.removeAttribute('id');
             // Save the updated holding tank to store
@@ -360,8 +405,8 @@ export function removeSelected() {
     // Remove the selected row from the holding tank immediately
     const selected = document.getElementById('selected_row');
     if (selected) {
+      removeHoldingTankElement(selected);
       selected.remove();
-      commitRenderedHoldingTankOrder();
       // Clear the selection
       document.getElementById('selected_row')?.removeAttribute('id');
       // Save the updated holding tank to store
@@ -396,8 +441,8 @@ export function removeSelected() {
 export async function clearHoldingTank() {
   const confirmed = await customConfirm("Are you sure you want clear your holding tank?");
   if (confirmed) {
+    clearActiveHoldingTankState();
     Dom.empty('.holding_tank.active');
-    commitRenderedHoldingTankOrder();
     requestProfileStateSave();
     window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'clear' });
     return { success: true };
@@ -563,6 +608,8 @@ export default {
   loadHoldingTankSnapshot,
   commitRenderedHoldingTankOrder,
   clearSongFromHoldingTankState,
+  removeHoldingTankElement,
+  clearActiveHoldingTankState,
   renameHoldingTankStateTab,
   moveHoldingTankItem,
   restoreHoldingTankSnapshot
