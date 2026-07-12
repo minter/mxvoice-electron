@@ -151,7 +151,7 @@ function prepareMainWindowForClose() {
 
     if (!mainWindow.webContents.isDestroyed()) {
       await mainWindow.webContents.executeJavaScript(
-        'window.moduleRegistry?.profileState?.flushProfileState?.()'
+        'window.profileStateAPI?.flushProfileState?.()'
       );
     }
     await saveWindowState(mainWindow);
@@ -347,4 +347,3 @@ async function loadWindowState(storeInstance = store, currentProfile = null) {
 
 export { createWindowStateManager };
 export default createWindowStateManager;
-

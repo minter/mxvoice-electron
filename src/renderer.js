@@ -84,6 +84,9 @@ window.logError = async (message, context) => {
   await debugLogger.error(message, context);
 };
 
+// Internal module registry populated by the bootstrap loader.
+const moduleRegistry = {};
+
 // Set up an early, lightweight IPC bridge for preferences so that
 // 'show_preferences' events are handled even if full coordination/
 // module loading is still in progress. This avoids races where the
@@ -105,7 +108,7 @@ window.logError = async (message, context) => {
                   const openFn =
                     (typeof window.openPreferencesModal === 'function'
                       ? window.openPreferencesModal
-                      : window.moduleRegistry?.preferences?.openPreferencesModal) || null;
+                      : moduleRegistry.preferences?.openPreferencesModal) || null;
 
                   if (openFn) {
                     openFn();
@@ -152,8 +155,6 @@ window.logError = async (message, context) => {
   }
 })();
 
-// Module registry to avoid window pollution
-const moduleRegistry = {};
 initializeProfileUI({ moduleRegistry });
 
 // Import keyboard manager for centralized keyboard shortcut management
@@ -297,8 +298,15 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     window.logDebug('Database', !!moduleRegistry.database);
     window.logDebug('Utils', !!moduleRegistry.utils);
 
-    // Make module registry available for debugging and development
-    window.moduleRegistry = moduleRegistry;
+    // Expose only the narrow production bridge needed by main-process shutdown.
+    window.profileStateAPI = {
+      flushProfileState: () => moduleRegistry.profileState?.flushProfileState?.()
+    };
+
+    // The full registry is an E2E harness, not a production dependency.
+    if (window.electronTest?.isE2E) {
+      window.moduleRegistry = moduleRegistry;
+    }
     
     // Ensure window.debugLog is available for modules
     if (moduleRegistry.debugLog && !window.debugLog) {
