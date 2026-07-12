@@ -45,11 +45,6 @@ vi.mock('../../../src/main/modules/profile-backup-manager.js', () => ({}));
 vi.mock('howler', () => ({ Howl: vi.fn(), Howler: {} }));
 vi.mock('music-metadata', () => ({ parseFile: vi.fn() }));
 
-// Mock index-modular.js for getCurrentProfile
-vi.mock('../../../src/main/index-modular.js', () => ({
-  getCurrentProfile: vi.fn(() => 'Test User'),
-}));
-
 // ── In-memory store stub ──────────────────────────────────────────────
 
 let storeData;
