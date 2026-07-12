@@ -152,15 +152,15 @@ export default class DOMInitialization {
         return item;
       };
       let playItem = mkItem('Play', () => {
-        if (window.playSelected) {
-          window.playSelected();
+        if (this.moduleRegistry.audio?.playSelected) {
+          this.moduleRegistry.audio.playSelected();
           // Delay ID restoration to allow Play function to complete
           setTimeout(() => restoreHotkeyId(), 50);
         }
       });
       let editItem = mkItem('Edit', () => {
-        if (window.editSelectedSong) {
-          window.editSelectedSong();
+        if (this.moduleRegistry.songManagement?.editSelectedSong) {
+          this.moduleRegistry.songManagement.editSelectedSong();
           // Delay ID restoration to allow Edit function to complete
           setTimeout(() => restoreHotkeyId(), 50);
         }
@@ -243,7 +243,7 @@ export default class DOMInitialization {
           } else {
             // This covers 'Delete' and 'Remove from Holding Tank'
             window.debugLog?.info('Context menu: Default Delete callback triggered');
-            if (window.deleteSelectedSong) window.deleteSelectedSong();
+            this.moduleRegistry.songManagement?.deleteSelectedSong?.();
           }
         };
 

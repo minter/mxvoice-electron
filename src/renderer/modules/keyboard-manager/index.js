@@ -146,8 +146,8 @@ export class KeyboardManager {
         // Case 3: Song deletion from search results
         if (selected.closest('#search_results')) {
           this.logInfo('Delete key triggered for search results');
-          if (window.deleteSelectedSong) {
-            window.deleteSelectedSong();
+          if (this.dependencies.moduleRegistry?.songManagement?.deleteSelectedSong) {
+            this.dependencies.moduleRegistry.songManagement.deleteSelectedSong();
           } else {
             this.logWarn('deleteSelectedSong function not found');
           }

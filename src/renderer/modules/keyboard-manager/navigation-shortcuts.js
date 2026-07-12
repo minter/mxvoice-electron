@@ -238,8 +238,9 @@ export class NavigationShortcuts {
         argumentsLength: arguments.length
       });
       
-      if (window.stopPlaying && typeof window.stopPlaying === 'function') {
-        window.stopPlaying(fadeOut);
+      const stopPlaying = this.dependencies.moduleRegistry?.audio?.stopPlaying;
+      if (typeof stopPlaying === 'function') {
+        stopPlaying(fadeOut);
       } else {
         this.logWarn('stopPlaying function not available');
       }
@@ -257,8 +258,9 @@ export class NavigationShortcuts {
     try {
       this.logDebug(`Pause playing requested (pauseAll: ${pauseAll})`);
       
-      if (window.pausePlaying && typeof window.pausePlaying === 'function') {
-        window.pausePlaying(pauseAll);
+      const pausePlaying = this.dependencies.moduleRegistry?.audio?.pausePlaying;
+      if (typeof pausePlaying === 'function') {
+        pausePlaying(pauseAll);
       } else {
         this.logWarn('pausePlaying function not available');
       }
@@ -284,8 +286,9 @@ export class NavigationShortcuts {
         return false;
       }
       
-      if (window.playSelected && typeof window.playSelected === 'function') {
-        window.playSelected();
+      const playSelected = this.dependencies.moduleRegistry?.audio?.playSelected;
+      if (typeof playSelected === 'function') {
+        playSelected();
       } else {
         this.logWarn('playSelected function not available');
       }
@@ -315,16 +318,16 @@ export class NavigationShortcuts {
       if (holding && sel && holding.contains(sel)) {
         this.logDebug("Selected row is in holding tank");
         // If in holding tank, remove from holding tank
-        if (window.removeFromHoldingTank && typeof window.removeFromHoldingTank === 'function') {
-          window.removeFromHoldingTank();
+        if (this.dependencies.moduleRegistry?.holdingTank?.removeSelected) {
+          this.dependencies.moduleRegistry.holdingTank.removeSelected();
         } else {
           this.logWarn('removeFromHoldingTank function not available');
         }
       } else if (hotkeys && sel && hotkeys.contains(sel)) {
         this.logDebug("Selected row is in hotkey tab");
         // If in hotkey tab, remove from hotkey
-        if (window.removeFromHotkey && typeof window.removeFromHotkey === 'function') {
-          window.removeFromHotkey();
+        if (this.dependencies.moduleRegistry?.hotkeys?.removeFromHotkey) {
+          this.dependencies.moduleRegistry.hotkeys.removeFromHotkey();
         } else {
           this.logWarn('removeFromHotkey function not available');
         }

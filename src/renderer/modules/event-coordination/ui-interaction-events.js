@@ -202,8 +202,8 @@ export default class UIInteractionEvents {
     // Hotkey tab double-click for renaming
     const hotkeyTabDoubleClickHandler = (_event) => {
       try {
-        if (window.renameHotkeyTab) {
-          window.renameHotkeyTab();
+        if (this.moduleRegistry.hotkeys?.renameHotkeyTab) {
+          this.moduleRegistry.hotkeys.renameHotkeyTab();
         } else {
           this.debugLog?.warn('renameHotkeyTab function not available');
         }
@@ -215,8 +215,8 @@ export default class UIInteractionEvents {
     // Holding tank tab double-click for renaming
     const holdingTankTabDoubleClickHandler = (_event) => {
       try {
-        if (window.renameHoldingTankTab) {
-          window.renameHoldingTankTab();
+        if (this.moduleRegistry.holdingTank?.renameHoldingTankTab) {
+          this.moduleRegistry.holdingTank.renameHoldingTankTab();
         } else {
           this.debugLog?.warn('renameHoldingTankTab function not available');
         }

@@ -58,13 +58,12 @@ export default class AudioControlEvents {
     const pauseButtonHandler = (event) => {
       try {
         this.debugLog?.debug('Pause button clicked');
-        this.debugLog?.debug('window.pausePlaying function', typeof window.pausePlaying);
-        
-        if (window.pausePlaying) {
+        const pausePlaying = this.moduleRegistry.audio?.pausePlaying;
+        if (pausePlaying) {
           if (event.shiftKey) {
-            window.pausePlaying(true);
+            pausePlaying(true);
           } else {
-            window.pausePlaying();
+            pausePlaying();
           }
         } else {
           this.debugLog?.error('pausePlaying function not available');
@@ -78,10 +77,9 @@ export default class AudioControlEvents {
     const playButtonHandler = (_event) => {
       try {
         this.debugLog?.debug('Play button clicked');
-        this.debugLog?.debug('window.pausePlaying function', typeof window.pausePlaying);
-        this.debugLog?.debug('window.playSelected function', typeof window.playSelected);
-        
-        if (window.pausePlaying && window.playSelected) {
+        const pausePlaying = this.moduleRegistry.audio?.pausePlaying;
+        const playSelected = this.moduleRegistry.audio?.playSelected;
+        if (pausePlaying && playSelected) {
           // Check if there's already a sound loaded and paused
           import('../shared-state.js').then(sharedStateModule => {
             const sharedState = sharedStateModule.default;
@@ -90,16 +88,16 @@ export default class AudioControlEvents {
             if (sound && sound.state() === 'loaded' && !sound.playing()) {
               // Sound is loaded but not playing - resume it
               this.debugLog?.debug('Resuming paused sound');
-              window.pausePlaying();
+              pausePlaying();
             } else {
               // No sound or sound is playing - play selected song
               this.debugLog?.debug('Playing selected song');
-              window.playSelected();
+              playSelected();
             }
           }).catch(error => {
             this.debugLog?.error('Failed to import shared state', error);
             // Fallback to playSelected
-            window.playSelected();
+            playSelected();
           });
         } else {
           this.debugLog?.error('Required functions not available');
@@ -113,13 +111,12 @@ export default class AudioControlEvents {
     const stopButtonHandler = (event) => {
       try {
         this.debugLog?.debug('Stop button clicked');
-        this.debugLog?.debug('window.stopPlaying function', typeof window.stopPlaying);
-        
-        if (window.stopPlaying) {
+        const stopPlaying = this.moduleRegistry.audio?.stopPlaying;
+        if (stopPlaying) {
           if (event.shiftKey) {
-            window.stopPlaying(true);
+            stopPlaying(true);
           } else {
-            window.stopPlaying();
+            stopPlaying();
           }
         } else {
           this.debugLog?.error('stopPlaying function not available');

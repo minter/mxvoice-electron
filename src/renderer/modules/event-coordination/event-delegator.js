@@ -53,19 +53,19 @@ export default class EventDelegator {
     if (!table) return;
     const clickHandler = (event) => {
       const row = event.target && event.target.closest('tbody tr');
-      if (row && table.contains(row) && window.toggleSelectedRow)
-        window.toggleSelectedRow(row);
+      if (row && table.contains(row) && this.moduleRegistry.ui?.toggleSelectedRow)
+        this.moduleRegistry.ui.toggleSelectedRow(row);
     };
     const contextHandler = (event) => {
       const row = event.target && event.target.closest('tbody tr');
-      if (row && table.contains(row) && window.toggleSelectedRow)
-        window.toggleSelectedRow(row);
+      if (row && table.contains(row) && this.moduleRegistry.ui?.toggleSelectedRow)
+        this.moduleRegistry.ui.toggleSelectedRow(row);
     };
     const dblHandler = (event) => {
       const row = event.target && event.target.closest('tbody tr.song');
-      if (row && table.contains(row) && window.playSelected) {
+      if (row && table.contains(row) && this.moduleRegistry.audio?.playSelected) {
         window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'search_result' });
-        window.playSelected();
+        this.moduleRegistry.audio.playSelected();
       }
     };
     table.addEventListener('click', clickHandler);
@@ -101,8 +101,8 @@ export default class EventDelegator {
     // Create handlers that will be attached to each container
     const holdingTankClickHandler = (event) => {
       const li = event.target && event.target.closest('.list-group-item');
-      if (li && event.currentTarget.contains(li) && window.toggleSelectedRow)
-        window.toggleSelectedRow(li);
+      if (li && event.currentTarget.contains(li) && this.moduleRegistry.ui?.toggleSelectedRow)
+        this.moduleRegistry.ui.toggleSelectedRow(li);
     };
 
     // Double click to play
@@ -121,10 +121,10 @@ export default class EventDelegator {
         sharedState.set('autoplay', true);
         window.secureElectronAPI?.analytics?.trackEvent?.('playlist_used', { action: 'play' });
       }
-      if (window.playSelected) {
+      if (this.moduleRegistry.audio?.playSelected) {
         const method = (window.getHoldingTankMode && window.getHoldingTankMode() === 'playlist') ? 'playlist' : 'holding_tank';
         window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: method });
-        window.playSelected();
+        this.moduleRegistry.audio.playSelected();
       }
     };
 
