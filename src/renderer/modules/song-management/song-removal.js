@@ -24,6 +24,12 @@ import {
   secureStore
 } from '../adapters/secure-adapter.js';
 
+let moduleRegistry = {};
+
+export function configureSongRemovalDependencies(dependencies = {}) {
+  moduleRegistry = dependencies.moduleRegistry || {};
+}
+
 /**
  * Deletes a song from the database and removes the associated file
  * Also removes the song from all UI elements (holding tank, hotkeys, search results)
@@ -81,17 +87,17 @@ export function deleteSong() {
 
           // Remove song anywhere it appears
           document.querySelectorAll(`.holding_tank .list-group-item[songid="${songId}"]`).forEach(el => el.remove());
-          window.moduleRegistry?.holdingTank?.clearSongFromHoldingTankState?.(songId);
+          moduleRegistry.holdingTank?.clearSongFromHoldingTankState?.(songId);
           // Clear the hotkey slot in-place: keep the li and its draggable span,
           // just drop the songid and label so the slot stays usable.
-          window.moduleRegistry?.hotkeys?.clearSong?.(songId);
+          moduleRegistry.hotkeys?.clearSong?.(songId);
           document.querySelectorAll(`.hotkeys li[songid="${songId}"]`).forEach(li => {
             li.removeAttribute('songid');
             const span = li.querySelector('span.song');
             if (span) span.textContent = '';
           });
           document.querySelectorAll(`#search_results tr[songid="${songId}"]`).forEach(el => el.remove());
-          window.moduleRegistry?.profileState?.saveProfileState?.();
+          moduleRegistry.profileState?.saveProfileState?.();
 
           secureAnalytics.trackEvent('song_deleted');
           return { success: true, songId: songId, title: songRow?.title };
@@ -120,13 +126,13 @@ export function removeFromHoldingTank() {
       // Remove the selected row from the holding tank
       const selected = document.getElementById('selected_row');
       if (selected) {
-        window.moduleRegistry?.holdingTank?.removeHoldingTankElement?.(selected);
+        moduleRegistry.holdingTank?.removeHoldingTankElement?.(selected);
         selected.remove();
       }
       // Clear the selection
       document.getElementById('selected_row')?.removeAttribute('id');
       // Save the updated holding tank to store
-      window.moduleRegistry?.holdingTank?.requestProfileStateSave?.();
+      moduleRegistry.holdingTank?.requestProfileStateSave?.();
       return { success: true, songId: songId, title: songRow?.title };
     });
   }
@@ -153,11 +159,11 @@ export async function removeFromHotkey() {
         debugLog?.info("Proceeding with removal from hotkey", { module: 'song-management', function: 'removeFromHotkey' });
         // Clear the hotkey slot
         const selectedHotkey = document.getElementById('selected_row');
-        window.moduleRegistry?.hotkeys?.clearHotkeyElement?.(selectedHotkey);
+        moduleRegistry.hotkeys?.clearHotkeyElement?.(selectedHotkey);
         // Clear the selection
         document.getElementById('selected_row')?.removeAttribute('id');
         // Save the updated hotkeys to store and wait for completion
-        await window.moduleRegistry?.hotkeys?.requestProfileStateSave?.();
+        await moduleRegistry.hotkeys?.requestProfileStateSave?.();
         debugLog?.info("Hotkey cleared successfully", { module: 'song-management', function: 'removeFromHotkey' });
         return { success: true, songId: songId, title: songRow.title };
       } else {
@@ -167,10 +173,10 @@ export async function removeFromHotkey() {
       debugLog?.error("Song not found in database for ID:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
       // Still clear the hotkey even if song not found
       const selectedHotkey = document.getElementById('selected_row');
-      window.moduleRegistry?.hotkeys?.clearHotkeyElement?.(selectedHotkey);
+      moduleRegistry.hotkeys?.clearHotkeyElement?.(selectedHotkey);
       document.getElementById('selected_row')?.removeAttribute('id');
       // Save the updated hotkeys to store and wait for completion
-      await window.moduleRegistry?.hotkeys?.requestProfileStateSave?.();
+      await moduleRegistry.hotkeys?.requestProfileStateSave?.();
       return { success: true, songId: songId };
     }
   } else {

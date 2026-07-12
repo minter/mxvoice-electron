@@ -12,7 +12,12 @@
  */
 
 import { saveEditedSong, saveNewSong, editSelectedSong, deleteSelectedSong, startAddNewSong } from './song-crud.js';
-import { deleteSong, removeFromHoldingTank, removeFromHotkey } from './song-removal.js';
+import {
+  configureSongRemovalDependencies,
+  deleteSong,
+  removeFromHoldingTank,
+  removeFromHotkey
+} from './song-removal.js';
 
 // Import debug logger (via global set up by renderer bootstrap)
 let debugLog = null;
@@ -47,12 +52,14 @@ class SongManagementModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(_dependencies = {}) {
+  async init(dependencies = {}) {
     try {
       debugLog?.info('Song management module initializing...', { 
         module: 'song-management', 
         function: 'init' 
       });
+
+      configureSongRemovalDependencies(dependencies);
 
       // Initialize song management functionality
       this.setupSongManagement();
@@ -150,4 +157,4 @@ class SongManagementModule {
 const songManagementModule = new SongManagementModule();
 
 // Default export for module loading
-export default songManagementModule; 
+export default songManagementModule;
