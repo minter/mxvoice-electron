@@ -2536,138 +2536,19 @@ function registerAllHandlers() {
   });
 
   debugLog?.info('✅ All IPC handlers registered successfully (context isolation ready)', {
-    module: 'ipc-handlers', 
+    module: 'ipc-handlers',
     function: 'registerAllHandlers',
     note: 'Using secure handlers only - legacy handlers removed for security'
   });
 }
 
-  // Remove all handlers (for cleanup)
-function removeAllHandlers() {
-  ipcMain.removeAllListeners('preload-log');
-  // Legacy handlers
-  ipcMain.removeHandler('get-app-path');
-  ipcMain.removeHandler('show-directory-picker');
-  ipcMain.removeHandler('open-hotkey-file');
-  ipcMain.removeHandler('save-hotkey-file');
-  ipcMain.removeHandler('open-holding-tank-file');
-  ipcMain.removeHandler('save-holding-tank-file');
-  ipcMain.removeHandler('restart-and-install-new-version');
-  ipcMain.removeHandler('increase-font-size');
-  ipcMain.removeHandler('decrease-font-size');
-  ipcMain.removeHandler('toggle-waveform');
-  ipcMain.removeHandler('toggle-advanced-search');
-  ipcMain.removeHandler('close-all-tabs');
-  ipcMain.removeHandler('delete-selected-song');
-  ipcMain.removeHandler('edit-selected-song');
-  ipcMain.removeHandler('manage-categories');
-  ipcMain.removeHandler('show-preferences');
-  ipcMain.removeHandler('get-categories');
-  ipcMain.removeHandler('add-song');
-  ipcMain.removeHandler('file-exists');
-  ipcMain.removeHandler('file-delete');
-  ipcMain.removeHandler('file-copy');
-  ipcMain.removeHandler('profile:load-state');
-  ipcMain.removeHandler('profile:get-legacy-migration-data');
-  ipcMain.removeHandler('store-get');
-  ipcMain.removeHandler('store-set');
-  ipcMain.removeHandler('store-delete');
-  ipcMain.removeHandler('store-has');
-  ipcMain.removeHandler('store-keys');
-  ipcMain.removeHandler('audio-play');
-  ipcMain.removeHandler('audio-stop');
-  ipcMain.removeHandler('audio-pause');
-  ipcMain.removeHandler('audio-fade');
-  ipcMain.removeHandler('path-join');
-  ipcMain.removeHandler('path-parse');
-  ipcMain.removeHandler('path-extname');
-  
-  // Secure API handlers
-  ipcMain.removeHandler('get-song-by-id');
-  ipcMain.removeHandler('delete-song');
-  ipcMain.removeHandler('update-song');
-  ipcMain.removeHandler('add-category');
-  ipcMain.removeHandler('update-category');
-  ipcMain.removeHandler('delete-category');
-  ipcMain.removeHandler('search-songs');
-  ipcMain.removeHandler('get-category-by-code');
-  ipcMain.removeHandler('get-songs-by-ids');
-  ipcMain.removeHandler('reassign-song-category');
-  ipcMain.removeHandler('find-category-codes-like');
-  ipcMain.removeHandler('count-songs');
-  ipcMain.removeHandler('path-dirname');
-  ipcMain.removeHandler('path-basename');
-  ipcMain.removeHandler('path-resolve');
-  ipcMain.removeHandler('path-normalize');
-  ipcMain.removeHandler('os-homedir');
-  ipcMain.removeHandler('os-platform');
-  ipcMain.removeHandler('os-arch');
-  ipcMain.removeHandler('os-tmpdir');
-  ipcMain.removeHandler('audio-resume');
-  ipcMain.removeHandler('audio-set-volume');
-  ipcMain.removeHandler('audio-get-duration');
-  ipcMain.removeHandler('audio-get-position');
-  ipcMain.removeHandler('audio-set-position');
-  ipcMain.removeHandler('app-get-path');
-  ipcMain.removeHandler('app-get-version');
-  ipcMain.removeHandler('app-get-name');
-  ipcMain.removeHandler('app-quit');
-  ipcMain.removeHandler('app-restart');
-  ipcMain.removeHandler('show-file-picker');
-  ipcMain.removeHandler('store-clear');
-  ipcMain.removeHandler('import-audio-files');
-  ipcMain.removeHandler('export-data');
-  ipcMain.removeHandler('generate-id');
-  ipcMain.removeHandler('format-duration');
-  ipcMain.removeHandler('validate-audio-file');
-  ipcMain.removeHandler('sanitize-filename');
-  
-  // Profile Backup handlers
-  ipcMain.removeHandler('profile:createBackup');
-  ipcMain.removeHandler('profile:listBackups');
-  ipcMain.removeHandler('profile:getBackupMetadata');
-  ipcMain.removeHandler('profile:restoreBackup');
-  ipcMain.removeHandler('profile:deleteBackup');
-  ipcMain.removeHandler('profile:getBackupSettings');
-  ipcMain.removeHandler('profile:saveBackupSettings');
-  
-  // Library Transfer handlers
-  ipcMain.removeHandler('library:export');
-  ipcMain.removeHandler('library:import');
-  ipcMain.removeHandler('library:import-confirm');
-
-  // Analytics handlers
-  ipcMain.removeHandler('analytics:track-event');
-  ipcMain.removeHandler('analytics:get-opt-out-status');
-  ipcMain.removeHandler('analytics:set-opt-out');
-
-  // Remove legacy event listeners
-  ipcMain.removeAllListeners('open-hotkey-file');
-  ipcMain.removeAllListeners('save-hotkey-file');
-  ipcMain.removeAllListeners('open-holding-tank-file');
-  ipcMain.removeAllListeners('save-holding-tank-file');
-
-  debugLog?.info('IPC handlers removed successfully', { module: 'ipc-handlers', function: 'removeAllHandlers' });
-}
-
-// Test function
-function testIpcHandlers() {
-  debugLog?.info('Testing IPC Handlers...', { module: 'ipc-handlers', function: 'testIpcHandlers' });
-  debugLog?.info('✅ IPC handlers module loaded', { module: 'ipc-handlers', function: 'testIpcHandlers' });
-  return true;
-}
-
 export {
   initializeIpcHandlers,
-  registerAllHandlers,
-  removeAllHandlers,
-  testIpcHandlers
+  registerAllHandlers
 };
 
 // Default export for module loading
 export default {
   initializeIpcHandlers,
-  registerAllHandlers,
-  removeAllHandlers,
-  testIpcHandlers
+  registerAllHandlers
 };

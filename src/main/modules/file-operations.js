@@ -338,13 +338,6 @@ function migrateOldPreferences() {
   }
 }
 
-// Test function
-function testFileOperations() {
-  debugLog?.info('Testing File Operations...', { module: 'file-operations', function: 'testFileOperations' });
-  debugLog?.info('✅ File operations module loaded', { module: 'file-operations', function: 'testFileOperations' });
-  return true;
-}
-
 export {
   initializeFileOperations,
   loadHotkeysFile,
@@ -354,7 +347,6 @@ export {
   addDirectoryDialog,
   addFileDialog,
   migrateOldPreferences,
-  testFileOperations,
   parseHotkeyFileLines
 };
 
@@ -368,6 +360,5 @@ export default {
   addDirectoryDialog,
   addFileDialog,
   migrateOldPreferences,
-  testFileOperations,
   parseHotkeyFileLines
 };

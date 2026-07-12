@@ -1153,30 +1153,6 @@ function setupApp() {
   });
 }
 
-// Test function to verify modular main process is working
-function testModularMain() {
-  debugLog.info('Testing Modular Main Process...', { 
-    function: "testModularMain" 
-  });
-  
-  // Test each module
-  const appSetupTest = appSetup.testAppSetup();
-  const ipcHandlersTest = ipcHandlers.testIpcHandlers();
-  const fileOperationsTest = fileOperations.testFileOperations();
-  
-  if (appSetupTest && ipcHandlersTest && fileOperationsTest) {
-    debugLog.info('Modular main process is working correctly!', { 
-      function: "testModularMain" 
-    });
-    return true;
-  } else {
-    debugLog.warn('Modular main process has issues', { 
-      function: "testModularMain" 
-    });
-    return false;
-  }
-}
-
 // Temporary testing functions for auto-update validation
 function testAutoUpdateScenarios() {
   if (process.env.TEST_AUTO_UPDATE === 'true') {
@@ -1255,14 +1231,12 @@ setupApp();
 export {
   appSetup,
   ipcHandlers,
-  fileOperations,
-  testModularMain
+  fileOperations
 };
 
 // Default export for module loading
 export default {
   appSetup,
   ipcHandlers,
-  fileOperations,
-  testModularMain
+  fileOperations
 }; 

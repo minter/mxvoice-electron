@@ -37,7 +37,7 @@ src/main/
   - Registers all secure IPC handlers (DB query/execute, store get/set/has/delete/clear, FS ops, path/os, audio controls, app ops, dialogs)
   - Adds Logs endpoints: `logs:write`, `logs:get-paths`, `logs:export`
   - Injects dependencies from coordinator (window, db, store, updater, debugLog, logService)
-  - Exports: `initializeIpcHandlers`, `registerAllHandlers`, `removeAllHandlers`, `testIpcHandlers`
+  - Exports: `initializeIpcHandlers`, `registerAllHandlers`
 
 - `file-operations.js`
   - User-facing dialogs for opening/saving hotkey (`.mrv`) and holding-tank (`.hld`) files

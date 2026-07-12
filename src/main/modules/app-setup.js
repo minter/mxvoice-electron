@@ -1182,13 +1182,6 @@ function setupAppLifecycle() {
   }
 }
 
-// Test function
-function testAppSetup() {
-  debugLog?.info('Testing App Setup...', { module: 'app-setup', function: 'testAppSetup' });
-  debugLog?.info('✅ App setup module loaded', { module: 'app-setup', function: 'testAppSetup' });
-  return true;
-}
-
 export {
   initializeAppSetup,
   createWindow,
@@ -1202,7 +1195,6 @@ export {
   sendDeleteSong,
   sendEditSong,
   manageCategories,
-  testAppSetup,
   setupWindowStateSaving,
   saveWindowState,
   loadWindowState
@@ -1222,7 +1214,6 @@ export default {
   sendDeleteSong,
   sendEditSong,
   manageCategories,
-  testAppSetup,
   setupWindowStateSaving,
   saveWindowState,
   loadWindowState
