@@ -12,7 +12,8 @@
  * @param {Object} options - Configuration options
  * @returns {Object} Event Handlers interface
  */
-function initializeEventHandlers(_options = {}) {
+function initializeEventHandlers(options = {}) {
+  const { moduleRegistry = {} } = options;
   
   /**
    * Toggle row selection
@@ -47,8 +48,8 @@ function initializeEventHandlers(_options = {}) {
       const link = document.querySelector('#hotkey_tabs .nav-link.active');
       if (link) link.textContent = newName;
       const tabNumber = Number(link?.getAttribute('href')?.match(/^#hotkeys_list_(\d)$/)?.[1]);
-      window.moduleRegistry?.hotkeys?.renameHotkeyStateTab?.(tabNumber, newName);
-      window.moduleRegistry?.hotkeys?.requestProfileStateSave?.();
+      moduleRegistry.hotkeys?.renameHotkeyStateTab?.(tabNumber, newName);
+      moduleRegistry.hotkeys?.requestProfileStateSave?.();
       return { success: true, newName: newName };
     } else {
       return { success: false, error: 'Invalid name' };
@@ -65,8 +66,8 @@ function initializeEventHandlers(_options = {}) {
       const link = document.querySelector('#holding_tank_tabs .nav-link.active');
       if (link) link.textContent = newName;
       const tabNumber = Number(link?.getAttribute('href')?.match(/^#holding_tank_(\d)$/)?.[1]);
-      window.moduleRegistry?.holdingTank?.renameHoldingTankStateTab?.(tabNumber, newName);
-      window.moduleRegistry?.holdingTank?.requestProfileStateSave?.();
+      moduleRegistry.holdingTank?.renameHoldingTankStateTab?.(tabNumber, newName);
+      moduleRegistry.holdingTank?.requestProfileStateSave?.();
       return { success: true, newName: newName };
     } else {
       return { success: false, error: 'Invalid name' };
@@ -86,4 +87,4 @@ export {
 };
 
 // Default export for module loading
-export default initializeEventHandlers; 
+export default initializeEventHandlers;

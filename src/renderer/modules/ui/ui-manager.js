@@ -14,7 +14,7 @@ try {
 }
 
 export default function initializeUIManager(options = {}) {
-  const { electronAPI } = options;
+  const { electronAPI, moduleRegistry = {} } = options;
   let fontSize = 11;
   
   function getFontSize() { return fontSize; }
@@ -45,8 +45,8 @@ export default function initializeUIManager(options = {}) {
 
   async function editSelectedSong() {
     try {
-      if (window.moduleRegistry?.songManagement?.editSelectedSong) {
-        return await window.moduleRegistry.songManagement.editSelectedSong();
+      if (moduleRegistry.songManagement?.editSelectedSong) {
+        return await moduleRegistry.songManagement.editSelectedSong();
       }
     } catch (error) {
       debugLog?.warn('Failed to call editSelectedSong in songManagement', { 
@@ -60,8 +60,8 @@ export default function initializeUIManager(options = {}) {
 
   async function deleteSelectedSong() {
     try {
-      if (window.moduleRegistry?.songManagement?.deleteSelectedSong) {
-        return await window.moduleRegistry.songManagement.deleteSelectedSong();
+      if (moduleRegistry.songManagement?.deleteSelectedSong) {
+        return await moduleRegistry.songManagement.deleteSelectedSong();
       }
     } catch (error) {
       debugLog?.warn('Failed to call deleteSelectedSong in songManagement', { 

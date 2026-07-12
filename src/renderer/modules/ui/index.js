@@ -23,13 +23,11 @@ import modals from './modals.js';
  * @returns {Object} UI module interface
  */
 export function initializeUI(options = {}) {
-  const { electronAPI, db, store } = options;
-  
   // Initialize sub-modules
-  const manager = uiManager({ electronAPI, db, store });
-  const handlers = eventHandlers({ electronAPI, db, store });
-  const uiControls = controls({ electronAPI, db, store });
-  const _modalOps = modals({ electronAPI, db, store });
+  const manager = uiManager(options);
+  const handlers = eventHandlers(options);
+  const uiControls = controls(options);
+  const _modalOps = modals(options);
   
   return {
     // UI Manager functions
