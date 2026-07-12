@@ -317,7 +317,13 @@ class HotkeysModule {
     const songsById = new Map();
 
     if (songIds.length > 0) {
-      const result = await this.electronAPI?.database?.getSongsByIds?.(songIds);
+      if (!this.electronAPI?.database?.getSongsByIds) {
+        throw new Error('Batch song lookup is unavailable during hotkey restore');
+      }
+      const result = await this.electronAPI.database.getSongsByIds(songIds);
+      if (result?.success === false) {
+        throw new Error(result.error || 'Failed to load hotkey song metadata');
+      }
       const rows = result?.data || result || [];
       if (!Array.isArray(rows)) throw new Error(result?.error || 'Failed to load hotkey song metadata');
       rows.forEach(row => songsById.set(String(row.id), row));
