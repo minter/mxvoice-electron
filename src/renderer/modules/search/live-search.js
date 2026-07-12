@@ -8,9 +8,8 @@
 
 // Import shared state
 import sharedState from '../shared-state.js';
-import { getAdvancedSearchValues, hasActiveAdvancedFilters } from './search-form-utils.js';
+import { getAdvancedSearchValues } from './search-form-utils.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
-import Dom from '../dom-utils/index.js';
 import { secureDatabase } from '../adapters/secure-adapter.js';
 
 // Import debug logger
@@ -107,18 +106,6 @@ function performLiveSearch(searchTerm) {
     searchTerm: searchTerm
   });
 
-  // Check if we have either a search term or advanced search filters
-  const hasSearchTerm = searchTerm && searchTerm.length >= 2;
-  const hasAdvancedFilters = hasActiveAdvancedFilters();
-
-  if (!hasSearchTerm && !hasAdvancedFilters) {
-    // Clear results if no search term and no advanced filters
-    const tbody = Dom.$('#search_results tbody');
-    Array.from(Dom.find(tbody, 'tr')).forEach(tr => Dom.remove(tr));
-    Dom.hide('#search_results thead');
-    return;
-  }
-
   const tbodyClear = document.querySelector('#search_results tbody');
   if (tbodyClear) tbodyClear.querySelectorAll('tr').forEach(tr => tr.remove());
   const theadShow = document.querySelector('#search_results thead');
@@ -146,7 +133,7 @@ function performLiveSearch(searchTerm) {
   }
 
   // Use named database operation for live search
-    secureDatabase.searchSongs(searchParams).then(result => {
+    return secureDatabase.searchSongs(searchParams).then(result => {
       if (result.success) {
         debugLog?.info(`🔍 Live search returned ${result.data.length} results`, { 
           module: 'live-search',

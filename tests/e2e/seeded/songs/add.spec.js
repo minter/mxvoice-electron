@@ -81,9 +81,9 @@ test.describe('Songs - add', () => {
           window.___captureAddDialog?.(filename);
           
           // Also check if startAddNewSong is available and call it
-          if (window.startAddNewSong) {
+          if (window.moduleRegistry.songManagement.startAddNewSong) {
             console.log('IPC: Calling startAddNewSong directly');
-            window.startAddNewSong(filename, metadata);
+            window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
           } else if (window.moduleRegistry?.songManagement?.startAddNewSong) {
             console.log('IPC: Calling startAddNewSong via moduleRegistry');
             window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
@@ -322,9 +322,9 @@ test.describe('Songs - add', () => {
           window.___captureAddDialogCancel?.(filename);
           
           // Also check if startAddNewSong is available and call it
-          if (window.startAddNewSong) {
+          if (window.moduleRegistry.songManagement.startAddNewSong) {
             console.log('IPC: Calling startAddNewSong for cancel test');
-            window.startAddNewSong(filename, metadata);
+            window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
           } else if (window.moduleRegistry?.songManagement?.startAddNewSong) {
             console.log('IPC: Calling startAddNewSong via moduleRegistry for cancel test');
             window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
@@ -511,9 +511,9 @@ test.describe('Songs - add', () => {
           window.___captureAddDialogOgg?.(filename);
           
           // Also check if startAddNewSong is available and call it
-          if (window.startAddNewSong) {
+          if (window.moduleRegistry.songManagement.startAddNewSong) {
             console.log('IPC: Calling startAddNewSong for OGG file');
-            window.startAddNewSong(filename, metadata);
+            window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
           } else if (window.moduleRegistry?.songManagement?.startAddNewSong) {
             console.log('IPC: Calling startAddNewSong via moduleRegistry for OGG file');
             window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);

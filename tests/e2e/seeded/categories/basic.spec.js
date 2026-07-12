@@ -107,14 +107,14 @@ test.describe('Categories - management', () => {
       // Wait for the openCategoriesModal function to be registered on window
       // (FunctionRegistry may still be initializing after networkidle)
       await testPage.waitForFunction(
-        () => typeof window.openCategoriesModal === 'function',
+        () => typeof window.moduleRegistry.categories.openCategoriesModal === 'function',
         { timeout: 15000 }
       );
 
       // Call the openCategoriesModal function directly through the page context
       // This simulates what happens when the menu is selected
       await testPage.evaluate(() => {
-        window.openCategoriesModal();
+        window.moduleRegistry.categories.openCategoriesModal();
       });
       
       // Verify the modal appears
@@ -208,13 +208,13 @@ test.describe('Categories - management', () => {
       
       // Wait for the openCategoriesModal function to be registered on window
       await testPage.waitForFunction(
-        () => typeof window.openCategoriesModal === 'function',
+        () => typeof window.moduleRegistry.categories.openCategoriesModal === 'function',
         { timeout: 15000 }
       );
 
       // Open the categories management modal
       await testPage.evaluate(() => {
-        window.openCategoriesModal();
+        window.moduleRegistry.categories.openCategoriesModal();
       });
       
       // Verify the modal appears
@@ -223,7 +223,7 @@ test.describe('Categories - management', () => {
 
       // Locate the new category input field and add button
       const newCategoryInput = modal.locator('#newCategoryDescription');
-      const addButton = modal.locator('form[onsubmit="addNewCategory(event)"] button[type="submit"]');
+      const addButton = modal.locator('#newCategoryForm button[type="submit"]');
       
       // Click into the text field
       await newCategoryInput.click();
@@ -350,13 +350,13 @@ test.describe('Categories - management', () => {
       
       // Wait for the openCategoriesModal function to be registered on window
       await testPage.waitForFunction(
-        () => typeof window.openCategoriesModal === 'function',
+        () => typeof window.moduleRegistry.categories.openCategoriesModal === 'function',
         { timeout: 15000 }
       );
 
       // Open the categories management modal
       await testPage.evaluate(() => {
-        window.openCategoriesModal();
+        window.moduleRegistry.categories.openCategoriesModal();
       });
       
       // Verify the modal appears
@@ -511,8 +511,8 @@ test.describe('Categories - management', () => {
       
       // Now reopen the manage categories modal to delete another category
       await testPage.evaluate(() => {
-        if (typeof window.openCategoriesModal === 'function') {
-          window.openCategoriesModal();
+        if (typeof window.moduleRegistry.categories.openCategoriesModal === 'function') {
+          window.moduleRegistry.categories.openCategoriesModal();
         } else {
           throw new Error('openCategoriesModal function not available');
         }
@@ -685,13 +685,13 @@ test.describe('Categories - management', () => {
       
       // Wait for the openCategoriesModal function to be registered on window
       await testPage.waitForFunction(
-        () => typeof window.openCategoriesModal === 'function',
+        () => typeof window.moduleRegistry.categories.openCategoriesModal === 'function',
         { timeout: 15000 }
       );
 
       // Open the categories management modal
       await testPage.evaluate(() => {
-        window.openCategoriesModal();
+        window.moduleRegistry.categories.openCategoriesModal();
       });
       
       // Verify the modal appears
@@ -818,5 +818,4 @@ test.describe('Categories - management', () => {
     }
   });
 });
-
 

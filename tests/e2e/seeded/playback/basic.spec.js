@@ -807,8 +807,8 @@ test.describe('Playback - basic', () => {
     console.log('🔍 Debug: Checking function availability before double-click...');
     const functionInfo = await page.evaluate(() => {
       return {
-        playSongFromId: typeof window.playSongFromId,
-        playSongFromHotkey: typeof window.playSongFromHotkey,
+        playSongFromId: typeof window.moduleRegistry.audio.playSongFromId,
+        playSongFromHotkey: typeof window.moduleRegistry.hotkeys.playSongFromHotkey,
         moduleRegistry: window.moduleRegistry ? Object.keys(window.moduleRegistry) : null,
         // Check if the hotkey element has the right attributes
         f1Hotkey: {
@@ -849,8 +849,6 @@ test.describe('Playback - basic', () => {
           console.log('Calling hotkeys init...');
           await window.moduleRegistry.hotkeys.init({
             electronAPI: window.secureElectronAPI,
-            db: window.db,
-            store: window.store,
             debugLog: window.debugLog
           });
           console.log('Hotkeys init completed');
@@ -976,9 +974,9 @@ test.describe('Playback - basic', () => {
     console.log('🔧 Simulating race condition by temporarily disabling playSongFromId...');
     await page.evaluate(() => {
       // Save the original function
-      window._originalPlaySongFromId = window.playSongFromId;
+      window._originalPlaySongFromId = window.moduleRegistry.audio.playSongFromId;
       // Replace with a no-op function that logs the attempt
-      window.playSongFromId = function(songId) {
+      window.moduleRegistry.audio.playSongFromId = function(songId) {
         console.log('🚫 First double-click ignored (simulating race condition)');
         window.debugLog?.warn('First double-click failed due to race condition simulation', {
           module: 'test-simulation',
@@ -1004,7 +1002,7 @@ test.describe('Playback - basic', () => {
     await page.evaluate(() => {
       // Restore the original function
       if (window._originalPlaySongFromId) {
-        window.playSongFromId = window._originalPlaySongFromId;
+        window.moduleRegistry.audio.playSongFromId = window._originalPlaySongFromId;
         delete window._originalPlaySongFromId;
         console.log('✅ playSongFromId function restored');
       }
@@ -1099,7 +1097,7 @@ test.describe('Playback - basic', () => {
     // Debug: Check if clearHotkeys function is available
     const clearFunctionInfo = await page.evaluate(() => {
       return {
-        clearHotkeysGlobal: typeof window.clearHotkeys,
+        clearHotkeysGlobal: typeof window.moduleRegistry.hotkeys.clearHotkeys,
         moduleRegistryHotkeys: !!window.moduleRegistry?.hotkeys,
         moduleRegistryClearMethod: typeof window.moduleRegistry?.hotkeys?.clearHotkeys,
         clearButtonExists: !!document.getElementById('hotkey-clear-btn'),
@@ -1113,8 +1111,8 @@ test.describe('Playback - basic', () => {
     await page.evaluate(() => {
       if (window.moduleRegistry?.hotkeys?.clearHotkeys) {
         window.moduleRegistry.hotkeys.clearHotkeys();
-      } else if (window.clearHotkeys) {
-        window.clearHotkeys();
+      } else if (window.moduleRegistry.hotkeys.clearHotkeys) {
+        window.moduleRegistry.hotkeys.clearHotkeys();
       } else {
         console.error('❌ No clearHotkeys function available');
       }
@@ -1239,4 +1237,3 @@ test.describe('Playback - basic', () => {
     console.log('✅ Clear operation affects all hotkeys in the active tab');
   });
 });
-

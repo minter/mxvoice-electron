@@ -487,7 +487,7 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
       Object.defineProperty(evt, 'currentTarget', { value: span });
       Object.defineProperty(evt, 'target', { value: span });
       // songDrag is exposed globally via the function registry
-      if (typeof window.songDrag === 'function') window.songDrag(evt);
+      if (typeof window.moduleRegistry.dragDrop.songDrag === 'function') window.moduleRegistry.dragDrop.songDrag(evt);
       return captured;
     });
 

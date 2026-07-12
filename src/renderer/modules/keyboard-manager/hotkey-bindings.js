@@ -113,8 +113,9 @@ export class HotkeyBindings {
     try {
       this.logDebug(`Function key pressed: ${fkey}`);
       
-      if (window.playSongFromHotkey && typeof window.playSongFromHotkey === 'function') {
-        window.playSongFromHotkey(fkey);
+      const playSongFromHotkey = this.dependencies.moduleRegistry?.hotkeys?.playSongFromHotkey;
+      if (typeof playSongFromHotkey === 'function') {
+        playSongFromHotkey(fkey);
       } else {
         this.logWarn(`playSongFromHotkey function not available for ${fkey}`);
       }

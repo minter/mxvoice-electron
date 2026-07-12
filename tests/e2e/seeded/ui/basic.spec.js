@@ -56,10 +56,10 @@ test.describe('UI - basic', () => {
     // Wait for toggleAdvancedSearch to be registered, then call it directly
     // (button click can fail on CI when tooltip or event handler timing interferes)
     await page.waitForFunction(
-      () => typeof window.toggleAdvancedSearch === 'function',
+      () => typeof window.moduleRegistry.ui.toggleAdvancedSearch === 'function',
       { timeout: 10000 }
     );
-    await page.evaluate(() => window.toggleAdvancedSearch());
+    await page.evaluate(() => window.moduleRegistry.ui.toggleAdvancedSearch());
 
     // Wait for animation + state
     await expect(btn).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 });
@@ -78,7 +78,7 @@ test.describe('UI - basic', () => {
 
     // Toggle back to close (use evaluate, same as open — btn.click() can be
     // intercepted by tooltip or animation overlay)
-    await page.evaluate(() => window.toggleAdvancedSearch());
+    await page.evaluate(() => window.moduleRegistry.ui.toggleAdvancedSearch());
 
     // Wait for the close animation (fadeOutUp) to finish — Dom.hide is called
     // inside the animateCSS .then() callback, so panel won't be hidden until done

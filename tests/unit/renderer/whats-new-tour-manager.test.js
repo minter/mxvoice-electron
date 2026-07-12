@@ -98,7 +98,7 @@ const { TourManager } = await import(
   '../../../src/renderer/modules/whats-new/tour-manager.js'
 );
 const { __mockInstance: mockDriver, driver: mockDriverFactory } = await import('driver.js');
-const { initWhatsNew, showWhatsNew, tourManager } = await import(
+const { initWhatsNew, showWhatsNew, tourManager, initializeWhatsNew } = await import(
   '../../../src/renderer/modules/whats-new/index.js'
 );
 const { safeShowModal } = await import('../../../src/renderer/modules/ui/bootstrap-helpers.js');
@@ -438,7 +438,11 @@ describe('TourManager', () => {
 describe('whats-new preference helpers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.openPreferencesModal = vi.fn().mockResolvedValue(undefined);
+    const openPreferencesModal = vi.fn().mockResolvedValue(undefined);
+    initializeWhatsNew({
+      moduleRegistry: { preferences: { openPreferencesModal } }
+    });
+    window.moduleRegistry = { preferences: { openPreferencesModal } };
     domElements.preferencesModal = {
       classList: {
         contains: vi.fn(() => false),
@@ -455,7 +459,7 @@ describe('whats-new preference helpers', () => {
   it('opens preferences through openPreferencesModal for crossfade helper', async () => {
     await tourManager.helpers.openPreferencesAndScrollToCrossfade();
 
-    expect(window.openPreferencesModal).toHaveBeenCalledTimes(1);
+    expect(window.moduleRegistry.preferences.openPreferencesModal).toHaveBeenCalledTimes(1);
     expect(safeShowModal).not.toHaveBeenCalled();
     expect(domElements['preferences-crossfade-seconds'].scrollIntoView).toHaveBeenCalled();
   });
@@ -463,7 +467,7 @@ describe('whats-new preference helpers', () => {
   it('opens preferences through openPreferencesModal for analytics helper when modal is closed', async () => {
     await tourManager.helpers.openPreferencesAndScrollToAnalytics();
 
-    expect(window.openPreferencesModal).toHaveBeenCalledTimes(1);
+    expect(window.moduleRegistry.preferences.openPreferencesModal).toHaveBeenCalledTimes(1);
     expect(safeShowModal).not.toHaveBeenCalled();
     expect(domElements['preferences-analytics-enabled'].scrollIntoView).toHaveBeenCalled();
   });

@@ -124,8 +124,8 @@ test.describe('First run modal behavior', () => {
       if (window.secureElectronAPI?.events?.onAddDialogLoad) {
         window.secureElectronAPI.events.onAddDialogLoad((filename, metadata) => {
           window.___captureAddDialog?.(filename);
-          if (window.startAddNewSong) {
-            window.startAddNewSong(filename, metadata);
+          if (window.moduleRegistry.songManagement.startAddNewSong) {
+            window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
           } else if (window.moduleRegistry?.songManagement?.startAddNewSong) {
             window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
           }

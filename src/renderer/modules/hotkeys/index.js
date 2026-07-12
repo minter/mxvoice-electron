@@ -551,13 +551,13 @@ class HotkeysModule {
         }
       );
 
-      if (typeof window.playSongFromId === 'function') {
+      if (typeof this.moduleRegistry.audio?.playSongFromId === 'function') {
         debugLog?.info('🎵 HOTKEY PLAYBACK: Calling playSongFromId', {
           module: 'hotkeys',
           function: 'playSongFromHotkey',
           song_id: song_id,
         });
-        window.playSongFromId(song_id);
+        this.moduleRegistry.audio.playSongFromId(song_id);
       } else {
         debugLog?.error(
           '❌ HOTKEY PLAYBACK FAIL: playSongFromId not available',
@@ -565,7 +565,7 @@ class HotkeysModule {
             module: 'hotkeys',
             function: 'playSongFromHotkey',
             song_id: song_id,
-            playSongFromId_type: typeof window.playSongFromId,
+            playSongFromId_type: typeof this.moduleRegistry.audio?.playSongFromId,
           }
         );
       }

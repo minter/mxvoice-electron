@@ -67,6 +67,7 @@ class CategoriesModule {
     try {
       // Load initial categories
       await this.loadCategories();
+      this.setupEventListeners();
       this.isInitialized = true;
       debugLog?.info('Categories module initialized successfully', { module: 'categories', function: 'init' });
       return true;
@@ -80,8 +81,8 @@ class CategoriesModule {
    * Set up event listeners for category functionality
    */
   setupEventListeners() {
-    // This will be called when the module is loaded
-    // Event listeners will be set up in the main renderer
+    document.getElementById('newCategoryForm')?.addEventListener('submit', this.addNewCategoryUI);
+    document.getElementById('currentCategoriesForm')?.addEventListener('submit', this.saveCategories);
   }
 
   /**
@@ -319,4 +320,4 @@ export const validateCategoryCode = categoriesModule.validateCategoryCode.bind(c
 export const generateCategoryCode = categoriesModule.generateCategoryCode.bind(categoriesModule);
 
 // Default export for module loading
-export default categoriesModule; 
+export default categoriesModule;

@@ -29,7 +29,7 @@ test.describe('Hotkeys - file operations', () => {
 
     // Wait for function registry to be properly set up for hotkey loading
     await page.waitForFunction(
-      () => window.moduleRegistry?.hotkeys && typeof window.populateHotkeys === 'function',
+      () => window.moduleRegistry?.hotkeys && typeof window.moduleRegistry.hotkeys.populateHotkeys === 'function',
       { timeout: 15000 }
     );
 

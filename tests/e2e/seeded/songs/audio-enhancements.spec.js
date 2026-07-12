@@ -51,8 +51,8 @@ test.describe('Audio Enhancements - song edit fields', () => {
 
     // Use direct function call to open edit modal (more reliable than context menu)
     await page.evaluate(() => {
-      if (typeof window.editSelectedSong === 'function') {
-        window.editSelectedSong();
+      if (typeof window.moduleRegistry.songManagement.editSelectedSong === 'function') {
+        window.moduleRegistry.songManagement.editSelectedSong();
       } else if (window.moduleRegistry?.songManagement?.editSelectedSong) {
         window.moduleRegistry.songManagement.editSelectedSong();
       }
@@ -295,8 +295,8 @@ test.describe('Audio Enhancements - playback with trim points', () => {
     await rows.first().click();
     await page.waitForTimeout(200);
     await page.evaluate(() => {
-      if (typeof window.editSelectedSong === 'function') {
-        window.editSelectedSong();
+      if (typeof window.moduleRegistry.songManagement.editSelectedSong === 'function') {
+        window.moduleRegistry.songManagement.editSelectedSong();
       } else if (window.moduleRegistry?.songManagement?.editSelectedSong) {
         window.moduleRegistry.songManagement.editSelectedSong();
       }
@@ -339,7 +339,7 @@ test.describe('Audio Enhancements - playback with trim points', () => {
     await rows.first().click();
     await page.waitForTimeout(200);
     await page.evaluate(() => {
-      if (typeof window.editSelectedSong === 'function') window.editSelectedSong();
+      if (typeof window.moduleRegistry.songManagement.editSelectedSong === 'function') window.moduleRegistry.songManagement.editSelectedSong();
       else if (window.moduleRegistry?.songManagement?.editSelectedSong) window.moduleRegistry.songManagement.editSelectedSong();
     });
     await expect(page.locator('#songFormModal')).toBeVisible({ timeout: 5000 });
@@ -363,7 +363,7 @@ test.describe('Audio Enhancements - playback with trim points', () => {
     await rows.first().click();
     await page.waitForTimeout(200);
     await page.evaluate(() => {
-      if (typeof window.editSelectedSong === 'function') window.editSelectedSong();
+      if (typeof window.moduleRegistry.songManagement.editSelectedSong === 'function') window.moduleRegistry.songManagement.editSelectedSong();
       else if (window.moduleRegistry?.songManagement?.editSelectedSong) window.moduleRegistry.songManagement.editSelectedSong();
     });
     await expect(page.locator('#songFormModal')).toBeVisible({ timeout: 5000 });
@@ -397,7 +397,7 @@ test.describe('Audio Enhancements - playback with trim points', () => {
     await rows.first().click();
     await page.waitForTimeout(200);
     await page.evaluate(() => {
-      if (typeof window.editSelectedSong === 'function') window.editSelectedSong();
+      if (typeof window.moduleRegistry.songManagement.editSelectedSong === 'function') window.moduleRegistry.songManagement.editSelectedSong();
       else if (window.moduleRegistry?.songManagement?.editSelectedSong) window.moduleRegistry.songManagement.editSelectedSong();
     });
     await expect(page.locator('#songFormModal')).toBeVisible({ timeout: 5000 });
@@ -422,7 +422,7 @@ test.describe('Audio Enhancements - playback with trim points', () => {
     await rows.first().click();
     await page.waitForTimeout(200);
     await page.evaluate(() => {
-      if (typeof window.editSelectedSong === 'function') window.editSelectedSong();
+      if (typeof window.moduleRegistry.songManagement.editSelectedSong === 'function') window.moduleRegistry.songManagement.editSelectedSong();
       else if (window.moduleRegistry?.songManagement?.editSelectedSong) window.moduleRegistry.songManagement.editSelectedSong();
     });
     await expect(page.locator('#songFormModal')).toBeVisible({ timeout: 5000 });
@@ -462,7 +462,7 @@ test.describe('Audio Enhancements - playback with trim points', () => {
     await rows.first().click();
     await page.waitForTimeout(200);
     await page.evaluate(() => {
-      if (typeof window.editSelectedSong === 'function') window.editSelectedSong();
+      if (typeof window.moduleRegistry.songManagement.editSelectedSong === 'function') window.moduleRegistry.songManagement.editSelectedSong();
       else if (window.moduleRegistry?.songManagement?.editSelectedSong) window.moduleRegistry.songManagement.editSelectedSong();
     });
     await expect(page.locator('#songFormModal')).toBeVisible({ timeout: 5000 });

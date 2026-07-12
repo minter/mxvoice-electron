@@ -364,7 +364,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <form onsubmit="addNewCategory(event)">
+            <form id="newCategoryForm">
               <div class="row g-2 mb-3">
                 <div class="col-sm-8">
                   <input type="text" class="form-control" id="newCategoryDescription" required>
@@ -377,7 +377,7 @@
 
             <hr />
 
-            <form id="currentCategoriesForm" onsubmit="saveCategories(event)">
+            <form id="currentCategoriesForm">
               <div id="categoryList">
               </div>
             <div class="modal-footer d-flex justify-content-end">

@@ -110,10 +110,7 @@ tourManager.registerHelper('openMultiSongImportTour', async () => {
  * Opens the Preferences modal and scrolls to the crossfade control.
  */
 tourManager.registerHelper('openPreferencesAndScrollToCrossfade', async () => {
-  const openPreferences =
-    (typeof window.openPreferencesModal === 'function'
-      ? window.openPreferencesModal
-      : moduleRegistry.preferences?.openPreferencesModal) || null;
+  const openPreferences = moduleRegistry.preferences?.openPreferencesModal || null;
 
   if (openPreferences) {
     await openPreferences();
@@ -140,10 +137,7 @@ tourManager.registerHelper('openPreferencesAndScrollToAnalytics', async () => {
   const modal = document.getElementById('preferencesModal');
   const alreadyOpen = modal?.classList.contains('show');
   if (!alreadyOpen) {
-    const openPreferences =
-      (typeof window.openPreferencesModal === 'function'
-        ? window.openPreferencesModal
-        : moduleRegistry.preferences?.openPreferencesModal) || null;
+    const openPreferences = moduleRegistry.preferences?.openPreferencesModal || null;
 
     if (openPreferences) {
       await openPreferences();

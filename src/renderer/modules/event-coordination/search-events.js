@@ -79,8 +79,8 @@ export default class SearchEvents {
         this.debugLog?.debug('Category select changed, calling searchData...');
         window.secureElectronAPI?.analytics?.trackEvent?.('category_browsed');
 
-        if (window.searchData) {
-          window.searchData();
+        if (this.moduleRegistry.search?.searchData) {
+          this.moduleRegistry.search.searchData();
           this.debugLog?.info('searchData called successfully from category change');
         } else {
           this.debugLog?.warn('searchData function not available');
@@ -122,8 +122,8 @@ export default class SearchEvents {
       try {
         this.debugLog?.debug('Date search changed, calling searchData...');
         
-        if (window.searchData) {
-          window.searchData();
+        if (this.moduleRegistry.search?.searchData) {
+          this.moduleRegistry.search.searchData();
           this.debugLog?.info('searchData called successfully from date search change');
         } else {
           this.debugLog?.warn('searchData function not available');
@@ -150,9 +150,9 @@ export default class SearchEvents {
         // Esc should stop playback even when focus is inside a search field
         if (event.key === 'Escape' || event.code === 'Escape') {
           this.debugLog?.debug('Escape pressed in search input; attempting to stop playback');
-          if (window.stopPlaying && typeof window.stopPlaying === 'function') {
+          if (typeof this.moduleRegistry.audio?.stopPlaying === 'function') {
             // Support Shift+Esc for fade-out, mirroring global behavior
-            window.stopPlaying(Boolean(event.shiftKey));
+            this.moduleRegistry.audio.stopPlaying(Boolean(event.shiftKey));
           } else {
             this.debugLog?.warn('stopPlaying function not available');
           }
@@ -169,8 +169,8 @@ export default class SearchEvents {
           
           this.debugLog?.debug('Search form submitted via Enter key, calling searchData...');
           
-          if (window.searchData) {
-            window.searchData();
+          if (this.moduleRegistry.search?.searchData) {
+            this.moduleRegistry.search.searchData();
             this.debugLog?.info('searchData called successfully');
           } else {
             this.debugLog?.warn('searchData function not available');
@@ -189,8 +189,8 @@ export default class SearchEvents {
         event.preventDefault();
         this.debugLog?.debug('Search form submitted, calling searchData...');
         
-        if (window.searchData) {
-          window.searchData();
+        if (this.moduleRegistry.search?.searchData) {
+          this.moduleRegistry.search.searchData();
           this.debugLog?.info('searchData called successfully');
         } else {
           this.debugLog?.warn('searchData function not available');
@@ -225,8 +225,8 @@ export default class SearchEvents {
       try {
         this.debugLog?.debug('Omni search input changed, triggering live search...');
         
-        if (window.triggerLiveSearch) {
-          window.triggerLiveSearch();
+        if (this.moduleRegistry.search?.triggerLiveSearch) {
+          this.moduleRegistry.search.triggerLiveSearch();
           this.debugLog?.info('triggerLiveSearch called successfully');
         } else {
           this.debugLog?.warn('triggerLiveSearch function not available');
@@ -243,8 +243,8 @@ export default class SearchEvents {
         this.debugLog?.debug('Category select changed, search term', searchTerm);
         
         if (searchTerm.length >= 2) {
-          if (window.triggerLiveSearch) {
-            window.triggerLiveSearch();
+          if (this.moduleRegistry.search?.triggerLiveSearch) {
+            this.moduleRegistry.search.triggerLiveSearch();
             this.debugLog?.info('triggerLiveSearch called successfully from category change');
           } else {
             this.debugLog?.warn('triggerLiveSearch function not available');
@@ -263,8 +263,8 @@ export default class SearchEvents {
         // When advanced search is active, trigger live search even if omni_search is empty
         const adv = document.getElementById('advanced-search');
         if (adv && adv.offsetParent !== null) {
-          if (window.triggerLiveSearch) {
-            window.triggerLiveSearch();
+          if (this.moduleRegistry.search?.triggerLiveSearch) {
+            this.moduleRegistry.search.triggerLiveSearch();
             this.debugLog?.info('triggerLiveSearch called successfully from advanced search');
           } else {
             this.debugLog?.warn('triggerLiveSearch function not available');
@@ -272,8 +272,8 @@ export default class SearchEvents {
         } else {
           const searchTerm = (document.getElementById('omni_search')?.value || '').trim();
           if (searchTerm.length >= 2) {
-            if (window.triggerLiveSearch) {
-              window.triggerLiveSearch();
+            if (this.moduleRegistry.search?.triggerLiveSearch) {
+              this.moduleRegistry.search.triggerLiveSearch();
               this.debugLog?.info('triggerLiveSearch called successfully from advanced search (with term)');
             } else {
               this.debugLog?.warn('triggerLiveSearch function not available');
@@ -312,8 +312,8 @@ export default class SearchEvents {
       try {
         // Shift+Tab: send to holding tank
         if ((event.key === 'Tab' || event.code === 'Tab') && event.shiftKey) {
-          if (typeof window.sendToHoldingTank === 'function') {
-            window.sendToHoldingTank();
+          if (typeof this.moduleRegistry.holdingTank?.sendToHoldingTank === 'function') {
+            this.moduleRegistry.holdingTank.sendToHoldingTank();
           }
           event.preventDefault();
           event.stopPropagation();
@@ -324,8 +324,8 @@ export default class SearchEvents {
         if (event.key === 'Tab' || event.code === 'Tab') {
           const selected = document.getElementById('selected_row');
           if (selected) {
-            if (typeof window.sendToHotkeys === 'function') {
-              window.sendToHotkeys();
+            if (typeof this.moduleRegistry.hotkeys?.sendToHotkeys === 'function') {
+              this.moduleRegistry.hotkeys.sendToHotkeys();
             }
             event.preventDefault();
             event.stopPropagation();
@@ -392,8 +392,8 @@ export default class SearchEvents {
       try {
         this.debugLog?.debug("Advanced search button clicked");
         
-        if (window.toggleAdvancedSearch) {
-          window.toggleAdvancedSearch();
+        if (this.moduleRegistry.ui?.toggleAdvancedSearch) {
+          this.moduleRegistry.ui.toggleAdvancedSearch();
           this.debugLog?.info('toggleAdvancedSearch called successfully');
         } else {
           this.debugLog?.warn('toggleAdvancedSearch function not available');

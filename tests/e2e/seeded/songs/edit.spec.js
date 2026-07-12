@@ -222,9 +222,9 @@ test.describe('Songs - edit and cancel', () => {
         console.log('⚠️ Edit option still not visible, trying direct function call...');
         // Try to call editSelectedSong directly through the page context
         await page.evaluate(() => {
-          if (window.editSelectedSong) {
+          if (window.moduleRegistry.songManagement.editSelectedSong) {
             console.log('✅ Calling editSelectedSong directly...');
-            window.editSelectedSong();
+            window.moduleRegistry.songManagement.editSelectedSong();
           } else if (window.moduleRegistry?.songManagement?.editSelectedSong) {
             console.log('✅ Calling editSelectedSong through moduleRegistry...');
             window.moduleRegistry.songManagement.editSelectedSong();
@@ -236,9 +236,9 @@ test.describe('Songs - edit and cancel', () => {
     } else {
       console.log('❌ Context menu not visible, trying direct function call...');
       await page.evaluate(() => {
-        if (window.editSelectedSong) {
+        if (window.moduleRegistry.songManagement.editSelectedSong) {
           console.log('✅ Calling editSelectedSong directly...');
-          window.editSelectedSong();
+          window.moduleRegistry.songManagement.editSelectedSong();
         } else if (window.moduleRegistry?.songManagement?.editSelectedSong) {
           console.log('✅ Calling editSelectedSong through moduleRegistry...');
           window.moduleRegistry.songManagement.editSelectedSong();

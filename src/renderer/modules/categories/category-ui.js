@@ -6,6 +6,7 @@
  */
 
 import { safeShowModal } from '../ui/bootstrap-helpers.js';
+import { customConfirm } from '../utils/index.js';
 
 // Import debug logger
 let debugLog = null;
@@ -140,9 +141,9 @@ function populateCategoriesModal(preserveScroll = false) {
             </div>
           `;
           const editBtn = rowDiv.querySelector('.category-edit-btn');
-          if (editBtn) editBtn.addEventListener('click', (e) => { e.preventDefault(); if (window.editCategoryUI) window.editCategoryUI(row.code); });
+          if (editBtn) editBtn.addEventListener('click', (e) => { e.preventDefault(); editCategoryUI(row.code); });
           const deleteBtn = rowDiv.querySelector('.category-delete-btn');
-          if (deleteBtn) deleteBtn.addEventListener('click', (e) => { e.preventDefault(); if (window.deleteCategory) window.deleteCategory(e, row.code, row.description); });
+          if (deleteBtn) deleteBtn.addEventListener('click', (e) => deleteCategoryUI(e, row.code, row.description));
           container.appendChild(rowDiv);
         }
       });
@@ -361,4 +362,4 @@ export default {
   saveCategories,
   addNewCategoryUI,
   deleteCategoryUI
-}; 
+};

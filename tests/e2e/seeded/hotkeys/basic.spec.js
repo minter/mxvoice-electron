@@ -35,7 +35,7 @@ test.describe('Hotkeys - save & load', () => {
 
     // Wait for function registry to be properly set up for hotkey loading
     await page.waitForFunction(
-      () => window.moduleRegistry?.hotkeys && typeof window.populateHotkeys === 'function',
+      () => window.moduleRegistry?.hotkeys && typeof window.moduleRegistry.hotkeys.populateHotkeys === 'function',
       { timeout: 15000 }
     );
   });
@@ -415,7 +415,7 @@ test.describe('Hotkeys - save & load', () => {
     // Wait for the app to fully initialize and clearHotkeys function to be available
     console.log('Waiting for clearHotkeys function to be available...');
     await page.waitForFunction(() => {
-      return typeof window.clearHotkeys === 'function';
+      return typeof window.moduleRegistry.hotkeys.clearHotkeys === 'function';
     }, { timeout: 10000 });
     console.log('clearHotkeys function is now available');
     
@@ -1089,9 +1089,9 @@ test.describe('Hotkeys - save & load', () => {
     // Debug: Check if saveHotkeyFile function is available and what it does
     console.log('Checking saveHotkeyFile function...');
     const saveFunctionInfo = await page.evaluate(() => {
-      if (window.saveHotkeyFile) {
+      if (window.moduleRegistry.hotkeys.saveHotkeyFile) {
         console.log('saveHotkeyFile function is available');
-        return { available: true, type: typeof window.saveHotkeyFile };
+        return { available: true, type: typeof window.moduleRegistry.hotkeys.saveHotkeyFile };
       } else if (window.moduleRegistry?.hotkeys?.saveHotkeyFile) {
         console.log('saveHotkeyFile available via moduleRegistry');
         return { available: true, type: 'moduleRegistry', source: 'moduleRegistry.hotkeys.saveHotkeyFile' };
@@ -1237,8 +1237,8 @@ test.describe('Hotkeys - save & load', () => {
     // Mock the playSongFromId function to track which song gets played
     let playedSongId = null;
     await page.evaluate(() => {
-      window.originalPlaySongFromId = window.playSongFromId;
-      window.playSongFromId = (songId) => {
+      window.originalPlaySongFromId = window.moduleRegistry.audio.playSongFromId;
+      window.moduleRegistry.audio.playSongFromId = (songId) => {
         window.lastPlayedSongId = songId;
         console.log(`🎵 Mock playSongFromId called with song ID: ${songId}`);
       };
@@ -1294,8 +1294,8 @@ test.describe('Hotkeys - save & load', () => {
           if (span && span.textContent && span.textContent.length > 0) {
             const song_id = tab3F1.getAttribute('songid');
             console.log('Manually triggering playback for song ID:', song_id);
-            if (song_id && window.playSongFromId) {
-              window.playSongFromId(song_id);
+            if (song_id && window.moduleRegistry.audio.playSongFromId) {
+              window.moduleRegistry.audio.playSongFromId(song_id);
             }
           }
         }
@@ -1352,7 +1352,7 @@ test.describe('Hotkeys - save & load', () => {
     // Restore original function
     await page.evaluate(() => {
       if (window.originalPlaySongFromId) {
-        window.playSongFromId = window.originalPlaySongFromId;
+        window.moduleRegistry.audio.playSongFromId = window.originalPlaySongFromId;
         delete window.originalPlaySongFromId;
       }
       delete window.lastPlayedSongId;
@@ -1783,7 +1783,7 @@ test.describe('Hotkeys - save & load', () => {
       await testPage.click('body');
       await testPage.waitForLoadState('domcontentloaded');
       await testPage.waitForFunction(
-        () => window.moduleRegistry?.hotkeys && typeof window.populateHotkeys === 'function',
+        () => window.moduleRegistry?.hotkeys && typeof window.moduleRegistry.hotkeys.populateHotkeys === 'function',
         { timeout: 15000 }
       );
 

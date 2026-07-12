@@ -94,7 +94,7 @@ export default class HotkeysEvents {
         const span = li.querySelector('span');
         if (span && (span.textContent || '').length) {
           const song_id = li.getAttribute('songid');
-          if (song_id && window.playSongFromId) {
+          if (song_id && this.moduleRegistry.audio?.playSongFromId) {
             this.debugLog?.info('🎵 Playing song from hotkey double-click', {
               module: 'hotkeys-events',
               function: 'attachPlaybackEvents',
@@ -102,13 +102,13 @@ export default class HotkeysEvents {
               tab_id: hotkeysContainer.id
             });
             window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'hotkey' });
-            window.playSongFromId(song_id);
+            this.moduleRegistry.audio.playSongFromId(song_id);
           } else {
             this.debugLog?.warn('Cannot play song - missing song_id or playSongFromId function', {
               module: 'hotkeys-events',
               function: 'attachPlaybackEvents',
               song_id: song_id,
-              hasPlayFunction: !!window.playSongFromId,
+              hasPlayFunction: !!this.moduleRegistry.audio?.playSongFromId,
               tab_id: hotkeysContainer.id
             });
           }

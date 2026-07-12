@@ -101,10 +101,7 @@ const moduleRegistry = {};
 
               const invokeWhenReady = () => {
                 try {
-                  const openFn =
-                    (typeof window.openPreferencesModal === 'function'
-                      ? window.openPreferencesModal
-                      : moduleRegistry.preferences?.openPreferencesModal) || null;
+                  const openFn = moduleRegistry.preferences?.openPreferencesModal || null;
 
                   if (openFn) {
                     openFn();
@@ -577,14 +574,21 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     // Call functions that depend on loaded modules
     try {
       moduleRegistry.ui?.scaleScrollable?.();
-      // Ensure categories are populated after database module is loaded
-      if (window.populateCategorySelect) {
-        window.logInfo('Attempting to populate categories...');
-        await window.populateCategorySelect();
-        window.logInfo('Categories populated successfully');
-      } else {
-        window.logWarn('populateCategorySelect function not available');
+
+      if (!moduleRegistry.categories?.populateCategorySelect) {
+        throw new Error('Categories module cannot populate the category select');
       }
+      window.logInfo('Attempting to populate categories...');
+      await moduleRegistry.categories.populateCategorySelect();
+      window.logInfo('Categories populated successfully');
+
+      if (!moduleRegistry.search?.performLiveSearch) {
+        throw new Error('Search module cannot perform the initial search');
+      }
+      window.logInfo('Loading initial search results...');
+      await moduleRegistry.search.performLiveSearch('');
+      window.logInfo('Initial search results loaded successfully');
+
       window.logInfo('Module-dependent functions called successfully!');
     } catch (error) {
       window.logError('Error calling module-dependent functions', error);

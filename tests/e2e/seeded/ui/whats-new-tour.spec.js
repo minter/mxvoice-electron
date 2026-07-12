@@ -214,8 +214,8 @@ test.describe("What's New Tour", () => {
     });
 
     await page.evaluate(async () => {
-      if (typeof window.openPreferencesModal === 'function') {
-        await window.openPreferencesModal();
+      if (typeof window.moduleRegistry.preferences.openPreferencesModal === 'function') {
+        await window.moduleRegistry.preferences.openPreferencesModal();
       } else if (window.moduleRegistry?.preferences?.openPreferencesModal) {
         await window.moduleRegistry.preferences.openPreferencesModal();
       }
