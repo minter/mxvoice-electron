@@ -1,37 +1,7 @@
-## Adapters Module
+# Secure Renderer Adapters
 
-Provides a unified interface for accessing Electron APIs that works in both secure (context isolation enabled) and legacy (context isolation disabled) modes.
+`secure-adapter.js` provides small, consistent wrappers over `window.secureElectronAPI` for database, filesystem, path, store, audio, analytics, utility, and file-dialog operations.
 
-### Structure
-```
-adapters/
-├── secure-adapter.js  # Auto-detecting API adapter
-└── README.md
-```
+Adapter methods catch rejected or unavailable preload calls and return `{ success: false, error }`, allowing feature modules to use one response shape. The adapter does not support insecure contexts, direct IPC, or the removed `window.electronAPI` facade.
 
-### Exports
-
-`secure-adapter.js` exports the following secure adapters:
-
-- `secureDatabase` — Database operations (getCategories, searchSongs, getSongById, addSong, updateSong, deleteSong, execute, query)
-- `secureStore` — Persistent key-value store (get, set, has, delete, clear)
-- `secureFileSystem` — File system operations (read, write, exists, readdir, stat, copy, delete, mkdir)
-- `securePath` — Path utilities (join, dirname, basename, extname, resolve, parse)
-- `secureOS` — OS information (platform, homedir)
-- `secureAudio` — Audio controls (play, pause, stop, volume)
-
-### Usage
-
-```javascript
-import { secureDatabase, secureStore, securePath } from '../adapters/secure-adapter.js';
-
-const categories = await secureDatabase.getCategories();
-const value = await secureStore.get('someKey');
-const fullPath = await securePath.join(dir, filename);
-```
-
-### Notes
-
-- Automatically detects whether `window.secureElectronAPI` or `window.electronAPI` is available
-- Falls back gracefully when APIs are unavailable
-- Used by most renderer modules instead of accessing `window` APIs directly
+The preload surface is intentionally narrow. When adding an adapter method, add the corresponding vetted preload method and update the preload-surface contract tests.

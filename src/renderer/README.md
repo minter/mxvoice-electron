@@ -1,41 +1,21 @@
-## Renderer Core Infrastructure
+## Renderer Architecture
 
-This directory contains renderer-wide infrastructure used by the feature modules in `modules/`.
+The renderer uses native ES modules with no bundler. `renderer.js` initializes logging and application state, loads feature modules through `modules/app-bootstrap`, and wires DOM events through `modules/event-coordination`.
 
-### Key files
+### Boundaries
 
-- `function-registry.js`
-  - Central registry that exposes selected module functions on `window` for HTML/legacy bindings
-  - Supports fallbacks, module‑registry wiring, and validation of required functions
-  - Typical flow: set debug logger → set module registry → `registerAllFunctions()`
+- Privileged operations use `window.secureElectronAPI`, exposed by the context-isolated preload.
+- Runtime state lives in the `modules/shared-state.js` singleton.
+- Feature modules receive collaborators through bootstrap dependencies and the internal module registry.
+- The full module registry and shared-state singleton are exposed on `window` only in E2E mode.
+- A limited set of functions remains on `window` because `src/index.html` still uses inline handlers.
 
-- `event-manager.js`
-  - Replaces inline `onclick` attributes with proper event listeners
-  - Wires UI buttons/links to registered functions; supports dynamic elements via `MutationObserver`
-  - Usage: construct with `FunctionRegistry` and `debugLog`, then `initialize()`
+### Lifecycle
 
-- `function-monitor.js`
-  - Periodic health checks for critical/global functions and per‑module functions
-  - Logs issues, exposes health reports and stats, and tracks availability changes
-  - Usage: construct with `FunctionRegistry` and `debugLog`, then `startMonitoring()`
+1. Initialize logging and application state.
+2. Load modules listed in `app-bootstrap/module-config.js`.
+3. Initialize profile state, theme management, and feature modules.
+4. Attach delegated DOM and main-process event handlers.
+5. Register cleanup for animation, audio, and event-listener resources.
 
-### How these work together
-
-1. App initialization/bootstrap loads feature modules into a module registry
-2. `FunctionRegistry` registers selected functions onto `window`
-3. `EventManager` attaches event listeners that call those functions
-4. `FunctionMonitor` periodically validates availability and logs health
-5. Feature modules consume `services/` for secure, preload‑mediated APIs
-
-### Lifecycle Management
-
-- `cleanup/` module handles resource cleanup on window close (`beforeunload`)
-  - Cancels animation frames (audio time tracking)
-  - Unloads Howler.js sound instances
-  - Cleans up event listeners via event coordination
-  - Integrated automatically during bootstrap; runs best-effort cleanup
-
-### Notes
-
-- Context isolation is enabled; all privileged access goes through preload secure APIs
-- Prefer consuming `services/` and module singletons rather than touching `window` directly
+Renderer modules must not use Node.js APIs, raw IPC, `window.electronAPI`, `window.db`, or `window.store`.

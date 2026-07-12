@@ -27,9 +27,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
 // Initialize the application
 const success = await AppInitialization.initialize({
   debug: {
-    electronAPI: window.electronAPI,
-    db: window.db,
-    store: window.store
+    electronAPI: window.secureElectronAPI
   },
   environment: {
     debugMode: true,
@@ -107,9 +105,7 @@ if (success) {
 // Custom configuration
 const success = await AppInitialization.initialize({
   debug: {
-    electronAPI: window.electronAPI,
-    db: window.db,
-    store: window.store
+    electronAPI: window.secureElectronAPI
   },
   environment: {
     debugMode: true,
@@ -155,8 +151,8 @@ The module maintains full backward compatibility with existing code:
 - `window.checkSharedStateHealth()` - Health checker
 
 ### Profile State Operations
-- `window.moduleRegistry.hotkeys.requestProfileStateSave()` - Request persistence of the current hotkey and holding-tank models
-- `window.moduleRegistry.holdingTank.requestProfileStateSave()` - Request the same shared profile-state save from holding-tank workflows
+- `moduleRegistry.hotkeys.requestProfileStateSave()` - Request persistence of the current hotkey and holding-tank models
+- `moduleRegistry.holdingTank.requestProfileStateSave()` - Request the same shared profile-state save from holding-tank workflows
 
 ## Error Handling
 

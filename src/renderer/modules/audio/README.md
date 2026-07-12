@@ -9,7 +9,6 @@ audio/
 ├── audio-controller.js  # Controls: stop, pause, loop, UI resets
 ├── audio-utils.js       # Utilities for time/progress tracking
 ├── audio-probe.js       # Test mode audio analysis (E2E only)
-├── function-registry.js # Function names and fallbacks for global registry
 ├── index.js             # Module entry; exports singleton + named bindings
 └── README.md
 ```

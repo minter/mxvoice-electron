@@ -37,11 +37,9 @@ The Hotkeys Events Module handles all hotkey-related event handlers in the Event
 ### Initialization
 ```javascript
 const hotkeysEvents = new HotkeysEvents({
-  electronAPI: window.electronAPI,
-  db: window.db,
-  store: window.store,
+  electronAPI: window.secureElectronAPI,
   debugLog: window.debugLog,
-  moduleRegistry: window.moduleRegistry
+  moduleRegistry: moduleRegistry
 });
 
 await hotkeysEvents.attachHotkeysEvents();

@@ -98,7 +98,7 @@ The search module depends on:
 - DOM utilities: `Dom` helpers from `modules/dom-utils/index.js`
 - Global variables: `fontSize`, `categories`, `db`
 - Global functions: `scale_scrollable`, `animateCSS`
-- Electron API: `window.electronAPI.database`
+- Electron API: `window.secureElectronAPI.database`
 
 ## Testing
 

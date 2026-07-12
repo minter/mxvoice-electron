@@ -13,7 +13,6 @@ ui/
 ├── modals.js            # Modal operations
 ├── bootstrap-adapter.js # Bootstrap 5 helpers (modal/tab/tooltip)
 ├── bootstrap-helpers.js # Safe modal/tab wrappers with error handling
-├── function-registry.js # Function names and fallbacks for global registry
 └── README.md            # This documentation
 ```
 
@@ -48,15 +47,13 @@ ui/
 
 ## Usage
 
-The module exports a pre-initialized singleton. To reinitialize with dependencies (as done during bootstrap), call `reinitializeUI`.
+The module exports an initializer used by app bootstrap.
 
 ```javascript
-import ui from './modules/ui/index.js';
+import initializeUI from './modules/ui/index.js';
 
-ui.reinitializeUI({
-  electronAPI: window.electronAPI,
-  db: window.db,
-  store: window.store
+const ui = initializeUI({
+  electronAPI: window.secureElectronAPI
 });
 
 ui.scaleScrollable();
@@ -176,7 +173,6 @@ hideAllTooltips(); // Force hide all tooltips
 
 The module includes comprehensive error handling:
 
-- **API Fallbacks** - Falls back to legacy APIs when modern APIs fail
 - **Graceful Degradation** - Continues to work even if some features are unavailable
 - **Console Logging** - Detailed logging for debugging
 - **User Feedback** - Clear error messages and confirmations
@@ -257,4 +253,3 @@ All legacy function names are preserved for backward compatibility. The module c
 - **v1.0.0** - Initial release with complete UI functionality extraction
 - Modular architecture with clear separation of concerns
 - Comprehensive error handling and fallback mechanisms
-- Full backward compatibility with existing code 

@@ -39,9 +39,9 @@ The system includes several specialized event handler modules:
 import EventCoordination from './modules/event-coordination/index.js';
 
 const events = new EventCoordination({
-  electronAPI: window.electronAPI,
+  electronAPI: window.secureElectronAPI,
   debugLog: window.debugLog,
-  moduleRegistry: window.moduleRegistry
+  moduleRegistry: moduleRegistry
 });
 
 await events.initialize();

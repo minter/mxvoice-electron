@@ -84,7 +84,7 @@ import themeManagement from './modules/theme-management/index.js';
 
 // Initialize with preferences module
 await themeManagement.initThemeManagement({
-  preferencesModule: window.preferencesModule
+  preferencesModule: preferencesModule
 });
 ```
 

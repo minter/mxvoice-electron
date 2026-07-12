@@ -77,7 +77,7 @@ hotkeys/
 import HotkeysModule from './modules/hotkeys/index.js';
 
 const hotkeys = new HotkeysModule({
-  electronAPI: window.electronAPI,
+  electronAPI: window.secureElectronAPI,
   db: db,
   store: store
 });

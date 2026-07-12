@@ -298,9 +298,7 @@ debugLog.debug("Debug info", { data: data });
 import debugLog from './modules/debug-log/index.js';
 
 debugLog.reinitializeDebugLog({
-  electronAPI: window.electronAPI,
-  db: window.db,
-  store: window.store
+  electronAPI: window.secureElectronAPI
 });
 ```
 
@@ -360,7 +358,7 @@ debugLog.info("Operation completed", context);
 ## Integration with Centralized Log Service
 
 - All renderer logs still show in DevTools for advanced users.
-- The same logs are forwarded to the main process via `window.secureElectronAPI.logs.write` (also available under `window.electronAPI.logs` for compatibility) and persisted to files under `userData/logs/`.
+- The same logs are forwarded to the main process via `window.secureElectronAPI.logs.write` and persisted to files under `userData/logs/`.
 - Errors and warnings from the renderer `console` and unhandled errors/rejections are mirrored to the centralized log service by preload.
 - Rotation: daily file (selected at app start) with 5 MB rollover; retention: 14 days (pruned at app start).
 - Users can export recent logs via the app menu (“Export Logs…”) or programmatically via `window.secureElectronAPI.logs.export({ days })`.
