@@ -5,16 +5,20 @@ function handlePlaybackCompleted({ sound, songId, sharedState, onSongEnded, repl
     sound.unload();
     return 'stale';
   }
+  return completeActivePlayback({ songId, sharedState, onSongEnded, replaySong, autoplayNext });
+}
+
+function completeActivePlayback({ songId, sharedState, onSongEnded, replaySong, autoplayNext }) {
   onSongEnded();
   const action = determinePlaybackCompletionAction({
     loop: sharedState.get('loop'),
     autoplay: sharedState.get('autoplay'),
     holdingTankMode: sharedState.get('holdingTankMode')
   });
-  if (action === 'loop') replaySong(songId);
+  if (action === 'loop' && songId) replaySong(songId);
   if (action === 'autoplay') autoplayNext();
   return action;
 }
 
-export { handlePlaybackCompleted };
+export { completeActivePlayback, handlePlaybackCompleted };
 export default handlePlaybackCompleted;

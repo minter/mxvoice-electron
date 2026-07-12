@@ -17,8 +17,9 @@ import { prepareCrossfadeTransition } from './crossfade-transition.js';
 import { presentPlaybackStarted } from './playback-ui-presenter.js';
 import { createPlaybackSound } from './playback-sound-factory.js';
 import { handlePlaybackStarted } from './playback-start.js';
-import { handlePlaybackCompleted } from './playback-completion.js';
+import { completeActivePlayback, handlePlaybackCompleted } from './playback-completion.js';
 import { parseCrossfadePreference, prepareForPlaybackReplacement } from './playback-replacement.js';
+import { loadSongForPlayback } from './playback-song-loader.js';
 import {
   calculatePlaybackVolume,
   getCrossfadePolicy,
@@ -424,47 +425,14 @@ async function playSongFromId(song_id, options = {}) {
 
   prepareForPlaybackReplacement({ sharedState, crossfade: options.crossfade });
 
-  secureDatabase
-    .getSongById(song_id)
-    .then((result) => {
-      if (result.success && result.data.length > 0) {
-        const row = result.data[0];
-        const filename = row.filename;
-
-        if (!filename) {
-          getDebugLog()?.error('No filename found for song ID', {
-            module: 'audio-manager',
-            function: 'playSongFromId',
-            song_id: song_id,
-            rowData: row,
-          });
-          return;
-        }
-
-        playSongWithFilename(filename, row, song_id, options);
-      } else {
-        getDebugLog()?.error('No song found with ID or query failed', {
-          module: 'audio-manager',
-          function: 'playSongFromId',
-          song_id: song_id,
-          result_success: result?.success,
-          result_data_length: result?.data?.length || 0,
-          result_error: result?.error || null,
-        });
-      }
-    })
-    .catch((error) => {
-      getDebugLog()?.error('Database query error', {
-        module: 'audio-manager',
-        function: 'playSongFromId',
-        song_id: song_id,
-        error: error.message,
-        error_stack:
-          error.stack?.split('\n').slice(0, 3).join('\n') || 'No stack trace',
-      });
+  const song = await loadSongForPlayback(song_id, secureDatabase);
+  if (!song.success) {
+    getDebugLog()?.error('Could not load song for playback', {
+      module: 'audio-manager', function: 'playSongFromId', song_id, error: song.error
     });
-
-  return; // Exit early since we're handling the rest in playSongWithFilename
+    return;
+  }
+  playSongWithFilename(song.filename, song.row, song_id, options);
 }
 
 /**
@@ -516,17 +484,15 @@ function songEndedFromTrimPoint() {
     module: 'audio-manager',
     function: 'songEndedFromTrimPoint'
   });
-  song_ended();
-  const loop = sharedState.get('loop');
-  const autoplay = sharedState.get('autoplay');
-  const holdingTankMode = sharedState.get('holdingTankMode');
   const nowPlayingEl = document.getElementById('song_now_playing');
   const currentSongId = nowPlayingEl?.getAttribute('songid');
-  if (loop && currentSongId) {
-    playSongFromId(currentSongId);
-  } else if (autoplay && holdingTankMode === 'playlist') {
-    autoplay_next();
-  }
+  completeActivePlayback({
+    songId: currentSongId,
+    sharedState,
+    onSongEnded: song_ended,
+    replaySong: playSongFromId,
+    autoplayNext: autoplay_next
+  });
 }
 
 // Register on window so audio-utils.js can call it
