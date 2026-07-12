@@ -3,6 +3,11 @@
  * 
  * Core functions for handling navigation operations
  */
+let moduleRegistry = {};
+
+export function configureNavigationDependencies(dependencies = {}) {
+  moduleRegistry = dependencies.moduleRegistry || {};
+}
 
 /**
  * Sends selected song to hotkeys
@@ -19,7 +24,7 @@ export function sendToHotkeys() {
     return false;
   }
   if (target && songId) {
-    window.moduleRegistry?.hotkeys?.setLabelFromSongId?.(songId, target);
+    moduleRegistry.hotkeys?.setLabelFromSongId?.(songId, target);
   }
   return false;
 }
@@ -33,10 +38,10 @@ export function sendToHoldingTank() {
   const target = document.querySelector('.holding_tank.active');
   const songId = document.getElementById('selected_row')?.getAttribute('songid');
   if (songId) {
-    if (window.moduleRegistry?.holdingTank?.addToHoldingTank) {
-      window.moduleRegistry.holdingTank.addToHoldingTank(songId, target).then(result => {
-        if (result && result.success && window.moduleRegistry?.holdingTank?.requestProfileStateSave) {
-          window.moduleRegistry.holdingTank.requestProfileStateSave();
+    if (moduleRegistry.holdingTank?.addToHoldingTank) {
+      moduleRegistry.holdingTank.addToHoldingTank(songId, target).then(result => {
+        if (result && result.success && moduleRegistry.holdingTank?.requestProfileStateSave) {
+          moduleRegistry.holdingTank.requestProfileStateSave();
         }
       }).catch(err => { window.debugLog?.warn('Failed to add to holding tank (registry)', { module: 'navigation', function: 'sendToHoldingTank', error: err?.message }); });
     }

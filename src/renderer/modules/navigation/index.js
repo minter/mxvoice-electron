@@ -5,7 +5,13 @@
  * and sending songs to different containers
  */
 
-import { sendToHotkeys, sendToHoldingTank, selectNext, selectPrev } from './navigation-functions.js';
+import {
+  configureNavigationDependencies,
+  sendToHotkeys,
+  sendToHoldingTank,
+  selectNext,
+  selectPrev
+} from './navigation-functions.js';
 import { setupNavigationEventHandlers } from './event-handlers.js';
 
 // Import debug logger
@@ -39,9 +45,6 @@ class NavigationModule {
   initializeNavigation() {
     // Setup event handlers for navigation
     setupNavigationEventHandlers();
-    // Global exposure is handled centrally by the function registry to avoid duplicates
-    // Do not assign navigation functions directly to window here
-
     debugLog?.info('Navigation Module initialized', { 
       module: 'navigation',
       function: 'initializeNavigation'
@@ -53,12 +56,14 @@ class NavigationModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(_dependencies = {}) {
+  async init(dependencies = {}) {
     try {
       debugLog?.info('Navigation module initializing...', { 
         module: 'navigation', 
         function: 'init' 
       });
+
+      configureNavigationDependencies(dependencies);
 
       // Call the existing initialization logic
       this.initializeNavigation();
@@ -138,4 +143,4 @@ class NavigationModule {
 const navigationModule = new NavigationModule();
 
 // Default export for module loading
-export default navigationModule; 
+export default navigationModule;
