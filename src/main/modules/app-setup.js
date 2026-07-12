@@ -10,6 +10,7 @@ import log from 'electron-log';
 import { getLogService } from './log-service.js';
 import * as profileManager from './profile-manager.js';
 import { isAllowedAboutExternalUrl } from './about-external-url.js';
+import { createRendererCommandDispatcher } from './renderer-command-dispatcher.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -34,6 +35,7 @@ let isQuitting = false;
 let shutdownComplete = false;
 let windowStateSaveTimeout = null;
 let closePreparationPromise = null;
+let rendererCommands;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -46,6 +48,10 @@ function initializeAppSetup(dependencies) {
   autoBackupTimer = dependencies.autoBackupTimer;
   analytics = dependencies.analytics;
   appStartTime = dependencies.appStartTime;
+  rendererCommands = createRendererCommandDispatcher({
+    getWindow: () => mainWindow,
+    debugLog
+  });
 }
 
 // Create the main window
@@ -1083,58 +1089,35 @@ function showAboutDialog() {
   }
 }
 function increaseFontSize() {
-  debugLog?.info('Increasing font size', { module: 'app-setup', function: 'increaseFontSize' });
-  if (mainWindow) {
-    mainWindow.webContents.send("increase_font_size");
-  }
+  return rendererCommands?.increaseFontSize();
 }
 
 function decreaseFontSize() {
-  debugLog?.info("Decreasing font size", { module: 'app-setup', function: 'decreaseFontSize' });
-  if (mainWindow) {
-    mainWindow.webContents.send("decrease_font_size");
-  }
+  return rendererCommands?.decreaseFontSize();
 }
 
 function toggleWaveform() {
-  debugLog?.info("Toggling waveform", { module: 'app-setup', function: 'toggleWaveform' });
-  if (mainWindow) {
-    mainWindow.webContents.send("toggle_wave_form");
-  }
+  return rendererCommands?.toggleWaveform();
 }
 
 function toggleAdvancedSearch() {
-  debugLog?.info("Toggling advanced search", { module: 'app-setup', function: 'toggleAdvancedSearch' });
-  if (mainWindow) {
-    mainWindow.webContents.send("toggle_advanced_search");
-  }
+  return rendererCommands?.toggleAdvancedSearch();
 }
 
 function closeAllTabs() {
-  if (mainWindow) {
-    mainWindow.webContents.send("close_all_tabs");
-  }
+  return rendererCommands?.closeAllTabs();
 }
 
 function sendDeleteSong() {
-  debugLog?.info('Sending delete_selected_song message', { module: 'app-setup', function: 'sendDeleteSong' });
-  if (mainWindow) {
-    mainWindow.webContents.send('delete_selected_song');
-  }
+  return rendererCommands?.deleteSelectedSong();
 }
 
 function sendEditSong() {
-  debugLog?.info('Sending edit_selected_song message', { module: 'app-setup', function: 'sendEditSong' });
-  if (mainWindow) {
-    mainWindow.webContents.send('edit_selected_song');
-  }
+  return rendererCommands?.editSelectedSong();
 }
 
 function manageCategories() {
-  debugLog?.info('Sending manage_categories message', { module: 'app-setup', function: 'manageCategories' });
-  if (mainWindow) {
-    mainWindow.webContents.send('manage_categories');
-  }
+  return rendererCommands?.manageCategories();
 }
 
 // Setup app lifecycle events
