@@ -47,10 +47,11 @@ export class DataPreloader {
     try {
       this.logInfo('Loading column order from profile preferences...');
       
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const electronAPI = window.secureElectronAPI;
       if (!electronAPI || !electronAPI.profile) {
         this.logWarn('Profile API not available, trying global store');
-        const hasColumnOrder = await secureStore.has("column_order");
+        const hasColumnOrderResult = await secureStore.has("column_order");
+        const hasColumnOrder = hasColumnOrderResult?.success && hasColumnOrderResult.has;
         this.logInfo(`Column order exists in global store: ${hasColumnOrder}`);
         
         if (hasColumnOrder) {
@@ -148,8 +149,8 @@ export class DataPreloader {
   async loadFontSize() {
     try {
       // Try to load from profile preferences first (new system)
-      if (window.electronAPI && window.electronAPI.profile) {
-        const result = await window.electronAPI.profile.getPreference('font_size');
+      if (window.secureElectronAPI?.profile) {
+        const result = await window.secureElectronAPI.profile.getPreference('font_size');
         if (result && result.success && result.value !== undefined && result.value !== null) {
           this.logInfo(`Font size loaded from profile preferences: ${result.value}`);
           return;
@@ -157,13 +158,14 @@ export class DataPreloader {
       }
 
       // Fallback to legacy store for backward compatibility
-      const hasFontSize = await secureStore.has("font-size");
-      if (hasFontSize) {
-        const size = await secureStore.get("font-size");
+      const hasFontSizeResult = await secureStore.has("font-size");
+      if (hasFontSizeResult?.success && hasFontSizeResult.has) {
+        const sizeResult = await secureStore.get("font-size");
+        const size = sizeResult?.success ? sizeResult.value : null;
         if (size !== undefined && size !== null) {
           // Migrate to profile preferences if available
-          if (window.electronAPI && window.electronAPI.profile) {
-            await window.electronAPI.profile.setPreference('font_size', size);
+          if (window.secureElectronAPI?.profile) {
+            await window.secureElectronAPI.profile.setPreference('font_size', size);
             this.logInfo(`Font size migrated from legacy store to profile: ${size}`);
           } else {
             this.logInfo(`Font size loaded from legacy store: ${size}`);

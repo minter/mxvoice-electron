@@ -171,7 +171,7 @@ export class EnvironmentSetup {
       modules: this.checkModuleSupport(),
       
       // Electron specific
-      electronAPI: typeof window.electronAPI !== 'undefined'
+      electronAPI: typeof window.secureElectronAPI !== 'undefined'
     };
 
     this.logInfo('System capabilities checked', capabilities);
