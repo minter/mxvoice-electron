@@ -40,7 +40,7 @@
     "test:debug": "playwright test --debug",
     "test:report": "playwright show-report",
     "test:install": "playwright install",
-    "test:smoke": "playwright test tests/e2e/smoke.spec.js",
+    "test:smoke": "npm run build:preload && playwright test --config playwright.smoke.config.js",
     "test:validate": "node tests/setup/test-runner.js",
     "test:isolate": "node tests/setup/verify-isolation.js",
     "test:run": "./tests/run-tests.sh",
