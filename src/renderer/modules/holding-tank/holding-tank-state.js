@@ -50,6 +50,16 @@ export class HoldingTankState {
     return removed;
   }
 
+  replaceTab(tabNumber, songIds) {
+    if (!Array.isArray(songIds)) throw new TypeError('songIds must be an array');
+    const tab = getValidTab(this.tabs, tabNumber);
+    const normalized = songIds.map(normalizeSongId);
+    if (normalized.length === tab.songIds.length && normalized.every((id, index) => id === tab.songIds[index])) return false;
+    tab.songIds = normalized;
+    this.#notify();
+    return true;
+  }
+
   clearTab(tabNumber) {
     const tab = getValidTab(this.tabs, tabNumber);
     if (tab.songIds.length === 0) return false;

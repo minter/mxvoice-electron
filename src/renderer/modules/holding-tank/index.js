@@ -62,6 +62,15 @@ export function syncHoldingTankStateFromDom() {
   return holdingTankState.toSnapshot();
 }
 
+export function syncActiveHoldingTankStateFromDom() {
+  const activeTab = document.querySelector('.holding_tank.active');
+  const tabNumber = Number(activeTab?.id?.match(/^holding_tank_(\d)$/)?.[1]);
+  if (!tabNumber) return false;
+  const songIds = [...activeTab.querySelectorAll('li.list-group-item[songid]')]
+    .map(element => element.getAttribute('songid')).filter(Boolean);
+  return holdingTankState.replaceTab(tabNumber, songIds);
+}
+
 export function getHoldingTankSnapshot() {
   return holdingTankState.toSnapshot();
 }
@@ -367,6 +376,8 @@ export function addToHoldingTank(song_id, element, insertPosition) {
         targetEl.appendChild(song_row);
       }
 
+      syncActiveHoldingTankStateFromDom();
+
       // Note: Save is now done by caller, not here, to avoid N saves during batch operations
       return { success: true, songId: song_id, title: title };
     } else {
@@ -415,6 +426,7 @@ export function removeFromHoldingTank() {
             // Remove the selected row from the holding tank
             const selected = document.getElementById('selected_row');
             if (selected) selected.parentElement?.removeChild(selected);
+            syncActiveHoldingTankStateFromDom();
             // Clear the selection
             document.getElementById('selected_row')?.removeAttribute('id');
             // Save the updated holding tank to store
@@ -468,6 +480,7 @@ export function removeSelected() {
     const selected = document.getElementById('selected_row');
     if (selected) {
       selected.remove();
+      syncActiveHoldingTankStateFromDom();
       // Clear the selection
       document.getElementById('selected_row')?.removeAttribute('id');
       // Save the updated holding tank to store
@@ -503,6 +516,7 @@ export async function clearHoldingTank() {
   const confirmed = await customConfirm("Are you sure you want clear your holding tank?");
   if (confirmed) {
     Dom.empty('.holding_tank.active');
+    syncActiveHoldingTankStateFromDom();
     saveHoldingTankToStore();
     window.secureElectronAPI?.analytics?.trackEvent?.('holding_tank_used', { action: 'clear' });
     return { success: true };
@@ -573,6 +587,9 @@ export async function renameHoldingTankTab() {
   const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Holding Tank Tab");
   if (newName && newName.trim() !== "") {
     Dom.text('#holding_tank_tabs .nav-link.active', newName);
+    const tabNumber = Number(document.querySelector('#holding_tank_tabs .nav-link.active')
+      ?.getAttribute('href')?.match(/^#holding_tank_(\d)$/)?.[1]);
+    if (tabNumber) holdingTankState.renameTab(tabNumber, newName);
     saveHoldingTankToStore();
     return { success: true, newName: newName };
   } else {
@@ -665,5 +682,6 @@ export default {
   getHoldingTankSnapshot,
   loadHoldingTankSnapshot,
   syncHoldingTankStateFromDom,
+  syncActiveHoldingTankStateFromDom,
   restoreHoldingTankSnapshot
 };

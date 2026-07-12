@@ -24,6 +24,13 @@ describe('HoldingTankState', () => {
     expect(state.toSnapshot()[1].songIds).toEqual(['17', '19']);
   });
 
+  it('atomically replaces a tab order while preserving duplicates', () => {
+    const state = new HoldingTankState([{ tabNumber: 1, songIds: ['17', '18'] }]);
+    state.replaceTab(1, ['18', '17', '18']);
+    expect(state.toSnapshot()[0].songIds).toEqual(['18', '17', '18']);
+    expect(state.replaceTab(1, ['18', '17', '18'])).toBe(false);
+  });
+
   it('clears and renames tabs without exposing internal arrays', () => {
     const state = new HoldingTankState([{ tabNumber: 1, songIds: ['17'] }]);
     const listener = vi.fn();

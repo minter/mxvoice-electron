@@ -253,6 +253,7 @@ export function holdingTankReorderDrop(event) {
   draggedItem.classList.add('holding-tank-flash');
 
   // Save the new order
+  window.moduleRegistry?.holdingTank?.syncActiveHoldingTankStateFromDom?.();
   if (typeof window.saveHoldingTankToStore === 'function') {
     window.saveHoldingTankToStore();
   }
@@ -350,4 +351,4 @@ export function clearHoldingTankDropIndicators() {
       el.classList.remove('holding-tank-drop-above', 'holding-tank-drop-below');
     });
   }
-} 
+}
