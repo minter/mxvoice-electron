@@ -158,7 +158,7 @@ test.describe('Categories - management', () => {
       }
       
       // Verify the add new category form is present
-      const addForm = modal.locator('form[onsubmit="addNewCategory(event)"]');
+      const addForm = modal.locator('#newCategoryForm');
       await expect(addForm).toBeVisible();
       
       const newCategoryInput = modal.locator('#newCategoryDescription');
@@ -818,4 +818,3 @@ test.describe('Categories - management', () => {
     }
   });
 });
-

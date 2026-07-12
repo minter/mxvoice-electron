@@ -287,9 +287,10 @@ export default class AudioControlEvents {
     const loopButtonHandler = (_event) => {
       try {
         this.debugLog?.debug('Loop button clicked');
-        this.debugLog?.debug('window.loop_on function', typeof window.loop_on);
-        
-        if (window.loop_on) {
+        const setLoop = this.moduleRegistry.audio?.loop_on?.bind(this.moduleRegistry.audio);
+        this.debugLog?.debug('audio.loop_on function', typeof setLoop);
+
+        if (setLoop) {
           // Get current loop state from shared state
           if (this.electronAPI && this.electronAPI.store) {
             import('../shared-state.js').then(sharedStateModule => {
@@ -299,22 +300,22 @@ export default class AudioControlEvents {
               
               this.debugLog?.debug('Toggling loop state', { currentLoop, newLoop });
               sharedState.set('loop', newLoop);
-              window.loop_on(newLoop);
+              setLoop(newLoop);
             }).catch(error => {
               this.debugLog?.error('Failed to import shared state', error);
               // Fallback to simple toggle
               const loopButton = document.getElementById('loop_button');
               const isActive = loopButton?.classList.contains('active') || false;
-              window.loop_on(!isActive);
+              setLoop(!isActive);
             });
           } else {
             // Fallback to simple toggle
             const loopButton = document.getElementById('loop_button');
             const isActive = loopButton?.classList.contains('active') || false;
-            window.loop_on(!isActive);
+            setLoop(!isActive);
           }
         } else {
-          this.debugLog?.error('loop_on function not available');
+          this.debugLog?.error('audio.loop_on function not available');
         }
       } catch (error) {
         this.debugLog?.error('Error in loop button handler:', error);
@@ -333,8 +334,8 @@ export default class AudioControlEvents {
   attachWaveformDisplayEvents() {
     const waveformButtonHandler = (_event) => {
       try {
-        if (window.toggleWaveform) {
-          window.toggleWaveform();
+        if (this.moduleRegistry.ui?.toggleWaveform) {
+          this.moduleRegistry.ui.toggleWaveform();
         } else {
           this.debugLog?.warn('toggleWaveform function not available');
         }

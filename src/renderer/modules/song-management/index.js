@@ -11,7 +11,14 @@
  * @module song-management
  */
 
-import { saveEditedSong, saveNewSong, editSelectedSong, deleteSelectedSong, startAddNewSong } from './song-crud.js';
+import {
+  configureSongCrudDependencies,
+  saveEditedSong,
+  saveNewSong,
+  editSelectedSong,
+  deleteSelectedSong,
+  startAddNewSong
+} from './song-crud.js';
 import {
   configureSongRemovalDependencies,
   deleteSong,
@@ -60,6 +67,7 @@ class SongManagementModule {
       });
 
       configureSongRemovalDependencies(dependencies);
+      configureSongCrudDependencies(dependencies);
 
       // Initialize song management functionality
       this.setupSongManagement();
@@ -88,6 +96,17 @@ class SongManagementModule {
       module: 'song-management', 
       function: 'setupSongManagement' 
     });
+
+    const songForm = document.querySelector('#songFormModal form');
+    if (songForm && !songForm.dataset.registrySubmitBound) {
+      songForm.addEventListener('submit', (event) => {
+        const handler = songForm.dataset.songFormMode === 'edit'
+          ? this.saveEditedSong
+          : this.saveNewSong;
+        handler(event);
+      });
+      songForm.dataset.registrySubmitBound = 'true';
+    }
   }
 
   /**

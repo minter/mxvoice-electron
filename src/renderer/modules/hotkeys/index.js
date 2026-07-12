@@ -23,6 +23,7 @@ import HotkeyState from './hotkey-state.js';
 
 // Import secure adapters for UI operations
 import { secureFileDialog } from '../adapters/secure-adapter.js';
+import { customConfirm, customPrompt } from '../utils/index.js';
 
 /**
  * Hotkeys Module Class

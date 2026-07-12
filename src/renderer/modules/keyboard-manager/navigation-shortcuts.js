@@ -157,19 +157,7 @@ export class NavigationShortcuts {
    */
   setupDeletionControls() {
     try {
-      // Backspace and Delete for removal/deletion
-      Mousetrap.bind(["backspace", "del"], () => {
-        return this.handleDeletion();
-      });
-      
-      this.bindings.set("backspace|del", {
-        key: "backspace|del",
-        handler: 'handleDeletion',
-        context: 'global',
-        description: 'Delete selected item based on context'
-      });
-      
-      this.logInfo('Deletion control shortcuts set up successfully');
+      this.logInfo('Deletion controls are managed by the keyboard shortcut registry');
     } catch (error) {
       this.logError('Error setting up deletion control shortcuts:', error);
     }

@@ -35,7 +35,7 @@ function setupMainProcessEventBridge({
     () => logWarn('populateHotkeys not yet available when fkey_load fired')
   ));
   register('onAddDialogLoad', (filename, metadata) => callFirstAvailable(
-    [moduleRegistry.songManagement?.startAddNewSong], [filename, metadata],
+    [moduleRegistry.songManagement?.startAddNewSong?.bind(moduleRegistry.songManagement)], [filename, metadata],
     () => logWarn('startAddNewSong not available when add_dialog_load fired')
   ));
   register('onBulkAddDialogLoad', (dirname) => callFirstAvailable(
@@ -68,7 +68,7 @@ function setupMainProcessEventBridge({
   ];
   uiEvents.forEach(([eventName, commandName, channelName]) => {
     register(eventName, () => callFirstAvailable(
-      [moduleRegistry.ui?.[commandName]], [],
+      [moduleRegistry.ui?.[commandName]?.bind(moduleRegistry.ui)], [],
       () => logWarn(`${commandName} not available when ${channelName} fired`)
     ));
   });

@@ -107,7 +107,11 @@ export class KeyboardManager {
       // Register Delete/Backspace for hotkey removal
       this.shortcutRegistry.registerShortcut(['del', 'backspace'], () => {
         // Find the selected row using either the ID or the class for consistency
-        const selected = document.querySelector('#selected_row, .selected-row');
+        // Prefer component selection state over the legacy search-row ID.
+        const selectedHotkey = window.currentSelectedHotkey
+          ? document.getElementById(window.currentSelectedHotkey)
+          : null;
+        const selected = selectedHotkey || document.querySelector('.selected-row, #selected_row');
 
         if (!selected) {
           this.logInfo('Delete pressed but no row is selected');

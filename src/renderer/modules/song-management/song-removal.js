@@ -23,6 +23,7 @@ import {
   securePath,
   secureStore
 } from '../adapters/secure-adapter.js';
+import { customConfirm } from '../utils/index.js';
 
 let moduleRegistry = {};
 

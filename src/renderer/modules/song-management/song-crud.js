@@ -29,6 +29,16 @@ import {
 } from '../adapters/secure-adapter.js';
 import { populateCategorySelect, findUniqueCategoryCode, refreshCategories } from '../categories/category-data.js';
 
+let moduleRegistry = {};
+
+export function configureSongCrudDependencies(dependencies = {}) {
+  moduleRegistry = dependencies.moduleRegistry || {};
+}
+
+function refreshSearchResults() {
+  return moduleRegistry.search?.searchData?.();
+}
+
 /**
  * Parse a MM:SS string into total seconds. Returns null if empty/invalid.
  * @param {string} mmss - Time string like "1:30" or "0:45"
@@ -136,9 +146,7 @@ export async function saveEditedSong(event) {
 
   const omni = document.getElementById('omni_search');
   if (omni) omni.value = title;
-  if (typeof searchData === 'function') {
-    searchData();
-  }
+  await refreshSearchResults();
 }
 
 /**
@@ -243,7 +251,7 @@ export async function saveNewSong(event) {
 
     const omni2 = document.getElementById('omni_search');
     if (omni2) omni2.value = title;
-    if (typeof searchData === 'function') searchData();
+    await refreshSearchResults();
   } catch (error) {
     debugLog?.warn('❌ Error in saveNewSong:', { module: 'song-management', function: 'saveNewSong', error: error?.message });
   }
@@ -299,7 +307,7 @@ export async function editSelectedSong() {
 
     // Prepare and show modal
     const editForm = document.querySelector('#songFormModal form');
-    if (editForm) editForm.setAttribute('onsubmit','saveEditedSong(event)');
+    if (editForm) editForm.dataset.songFormMode = 'edit';
     const mTitle = document.getElementById('songFormModalTitle');
     if (mTitle) mTitle.textContent = 'Edit This Song';
     const mBtn = document.getElementById('songFormSubmitButton');
@@ -421,7 +429,7 @@ export async function startAddNewSong(filename, metadata = null) {
 
     // Prepare and show modal for adding
     const addForm = document.querySelector('#songFormModal form');
-    if (addForm) addForm.setAttribute('onsubmit','saveNewSong(event)');
+    if (addForm) addForm.dataset.songFormMode = 'add';
     const addTitle = document.getElementById('songFormModalTitle');
     if (addTitle) addTitle.textContent = 'Add New Song';
     const addBtn = document.getElementById('songFormSubmitButton');
@@ -465,14 +473,14 @@ export function deleteSelectedSong() {
   if (document.getElementById('holding-tank-column')?.contains?.(document.getElementById('selected_row'))) {
     debugLog?.info("Selected row is in holding tank", { module: 'song-management', function: 'deleteSelectedSong' });
     // If in holding tank, remove from holding tank
-    removeFromHoldingTank();
+    return moduleRegistry.songManagement?.removeFromHoldingTank?.();
   } else if (document.getElementById('hotkey-tab-content')?.contains?.(document.getElementById('selected_row'))) {
     debugLog?.info("Selected row is in hotkey tab", { module: 'song-management', function: 'deleteSelectedSong' });
     // If in hotkey tab, remove from hotkey
-    removeFromHotkey();
+    return moduleRegistry.songManagement?.removeFromHotkey?.();
   } else {
     debugLog?.info("Selected row is in search results", { module: 'song-management', function: 'deleteSelectedSong' });
     // If not in holding tank or hotkey, delete from database
-    deleteSong();
+    return moduleRegistry.songManagement?.deleteSong?.();
   }
 }

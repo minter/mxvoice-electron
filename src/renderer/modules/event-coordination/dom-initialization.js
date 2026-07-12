@@ -1,3 +1,5 @@
+import { customConfirm } from '../utils/index.js';
+
 /**
  * DOM Initialization Module
  *

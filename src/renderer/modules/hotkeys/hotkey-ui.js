@@ -24,6 +24,7 @@ try {
 
 // Drag handler import for programmatic binding
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
+import { customPrompt } from '../utils/index.js';
 
 /**
  * Handle dropping songs into hotkey containers
