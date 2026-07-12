@@ -382,14 +382,8 @@ async function restoreHotkeyTabs(hotkeyTabs, _hotkeysModule) {
       hotkeyCount: Object.keys(hotkeys).length
     });
     
-    // Switch to this tab
     const tabLink = document.querySelector(`#hotkey_tabs .nav-item:nth-child(${tabNumber}) a`);
     if (tabLink) {
-      tabLink.click();
-      
-      // Wait a bit for tab to activate
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
       // Set custom tab name if exists
       if (tabName) {
         tabLink.textContent = tabName;
@@ -469,12 +463,6 @@ async function restoreHotkeyTabs(hotkeyTabs, _hotkeysModule) {
     }
   }
   
-  // Switch back to first tab
-  const firstTab = document.querySelector('#hotkey_tabs .nav-item:first-child a');
-  if (firstTab) {
-    firstTab.click();
-  }
-
   // Deleted songs are intentionally skipped above, so recapture the rendered
   // result to keep the model aligned with what the user can actually trigger.
   _hotkeysModule?.syncStateFromDom?.();
@@ -518,14 +506,8 @@ async function restoreHoldingTankTabs(holdingTankTabs, _holdingTankModule) {
     
     if (!songIds || songIds.length === 0) continue;
     
-    // Switch to this tab
     const tabLink = document.querySelector(`#holding_tank_tabs .nav-item:nth-child(${tabNumber}) a`);
     if (tabLink) {
-      tabLink.click();
-      
-      // Wait a bit for tab to activate
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
       // Set custom tab name if exists
       if (tabName) {
         tabLink.textContent = tabName;
@@ -599,11 +581,6 @@ async function restoreHoldingTankTabs(holdingTankTabs, _holdingTankModule) {
     }
   }
   
-  // Switch back to first tab
-  const firstTab = document.querySelector('#holding_tank_tabs .nav-item:first-child a');
-  if (firstTab) {
-    firstTab.click();
-  }
   _holdingTankModule?.syncHoldingTankStateFromDom?.();
 }
 
