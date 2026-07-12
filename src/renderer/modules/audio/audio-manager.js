@@ -17,9 +17,9 @@ import { prepareCrossfadeTransition } from './crossfade-transition.js';
 import { presentPlaybackStarted } from './playback-ui-presenter.js';
 import { createPlaybackSound } from './playback-sound-factory.js';
 import { handlePlaybackStarted } from './playback-start.js';
+import { handlePlaybackCompleted } from './playback-completion.js';
 import {
   calculatePlaybackVolume,
-  determinePlaybackCompletionAction,
   getCrossfadePolicy,
   getTrackBounds
 } from './playback-policy.js';
@@ -313,24 +313,12 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                 });
               },
               onEnd: function () {
-                // If this sound is no longer the active sound (crossfade already
-                // started the next track), just unload quietly
-                if (sharedState.get('sound') !== sound) {
-                  sound.unload();
-                  return;
-                }
-                song_ended();
-                const completionAction = determinePlaybackCompletionAction({
-                  loop: sharedState.get('loop'),
-                  autoplay: sharedState.get('autoplay'),
-                  holdingTankMode: sharedState.get('holdingTankMode')
+                handlePlaybackCompleted({
+                  sound, songId: song_id, sharedState,
+                  onSongEnded: song_ended,
+                  replaySong: playSongFromId,
+                  autoplayNext: autoplay_next
                 });
-                if (completionAction === 'loop') {
-                  // If loop mode is enabled, restart the current song
-                  playSongFromId(song_id);
-                } else if (completionAction === 'autoplay') {
-                  autoplay_next();
-                }
               },
             });
             
