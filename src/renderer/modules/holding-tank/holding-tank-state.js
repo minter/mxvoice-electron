@@ -58,6 +58,20 @@ export class HoldingTankState {
     return true;
   }
 
+  clearSong(songId) {
+    const normalizedSongId = normalizeSongId(songId);
+    let changed = false;
+    for (const tab of this.tabs) {
+      const filtered = tab.songIds.filter(id => id !== normalizedSongId);
+      if (filtered.length !== tab.songIds.length) {
+        tab.songIds = filtered;
+        changed = true;
+      }
+    }
+    if (changed) this.#notify();
+    return changed;
+  }
+
   renameTab(tabNumber, tabName) {
     const tab = getValidTab(this.tabs, tabNumber);
     const normalizedName = tabName === null || tabName === undefined || String(tabName).trim() === ''

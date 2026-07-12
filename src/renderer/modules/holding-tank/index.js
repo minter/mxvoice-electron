@@ -70,6 +70,42 @@ export function loadHoldingTankSnapshot(snapshot) {
   holdingTankState.loadFromSnapshot(snapshot, { notify: false });
 }
 
+export async function restoreHoldingTankSnapshot(snapshot) {
+  loadHoldingTankSnapshot(snapshot);
+  const songIds = [...new Set(holdingTankState.toSnapshot().flatMap(tab => tab.songIds))];
+  const songsById = new Map();
+  if (songIds.length > 0) {
+    const result = await database.getSongsByIds(songIds);
+    if (result?.success === false) throw new Error(result.error || 'Failed to load holding tank metadata');
+    const rows = result?.data || result || [];
+    if (!Array.isArray(rows)) throw new Error('Failed to load holding tank metadata');
+    rows.forEach(row => songsById.set(String(row.id), row));
+    songIds.filter(songId => !songsById.has(String(songId)))
+      .forEach(songId => holdingTankState.clearSong(songId));
+  }
+
+  for (const tab of holdingTankState.toSnapshot()) {
+    const tabLink = document.querySelector(`#holding_tank_tabs .nav-item:nth-child(${tab.tabNumber}) a`);
+    if (tabLink) tabLink.textContent = tab.tabName || String(tab.tabNumber);
+    const tabContent = document.getElementById(`holding_tank_${tab.tabNumber}`);
+    if (!tabContent) continue;
+    tabContent.replaceChildren();
+    for (const songId of tab.songIds) {
+      const row = songsById.get(String(songId));
+      if (!row) continue;
+      const element = document.createElement('li');
+      element.style.fontSize = '11px';
+      element.className = 'song list-group-item context-menu';
+      element.draggable = true;
+      element.addEventListener('dragstart', songDrag);
+      element.setAttribute('songid', songId);
+      element.textContent = `${row.title || '[Unknown Title]'} by ${row.artist || '[Unknown Artist]'} (${row.time || '[??:??]'})`;
+      tabContent.appendChild(element);
+    }
+  }
+  return holdingTankState.toSnapshot();
+}
+
 /**
  * Initialize the holding tank module
  */
@@ -628,5 +664,6 @@ export default {
   saveHoldingTankToStoreWrapper,
   getHoldingTankSnapshot,
   loadHoldingTankSnapshot,
-  syncHoldingTankStateFromDom
+  syncHoldingTankStateFromDom,
+  restoreHoldingTankSnapshot
 };

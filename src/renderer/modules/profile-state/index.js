@@ -506,6 +506,11 @@ async function restoreHoldingTankTabs(holdingTankTabs, _holdingTankModule) {
     return;
   }
 
+  if (_holdingTankModule?.restoreHoldingTankSnapshot) {
+    await _holdingTankModule.restoreHoldingTankSnapshot(holdingTankTabs);
+    return;
+  }
+
   _holdingTankModule?.loadHoldingTankSnapshot?.(holdingTankTabs);
   
   for (const tabState of holdingTankTabs) {

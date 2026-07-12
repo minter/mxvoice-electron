@@ -36,6 +36,16 @@ describe('HoldingTankState', () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 
+  it('clears every occurrence of a deleted song', () => {
+    const state = new HoldingTankState([
+      { tabNumber: 1, songIds: ['17', '18', '17'] },
+      { tabNumber: 2, songIds: ['17'] }
+    ]);
+    state.clearSong('17');
+    expect(state.toSnapshot()[0].songIds).toEqual(['18']);
+    expect(state.toSnapshot()[1].songIds).toEqual([]);
+  });
+
   it('rejects invalid direct mutations and ignores invalid snapshot tabs', () => {
     const state = new HoldingTankState([{ tabNumber: 8, songIds: ['17'] }]);
     expect(() => state.add(0, '17')).toThrow(RangeError);
