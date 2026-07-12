@@ -1,7 +1,7 @@
 /**
  * Preference Manager
  * 
- * Handles preference UI management and loading of preferences from store.
+ * Handles preference UI management and loading preferences through the secure API.
  * 
  * @module preference-manager
  */
@@ -12,13 +12,10 @@ import { getPreference } from './profile-preference-adapter.js';
  * Initialize the preference manager
  * @param {Object} options - Configuration options
  * @param {Object} options.electronAPI - Electron API reference
- * @param {Object} options.db - Database reference
- * @param {Object} options.store - Store reference
  * @returns {Object} Preference manager interface
  */
 function initializePreferenceManager(options = {}) {
-  // Prefer exposed API; fallback to secure API if only that exists
-  const electronAPISource = (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null;
+  const electronAPISource = (typeof window !== 'undefined' && window.secureElectronAPI) || null;
   const electronAPI = options.electronAPI || electronAPISource;
   const debugLog = typeof window !== 'undefined' ? window.debugLog : null;
   
@@ -42,6 +39,27 @@ function initializePreferenceManager(options = {}) {
         error: error.message
       });
     }
+  }
+
+  async function readPreference(key, fallback = null) {
+    try {
+      const result = await getPreference(key, electronAPI);
+      if (result.success) return result.value ?? fallback;
+
+      debugLog?.warn(`Failed to get preference ${key}`, {
+        function: 'readPreference',
+        key,
+        error: result.error
+      });
+    } catch (error) {
+      debugLog?.error(`Preference get error for ${key}`, {
+        function: 'readPreference',
+        key,
+        error
+      });
+    }
+
+    return fallback;
   }
   
   /**
@@ -82,29 +100,26 @@ function initializePreferenceManager(options = {}) {
    * Loads all stored preferences and populates the preferences modal
    */
   async function loadPreferences() {
-    // Get the current electronAPI (may have been set after initialization)
-    const currentAPI = electronAPI || (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI));
-    
     debugLog?.info('[PREFS-LOAD] Current API status', {
       function: 'loadPreferences',
-      hasCurrentAPI: !!currentAPI,
-      hasStore: !!(currentAPI && currentAPI.store),
-      hasProfile: !!(currentAPI && currentAPI.profile),
-      apiKeys: currentAPI ? Object.keys(currentAPI) : []
+      hasCurrentAPI: !!electronAPI,
+      hasStore: !!electronAPI?.store,
+      hasProfile: !!electronAPI?.profile,
+      apiKeys: electronAPI ? Object.keys(electronAPI) : []
     });
     
     // Use adapter for loading preferences (routes to profile or global as appropriate)
-    if (currentAPI && currentAPI.store) {
+    if (electronAPI?.store && electronAPI?.profile) {
       try {
         const [dbDir, musicDir, hotkeyDir, fadeSeconds, crossfadeSeconds, debugLogPref, prereleasePref, screenModePref] = await Promise.all([
-          getPreference("database_directory", currentAPI),
-          getPreference("music_directory", currentAPI),
-          getPreference("hotkey_directory", currentAPI),
-          getPreference("fade_out_seconds", currentAPI),
-          getPreference("crossfade_seconds", currentAPI),
-          getPreference("debug_log_enabled", currentAPI),
-          getPreference("prerelease_updates", currentAPI),
-          getPreference("screen_mode", currentAPI)
+          getPreference("database_directory", electronAPI),
+          getPreference("music_directory", electronAPI),
+          getPreference("hotkey_directory", electronAPI),
+          getPreference("fade_out_seconds", electronAPI),
+          getPreference("crossfade_seconds", electronAPI),
+          getPreference("debug_log_enabled", electronAPI),
+          getPreference("prerelease_updates", electronAPI),
+          getPreference("screen_mode", electronAPI)
         ]);
         
         debugLog?.info('[PREFS-LOAD] Loaded preferences', {
@@ -183,7 +198,7 @@ function initializePreferenceManager(options = {}) {
           }
         }
         // Load analytics opt-out status
-        const analyticsAPI = currentAPI?.analytics;
+        const analyticsAPI = electronAPI.analytics;
         if (analyticsAPI) {
           try {
             const analyticsResult = await analyticsAPI.getOptOutStatus();
@@ -209,12 +224,9 @@ function initializePreferenceManager(options = {}) {
     } else {
       debugLog?.error('Cannot load preferences - electronAPI not available', {
         function: 'loadPreferences',
-        hasElectronAPI: !!currentAPI,
-        hasStore: !!(currentAPI && currentAPI.store),
-        windowAPI: typeof window !== 'undefined' ? {
-          hasElectronAPI: !!window.electronAPI,
-          hasSecureAPI: !!window.secureElectronAPI
-        } : 'window not available'
+        hasElectronAPI: !!electronAPI,
+        hasStore: !!electronAPI?.store,
+        hasProfile: !!electronAPI?.profile
       });
     }
   }
@@ -224,26 +236,7 @@ function initializePreferenceManager(options = {}) {
    * @returns {Promise<string>} Database directory path
    */
   async function getDatabaseDirectory() {
-    if (electronAPI && electronAPI.store) {
-      try {
-        const result = await getPreference("database_directory", electronAPI);
-        if (result.success) {
-          return result.value;
-        } else {
-          await debugLog.warn('Failed to get database directory', { 
-            function: "getDatabaseDirectory",
-            error: result.error
-          });
-          return null;
-        }
-      } catch (error) {
-        await debugLog.error('Database directory get error', { 
-          function: "getDatabaseDirectory",
-          error: error
-        });
-        return null;
-      }
-    }
+    return readPreference('database_directory');
   }
   
   /**
@@ -251,26 +244,7 @@ function initializePreferenceManager(options = {}) {
    * @returns {Promise<string>} Music directory path
    */
   async function getMusicDirectory() {
-    if (electronAPI && electronAPI.store) {
-      try {
-        const result = await getPreference("music_directory", electronAPI);
-        if (result.success) {
-          return result.value;
-        } else {
-          await debugLog.warn('Failed to get music directory', { 
-            function: "getMusicDirectory",
-            error: result.error
-          });
-          return null;
-        }
-      } catch (error) {
-        await debugLog.error('Music directory get error', { 
-          function: "getMusicDirectory",
-          error: error
-        });
-        return null;
-      }
-    }
+    return readPreference('music_directory');
   }
   
   /**
@@ -278,26 +252,7 @@ function initializePreferenceManager(options = {}) {
    * @returns {Promise<string>} Hotkey directory path
    */
   async function getHotkeyDirectory() {
-    if (electronAPI && electronAPI.store) {
-      try {
-        const result = await getPreference("hotkey_directory", electronAPI);
-        if (result.success) {
-          return result.value;
-        } else {
-          await debugLog.warn('Failed to get hotkey directory', { 
-            function: "getHotkeyDirectory",
-            error: result.error
-          });
-          return null;
-        }
-      } catch (error) {
-        await debugLog.error('Hotkey directory get error', { 
-          function: "getHotkeyDirectory",
-          error: error
-        });
-        return null;
-      }
-    }
+    return readPreference('hotkey_directory');
   }
   
   /**
@@ -305,26 +260,7 @@ function initializePreferenceManager(options = {}) {
    * @returns {Promise<number>} Fade out duration in seconds
    */
   async function getFadeOutSeconds() {
-    if (electronAPI && electronAPI.store) {
-      try {
-        const result = await getPreference("fade_out_seconds", electronAPI);
-        if (result.success) {
-          return result.value;
-        } else {
-          await debugLog.warn('Failed to get fade out seconds', { 
-            function: "getFadeOutSeconds",
-            error: result.error
-          });
-          return null;
-        }
-      } catch (error) {
-        await debugLog.error('Fade out seconds get error', { 
-          function: "getFadeOutSeconds",
-          error: error
-        });
-        return null;
-      }
-    }
+    return readPreference('fade_out_seconds');
   }
   
   /**
@@ -332,27 +268,7 @@ function initializePreferenceManager(options = {}) {
    * @returns {Promise<boolean>} Debug log enabled status
    */
   async function getDebugLogEnabled() {
-    if (electronAPI && electronAPI.store) {
-      try {
-        const result = await getPreference("debug_log_enabled", electronAPI);
-        if (result.success) {
-          return result.value !== undefined ? result.value : true;
-        } else {
-          await debugLog.error('Failed to get debug log enabled', { 
-            function: "getDebugLogEnabled",
-            error: result.error
-          });
-          return true; // Default to enabled on error
-        }
-      } catch (error) {
-        await debugLog.error('Debug log enabled get error', { 
-          function: "getDebugLogEnabled",
-          error: error
-        });
-        return true; // Default to enabled on error
-      }
-    }
-    return true; // Default to enabled if no electronAPI
+    return readPreference('debug_log_enabled', true);
   }
   
   /**
@@ -360,26 +276,7 @@ function initializePreferenceManager(options = {}) {
    * @returns {Promise<boolean>} Prerelease updates enabled status
    */
   async function getPrereleaseUpdates() {
-    if (electronAPI && electronAPI.store) {
-      try {
-        const result = await getPreference("prerelease_updates", electronAPI);
-        if (result.success) {
-          return result.value || false;
-        } else {
-          await debugLog.warn('Failed to get prerelease updates', { 
-            function: "getPrereleaseUpdates",
-            error: result.error
-          });
-          return false;
-        }
-      } catch (error) {
-        await debugLog.error('Prerelease updates get error', { 
-          function: "getPrereleaseUpdates",
-          error: error
-        });
-        return false;
-      }
-    }
+    return readPreference('prerelease_updates', false);
   }
   
   /**
@@ -387,26 +284,7 @@ function initializePreferenceManager(options = {}) {
    * @returns {Promise<string>} Screen mode preference ('auto', 'light', or 'dark')
    */
   async function getScreenMode() {
-    if (electronAPI && electronAPI.store) {
-      try {
-        const result = await getPreference("screen_mode", electronAPI);
-        if (result.success) {
-          return result.value || 'auto';
-        } else {
-          await debugLog.warn('Failed to get screen mode', { 
-            function: "getScreenMode",
-            error: result.error
-          });
-          return 'auto';
-        }
-      } catch (error) {
-        await debugLog.error('Screen mode get error', { 
-          function: "getScreenMode",
-          error: error
-        });
-        return 'auto';
-      }
-    }
+    return readPreference('screen_mode', 'auto');
   }
   
   const PreferenceManager = {

@@ -27,13 +27,12 @@ try {
  * Initialize the settings controller
  * @param {Object} options - Configuration options
  * @param {Object} options.electronAPI - Electron API reference
- * @param {Object} options.db - Database reference
  * @returns {Object} Settings controller interface
  */
 function initializeSettingsController(options = {}) {
   const electronAPISource = (typeof window !== 'undefined' && window.secureElectronAPI) || null;
   const electronAPI = options.electronAPI || electronAPISource;
-  const { db: _db, moduleRegistry = {} } = options;
+  const { moduleRegistry = {} } = options;
 
   function preserveDirectoryPreferences(formValues, currentValues) {
     const directoryKeys = ['database_directory', 'music_directory', 'hotkey_directory'];

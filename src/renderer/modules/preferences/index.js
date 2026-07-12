@@ -13,18 +13,16 @@ import settingsController from './settings-controller.js';
  * Initialize the Preferences module
  * @param {Object} options - Configuration options
  * @param {Object} options.electronAPI - Electron API reference
- * @param {Object} options.db - Database reference
- * @param {Object} options.store - Store reference
  * @returns {Object} Preferences module interface
  */
 function initializePreferences(options = {}) {
-  const electronAPISource = (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null;
+  const electronAPISource = (typeof window !== 'undefined' && window.secureElectronAPI) || null;
   const electronAPI = options.electronAPI || electronAPISource;
-  const { db, store, moduleRegistry } = options;
+  const { moduleRegistry } = options;
   
   // Initialize sub-modules
-  const manager = preferenceManager({ electronAPI, db, store });
-  const controller = settingsController({ electronAPI, db, store, moduleRegistry });
+  const manager = preferenceManager({ electronAPI });
+  const controller = settingsController({ electronAPI, moduleRegistry });
   
   return {
     // Preference Manager functions
