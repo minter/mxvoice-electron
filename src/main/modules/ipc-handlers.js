@@ -21,11 +21,14 @@ import fileOperations from './file-operations.js';
 import * as profileManager from './profile-manager.js';
 import * as profileBackupManager from './profile-backup-manager.js';
 import * as libraryTransferManager from './library-transfer-manager.js';
-import { isSupportedAudioFile, copyFileStreaming } from './file-utils.js';
-import { isPathInside, canonicalizeForAuthorization } from './ipc/guards.js';
+import { isSupportedAudioFile } from './file-utils.js';
 import * as storeHandlers from './ipc/store-handlers.js';
 import * as pathOsHandlers from './ipc/path-os-handlers.js';
 import * as databaseHandlers from './ipc/database-handlers.js';
+import * as filesystemHandlers from './ipc/filesystem-handlers.js';
+import * as loggingHandlers from './ipc/logging-handlers.js';
+import * as dialogHandlers from './ipc/dialog-handlers.js';
+import * as uiHandlers from './ipc/ui-handlers.js';
 
 // Dependencies that will be injected
 let mainWindow;
@@ -79,179 +82,16 @@ function registerAllHandlers(deps) {
   storeHandlers.register(deps);
   pathOsHandlers.register(deps);
   databaseHandlers.register(deps);
-
-  // Preload logging — fire-and-forget via ipcRenderer.send (sandbox-safe)
-  ipcMain.on('preload-log', (_event, level, message, context) => {
-    if (debugLog && typeof debugLog[level] === 'function') {
-      debugLog[level](message, context);
-    }
-  });
-
-  // Logs API (centralized log service)
-  ipcMain.handle('logs:write', async (_event, payload) => {
-    try {
-      logService?.write(payload);
-      return { success: true };
-    } catch (error) {
-      debugLog?.error('Logs write error', { module: 'ipc-handlers', function: 'logs:write', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('logs:get-paths', async () => {
-    try {
-      const paths = logService?.getPaths();
-      return { success: true, ...paths };
-    } catch (error) {
-      debugLog?.error('Logs get-paths error', { module: 'ipc-handlers', function: 'logs:get-paths', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('logs:export', async (_event, options) => {
-    try {
-      const result = await logService?.exportLogs(options || {});
-      return result || { success: false };
-    } catch (error) {
-      debugLog?.error('Logs export error', { module: 'ipc-handlers', function: 'logs:export', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('show-directory-picker', async (event, defaultPath) => {
-    let path = dialog.showOpenDialogSync({
-      defaultPath: defaultPath,
-      properties: ['openDirectory']
-    });
-    return path;
-  });
-
-  // File operations
-  ipcMain.handle('open-hotkey-file', async () => {
-    return await fileOperations.loadHotkeysFile();
-  });
-
-  ipcMain.handle('save-hotkey-file', async (event, hotkeyArray) => {
-    return await fileOperations.saveHotkeysFile(hotkeyArray);
-  });
-
-  ipcMain.handle('open-holding-tank-file', async () => {
-    return await fileOperations.loadHoldingTankFile();
-  });
-
-  ipcMain.handle('save-holding-tank-file', async (event, holdingTankArray) => {
-    return await fileOperations.saveHoldingTankFile(holdingTankArray);
-  });
+  filesystemHandlers.register(deps);
+  loggingHandlers.register(deps);
+  dialogHandlers.register(deps);
+  uiHandlers.register(deps);
 
   // App operations
   // Note: restart-and-install-new-version handler is defined later with enhanced error handling
 
-  // UI operations
-  ipcMain.handle('increase-font-size', async () => {
-    mainWindow.webContents.send("increase_font_size");
-  });
-
-  ipcMain.handle('decrease-font-size', async () => {
-    mainWindow.webContents.send("decrease_font_size");
-  });
-
-  ipcMain.handle('toggle-waveform', async () => {
-    mainWindow.webContents.send("toggle_wave_form");
-  });
-
-  ipcMain.handle('toggle-advanced-search', async () => {
-    mainWindow.webContents.send("toggle_advanced_search");
-  });
-
-  ipcMain.handle('close-all-tabs', async () => {
-    mainWindow.webContents.send("close_all_tabs");
-  });
-
   // Song operations
   // Note: delete-selected-song and edit-selected-song handlers are defined later with enhanced error handling
-
-  // Category operations
-  ipcMain.handle('manage-categories', async () => {
-    mainWindow.webContents.send('manage_categories');
-  });
-
-  // Preferences
-  ipcMain.handle('show-preferences', async () => {
-    mainWindow.webContents.send('show_preferences');
-  });
-
-  ipcMain.handle('file-exists', async (event, filePath) => {
-    try {
-      if (!filePath || typeof filePath !== 'string') throw new Error('Invalid file path');
-      const musicDirectory = store.get('music_directory');
-      if (!musicDirectory || !isPathInside(filePath, musicDirectory)) {
-        throw new Error('Access denied: Path must be inside the managed music directory');
-      }
-      return { success: true, exists: fs.existsSync(path.resolve(filePath)) };
-    } catch (error) {
-      debugLog?.error('File exists error:', { module: 'ipc-handlers', function: 'file-exists', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('file-delete', async (event, filePath) => {
-    try {
-      // Security: Validate input
-      if (!filePath || typeof filePath !== 'string') {
-        throw new Error('Invalid file path');
-      }
-
-      // Security: Restrict to allowed directories (same pattern as file-read)
-      const musicDirectory = store.get('music_directory');
-      if (!musicDirectory) throw new Error('Music directory is not configured');
-      const allowedPaths = [musicDirectory];
-
-      const resolvedPath = path.resolve(filePath);
-      const { canonicalPath, allowed: isAllowed } = await canonicalizeForAuthorization(resolvedPath, allowedPaths);
-
-      if (!isAllowed) {
-        debugLog?.warn('File delete access denied', {
-          module: 'ipc-handlers',
-          function: 'file-delete',
-          filePath: filePath,
-          resolvedPath: resolvedPath
-        });
-        throw new Error('Access denied: File path not in allowed directories');
-      }
-
-      await fs.promises.unlink(canonicalPath);
-      return { success: true };
-    } catch (error) {
-      // ENOENT means file doesn't exist - treat as success since goal is achieved
-      if (error.code === 'ENOENT') {
-        debugLog?.info('File already deleted (not found):', {
-          module: 'ipc-handlers',
-          function: 'file-delete',
-          filePath: filePath
-        });
-        return { success: true, alreadyDeleted: true };
-      }
-      debugLog?.error('File delete error:', { module: 'ipc-handlers', function: 'file-delete', error: error.message, filePath: filePath });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('file-copy', async (event, sourcePath, destPath) => {
-    try {
-      if (!sourcePath || !destPath || !isSupportedAudioFile(sourcePath)) {
-        throw new Error('Only supported audio files can be imported');
-      }
-      const musicDirectory = store.get('music_directory');
-      if (!musicDirectory || !isPathInside(destPath, musicDirectory)) {
-        throw new Error('Access denied: Destination must be inside the managed music directory');
-      }
-      // Use streaming for better memory efficiency with large files
-      return await copyFileStreaming(sourcePath, destPath, { debugLog });
-    } catch (error) {
-      debugLog?.error('File copy error:', { module: 'ipc-handlers', function: 'file-copy', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
 
   // Audio API handlers
   ipcMain.handle('audio-play', async (event, filePath) => {
@@ -334,38 +174,6 @@ function registerAllHandlers(deps) {
       return { success: true };
     } catch (error) {
       debugLog?.error('Audio fade error:', { module: 'ipc-handlers', function: 'audio-fade', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle('library:scan-audio-directory', async (_event, rootPath) => {
-    try {
-      if (!rootPath || typeof rootPath !== 'string') throw new Error('Invalid directory path');
-      const canonicalRoot = await fsPromises.realpath(path.resolve(rootPath));
-      const rootStats = await fsPromises.stat(canonicalRoot);
-      if (!rootStats.isDirectory()) throw new Error('Selected path is not a directory');
-
-      const audioFiles = [];
-      const visit = async directory => {
-        const entries = await fsPromises.readdir(directory, { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.name.startsWith('.')) continue;
-          const entryPath = path.join(directory, entry.name);
-          if (entry.isSymbolicLink()) continue;
-          if (entry.isDirectory()) await visit(entryPath);
-          else if (entry.isFile() && isSupportedAudioFile(entry.name)) {
-            audioFiles.push(entryPath);
-          }
-        }
-      };
-      await visit(canonicalRoot);
-      return { success: true, data: audioFiles };
-    } catch (error) {
-      debugLog?.error('Audio directory scan error', {
-        module: 'ipc-handlers',
-        function: 'library:scan-audio-directory',
-        error: error.message
-      });
       return { success: false, error: error.message };
     }
   });
@@ -677,16 +485,6 @@ function registerAllHandlers(deps) {
         error: errorMessage 
       });
       return { success: false, error: errorMessage };
-    }
-  });
-
-  ipcMain.handle('show-file-picker', async (event, options = {}) => {
-    try {
-      const result = await dialog.showOpenDialog(mainWindow, options);
-      return { success: true, data: result };
-    } catch (error) {
-      debugLog?.error('Show file picker error:', { module: 'ipc-handlers', function: 'show-file-picker', error: error.message });
-      return { success: false, error: error.message };
     }
   });
 
