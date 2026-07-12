@@ -11,7 +11,7 @@ export default class AudioControlEvents {
     this.db = null;
     this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
-    this.moduleRegistry = dependencies.moduleRegistry || window.moduleRegistry;
+    this.moduleRegistry = dependencies.moduleRegistry || {};
     
     this.eventsAttached = false;
     this.audioHandlers = new Map();

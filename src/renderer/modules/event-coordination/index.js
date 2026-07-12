@@ -25,7 +25,7 @@ class EventCoordination {
     this.db = null;
     this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
-    this.moduleRegistry = dependencies.moduleRegistry || window.moduleRegistry;
+    this.moduleRegistry = dependencies.moduleRegistry || {};
     
     // Event handler modules
     this.searchEvents = null;

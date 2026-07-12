@@ -11,7 +11,7 @@ export default class DOMInitialization {
     this.db = null;
     this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
-    this.moduleRegistry = dependencies.moduleRegistry || window.moduleRegistry;
+    this.moduleRegistry = dependencies.moduleRegistry || {};
 
     this.initialized = false;
   }
@@ -340,13 +340,13 @@ export default class DOMInitialization {
                   // Use the same direct approach as delete keypress (no ID manipulation needed)
                   const element = document.getElementById('selected_row'); // This is our hotkeyLi
                   if (element) {
-                    window.moduleRegistry?.hotkeys?.clearHotkeyElement?.(element);
+                    this.moduleRegistry.hotkeys?.clearHotkeyElement?.(element);
                     element.classList.remove('active-hotkey', 'selected-row');
                     window.currentSelectedHotkey = null;
                     
                     // Save hotkeys state
-                    if (window.moduleRegistry?.hotkeys?.requestProfileStateSave) {
-                      window.moduleRegistry?.hotkeys.requestProfileStateSave();
+                    if (this.moduleRegistry.hotkeys?.requestProfileStateSave) {
+                      this.moduleRegistry.hotkeys.requestProfileStateSave();
                       window.debugLog?.info('Hotkeys state saved after context menu removal');
                     }
                     

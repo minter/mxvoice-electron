@@ -27,7 +27,7 @@ export default class HotkeysEvents {
     this.db = dependencies.db || window.db;
     this.store = dependencies.store || window.store;
     this.debugLog = dependencies.debugLog || window.debugLog;
-    this.moduleRegistry = dependencies.moduleRegistry || window.moduleRegistry;
+    this.moduleRegistry = dependencies.moduleRegistry || {};
     
     // Event handling state
     this.eventsAttached = false;

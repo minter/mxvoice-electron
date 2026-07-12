@@ -11,7 +11,7 @@ export default class EventDelegator {
     this.db = null;
     this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
-    this.moduleRegistry = dependencies.moduleRegistry || window.moduleRegistry;
+    this.moduleRegistry = dependencies.moduleRegistry || {};
 
     this.delegatedHandlers = new Map();
     this.isSetup = false;
