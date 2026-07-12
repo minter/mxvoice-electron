@@ -156,14 +156,8 @@ window.logError = async (message, context) => {
 const moduleRegistry = {};
 initializeProfileUI({ moduleRegistry });
 
-// Import function coordination module for centralized function management
-import FunctionCoordination from './renderer/modules/function-coordination/index.js';
-
 // Import keyboard manager for centralized keyboard shortcut management
 import KeyboardManager from './renderer/modules/keyboard-manager/index.js';
-
-// Function coordination instance - initialized after debug logger is available
-let functionCoordination = null;
 
 // Global keyboard manager instance
 let keyboardManager = null;
@@ -552,30 +546,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       }
     }
     
-    // Initialize function coordination system
-    window.logInfo('Initializing function coordination system...');
-    functionCoordination = new FunctionCoordination({
-      debugLog: window.debugLog || debugLogger,
-      electronAPI: window.electronAPI,
-      db: window.db,
-      store: window.store
-    });
-    
-    // Initialize all function coordination components
-    const coordinationSuccess = await functionCoordination.init({
-      debugLogger: window.debugLog || debugLogger, 
-      moduleRegistry: moduleRegistry
-    });
-    
-    if (!coordinationSuccess) {
-      window.logError('Function coordination initialization failed, but continuing...');
-    } else {
-      window.logInfo('Function coordination system initialized successfully');
-    }
-
-    // Clear profile restoration lock now that app initialization is complete,
-    // even if function coordination failed. Saves must never remain blocked
-    // for the entire session just because coordination init had an issue.
+    // Clear profile restoration lock now that app initialization is complete.
     if (moduleRegistry.profileState && moduleRegistry.profileState.clearProfileRestorationLock) {
       moduleRegistry.profileState.clearProfileRestorationLock();
       window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
@@ -602,26 +573,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });
     }
 
-    // If coordination initialized successfully, log stats and health check.
-    if (coordinationSuccess) {
-      const comprehensiveStats = functionCoordination.getComprehensiveStats();
-      window.logInfo('Function Coordination Statistics', comprehensiveStats);
-      
-      const healthCheck = functionCoordination.performHealthCheck(moduleRegistry);
-      window.logInfo('Function Coordination Health Check', healthCheck);
-    }
-    
-    // Make function coordination available for debugging and access to components
-    window.functionCoordination = functionCoordination;
-    
-    // Maintain backward compatibility by exposing individual components
-    if (functionCoordination) {
-      const components = functionCoordination.getComponents();
-      window.functionRegistry = components.functionRegistry;
-      window.eventManager = components.eventManager;
-      window.functionMonitor = components.functionMonitor;
-    }
-    
     // Legacy functions moved to modules - keeping only HTML-compatible functions
     // All other functions are now available through moduleRegistry
     // Example: moduleRegistry.fileOperations.openHotkeyFile() instead of window.openHotkeyFile
