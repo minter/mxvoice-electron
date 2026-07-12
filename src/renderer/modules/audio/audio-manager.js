@@ -11,6 +11,12 @@ import { howlerUtils, createHowl } from './audio-utils.js';
 import { createProbeFromHowler } from './audio-probe.js';
 import { getPlaybackSelectionSongId, resetUIState } from './audio-controller.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
+import {
+  calculatePlaybackVolume,
+  determinePlaybackCompletionAction,
+  getCrossfadePolicy,
+  getTrackBounds
+} from './playback-policy.js';
 
 // Import debug logger - use lazy getter for proper initialization timing
 function getDebugLog() {
@@ -536,12 +542,14 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
               window.moduleRegistry.audio.ensureTestMode();
             }
 
-            const masterVolume2 = (Number(document.getElementById('volume')?.value) || 0) / 100;
-            const trackVolume2 = (row?.volume ?? 100) / 100;
+            const { trackVolume: trackVolume2, targetVolume: targetVolume2 } = calculatePlaybackVolume(
+              document.getElementById('volume')?.value,
+              row?.volume ?? 100
+            );
             sharedState.set('trackVolume', trackVolume2);
-            const targetVolume2 = masterVolume2 * trackVolume2;
-            const shouldCrossfade2 = !!options.crossfade;
-            const crossfadeMs2 = shouldCrossfade2 ? (options.crossfadeSeconds || 3) * 1000 : 0;
+            const crossfade = getCrossfadePolicy(options);
+            const shouldCrossfade2 = crossfade.enabled;
+            const crossfadeMs2 = crossfade.durationMs;
 
             // Handle outgoing sound for crossfade
             if (shouldCrossfade2) {
@@ -691,21 +699,24 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                   return;
                 }
                 song_ended();
-                const loop = sharedState.get('loop');
-                const autoplay = sharedState.get('autoplay');
-                const holdingTankMode = sharedState.get('holdingTankMode');
-                if (loop) {
+                const completionAction = determinePlaybackCompletionAction({
+                  loop: sharedState.get('loop'),
+                  autoplay: sharedState.get('autoplay'),
+                  holdingTankMode: sharedState.get('holdingTankMode')
+                });
+                if (completionAction === 'loop') {
                   // If loop mode is enabled, restart the current song
                   playSongFromId(song_id);
-                } else if (autoplay && holdingTankMode === 'playlist') {
+                } else if (completionAction === 'autoplay') {
                   autoplay_next();
                 }
               },
             });
             
             sharedState.set('sound', sound);
-            sharedState.set('trackStartTime', row?.start_time ?? null);
-            sharedState.set('trackEndTime', row?.end_time ?? null);
+            const trackBounds = getTrackBounds(row);
+            sharedState.set('trackStartTime', trackBounds.startTime);
+            sharedState.set('trackEndTime', trackBounds.endTime);
             sharedState.set('crossfadeTriggered', false);
 
             // Start playback with audio context resume and validation
