@@ -37,6 +37,7 @@ import { secureFileDialog } from '../adapters/secure-adapter.js';
 class HotkeysModule {
   constructor(options = {}) {
     this.electronAPI = options.electronAPI;
+    this.moduleRegistry = options.moduleRegistry || {};
     // Remove legacy db/store usage in secure context
     this.db = null;
     this.store = null;
@@ -196,13 +197,13 @@ class HotkeysModule {
    * Save hotkeys to profile state.
    */
   async requestProfileStateSave() {
-    if (window.moduleRegistry?.profileState) {
+    if (this.moduleRegistry.profileState) {
       debugLog?.info('Saving hotkeys to profile state', {
         module: 'hotkeys',
         function: 'requestProfileStateSave'
       });
       try {
-        await window.moduleRegistry.profileState.saveProfileState();
+        await this.moduleRegistry.profileState.saveProfileState();
         debugLog?.info('Hotkeys saved to profile state successfully', {
           module: 'hotkeys',
           function: 'requestProfileStateSave'
