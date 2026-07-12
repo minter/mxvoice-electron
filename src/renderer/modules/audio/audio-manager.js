@@ -18,6 +18,7 @@ import { presentPlaybackStarted } from './playback-ui-presenter.js';
 import { createPlaybackSound } from './playback-sound-factory.js';
 import { handlePlaybackStarted } from './playback-start.js';
 import { handlePlaybackCompleted } from './playback-completion.js';
+import { parseCrossfadePreference, prepareForPlaybackReplacement } from './playback-replacement.js';
 import {
   calculatePlaybackVolume,
   getCrossfadePolicy,
@@ -414,33 +415,14 @@ async function playSongFromId(song_id, options = {}) {
   // Cache crossfade preference for the time tracker to use synchronously
   if (!options.crossfade) {
     try {
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
-      const cfResult = await getPreference('crossfade_seconds', electronAPI);
-      const cfSeconds = (cfResult?.success && cfResult?.value) ? parseFloat(cfResult.value) : 0;
-      sharedState.set('crossfadeSeconds', isNaN(cfSeconds) ? 0 : cfSeconds);
+      const cfResult = await getPreference('crossfade_seconds', window.secureElectronAPI);
+      sharedState.set('crossfadeSeconds', parseCrossfadePreference(cfResult));
     } catch (_e) {
       sharedState.set('crossfadeSeconds', 0);
     }
   }
 
-  const sound = sharedState.get('sound');
-  if (sound && !options.crossfade) {
-    // Only unload immediately if not crossfading
-    sound.off('fade');
-    sound.unload();
-    if (sharedState.get('sound') === sound) {
-      sharedState.set('sound', null);
-    }
-  }
-
-  const outgoingSound = sharedState.get('outgoingSound');
-  if (outgoingSound && !options.crossfade) {
-    outgoingSound.off('fade');
-    outgoingSound.unload();
-    if (sharedState.get('outgoingSound') === outgoingSound) {
-      sharedState.set('outgoingSound', null);
-    }
-  }
+  prepareForPlaybackReplacement({ sharedState, crossfade: options.crossfade });
 
   secureDatabase
     .getSongById(song_id)
