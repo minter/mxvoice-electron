@@ -253,8 +253,8 @@ export default class UIInteractionEvents {
   attachWindowEvents() {
     const windowResizeHandler = (_event) => {
       try {
-        if (window.scaleScrollable) {
-          window.scaleScrollable();
+        if (this.moduleRegistry.ui?.scaleScrollable) {
+          this.moduleRegistry.ui.scaleScrollable();
         } else {
           this.debugLog?.warn('scaleScrollable function not available');
         }

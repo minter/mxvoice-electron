@@ -584,9 +584,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
 
     // Call functions that depend on loaded modules
     try {
-      if (window.scaleScrollable) {
-        window.scaleScrollable();
-      }
+      moduleRegistry.ui?.scaleScrollable?.();
       // Ensure categories are populated after database module is loaded
       if (window.populateCategorySelect) {
         window.logInfo('Attempting to populate categories...');
@@ -718,24 +716,23 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     // Initialize the event coordination system
-    await eventCoordination.init({
+    const initialized = await eventCoordination.init({
       electronAPI: window.secureElectronAPI,
       db: window.db,
       store: window.store,
       debugLog: debugLogger,
       moduleRegistry: moduleRegistry
     });
+    if (!initialized) throw new Error('Event coordination initialization failed');
     window.logInfo('Event coordination initialized successfully');
 
     // Attach all event handlers - this replaces all the jQuery event handling code
-    await eventCoordination.attachEventHandlers();
+    const handlersAttached = await eventCoordination.attachEventHandlers();
+    if (!handlersAttached) throw new Error('Event handlers failed to attach');
     window.logInfo('All event handlers attached via event coordination module');
 
     // Hotkeys module is now handled by EventCoordination system
     // No manual initialization needed
-
-    // Make event coordination available globally for debugging
-    window.eventCoordination = eventCoordination;
 
     // Initialize cleanup module for resource cleanup on window close
     if (moduleRegistry.cleanup && moduleRegistry.cleanup.initializeCleanup) {
@@ -747,21 +744,6 @@ document.addEventListener('DOMContentLoaded', async function () {
       window.logInfo('Cleanup module initialized successfully');
     }
 
-    // Provide global aliases for UI scaling (legacy underscore and new camelCase)
-    try {
-      const uiModule = moduleRegistry.ui;
-      const holdingModule = moduleRegistry.holdingTank;
-      const scaleFn = (uiModule && uiModule.scaleScrollable) || (holdingModule && holdingModule.scaleScrollable) || null;
-      if (!window.scaleScrollable) {
-        window.scaleScrollable = scaleFn;
-      }
-      if (!window.scaleScrollable) {
-        window.scaleScrollable = scaleFn;
-      }
-    } catch {
-      // Ignore scaleScrollable initialization errors
-    }
-
     // Show analytics consent banner if not yet shown
     await showAnalyticsBannerIfNeeded({
       electronAPI: window.secureElectronAPI,
@@ -770,10 +752,5 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   } catch (error) {
     window.logError('Error initializing event coordination:', error);
-    window.logError('Falling back to basic initialization');
-
-    // Minimal fallback initialization if event coordination fails
-    const progress = document.getElementById('audio_progress'); if (progress) progress.style.width = '0%';
-    const thead = document.querySelector('#search_results thead'); if (thead) thead.style.display = 'none';
   }
 });

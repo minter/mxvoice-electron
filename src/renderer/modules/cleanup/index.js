@@ -20,7 +20,7 @@ let eventCoordination = null;
  */
 function initializeCleanup(dependencies = {}) {
   debugLog = dependencies.debugLog || window.debugLog || null;
-  eventCoordination = dependencies.eventCoordination || window.eventCoordination || null;
+  eventCoordination = dependencies.eventCoordination || null;
   
   debugLog?.info('Cleanup module initializing', {
     module: 'cleanup',
@@ -141,11 +141,8 @@ function cleanupAudio() {
  */
 function cleanupEventListeners() {
   try {
-    // Try to get event coordination from multiple sources
-    const coordination = eventCoordination || window.eventCoordination;
-    
-    if (coordination?.eventDelegator?.cleanup) {
-      coordination.eventDelegator.cleanup();
+    if (eventCoordination?.eventDelegator?.cleanup) {
+      eventCoordination.eventDelegator.cleanup();
       
       debugLog?.info('Event listeners cleaned up', {
         module: 'cleanup',
@@ -182,4 +179,3 @@ export default {
   initializeCleanup,
   cleanup
 };
-

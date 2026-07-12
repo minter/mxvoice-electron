@@ -50,6 +50,7 @@ export function initializeUI(options = {}) {
     // Utility functions
     getFontSize: manager.getFontSize,
     setFontSize: manager.setFontSize,
+    scaleScrollable: manager.scaleScrollable,
     
     // Module info
     version: '1.0.0',
