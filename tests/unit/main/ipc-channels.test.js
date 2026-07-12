@@ -27,6 +27,6 @@ describe('IPC channel manifest', () => {
 
   it('covers the known surface size', () => {
     // Keep this explicit so intentional IPC surface changes are reviewed.
-    expect(allValues().length).toBe(106);
+    expect(allValues().length).toBe(104);
   });
 });

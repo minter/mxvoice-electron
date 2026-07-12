@@ -240,24 +240,6 @@ export class ShortcutRegistry {
   }
 
   /**
-   * Resolve conflicts by priority
-   * @returns {number} - Number of conflicts resolved
-   */
-  resolveConflictsByPriority() {
-    let resolved = 0;
-    
-    for (const key of this.conflicts) {
-      // This is a placeholder for conflict resolution logic
-      // In a real implementation, you might need to handle multiple
-      // shortcuts with the same key and resolve by priority
-      this.logInfo(`Resolving conflict for key: ${key}`);
-      resolved++;
-    }
-    
-    return resolved;
-  }
-
-  /**
    * Get comprehensive statistics
    * @returns {Object} - Registry statistics
    */

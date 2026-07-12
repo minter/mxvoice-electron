@@ -21,7 +21,6 @@ export const moduleConfig = [
   { name: 'modeManagement', path: '../mode-management/index.js', required: false },
   { name: 'preferences', path: '../preferences/index.js', required: true },
   { name: 'themeManagement', path: '../theme-management/index.js', required: false },
-  { name: 'testUtils', path: '../test-utils/index.js', required: false },
   { name: 'search', path: '../search/index.js', required: false },
   { name: 'audio', path: '../audio/index.js', required: false },
   { name: 'ui', path: '../ui/index.js', required: true },

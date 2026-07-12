@@ -220,12 +220,6 @@ function initializePreferenceManager(options = {}) {
   }
   
   /**
-   * Load preferences using legacy store access
-   * Fallback method when new API is not available
-   */
-  async function _loadPreferencesLegacy() {}
-  
-  /**
    * Get database directory preference
    * @returns {Promise<string>} Database directory path
    */
@@ -435,4 +429,4 @@ export {
 };
 
 // Default export for module loading
-export default initializePreferenceManager; 
+export default initializePreferenceManager;

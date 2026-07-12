@@ -42,7 +42,6 @@ class DatabaseModule {
     this.saveNewSong = databaseOperations.saveNewSong;
     this.deleteSong = databaseOperations.deleteSong;
     this.getSongById = databaseOperations.getSongById;
-    this.addSongsByPath = databaseOperations.addSongsByPath;
   }
 
   /**
@@ -97,8 +96,7 @@ class DatabaseModule {
       saveEditedSong: this.saveEditedSong,
       saveNewSong: this.saveNewSong,
       deleteSong: this.deleteSong,
-      getSongById: this.getSongById,
-      addSongsByPath: this.addSongsByPath
+      getSongById: this.getSongById
     };
   }
 
@@ -157,12 +155,6 @@ class DatabaseModule {
         results.databaseOperations.getSongById = '❌ Function missing';
       }
 
-      if (typeof this.addSongsByPath === 'function') {
-        results.databaseOperations.addSongsByPath = '✅ Function exists';
-      } else {
-        results.databaseOperations.addSongsByPath = '❌ Function missing';
-      }
-
     } catch (error) {
       results.databaseOperations.error = `❌ Error: ${error.message}`;
     }
@@ -196,7 +188,6 @@ export const saveEditedSong = databaseModule.saveEditedSong;
 export const saveNewSong = databaseModule.saveNewSong;
 export const deleteSong = databaseModule.deleteSong;
 export const getSongById = databaseModule.getSongById;
-export const addSongsByPath = databaseModule.addSongsByPath;
 
 // Default export for module loading - export the instance directly
 export default databaseModule;

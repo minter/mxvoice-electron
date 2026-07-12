@@ -108,8 +108,6 @@ const IPC = deepFreeze({
     INSTALL_UPDATE: 'install-update',
   },
   UTILITY: {
-    IMPORT_AUDIO_FILES: 'import-audio-files',
-    EXPORT_DATA: 'export-data',
     GENERATE_ID: 'generate-id',
     FORMAT_DURATION: 'format-duration',
     VALIDATE_AUDIO_FILE: 'validate-audio-file',

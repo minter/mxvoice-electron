@@ -19,15 +19,6 @@ This directory contains renderer-wide infrastructure used by the feature modules
   - Logs issues, exposes health reports and stats, and tracks availability changes
   - Usage: construct with `FunctionRegistry` and `debugLog`, then `startMonitoring()`
 
-### Services (`services/`)
-
-Typed facades over secure preload APIs (via `window.electronAPI` or secure adapters) for clean usage in modules:
-
-- `database.js`: `database.query(sql, params)`, `getSongById(id)`, etc.
-- `file-system.js`: `fileSystem.read`, `write`, `exists`, `readdir`, `stat`, `copy`, `delete` (backed by secure adapters)
-- `path.js`: `path.join/dirname/basename/extname/resolve/parse` (secure adapter)
-- `store.js`: `store.has/get/set/delete` (secure adapter)
-
 ### How these work together
 
 1. App initialization/bootstrap loads feature modules into a module registry
@@ -48,4 +39,3 @@ Typed facades over secure preload APIs (via `window.electronAPI` or secure adapt
 
 - Context isolation is enabled; all privileged access goes through preload secure APIs
 - Prefer consuming `services/` and module singletons rather than touching `window` directly
-

@@ -286,7 +286,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     window.logDebug('Navigation', !!moduleRegistry.navigation);
     window.logDebug('Mode Management', !!moduleRegistry.modeManagement);
     window.logDebug('Theme Management', !!moduleRegistry.themeManagement);
-    window.logDebug('Test Utils', !!moduleRegistry.testUtils);
     window.logDebug('Search', !!moduleRegistry.search);
     window.logDebug('Audio', !!moduleRegistry.audio);
     window.logDebug('UI', !!moduleRegistry.ui);
@@ -1022,9 +1021,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     const thead = document.querySelector('#search_results thead'); if (thead) thead.style.display = 'none';
   }
 });
-
-// Test Functions Module - Functions extracted to src/renderer/modules/test-utils/
-// testPhase2Migrations(), testDatabaseAPI(), testFileSystemAPI(), testStoreAPI(), testAudioAPI(), testSecurityFeatures() - All moved to test-utils module
 
 /**
  * Show the new profile creation modal

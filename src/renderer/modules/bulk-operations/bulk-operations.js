@@ -63,7 +63,9 @@ export async function showBulkAddModal(directory) {
           format: { duration: d.duration || 0 }
         };
       }
-    } catch (_e) {}
+    } catch (_e) {
+      // Metadata is optional; the add-song form derives defaults from the path.
+    }
 
     if (window.moduleRegistry?.songManagement?.startAddNewSong) {
       window.moduleRegistry.songManagement.startAddNewSong(songs[0], metadata);
@@ -119,7 +121,9 @@ export async function showBulkAddFromFiles(filePaths) {
           format: { duration: d.duration || 0 }
         };
       }
-    } catch (_e) {}
+    } catch (_e) {
+      // Metadata is optional; the add-song form derives defaults from the path.
+    }
 
     if (window.moduleRegistry?.songManagement?.startAddNewSong) {
       window.moduleRegistry.songManagement.startAddNewSong(filePaths[0], metadata);
@@ -382,7 +386,9 @@ export async function saveBulkUpload(event) {
           format: { duration: d.duration || 0 }
         };
       }
-    } catch (_e) {}
+    } catch (_e) {
+      // Metadata is optional; the add-song form derives defaults from the path.
+    }
 
     if (window.moduleRegistry?.songManagement?.startAddNewSong) {
       window.moduleRegistry.songManagement.startAddNewSong(songs[0], metadata);

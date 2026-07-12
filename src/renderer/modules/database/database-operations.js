@@ -394,85 +394,6 @@ async function getSongById(songId) {
   }
 }
 
-/**
- * Add songs by path (bulk operation)
- * Processes multiple audio files and adds them to the database
- * 
- * @param {Array} pathArray - Array of file paths to process
- * @param {string} category - Category to assign to all songs
- * @returns {Promise<Object>} - Result of the operation
- */
-function addSongsByPath(pathArray, category) {
-  return new Promise((resolve, reject) => {
-    if (pathArray.length === 0) {
-      resolve({ success: true, processed: 0 });
-      return;
-    }
-
-    const songSourcePath = pathArray.shift();
-    
-    // This would need to be integrated with the music-metadata library
-    // For now, we'll create a placeholder implementation
-    debugLog?.info(`Processing song: ${songSourcePath}`, { 
-      module: 'database-operations',
-      function: 'addSongsByPath',
-      songSourcePath: songSourcePath,
-      category: category
-    });
-    
-    // Mock metadata for testing
-    const mockMetadata = {
-      common: {
-        title: path.parse(songSourcePath).name,
-        artist: 'Unknown Artist'
-      },
-      format: {
-        duration: 180 // 3 minutes default
-      }
-    };
-    
-    const durationSeconds = mockMetadata.format.duration.toFixed(0);
-    const durationString = new Date(durationSeconds * 1000)
-      .toISOString()
-      .substr(14, 5);
-
-    const title = mockMetadata.common.title || path.parse(songSourcePath).name;
-    const artist = mockMetadata.common.artist;
-    const uuid = uuidv4 ? uuidv4() : Date.now().toString();
-    const newFilename = `${artist}-${title}-${uuid}${path.extname(songSourcePath)}`.replace(/[^-.\w]/g, "");
-    
-    // Save to database
-    saveNewSong({
-      title: title,
-      artist: artist,
-      category: category,
-      info: '',
-      filename: newFilename,
-      duration: durationString
-    }).then(_result => {
-      debugLog?.info(`Song added to database: ${title}`, {
-        module: 'database-operations',
-        function: 'addSongsByPath',
-        title: title,
-        artist: artist
-      });
-      
-      // Process remaining files
-      return addSongsByPath(pathArray, category);
-    }).then(result => {
-      resolve({ success: true, processed: result.processed + 1 });
-    }).catch(error => {
-      debugLog?.warn('Failed to add song', { 
-        module: 'database-operations',
-        function: 'addSongsByPath',
-        songSourcePath: songSourcePath,
-        error: error
-      });
-      reject(error);
-    });
-  });
-}
-
 export {
   editCategory,
   deleteCategory,
@@ -480,8 +401,7 @@ export {
   saveEditedSong,
   saveNewSong,
   deleteSong,
-  getSongById,
-  addSongsByPath
+  getSongById
 };
 
 // Default export for module loading
@@ -492,6 +412,5 @@ export default {
   saveEditedSong,
   saveNewSong,
   deleteSong,
-  getSongById,
-  addSongsByPath
+  getSongById
 };

@@ -13,19 +13,6 @@ const { IPC } = ipcChannels;
 export function register(deps) {
   const { debugLog } = deps;
 
-  // File operations enhancements
-  ipcMain.handle(IPC.UTILITY.IMPORT_AUDIO_FILES, async (_event, _filePaths) => {
-    // This would be implemented to handle bulk import
-    // For now, return a placeholder
-    return { success: true, imported: 0, skipped: 0, errors: [] };
-  });
-
-  ipcMain.handle(IPC.UTILITY.EXPORT_DATA, async (_event, _exportOptions) => {
-    // This would be implemented to handle data export
-    // For now, return a placeholder
-    return { success: true, exportPath: '' };
-  });
-
   // Utility functions for secure API
   ipcMain.handle(IPC.UTILITY.GENERATE_ID, async () => {
     try {

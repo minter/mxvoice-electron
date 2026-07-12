@@ -29,7 +29,9 @@ try {
   if (window.debugLog) {
     debugLog = window.debugLog;
   }
-} catch (_e) {}
+} catch (_e) {
+  // The logger is optional during early renderer initialization and unit tests.
+}
 
 /**
  * Shows the Multi-Song Import modal pre-populated with song data.
@@ -105,7 +107,9 @@ export async function showMultiSongImport(items) {
           durationString = `${m}:${s.toString().padStart(2, '0')}`;
         }
       }
-    } catch (_e) {}
+    } catch (_e) {
+      // Metadata is optional; filename parsing below supplies the title fallback.
+    }
 
     // Fallback to filename if title is missing
     if (!title) {
@@ -339,7 +343,7 @@ async function saveMultiSongImport() {
         }
 
         // 5. Add to UI (search results)
-        addSongToSearchResultsUI(lastId, song, newFilename);
+        addSongToSearchResultsUI(lastId, song);
       }
     }
 
@@ -363,7 +367,7 @@ async function saveMultiSongImport() {
 /**
  * Adds a newly imported song to the search results table
  */
-function addSongToSearchResultsUI(id, song, filename) {
+function addSongToSearchResultsUI(id, song) {
   const categoryLabel = getCategoryDescription(song.category) || song.category;
   const results = document.querySelector('#search_results tbody') || document.querySelector('#search_results');
   if (!results) return;

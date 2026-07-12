@@ -264,9 +264,7 @@ const secureElectronAPI = {
           });
           throw error;
         });
-    },
-    importAudioFiles: (filePaths) => ipcRenderer.invoke(IPC.UTILITY.IMPORT_AUDIO_FILES, filePaths),
-    exportData: (exportOptions) => ipcRenderer.invoke(IPC.UTILITY.EXPORT_DATA, exportOptions)
+    }
   },
   
   // UI operations - secure UI control

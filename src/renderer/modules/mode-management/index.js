@@ -16,8 +16,6 @@ try {
   // Debug logger not available
 }
 
-// Import secure adapters
-import { secureStore } from '../adapters/secure-adapter.js';
 import { setPreference } from '../preferences/profile-preference-adapter.js';
 
 /**

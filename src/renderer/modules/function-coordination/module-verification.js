@@ -75,7 +75,6 @@ export class ModuleVerification {
         'dragDrop',
         'navigation',
         'modeManagement',
-        'testUtils',
         'search',
         'audio',
         'ui',

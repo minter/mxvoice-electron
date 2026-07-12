@@ -8,9 +8,8 @@ The Test Functions Module contains all testing utilities for the MxVoice applica
 
 ```
 test-utils/
-├── index.js                    # Main module entry point
-├── security-transition-test.js # Security feature validation tests
-└── README.md                   # This documentation
+├── index.js  # Main module entry point
+└── README.md # This documentation
 ```
 
 ## Functions
@@ -103,4 +102,4 @@ console.log(`Tests: ${allResults.passed} passed, ${allResults.failed} failed`);
 
 ## Integration
 
-This module is integrated with the main renderer.js file and provides comprehensive testing capabilities for the application's various APIs and features. 
+This module is integrated with the main renderer.js file and provides comprehensive testing capabilities for the application's various APIs and features.
