@@ -109,9 +109,6 @@ export class SharedStateSetup {
       this.sharedStateInstance.set('categories', {}); // Changed from [] to {} for proper category lookup
       this.sharedStateInstance.set('searchTimeout', null);
       
-      // Make searchTimeout available globally for backward compatibility
-      window.searchTimeout = null;
-      
       // Make shared state available globally for modules
       window.sharedState = this.sharedStateInstance;
       window.getSharedState = this.getSharedState.bind(this);

@@ -5,6 +5,8 @@
  * Includes search form submission, live search, category filters, and advanced search.
  */
 
+import { clearSearchTimeout } from '../search/search-timeout.js';
+
 export default class SearchEvents {
   constructor(dependencies = {}) {
     this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
@@ -157,12 +159,7 @@ export default class SearchEvents {
             this.debugLog?.warn('stopPlaying function not available');
           }
           // Cancel any pending live-search debounce to avoid unintended result clearing
-          try {
-            if (window.searchTimeout) {
-              clearTimeout(window.searchTimeout);
-              window.searchTimeout = null;
-            }
-          } catch { /* silently ignore timeout cleanup errors */ }
+          clearSearchTimeout();
           event.preventDefault();
           event.stopPropagation();
           return false;
@@ -170,10 +167,7 @@ export default class SearchEvents {
 
         if (event.code == "Enter") {
           // Clear any pending live search using shared state
-          const searchTimeout = window.searchTimeout;
-          if (searchTimeout) {
-            clearTimeout(searchTimeout);
-          }
+          clearSearchTimeout();
           
           this.debugLog?.debug('Search form submitted via Enter key, calling searchData...');
           
@@ -369,10 +363,7 @@ export default class SearchEvents {
         this.debugLog?.debug('Reset button clicked');
         
         // Clear any pending live search
-        const searchTimeout = window.searchTimeout;
-        if (searchTimeout) {
-          clearTimeout(searchTimeout);
-        }
+        clearSearchTimeout();
         
         const form = document.getElementById('search_form');
         form?.reset();

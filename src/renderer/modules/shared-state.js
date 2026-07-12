@@ -27,8 +27,6 @@ const VALID_KEYS = new Set([
   // Data state
   'categories',
   'searchTimeout',
-  // Legacy
-  'db',
 ]);
 
 class SharedState {
@@ -46,10 +44,7 @@ class SharedState {
       fontSize: 11,
 
       // Data state
-      categories: {},
-
-      // Legacy database reference (for fallback)
-      db: null
+      categories: {}
     };
 
     this.listeners = new Map();
@@ -147,8 +142,7 @@ class SharedState {
       loop: false,
       holdingTankMode: "storage",
       fontSize: 11,
-      categories: {},
-      db: null
+      categories: {}
     };
   }
 }
@@ -164,4 +158,4 @@ export const getState = (key) => sharedState.get(key);
 export const setState = (key, value) => sharedState.set(key, value);
 export const subscribe = (key, callback) => sharedState.subscribe(key, callback);
 export const getAllState = () => sharedState.getAll();
-export const resetState = () => sharedState.reset(); 
+export const resetState = () => sharedState.reset();

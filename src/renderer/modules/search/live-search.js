@@ -41,12 +41,6 @@ function getCachedCategories() {
       return categories;
     }
     
-    // Fallback to global categories if available
-    if (typeof window.categories !== 'undefined' && window.categories) {
-      return window.categories;
-    }
-    
-    // Return empty object as last resort
     return {};
   } catch (error) {
     debugLog?.warn('❌ Error getting cached categories:', { 

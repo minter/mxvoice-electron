@@ -6,7 +6,8 @@
  * PHASE 2 SECURITY MIGRATION: Now uses secure adapters for all database operations
  */
 
-// Import secure adapters for Phase 2 migration
+import { clearSearchTimeout } from './search-timeout.js';
+
 // Import debug logger
 let debugLog = null;
 try {
@@ -32,14 +33,7 @@ async function performAdvancedSearch(_filters) {
       function: 'performAdvancedSearch'
     });
 
-    // Clear any pending live search - use global searchTimeout if available
-    if (window.searchTimeout) {
-      clearTimeout(window.searchTimeout);
-      debugLog?.info("Cleared timeout", { 
-        module: 'advanced-search',
-        function: 'performAdvancedSearch'
-      });
-    }
+    clearSearchTimeout();
 
     const form = document.getElementById('search_form');
     if (form) form.reset();
@@ -220,4 +214,4 @@ export {
 // Default export for module loading
 export default {
   performAdvancedSearch
-}; 
+};

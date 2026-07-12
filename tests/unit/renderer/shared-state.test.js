@@ -28,7 +28,6 @@ describe('SharedState', () => {
       expect(sharedState.get('holdingTankMode')).toBe('storage');
       expect(sharedState.get('fontSize')).toBe(11);
       expect(sharedState.get('categories')).toEqual({});
-      expect(sharedState.get('db')).toBe(null);
     });
   });
 

@@ -10,6 +10,7 @@ import sharedState from '../shared-state.js';
 import Dom from '../dom-utils/index.js';
 import { hasActiveAdvancedFilters } from './search-form-utils.js';
 import { secureAnalytics, secureDatabase } from '../adapters/secure-adapter.js';
+import { scheduleSearch } from './search-timeout.js';
 
 // Import debug logger
 let debugLog = null;
@@ -237,18 +238,9 @@ function searchData() {
  * This function handles the debounced live search functionality
  */
 function triggerLiveSearch() {
-  // Get searchTimeout from shared state or global fallback
-  let searchTimeout = sharedState.get('searchTimeout') || window.searchTimeout;
-  
-  // Clear existing timeout
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-  
   const searchTerm = (document.getElementById('omni_search')?.value || '').trim();
 
-  // Set new timeout and store in shared state and global
-  const newTimeout = setTimeout(() => {
+  scheduleSearch(() => {
     // Check if we have either a search term or advanced search filters
     const hasSearchTerm = searchTerm.length >= 2;
     const hasAdvancedFilters = hasActiveAdvancedFilters();
@@ -269,11 +261,7 @@ function triggerLiveSearch() {
       if (tbody2) tbody2.querySelectorAll('tr').forEach(tr => tr.remove());
       if (thead2) thead2.style.display = 'none';
     }
-  }, 300); // 300ms debounce
-  
-  // Store timeout in shared state and global
-  sharedState.set('searchTimeout', newTimeout);
-  window.searchTimeout = newTimeout;
+  });
 }
 
 // Export individual functions for direct access
