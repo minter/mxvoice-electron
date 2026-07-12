@@ -13,6 +13,7 @@ import { isAllowedAboutExternalUrl } from './about-external-url.js';
 import { createRendererCommandDispatcher } from './renderer-command-dispatcher.js';
 import { buildApplicationMenu } from './application-menu.js';
 import { createWindowStateManager } from './window-state-manager.js';
+import { createMainWindow } from './main-window-factory.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -69,69 +70,16 @@ function initializeAppSetup(dependencies) {
 // Accept initial dimensions and state so the caller (which has access to the store)
 // can restore the last-saved window state on startup.
 function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScreen, displayId } = {}) {
-  // Validate display still exists if displayId is provided
-  let validDisplay = null;
-  if (displayId) {
-    const displays = screen.getAllDisplays();
-    validDisplay = displays.find(d => d.id === displayId);
-  }
-
-  // If display is valid and coordinates are provided, use them; otherwise use defaults
-  const windowOptions = {
-    width,
-    height,
-    icon: path.join(__dirname, '../../assets/icons/mxvoice.ico'),
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      enableRemoteModule: false,
-      preload: path.join(__dirname, '../../preload/preload-bundle.cjs'),
-      sandbox: true,
-      webSecurity: true,
-      allowRunningInsecureContent: false,
-      // Enhanced security settings
-      experimentalFeatures: false,
-      webgl: false, // Disable WebGL for security (can be enabled if needed)
-      plugins: false // Disable plugins for security
-    }
-  };
-
-  // Add position if we have valid coordinates and display
-  if (validDisplay && x !== undefined && y !== undefined) {
-    windowOptions.x = x;
-    windowOptions.y = y;
-  }
-
-  // Hide window during tests to prevent focus-stealing
-  if (process.env.APP_TEST_MODE === '1') {
-    windowOptions.show = false;
-  }
-
-  // Create the browser window.
-  const mainWindow = new BrowserWindow(windowOptions);
-
-  // Load the index.html of the app.
-  mainWindow.loadFile(path.join(__dirname, '../../index.html'));
-
-  // Open the DevTools.
-  //mainWindow.webContents.openDevTools();
-
-  // Restore window state after window is ready
-  mainWindow.once('ready-to-show', () => {
-    if (autoUpdater) {
-      autoUpdater.checkForUpdatesAndNotify();
-    }
-    
-    // Restore maximized/fullscreen state after window is ready
-    if (isMaximized && !mainWindow.isDestroyed()) {
-      mainWindow.maximize();
-    }
-    if (isFullScreen && !mainWindow.isDestroyed()) {
-      mainWindow.setFullScreen(true);
-    }
+  return createMainWindow({
+    BrowserWindow,
+    screen,
+    autoUpdater,
+    iconPath: path.join(__dirname, '../../assets/icons/mxvoice.ico'),
+    preloadPath: path.join(__dirname, '../../preload/preload-bundle.cjs'),
+    indexPath: path.join(__dirname, '../../index.html'),
+    testMode: process.env.APP_TEST_MODE === '1',
+    state: { width, height, x, y, isMaximized, isFullScreen, displayId }
   });
-
-  return mainWindow;
 }
 
 /**
