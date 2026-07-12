@@ -34,10 +34,24 @@ src/main/
   - Exports: `initializeAppSetup`, `createWindow`, `createApplicationMenu`, `setupAppLifecycle`, `setupWindowStateSaving`, `saveWindowState`, `loadWindowState`, and UI senders
 
 - `ipc-handlers.js`
-  - Registers all secure IPC handlers (DB query/execute, store get/set/has/delete/clear, FS ops, path/os, audio controls, app ops, dialogs)
-  - Adds Logs endpoints: `logs:write`, `logs:get-paths`, `logs:export`
-  - Injects dependencies from coordinator (window, db, store, updater, debugLog, logService)
+  - Orchestrator: requires all domain modules and injects dependencies; delegates registration to `ipc/` handlers
   - Exports: `initializeIpcHandlers`, `registerAllHandlers`
+  - **Domain Modules** (`ipc/`):
+    - `database-handlers.js` — Named database API queries (categories, hotkeys, search, etc.)
+    - `store-handlers.js` — electron-store get/set/delete/has/clear operations
+    - `filesystem-handlers.js` — Filesystem operations with path authorization guards
+    - `dialog-handlers.js` — Native dialogs (directory picker, file/folder selection)
+    - `path-os-handlers.js` — Path manipulation and OS info queries
+    - `audio-handlers.js` — Audio playback (Howler) and metadata parsing
+    - `app-update-handlers.js` — App version queries and auto-update operations
+    - `ui-handlers.js` — UI commands (font sizing, focus, toolbar updates)
+    - `logging-handlers.js` — Centralized logging endpoints for renderer and file exports
+    - `profile-handlers.js` — Profile CRUD, switching, and current profile management
+    - `profile-backup-handlers.js` — Profile backup creation and restore operations
+    - `library-handlers.js` — Library import/export operations with zip archiving
+    - `analytics-handlers.js` — Analytics event tracking (PostHog integration, consent gating)
+    - `utility-handlers.js` — Utility operations (audio file validation, UUID generation)
+    - `guards.js` — Path authorization helpers (path validation and canonicalization)
 
 - `file-operations.js`
   - User-facing dialogs for opening/saving hotkey (`.mrv`) and holding-tank (`.hld`) files
