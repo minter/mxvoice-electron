@@ -18,7 +18,9 @@ State is saved to `profiles/<ProfileName>/state.json` and automatically loaded o
 - **Tab preservation:** Maintains custom tab names and song order
 - **Explicit save before switch:** State is saved synchronously before profile switching to ensure no data loss
 - **Race condition protection:** Profile name is explicitly passed to save handlers to prevent state being saved to wrong profile directory
-- **Restoration lock:** Prevents saves during state restoration to avoid race conditions and data corruption
+- **Model snapshots:** Saves serialize `HotkeyState` and `HoldingTankState`, never live DOM
+- **Deterministic restore:** Batch metadata lookup and direct rendering work without tab activation or timing delays
+- **Restoration lock:** Protects the broader profile/backup/import lifecycle during app initialization
 - **🔒 Critical Data Protection:** Multi-layered safeguards prevent empty states from overwriting valid user data
 
 ## Usage
@@ -40,11 +42,11 @@ initializeProfileState({
 ```javascript
 import { saveProfileState } from './modules/profile-state/index.js';
 
-// Manually save current state (extracts from DOM, takes no parameters)
+// Manually save the current model snapshots (takes no parameters)
 await saveProfileState();
 ```
 
-**Note:** `saveProfileState()` takes NO parameters. It always extracts state from the current DOM.
+**Note:** `saveProfileState()` takes no parameters. The initialized hotkey and holding-tank modules provide their snapshots.
 
 ### Manual Load
 
@@ -125,8 +127,8 @@ IPC handler saves state before closing app.
 ## Data Validation
 
 When loading state:
-- Each song ID is validated against the database
-- Deleted songs are skipped (not restored)
+- Song IDs are validated with one batch database query per collection
+- Deleted songs are removed from the models and are not rendered
 - Invalid data is logged but doesn't break initialization
 - Missing state file is treated as fresh start
 
@@ -163,13 +165,13 @@ A global flag `window.isRestoringProfileState` protects against saves during the
    - Module initialization
    - Event registration
 3. **Cleared after complete init:** `clearProfileRestorationLock()` called after app is fully ready
-4. **Checked by all save functions:** `saveProfileState()`, `switchProfileWithSave()`, and `beforeunload` handler all check this flag
+4. **Checked at the lifecycle boundary:** `saveProfileState()`, `switchProfileWithSave()`, and the `beforeunload` handler check this flag. Hotkeys and holding tank do not need their own checks.
 
 This prevents the critical race condition where:
 - Profile loads with valid state (4 hotkeys, 1 holding tank song)
-- DOM is being populated from database
-- A save is triggered before song table has rows
-- Empty state gets extracted and saved
+- App initialization is still in progress
+- A lifecycle save is triggered before initialization completes
+- An incomplete snapshot could otherwise be saved
 - User's carefully-built configuration is lost forever
 
 **Key Insight:** By extending the lock to cover the entire initialization, we ensure NO saves can happen during the vulnerable window.
@@ -178,7 +180,7 @@ This prevents the critical race condition where:
 
 **Problem:** Empty states were sometimes saved during profile switches, overwriting valid user data due to a race condition where state was extracted before app initialization (including song table population) was complete.
 
-**Root Cause:** Profile loads → State restoration begins → `isRestoringProfileState` cleared too early → Song table not yet populated → Save triggered → Empty state extracted → Valid data overwritten.
+**Historical root cause:** Profile loads → restoration begins → the lifecycle lock clears too early → initialization is incomplete → a save overwrites valid data.
 
 **Simple, Robust Solution:**
 
@@ -188,7 +190,7 @@ This prevents the critical race condition where:
 
 **How It Works:**
 1. **Lock Set:** `window.isRestoringProfileState = true` when `loadProfileState()` starts
-2. **Hotkeys/Holding Tank Restored:** Profile state restored to DOM
+2. **Hotkeys/Holding Tank Restored:** Snapshots load into the models, metadata is batch-fetched, and all tabs render directly
 3. **Lock Stays Active:** Lock is NOT cleared yet (this is the fix!)
 4. **App Initialization Continues:** Song table populated, modules initialized, events registered
 5. **Lock Cleared:** `clearProfileRestorationLock()` called after full app initialization
@@ -196,7 +198,7 @@ This prevents the critical race condition where:
 
 **Why This Works:**
 - ANY save attempt during the entire initialization window is blocked
-- No complex conditions or timing windows needed
+- Restore itself has no Bootstrap tab clicks, animation waits, or DOM scraping
 - Simple, predictable, and easy to understand
 - Covers ALL race condition scenarios
 
@@ -205,7 +207,7 @@ This prevents the critical race condition where:
 // Start of profile load
 window.isRestoringProfileState = true; 
 
-// ... restore hotkeys and holding tank ...
+// ... load model snapshots and render hotkeys and holding tank ...
 // ... continue app initialization ...
 // ... populate song table ...
 // ... initialize all modules ...
@@ -283,7 +285,7 @@ export function initializeProfileState(options): Object
 // Extract current state without saving
 export function extractProfileState(): Object
 
-// Save state to file (takes NO parameters, extracts from DOM)
+// Save model snapshots to the profile state file (takes no parameters)
 export function saveProfileState(): Promise<{success: boolean, error?: string}>
 
 // Load state from file
@@ -305,4 +307,3 @@ export function switchProfileWithSave(): Promise<{success: boolean, error?: stri
 - `window.secureElectronAPI.database` - Song validation
 - `hotkeysModule` - Hotkey restoration
 - `holdingTankModule` - Holding tank restoration
-
