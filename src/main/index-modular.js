@@ -708,7 +708,10 @@ async function initializeModules() {
 
   const dependencies = {
     mainWindow,
-    db,
+    db, // legacy snapshot — prefer getDb()
+    getDb: () => db,
+    setDb: (next) => { db = next; },
+    getProfileDirectory,
     store,
     audioInstances,
     autoUpdater,
@@ -744,7 +747,12 @@ async function initializeModules() {
   fileOperations.initializeFileOperations(dependencies);
 
   // Initialize library transfer manager (needs db and store which are now available)
-  libraryTransferManager.initializeLibraryTransferManager({ debugLog, db, store });
+  libraryTransferManager.initializeLibraryTransferManager({
+    debugLog,
+    getDb: () => db,
+    setDb: (next) => { db = next; },
+    store
+  });
 }
 
 // Main window creation function

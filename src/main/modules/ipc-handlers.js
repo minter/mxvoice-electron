@@ -26,7 +26,9 @@ import { isSupportedAudioFile, copyFileStreaming } from './file-utils.js';
 
 // Dependencies that will be injected
 let mainWindow;
-let db;
+let getDb = () => null;
+let getCurrentProfile;
+let getProfileDirectory;
 let store;
 let audioInstances;
 let autoUpdater;
@@ -69,7 +71,9 @@ async function isPathAllowed(filePath, allowedPaths) {
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
   mainWindow = dependencies.mainWindow;
-  db = dependencies.db;
+  getDb = dependencies.getDb || (() => dependencies.db);
+  getCurrentProfile = dependencies.getCurrentProfile;
+  getProfileDirectory = dependencies.getProfileDirectory;
   store = dependencies.store;
   audioInstances = dependencies.audioInstances;
   autoUpdater = dependencies.autoUpdater;
@@ -199,7 +203,7 @@ function registerAllHandlers() {
   // Named database API handlers
   ipcMain.handle('get-categories', async () => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       
@@ -211,7 +215,7 @@ function registerAllHandlers() {
         sql 
       });
       
-      const stmt = db.prepare(sql);
+      const stmt = getDb().prepare(sql);
       const result = stmt.all([]);
       stmt.finalize();
       
@@ -236,7 +240,7 @@ function registerAllHandlers() {
 
   ipcMain.handle('add-song', async (event, songData) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       
@@ -247,7 +251,7 @@ function registerAllHandlers() {
       });
       
       // For node-sqlite3-wasm, use prepare/run for parameterized statements
-      const stmt = db.prepare(`
+      const stmt = getDb().prepare(`
         INSERT INTO mrvoice (title, artist, category, info, filename, time, modtime, volume, start_time, end_time)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
@@ -955,14 +959,14 @@ function registerAllHandlers() {
   // Enhanced database operations for secure API
   ipcMain.handle('get-song-by-id', async (event, songId) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       if (!songId) {
         throw new Error('Song ID is required');
       }
       // For node-sqlite3-wasm, use prepare/get for parameterized queries
-      const stmt = db.prepare('SELECT * FROM mrvoice WHERE id = ?');
+      const stmt = getDb().prepare('SELECT * FROM mrvoice WHERE id = ?');
       const result = stmt.get(songId);
       stmt.finalize();
       
@@ -977,14 +981,14 @@ function registerAllHandlers() {
 
   ipcMain.handle('delete-song', async (event, songId) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       if (!songId) {
         throw new Error('Song ID is required');
       }
       // For node-sqlite3-wasm, use prepare/run for parameterized statements
-      const stmt = db.prepare('DELETE FROM mrvoice WHERE id = ?');
+      const stmt = getDb().prepare('DELETE FROM mrvoice WHERE id = ?');
       const result = stmt.run(songId);
       stmt.finalize();
       
@@ -1021,7 +1025,7 @@ function registerAllHandlers() {
 
   ipcMain.handle('update-song', async (event, songData) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       if (!songData || !songData.id) {
@@ -1046,7 +1050,7 @@ function registerAllHandlers() {
       }
 
       params.push(songData.id);
-      const stmt = db.prepare(`UPDATE mrvoice SET ${setClauses.join(', ')} WHERE id = ?`);
+      const stmt = getDb().prepare(`UPDATE mrvoice SET ${setClauses.join(', ')} WHERE id = ?`);
       const result = stmt.run(params);
       
       stmt.finalize();
@@ -1060,7 +1064,7 @@ function registerAllHandlers() {
 
   ipcMain.handle('add-category', async (event, categoryData) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       
@@ -1069,7 +1073,7 @@ function registerAllHandlers() {
       }
       
       // For node-sqlite3-wasm, use prepare/run for parameterized statements
-      const stmt = db.prepare('INSERT INTO categories (code, description) VALUES (?, ?)');
+      const stmt = getDb().prepare('INSERT INTO categories (code, description) VALUES (?, ?)');
       const result = stmt.run([categoryData.code, categoryData.description]);
       stmt.finalize();
       
@@ -1082,14 +1086,14 @@ function registerAllHandlers() {
 
   ipcMain.handle('update-category', async (event, code, description) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       if (!code || !description) {
         throw new Error('Category code and description are required');
       }
       // For node-sqlite3-wasm, use prepare/run for parameterized statements
-      const stmt = db.prepare('UPDATE categories SET description = ? WHERE code = ?');
+      const stmt = getDb().prepare('UPDATE categories SET description = ? WHERE code = ?');
       const result = stmt.run([description, code]);
       stmt.finalize();
       
@@ -1102,7 +1106,7 @@ function registerAllHandlers() {
 
   ipcMain.handle('delete-category', async (event, code, _description) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       if (!code) {
@@ -1113,17 +1117,17 @@ function registerAllHandlers() {
       }
 
       // Ensure the UNC (Uncategorized) category exists
-      const upsertStmt = db.prepare('INSERT OR REPLACE INTO categories VALUES(?, ?)');
+      const upsertStmt = getDb().prepare('INSERT OR REPLACE INTO categories VALUES(?, ?)');
       upsertStmt.run(['UNC', 'Uncategorized']);
       upsertStmt.finalize();
 
       // Move all songs from the deleted category to UNC
-      const updateStmt = db.prepare('UPDATE mrvoice SET category = ? WHERE category = ?');
+      const updateStmt = getDb().prepare('UPDATE mrvoice SET category = ? WHERE category = ?');
       updateStmt.run(['UNC', code]);
       updateStmt.finalize();
 
       // Then delete the category
-      const deleteStmt = db.prepare('DELETE FROM categories WHERE code = ?');
+      const deleteStmt = getDb().prepare('DELETE FROM categories WHERE code = ?');
       const result = deleteStmt.run([code]);
       deleteStmt.finalize();
       
@@ -1138,7 +1142,7 @@ function registerAllHandlers() {
 
   ipcMain.handle('search-songs', async (event, searchParams) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       if (!searchParams || typeof searchParams !== 'object') {
@@ -1198,7 +1202,7 @@ function registerAllHandlers() {
       }
 
       const sql = 'SELECT * FROM mrvoice' + queryString + ' ORDER BY category,info,title,artist';
-      const stmt = db.prepare(sql);
+      const stmt = getDb().prepare(sql);
       const result = stmt.all(queryParams);
       stmt.finalize();
 
@@ -1211,13 +1215,13 @@ function registerAllHandlers() {
 
   ipcMain.handle('get-category-by-code', async (event, code) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       if (!code) {
         throw new Error('Category code is required');
       }
-      const stmt = db.prepare('SELECT * FROM categories WHERE code = ?');
+      const stmt = getDb().prepare('SELECT * FROM categories WHERE code = ?');
       const result = stmt.get(code);
       stmt.finalize();
       return { success: true, data: result ? [result] : [] };
@@ -1229,7 +1233,7 @@ function registerAllHandlers() {
 
   ipcMain.handle('get-songs-by-ids', async (event, ids) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       if (!Array.isArray(ids) || ids.length === 0) {
@@ -1241,7 +1245,7 @@ function registerAllHandlers() {
         return { success: true, data: [] };
       }
       const placeholders = validIds.map(() => '?').join(',');
-      const stmt = db.prepare(`SELECT * FROM mrvoice WHERE id IN (${placeholders})`);
+      const stmt = getDb().prepare(`SELECT * FROM mrvoice WHERE id IN (${placeholders})`);
       const result = stmt.all(validIds);
       stmt.finalize();
       return { success: true, data: result || [] };
@@ -1253,13 +1257,13 @@ function registerAllHandlers() {
 
   ipcMain.handle('reassign-song-category', async (event, fromCode, toCode) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       if (!fromCode || !toCode) {
         throw new Error('Both source and target category codes are required');
       }
-      const stmt = db.prepare('UPDATE mrvoice SET category = ? WHERE category = ?');
+      const stmt = getDb().prepare('UPDATE mrvoice SET category = ? WHERE category = ?');
       const result = stmt.run([toCode, fromCode]);
       stmt.finalize();
       return { success: true, data: { changes: result.changes || 0 } };
@@ -1271,13 +1275,13 @@ function registerAllHandlers() {
 
   ipcMain.handle('find-category-codes-like', async (event, code, pattern) => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
       if (!code) {
         throw new Error('Category code is required');
       }
-      const stmt = db.prepare('SELECT code FROM categories WHERE code = ? OR code LIKE ?');
+      const stmt = getDb().prepare('SELECT code FROM categories WHERE code = ? OR code LIKE ?');
       const result = stmt.all([code, pattern || `${code}%`]);
       stmt.finalize();
       return { success: true, data: result || [] };
@@ -1289,10 +1293,10 @@ function registerAllHandlers() {
 
   ipcMain.handle('count-songs', async () => {
     try {
-      if (!db) {
+      if (!getDb()) {
         throw new Error('Database not initialized');
       }
-      const stmt = db.prepare('SELECT count(*) as count FROM mrvoice');
+      const stmt = getDb().prepare('SELECT count(*) as count FROM mrvoice');
       const result = stmt.get();
       stmt.finalize();
       return { success: true, data: [result] };
@@ -1378,8 +1382,7 @@ function registerAllHandlers() {
   ipcMain.handle('profile:get-current', async () => {
     try {
       // Import the main module to get current profile
-      const mainModule = await import('../index-modular.js');
-      const profile = mainModule.getCurrentProfile();
+      const profile = getCurrentProfile();
       return { success: true, profile: profile || null };
     } catch (error) {
       debugLog?.error('Get current profile error:', { module: 'ipc-handlers', function: 'profile:get-current', error: error.message });
@@ -1390,8 +1393,7 @@ function registerAllHandlers() {
   ipcMain.handle('profile:get-directory', async (event, type) => {
     try {
       // Import the main module to get profile directory
-      const mainModule = await import('../index-modular.js');
-      const directory = mainModule.getProfileDirectory(type);
+      const directory = getProfileDirectory(type);
       return { success: true, directory };
     } catch (error) {
       debugLog?.error('Get profile directory error:', { module: 'ipc-handlers', function: 'profile:get-directory', error: error.message });
@@ -1401,8 +1403,7 @@ function registerAllHandlers() {
 
   ipcMain.handle('profile:load-state', async () => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const stateFile = path.join(mainModule.getProfileDirectory('state'), 'state.json');
+      const stateFile = path.join(getProfileDirectory('state'), 'state.json');
       try {
         const data = await fsPromises.readFile(stateFile, 'utf8');
         return { success: true, loaded: true, data };
@@ -1422,8 +1423,7 @@ function registerAllHandlers() {
 
   ipcMain.handle('profile:get-legacy-migration-data', async () => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const stateFile = path.join(mainModule.getProfileDirectory('state'), 'state.json');
+      const stateFile = path.join(getProfileDirectory('state'), 'state.json');
       const configFile = path.join(app.getPath('userData'), 'config.json');
       const stateExists = fs.existsSync(stateFile);
       if (!fs.existsSync(configFile)) {
@@ -1452,8 +1452,7 @@ function registerAllHandlers() {
     try {
       // If profileName is not provided, fall back to current profile
       if (!profileName) {
-        const mainModule = await import('../index-modular.js');
-        profileName = mainModule.getCurrentProfile();
+        profileName = getCurrentProfile();
       }
 
       if (!profileName) {
@@ -1461,7 +1460,6 @@ function registerAllHandlers() {
       }
 
       // Use profile manager to get the correct directory path
-      const profileManager = await import('./profile-manager.js');
       const sanitizedName = profileManager.sanitizeProfileName(profileName);
       const profilesDir = profileManager.getProfilesDirectory();
       const profileDir = path.join(profilesDir, sanitizedName);
@@ -1564,8 +1562,7 @@ function registerAllHandlers() {
   // Profile: Get preference value
   ipcMain.handle('profile:get-preference', async (event, key) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const profileName = mainModule.getCurrentProfile();
+      const profileName = getCurrentProfile();
       const preferences = await profileManager.loadProfilePreferences(profileName);
       
       return { success: true, value: preferences[key] };
@@ -1583,8 +1580,7 @@ function registerAllHandlers() {
   // Profile: Set preference value
   ipcMain.handle('profile:set-preference', async (event, key, value) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const profileName = mainModule.getCurrentProfile();
+      const profileName = getCurrentProfile();
       
       debugLog?.info('[PROFILE-PREF] Loading preferences for profile', {
         module: 'ipc-handlers',
@@ -1639,8 +1635,7 @@ function registerAllHandlers() {
   // Profile: Set multiple preferences atomically (prevents race conditions)
   ipcMain.handle('profile:set-preferences', async (event, preferencesObject) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const profileName = mainModule.getCurrentProfile();
+      const profileName = getCurrentProfile();
       
       debugLog?.info('[PROFILE-PREF] Setting multiple preferences atomically', {
         module: 'ipc-handlers',
@@ -1711,8 +1706,7 @@ function registerAllHandlers() {
   // Profile: Get all preferences
   ipcMain.handle('profile:get-all-preferences', async () => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const profileName = mainModule.getCurrentProfile();
+      const profileName = getCurrentProfile();
       const preferences = await profileManager.loadProfilePreferences(profileName);
       
       return { success: true, preferences: preferences };
@@ -1737,8 +1731,7 @@ function registerAllHandlers() {
       // The renderer should call profile:save-state-before-switch first
       
       // Save current profile name for fallback if launcher is closed without selection
-      const mainModule = await import('../index-modular.js');
-      const currentProfile = mainModule.getCurrentProfile();
+      const currentProfile = getCurrentProfile();
       if (currentProfile) {
         // Store the current profile as the fallback profile
         store.set('fallback-profile', currentProfile);
@@ -1770,8 +1763,7 @@ function registerAllHandlers() {
     try {
       // If profileName is not provided, fall back to current profile
       if (!profileName) {
-        const mainModule = await import('../index-modular.js');
-        profileName = mainModule.getCurrentProfile();
+        profileName = getCurrentProfile();
       }
 
       if (!profileName) {
@@ -1794,7 +1786,6 @@ function registerAllHandlers() {
       });
 
       // Use profile manager to get the correct directory path
-      const profileManager = await import('./profile-manager.js');
       const sanitizedName = profileManager.sanitizeProfileName(profileName);
       const profilesDir = profileManager.getProfilesDirectory();
       const profileDir = path.join(profilesDir, sanitizedName);
@@ -1978,8 +1969,7 @@ function registerAllHandlers() {
       });
       
       // Save current profile name for fallback if launcher is closed without selection
-      const mainModule = await import('../index-modular.js');
-      const currentProfile = mainModule.getCurrentProfile();
+      const currentProfile = getCurrentProfile();
       if (currentProfile) {
         store.set('fallback-profile', currentProfile);
         debugLog?.info('Saved fallback profile before switch', {
@@ -2053,8 +2043,7 @@ function registerAllHandlers() {
   // Profile Backup: Create backup
   ipcMain.handle('profile:createBackup', async (_event) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const currentProfile = mainModule.getCurrentProfile();
+      const currentProfile = getCurrentProfile();
       
       if (!currentProfile) {
         return { success: false, error: 'No active profile' };
@@ -2098,8 +2087,7 @@ function registerAllHandlers() {
   // Profile Backup: List backups
   ipcMain.handle('profile:listBackups', async (_event) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const currentProfile = mainModule.getCurrentProfile();
+      const currentProfile = getCurrentProfile();
       
       if (!currentProfile) {
         return { success: false, error: 'No active profile' };
@@ -2127,8 +2115,7 @@ function registerAllHandlers() {
   // Profile Backup: Get backup metadata
   ipcMain.handle('profile:getBackupMetadata', async (_event) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const currentProfile = mainModule.getCurrentProfile();
+      const currentProfile = getCurrentProfile();
       
       if (!currentProfile) {
         return { success: false, error: 'No active profile' };
@@ -2150,8 +2137,7 @@ function registerAllHandlers() {
   // Profile Backup: Restore from backup
   ipcMain.handle('profile:restoreBackup', async (event, backupId) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const currentProfile = mainModule.getCurrentProfile();
+      const currentProfile = getCurrentProfile();
       
       if (!currentProfile) {
         return { success: false, error: 'No active profile' };
@@ -2197,8 +2183,7 @@ function registerAllHandlers() {
   // Profile Backup: Delete backup
   ipcMain.handle('profile:deleteBackup', async (event, backupId) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const currentProfile = mainModule.getCurrentProfile();
+      const currentProfile = getCurrentProfile();
       
       if (!currentProfile) {
         return { success: false, error: 'No active profile' };
@@ -2227,8 +2212,7 @@ function registerAllHandlers() {
   // Profile Backup: Get backup settings
   ipcMain.handle('profile:getBackupSettings', async (_event) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const currentProfile = mainModule.getCurrentProfile();
+      const currentProfile = getCurrentProfile();
       
       if (!currentProfile) {
         return { success: false, error: 'No active profile' };
@@ -2256,8 +2240,7 @@ function registerAllHandlers() {
   // Profile Backup: Save backup settings
   ipcMain.handle('profile:saveBackupSettings', async (event, settings) => {
     try {
-      const mainModule = await import('../index-modular.js');
-      const currentProfile = mainModule.getCurrentProfile();
+      const currentProfile = getCurrentProfile();
       
       if (!currentProfile) {
         return { success: false, error: 'No active profile' };

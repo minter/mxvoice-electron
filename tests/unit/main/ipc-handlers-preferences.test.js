@@ -88,6 +88,7 @@ beforeAll(async () => {
     debugLog: mockDebugLog,
     logService: null,
     updateState: { downloaded: false },
+    getCurrentProfile: vi.fn(() => 'Test User'),
   });
 });
 

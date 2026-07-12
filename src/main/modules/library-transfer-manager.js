@@ -28,7 +28,8 @@ const { ZipArchive } = require('archiver');
 const MANIFEST_VERSION = 1;
 
 let debugLog = null;
-let db = null;
+let getDb = () => null;
+let setDb = () => {};
 let store = null;
 
 async function pathExists(p) {
@@ -55,7 +56,8 @@ async function copyDirectoryRecursive(src, dest) {
  */
 function initializeLibraryTransferManager(dependencies) {
   debugLog = dependencies.debugLog;
-  db = dependencies.db;
+  getDb = dependencies.getDb || (() => dependencies.db);
+  setDb = dependencies.setDb || (() => {});
   store = dependencies.store;
 
   debugLog?.info('Library Transfer Manager initialized', {
@@ -564,9 +566,11 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
         progressCallback({ percent: 55, message: 'Importing database...' });
 
         // Close existing database if open
-        if (db && typeof db.close === 'function') {
+        const currentDb = getDb();
+        if (currentDb && typeof currentDb.close === 'function') {
           try {
-            db.close();
+            currentDb.close();
+            setDb(null);
             debugLog?.info('Closed existing database for import', logCtx);
           } catch (closeErr) {
             debugLog?.warn('Could not close existing database', { ...logCtx, error: closeErr.message });
