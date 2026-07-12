@@ -18,6 +18,11 @@ try {
 
 // Import secure adapters
 import { secureFileDialog } from '../adapters/secure-adapter.js';
+let moduleRegistry = {};
+
+export function configureFileOperationDependencies(dependencies = {}) {
+  moduleRegistry = dependencies.moduleRegistry || {};
+}
 
 /**
  * Opens a hotkey file using the modern electronAPI with fallback to legacy ipcRenderer
@@ -90,7 +95,7 @@ export function saveHotkeyFile() {
     saveBtn.dataset.tooltipSuppressUntil = Date.now() + 2000; // Suppress for 2 seconds
   }
   
-  const hotkeys = window.moduleRegistry?.hotkeys;
+  const hotkeys = moduleRegistry.hotkeys;
   if (!hotkeys?.saveHotkeyFile) throw new Error('Hotkeys module is unavailable');
   return hotkeys.saveHotkeyFile();
 }
@@ -115,7 +120,7 @@ export function saveHoldingTankFile() {
   if (saveBtn) {
     saveBtn.dataset.tooltipSuppressUntil = Date.now() + 2000; // Suppress for 2 seconds
   }
-  const holdingTank = window.moduleRegistry?.holdingTank;
+  const holdingTank = moduleRegistry.holdingTank;
   if (!holdingTank?.saveHoldingTankFile) throw new Error('Holding tank module is unavailable');
   return holdingTank.saveHoldingTankFile();
 }

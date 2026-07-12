@@ -266,8 +266,8 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
             const sound_path = sourceResult.source;
             
             // Ensure E2E test mode/probe is initialized right before first playback
-            if (window.electronTest?.isE2E && window.moduleRegistry?.audio?.ensureTestMode) {
-              window.moduleRegistry.audio.ensureTestMode();
+            if (window.electronTest?.isE2E) {
+              createAndInstallProbe();
             }
 
             const { trackVolume: trackVolume2, targetVolume: targetVolume2 } = calculatePlaybackVolume(

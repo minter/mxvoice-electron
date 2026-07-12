@@ -21,7 +21,13 @@ try {
   // Debug logger not available
 }
 
-import { openHotkeyFile, openHoldingTankFile, saveHotkeyFile, saveHoldingTankFile } from './file-operations.js';
+import {
+  configureFileOperationDependencies,
+  openHotkeyFile,
+  openHoldingTankFile,
+  saveHotkeyFile,
+  saveHoldingTankFile
+} from './file-operations.js';
 import { pickDirectory, startUpdateProcess } from './system-operations.js';
 
 /**
@@ -45,12 +51,14 @@ class FileOperationsModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(_dependencies = {}) {
+  async init(dependencies = {}) {
     try {
       debugLog?.info('File operations module initializing...', { 
         module: 'file-operations', 
         function: 'init' 
       });
+
+      configureFileOperationDependencies(dependencies);
 
       // Initialize file operations functionality
       this.setupFileOperations();
@@ -145,4 +153,4 @@ class FileOperationsModule {
 const fileOperationsModule = new FileOperationsModule();
 
 // Default export for module loading
-export default fileOperationsModule; 
+export default fileOperationsModule;
