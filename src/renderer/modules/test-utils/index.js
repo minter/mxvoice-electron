@@ -181,91 +181,40 @@ export function testFileSystemAPI() {
         const testPath = dbResult.value;
         return secureFileSystem.exists(testPath).then(result => {
           if (result.success) {
-            debugLog?.info('file exists API works', { 
+            debugLog?.info('file exists API works', {
               module: 'test-utils',
               function: 'testFileSystemAPI',
               exists: result.exists
             });
             results.tests.push({ name: 'fileExists', success: true, exists: result.exists });
           } else {
-            debugLog?.warn('file exists API failed', { 
+            debugLog?.warn('file exists API failed', {
               module: 'test-utils',
               function: 'testFileSystemAPI',
               error: result.error
             });
             results.tests.push({ name: 'fileExists', success: false, error: result.error });
           }
-          
-          // Test file read (try to read a config file)
-          return secureStore.get('database_directory');
+
+          return results;
         });
       } else {
-        debugLog?.warn('Could not get database directory from store', { 
+        debugLog?.warn('Could not get database directory from store', {
           module: 'test-utils',
           function: 'testFileSystemAPI'
         });
         results.tests.push({ name: 'fileExists', success: false, error: 'Could not get database directory' });
-        return Promise.resolve({ success: false, error: 'Could not get database directory' });
-      }
-    }).then(dbResult => {
-      if (dbResult.success) {
-        return securePath.join(dbResult.value, 'config.json').then(result => {
-            if (!result.success || !result.data) {
-              debugLog?.warn('Path join failed:', { 
-                module: 'test-utils',
-                function: 'testFileSystemAPI',
-                result: result
-              });
-              results.tests.push({ name: 'fileRead', success: false, error: 'Path join failed' });
-              return results;
-            }
-            const configPath = result.data;
-            return secureFileSystem.read(configPath).then(result => {
-              if (result.success) {
-                debugLog?.info('file read API works: Config file read successfully', { 
-                  module: 'test-utils',
-                  function: 'testFileSystemAPI'
-                });
-                results.tests.push({ name: 'fileRead', success: true, data: 'Config file read' });
-              } else {
-                debugLog?.info('file read API works: Config file does not exist (expected)', { 
-                  module: 'test-utils',
-                  function: 'testFileSystemAPI'
-                });
-                results.tests.push({ name: 'fileRead', success: true, data: 'Config file does not exist' });
-              }
-              return results;
-            }).catch(error => {
-              debugLog?.warn('file read API error', { 
-                module: 'test-utils',
-                function: 'testFileSystemAPI',
-                error: error.message
-              });
-              results.tests.push({ name: 'fileRead', success: false, error: error.message });
-              return results;
-            });
-        }).catch(error => {
-          debugLog?.warn('Path join error', { 
-            module: 'test-utils',
-            function: 'testFileSystemAPI',
-            error: error.message
-          });
-          results.tests.push({ name: 'fileRead', success: false, error: error.message });
-          return results;
-        });
-      } else {
-        results.tests.push({ name: 'fileRead', success: false, error: 'Could not get database directory' });
         return results;
       }
     }).catch(error => {
-      debugLog?.warn('store get API error', { 
+      debugLog?.warn('store get API error', {
         module: 'test-utils',
         function: 'testFileSystemAPI',
         error: error.message
       });
       return { success: false, error: error.message };
     });
-    
+
   } else {
     debugLog?.warn('File System API not available', { 
       module: 'test-utils',

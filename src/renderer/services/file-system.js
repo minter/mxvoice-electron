@@ -10,40 +10,12 @@ import { secureFileSystem } from '../modules/adapters/secure-adapter.js';
 // Export the secure file system API
 export const fileSystem = {
   /**
-   * Read a file
-   * @param {string} path - The file path
-   * @returns {Promise<Object>} - File read result
-   */
-  readFile: (path) => {
-    return secureFileSystem.read(path);
-  },
-
-  /**
-   * Write a file
-   * @param {string} path - The file path
-   * @param {string} content - The file content
-   * @returns {Promise<Object>} - Result of the operation
-   */
-  writeFile: (path, content) => {
-    return secureFileSystem.write(path, content);
-  },
-
-  /**
    * Check if a file exists
    * @param {string} path - The file path
    * @returns {Promise<Object>} - File exists result
    */
   exists: (path) => {
     return secureFileSystem.exists(path);
-  },
-
-  /**
-   * Get file information
-   * @param {string} path - The file path
-   * @returns {Promise<Object>} - File stat result
-   */
-  stat: (path) => {
-    return secureFileSystem.stat(path);
   },
 
   /**
@@ -63,14 +35,5 @@ export const fileSystem = {
    */
   delete: (path) => {
     return secureFileSystem.delete(path);
-  },
-
-  /**
-   * Read directory contents
-   * @param {string} path - Directory path
-   * @returns {Promise<Object>} - Directory listing result
-   */
-  readdir: (path) => {
-    return secureFileSystem.readdir(path);
   }
-}; 
+};

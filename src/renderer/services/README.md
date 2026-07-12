@@ -6,7 +6,7 @@ Typed facades over secure preload APIs for clean usage in renderer modules. Each
 ```
 services/
 ├── database.js    # Database query and CRUD operations
-├── file-system.js # File read, write, exists, readdir, stat, copy, delete
+├── file-system.js # File exists, copy, delete
 ├── path.js        # Path join, dirname, basename, extname, resolve, parse
 ├── store.js       # Persistent key-value store (has, get, set, delete)
 └── README.md

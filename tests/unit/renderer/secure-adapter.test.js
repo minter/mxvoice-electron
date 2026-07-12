@@ -148,41 +148,6 @@ describe('secureDatabase', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('secureFileSystem', () => {
-  it('read uses secureElectronAPI when available', async () => {
-    setupSecureAPI('fileSystem', {
-      read: async (path) => ({ success: true, data: 'content' }),
-    });
-
-    const res = await secureFileSystem.read('/test/file.txt');
-    expect(res.success).toBe(true);
-    expect(window.secureElectronAPI.fileSystem.read).toHaveBeenCalledWith('/test/file.txt');
-  });
-
-  it('read falls back to electronAPI', async () => {
-    setupFallbackAPI('fileSystem', {
-      read: async (path) => ({ success: true, data: 'fallback' }),
-    });
-
-    const res = await secureFileSystem.read('/test/file.txt');
-    expect(res.success).toBe(true);
-    expect(res.data).toBe('fallback');
-  });
-
-  it('read returns error when no API is available', async () => {
-    const res = await secureFileSystem.read('/test/file.txt');
-    expect(res.success).toBe(false);
-    expect(res.error).toMatch(/no file system api/i);
-  });
-
-  it('write passes filePath and data', async () => {
-    setupSecureAPI('fileSystem', {
-      write: async (path, data) => ({ success: true }),
-    });
-
-    await secureFileSystem.write('/test/out.txt', 'hello');
-    expect(window.secureElectronAPI.fileSystem.write).toHaveBeenCalledWith('/test/out.txt', 'hello');
-  });
-
   it('copy passes source and dest', async () => {
     setupSecureAPI('fileSystem', {
       copy: async (src, dest) => ({ success: true }),
@@ -190,15 +155,6 @@ describe('secureFileSystem', () => {
 
     await secureFileSystem.copy('/src', '/dest');
     expect(window.secureElectronAPI.fileSystem.copy).toHaveBeenCalledWith('/src', '/dest');
-  });
-
-  it('mkdir passes options', async () => {
-    setupSecureAPI('fileSystem', {
-      mkdir: async (dir, opts) => ({ success: true }),
-    });
-
-    await secureFileSystem.mkdir('/new/dir', { recursive: true });
-    expect(window.secureElectronAPI.fileSystem.mkdir).toHaveBeenCalledWith('/new/dir', { recursive: true });
   });
 });
 
