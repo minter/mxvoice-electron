@@ -11,6 +11,8 @@ import { howlerUtils, createHowl } from './audio-utils.js';
 import { createProbeFromHowler } from './audio-probe.js';
 import { getPlaybackSelectionSongId, resetUIState } from './audio-controller.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
+import { resolveAudioSource } from './audio-source-resolver.js';
+import { showMissingAudioFile } from './playback-error-presenter.js';
 import {
   calculatePlaybackVolume,
   determinePlaybackCompletionAction,
@@ -228,47 +230,34 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
 
       if (musicDirectory) {
 
-        securePath
-          .join(musicDirectory, filename)
-          .then(async (result) => {
-            if (!result.success || !result.data) {
-              getDebugLog()?.warn('Path join failed', {
+        resolveAudioSource({
+          musicDirectory,
+          filename,
+          pathAPI: securePath,
+          fileSystemAPI: secureFileSystem
+        }).then(async (sourceResult) => {
+            if (!sourceResult.success && sourceResult.reason === 'path') {
+              getDebugLog()?.warn('Audio source resolution failed', {
                 module: 'audio-manager',
                 function: 'playSongWithFilename',
-                result: result,
+                error: sourceResult.error,
               });
               return;
             }
-            
-            const joinedPath = result.data;
-            const sound_path = [joinedPath];
-            
-            // Check if file exists before attempting to load
-            const fileExistsResult = await secureFileSystem.exists(joinedPath);
-            if (!fileExistsResult.success || !fileExistsResult.exists) {
+            if (!sourceResult.success) {
               getDebugLog()?.error('Audio file not found', {
                 module: 'audio-manager',
                 function: 'playSongWithFilename',
                 song_id: song_id,
                 filename: filename,
-                filePath: joinedPath,
+                filePath: sourceResult.filePath,
                 title: row?.title,
-                error: fileExistsResult.error || 'File does not exist'
+                error: sourceResult.error
               });
-              // Show user-friendly error message
-              const now = document.getElementById('song_now_playing');
-              if (now) {
-                const title = row?.title || filename;
-                now.textContent = '';
-                const icon = document.createElement('i');
-                icon.className = 'fas fa-exclamation-triangle text-warning';
-                now.appendChild(icon);
-                now.appendChild(document.createTextNode(` File not found: ${title}`));
-                now.style.display = '';
-                now.removeAttribute('songid');
-              }
+              showMissingAudioFile({ title: row?.title, filename });
               return;
             }
+            const sound_path = sourceResult.source;
             
             // Ensure E2E test mode/probe is initialized right before first playback
             if (window.electronTest?.isE2E && window.moduleRegistry?.audio?.ensureTestMode) {
