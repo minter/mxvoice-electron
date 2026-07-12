@@ -1,5 +1,6 @@
 // This smoke test is retained for manual runs via `npm run test:smoke`.
-// It is intentionally excluded from CI's default suite by moving it under `tests/e2e/unseeded/`.
+// It is intentionally excluded from the default suite via the base config's
+// testIgnore; test:smoke runs it through playwright.smoke.config.js.
 import { _electron as electron, test, expect } from '@playwright/test';
 import electronPath from 'electron';
 import path from 'path';
@@ -10,15 +11,17 @@ import { fileURLToPath } from 'url';
 test.describe('Mx. Voice App Smoke Tests (manual)', () => {
   let app;
   let page;
+  let userDataDir;
+  let fakeHome;
 
   test.beforeAll(async () => {
     // Minimal, ad-hoc userDataDir for a pure boot check
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    const userDataDir = path.join(__dirname, '../../fixtures/test-user-data-smoke');
+    userDataDir = path.join(__dirname, '../fixtures/test-user-data-smoke');
     if (fs.existsSync(userDataDir)) fs.rmSync(userDataDir, { recursive: true, force: true });
     fs.mkdirSync(userDataDir, { recursive: true });
-    const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
+    fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
 
     app = await electron.launch({
       executablePath: electronPath,
@@ -39,6 +42,8 @@ test.describe('Mx. Voice App Smoke Tests (manual)', () => {
 
   test.afterAll(async () => {
     await app.close();
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+    fs.rmSync(fakeHome, { recursive: true, force: true });
   });
 
   test('boots and renders main window', async () => {
