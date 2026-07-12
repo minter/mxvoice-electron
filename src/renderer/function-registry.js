@@ -259,12 +259,6 @@ class FunctionRegistry {
       buildSearchQuery: 'buildSearchQuery'
     });
 
-    // Database Functions
-    this.registerModule('database', {
-      addToHoldingTank: 'addToHoldingTank',
-      populateHoldingTank: 'populateHoldingTank'
-    });
-
     // Utils Functions
     this.registerModule('utils', {
       animateCSS: 'animateCSS',
@@ -415,4 +409,4 @@ class FunctionRegistry {
   }
 }
 
-export default FunctionRegistry; 
+export default FunctionRegistry;

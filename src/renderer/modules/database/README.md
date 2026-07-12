@@ -5,7 +5,6 @@ Unified interface for UI data population, store persistence, and DB CRUD.
 ### Structure
 ```
 database/
-├── data-population.js
 ├── store-operations.js
 ├── ui-operations.js
 ├── database-operations.js

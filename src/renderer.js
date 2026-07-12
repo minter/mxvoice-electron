@@ -585,15 +585,15 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     // core UI actions like preferences and category management still work.
     try {
       if (window.secureElectronAPI && window.secureElectronAPI.events) {
-        // Holding tank load → populateHoldingTank
+        // Holding tank load → holding-tank state and renderer
         if (typeof window.secureElectronAPI.events.onHoldingTankLoad === 'function') {
           window.secureElectronAPI.events.onHoldingTankLoad((songIds) => {
-            if (typeof window.populateHoldingTank === 'function') {
-              window.populateHoldingTank(songIds).catch(error => {
+            if (moduleRegistry.holdingTank?.populateHoldingTank) {
+              moduleRegistry.holdingTank.populateHoldingTank(songIds).catch(error => {
                 window.logError('Error populating holding tank:', error);
               });
             } else {
-              window.logWarn('populateHoldingTank not yet available when holding_tank_load fired');
+              window.logWarn('Holding tank module not yet available when holding_tank_load fired');
             }
           });
         }

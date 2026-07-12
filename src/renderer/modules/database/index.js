@@ -18,7 +18,6 @@ try {
 }
 
 // Import database sub-modules
-import dataPopulation from './data-population.js';
 import uiOperations from './ui-operations.js';
 import databaseOperations from './database-operations.js';
 
@@ -34,9 +33,6 @@ class DatabaseModule {
     this.fontSize = 11;
     
     // Bind all functions from sub-modules as methods
-    this.addToHoldingTank = dataPopulation.addToHoldingTank;
-    this.populateHoldingTank = dataPopulation.populateHoldingTank;
-    
     this.scaleScrollable = uiOperations.scaleScrollable;
     
     this.editCategory = databaseOperations.editCategory;
@@ -94,10 +90,6 @@ class DatabaseModule {
    */
   getAllDatabaseFunctions() {
     return {
-      // Data population functions
-      addToHoldingTank: this.addToHoldingTank,
-      populateHoldingTank: this.populateHoldingTank,
-      
       // Database operation functions
       editCategory: this.editCategory,
       deleteCategory: this.deleteCategory,
@@ -117,27 +109,9 @@ class DatabaseModule {
    */
   test() {
     const results = {
-      dataPopulation: {},
       uiOperations: {},
       databaseOperations: {}
     };
-
-    // Test data population functions
-    try {
-      if (typeof this.addToHoldingTank === 'function') {
-        results.dataPopulation.addToHoldingTank = '✅ Function exists';
-      } else {
-        results.dataPopulation.addToHoldingTank = '❌ Function missing';
-      }
-
-      if (typeof this.populateHoldingTank === 'function') {
-        results.dataPopulation.populateHoldingTank = '✅ Function exists';
-      } else {
-        results.dataPopulation.populateHoldingTank = '❌ Function missing';
-      }
-    } catch (error) {
-      results.dataPopulation.error = `❌ Error: ${error.message}`;
-    }
 
     // Test database operation functions
     try {
@@ -215,8 +189,6 @@ class DatabaseModule {
 const databaseModule = new DatabaseModule();
 
 // Export individual functions for backward compatibility
-export const addToHoldingTank = databaseModule.addToHoldingTank;
-export const populateHoldingTank = databaseModule.populateHoldingTank;
 export const editCategory = databaseModule.editCategory;
 export const deleteCategory = databaseModule.deleteCategory;
 export const addNewCategory = databaseModule.addNewCategory;

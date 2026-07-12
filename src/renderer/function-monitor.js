@@ -152,7 +152,6 @@ class FunctionMonitor {
       fileOperations: ['openHotkeyFile', 'openHoldingTankFile', 'saveHotkeyFile', 'saveHoldingTankFile'],
       ui: ['closeAllTabs', 'toggleSelectedRow', 'increaseFontSize', 'decreaseFontSize', 'toggleWaveform', 'toggleAdvancedSearch', 'getFontSize', 'setFontSize'],
       search: ['searchData', 'performLiveSearch', 'triggerLiveSearch', 'clearSearchResults', 'buildSearchQuery'],
-      database: ['addToHoldingTank', 'populateHoldingTank'],
       utils: ['animateCSS', 'customConfirm', 'customPrompt', 'scaleScrollable', 'restoreFocusToSearch', 'isValidSongId', 'isValidCategoryCode', 'isValidFilePath', 'isValidHotkey'],
               preferences: ['openPreferencesModal', 'loadPreferences', 'savePreferences', 'getPreference', 'setPreference', 'getDatabaseDirectory', 'getMusicDirectory', 'getHotkeyDirectory', 'getFadeOutSeconds', 'getPrereleaseUpdates', 'getScreenMode'],
               modeManagement: ['setHoldingTankMode', 'getHoldingTankMode', 'toggleAutoPlay', 'getAutoPlayState'],
@@ -270,4 +269,4 @@ class FunctionMonitor {
   }
 }
 
-export default FunctionMonitor; 
+export default FunctionMonitor;

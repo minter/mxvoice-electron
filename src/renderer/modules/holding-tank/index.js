@@ -43,15 +43,6 @@ let holdingTankMode = "storage"; // 'storage' or 'playlist'
 let _autoplay = false;
 const holdingTankState = new HoldingTankState();
 
-export function commitRenderedHoldingTankOrder() {
-  const activeTab = document.querySelector('.holding_tank.active');
-  const tabNumber = Number(activeTab?.id?.match(/^holding_tank_(\d)$/)?.[1]);
-  if (!tabNumber) return false;
-  const songIds = [...activeTab.querySelectorAll('li.list-group-item[songid]')]
-    .map(element => element.getAttribute('songid')).filter(Boolean);
-  return holdingTankState.replaceTab(tabNumber, songIds);
-}
-
 export function getHoldingTankSnapshot() {
   return holdingTankState.toSnapshot();
 }
@@ -606,7 +597,6 @@ export default {
   requestProfileStateSaveWrapper,
   getHoldingTankSnapshot,
   loadHoldingTankSnapshot,
-  commitRenderedHoldingTankOrder,
   clearSongFromHoldingTankState,
   removeHoldingTankElement,
   clearActiveHoldingTankState,
