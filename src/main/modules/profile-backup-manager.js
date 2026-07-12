@@ -251,7 +251,9 @@ async function createBackup(profileName, options = {}) {
     
     // Update metadata atomically
     await updateMetadata(profileName, (metadata) => {
-      // Add new backup
+      // A first-run metadata rebuild may already discover the directory that
+      // was just copied. Remove that entry before adding the richer record.
+      metadata.backups = (metadata.backups || []).filter((backup) => backup.id !== backupId);
       metadata.backups.unshift({
         id: backupId,
         timestamp: Date.now(),

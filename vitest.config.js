@@ -6,5 +6,21 @@ export default defineConfig({
     testTimeout: 10000,
     // Needed for node-sqlite3-wasm WASM initialization
     pool: 'forks',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      reportsDirectory: 'coverage',
+      include: ['src/main/modules/**/*.js', 'src/renderer/modules/**/*.js'],
+      exclude: ['**/README.md'],
+      thresholds: {
+        // Initial floor based on the first whole-source report. Raise these as
+        // previously E2E-only modules gain focused unit coverage.
+        lines: 17,
+        functions: 19,
+        statements: 17,
+        branches: 15,
+      },
+      reportOnFailure: true,
+    },
   },
 });

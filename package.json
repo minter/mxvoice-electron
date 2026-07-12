@@ -45,6 +45,7 @@
     "test:isolate": "node tests/setup/verify-isolation.js",
     "test:run": "./tests/run-tests.sh",
     "test:unit": "vitest run",
+    "test:unit:coverage": "vitest run --coverage",
     "test:unit:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
@@ -171,9 +172,9 @@
   "license": "MIT",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.3.0",
-    "archiver": "^8.0.0",
     "@octokit/rest": "^22.0.1",
     "animate.css": "^4.1.1",
+    "archiver": "^8.0.0",
     "bootstrap": "^5.3.8",
     "dompurify": "^3.4.11",
     "driver.js": "^1.6.0",
@@ -194,6 +195,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "cross-env": "^10.1.0",
     "electron": "^43.1.0",
     "electron-builder": "26.15.3",
