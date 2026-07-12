@@ -299,6 +299,21 @@ export default class UIInteractionEvents {
    * Form modal events (lines 1124-1166 from renderer.js)
    */
   attachFormEvents() {
+    document.getElementById('preferencesForm')?.addEventListener('submit', (event) => {
+      this.moduleRegistry.preferences?.savePreferences?.(event);
+    });
+    document.getElementById('bulkAddForm')?.addEventListener('submit', (event) => {
+      this.moduleRegistry.bulkOperations?.saveBulkUpload?.(event);
+    });
+    document.querySelectorAll('[data-directory-target]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        this.moduleRegistry.fileOperations?.pickDirectory?.(event, button.dataset.directoryTarget);
+      });
+    });
+    document.getElementById('installNowBtn')?.addEventListener('click', () => {
+      this.moduleRegistry.fileOperations?.startUpdateProcess?.();
+    });
+
     // Song form modal hidden event
     const songFormModalHiddenHandler = (_event) => {
       try {

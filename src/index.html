@@ -122,7 +122,7 @@
               </div>
             </h6>
             <div class="card-body">
-              <form id="search_form" onsubmit="searchData();return false;">
+              <form id="search_form">
 
                 <div class="input-group mb-3">
                   <select class="form-select" id="category_select"></select>
@@ -400,7 +400,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <form onsubmit="saveBulkUpload(event)">
+            <form id="bulkAddForm">
               <div class="row g-2 mb-3">
                 <label for="bulk-add-category" class="col-sm-3 col-form-label">Category</label>
                 <div class="col-sm-9">
@@ -555,7 +555,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <form onsubmit="savePreferences(event)">
+            <form id="preferencesForm">
               <fieldset>
                 <legend>Data Locations</legend>
                 <div class="alert alert-info mb-3" role="alert">
@@ -568,7 +568,7 @@
                     <input type="text" class="form-control" id="preferences-database-directory">
                   </div>
                   <div class="col-sm-3">
-                    <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-database-directory")' data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your database file is stored">Choose Location</button>
+                    <button type="button" class="btn btn-primary" data-directory-target="#preferences-database-directory" data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your database file is stored">Choose Location</button>
                   </div>
                 </div>
                 <div class="row g-2 mb-3">
@@ -577,7 +577,7 @@
                     <input type="text" class="form-control" id="preferences-song-directory">
                   </div>
                   <div class="col-sm-3">
-                    <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-song-directory")' data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your song files are stored">Choose Location</button>
+                    <button type="button" class="btn btn-primary" data-directory-target="#preferences-song-directory" data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your song files are stored">Choose Location</button>
                   </div>
                 </div>
                 <div class="row g-2 mb-3">
@@ -586,7 +586,7 @@
                     <input type="text" class="form-control" id="preferences-hotkey-directory">
                   </div>
                   <div class="col-sm-3">
-                    <button class="btn btn-primary" onclick='pickDirectory(event, "#preferences-hotkey-directory")' data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your hotkey files are stored">Choose Location</button>
+                    <button type="button" class="btn btn-primary" data-directory-target="#preferences-hotkey-directory" data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your hotkey files are stored">Choose Location</button>
                   </div>
                 </div>
                 <div class="row g-2 mb-3">
@@ -725,7 +725,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-warning btn-sm" data-bs-dismiss="modal" id="updateLaterBtn">Later</button>
-            <button type="button" class="btn btn-success btn-sm" id="installNowBtn" onclick="startUpdateProcess()" title="Install the update now">Install Now</button>
+            <button type="button" class="btn btn-success btn-sm" id="installNowBtn" title="Install the update now">Install Now</button>
           </div>
         </div>
       </div>
