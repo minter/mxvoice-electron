@@ -14,6 +14,7 @@ import { createRendererCommandDispatcher } from './renderer-command-dispatcher.j
 import { buildApplicationMenu } from './application-menu.js';
 import { createWindowStateManager } from './window-state-manager.js';
 import { createMainWindow } from './main-window-factory.js';
+import { createAppLifecycle } from './app-lifecycle.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -34,10 +35,9 @@ let getCurrentProfile;
 let autoBackupTimer;
 let analytics;
 let appStartTime;
-let isQuitting = false;
-let shutdownComplete = false;
 let rendererCommands;
 let windowStateManager;
+let appLifecycle;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -62,7 +62,18 @@ function initializeAppSetup(dependencies) {
     profileManager,
     getCurrentProfile,
     log,
-    isQuitting: () => isQuitting
+    isQuitting: () => appLifecycle?.isQuitting() || false
+  });
+  appLifecycle = createAppLifecycle({
+    app,
+    BrowserWindow,
+    prepareWindowForClose: () => prepareMainWindowForClose(),
+    createWindow,
+    onClosed: () => { mainWindow = null; },
+    autoBackupTimer,
+    analytics,
+    appStartTime,
+    debugLog
   });
 }
 
@@ -370,97 +381,7 @@ function manageCategories() {
 
 // Setup app lifecycle events
 function setupAppLifecycle() {
-  app.on('closed', function () {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
-    mainWindow = null;
-  });
-  
-  // Shutdown analytics and stop backup timer before quit.
-  // Electron does not await async before-quit handlers, so block the quit,
-  // do the async work, then re-issue the quit with a flag to skip this handler.
-  app.on('before-quit', async (event) => {
-    if (shutdownComplete) return;
-    event.preventDefault();
-    if (isQuitting) return;
-    isQuitting = true;
-
-    try {
-      await prepareMainWindowForClose();
-      debugLog?.info('Window and profile state saved on app quit', {
-        module: 'app-setup',
-        function: 'before-quit'
-      });
-    } catch (err) {
-      debugLog?.error('Error saving state on app quit', {
-        module: 'app-setup',
-        function: 'before-quit',
-        error: err.message
-      });
-    }
-
-    if (autoBackupTimer) {
-      autoBackupTimer.stopAutoBackupTimer();
-      debugLog?.info('Stopped auto-backup timer on app quit', {
-        module: 'app-setup',
-        function: 'setupAppLifecycle'
-      });
-    }
-
-    if (analytics) {
-      const startTime = appStartTime || Date.now();
-      const sessionDuration = Math.floor((Date.now() - startTime) / 1000);
-      analytics.trackEvent('app_closed', { session_duration_seconds: sessionDuration });
-      try {
-        await analytics.shutdown();
-      } catch (err) {
-        debugLog?.error('Analytics shutdown error', {
-          module: 'app-setup',
-          function: 'before-quit',
-          error: err.message,
-        });
-      }
-    }
-
-    shutdownComplete = true;
-    app.quit();
-  });
-
-  // Quit when all windows are closed.
-  app.on('window-all-closed', () => {
-    // On OS X it is common for applications and their menu bar
-    // to stay active until the user quits explicitly with Cmd + Q.
-    // In test mode, always quit so Playwright's app.close() can exit cleanly.
-    const inTestMode = process.env.APP_TEST_MODE === '1' || !!process.env.E2E_USER_DATA_DIR;
-    if (process.platform !== 'darwin' || inTestMode) {
-      app.quit();
-    }
-  });
-
-  app.on('activate', () => {
-    // On OS X it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-
-  app.setAppLogsPath();
-
-  if (process.platform == 'darwin') {
-    app.setAboutPanelOptions({
-      applicationName: app.name,
-      applicationVersion: app.getVersion(),
-      copyright: 'Copyright 2025',
-      authors: [
-        'Wade Minter',
-        'Andrew Berkowitz'
-      ],
-      website: 'https://mxvoice.app/',
-      credits: "Wade Minter\nAndrew Berkowitz"
-    })
-  }
+  return appLifecycle?.setup();
 }
 
 export {
