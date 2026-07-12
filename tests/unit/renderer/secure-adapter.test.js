@@ -3,8 +3,7 @@
  *
  * Every adapter method follows the same pattern:
  *   1. Check window.secureElectronAPI.{namespace}.{method}  → call it
- *   2. (fileSystem/path/store/audio only) fallback to window.electronAPI
- *   3. Otherwise throw → caught → return { success: false, error }
+ *   2. Otherwise normalize the failure to { success: false, error }
  *
  * We test representative methods from each adapter group to validate the
  * pattern, plus edge cases.
@@ -18,7 +17,6 @@ window.debugLog = mockDebugLog;
 
 // Clear APIs before import so the module starts clean
 delete window.secureElectronAPI;
-delete window.electronAPI;
 
 const {
   secureDatabase,
@@ -68,29 +66,13 @@ function setupSecureAPI(namespace, methods) {
   }
 }
 
-function setupFallbackAPI(namespace, methods) {
-  window.electronAPI = window.electronAPI || {};
-  if (namespace) {
-    window.electronAPI[namespace] = {};
-    for (const [name, impl] of Object.entries(methods)) {
-      window.electronAPI[namespace][name] = vi.fn(impl);
-    }
-  } else {
-    // Top-level methods (e.g. electronAPI.showFilePicker)
-    for (const [name, impl] of Object.entries(methods)) {
-      window.electronAPI[name] = vi.fn(impl);
-    }
-  }
-}
-
 beforeEach(() => {
   delete window.secureElectronAPI;
-  delete window.electronAPI;
   vi.clearAllMocks();
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// secureDatabase — no fallback path, only secureElectronAPI
+// secureDatabase
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('secureDatabase', () => {
@@ -173,7 +155,7 @@ describe('secureDatabase', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// secureFileSystem — has fallback to electronAPI
+// secureFileSystem
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('secureFileSystem', () => {
@@ -188,7 +170,7 @@ describe('secureFileSystem', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// securePath — has fallback to electronAPI
+// securePath
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('securePath', () => {
@@ -199,15 +181,6 @@ describe('securePath', () => {
 
     const res = await securePath.join('/a', 'b', 'c');
     expect(res).toBe('/a/b/c');
-  });
-
-  it('join falls back to electronAPI', async () => {
-    setupFallbackAPI('path', {
-      join: async (...parts) => 'fallback/path',
-    });
-
-    const res = await securePath.join('fallback', 'path');
-    expect(res).toBe('fallback/path');
   });
 
   it('join returns error when no API available', async () => {
@@ -235,7 +208,7 @@ describe('securePath', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// secureStore — has fallback to electronAPI
+// secureStore
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('secureStore', () => {
@@ -246,15 +219,6 @@ describe('secureStore', () => {
 
     const res = await secureStore.get('theme');
     expect(res.value).toBe('dark');
-  });
-
-  it('get falls back to electronAPI', async () => {
-    setupFallbackAPI('store', {
-      get: async (key) => ({ success: true, value: 'light' }),
-    });
-
-    const res = await secureStore.get('theme');
-    expect(res.value).toBe('light');
   });
 
   it('get returns error when no API available', async () => {
@@ -291,7 +255,7 @@ describe('secureStore', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// secureAudio — has fallback to electronAPI
+// secureAudio
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('secureAudio', () => {
@@ -329,7 +293,7 @@ describe('secureAudio', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// secureFileDialog — mixed API patterns
+// secureFileDialog
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('secureFileDialog', () => {
@@ -340,15 +304,6 @@ describe('secureFileDialog', () => {
 
     const res = await secureFileDialog.showFilePicker({ multiple: false });
     expect(res.path).toBe('/picked');
-  });
-
-  it('showFilePicker falls back to electronAPI.showFilePicker', async () => {
-    setupFallbackAPI(null, {
-      showFilePicker: async (opts) => ({ success: true, path: '/fallback' }),
-    });
-
-    const res = await secureFileDialog.showFilePicker();
-    expect(res.path).toBe('/fallback');
   });
 
   it('showDirectoryPicker passes defaultPath', async () => {
@@ -369,15 +324,6 @@ describe('secureFileDialog', () => {
     expect(res.success).toBe(true);
   });
 
-  it('openHotkeyFile falls back to electronAPI.openHotkeyFile', async () => {
-    setupFallbackAPI(null, {
-      openHotkeyFile: async () => ({ success: true, data: ['fallback'] }),
-    });
-
-    const res = await secureFileDialog.openHotkeyFile();
-    expect(res.success).toBe(true);
-  });
-
   it('saveHotkeyFile passes hotkeyArray', async () => {
     const arr = [{ key: 'F1', songId: 1 }];
     setupSecureAPI('fileOperations', {
@@ -391,6 +337,6 @@ describe('secureFileDialog', () => {
   it('returns error when no dialog API available', async () => {
     const res = await secureFileDialog.showFilePicker();
     expect(res.success).toBe(false);
-    expect(res.error).toMatch(/no file picker api/i);
+    expect(res.error).toMatch(/no app api/i);
   });
 });

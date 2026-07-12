@@ -14,7 +14,7 @@ describe('secure-adapter fileSystem surface matches preload', () => {
   );
 
   const adapterBlock = adapter.match(/export const secureFileSystem = {([\s\S]*?)\n};/);
-  const adapterMethods = [...adapterBlock[1].matchAll(/^  (\w+): async/gm)].map(m => m[1]);
+  const adapterMethods = [...adapterBlock[1].matchAll(/^  (\w+):/gm)].map(m => m[1]);
 
   it('found both surfaces', () => {
     expect(preloadMethods.size).toBeGreaterThan(0);
