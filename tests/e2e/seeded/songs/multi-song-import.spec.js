@@ -31,7 +31,7 @@ test.describe('Songs - Multi-Song Import', () => {
     await closeApp(app);
   });
 
-  test('Drop 2 files → Multi-Song Import modal shows with metadata', async () => {
+  test('Drop 2 files → partial import rolls back a missing source file', async () => {
     const song1 = path.resolve(__dirname, '../../../fixtures/test-songs/IndigoGirls-ShameOnYou.mp3');
     const song2 = path.resolve(__dirname, '../../../fixtures/test-songs/BlueBucksClan-LilWhip.mp3');
 
@@ -105,7 +105,7 @@ test.describe('Songs - Multi-Song Import', () => {
     // The successful import path should use the shared toast utility.
     const successToast = page.locator('#file-drop-toast');
     await expect(successToast).toBeVisible();
-    await expect(successToast).toHaveText('Successfully imported 2 songs');
+    await expect(successToast).toHaveText('Successfully imported 1 song');
 
     // Verify songs appear in search results
     const resultsTbody = page.locator('#search_results tbody');
@@ -116,12 +116,9 @@ test.describe('Songs - Multi-Song Import', () => {
     await expect(song1Row.locator('td').nth(0)).toHaveText('Running In');
     await expect(song1Row.locator('td').nth(3)).toHaveText('Indigo Girls');
 
-    // Verify second song (custom metadata + individual category)
+    // The missing source file must not leave an orphaned database row.
     const song2Row = resultsTbody.locator('tr.song').filter({ hasText: 'Custom Lil Whip' });
-    await expect(song2Row).toBeVisible();
-    await expect(song2Row.locator('td').nth(0)).toHaveText('Game');
-    await expect(song2Row.locator('td').nth(1)).toHaveText('Import Note');
-    await expect(song2Row.locator('td').nth(3)).toHaveText('Custom Artist');
+    await expect(song2Row).toHaveCount(0);
     
     console.log('✅ Multi-Song Import persistence verification completed successfully');
   });

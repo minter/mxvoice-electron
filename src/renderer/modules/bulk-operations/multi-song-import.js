@@ -268,7 +268,7 @@ function validateInputs() {
 /**
  * Saves all songs in the Multi-Song Import modal to the database
  */
-async function saveMultiSongImport() {
+export async function saveMultiSongImport() {
   // 1. Validate
   if (!validateInputs()) {
     customAlert('Please ensure all songs have a title and a category selected.');
@@ -286,6 +286,7 @@ async function saveMultiSongImport() {
   });
 
   try {
+    let successCount = 0;
     // Clear current search results to show new imports
     const tbody = document.querySelector('#search_results tbody');
     if (tbody) tbody.querySelectorAll('tr').forEach(tr => tr.remove());
@@ -341,17 +342,20 @@ async function saveMultiSongImport() {
         const copyRes = await secureFileSystem.copy(song.filePath, newPath);
         if (!copyRes?.success) {
           debugLog?.warn('Failed to copy file during multi-import', { path: song.filePath, error: copyRes?.error });
+          await secureDatabase.deleteSong(lastId);
+          continue;
         }
 
         // 5. Add to UI (search results)
         addSongToSearchResultsUI(lastId, song);
+        successCount++;
       }
     }
 
     debugLog?.info('Multi-song import completed');
     safeHideModal('#multiSongImportModal');
     
-    showDropToast(`Successfully imported ${pendingSongs.length} songs`);
+    showDropToast(`Successfully imported ${successCount} song${successCount === 1 ? '' : 's'}`);
 
   } catch (error) {
     debugLog?.error('Error during multi-song import save', { error: error.message });

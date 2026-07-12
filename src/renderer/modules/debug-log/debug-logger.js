@@ -112,9 +112,8 @@ function initializeDebugLogger(options = {}) {
    * @param {number} level - New log level
    */
   function setLogLevel(level) {
-    if (LOG_LEVELS.hasOwnProperty(level) || Object.values(LOG_LEVELS).includes(level)) {
-      currentLogLevel = level;
-    }
+    if (Object.prototype.hasOwnProperty.call(LOG_LEVELS, level)) currentLogLevel = LOG_LEVELS[level];
+    else if (Object.values(LOG_LEVELS).includes(level)) currentLogLevel = level;
   }
   
   /**

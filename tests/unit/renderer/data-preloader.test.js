@@ -1,0 +1,8 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+const secureStore={has:vi.fn(),get:vi.fn()};vi.mock('../../../src/renderer/modules/adapters/secure-adapter.js',()=>({secureStore}));
+const children=[{id:'search-column'},{id:'hotkeys-column'}];const topRow={children:[...children],querySelector:id=>children.find(x=>`#${x.id}`===id),appendChild(child){this.children=this.children.filter(x=>x!==child);this.children.push(child);}};
+globalThis.window={secureElectronAPI:{profile:{getPreference:vi.fn(),setPreference:vi.fn()}},refreshColumnDropZones:vi.fn()};globalThis.document={getElementById:id=>id==='top-row'?topRow:null};
+const {DataPreloader}=await import('../../../src/renderer/modules/app-initialization/data-preloader.js');
+describe('data preloader',()=>{beforeEach(()=>{vi.clearAllMocks();topRow.children=[...children];});
+it('applies profile column order and refreshes drop zones',async()=>{vi.useFakeTimers();window.secureElectronAPI.profile.getPreference.mockResolvedValue({success:true,value:['hotkeys-column','search-column']});const loader=new DataPreloader();await loader.loadColumnOrder();expect(topRow.children.map(x=>x.id)).toEqual(['hotkeys-column','search-column']);await vi.runAllTimersAsync();expect(window.refreshColumnDropZones).toHaveBeenCalled();vi.useRealTimers();});
+it('migrates a legacy font size to profile preferences',async()=>{window.secureElectronAPI.profile.getPreference.mockResolvedValue({success:true,value:null});secureStore.has.mockResolvedValue({success:true,has:true});secureStore.get.mockResolvedValue({success:true,value:14});const loader=new DataPreloader();await loader.loadFontSize();expect(window.secureElectronAPI.profile.setPreference).toHaveBeenCalledWith('font_size',14);});});

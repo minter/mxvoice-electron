@@ -649,6 +649,7 @@ export {
   playSelected,
   song_ended,
   autoplay_next,
+  triggerEarlyCrossfade,
   cancel_autoplay,
   initializeMusicDirectoryCache,
   updateMusicDirectoryCache,

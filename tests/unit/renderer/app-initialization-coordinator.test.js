@@ -1,0 +1,7 @@
+import { describe, expect, it, vi } from 'vitest';
+globalThis.window={secureElectronAPI:{},logInfo:vi.fn(),logError:vi.fn(),logWarn:vi.fn(),logDebug:vi.fn()};globalThis.performance={mark:vi.fn(),measure:vi.fn()};
+const {AppInitialization}=await import('../../../src/renderer/modules/app-initialization/index.js');
+describe('app initialization coordinator',()=>{
+it('runs initialization stages in order and records completion',async()=>{const app=new AppInitialization();const order=[];app.initializeDebugLogger=vi.fn(async()=>order.push('debug'));app.initializeEnvironment=vi.fn(async()=>order.push('environment'));app.initializeSharedState=vi.fn(async()=>order.push('state'));app.preloadInitialData=vi.fn(async()=>order.push('data'));await expect(app.initialize()).resolves.toBe(true);expect(order).toEqual(['debug','environment','state','data']);expect(app.isInitialized()).toBe(true);});
+it('fails closed when a stage rejects',async()=>{const app=new AppInitialization();app.initializeDebugLogger=vi.fn(async()=>{});app.initializeEnvironment=vi.fn(async()=>{throw new Error('environment failed');});await expect(app.initialize()).resolves.toBe(false);expect(app.isInitialized()).toBe(false);});
+it('records DOM initialization without a preloader',async()=>{const app=new AppInitialization();await expect(app.initializeDOMDependentFeatures()).resolves.toBe(true);expect(app.getInitializationStatus().steps).toEqual([expect.objectContaining({name:'DOM Features',success:true})]);});});
