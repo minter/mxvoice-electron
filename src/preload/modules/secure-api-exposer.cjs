@@ -7,6 +7,7 @@
  */
 
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
+const { IPC } = require('../../shared/ipc-channels.cjs');
 
 // debugLog will be injected by the calling module
 let debugLog = null;
@@ -92,103 +93,103 @@ function sanitizeForIPC(value, depth = 0, seen = new WeakSet()) {
 const secureElectronAPI = {
   // Database operations - all go through secure IPC
   database: {
-    getCategories: () => ipcRenderer.invoke('get-categories'),
-    addSong: (songData) => ipcRenderer.invoke('add-song', songData),
-    getSongById: (songId) => ipcRenderer.invoke('get-song-by-id', songId),
-    deleteSong: (songId) => ipcRenderer.invoke('delete-song', songId),
-    updateSong: (songData) => ipcRenderer.invoke('update-song', songData),
-    addCategory: (categoryData) => ipcRenderer.invoke('add-category', categoryData),
-    updateCategory: (code, description) => ipcRenderer.invoke('update-category', code, description),
-    deleteCategory: (code, description) => ipcRenderer.invoke('delete-category', code, description),
-    searchSongs: (searchParams) => ipcRenderer.invoke('search-songs', searchParams),
-    getCategoryByCode: (code) => ipcRenderer.invoke('get-category-by-code', code),
-    getSongsByIds: (ids) => ipcRenderer.invoke('get-songs-by-ids', ids),
-    reassignSongCategory: (fromCode, toCode) => ipcRenderer.invoke('reassign-song-category', fromCode, toCode),
-    findCategoryCodesLike: (code, pattern) => ipcRenderer.invoke('find-category-codes-like', code, pattern),
-    countSongs: () => ipcRenderer.invoke('count-songs')
+    getCategories: () => ipcRenderer.invoke(IPC.DATABASE.GET_CATEGORIES),
+    addSong: (songData) => ipcRenderer.invoke(IPC.DATABASE.ADD_SONG, songData),
+    getSongById: (songId) => ipcRenderer.invoke(IPC.DATABASE.GET_SONG_BY_ID, songId),
+    deleteSong: (songId) => ipcRenderer.invoke(IPC.DATABASE.DELETE_SONG, songId),
+    updateSong: (songData) => ipcRenderer.invoke(IPC.DATABASE.UPDATE_SONG, songData),
+    addCategory: (categoryData) => ipcRenderer.invoke(IPC.DATABASE.ADD_CATEGORY, categoryData),
+    updateCategory: (code, description) => ipcRenderer.invoke(IPC.DATABASE.UPDATE_CATEGORY, code, description),
+    deleteCategory: (code, description) => ipcRenderer.invoke(IPC.DATABASE.DELETE_CATEGORY, code, description),
+    searchSongs: (searchParams) => ipcRenderer.invoke(IPC.DATABASE.SEARCH_SONGS, searchParams),
+    getCategoryByCode: (code) => ipcRenderer.invoke(IPC.DATABASE.GET_CATEGORY_BY_CODE, code),
+    getSongsByIds: (ids) => ipcRenderer.invoke(IPC.DATABASE.GET_SONGS_BY_IDS, ids),
+    reassignSongCategory: (fromCode, toCode) => ipcRenderer.invoke(IPC.DATABASE.REASSIGN_SONG_CATEGORY, fromCode, toCode),
+    findCategoryCodesLike: (code, pattern) => ipcRenderer.invoke(IPC.DATABASE.FIND_CATEGORY_CODES_LIKE, code, pattern),
+    countSongs: () => ipcRenderer.invoke(IPC.DATABASE.COUNT_SONGS)
   },
   
   // Store operations - secure preference management
   store: {
-    get: (key) => ipcRenderer.invoke('store-get', key),
-    set: (key, value) => ipcRenderer.invoke('store-set', key, value),
-    delete: (key) => ipcRenderer.invoke('store-delete', key),
-    has: (key) => ipcRenderer.invoke('store-has', key),
-    keys: () => ipcRenderer.invoke('store-keys'),
-    clear: () => ipcRenderer.invoke('store-clear')
+    get: (key) => ipcRenderer.invoke(IPC.STORE.GET, key),
+    set: (key, value) => ipcRenderer.invoke(IPC.STORE.SET, key, value),
+    delete: (key) => ipcRenderer.invoke(IPC.STORE.DELETE, key),
+    has: (key) => ipcRenderer.invoke(IPC.STORE.HAS, key),
+    keys: () => ipcRenderer.invoke(IPC.STORE.KEYS),
+    clear: () => ipcRenderer.invoke(IPC.STORE.CLEAR)
   },
   
   // File system operations - secure file access with validation
   fileSystem: {
-    exists: (filePath) => ipcRenderer.invoke('file-exists', filePath),
-    delete: (filePath) => ipcRenderer.invoke('file-delete', filePath),
-    copy: (sourcePath, destPath) => ipcRenderer.invoke('file-copy', sourcePath, destPath),
-    scanAudioDirectory: (rootPath) => ipcRenderer.invoke('library:scan-audio-directory', rootPath)
+    exists: (filePath) => ipcRenderer.invoke(IPC.FILESYSTEM.FILE_EXISTS, filePath),
+    delete: (filePath) => ipcRenderer.invoke(IPC.FILESYSTEM.FILE_DELETE, filePath),
+    copy: (sourcePath, destPath) => ipcRenderer.invoke(IPC.FILESYSTEM.FILE_COPY, sourcePath, destPath),
+    scanAudioDirectory: (rootPath) => ipcRenderer.invoke(IPC.FILESYSTEM.SCAN_AUDIO_DIRECTORY, rootPath)
   },
   
   // Path operations - secure path manipulation
   path: {
-    join: (...paths) => ipcRenderer.invoke('path-join', ...paths),
-    extname: (filePath) => ipcRenderer.invoke('path-extname', filePath),
-    dirname: (filePath) => ipcRenderer.invoke('path-dirname', filePath),
-    basename: (filePath, ext) => ipcRenderer.invoke('path-basename', filePath, ext),
-    resolve: (...paths) => ipcRenderer.invoke('path-resolve', ...paths),
-    normalize: (filePath) => ipcRenderer.invoke('path-normalize', filePath),
-    parse: (filePath) => ipcRenderer.invoke('path-parse', filePath)
+    join: (...paths) => ipcRenderer.invoke(IPC.PATH_OS.PATH_JOIN, ...paths),
+    extname: (filePath) => ipcRenderer.invoke(IPC.PATH_OS.PATH_EXTNAME, filePath),
+    dirname: (filePath) => ipcRenderer.invoke(IPC.PATH_OS.PATH_DIRNAME, filePath),
+    basename: (filePath, ext) => ipcRenderer.invoke(IPC.PATH_OS.PATH_BASENAME, filePath, ext),
+    resolve: (...paths) => ipcRenderer.invoke(IPC.PATH_OS.PATH_RESOLVE, ...paths),
+    normalize: (filePath) => ipcRenderer.invoke(IPC.PATH_OS.PATH_NORMALIZE, filePath),
+    parse: (filePath) => ipcRenderer.invoke(IPC.PATH_OS.PATH_PARSE, filePath)
   },
   
   // OS operations - secure system information
   os: {
-    homedir: () => ipcRenderer.invoke('os-homedir'),
-    platform: () => ipcRenderer.invoke('os-platform'),
-    arch: () => ipcRenderer.invoke('os-arch'),
-    tmpdir: () => ipcRenderer.invoke('os-tmpdir')
+    homedir: () => ipcRenderer.invoke(IPC.PATH_OS.OS_HOMEDIR),
+    platform: () => ipcRenderer.invoke(IPC.PATH_OS.OS_PLATFORM),
+    arch: () => ipcRenderer.invoke(IPC.PATH_OS.OS_ARCH),
+    tmpdir: () => ipcRenderer.invoke(IPC.PATH_OS.OS_TMPDIR)
   },
   
   // Audio operations - secure audio management
   audio: {
-    play: (filePath, options) => ipcRenderer.invoke('audio-play', filePath, options),
-    stop: (soundId) => ipcRenderer.invoke('audio-stop', soundId),
-    pause: (soundId) => ipcRenderer.invoke('audio-pause', soundId),
-    resume: (soundId) => ipcRenderer.invoke('audio-resume', soundId),
-    setVolume: (volume, soundId) => ipcRenderer.invoke('audio-set-volume', volume, soundId),
-    fade: (soundId, fromVolume, toVolume, duration) => ipcRenderer.invoke('audio-fade', soundId, fromVolume, toVolume, duration),
-    getDuration: (filePath) => ipcRenderer.invoke('audio-get-duration', filePath),
-    getPosition: (soundId) => ipcRenderer.invoke('audio-get-position', soundId),
-    setPosition: (soundId, position) => ipcRenderer.invoke('audio-set-position', soundId, position),
-    getMetadata: (filePath) => ipcRenderer.invoke('audio-get-metadata', filePath)
+    play: (filePath, options) => ipcRenderer.invoke(IPC.AUDIO.PLAY, filePath, options),
+    stop: (soundId) => ipcRenderer.invoke(IPC.AUDIO.STOP, soundId),
+    pause: (soundId) => ipcRenderer.invoke(IPC.AUDIO.PAUSE, soundId),
+    resume: (soundId) => ipcRenderer.invoke(IPC.AUDIO.RESUME, soundId),
+    setVolume: (volume, soundId) => ipcRenderer.invoke(IPC.AUDIO.SET_VOLUME, volume, soundId),
+    fade: (soundId, fromVolume, toVolume, duration) => ipcRenderer.invoke(IPC.AUDIO.FADE, soundId, fromVolume, toVolume, duration),
+    getDuration: (filePath) => ipcRenderer.invoke(IPC.AUDIO.GET_DURATION, filePath),
+    getPosition: (soundId) => ipcRenderer.invoke(IPC.AUDIO.GET_POSITION, soundId),
+    setPosition: (soundId, position) => ipcRenderer.invoke(IPC.AUDIO.SET_POSITION, soundId, position),
+    getMetadata: (filePath) => ipcRenderer.invoke(IPC.AUDIO.GET_METADATA, filePath)
   },
   
   // App operations - secure application control
   app: {
-    getPath: (name) => ipcRenderer.invoke('app-get-path', name),
-    getVersion: () => ipcRenderer.invoke('app-get-version'),
-    getName: () => ipcRenderer.invoke('app-get-name'),
-    quit: () => ipcRenderer.invoke('app-quit'),
-    restart: () => ipcRenderer.invoke('app-restart'),
-    showDirectoryPicker: (defaultPath) => ipcRenderer.invoke('show-directory-picker', defaultPath),
-    showFilePicker: (options) => ipcRenderer.invoke('show-file-picker', options)
+    getPath: (name) => ipcRenderer.invoke(IPC.APP.GET_PATH, name),
+    getVersion: () => ipcRenderer.invoke(IPC.APP.GET_VERSION),
+    getName: () => ipcRenderer.invoke(IPC.APP.GET_NAME),
+    quit: () => ipcRenderer.invoke(IPC.APP.QUIT),
+    restart: () => ipcRenderer.invoke(IPC.APP.RESTART),
+    showDirectoryPicker: (defaultPath) => ipcRenderer.invoke(IPC.DIALOG.SHOW_DIRECTORY_PICKER, defaultPath),
+    showFilePicker: (options) => ipcRenderer.invoke(IPC.DIALOG.SHOW_FILE_PICKER, options)
   },
 
   // Logs API - centralized logging exposed securely
   logs: {
     write: (level, message, context = null, meta = {}) =>
-      ipcRenderer.invoke('logs:write', {
+      ipcRenderer.invoke(IPC.LOGGING.WRITE, {
         level,
         message: truncateString(message),
         context: sanitizeForIPC(context),
         meta: sanitizeForIPC({ process: 'renderer', ...meta })
       }),
-    export: (options) => ipcRenderer.invoke('logs:export', options),
-    getPaths: () => ipcRenderer.invoke('logs:get-paths')
+    export: (options) => ipcRenderer.invoke(IPC.LOGGING.EXPORT, options),
+    getPaths: () => ipcRenderer.invoke(IPC.LOGGING.GET_PATHS)
   },
 
   // File operations - secure file management
   fileOperations: {
-    openHotkeyFile: () => ipcRenderer.invoke('open-hotkey-file'),
-    saveHotkeyFile: (data) => ipcRenderer.invoke('save-hotkey-file', data),
-    openHoldingTankFile: () => ipcRenderer.invoke('open-holding-tank-file'),
-    saveHoldingTankFile: (data) => ipcRenderer.invoke('save-holding-tank-file', data),
+    openHotkeyFile: () => ipcRenderer.invoke(IPC.DIALOG.OPEN_HOTKEY_FILE),
+    saveHotkeyFile: (data) => ipcRenderer.invoke(IPC.DIALOG.SAVE_HOTKEY_FILE, data),
+    openHoldingTankFile: () => ipcRenderer.invoke(IPC.DIALOG.OPEN_HOLDING_TANK_FILE),
+    saveHoldingTankFile: (data) => ipcRenderer.invoke(IPC.DIALOG.SAVE_HOLDING_TANK_FILE, data),
     pickDirectory: (defaultPath) => ipcRenderer.invoke('pick-directory', defaultPath),
     // Auto-update operations - Three-stage process
     checkForUpdate: () => {
@@ -196,7 +197,7 @@ const secureElectronAPI = {
         module: 'secure-api-exposer', 
         function: 'checkForUpdate' 
       });
-      return ipcRenderer.invoke('check-for-update')
+      return ipcRenderer.invoke(IPC.APP.CHECK_FOR_UPDATE)
         .then(result => {
           debugLog.info('🔍 Preload: check-for-update result', { 
             module: 'secure-api-exposer', 
@@ -221,7 +222,7 @@ const secureElectronAPI = {
         module: 'secure-api-exposer', 
         function: 'downloadUpdate' 
       });
-      return ipcRenderer.invoke('download-update')
+      return ipcRenderer.invoke(IPC.APP.DOWNLOAD_UPDATE)
         .then(result => {
           debugLog.info('📥 Preload: download-update result', { 
             module: 'secure-api-exposer', 
@@ -246,7 +247,7 @@ const secureElectronAPI = {
         module: 'secure-api-exposer', 
         function: 'installUpdate' 
       });
-      return ipcRenderer.invoke('install-update')
+      return ipcRenderer.invoke(IPC.APP.INSTALL_UPDATE)
         .then(result => {
           debugLog.info('🚀 Preload: install-update result', { 
             module: 'secure-api-exposer', 
@@ -265,21 +266,21 @@ const secureElectronAPI = {
           throw error;
         });
     },
-    importAudioFiles: (filePaths) => ipcRenderer.invoke('import-audio-files', filePaths),
-    exportData: (exportOptions) => ipcRenderer.invoke('export-data', exportOptions)
+    importAudioFiles: (filePaths) => ipcRenderer.invoke(IPC.UTILITY.IMPORT_AUDIO_FILES, filePaths),
+    exportData: (exportOptions) => ipcRenderer.invoke(IPC.UTILITY.EXPORT_DATA, exportOptions)
   },
   
   // UI operations - secure UI control
   ui: {
-    increaseFontSize: () => ipcRenderer.invoke('increase-font-size'),
-    decreaseFontSize: () => ipcRenderer.invoke('decrease-font-size'),
-    toggleWaveform: () => ipcRenderer.invoke('toggle-waveform'),
-    toggleAdvancedSearch: () => ipcRenderer.invoke('toggle-advanced-search'),
-    closeAllTabs: () => ipcRenderer.invoke('close-all-tabs'),
-    showPreferences: () => ipcRenderer.invoke('show-preferences'),
-    manageCategories: () => ipcRenderer.invoke('manage-categories'),
-    editSelectedSong: () => ipcRenderer.invoke('edit-selected-song'),
-    deleteSelectedSong: () => ipcRenderer.invoke('delete-selected-song')
+    increaseFontSize: () => ipcRenderer.invoke(IPC.UI.INCREASE_FONT_SIZE),
+    decreaseFontSize: () => ipcRenderer.invoke(IPC.UI.DECREASE_FONT_SIZE),
+    toggleWaveform: () => ipcRenderer.invoke(IPC.UI.TOGGLE_WAVEFORM),
+    toggleAdvancedSearch: () => ipcRenderer.invoke(IPC.UI.TOGGLE_ADVANCED_SEARCH),
+    closeAllTabs: () => ipcRenderer.invoke(IPC.UI.CLOSE_ALL_TABS),
+    showPreferences: () => ipcRenderer.invoke(IPC.UI.SHOW_PREFERENCES),
+    manageCategories: () => ipcRenderer.invoke(IPC.UI.MANAGE_CATEGORIES),
+    editSelectedSong: () => ipcRenderer.invoke(IPC.DATABASE.EDIT_SELECTED_SONG),
+    deleteSelectedSong: () => ipcRenderer.invoke(IPC.DATABASE.DELETE_SELECTED_SONG)
   },
   
   // Event listeners - secure event handling (limited and safe)
@@ -450,36 +451,36 @@ const secureElectronAPI = {
   
   // Profile functions
   profile: {
-    getCurrent: () => ipcRenderer.invoke('profile:get-current'),
-    getDirectory: (type) => ipcRenderer.invoke('profile:get-directory', type),
-    switchProfile: () => ipcRenderer.invoke('profile:switch'),
-    switchToProfile: (name) => ipcRenderer.invoke('profile:switch-to', name),
-    saveState: (state, profileName) => ipcRenderer.invoke('profile:save-state', state, profileName),
-    loadState: () => ipcRenderer.invoke('profile:load-state'),
-    getLegacyMigrationData: () => ipcRenderer.invoke('profile:get-legacy-migration-data'),
-    saveStateBeforeSwitch: (state, profileName) => ipcRenderer.invoke('profile:save-state-before-switch', state, profileName),
-    getPreference: (key) => ipcRenderer.invoke('profile:get-preference', key),
-    setPreference: (key, value) => ipcRenderer.invoke('profile:set-preference', key, value),
-    setPreferences: (preferencesObject) => ipcRenderer.invoke('profile:set-preferences', preferencesObject),
-    getAllPreferences: () => ipcRenderer.invoke('profile:get-all-preferences'),
-    createProfile: (name, description) => ipcRenderer.invoke('profile:create', name, description),
-    duplicateProfile: (sourceName, targetName, description) => ipcRenderer.invoke('profile:duplicate', sourceName, targetName, description),
-    deleteProfile: (name) => ipcRenderer.invoke('profile:delete', name),
+    getCurrent: () => ipcRenderer.invoke(IPC.PROFILE.GET_CURRENT),
+    getDirectory: (type) => ipcRenderer.invoke(IPC.PROFILE.GET_DIRECTORY, type),
+    switchProfile: () => ipcRenderer.invoke(IPC.PROFILE.SWITCH),
+    switchToProfile: (name) => ipcRenderer.invoke(IPC.PROFILE.SWITCH_TO, name),
+    saveState: (state, profileName) => ipcRenderer.invoke(IPC.PROFILE.SAVE_STATE, state, profileName),
+    loadState: () => ipcRenderer.invoke(IPC.PROFILE.LOAD_STATE),
+    getLegacyMigrationData: () => ipcRenderer.invoke(IPC.PROFILE.GET_LEGACY_MIGRATION_DATA),
+    saveStateBeforeSwitch: (state, profileName) => ipcRenderer.invoke(IPC.PROFILE.SAVE_STATE_BEFORE_SWITCH, state, profileName),
+    getPreference: (key) => ipcRenderer.invoke(IPC.PROFILE.GET_PREFERENCE, key),
+    setPreference: (key, value) => ipcRenderer.invoke(IPC.PROFILE.SET_PREFERENCE, key, value),
+    setPreferences: (preferencesObject) => ipcRenderer.invoke(IPC.PROFILE.SET_PREFERENCES, preferencesObject),
+    getAllPreferences: () => ipcRenderer.invoke(IPC.PROFILE.GET_ALL_PREFERENCES),
+    createProfile: (name, description) => ipcRenderer.invoke(IPC.PROFILE.CREATE, name, description),
+    duplicateProfile: (sourceName, targetName, description) => ipcRenderer.invoke(IPC.PROFILE.DUPLICATE, sourceName, targetName, description),
+    deleteProfile: (name) => ipcRenderer.invoke(IPC.PROFILE.DELETE, name),
     // Backup functions
-    createBackup: () => ipcRenderer.invoke('profile:createBackup'),
-    listBackups: () => ipcRenderer.invoke('profile:listBackups'),
-    getBackupMetadata: () => ipcRenderer.invoke('profile:getBackupMetadata'),
-    restoreBackup: (backupId) => ipcRenderer.invoke('profile:restoreBackup', backupId),
-    deleteBackup: (backupId) => ipcRenderer.invoke('profile:deleteBackup', backupId),
-    getBackupSettings: () => ipcRenderer.invoke('profile:getBackupSettings'),
-    saveBackupSettings: (settings) => ipcRenderer.invoke('profile:saveBackupSettings', settings)
+    createBackup: () => ipcRenderer.invoke(IPC.PROFILE_BACKUP.CREATE),
+    listBackups: () => ipcRenderer.invoke(IPC.PROFILE_BACKUP.LIST),
+    getBackupMetadata: () => ipcRenderer.invoke(IPC.PROFILE_BACKUP.GET_METADATA),
+    restoreBackup: (backupId) => ipcRenderer.invoke(IPC.PROFILE_BACKUP.RESTORE, backupId),
+    deleteBackup: (backupId) => ipcRenderer.invoke(IPC.PROFILE_BACKUP.DELETE, backupId),
+    getBackupSettings: () => ipcRenderer.invoke(IPC.PROFILE_BACKUP.GET_SETTINGS),
+    saveBackupSettings: (settings) => ipcRenderer.invoke(IPC.PROFILE_BACKUP.SAVE_SETTINGS, settings)
   },
 
   // Library transfer functions
   library: {
-    exportLibrary: () => ipcRenderer.invoke('library:export'),
-    importLibrary: () => ipcRenderer.invoke('library:import'),
-    confirmImport: (archivePath) => ipcRenderer.invoke('library:import-confirm', archivePath),
+    exportLibrary: () => ipcRenderer.invoke(IPC.LIBRARY.EXPORT),
+    importLibrary: () => ipcRenderer.invoke(IPC.LIBRARY.IMPORT),
+    confirmImport: (archivePath) => ipcRenderer.invoke(IPC.LIBRARY.IMPORT_CONFIRM, archivePath),
     onExportProgress: (callback) => {
       const handler = (_event, data) => callback(data);
       ipcRenderer.on('library:export-progress', handler);
@@ -494,18 +495,18 @@ const secureElectronAPI = {
 
   // Utility functions
   utils: {
-    generateId: () => ipcRenderer.invoke('generate-id'),
-    formatDuration: (seconds) => ipcRenderer.invoke('format-duration', seconds),
-    validateAudioFile: (filePath) => ipcRenderer.invoke('validate-audio-file', filePath),
-    sanitizeFilename: (filename) => ipcRenderer.invoke('sanitize-filename', filename),
+    generateId: () => ipcRenderer.invoke(IPC.UTILITY.GENERATE_ID),
+    formatDuration: (seconds) => ipcRenderer.invoke(IPC.UTILITY.FORMAT_DURATION, seconds),
+    validateAudioFile: (filePath) => ipcRenderer.invoke(IPC.UTILITY.VALIDATE_AUDIO_FILE, filePath),
+    sanitizeFilename: (filename) => ipcRenderer.invoke(IPC.UTILITY.SANITIZE_FILENAME, filename),
     getPathForFile: (file) => webUtils.getPathForFile(file)
   },
   
   // Analytics
   analytics: {
-    trackEvent: (name, properties) => ipcRenderer.invoke('analytics:track-event', name, properties),
-    getOptOutStatus: () => ipcRenderer.invoke('analytics:get-opt-out-status'),
-    setOptOut: (value) => ipcRenderer.invoke('analytics:set-opt-out', value),
+    trackEvent: (name, properties) => ipcRenderer.invoke(IPC.ANALYTICS.TRACK_EVENT, name, properties),
+    getOptOutStatus: () => ipcRenderer.invoke(IPC.ANALYTICS.GET_OPT_OUT_STATUS),
+    setOptOut: (value) => ipcRenderer.invoke(IPC.ANALYTICS.SET_OPT_OUT, value),
   },
 
   // Testing and debugging functions
@@ -536,14 +537,14 @@ function exposeSecureAPI(injectedDebugLog) {
         saveHoldingTankFile: secureElectronAPI.fileOperations.saveHoldingTankFile,
         getAppPath: secureElectronAPI.app.getPath,
         showDirectoryPicker: secureElectronAPI.app.showDirectoryPicker,
-        restartAndInstall: () => ipcRenderer.invoke('restart-and-install-new-version'),
+        restartAndInstall: () => ipcRenderer.invoke(IPC.APP.RESTART_AND_INSTALL),
         increaseFontSize: secureElectronAPI.ui.increaseFontSize,
         decreaseFontSize: secureElectronAPI.ui.decreaseFontSize,
         toggleWaveform: secureElectronAPI.ui.toggleWaveform,
         toggleAdvancedSearch: secureElectronAPI.ui.toggleAdvancedSearch,
         closeAllTabs: secureElectronAPI.ui.closeAllTabs,
-        deleteSelectedSong: () => ipcRenderer.invoke('delete-selected-song'),
-        editSelectedSong: () => ipcRenderer.invoke('edit-selected-song'),
+        deleteSelectedSong: () => ipcRenderer.invoke(IPC.DATABASE.DELETE_SELECTED_SONG),
+        editSelectedSong: () => ipcRenderer.invoke(IPC.DATABASE.EDIT_SELECTED_SONG),
         manageCategories: secureElectronAPI.ui.manageCategories,
         showPreferences: secureElectronAPI.ui.showPreferences,
         onFkeyLoad: secureElectronAPI.events.onFkeyLoad,
