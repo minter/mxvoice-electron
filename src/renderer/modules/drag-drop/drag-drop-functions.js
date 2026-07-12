@@ -4,7 +4,11 @@
  * Core functions for handling drag and drop operations
  */
 
-// Database functions are accessed via window globals (registered by function-registry)
+let moduleRegistry = {};
+
+export function configureDragDropDependencies(dependencies = {}) {
+  moduleRegistry = dependencies.moduleRegistry || {};
+}
 
 // Import debug logger
 let debugLog = null;
@@ -35,8 +39,8 @@ export function hotkeyDrop(event) {
   }
   const target = event.currentTarget;
 
-  if (window.moduleRegistry?.hotkeys?.setLabelFromSongId) {
-    window.moduleRegistry.hotkeys.setLabelFromSongId(song_id, target);
+  if (moduleRegistry.hotkeys?.setLabelFromSongId) {
+    moduleRegistry.hotkeys.setLabelFromSongId(song_id, target);
   } else {
     debugLog?.warn('setLabelFromSongId function not available', { 
       module: 'drag-drop-functions',
@@ -46,12 +50,12 @@ export function hotkeyDrop(event) {
   
   // Save hotkeys state after assignment
   // First try to use the hotkeys module's save function
-  if (window.moduleRegistry?.hotkeys?.requestProfileStateSave) {
+  if (moduleRegistry.hotkeys?.requestProfileStateSave) {
     debugLog?.info('Saving hotkeys via module registry', {
       module: 'drag-drop-functions',
       function: 'hotkeyDrop'
     });
-    window.moduleRegistry.hotkeys.requestProfileStateSave();
+    moduleRegistry.hotkeys.requestProfileStateSave();
   } else {
     debugLog?.error('No requestProfileStateSave function available', {
       module: 'drag-drop-functions',
@@ -115,8 +119,8 @@ export function holdingTankDrop(event) {
     }
   }
 
-  if (window.moduleRegistry?.holdingTank?.addToHoldingTank) {
-    window.moduleRegistry.holdingTank.addToHoldingTank(songId, insertTarget, insertPosition).then(result => {
+  if (moduleRegistry.holdingTank?.addToHoldingTank) {
+    moduleRegistry.holdingTank.addToHoldingTank(songId, insertTarget, insertPosition).then(result => {
       if (result && result.success) {
         // Flash the newly added item to confirm placement
         const added = document.querySelector(`.holding_tank.active .list-group-item[songid="${songId}"]`);
@@ -125,7 +129,7 @@ export function holdingTankDrop(event) {
           void added.offsetWidth;
           added.classList.add('holding-tank-flash');
         }
-        window.moduleRegistry?.holdingTank?.requestProfileStateSave?.();
+        moduleRegistry.holdingTank?.requestProfileStateSave?.();
       }
     }).catch(err => { debugLog?.warn('Failed to add song to holding tank', { module: 'drag-drop-functions', function: 'holdingTankDrop', error: err?.message }); });
   } else {
@@ -234,7 +238,7 @@ export function holdingTankReorderDrop(event) {
       : event.clientY < (targetRect.top + targetRect.height / 2);
     targetIndex = [...targetList.children].indexOf(targetItem) + (insertBefore ? 0 : 1);
 
-    window.moduleRegistry?.holdingTank?.moveHoldingTankItem?.(
+    moduleRegistry.holdingTank?.moveHoldingTankItem?.(
       sourceTabNumber,
       sourceIndex,
       targetTabNumber,
@@ -247,7 +251,7 @@ export function holdingTankReorderDrop(event) {
       targetList.insertBefore(draggedItem, targetItem.nextSibling);
     }
   } else {
-    window.moduleRegistry?.holdingTank?.moveHoldingTankItem?.(
+    moduleRegistry.holdingTank?.moveHoldingTankItem?.(
       sourceTabNumber,
       sourceIndex,
       targetTabNumber,
@@ -263,7 +267,7 @@ export function holdingTankReorderDrop(event) {
   draggedItem.classList.add('holding-tank-flash');
 
   // Save the model order
-  window.moduleRegistry?.holdingTank?.requestProfileStateSave?.();
+  moduleRegistry.holdingTank?.requestProfileStateSave?.();
 
   debugLog?.info('Holding tank item reordered', {
     module: 'drag-drop-functions',

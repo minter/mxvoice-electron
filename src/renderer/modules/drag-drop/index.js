@@ -5,7 +5,7 @@
  * and rearranging UI elements
  */
 
-import { songDrag } from './drag-drop-functions.js';
+import { configureDragDropDependencies, songDrag } from './drag-drop-functions.js';
 import { setupDragDropEventHandlers } from './event-handlers.js';
 import { setupFileDropHandlers, handleExternalFileDrop } from './file-drop-handler.js';
 
@@ -43,12 +43,9 @@ class DragDropModule {
     // Setup event handlers for external file drops (OS → app window)
     setupFileDropHandlers();
 
-    // Note: Functions are now registered through the function registry system
-    // to prevent duplicate registration warnings
     debugLog?.info('Drag & Drop Module initialized', {
       module: 'drag-drop',
-      function: 'initializeDragDrop',
-      note: 'Functions registered through function registry system'
+      function: 'initializeDragDrop'
     });
   }
 
@@ -57,12 +54,14 @@ class DragDropModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(_dependencies = {}) {
+  async init(dependencies = {}) {
     try {
       debugLog?.info('Drag & Drop module initializing...', { 
         module: 'drag-drop', 
         function: 'init' 
       });
+
+      configureDragDropDependencies(dependencies);
 
       // Call the existing initialization logic
       this.initializeDragDrop();
@@ -141,4 +140,4 @@ const dragDropModule = new DragDropModule();
 export const initializeDragDrop = dragDropModule.initializeDragDrop.bind(dragDropModule);
 
 // Default export for module loading
-export default dragDropModule; 
+export default dragDropModule;
