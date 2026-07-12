@@ -25,6 +25,7 @@ import { createBackupMetadataStore } from './backup-metadata-store.js';
 import { createBackupDirectoryScanner } from './backup-directory-scanner.js';
 import { createBackupFileOperations } from './backup-file-operations.js';
 import { selectBackupsForRetention } from './backup-retention-policy.js';
+import { createProfileChangeDetector } from './profile-change-detector.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -60,6 +61,15 @@ const metadataStore = createBackupMetadataStore({
   pathExists,
   coordinator: metadataCoordinator,
   rebuildMetadata: (profileName) => rebuildMetadataFromDirectories(profileName),
+  getDebugLog: () => debugLog
+});
+const changeDetector = createProfileChangeDetector({
+  fs,
+  path,
+  crypto,
+  getProfileDirectory,
+  pathExists,
+  readMetadata: (profileName) => metadataStore.readSafe(profileName),
   getDebugLog: () => debugLog
 });
 
@@ -523,56 +533,7 @@ async function cleanupOldBackups(profileName, maxCount, maxAge) {
  * @returns {Promise<string>} Hash of profile contents
  */
 async function calculateProfileHash(profileName) {
-  try {
-    const profileDir = getProfileDirectory(profileName);
-    
-    if (!await pathExists(profileDir)) {
-      return null;
-    }
-
-    const hash = crypto.createHash('sha256');
-    
-    async function hashDirectory(dirPath) {
-      const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-      
-      // Sort entries for consistent hashing
-      entries.sort((a, b) => a.name.localeCompare(b.name));
-      
-      for (const entry of entries) {
-        const entryPath = path.join(dirPath, entry.name);
-        
-        // Skip backup directories and temp files
-        if (entry.name.startsWith('.') || entry.name.includes('backup')) {
-          continue;
-        }
-        
-        if (entry.isDirectory()) {
-          await hashDirectory(entryPath);
-        } else {
-          const stats = await fs.promises.stat(entryPath);
-          const content = await fs.promises.readFile(entryPath);
-          
-          // Include file path, size, and content in hash
-          hash.update(entryPath);
-          hash.update(stats.size.toString());
-          hash.update(stats.mtimeMs.toString());
-          hash.update(content);
-        }
-      }
-    }
-    
-    await hashDirectory(profileDir);
-    
-    return hash.digest('hex');
-  } catch (error) {
-    debugLog?.error('Failed to calculate profile hash', {
-      module: 'profile-backup-manager',
-      function: 'calculateProfileHash',
-      profileName,
-      error: error.message
-    });
-    return null;
-  }
+  return changeDetector.calculateHash(profileName);
 }
 
 /**
@@ -581,34 +542,7 @@ async function calculateProfileHash(profileName) {
  * @returns {Promise<{changed: boolean, currentHash?: string, lastHash?: string}>}
  */
 async function hasProfileChanged(profileName) {
-  try {
-    const currentHash = await calculateProfileHash(profileName);
-    
-    if (!currentHash) {
-      return { changed: true }; // If we can't calculate hash, assume changed
-    }
-    
-    const metadata = await readMetadataSafe(profileName);
-    const lastHash = metadata.lastBackupHash || null;
-    
-    if (!lastHash) {
-      return { changed: true, currentHash }; // No previous backup
-    }
-    
-    return {
-      changed: currentHash !== lastHash,
-      currentHash,
-      lastHash
-    };
-  } catch (error) {
-    debugLog?.error('Failed to check profile changes', {
-      module: 'profile-backup-manager',
-      function: 'hasProfileChanged',
-      profileName,
-      error: error.message
-    });
-    return { changed: true }; // On error, assume changed
-  }
+  return changeDetector.hasChanged(profileName);
 }
 
 /**
