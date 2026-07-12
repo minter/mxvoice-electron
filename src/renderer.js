@@ -62,7 +62,7 @@ let _sharedStateInitialized = false;
 
 // Initialize debug logger early with basic configuration
 debugLogger = initializeDebugLogger({
-  electronAPI: window.electronAPI,
+  electronAPI: window.secureElectronAPI,
   db: window.db,
   store: window.store
 });
@@ -211,7 +211,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     window.logInfo('🚀 Initializing application components...');
     const initSuccess = await AppInitialization.initialize({
       debug: {
-        electronAPI: window.electronAPI,
+        electronAPI: window.secureElectronAPI,
         db: window.db,
         store: window.store
       },
@@ -242,7 +242,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logError, 
       window.logWarn,
       {
-        electronAPI: window.electronAPI,
+        electronAPI: window.secureElectronAPI,
         db: window.db,
         store: window.store,
         debugLog: window.debugLog
@@ -318,7 +318,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     if (moduleRegistry.profileBackup) {
       window.logInfo('💾 Initializing profile backup module...');
       moduleRegistry.profileBackup.initializeProfileBackup({
-        electronAPI: window.secureElectronAPI || window.electronAPI,
+        electronAPI: window.secureElectronAPI,
         moduleRegistry
       });
     }
@@ -327,7 +327,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     if (moduleRegistry.libraryTransfer) {
       window.logInfo('📦 Initializing library transfer module...');
       moduleRegistry.libraryTransfer.initializeLibraryTransfer({
-        electronAPI: window.secureElectronAPI || window.electronAPI
+        electronAPI: window.secureElectronAPI
       });
     }
 
@@ -353,23 +353,12 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       }
       
       // Set up profile event listeners
-      const apiToUse = window.secureElectronAPI || window.electronAPI;
+      const apiToUse = window.secureElectronAPI;
       
       // Profile switch event listener
       if (apiToUse && apiToUse.events && apiToUse.events.onSwitchProfile) {
         window.logInfo('🔀 Setting up profile switch event listener...');
         apiToUse.events.onSwitchProfile(async () => {
-          window.logInfo('🔀 Profile switch requested from menu');
-          if (moduleRegistry.profileState && moduleRegistry.profileState.switchProfileWithSave) {
-            await moduleRegistry.profileState.switchProfileWithSave();
-          } else {
-            window.logError('Profile state module not available for switch');
-          }
-        });
-      } else if (apiToUse && apiToUse.onSwitchProfile) {
-        // Fallback to legacy namespace
-        window.logInfo('🔀 Setting up profile switch event listener (legacy)...');
-        apiToUse.onSwitchProfile(async () => {
           window.logInfo('🔀 Profile switch requested from menu');
           if (moduleRegistry.profileState && moduleRegistry.profileState.switchProfileWithSave) {
             await moduleRegistry.profileState.switchProfileWithSave();
@@ -621,7 +610,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logInfo('Initializing keyboard manager...');
       keyboardManager = new KeyboardManager({
         debugLog: window.debugLog || debugLogger,
-        electronAPI: window.electronAPI,
+        electronAPI: window.secureElectronAPI,
         db: window.db,
         store: window.store,
         moduleRegistry
@@ -721,7 +710,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     
     // Initialize event coordination module
     eventCoordination = new EventCoordination({
-      electronAPI: window.electronAPI,
+      electronAPI: window.secureElectronAPI,
       db: window.db,
       store: window.store,
       debugLog: debugLogger,
@@ -730,7 +719,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Initialize the event coordination system
     await eventCoordination.init({
-      electronAPI: window.electronAPI,
+      electronAPI: window.secureElectronAPI,
       db: window.db,
       store: window.store,
       debugLog: debugLogger,
@@ -775,7 +764,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Show analytics consent banner if not yet shown
     await showAnalyticsBannerIfNeeded({
-      electronAPI: window.secureElectronAPI || window.electronAPI,
+      electronAPI: window.secureElectronAPI,
       testEnvironment: window.electronTest
     });
 

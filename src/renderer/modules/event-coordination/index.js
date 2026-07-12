@@ -21,7 +21,7 @@ import EventDelegator from './event-delegator.js';
  */
 class EventCoordination {
   constructor(dependencies = {}) {
-    this.electronAPI = dependencies.electronAPI || window.electronAPI;
+    this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
     this.db = null;
     this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;

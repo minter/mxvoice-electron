@@ -14,8 +14,7 @@ import { moduleConfig } from './module-config.js';
 export async function loadBasicModules(config, moduleRegistry, logInfo, logError, logWarn, dependencies = {}) {
   // Default dependencies
   const defaultDependencies = {
-    // Prefer the compatibility layer, fall back to the secure API if needed
-    electronAPI: (typeof window !== 'undefined' && (window.electronAPI || window.secureElectronAPI)) || null,
+    electronAPI: (typeof window !== 'undefined' && window.secureElectronAPI) || null,
     debugLog: (typeof window !== 'undefined' && window.debugLog) || null,
     moduleRegistry,
     ...dependencies

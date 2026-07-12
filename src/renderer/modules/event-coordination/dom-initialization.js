@@ -7,7 +7,7 @@
 
 export default class DOMInitialization {
   constructor(dependencies = {}) {
-    this.electronAPI = dependencies.electronAPI || window.electronAPI;
+    this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
     this.db = null;
     this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
@@ -320,9 +320,9 @@ export default class DOMInitialization {
               try {
                 // Get song title for confirmation (same as the complex function)
                 let songTitle = 'this song';
-                if (window.electronAPI?.database?.getSongById) {
+                if (this.electronAPI?.database?.getSongById) {
                   try {
-                    const result = await window.electronAPI.database.getSongById(songid);
+                    const result = await this.electronAPI.database.getSongById(songid);
                     if (result?.success && result.data?.[0]?.title) {
                       songTitle = result.data[0].title;
                     }
