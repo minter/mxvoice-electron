@@ -102,6 +102,11 @@ test.describe('Songs - Multi-Song Import', () => {
     // Modal should hide
     await expect(modal).not.toBeVisible({ timeout: 10000 });
 
+    // The successful import path should use the shared toast utility.
+    const successToast = page.locator('#file-drop-toast');
+    await expect(successToast).toBeVisible();
+    await expect(successToast).toHaveText('Successfully imported 2 songs');
+
     // Verify songs appear in search results
     const resultsTbody = page.locator('#search_results tbody');
     

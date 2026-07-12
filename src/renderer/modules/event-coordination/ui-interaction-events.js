@@ -486,8 +486,8 @@ export default class UIInteractionEvents {
   attachConfirmationEvents() {
     const confirmationModalHiddenHandler = (_event) => {
       try {
-        if (window.restoreFocusToSearch) {
-          window.restoreFocusToSearch();
+        if (this.moduleRegistry.utils?.restoreFocusToSearch) {
+          this.moduleRegistry.utils.restoreFocusToSearch();
         } else {
           this.debugLog?.warn('restoreFocusToSearch function not available');
         }

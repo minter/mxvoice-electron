@@ -183,7 +183,6 @@ export async function saveNewSong(event) {
       }
       debugLog?.info(`Added new category`, { module: 'song-management', function: 'saveNewSong', code: finalCode });
       await refreshCategories();
-      if (typeof window.populateCategorySelect === 'function') window.populateCategorySelect();
       if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
       category = finalCode;
     }

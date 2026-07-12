@@ -2,7 +2,7 @@
  * Navigation Shortcuts Module
  * 
  * This module handles navigation and control shortcuts including tab switching,
- * search focus, play/pause controls, and deletion operations.
+ * search focus and play/pause controls.
  * 
  * Extracted from renderer.js as part of Phase 5 modularization.
  */
@@ -38,7 +38,6 @@ export class NavigationShortcuts {
       this.setupTabSwitching();
       this.setupSearchFocus();
       this.setupAudioControls();
-      this.setupDeletionControls();
       
       this.isInitialized = true;
       this.logInfo('Navigation shortcuts initialized successfully');
@@ -149,17 +148,6 @@ export class NavigationShortcuts {
       this.logInfo('Audio control shortcuts set up successfully');
     } catch (error) {
       this.logError('Error setting up audio control shortcuts:', error);
-    }
-  }
-
-  /**
-   * Set up deletion control shortcuts
-   */
-  setupDeletionControls() {
-    try {
-      this.logInfo('Deletion controls are managed by the keyboard shortcut registry');
-    } catch (error) {
-      this.logError('Error setting up deletion control shortcuts:', error);
     }
   }
 
@@ -285,54 +273,6 @@ export class NavigationShortcuts {
       return false; // Prevent default enter behavior
     } catch (error) {
       this.logError('Error playing selected song:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Handle deletion based on context
-   * @returns {boolean} - False to prevent default behavior
-   */
-  handleDeletion() {
-    try {
-      this.logDebug("Delete key pressed");
-      this.logDebug("selected_row", document.getElementById('selected_row'));
-      const sel = document.getElementById('selected_row');
-      const holding = document.getElementById('holding-tank-column');
-      const hotkeys = document.getElementById('hotkey-tab-content');
-      this.logDebug("holding-tank-column has selected_row", Number(Boolean(holding && sel && holding.contains(sel))));
-      this.logDebug("hotkey-tab-content has selected_row", Number(Boolean(hotkeys && sel && hotkeys.contains(sel))));
-      
-      // Check if the selected row is in the holding tank
-      if (holding && sel && holding.contains(sel)) {
-        this.logDebug("Selected row is in holding tank");
-        // If in holding tank, remove from holding tank
-        if (this.dependencies.moduleRegistry?.holdingTank?.removeSelected) {
-          this.dependencies.moduleRegistry.holdingTank.removeSelected();
-        } else {
-          this.logWarn('removeFromHoldingTank function not available');
-        }
-      } else if (hotkeys && sel && hotkeys.contains(sel)) {
-        this.logDebug("Selected row is in hotkey tab");
-        // If in hotkey tab, remove from hotkey
-        if (this.dependencies.moduleRegistry?.hotkeys?.removeFromHotkey) {
-          this.dependencies.moduleRegistry.hotkeys.removeFromHotkey();
-        } else {
-          this.logWarn('removeFromHotkey function not available');
-        }
-      } else {
-        this.logDebug("Selected row is in search results");
-        // If not in holding tank or hotkey, delete from database
-        if (window.deleteSong && typeof window.deleteSong === 'function') {
-          window.deleteSong();
-        } else {
-          this.logWarn('deleteSong function not available');
-        }
-      }
-      
-      return false; // Prevent default delete behavior
-    } catch (error) {
-      this.logError('Error handling deletion:', error);
       return false;
     }
   }

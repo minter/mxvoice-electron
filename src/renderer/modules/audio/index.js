@@ -62,6 +62,7 @@ class AudioModule {
    */
   async init(_dependencies = {}) {
     try {
+      audioManager.configureAudioManagerDependencies(_dependencies);
       debugLog?.info('Audio module initializing...', { 
         module: 'audio', 
         function: 'init' 
@@ -388,4 +389,4 @@ export const initializeMusicDirectoryCache = audioModule.initializeMusicDirector
 export const updateMusicDirectoryCache = audioModule.updateMusicDirectoryCache.bind(audioModule);
 
 // Default export for module loading
-export default audioModule; 
+export default audioModule;

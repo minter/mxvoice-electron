@@ -7,6 +7,7 @@
  */
 
 import { SUPPORTED_AUDIO_EXTS } from '../bulk-operations/bulk-operations.js';
+import { showDropToast } from '../utils/toast-utils.js';
 
 // Import debug logger
 let debugLog = null;
@@ -43,46 +44,6 @@ function showOverlay() {
 function hideOverlay() {
   const overlay = document.getElementById('file-drop-overlay');
   if (overlay) overlay.classList.remove('active');
-}
-
-/**
- * Show a brief auto-dismissing toast message near the top of the window
- * @param {string} message
- * @param {number} [duration=3000] - ms before auto-dismiss
- */
-function showDropToast(message, duration = 3000) {
-  // Remove any existing toast
-  const existing = document.getElementById('file-drop-toast');
-  if (existing) existing.remove();
-
-  const toast = document.createElement('div');
-  toast.id = 'file-drop-toast';
-  toast.textContent = message;
-  Object.assign(toast.style, {
-    position: 'fixed',
-    top: '1rem',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    zIndex: '10001',
-    padding: '0.5rem 1.25rem',
-    borderRadius: '0.375rem',
-    background: 'rgba(0, 0, 0, 0.85)',
-    color: 'white',
-    fontSize: '0.9rem',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-    opacity: '0',
-    transition: 'opacity 0.2s ease'
-  });
-  document.body.appendChild(toast);
-
-  // Fade in
-  requestAnimationFrame(() => { toast.style.opacity = '1'; });
-
-  // Auto-dismiss
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    setTimeout(() => toast.remove(), 200);
-  }, duration);
 }
 
 /**
@@ -146,8 +107,6 @@ async function routeFiles(filePaths) {
 
   if (moduleRegistry.bulkOperations?.showBulkAddFromFiles) {
     moduleRegistry.bulkOperations.showBulkAddFromFiles(filePaths);
-  } else if (typeof window.showBulkAddFromFiles === 'function') {
-    window.showBulkAddFromFiles(filePaths);
   } else {
     debugLog?.warn('showBulkAddFromFiles not available for file drop', {
       module: 'file-drop-handler',

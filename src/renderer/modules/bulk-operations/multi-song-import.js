@@ -3,6 +3,7 @@ import { secureFileSystem, secureDatabase, securePath, secureStore } from '../ad
 import { populateCategorySelect, getCategoryDescription } from '../categories/category-data.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 import { customAlert } from '../utils/modal-utils.js';
+import { showDropToast } from '../utils/toast-utils.js';
 
 /**
  * Multi-Song Import Module
@@ -350,10 +351,7 @@ async function saveMultiSongImport() {
     debugLog?.info('Multi-song import completed');
     safeHideModal('#multiSongImportModal');
     
-    // Optional: Show success message
-    if (typeof window.showDropToast === 'function') {
-      window.showDropToast(`Successfully imported ${pendingSongs.length} songs`);
-    }
+    showDropToast(`Successfully imported ${pendingSongs.length} songs`);
 
   } catch (error) {
     debugLog?.error('Error during multi-song import save', { error: error.message });

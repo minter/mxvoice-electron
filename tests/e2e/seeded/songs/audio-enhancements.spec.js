@@ -725,8 +725,31 @@ test.describe('Audio Enhancements - holding tank mode persistence', () => {
     console.log('✅ Playlist mode UI and shared state updated');
   });
 
+  test('cancelling autoplay outside the holding tank returns to storage mode', async () => {
+    await page.locator('#playlist_mode_btn').click();
+    await expect(page.locator('#playlist_mode_btn')).toHaveClass(/active/, { timeout: 3000 });
+
+    await page.evaluate(() => {
+      const selectedRow = document.getElementById('selected_row');
+      selectedRow?.removeAttribute('id');
+      window.moduleRegistry.audio.cancel_autoplay();
+    });
+
+    await expect(page.locator('#storage_mode_btn')).toHaveClass(/active/, { timeout: 3000 });
+    await expect(page.locator('#playlist_mode_btn')).not.toHaveClass(/active/);
+
+    const state = await page.evaluate(() => ({
+      mode: window.sharedState?.get('holdingTankMode'),
+      autoplay: window.sharedState?.get('autoplay')
+    }));
+    expect(state).toEqual({ mode: 'storage', autoplay: false });
+  });
+
   test('playlist mode is saved to profile preferences', async () => {
-    // The previous test set playlist mode — verify it was persisted
+    await page.locator('#playlist_mode_btn').click();
+    await expect(page.locator('#playlist_mode_btn')).toHaveClass(/active/, { timeout: 3000 });
+
+    // Verify playlist mode was persisted.
     const savedMode = await page.evaluate(async () => {
       const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.getPreference) {

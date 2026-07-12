@@ -26,6 +26,12 @@ import {
   getTrackBounds
 } from './playback-policy.js';
 
+let moduleRegistry = {};
+
+export function configureAudioManagerDependencies(dependencies = {}) {
+  moduleRegistry = dependencies.moduleRegistry || {};
+}
+
 // Import debug logger - use lazy getter for proper initialization timing
 function getDebugLog() {
   return window.debugLog || null;
@@ -631,10 +637,7 @@ function cancel_autoplay() {
     const holdingTankMode = sharedState.get('holdingTankMode');
     if (holdingTankMode === 'playlist') {
       sharedState.set('autoplay', false);
-      // Note: setHoldingTankMode should be available from the mode management module
-      if (window.setHoldingTankMode) {
-        window.setHoldingTankMode('storage');
-      }
+      moduleRegistry.modeManagement?.setHoldingTankMode?.('storage');
     }
   }
 }

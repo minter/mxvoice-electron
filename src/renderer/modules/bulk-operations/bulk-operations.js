@@ -437,7 +437,6 @@ async function handleNewCategoryCreation() {
     if (ins?.success) {
       debugLog?.info('Added new row into database', { module: 'bulk-operations', function: 'handleNewCategoryCreation', code: finalCode, description });
       await refreshCategories();
-      if (typeof window.populateCategorySelect === 'function') window.populateCategorySelect();
       if (typeof populateCategoriesModal === 'function') populateCategoriesModal();
       return finalCode;
     } else {
