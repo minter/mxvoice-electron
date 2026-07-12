@@ -40,6 +40,11 @@ This project uses Playwright with first-class Electron support. Each test suite 
 **Important**: On macOS/Linux, unset `ELECTRON_RUN_AS_NODE` before running tests:
 
 ```bash
+# Required unit/policy checks used by CI
+npm run build:preload
+npm run test:no-skips
+npm run test:unit:coverage
+
 # Run all tests (comprehensive E2E coverage)
 unset ELECTRON_RUN_AS_NODE && npm test
 
@@ -58,6 +63,8 @@ npm run test:report
 # Optional: manual smoke test (excluded from default runs)
 unset ELECTRON_RUN_AS_NODE && npx playwright test tests/e2e/smoke.spec.js
 ```
+
+CI treats unit coverage and Electron E2E as independent required gates. Skipped or fixme tests are not permitted; make the test deterministic or replace it with a lower-level contract test. Hardware-specific measurements such as audio RMS may be conditional, but their state and UI assertions must continue to run. Coverage thresholds live in `vitest.config.js` and should increase as coverage improves.
 
 **Why?** IDEs like VS Code and Cursor often set `ELECTRON_RUN_AS_NODE=1`, which prevents Electron from launching its GUI. Tests require the full GUI application.
 

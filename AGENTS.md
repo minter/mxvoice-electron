@@ -65,6 +65,8 @@ When adding user-facing features, add tour steps to `src/renderer/modules/whats-
 - `npm run build:preload` — bundle preload script (required before start/test/build)
 - `npm start` — build preload + launch app in dev mode
 - `npm run test:unit` / `npx vitest run` — run unit tests
+- `npm run test:unit:coverage` — run unit tests and enforce required coverage thresholds
+- `npm run test:no-skips` — reject skipped or fixme tests anywhere under `tests/`
 - `npm test` / `npx playwright test` — run E2E tests
 - `npx eslint src/` — lint source files (not in CI)
 - `npm run build` — package app via electron-builder
@@ -72,6 +74,10 @@ When adding user-facing features, add tour steps to `src/renderer/modules/whats-
 
 ## Testing Patterns
 
+- **Required local policy check** — before handing off test-affecting changes, run `npm run build:preload`, `npm run test:no-skips`, and `npm run test:unit:coverage`. Run relevant Playwright suites for Electron lifecycle, IPC, filesystem, audio-control, or DOM behavior.
+- **No skipped tests** — `test.skip`, `test.fixme`, `it.skip`, `describe.skip`, and equivalent directives are prohibited. Make the scenario deterministic or replace it with a lower-level contract test. For environment-specific capabilities, keep state/UI assertions active and condition only the hardware-specific measurement.
+- **Coverage floors** — thresholds in `vitest.config.js` are required CI gates. Raise them when coverage rises. Do not lower them without explicit justification from the user or in the pull request.
+- **Two independent gates** — Vitest coverage does not replace Playwright. Unit coverage protects deterministic logic and failure paths; macOS/Windows E2E protects the real Electron/process/DOM boundary.
 - **Unit tests** (Vitest): `tests/unit/renderer/` and `tests/unit/main/`. Mock `window.secureElectronAPI` and `window.debugLog` in test setup.
 - **E2E tests** (Playwright): `tests/e2e/seeded/` for tests with pre-populated data. Use `launchSeededApp(electron, 'suite-name')` and `waitForAppReady(page, app)` from `tests/utils/seeded-launch.js`.
 - **Test isolation** — main process checks `APP_TEST_MODE=1` or `E2E_USER_DATA_DIR` env var and overrides `userData` path before Store creation.
@@ -85,7 +91,7 @@ When adding user-facing features, add tour steps to `src/renderer/modules/whats-
 
 ## CI/CD
 
-- **GitHub Actions** — E2E tests (Playwright on macOS/Windows), unit tests (Vitest on Ubuntu), CodeQL security scanning. Runs on PRs and pushes to main.
+- **GitHub Actions** — the Ubuntu unit job builds preload, enforces the no-skips rule, runs Vitest with coverage thresholds, and retains the HTML report. The independent E2E job runs Playwright on macOS and Windows. CodeQL runs separately. All run on PRs and pushes to main.
 
 ## Code Style
 

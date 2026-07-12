@@ -78,7 +78,7 @@ test.beforeAll(async () => {
 ### Audio measurements (local vs CI)
 Some playback tests perform real audio checks using renderer tap helpers (`rms(page)`, `waitForAudible(page)`, `waitForSilence(page)`). To keep CI reliable:
 
-- On GitHub Actions: audio tap checks are skipped; tests assert UI state and timing instead (e.g., waiting for fade‑out completion).
+- On GitHub Actions: tests still run and assert audio-control state, UI, and timing. Only physical audio tap measurements are conditionally omitted when no audio device is available.
 - Locally: full audio verification runs (audible/silence verification, volume relationship checks, fade‑out sampling).
 
 Tip: To mimic CI locally, run with `CI=true`:
