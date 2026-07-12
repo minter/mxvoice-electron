@@ -400,7 +400,8 @@ async function confirmImport() {
 export {
   initializeLibraryTransfer,
   startExport,
-  startImport
+  startImport,
+  confirmImport
 };
 
 export default {

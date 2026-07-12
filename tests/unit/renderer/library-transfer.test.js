@@ -156,4 +156,34 @@ describe('library transfer renderer import workflow', () => {
     expect(hideModal).toHaveBeenCalledWith('#libraryTransferModal');
     expect(showModal).not.toHaveBeenCalledWith('#libraryImportConfirmModal');
   });
+
+  it('confirms a validated import, protects state, and restarts the app', async () => {
+    vi.useFakeTimers();
+    const { api, library } = createImportAPI({
+      success: true, archivePath: '/tmp/library.mxvlib',
+      manifest: { createdAt: '2026-01-01', contents: {} }
+    });
+    library.confirmImport.mockResolvedValue({ success: true, songCount: 4 });
+    libraryTransfer.initializeLibraryTransfer({ electronAPI: api });
+    await libraryTransfer.startImport();
+    await libraryTransfer.confirmImport();
+    expect(library.confirmImport).toHaveBeenCalledWith('/tmp/library.mxvlib');
+    expect(window.isRestoringProfileState).toBe(true);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(api.app.restart).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
+
+  it('falls back to reloading when restart fails', async () => {
+    vi.useFakeTimers();
+    const { api, library } = createImportAPI({ success: true, archivePath: '/tmp/library.mxvlib', manifest: { createdAt: '2026-01-01', contents: {} } });
+    library.confirmImport.mockResolvedValue({ success: true });
+    api.app.restart.mockRejectedValue(new Error('restart failed'));
+    libraryTransfer.initializeLibraryTransfer({ electronAPI: api });
+    await libraryTransfer.startImport();
+    await libraryTransfer.confirmImport();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(window.location.reload).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
 });
