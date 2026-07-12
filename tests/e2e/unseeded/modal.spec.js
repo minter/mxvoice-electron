@@ -130,10 +130,6 @@ test.describe('First run modal behavior', () => {
             window.moduleRegistry.songManagement.startAddNewSong(filename, metadata);
           }
         });
-      } else if (window.electronAPI?.onAddDialogLoad) {
-        window.electronAPI.onAddDialogLoad((filename) => {
-          window.___captureAddDialog?.(filename);
-        });
       } else if (window.electron?.ipcRenderer?.on) {
         window.electron.ipcRenderer.on('add_dialog_load', (_e, filename) => {
           window.___captureAddDialog?.(filename);

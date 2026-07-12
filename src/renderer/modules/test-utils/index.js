@@ -30,7 +30,7 @@ export function testPhase2Migrations() {
   });
   
   // Test if new APIs are available
-  if (window.electronAPI) {
+  if (window.secureElectronAPI) {
     debugLog?.info('New electronAPI is available', { 
       module: 'test-utils',
       function: 'testPhase2Migrations'
@@ -164,7 +164,7 @@ export function testFileSystemAPI() {
     function: 'testFileSystemAPI'
   });
   
-  if (window.electronAPI && window.electronAPI.fileSystem) {
+  if (window.secureElectronAPI && window.secureElectronAPI.fileSystem) {
     debugLog?.info('File System API available', { 
       module: 'test-utils',
       function: 'testFileSystemAPI'
@@ -234,7 +234,7 @@ export function testStoreAPI() {
     function: 'testStoreAPI'
   });
   
-  if (window.electronAPI && window.electronAPI.store) {
+  if (window.secureElectronAPI && window.secureElectronAPI.store) {
     debugLog?.info('Store API available', { 
       module: 'test-utils',
       function: 'testStoreAPI'
@@ -359,7 +359,7 @@ export function testAudioAPI() {
     function: 'testAudioAPI'
   });
   
-  if (window.electronAPI && window.electronAPI.audio) {
+  if (window.secureElectronAPI && window.secureElectronAPI.audio) {
     debugLog?.info('Audio API available', { 
       module: 'test-utils',
       function: 'testAudioAPI'
@@ -519,7 +519,7 @@ export function testSecurityFeatures() {
   };
   
   // Test that contextBridge APIs are available
-  if (window.electronAPI) {
+  if (window.secureElectronAPI) {
     debugLog?.info('electronAPI available through contextBridge', { 
       module: 'test-utils',
       function: 'testSecurityFeatures'
@@ -529,7 +529,7 @@ export function testSecurityFeatures() {
     // Test all API categories
     const apiCategories = ['database', 'fileSystem', 'store', 'audio'];
     apiCategories.forEach(category => {
-      if (window.electronAPI[category]) {
+      if (window.secureElectronAPI[category]) {
         debugLog?.info(`${category} API available`, { 
           module: 'test-utils',
           function: 'testSecurityFeatures',

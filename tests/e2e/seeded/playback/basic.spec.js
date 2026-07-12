@@ -848,7 +848,7 @@ test.describe('Playback - basic', () => {
         try {
           console.log('Calling hotkeys init...');
           await window.moduleRegistry.hotkeys.init({
-            electronAPI: window.electronAPI,
+            electronAPI: window.secureElectronAPI,
             db: window.db,
             store: window.store,
             debugLog: window.debugLog
@@ -1239,5 +1239,4 @@ test.describe('Playback - basic', () => {
     console.log('✅ Clear operation affects all hotkeys in the active tab');
   });
 });
-
 

@@ -64,7 +64,7 @@ test.describe('Playback - fade out', () => {
   test('fade out preference can be set via store', async () => {
     // Set fade_out_seconds to 2 seconds via the secure store
     const result = await page.evaluate(async () => {
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.setPreference) {
         return electronAPI.profile.setPreference('fade_out_seconds', 2);
       }
@@ -80,7 +80,7 @@ test.describe('Playback - fade out', () => {
 
     // Verify we can read it back
     const stored = await page.evaluate(async () => {
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.getPreference) {
         return electronAPI.profile.getPreference('fade_out_seconds');
       }
@@ -102,7 +102,7 @@ test.describe('Playback - fade out', () => {
 
     // Set a short fade duration for testing (2 seconds)
     await page.evaluate(async () => {
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.setPreference) {
         await electronAPI.profile.setPreference('fade_out_seconds', 2);
       }
@@ -158,7 +158,7 @@ test.describe('Playback - fade out', () => {
 
     // Set fade duration
     await page.evaluate(async () => {
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.setPreference) {
         await electronAPI.profile.setPreference('fade_out_seconds', 1);
       }

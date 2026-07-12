@@ -523,51 +523,8 @@ function exposeSecureAPI(injectedDebugLog) {
       // Expose the secure API via contextBridge
       contextBridge.exposeInMainWorld('secureElectronAPI', secureElectronAPI);
       
-      
-      // Also expose a legacy compatibility layer for existing code
-      contextBridge.exposeInMainWorld('electronAPI', {
-        // Legacy API compatibility
-        openHotkeyFile: secureElectronAPI.fileOperations.openHotkeyFile,
-        saveHotkeyFile: secureElectronAPI.fileOperations.saveHotkeyFile,
-        openHoldingTankFile: secureElectronAPI.fileOperations.openHoldingTankFile,
-        saveHoldingTankFile: secureElectronAPI.fileOperations.saveHoldingTankFile,
-        getAppPath: secureElectronAPI.app.getPath,
-        showDirectoryPicker: secureElectronAPI.app.showDirectoryPicker,
-        restartAndInstall: () => ipcRenderer.invoke(IPC.APP.RESTART_AND_INSTALL),
-        increaseFontSize: secureElectronAPI.ui.increaseFontSize,
-        decreaseFontSize: secureElectronAPI.ui.decreaseFontSize,
-        toggleWaveform: secureElectronAPI.ui.toggleWaveform,
-        toggleAdvancedSearch: secureElectronAPI.ui.toggleAdvancedSearch,
-        closeAllTabs: secureElectronAPI.ui.closeAllTabs,
-        deleteSelectedSong: () => ipcRenderer.invoke(IPC.DATABASE.DELETE_SELECTED_SONG),
-        editSelectedSong: () => ipcRenderer.invoke(IPC.DATABASE.EDIT_SELECTED_SONG),
-        manageCategories: secureElectronAPI.ui.manageCategories,
-        showPreferences: secureElectronAPI.ui.showPreferences,
-        onFkeyLoad: secureElectronAPI.events.onFkeyLoad,
-        onHoldingTankLoad: secureElectronAPI.events.onHoldingTankLoad,
-        onBulkAddDialogLoad: secureElectronAPI.events.onBulkAddDialogLoad,
-        onAddDialogLoad: secureElectronAPI.events.onAddDialogLoad,
-        onDisplayReleaseNotes: secureElectronAPI.events.onDisplayReleaseNotes,
-        onSwitchProfile: secureElectronAPI.events.onSwitchProfile,
-        removeAllListeners: secureElectronAPI.events.removeAllListeners,
-        database: secureElectronAPI.database,
-        fileSystem: secureElectronAPI.fileSystem,
-        path: secureElectronAPI.path,
-        store: secureElectronAPI.store,
-        audio: secureElectronAPI.audio,
-        os: secureElectronAPI.os,
-        utils: secureElectronAPI.utils,
-        testing: secureElectronAPI.testing,
-        profile: secureElectronAPI.profile,
-        library: secureElectronAPI.library,
-        // Provide logs under legacy namespace for compatibility with existing renderer code
-        logs: secureElectronAPI.logs,
-        analytics: secureElectronAPI.analytics
-      });
-      
       if (debugLog && typeof debugLog.info === 'function') {
         debugLog.info('✅ Secure API exposed via contextBridge (context isolation enabled)');
-        debugLog.info('✅ Legacy API compatibility layer exposed');
       }
       return true;
     } else {

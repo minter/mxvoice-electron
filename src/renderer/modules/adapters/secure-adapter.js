@@ -1,11 +1,7 @@
 /**
  * Secure Adapter Module
  * 
- * Provides a unified interface for accessing Electron APIs that works in both
- * secure (context isolation enabled) and insecure (context isolation disabled) modes.
- * 
- * This adapter automatically detects the available APIs and routes calls appropriately,
- * ensuring compatibility across different security configurations.
+ * Provides a consistent renderer interface over the context-isolated preload API.
  */
 
 // Import debug logger safely

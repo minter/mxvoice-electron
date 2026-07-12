@@ -91,11 +91,6 @@ test.describe('Songs - add', () => {
             console.log('IPC: startAddNewSong not available!');
           }
         });
-      } else if (window.electronAPI?.onAddDialogLoad) {
-        window.electronAPI.onAddDialogLoad((filename) => {
-          console.log('IPC: add_dialog_load received via legacy API:', filename);
-          window.___captureAddDialog?.(filename);
-        });
       } else if (window.electron?.ipcRenderer?.on) {
         window.electron.ipcRenderer.on('add_dialog_load', (_e, filename) => {
           console.log('IPC: add_dialog_load received via direct IPC:', filename);
@@ -219,8 +214,6 @@ test.describe('Songs - add', () => {
     const musicDirResult = await page.evaluate(async () => {
       if (window.secureElectronAPI?.store?.get) {
         return await window.secureElectronAPI.store.get('music_directory');
-      } else if (window.electronAPI?.store?.get) {
-        return await window.electronAPI.store.get('music_directory');
       }
       return null;
     });
@@ -447,8 +440,6 @@ test.describe('Songs - add', () => {
     const musicDirResult = await page.evaluate(async () => {
       if (window.secureElectronAPI?.store?.get) {
         return await window.secureElectronAPI.store.get('music_directory');
-      } else if (window.electronAPI?.store?.get) {
-        return await window.electronAPI.store.get('music_directory');
       }
       return null;
     });
@@ -529,11 +520,6 @@ test.describe('Songs - add', () => {
           } else {
             console.log('IPC: startAddNewSong not available for OGG file!');
           }
-        });
-      } else if (window.electronAPI?.onAddDialogLoad) {
-        window.electronAPI.onAddDialogLoad((filename) => {
-          console.log('IPC: add_dialog_load received via legacy API for OGG file:', filename);
-          window.___captureAddDialogOgg?.(filename);
         });
       } else if (window.electron?.ipcRenderer?.on) {
         window.electron.ipcRenderer.on('add_dialog_load', (_e, filename) => {
@@ -635,8 +621,6 @@ test.describe('Songs - add', () => {
     const musicDirResult = await page.evaluate(async () => {
       if (window.secureElectronAPI?.store?.get) {
         return await window.secureElectronAPI.store.get('music_directory');
-      } else if (window.electronAPI?.store?.get) {
-        return await window.electronAPI.store.get('music_directory');
       }
       return null;
     });

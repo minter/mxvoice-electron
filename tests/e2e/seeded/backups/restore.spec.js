@@ -145,7 +145,7 @@ test.describe('Profile Backups - restore', () => {
 
     // Step 5: Restore via the API (bypassing the confirm dialog)
     const restoreResult = await page.evaluate(async (bid) => {
-      const api = window.secureElectronAPI || window.electronAPI;
+      const api = window.secureElectronAPI;
       if (api?.profile?.restoreBackup) {
         return await api.profile.restoreBackup(bid);
       }
@@ -188,7 +188,7 @@ test.describe('Profile Backups - restore', () => {
     // Restore the first backup
     const backupId = metadataBefore.backups[0].id;
     await page.evaluate(async (bid) => {
-      const api = window.secureElectronAPI || window.electronAPI;
+      const api = window.secureElectronAPI;
       return await api.profile.restoreBackup(bid);
     }, backupId);
 

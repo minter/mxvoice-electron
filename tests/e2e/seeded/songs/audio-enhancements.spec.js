@@ -634,7 +634,7 @@ test.describe('Audio Enhancements - database migration', () => {
   test('existing songs have new columns with correct defaults', async () => {
     // Verify migration ran by checking that a song has the new columns with defaults
     const song = await page.evaluate(async () => {
-      const api = window.secureElectronAPI?.database || window.electronAPI?.database;
+      const api = window.secureElectronAPI?.database;
       if (!api?.getSongById) return null;
       const result = await api.getSongById('1001');
       if (result?.success && result?.data?.length > 0) {
@@ -728,7 +728,7 @@ test.describe('Audio Enhancements - holding tank mode persistence', () => {
   test('playlist mode is saved to profile preferences', async () => {
     // The previous test set playlist mode — verify it was persisted
     const savedMode = await page.evaluate(async () => {
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.getPreference) {
         const result = await electronAPI.profile.getPreference('holding_tank_mode');
         return result?.value;
@@ -747,7 +747,7 @@ test.describe('Audio Enhancements - holding tank mode persistence', () => {
 
     // Manually set the preference to playlist (simulating a previous session's save)
     await page.evaluate(async () => {
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.setPreference) {
         await electronAPI.profile.setPreference('holding_tank_mode', 'playlist');
       }
@@ -783,7 +783,7 @@ test.describe('Audio Enhancements - holding tank mode persistence', () => {
 
     // Verify it was saved
     const savedMode = await page.evaluate(async () => {
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.getPreference) {
         const result = await electronAPI.profile.getPreference('holding_tank_mode');
         return result?.value;

@@ -25,3 +25,12 @@ describe('secure-adapter fileSystem surface matches preload', () => {
     expect(preloadMethods.has(method)).toBe(true);
   });
 });
+
+describe('preload contextBridge surface', () => {
+  const preload = fs.readFileSync('src/preload/modules/secure-api-exposer.cjs', 'utf8');
+
+  it('exposes only the secure Electron API', () => {
+    expect(preload).toContain("exposeInMainWorld('secureElectronAPI', secureElectronAPI)");
+    expect(preload).not.toContain("exposeInMainWorld('electronAPI'");
+  });
+});

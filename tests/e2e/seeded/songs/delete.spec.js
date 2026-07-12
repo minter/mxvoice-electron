@@ -147,8 +147,6 @@ test.describe('Songs - delete', () => {
     const musicDirResult = await page.evaluate(async () => {
       if (window.secureElectronAPI?.store?.get) {
         return await window.secureElectronAPI.store.get('music_directory');
-      } else if (window.electronAPI?.store?.get) {
-        return await window.electronAPI.store.get('music_directory');
       }
       return null;
     });
@@ -292,8 +290,6 @@ test.describe('Songs - delete', () => {
     const musicDirResult = await page.evaluate(async () => {
       if (window.secureElectronAPI?.store?.get) {
         return await window.secureElectronAPI.store.get('music_directory');
-      } else if (window.electronAPI?.store?.get) {
-        return await window.electronAPI.store.get('music_directory');
       }
       return null;
     });

@@ -225,7 +225,7 @@ test.describe('Drag & Drop - basic', () => {
         .map(el => el.id);
 
       // Trigger save via profile API if available
-      const electronAPI = window.secureElectronAPI || window.electronAPI;
+      const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.setPreference) {
         electronAPI.profile.setPreference('column_order', newOrder);
       }
