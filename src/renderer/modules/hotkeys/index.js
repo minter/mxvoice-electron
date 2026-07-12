@@ -39,8 +39,6 @@ class HotkeysModule {
     this.electronAPI = options.electronAPI;
     this.moduleRegistry = options.moduleRegistry || {};
     // Remove legacy db/store usage in secure context
-    this.db = null;
-    this.store = null;
     this.state = new HotkeyState();
 
     // Initialize sub-modules

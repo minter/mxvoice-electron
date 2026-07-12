@@ -12,8 +12,6 @@ import { safeStringify } from './utils.js';
  * Initialize the debug logger
  * @param {Object} options - Configuration options
  * @param {Object} options.electronAPI - Electron API reference
- * @param {Object} options.db - Database reference
- * @param {Object} options.store - Store reference
  * @returns {Object} Debug logger interface
  */
 function initializeDebugLogger(options = {}) {
@@ -257,4 +255,4 @@ export {
 };
 
 // Default export for module loading
-export default initializeDebugLogger; 
+export default initializeDebugLogger;

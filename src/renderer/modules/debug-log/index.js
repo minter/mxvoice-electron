@@ -13,16 +13,14 @@ import logFormatter from './log-formatter.js';
  * Initialize the DebugLog module
  * @param {Object} options - Configuration options
  * @param {Object} options.electronAPI - Electron API reference
- * @param {Object} options.db - Database reference
- * @param {Object} options.store - Store reference
  * @returns {Object} DebugLog module interface
  */
 function initializeDebugLog(options = {}) {
-  const { electronAPI, db, store } = options;
+  const { electronAPI } = options;
   
   // Initialize sub-modules
-  const logger = debugLogger({ electronAPI, db, store });
-  const formatter = logFormatter({ electronAPI, db, store });
+  const logger = debugLogger({ electronAPI });
+  const formatter = logFormatter();
   
   return {
     // Debug Logger functions
@@ -78,4 +76,4 @@ export { reinitializeDebugLog };
 debugLogModule.reinitializeDebugLog = reinitializeDebugLog;
 
 // Default export for module loading
-export default debugLogModule; 
+export default debugLogModule;

@@ -60,9 +60,7 @@ let debugLogger = null;
 
 // Initialize debug logger early with basic configuration
 debugLogger = initializeDebugLogger({
-  electronAPI: window.secureElectronAPI,
-  db: window.db,
-  store: window.store
+  electronAPI: window.secureElectronAPI
 });
 
 // Set up logging functions using the debug logger (assuming always available)
@@ -209,9 +207,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     window.logInfo('🚀 Initializing application components...');
     const initSuccess = await AppInitialization.initialize({
       debug: {
-        electronAPI: window.secureElectronAPI,
-        db: window.db,
-        store: window.store
+        electronAPI: window.secureElectronAPI
       },
       environment: {
         debugMode: true,
@@ -241,8 +237,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       window.logWarn,
       {
         electronAPI: window.secureElectronAPI,
-        db: window.db,
-        store: window.store,
         debugLog: window.debugLog
       }
     );
@@ -607,8 +601,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       keyboardManager = new KeyboardManager({
         debugLog: window.debugLog || debugLogger,
         electronAPI: window.secureElectronAPI,
-        db: window.db,
-        store: window.store,
         moduleRegistry
       });
       
@@ -707,8 +699,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Initialize event coordination module
     eventCoordination = new EventCoordination({
       electronAPI: window.secureElectronAPI,
-      db: window.db,
-      store: window.store,
       debugLog: debugLogger,
       moduleRegistry: moduleRegistry
     });
@@ -716,8 +706,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Initialize the event coordination system
     const initialized = await eventCoordination.init({
       electronAPI: window.secureElectronAPI,
-      db: window.db,
-      store: window.store,
       debugLog: debugLogger,
       moduleRegistry: moduleRegistry
     });

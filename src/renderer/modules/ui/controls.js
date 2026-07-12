@@ -26,8 +26,6 @@ try {
  * Initialize the Controls module
  * @param {Object} options - Configuration options
  * @param {Object} options.electronAPI - Electron API reference
- * @param {Object} options.db - Database reference
- * @param {Object} options.store - Store reference
  * @returns {Object} Controls interface
  */
 function initializeControls(options = {}) {

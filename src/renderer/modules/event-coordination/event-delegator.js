@@ -10,8 +10,6 @@ import sharedState from '../shared-state.js';
 export default class EventDelegator {
   constructor(dependencies = {}) {
     this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
-    this.db = null;
-    this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
     this.moduleRegistry = dependencies.moduleRegistry || {};
 

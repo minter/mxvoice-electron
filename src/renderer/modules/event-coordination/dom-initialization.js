@@ -8,8 +8,6 @@
 export default class DOMInitialization {
   constructor(dependencies = {}) {
     this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
-    this.db = null;
-    this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
     this.moduleRegistry = dependencies.moduleRegistry || {};
 

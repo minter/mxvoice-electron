@@ -24,8 +24,6 @@ try {
 export default class HotkeysEvents {
   constructor(dependencies = {}) {
     this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
-    this.db = dependencies.db || window.db;
-    this.store = dependencies.store || window.store;
     this.debugLog = dependencies.debugLog || window.debugLog;
     this.moduleRegistry = dependencies.moduleRegistry || {};
     

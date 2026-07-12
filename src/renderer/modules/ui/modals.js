@@ -23,12 +23,10 @@ try {
  * Initialize the Modals module
  * @param {Object} options - Configuration options
  * @param {Object} options.electronAPI - Electron API reference
- * @param {Object} options.db - Database reference
- * @param {Object} options.store - Store reference
  * @returns {Object} Modals interface
  */
 function initializeModals(options = {}) {
-  const { electronAPI, db: _db, store: _store } = options;
+  const { electronAPI } = options;
   
   // DOM utilities (jQuery-free)
   let _Dom = null;

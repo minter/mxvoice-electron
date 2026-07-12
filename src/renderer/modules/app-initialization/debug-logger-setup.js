@@ -14,7 +14,7 @@ export class DebugLoggerSetup {
 
   /**
    * Initialize debug logger with fallback
-   * @param {Object} context - Context object with electronAPI, db, store
+   * @param {Object} context - Context object with electronAPI
    * @returns {Promise<Object>} Debug logger instance
    */
   async initializeDebugLoggerInstance(context = {}) {

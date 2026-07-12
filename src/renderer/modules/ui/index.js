@@ -18,8 +18,6 @@ import modals from './modals.js';
  * Initialize the UI module
  * @param {Object} options - Configuration options
  * @param {Object} options.electronAPI - Electron API reference
- * @param {Object} options.db - Database reference
- * @param {Object} options.store - Store reference
  * @returns {Object} UI module interface
  */
 export function initializeUI(options = {}) {

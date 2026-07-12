@@ -10,8 +10,6 @@ import { clearSearchTimeout } from '../search/search-timeout.js';
 export default class SearchEvents {
   constructor(dependencies = {}) {
     this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
-    this.db = null;
-    this.store = null;
     this.debugLog = dependencies.debugLog || window.debugLog;
     this.moduleRegistry = dependencies.moduleRegistry || {};
     
