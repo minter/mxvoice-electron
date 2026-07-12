@@ -1,6 +1,20 @@
 # Situation Brief: In-Memory State Model for Hotkeys & Holding Tank
 
-**Status:** Problem documented, design NOT started. This brief seeds a future brainstorming/design session — it records what we know, what must not break, and the open questions. It deliberately does not commit to an implementation.
+**Status:** Implemented on `codex/hotkey-state-model`; final integration review remains.
+
+## Implementation Update
+
+The migration described below has now been completed for both collections:
+
+- `HotkeyState` and `HoldingTankState` own assignment/order and tab-name data.
+- Profile saves serialize model snapshots; neither collection scrapes the DOM at save time.
+- Profile restore loads the models, batch-fetches song metadata, filters deleted songs, and renders all five tabs directly.
+- Restore no longer activates Bootstrap tabs or waits on animation timing.
+- Legacy HTML is read into the models only at the legacy-load compatibility boundary.
+- Core mutations, including swaps, reordering, clears, renames, deletion, and file population, update the models.
+- Unit coverage now exercises snapshot compatibility, mutation rules, batching, and subscriber isolation.
+
+The global `window.isRestoringProfileState` lifecycle flag remains because profile backup, library transfer, renderer initialization, and profile-state still coordinate through it. Hotkeys and the holding tank no longer read it themselves. Replacing that cross-module protocol should be handled separately rather than folded into the state-model migration.
 
 **Origin:** Item 5 (final remaining major item) of the 2026-07-11 architectural review. Items 1–4 are complete: dead-code/boundary cleanup (`docs/superpowers/plans/2026-07-11-dead-code-and-boundary-cleanup.md`), IPC domain split + channel manifest + drift guard (`docs/superpowers/plans/2026-07-11-ipc-domain-split.md`), and the DI-getter follow-ups (getDb/getMainWindow/getCurrentProfile live getters).
 
