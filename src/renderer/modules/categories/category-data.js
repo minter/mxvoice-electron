@@ -19,6 +19,7 @@ try {
 // Import category operations for data operations
 import * as categoryOperations from './category-operations.js';
 import sharedState from '../shared-state.js';
+import { secureDatabase } from '../adapters/secure-adapter.js';
 
 /**
  * Load categories into the module's internal state
@@ -360,12 +361,8 @@ async function populateCategorySelect(selectEl, selectedCode, { addNewOption = t
  * @returns {Promise<string>} - A unique code (e.g. "ROCK", "ROCK2", "ROCK3")
  */
 async function findUniqueCategoryCode(baseCode) {
-  if (!window.secureElectronAPI?.database?.findCategoryCodesLike) {
-    throw new Error('Database not available');
-  }
-
   // Fetch all codes that start with the base code in one query
-  const result = await window.secureElectronAPI.database.findCategoryCodesLike(baseCode, `${baseCode}%`);
+  const result = await secureDatabase.findCategoryCodesLike(baseCode, `${baseCode}%`);
 
   const existing = new Set();
   if (result?.success && Array.isArray(result.data)) {
@@ -416,4 +413,4 @@ export default {
   filterCategories,
   populateCategorySelect,
   findUniqueCategoryCode
-}; 
+};

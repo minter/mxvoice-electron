@@ -22,171 +22,39 @@ try {
  * Database Operations Adapter
  * Provides secure database access through IPC calls
  */
-export const secureDatabase = {
-  /**
-   * Get all categories from the database
-   * @returns {Promise<Object>} Categories data
-   */
-  getCategories: async () => {
-    try {
-      if (window.secureElectronAPI?.database?.getCategories) {
-        return await window.secureElectronAPI.database.getCategories();
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Get categories failed:', { module: 'secure-adapter', function: 'secureDatabase.getCategories', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
-   * Add a new song to the database
-   * @param {Object} songData - Song data object
-   * @returns {Promise<Object>} Add result
-   */
-  addSong: async (songData) => {
-    try {
-      if (window.secureElectronAPI?.database?.addSong) {
-        return await window.secureElectronAPI.database.addSong(songData);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Add song failed:', { module: 'secure-adapter', function: 'secureDatabase.addSong', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  getSongById: async (songId) => {
-    try {
-      if (window.secureElectronAPI?.database?.getSongById) {
-        return await window.secureElectronAPI.database.getSongById(songId);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Get song by ID failed:', { module: 'secure-adapter', function: 'secureDatabase.getSongById', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  getSongsByIds: async (ids) => {
-    try {
-      if (window.secureElectronAPI?.database?.getSongsByIds) {
-        return await window.secureElectronAPI.database.getSongsByIds(ids);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Get songs by IDs failed:', { module: 'secure-adapter', function: 'secureDatabase.getSongsByIds', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  searchSongs: async (searchParams) => {
-    try {
-      if (window.secureElectronAPI?.database?.searchSongs) {
-        return await window.secureElectronAPI.database.searchSongs(searchParams);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Search songs failed:', { module: 'secure-adapter', function: 'secureDatabase.searchSongs', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  updateSong: async (songData) => {
-    try {
-      if (window.secureElectronAPI?.database?.updateSong) {
-        return await window.secureElectronAPI.database.updateSong(songData);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Update song failed:', { module: 'secure-adapter', function: 'secureDatabase.updateSong', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  deleteSong: async (songId) => {
-    try {
-      if (window.secureElectronAPI?.database?.deleteSong) {
-        return await window.secureElectronAPI.database.deleteSong(songId);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Delete song failed:', { module: 'secure-adapter', function: 'secureDatabase.deleteSong', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  addCategory: async (categoryData) => {
-    try {
-      if (window.secureElectronAPI?.database?.addCategory) {
-        return await window.secureElectronAPI.database.addCategory(categoryData);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Add category failed:', { module: 'secure-adapter', function: 'secureDatabase.addCategory', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  updateCategory: async (code, description) => {
-    try {
-      if (window.secureElectronAPI?.database?.updateCategory) {
-        return await window.secureElectronAPI.database.updateCategory(code, description);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Update category failed:', { module: 'secure-adapter', function: 'secureDatabase.updateCategory', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  deleteCategory: async (code) => {
-    try {
-      if (window.secureElectronAPI?.database?.deleteCategory) {
-        return await window.secureElectronAPI.database.deleteCategory(code);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Delete category failed:', { module: 'secure-adapter', function: 'secureDatabase.deleteCategory', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  getCategoryByCode: async (code) => {
-    try {
-      if (window.secureElectronAPI?.database?.getCategoryByCode) {
-        return await window.secureElectronAPI.database.getCategoryByCode(code);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Get category by code failed:', { module: 'secure-adapter', function: 'secureDatabase.getCategoryByCode', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  reassignSongCategory: async (fromCode, toCode) => {
-    try {
-      if (window.secureElectronAPI?.database?.reassignSongCategory) {
-        return await window.secureElectronAPI.database.reassignSongCategory(fromCode, toCode);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Reassign song category failed:', { module: 'secure-adapter', function: 'secureDatabase.reassignSongCategory', error: error.message });
-      return { success: false, error: error.message };
-    }
-  },
-
-  findCategoryCodesLike: async (code, pattern) => {
-    try {
-      if (window.secureElectronAPI?.database?.findCategoryCodesLike) {
-        return await window.secureElectronAPI.database.findCategoryCodesLike(code, pattern);
-      }
-      throw new Error('No database API available');
-    } catch (error) {
-      debugLog?.error('Find category codes failed:', { module: 'secure-adapter', function: 'secureDatabase.findCategoryCodesLike', error: error.message });
-      return { success: false, error: error.message };
-    }
+async function invokeDatabase(method, args, operation) {
+  try {
+    const handler = window.secureElectronAPI?.database?.[method];
+    if (typeof handler !== 'function') throw new Error('No database API available');
+    return await handler(...args);
+  } catch (error) {
+    debugLog?.error(`${operation} failed:`, {
+      module: 'secure-adapter',
+      function: `secureDatabase.${method}`,
+      error: error.message
+    });
+    return { success: false, error: error.message };
   }
+}
+
+export const secureDatabase = {
+  getCategories: () => invokeDatabase('getCategories', [], 'Get categories'),
+  addSong: (songData) => invokeDatabase('addSong', [songData], 'Add song'),
+  getSongById: (songId) => invokeDatabase('getSongById', [songId], 'Get song by ID'),
+  getSongsByIds: (ids) => invokeDatabase('getSongsByIds', [ids], 'Get songs by IDs'),
+  searchSongs: (searchParams) => invokeDatabase('searchSongs', [searchParams], 'Search songs'),
+  updateSong: (songData) => invokeDatabase('updateSong', [songData], 'Update song'),
+  deleteSong: (songId) => invokeDatabase('deleteSong', [songId], 'Delete song'),
+  addCategory: (categoryData) => invokeDatabase('addCategory', [categoryData], 'Add category'),
+  updateCategory: (code, description) => invokeDatabase('updateCategory', [code, description], 'Update category'),
+  deleteCategory: (code) => invokeDatabase('deleteCategory', [code], 'Delete category'),
+  getCategoryByCode: (code) => invokeDatabase('getCategoryByCode', [code], 'Get category by code'),
+  reassignSongCategory: (fromCode, toCode) => invokeDatabase(
+    'reassignSongCategory', [fromCode, toCode], 'Reassign song category'
+  ),
+  findCategoryCodesLike: (code, pattern) => invokeDatabase(
+    'findCategoryCodesLike', [code, pattern], 'Find category codes'
+  )
 };
 
 /**

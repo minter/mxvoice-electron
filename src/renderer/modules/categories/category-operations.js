@@ -5,6 +5,7 @@
  * category management, and database interactions. This module provides the
  * database-level operations for categories.
  */
+import { secureDatabase } from '../adapters/secure-adapter.js';
 
 // Import debug logger
 let debugLog = null;
@@ -24,8 +25,7 @@ try {
  */
 function getCategories() {
   return new Promise((resolve, reject) => {
-    if (window.secureElectronAPI && window.secureElectronAPI.database) {
-      window.secureElectronAPI.database.getCategories().then(result => {
+      secureDatabase.getCategories().then(result => {
         if (result.success) {
           debugLog?.info('Categories retrieved successfully', {
             module: 'category-operations',
@@ -48,9 +48,6 @@ function getCategories() {
         });
         reject(error);
       });
-    } else {
-      reject(new Error('Database not available'));
-    }
   });
 }
 
@@ -62,8 +59,7 @@ function getCategories() {
  */
 function getCategoryByCode(code) {
   return new Promise((resolve, reject) => {
-    if (window.secureElectronAPI && window.secureElectronAPI.database) {
-      window.secureElectronAPI.database.getCategoryByCode(code).then(result => {
+      secureDatabase.getCategoryByCode(code).then(result => {
         if (result.success && result.data.length > 0) {
           debugLog?.info('Category retrieved successfully', { 
             module: 'category-operations',
@@ -88,9 +84,6 @@ function getCategoryByCode(code) {
         });
         reject(error);
       });
-    } else {
-      reject(new Error('Database not available'));
-    }
   });
 }
 
@@ -104,8 +97,7 @@ function getCategoryByCode(code) {
  */
 function editCategory(code, description) {
   return new Promise((resolve, reject) => {
-    if (window.secureElectronAPI && window.secureElectronAPI.database) {
-      window.secureElectronAPI.database.updateCategory(code, description).then(result => {
+      secureDatabase.updateCategory(code, description).then(result => {
         if (result.success) {
           debugLog?.info('Category updated successfully', { 
             module: 'category-operations',
@@ -132,9 +124,6 @@ function editCategory(code, description) {
         });
         reject(error);
       });
-    } else {
-      reject(new Error('Database not available'));
-    }
   });
 }
 
@@ -159,17 +148,16 @@ function updateCategory(code, description) {
  */
 function deleteCategory(code, description) {
   return new Promise((resolve, reject) => {
-    if (window.secureElectronAPI && window.secureElectronAPI.database) {
       // First ensure "Uncategorized" category exists
-      window.secureElectronAPI.database.addCategory({
+      secureDatabase.addCategory({
         code: "UNC",
         description: "Uncategorized"
       }).then(() => {
         // Update all songs in this category to "Uncategorized"
-        return window.secureElectronAPI.database.reassignSongCategory(code, "UNC");
+        return secureDatabase.reassignSongCategory(code, "UNC");
       }).then(() => {
         // Delete the category
-        return window.secureElectronAPI.database.deleteCategory(code, "Category deletion");
+        return secureDatabase.deleteCategory(code, "Category deletion");
       }).then(result => {
         if (result.success) {
           debugLog?.info('Category deleted successfully', { 
@@ -197,9 +185,6 @@ function deleteCategory(code, description) {
         });
         reject(error);
       });
-    } else {
-      reject(new Error('Database not available'));
-    }
   });
 }
 
@@ -224,10 +209,6 @@ async function addNewCategory(description) {
       throw new Error('Failed to generate category code from description');
     }
 
-    if (!window.secureElectronAPI || !window.secureElectronAPI.database) {
-      throw new Error('Database not available');
-    }
-
     // Find unique code with a single query instead of recursive individual lookups
     const { findUniqueCategoryCode } = await import('./category-data.js');
     const finalCode = await findUniqueCategoryCode(code);
@@ -238,7 +219,7 @@ async function addNewCategory(description) {
     }
 
     // Use named operation to add category
-    const result = await window.secureElectronAPI.database.addCategory({code: finalCode, description});
+    const result = await secureDatabase.addCategory({code: finalCode, description});
 
     if (result.success) {
       debugLog?.info('New category added successfully', {
@@ -285,4 +266,4 @@ export default {
   updateCategory,
   deleteCategory,
   addNewCategory
-}; 
+};
