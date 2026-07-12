@@ -28,7 +28,7 @@ try {
  * @returns {Object} Modals interface
  */
 function initializeModals(options = {}) {
-  const { electronAPI: _electronAPI, db: _db, store: _store } = options;
+  const { electronAPI, db: _db, store: _store } = options;
   
   // DOM utilities (jQuery-free)
   let _Dom = null;
@@ -54,20 +54,10 @@ function initializeModals(options = {}) {
     const defaultPath = el?.value || '';
     
     try {
-      if (window.secureElectronAPI?.app?.showDirectoryPicker) {
-        window.secureElectronAPI.app.showDirectoryPicker(defaultPath).then(res => {
+      if (electronAPI?.app?.showDirectoryPicker) {
+        electronAPI.app.showDirectoryPicker(defaultPath).then(res => {
           if (res?.success && res.data && !res.data.canceled && Array.isArray(res.data.filePaths)) {
             const dir = res.data.filePaths[0];
-            if (dir && el) el.value = dir;
-          } else if (Array.isArray(res)) {
-            const dir = res[0];
-            if (dir && el) el.value = dir;
-          }
-        });
-      } else if (window.electronAPI?.showDirectoryPicker) {
-        window.electronAPI.showDirectoryPicker(defaultPath).then(res => {
-          if (Array.isArray(res)) {
-            const dir = res[0];
             if (dir && el) el.value = dir;
           }
         });
@@ -102,10 +92,8 @@ function initializeModals(options = {}) {
       const statusEl = document.getElementById('updateStatusText');
       if (statusEl) statusEl.textContent = 'Preparing installation…';
       
-      if (window.secureElectronAPI?.fileOperations?.installUpdate) {
-        return window.secureElectronAPI.fileOperations.installUpdate();
-      } else if (window.electronAPI?.restartAndInstall) {
-        return window.electronAPI.restartAndInstall();
+      if (electronAPI?.fileOperations?.installUpdate) {
+        return electronAPI.fileOperations.installUpdate();
       }
     } catch (error) {
       debugLog?.error('Install update failed', { 

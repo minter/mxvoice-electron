@@ -36,20 +36,6 @@ export function pickDirectory(event, element) {
           if (dir && el && el instanceof Element) {
             el.value = dir;
           }
-        } else if (Array.isArray(res)) {
-          const dir = res[0];
-          if (dir && el && el instanceof Element) {
-            el.value = dir;
-          }
-        }
-      });
-    } else if (window.electronAPI?.showDirectoryPicker) {
-      window.electronAPI.showDirectoryPicker(defaultPath).then((res) => {
-        if (Array.isArray(res)) {
-          const dir = res[0];
-          if (dir && el && el instanceof Element) {
-            el.value = dir;
-          }
         }
       });
     }
@@ -251,4 +237,4 @@ export async function handleUpdateReady(version) {
       installBtn.textContent = 'Try Again';
     }
   }
-} 
+}
