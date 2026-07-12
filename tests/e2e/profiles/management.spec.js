@@ -116,11 +116,17 @@ test.describe('Profile Management', () => {
     await expect(searchInput).toBeVisible({ timeout: 10000 });
   });
 
-  test.skip('double-click on profile launches app directly', async () => {
-    // Skipped: Double-click triggers a race condition where the window closes
-    // before Playwright can properly handle the event. The core functionality
-    // is already tested via "can select a profile and launch app".
-    // This is a known limitation of testing rapid interactions that cause window closures.
+  test('double-click on profile launches app directly', async () => {
+    const defaultProfile = page.locator('.profile-item[data-profile-name="Default User"]');
+    const windowPromise = app.waitForEvent('window', { timeout: 10000 });
+
+    await defaultProfile.dblclick().catch(() => {
+      // The launcher may close while Playwright is completing the gesture.
+    });
+
+    const mainWindow = await windowPromise;
+    await mainWindow.waitForLoadState('domcontentloaded');
+    await expect(mainWindow.locator('#omni_search')).toBeVisible({ timeout: 10000 });
   });
 
   test('can create a new profile', async () => {
@@ -314,10 +320,18 @@ test.describe('Profile Management', () => {
     await expect(searchInput).toBeVisible({ timeout: 10000 });
   });
 
-  test.skip('Enter key in profile name field creates profile', async () => {
-    // Skipped: Enter key in the modal can cause rapid state changes that
-    // close the window before assertions can complete. The core create functionality
-    // is already tested via "can create a new profile" using the button.
+  test('Enter key in profile name field creates profile', async () => {
+    await page.locator('#create-profile-btn').click();
+    const modal = page.locator('#create-profile-modal');
+    await expect(modal).toBeVisible();
+
+    const nameInput = page.locator('#profile-name-input');
+    await nameInput.fill('Keyboard User');
+    await nameInput.press('Enter');
+
+    const profile = page.locator('.profile-item[data-profile-name="Keyboard User"]');
+    await expect(profile).toBeVisible({ timeout: 10000 });
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
   });
 
   test('modal can be cancelled with Cancel button', async () => {
@@ -571,4 +585,3 @@ test.describe('Profile Switching and Isolation', () => {
     console.log('✅ Profile isolation verified: preferences do not bleed between profiles');
   });
 });
-

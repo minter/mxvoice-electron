@@ -94,12 +94,6 @@ test.describe('Playback - fade out', () => {
   });
 
   test('shift+click stop triggers fade out to silence', async () => {
-    // Skip audio-level verification on CI (no audio device)
-    if (isCI) {
-      test.skip();
-      return;
-    }
-
     // Set a short fade duration for testing (2 seconds)
     await page.evaluate(async () => {
       const electronAPI = window.secureElectronAPI;
@@ -112,16 +106,18 @@ test.describe('Playback - fade out', () => {
     await startPlayback();
 
     // Capture the RMS level while playing
-    const playingRMS = await rms(page);
-    console.log('RMS while playing:', playingRMS);
-    expect(playingRMS).toBeGreaterThan(0);
+    if (!isCI) {
+      const playingRMS = await rms(page);
+      console.log('RMS while playing:', playingRMS);
+      expect(playingRMS).toBeGreaterThan(0);
+    }
 
     // Shift+click stop to trigger fade out
     const stopButton = page.locator('#stop_button');
     await stopButton.click({ modifiers: ['Shift'] });
 
     // The fade should take ~2 seconds. Wait for silence within 4 seconds.
-    await waitForSilence(page, 1e-3, 4000);
+    if (!isCI) await waitForSilence(page, 1e-3, 4000);
 
     // Verify UI is reset after fade completes
     await expect(page.locator('#play_button')).toBeVisible({ timeout: 5000 });
@@ -129,11 +125,6 @@ test.describe('Playback - fade out', () => {
   });
 
   test('regular stop without fade is immediate', async () => {
-    if (isCI) {
-      test.skip();
-      return;
-    }
-
     // Start playback
     await startPlayback();
 
@@ -142,20 +133,17 @@ test.describe('Playback - fade out', () => {
     await stopButton.click();
 
     // Should be silent almost immediately (within 500ms)
-    await stabilize(page, 300);
-    const afterStopRMS = await rms(page);
-    expect(afterStopRMS).toBeLessThan(1e-3);
+    if (!isCI) {
+      await stabilize(page, 300);
+      const afterStopRMS = await rms(page);
+      expect(afterStopRMS).toBeLessThan(1e-3);
+    }
 
     // Verify UI is reset
     await expect(page.locator('#play_button')).toBeVisible({ timeout: 5000 });
   });
 
   test('fade-pause preserves song position for resume', async () => {
-    if (isCI) {
-      test.skip();
-      return;
-    }
-
     // Set fade duration
     await page.evaluate(async () => {
       const electronAPI = window.secureElectronAPI;
@@ -191,7 +179,7 @@ test.describe('Playback - fade out', () => {
     // Resume and verify audio returns
     await playButton.click();
     await expect(pauseButton).toBeVisible({ timeout: 5000 });
-    await waitForAudible(page);
+    if (!isCI) await waitForAudible(page);
 
     // Clean up - stop playback
     await page.locator('#stop_button').click();

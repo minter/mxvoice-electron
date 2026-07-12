@@ -33,10 +33,7 @@ test.describe("What's New Tour", () => {
       return false;
     });
 
-    if (!launched) {
-      test.skip();
-      return;
-    }
+    expect(launched).toBe(true);
 
     // Driver.js overlay should be visible
     const overlay = page.locator('.driver-overlay');
