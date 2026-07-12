@@ -310,7 +310,8 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     if (moduleRegistry.profileBackup) {
       window.logInfo('💾 Initializing profile backup module...');
       moduleRegistry.profileBackup.initializeProfileBackup({
-        electronAPI: window.secureElectronAPI || window.electronAPI
+        electronAPI: window.secureElectronAPI || window.electronAPI,
+        moduleRegistry
       });
     }
     

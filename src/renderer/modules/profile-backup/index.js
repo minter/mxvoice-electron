@@ -7,6 +7,7 @@
 import { info, warn, error } from '../debug-log/index.js';
 
 let electronAPI = null;
+let moduleRegistry = {};
 let isCreatingBackup = false; // Lock to prevent duplicate backup creation
 
 /**
@@ -16,6 +17,7 @@ let isCreatingBackup = false; // Lock to prevent duplicate backup creation
  */
 function initializeProfileBackup(options = {}) {
   electronAPI = options.electronAPI || (typeof window !== 'undefined' && window.secureElectronAPI);
+  moduleRegistry = options.moduleRegistry || {};
   
   info('Profile Backup module initialized', {
     module: 'profile-backup',
@@ -404,9 +406,7 @@ async function createBackupNow() {
     // so that the backup represents the exact current UI state.
     if (typeof window !== 'undefined' && !window.isRestoringProfileState) {
       const hasProfileStateModule =
-        window.moduleRegistry &&
-        window.moduleRegistry.profileState &&
-        typeof window.moduleRegistry.profileState.saveProfileState === 'function';
+        typeof moduleRegistry.profileState?.saveProfileState === 'function';
 
       if (hasProfileStateModule) {
         info('Saving profile state before manual backup', {
@@ -416,7 +416,7 @@ async function createBackupNow() {
 
         let saveResult = null;
         try {
-          saveResult = await window.moduleRegistry.profileState.saveProfileState();
+          saveResult = await moduleRegistry.profileState.saveProfileState();
         } catch (err) {
           error('Error saving profile state before backup', {
             module: 'profile-backup',
@@ -534,6 +534,7 @@ async function createBackupNow() {
  */
 function reinitializeProfileBackup(deps) {
   electronAPI = deps.electronAPI || (typeof window !== 'undefined' && window.secureElectronAPI);
+  moduleRegistry = deps.moduleRegistry || {};
 }
 
 export {

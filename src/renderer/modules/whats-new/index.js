@@ -2,6 +2,7 @@ import tourData from './tours.js';
 import { TourManager } from './tour-manager.js';
 
 const tourManager = new TourManager(tourData);
+let moduleRegistry = {};
 
 function showNoTourToast(version) {
   const existing = document.getElementById('whats-new-toast');
@@ -95,10 +96,10 @@ tourManager.registerHelper('hideFileDropOverlay', async () => {
 });
 
 tourManager.registerHelper('openMultiSongImportTour', async () => {
-  if (window.moduleRegistry?.bulkOperations?.showMultiSongImport) {
+  if (moduleRegistry.bulkOperations?.showMultiSongImport) {
     // Pre-built demo data — bypasses metadata IPC so the modal renders
     // populated rows instantly without touching the filesystem.
-    await window.moduleRegistry.bulkOperations.showMultiSongImport([
+    await moduleRegistry.bulkOperations.showMultiSongImport([
       { filePath: '__tour_demo_1__', title: 'Opening Theme', artist: 'House Band', duration: '2:30' },
       { filePath: '__tour_demo_2__', title: 'Closing Music', artist: 'House Band', duration: '1:45' }
     ]);
@@ -112,7 +113,7 @@ tourManager.registerHelper('openPreferencesAndScrollToCrossfade', async () => {
   const openPreferences =
     (typeof window.openPreferencesModal === 'function'
       ? window.openPreferencesModal
-      : window.moduleRegistry?.preferences?.openPreferencesModal) || null;
+      : moduleRegistry.preferences?.openPreferencesModal) || null;
 
   if (openPreferences) {
     await openPreferences();
@@ -142,7 +143,7 @@ tourManager.registerHelper('openPreferencesAndScrollToAnalytics', async () => {
     const openPreferences =
       (typeof window.openPreferencesModal === 'function'
         ? window.openPreferencesModal
-        : window.moduleRegistry?.preferences?.openPreferencesModal) || null;
+        : moduleRegistry.preferences?.openPreferencesModal) || null;
 
     if (openPreferences) {
       await openPreferences();
@@ -211,4 +212,12 @@ export async function showWhatsNew() {
 
 export { tourManager };
 
-export default { initWhatsNew, showWhatsNew, tourManager };
+const whatsNewModule = { initWhatsNew, showWhatsNew, tourManager };
+
+function initializeWhatsNew(options = {}) {
+  moduleRegistry = options.moduleRegistry || {};
+  return whatsNewModule;
+}
+
+export { initializeWhatsNew };
+export default initializeWhatsNew;
