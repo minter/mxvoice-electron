@@ -26,8 +26,37 @@ const {
   securePath,
   secureStore,
   secureAudio,
+  secureAnalytics,
+  secureUtilities,
   secureFileDialog,
 } = await import('../../../src/renderer/modules/adapters/secure-adapter.js');
+
+describe('secure utility adapters', () => {
+  it('delegates utility and analytics calls to the secure API', async () => {
+    setupSecureAPI('utils', {
+      generateId: async () => ({ success: true, data: 'id-1' }),
+      formatDuration: async (seconds) => ({ success: true, data: `${seconds}s` })
+    });
+    setupSecureAPI('analytics', {
+      trackEvent: async () => ({ success: true })
+    });
+
+    await secureUtilities.generateId();
+    await secureUtilities.formatDuration(42);
+    await secureAnalytics.trackEvent('searched', { count: 2 });
+
+    expect(window.secureElectronAPI.utils.generateId).toHaveBeenCalledOnce();
+    expect(window.secureElectronAPI.utils.formatDuration).toHaveBeenCalledWith(42);
+    expect(window.secureElectronAPI.analytics.trackEvent).toHaveBeenCalledWith('searched', { count: 2 });
+  });
+
+  it('normalizes an unavailable utility API', async () => {
+    await expect(secureUtilities.generateId()).resolves.toMatchObject({
+      success: false,
+      error: expect.stringMatching(/no utils api/i)
+    });
+  });
+});
 
 // ── Helpers ───────────────────────────────────────────────────────────
 

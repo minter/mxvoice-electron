@@ -16,7 +16,13 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem, secureDatabase, secureStore, securePath } from '../adapters/secure-adapter.js';
+import {
+  secureAnalytics,
+  secureDatabase,
+  secureFileSystem,
+  securePath,
+  secureStore
+} from '../adapters/secure-adapter.js';
 
 /**
  * Deletes a song from the database and removes the associated file
@@ -87,7 +93,7 @@ export function deleteSong() {
           document.querySelectorAll(`#search_results tr[songid="${songId}"]`).forEach(el => el.remove());
           window.moduleRegistry?.profileState?.saveProfileState?.();
 
-          window.secureElectronAPI?.analytics?.trackEvent?.('song_deleted');
+          secureAnalytics.trackEvent('song_deleted');
           return { success: true, songId: songId, title: songRow?.title };
       } else {
         return { success: false, error: 'User cancelled' };

@@ -18,7 +18,15 @@ try {
 }
 
 // Import secure adapters
-import { secureFileSystem, secureDatabase, securePath, secureStore } from '../adapters/secure-adapter.js';
+import {
+  secureAnalytics,
+  secureAudio,
+  secureDatabase,
+  secureFileSystem,
+  securePath,
+  secureStore,
+  secureUtilities
+} from '../adapters/secure-adapter.js';
 import { populateCategorySelect, findUniqueCategoryCode, refreshCategories } from '../categories/category-data.js';
 
 /**
@@ -120,7 +128,7 @@ export async function saveEditedSong(event) {
     if (!result?.success) {
       debugLog?.warn('Edit update failed', { module: 'song-management', function: 'saveEditedSong', error: result?.error });
     } else {
-      window.secureElectronAPI?.analytics?.trackEvent?.('song_edited');
+      secureAnalytics.trackEvent('song_edited');
     }
   } catch (error) {
     debugLog?.error('Edit update error', { module: 'song-management', function: 'saveEditedSong', error: error?.message });
@@ -177,8 +185,8 @@ export async function saveNewSong(event) {
     const startTime = parseMMSS(document.getElementById('song-form-start-time')?.value);
     const endTime = parseMMSS(document.getElementById('song-form-end-time')?.value);
     let uuid;
-    if (window.secureElectronAPI?.utils?.generateId) {
-      const uuidResult = await window.secureElectronAPI.utils.generateId();
+    if (secureUtilities.generateId) {
+      const uuidResult = await secureUtilities.generateId();
       uuid = uuidResult?.success && uuidResult?.data ? uuidResult.data : Date.now().toString();
     } else if (typeof uuidv4 === 'function') {
       uuid = uuidv4();
@@ -225,7 +233,7 @@ export async function saveNewSong(event) {
       }
       return;
     }
-    window.secureElectronAPI?.analytics?.trackEvent?.('song_added', { method: 'single' });
+    secureAnalytics.trackEvent('song_added', { method: 'single' });
     const copyRes = await secureFileSystem.copy(filename, newPath);
     if (!copyRes?.success) {
       debugLog?.warn('❌ Failed to copy file:', { module: 'song-management', function: 'saveNewSong', error: copyRes?.error });
@@ -356,23 +364,12 @@ export async function startAddNewSong(filename, metadata = null) {
           function: 'startAddNewSong',
           filename
         });
-        if (window.secureElectronAPI?.audio?.getDuration) {
-          const res = await window.secureElectronAPI.audio.getDuration(filename);
+        if (secureAudio.getDuration) {
+          const res = await secureAudio.getDuration(filename);
           if (res?.success) {
             const sec = Math.round(res.duration ?? res.data ?? 0);
             if (sec > 0) durationSeconds = Math.max(durationSeconds, sec);
             debugLog?.info('Duration fetched via secure audio API', {
-              module: 'song-management',
-              function: 'startAddNewSong',
-              durationSeconds
-            });
-          }
-        } else if (window.electronAPI?.audio?.getDuration) {
-          const res = await window.electronAPI.audio.getDuration(filename);
-          if (res?.success) {
-            const sec = Math.round(res.duration ?? res.data ?? 0);
-            if (sec > 0) durationSeconds = Math.max(durationSeconds, sec);
-            debugLog?.info('Duration fetched via legacy audio API', {
               module: 'song-management',
               function: 'startAddNewSong',
               durationSeconds
@@ -385,9 +382,9 @@ export async function startAddNewSong(filename, metadata = null) {
     }
 
     if (typeof durationSeconds === 'number' && durationSeconds > 0) {
-      if (window.secureElectronAPI?.utils?.formatDuration) {
+      if (secureUtilities.formatDuration) {
         try {
-          const fmt = await window.secureElectronAPI.utils.formatDuration(durationSeconds);
+          const fmt = await secureUtilities.formatDuration(durationSeconds);
           const formatted = fmt?.data || fmt?.formatted || (typeof fmt === 'string' ? fmt : null);
            const d = document.getElementById('song-form-duration'); if (d) d.value = (formatted || toTimeString(durationSeconds));
           debugLog?.info('Duration field set', {
@@ -478,4 +475,4 @@ export function deleteSelectedSong() {
     // If not in holding tank or hotkey, delete from database
     deleteSong();
   }
-} 
+}

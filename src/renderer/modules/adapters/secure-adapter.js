@@ -24,15 +24,27 @@ try {
  */
 async function invokeDatabase(method, args, operation) {
   try {
-    const handler = window.secureElectronAPI?.database?.[method];
+    const database = window.secureElectronAPI?.database;
+    const handler = database?.[method];
     if (typeof handler !== 'function') throw new Error('No database API available');
-    return await handler(...args);
+    return await handler.apply(database, args);
   } catch (error) {
     debugLog?.error(`${operation} failed:`, {
       module: 'secure-adapter',
       function: `secureDatabase.${method}`,
       error: error.message
     });
+    return { success: false, error: error.message };
+  }
+}
+
+async function invokeSecureAPI(namespace, method, args = []) {
+  try {
+    const api = window.secureElectronAPI?.[namespace];
+    const handler = api?.[method];
+    if (typeof handler !== 'function') throw new Error(`No ${namespace} API available`);
+    return await handler.apply(api, args);
+  } catch (error) {
     return { success: false, error: error.message };
   }
 }
@@ -470,6 +482,7 @@ export const secureStore = {
  * Provides secure audio management through IPC calls
  */
 export const secureAudio = {
+  getDuration: (filePath) => invokeSecureAPI('audio', 'getDuration', [filePath]),
   /**
    * Play an audio file
    * @param {string} filePath - Path to audio file
@@ -560,6 +573,15 @@ export const secureAudio = {
       return { success: false, error: error.message };
     }
   }
+};
+
+export const secureUtilities = {
+  generateId: () => invokeSecureAPI('utils', 'generateId'),
+  formatDuration: (seconds) => invokeSecureAPI('utils', 'formatDuration', [seconds])
+};
+
+export const secureAnalytics = {
+  trackEvent: (name, properties) => invokeSecureAPI('analytics', 'trackEvent', [name, properties])
 };
 
 /**
@@ -791,6 +813,8 @@ export default {
   securePath,
   secureStore,
   secureAudio,
+  secureUtilities,
+  secureAnalytics,
   secureFileDialog,
   testSecureAdapter
 };

@@ -11,6 +11,7 @@ import sharedState from '../shared-state.js';
 import { getAdvancedSearchValues, hasActiveAdvancedFilters } from './search-form-utils.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 import Dom from '../dom-utils/index.js';
+import { secureDatabase } from '../adapters/secure-adapter.js';
 
 // Import debug logger
 let debugLog = null;
@@ -151,8 +152,7 @@ function performLiveSearch(searchTerm) {
   }
 
   // Use named database operation for live search
-  if (window.secureElectronAPI && window.secureElectronAPI.database) {
-    window.secureElectronAPI.database.searchSongs(searchParams).then(result => {
+    secureDatabase.searchSongs(searchParams).then(result => {
       if (result.success) {
         debugLog?.info(`🔍 Live search returned ${result.data.length} results`, { 
           module: 'live-search',
@@ -219,7 +219,6 @@ function performLiveSearch(searchTerm) {
         error: error.message
       });
     });
-  }
 }
 
 // Export individual functions for direct access
@@ -234,4 +233,4 @@ export default {
   performLiveSearch,
   getCachedCategories,
   getCategoryName
-}; 
+};

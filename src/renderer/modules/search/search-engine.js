@@ -9,6 +9,7 @@
 import sharedState from '../shared-state.js';
 import Dom from '../dom-utils/index.js';
 import { hasActiveAdvancedFilters } from './search-form-utils.js';
+import { secureAnalytics, secureDatabase } from '../adapters/secure-adapter.js';
 
 // Import debug logger
 let debugLog = null;
@@ -121,23 +122,13 @@ function searchData() {
   const fontSize = sharedState.get('fontSize') || 11;
 
   // Execute search query
-  debugLog?.info('🔍 Checking database API availability', { 
-    module: 'search-engine',
-    function: 'searchData',
-    hasSecureAPI: !!window.secureElectronAPI,
-    hasDatabase: !!(window.secureElectronAPI && window.secureElectronAPI.database),
-    secureAPIKeys: window.secureElectronAPI ? Object.keys(window.secureElectronAPI) : [],
-    databaseKeys: window.secureElectronAPI?.database ? Object.keys(window.secureElectronAPI.database) : []
-  });
-  
-  if (window.secureElectronAPI && window.secureElectronAPI.database) {
     debugLog?.info('🔍 Making searchSongs call', {
       module: 'search-engine',
       function: 'searchData',
       searchParams: searchParams
     });
 
-    window.secureElectronAPI.database.searchSongs(searchParams).then(result => {
+    secureDatabase.searchSongs(searchParams).then(result => {
       // Check if this search is still the active one
       if (thisSearchId !== activeSearchId) {
         debugLog?.info('🔍 Search cancelled, newer search in progress', { 
@@ -152,7 +143,7 @@ function searchData() {
       if (result.success) {
         // Only track intentional searches (has search term or advanced filters), not "show all" loads
         if (searchParams.searchTerm || searchParams.advancedFilters) {
-          window.secureElectronAPI?.analytics?.trackEvent?.('search_performed', { result_count: result.data?.length || 0 });
+          secureAnalytics.trackEvent('search_performed', { result_count: result.data?.length || 0 });
         }
         const tbody = document.querySelector('#search_results tbody');
 
@@ -239,14 +230,6 @@ function searchData() {
         loadingIndicator.remove();
       }
     });
-  } else {
-    debugLog?.warn('❌ Database API not available', { 
-      module: 'search-engine',
-      function: 'searchData',
-      hasSecureAPI: !!window.secureElectronAPI,
-      hasDatabase: !!(window.secureElectronAPI && window.secureElectronAPI.database)
-    });
-  }
 }
 
 /**
@@ -305,4 +288,4 @@ export default {
   searchData,
   triggerLiveSearch,
   getCategoryNameSync
-}; 
+};
