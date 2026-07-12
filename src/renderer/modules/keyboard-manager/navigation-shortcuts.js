@@ -183,8 +183,9 @@ export class NavigationShortcuts {
     try {
       this.logDebug(`Tab switch requested: ${tabNumber}`);
       
-      if (window.switchToHotkeyTab && typeof window.switchToHotkeyTab === 'function') {
-        window.switchToHotkeyTab(tabNumber);
+      const switchToHotkeyTab = this.dependencies.moduleRegistry?.hotkeys?.switchToHotkeyTab;
+      if (typeof switchToHotkeyTab === 'function') {
+        switchToHotkeyTab(tabNumber);
       } else {
         this.logWarn(`switchToHotkeyTab function not available for tab ${tabNumber}`);
       }

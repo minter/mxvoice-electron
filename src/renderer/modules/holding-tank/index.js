@@ -34,7 +34,7 @@ const database = secureDatabase;
 import Dom from '../dom-utils/index.js';
 // Import secure adapters
 import { secureFileDialog } from '../adapters/secure-adapter.js';
-import { scaleScrollable } from '../utils/index.js';
+import { customConfirm, scaleScrollable } from '../utils/index.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 import HoldingTankState from './holding-tank-state.js';
 

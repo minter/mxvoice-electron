@@ -10,6 +10,8 @@
  * while maintaining separation of concerns.
  */
 
+import { songDrag } from '../drag-drop/drag-drop-functions.js';
+
 // Import debug logger
 let _debugLog = null;
 try {
@@ -146,6 +148,13 @@ export default class HotkeysEvents {
       }
 
       hotkeyItems.forEach((li) => {
+        li.addEventListener('dragstart', songDrag);
+        this.hotkeyHandlers.set(`dragstart_${li.id}`, {
+          element: li,
+          event: 'dragstart',
+          handler: songDrag
+        });
+
         // Drop event
         const dropHandler = (event) => {
           li.classList.remove('drop_target');

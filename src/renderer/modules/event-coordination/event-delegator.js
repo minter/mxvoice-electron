@@ -113,16 +113,13 @@ export default class EventDelegator {
       firstNow?.classList.remove('now_playing');
       document.getElementById('selected_row')?.removeAttribute('id');
       li.id = 'selected_row';
-      if (
-        window.getHoldingTankMode &&
-        window.getHoldingTankMode() === 'playlist'
-      ) {
+      if (this.moduleRegistry.modeManagement?.getHoldingTankMode?.() === 'playlist') {
         li.classList.add('now_playing');
         sharedState.set('autoplay', true);
         window.secureElectronAPI?.analytics?.trackEvent?.('playlist_used', { action: 'play' });
       }
       if (this.moduleRegistry.audio?.playSelected) {
-        const method = (window.getHoldingTankMode && window.getHoldingTankMode() === 'playlist') ? 'playlist' : 'holding_tank';
+        const method = this.moduleRegistry.modeManagement?.getHoldingTankMode?.() === 'playlist' ? 'playlist' : 'holding_tank';
         window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: method });
         this.moduleRegistry.audio.playSelected();
       }
