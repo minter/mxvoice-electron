@@ -46,6 +46,14 @@ if (document.readyState === 'loading') {
 // Import debug logger for centralized logging
 import initializeDebugLogger from './renderer/modules/debug-log/debug-logger.js';
 import setupMainProcessEventBridge from './renderer/modules/event-coordination/main-process-events.js';
+import showAnalyticsBannerIfNeeded, {
+  setupUpdateDeferralTracking
+} from './renderer/modules/analytics/consent-banner.js';
+import {
+  initializeProfileUI,
+  showDuplicateProfileModal,
+  showNewProfileModal
+} from './renderer/modules/profiles/profile-ui-controller.js';
 
 // Global instances - now managed by app-initialization module  
 let debugLogger = null;
@@ -146,6 +154,7 @@ window.logError = async (message, context) => {
 
 // Module registry to avoid window pollution
 const moduleRegistry = {};
+initializeProfileUI({ moduleRegistry });
 
 // Import function coordination module for centralized function management
 import FunctionCoordination from './renderer/modules/function-coordination/index.js';
@@ -750,42 +759,10 @@ import EventCoordination from './renderer/modules/event-coordination/index.js';
 // Global event coordination instance
 let eventCoordination = null;
 
-/**
- * Show analytics consent banner if not yet shown to the user.
- * On first run, displays a fixed-position banner offering OK or Disable.
- */
-async function showAnalyticsBannerIfNeeded() {
-  // Don't show banner during E2E tests
-  if (window.electronTest?.isE2E) return;
-
-  const api = window.secureElectronAPI || window.electronAPI;
-  if (!api?.store) return;
-
-  const result = await api.store.get('analytics_banner_shown');
-  if (result.success && result.value) return;
-
-  const banner = document.getElementById('analytics-consent-banner');
-  if (!banner) return;
-
-  banner.classList.remove('d-none');
-  banner.classList.add('show');
-
-  document.getElementById('analytics-consent-ok')?.addEventListener('click', async () => {
-    banner.classList.add('d-none');
-    await api.store.set('analytics_banner_shown', true);
-  });
-
-  document.getElementById('analytics-consent-disable')?.addEventListener('click', async () => {
-    banner.classList.add('d-none');
-    await api.store.set('analytics_banner_shown', true);
-    if (api.analytics) {
-      await api.analytics.setOptOut(true);
-    }
-  });
-}
-
 document.addEventListener('DOMContentLoaded', async function () {
   try {
+    setupUpdateDeferralTracking({ electronAPI: window.secureElectronAPI });
+
     // Initialize DOM-dependent features from app-initialization module
     if (AppInitialization.isInitialized()) {
       await AppInitialization.initializeDOMDependentFeatures();
@@ -848,7 +825,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // Show analytics consent banner if not yet shown
-    await showAnalyticsBannerIfNeeded();
+    await showAnalyticsBannerIfNeeded({
+      electronAPI: window.secureElectronAPI || window.electronAPI,
+      testEnvironment: window.electronTest
+    });
 
   } catch (error) {
     window.logError('Error initializing event coordination:', error);
@@ -858,273 +838,4 @@ document.addEventListener('DOMContentLoaded', async function () {
     const progress = document.getElementById('audio_progress'); if (progress) progress.style.width = '0%';
     const thead = document.querySelector('#search_results thead'); if (thead) thead.style.display = 'none';
   }
-});
-
-/**
- * Show the new profile creation modal
- */
-function showNewProfileModal() {
-  // Clear any previous form data
-  document.getElementById('newProfileName').value = '';
-  document.getElementById('newProfileDescription').value = '';
-  
-  // Show the modal
-  const modal = new bootstrap.Modal(document.getElementById('newProfileModal'));
-  modal.show();
-  
-  // Focus the name input after modal is shown
-  document.getElementById('newProfileModal').addEventListener('shown.bs.modal', function () {
-    document.getElementById('newProfileName').focus();
-  }, { once: true });
-}
-
-/**
- * Handle new profile form submission
- */
-async function handleNewProfileSubmit() {
-  const nameInput = document.getElementById('newProfileName');
-  const descInput = document.getElementById('newProfileDescription');
-  
-  const name = nameInput.value.trim();
-  const description = descInput.value.trim();
-  
-  // Validate profile name
-  if (!name) {
-    alert('Profile name is required');
-    nameInput.focus();
-    return;
-  }
-  
-  // Check for invalid characters (basic validation)
-  if (!/^[a-zA-Z0-9\s\-_]+$/.test(name)) {
-    alert('Profile name can only contain letters, numbers, spaces, hyphens, and underscores');
-    nameInput.focus();
-    return;
-  }
-  
-  try {
-    // Create the profile
-    const result = await window.secureElectronAPI.profile.createProfile(name, description);
-    
-    if (result.success) {
-      // Close the modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('newProfileModal'));
-      modal.hide();
-      
-      // Save current state before switching to new profile
-      window.logInfo('💾 Saving current profile state before switching to new profile...');
-      if (moduleRegistry.profileState && moduleRegistry.profileState.extractProfileState) {
-        try {
-          const state = moduleRegistry.profileState.extractProfileState();
-          const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state);
-          
-          if (!saveResult.success) {
-            window.logError('Failed to save state before switching to new profile:', saveResult.error);
-          } else {
-            window.logInfo('✅ State saved successfully before switching to new profile');
-          }
-        } catch (stateError) {
-          window.logError('Error saving state before switching to new profile:', stateError);
-        }
-      }
-      
-      // Switch directly to the newly created profile
-      try {
-        const switchResult = await window.secureElectronAPI.profile.switchToProfile(name);
-        if (!switchResult.success) {
-          window.logError('Failed to switch to new profile:', switchResult.error);
-          // Fallback: just refresh the indicator
-          await refreshProfileIndicator();
-        }
-      } catch (switchError) {
-        window.logError('Error switching to new profile:', switchError);
-        // Fallback: just refresh the indicator
-        await refreshProfileIndicator();
-      }
-    } else {
-      alert(`Failed to create profile: ${result.error}`);
-    }
-  } catch (error) {
-    window.logError('Error creating new profile:', error);
-    alert(`Error creating profile: ${error.message}`);
-  }
-}
-
-/**
- * Show the duplicate profile modal
- */
-async function showDuplicateProfileModal() {
-  try {
-    // Get current profile name
-    const currentProfile = await window.secureElectronAPI.profile.getCurrent();
-    if (!currentProfile.success) {
-      alert('Could not determine current profile');
-      return;
-    }
-    
-    // Store the current profile name for use in duplication
-    window.currentProfileForDuplication = currentProfile.profile;
-    
-    // Clear target fields
-    document.getElementById('duplicateTargetName').value = '';
-    document.getElementById('duplicateTargetDescription').value = '';
-    
-    // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById('duplicateProfileModal'));
-    modal.show();
-    
-    // Focus the target name input after modal is shown
-    document.getElementById('duplicateProfileModal').addEventListener('shown.bs.modal', function () {
-      document.getElementById('duplicateTargetName').focus();
-    }, { once: true });
-  } catch (error) {
-    window.logError('Error showing duplicate profile modal:', error);
-    alert(`Error: ${error.message}`);
-  }
-}
-
-/**
- * Handle duplicate profile form submission
- */
-async function handleDuplicateProfileSubmit() {
-  const targetNameInput = document.getElementById('duplicateTargetName');
-  const targetDescInput = document.getElementById('duplicateTargetDescription');
-  
-  const sourceName = window.currentProfileForDuplication;
-  const targetName = targetNameInput.value.trim();
-  const targetDescription = targetDescInput.value.trim();
-  
-  // Validate source profile exists
-  if (!sourceName) {
-    alert('Could not determine source profile');
-    return;
-  }
-  
-  // Validate target profile name
-  if (!targetName) {
-    alert('New profile name is required');
-    targetNameInput.focus();
-    return;
-  }
-  
-  // Check for invalid characters (basic validation)
-  if (!/^[a-zA-Z0-9\s\-_]+$/.test(targetName)) {
-    alert('Profile name can only contain letters, numbers, spaces, hyphens, and underscores');
-    targetNameInput.focus();
-    return;
-  }
-  
-  // Check if trying to duplicate to same name
-  if (sourceName === targetName) {
-    alert('New profile name must be different from the source profile');
-    targetNameInput.focus();
-    return;
-  }
-  
-  try {
-    // Duplicate the profile
-    const result = await window.secureElectronAPI.profile.duplicateProfile(sourceName, targetName, targetDescription);
-    
-    if (result && result.success) {
-      // Close the modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('duplicateProfileModal'));
-      modal.hide();
-      
-      // Save current state before switching to duplicated profile
-      window.logInfo('💾 Saving current profile state before switching to duplicated profile...');
-      if (moduleRegistry.profileState && moduleRegistry.profileState.extractProfileState) {
-        try {
-          const state = moduleRegistry.profileState.extractProfileState();
-          const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state);
-          
-          if (!saveResult.success) {
-            window.logError('Failed to save state before switching to duplicated profile:', saveResult.error);
-          } else {
-            window.logInfo('✅ State saved successfully before switching to duplicated profile');
-          }
-        } catch (stateError) {
-          window.logError('Error saving state before switching to duplicated profile:', stateError);
-        }
-      }
-      
-      // Switch directly to the newly duplicated profile
-      try {
-        const switchResult = await window.secureElectronAPI.profile.switchToProfile(targetName);
-        if (!switchResult.success) {
-          window.logError('Failed to switch to duplicated profile:', switchResult.error);
-          // Fallback: just refresh the indicator
-          await refreshProfileIndicator();
-        }
-      } catch (switchError) {
-        window.logError('Error switching to duplicated profile:', switchError);
-        // Fallback: just refresh the indicator
-        await refreshProfileIndicator();
-      }
-    } else {
-      const errorMessage = result?.error || 'Unknown error occurred';
-      alert(`Failed to duplicate profile: ${errorMessage}`);
-    }
-  } catch (error) {
-    window.logError('Error duplicating profile:', error);
-    alert(`Error duplicating profile: ${error.message}`);
-  }
-}
-
-/**
- * Refresh the profile indicator after profile changes
- */
-async function refreshProfileIndicator() {
-  try {
-    const result = await window.secureElectronAPI.profile.getCurrent();
-    if (result.success) {
-      const profileNameElement = document.getElementById('profile-name');
-      if (profileNameElement) {
-        profileNameElement.textContent = `Profile: ${result.profile}`;
-      }
-    }
-  } catch (error) {
-    window.logError('Failed to refresh profile indicator:', error);
-  }
-}
-
-// Set up event listeners for the profile modals
-document.addEventListener('DOMContentLoaded', function() {
-  // New profile modal handlers
-  document.getElementById('createProfileBtn').addEventListener('click', handleNewProfileSubmit);
-  
-  document.getElementById('newProfileName').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleNewProfileSubmit();
-    }
-  });
-  
-  document.getElementById('newProfileDescription').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleNewProfileSubmit();
-    }
-  });
-  
-  // Duplicate profile modal handlers
-  document.getElementById('duplicateProfileBtn').addEventListener('click', handleDuplicateProfileSubmit);
-  
-  document.getElementById('duplicateTargetName').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleDuplicateProfileSubmit();
-    }
-  });
-  
-  document.getElementById('duplicateTargetDescription').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleDuplicateProfileSubmit();
-    }
-  });
-
-  // Track update deferral when user clicks "Later" on the update modal
-  document.getElementById('updateLaterBtn')?.addEventListener('click', () => {
-    window.secureElectronAPI?.analytics?.trackEvent?.('auto_update_action', { action: 'deferred' });
-  });
 });
