@@ -577,16 +577,6 @@ function registerAllHandlers() {
     }
   });
 
-  ipcMain.handle('audio-volume', async (event, volume) => {
-    try {
-      Howler.volume(volume);
-      return { success: true };
-    } catch (error) {
-      debugLog?.error('Audio volume error:', { module: 'ipc-handlers', function: 'audio-volume', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
   ipcMain.handle('audio-fade', async (event, soundId, fromVolume, toVolume, duration) => {
     try {
       if (soundId) {
@@ -2587,7 +2577,6 @@ function removeAllHandlers() {
   ipcMain.removeHandler('audio-play');
   ipcMain.removeHandler('audio-stop');
   ipcMain.removeHandler('audio-pause');
-  ipcMain.removeHandler('audio-volume');
   ipcMain.removeHandler('audio-fade');
   ipcMain.removeHandler('path-join');
   ipcMain.removeHandler('path-parse');
