@@ -127,16 +127,6 @@ function registerAllHandlers() {
       return { success: false, error: error.message };
     }
   });
-  // Get app path handler
-  ipcMain.handle('get-app-path', async () => {
-    try {
-      const result = await app.getAppPath();
-      return { success: true, path: result };
-    } catch (error) {
-      debugLog?.error('Error getting app path:', { module: 'ipc-handlers', function: 'get-app-path', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
 
   ipcMain.handle('show-directory-picker', async (event, defaultPath) => {
     let path = dialog.showOpenDialogSync({
