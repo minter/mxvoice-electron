@@ -24,6 +24,7 @@ import { createBackupMetadataCoordinator } from './backup-metadata-coordinator.j
 import { createBackupMetadataStore } from './backup-metadata-store.js';
 import { createBackupDirectoryScanner } from './backup-directory-scanner.js';
 import { createBackupFileOperations } from './backup-file-operations.js';
+import { selectBackupsForRetention } from './backup-retention-policy.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -467,19 +468,10 @@ async function deleteBackup(profileName, backupId) {
 async function cleanupOldBackups(profileName, maxCount, maxAge) {
   try {
     const metadata = await readMetadataSafe(profileName);
-    const now = Date.now();
-    
-    // Filter backups by age and sort by timestamp (newest first)
-    const backupsToKeep = metadata.backups
-      .filter(backup => {
-        return (now - backup.timestamp) <= maxAge;
-      })
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, maxCount);
-    
-    const backupsToDelete = metadata.backups.filter(backup => {
-      return !backupsToKeep.find(b => b.id === backup.id);
-    });
+    const { keep: backupsToKeep, remove: backupsToDelete } = selectBackupsForRetention(
+      metadata.backups,
+      { maxCount, maxAge }
+    );
     
     // Delete old backups
     const backupDir = getBackupDirectory(profileName);
