@@ -79,6 +79,10 @@ export function loadHoldingTankSnapshot(snapshot) {
   holdingTankState.loadFromSnapshot(snapshot, { notify: false });
 }
 
+export function clearSongFromHoldingTankState(songId) {
+  return holdingTankState.clearSong(songId);
+}
+
 export async function restoreHoldingTankSnapshot(snapshot) {
   loadHoldingTankSnapshot(snapshot);
   const songIds = [...new Set(holdingTankState.toSnapshot().flatMap(tab => tab.songIds))];
@@ -164,8 +168,6 @@ export function saveHoldingTankToStore() {
     return Promise.resolve({ success: true, skipped: true });
   }
 
-  syncHoldingTankStateFromDom();
-  
   // When profiles are active, save to profile state instead
   if (window.moduleRegistry && window.moduleRegistry.profileState) {
     debugLog?.info('Saving holding tank to profile state', {
@@ -683,5 +685,6 @@ export default {
   loadHoldingTankSnapshot,
   syncHoldingTankStateFromDom,
   syncActiveHoldingTankStateFromDom,
+  clearSongFromHoldingTankState,
   restoreHoldingTankSnapshot
 };

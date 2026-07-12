@@ -85,6 +85,7 @@ async function addToHoldingTank(song_id, element, insertPosition) {
       } else if (targetEl?.appendChild) {
         targetEl.appendChild(song_row);
       }
+      window.moduleRegistry?.holdingTank?.syncActiveHoldingTankStateFromDom?.();
       
       if (typeof window.saveHoldingTankToStore === 'function') {
         window.saveHoldingTankToStore();
@@ -216,6 +217,7 @@ async function populateHoldingTank(songIds) {
   }
 
   if (typeof window.saveHoldingTankToStore === 'function') {
+    window.moduleRegistry?.holdingTank?.syncActiveHoldingTankStateFromDom?.();
     window.saveHoldingTankToStore();
   }
 
@@ -240,4 +242,4 @@ export {
 export default {
   addToHoldingTank,
   populateHoldingTank
-}; 
+};

@@ -77,6 +77,7 @@ function initializeEventHandlers(options = {}) {
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#holding_tank_tabs .nav-link.active');
       if (link) link.textContent = newName;
+      window.moduleRegistry?.holdingTank?.syncHoldingTankStateFromDom?.();
       saveHoldingTankToStore();
       return { success: true, newName: newName };
     } else {

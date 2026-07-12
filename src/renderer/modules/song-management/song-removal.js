@@ -75,6 +75,7 @@ export function deleteSong() {
 
           // Remove song anywhere it appears
           document.querySelectorAll(`.holding_tank .list-group-item[songid="${songId}"]`).forEach(el => el.remove());
+          window.moduleRegistry?.holdingTank?.clearSongFromHoldingTankState?.(songId);
           // Clear the hotkey slot in-place: keep the li and its draggable span,
           // just drop the songid and label so the slot stays usable.
           window.hotkeysModule?.clearSong?.(songId);
@@ -113,6 +114,7 @@ export function removeFromHoldingTank() {
       debugLog?.info("Proceeding with removal from holding tank", { module: 'song-management', function: 'removeFromHoldingTank' });
       // Remove the selected row from the holding tank
       document.getElementById('selected_row')?.remove();
+      window.moduleRegistry?.holdingTank?.syncActiveHoldingTankStateFromDom?.();
       // Clear the selection
       document.getElementById('selected_row')?.removeAttribute('id');
       // Save the updated holding tank to store
