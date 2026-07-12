@@ -15,6 +15,7 @@ import { resolveAudioSource } from './audio-source-resolver.js';
 import { showMissingAudioFile } from './playback-error-presenter.js';
 import { prepareCrossfadeTransition, startCrossfadeIn } from './crossfade-transition.js';
 import { presentPlaybackStarted } from './playback-ui-presenter.js';
+import { createPlaybackSound } from './playback-sound-factory.js';
 import {
   calculatePlaybackVolume,
   determinePlaybackCompletionAction,
@@ -284,44 +285,16 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
               });
             }
 
-            let sound = createHowl({
-              src: sound_path,
+            let sound = createPlaybackSound({
+              createHowl,
+              source: sound_path,
               volume: shouldCrossfade2 ? 0 : targetVolume2,
-              mute:
+              muted:
                 document
                   .getElementById('mute_button')
                   ?.classList.contains('active') || false,
-              onload: function () {
-                getDebugLog()?.info('Sound fully loaded', {
-                  module: 'audio-manager',
-                  function: 'playSongWithFilename',
-                  duration: this.duration(),
-                  state: this.state()
-                });
-              },
-              onloaderror: function (id, error) {
-                getDebugLog()?.error('Sound load error', {
-                  module: 'audio-manager',
-                  function: 'playSongWithFilename',
-                  soundId: id,
-                  error: error,
-                  src: sound_path
-                });
-              },
-              onplayerror: function (id, error) {
-                getDebugLog()?.error('Sound play error', {
-                  module: 'audio-manager',
-                  function: 'playSongWithFilename',
-                  soundId: id,
-                  error: error,
-                  src: sound_path
-                });
-              },
-              onplay: function () {
-                getDebugLog()?.info('Sound playback started', {
-                  module: 'audio-manager',
-                  function: 'playSongWithFilename',
-                });
+              debugLog: getDebugLog(),
+              onPlay: function () {
                 // Fade in if crossfading
                 if (shouldCrossfade2 && crossfadeMs2 > 0) {
                   startCrossfadeIn({ sound, targetVolume: targetVolume2, durationMs: crossfadeMs2 });
@@ -360,11 +333,7 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                   }
                 } catch (_) { /* best-effort E2E audio probe setup */ }
               },
-              onend: function () {
-                getDebugLog()?.info('Sound playback ended', {
-                  module: 'audio-manager',
-                  function: 'playSongWithFilename',
-                });
+              onEnd: function () {
                 // If this sound is no longer the active sound (crossfade already
                 // started the next track), just unload quietly
                 if (sharedState.get('sound') !== sound) {
