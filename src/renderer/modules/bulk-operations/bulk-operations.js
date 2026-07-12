@@ -8,6 +8,11 @@ import { safeShowModal, safeHideModal } from '../ui/bootstrap-helpers.js';
 
 // Import debug logger
 let debugLog = null;
+let moduleRegistry = {};
+
+export function configureBulkOperationsDependencies(dependencies = {}) {
+  moduleRegistry = dependencies.moduleRegistry || {};
+}
 try {
   // Try to get debug logger from global scope
   if (window.debugLog) {
@@ -67,8 +72,8 @@ export async function showBulkAddModal(directory) {
       // Metadata is optional; the add-song form derives defaults from the path.
     }
 
-    if (window.moduleRegistry?.songManagement?.startAddNewSong) {
-      window.moduleRegistry.songManagement.startAddNewSong(songs[0], metadata);
+    if (moduleRegistry.songManagement?.startAddNewSong) {
+      moduleRegistry.songManagement.startAddNewSong(songs[0], metadata);
     } else if (typeof window.startAddNewSong === 'function') {
       window.startAddNewSong(songs[0], metadata);
     }
@@ -125,8 +130,8 @@ export async function showBulkAddFromFiles(filePaths) {
       // Metadata is optional; the add-song form derives defaults from the path.
     }
 
-    if (window.moduleRegistry?.songManagement?.startAddNewSong) {
-      window.moduleRegistry.songManagement.startAddNewSong(filePaths[0], metadata);
+    if (moduleRegistry.songManagement?.startAddNewSong) {
+      moduleRegistry.songManagement.startAddNewSong(filePaths[0], metadata);
     } else if (typeof window.startAddNewSong === 'function') {
       window.startAddNewSong(filePaths[0], metadata);
     }
@@ -390,8 +395,8 @@ export async function saveBulkUpload(event) {
       // Metadata is optional; the add-song form derives defaults from the path.
     }
 
-    if (window.moduleRegistry?.songManagement?.startAddNewSong) {
-      window.moduleRegistry.songManagement.startAddNewSong(songs[0], metadata);
+    if (moduleRegistry.songManagement?.startAddNewSong) {
+      moduleRegistry.songManagement.startAddNewSong(songs[0], metadata);
     } else if (typeof window.startAddNewSong === 'function') {
       window.startAddNewSong(songs[0], metadata);
     }

@@ -23,6 +23,11 @@ let fileDropAbortController = null;
 
 // Debounce counter for dragleave (avoids flicker when moving between child elements)
 let dragEnterCount = 0;
+let moduleRegistry = {};
+
+export function configureFileDropDependencies(dependencies = {}) {
+  moduleRegistry = dependencies.moduleRegistry || {};
+}
 
 /**
  * Show the full-window drop overlay
@@ -139,8 +144,8 @@ async function routeFiles(filePaths) {
     function: 'routeFiles'
   });
 
-  if (window.moduleRegistry?.bulkOperations?.showBulkAddFromFiles) {
-    window.moduleRegistry.bulkOperations.showBulkAddFromFiles(filePaths);
+  if (moduleRegistry.bulkOperations?.showBulkAddFromFiles) {
+    moduleRegistry.bulkOperations.showBulkAddFromFiles(filePaths);
   } else if (typeof window.showBulkAddFromFiles === 'function') {
     window.showBulkAddFromFiles(filePaths);
   } else {

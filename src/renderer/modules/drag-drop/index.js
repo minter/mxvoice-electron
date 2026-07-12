@@ -7,7 +7,11 @@
 
 import { configureDragDropDependencies, songDrag } from './drag-drop-functions.js';
 import { setupDragDropEventHandlers } from './event-handlers.js';
-import { setupFileDropHandlers, handleExternalFileDrop } from './file-drop-handler.js';
+import {
+  configureFileDropDependencies,
+  setupFileDropHandlers,
+  handleExternalFileDrop
+} from './file-drop-handler.js';
 
 // Import debug logger
 let debugLog = null;
@@ -62,6 +66,7 @@ class DragDropModule {
       });
 
       configureDragDropDependencies(dependencies);
+      configureFileDropDependencies(dependencies);
 
       // Call the existing initialization logic
       this.initializeDragDrop();

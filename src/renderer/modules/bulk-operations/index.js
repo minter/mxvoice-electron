@@ -5,7 +5,13 @@
  * Includes event handlers for bulk operations UI
  */
 
-import { showBulkAddModal, showBulkAddFromFiles, addSongsByPath, saveBulkUpload } from './bulk-operations.js';
+import {
+  configureBulkOperationsDependencies,
+  showBulkAddModal,
+  showBulkAddFromFiles,
+  addSongsByPath,
+  saveBulkUpload
+} from './bulk-operations.js';
 import { showMultiSongImport, setMultiSongThreshold } from './multi-song-import.js';
 import { setupBulkEventHandlers } from './event-handlers.js';
 
@@ -40,12 +46,14 @@ class BulkOperationsModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(_dependencies = {}) {
+  async init(dependencies = {}) {
     try {
       window.debugLog?.info('Bulk Operations module initializing...', { 
         module: 'bulk-operations', 
         function: 'init' 
       });
+
+      configureBulkOperationsDependencies(dependencies);
 
       // Call the existing initialization logic
       this.initializeBulkOperations();
@@ -125,4 +133,4 @@ class BulkOperationsModule {
 const bulkOperationsModule = new BulkOperationsModule();
 
 // Default export for module loading
-export default bulkOperationsModule; 
+export default bulkOperationsModule;
