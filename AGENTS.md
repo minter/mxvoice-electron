@@ -67,7 +67,8 @@ When adding user-facing features, add tour steps to `src/renderer/modules/whats-
 - `npm run test:unit` / `npx vitest run` — run unit tests
 - `npm run test:unit:coverage` — run unit tests and enforce required coverage thresholds
 - `npm run test:no-skips` — reject skipped or fixme tests anywhere under `tests/`
-- `npm test` / `npx playwright test` — run E2E tests
+- `env -u ELECTRON_RUN_AS_NODE npm test` — run E2E tests in parallel (4 local workers by default); on macOS/Linux, Electron cannot launch its GUI if `ELECTRON_RUN_AS_NODE` is inherited from an IDE
+- `env -u ELECTRON_RUN_AS_NODE PWWORKERS=<n> npm test` — override local E2E parallelism; use `PWWORKERS=1` only when diagnosing timing-sensitive behavior
 - `npx eslint src/` — lint source files (not in CI)
 - `npm run build` — package app via electron-builder
 - `npm run release:mac` / `release:win` / `release:linux` — signed production builds
@@ -80,6 +81,7 @@ When adding user-facing features, add tour steps to `src/renderer/modules/whats-
 - **Two independent gates** — Vitest coverage does not replace Playwright. Unit coverage protects deterministic logic and failure paths; macOS/Windows E2E protects the real Electron/process/DOM boundary.
 - **Unit tests** (Vitest): `tests/unit/renderer/` and `tests/unit/main/`. Mock `window.secureElectronAPI` and `window.debugLog` in test setup.
 - **E2E tests** (Playwright): `tests/e2e/seeded/` for tests with pre-populated data. Use `launchSeededApp(electron, 'suite-name')` and `waitForAppReady(page, app)` from `tests/utils/seeded-launch.js`.
+- **Local E2E invocation** — on macOS/Linux, run `env -u ELECTRON_RUN_AS_NODE npm test`. The default four-worker run is parallel-safe because every suite receives an isolated user-data directory. If the execution environment restricts GUI processes, run the command outside that restricted sandbox; sandboxed Electron launches can abort with `SIGABRT`/`kill EPERM` before tests execute.
 - **Test isolation** — main process checks `APP_TEST_MODE=1` or `E2E_USER_DATA_DIR` env var and overrides `userData` path before Store creation.
 - Test files in `tests/` are eslint-ignored by config — this is expected.
 

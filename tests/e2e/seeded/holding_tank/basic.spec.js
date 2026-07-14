@@ -1087,12 +1087,7 @@ test.describe('Holding Tank - basic', () => {
     console.log('✅ Songs are removed immediately without confirmation modal');
   });
 
-  test('bug reproduction: double-click playback in holding tank tab 4', async () => {
-    // This test reproduces a bug where double-clicking songs in holding tank tabs
-    // other than tab 1 doesn't work properly
-    
-    console.log('🧪 Testing bug: double-click playback in holding tank tab 4');
-    
+  test('double-click playback works in holding tank tab 4', async () => {
     // 1) Clear the holding tank first to ensure clean state
     await clearModalBackdrop(page);
     const clearButton = page.locator('#holding-tank-clear-btn');
@@ -1117,8 +1112,6 @@ test.describe('Holding Tank - basic', () => {
     const tab4List = page.locator('#holding_tank_4');
     await expect(tab4List).toHaveClass(/show/);
     await expect(tab4List).toHaveClass(/active/);
-    
-    console.log('✅ Tab 4 is now active and visible');
     
     // 3) Load the test.hld file
     const holdingTankFile = path.resolve(__dirname, '../../../fixtures/test-holding-tank/test.hld');
@@ -1153,12 +1146,7 @@ test.describe('Holding Tank - basic', () => {
     await expect(firstItem).toContainText('Theme From The Greatest American Hero');
     await expect(firstItem).toContainText('Joey Scarbury');
     
-    console.log('✅ Test.hld file loaded successfully into Tab 4');
-    console.log('✅ Tab 4 contains 5 songs, first song: Theme From The Greatest American Hero');
-    
     // 4) Double-click the first song in Tab 4
-    console.log('🧪 Attempting to double-click first song in Tab 4...');
-    
     // Ensure we're still on Tab 4
     await expect(tab4Link).toHaveClass(/active/);
     await expect(tab4List).toHaveClass(/show/);
@@ -1166,48 +1154,16 @@ test.describe('Holding Tank - basic', () => {
     // Double-click the first song
     await firstItem.dblclick();
 
-    // 5) Check if playback started
-    const playButton = page.locator('#play_button');
+    // Playback loads the selected song asynchronously from the database. Wait for
+    // the expected track rather than sampling the previous playback state.
     const pauseButton = page.locator('#pause_button');
     const songNowPlaying = page.locator('#song_now_playing');
-    
-    // Check current state
-    const isPlayButtonVisible = await playButton.isVisible();
-    const isPauseButtonVisible = await pauseButton.isVisible();
-    const nowPlayingText = await songNowPlaying.textContent();
-    
-    console.log('Play button visible:', isPlayButtonVisible);
-    console.log('Pause button visible:', isPauseButtonVisible);
-    console.log('Now playing text:', nowPlayingText);
-    
-    // 6) Analyze the results to confirm the bug
-    if (isPauseButtonVisible && nowPlayingText.includes('Theme From The Greatest American Hero')) {
-      console.log('✅ SUCCESS: Double-click in Tab 4 worked - song is playing');
-      console.log('✅ Bug is NOT reproducible in this test environment');
-    } else {
-      console.log('❌ BUG CONFIRMED: Double-click in Tab 4 did NOT work');
-      console.log('❌ Expected: Pause button visible and song title showing');
-      console.log('❌ Actual: Play button visible, no song playing');
-      console.log('❌ This confirms the theory about tab-specific double-click handling');
-    }
-    
-    // 7) Restore the original dialog
+    await expect(firstItem).toHaveAttribute('id', 'selected_row');
+    await expect(pauseButton).toBeVisible({ timeout: 5000 });
+    await expect(songNowPlaying).toContainText('Theme From The Greatest American Hero', { timeout: 5000 });
+
+    // 5) Restore the original dialog and stop playback
     await app.evaluate(() => { globalThis.__restoreHoldingTankDialogTab4?.(); });
-    
-    // 8) Summary and bug analysis
-    if (isPauseButtonVisible && nowPlayingText.includes('Theme From The Greatest American Hero')) {
-      console.log('✅ Test completed: Double-click in Tab 4 worked correctly');
-      console.log('✅ No bug detected in this test environment');
-      console.log('✅ Holding tank double-click functionality works in all tabs');
-    } else {
-      console.log('❌ BUG REPRODUCTION SUCCESSFUL');
-      console.log('❌ Double-click in Tab 4 fails to play songs');
-      console.log('❌ This supports the theory about tab-specific event handling issues');
-      console.log('❌ Possible causes:');
-      console.log('❌   1. Event handlers only bound to Tab 1');
-      console.log('❌   2. Multiple conflicting double-click handlers');
-      console.log('❌   3. Tab switching not properly updating event bindings');
-    }
+    await page.locator('#stop_button').click();
   });
 });
-
