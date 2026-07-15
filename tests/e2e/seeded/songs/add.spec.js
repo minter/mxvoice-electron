@@ -9,10 +9,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 test.describe('Songs - add', () => {
-  let app; let page;
+  let app; let page; let suiteMusicDir;
 
   test.beforeAll(async () => {
-    ({ app, page } = await launchSeededApp(electron, 'songs'));
+    ({ app, page, suiteMusicDir } = await launchSeededApp(electron, 'songs'));
   });
 
   test.beforeEach(async () => {
@@ -208,64 +208,12 @@ test.describe('Songs - add', () => {
     await expect(page.locator('#search_results')).toContainText('Indigo Girls');
     await expect(page.locator('#search_results')).toContainText('Test');
     
-    // 9) Verify the song file exists in the test music directory
-
-    // Get the music directory from the store
-    const musicDirResult = await page.evaluate(async () => {
-      if (window.secureElectronAPI?.store?.get) {
-        return await window.secureElectronAPI.store.get('music_directory');
-      }
-      return null;
-    });
-    
-    if (musicDirResult?.success && musicDirResult.value) {
-      const musicDir = musicDirResult.value;
-      
-      // Check if a file with the expected pattern exists in the test music directory
-      const fileExists = await page.evaluate(async (dir) => {
-        if (window.secureElectronAPI?.fileSystem?.readdir) {
-          try {
-            const result = await window.secureElectronAPI.fileSystem.readdir(dir);
-            
-            // The IPC handler returns the file array directly, not wrapped in {success, data}
-            if (Array.isArray(result)) {
-              return { success: true, files: result };
-            } else if (result?.success && result.data) {
-              return { success: true, files: result.data };
-            } else {
-              return { success: false, error: 'readdir failed', result: result };
-            }
-          } catch (err) {
-            return { success: false, error: err.message };
-          }
-        } else {
-          return { success: false, error: 'secureElectronAPI.fileSystem.readdir not available' };
-        }
-      }, musicDir);
-      
-      if (fileExists?.success && fileExists.files) {
-        const files = fileExists.files;
-        
-        // Look for a file that contains "Indigo Girls" and "Shame On You"
-        const songFile = files.find(file => 
-          (file.includes('Indigo Girls') || file.includes('IndigoGirls')) && 
-          (file.includes('Shame On You') || file.includes('ShameOnYou')) && 
-          file.endsWith('.mp3')
-        );
-        
-        if (songFile) {
-          console.log('✅ Song file found in test music directory:', songFile);
-        } else {
-          console.log('❌ No matching song file found');
-          const mp3Files = files.filter(f => f.endsWith('.mp3'));
-          console.log('MP3 files in directory:', mp3Files);
-        }
-      } else {
-        console.log('❌ Failed to read test music directory:', fileExists?.error || 'Unknown error');
-      }
-    } else {
-      console.log('⚠️ Could not retrieve music directory from store');
-    }
+    // 9) Verify the source audio was copied into this suite's isolated music directory.
+    await expect.poll(() => fs.readdirSync(suiteMusicDir), { timeout: 10000 }).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^IndigoGirls-ShameOnYou-.+\.mp3$/)
+      ])
+    );
     
     // 10) Restore dialog
     await app.evaluate(() => { globalThis.__restoreDialog?.(); });
@@ -436,24 +384,10 @@ test.describe('Songs - add', () => {
     // 8) Verify no John Lennon file exists in the music directory
     console.log('Verifying no John Lennon file exists in music directory...');
     
-    // Get the music directory from the store
-    const musicDirResult = await page.evaluate(async () => {
-      if (window.secureElectronAPI?.store?.get) {
-        return await window.secureElectronAPI.store.get('music_directory');
-      }
-      return null;
-    });
-    
-    if (musicDirResult?.success && musicDirResult.value) {
-      const musicDir = musicDirResult.value;
-      
-      const lennonFiles = fs.readdirSync(musicDir).filter(file =>
-        file.includes('Lennon') && file.endsWith('.mp3')
-      );
-      expect(lennonFiles).toEqual([]);
-    } else {
-      console.log('⚠️ Could not retrieve music directory from store');
-    }
+    const lennonFiles = fs.readdirSync(suiteMusicDir).filter(file =>
+      file.includes('Lennon') && file.endsWith('.mp3')
+    );
+    expect(lennonFiles).toEqual([]);
     
     // 9) Restore dialog
     await app.evaluate(() => { globalThis.__restoreDialogCancel?.(); });
@@ -617,60 +551,12 @@ test.describe('Songs - add', () => {
     await expect(page.locator('#search_results')).toContainText("Alice's Restaurant");
     await expect(page.locator('#search_results')).toContainText('Arlo Guthrie');
     
-    // 8) Verify the OGG file exists in the test music directory
-    const musicDirResult = await page.evaluate(async () => {
-      if (window.secureElectronAPI?.store?.get) {
-        return await window.secureElectronAPI.store.get('music_directory');
-      }
-      return null;
-    });
-    
-    if (musicDirResult?.success && musicDirResult.value) {
-      const musicDir = musicDirResult.value;
-      
-      const fileExists = await page.evaluate(async (dir) => {
-        if (window.secureElectronAPI?.fileSystem?.readdir) {
-          try {
-            const result = await window.secureElectronAPI.fileSystem.readdir(dir);
-            
-            if (Array.isArray(result)) {
-              return { success: true, files: result };
-            } else if (result?.success && result.data) {
-              return { success: true, files: result.data };
-            } else {
-              return { success: false, error: 'readdir failed', result: result };
-            }
-          } catch (err) {
-            return { success: false, error: err.message };
-          }
-        } else {
-          return { success: false, error: 'secureElectronAPI.fileSystem.readdir not available' };
-        }
-      }, musicDir);
-      
-      if (fileExists?.success && fileExists.files) {
-        const files = fileExists.files;
-        
-        // Look for a file that contains "Arlo Guthrie" and "Alice"
-        const songFile = files.find(file => 
-          (file.includes('Arlo Guthrie') || file.includes('ArloGuthrie')) && 
-          (file.includes('Alice') || file.includes('Restaurant')) && 
-          file.endsWith('.ogg')
-        );
-        
-        if (songFile) {
-          console.log('✅ OGG song file found in test music directory:', songFile);
-        } else {
-          console.log('❌ No matching OGG song file found');
-          const oggFiles = files.filter(f => f.endsWith('.ogg'));
-          console.log('OGG files in directory:', oggFiles);
-        }
-      } else {
-        console.log('❌ Failed to read test music directory:', fileExists?.error || 'Unknown error');
-      }
-    } else {
-      console.log('⚠️ Could not retrieve music directory from store');
-    }
+    // 8) Verify the OGG source was copied with the app's sanitized filename.
+    await expect.poll(() => fs.readdirSync(suiteMusicDir), { timeout: 10000 }).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^ArloGuthrie-AlicesRestaurant-.+\.ogg$/)
+      ])
+    );
     
     // 9) Restore dialog
     await app.evaluate(() => { globalThis.__restoreDialogOgg?.(); });

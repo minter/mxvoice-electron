@@ -1,5 +1,7 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 test.describe('Songs - delete', () => {
   // Tests are ordered: first test deletes Anthrax, second test verifies cancel preserves
@@ -7,10 +9,10 @@ test.describe('Songs - delete', () => {
   // MUST run in declared order.
   test.describe.configure({ mode: 'serial' });
 
-  let app; let page;
+  let app; let page; let suiteMusicDir;
 
   test.beforeAll(async () => {
-    ({ app, page } = await launchSeededApp(electron, 'songs-delete'));
+    ({ app, page, suiteMusicDir } = await launchSeededApp(electron, 'songs-delete'));
 
     // Refresh the page to clear any cached search state
     console.log('🔄 Refreshing page to clear search cache...');
@@ -27,6 +29,9 @@ test.describe('Songs - delete', () => {
   });
 
   test('Delete song via context menu → confirmation modal → song removed', async () => {
+    const anthraxFile = path.join(suiteMusicDir, 'Anthrax-GotTheTime.mp3');
+    expect(fs.existsSync(anthraxFile)).toBe(true);
+
     // 1) Start with a fresh database and search for "Anthrax"
     console.log('🔍 Searching for "Anthrax" to find the song to delete...');
     
@@ -140,67 +145,16 @@ test.describe('Songs - delete', () => {
     
     console.log('✅ No Anthrax songs found after deletion');
     
-    // 11) Verify the file no longer exists in the music directory
-    console.log('📁 Verifying file is removed from music directory...');
-    
-    // Get the music directory from the store
-    const musicDirResult = await page.evaluate(async () => {
-      if (window.secureElectronAPI?.store?.get) {
-        return await window.secureElectronAPI.store.get('music_directory');
-      }
-      return null;
-    });
-    
-    if (musicDirResult?.success && musicDirResult.value) {
-      const musicDir = musicDirResult.value;
-      
-      // Check if the Anthrax file still exists
-      const fileExists = await page.evaluate(async (dir) => {
-        if (window.secureElectronAPI?.fileSystem?.readdir) {
-          try {
-            const result = await window.secureElectronAPI.fileSystem.readdir(dir);
-            
-            // The IPC handler returns the file array directly, not wrapped in {success, data}
-            if (Array.isArray(result)) {
-              return { success: true, files: result };
-            } else if (result?.success && result.data) {
-              return { success: true, files: result.data };
-            } else {
-              return { success: false, error: 'readdir failed', result: result };
-            }
-          } catch (err) {
-            return { success: false, error: err.message };
-          }
-        } else {
-          return { success: false, error: 'secureElectronAPI.fileSystem.readdir not available' };
-        }
-      }, musicDir);
-      
-      if (fileExists?.success && fileExists.files) {
-        const files = fileExists.files;
-        
-        // Look for any files containing "Anthrax" or "GotTheTime"
-        const anthraxFiles = files.filter(file => 
-          (file.includes('Anthrax') || file.includes('GotTheTime')) && file.endsWith('.mp3')
-        );
-        
-        if (anthraxFiles.length === 0) {
-          console.log('✅ No Anthrax files found in music directory (as expected)');
-        } else {
-          console.log('❌ Anthrax files still found in music directory:', anthraxFiles);
-          throw new Error('Anthrax files should not exist after deletion');
-        }
-      } else {
-        console.log('❌ Failed to read music directory:', fileExists?.error || 'Unknown error');
-      }
-    } else {
-      console.log('⚠️ Could not retrieve music directory from store');
-    }
+    // 11) Verify the associated audio file was removed, not just the database row.
+    await expect.poll(() => fs.existsSync(anthraxFile), { timeout: 10000 }).toBe(false);
     
     console.log('✅ Song deletion test completed successfully');
   });
 
   test('Delete song → cancel flow → song preserved', async () => {
+    const edieFile = path.join(suiteMusicDir, 'EdieBrickell-TheWheel.mp3');
+    expect(fs.existsSync(edieFile)).toBe(true);
+
     // 1) Do a search for all songs (empty search)
     console.log('🔍 Performing empty search to see all songs...');
     
@@ -283,62 +237,8 @@ test.describe('Songs - delete', () => {
     const afterCancelCount = await page.locator('#search_results tbody tr').count();
     expect(afterCancelCount).toBe(initialCount);
 
-    // 12) Verify the file still exists in the music directory
-    console.log('📁 Verifying file still exists in music directory...');
-    
-    // Get the music directory from the store
-    const musicDirResult = await page.evaluate(async () => {
-      if (window.secureElectronAPI?.store?.get) {
-        return await window.secureElectronAPI.store.get('music_directory');
-      }
-      return null;
-    });
-    
-    if (musicDirResult?.success && musicDirResult.value) {
-      const musicDir = musicDirResult.value;
-      
-      // Check if the Edie Brickell file still exists
-      const fileExists = await page.evaluate(async (dir) => {
-        if (window.secureElectronAPI?.fileSystem?.readdir) {
-          try {
-            const result = await window.secureElectronAPI.fileSystem.readdir(dir);
-            
-            // The IPC handler returns the file array directly, not wrapped in {success, data}
-            if (Array.isArray(result)) {
-              return { success: true, files: result };
-            } else if (result?.success && result.data) {
-              return { success: true, files: result.data };
-            } else {
-              return { success: false, error: 'readdir failed', result: result };
-            }
-          } catch (err) {
-            return { success: false, error: err.message };
-          }
-        } else {
-          return { success: false, error: 'secureElectronAPI.fileSystem.readdir not available' };
-        }
-      }, musicDir);
-      
-      if (fileExists?.success && fileExists.files) {
-        const files = fileExists.files;
-        
-        // Look for files containing "Edie" or "Brickell"
-        const edieFiles = files.filter(file => 
-          (file.includes('Edie') || file.includes('Brickell')) && file.endsWith('.mp3')
-        );
-        
-        if (edieFiles.length > 0) {
-          console.log('✅ Edie Brickell files found in music directory (as expected):', edieFiles);
-        } else {
-          console.log('❌ No Edie Brickell files found in music directory');
-          throw new Error('Edie Brickell files should still exist after canceling deletion');
-        }
-      } else {
-        console.log('❌ Failed to read music directory:', fileExists?.error || 'Unknown error');
-      }
-    } else {
-      console.log('⚠️ Could not retrieve music directory from store');
-    }
+    // 12) Canceling must preserve the associated audio file.
+    expect(fs.existsSync(edieFile)).toBe(true);
     
     console.log('✅ Song deletion cancel test completed successfully');
   });
