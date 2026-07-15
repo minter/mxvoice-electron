@@ -107,6 +107,60 @@ test.describe('Profile Lifecycle', () => {
     return mainWindow;
   }
 
+  async function launchReplacementProcess() {
+    app = await electron.launch({
+      executablePath: electronPath,
+      args: ['.'],
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        APP_TEST_MODE: '1',
+        DISABLE_HARDWARE_ACCELERATION: '1',
+        AUTO_UPDATE: '0',
+        E2E_USER_DATA_DIR: userDataDir,
+        HOME: fakeHome,
+        APPDATA: fakeHome,
+      },
+    });
+
+    page = await app.firstWindow();
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForSelector('#profile-content', { timeout: 10000 });
+  }
+
+  async function switchToLauncher(mainWindow) {
+    // Electron's automatic replacement process is not connected to Playwright.
+    // Suppress only that spawn; the production switch path still saves state,
+    // closes the window, and exits this process. The test launches the observable
+    // replacement process with the same isolated user-data directory.
+    await app.evaluate(({ app: electronApp }) => {
+      electronApp.relaunch = () => {};
+    });
+
+    const processClosed = app.waitForEvent('close', { timeout: 15000 });
+    await mainWindow.evaluate(() => {
+      void window.moduleRegistry.profileState.switchProfileWithSave();
+    }).catch(() => {});
+    await processClosed;
+    app = null;
+  }
+
+  async function renameActiveTab(mainWindow, buttonSelector, name) {
+    await mainWindow.locator(buttonSelector).click();
+    const prompt = mainWindow.locator('.modal:visible .prompt-input');
+    await expect(prompt).toBeVisible();
+    await prompt.fill(name);
+    await mainWindow.locator('.modal:visible .confirm-btn').click();
+    await expect(prompt).not.toBeVisible({ timeout: 5000 });
+  }
+
+  async function dismissFirstRunModal(mainWindow) {
+    const modal = mainWindow.locator('#firstRunModal');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+    await modal.getByRole('button', { name: 'Got It!' }).click();
+    await expect(modal).not.toBeVisible({ timeout: 5000 });
+  }
+
   test('delete profile from launcher removes it', async () => {
     // Create a profile to delete
     await createProfileInLauncher('ToDelete', 'Will be deleted');
@@ -239,47 +293,71 @@ test.describe('Profile Lifecycle', () => {
     expect(prefsExist).toBe(true);
   });
 
-  test('switch profile API saves state and triggers relaunch', async () => {
-    // Create a second profile so we have something to switch to
+  test('switching profiles across process relaunch preserves isolated state', async () => {
     await createProfileInLauncher('SecondProfile', 'For switching');
 
-    // Launch into Default User
-    const mainWindow = await launchProfile('Default User');
+    let mainWindow = await launchProfile('Default User');
+    await mainWindow.waitForFunction(
+      () => window.moduleRegistry?.profileState && window.isRestoringProfileState === false,
+      { timeout: 15000 }
+    );
+    await dismissFirstRunModal(mainWindow);
 
-    // Wait for full initialization (moduleRegistry must be available)
-    await mainWindow.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
+    await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Default Keys');
+    await renameActiveTab(mainWindow, '#holding-tank-rename-btn', 'Default Queue');
+    await mainWindow.evaluate(() => (
+      window.secureElectronAPI.profile.setPreference('e2e_profile_marker', 'default-marker')
+    ));
+    await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('Default Keys');
+    await expect(mainWindow.locator('#holding_tank_tabs a[href="#holding_tank_1"]')).toHaveText('Default Queue');
 
-    // Verify we're running as Default User
-    const currentProfile = await mainWindow.evaluate(async () => {
-      return await window.secureElectronAPI?.profile?.getCurrent?.();
-    });
-    console.log('Current profile:', currentProfile);
-    expect(currentProfile?.success).toBe(true);
-    expect(currentProfile?.profile).toBe('Default User');
+    await switchToLauncher(mainWindow);
+    await launchReplacementProcess();
 
-    // Verify the switch profile API is available
-    const switchAvailable = await mainWindow.evaluate(() => {
-      return typeof window.secureElectronAPI?.profile?.switchProfile === 'function';
-    });
-    expect(switchAvailable).toBe(true);
+    mainWindow = await launchProfile('SecondProfile');
+    await mainWindow.waitForFunction(
+      () => window.moduleRegistry?.profileState && window.isRestoringProfileState === false,
+      { timeout: 15000 }
+    );
+    await dismissFirstRunModal(mainWindow);
 
-    // Verify state can be extracted (the first step of profile switching)
-    const stateResult = await mainWindow.evaluate(async () => {
-      if (window.moduleRegistry?.profileState?.extractProfileState) {
-        const state = window.moduleRegistry.profileState.extractProfileState();
-        return { success: true, hasState: !!state, hotkeyTabs: Object.keys(state?.hotkeyTabs || {}).length };
-      }
-      return { success: false, error: 'extractProfileState not available' };
-    });
-    console.log('State extraction result:', stateResult);
-    expect(stateResult.success).toBe(true);
-    expect(stateResult.hasState).toBe(true);
+    expect(await mainWindow.evaluate(() => window.secureElectronAPI.profile.getCurrent()))
+      .toMatchObject({ success: true, profile: 'SecondProfile' });
+    await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('1');
+    await expect(mainWindow.locator('#holding_tank_tabs a[href="#holding_tank_1"]')).toHaveText('1');
+    expect(await mainWindow.evaluate(async () => (
+      await window.secureElectronAPI.profile.getPreference('e2e_profile_marker')
+    )).value).not.toBe('default-marker');
 
-    // Note: Actually calling switchProfile() would close the window and relaunch the app,
-    // which Playwright can't track across process boundaries. We've verified:
-    // 1. The current profile is correctly identified
-    // 2. The switch API is available
-    // 3. Profile state can be extracted for saving before switch
-    // 4. Multiple profiles exist to switch between
+    await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Second Keys');
+    await renameActiveTab(mainWindow, '#holding-tank-rename-btn', 'Second Queue');
+    await mainWindow.evaluate(() => (
+      window.secureElectronAPI.profile.setPreference('e2e_profile_marker', 'second-marker')
+    ));
+
+    await switchToLauncher(mainWindow);
+    await launchReplacementProcess();
+
+    mainWindow = await launchProfile('Default User');
+    await mainWindow.waitForFunction(
+      () => window.moduleRegistry?.profileState && window.isRestoringProfileState === false,
+      { timeout: 15000 }
+    );
+    await dismissFirstRunModal(mainWindow);
+
+    expect(await mainWindow.evaluate(() => window.secureElectronAPI.profile.getCurrent()))
+      .toMatchObject({ success: true, profile: 'Default User' });
+    await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('Default Keys');
+    await expect(mainWindow.locator('#holding_tank_tabs a[href="#holding_tank_1"]')).toHaveText('Default Queue');
+    expect(await mainWindow.evaluate(async () => (
+      await window.secureElectronAPI.profile.getPreference('e2e_profile_marker')
+    ))).toMatchObject({ success: true, value: 'default-marker' });
+
+    const secondState = JSON.parse(fs.readFileSync(
+      path.join(userDataDir, 'profiles', 'SecondProfile', 'state.json'),
+      'utf8'
+    ));
+    expect(secondState.hotkeys[0].tabName).toBe('Second Keys');
+    expect(secondState.holdingTank[0].tabName).toBe('Second Queue');
   });
 });

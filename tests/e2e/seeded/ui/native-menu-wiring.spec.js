@@ -64,7 +64,9 @@ test.describe('Native menu wiring', () => {
 
   test.beforeEach(async () => {
     const tourClose = page.locator('.driver-popover-close-btn');
-    if (await tourClose.isVisible().catch(() => false)) await tourClose.click();
+    if (await tourClose.isVisible().catch(() => false)) {
+      await tourClose.click({ timeout: 2000 }).catch(() => {});
+    }
     for (const selector of [
       '#categoryManagementModal', '#preferencesModal', '#newProfileModal',
       '#duplicateProfileModal', '#backupRestoreModal', '#backupSettingsModal'
