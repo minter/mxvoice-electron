@@ -49,7 +49,10 @@ Post-build script that signs the installer and uninstaller after they're created
   - YubiKey PIN will be prompted once for all files
 
 ### `publishWindows.cjs`
-Publishes signed Windows builds to GitHub releases. Handles uploading the signed installer and associated files after the signing process is complete. Supports `--draft` and `--prerelease` flags.
+Publishes signed Windows builds to GitHub releases. Handles uploading the signed installer and associated files after the signing process is complete. New releases explicitly target the exact checked-out Git commit, so publishing from a maintenance branch cannot create the version tag from the repository's default branch. Supports `--draft` and `--prerelease` flags.
+
+### `release-target.cjs`
+Resolves and validates the full commit SHA at `HEAD` for release creation. Publishing stops if the release commit cannot be determined.
 
 ### `win-sign-utils.cjs`
 Shared utilities for Windows code signing. Provides `findSigntool()` (signtool.exe path discovery), `buildSignCommand()` (certificate selection and command assembly), and `logCertInfo()` (log which cert method is active). Used by both `afterPack.js` and `signAllWindows.cjs`.

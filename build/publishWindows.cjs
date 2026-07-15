@@ -5,6 +5,7 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const { execFileSync } = require("child_process");
+const { buildReleaseCreationOptions, resolveReleaseTarget } = require("./release-target.cjs");
 
 if (process.platform !== "win32") {
   console.log("[publishWindows] Skipping - not Windows platform");
@@ -30,6 +31,7 @@ if (!publishConfig || publishConfig.provider !== "github") {
 const owner = publishConfig.owner;
 const repo = publishConfig.repo;
 const tag = `v${version}`;
+const releaseTarget = resolveReleaseTarget(process.cwd());
 
 // Find artifacts matching the current version
 const entries = fs.readdirSync(distDir);
@@ -111,6 +113,7 @@ console.log(`[publishWindows] Publishing to GitHub:`);
 console.log(`[publishWindows]   Owner: ${owner}`);
 console.log(`[publishWindows]   Repo: ${repo}`);
 console.log(`[publishWindows]   Tag: ${tag}`);
+console.log(`[publishWindows]   Target commit: ${releaseTarget}`);
 console.log(`[publishWindows]   Artifacts: ${artifacts.map(a => a.name).join(", ")}`);
 
 // Check for GitHub token
@@ -171,15 +174,15 @@ const octokit = new Octokit({ auth: token });
       if (error.status === 404) {
         // Create new release
         console.log(`[publishWindows] Creating new ${releaseType} release ${tag}...`);
-        const response = await octokit.repos.createRelease({
+        const response = await octokit.repos.createRelease(buildReleaseCreationOptions({
           owner,
           repo,
-          tag_name: tag,
-          name: tag,
-          draft: isDraft,
-          prerelease: isPrerelease || releaseType === "prerelease",
-          generate_release_notes: true
-        });
+          tag,
+          releaseTarget,
+          isDraft,
+          isPrerelease,
+          releaseType
+        }));
         release = response.data;
         console.log(`[publishWindows] ✅ Created release ${tag}`);
       } else {
