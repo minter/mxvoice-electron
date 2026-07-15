@@ -4,6 +4,13 @@ This directory contains build scripts and configuration for the Mx. Voice Electr
 
 ## Build Hooks
 
+### `build-preload.js`
+
+Canonical esbuild configuration for `src/preload/preload-bundle.cjs`. It is
+used by both `npm run build:preload` and electron-builder's `beforePack` hook,
+so every packaging command rebuilds the ignored generated preload bundle from
+the source being packaged. Packaging stops if the preload build fails.
+
 ### `afterPack.js`
 Runs after the app is packaged but before code signing. Handles macOS code signing for nested binaries.
 

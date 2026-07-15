@@ -12,7 +12,7 @@
     "email": "wade@wademinter.com"
   },
   "scripts": {
-    "build:preload": "esbuild src/preload/preload-modular.cjs --bundle --platform=node --external:electron --outfile=src/preload/preload-bundle.cjs --format=cjs",
+    "build:preload": "node build/build-preload.js",
     "start": "npm run build:preload && electron .",
     "build": "npm run build:preload && electron-builder",
     "build:mac": "electron-builder --mac",
@@ -62,6 +62,7 @@
     "asarUnpack": [
       "node_modules/node-sqlite3-wasm/dist/*.wasm"
     ],
+    "beforePack": "build/build-preload.js",
     "afterPack": "build/afterPack.js",
     "electronFuses": {
       "enableEmbeddedAsarIntegrityValidation": true,
