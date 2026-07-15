@@ -6,6 +6,64 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * Dispatch an OS-style file drop using genuine, disk-backed File objects.
+ *
+ * Playwright's setInputFiles() attaches the real fixture paths to a browser
+ * file input. Reusing those File objects in a DataTransfer exercises the same
+ * renderer -> preload webUtils.getPathForFile() boundary used by Explorer and
+ * Finder, unlike handleExternalFileDrop(), which starts with paths already in
+ * hand.
+ */
+async function dispatchDiskBackedFileDrop(page, filePaths) {
+  await page.evaluate(() => {
+    document.getElementById('e2e-disk-backed-file-input')?.remove();
+    const input = document.createElement('input');
+    input.id = 'e2e-disk-backed-file-input';
+    input.type = 'file';
+    input.multiple = true;
+    input.hidden = true;
+    document.body.appendChild(input);
+  });
+
+  const input = page.locator('#e2e-disk-backed-file-input');
+  await input.setInputFiles(filePaths);
+
+  return page.evaluate(() => {
+    const fileInput = document.getElementById('e2e-disk-backed-file-input');
+    const files = [...fileInput.files];
+    const pathResults = files.map(file => {
+      try {
+        return {
+          name: file.name,
+          path: window.secureElectronAPI?.utils?.getPathForFile?.(file) || '',
+          error: null
+        };
+      } catch (error) {
+        return { name: file.name, path: '', error: error.message };
+      }
+    });
+
+    const dataTransfer = new DataTransfer();
+    files.forEach(file => dataTransfer.items.add(file));
+    const dropEvent = new DragEvent('drop', {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer
+    });
+
+    document.dispatchEvent(dropEvent);
+    fileInput.remove();
+
+    return {
+      defaultPrevented: dropEvent.defaultPrevented,
+      fileCount: files.length,
+      transferTypes: [...dataTransfer.types],
+      pathResults
+    };
+  });
+}
+
 test.describe('File Drop — external file import', () => {
   let app; let page; let suiteMusicDir;
 
@@ -101,6 +159,55 @@ test.describe('File Drop — external file import', () => {
     // Verify song rows are rendered
     const rows = modal.locator('.song-import-row');
     await expect(rows).toHaveCount(3);
+  });
+
+  test('disk-backed single-file drop resolves its path and opens Add Song', async () => {
+    const mp3 = path.resolve(__dirname, '../../../fixtures/test-songs/IndigoGirls-ShameOnYou.mp3');
+
+    const dropResult = await dispatchDiskBackedFileDrop(page, [mp3]);
+
+    expect(dropResult.defaultPrevented).toBe(true);
+    expect(dropResult.transferTypes).toContain('Files');
+    expect(dropResult.fileCount).toBe(1);
+    expect(dropResult.pathResults).toEqual([
+      {
+        name: 'IndigoGirls-ShameOnYou.mp3',
+        path: expect.stringMatching(/\S+/),
+        error: null
+      }
+    ]);
+
+    await expect(page.locator('#songFormModal')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#songFormModalTitle')).toHaveText(/add new song/i);
+    await expect(page.locator('#file-drop-toast')).not.toBeVisible();
+  });
+
+  test('disk-backed five-file drop resolves every path and opens Multi-Song Import', async () => {
+    const fixtures = path.resolve(__dirname, '../../../fixtures/test-songs');
+    const files = [
+      path.join(fixtures, 'Anthrax-GotTheTime.mp3'),
+      path.join(fixtures, 'ArloGuthrie-AlicesRestaurant.ogg'),
+      path.join(fixtures, 'EdieBrickell-TheWheel.mp3'),
+      path.join(fixtures, 'JoeyScarbury-GreatestAmericanHero.mp3'),
+      path.join(fixtures, 'SisterSledge-WeAreFamily.mp3'),
+    ];
+
+    const dropResult = await dispatchDiskBackedFileDrop(page, files);
+
+    expect(dropResult.defaultPrevented).toBe(true);
+    expect(dropResult.transferTypes).toContain('Files');
+    expect(dropResult.fileCount).toBe(5);
+    expect(dropResult.pathResults).toEqual(files.map(filePath => ({
+      name: path.basename(filePath),
+      path: expect.stringMatching(/\S+/),
+      error: null
+    })));
+
+    const modal = page.locator('#multiSongImportModal');
+    await expect(modal).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#multi-song-import-count')).toHaveText(/5 songs ready to import/);
+    await expect(modal.locator('.song-import-row')).toHaveCount(5);
+    await expect(page.locator('#file-drop-toast')).not.toBeVisible();
   });
 
   test('non-audio files drop shows toast notification', async () => {
