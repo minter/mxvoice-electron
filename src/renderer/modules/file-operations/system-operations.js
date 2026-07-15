@@ -59,8 +59,9 @@ let updateProcessState = {
  * Single-flow update process: Download → Install → Restart
  * Handles the entire update flow in one function with progress updates
  */
-export async function startUpdateProcess() {
+export async function startUpdateProcess(options = {}) {
   debugLog?.info("🚀 Starting complete update process...", { module: 'system-operations', function: 'startUpdateProcess' });
+  const fileOperations = options.fileOperations || window.secureElectronAPI?.fileOperations;
   
   try {
     // Set coordination state
@@ -76,12 +77,12 @@ export async function startUpdateProcess() {
       installBtn.textContent = 'Starting download...';
     }
     
-    if (!window.secureElectronAPI?.fileOperations?.downloadUpdate) {
+    if (!fileOperations?.downloadUpdate) {
       throw new Error('Download update not available');
     }
     
     // Start download
-    const downloadResult = await window.secureElectronAPI.fileOperations.downloadUpdate();
+    const downloadResult = await fileOperations.downloadUpdate();
     debugLog?.info("Download initiated:", { 
       module: 'system-operations', 
       function: 'startUpdateProcess',
@@ -169,7 +170,7 @@ export function handleDownloadProgress(progress) {
 /**
  * Handle update ready notification from the main process
  */
-export async function handleUpdateReady(version) {
+export async function handleUpdateReady(version, options = {}) {
   try {
     // Only proceed if we're in an active update process
     if (!updateProcessState.isActive) {
@@ -192,24 +193,26 @@ export async function handleUpdateReady(version) {
     });
     
     // Start the install countdown (increased to 5 seconds)
-    const countdownSeconds = 5;
+    const countdownSeconds = Number.isInteger(options.countdownSeconds) ? options.countdownSeconds : 5;
+    const countdownDelayMs = Number.isFinite(options.countdownDelayMs) ? options.countdownDelayMs : 1000;
+    const fileOperations = options.fileOperations || window.secureElectronAPI?.fileOperations;
     for (let i = countdownSeconds; i > 0; i--) {
       // Double-check we're still in ready state (prevent race conditions)
       if (!updateProcessState.isReady) return;
       
       installBtn.textContent = `Restarting in ${i} second${i > 1 ? 's' : ''}...`;
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, countdownDelayMs));
     }
     
     // Final message and install
     if (updateProcessState.isReady) {
       installBtn.textContent = 'Restarting now...';
       
-      if (!window.secureElectronAPI?.fileOperations?.installUpdate) {
+      if (!fileOperations?.installUpdate) {
         throw new Error('Install update not available');
       }
       
-      const result = await window.secureElectronAPI.fileOperations.installUpdate();
+      const result = await fileOperations.installUpdate();
       debugLog?.info("Install update result:", { 
         module: 'system-operations', 
         function: 'handleUpdateReady',

@@ -58,6 +58,10 @@ import * as launcherWindow from './modules/launcher-window.js';
 import { selfHealDirectoryPreferences } from './modules/preferences-self-heal.js';
 import { isSupportedAudioFile, copyFileStreaming } from './modules/file-utils.js';
 
+if (process.env.APP_TEST_MODE === '1') {
+  globalThis.__e2eShowAboutDialog = appSetup.showAboutDialog;
+}
+
 const appStartTime = Date.now();
 
 // Initialize Octokit for GitHub API (will be initialized after debugLog is available)

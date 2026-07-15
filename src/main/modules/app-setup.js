@@ -397,6 +397,7 @@ export {
   sendDeleteSong,
   sendEditSong,
   manageCategories,
+  showAboutDialog,
   setupWindowStateSaving,
   saveWindowState,
   loadWindowState
@@ -416,6 +417,7 @@ export default {
   sendDeleteSong,
   sendEditSong,
   manageCategories,
+  showAboutDialog,
   setupWindowStateSaving,
   saveWindowState,
   loadWindowState
