@@ -17,10 +17,10 @@ const __dirname = path.dirname(__filename);
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
 test.describe('Hotkeys - save & load', () => {
-  let app; let page;
+  let app; let page; let suiteHotkeysDir;
 
   test.beforeAll(async () => {
-    ({ app, page } = await launchSeededApp(electron, 'hotkeys'));
+    ({ app, page, suiteHotkeysDir } = await launchSeededApp(electron, 'hotkeys'));
     
     // Ensure window is visible and focused for reliable input
     await app.evaluate(async ({ BrowserWindow }) => {
@@ -967,7 +967,7 @@ test.describe('Hotkeys - save & load', () => {
     console.log('✅ Tab name: Intros');
   });
 
-  test('save hotkeys to file', async () => {
+  test('save active tab hotkeys with song IDs and renamed tab', async () => {
     // 1) Do an empty search to get all songs
     const searchInput = page.locator('#omni_search');
     await searchInput.clear();
@@ -975,19 +975,12 @@ test.describe('Hotkeys - save & load', () => {
 
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 5000 });
-    
-    // Debug: Check what songs are in which positions
-    console.log('Checking song order in search results...');
-    for (let i = 0; i < 5; i++) {
-      const songText = await rows.nth(i).textContent();
-      console.log(`Row ${i}: ${songText}`);
-    }
-    
+
     // 2) Click on Tab 2
     const tab2 = page.locator('#hotkey_tabs a[href="#hotkeys_list_2"]');
     await tab2.click();
     await expect(tab2).toHaveClass(/active/);
-    
+
     // 3) Drag Got The Time to F1 (song ID 1001) - find it by searching for "Anthrax"
     const gotTheTimeRow = rows.filter({ hasText: 'Anthrax' }).first();
     const activeTab2 = page.locator('#hotkeys_list_2');
@@ -1019,144 +1012,32 @@ test.describe('Hotkeys - save & load', () => {
     await expect(renameInput).not.toBeVisible();
 
     await expect(tab2).toHaveText('Testing');
-    
-    // 7) Override the file picker to specify save location
-    const hotkeyDir = await page.evaluate(async () => {
-      if (window.secureElectronAPI?.store?.get) {
-        const result = await window.secureElectronAPI.store.get('hotkey_directory');
-        return result?.success ? result.value : null;
-      }
-      return null;
-    });
-    
-    if (!hotkeyDir) {
-      throw new Error('Could not retrieve hotkey directory from store');
-    }
-    
-    const saveFilePath = path.join(hotkeyDir, 'testing.mrv');
-    
+
+    // 7) Override the file picker to save inside this suite's isolated directory
+    const saveFilePath = path.join(suiteHotkeysDir, 'testing.mrv');
+
     await app.evaluate(async ({ dialog }) => {
       const original = dialog.showSaveDialog;
-      // Save a restorer for later
-      // @ts-ignore
       globalThis.__restoreSaveDialog = () => (dialog.showSaveDialog = original);
     });
-    
+
     await app.evaluate(({ dialog }, filePath) => {
-      dialog.showSaveDialog = async () => {
-        return {
-          canceled: false,
-          filePath: filePath,
-        };
-      };
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath });
     }, saveFilePath);
-    
-    // 8) Click the Save button to trigger the save operation
-    const saveButton = page.locator('#hotkey-save-btn');
-    console.log('About to click save button...');
-    
-    // Debug: Verify Tab 2 is still active and hotkeys are visible
-    console.log('Verifying Tab 2 is active before saving...');
-    const tab2Active = await page.evaluate(() => {
-      const tab2 = document.querySelector('#hotkey_tabs a[href="#hotkeys_list_2"]');
-      const isActive = tab2 && tab2.classList.contains('active');
-      console.log('Tab 2 active status:', isActive);
-      
-      // Check what hotkeys are visible in Tab 2
-      const tab2Content = document.querySelector('#hotkeys_list_2');
-      if (tab2Content) {
-        const hotkeys = {};
-        for (let i = 1; i <= 12; i++) {
-          const hotkey = tab2Content.querySelector(`[id^="f${i}_hotkey"]`);
-          if (hotkey) {
-            const songSpan = hotkey.querySelector('.song');
-            const songId = hotkey.getAttribute('songid');
-            hotkeys[`f${i}`] = {
-              text: songSpan ? songSpan.textContent : '',
-              songId: songId || ''
-            };
-          }
-        }
-        console.log('Hotkeys in Tab 2:', hotkeys);
-        return { isActive, hotkeys };
-      }
-      return { isActive, hotkeys: null };
-    });
-    console.log('Tab 2 status before save:', tab2Active);
-    
-    await saveButton.click();
-    
-    // Debug: Check if saveHotkeyFile function is available and what it does
-    console.log('Checking saveHotkeyFile function...');
-    const saveFunctionInfo = await page.evaluate(() => {
-      if (window.moduleRegistry.hotkeys.saveHotkeyFile) {
-        console.log('saveHotkeyFile function is available');
-        return { available: true, type: typeof window.moduleRegistry.hotkeys.saveHotkeyFile };
-      } else if (window.moduleRegistry?.hotkeys?.saveHotkeyFile) {
-        console.log('saveHotkeyFile available via moduleRegistry');
-        return { available: true, type: 'moduleRegistry', source: 'moduleRegistry.hotkeys.saveHotkeyFile' };
-      } else {
-        console.log('saveHotkeyFile function not found');
-        return { available: false };
-      }
-    });
-    console.log('Save function info:', saveFunctionInfo);
-    
-    // 9) Wait for the file to be saved by checking the directory
+
+    // 8) Save and wait for the file to be written
+    await page.locator('#hotkey-save-btn').click();
     await expect.poll(() => fs.existsSync(saveFilePath), { timeout: 10000 }).toBe(true);
 
-    // Debug: Check if the file exists and list directory contents
-    console.log('Checking if file was saved...');
-    const directoryContents = fs.readdirSync(hotkeyDir);
-    
-    if (directoryContents) {
-      console.log('Files in hotkey directory:', directoryContents);
-      const testingFile = directoryContents.find(f => f.includes('testing.mrv'));
-      if (testingFile) {
-        console.log('✅ testing.mrv file found:', testingFile);
-      } else {
-        console.log('❌ testing.mrv file not found');
-      }
-    } else {
-      console.log('❌ Could not read directory contents');
-    }
-    
-    // 10) Read the file back from disk to verify content
-    console.log('Attempting to read file:', saveFilePath);
-    
+    // 9) Require the saved file to retain all assignments and the renamed tab
     const fileContent = fs.readFileSync(saveFilePath, 'utf8');
-    
-    console.log('File content result:', fileContent);
-    
-    // 11) Verify the file content matches expected format
-    // NOTE: There appears to be a bug in the saveHotkeyFile function
-    // The function is called but doesn't save the song IDs to the file
-    // The hotkeys are correctly assigned in the DOM (as verified above)
-    // but the save function only saves empty hotkey assignments
-    
-    console.log('⚠️ BUG DETECTED: saveHotkeyFile function is not saving song IDs');
-    console.log('Expected format: f1::1001, f5::1004, f8::1005');
-    console.log('Actual file content:', fileContent);
-    
-    // For now, verify that the file was created and has the basic structure
-    expect(fileContent).toContain('f1::');
-    expect(fileContent).toContain('f5::');
-    expect(fileContent).toContain('f8::');
+    expect(fileContent).toContain('f1::1001');
+    expect(fileContent).toContain('f5::1004');
+    expect(fileContent).toContain('f8::1005');
     expect(fileContent).toContain('tab_name::Testing');
-    
-    // TODO: Fix the saveHotkeyFile function to properly save song IDs
-    // The function should read the songid attributes from the DOM elements
-    // and save them to the file in the format: f1::1001, f5::1004, f8::1005
-    
-    // 12) Restore the original dialog
+
+    // 10) Restore the original dialog
     await app.evaluate(() => { globalThis.__restoreSaveDialog?.(); });
-    
-    console.log('✅ Successfully saved hotkeys to file');
-    console.log('✅ F1: Got The Time (1001)');
-    console.log('✅ F5: We Are Family (1004)');
-    console.log('✅ F8: Eat It (1005)');
-    console.log('✅ Tab name: Testing');
-    console.log('✅ File format matches expected structure');
   });
 
   test('tab isolation bug - F1 key and double-click should respect active tab', async () => {
