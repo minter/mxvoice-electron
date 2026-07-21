@@ -190,7 +190,7 @@
     "music-metadata": "11.14.0",
     "n-readlines": "^3.4.1",
     "node-sqlite3-wasm": "^0.8.59",
-    "posthog-node": "^5.45.2",
+    "posthog-node": "^5.46.0",
     "uuid": "^14.0.1",
     "wavesurfer.js": "^7.12.11"
   },
