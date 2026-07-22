@@ -67,7 +67,7 @@ When adding user-facing features, add tour steps to `src/renderer/modules/whats-
 - `npm run test:unit` / `npx vitest run` — run unit tests
 - `npm run test:unit:coverage` — run unit tests and enforce required coverage thresholds
 - `npm run test:no-skips` — reject skipped or fixme tests anywhere under `tests/`
-- `env -u ELECTRON_RUN_AS_NODE npm test` — run E2E tests in parallel (4 local workers by default); on macOS/Linux, Electron cannot launch its GUI if `ELECTRON_RUN_AS_NODE` is inherited from an IDE
+- `env -u ELECTRON_RUN_AS_NODE E2E_BACKGROUND=1 npm test` — run E2E tests in parallel (4 local workers by default). On macOS, ALWAYS set `E2E_BACKGROUND=1` (or use `npm run test:background`) so app windows stay hidden and never steal focus from the developer. On macOS/Linux, Electron cannot launch its GUI if `ELECTRON_RUN_AS_NODE` is inherited from an IDE
 - `env -u ELECTRON_RUN_AS_NODE PWWORKERS=<n> npm test` — override local E2E parallelism; use `PWWORKERS=1` only when diagnosing timing-sensitive behavior
 - `npx eslint src/` — lint source files (not in CI)
 - `npm run build` — package app via electron-builder
@@ -81,7 +81,7 @@ When adding user-facing features, add tour steps to `src/renderer/modules/whats-
 - **Two independent gates** — Vitest coverage does not replace Playwright. Unit coverage protects deterministic logic and failure paths; macOS/Windows E2E protects the real Electron/process/DOM boundary.
 - **Unit tests** (Vitest): `tests/unit/renderer/` and `tests/unit/main/`. Mock `window.secureElectronAPI` and `window.debugLog` in test setup.
 - **E2E tests** (Playwright): `tests/e2e/seeded/` for tests with pre-populated data. Use `launchSeededApp(electron, 'suite-name')` and `waitForAppReady(page, app)` from `tests/utils/seeded-launch.js`.
-- **Local E2E invocation** — on macOS/Linux, run `env -u ELECTRON_RUN_AS_NODE npm test`. The default four-worker run is parallel-safe because every suite receives an isolated user-data directory. If the execution environment restricts GUI processes, run the command outside that restricted sandbox; sandboxed Electron launches can abort with `SIGABRT`/`kill EPERM` before tests execute.
+- **Local E2E invocation** — on macOS/Linux, run `env -u ELECTRON_RUN_AS_NODE E2E_BACKGROUND=1 npm test`. On macOS, background mode is the default way to run locally: it hides the Dock icon and keeps all app windows hidden so the run never steals focus (Electron has no true headless mode; offscreen positioning does not work because macOS constrains shown windows back onscreen). Drop `E2E_BACKGROUND=1` only when visually debugging a failure — background-mode failure screenshots/videos may be blank. The default four-worker run is parallel-safe because every suite receives an isolated user-data directory. If the execution environment restricts GUI processes, run the command outside that restricted sandbox; sandboxed Electron launches can abort with `SIGABRT`/`kill EPERM` before tests execute.
 - **Test isolation** — main process checks `APP_TEST_MODE=1` or `E2E_USER_DATA_DIR` env var and overrides `userData` path before Store creation.
 - Test files in `tests/` are eslint-ignored by config — this is expected.
 

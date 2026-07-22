@@ -42,6 +42,13 @@ if (process.env.APP_TEST_MODE === '1' || E2E_USER_DATA_DIR) {
     app.commandLine.appendSwitch('use-mock-keychain');
     app.commandLine.appendSwitch('password-store', 'basic');
   }
+
+  // E2E background mode: run as an accessory app (no Dock icon, no Cmd-Tab
+  // entry) so test windows never activate or steal focus from whatever the
+  // developer is doing while the suite runs.
+  if (process.env.E2E_BACKGROUND === '1' && process.platform === 'darwin') {
+    app.dock?.hide();
+  }
 }
 
 // Import main process modules

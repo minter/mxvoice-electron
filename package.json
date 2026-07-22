@@ -35,6 +35,7 @@
     "dist": "electron-builder",
     "postinstall": "electron-builder install-app-deps",
     "test": "npm run build:preload && playwright test",
+    "test:background": "E2E_BACKGROUND=1 npm test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",

@@ -108,14 +108,22 @@ export async function launchSeededApp(electron, suffix = '') {
  * Replaces arbitrary waitForTimeout calls in beforeAll blocks.
  */
 export async function waitForAppReady(page, app) {
-  // Ensure window is visible and focused
-  await app.evaluate(async ({ BrowserWindow }) => {
+  // Ensure window is visible; in background mode (E2E_BACKGROUND=1) never
+  // focus or activate it so the suite doesn't steal focus from the developer.
+  const background = process.env.E2E_BACKGROUND === '1';
+  await app.evaluate(async ({ BrowserWindow }, background) => {
     const win = BrowserWindow.getAllWindows()[0];
-    win.show();
-    if (win.isMinimized()) win.restore();
-    win.focus();
-  });
-  await page.bringToFront();
+    if (background) {
+      win.showInactive();
+    } else {
+      win.show();
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  }, background);
+  if (!background) {
+    await page.bringToFront();
+  }
   await page.click('body');
   await page.waitForLoadState('domcontentloaded');
 
