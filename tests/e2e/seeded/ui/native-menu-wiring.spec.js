@@ -49,10 +49,14 @@ test.describe('Native menu wiring', () => {
   async function closeModal(selector) {
     const modal = page.locator(selector);
     if (await modal.isVisible().catch(() => false)) {
-      const close = modal.locator('.btn-close').first();
-      if (await close.isVisible().catch(() => false)) await close.click();
-      else await page.keyboard.press('Escape');
-      await expect(modal).not.toBeVisible({ timeout: 5000 });
+      // Bootstrap ignores hide() while the fade-in transition is running, so a
+      // single close click can be silently swallowed. Retry until it sticks.
+      await expect(async () => {
+        const close = modal.locator('.btn-close').first();
+        if (await close.isVisible().catch(() => false)) await close.click();
+        else await page.keyboard.press('Escape');
+        await expect(modal).not.toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 10000 });
     }
     await clearModalBackdrop(page);
   }
