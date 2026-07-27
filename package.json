@@ -207,7 +207,7 @@
     "eslint": "^10.7.0",
     "globals": "^17.7.0",
     "node-abi": "4.33.0",
-    "playwright": "^1.61.1",
+    "playwright": "^1.62.0",
     "vitest": "^4.1.10"
   },
   "engines": {
