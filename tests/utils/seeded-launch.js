@@ -124,7 +124,10 @@ export async function waitForAppReady(page, app) {
   if (!background) {
     await page.bringToFront();
   }
-  await page.click('body');
+  // Click a neutral corner point, never the default element center — the
+  // window center can land on a search-result row, selecting it and enabling
+  // playback controls before any test runs (broke CI on macOS image 20260720).
+  await page.click('body', { position: { x: 1, y: 1 } });
   await page.waitForLoadState('domcontentloaded');
 
   // Wait for the app's module registry to be ready
