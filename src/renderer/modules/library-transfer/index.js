@@ -257,18 +257,21 @@ async function startImport() {
       return;
     }
 
-    // Hide validation modal before showing error or confirmation
-    if (validationModalShown) {
-      const { hideModal } = await import('../ui/bootstrap-adapter.js');
-      hideModal('#libraryTransferModal');
-    }
-
     if (!result.success) {
-      // Show error in the progress modal
+      // Repurpose the progress modal (which may already be visible from the
+      // validation phase) for the error in place. Hiding and re-showing it
+      // races Bootstrap's hide transition, which swallows the show() and
+      // leaves the error modal hidden.
       resetProgressModal();
       await showProgressModal('Import Error');
       showError(result.error || 'Failed to validate the library file.');
       return;
+    }
+
+    // Hide validation modal before showing the confirmation modal
+    if (validationModalShown) {
+      const { hideModal } = await import('../ui/bootstrap-adapter.js');
+      hideModal('#libraryTransferModal');
     }
 
     // Store path and show confirmation modal with manifest details
