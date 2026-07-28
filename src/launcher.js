@@ -268,13 +268,15 @@ function setupEventListeners() {
   // Enter key in name field creates profile
   document.getElementById('profile-name-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
+      e.stopPropagation();
       createProfile();
     }
   });
-  
+
   // Enter key in description field creates profile
   document.getElementById('profile-description-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
+      e.stopPropagation();
       createProfile();
     }
   });
@@ -284,9 +286,11 @@ function setupEventListeners() {
     filterProfiles(e.target.value);
   });
   
-  // Enter key launches app if profile selected
+  // Enter key launches app if profile selected (but never while the
+  // create-profile modal is open — Enter there means "create profile")
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && selectedProfile) {
+    const modalOpen = document.getElementById('create-profile-modal')?.style.display === 'flex';
+    if (e.key === 'Enter' && selectedProfile && !modalOpen) {
       launchApp();
     }
   });

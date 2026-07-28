@@ -62,6 +62,22 @@ function createMainWindow({
     window.showInactive = () => {};
     window.focus = () => {};
   }
+  if (testMode) {
+    // Zero out Bootstrap's fade/collapse transitions during E2E runs.
+    // Bootstrap ignores Modal.hide() while a fade-in transition is still
+    // running, so a close click issued right after the modal becomes visible
+    // can be silently swallowed — a race that CI runner timing changes keep
+    // re-exposing. Scoped to Bootstrap classes only: the app's animateCSS
+    // helper depends on real animationend events from animate.css.
+    window.webContents.on('did-finish-load', () => {
+      window.webContents.insertCSS(
+        '.fade, .collapsing, .modal.fade .modal-dialog {' +
+          'transition-duration: 0s !important;' +
+          'transition-delay: 0s !important;' +
+        '}'
+      );
+    });
+  }
   window.loadFile(indexPath);
   window.once('ready-to-show', () => {
     autoUpdater?.checkForUpdatesAndNotify();

@@ -5,8 +5,29 @@
  */
 
 /**
+ * Hide a dynamically created dialog and remove its element from the DOM.
+ * Removal happens on 'hidden.bs.modal' rather than a fixed timer so the
+ * element is gone as soon as Bootstrap finishes hiding — a timer leaves a
+ * window where a newly opened dialog coexists with the old element.
+ */
+function hideAndRemoveModal(modal) {
+  const instance = bootstrap.Modal.getOrCreateInstance(modal);
+  const removeModal = () => { modal.remove(); };
+  if (modal.classList.contains('show')) {
+    modal.addEventListener('hidden.bs.modal', removeModal, { once: true });
+    instance.hide();
+    // Safety net in case 'hidden.bs.modal' never fires
+    setTimeout(removeModal, 1000);
+  } else {
+    // Already hidden (e.g. dismissed via backdrop or Esc)
+    instance.hide();
+    removeModal();
+  }
+}
+
+/**
  * Custom confirmation dialog
- * 
+ *
  * @param {string} message - The confirmation message
  * @param {string} title - The dialog title (default: 'Confirm')
  * @returns {Promise<boolean>} - Promise that resolves to true if confirmed, false if cancelled
@@ -43,13 +64,7 @@ export function customConfirm(message, title = 'Confirm') {
 
     const cleanup = () => {
       // Use Bootstrap 5 API to hide and remove
-      const instance = bootstrap.Modal.getOrCreateInstance(modal);
-      instance.hide();
-      setTimeout(() => {
-        if (document.body.contains(modal)) {
-          document.body.removeChild(modal);
-        }
-      }, 200);
+      hideAndRemoveModal(modal);
     };
 
     confirmBtn.addEventListener('click', () => {
@@ -151,13 +166,7 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
     let hasResolved = false;
     const cleanup = () => {
       // Hide and remove using Bootstrap 5 API
-      const instance = bootstrap.Modal.getOrCreateInstance(modal);
-      instance.hide();
-      setTimeout(() => {
-        if (document.body.contains(modal)) {
-          document.body.removeChild(modal);
-        }
-      }, 200);
+      hideAndRemoveModal(modal);
     };
     const safeResolve = (value) => {
       if (hasResolved) return;
@@ -270,13 +279,7 @@ export function customAlert(message, title = 'Alert') {
 
     let hasResolved = false;
     const cleanup = () => {
-      const instance = bootstrap.Modal.getOrCreateInstance(modal);
-      instance.hide();
-      setTimeout(() => {
-        if (document.body.contains(modal)) {
-          document.body.removeChild(modal);
-        }
-      }, 200);
+      hideAndRemoveModal(modal);
     };
     
     const safeResolve = () => {

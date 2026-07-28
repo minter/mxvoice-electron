@@ -7,6 +7,10 @@ function createBrowserWindowMock() {
     constructor(options) {
       this.options = options;
       this.loadFile = vi.fn();
+      this.webContents = {
+        on: vi.fn((event, handler) => { this.finishLoadHandler = handler; }),
+        insertCSS: vi.fn()
+      };
       this.once = vi.fn((event, handler) => { this.readyHandler = handler; });
       this.isDestroyed = () => false;
       this.maximize = vi.fn();
@@ -66,5 +70,28 @@ describe('main window factory', () => {
       iconPath: '', preloadPath: '', indexPath: '', testMode: true
     });
     expect(instances[0].options.show).toBe(false);
+  });
+
+  it('disables CSS transitions in test mode', () => {
+    const { BrowserWindow, instances } = createBrowserWindowMock();
+    createMainWindow({
+      BrowserWindow,
+      screen: { getAllDisplays: () => [] },
+      iconPath: '', preloadPath: '', indexPath: '', testMode: true
+    });
+    instances[0].finishLoadHandler();
+    expect(instances[0].webContents.insertCSS).toHaveBeenCalledWith(
+      expect.stringContaining('transition-duration: 0s')
+    );
+  });
+
+  it('does not inject transition-disabling CSS outside test mode', () => {
+    const { BrowserWindow, instances } = createBrowserWindowMock();
+    createMainWindow({
+      BrowserWindow,
+      screen: { getAllDisplays: () => [] },
+      iconPath: '', preloadPath: '', indexPath: ''
+    });
+    expect(instances[0].webContents.on).not.toHaveBeenCalled();
   });
 });
