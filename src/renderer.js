@@ -585,13 +585,26 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       if (!moduleRegistry.search?.performLiveSearch) {
         throw new Error('Search module cannot perform the initial search');
       }
-      window.logInfo('Loading initial search results...');
-      await moduleRegistry.search.performLiveSearch('');
-      window.logInfo('Initial search results loaded successfully');
+      // If a search term arrived before initialization finished (fast user,
+      // E2E test), showing all songs here would overwrite their results.
+      const pendingTerm = (document.getElementById('omni_search')?.value || '').trim();
+      if (pendingTerm) {
+        window.logInfo('Skipping initial search results - a search term is already present');
+      } else {
+        window.logInfo('Loading initial search results...');
+        await moduleRegistry.search.performLiveSearch('');
+        window.logInfo('Initial search results loaded successfully');
+      }
 
       window.logInfo('Module-dependent functions called successfully!');
     } catch (error) {
       window.logError('Error calling module-dependent functions', error);
+    }
+
+    // The initial-search phase has settled (ran, was skipped, or failed);
+    // E2E readiness checks key on this to avoid racing app initialization.
+    if (window.electronTest?.isE2E) {
+      window.__e2eInitialSearchSettled = true;
     }
 
     // Auto-trigger What's New tour if applicable
@@ -720,6 +733,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     const handlersAttached = await eventCoordination.attachEventHandlers();
     if (!handlersAttached) throw new Error('Event handlers failed to attach');
     window.logInfo('All event handlers attached via event coordination module');
+
+    if (window.electronTest?.isE2E) {
+      window.__e2eEventHandlersAttached = true;
+    }
 
     // Hotkeys module is now handled by EventCoordination system
     // No manual initialization needed

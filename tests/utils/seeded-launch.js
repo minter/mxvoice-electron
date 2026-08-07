@@ -130,9 +130,14 @@ export async function waitForAppReady(page, app) {
   await page.click('body', { position: { x: 1, y: 1 } });
   await page.waitForLoadState('domcontentloaded');
 
-  // Wait for the app's module registry to be ready
+  // Wait for the app's module registry to be ready, event handlers to be
+  // attached, and the initial-search phase to settle. The last two run in
+  // separate async flows from module loading, so the registry alone doesn't
+  // guarantee the app will respond to (or not clobber) test interactions.
   await page.waitForFunction(
-    () => !!window.moduleRegistry,
+    () => !!window.moduleRegistry &&
+          window.__e2eEventHandlersAttached === true &&
+          window.__e2eInitialSearchSettled === true,
     { timeout: 15000 }
   );
 }

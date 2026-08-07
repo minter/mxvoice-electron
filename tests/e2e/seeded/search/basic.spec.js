@@ -1,5 +1,5 @@
 import { _electron as electron, test, expect } from '@playwright/test';
-import { launchSeededApp, closeApp, performEmptySearch } from '../../../utils/seeded-launch.js';
+import { launchSeededApp, closeApp, performEmptySearch, waitForAppReady } from '../../../utils/seeded-launch.js';
 import { TEST_CONFIG } from '../../../config/test-environment.js';
 
 test.describe('Search - basic', () => {
@@ -7,6 +7,7 @@ test.describe('Search - basic', () => {
 
   test.beforeAll(async () => {
     ({ app, page } = await launchSeededApp(electron, 'search'));
+    await waitForAppReady(page, app);
   });
 
   test.afterAll(async () => {
@@ -112,10 +113,26 @@ test.describe('Search - basic', () => {
     // Second toggle (revert)
     console.log('Triggering second menu item click to revert...');
     await triggerMenuItem();
-    
+
     // Wait for the attribute to revert
     await expect(btn).toHaveAttribute('aria-expanded', before, { timeout: 5000 });
     console.log(`✅ aria-expanded reverted to ${before}`);
+
+    // Wait for the panel's actual visibility to revert too. searchData()
+    // routes by panel visibility, so a still-collapsing panel makes later
+    // basic-search tests run in advanced mode and return every song.
+    await expect
+      .poll(async () => {
+        return await page.evaluate(() => {
+          const el = document.querySelector('#advanced-search');
+          if (!el) return false;
+          const cs = getComputedStyle(el), r = el.getBoundingClientRect();
+          return cs.display !== 'none' && cs.visibility !== 'hidden' &&
+                 parseFloat(cs.opacity || '1') > 0 && r.width > 0 && r.height > 0 &&
+                 el.getClientRects().length > 0;
+        });
+      }, { timeout: 5000 })
+      .toBe(before === 'true');
   });
   
     

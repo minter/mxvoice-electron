@@ -11,6 +11,7 @@ import sharedState from '../shared-state.js';
 import { getAdvancedSearchValues } from './search-form-utils.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 import { secureDatabase } from '../adapters/secure-adapter.js';
+import { scaleScrollable } from '../utils/index.js';
 
 // Import debug logger
 let debugLog = null;
