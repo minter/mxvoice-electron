@@ -3,7 +3,7 @@
  *
  * Strategy: create a real temp directory structure mimicking userData,
  * mock electron/store, and exercise export/import/validate end-to-end
- * using the real archiver and extract-zip libraries.
+ * using the real archiver and yauzl libraries.
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
 import fs from 'fs';
