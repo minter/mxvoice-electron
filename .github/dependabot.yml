@@ -3,8 +3,15 @@ updates:
 - package-ecosystem: npm
   directory: "/"
   schedule:
-    interval: daily
+    interval: weekly
+    day: monday
     time: "10:00"
+  groups:
+    weekly-batch:
+      patterns:
+      - "*"
+  cooldown:
+    default-days: 3
   versioning-strategy: increase
   open-pull-requests-limit: 10
   ignore:
@@ -17,3 +24,15 @@ updates:
     versions:
     - 4.3.3
     - 4.3.4
+- package-ecosystem: github-actions
+  directory: "/"
+  schedule:
+    interval: weekly
+    day: monday
+    time: "10:00"
+  groups:
+    weekly-batch:
+      patterns:
+      - "*"
+  cooldown:
+    default-days: 3
