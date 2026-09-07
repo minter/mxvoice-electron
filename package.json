@@ -190,7 +190,7 @@
     "music-metadata": "11.15.0",
     "n-readlines": "^3.4.1",
     "node-sqlite3-wasm": "^0.8.60",
-    "posthog-node": "^5.51.4",
+    "posthog-node": "^5.51.6",
     "uuid": "^14.0.2",
     "wavesurfer.js": "^7.12.11",
     "yauzl": "^3.4.0"
@@ -198,17 +198,17 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.0",
     "cross-env": "^10.1.0",
-    "electron": "^44.0.0",
+    "electron": "^44.2.0",
     "electron-builder": "26.15.3",
     "electron-reload": "^1.5.0",
     "esbuild": "^0.28.2",
     "eslint": "^10.9.1",
-    "globals": "^17.11.0",
-    "node-abi": "4.34.0",
+    "globals": "^17.12.0",
+    "node-abi": "4.35.0",
     "playwright": "^1.62.1",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.0"
   },
   "engines": {
     "node": ">=22.12.0"
