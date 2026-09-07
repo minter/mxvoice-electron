@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-globalThis.window={secureElectronAPI:{},logInfo:vi.fn(),logError:vi.fn(),logWarn:vi.fn(),logDebug:vi.fn()};globalThis.performance={mark:vi.fn(),measure:vi.fn()};
+globalThis.window={secureElectronAPI:{},logInfo:vi.fn(),logError:vi.fn(),logWarn:vi.fn(),logDebug:vi.fn()};globalThis.performance={now:()=>Date.now(),mark:vi.fn(),measure:vi.fn()};
 const {AppInitialization}=await import('../../../src/renderer/modules/app-initialization/index.js');
 describe('app initialization coordinator',()=>{
 it('runs initialization stages in order and records completion',async()=>{const app=new AppInitialization();const order=[];app.initializeDebugLogger=vi.fn(async()=>order.push('debug'));app.initializeEnvironment=vi.fn(async()=>order.push('environment'));app.initializeSharedState=vi.fn(async()=>order.push('state'));app.preloadInitialData=vi.fn(async()=>order.push('data'));await expect(app.initialize()).resolves.toBe(true);expect(order).toEqual(['debug','environment','state','data']);expect(app.isInitialized()).toBe(true);});
