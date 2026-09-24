@@ -68,6 +68,26 @@ describe('update indicator', () => {
     expect(dispatched).toHaveLength(0);
   });
 
+  it('restores a pending update after a reload by asking the main process', async () => {
+    const restoredButton = fakeButton();
+    const electronAPI = { fileOperations: { getPendingUpdate: vi.fn(async () => ({ success: true, data: { name: '4.3.3', notes: '<p>n</p>' } })) } };
+
+    setupUpdateIndicator({ documentTarget: { getElementById: () => restoredButton }, windowTarget: new EventTarget(), electronAPI });
+
+    await vi.waitFor(() => expect(restoredButton.classList.contains('d-none')).toBe(false));
+    expect(restoredButton.label.textContent).toBe('Update 4.3.3');
+  });
+
+  it('stays hidden when the main process has no pending update', async () => {
+    const hiddenButton = fakeButton();
+    const getPendingUpdate = vi.fn(async () => ({ success: true, data: null }));
+
+    setupUpdateIndicator({ documentTarget: { getElementById: () => hiddenButton }, windowTarget: new EventTarget(), electronAPI: { fileOperations: { getPendingUpdate } } });
+    await vi.waitFor(() => expect(getPendingUpdate).toHaveBeenCalled());
+
+    expect(hiddenButton.classList.contains('d-none')).toBe(true);
+  });
+
   it('is a no-op when the button is missing from the page', () => {
     expect(() => setupUpdateIndicator({ documentTarget: { getElementById: () => null }, windowTarget: new EventTarget() })).not.toThrow();
   });

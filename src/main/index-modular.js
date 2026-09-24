@@ -69,6 +69,7 @@ import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-chan
 import { describeUpdateError } from './modules/update-analytics.js';
 import { decideUpdateNotice, runBackgroundCheck, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
 import { trackProfileSwitch } from './modules/profile-switch-analytics.js';
+import { quietlyAnnouncedVersion, recordAvailableUpdate, recordDownloadedUpdate } from './modules/pending-update.js';
 
 if (process.env.APP_TEST_MODE === '1') {
   globalThis.__e2eShowAboutDialog = appSetup.showAboutDialog;
@@ -811,7 +812,7 @@ const createWindow = async () => {
       windowOptions: windowOptions
     });
 
-    mainWindow = appSetup.createWindow({ ...windowOptions, updateState });
+    mainWindow = appSetup.createWindow(windowOptions);
 
     // Initialize modules with dependencies AFTER mainWindow is created
     await initializeModules();
@@ -946,13 +947,26 @@ function setupApp() {
   autoUpdater.on('update-available', (updateInfo) => {
     updateState.downloaded = false;
     const background = !!updateState.backgroundCheck;
+    const windowAvailable = !!mainWindow && !mainWindow.isDestroyed();
     const notice = decideUpdateNotice({
       version: updateInfo.version,
       background,
-      lastQuietVersion: updateState.lastQuietVersion ?? null,
-      windowAvailable: !!mainWindow && !mainWindow.isDestroyed(),
+      lastQuietVersion: quietlyAnnouncedVersion(updateState),
+      windowAvailable,
     });
-    if (notice === 'none') return;
+    // Pass release notes to renderer for sanitization
+    // GitHub provides HTML in releaseNotes, which will be sanitized by DOMPurify in the renderer
+    const releaseNotesHtml = `<h1>Version ${updateInfo.releaseName}</h1>` + (updateInfo.releaseNotes || '');
+    if (notice === 'none') {
+      // macOS keeps running with the window closed: remember the update so the
+      // next window's indicator restores it (it asks for the pending update)
+      if (background && !windowAvailable) {
+        recordAvailableUpdate(updateState, {
+          version: updateInfo.version, name: updateInfo.releaseName, notes: releaseNotesHtml, quiet: true,
+        });
+      }
+      return;
+    }
     analytics?.trackEvent('update_available', { offered_version: updateInfo.version, background });
     debugLog.info(`Update available: ${updateInfo.releaseName}`, { 
       function: "autoUpdater update-available",
@@ -968,16 +982,17 @@ function setupApp() {
       }
     });
     
-    // Pass release notes to renderer for sanitization
-    // GitHub provides HTML in releaseNotes, which will be sanitized by DOMPurify in the renderer
-    const releaseNotes = updateInfo.releaseNotes || '';
-    const releaseNotesHtml = `<h1>Version ${updateInfo.releaseName}</h1>` + releaseNotes;
+    // Both paths record it, so a reload always restores the newest known update
+    recordAvailableUpdate(updateState, {
+      version: updateInfo.version,
+      name: updateInfo.releaseName,
+      notes: releaseNotesHtml,
+      quiet: notice === 'quiet',
+    });
 
     // Background checks run mid-session (possibly mid-show): never open the
     // modal, just show the quiet toolbar indicator
     if (notice === 'quiet') {
-      updateState.lastQuietVersion = updateInfo.version;
-      updateState.quietUpdate = { name: updateInfo.releaseName, notes: releaseNotesHtml };
       mainWindow.webContents.send('update_available_quiet', updateInfo.releaseName, releaseNotesHtml);
       return;
     }
@@ -1055,7 +1070,7 @@ function setupApp() {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    updateState.downloaded = true;
+    recordDownloadedUpdate(updateState, info?.version);
     analytics?.trackEvent('update_downloaded', { version: info?.version });
     try {
       // Send IPC event - ipc-bridge dispatches custom event in renderer

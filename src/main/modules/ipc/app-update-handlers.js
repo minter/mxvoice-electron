@@ -6,6 +6,7 @@
 import electron from 'electron';
 const { ipcMain, app } = electron;
 import ipcChannels from '../../../shared/ipc-channels.cjs';
+import { getPendingUpdateNotice } from '../pending-update.js';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
@@ -130,6 +131,7 @@ export function register(deps) {
 
       // Background update checks are skipped while this is set
       updateState.downloading = true;
+      updateState.downloadStartedAt = Date.now();
 
       // Download with timeout to prevent hangs
       // The IPC timeout does not cancel the transfer. Keep the guard until
@@ -158,6 +160,12 @@ export function register(deps) {
       clearTimeout(downloadTimeout);
     }
   });
+
+  // The renderer restores the quiet indicator after a reload by asking for this
+  ipcMain.handle(IPC.APP.GET_PENDING_UPDATE, async () => ({
+    success: true,
+    data: getPendingUpdateNotice(updateState),
+  }));
 
   // Stage 3: Install update (only if downloaded)
   ipcMain.handle(IPC.APP.INSTALL_UPDATE, async () => {

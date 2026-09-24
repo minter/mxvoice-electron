@@ -119,35 +119,5 @@ describe('main window factory', () => {
     expect(instances[0].webContents.insertCSS).not.toHaveBeenCalled();
   });
 
-  it('restores a quiet update after renderer reloads without another update check', () => {
-    const { BrowserWindow } = createBrowserWindowMock();
-    const updateState = {};
-    const autoUpdater = { checkForUpdatesAndNotify: vi.fn() };
-    const window = createMainWindow({
-      BrowserWindow, screen: { getAllDisplays: () => [] }, autoUpdater, updateState,
-      iconPath: '', preloadPath: '', indexPath: ''
-    });
-    const finishLoad = () => {
-      for (const [event, handler] of window.webContents.on.mock.calls) {
-        if (event === 'did-finish-load') handler();
-      }
-    };
-    finishLoad();
-    expect(window.webContents.send).not.toHaveBeenCalled();
-
-    updateState.quietUpdate = { name: '4.3.3', notes: '<h2>Release notes</h2>' };
-    finishLoad();
-    finishLoad();
-    expect(window.webContents.send.mock.calls).toEqual([
-      ['update_available_quiet', '4.3.3', '<h2>Release notes</h2>'],
-      ['update_available_quiet', '4.3.3', '<h2>Release notes</h2>'],
-    ]);
-    expect(autoUpdater.checkForUpdatesAndNotify).not.toHaveBeenCalled();
-
-    window.webContents.send.mockClear();
-    updateState.downloaded = true;
-    finishLoad();
-    expect(window.webContents.send).not.toHaveBeenCalled();
-  });
 
 });

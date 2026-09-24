@@ -55,6 +55,27 @@ describe('app update IPC handlers', () => {
     expect(backgroundDuringManualCheck).toBe(false);
   });
 
+  it('returns the pending update for the renderer to restore after a reload', async () => {
+    const { updateState } = setup({});
+    updateState.pendingUpdate = { version: '4.3.3', name: '4.3.3', notes: '<p>n</p>', shownQuietly: true };
+
+    await expect(invoke('get-pending-update')).resolves.toEqual({ success: true, data: { name: '4.3.3', notes: '<p>n</p>' } });
+
+    updateState.downloadedVersion = '4.3.3';
+    await expect(invoke('get-pending-update')).resolves.toEqual({ success: true, data: null });
+  });
+
+  it('records when a download starts so a hung transfer cannot block checks forever', async () => {
+    const autoUpdater = { downloadUpdate: vi.fn(() => new Promise(() => {})) };
+    const { updateState } = setup(autoUpdater);
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000);
+
+    invoke('download-update');
+
+    expect(updateState.downloadStartedAt).toBe(1_000_000);
+  });
+
   it('returns a wrapped error when the updater is unavailable', async () => {
     setup();
     await expect(invoke('check-for-update')).resolves.toEqual({

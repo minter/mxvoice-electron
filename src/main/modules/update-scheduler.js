@@ -11,6 +11,8 @@
  * @module update-scheduler
  */
 
+import { isDownloadGuardActive } from './pending-update.js';
+
 export const BACKGROUND_UPDATE_INTERVAL_MS = 12 * 60 * 60 * 1000;
 
 /**
@@ -37,8 +39,8 @@ export function decideUpdateNotice({ version, background, lastQuietVersion, wind
  *
  * @returns {Promise<boolean>} Whether a check was started
  */
-export async function runBackgroundCheck({ autoUpdater, updateState }) {
-  if (!autoUpdater || updateState.downloading || updateState.downloaded || updateState.backgroundCheck) {
+export async function runBackgroundCheck({ autoUpdater, updateState, now = Date.now }) {
+  if (!autoUpdater || isDownloadGuardActive(updateState, now()) || updateState.downloaded || updateState.backgroundCheck) {
     return false;
   }
   updateState.backgroundCheck = true;

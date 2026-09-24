@@ -2,7 +2,6 @@ function createMainWindow({
   BrowserWindow,
   screen,
   autoUpdater,
-  updateState = {},
   iconPath,
   preloadPath,
   indexPath,
@@ -79,14 +78,6 @@ function createMainWindow({
       );
     });
   }
-  // Renderer reloads (including Start a New Session) lose the toolbar state.
-  // Replay the pending notice without opening a modal or counting it again.
-  window.webContents.on('did-finish-load', () => {
-    if (updateState.quietUpdate && !updateState.downloaded) {
-      const { name, notes } = updateState.quietUpdate;
-      window.webContents.send('update_available_quiet', name, notes);
-    }
-  });
   window.loadFile(indexPath);
   window.once('ready-to-show', () => {
     // Failures are reported by the autoUpdater 'error' handler (update_failed);

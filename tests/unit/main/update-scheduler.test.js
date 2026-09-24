@@ -61,6 +61,14 @@ describe('runBackgroundCheck', () => {
     expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
   });
 
+  it('runs again once a download has hung for 30 minutes without settling', async () => {
+    const autoUpdater = { checkForUpdates: vi.fn(async () => {}) };
+    const updateState = { downloaded: false, downloading: true, downloadStartedAt: 0 };
+
+    await expect(runBackgroundCheck({ autoUpdater, updateState, now: () => 30 * 60 * 1000 })).resolves.toBe(true);
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledOnce();
+  });
+
   it('skips when there is no updater', async () => {
     await expect(runBackgroundCheck({ autoUpdater: null, updateState: {} })).resolves.toBe(false);
   });
