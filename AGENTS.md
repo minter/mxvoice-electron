@@ -49,6 +49,7 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 
 - **electron-updater + GitHub releases** — release notes fetched and sanitized via DOMPurify before display.
 - **Prerelease builds** — controlled by `EP_PRE_RELEASE` env var and per-profile `prerelease_updates` preference.
+- **Version prereleases as `X.Y.Z-beta.N`, never `-pre.N`** — installs with prereleases enabled are pinned to electron-updater's `beta` channel (`src/main/modules/update-channel.js`), which offers the newest stable *or* beta release. Any other prerelease id (e.g. `pre`) is a custom channel that only sees its own releases, which stranded `-pre` installs away from stable releases.
 
 ## Adding New Modules
 

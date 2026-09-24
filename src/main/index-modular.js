@@ -65,6 +65,7 @@ import * as launcherWindow from './modules/launcher-window.js';
 import { selfHealDirectoryPreferences } from './modules/preferences-self-heal.js';
 import { isSupportedAudioFile, copyFileStreaming } from './modules/file-utils.js';
 import { collectLibraryStats } from './modules/library-stats.js';
+import { configureUpdateChannel } from './modules/update-channel.js';
 
 if (process.env.APP_TEST_MODE === '1') {
   globalThis.__e2eShowAboutDialog = appSetup.showAboutDialog;
@@ -326,10 +327,8 @@ if (process.platform === "darwin" || process.platform === "win32") {
     
     // Check user preference for prerelease updates OR if currently running a pre-release version
     const userPrefersPrereleases = store.get('prerelease_updates') || false;
-    const isCurrentlyPrerelease = currentVersion.includes('-pre.') || currentVersion.includes('-beta') || currentVersion.includes('-alpha');
-    const shouldAllowPrereleases = userPrefersPrereleases || isCurrentlyPrerelease;
-    
-    autoUpdater.allowPrerelease = shouldAllowPrereleases;
+    const { allowPrerelease: shouldAllowPrereleases, isCurrentlyPrerelease } =
+      configureUpdateChannel(autoUpdater, { currentVersion, userPrefersPrereleases });
     
     debugLog.info(`Prerelease updates ${shouldAllowPrereleases ? 'enabled' : 'disabled'}`, { 
       function: "auto-updater setup",
@@ -843,10 +842,8 @@ function setupApp() {
   store.onDidChange('prerelease_updates', (newValue) => {
     if (autoUpdater) {
       const currentVersion = getTestVersion();
-      const isCurrentlyPrerelease = currentVersion.includes('-pre.') || currentVersion.includes('-beta') || currentVersion.includes('-alpha');
-      const shouldAllowPrereleases = newValue || isCurrentlyPrerelease;
-      
-      autoUpdater.allowPrerelease = shouldAllowPrereleases;
+      const { allowPrerelease: shouldAllowPrereleases, isCurrentlyPrerelease } =
+        configureUpdateChannel(autoUpdater, { currentVersion, userPrefersPrereleases: newValue });
       if (newValue && analytics) {
         analytics.trackEvent('auto_update_action', { action: 'prerelease_opted_in' });
       }
