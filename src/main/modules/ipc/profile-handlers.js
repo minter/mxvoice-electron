@@ -8,11 +8,12 @@ const { ipcMain, app } = electron;
 import path from 'path';
 import { promises as fsPromises } from 'fs';
 import * as profileManager from '../profile-manager.js';
+import { trackProfileSwitch } from '../profile-switch-analytics.js';
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { getCurrentProfile, getProfileDirectory, store, debugLog, getMainWindow } = deps;
+  const { getCurrentProfile, getProfileDirectory, store, debugLog, getMainWindow, analytics } = deps;
 
   // Profile handlers
   ipcMain.handle(IPC.PROFILE.GET_CURRENT, async () => {
@@ -256,6 +257,10 @@ export function register(deps) {
         });
       }
 
+      // app.exit() skips before-quit, so flush analytics first. Do it before
+      // closing the window: closing can trigger the quit path on Windows.
+      await analytics?.endSession();
+
       // Close main window and relaunch launcher
       const win = getMainWindow();
       if (win) {
@@ -393,6 +398,12 @@ export function register(deps) {
 
       // Set the target profile as the fallback so launcher will auto-select it
       store.set('auto-select-profile', profileName);
+
+      trackProfileSwitch({ analytics, fromProfile: currentProfile, toProfile: profileName, method: 'direct' });
+
+      // app.exit() skips before-quit, so flush analytics first. Do it before
+      // closing the window: closing can trigger the quit path on Windows.
+      await analytics?.endSession();
 
       // Close main window and relaunch launcher
       const win = getMainWindow();

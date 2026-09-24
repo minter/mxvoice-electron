@@ -6,7 +6,6 @@ function createAppLifecycle({
   onClosed,
   autoBackupTimer,
   analytics,
-  appStartTime,
   debugLog,
   platform = process.platform,
   environment = process.env
@@ -32,17 +31,7 @@ function createAppLifecycle({
     }
 
     autoBackupTimer?.stopAutoBackupTimer();
-    if (analytics) {
-      const sessionDuration = Math.floor((Date.now() - (appStartTime || Date.now())) / 1000);
-      analytics.trackEvent('app_closed', { session_duration_seconds: sessionDuration });
-      try {
-        await analytics.shutdown();
-      } catch (error) {
-        debugLog?.error('Analytics shutdown error', {
-          module: 'app-lifecycle', function: 'beforeQuit', error: error.message
-        });
-      }
-    }
+    await analytics?.endSession();
 
     shutdownComplete = true;
     app.quit();

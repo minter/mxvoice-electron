@@ -1,17 +1,12 @@
-// Track renderer errors via analytics
+// Track renderer errors via analytics (intentional aborts are ignored)
 window.addEventListener('error', (event) => {
-  window.secureElectronAPI?.analytics?.trackEvent?.('renderer_error', {
-    error_message: event.message,
-    stack_trace: event.error?.stack,
-  });
+  const report = buildRendererErrorReport(event.error, event.message);
+  if (report) window.secureElectronAPI?.analytics?.trackEvent?.('renderer_error', report);
 });
 
 window.addEventListener('unhandledrejection', (event) => {
-  const reason = event.reason;
-  window.secureElectronAPI?.analytics?.trackEvent?.('renderer_error', {
-    error_message: reason instanceof Error ? reason.message : String(reason),
-    stack_trace: reason instanceof Error ? reason.stack : undefined,
-  });
+  const report = buildRendererErrorReport(event.reason);
+  if (report) window.secureElectronAPI?.analytics?.trackEvent?.('renderer_error', report);
 });
 
 // Set window title based on platform (macOS HIG compliance)
@@ -46,6 +41,8 @@ if (document.readyState === 'loading') {
 // Import debug logger for centralized logging
 import initializeDebugLogger from './renderer/modules/debug-log/debug-logger.js';
 import setupMainProcessEventBridge from './renderer/modules/event-coordination/main-process-events.js';
+import { buildRendererErrorReport } from './renderer/modules/analytics/error-reporting.js';
+import { setupUpdateIndicator } from './renderer/modules/ui/update-indicator.js';
 import showAnalyticsBannerIfNeeded, {
   setupUpdateDeferralTracking
 } from './renderer/modules/analytics/consent-banner.js';
@@ -705,6 +702,7 @@ let eventCoordination = null;
 document.addEventListener('DOMContentLoaded', async function () {
   try {
     setupUpdateDeferralTracking({ electronAPI: window.secureElectronAPI });
+    setupUpdateIndicator();
 
     // Initialize DOM-dependent features from app-initialization module
     if (AppInitialization.isInitialized()) {

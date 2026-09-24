@@ -8,7 +8,8 @@ function createBrowserWindowMock() {
       this.options = options;
       this.loadFile = vi.fn();
       this.webContents = {
-        on: vi.fn((event, handler) => { this.finishLoadHandler = handler; }),
+        on: vi.fn(),
+        send: vi.fn(),
         insertCSS: vi.fn()
       };
       this.once = vi.fn((event, handler) => { this.readyHandler = handler; });
@@ -48,6 +49,24 @@ describe('main window factory', () => {
     expect(window.maximize).toHaveBeenCalledOnce();
   });
 
+  it('does not leave a failed update check as an unhandled rejection', async () => {
+    const { BrowserWindow } = createBrowserWindowMock();
+    const failure = Promise.reject(new Error('net::ERR_INTERNET_DISCONNECTED'));
+    const catchSpy = vi.spyOn(failure, 'catch');
+    const autoUpdater = { checkForUpdatesAndNotify: vi.fn(() => failure) };
+    const window = createMainWindow({
+      BrowserWindow,
+      screen: { getAllDisplays: () => [] },
+      autoUpdater,
+      iconPath: '', preloadPath: '', indexPath: ''
+    });
+
+    window.readyHandler();
+    await Promise.resolve();
+
+    expect(catchSpy).toHaveBeenCalledOnce();
+  });
+
   it('does not restore coordinates for a missing display', () => {
     const { BrowserWindow, instances } = createBrowserWindowMock();
     createMainWindow({
@@ -79,7 +98,9 @@ describe('main window factory', () => {
       screen: { getAllDisplays: () => [] },
       iconPath: '', preloadPath: '', indexPath: '', testMode: true
     });
-    instances[0].finishLoadHandler();
+    for (const [event, handler] of instances[0].webContents.on.mock.calls) {
+      if (event === 'did-finish-load') handler();
+    }
     expect(instances[0].webContents.insertCSS).toHaveBeenCalledWith(
       expect.stringContaining('transition-duration: 0s')
     );
@@ -92,6 +113,11 @@ describe('main window factory', () => {
       screen: { getAllDisplays: () => [] },
       iconPath: '', preloadPath: '', indexPath: ''
     });
-    expect(instances[0].webContents.on).not.toHaveBeenCalled();
+    for (const [event, handler] of instances[0].webContents.on.mock.calls) {
+      if (event === 'did-finish-load') handler();
+    }
+    expect(instances[0].webContents.insertCSS).not.toHaveBeenCalled();
   });
+
+
 });

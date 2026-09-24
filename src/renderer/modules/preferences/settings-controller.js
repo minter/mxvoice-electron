@@ -12,6 +12,7 @@ import {
   getPreference as getPreferenceViaAdapter
 } from './profile-preference-adapter.js';
 import { safeHideModal } from '../ui/bootstrap-helpers.js';
+import { TRACKED_PREFERENCE_KEYS, changedPreferenceKeys } from './preference-changes.js';
 
 // Import debug logger from global scope (renderer initializes it early)
 let debugLog = null;
@@ -88,10 +89,6 @@ function initializeSettingsController(options = {}) {
       formValues
     });
 
-    electronAPI?.analytics?.trackEvent?.('preferences_changed', {
-      setting_names: Object.keys(formValues),
-    });
-    
     if (!electronAPI?.store) {
       debugLog?.error('[PREFS-SAVE] Secure store API is unavailable', {
         function: 'savePreferences'
@@ -101,15 +98,15 @@ function initializeSettingsController(options = {}) {
 
       // Validate that critical directory preferences are not being cleared
       // Only save if the value is non-empty OR if it was already empty
-      const validateDirectory = async (key) => {
+      const readCurrentPreference = async (key) => {
         const current = await getPreferenceViaAdapter(key, electronAPI);
         return current?.success ? current.value : '';
       };
       
       const [currentDbDir, currentMusicDir, currentHotkeyDir] = await Promise.all([
-        validateDirectory('database_directory'),
-        validateDirectory('music_directory'),
-        validateDirectory('hotkey_directory')
+        readCurrentPreference('database_directory'),
+        readCurrentPreference('music_directory'),
+        readCurrentPreference('hotkey_directory')
       ]);
       
       const preservedDirectories = preserveDirectoryPreferences(formValues, {
@@ -128,6 +125,28 @@ function initializeSettingsController(options = {}) {
       };
 
       debugLog?.info("[PREFS-SAVE] Preferences to save", { preferences });
+
+      // Analytics must never block a save, so lookup failures are ignored
+      try {
+        // Directory values were read above; read only the remaining keys
+        const knownValues = {
+          database_directory: currentDbDir,
+          music_directory: currentMusicDir,
+          hotkey_directory: currentHotkeyDir,
+        };
+        const previousValues = Object.fromEntries(await Promise.all(
+          TRACKED_PREFERENCE_KEYS.map(async (key) => [
+            key,
+            key in knownValues ? knownValues[key] : await readCurrentPreference(key),
+          ])
+        ));
+        const changedKeys = changedPreferenceKeys(previousValues, preferences);
+        if (changedKeys.length) {
+          electronAPI?.analytics?.trackEvent?.('preferences_changed', { setting_names: changedKeys });
+        }
+      } catch (error) {
+        debugLog?.warn('[PREFS-SAVE] Could not compare preferences for analytics', { error: error.message });
+      }
       
       // Save all preferences (using adapter to route to profile or global as appropriate)
       // Profile preferences are saved atomically to avoid concurrent file overwrites.

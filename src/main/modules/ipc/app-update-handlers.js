@@ -6,6 +6,7 @@
 import electron from 'electron';
 const { ipcMain, app } = electron;
 import ipcChannels from '../../../shared/ipc-channels.cjs';
+import { getPendingUpdateNotice } from '../pending-update.js';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
@@ -51,6 +52,8 @@ export function register(deps) {
 
   ipcMain.handle(IPC.APP.RESTART, async () => {
     try {
+      // app.exit() skips before-quit, so flush analytics first
+      await analytics?.endSession();
       app.relaunch();
       app.exit();
       return { success: true };
@@ -93,6 +96,10 @@ export function register(deps) {
       updateState.downloaded = false;
       updateState.userApprovedInstall = false;
 
+      // electron-updater merges concurrent checks into one; if a background
+      // check is in flight, the user's request must still get the modal
+      updateState.backgroundCheck = false;
+
       const result = await autoUpdater.checkForUpdates();
       return {
         success: true,
@@ -111,6 +118,7 @@ export function register(deps) {
 
   // Stage 2: Download update (user-initiated)
   ipcMain.handle(IPC.APP.DOWNLOAD_UPDATE, async () => {
+    let downloadTimeout;
     try {
       debugLog.info('📥 Starting update download...', {
         module: 'ipc-handlers',
@@ -121,10 +129,18 @@ export function register(deps) {
         throw new Error('Auto updater not available');
       }
 
+      // Background update checks are skipped while this is set
+      updateState.downloading = true;
+      updateState.downloadStartedAt = Date.now();
+
       // Download with timeout to prevent hangs
-      const downloadPromise = autoUpdater.downloadUpdate();
+      // The IPC timeout does not cancel the transfer. Keep the guard until
+      // the actual download settles, including errors emitted after timeout.
+      const downloadPromise = Promise.resolve()
+        .then(() => autoUpdater.downloadUpdate())
+        .finally(() => { updateState.downloading = false; });
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Download timeout after 60 seconds')), 60000)
+        downloadTimeout = setTimeout(() => reject(new Error('Download timeout after 60 seconds')), 60000)
       );
 
       await Promise.race([downloadPromise, timeoutPromise]);
@@ -140,8 +156,16 @@ export function register(deps) {
         error: errorMessage
       });
       return { success: false, error: errorMessage };
+    } finally {
+      clearTimeout(downloadTimeout);
     }
   });
+
+  // The renderer restores the quiet indicator after a reload by asking for this
+  ipcMain.handle(IPC.APP.GET_PENDING_UPDATE, async () => ({
+    success: true,
+    data: getPendingUpdateNotice(updateState),
+  }));
 
   // Stage 3: Install update (only if downloaded)
   ipcMain.handle(IPC.APP.INSTALL_UPDATE, async () => {

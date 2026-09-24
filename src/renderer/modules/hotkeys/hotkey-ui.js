@@ -42,6 +42,11 @@ function hotkeyDrop(event, _options = {}) {
     this?.requestProfileStateSave?.();
   };
   
+  // assignHotkey returns false for a repeat, so duplicate drop listeners count once
+  if (song_id && this?.assignHotkey?.(target, song_id)) {
+    window.secureElectronAPI?.analytics?.trackEvent?.('hotkey_configured', { method: 'drag_drop' });
+  }
+
   if (this?.setLabelFromSongId) {
     // Call setLabelFromSongId and save after completion
     const result = this.setLabelFromSongId(song_id, target);
