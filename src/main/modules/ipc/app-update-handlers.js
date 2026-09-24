@@ -95,6 +95,10 @@ export function register(deps) {
       updateState.downloaded = false;
       updateState.userApprovedInstall = false;
 
+      // electron-updater merges concurrent checks into one; if a background
+      // check is in flight, the user's request must still get the modal
+      updateState.backgroundCheck = false;
+
       const result = await autoUpdater.checkForUpdates();
       return {
         success: true,

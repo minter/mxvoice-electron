@@ -8,7 +8,7 @@
 
 // Import shared state
 import sharedState from '../shared-state.js';
-import { getAdvancedSearchValues } from './search-form-utils.js';
+import { getAdvancedSearchValues, hasSearchCriteria } from './search-form-utils.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 import { secureDatabase } from '../adapters/secure-adapter.js';
 import { recordSearch } from '../analytics/search-tracker.js';
@@ -137,7 +137,7 @@ function performLiveSearch(searchTerm) {
   // Use named database operation for live search
     return secureDatabase.searchSongs(searchParams).then(result => {
       if (result.success) {
-        if (searchParams.searchTerm || searchParams.advancedFilters) {
+        if (hasSearchCriteria(searchParams)) {
           recordSearch({
             signature: JSON.stringify(searchParams),
             resultCount: result.data.length,

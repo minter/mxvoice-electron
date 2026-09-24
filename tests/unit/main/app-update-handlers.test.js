@@ -39,6 +39,18 @@ describe('app update IPC handlers', () => {
     expect(updateState).toMatchObject({ downloaded: false, userApprovedInstall: false });
   });
 
+  it('treats a manual check as user-initiated even while a background check is running', async () => {
+    let backgroundDuringManualCheck;
+    const autoUpdater = { checkForUpdates: vi.fn(async () => { backgroundDuringManualCheck = updateState.backgroundCheck; return {}; }) };
+    const { updateState } = setup(autoUpdater);
+    updateState.backgroundCheck = true;
+
+    await invoke('check-for-update');
+
+    // electron-updater merges concurrent checks, so the shared result must open the modal
+    expect(backgroundDuringManualCheck).toBe(false);
+  });
+
   it('returns a wrapped error when the updater is unavailable', async () => {
     setup();
     await expect(invoke('check-for-update')).resolves.toEqual({

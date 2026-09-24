@@ -128,8 +128,17 @@ function initializeSettingsController(options = {}) {
 
       // Analytics must never block a save, so lookup failures are ignored
       try {
+        // Directory values were read above; read only the remaining keys
+        const knownValues = {
+          database_directory: currentDbDir,
+          music_directory: currentMusicDir,
+          hotkey_directory: currentHotkeyDir,
+        };
         const previousValues = Object.fromEntries(await Promise.all(
-          TRACKED_PREFERENCE_KEYS.map(async (key) => [key, await readCurrentPreference(key)])
+          TRACKED_PREFERENCE_KEYS.map(async (key) => [
+            key,
+            key in knownValues ? knownValues[key] : await readCurrentPreference(key),
+          ])
         ));
         const changedKeys = changedPreferenceKeys(previousValues, preferences);
         if (changedKeys.length) {

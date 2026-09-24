@@ -20,9 +20,13 @@ export const BACKGROUND_UPDATE_INTERVAL_MS = 12 * 60 * 60 * 1000;
  * @param {string} params.version - Version offered by the updater
  * @param {boolean} params.background - Whether a background check found it
  * @param {string|null} params.lastQuietVersion - Version last announced quietly
+ * @param {boolean} [params.windowAvailable=true] - Whether a live main window can show it.
+ *   On macOS the app keeps running with its window closed; the version must stay
+ *   unannounced so the next check shows it once a window exists again.
  * @returns {'modal'|'quiet'|'none'}
  */
-export function decideUpdateNotice({ version, background, lastQuietVersion }) {
+export function decideUpdateNotice({ version, background, lastQuietVersion, windowAvailable = true }) {
+  if (!windowAvailable) return 'none';
   if (!background) return 'modal';
   return version === lastQuietVersion ? 'none' : 'quiet';
 }

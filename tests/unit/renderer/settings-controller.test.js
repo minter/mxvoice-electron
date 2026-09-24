@@ -68,6 +68,8 @@ describe('settings controller', () => {
     expect(electronAPI.analytics.trackEvent).toHaveBeenCalledWith('preferences_changed', {
       setting_names: ['music_directory', 'crossfade_seconds', 'screen_mode'],
     });
+    // Each directory preference is read once, not again for the comparison
+    expect(electronAPI.store.get.mock.calls.filter(([key]) => key === 'music_directory')).toHaveLength(1);
   });
 
   it('still saves when comparing preferences for analytics fails', async () => {

@@ -14,12 +14,17 @@ const OFFLINE_PATTERN =
 
 /**
  * @param {Error|undefined} error - Error emitted by electron-updater
- * @returns {{ error_code: string }|null} Event properties, or null to skip offline errors
+ * @param {Object} [context]
+ * @param {boolean} [context.downloading] - Whether an update download was in progress
+ * @returns {{ error_code: string, stage: 'check'|'download' }|null} Event properties,
+ *   or null to skip offline errors
  */
-export function describeUpdateError(error) {
+export function describeUpdateError(error, { downloading = false } = {}) {
   const code = typeof error?.code === 'string' ? error.code : null;
   if (OFFLINE_PATTERN.test(`${code ?? ''} ${error?.message ?? ''}`)) return null;
-  if (code) return { error_code: code };
-  if (error?.statusCode) return { error_code: `HTTP_${error.statusCode}` };
-  return { error_code: 'unknown' };
+  // The updater's 'error' event covers both checking and downloading
+  const stage = downloading ? 'download' : 'check';
+  if (code) return { error_code: code, stage };
+  if (error?.statusCode) return { error_code: `HTTP_${error.statusCode}`, stage };
+  return { error_code: 'unknown', stage };
 }

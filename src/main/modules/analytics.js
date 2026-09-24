@@ -20,6 +20,9 @@ const ERROR_EVENTS = new Set(['app_error', 'renderer_error']);
 const MAX_ERROR_EVENTS_PER_SESSION = 20;
 // Some messages (e.g. electron-updater HTTP errors) embed stacks and headers
 const MAX_ERROR_MESSAGE_LENGTH = 300;
+// Bound the final flush on exit: posthog-node defaults to 30s with retries,
+// which would stall quitting or switching profiles when offline
+const SESSION_END_FLUSH_TIMEOUT_MS = 3000;
 
 /**
  * Reduce an error message to its first line, truncated, so repeats group
@@ -156,9 +159,9 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessi
     return optedOut;
   }
 
-  async function shutdown() {
+  async function shutdown(timeoutMs) {
     if (client) {
-      await client.shutdown();
+      await client.shutdown(timeoutMs);
       client = null;
       initialized = false;
       debugLog.info('Analytics shut down', {
@@ -181,7 +184,7 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessi
         session_duration_seconds: Math.floor((Date.now() - sessionStartTime) / 1000),
       });
       try {
-        await shutdown();
+        await shutdown(SESSION_END_FLUSH_TIMEOUT_MS);
       } catch (error) {
         debugLog.error('Analytics shutdown error', {
           module: 'analytics', function: 'endSession', error: error.message,

@@ -10,17 +10,17 @@ function error(message, code) {
 describe('describeUpdateError', () => {
   it('reports the updater error code without the message', () => {
     const err = error('Cannot find latest.yml in the latest release artifacts (https://…): HttpError: 404', 'ERR_UPDATER_CHANNEL_FILE_NOT_FOUND');
-    expect(describeUpdateError(err)).toEqual({ error_code: 'ERR_UPDATER_CHANNEL_FILE_NOT_FOUND' });
+    expect(describeUpdateError(err)).toEqual({ error_code: 'ERR_UPDATER_CHANNEL_FILE_NOT_FOUND', stage: 'check' });
   });
 
   it('falls back to the HTTP status when there is no code', () => {
     const err = error('HttpError: 503');
     err.statusCode = 503;
-    expect(describeUpdateError(err)).toEqual({ error_code: 'HTTP_503' });
+    expect(describeUpdateError(err)).toEqual({ error_code: 'HTTP_503', stage: 'check' });
   });
 
   it('labels errors without a code or status as unknown', () => {
-    expect(describeUpdateError(error('something odd'))).toEqual({ error_code: 'unknown' });
+    expect(describeUpdateError(error('something odd'))).toEqual({ error_code: 'unknown', stage: 'check' });
   });
 
   it.each([
@@ -39,7 +39,12 @@ describe('describeUpdateError', () => {
     expect(describeUpdateError(error('request failed', 'ENOTFOUND'))).toBeNull();
   });
 
+  it('labels failures during a download as the download stage', () => {
+    const err = error('sha512 checksum mismatch', 'ERR_CHECKSUM_MISMATCH');
+    expect(describeUpdateError(err, { downloading: true })).toEqual({ error_code: 'ERR_CHECKSUM_MISMATCH', stage: 'download' });
+  });
+
   it('handles a missing error', () => {
-    expect(describeUpdateError(undefined)).toEqual({ error_code: 'unknown' });
+    expect(describeUpdateError(undefined)).toEqual({ error_code: 'unknown', stage: 'check' });
   });
 });

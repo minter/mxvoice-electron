@@ -291,6 +291,15 @@ describe('analytics module', () => {
       expect(mockCapture.mock.invocationCallOrder[0]).toBeLessThan(mockShutdown.mock.invocationCallOrder[0]);
     });
 
+    it('caps the final flush so an offline exit or profile switch cannot stall for 30s', async () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      await analytics.endSession();
+
+      expect(mockShutdown).toHaveBeenCalledWith(3000);
+    });
+
     it('only ends the session once when called from several exit paths', async () => {
       const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();

@@ -68,6 +68,7 @@ import { collectLibraryStats } from './modules/library-stats.js';
 import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-channel.js';
 import { describeUpdateError } from './modules/update-analytics.js';
 import { decideUpdateNotice, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
+import { trackProfileSwitch } from './modules/profile-switch-analytics.js';
 
 if (process.env.APP_TEST_MODE === '1') {
   globalThis.__e2eShowAboutDialog = appSetup.showAboutDialog;
@@ -912,6 +913,8 @@ function setupApp() {
         mainWindow,
         mainAppLauncher: async (profileName) => {
           currentProfile = profileName;
+          // After "Switch Profile", the relaunched app remembers where it came from
+          trackProfileSwitch({ analytics, fromProfile: store.get('fallback-profile'), toProfile: profileName, method: 'launcher' });
           
           debugLog.info('Launching main app from launcher', { 
             function: "mainAppLauncher",
@@ -941,6 +944,7 @@ function setupApp() {
       version: updateInfo.version,
       background,
       lastQuietVersion: updateState.lastQuietVersion ?? null,
+      windowAvailable: !!mainWindow && !mainWindow.isDestroyed(),
     });
     if (notice === 'none') return;
     analytics?.trackEvent('update_available', { offered_version: updateInfo.version, background });
@@ -967,7 +971,7 @@ function setupApp() {
     // modal, just show the quiet toolbar indicator
     if (notice === 'quiet') {
       updateState.lastQuietVersion = updateInfo.version;
-      mainWindow?.webContents.send('update_available_quiet', updateInfo.releaseName, releaseNotesHtml);
+      mainWindow.webContents.send('update_available_quiet', updateInfo.releaseName, releaseNotesHtml);
       return;
     }
 
@@ -1000,7 +1004,7 @@ function setupApp() {
   });
 
   autoUpdater.on('error', (err) => {
-    const updateFailure = describeUpdateError(err);
+    const updateFailure = describeUpdateError(err, { downloading: !!updateState.downloading });
     if (updateFailure) analytics?.trackEvent('update_failed', updateFailure);
     debugLog.error(`Auto-updater error: ${err.message}`, { 
       function: "autoUpdater error",

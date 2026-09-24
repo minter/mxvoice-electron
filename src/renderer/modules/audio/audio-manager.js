@@ -271,6 +271,8 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
               return;
             }
             const sound_path = sourceResult.source;
+            // Count the play only once the audio file exists (not for missing files)
+            trackSongPlayed(options.trigger_method);
             
             // Ensure E2E test mode/probe is initialized right before first playback
             if (window.electronTest?.isE2E) {
@@ -440,7 +442,6 @@ async function playSongFromId(song_id, options = {}) {
     });
     return;
   }
-  trackSongPlayed(options.trigger_method);
   playSongWithFilename(song.filename, song.row, song_id, options);
 }
 

@@ -22,6 +22,11 @@ describe('decideUpdateNotice', () => {
   it('announces a newer version found by a later background check', () => {
     expect(decideUpdateNotice({ version: '4.3.4', background: true, lastQuietVersion: '4.3.3' })).toBe('quiet');
   });
+
+  it('leaves the version unannounced when there is no live window (macOS window closed)', () => {
+    expect(decideUpdateNotice({ version: '4.3.3', background: true, lastQuietVersion: null, windowAvailable: false })).toBe('none');
+    expect(decideUpdateNotice({ version: '4.3.3', background: false, lastQuietVersion: null, windowAvailable: false })).toBe('none');
+  });
 });
 
 describe('runBackgroundCheck', () => {

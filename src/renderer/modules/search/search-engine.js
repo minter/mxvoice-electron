@@ -8,7 +8,7 @@
 // Import shared state
 import sharedState from '../shared-state.js';
 import Dom from '../dom-utils/index.js';
-import { hasActiveAdvancedFilters } from './search-form-utils.js';
+import { hasActiveAdvancedFilters, hasSearchCriteria } from './search-form-utils.js';
 import { secureDatabase } from '../adapters/secure-adapter.js';
 import { recordSearch } from '../analytics/search-tracker.js';
 import { scheduleSearch } from './search-timeout.js';
@@ -147,7 +147,7 @@ function searchData({ trackAnalytics = true } = {}) {
       
       if (result.success) {
         // Only track intentional searches (has search term or advanced filters), not "show all" loads
-        if (trackAnalytics && (searchParams.searchTerm || searchParams.advancedFilters)) {
+        if (trackAnalytics && hasSearchCriteria(searchParams)) {
           recordSearch({
             signature: JSON.stringify(searchParams),
             resultCount: result.data?.length || 0,
