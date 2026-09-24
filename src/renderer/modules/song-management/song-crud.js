@@ -36,7 +36,7 @@ export function configureSongCrudDependencies(dependencies = {}) {
 }
 
 function refreshSearchResults() {
-  return moduleRegistry.search?.searchData?.();
+  return moduleRegistry.search?.searchData?.({ trackAnalytics: false });
 }
 
 /**

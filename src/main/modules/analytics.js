@@ -14,6 +14,11 @@ import { v4 as uuidv4 } from 'uuid';
 const POSTHOG_API_KEY = 'phc_qJdKChSMdVxUjNJZyx7dnTaeti64Vd2F5R2rvM8iDXkH';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
+// Error events are throttled so one install stuck in an error loop can't flood
+// the project: each distinct message is reported once per session, up to a cap.
+const ERROR_EVENTS = new Set(['app_error', 'renderer_error']);
+const MAX_ERROR_EVENTS_PER_SESSION = 20;
+
 /**
  * Create an analytics instance.
  *
@@ -29,6 +34,18 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged }) {
   let optedOut = false;
   let initialized = false;
   let disabled = false;
+  const reportedErrors = new Set();
+
+  /**
+   * Returns true when an error event should be dropped as a repeat or over the cap.
+   */
+  function shouldThrottleError(name, properties) {
+    if (!ERROR_EVENTS.has(name)) return false;
+    const key = `${name}:${properties.error_message ?? ''}`;
+    if (reportedErrors.has(key) || reportedErrors.size >= MAX_ERROR_EVENTS_PER_SESSION) return true;
+    reportedErrors.add(key);
+    return false;
+  }
 
   /**
    * Scrub absolute file paths from a stack trace string.
@@ -84,6 +101,7 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged }) {
 
   function trackEvent(name, properties = {}) {
     if (disabled || !initialized || optedOut || !client) return;
+    if (shouldThrottleError(name, properties)) return;
 
     // Scrub stack traces in error events
     const scrubbed = { ...properties };

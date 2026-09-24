@@ -11,6 +11,7 @@ import sharedState from '../shared-state.js';
 import { getAdvancedSearchValues } from './search-form-utils.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 import { secureDatabase } from '../adapters/secure-adapter.js';
+import { recordSearch } from '../analytics/search-tracker.js';
 import { scaleScrollable } from '../utils/index.js';
 
 // Import debug logger
@@ -136,6 +137,13 @@ function performLiveSearch(searchTerm) {
   // Use named database operation for live search
     return secureDatabase.searchSongs(searchParams).then(result => {
       if (result.success) {
+        if (searchParams.searchTerm || searchParams.advancedFilters) {
+          recordSearch({
+            signature: JSON.stringify(searchParams),
+            resultCount: result.data.length,
+            source: 'live',
+          });
+        }
         debugLog?.info(`🔍 Live search returned ${result.data.length} results`, { 
           module: 'live-search',
           function: 'performLiveSearch',

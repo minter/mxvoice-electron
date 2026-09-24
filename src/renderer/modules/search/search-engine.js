@@ -9,7 +9,8 @@
 import sharedState from '../shared-state.js';
 import Dom from '../dom-utils/index.js';
 import { hasActiveAdvancedFilters } from './search-form-utils.js';
-import { secureAnalytics, secureDatabase } from '../adapters/secure-adapter.js';
+import { secureDatabase } from '../adapters/secure-adapter.js';
+import { recordSearch } from '../analytics/search-tracker.js';
 import { scheduleSearch } from './search-timeout.js';
 
 // Import debug logger
@@ -46,8 +47,11 @@ function getCategoryNameSync(categoryCode) {
 /**
  * Perform search and display results
  * This function handles the main search functionality
+ *
+ * @param {Object} [options]
+ * @param {boolean} [options.trackAnalytics=true] - False for programmatic refreshes (e.g. after a song edit)
  */
-function searchData() {
+function searchData({ trackAnalytics = true } = {}) {
   // Increment search ID to invalidate any in-flight searches
   activeSearchId++;
   const thisSearchId = activeSearchId;
@@ -143,8 +147,12 @@ function searchData() {
       
       if (result.success) {
         // Only track intentional searches (has search term or advanced filters), not "show all" loads
-        if (searchParams.searchTerm || searchParams.advancedFilters) {
-          secureAnalytics.trackEvent('search_performed', { result_count: result.data?.length || 0 });
+        if (trackAnalytics && (searchParams.searchTerm || searchParams.advancedFilters)) {
+          recordSearch({
+            signature: JSON.stringify(searchParams),
+            resultCount: result.data?.length || 0,
+            source: 'submit',
+          });
         }
         const tbody = document.querySelector('#search_results tbody');
 

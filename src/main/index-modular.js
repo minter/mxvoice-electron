@@ -64,6 +64,7 @@ import * as libraryTransferManager from './modules/library-transfer-manager.js';
 import * as launcherWindow from './modules/launcher-window.js';
 import { selfHealDirectoryPreferences } from './modules/preferences-self-heal.js';
 import { isSupportedAudioFile, copyFileStreaming } from './modules/file-utils.js';
+import { collectLibraryStats } from './modules/library-stats.js';
 
 if (process.env.APP_TEST_MODE === '1') {
   globalThis.__e2eShowAboutDialog = appSetup.showAboutDialog;
@@ -678,14 +679,7 @@ async function initializeAnalytics() {
 function trackLibraryStats() {
   if (!analytics || !db) return;
   try {
-    const songResult = db.exec('SELECT count(*) as count FROM mrvoice');
-    const songCount = songResult[0]?.values[0]?.[0] || 0;
-    const catResult = db.exec('SELECT count(*) as count FROM categories');
-    const categoryCount = catResult[0]?.values[0]?.[0] || 0;
-    analytics.trackEvent('library_stats', {
-      song_count: songCount,
-      category_count: categoryCount,
-    });
+    analytics.trackEvent('library_stats', collectLibraryStats(db));
   } catch (error) {
     debugLog.warn('Failed to track library stats', {
       function: 'trackLibraryStats',

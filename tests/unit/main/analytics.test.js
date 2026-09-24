@@ -153,6 +153,52 @@ describe('analytics module', () => {
     });
   });
 
+  describe('error event throttling', () => {
+    it('reports a repeated error message only once per session', () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      for (let i = 0; i < 5; i++) {
+        analytics.trackEvent('renderer_error', { error_message: 'boom' });
+      }
+
+      expect(mockCapture).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports distinct error messages and event types separately', () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      analytics.trackEvent('renderer_error', { error_message: 'boom' });
+      analytics.trackEvent('renderer_error', { error_message: 'bang' });
+      analytics.trackEvent('app_error', { error_message: 'boom' });
+
+      expect(mockCapture).toHaveBeenCalledTimes(3);
+    });
+
+    it('caps total error events per session', () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      for (let i = 0; i < 100; i++) {
+        analytics.trackEvent('renderer_error', { error_message: `error ${i}` });
+      }
+
+      expect(mockCapture).toHaveBeenCalledTimes(20);
+    });
+
+    it('does not throttle non-error events', () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      for (let i = 0; i < 30; i++) {
+        analytics.trackEvent('song_played', { trigger_method: 'hotkey' });
+      }
+
+      expect(mockCapture).toHaveBeenCalledTimes(30);
+    });
+  });
+
   describe('shutdown', () => {
     it('flushes PostHog client on shutdown', async () => {
       const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
