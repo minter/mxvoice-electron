@@ -92,8 +92,7 @@ class HotkeysModule {
       function: 'initHotkeys',
     });
 
-    // Event listeners are now handled by EventCoordination system
-    // No need to call this.setupEventListeners() here
+    // Event listeners are handled by the EventCoordination system
 
     debugLog?.info('✅ Hotkeys Module initialized', {
       module: 'hotkeys',
@@ -129,67 +128,6 @@ class HotkeysModule {
       });
       return false;
     }
-  }
-
-  /**
-   * Set up event listeners for hotkey functionality
-   * NOTE: This method is deprecated - event listeners are now handled by EventCoordination system
-   * Keeping for backward compatibility but it should not be called
-   */
-  setupEventListeners() {
-    // Hotkey click events
-    const hotkeysRoot = document.querySelector('.hotkeys');
-    if (hotkeysRoot) {
-      hotkeysRoot.addEventListener('click', (event) => {
-        const li = event.target && event.target.closest('li');
-        if (!li || !hotkeysRoot.contains(li)) return;
-        // Note: Intentionally not selecting hotkey tracks on single click
-        // Hotkey tracks should be triggered via keyboard shortcuts or double-click to play
-      });
-    }
-
-    // Hotkey double-click events
-    if (hotkeysRoot) {
-      hotkeysRoot.addEventListener('dblclick', (event) => {
-        const li = event.target && event.target.closest('li');
-        if (!li || !hotkeysRoot.contains(li)) return;
-        document.querySelector('.now_playing')?.classList.remove('now_playing');
-        document.getElementById('selected_row')?.removeAttribute('id');
-        const span = li.querySelector('span');
-        if (span && (span.textContent || '').length) {
-          const song_id = li.getAttribute('songid');
-          if (song_id) this.playSongFromHotkey(song_id);
-        }
-      });
-    }
-
-    // Hotkey drag and drop events
-    document.querySelectorAll('.hotkeys li').forEach((li) => {
-      li.addEventListener('drop', (event) => {
-        li.classList.remove('drop_target');
-        const data =
-          (event.originalEvent || event).dataTransfer?.getData('text') || '';
-        if (!data.length) return;
-        this.hotkeyDrop(event.originalEvent || event, {
-          setLabelFromSongId: this.setLabelFromSongId.bind(this),
-        });
-      });
-      li.addEventListener('dragover', (event) => {
-        li.classList.add('drop_target');
-        this.allowHotkeyDrop(event.originalEvent || event);
-      });
-      li.addEventListener('dragleave', (event) => {
-        event.currentTarget.classList.remove('drop_target');
-      });
-    });
-
-    // Hotkey tab rename is handled centrally by UI Interaction Events module
-    // to avoid duplicate handlers and duplicate modals.
-
-    debugLog?.info('✅ Hotkeys event listeners set up', {
-      module: 'hotkeys',
-      function: 'setupEventListeners',
-    });
   }
 
   /**

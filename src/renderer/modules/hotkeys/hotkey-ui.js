@@ -8,9 +8,6 @@
  * - Element manipulation
  */
 
-// AbortController for cleaning up hotkey UI listeners on re-initialization
-let hotkeyUIAbortController = null;
-
 // Import debug logger
 let debugLog = null;
 try {
@@ -24,7 +21,6 @@ try {
 
 // Drag handler import for programmatic binding
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
-import { customPrompt } from '../utils/index.js';
 
 /**
  * Handle dropping songs into hotkey containers
@@ -71,70 +67,6 @@ function allowHotkeyDrop(event) {
 function switchToHotkeyTab(tab) {
   import('../ui/bootstrap-helpers.js')
     .then(({ safeShowTab }) => safeShowTab(`#hotkey_tabs li:nth-child(${tab}) a`, { module: 'hotkey-ui', function: 'switchToHotkeyTab' }));
-}
-
-/**
- * Rename the active hotkey tab
- * 
- * @param {Object} options - Additional options
- */
-async function renameHotkeyTab(_options = {}) {
-  const currentName = document.querySelector('#hotkey_tabs .nav-link.active')?.textContent || '';
-  const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
-  if (newName && newName.trim() !== "") {
-    const link = document.querySelector('#hotkey_tabs .nav-link.active');
-    if (link) link.textContent = newName;
-    return { success: true, newName: newName };
-  } else {
-    return { success: false, error: 'Invalid name' };
-  }
-}
-
-/**
- * Setup all hotkey event listeners
- * 
- * @param {Object} options - Additional options
- */
-function setupHotkeyEventListeners(options = {}) {
-  // Abort previous listeners before re-attaching
-  hotkeyUIAbortController?.abort();
-  hotkeyUIAbortController = new AbortController();
-  const { signal } = hotkeyUIAbortController;
-
-  // Hotkey drop handlers
-  document.querySelectorAll('.hotkeys li').forEach((li) => {
-    li.addEventListener('drop', (event) => {
-      li.classList.remove('drop_target');
-      const data = (event.originalEvent || event).dataTransfer?.getData('text') || '';
-      if (!data.length) return;
-      hotkeyDrop((event.originalEvent || event), options);
-    }, { signal });
-    li.addEventListener('dragover', (event) => {
-      li.classList.add('drop_target');
-      allowHotkeyDrop((event.originalEvent || event));
-    }, { signal });
-    li.addEventListener('dragleave', (event) => {
-      (event.currentTarget).classList.remove('drop_target');
-    }, { signal });
-  });
-
-  // Note: Click highlighting is now handled by event delegation in setupHotkeyHighlightDelegation()
-  // This prevents duplicate event handlers that were causing highlighting conflicts
-
-  // Hotkey tab events
-  const hotkeyTabs = document.getElementById('hotkey_tabs');
-  if (hotkeyTabs) {
-    hotkeyTabs.addEventListener('dblclick', (e) => {
-      if (e.target && e.target.closest('.nav-link')) {
-        renameHotkeyTab?.(options);
-      }
-    }, { signal });
-  }
-
-  debugLog?.info('Hotkeys event listeners set up', { 
-    module: 'hotkey-ui',
-    function: 'setupHotkeyEventListeners'
-  });
 }
 
 /**
@@ -456,21 +388,11 @@ function setupHotkeyHighlightDelegation() {
 // Call this after hotkey lists are rendered/updated
 setupHotkeyHighlightDelegation();
 
-/**
- * Clean up hotkey UI event listeners
- */
-function cleanupHotkeyUIEventListeners() {
-  hotkeyUIAbortController?.abort();
-  hotkeyUIAbortController = null;
-}
-
 // Export all functions
 export {
   hotkeyDrop,
   allowHotkeyDrop,
   switchToHotkeyTab,
-  renameHotkeyTab,
-  setupHotkeyEventListeners,
   initHotkeyTabs,
   getActiveHotkeyTab,
   setActiveHotkeyTab,
@@ -490,8 +412,7 @@ export {
   setHotkeyLabel,
   isHotkeyAssigned,
   getAssignedHotkeys,
-  getUnassignedHotkeys,
-  cleanupHotkeyUIEventListeners
+  getUnassignedHotkeys
 };
 
 // Default export for module loading
@@ -499,8 +420,6 @@ export default {
   hotkeyDrop,
   allowHotkeyDrop,
   switchToHotkeyTab,
-  renameHotkeyTab,
-  setupHotkeyEventListeners,
   initHotkeyTabs,
   getActiveHotkeyTab,
   setActiveHotkeyTab,
@@ -520,6 +439,5 @@ export default {
   setHotkeyLabel,
   isHotkeyAssigned,
   getAssignedHotkeys,
-  getUnassignedHotkeys,
-  cleanupHotkeyUIEventListeners
+  getUnassignedHotkeys
 };
