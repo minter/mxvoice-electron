@@ -187,6 +187,26 @@ describe('analytics module', () => {
       expect(mockCapture).toHaveBeenCalledTimes(20);
     });
 
+    it('sends only the first line of an error message, truncated', () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      analytics.trackEvent('app_error', { error_message: `${'x'.repeat(400)}\nHeaders: {"date": "today"}` });
+
+      const sent = mockCapture.mock.calls[0][0].properties.error_message;
+      expect(sent).toBe('x'.repeat(300));
+    });
+
+    it('groups messages that differ only after the first line', () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      analytics.trackEvent('app_error', { error_message: 'Cannot find latest.yml: 404\n"date": "Mon"' });
+      analytics.trackEvent('app_error', { error_message: 'Cannot find latest.yml: 404\n"date": "Tue"' });
+
+      expect(mockCapture).toHaveBeenCalledTimes(1);
+    });
+
     it('does not throttle non-error events', () => {
       const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
@@ -196,6 +216,91 @@ describe('analytics module', () => {
       }
 
       expect(mockCapture).toHaveBeenCalledTimes(30);
+    });
+  });
+
+  describe('internal user tagging', () => {
+    it('tags the person as internal on the first event when the store flag is set', () => {
+      storeData.analytics_internal_user = true;
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      analytics.trackEvent('app_launched', {});
+      analytics.trackEvent('song_played', {});
+
+      expect(mockCapture.mock.calls[0][0].properties.$set).toEqual({ $internal_or_test_user: true });
+      expect(mockCapture.mock.calls[1][0].properties.$set).toBeUndefined();
+    });
+
+    it('tags dev builds running with ANALYTICS_ENABLED=1 as internal', () => {
+      const originalEnv = process.env.ANALYTICS_ENABLED;
+      process.env.ANALYTICS_ENABLED = '1';
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: false });
+      analytics.init();
+
+      analytics.trackEvent('app_launched', {});
+
+      expect(mockCapture.mock.calls[0][0].properties.$set).toEqual({ $internal_or_test_user: true });
+      process.env.ANALYTICS_ENABLED = originalEnv;
+    });
+
+    it('does not tag regular installs', () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      analytics.trackEvent('app_launched', {});
+
+      expect(mockCapture.mock.calls[0][0].properties.$set).toBeUndefined();
+    });
+  });
+
+  describe('endSession', () => {
+    it('sends app_closed with the session duration, then flushes', async () => {
+      const analytics = createAnalytics({
+        store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true,
+        sessionStartTime: Date.now() - 90_000,
+      });
+      analytics.init();
+
+      await analytics.endSession();
+
+      expect(mockCapture).toHaveBeenCalledWith(expect.objectContaining({
+        event: 'app_closed',
+        properties: expect.objectContaining({ session_duration_seconds: 90 }),
+      }));
+      expect(mockShutdown).toHaveBeenCalledOnce();
+      expect(mockCapture.mock.invocationCallOrder[0]).toBeLessThan(mockShutdown.mock.invocationCallOrder[0]);
+    });
+
+    it('only ends the session once when called from several exit paths', async () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      await Promise.all([analytics.endSession(), analytics.endSession()]);
+      await analytics.endSession();
+
+      expect(mockCapture).toHaveBeenCalledTimes(1);
+      expect(mockShutdown).toHaveBeenCalledOnce();
+    });
+
+    it('is a no-op when analytics is disabled', async () => {
+      const originalEnv = process.env.ANALYTICS_ENABLED;
+      delete process.env.ANALYTICS_ENABLED;
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: false });
+      analytics.init();
+
+      await expect(analytics.endSession()).resolves.toBeUndefined();
+      expect(mockShutdown).not.toHaveBeenCalled();
+      process.env.ANALYTICS_ENABLED = originalEnv;
+    });
+
+    it('logs instead of throwing when the flush fails', async () => {
+      mockShutdown.mockRejectedValueOnce(new Error('offline'));
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      await expect(analytics.endSession()).resolves.toBeUndefined();
+      expect(mockDebugLog.error).toHaveBeenCalled();
     });
   });
 

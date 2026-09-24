@@ -12,7 +12,7 @@ import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { getCurrentProfile, getProfileDirectory, store, debugLog, getMainWindow } = deps;
+  const { getCurrentProfile, getProfileDirectory, store, debugLog, getMainWindow, analytics } = deps;
 
   // Profile handlers
   ipcMain.handle(IPC.PROFILE.GET_CURRENT, async () => {
@@ -262,6 +262,9 @@ export function register(deps) {
         win.close();
       }
 
+      // app.exit() skips before-quit, so flush analytics first
+      await analytics?.endSession();
+
       // Relaunch the app without profile argument to show launcher
       app.relaunch({ args: process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')) });
       app.exit(0);
@@ -399,6 +402,8 @@ export function register(deps) {
       if (win) {
         win.close();
       }
+      // app.exit() skips before-quit, so flush analytics first
+      await analytics?.endSession();
       app.relaunch({ args: [...process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')), `--profile=${profileName}`] });
       app.exit(0);
 

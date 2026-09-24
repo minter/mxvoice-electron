@@ -51,6 +51,8 @@ export function register(deps) {
 
   ipcMain.handle(IPC.APP.RESTART, async () => {
     try {
+      // app.exit() skips before-quit, so flush analytics first
+      await analytics?.endSession();
       app.relaunch();
       app.exit();
       return { success: true };

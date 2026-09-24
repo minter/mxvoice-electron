@@ -21,13 +21,17 @@ function setFields(overrides = {}) {
 }
 
 function createAPI() {
-  const stored = { database_directory: '/db', music_directory: '/old', hotkey_directory: '/hotkeys' };
+  const stored = { database_directory: '/db', music_directory: '/old', hotkey_directory: '/hotkeys', debug_log_enabled: true };
+  const profileStored = { fade_out_seconds: 5, crossfade_seconds: 0, prerelease_updates: false, screen_mode: 'auto' };
   return {
     store: {
       get: vi.fn(async (key) => ({ success: true, value: stored[key] })),
       set: vi.fn(async () => ({ success: true }))
     },
-    profile: { setPreferences: vi.fn(async () => ({ success: true })) },
+    profile: {
+      getPreference: vi.fn(async (key) => ({ success: true, value: profileStored[key] })),
+      setPreferences: vi.fn(async () => ({ success: true }))
+    },
     analytics: { trackEvent: vi.fn(), setOptOut: vi.fn(async () => ({ success: true })) }
   };
 }
@@ -54,6 +58,27 @@ describe('settings controller', () => {
     expect(moduleRegistry.audio.updateMusicDirectoryCache).toHaveBeenCalledWith('/new-music');
     expect(electronAPI.analytics.setOptOut).toHaveBeenCalledWith(false);
     expect(safeHideModal).toHaveBeenCalledWith('#preferencesModal', expect.any(Object));
+  });
+
+  it('reports only the names of preferences that changed', async () => {
+    const electronAPI = createAPI();
+    const controller = initializeSettingsController({ electronAPI, moduleRegistry: {} });
+    await controller.savePreferences({ preventDefault: vi.fn() });
+
+    expect(electronAPI.analytics.trackEvent).toHaveBeenCalledWith('preferences_changed', {
+      setting_names: ['music_directory', 'crossfade_seconds', 'screen_mode'],
+    });
+  });
+
+  it('still saves when comparing preferences for analytics fails', async () => {
+    const electronAPI = createAPI();
+    electronAPI.profile.getPreference = vi.fn(async () => { throw new Error('offline'); });
+    const controller = initializeSettingsController({ electronAPI, moduleRegistry: {} });
+    await controller.savePreferences({ preventDefault: vi.fn() });
+
+    expect(electronAPI.analytics.trackEvent).not.toHaveBeenCalled();
+    expect(electronAPI.profile.setPreferences).toHaveBeenCalled();
+    expect(safeHideModal).toHaveBeenCalled();
   });
 
   it('does not close or write when the secure store is unavailable', async () => {

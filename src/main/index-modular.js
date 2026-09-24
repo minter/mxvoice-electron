@@ -619,7 +619,7 @@ async function initializeAnalytics() {
   const appVersion = app.getVersion();
   try {
     const { createAnalytics } = await import('./modules/analytics.js');
-    analytics = createAnalytics({ store, debugLog, appVersion, isPackaged: app.isPackaged });
+    analytics = createAnalytics({ store, debugLog, appVersion, isPackaged: app.isPackaged, sessionStartTime: appStartTime });
     analytics.init();
   } catch (error) {
     analytics = null;
