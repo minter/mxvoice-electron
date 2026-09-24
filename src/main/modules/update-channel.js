@@ -18,6 +18,18 @@
  */
 
 /**
+ * Whether a version updates from GitHub releases. Only 3.x uses the legacy
+ * download.mxvoice.app server, which answers "no update" (204) for any other
+ * version, so a `startsWith('4.')` check would have silently frozen 5.x.
+ *
+ * @param {string} version
+ * @returns {boolean} True for major version 4 and above
+ */
+export function usesGitHubUpdates(version) {
+  return parseInt(String(version), 10) >= 4;
+}
+
+/**
  * @param {string} version
  * @returns {boolean} True for -pre, -beta, and -alpha versions
  */

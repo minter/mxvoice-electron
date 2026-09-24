@@ -80,7 +80,9 @@ function createMainWindow({
   }
   window.loadFile(indexPath);
   window.once('ready-to-show', () => {
-    autoUpdater?.checkForUpdatesAndNotify();
+    // Failures are reported by the autoUpdater 'error' handler (update_failed);
+    // an uncaught rejection would also surface as a noisy app_error
+    autoUpdater?.checkForUpdatesAndNotify()?.catch(() => {});
     if (isMaximized && !window.isDestroyed()) window.maximize();
     if (isFullScreen && !window.isDestroyed()) window.setFullScreen(true);
   });

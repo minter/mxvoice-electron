@@ -65,7 +65,8 @@ import * as launcherWindow from './modules/launcher-window.js';
 import { selfHealDirectoryPreferences } from './modules/preferences-self-heal.js';
 import { isSupportedAudioFile, copyFileStreaming } from './modules/file-utils.js';
 import { collectLibraryStats } from './modules/library-stats.js';
-import { configureUpdateChannel } from './modules/update-channel.js';
+import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-channel.js';
+import { describeUpdateError } from './modules/update-analytics.js';
 
 if (process.env.APP_TEST_MODE === '1') {
   globalThis.__e2eShowAboutDialog = appSetup.showAboutDialog;
@@ -314,7 +315,7 @@ if (process.platform === "darwin" || process.platform === "win32") {
     nodeVersion: process.versions.node
   });
   
-  if (currentVersion.startsWith('4.')) {
+  if (usesGitHubUpdates(currentVersion)) {
     // 4.0+ users: Use GitHub provider for multi-architecture support
     debugLog.info(`Using GitHub provider for version ${currentVersion} on ${process.platform}`, { 
       function: "auto-updater setup",
@@ -410,7 +411,7 @@ if (process.platform === "darwin" || process.platform === "win32") {
     platform: process.platform,
     arch: process.arch,
     version: currentVersion,
-    provider: currentVersion.startsWith('4.') ? 'github' : 'custom',
+    provider: usesGitHubUpdates(currentVersion) ? 'github' : 'custom',
     allowPrerelease: autoUpdater.allowPrerelease,
     autoDownload: autoUpdater.autoDownload,
     electronVersion: process.versions.electron,
@@ -651,6 +652,8 @@ async function initializeAnalytics() {
       arch: process.arch,
       electron_version: process.versions.electron,
       profile_count: profileCount,
+      // Person properties so any event can be broken down by the install's current version/OS
+      $set: { app_version: appVersion, os: process.platform, arch: process.arch },
     });
   }
 
@@ -932,11 +935,12 @@ function setupApp() {
   // Setup auto-updater events
   autoUpdater.on('update-available', (updateInfo) => {
     updateState.downloaded = false;
+    analytics?.trackEvent('update_available', { offered_version: updateInfo.version });
     debugLog.info(`Update available: ${updateInfo.releaseName}`, { 
       function: "autoUpdater update-available",
       currentVersion: app.getVersion(),
       updateVersion: updateInfo.releaseName,
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      provider: usesGitHubUpdates(app.getVersion()) ? 'github' : 'custom',
       platform: process.platform,
       arch: process.arch,
       updateInfo: {
@@ -961,7 +965,7 @@ function setupApp() {
     debugLog.info('Checking for updates...', { 
       function: "autoUpdater checking-for-update",
       currentVersion: app.getVersion(),
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      provider: usesGitHubUpdates(app.getVersion()) ? 'github' : 'custom',
       platform: process.platform,
       arch: process.arch,
       feedURL: autoUpdater.getFeedURL?.() || 'not set'
@@ -972,17 +976,19 @@ function setupApp() {
     debugLog.info('No updates available', { 
       function: "autoUpdater update-not-available",
       currentVersion: app.getVersion(),
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      provider: usesGitHubUpdates(app.getVersion()) ? 'github' : 'custom',
       platform: process.platform,
       arch: process.arch
     });
   });
 
   autoUpdater.on('error', (err) => {
+    const updateFailure = describeUpdateError(err);
+    if (updateFailure) analytics?.trackEvent('update_failed', updateFailure);
     debugLog.error(`Auto-updater error: ${err.message}`, { 
       function: "autoUpdater error",
       currentVersion: app.getVersion(),
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      provider: usesGitHubUpdates(app.getVersion()) ? 'github' : 'custom',
       error: err.message,
       errorStack: err.stack,
       platform: process.platform,
@@ -1022,6 +1028,7 @@ function setupApp() {
 
   autoUpdater.on('update-downloaded', (info) => {
     updateState.downloaded = true;
+    analytics?.trackEvent('update_downloaded', { version: info?.version });
     try {
       // Send IPC event - ipc-bridge dispatches custom event in renderer
       const version = info?.version || '';
@@ -1064,7 +1071,7 @@ function testAutoUpdateScenarios() {
     });
     
     const currentVersion = getTestVersion(); // Use test version if available
-    const isV4 = currentVersion.startsWith('4.');
+    const isV4 = usesGitHubUpdates(currentVersion);
     
     debugLog.info(`Current version: ${currentVersion}, Provider: ${isV4 ? 'github' : 'custom'}`, { 
       function: "testAutoUpdateScenarios",

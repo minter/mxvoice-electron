@@ -48,6 +48,24 @@ describe('main window factory', () => {
     expect(window.maximize).toHaveBeenCalledOnce();
   });
 
+  it('does not leave a failed update check as an unhandled rejection', async () => {
+    const { BrowserWindow } = createBrowserWindowMock();
+    const failure = Promise.reject(new Error('net::ERR_INTERNET_DISCONNECTED'));
+    const catchSpy = vi.spyOn(failure, 'catch');
+    const autoUpdater = { checkForUpdatesAndNotify: vi.fn(() => failure) };
+    const window = createMainWindow({
+      BrowserWindow,
+      screen: { getAllDisplays: () => [] },
+      autoUpdater,
+      iconPath: '', preloadPath: '', indexPath: ''
+    });
+
+    window.readyHandler();
+    await Promise.resolve();
+
+    expect(catchSpy).toHaveBeenCalledOnce();
+  });
+
   it('does not restore coordinates for a missing display', () => {
     const { BrowserWindow, instances } = createBrowserWindowMock();
     createMainWindow({

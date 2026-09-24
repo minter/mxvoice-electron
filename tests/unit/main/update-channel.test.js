@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { configureUpdateChannel, isPrereleaseVersion } from '../../../src/main/modules/update-channel.js';
+import { configureUpdateChannel, isPrereleaseVersion, usesGitHubUpdates } from '../../../src/main/modules/update-channel.js';
+
+describe('usesGitHubUpdates', () => {
+  it.each([
+    ['4.3.2', true],
+    ['4.3.3-pre.1', true],
+    ['5.0.0', true],
+    ['5.0.0-beta.1', true],
+    ['10.2.0', true],
+    ['3.1.5', false],
+    ['3.0.0-beta.2', false],
+  ])('%s → %s', (version, expected) => {
+    expect(usesGitHubUpdates(version)).toBe(expected);
+  });
+});
 
 // Mirrors electron-updater's AppUpdater: setting `channel` also enables downgrades
 function fakeUpdater() {

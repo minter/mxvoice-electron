@@ -16,7 +16,7 @@ export default defineConfig({
         // Initial floor based on the first whole-source report. Raise these as
         // previously E2E-only modules gain focused unit coverage.
         lines: 39,
-        functions: 37,
+        functions: 38,
         statements: 38,
         branches: 31,
       },

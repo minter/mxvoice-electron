@@ -244,6 +244,16 @@ describe('analytics module', () => {
       process.env.ANALYTICS_ENABLED = originalEnv;
     });
 
+    it('merges the internal tag with person properties the event already sets', () => {
+      storeData.analytics_internal_user = true;
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      analytics.trackEvent('app_launched', { $set: { os: 'win32' } });
+
+      expect(mockCapture.mock.calls[0][0].properties.$set).toEqual({ os: 'win32', $internal_or_test_user: true });
+    });
+
     it('does not tag regular installs', () => {
       const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
@@ -251,6 +261,15 @@ describe('analytics module', () => {
       analytics.trackEvent('app_launched', {});
 
       expect(mockCapture.mock.calls[0][0].properties.$set).toBeUndefined();
+    });
+
+    it('passes through person properties for regular installs', () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      analytics.trackEvent('app_launched', { $set: { os: 'win32', app_version: '1.0.0' } });
+
+      expect(mockCapture.mock.calls[0][0].properties.$set).toEqual({ os: 'win32', app_version: '1.0.0' });
     });
   });
 

@@ -136,7 +136,7 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessi
       properties: {
         ...scrubbed,
         app_version: appVersion,
-        ...(pendingInternalTag && { $set: { $internal_or_test_user: true } }),
+        ...(pendingInternalTag && { $set: { ...scrubbed.$set, $internal_or_test_user: true } }),
       },
     });
     pendingInternalTag = false;
