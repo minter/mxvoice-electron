@@ -124,6 +124,40 @@ describe('app update IPC handlers', () => {
     await expect(runBackgroundCheck({ autoUpdater, updateState })).resolves.toBe(true);
   });
 
+  it.each(['resolve', 'reject'])('keeps a retry joined to the timed-out transfer until it %s', async (outcome) => {
+    vi.useFakeTimers();
+    let resolveDownload;
+    let rejectDownload;
+    const transfer = new Promise((resolve, reject) => {
+      resolveDownload = resolve;
+      rejectDownload = reject;
+    });
+    // electron-updater returns the same promise while its download is active.
+    const autoUpdater = {
+      downloadUpdate: vi.fn(() => transfer),
+      checkForUpdates: vi.fn().mockResolvedValue({}),
+    };
+    const { updateState, analytics } = setup(autoUpdater);
+    updateState.downloaded = false;
+    const first = invoke('download-update');
+    await vi.advanceTimersByTimeAsync(60000);
+    await expect(first).resolves.toMatchObject({ success: false });
+
+    const retry = invoke('download-update');
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(autoUpdater.downloadUpdate).toHaveBeenCalledTimes(2);
+    expect(updateState.downloading).toBe(true);
+    await expect(runBackgroundCheck({ autoUpdater, updateState })).resolves.toBe(false);
+    expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
+
+    if (outcome === 'resolve') resolveDownload([]);
+    else rejectDownload(new Error('checksum mismatch'));
+    await expect(retry).resolves.toMatchObject({ success: outcome === 'resolve' });
+    expect(updateState.downloading).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(analytics.trackEvent).toHaveBeenCalledTimes(outcome === 'resolve' ? 1 : 0);
+  });
+
   it('clears the guard for a synchronous download failure', async () => {
     const { updateState } = setup({ downloadUpdate: () => { throw new Error('download unavailable'); } });
     await expect(invoke('download-update')).resolves.toMatchObject({ success: false });

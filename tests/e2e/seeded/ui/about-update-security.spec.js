@@ -145,6 +145,39 @@ test.describe('About and update security boundaries', () => {
     await expect(modal).not.toBeVisible({ timeout: 5000 });
   });
 
+  test('a real background notice survives a renderer reload and stays hidden once downloaded', async () => {
+    await app.evaluate(() => globalThis.__e2eBackgroundUpdate({
+      version: '9.9.11', releaseName: '9.9.11',
+      releaseNotes: '<h2>Restored notes</h2><script>window.__restoredXss=true</script>',
+    }));
+    const indicator = page.locator('#update_available_button');
+    const modal = page.locator('#newReleaseModal');
+    await expect(indicator).toContainText('Update 9.9.11');
+    await expect(indicator).toBeVisible();
+    await expect(modal).not.toBeVisible();
+
+    await page.reload();
+    await waitForAppReady(page, app);
+    await expect(indicator).toBeVisible();
+    await expect(indicator).toContainText('Update 9.9.11');
+    await expect(modal).not.toBeVisible();
+    await indicator.click();
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('.modal-title')).toHaveText('Update Available: 9.9.11');
+    await expect(modal.locator('.modal-body')).toContainText('Restored notes');
+    await expect(modal.locator('.modal-body script')).toHaveCount(0);
+    expect(await page.evaluate(() => window.__restoredXss)).toBeUndefined();
+    await modal.locator('.btn-close').click();
+    await expect(modal).not.toBeVisible();
+
+    await app.evaluate(() => globalThis.__e2eUpdateDownloaded({ version: '9.9.11' }));
+    await expect(indicator).toBeHidden();
+    await page.reload();
+    await waitForAppReady(page, app);
+    await expect(indicator).toBeHidden();
+    await expect(modal).not.toBeVisible();
+  });
+
   test('mocked updater states render download, ready, install, and failure feedback', async () => {
     const result = await page.evaluate(async () => {
       const update = await import('./renderer/modules/file-operations/system-operations.js');

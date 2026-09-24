@@ -67,11 +67,17 @@ import { isSupportedAudioFile, copyFileStreaming } from './modules/file-utils.js
 import { collectLibraryStats } from './modules/library-stats.js';
 import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-channel.js';
 import { describeUpdateError } from './modules/update-analytics.js';
-import { decideUpdateNotice, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
+import { decideUpdateNotice, runBackgroundCheck, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
 import { trackProfileSwitch } from './modules/profile-switch-analytics.js';
 
 if (process.env.APP_TEST_MODE === '1') {
   globalThis.__e2eShowAboutDialog = appSetup.showAboutDialog;
+  // Stub only the network boundary; exercise the real scheduler and handlers.
+  globalThis.__e2eBackgroundUpdate = (info) => runBackgroundCheck({
+    updateState,
+    autoUpdater: { checkForUpdates: async () => autoUpdater.emit('update-available', info) },
+  });
+  globalThis.__e2eUpdateDownloaded = (info) => autoUpdater.emit('update-downloaded', info);
 }
 
 const appStartTime = Date.now();
