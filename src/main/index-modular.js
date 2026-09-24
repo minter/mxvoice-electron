@@ -805,7 +805,7 @@ const createWindow = async () => {
       windowOptions: windowOptions
     });
 
-    mainWindow = appSetup.createWindow(windowOptions);
+    mainWindow = appSetup.createWindow({ ...windowOptions, updateState });
 
     // Initialize modules with dependencies AFTER mainWindow is created
     await initializeModules();
@@ -971,6 +971,7 @@ function setupApp() {
     // modal, just show the quiet toolbar indicator
     if (notice === 'quiet') {
       updateState.lastQuietVersion = updateInfo.version;
+      updateState.quietUpdate = { name: updateInfo.releaseName, notes: releaseNotesHtml };
       mainWindow.webContents.send('update_available_quiet', updateInfo.releaseName, releaseNotesHtml);
       return;
     }

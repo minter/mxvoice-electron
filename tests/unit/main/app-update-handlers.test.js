@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const handlers = {};
 const app = {
@@ -10,6 +10,9 @@ const app = {
 const ipcMain = { handle: (channel, handler) => { handlers[channel] = handler; } };
 
 vi.mock('electron', () => ({ default: { ipcMain, app }, ipcMain, app }));
+
+const { runBackgroundCheck } = await import('../../../src/main/modules/update-scheduler.js');
+const { describeUpdateError } = await import('../../../src/main/modules/update-analytics.js');
 
 const { register } = await import('../../../src/main/modules/ipc/app-update-handlers.js');
 
@@ -27,6 +30,7 @@ function invoke(channel, ...args) {
 
 describe('app update IPC handlers', () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.useRealTimers());
 
   it('checks for updates and resets download approval state', async () => {
     const updateInfo = { version: '4.4.0' };
@@ -84,6 +88,53 @@ describe('app update IPC handlers', () => {
 
     await expect(invoke('download-update')).resolves.toMatchObject({ success: false });
     expect(updateState.downloading).toBe(false);
+  });
+
+  it.each(['resolve', 'reject'])('keeps timed-out downloads guarded until they %s', async (outcome) => {
+    vi.useFakeTimers();
+    let resolveDownload;
+    let rejectDownload;
+    const transfer = new Promise((resolve, reject) => {
+      resolveDownload = resolve;
+      rejectDownload = reject;
+    });
+    const autoUpdater = {
+      downloadUpdate: vi.fn(() => transfer),
+      checkForUpdates: vi.fn().mockResolvedValue({}),
+    };
+    const { updateState } = setup(autoUpdater);
+    updateState.downloaded = false;
+    const response = invoke('download-update');
+    await vi.advanceTimersByTimeAsync(60000);
+    await expect(response).resolves.toEqual({ success: false, error: 'Download timeout after 60 seconds' });
+    expect(updateState.downloading).toBe(true);
+    await expect(runBackgroundCheck({ autoUpdater, updateState })).resolves.toBe(false);
+    expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
+
+    if (outcome === 'reject') {
+      const error = Object.assign(new Error('checksum mismatch'), { code: 'ERR_CHECKSUM_MISMATCH' });
+      // electron-updater emits its error before rejecting the transfer promise.
+      expect(describeUpdateError(error, updateState)).toEqual({ error_code: 'ERR_CHECKSUM_MISMATCH', stage: 'download' });
+      rejectDownload(error);
+    } else {
+      resolveDownload([]);
+    }
+    await vi.advanceTimersByTimeAsync(0);
+    expect(updateState.downloading).toBe(false);
+    await expect(runBackgroundCheck({ autoUpdater, updateState })).resolves.toBe(true);
+  });
+
+  it('clears the guard for a synchronous download failure', async () => {
+    const { updateState } = setup({ downloadUpdate: () => { throw new Error('download unavailable'); } });
+    await expect(invoke('download-update')).resolves.toMatchObject({ success: false });
+    expect(updateState.downloading).toBe(false);
+  });
+
+  it('cancels the IPC timeout when the download finishes promptly', async () => {
+    vi.useFakeTimers();
+    setup({ downloadUpdate: vi.fn().mockResolvedValue([]) });
+    await invoke('download-update');
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('refuses installation until the download-complete state is set', async () => {

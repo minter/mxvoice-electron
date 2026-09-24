@@ -80,11 +80,12 @@ function initializeAppSetup(dependencies) {
 // Create the main window
 // Accept initial dimensions and state so the caller (which has access to the store)
 // can restore the last-saved window state on startup.
-function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScreen, displayId } = {}) {
+function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScreen, displayId, updateState } = {}) {
   return createMainWindow({
     BrowserWindow,
     screen,
     autoUpdater,
+    updateState,
     iconPath: path.join(__dirname, '../../assets/icons/mxvoice.ico'),
     preloadPath: path.join(__dirname, '../../preload/preload-bundle.cjs'),
     indexPath: path.join(__dirname, '../../index.html'),

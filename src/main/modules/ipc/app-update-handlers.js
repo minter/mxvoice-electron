@@ -117,6 +117,7 @@ export function register(deps) {
 
   // Stage 2: Download update (user-initiated)
   ipcMain.handle(IPC.APP.DOWNLOAD_UPDATE, async () => {
+    let downloadTimeout;
     try {
       debugLog.info('📥 Starting update download...', {
         module: 'ipc-handlers',
@@ -131,9 +132,13 @@ export function register(deps) {
       updateState.downloading = true;
 
       // Download with timeout to prevent hangs
-      const downloadPromise = autoUpdater.downloadUpdate();
+      // The IPC timeout does not cancel the transfer. Keep the guard until
+      // the actual download settles, including errors emitted after timeout.
+      const downloadPromise = Promise.resolve()
+        .then(() => autoUpdater.downloadUpdate())
+        .finally(() => { updateState.downloading = false; });
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Download timeout after 60 seconds')), 60000)
+        downloadTimeout = setTimeout(() => reject(new Error('Download timeout after 60 seconds')), 60000)
       );
 
       await Promise.race([downloadPromise, timeoutPromise]);
@@ -150,7 +155,7 @@ export function register(deps) {
       });
       return { success: false, error: errorMessage };
     } finally {
-      updateState.downloading = false;
+      clearTimeout(downloadTimeout);
     }
   });
 
