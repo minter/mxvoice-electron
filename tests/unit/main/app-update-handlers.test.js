@@ -55,6 +55,25 @@ describe('app update IPC handlers', () => {
     expect(analytics.trackEvent).toHaveBeenCalledWith('auto_update_action', { action: 'accepted' });
   });
 
+  it('marks a download in progress so background checks skip it, then clears the mark', async () => {
+    let downloadingDuringDownload;
+    const autoUpdater = { downloadUpdate: vi.fn(async () => { downloadingDuringDownload = updateState.downloading; return []; }) };
+    const { updateState } = setup(autoUpdater);
+
+    await invoke('download-update');
+
+    expect(downloadingDuringDownload).toBe(true);
+    expect(updateState.downloading).toBe(false);
+  });
+
+  it('clears the in-progress mark when a download fails', async () => {
+    const autoUpdater = { downloadUpdate: vi.fn().mockRejectedValue(new Error('network')) };
+    const { updateState } = setup(autoUpdater);
+
+    await expect(invoke('download-update')).resolves.toMatchObject({ success: false });
+    expect(updateState.downloading).toBe(false);
+  });
+
   it('refuses installation until the download-complete state is set', async () => {
     const autoUpdater = { quitAndInstall: vi.fn() };
     const { updateState } = setup(autoUpdater);

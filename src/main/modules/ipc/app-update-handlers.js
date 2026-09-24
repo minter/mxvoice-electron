@@ -123,6 +123,9 @@ export function register(deps) {
         throw new Error('Auto updater not available');
       }
 
+      // Background update checks are skipped while this is set
+      updateState.downloading = true;
+
       // Download with timeout to prevent hangs
       const downloadPromise = autoUpdater.downloadUpdate();
       const timeoutPromise = new Promise((_, reject) =>
@@ -142,6 +145,8 @@ export function register(deps) {
         error: errorMessage
       });
       return { success: false, error: errorMessage };
+    } finally {
+      updateState.downloading = false;
     }
   });
 

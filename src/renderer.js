@@ -42,6 +42,7 @@ if (document.readyState === 'loading') {
 import initializeDebugLogger from './renderer/modules/debug-log/debug-logger.js';
 import setupMainProcessEventBridge from './renderer/modules/event-coordination/main-process-events.js';
 import { buildRendererErrorReport } from './renderer/modules/analytics/error-reporting.js';
+import { setupUpdateIndicator } from './renderer/modules/ui/update-indicator.js';
 import showAnalyticsBannerIfNeeded, {
   setupUpdateDeferralTracking
 } from './renderer/modules/analytics/consent-banner.js';
@@ -701,6 +702,7 @@ let eventCoordination = null;
 document.addEventListener('DOMContentLoaded', async function () {
   try {
     setupUpdateDeferralTracking({ electronAPI: window.secureElectronAPI });
+    setupUpdateIndicator();
 
     // Initialize DOM-dependent features from app-initialization module
     if (AppInitialization.isInitialized()) {

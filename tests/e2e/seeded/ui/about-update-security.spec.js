@@ -118,6 +118,33 @@ test.describe('About and update security boundaries', () => {
     await expect(modal).not.toBeVisible({ timeout: 5000 });
   });
 
+  test('background update shows a quiet toolbar indicator instead of the modal', async () => {
+    const indicator = page.locator('#update_available_button');
+    const modal = page.locator('#newReleaseModal');
+    await expect(indicator).toBeHidden();
+
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find(candidate => !candidate.getTitle().startsWith('About '));
+      win.webContents.send('update_available_quiet', '9.9.10-test', '<h2>Quiet notes</h2><script>window.__quietXss=true</script>');
+    });
+
+    await expect(indicator).toBeVisible({ timeout: 5000 });
+    await expect(indicator).toContainText('Update 9.9.10-test');
+    // Mid-session checks must never pop the modal on their own
+    await page.waitForTimeout(500);
+    await expect(modal).not.toBeVisible();
+
+    await indicator.click();
+    await expect(modal).toBeVisible({ timeout: 5000 });
+    await expect(modal.locator('.modal-title')).toHaveText('Update Available: 9.9.10-test');
+    await expect(modal.locator('.modal-body')).toContainText('Quiet notes');
+    await expect(modal.locator('.modal-body script')).toHaveCount(0);
+    expect(await page.evaluate(() => window.__quietXss)).toBeUndefined();
+
+    await modal.locator('.btn-close').click();
+    await expect(modal).not.toBeVisible({ timeout: 5000 });
+  });
+
   test('mocked updater states render download, ready, install, and failure feedback', async () => {
     const result = await page.evaluate(async () => {
       const update = await import('./renderer/modules/file-operations/system-operations.js');

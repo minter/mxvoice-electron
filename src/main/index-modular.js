@@ -67,6 +67,7 @@ import { isSupportedAudioFile, copyFileStreaming } from './modules/file-utils.js
 import { collectLibraryStats } from './modules/library-stats.js';
 import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-channel.js';
 import { describeUpdateError } from './modules/update-analytics.js';
+import { decideUpdateNotice, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
 
 if (process.env.APP_TEST_MODE === '1') {
   globalThis.__e2eShowAboutDialog = appSetup.showAboutDialog;
@@ -935,7 +936,14 @@ function setupApp() {
   // Setup auto-updater events
   autoUpdater.on('update-available', (updateInfo) => {
     updateState.downloaded = false;
-    analytics?.trackEvent('update_available', { offered_version: updateInfo.version });
+    const background = !!updateState.backgroundCheck;
+    const notice = decideUpdateNotice({
+      version: updateInfo.version,
+      background,
+      lastQuietVersion: updateState.lastQuietVersion ?? null,
+    });
+    if (notice === 'none') return;
+    analytics?.trackEvent('update_available', { offered_version: updateInfo.version, background });
     debugLog.info(`Update available: ${updateInfo.releaseName}`, { 
       function: "autoUpdater update-available",
       currentVersion: app.getVersion(),
@@ -953,8 +961,17 @@ function setupApp() {
     // Pass release notes to renderer for sanitization
     // GitHub provides HTML in releaseNotes, which will be sanitized by DOMPurify in the renderer
     const releaseNotes = updateInfo.releaseNotes || '';
-    
-    mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + releaseNotes);
+    const releaseNotesHtml = `<h1>Version ${updateInfo.releaseName}</h1>` + releaseNotes;
+
+    // Background checks run mid-session (possibly mid-show): never open the
+    // modal, just show the quiet toolbar indicator
+    if (notice === 'quiet') {
+      updateState.lastQuietVersion = updateInfo.version;
+      mainWindow?.webContents.send('update_available_quiet', updateInfo.releaseName, releaseNotesHtml);
+      return;
+    }
+
+    mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, releaseNotesHtml);
     debugLog.info('display_release_notes call done', { 
       function: "autoUpdater update-available" 
     });
@@ -1061,6 +1078,11 @@ function setupApp() {
       }
     }
   });
+
+  // Installs at venues can stay open for weeks; keep checking while running
+  if (process.platform === 'darwin' || process.platform === 'win32') {
+    startBackgroundUpdateChecks({ autoUpdater, updateState });
+  }
 }
 
 // Temporary testing functions for auto-update validation
