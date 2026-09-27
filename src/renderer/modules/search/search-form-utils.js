@@ -28,3 +28,15 @@ export function hasActiveAdvancedFilters() {
   const { title, artist, info, since } = getAdvancedSearchValues();
   return title.length > 0 || artist.length > 0 || info.length > 0 || since.length > 0;
 }
+
+/**
+ * Whether search parameters contain anything the user searched for: a term or
+ * at least one non-empty advanced field. An open advanced panel always yields
+ * an advancedFilters object, even with every field blank.
+ * @param {{ searchTerm?: string|null, advancedFilters?: Object|null }} searchParams
+ * @returns {boolean}
+ */
+export function hasSearchCriteria(searchParams) {
+  if (searchParams?.searchTerm) return true;
+  return Object.values(searchParams?.advancedFilters || {}).some(Boolean);
+}

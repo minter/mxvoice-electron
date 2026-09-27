@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const searchSongs = vi.fn();
-const trackEvent = vi.fn();
+const recordSearch = vi.fn();
 const isVisible = vi.fn(() => false);
 const val = vi.fn(() => '');
 
 vi.mock('../../../src/renderer/modules/adapters/secure-adapter.js', () => ({
-  secureDatabase: { searchSongs }, secureAnalytics: { trackEvent }
+  secureDatabase: { searchSongs }
 }));
+vi.mock('../../../src/renderer/modules/analytics/search-tracker.js', () => ({ recordSearch }));
 vi.mock('../../../src/renderer/modules/dom-utils/index.js', () => ({
   default: { isVisible, val }
 }));
@@ -86,9 +87,23 @@ describe('search engine orchestration', () => {
     expect(searchSongs).toHaveBeenCalledWith({
       category: '*', searchTerm: 'anthem', advancedFilters: null
     });
-    expect(trackEvent).toHaveBeenCalledWith('search_performed', { result_count: 1 });
+    expect(recordSearch).toHaveBeenCalledWith({
+      signature: JSON.stringify({ category: '*', searchTerm: 'anthem', advancedFilters: null }),
+      resultCount: 1,
+      source: 'submit',
+    });
     const row = tbody.children.find((child) => child.songid === '7');
     expect(row.children[0].textContent).toBe('Music');
+  });
+
+  it('does not record programmatic refreshes such as after a song edit', async () => {
+    omni.value = 'anthem';
+    searchSongs.mockResolvedValue({ success: true, data: [] });
+    searchEngine.searchData({ trackAnalytics: false });
+    await flush();
+
+    expect(searchSongs).toHaveBeenCalled();
+    expect(recordSearch).not.toHaveBeenCalled();
   });
 
   it('ignores an older result that resolves after a newer search', async () => {

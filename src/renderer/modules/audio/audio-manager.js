@@ -20,6 +20,7 @@ import { handlePlaybackStarted } from './playback-start.js';
 import { completeActivePlayback, handlePlaybackCompleted } from './playback-completion.js';
 import { parseCrossfadePreference, prepareForPlaybackReplacement } from './playback-replacement.js';
 import { loadSongForPlayback } from './playback-song-loader.js';
+import { resolvePlaybackTrigger, trackSongPlayed } from './playback-analytics.js';
 import {
   calculatePlaybackVolume,
   getCrossfadePolicy,
@@ -270,6 +271,8 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
               return;
             }
             const sound_path = sourceResult.source;
+            // Count the play only once the audio file exists (not for missing files)
+            trackSongPlayed(options.trigger_method);
             
             // Ensure E2E test mode/probe is initialized right before first playback
             if (window.electronTest?.isE2E) {
@@ -401,6 +404,7 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
  * @param {Object} options - Playback options
  * @param {boolean} options.crossfade - Whether to crossfade from current track
  * @param {number} options.crossfadeSeconds - Crossfade duration in seconds
+ * @param {string} options.trigger_method - Analytics source of the play (hotkey, search_result, ...)
  */
 async function playSongFromId(song_id, options = {}) {
   getDebugLog()?.info('Playing song from ID', {
@@ -451,6 +455,10 @@ function playSelected() {
   });
 
   const song_id = getPlaybackSelectionSongId();
+  const trigger_method = resolvePlaybackTrigger({
+    selectedRow: document.getElementById('selected_row'),
+    holdingTankMode: sharedState.get('holdingTankMode'),
+  });
 
   // Only clear the now_playing class if the selected row is from the search panel
   // (not from the holding tank/playlist)
@@ -471,7 +479,7 @@ function playSelected() {
   }
   // In playlist mode, autoplay is already set up by the double-click handler
 
-  playSongFromId(song_id);
+  playSongFromId(song_id, { trigger_method });
 }
 
 /**
@@ -540,7 +548,7 @@ function triggerEarlyCrossfade(remaining) {
     next_song.classList.add('now_playing');
 
     // Play next song with crossfade
-    playSongFromId(nextSongId, { crossfade: true, crossfadeSeconds });
+    playSongFromId(nextSongId, { crossfade: true, crossfadeSeconds, trigger_method: 'playlist_autoplay' });
   } catch (_e) {
     getDebugLog()?.warn('Error in triggerEarlyCrossfade', {
       module: 'audio-manager',
@@ -601,8 +609,7 @@ async function autoplay_next() {
       // updateTimeTracker / triggerEarlyCrossfade can't read a stale .now_playing
       // and target the wrong sibling while the new sound is still loading.
       next_song.classList.add('now_playing');
-      window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'playlist_autoplay' });
-      playSongFromId(next_song.getAttribute('songid'), crossfadeOpts);
+      playSongFromId(next_song.getAttribute('songid'), { ...crossfadeOpts, trigger_method: 'playlist_autoplay' });
     } else {
       getDebugLog()?.info('End of playlist reached', {
         module: 'audio-manager',

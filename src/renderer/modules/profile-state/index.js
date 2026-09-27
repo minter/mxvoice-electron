@@ -449,7 +449,6 @@ export async function switchProfileWithSave() {
     
     // Now switch profiles (this will close the window and relaunch)
     await window.secureElectronAPI.profile.switchProfile();
-    window.secureElectronAPI?.analytics?.trackEvent?.('profile_switched');
 
     return { success: true };
   } catch (error) {

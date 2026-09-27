@@ -558,7 +558,7 @@ class HotkeysModule {
           function: 'playSongFromHotkey',
           song_id: song_id,
         });
-        this.moduleRegistry.audio.playSongFromId(song_id);
+        this.moduleRegistry.audio.playSongFromId(song_id, { trigger_method: 'hotkey' });
       } else {
         debugLog?.error(
           '❌ HOTKEY PLAYBACK FAIL: playSongFromId not available',
@@ -603,7 +603,9 @@ class HotkeysModule {
       return;
     }
     if (target && song_id) {
-      this.assignHotkey(target, song_id);
+      if (this.assignHotkey(target, song_id)) {
+        window.secureElectronAPI?.analytics?.trackEvent?.('hotkey_configured', { method: 'send_to_hotkeys' });
+      }
       target.setAttribute('songid', song_id);
       this.setLabelFromSongId(song_id, target);
       // Save hotkeys state after assignment

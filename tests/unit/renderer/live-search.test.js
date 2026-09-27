@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const searchSongs = vi.fn();
 vi.mock('../../../src/renderer/modules/adapters/secure-adapter.js', () => ({ secureDatabase: { searchSongs } }));
 vi.mock('../../../src/renderer/modules/drag-drop/drag-drop-functions.js', () => ({ songDrag: vi.fn() }));
+const recordSearch = vi.fn();
+vi.mock('../../../src/renderer/modules/analytics/search-tracker.js', () => ({ recordSearch }));
 
 function node(tag = 'div') { return { tag, value: '', offsetParent: null, style: {}, children: [], appendChild(c) { if (c.tag === 'fragment') this.children.push(...c.children); else this.children.push(c); }, querySelectorAll() { return []; }, setAttribute(k,v){this[k]=v;}, addEventListener: vi.fn() }; }
 const tbody = node('tbody'); const thead = node('thead'); const category = node('select'); const advanced = node();
@@ -23,6 +25,16 @@ describe('live search', () => {
     await live.performLiveSearch('so');
     expect(searchSongs).toHaveBeenCalledWith({ category: '*', searchTerm: 'so', advancedFilters: null });
     expect(tbody.children[0].children[0].textContent).toBe('Music');
+    expect(recordSearch).toHaveBeenCalledWith({
+      signature: JSON.stringify({ category: '*', searchTerm: 'so', advancedFilters: null }),
+      resultCount: 1,
+      source: 'live',
+    });
+  });
+  it('does not record a failed search', async () => {
+    searchSongs.mockResolvedValueOnce({ success: false, error: 'bad query' });
+    await live.performLiveSearch('so');
+    expect(recordSearch).not.toHaveBeenCalled();
   });
   it('handles wrapped failures and rejected calls without throwing', async () => {
     searchSongs.mockResolvedValueOnce({ success: false, error: 'bad query' });

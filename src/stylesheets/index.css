@@ -920,10 +920,20 @@ legend {
 }
 
 /* Profile indicator styles */
+/* A flex item (not absolutely positioned) so it shares the header with the
+   update indicator and long profile names truncate instead of overlapping */
+#search-column .card-header {
+  flex-wrap: nowrap;
+}
+
+#search-column .card-header .header-button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .profile-indicator {
-  position: absolute;
-  top: 15px;
-  right: 10px;
+  margin-left: auto;
+  min-width: 0;
   font-size: 18px;
   color: var(--text-muted);
   display: flex;
@@ -946,6 +956,16 @@ legend {
 #profile-indicator-icon {
   position: relative;
   top: -1px;
+}
+
+#profile-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#update_available_button {
+  flex-shrink: 0;
 }
 /* End profile indicator styles */
 

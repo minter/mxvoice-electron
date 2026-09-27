@@ -18,6 +18,15 @@ const MAX_DEPTH = 3;
 const MAX_KEYS = 50;
 const MAX_STRING = 1000;
 
+/**
+ * Invoke an IPC channel whose result nobody awaits. Failures are swallowed:
+ * an unhandled rejection would reach the renderer's error handler, which
+ * reports it through analytics and logging, failing again in a loop.
+ */
+function invokeFireAndForget(channel, ...args) {
+  return ipcRenderer.invoke(channel, ...args).then(() => undefined, () => undefined);
+}
+
 function truncateString(str) {
   try {
     const s = String(str);
@@ -174,7 +183,7 @@ const secureElectronAPI = {
   // Logs API - centralized logging exposed securely
   logs: {
     write: (level, message, context = null, meta = {}) =>
-      ipcRenderer.invoke(IPC.LOGGING.WRITE, {
+      invokeFireAndForget(IPC.LOGGING.WRITE, {
         level,
         message: truncateString(message),
         context: sanitizeForIPC(context),
@@ -190,6 +199,8 @@ const secureElectronAPI = {
     saveHotkeyFile: (data) => ipcRenderer.invoke(IPC.DIALOG.SAVE_HOTKEY_FILE, data),
     openHoldingTankFile: () => ipcRenderer.invoke(IPC.DIALOG.OPEN_HOLDING_TANK_FILE),
     saveHoldingTankFile: (data) => ipcRenderer.invoke(IPC.DIALOG.SAVE_HOLDING_TANK_FILE, data),
+    // Pending update for restoring the quiet indicator after a renderer reload
+    getPendingUpdate: () => ipcRenderer.invoke(IPC.APP.GET_PENDING_UPDATE),
     // Auto-update operations - Three-stage process
     checkForUpdate: () => {
       debugLog.info('🔍 Preload: checkForUpdate called', { 
@@ -500,7 +511,7 @@ const secureElectronAPI = {
   
   // Analytics
   analytics: {
-    trackEvent: (name, properties) => ipcRenderer.invoke(IPC.ANALYTICS.TRACK_EVENT, name, properties),
+    trackEvent: (name, properties) => invokeFireAndForget(IPC.ANALYTICS.TRACK_EVENT, name, properties),
     getOptOutStatus: () => ipcRenderer.invoke(IPC.ANALYTICS.GET_OPT_OUT_STATUS),
     setOptOut: (value) => ipcRenderer.invoke(IPC.ANALYTICS.SET_OPT_OUT, value),
   },

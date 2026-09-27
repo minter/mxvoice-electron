@@ -64,9 +64,21 @@ import * as libraryTransferManager from './modules/library-transfer-manager.js';
 import * as launcherWindow from './modules/launcher-window.js';
 import { selfHealDirectoryPreferences } from './modules/preferences-self-heal.js';
 import { isSupportedAudioFile, copyFileStreaming } from './modules/file-utils.js';
+import { collectLibraryStats } from './modules/library-stats.js';
+import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-channel.js';
+import { describeUpdateError } from './modules/update-analytics.js';
+import { decideUpdateNotice, runBackgroundCheck, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
+import { trackProfileSwitch } from './modules/profile-switch-analytics.js';
+import { quietlyAnnouncedVersion, recordAvailableUpdate, recordDownloadedUpdate } from './modules/pending-update.js';
 
 if (process.env.APP_TEST_MODE === '1') {
   globalThis.__e2eShowAboutDialog = appSetup.showAboutDialog;
+  // Stub only the network boundary; exercise the real scheduler and handlers.
+  globalThis.__e2eBackgroundUpdate = (info) => runBackgroundCheck({
+    updateState,
+    autoUpdater: { checkForUpdates: async () => autoUpdater.emit('update-available', info) },
+  });
+  globalThis.__e2eUpdateDownloaded = (info) => autoUpdater.emit('update-downloaded', info);
 }
 
 const appStartTime = Date.now();
@@ -312,7 +324,7 @@ if (process.platform === "darwin" || process.platform === "win32") {
     nodeVersion: process.versions.node
   });
   
-  if (currentVersion.startsWith('4.')) {
+  if (usesGitHubUpdates(currentVersion)) {
     // 4.0+ users: Use GitHub provider for multi-architecture support
     debugLog.info(`Using GitHub provider for version ${currentVersion} on ${process.platform}`, { 
       function: "auto-updater setup",
@@ -325,10 +337,8 @@ if (process.platform === "darwin" || process.platform === "win32") {
     
     // Check user preference for prerelease updates OR if currently running a pre-release version
     const userPrefersPrereleases = store.get('prerelease_updates') || false;
-    const isCurrentlyPrerelease = currentVersion.includes('-pre.') || currentVersion.includes('-beta') || currentVersion.includes('-alpha');
-    const shouldAllowPrereleases = userPrefersPrereleases || isCurrentlyPrerelease;
-    
-    autoUpdater.allowPrerelease = shouldAllowPrereleases;
+    const { allowPrerelease: shouldAllowPrereleases, isCurrentlyPrerelease } =
+      configureUpdateChannel(autoUpdater, { currentVersion, userPrefersPrereleases });
     
     debugLog.info(`Prerelease updates ${shouldAllowPrereleases ? 'enabled' : 'disabled'}`, { 
       function: "auto-updater setup",
@@ -410,7 +420,7 @@ if (process.platform === "darwin" || process.platform === "win32") {
     platform: process.platform,
     arch: process.arch,
     version: currentVersion,
-    provider: currentVersion.startsWith('4.') ? 'github' : 'custom',
+    provider: usesGitHubUpdates(currentVersion) ? 'github' : 'custom',
     allowPrerelease: autoUpdater.allowPrerelease,
     autoDownload: autoUpdater.autoDownload,
     electronVersion: process.versions.electron,
@@ -618,7 +628,7 @@ async function initializeAnalytics() {
   const appVersion = app.getVersion();
   try {
     const { createAnalytics } = await import('./modules/analytics.js');
-    analytics = createAnalytics({ store, debugLog, appVersion, isPackaged: app.isPackaged });
+    analytics = createAnalytics({ store, debugLog, appVersion, isPackaged: app.isPackaged, sessionStartTime: appStartTime });
     analytics.init();
   } catch (error) {
     analytics = null;
@@ -651,6 +661,8 @@ async function initializeAnalytics() {
       arch: process.arch,
       electron_version: process.versions.electron,
       profile_count: profileCount,
+      // Person properties so any event can be broken down by the install's current version/OS
+      $set: { app_version: appVersion, os: process.platform, arch: process.arch },
     });
   }
 
@@ -678,14 +690,7 @@ async function initializeAnalytics() {
 function trackLibraryStats() {
   if (!analytics || !db) return;
   try {
-    const songResult = db.exec('SELECT count(*) as count FROM mrvoice');
-    const songCount = songResult[0]?.values[0]?.[0] || 0;
-    const catResult = db.exec('SELECT count(*) as count FROM categories');
-    const categoryCount = catResult[0]?.values[0]?.[0] || 0;
-    analytics.trackEvent('library_stats', {
-      song_count: songCount,
-      category_count: categoryCount,
-    });
+    analytics.trackEvent('library_stats', collectLibraryStats(db));
   } catch (error) {
     debugLog.warn('Failed to track library stats', {
       function: 'trackLibraryStats',
@@ -849,10 +854,8 @@ function setupApp() {
   store.onDidChange('prerelease_updates', (newValue) => {
     if (autoUpdater) {
       const currentVersion = getTestVersion();
-      const isCurrentlyPrerelease = currentVersion.includes('-pre.') || currentVersion.includes('-beta') || currentVersion.includes('-alpha');
-      const shouldAllowPrereleases = newValue || isCurrentlyPrerelease;
-      
-      autoUpdater.allowPrerelease = shouldAllowPrereleases;
+      const { allowPrerelease: shouldAllowPrereleases, isCurrentlyPrerelease } =
+        configureUpdateChannel(autoUpdater, { currentVersion, userPrefersPrereleases: newValue });
       if (newValue && analytics) {
         analytics.trackEvent('auto_update_action', { action: 'prerelease_opted_in' });
       }
@@ -917,6 +920,8 @@ function setupApp() {
         mainWindow,
         mainAppLauncher: async (profileName) => {
           currentProfile = profileName;
+          // After "Switch Profile", the relaunched app remembers where it came from
+          trackProfileSwitch({ analytics, fromProfile: store.get('fallback-profile'), toProfile: profileName, method: 'launcher' });
           
           debugLog.info('Launching main app from launcher', { 
             function: "mainAppLauncher",
@@ -941,11 +946,33 @@ function setupApp() {
   // Setup auto-updater events
   autoUpdater.on('update-available', (updateInfo) => {
     updateState.downloaded = false;
+    const background = !!updateState.backgroundCheck;
+    const windowAvailable = !!mainWindow && !mainWindow.isDestroyed();
+    const notice = decideUpdateNotice({
+      version: updateInfo.version,
+      background,
+      lastQuietVersion: quietlyAnnouncedVersion(updateState),
+      windowAvailable,
+    });
+    // Pass release notes to renderer for sanitization
+    // GitHub provides HTML in releaseNotes, which will be sanitized by DOMPurify in the renderer
+    const releaseNotesHtml = `<h1>Version ${updateInfo.releaseName}</h1>` + (updateInfo.releaseNotes || '');
+    if (notice === 'none') {
+      // macOS keeps running with the window closed: remember the update so the
+      // next window's indicator restores it (it asks for the pending update)
+      if (background && !windowAvailable) {
+        recordAvailableUpdate(updateState, {
+          version: updateInfo.version, name: updateInfo.releaseName, notes: releaseNotesHtml, quiet: true,
+        });
+      }
+      return;
+    }
+    analytics?.trackEvent('update_available', { offered_version: updateInfo.version, background });
     debugLog.info(`Update available: ${updateInfo.releaseName}`, { 
       function: "autoUpdater update-available",
       currentVersion: app.getVersion(),
       updateVersion: updateInfo.releaseName,
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      provider: usesGitHubUpdates(app.getVersion()) ? 'github' : 'custom',
       platform: process.platform,
       arch: process.arch,
       updateInfo: {
@@ -955,11 +982,22 @@ function setupApp() {
       }
     });
     
-    // Pass release notes to renderer for sanitization
-    // GitHub provides HTML in releaseNotes, which will be sanitized by DOMPurify in the renderer
-    const releaseNotes = updateInfo.releaseNotes || '';
-    
-    mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, `<h1>Version ${updateInfo.releaseName}</h1>` + releaseNotes);
+    // Both paths record it, so a reload always restores the newest known update
+    recordAvailableUpdate(updateState, {
+      version: updateInfo.version,
+      name: updateInfo.releaseName,
+      notes: releaseNotesHtml,
+      quiet: notice === 'quiet',
+    });
+
+    // Background checks run mid-session (possibly mid-show): never open the
+    // modal, just show the quiet toolbar indicator
+    if (notice === 'quiet') {
+      mainWindow.webContents.send('update_available_quiet', updateInfo.releaseName, releaseNotesHtml);
+      return;
+    }
+
+    mainWindow.webContents.send('display_release_notes', updateInfo.releaseName, releaseNotesHtml);
     debugLog.info('display_release_notes call done', { 
       function: "autoUpdater update-available" 
     });
@@ -970,7 +1008,7 @@ function setupApp() {
     debugLog.info('Checking for updates...', { 
       function: "autoUpdater checking-for-update",
       currentVersion: app.getVersion(),
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      provider: usesGitHubUpdates(app.getVersion()) ? 'github' : 'custom',
       platform: process.platform,
       arch: process.arch,
       feedURL: autoUpdater.getFeedURL?.() || 'not set'
@@ -981,17 +1019,19 @@ function setupApp() {
     debugLog.info('No updates available', { 
       function: "autoUpdater update-not-available",
       currentVersion: app.getVersion(),
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      provider: usesGitHubUpdates(app.getVersion()) ? 'github' : 'custom',
       platform: process.platform,
       arch: process.arch
     });
   });
 
   autoUpdater.on('error', (err) => {
+    const updateFailure = describeUpdateError(err, { downloading: !!updateState.downloading });
+    if (updateFailure) analytics?.trackEvent('update_failed', updateFailure);
     debugLog.error(`Auto-updater error: ${err.message}`, { 
       function: "autoUpdater error",
       currentVersion: app.getVersion(),
-      provider: app.getVersion().startsWith('4.') ? 'github' : 'custom',
+      provider: usesGitHubUpdates(app.getVersion()) ? 'github' : 'custom',
       error: err.message,
       errorStack: err.stack,
       platform: process.platform,
@@ -1030,7 +1070,8 @@ function setupApp() {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    updateState.downloaded = true;
+    recordDownloadedUpdate(updateState, info?.version);
+    analytics?.trackEvent('update_downloaded', { version: info?.version });
     try {
       // Send IPC event - ipc-bridge dispatches custom event in renderer
       const version = info?.version || '';
@@ -1063,6 +1104,11 @@ function setupApp() {
       }
     }
   });
+
+  // Installs at venues can stay open for weeks; keep checking while running
+  if (process.platform === 'darwin' || process.platform === 'win32') {
+    startBackgroundUpdateChecks({ autoUpdater, updateState });
+  }
 }
 
 // Temporary testing functions for auto-update validation
@@ -1073,7 +1119,7 @@ function testAutoUpdateScenarios() {
     });
     
     const currentVersion = getTestVersion(); // Use test version if available
-    const isV4 = currentVersion.startsWith('4.');
+    const isV4 = usesGitHubUpdates(currentVersion);
     
     debugLog.info(`Current version: ${currentVersion}, Provider: ${isV4 ? 'github' : 'custom'}`, { 
       function: "testAutoUpdateScenarios",

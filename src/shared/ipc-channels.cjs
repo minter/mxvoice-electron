@@ -106,6 +106,7 @@ const IPC = deepFreeze({
     CHECK_FOR_UPDATE: 'check-for-update',
     DOWNLOAD_UPDATE: 'download-update',
     INSTALL_UPDATE: 'install-update',
+    GET_PENDING_UPDATE: 'get-pending-update',
   },
   UTILITY: {
     GENERATE_ID: 'generate-id',

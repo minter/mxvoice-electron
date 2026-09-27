@@ -30,7 +30,7 @@ function createHarness(overrides = {}) {
 describe('app lifecycle', () => {
   it('flushes state and services before reissuing quit', async () => {
     const autoBackupTimer = { stopAutoBackupTimer: vi.fn() };
-    const analytics = { trackEvent: vi.fn(), shutdown: vi.fn() };
+    const analytics = { endSession: vi.fn() };
     const { app, dependencies, handlers } = createHarness({ autoBackupTimer, analytics, appStartTime: Date.now() - 5000 });
     const event = { preventDefault: vi.fn() };
 
@@ -38,7 +38,7 @@ describe('app lifecycle', () => {
     expect(event.preventDefault).toHaveBeenCalledOnce();
     expect(dependencies.prepareWindowForClose).toHaveBeenCalledOnce();
     expect(autoBackupTimer.stopAutoBackupTimer).toHaveBeenCalledOnce();
-    expect(analytics.shutdown).toHaveBeenCalledOnce();
+    expect(analytics.endSession).toHaveBeenCalledOnce();
     expect(app.quit).toHaveBeenCalledOnce();
   });
 

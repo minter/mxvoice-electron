@@ -46,6 +46,20 @@ const ipcHandlers = {
     }
   },
 
+  // Update found by a background (mid-session) check: show the quiet toolbar
+  // indicator instead of opening the modal
+  update_available_quiet: function (_event, releaseName, releaseNotes) {
+    try {
+      window.dispatchEvent(new CustomEvent('mxvoice:update-available-quiet', { detail: { name: releaseName, notes: releaseNotes } }));
+    } catch (error) {
+      debugLog.error('Failed to dispatch quiet update event', {
+        module: 'ipc-bridge',
+        function: 'update_available_quiet',
+        error: error?.message || 'Unknown error'
+      });
+    }
+  },
+
   // Auto-update progress events
   update_download_progress: function (_event, progress) {
     try {

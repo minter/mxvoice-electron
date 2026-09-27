@@ -64,7 +64,6 @@ export default class EventDelegator {
     const dblHandler = (event) => {
       const row = event.target && event.target.closest('tbody tr.song');
       if (row && table.contains(row) && this.moduleRegistry.audio?.playSelected) {
-        window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'search_result' });
         this.moduleRegistry.audio.playSelected();
       }
     };
@@ -119,8 +118,6 @@ export default class EventDelegator {
         window.secureElectronAPI?.analytics?.trackEvent?.('playlist_used', { action: 'play' });
       }
       if (this.moduleRegistry.audio?.playSelected) {
-        const method = this.moduleRegistry.modeManagement?.getHoldingTankMode?.() === 'playlist' ? 'playlist' : 'holding_tank';
-        window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: method });
         this.moduleRegistry.audio.playSelected();
       }
     };

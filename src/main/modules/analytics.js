@@ -14,6 +14,25 @@ import { v4 as uuidv4 } from 'uuid';
 const POSTHOG_API_KEY = 'phc_qJdKChSMdVxUjNJZyx7dnTaeti64Vd2F5R2rvM8iDXkH';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
+// Error events are throttled so one install stuck in an error loop can't flood
+// the project: each distinct message is reported once per session, up to a cap.
+const ERROR_EVENTS = new Set(['app_error', 'renderer_error']);
+const MAX_ERROR_EVENTS_PER_SESSION = 20;
+// Some messages (e.g. electron-updater HTTP errors) embed stacks and headers
+const MAX_ERROR_MESSAGE_LENGTH = 300;
+// Bound the final flush on exit: posthog-node defaults to 30s with retries,
+// which would stall quitting or switching profiles when offline
+const SESSION_END_FLUSH_TIMEOUT_MS = 3000;
+
+/**
+ * Reduce an error message to its first line, truncated, so repeats group
+ * together and embedded stacks/headers are not sent.
+ */
+function normalizeErrorMessage(message) {
+  if (typeof message !== 'string') return message;
+  return message.split('\n')[0].trim().slice(0, MAX_ERROR_MESSAGE_LENGTH);
+}
+
 /**
  * Create an analytics instance.
  *
@@ -21,14 +40,31 @@ const POSTHOG_HOST = 'https://us.i.posthog.com';
  * @param {Object} options.store - electron-store instance
  * @param {Object} options.debugLog - debug log instance
  * @param {string} options.appVersion - current app version string
+ * @param {number} [options.sessionStartTime] - epoch ms the app started, for app_closed duration
  * @returns {Object} analytics interface
  */
-export function createAnalytics({ store, debugLog, appVersion, isPackaged }) {
+export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessionStartTime = Date.now() }) {
   let client = null;
   let deviceId = null;
   let optedOut = false;
   let initialized = false;
   let disabled = false;
+  const reportedErrors = new Set();
+  let sessionEnd = null;
+  // Dev builds and installs with analytics_internal_user set are tagged so the
+  // project's "Internal / Test users" cohort filters them out of dashboards.
+  let pendingInternalTag = false;
+
+  /**
+   * Returns true when an error event should be dropped as a repeat or over the cap.
+   */
+  function shouldThrottleError(name, properties) {
+    if (!ERROR_EVENTS.has(name)) return false;
+    const key = `${name}:${properties.error_message ?? ''}`;
+    if (reportedErrors.has(key) || reportedErrors.size >= MAX_ERROR_EVENTS_PER_SESSION) return true;
+    reportedErrors.add(key);
+    return false;
+  }
 
   /**
    * Scrub absolute file paths from a stack trace string.
@@ -65,6 +101,7 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged }) {
 
     // Read opt-out preference
     optedOut = !!store.get('analytics_opt_out');
+    pendingInternalTag = !isPackaged || !!store.get('analytics_internal_user');
 
     // Initialize PostHog client
     client = new PostHog(POSTHOG_API_KEY, {
@@ -85,8 +122,13 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged }) {
   function trackEvent(name, properties = {}) {
     if (disabled || !initialized || optedOut || !client) return;
 
-    // Scrub stack traces in error events
     const scrubbed = { ...properties };
+    if (ERROR_EVENTS.has(name)) {
+      scrubbed.error_message = normalizeErrorMessage(scrubbed.error_message);
+    }
+    if (shouldThrottleError(name, scrubbed)) return;
+
+    // Scrub stack traces in error events
     if (scrubbed.stack_trace) {
       scrubbed.stack_trace = scrubStackTrace(scrubbed.stack_trace);
     }
@@ -97,8 +139,10 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged }) {
       properties: {
         ...scrubbed,
         app_version: appVersion,
+        ...(pendingInternalTag && { $set: { ...scrubbed.$set, $internal_or_test_user: true } }),
       },
     });
+    pendingInternalTag = false;
   }
 
   function setOptOut(value) {
@@ -115,9 +159,9 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged }) {
     return optedOut;
   }
 
-  async function shutdown() {
+  async function shutdown(timeoutMs) {
     if (client) {
-      await client.shutdown();
+      await client.shutdown(timeoutMs);
       client = null;
       initialized = false;
       debugLog.info('Analytics shut down', {
@@ -127,5 +171,28 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged }) {
     }
   }
 
-  return { init, trackEvent, setOptOut, getOptOutStatus, shutdown };
+  /**
+   * Send app_closed and flush queued events. Safe to call from every exit
+   * path (normal quit, profile switch, restart); only the first call runs.
+   * `app.exit()` skips before-quit, so callers must await this first.
+   */
+  function endSession() {
+    if (sessionEnd) return sessionEnd;
+    sessionEnd = (async () => {
+      if (!client) return;
+      trackEvent('app_closed', {
+        session_duration_seconds: Math.floor((Date.now() - sessionStartTime) / 1000),
+      });
+      try {
+        await shutdown(SESSION_END_FLUSH_TIMEOUT_MS);
+      } catch (error) {
+        debugLog.error('Analytics shutdown error', {
+          module: 'analytics', function: 'endSession', error: error.message,
+        });
+      }
+    })();
+    return sessionEnd;
+  }
+
+  return { init, trackEvent, setOptOut, getOptOutStatus, shutdown, endSession };
 }

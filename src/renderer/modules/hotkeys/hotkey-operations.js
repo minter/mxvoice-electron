@@ -88,8 +88,7 @@ function playSongFromHotkey(hotkey, _options = {}) {
     window.currentSelectedHotkey = hotkeyElement?.id || null;
     // Hotkey playback should not affect holding tank mode
     // Just play the song without changing autoplay state
-    window.secureElectronAPI?.analytics?.trackEvent?.('song_played', { trigger_method: 'hotkey' });
-    this?.moduleRegistry?.audio?.playSongFromId?.(song_id);
+    this?.moduleRegistry?.audio?.playSongFromId?.(song_id, { trigger_method: 'hotkey' });
     if (typeof animateCSS === 'function' && hotkeyElement) {
       animateCSS(hotkeyElement, "flipInX");
     }
