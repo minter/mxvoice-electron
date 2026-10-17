@@ -54,4 +54,27 @@ describe('window state manager', () => {
     store.get.mockReturnValue({ width: 700 });
     await expect(manager.loadWindowState(store, 'Show Profile')).resolves.toEqual({ width: 700 });
   });
+
+  it('gives up on a page that never flushes, and still saves the window state', async () => {
+    vi.useFakeTimers();
+    try {
+      const window = {
+        isDestroyed: () => false,
+        webContents: { isDestroyed: () => false, executeJavaScript: vi.fn(() => new Promise(() => {})) },
+        getBounds: () => ({ x: 1, y: 2, width: 800, height: 600 }),
+        isMaximized: () => false,
+        isFullScreen: () => false
+      };
+      const { manager, store } = createHarness({ getMainWindow: () => window, flushTimeoutMs: 50 });
+
+      const closing = manager.prepareMainWindowForClose();
+      await vi.advanceTimersByTimeAsync(50);
+      await closing;
+
+      expect(window.webContents.executeJavaScript).toHaveBeenCalled();
+      expect(store.set).toHaveBeenCalledWith('window_state', expect.objectContaining({ width: 800 }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

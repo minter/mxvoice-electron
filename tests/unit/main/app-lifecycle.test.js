@@ -13,13 +13,10 @@ function createHarness(overrides = {}) {
   };
   const dependencies = {
     app,
-    BrowserWindow: { getAllWindows: () => [{}] },
     prepareWindowForClose: vi.fn(),
-    createWindow: vi.fn(),
     onClosed: vi.fn(),
     debugLog: { info: vi.fn(), error: vi.fn() },
     platform: 'linux',
-    environment: {},
     ...overrides
   };
   const lifecycle = createAppLifecycle(dependencies);
@@ -53,9 +50,20 @@ describe('app lifecycle', () => {
     await first;
   });
 
-  it('keeps the app open on macOS when all windows close', () => {
-    const { app, handlers } = createHarness({ platform: 'darwin' });
+  it.each(['darwin', 'win32', 'linux'])('quits when the last window closes on %s', (platform) => {
+    const { app, handlers } = createHarness({ platform });
     handlers['window-all-closed']();
-    expect(app.quit).not.toHaveBeenCalled();
+    expect(app.quit).toHaveBeenCalledOnce();
+  });
+
+  it('has no windowless state to reopen from the Dock', () => {
+    const { handlers } = createHarness({ platform: 'darwin' });
+    expect(handlers.activate).toBeUndefined();
+  });
+
+  it('sets the macOS About panel and the logs path', () => {
+    const { app } = createHarness({ platform: 'darwin' });
+    expect(app.setAppLogsPath).toHaveBeenCalled();
+    expect(app.setAboutPanelOptions).toHaveBeenCalledWith(expect.objectContaining({ applicationName: 'Mx. Voice' }));
   });
 });

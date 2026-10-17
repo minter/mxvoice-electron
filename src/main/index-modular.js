@@ -856,9 +856,6 @@ const createWindow = async () => {
 
 // Setup app lifecycle
 function setupApp() {
-  // Setup app lifecycle events
-  appSetup.setupAppLifecycle();
-  
   // Listen for preference changes that affect auto-updater
   store.onDidChange('prerelease_updates', (newValue) => {
     if (autoUpdater) {
@@ -898,6 +895,10 @@ function setupApp() {
     autoBackupTimer.initializeAutoBackupTimer({ debugLog });
 
     initializeMainProcessServices();
+
+    // Quit handling (state flush, backup timer, analytics) and close-to-quit.
+    // Needs app setup, which initializeMainProcessServices() just created.
+    appSetup.setupAppLifecycle();
     
     // Check if profile was provided via command line
     currentProfile = getProfileFromArgs();

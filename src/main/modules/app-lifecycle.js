@@ -1,14 +1,11 @@
 function createAppLifecycle({
   app,
-  BrowserWindow,
   prepareWindowForClose,
-  createWindow,
   onClosed,
   autoBackupTimer,
   analytics,
   debugLog,
-  platform = process.platform,
-  environment = process.env
+  platform = process.platform
 }) {
   let isQuitting = false;
   let shutdownComplete = false;
@@ -40,13 +37,10 @@ function createAppLifecycle({
   function setup() {
     app.on('closed', onClosed);
     app.on('before-quit', beforeQuit);
-    app.on('window-all-closed', () => {
-      const inTestMode = environment.APP_TEST_MODE === '1' || !!environment.E2E_USER_DATA_DIR;
-      if (platform !== 'darwin' || inTestMode) app.quit();
-    });
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    });
+    // Closing the last window quits on every platform, macOS included: a show
+    // tool shouldn't keep running out of sight with audio or a backup timer
+    // alive. So there is no windowless state to reopen from the Dock.
+    app.on('window-all-closed', () => app.quit());
 
     app.setAppLogsPath();
     if (platform === 'darwin') {

@@ -66,9 +66,7 @@ function initializeAppSetup(dependencies) {
   });
   appLifecycle = createAppLifecycle({
     app,
-    BrowserWindow,
     prepareWindowForClose: () => prepareMainWindowForClose(),
-    createWindow,
     // index-modular.js owns the main window reference
     onClosed: () => {},
     autoBackupTimer,
@@ -380,9 +378,13 @@ function manageCategories() {
   return rendererCommands?.manageCategories();
 }
 
-// Setup app lifecycle events
+// Setup app lifecycle events. Call after initializeAppSetup(): before it
+// there is no lifecycle to set up, and the call would silently do nothing.
 function setupAppLifecycle() {
-  return appLifecycle?.setup();
+  if (!appLifecycle) {
+    throw new Error('setupAppLifecycle() called before initializeAppSetup()');
+  }
+  return appLifecycle.setup();
 }
 
 export {

@@ -199,9 +199,18 @@ before the reload and resume afterwards (about a one-second dropout).
   leaves" maps to `profile-switcher.js`'s flush step. Under boards that step
   retires the recovery record instead.
 
-## Out of scope
+## App lifecycle (fixed on this branch)
 
-- `appSetup.setupAppLifecycle()` runs before `initializeAppSetup()`, so
-  the lifecycle listeners (`before-quit` flush, macOS `activate`) are never
-  attached. That is tracked separately. With registration moved out of
-  `createWindow()`, the `activate → createWindow` path becomes safe to enable.
+`appSetup.setupAppLifecycle()` used to run before `initializeAppSetup()`
+(a regression from bc79485, unreleased), so the lifecycle listeners were
+never attached. Quit didn't run its shutdown path: no analytics session end,
+and state was saved only because the window's own close handler happened to
+flush it. On macOS, closing the window quit the app by Electron's default.
+
+It now runs in the `ready` handler right after
+`initializeMainProcessServices()`, and it throws if called earlier. Closing
+the last window quits on every platform, macOS included, by decision: a show
+tool shouldn't keep running out of sight. So the Dock `activate` reopen
+handler is gone. It only ever rebuilt a bare window without the app's setup.
+The page's state flush on close or quit gives up after 5s, so a hung page
+can't make the app unquittable.

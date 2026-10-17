@@ -7,7 +7,9 @@ function createWindowStateManager({
   profileManager,
   getCurrentProfile,
   log,
-  isQuitting
+  isQuitting,
+  // A hung page must not block closing or quitting: give up on its flush
+  flushTimeoutMs = 5000
 }) {
   let windowStateSaveTimeout = null;
   let closePreparationPromise = null;
@@ -153,9 +155,21 @@ function prepareMainWindowForClose() {
     if (!mainWindow || mainWindow.isDestroyed()) return;
 
     if (!mainWindow.webContents.isDestroyed()) {
-      await mainWindow.webContents.executeJavaScript(
-        'window.profileStateAPI?.flushProfileState?.()'
-      );
+      let timer;
+      const timedOut = new Promise((resolve) => {
+        timer = setTimeout(() => resolve('timeout'), flushTimeoutMs);
+      });
+      const outcome = await Promise.race([
+        mainWindow.webContents.executeJavaScript('window.profileStateAPI?.flushProfileState?.()'),
+        timedOut
+      ]).finally(() => clearTimeout(timer));
+      if (outcome === 'timeout') {
+        debugLog?.warn('Page did not flush its state in time; closing without it', {
+          module: 'app-setup',
+          function: 'prepareMainWindowForClose',
+          timeoutMs: flushTimeoutMs
+        });
+      }
     }
     await saveWindowState(mainWindow);
   })();
