@@ -107,8 +107,8 @@ test.describe('Profile Lifecycle', () => {
     return mainWindow;
   }
 
-  // Switch Profile opens the launcher in this same process, the main window
-  // hidden behind it. Returns the launcher page.
+  // Switch Profile opens the launcher in this same process, as a modal sheet
+  // over the main window. Returns the launcher page.
   async function openSwitchPicker(mainWindow) {
     const launcherPromise = app.waitForEvent('window');
     await mainWindow.evaluate(() => {
@@ -144,7 +144,7 @@ test.describe('Profile Lifecycle', () => {
   async function closeLauncherWindow() {
     await app.evaluate(({ BrowserWindow }) => {
       BrowserWindow.getAllWindows()
-        .find((win) => win.webContents.getURL().endsWith('launcher.html'))
+        .find((win) => win.webContents.getURL().includes('launcher.html'))
         ?.close();
     });
   }
@@ -369,8 +369,8 @@ test.describe('Profile Lifecycle', () => {
     await mainWindow.locator('#omni_search').fill('in-flight search');
     await mainWindow.evaluate(() => { window.__e2eSessionMarker = 'still-here'; });
 
-    await openSwitchPicker(mainWindow);
-    await closeLauncherWindow();
+    const picker = await openSwitchPicker(mainWindow);
+    await picker.locator('#cancel-switch-btn').click();
     await expect.poll(windowCount).toBe(1);
 
     // Not reloaded: in-memory page state and layout survive the cancel
@@ -380,6 +380,29 @@ test.describe('Profile Lifecycle', () => {
     await expect(mainWindow.locator('#omni_search')).toBeVisible();
     expect(await mainWindow.evaluate(() => window.secureElectronAPI.profile.getCurrent()))
       .toMatchObject({ success: true, profile: 'Default User' });
+  });
+
+  test('Esc cancels Switch Profile; the startup launcher has no cancel', async () => {
+    await expect(page.locator('#cancel-switch-btn')).toBeHidden();
+
+    const mainWindow = await launchProfile('Default User');
+    await waitForProfileReady(mainWindow, 'Default User');
+    await dismissFirstRunModal(mainWindow);
+    await mainWindow.evaluate(() => { window.__e2eSessionMarker = 'still-here'; });
+
+    const picker = await openSwitchPicker(mainWindow);
+    await expect(picker.locator('#cancel-switch-btn')).toBeVisible();
+    // Esc closes the create-profile form first, without leaving the picker
+    await picker.locator('#create-profile-btn').click();
+    await expect(picker.locator('#create-profile-modal')).toBeVisible();
+    await picker.keyboard.press('Escape');
+    await expect(picker.locator('#create-profile-modal')).toBeHidden();
+    expect(await windowCount()).toBe(2);
+
+    // The picker closes on keydown, so the keyup half of press() has no page left
+    await picker.keyboard.press('Escape').catch(() => {});
+    await expect.poll(windowCount).toBe(1);
+    expect(await mainWindow.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
   });
 
   test('Log Out switches to Default User in-process', async () => {

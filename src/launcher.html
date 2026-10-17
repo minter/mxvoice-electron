@@ -219,6 +219,8 @@
 
     .launcher-actions {
       margin-top: 20px;
+      display: flex;
+      gap: 12px;
     }
 
     .btn {
@@ -240,6 +242,12 @@
 
     .btn-primary:hover {
       box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
     }
 
     .btn-primary:disabled {
@@ -436,6 +444,10 @@
         <ul id="profile-list" class="profile-list"></ul>
 
         <div class="launcher-actions">
+          <!-- Shown when switching from a running session (launcher.js) -->
+          <button id="cancel-switch-btn" class="btn btn-secondary" style="display: none;">
+            Cancel
+          </button>
           <button id="launch-btn" class="btn btn-primary" disabled>
             Choose Profile
           </button>

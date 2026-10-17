@@ -50,10 +50,12 @@ function initializeLauncherWindow(dependencies) {
 
 /**
  * Create and show the launcher window
- * @param {{ mode?: 'startup'|'switch' }} [options]
+ * @param {{ mode?: 'startup'|'switch', parent?: BrowserWindow }} [options]
+ *   In switch mode, pass the main window as `parent`: the picker opens as a
+ *   modal sheet over it so the running show stays in view.
  * @returns {Promise<BrowserWindow>} The launcher window
  */
-async function createLauncherWindow({ mode = 'startup' } = {}) {
+async function createLauncherWindow({ mode = 'startup', parent = null } = {}) {
   if (launcherWindow) {
     launcherWindow.focus();
     return launcherWindow;
@@ -69,7 +71,9 @@ async function createLauncherWindow({ mode = 'startup' } = {}) {
     mode
   });
   
+  const sheetParent = parent && !parent.isDestroyed() ? parent : null;
   launcherWindow = new BrowserWindow({
+    ...(sheetParent ? { parent: sheetParent, modal: true } : {}),
     width: 550,
     height: 650,
     show: process.env.APP_TEST_MODE !== '1',
@@ -86,7 +90,8 @@ async function createLauncherWindow({ mode = 'startup' } = {}) {
   
   // Load the launcher HTML
   const launcherHtmlPath = path.join(__dirname, '..', '..', 'launcher.html');
-  await launcherWindow.loadFile(launcherHtmlPath);
+  // The page shows Cancel / handles Esc only when there is a session to return to
+  await launcherWindow.loadFile(launcherHtmlPath, { query: { mode } });
   
   // Open DevTools in development (disabled by default)
   // Uncomment to enable DevTools for debugging the launcher

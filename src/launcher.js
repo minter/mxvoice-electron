@@ -14,6 +14,10 @@ let profiles = [];
 let filteredProfiles = [];
 let latestLoadProfilesRequestId = 0;
 
+// 'switch' when opened over a running session (Switch Profile); closing the
+// window then returns to that session untouched
+const launcherMode = new URLSearchParams(window.location.search).get('mode') || 'startup';
+
 // Wait for the secure API to be available
 window.addEventListener('DOMContentLoaded', async () => {
   // Wait for launcher API to be ready (especially important on Windows)
@@ -249,6 +253,12 @@ async function launchApp() {
  */
 function setupEventListeners() {
   document.getElementById('launch-btn').addEventListener('click', launchApp);
+
+  if (launcherMode === 'switch') {
+    const cancelButton = document.getElementById('cancel-switch-btn');
+    cancelButton.style.display = '';
+    cancelButton.addEventListener('click', () => window.close());
+  }
   
   // Create profile button
   document.getElementById('create-profile-btn').addEventListener('click', showCreateProfileModal);
@@ -292,6 +302,11 @@ function setupEventListeners() {
     const modalOpen = document.getElementById('create-profile-modal')?.style.display === 'flex';
     if (e.key === 'Enter' && selectedProfile && !modalOpen) {
       launchApp();
+    }
+    // Esc closes the create-profile modal first, then cancels a switch
+    if (e.key === 'Escape') {
+      if (modalOpen) hideCreateProfileModal();
+      else if (launcherMode === 'switch') window.close();
     }
   });
 }

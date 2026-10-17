@@ -55,7 +55,7 @@ export function applyWindowState(win, state, screen) {
  * @param {Function} deps.rebuildMenu
  * @param {Function} deps.loadWindowState - (profileName) => Promise<state|null>
  * @param {Function} deps.applyWindowState - (win, state) => void
- * @param {Function} deps.openLauncher - Show the profile picker in switch mode
+ * @param {Function} deps.openLauncher - Show the profile picker in switch mode, as a sheet over the main window
  * @param {Function} [deps.getAnalytics]
  * @param {Object} [deps.debugLog]
  */
@@ -159,7 +159,7 @@ export function createProfileSwitcher({
     }
   }
 
-  function showMainWindow() {
+  function focusMainWindow() {
     const win = liveWindow();
     if (!win) return;
     win.show();
@@ -167,8 +167,8 @@ export function createProfileSwitcher({
   }
 
   /**
-   * Hide the main window and show the profile picker. The session stays in
-   * memory until a different profile is chosen.
+   * Show the profile picker over the main window. The main window stays in
+   * view and the session stays in memory until a different profile is chosen.
    */
   async function openPicker() {
     if (pickerOpen) {
@@ -185,12 +185,11 @@ export function createProfileSwitcher({
     }
 
     try {
-      win?.hide();
       await openLauncher();
       return { success: true };
     } catch (error) {
       pickerOpen = false;
-      showMainWindow();
+      focusMainWindow();
       return { success: false, error: error.message };
     }
   }
@@ -201,7 +200,7 @@ export function createProfileSwitcher({
     const result = await switchProfile(name, { method: 'launcher' });
     if (!result.success) throw new Error(result.error);
     pickerOpen = false;
-    showMainWindow();
+    focusMainWindow();
     return result;
   }
 
@@ -212,7 +211,7 @@ export function createProfileSwitcher({
     if (!current || !profileManager.profileExists(current)) {
       await switchProfile(DEFAULT_PROFILE, { method: 'launcher' });
     }
-    showMainWindow();
+    focusMainWindow();
   }
 
   return {

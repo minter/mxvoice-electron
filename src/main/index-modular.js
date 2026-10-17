@@ -720,7 +720,7 @@ function initializeMainProcessServices() {
     rebuildMenu: () => appSetup.createApplicationMenu(),
     loadWindowState: (name) => appSetup.loadWindowState(store, name),
     applyWindowState: (win, state) => applyWindowState(win, state, screen),
-    openLauncher: () => launcherWindow.createLauncherWindow({ mode: 'switch' }),
+    openLauncher: () => launcherWindow.createLauncherWindow({ mode: 'switch', parent: mainWindow }),
     getAnalytics: () => analytics,
     debugLog
   });

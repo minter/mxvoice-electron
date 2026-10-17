@@ -128,14 +128,15 @@ describe('profile switcher', () => {
   });
 
   describe('picker', () => {
-    it('hides the main window behind the launcher and switches on a choice', async () => {
+    it('opens the launcher over the visible main window and switches on a choice', async () => {
       const { switcher, calls, analytics } = setup();
 
       await switcher.openPicker();
       expect(switcher.isPickerOpen()).toBe(true);
       await switcher.onPickerChoice('Saturday Show');
 
-      expect(calls.slice(0, 2)).toEqual(['hide', 'launcher']);
+      expect(calls[0]).toBe('launcher');
+      expect(calls).not.toContain('hide');
       expect(calls).toContain('reload:Saturday Show');
       expect(calls.at(-1)).toBe('show');
       expect(analytics.trackEvent).toHaveBeenCalledWith('profile_switched', { method: 'launcher' });
@@ -148,7 +149,7 @@ describe('profile switcher', () => {
       await switcher.openPicker();
       await switcher.onPickerCancel();
 
-      expect(calls).toEqual(['hide', 'launcher', 'show']);
+      expect(calls).toEqual(['launcher', 'show']);
       expect(win.webContents.reload).not.toHaveBeenCalled();
     });
 
@@ -186,7 +187,7 @@ describe('profile switcher', () => {
       await switcher.openPicker();
       await switcher.openPicker();
       expect(deps.openLauncher).toHaveBeenCalledTimes(2);
-      expect(win.hide).toHaveBeenCalledTimes(1);
+      expect(win.hide).not.toHaveBeenCalled();
     });
 
     it('returns to the main window when the launcher cannot open', async () => {

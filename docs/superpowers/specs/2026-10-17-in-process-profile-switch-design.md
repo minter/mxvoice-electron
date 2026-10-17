@@ -64,20 +64,27 @@ injected, so the order can be unit-tested. For a switch to `name`, it runs these
 Concurrent switch requests are serialised: a second request while one is
 running is rejected.
 
-### 3. Picker: reuse the launcher window (recommended)
+### 3. Picker: the launcher as a sheet over the main window
 
-Options considered:
+Switch Profile opens the existing launcher window in "switch" mode as a
+modal child of the main window (`parent` + `modal`): a sheet on macOS, a
+dialog the main window can't be clicked behind on Windows. The main window
+stays in view, because a show may be running. Hiding it would take the
+transport controls off screen mid-track and make the app look closed. The
+picker shows a Cancel button. Esc closes the create-profile form first, then
+cancels the switch.
 
-- **Launcher window, same process (chosen).** Switch Profile hides the main
-  window and opens the existing launcher window in "switch" mode. Choosing a
-  profile calls `switchProfile(name)` and re-shows the main window. Closing
-  the launcher re-shows the main window untouched. The session stays in
-  memory, and no store key or relaunch is involved. This reuses the launcher
-  UI, preload and E2E helpers unchanged.
-- **Modal in the main window.** It looks nicer (no second window), but it means
-  porting the launcher's list/create/delete UI into the main renderer, and the
-  modal would be torn down by the very reload it triggers. It is more work and
-  gives no extra safety.
+Choosing a profile calls `switchProfile(name)`. Choosing the profile already
+running, Cancel, Esc or closing the window returns to the untouched session.
+The session never left memory, so there is nothing to restore, and no store
+key or relaunch is involved. A modal blocks the main window's clicks and
+keyboard shortcuts while it is open. Esc makes getting back to the controls
+one keypress.
+
+The alternative was a picker built into the main window. It would keep the
+transport usable while picking, but it means porting the launcher's
+list/create/delete UI, and the reload would tear that picker down. Not worth
+it while the reload exists.
 
 If the active profile was deleted while the picker was open (or by
 Delete Current Profile), cancelling falls back to `switchProfile('Default
@@ -91,14 +98,61 @@ launcher.
 
 | Flow | Before | After |
 |---|---|---|
-| Switch Profile | save, relaunch to launcher | save, hide main, launcher (switch mode) |
+| Switch Profile | save, relaunch to launcher | save, launcher as a sheet over main |
 | Switch → pick | new process | `switchProfile(name)`, reload |
-| Switch → cancel | relaunch with `fallback-profile` | re-show main window |
+| Switch → cancel (button, Esc, close) | relaunch with `fallback-profile` | back to main window, untouched |
 | Log Out | relaunch with `--profile=Default User` | `switchProfile('Default User')` |
 | Delete current | delete, then Switch Profile | delete, then picker; cancel → Default User |
 
 `fallback-profile` and `auto-select-profile` are no longer written. Startup
 deletes any left over from older versions.
+
+## Audio across a switch, and boards
+
+Today the reload stops playback, so a switch cuts whatever is playing (for
+example house music at the end of the night). The target behavior is for
+the current track to keep playing through any switch (pick, Log Out,
+Delete Current Profile). Stop, Pause and fade work as usual, using the new
+profile's fade time. Playlist mode does not advance into the new holding
+tank. Songs live in the shared library, so the track is valid in every
+profile.
+
+That needs a swap inside the running page instead of a reload, and boards
+(2026-10-17-boards-design.md) already requires exactly that swap: a board
+switch keeps the playing song going. Under boards, entering a profile means
+loading its active board plus a small set of profile preferences (theme,
+font size, fade time, column order, holding-tank mode). The main-process
+steps above stay as they are. So the order is:
+
+1. **This change:** in-process switch, picker as a sheet, page reload. The
+   reload is the clean-start guarantee for now.
+2. **Boards:** build "load board in place, playback untouched". Startup, board
+   switch and profile switch use that one load path.
+3. **Then:** profile switch uses it, and the `webContents.reload()` step goes
+   away. The guarantee becomes a test: after switching A → B, B's layout and
+   saved state match a fresh start of B.
+
+A separate in-place profile swap before boards would be built twice, the
+first time around `state.json`, which boards retires. If the gap matters
+before boards lands, a stopgap is to record the song, position and volume
+before the reload and resume afterwards (about a one-second dropout).
+
+### Proposed edits to the boards brief
+
+- *Opening and leaving:* replace "Choosing Switch Profile closes the show
+  window and opens the launcher, as it does today. Closing that launcher …
+  The live session comes back from the recovery copy" with: Switch Profile
+  opens the picker over the show window. Cancelling it, or picking the same
+  person, returns to the live session, which never left memory. Nothing is
+  restored, because nothing was torn down.
+- *Decisions table, "Backing out of Switch Profile keeps the night":* the
+  reason becomes "the session is still in memory while the picker is open".
+  It no longer depends on the launcher's fallback profile, which is gone.
+- *Opening and leaving:* add that a profile switch, like a board switch,
+  leaves the playing song running and does not advance playlist mode.
+- *Refactoring:* "Profile switch today saves the live layout before it
+  leaves" maps to `profile-switcher.js`'s flush step. Under boards that step
+  retires the recovery record instead.
 
 ## Out of scope
 
