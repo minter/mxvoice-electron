@@ -438,6 +438,34 @@ test.describe('Profile Lifecycle', () => {
     expect(await mainWindow.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
   });
 
+  test('filtering keeps the Switch Profile dialog its size and drops a hidden selection', async () => {
+    await createProfileInLauncher('Aaron');
+    await createProfileInLauncher('Sandy Duncan');
+    await createProfileInLauncher('Zed');
+    const mainWindow = await launchProfile('Default User');
+    await waitForProfileReady(mainWindow, 'Default User');
+    await dismissFirstRunModal(mainWindow);
+
+    const picker = await openSwitchPicker(mainWindow);
+    await expect(picker.locator('.profile-item')).toHaveCount(4);
+    const dialogHeight = () => picker.locator('.modal-content').evaluate((el) => el.getBoundingClientRect().height);
+    const before = await dialogHeight();
+
+    await picker.locator('.profile-item[data-profile-name="Zed"]').click();
+    await expect(picker.locator('#launch-btn')).toHaveText('Switch to Zed');
+
+    await picker.locator('#profile-search').fill('san');
+    await expect(picker.locator('.profile-item')).toHaveCount(1);
+    expect(await dialogHeight()).toBe(before);
+    // Zed is filtered out, so it is no longer what the button would switch to
+    await expect(picker.locator('#launch-btn')).toHaveText('Switch');
+    await expect(picker.locator('#launch-btn')).toBeDisabled();
+
+    await picker.locator('#profile-search').fill('nobody');
+    await expect(picker.locator('.profile-picker-empty')).toBeVisible();
+    expect(await dialogHeight()).toBe(before);
+  });
+
   test('Enter in the Switch Profile dialog switches instead of playing a song', async () => {
     await createProfileInLauncher('SecondProfile');
     const mainWindow = await launchProfile('Default User');

@@ -86,6 +86,8 @@ async function open(options = {}) {
     keyTarget: document,
     mode: 'switch',
     currentProfile,
+    // The dialog sizes to its content; filtering shouldn't make it shrink
+    fixedListHeight: true,
     api: {
       listProfiles: () => window.secureElectronAPI.profile.listProfiles(),
       createProfile: (name, description) => window.secureElectronAPI.profile.createProfile(name, description),

@@ -83,6 +83,8 @@ const TEMPLATE = `
  * @param {Function} options.api.createProfile - (name, description) => Promise<{success, error}>
  * @param {Function} options.api.choose - (name) => Promise<{success, error}>
  * @param {Function} [options.onCancel] - Back out (switch mode only)
+ * @param {boolean} [options.fixedListHeight] - Keep the list at its loaded height while
+ *   filtering, so a dialog sized by its content doesn't shrink as matches drop
  * @param {Function} [options.onLayoutChange] - After the list (re)loads or the view switches between list and New profile
  * @returns {{ load: Function, focus: Function, destroy: Function }}
  */
@@ -94,6 +96,7 @@ export function createProfilePicker({
   iconSrc,
   api,
   onCancel,
+  fixedListHeight = false,
   onLayoutChange
 }) {
   const isSwitch = mode === 'switch';
@@ -162,6 +165,7 @@ export function createProfilePicker({
     updateChrome();
   }
 
+  /** @returns {string[]} Names now shown */
   function renderList() {
     const visible = sortProfiles(filterProfiles(profiles, search.value));
     if (!visible.length) {
@@ -169,7 +173,7 @@ export function createProfilePicker({
         ? `No profiles match "${escapeHtml(search.value)}".`
         : 'No profiles yet. Create one to get started.';
       list.innerHTML = `<li class="list-group-item profile-picker-empty">${message}</li>`;
-      return;
+      return [];
     }
     list.innerHTML = visible.map((profile) => `
       <li class="list-group-item list-group-item-action profile-item${profile.name === selected ? ' selected' : ''}"
@@ -181,6 +185,24 @@ export function createProfilePicker({
         ${isSwitch && profile.name === currentProfile ? '<span class="profile-current-tag">Current</span>' : ''}
       </li>
     `).join('');
+    return visible.map((profile) => profile.name);
+  }
+
+  // Measured from the full list, before any filter narrows it
+  function lockListHeight() {
+    if (!fixedListHeight) return;
+    list.style.minHeight = '';
+    const height = list.offsetHeight;
+    if (height) list.style.minHeight = `${height}px`;
+  }
+
+  function onSearch() {
+    // The dialog may still have been animating in at load; the full list is
+    // on screen now, before this keystroke narrows it
+    if (fixedListHeight && !list.style.minHeight) lockListHeight();
+    const shown = renderList();
+    // A selection the filter hides would still be what Enter or the button acts on
+    if (selected && !shown.includes(selected)) select(null);
   }
 
   async function load({ keepSelection = false } = {}) {
@@ -202,6 +224,7 @@ export function createProfilePicker({
       showError(result?.error || 'Failed to load profiles');
     }
     updateChrome();
+    lockListHeight();
     onLayoutChange?.();
   }
 
@@ -281,7 +304,7 @@ export function createProfilePicker({
   };
   list.addEventListener('click', onListClick);
   list.addEventListener('dblclick', onListDoubleClick);
-  search.addEventListener('input', renderList);
+  search.addEventListener('input', onSearch);
   launchButton.addEventListener('click', () => choose());
   $('#create-profile-btn').addEventListener('click', showCreate);
   $('#cancel-switch-btn').addEventListener('click', () => onCancel?.());
