@@ -1,3 +1,5 @@
+import { withTimeout, TimeoutError } from './with-timeout.js';
+
 function createWindowStateManager({
   mainWindow: initialWindow = null,
   getMainWindow = () => initialWindow,
@@ -16,13 +18,17 @@ function createWindowStateManager({
 }) {
   let windowStateSaveTimeout = null;
   let closePreparationPromise = null;
-  // Set when the app is closing the window itself (installing an update):
-  // there is nothing to confirm, and a preventDefault would cancel the install
+  // Set only at the moment the app is really closing the window itself
+  // (Electron's before-quit-for-update, Windows session end): there is nothing
+  // to confirm, and a preventDefault would cancel the install or shutdown.
+  // Never set ahead of time: an install that doesn't quit must leave the
+  // confirmation and the close-time flush in place.
   let closeWithoutConfirm = false;
   // While the switcher applies another profile's bounds, the resize,
   // maximize and fullscreen events it causes must not save interim bounds
   // into that profile (they describe the old layout mid-transition)
   let suppressSavesUntil = 0;
+  let settledSaveTimer = null;
   const savesSuppressed = () => Date.now() < suppressSavesUntil;
 
 function setupWindowStateSaving() {
@@ -126,6 +132,17 @@ function setupWindowStateSaving() {
     });
   });
 
+  // Windows shutdown, restart or log off: the session is ending and the
+  // window will be closed for us. Asking "Quit?" would block the shutdown
+  // ("Mx. Voice is preventing shutdown"), so let it close, and save now.
+  // (Not on query-session-end: that shutdown can still be cancelled.)
+  mainWindow.on('session-end', () => {
+    closeWithoutConfirm = true;
+    prepareMainWindowForClose().catch((err) => {
+      debugLog?.error('Error saving state at session end', { module: 'app-setup', function: 'setupWindowStateSaving', error: err.message });
+    });
+  });
+
   let closeSaveComplete = false;
   let closeInProgress = false;
   mainWindow.on('close', async (event) => {
@@ -196,15 +213,14 @@ function prepareMainWindowForClose() {
     if (!mainWindow || mainWindow.isDestroyed()) return;
 
     if (!mainWindow.webContents.isDestroyed()) {
-      let timer;
-      const timedOut = new Promise((resolve) => {
-        timer = setTimeout(() => resolve('timeout'), flushTimeoutMs);
-      });
-      const outcome = await Promise.race([
-        mainWindow.webContents.executeJavaScript('window.profileStateAPI?.flushProfileState?.()'),
-        timedOut
-      ]).finally(() => clearTimeout(timer));
-      if (outcome === 'timeout') {
+      try {
+        await withTimeout(
+          mainWindow.webContents.executeJavaScript('window.profileStateAPI?.flushProfileState?.()'),
+          flushTimeoutMs,
+          `Page did not flush its state within ${flushTimeoutMs}ms`
+        );
+      } catch (error) {
+        if (!(error instanceof TimeoutError)) throw error;
         debugLog?.warn('Page did not flush its state in time; closing without it', {
           module: 'app-setup',
           function: 'prepareMainWindowForClose',
@@ -396,24 +412,27 @@ async function loadWindowState(storeInstance = store, currentProfile = null) {
 }
 
   /**
-   * The app is about to close the window itself (autoUpdater.quitAndInstall()
-   * closes every window before before-quit fires): flush now, then let the
-   * close through without the "Quit?" question or a preventDefault.
+   * Ignore event-driven saves for the next `ms` (macOS fullscreen exits
+   * animate), then save the window's actual state once. That final save is
+   * what counts: it records the settled layout even if a transition outlasted
+   * the window, and keeps a resize the user made meanwhile.
    */
-  async function prepareForUnconfirmedClose() {
-    closeWithoutConfirm = true;
-    await prepareMainWindowForClose();
-  }
-
-  /** Ignore event-driven saves for the next `ms` (macOS fullscreen exits animate) */
   function suppressSaves(ms) {
     suppressSavesUntil = Math.max(suppressSavesUntil, Date.now() + ms);
+    clearTimeout(settledSaveTimer);
+    settledSaveTimer = setTimeout(() => {
+      settledSaveTimer = null;
+      const window = getMainWindow();
+      if (!window || window.isDestroyed()) return;
+      saveWindowState(window).catch((err) => {
+        debugLog?.error('Error saving settled window state', { module: 'app-setup', function: 'suppressSaves', error: err.message });
+      });
+    }, Math.max(0, suppressSavesUntil - Date.now()));
   }
 
   return {
     suppressSaves,
     allowUnconfirmedClose: () => { closeWithoutConfirm = true; },
-    prepareForUnconfirmedClose,
     loadWindowState,
     prepareMainWindowForClose,
     saveWindowState,

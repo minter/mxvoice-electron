@@ -158,7 +158,7 @@ describe('window state manager', () => {
     });
   });
 
-  it('an update install closes without asking, after saving', async () => {
+  it('a close the app makes itself (update install, session end) does not ask', async () => {
     const handlers = {};
     const window = {
       id: 1,
@@ -174,12 +174,14 @@ describe('window state manager', () => {
     const { manager } = createHarness({ getMainWindow: () => window, confirmClose });
     manager.setupWindowStateSaving();
 
-    await manager.prepareForUnconfirmedClose();
-    expect(window.webContents.executeJavaScript).toHaveBeenCalledOnce();
+    // Until it is really happening, a close still asks
+    await handlers.close({ preventDefault: vi.fn() });
+    expect(confirmClose).toHaveBeenCalledOnce();
 
+    manager.allowUnconfirmedClose();
     const event = { preventDefault: vi.fn() };
     await handlers.close(event);
-    expect(confirmClose).not.toHaveBeenCalled();
+    expect(confirmClose).toHaveBeenCalledOnce();
     expect(event.preventDefault).not.toHaveBeenCalled();
   });
 
@@ -191,6 +193,7 @@ describe('window state manager', () => {
         id: 1,
         isDestroyed: () => false,
         on: (event, handler) => { handlers[event] = handler; },
+        webContents: { isDestroyed: () => false },
         getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
         isMaximized: () => false,
         isFullScreen: () => false
@@ -205,12 +208,41 @@ describe('window state manager', () => {
       await vi.advanceTimersByTimeAsync(600);
       expect(store.set).not.toHaveBeenCalled();
 
+      // Once settled, the actual state is saved once, with no event needed
       await vi.advanceTimersByTimeAsync(1000);
+      expect(store.set).toHaveBeenCalledWith('window_state', expect.objectContaining({ width: 800 }));
+
+      // Later events save normally again
+      store.set.mockClear();
       handlers.maximize();
       await vi.advanceTimersByTimeAsync(0);
       expect(store.set).toHaveBeenCalledWith('window_state', expect.any(Object));
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('Windows session end closes without asking and saves', async () => {
+    const handlers = {};
+    const window = {
+      id: 1,
+      isDestroyed: () => false,
+      on: (event, handler) => { handlers[event] = handler; },
+      close: vi.fn(),
+      webContents: { isDestroyed: () => false, executeJavaScript: vi.fn(async () => ({ success: true })) },
+      getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+      isMaximized: () => false,
+      isFullScreen: () => false
+    };
+    const confirmClose = vi.fn(async () => false);
+    const { manager } = createHarness({ getMainWindow: () => window, confirmClose });
+    manager.setupWindowStateSaving();
+
+    handlers['session-end']();
+    expect(window.webContents.executeJavaScript).toHaveBeenCalledOnce();
+    const event = { preventDefault: vi.fn() };
+    await handlers.close(event);
+    expect(confirmClose).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
   });
 });

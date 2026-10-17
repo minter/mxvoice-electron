@@ -274,6 +274,9 @@ test.describe("What's New Tour: next release", () => {
   });
 
   test('next release tour shows the Switch Profile dialog, then the quit confirmation note', async () => {
+    // With one other profile, the real dialog would preselect it
+    await page.evaluate(() => window.secureElectronAPI.profile.createProfile('Tour Other', ''));
+    await page.evaluate(() => { window.__e2eSessionMarker = 'still-here'; });
     await page.evaluate(() => window.moduleRegistry.whatsNew.tourManager.launchTour('4.4.0', { markSeen: false }));
 
     const title = page.locator('.driver-popover-title');
@@ -281,6 +284,12 @@ test.describe("What's New Tour: next release", () => {
     await expect(page.locator('#profileSwitchModal')).toBeVisible();
     // The tour ignores Next while a step's open/close action is still running
     await page.waitForFunction(() => !window.moduleRegistry.whatsNew.tourManager._transitioning);
+
+    // A preview: nothing selected, and Enter during the tour can't switch profiles
+    await expect(page.locator('#profileSwitchModal #launch-btn')).toHaveText('Switch');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
 
     await page.locator('.driver-popover-next-btn').click();
     await expect(title).toHaveText('Closing the Window Asks First', { timeout: 5000 });

@@ -223,9 +223,12 @@ Cmd-W doesn't close the window in this app (it toggles the waveform), so the
 close button, Alt+F4 or the taskbar are the paths that ask.
 
 Installing an update doesn't ask. `autoUpdater.quitAndInstall()` closes every
-window before `before-quit` fires, so `installUpdateNow()` saves state and lets
-the close through first. Electron's `before-quit-for-update` event is a safety
-net for any other caller.
+window before `before-quit` fires. `installUpdateNow()` saves state first. The
+"Quit?" question is skipped only from `before-quit-for-update`, which Electron
+and electron-updater emit when the install really quits. An install that
+doesn't quit leaves the confirmation and the close-time save in place. A
+Windows `session-end` (shutdown, restart, log off) also closes without asking
+and saves, so the app can't block shutdown.
 
 ## Review follow-ups
 
@@ -239,5 +242,14 @@ net for any other caller.
 - If the Default User fallback after Delete Current Profile fails, the dialog
   reopens rather than leaving the deleted profile running.
 - Saves caused by applying another profile's window bounds are ignored for
-  1.5s, so the old layout's interim bounds aren't written into the new profile.
+  1.5s, then the settled state is saved once. Interim bounds never reach the
+  new profile, and a late transition or a user resize is still recorded.
+- `--profile=` with an unregistered name whose directory still exists (a lost
+  registry) re-registers it instead of hiding its data.
+- After Delete Current Profile, the Default User fallback retries, then
+  reopens the dialog, and keeps trying until it lands.
+- The What's New tour shows the dialog as a non-interactive preview, so Enter
+  during the tour can't switch profiles.
+- The dialog module is one state machine
+  (closed → opening → showing → open → closing).
 - Preference saves that don't reach disk report failure.

@@ -7,6 +7,7 @@ import electron from 'electron';
 const { ipcMain, app } = electron;
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 import { getPendingUpdateNotice } from '../pending-update.js';
+import { withTimeout } from '../with-timeout.js';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
@@ -120,7 +121,6 @@ export function register(deps) {
 
   // Stage 2: Download update (user-initiated)
   ipcMain.handle(IPC.APP.DOWNLOAD_UPDATE, async () => {
-    let downloadTimeout;
     try {
       debugLog.info('📥 Starting update download...', {
         module: 'ipc-handlers',
@@ -141,11 +141,7 @@ export function register(deps) {
       const downloadPromise = Promise.resolve()
         .then(() => autoUpdater.downloadUpdate())
         .finally(() => { updateState.downloading = false; });
-      const timeoutPromise = new Promise((_, reject) =>
-        downloadTimeout = setTimeout(() => reject(new Error('Download timeout after 60 seconds')), 60000)
-      );
-
-      await Promise.race([downloadPromise, timeoutPromise]);
+      await withTimeout(downloadPromise, 60000, 'Download timeout after 60 seconds');
       if (analytics) {
         analytics.trackEvent('auto_update_action', { action: 'accepted' });
       }
@@ -158,8 +154,6 @@ export function register(deps) {
         error: errorMessage
       });
       return { success: false, error: errorMessage };
-    } finally {
-      clearTimeout(downloadTimeout);
     }
   });
 

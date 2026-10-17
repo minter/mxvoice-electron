@@ -403,11 +403,13 @@ function manageCategories() {
 }
 
 /**
- * Installing an update: save state, then let the window close without the
- * "Quit?" confirmation. Await this before autoUpdater.quitAndInstall().
+ * Installing an update: save state now. quitAndInstall() then closes the
+ * window without the close-time flush; the "Quit?" question is skipped from
+ * Electron's before-quit-for-update (allowUnconfirmedClose), which fires only
+ * when the install really quits.
  */
 function prepareForUpdateInstall() {
-  return windowStateManager?.prepareForUnconfirmedClose();
+  return windowStateManager?.prepareMainWindowForClose();
 }
 
 /** Ignore window-state saves caused by the next `ms` of programmatic resizing */
@@ -415,7 +417,7 @@ function suppressWindowStateSaves(ms) {
   windowStateManager?.suppressSaves(ms);
 }
 
-/** Sync variant for Electron's 'before-quit-for-update' (no time to save) */
+/** The app is closing the window itself right now: don't ask "Quit?" */
 function allowUnconfirmedClose() {
   windowStateManager?.allowUnconfirmedClose();
 }

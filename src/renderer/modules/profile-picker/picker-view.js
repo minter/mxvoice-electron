@@ -20,12 +20,7 @@ import {
   isSelectable,
   validateNewProfileName
 } from './picker-model.js';
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text ?? '';
-  return div.innerHTML;
-}
+import { escapeHtml } from '../dom-utils/escape-html.js';
 
 const TEMPLATE = `
   <div class="modal-header profile-picker-header">
@@ -83,6 +78,8 @@ const TEMPLATE = `
  * @param {Function} options.api.createProfile - (name, description) => Promise<{success, error}>
  * @param {Function} options.api.choose - (name) => Promise<{success, error}>
  * @param {Function} [options.onCancel] - Back out (switch mode only)
+ * @param {boolean} [options.preview] - Shown but not usable (What's New tour): no key
+ *   capture, nothing preselected, content inert
  * @param {boolean} [options.fixedListHeight] - Keep the list at its loaded height while
  *   filtering, so a dialog sized by its content doesn't shrink as matches drop
  * @param {Function} [options.onLayoutChange] - After the list (re)loads or the view switches between list and New profile
@@ -97,6 +94,7 @@ export function createProfilePicker({
   api,
   onCancel,
   fixedListHeight = false,
+  preview = false,
   onLayoutChange
 }) {
   const isSwitch = mode === 'switch';
@@ -231,7 +229,7 @@ export function createProfilePicker({
     $('#loading-state').style.display = 'none';
     if (result?.success) {
       profiles = result.profiles || [];
-      if (!keepSelection) selected = initialSelection({ profiles, mode, currentProfile });
+      if (!keepSelection) selected = preview ? null : initialSelection({ profiles, mode, currentProfile });
       renderList();
     } else {
       showError(result?.error || 'Failed to load profiles');
@@ -340,7 +338,7 @@ export function createProfilePicker({
   // A closing dialog must stop taking keys at once: Enter pressed while it
   // fades out is meant for the main window (play), not for "switch"
   function activate() {
-    if (keysActive || destroyed) return;
+    if (keysActive || destroyed || preview) return;
     keysActive = true;
     keyTarget.addEventListener('keydown', onKeyDown, true);
   }
@@ -351,6 +349,8 @@ export function createProfilePicker({
     keyTarget.removeEventListener('keydown', onKeyDown, true);
   }
 
+  // Preview: nothing in it can be clicked or focused either
+  root.inert = preview;
   activate();
   updateChrome();
 
@@ -362,6 +362,7 @@ export function createProfilePicker({
     destroy: () => {
       destroyed = true;
       deactivate();
+      root.inert = false;
       root.innerHTML = '';
     }
   };

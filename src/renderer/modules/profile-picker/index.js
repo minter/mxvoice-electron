@@ -17,16 +17,24 @@ import { safeShowModal, safeHideModal } from '../ui/bootstrap-helpers.js';
 const MODAL_ID = 'profileSwitchModal';
 const CONTEXT = { module: 'profile-picker' };
 
+// After Delete Current Profile, how often to retry landing on Default User
+const FALLBACK_RETRY_MS = 500;
+const FALLBACK_ATTEMPTS = 3;
+
+/**
+ * One dialog lifecycle:
+ *   closed → opening (reading the current profile) → showing (Bootstrap is
+ *   animating it in) → open → closing (animating out) → closed
+ * Bootstrap ignores hide() while showing, so a close requested then is
+ * remembered in closeAfterShow and runs on 'shown'.
+ */
+let state = 'closed';
+let closeAfterShow = false;
 let picker = null;
-let opening = false;
-// Bootstrap ignores hide() while the dialog is still animating in, so a
-// close requested then (a quick Esc or Cancel) waits for 'shown'
-let shown = false;
-let closeWhenShown = false;
-// Set from hide() until 'hidden': reopening then waits instead of being dropped
-let hiding = null;
-let afterDelete = false;
-let switching = false;
+// Per opening: { afterDelete, preview, switching }
+let session = null;
+// Resolved on 'hidden', for an open() that arrives while closing
+let hidden = null;
 
 function ensureModal() {
   let modal = document.getElementById(MODAL_ID);
@@ -45,9 +53,9 @@ function ensureModal() {
   document.body.appendChild(modal);
 
   modal.addEventListener('shown.bs.modal', () => {
-    shown = true;
-    if (closeWhenShown) {
-      closeWhenShown = false;
+    state = 'open';
+    if (closeAfterShow) {
+      closeAfterShow = false;
       close();
       return;
     }
@@ -55,79 +63,99 @@ function ensureModal() {
   });
   // Any close (Esc, Cancel, X, backdrop click): stop taking keys right away,
   // not after the fade-out
-  modal.addEventListener('hide.bs.modal', () => picker?.deactivate());
+  modal.addEventListener('hide.bs.modal', () => {
+    picker?.deactivate();
+    state = 'closing';
+  });
   modal.addEventListener('hidden.bs.modal', () => {
-    shown = false;
+    const ended = session;
+    state = 'closed';
+    closeAfterShow = false;
+    session = null;
     picker?.destroy();
     picker = null;
-    hiding?.resolve();
-    hiding = null;
+    hidden?.resolve();
+    hidden = null;
     // The deleted profile can't be returned to: closing lands on Default User
-    if (afterDelete && !switching) fallBackToDefaultUser();
+    if (ended?.afterDelete && !ended.switching) fallBackToDefaultUser();
   });
   return modal;
 }
 
-// After Delete Current Profile the window must not stay on the deleted
-// profile (its saves are locked). If the switch fails, ask again.
-async function fallBackToDefaultUser() {
+function whenHidden() {
+  if (!hidden) {
+    let resolve;
+    const done = new Promise((r) => { resolve = r; });
+    hidden = { done, resolve };
+  }
+  return hidden.done;
+}
+
+async function switchTo(name) {
+  if (session) session.switching = true;
+  const result = await window.secureElectronAPI.profile.switchToProfile(name, 'launcher');
+  // On success the main process reloads this window; nothing more to do here
+  if (!result?.success && session) session.switching = false;
+  return result;
+}
+
+/**
+ * After Delete Current Profile the window must not stay on the deleted
+ * profile (its saves are locked). Retry the switch, then ask again; if the
+ * dialog can't open either (another dialog is up), keep trying until it lands.
+ */
+async function fallBackToDefaultUser(attempt = 1) {
   let result;
   try {
-    result = await switchTo(DEFAULT_PROFILE);
+    result = await window.secureElectronAPI.profile.switchToProfile(DEFAULT_PROFILE, 'launcher');
   } catch (error) {
     result = { success: false, error: error?.message };
   }
   if (result?.success) return;
-  window.debugLog?.error('Failed to fall back to Default User; reopening the picker', {
-    ...CONTEXT, function: 'fallBackToDefaultUser', error: result?.error
+  window.debugLog?.warn('Fallback to Default User failed', {
+    ...CONTEXT, function: 'fallBackToDefaultUser', attempt, error: result?.error
   });
-  open({ afterDelete: true });
-}
-
-async function switchTo(name) {
-  switching = true;
-  const result = await window.secureElectronAPI.profile.switchToProfile(name, 'launcher');
-  // On success the main process reloads this window; nothing more to do here
-  if (!result?.success) switching = false;
-  return result;
+  if (attempt < FALLBACK_ATTEMPTS) {
+    setTimeout(() => fallBackToDefaultUser(attempt + 1), FALLBACK_RETRY_MS);
+    return;
+  }
+  const opened = await open({ afterDelete: true });
+  if (!opened) setTimeout(() => fallBackToDefaultUser(1), FALLBACK_RETRY_MS * 2);
 }
 
 function close() {
+  if (state === 'closed' || state === 'closing') return Promise.resolve();
   picker?.deactivate();
-  if (!shown) {
-    closeWhenShown = true;
+  if (state === 'opening' || state === 'showing') {
+    closeAfterShow = true;
     return Promise.resolve();
   }
-  if (!hiding) {
-    let resolve;
-    const done = new Promise((r) => { resolve = r; });
-    hiding = { done, resolve };
-  }
+  state = 'closing';
   return safeHideModal(`#${MODAL_ID}`, { ...CONTEXT, function: 'close' });
 }
 
 /**
  * Open the Switch Profile dialog.
- * @param {{ afterDelete?: boolean }} [options] - afterDelete: the running
- *   profile was just deleted; it is not marked, and closing the dialog
- *   switches to Default User
+ * @param {{ afterDelete?: boolean, preview?: boolean }} [options]
+ *   afterDelete: the running profile was just deleted; nothing is marked
+ *   current, and closing the dialog switches to Default User.
+ *   preview: for the What's New tour; shown but not usable (no key capture,
+ *   nothing selected or clickable), so tour keys can't switch profiles.
+ * @returns {Promise<boolean>} whether the dialog is open (or opening)
  */
 async function open(options = {}) {
-  // Closed while still animating in, then reopened: the latest request wins,
-  // so drop the queued close and keep it open
-  if (picker && closeWhenShown) {
-    closeWhenShown = false;
-    picker.activate();
-    return;
+  // Closed while still animating in, then reopened: the latest request wins
+  if (closeAfterShow && (state === 'opening' || state === 'showing')) {
+    closeAfterShow = false;
+    if (!session?.preview) picker?.activate();
+    return true;
   }
-  // Still closing from a moment ago: open once that has finished
-  if (hiding) await hiding.done;
-  // One picker at a time: a second one would leave the first one's document
-  // key listener behind. `opening` covers the await below.
-  if (picker || opening) return;
+  if (state === 'closing') await whenHidden();
+  if (state !== 'closed') return true;
+
   if (!window.bootstrap?.Modal) {
     window.debugLog?.error('Bootstrap Modal unavailable; cannot open Switch Profile', { ...CONTEXT, function: 'open' });
-    return;
+    return false;
   }
   // Bootstrap dialogs don't stack: over another open dialog this one would
   // stay invisible while still capturing Enter and Esc for the whole page
@@ -136,24 +164,21 @@ async function open(options = {}) {
     window.debugLog?.warn('Another dialog is open; not opening Switch Profile over it', {
       ...CONTEXT, function: 'open', openDialog: otherDialog.id || null
     });
-    return;
+    return false;
   }
-  opening = true;
-  shown = false;
-  closeWhenShown = false;
-  afterDelete = !!options.afterDelete;
-  switching = false;
+
+  state = 'opening';
+  closeAfterShow = false;
+  session = { afterDelete: !!options.afterDelete, preview: !!options.preview, switching: false };
 
   let currentProfile = null;
-  try {
-    if (!afterDelete) {
+  if (!session.afterDelete) {
+    try {
       const current = await window.secureElectronAPI.profile.getCurrent();
       currentProfile = current?.success ? current.profile : null;
+    } catch (error) {
+      window.debugLog?.warn('Could not read the current profile', { ...CONTEXT, function: 'open', error: error?.message });
     }
-  } catch (error) {
-    window.debugLog?.warn('Could not read the current profile', { ...CONTEXT, function: 'open', error: error?.message });
-  } finally {
-    opening = false;
   }
 
   const modal = ensureModal();
@@ -162,6 +187,7 @@ async function open(options = {}) {
     keyTarget: document,
     mode: 'switch',
     currentProfile,
+    preview: session.preview,
     // The dialog sizes to its content; filtering shouldn't make it shrink
     fixedListHeight: true,
     api: {
@@ -171,10 +197,13 @@ async function open(options = {}) {
     },
     onCancel: close
   });
+  if (closeAfterShow) picker.deactivate();
 
+  state = 'showing';
   // Esc is the picker's: it closes the New profile form before the dialog
   await safeShowModal(`#${MODAL_ID}`, { ...CONTEXT, function: 'open' }, { backdrop: true, keyboard: false });
   await picker?.load();
+  return true;
 }
 
 export { open, close };

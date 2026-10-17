@@ -156,10 +156,11 @@ tourManager.registerHelper('openPreferencesAndScrollToAnalytics', async () => {
 });
 
 /**
- * Opens the Switch Profile dialog for the tour (it animates in)
+ * Shows the Switch Profile dialog for the tour, as a preview: it doesn't take
+ * keys or clicks, so Enter during the tour can't switch profiles
  */
 tourManager.registerHelper('openSwitchProfileForTour', async () => {
-  await moduleRegistry.profilePicker?.open();
+  await moduleRegistry.profilePicker?.open({ preview: true });
   await new Promise((resolve) => setTimeout(resolve, 400));
 });
 

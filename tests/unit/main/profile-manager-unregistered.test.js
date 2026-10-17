@@ -60,4 +60,25 @@ describe('unregistered profiles are never recreated on disk', () => {
     expect(fs.existsSync(path.join(profileDirectory('Default User'), 'preferences.json'))).toBe(true);
     await expect(profiles.saveProfileState('Default User', state)).resolves.toEqual({ success: true });
   });
+
+  it('re-registers a profile whose directory survived a lost registry', async () => {
+    expect(profiles.createProfile('Survivor', '')).toEqual({ success: true });
+    // profiles.json lost: only the default registry is left
+    fs.rmSync(path.join(userDataDirectory, 'profiles.json'), { force: true });
+    expect(profiles.profileExists('Survivor')).toBe(false);
+
+    expect(profiles.adoptProfileDirectory('Survivor')).toBe(true);
+    expect(profiles.profileExists('Survivor')).toBe(true);
+    await expect(profiles.saveProfileState('Survivor', state)).resolves.toEqual({ success: true });
+  });
+
+  it('does not adopt a name without a directory, or one that collides with a registered profile', () => {
+    expect(profiles.adoptProfileDirectory('Never Made')).toBe(false);
+    expect(fs.existsSync(profileDirectory('Never Made'))).toBe(false);
+
+    expect(profiles.createProfile('Show', '')).toEqual({ success: true });
+    // "Show!" sanitizes to the same directory as "Show"
+    expect(profiles.adoptProfileDirectory('Show!')).toBe(false);
+    expect(profiles.profileExists('Show!')).toBe(false);
+  });
 });

@@ -265,6 +265,36 @@ function validateProfileName(name) {
 }
 
 /**
+ * Register a profile whose directory exists but that is missing from the
+ * registry (e.g. profiles.json was corrupted and reset to the default), so
+ * its data is reachable again. Never creates a directory, and refuses a name
+ * that would share another registered profile's directory.
+ * @param {string} profileName
+ * @returns {boolean} true when the profile is (now) registered
+ */
+function adoptProfileDirectory(profileName) {
+  if (profileExists(profileName)) return true;
+  if (!validateProfileName(profileName).valid) return false;
+  if (!fs.existsSync(getProfileDirectory(profileName))) return false;
+
+  const registry = loadProfileRegistry();
+  registry.profiles[profileName] = {
+    name: profileName,
+    description: '',
+    created_at: Date.now(),
+    last_used: Date.now()
+  };
+  const saved = saveProfileRegistry(registry);
+  debugLog?.info('Registered existing profile directory', {
+    module: 'profile-manager',
+    function: 'adoptProfileDirectory',
+    profileName,
+    saved
+  });
+  return saved;
+}
+
+/**
  * Create a new profile
  * @param {string} profileName - Name for the new profile
  * @param {string} description - Optional description
@@ -936,6 +966,7 @@ export {
   initializeProfileManager,
   getAvailableProfiles,
   profileExists,
+  adoptProfileDirectory,
   validateProfileName,
   createProfile,
   updateProfileLastUsed,

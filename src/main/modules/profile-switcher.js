@@ -9,6 +9,7 @@
  */
 
 import { trackProfileSwitch } from './profile-switch-analytics.js';
+import { withTimeout } from './with-timeout.js';
 
 // Stops the old page's debounced collection saves; they would otherwise land
 // in the new profile once currentProfile changes
@@ -19,14 +20,6 @@ const LOCK_RENDERER_SAVES = 'window.isRestoringProfileState = true';
 // at the end replaces it anyway. The flush (prepareForSwitch) has its own
 // limit in prepareMainWindowForClose.
 const RENDERER_TIMEOUT_MS = 5000;
-
-function withTimeout(promise, ms, label) {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-}
 
 /**
  * Restore a saved window_state onto an existing window.
@@ -140,7 +133,9 @@ export function createProfileSwitcher({
 
       savesFenced = true;
       await step('lock-renderer-saves', () => withTimeout(
-        win.webContents.executeJavaScript(LOCK_RENDERER_SAVES), rendererTimeoutMs, 'lock-renderer-saves'
+        win.webContents.executeJavaScript(LOCK_RENDERER_SAVES),
+        rendererTimeoutMs,
+        `lock-renderer-saves timed out after ${rendererTimeoutMs}ms`
       ));
 
       setCurrentProfile(name);

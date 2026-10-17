@@ -704,8 +704,9 @@ let profileSwitcher = null;
 
 /**
  * Install a downloaded update. quitAndInstall() closes every window before
- * before-quit fires, so save state first and let the close through without
- * the "Quit Mx. Voice?" confirmation (which would cancel the install).
+ * before-quit fires, so save state first. The "Quit Mx. Voice?" confirmation
+ * (which would cancel the install) is skipped from before-quit-for-update,
+ * not here: if this install doesn't quit, closes must still ask and save.
  */
 async function installUpdateNow() {
   try {
@@ -920,8 +921,9 @@ function setupApp() {
     // Needs app setup, which initializeMainProcessServices() just created.
     appSetup.setupAppLifecycle();
 
-    // Safety net for any quitAndInstall() that skips installUpdateNow(): the
-    // native updater closes the windows itself, which must not ask "Quit?"
+    // quitAndInstall() is really quitting: the native updater closes the
+    // windows itself next, which must not ask "Quit?" (it would cancel it).
+    // Emitted by Electron's updater (macOS) and by electron-updater.
     try {
       nativeAutoUpdater?.on?.('before-quit-for-update', () => appSetup.allowUnconfirmedClose());
     } catch (error) {
@@ -932,8 +934,9 @@ function setupApp() {
     currentProfile = getProfileFromArgs();
 
     // An unknown name (typo, deleted, never created) would run a session in
-    // which nothing can be saved: pick a profile in the launcher instead
-    if (currentProfile && !profileManager.profileExists(currentProfile)) {
+    // which nothing can be saved: pick a profile in the launcher instead.
+    // A profile whose directory survived a lost registry is registered again.
+    if (currentProfile && !profileManager.adoptProfileDirectory(currentProfile)) {
       debugLog.warn('Profile from --profile= does not exist; showing the launcher', {
         function: "app ready event",
         profile: currentProfile
