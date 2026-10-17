@@ -27,6 +27,12 @@ let profileSelected = false;
 // hidden behind the picker, closing returns to it.
 let launcherMode = 'startup';
 
+// The window stays hidden until the page has sized it to its profile list,
+// so it never appears at the default size first; this is the fallback if the
+// page never reports (for example, profiles failed to load)
+const REVEAL_FALLBACK_MS = 1500;
+let revealFallbackTimer = null;
+
 const LAUNCHER_WIDTH = 420;
 const LAUNCHER_MIN_HEIGHT = 240;
 const LAUNCHER_MAX_HEIGHT = 560;
@@ -84,7 +90,7 @@ async function createLauncherWindow({ mode = 'startup', parent = null, current =
     width: LAUNCHER_WIDTH,
     height: 420,
     useContentSize: true,
-    show: process.env.APP_TEST_MODE !== '1',
+    show: false,
     resizable: false,
     center: true,
     autoHideMenuBar: true,
@@ -100,6 +106,9 @@ async function createLauncherWindow({ mode = 'startup', parent = null, current =
   // The page shows Cancel / handles Esc only when there is a session to return to
   const query = { mode, theme: theme || 'auto' };
   if (current) query.current = current;
+  const windowBeingLoaded = launcherWindow;
+  clearTimeout(revealFallbackTimer);
+  revealFallbackTimer = setTimeout(() => revealLauncherWindow(windowBeingLoaded), REVEAL_FALLBACK_MS);
   await launcherWindow.loadFile(launcherHtmlPath, { query });
   
   // Open DevTools in development (disabled by default)
@@ -117,6 +126,7 @@ async function createLauncherWindow({ mode = 'startup', parent = null, current =
       profileSelected
     });
     
+    clearTimeout(revealFallbackTimer);
     launcherWindow = null;
     if (profileSelected) return;
 
@@ -136,6 +146,17 @@ async function createLauncherWindow({ mode = 'startup', parent = null, current =
   });
   
   return launcherWindow;
+}
+
+/**
+ * Show the launcher once it has its final size (tests keep it hidden)
+ * @param {BrowserWindow} win
+ */
+function revealLauncherWindow(win) {
+  if (!win || win.isDestroyed() || win.isVisible()) return;
+  clearTimeout(revealFallbackTimer);
+  if (process.env.APP_TEST_MODE === '1') return;
+  win.show();
 }
 
 /**
@@ -244,6 +265,7 @@ function registerLauncherHandlers() {
     const requested = Number.isFinite(height) ? Math.round(height) : LAUNCHER_MIN_HEIGHT;
     const clamped = Math.min(LAUNCHER_MAX_HEIGHT, Math.max(LAUNCHER_MIN_HEIGHT, requested));
     launcherWindow.setContentSize(LAUNCHER_WIDTH, clamped);
+    revealLauncherWindow(launcherWindow);
     return { success: true, height: clamped };
   });
 

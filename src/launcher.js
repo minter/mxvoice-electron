@@ -189,6 +189,7 @@ async function loadProfiles(options = {}) {
       // Still show the UI even if there was an error
       document.getElementById('loading-state').style.display = 'none';
       document.getElementById('profile-content').style.display = 'flex';
+      fitWindowToContent();
     }
   } catch (error) {
     if (!forceRender && requestId !== latestLoadProfilesRequestId) {
@@ -199,6 +200,7 @@ async function loadProfiles(options = {}) {
     // Still show the UI even if there was an error
     document.getElementById('loading-state').style.display = 'none';
     document.getElementById('profile-content').style.display = 'flex';
+    fitWindowToContent();
   }
 }
 
