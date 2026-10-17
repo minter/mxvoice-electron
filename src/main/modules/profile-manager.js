@@ -206,6 +206,18 @@ function profileExists(profileName) {
 }
 
 /**
+ * True when writing for this profile would create its directory although the
+ * profile isn't registered: it was deleted (the running window can still name
+ * it until another profile opens) or never existed. Such reads and writes must
+ * not bring the directory back.
+ * @param {string} profileName
+ * @param {string} profileDir
+ */
+function wouldRecreateUnregisteredProfile(profileName, profileDir) {
+  return !fs.existsSync(profileDir) && !profileExists(profileName);
+}
+
+/**
  * Validate profile name
  * @param {string} name - Profile name to validate
  * @returns {Object} Validation result { valid: boolean, error?: string }
@@ -544,8 +556,16 @@ async function loadProfilePreferences(profileName) {
     const preferencesPath = getProfilePreferencesPath(profileName);
     
     if (!fs.existsSync(preferencesPath)) {
-      // Create preferences, migrating from global store if available
       const profileDir = path.dirname(preferencesPath);
+      if (wouldRecreateUnregisteredProfile(profileName, profileDir)) {
+        debugLog?.warn('Preferences read for an unregistered profile; returning defaults without creating it', {
+          module: 'profile-manager',
+          function: 'loadProfilePreferences',
+          profileName
+        });
+        return getDefaultPreferences();
+      }
+      // Create preferences, migrating from global store if available
       if (!fs.existsSync(profileDir)) {
         fs.mkdirSync(profileDir, { recursive: true });
       }
@@ -606,6 +626,15 @@ async function saveProfilePreferences(profileName, preferences) {
   try {
     const preferencesPath = getProfilePreferencesPath(profileName);
     const profileDir = path.dirname(preferencesPath);
+
+    if (wouldRecreateUnregisteredProfile(profileName, profileDir)) {
+      debugLog?.warn('Refusing to save preferences for an unregistered profile', {
+        module: 'profile-manager',
+        function: 'saveProfilePreferences',
+        profileName
+      });
+      return false;
+    }
     
     // Ensure profile directory exists
     if (!fs.existsSync(profileDir)) {
@@ -820,6 +849,16 @@ async function saveProfileState(profileName, state, { reason = 'save' } = {}) {
   const profileDir = getProfileDirectory(profileName);
   const stateFile = getProfileStatePath(profileName);
   const sanitizedName = sanitizeProfileName(profileName);
+
+  if (wouldRecreateUnregisteredProfile(profileName, profileDir)) {
+    debugLog?.warn('Refusing to save state for an unregistered profile', {
+      module: 'profile-manager',
+      function: 'saveProfileState',
+      reason,
+      profileName
+    });
+    return { success: false, skipped: true, error: 'Profile does not exist' };
+  }
 
   const hotkeyCount = state?.hotkeys?.reduce((sum, tab) => sum + Object.keys(tab.hotkeys || {}).length, 0) || 0;
   const holdingTankCount = state?.holdingTank?.reduce((sum, tab) => sum + (tab.songIds?.length || 0), 0) || 0;
