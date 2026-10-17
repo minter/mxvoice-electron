@@ -27,6 +27,10 @@ let profileSelected = false;
 // hidden behind the picker, closing returns to it.
 let launcherMode = 'startup';
 
+const LAUNCHER_WIDTH = 420;
+const LAUNCHER_MIN_HEIGHT = 240;
+const LAUNCHER_MAX_HEIGHT = 560;
+
 /**
  * Initialize the launcher window module. Registers the launcher IPC handlers,
  * so call it exactly once per process.
@@ -50,12 +54,15 @@ function initializeLauncherWindow(dependencies) {
 
 /**
  * Create and show the launcher window
- * @param {{ mode?: 'startup'|'switch', parent?: BrowserWindow }} [options]
- *   In switch mode, pass the main window as `parent`: the picker opens as a
- *   modal sheet over it so the running show stays in view.
+ * @param {Object} [options]
+ * @param {'startup'|'switch'} [options.mode]
+ * @param {BrowserWindow} [options.parent] - In switch mode, the main window: the
+ *   picker opens as a modal sheet over it so the running show stays in view
+ * @param {string} [options.current] - Profile running behind the sheet
+ * @param {string} [options.theme] - That profile's screen_mode (auto/light/dark)
  * @returns {Promise<BrowserWindow>} The launcher window
  */
-async function createLauncherWindow({ mode = 'startup', parent = null } = {}) {
+async function createLauncherWindow({ mode = 'startup', parent = null, current = null, theme = 'auto' } = {}) {
   if (launcherWindow) {
     launcherWindow.focus();
     return launcherWindow;
@@ -73,13 +80,13 @@ async function createLauncherWindow({ mode = 'startup', parent = null } = {}) {
   
   const sheetParent = parent && !parent.isDestroyed() ? parent : null;
   launcherWindow = new BrowserWindow({
-    ...(sheetParent ? { parent: sheetParent, modal: true } : {}),
-    width: 550,
-    height: 650,
+    ...(sheetParent ? { parent: sheetParent, modal: true } : { titleBarStyle: 'hiddenInset' }),
+    width: LAUNCHER_WIDTH,
+    height: 420,
+    useContentSize: true,
     show: process.env.APP_TEST_MODE !== '1',
     resizable: false,
     center: true,
-    titleBarStyle: 'hiddenInset',
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -91,7 +98,9 @@ async function createLauncherWindow({ mode = 'startup', parent = null } = {}) {
   // Load the launcher HTML
   const launcherHtmlPath = path.join(__dirname, '..', '..', 'launcher.html');
   // The page shows Cancel / handles Esc only when there is a session to return to
-  await launcherWindow.loadFile(launcherHtmlPath, { query: { mode } });
+  const query = { mode, theme: theme || 'auto' };
+  if (current) query.current = current;
+  await launcherWindow.loadFile(launcherHtmlPath, { query });
   
   // Open DevTools in development (disabled by default)
   // Uncomment to enable DevTools for debugging the launcher
@@ -227,6 +236,17 @@ function registerLauncherHandlers() {
     }
   });
   
+  // Fit the window to the profile list (the page measures itself once)
+  ipcMain.handle('launcher:fit-to-content', (event, height) => {
+    if (!launcherWindow || launcherWindow.isDestroyed() || event.sender !== launcherWindow.webContents) {
+      return { success: false, error: 'Launcher window not available' };
+    }
+    const requested = Number.isFinite(height) ? Math.round(height) : LAUNCHER_MIN_HEIGHT;
+    const clamped = Math.min(LAUNCHER_MAX_HEIGHT, Math.max(LAUNCHER_MIN_HEIGHT, requested));
+    launcherWindow.setContentSize(LAUNCHER_WIDTH, clamped);
+    return { success: true, height: clamped };
+  });
+
   // Launch main app with profile
   ipcMain.handle('launcher:launch-app', async (event, profileName) => {
     try {

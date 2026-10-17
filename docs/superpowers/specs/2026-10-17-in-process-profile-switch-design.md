@@ -81,6 +81,14 @@ key or relaunch is involved. A modal blocks the main window's clicks and
 keyboard shortcuts while it is open. Esc makes getting back to the controls
 one keypress.
 
+The picker uses the main window's stylesheets (Bootstrap and `colors.css`), so it
+matches the app. In switch mode it follows the running profile's light/dark
+setting. Startup and switch share one compact layout: a header bar ("Choose a
+profile" / "Switch profile, Current: X"), dense rows with a Current tag, and a
+footer with New profile, Cancel (switch only) and a primary button that names
+the target ("Open X" / "Switch to X"). At startup the most recently used
+profile is preselected. The window sizes itself to the list, up to a cap.
+
 The alternative was a picker built into the main window. It would keep the
 transport usable while picking, but it means porting the launcher's
 list/create/delete UI, and the reload would tear that picker down. Not worth

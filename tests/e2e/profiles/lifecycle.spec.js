@@ -405,6 +405,70 @@ test.describe('Profile Lifecycle', () => {
     expect(await mainWindow.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
   });
 
+  test('switch sheet names the running profile, follows its theme and fits its list', async () => {
+    await expect(page.locator('#launcher-title')).toHaveText('Choose a profile');
+    await expect(page.locator('#launcher-current')).toBeHidden();
+    await createProfileInLauncher('SecondProfile');
+
+    const mainWindow = await launchProfile('Default User');
+    await waitForProfileReady(mainWindow, 'Default User');
+    await dismissFirstRunModal(mainWindow);
+    await mainWindow.evaluate(() => window.secureElectronAPI.profile.setPreference('screen_mode', 'dark'));
+
+    const picker = await openSwitchPicker(mainWindow);
+    await expect(picker.locator('#launcher-title')).toHaveText('Switch profile');
+    await expect(picker.locator('#launcher-current')).toHaveText('Current: Default User');
+    await expect(picker.locator('.profile-item[data-profile-name="Default User"] .profile-current-tag')).toHaveText('Current');
+    await expect(picker.locator('.profile-item[data-profile-name="SecondProfile"] .profile-current-tag')).toHaveCount(0);
+    await expect(picker.locator('html')).toHaveAttribute('data-bs-theme', 'dark');
+    await expect(picker.locator('body')).toHaveClass(/theme-dark/);
+
+    // Nothing preselected while switching; the button says what it will do
+    await expect(picker.locator('#launch-btn')).toHaveText('Switch');
+    await picker.locator('.profile-item[data-profile-name="SecondProfile"]').click();
+    await expect(picker.locator('#launch-btn')).toHaveText('Switch to SecondProfile');
+    await picker.locator('.profile-item[data-profile-name="Default User"]').click();
+    await expect(picker.locator('#launch-btn')).toHaveText('Stay on Default User');
+
+    // Sized to its two rows: no scrolling, and shorter than the initial window
+    await expect.poll(() => picker.evaluate(() => {
+      const list = document.getElementById('profile-list');
+      return list.scrollHeight <= list.clientHeight;
+    })).toBe(true);
+    const launcherHeight = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()
+      .find((win) => win.webContents.getURL().includes('launcher.html')).getContentSize()[1]);
+    expect(launcherHeight).toBeGreaterThanOrEqual(240);
+    expect(launcherHeight).toBeLessThan(420);
+  });
+
+  test('the startup launcher preselects the most recently used profile', async () => {
+    await createProfileInLauncher('Recent');
+    const mainWindow = await launchProfile('Recent');
+    await waitForProfileReady(mainWindow, 'Recent');
+    await app.close();
+
+    app = await electron.launch({
+      executablePath: electronPath,
+      args: ['.'],
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        APP_TEST_MODE: '1',
+        DISABLE_HARDWARE_ACCELERATION: '1',
+        AUTO_UPDATE: '0',
+        E2E_USER_DATA_DIR: userDataDir,
+        HOME: fakeHome,
+        APPDATA: fakeHome,
+      },
+    });
+    page = await app.firstWindow();
+    await page.waitForSelector('#profile-content', { timeout: 10000 });
+
+    await expect(page.locator('.profile-item[data-profile-name="Recent"]')).toHaveClass(/selected/);
+    await expect(page.locator('#launch-btn')).toHaveText('Open Recent');
+    await expect(page.locator('#cancel-switch-btn')).toBeHidden();
+  });
+
   test('Log Out switches to Default User in-process', async () => {
     await createProfileInLauncher('ShowNight');
 

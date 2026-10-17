@@ -720,7 +720,18 @@ function initializeMainProcessServices() {
     rebuildMenu: () => appSetup.createApplicationMenu(),
     loadWindowState: (name) => appSetup.loadWindowState(store, name),
     applyWindowState: (win, state) => applyWindowState(win, state, screen),
-    openLauncher: () => launcherWindow.createLauncherWindow({ mode: 'switch', parent: mainWindow }),
+    openLauncher: async () => {
+      // A just-deleted profile has no preferences to read, and reading them
+      // would recreate its directory
+      const live = currentProfile && profileManager.profileExists(currentProfile) ? currentProfile : null;
+      const preferences = live ? await profileManager.loadProfilePreferences(live).catch(() => null) : null;
+      return launcherWindow.createLauncherWindow({
+        mode: 'switch',
+        parent: mainWindow,
+        current: live,
+        theme: preferences?.screen_mode
+      });
+    },
     getAnalytics: () => analytics,
     debugLog
   });

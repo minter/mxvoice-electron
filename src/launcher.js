@@ -14,12 +14,88 @@ let profiles = [];
 let filteredProfiles = [];
 let latestLoadProfilesRequestId = 0;
 
+const launcherParams = new URLSearchParams(window.location.search);
 // 'switch' when opened over a running session (Switch Profile); closing the
 // window then returns to that session untouched
-const launcherMode = new URLSearchParams(window.location.search).get('mode') || 'startup';
+const launcherMode = launcherParams.get('mode') || 'startup';
+// Profile running behind the switch sheet, if any
+const currentProfileName = launcherParams.get('current') || null;
+// The running profile's screen_mode in switch mode; 'auto' follows the system
+const themePreference = launcherParams.get('theme') || 'auto';
+
+/**
+ * Apply the main window's theme classes (colors.css) and Bootstrap's theme
+ */
+function applyTheme() {
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  const theme = themePreference === 'light' || themePreference === 'dark'
+    ? themePreference
+    : (prefersDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-bs-theme', theme);
+  document.body.classList.remove('theme-light', 'theme-dark');
+  document.body.classList.add(`theme-${theme}`);
+}
+
+/**
+ * Title, current-profile label and window chrome for the launcher mode
+ */
+function applyModeChrome() {
+  const isSwitch = launcherMode === 'switch';
+  document.getElementById('launcher-title').textContent = isSwitch ? 'Switch profile' : 'Choose a profile';
+  // The startup window keeps the macOS traffic lights over its header
+  document.body.classList.toggle('has-titlebar', !isSwitch && /Mac/.test(navigator.platform));
+
+  const current = document.getElementById('launcher-current');
+  if (isSwitch && currentProfileName) {
+    current.textContent = `Current: ${currentProfileName}`;
+    current.hidden = false;
+  }
+
+  if (isSwitch) {
+    const cancelButton = document.getElementById('cancel-switch-btn');
+    cancelButton.style.display = '';
+    cancelButton.addEventListener('click', () => window.close());
+  }
+  updateLaunchButton();
+}
+
+/**
+ * The primary button names what it will do
+ */
+function updateLaunchButton() {
+  const button = document.getElementById('launch-btn');
+  const isSwitch = launcherMode === 'switch';
+  if (!selectedProfile) {
+    button.textContent = isSwitch ? 'Switch' : 'Open';
+  } else if (isSwitch && selectedProfile === currentProfileName) {
+    button.textContent = `Stay on ${selectedProfile}`;
+  } else {
+    button.textContent = isSwitch ? `Switch to ${selectedProfile}` : `Open ${selectedProfile}`;
+  }
+}
+
+/**
+ * Size the window to the full profile list (the main process caps it, and
+ * the list scrolls past that). Not called while filtering, so the window
+ * doesn't jump as you type.
+ */
+function fitWindowToContent() {
+  if (typeof window.launcherAPI?.fitToContent !== 'function') return;
+  const list = document.getElementById('profile-list');
+  const launcher = document.querySelector('.launcher');
+  const rowsHeight = [...list.children].reduce((sum, row) => sum + row.offsetHeight, 0);
+  const listBorders = list.offsetHeight - list.clientHeight;
+  // Everything but the list keeps its height; the list takes its rows' height
+  const height = launcher.offsetHeight - list.offsetHeight + rowsHeight + listBorders;
+  window.launcherAPI.fitToContent(Math.ceil(height)).catch(() => {});
+}
 
 // Wait for the secure API to be available
 window.addEventListener('DOMContentLoaded', async () => {
+  applyTheme();
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
+  applyModeChrome();
+
   // Wait for launcher API to be ready (especially important on Windows)
   await waitForLauncherAPI();
   
@@ -84,7 +160,7 @@ async function loadProfiles(options = {}) {
       
       // Hide loading, show content
       document.getElementById('loading-state').style.display = 'none';
-      document.getElementById('profile-content').style.display = 'block';
+      document.getElementById('profile-content').style.display = 'flex';
       
       // Focus the search field now that it's visible (only on initial load)
       // Skip focus if forceRender is set as we're likely in a profile operation
@@ -97,15 +173,22 @@ async function loadProfiles(options = {}) {
         }, 100);
       }
       
-      // Auto-select first profile if only one exists
+      // At startup, Enter opens the profile used most recently. While
+      // switching, the running profile is marked instead of preselected.
       if (profiles.length === 1) {
         selectProfile(profiles[0].name);
+      } else if (launcherMode !== 'switch' && !selectedProfile && profiles.length) {
+        const mostRecent = profiles.reduce((latest, profile) => (
+          (profile.last_used || 0) > (latest.last_used || 0) ? profile : latest
+        ));
+        selectProfile(mostRecent.name);
       }
+      fitWindowToContent();
     } else {
       showError(result.error || 'Failed to load profiles');
       // Still show the UI even if there was an error
       document.getElementById('loading-state').style.display = 'none';
-      document.getElementById('profile-content').style.display = 'block';
+      document.getElementById('profile-content').style.display = 'flex';
     }
   } catch (error) {
     if (!forceRender && requestId !== latestLoadProfilesRequestId) {
@@ -115,7 +198,7 @@ async function loadProfiles(options = {}) {
     showError(`Error loading profiles: ${error.message}`);
     // Still show the UI even if there was an error
     document.getElementById('loading-state').style.display = 'none';
-    document.getElementById('profile-content').style.display = 'block';
+    document.getElementById('profile-content').style.display = 'flex';
   }
 }
 
@@ -173,18 +256,25 @@ function renderProfiles() {
   
   sortedProfiles.forEach(profile => {
     const li = document.createElement('li');
-    li.className = 'profile-item';
+    li.className = 'list-group-item list-group-item-action profile-item';
     li.dataset.profileName = profile.name;
     
     if (selectedProfile === profile.name) {
       li.classList.add('selected');
     }
     
+    const description = profile.description
+      ? `<span class="profile-description">${escapeHtml(profile.description)}</span>`
+      : '';
+    const currentTag = launcherMode === 'switch' && profile.name === currentProfileName
+      ? '<span class="profile-current-tag">Current</span>'
+      : '';
     li.innerHTML = `
       <div class="profile-info">
-        <div class="profile-name">${escapeHtml(profile.name)}</div>
-        <div class="profile-description">${escapeHtml(profile.description || 'No description')}</div>
+        <span class="profile-name">${escapeHtml(profile.name)}</span>
+        ${description}
       </div>
+      ${currentTag}
     `;
     
     // Click to select profile
@@ -218,6 +308,7 @@ function selectProfile(profileName) {
   
   // Enable launch button
   document.getElementById('launch-btn').disabled = false;
+  updateLaunchButton();
 }
 
 /**
@@ -253,12 +344,6 @@ async function launchApp() {
  */
 function setupEventListeners() {
   document.getElementById('launch-btn').addEventListener('click', launchApp);
-
-  if (launcherMode === 'switch') {
-    const cancelButton = document.getElementById('cancel-switch-btn');
-    cancelButton.style.display = '';
-    cancelButton.addEventListener('click', () => window.close());
-  }
   
   // Create profile button
   document.getElementById('create-profile-btn').addEventListener('click', showCreateProfileModal);
@@ -316,7 +401,7 @@ function setupEventListeners() {
  */
 function showError(message) {
   const container = document.getElementById('error-container');
-  container.innerHTML = `<div class="error-message">${escapeHtml(message)}</div>`;
+  container.innerHTML = `<div class="alert alert-danger error-message">${escapeHtml(message)}</div>`;
 }
 
 /**

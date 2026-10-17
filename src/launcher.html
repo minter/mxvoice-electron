@@ -3,479 +3,283 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
-  <title>Mx. Voice - Profile Launcher</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:">
+  <title>Mx. Voice - Profiles</title>
+
+  <!-- Same stylesheets as the main window, so the picker matches it -->
+  <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="stylesheets/fonts.css">
+  <link rel="stylesheet" href="stylesheets/colors.css">
+
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    :root {
-      --bg-gradient-start: #667eea;
-      --bg-gradient-end: #764ba2;
-      --container-bg: #ffffff;
-      --text-primary: #333333;
-      --text-secondary: #666666;
-      --item-bg: #f8f9fa;
-      --item-hover-bg: #e9ecef;
-      --item-selected-bg: #e7eaf6;
-      --border-color: #ddd;
-      --error-bg: #f8d7da;
-      --error-border: #f5c6cb;
-      --error-text: #721c24;
-      --modal-bg: #ffffff;
-      --scrollbar-track: #f1f1f1;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg-gradient-start: #2d3748;
-        --bg-gradient-end: #1a202c;
-        --container-bg: #2d3748;
-        --text-primary: #f7fafc;
-        --text-secondary: #cbd5e0;
-        --item-bg: #1a202c;
-        --item-hover-bg: #374151;
-        --item-selected-bg: #4a5568;
-        --border-color: #4a5568;
-        --error-bg: #7f1d1d;
-        --error-border: #991b1b;
-        --error-text: #fecaca;
-        --modal-bg: #1a202c;
-        --scrollbar-track: #1a202c;
-      }
+    html, body {
+      height: 100%;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
-      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      padding: 20px;
-      color: var(--text-primary);
-    }
-
-    .launcher-container {
-      background: var(--container-bg);
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      max-width: 500px;
-      width: 100%;
+      margin: 0;
+      background-color: var(--panel-color);
+      color: var(--card-text);
+      font-size: 14px;
       overflow: hidden;
     }
 
-    .launcher-header {
-      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-      color: white;
-      padding: 30px;
-      text-align: center;
-    }
-
-    .launcher-header h1 {
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .header-actions {
+    .launcher {
       display: flex;
-      justify-content: right;
-      margin-top: 8px;
+      flex-direction: column;
+      height: 100%;
     }
 
-    .header-actions p {
-      font-size: 14px;
-      opacity: 0.9;
+    .launcher-header,
+    .launcher-footer {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background-color: var(--header-color);
+    }
+
+    .launcher-header {
+      border-bottom: 1px solid var(--card-border);
+      -webkit-app-region: drag;
+    }
+
+    /* Standalone window: clear the macOS traffic lights */
+    body.has-titlebar .launcher-header {
+      padding-top: 32px;
+    }
+
+    .launcher-header img {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+    }
+
+    .launcher-title {
       margin: 0;
+      font-size: 15px;
+      font-weight: 600;
     }
 
-    .header-create-btn {
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .header-create-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      border-color: rgba(255, 255, 255, 0.5);
+    .launcher-current {
+      margin-left: auto;
+      font-size: 12px;
+      opacity: 0.75;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .launcher-body {
-      padding: 30px;
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px 8px;
     }
 
-    .profile-search-container {
-      margin-bottom: 20px;
+    #profile-content {
+      flex-direction: column;
+      min-height: 0;
+      flex: 1 1 auto;
     }
 
     .profile-search {
-      width: 100%;
-      padding: 12px 16px;
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      font-size: 14px;
-      background: var(--item-bg);
-      color: var(--text-primary);
-      transition: all 0.2s ease;
-      box-sizing: border-box;
-    }
-
-    .profile-search:focus {
-      outline: none;
-      border-color: var(--bg-gradient-start);
-      box-shadow: 0 0 0 3px rgba(var(--highlight-color-rgb), 0.1);
-    }
-
-    .profile-search::placeholder {
-      color: var(--text-secondary);
+      flex: none;
+      margin-bottom: 8px;
+      background-color: var(--input-background);
+      border-color: var(--input-border);
+      color: var(--input-text);
     }
 
     .profile-list {
-      list-style: none;
-      margin-bottom: 20px;
-      max-height: 280px;
+      flex: 1 1 auto;
+      min-height: 0;
       overflow-y: auto;
+      margin: 0;
     }
 
     .profile-item {
-      background: var(--item-bg);
-      border: 2px solid var(--border-color);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      transition: all 0.2s ease;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-    }
-    
-    @media (prefers-color-scheme: light) {
-      .profile-item {
-        border-color: transparent;
-      }
-    }
-
-    .profile-item:hover {
-      background: var(--item-hover-bg);
-      border-color: var(--bg-gradient-start);
+      gap: 8px;
+      padding: 7px 10px;
+      cursor: pointer;
+      user-select: none;
     }
 
     .profile-item.selected {
-      background: var(--item-selected-bg);
-      border-color: var(--bg-gradient-start);
+      background-color: var(--bs-primary) !important;
+      border-color: var(--bs-primary) !important;
+      color: #fff !important;
     }
 
     .profile-info {
-      flex: 1;
+      min-width: 0;
+      flex: 1 1 auto;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
     }
 
     .profile-name {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 4px;
+      font-weight: 500;
+      white-space: nowrap;
     }
 
     .profile-description {
-      font-size: 13px;
-      color: var(--text-secondary);
+      font-size: 12px;
+      opacity: 0.7;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .profile-actions {
+    .profile-current-tag {
+      flex: none;
+      font-size: 11px;
+      padding: 1px 6px;
+      border: 1px solid currentColor;
+      border-radius: 4px;
+      opacity: 0.75;
+    }
+
+    .launcher-footer {
+      border-top: 1px solid var(--card-border);
+    }
+
+    .launcher-footer .footer-actions {
+      margin-left: auto;
       display: flex;
       gap: 8px;
     }
 
-    .profile-delete {
-      background: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .profile-delete:hover {
-      background: #c82333;
-    }
-
-    .profile-delete:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-
-    .launcher-actions {
-      margin-top: 20px;
-      display: flex;
-      gap: 12px;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 14px 24px;
-      border: none;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
+    .empty-state,
+    .loading {
+      padding: 24px 8px;
       text-align: center;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-
-    .btn-secondary {
-      background: transparent;
-      color: var(--text-secondary);
-      border: 1px solid var(--border-color);
-    }
-
-    .btn-primary:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-secondary);
-    }
-
-    .empty-state p {
-      margin-bottom: 20px;
-      font-size: 15px;
+      opacity: 0.75;
     }
 
     .error-message {
-      background: var(--error-bg);
-      border: 1px solid var(--error-border);
-      color: var(--error-text);
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-      font-size: 14px;
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
     }
 
-    /* Scrollbar styling */
-    .profile-list::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    .profile-list::-webkit-scrollbar-track {
-      background: var(--scrollbar-track);
-      border-radius: 10px;
-    }
-
-    .profile-list::-webkit-scrollbar-thumb {
-      background: var(--bg-gradient-start);
-      border-radius: 10px;
-    }
-
-    .profile-list::-webkit-scrollbar-thumb:hover {
-      background: var(--bg-gradient-end);
-    }
-
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-secondary);
-    }
-
-    .loading::after {
-      content: '...';
-      animation: dots 1.5s steps(4, end) infinite;
-    }
-
-    @keyframes dots {
-      0%, 20% { content: '.'; }
-      40% { content: '..'; }
-      60%, 100% { content: '...'; }
-    }
-
-    /* Modal styles */
-    .modal {
+    /* Create-profile form: shown/hidden by launcher.js via style.display */
+    #create-profile-modal {
       position: fixed;
+      inset: 0;
       z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-      display: flex;
+      align-items: center;
       justify-content: center;
-      align-items: center;
+      padding: 16px;
+      background-color: rgba(0, 0, 0, 0.45);
     }
 
-    .modal-content {
-      background: var(--modal-bg);
-      border-radius: 12px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      max-width: 400px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-
-    .modal-header {
-      padding: 20px 24px 16px;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .modal-header h2 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .close {
-      color: var(--text-secondary);
-      font-size: 24px;
-      font-weight: bold;
-      cursor: pointer;
-      line-height: 1;
-    }
-
-    .close:hover {
-      color: var(--text-primary);
-    }
-
-    .modal-body {
-      padding: 20px 24px;
-    }
-
-    .modal-footer {
-      padding: 16px 24px 20px;
-      border-top: 1px solid var(--border-color);
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-primary);
-    }
-
-    .form-input {
+    /* Bootstrap scopes these to .modal; this form uses the parts without it */
+    #create-profile-modal .modal-content {
       width: 100%;
-      padding: 10px 12px;
-      border: 2px solid var(--border-color);
-      border-radius: 6px;
-      font-size: 14px;
-      background: var(--item-bg);
-      color: var(--text-primary);
-      transition: border-color 0.2s ease;
-      box-sizing: border-box;
+      max-width: 360px;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      overflow: hidden;
     }
 
-    .form-input:focus {
-      outline: none;
-      border-color: var(--bg-gradient-start);
+    #create-profile-modal .modal-header,
+    #create-profile-modal .modal-footer {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
     }
 
-    .form-input::placeholder {
-      color: var(--text-secondary);
+    #create-profile-modal .modal-header .btn-close {
+      margin-left: auto;
     }
 
+    /* colors.css leaves the close icon dark; it needs to be light on dark */
+    .theme-dark #create-profile-modal .btn-close {
+      filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    #create-profile-modal .modal-footer {
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    #create-profile-modal .modal-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    #create-profile-modal .modal-body {
+      padding: 12px 16px;
+    }
+
+    #create-profile-modal .form-control {
+      background-color: var(--input-background);
+      border-color: var(--input-border);
+      color: var(--input-text);
+    }
   </style>
 </head>
 <body>
-  <div class="launcher-container">
+  <div class="launcher">
     <div class="launcher-header">
-      <h1>🎵 Mx. Voice</h1>
-      <div class="header-actions">
-        <button id="create-profile-btn" class="header-create-btn">
-          + New Profile
-        </button>
-      </div>
+      <img src="assets/icons/mxvoice-square.png" alt="">
+      <h1 class="launcher-title" id="launcher-title">Choose a profile</h1>
+      <span class="launcher-current" id="launcher-current" hidden></span>
     </div>
 
     <div class="launcher-body">
       <div id="error-container"></div>
-      
-      <div id="loading-state" class="loading">
-        Loading profiles
-      </div>
+
+      <div id="loading-state" class="loading">Loading profiles…</div>
 
       <div id="profile-content" style="display: none;">
-        <div class="profile-search-container">
-          <input 
-            type="text" 
-            id="profile-search" 
-            class="profile-search" 
-            placeholder="Search profiles..."
-            autocomplete="off"
-          />
-        </div>
-        <ul id="profile-list" class="profile-list"></ul>
+        <input
+          type="text"
+          id="profile-search"
+          class="form-control form-control-sm profile-search"
+          placeholder="Search profiles"
+          autocomplete="off"
+        />
+        <ul id="profile-list" class="list-group profile-list"></ul>
+      </div>
+    </div>
 
-        <div class="launcher-actions">
-          <!-- Shown when switching from a running session (launcher.js) -->
-          <button id="cancel-switch-btn" class="btn btn-secondary" style="display: none;">
-            Cancel
-          </button>
-          <button id="launch-btn" class="btn btn-primary" disabled>
-            Choose Profile
-          </button>
-        </div>
+    <div class="launcher-footer">
+      <button id="create-profile-btn" class="btn btn-sm btn-secondary">New profile</button>
+      <div class="footer-actions">
+        <!-- Shown when switching from a running session (launcher.js) -->
+        <button id="cancel-switch-btn" class="btn btn-sm btn-secondary" style="display: none;">Cancel</button>
+        <button id="launch-btn" class="btn btn-sm btn-primary" disabled>Open</button>
       </div>
     </div>
   </div>
 
   <!-- Create Profile Modal -->
-  <div id="create-profile-modal" class="modal" style="display: none;">
+  <div id="create-profile-modal" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Create New Profile</h2>
-        <span class="close" id="modal-close">&times;</span>
+        <h2 class="modal-title">New profile</h2>
+        <button type="button" class="btn-close" id="modal-close" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label for="profile-name-input">Profile Name</label>
-          <input type="text" id="profile-name-input" class="form-input" placeholder="Enter profile name..." required>
+        <div class="mb-2">
+          <label for="profile-name-input" class="form-label mb-1">Name</label>
+          <input type="text" id="profile-name-input" class="form-control form-control-sm" placeholder="Saturday show">
         </div>
-        <div class="form-group">
-          <label for="profile-description-input">Description (Optional)</label>
-          <input type="text" id="profile-description-input" class="form-input" placeholder="Enter description...">
+        <div>
+          <label for="profile-description-input" class="form-label mb-1">Description (optional)</label>
+          <input type="text" id="profile-description-input" class="form-control form-control-sm">
         </div>
       </div>
       <div class="modal-footer">
-        <button id="cancel-create-btn" class="btn btn-secondary">Cancel</button>
-        <button id="confirm-create-btn" class="btn btn-primary">Create Profile</button>
+        <button id="cancel-create-btn" class="btn btn-sm btn-secondary">Cancel</button>
+        <button id="confirm-create-btn" class="btn btn-sm btn-primary">Create profile</button>
       </div>
     </div>
   </div>
@@ -483,4 +287,3 @@
   <script src="launcher.js"></script>
 </body>
 </html>
-
