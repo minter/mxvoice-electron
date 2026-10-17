@@ -155,6 +155,19 @@ tourManager.registerHelper('openPreferencesAndScrollToAnalytics', async () => {
   }
 });
 
+/**
+ * Opens the Switch Profile dialog for the tour (it animates in)
+ */
+tourManager.registerHelper('openSwitchProfileForTour', async () => {
+  await moduleRegistry.profilePicker?.open();
+  await new Promise((resolve) => setTimeout(resolve, 400));
+});
+
+tourManager.registerHelper('closeSwitchProfileForTour', async () => {
+  await moduleRegistry.profilePicker?.close();
+  await new Promise((resolve) => setTimeout(resolve, 400));
+});
+
 // ─── Public API ───────────────────────────────────────────────────────
 
 export async function initWhatsNew() {

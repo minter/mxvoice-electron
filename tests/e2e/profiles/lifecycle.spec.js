@@ -137,14 +137,18 @@ test.describe('Profile Lifecycle', () => {
     await waitForProfileReady(mainWindow, profileName);
   }
 
+  // The predicate must be synchronous: waitForFunction treats a returned
+  // Promise as truthy and would pass before the page has started
   async function waitForProfileReady(mainWindow, profileName) {
     await mainWindow.waitForFunction(
-      async (name) => window.moduleRegistry?.profileState
-        && window.isRestoringProfileState === false
-        && (await window.secureElectronAPI.profile.getCurrent()).profile === name,
-      profileName,
+      () => !!window.moduleRegistry?.profileState && window.isRestoringProfileState === false,
+      null,
       { timeout: 15000 }
     );
+    await expect.poll(
+      () => mainWindow.evaluate(async () => (await window.secureElectronAPI.profile.getCurrent()).profile),
+      { timeout: 15000 }
+    ).toBe(profileName);
   }
 
   async function windowCount() {

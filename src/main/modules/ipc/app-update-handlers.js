@@ -11,6 +11,8 @@ const { IPC } = ipcChannels;
 
 export function register(deps) {
   const { autoUpdater, updateState, debugLog, analytics } = deps;
+  // Saves state and skips the close confirmation first (index-modular.js)
+  const installUpdate = deps.installUpdate || (async () => autoUpdater.quitAndInstall());
 
   // App operations for secure API
   ipcMain.handle(IPC.APP.GET_PATH, async (event, name) => {
@@ -66,7 +68,7 @@ export function register(deps) {
   ipcMain.handle(IPC.APP.RESTART_AND_INSTALL, async () => {
     try {
       if (autoUpdater) {
-        autoUpdater.quitAndInstall();
+        await installUpdate();
         return { success: true };
       } else {
         throw new Error('Auto updater not available');
@@ -186,7 +188,9 @@ export function register(deps) {
 
       // Install and restart immediately
       setImmediate(() => {
-        autoUpdater.quitAndInstall();
+        installUpdate().catch((error) => {
+          debugLog?.error('Install update failed', { module: 'ipc-handlers', function: 'install-update', error: error?.message });
+        });
       });
 
       return { success: true, message: 'Installing and restarting...' };

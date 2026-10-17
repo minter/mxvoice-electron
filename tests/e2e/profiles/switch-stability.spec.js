@@ -36,14 +36,18 @@ test.describe('Profile switch stability', () => {
     fs.rmSync(userDataDir, { recursive: true, force: true });
   });
 
+  // The predicate must be synchronous: waitForFunction treats a returned
+  // Promise as truthy and would pass before the app has started
   async function waitForProfile(page, name) {
     await page.waitForFunction(
-      async (profile) => window.moduleRegistry?.profileState
-        && window.isRestoringProfileState === false
-        && (await window.secureElectronAPI.profile.getCurrent()).profile === profile,
-      name,
+      () => !!window.moduleRegistry?.profileState && window.isRestoringProfileState === false,
+      null,
       { timeout: 20000 }
     );
+    await expect.poll(
+      () => page.evaluate(async () => (await window.secureElectronAPI.profile.getCurrent()).profile),
+      { timeout: 20000 }
+    ).toBe(name);
   }
 
   function mainProcessCounts() {
@@ -123,5 +127,75 @@ test.describe('Profile switch stability', () => {
     await torndown();
 
     expect(await documentListenerCount(page, cdp)).toBe(baseline);
+  });
+
+  test('Switch Profile does not open over another dialog', async () => {
+    const page = await app.firstWindow();
+    await waitForProfile(page, 'Default User');
+    // The empty library's first-run dialog is open: Switch Profile must not
+    // open invisibly behind it (and take over Enter and Esc)
+    const firstRun = page.locator('#firstRunModal');
+    await expect(firstRun).toBeVisible({ timeout: 5000 });
+
+    await page.evaluate(() => window.moduleRegistry.profilePicker.open());
+    await expect(page.locator('#profileSwitchModal')).toHaveCount(0);
+
+    await firstRun.getByRole('button', { name: 'Got It!' }).click();
+    await expect(firstRun).toBeHidden();
+    await page.evaluate(() => window.moduleRegistry.profilePicker.open());
+    await expect(page.locator('#profileSwitchModal #profile-content')).toBeVisible();
+  });
+
+  test('Enter right after Esc goes to the main window, not to the closing dialog', async () => {
+    const page = await app.firstWindow();
+    await waitForProfile(page, 'Default User');
+    await page.evaluate(() => window.secureElectronAPI.profile.createProfile('Other', ''));
+    const firstRun = page.locator('#firstRunModal');
+    await expect(firstRun).toBeVisible({ timeout: 5000 });
+    await firstRun.getByRole('button', { name: 'Got It!' }).click();
+    await expect(firstRun).toBeHidden();
+    await page.evaluate(() => { window.__e2eSessionMarker = 'still-here'; });
+
+    const dialog = page.locator('#profileSwitchModal');
+    await page.evaluate(() => window.moduleRegistry.profilePicker.open());
+    // The only other profile starts selected, so a stray Enter would switch to it
+    await expect(dialog.locator('#launch-btn')).toHaveText('Switch to Other');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeHidden();
+    await page.waitForTimeout(800);
+
+    expect(await page.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
+    expect(await page.evaluate(async () => (await window.secureElectronAPI.profile.getCurrent()).profile)).toBe('Default User');
+  });
+});
+
+test.describe('Unknown --profile at startup', () => {
+  test('opens the launcher instead of running a profile that cannot save', async () => {
+    const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-unknown-profile-'));
+    const app = await electron.launch({
+      executablePath: electronPath,
+      args: ['.', '--profile=Nobody Here'],
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        APP_TEST_MODE: '1',
+        DISABLE_HARDWARE_ACCELERATION: '1',
+        AUTO_UPDATE: '0',
+        E2E_USER_DATA_DIR: userDataDir,
+        HOME: userDataDir,
+        APPDATA: userDataDir,
+      },
+    });
+    try {
+      const page = await app.firstWindow();
+      await page.waitForSelector('#profile-content', { timeout: 10000 });
+      expect(page.url()).toContain('launcher.html');
+      await expect(page.locator('#launcher-title')).toHaveText('Choose a profile');
+      expect(fs.existsSync(path.join(userDataDir, 'profiles', 'Nobody Here'))).toBe(false);
+    } finally {
+      await app.close();
+      fs.rmSync(userDataDir, { recursive: true, force: true });
+    }
   });
 });

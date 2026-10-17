@@ -105,6 +105,10 @@ export function createProfilePicker({
   let view = 'list';
   let latestRequest = 0;
   let choosing = false;
+  let keysActive = false;
+  // Set by destroy(): a load still waiting on IPC must not touch the
+  // cleared DOM when it resumes
+  let destroyed = false;
 
   root.classList.add('profile-picker');
   root.dataset.mode = mode;
@@ -222,7 +226,7 @@ export function createProfilePicker({
     } catch (error) {
       result = { success: false, error: error.message };
     }
-    if (request !== latestRequest) return;
+    if (destroyed || request !== latestRequest) return;
 
     $('#loading-state').style.display = 'none';
     if (result?.success) {
@@ -333,15 +337,31 @@ export function createProfilePicker({
       cancel();
     }
   };
-  keyTarget.addEventListener('keydown', onKeyDown, true);
+  // A closing dialog must stop taking keys at once: Enter pressed while it
+  // fades out is meant for the main window (play), not for "switch"
+  function activate() {
+    if (keysActive || destroyed) return;
+    keysActive = true;
+    keyTarget.addEventListener('keydown', onKeyDown, true);
+  }
 
+  function deactivate() {
+    if (!keysActive) return;
+    keysActive = false;
+    keyTarget.removeEventListener('keydown', onKeyDown, true);
+  }
+
+  activate();
   updateChrome();
 
   return {
     load,
+    activate,
+    deactivate,
     focus: () => (view === 'create' ? nameInput : search).focus(),
     destroy: () => {
-      keyTarget.removeEventListener('keydown', onKeyDown, true);
+      destroyed = true;
+      deactivate();
       root.innerHTML = '';
     }
   };

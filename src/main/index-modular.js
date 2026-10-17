@@ -11,7 +11,7 @@
 // Add immediate logging to see if the file is being loaded
 // Note: debugLog will be initialized later in this file
 
-import { app, dialog, screen } from 'electron';
+import { app, dialog, screen, autoUpdater as nativeAutoUpdater } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import readlines from 'n-readlines';
@@ -703,6 +703,20 @@ function trackLibraryStats() {
 let profileSwitcher = null;
 
 /**
+ * Install a downloaded update. quitAndInstall() closes every window before
+ * before-quit fires, so save state first and let the close through without
+ * the "Quit Mx. Voice?" confirmation (which would cancel the install).
+ */
+async function installUpdateNow() {
+  try {
+    await appSetup.prepareForUpdateInstall();
+  } catch (error) {
+    debugLog.warn('Could not save state before installing the update', { function: 'installUpdateNow', error: error.message });
+  }
+  autoUpdater.quitAndInstall();
+}
+
+/**
  * Initialize main-process services once per process, before any window exists.
  * ipcMain.handle throws on a second registration of a channel, so none of
  * this may run from createWindow(). Everything reads the window, profile and
@@ -719,7 +733,12 @@ function initializeMainProcessServices() {
     store,
     rebuildMenu: () => appSetup.createApplicationMenu(),
     loadWindowState: (name) => appSetup.loadWindowState(store, name),
-    applyWindowState: (win, state) => applyWindowState(win, state, screen),
+    applyWindowState: (win, state) => {
+      // Its maximize/fullscreen/resize events would otherwise save the old
+      // layout's interim bounds into the new profile (fullscreen exit animates)
+      appSetup.suppressWindowStateSaves(1500);
+      applyWindowState(win, state, screen);
+    },
     getAnalytics: () => analytics,
     debugLog
   });
@@ -740,7 +759,8 @@ function initializeMainProcessServices() {
     autoBackupTimer,
     analytics,
     appStartTime,
-    profileSwitcher
+    profileSwitcher,
+    installUpdate: installUpdateNow
   };
 
   appSetup.initializeAppSetup(dependencies);
@@ -899,9 +919,27 @@ function setupApp() {
     // Quit handling (state flush, backup timer, analytics) and close-to-quit.
     // Needs app setup, which initializeMainProcessServices() just created.
     appSetup.setupAppLifecycle();
+
+    // Safety net for any quitAndInstall() that skips installUpdateNow(): the
+    // native updater closes the windows itself, which must not ask "Quit?"
+    try {
+      nativeAutoUpdater?.on?.('before-quit-for-update', () => appSetup.allowUnconfirmedClose());
+    } catch (error) {
+      debugLog.warn('Native autoUpdater unavailable', { function: 'app ready event', error: error.message });
+    }
     
     // Check if profile was provided via command line
     currentProfile = getProfileFromArgs();
+
+    // An unknown name (typo, deleted, never created) would run a session in
+    // which nothing can be saved: pick a profile in the launcher instead
+    if (currentProfile && !profileManager.profileExists(currentProfile)) {
+      debugLog.warn('Profile from --profile= does not exist; showing the launcher', {
+        function: "app ready event",
+        profile: currentProfile
+      });
+      currentProfile = null;
+    }
 
     if (currentProfile) {
       // Profile provided (or default) - launch main app directly
@@ -1084,7 +1122,9 @@ function setupApp() {
     if (updateState.userApprovedInstall) {
       try {
         debugLog.info('User approved install earlier; quitting to install now', { function: 'autoUpdater update-downloaded' });
-        autoUpdater.quitAndInstall();
+        installUpdateNow().catch((e) => {
+          debugLog.error('Auto-install on ready failed', { function: 'autoUpdater update-downloaded', error: e?.message });
+        });
       } catch (e) {
         debugLog.error('Auto-install on ready failed', { function: 'autoUpdater update-downloaded', error: e?.message });
       }

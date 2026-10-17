@@ -14,7 +14,6 @@ function createHarness(overrides = {}) {
   const dependencies = {
     app,
     prepareWindowForClose: vi.fn(),
-    onClosed: vi.fn(),
     debugLog: { info: vi.fn(), error: vi.fn() },
     platform: 'linux',
     ...overrides

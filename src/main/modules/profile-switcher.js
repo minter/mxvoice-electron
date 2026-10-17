@@ -14,9 +14,10 @@ import { trackProfileSwitch } from './profile-switch-analytics.js';
 // in the new profile once currentProfile changes
 const LOCK_RENDERER_SAVES = 'window.isRestoringProfileState = true';
 
-// The flush and lock wait on the page. A hung page must not wedge switching
+// The save lock waits on the page. A hung page must not wedge switching
 // (every later switch would be refused as "already in progress"); the reload
-// at the end replaces it anyway.
+// at the end replaces it anyway. The flush (prepareForSwitch) has its own
+// limit in prepareMainWindowForClose.
 const RENDERER_TIMEOUT_MS = 5000;
 
 function withTimeout(promise, ms, label) {
@@ -60,6 +61,7 @@ export function applyWindowState(win, state, screen) {
  * @param {Function} deps.getCurrentProfile
  * @param {Function} deps.setCurrentProfile
  * @param {Function} deps.prepareForSwitch - Flush renderer state and window bounds for the current profile
+ *   (time-limited itself, so a hung page can't hold the switch)
  * @param {Object} deps.profileManager - { profileExists, updateProfileLastUsed, loadProfilePreferences }
  * @param {Object} deps.autoBackupTimer - { stopAutoBackupTimer, startAutoBackupTimer }
  * @param {Object} deps.store - Global electron-store
@@ -133,7 +135,7 @@ export function createProfileSwitcher({
 
       // A just-deleted profile has nothing left to flush into
       if (fromProfile && profileManager.profileExists(fromProfile)) {
-        await step('flush', () => withTimeout(prepareForSwitch(), rendererTimeoutMs, 'flush'));
+        await step('flush', () => prepareForSwitch());
       }
 
       savesFenced = true;

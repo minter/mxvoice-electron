@@ -1,7 +1,6 @@
 function createAppLifecycle({
   app,
   prepareWindowForClose,
-  onClosed,
   autoBackupTimer,
   analytics,
   debugLog,
@@ -35,7 +34,6 @@ function createAppLifecycle({
   }
 
   function setup() {
-    app.on('closed', onClosed);
     app.on('before-quit', beforeQuit);
     // Closing the last window quits on every platform, macOS included: a show
     // tool shouldn't keep running out of sight with audio or a backup timer

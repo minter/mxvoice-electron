@@ -16,6 +16,14 @@ function createWindowStateManager({
 }) {
   let windowStateSaveTimeout = null;
   let closePreparationPromise = null;
+  // Set when the app is closing the window itself (installing an update):
+  // there is nothing to confirm, and a preventDefault would cancel the install
+  let closeWithoutConfirm = false;
+  // While the switcher applies another profile's bounds, the resize,
+  // maximize and fullscreen events it causes must not save interim bounds
+  // into that profile (they describe the old layout mid-transition)
+  let suppressSavesUntil = 0;
+  const savesSuppressed = () => Date.now() < suppressSavesUntil;
 
 function setupWindowStateSaving() {
   const mainWindow = getMainWindow();
@@ -41,6 +49,7 @@ function setupWindowStateSaving() {
     if (windowStateSaveTimeout) clearTimeout(windowStateSaveTimeout);
     windowStateSaveTimeout = setTimeout(() => {
       windowStateSaveTimeout = null;
+      if (savesSuppressed()) return;
       saveWindowState(mainWindow).catch(err => {
         debugLog?.error('Error in debounced window state save', {
           module: 'app-setup',
@@ -71,6 +80,7 @@ function setupWindowStateSaving() {
 
   // Save window state when maximized
   mainWindow.on('maximize', () => {
+    if (savesSuppressed()) return;
     saveWindowState(mainWindow).catch(err => {
       debugLog?.error('Error saving on maximize', { module: 'app-setup', error: err.message });
     });
@@ -78,6 +88,7 @@ function setupWindowStateSaving() {
 
   // Save window state when unmaximized
   mainWindow.on('unmaximize', () => {
+    if (savesSuppressed()) return;
     saveWindowState(mainWindow).catch(err => {
       debugLog?.error('Error saving on unmaximize', { module: 'app-setup', error: err.message });
     });
@@ -85,6 +96,7 @@ function setupWindowStateSaving() {
 
   // Save window state when entering fullscreen
   mainWindow.on('enter-full-screen', () => {
+    if (savesSuppressed()) return;
     saveWindowState(mainWindow).catch(err => {
       debugLog?.error('Error saving on enter-fullscreen', { module: 'app-setup', error: err.message });
     });
@@ -92,6 +104,7 @@ function setupWindowStateSaving() {
 
   // Save window state when leaving fullscreen
   mainWindow.on('leave-full-screen', () => {
+    if (savesSuppressed()) return;
     saveWindowState(mainWindow).catch(err => {
       debugLog?.error('Error saving on leave-fullscreen', { module: 'app-setup', error: err.message });
     });
@@ -99,6 +112,7 @@ function setupWindowStateSaving() {
 
   // Save window state when minimized (for completeness)
   mainWindow.on('minimize', () => {
+    if (savesSuppressed()) return;
     saveWindowState(mainWindow).catch(err => {
       debugLog?.error('Error saving on minimize', { module: 'app-setup', error: err.message });
     });
@@ -106,6 +120,7 @@ function setupWindowStateSaving() {
 
   // Save window state when restored from minimize
   mainWindow.on('restore', () => {
+    if (savesSuppressed()) return;
     saveWindowState(mainWindow).catch(err => {
       debugLog?.error('Error saving on restore', { module: 'app-setup', error: err.message });
     });
@@ -115,7 +130,7 @@ function setupWindowStateSaving() {
   let closeInProgress = false;
   mainWindow.on('close', async (event) => {
     // An explicit quit was already confirmed by asking for it
-    if (isQuitting() || closeSaveComplete) return;
+    if (isQuitting() || closeSaveComplete || closeWithoutConfirm) return;
     event.preventDefault();
     // Already asking, or already closing: one dialog, one save
     if (closeInProgress) return;
@@ -380,7 +395,25 @@ async function loadWindowState(storeInstance = store, currentProfile = null) {
   return null;
 }
 
+  /**
+   * The app is about to close the window itself (autoUpdater.quitAndInstall()
+   * closes every window before before-quit fires): flush now, then let the
+   * close through without the "Quit?" question or a preventDefault.
+   */
+  async function prepareForUnconfirmedClose() {
+    closeWithoutConfirm = true;
+    await prepareMainWindowForClose();
+  }
+
+  /** Ignore event-driven saves for the next `ms` (macOS fullscreen exits animate) */
+  function suppressSaves(ms) {
+    suppressSavesUntil = Math.max(suppressSavesUntil, Date.now() + ms);
+  }
+
   return {
+    suppressSaves,
+    allowUnconfirmedClose: () => { closeWithoutConfirm = true; },
+    prepareForUnconfirmedClose,
     loadWindowState,
     prepareMainWindowForClose,
     saveWindowState,

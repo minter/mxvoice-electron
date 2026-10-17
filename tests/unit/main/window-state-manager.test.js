@@ -157,4 +157,60 @@ describe('window state manager', () => {
       expect(window.close).toHaveBeenCalledOnce();
     });
   });
+
+  it('an update install closes without asking, after saving', async () => {
+    const handlers = {};
+    const window = {
+      id: 1,
+      isDestroyed: () => false,
+      on: (event, handler) => { handlers[event] = handler; },
+      close: vi.fn(),
+      webContents: { isDestroyed: () => false, executeJavaScript: vi.fn(async () => ({ success: true })) },
+      getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+      isMaximized: () => false,
+      isFullScreen: () => false
+    };
+    const confirmClose = vi.fn(async () => false);
+    const { manager } = createHarness({ getMainWindow: () => window, confirmClose });
+    manager.setupWindowStateSaving();
+
+    await manager.prepareForUnconfirmedClose();
+    expect(window.webContents.executeJavaScript).toHaveBeenCalledOnce();
+
+    const event = { preventDefault: vi.fn() };
+    await handlers.close(event);
+    expect(confirmClose).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('ignores resize, maximize and fullscreen saves while another profile is being applied', async () => {
+    vi.useFakeTimers();
+    try {
+      const handlers = {};
+      const window = {
+        id: 1,
+        isDestroyed: () => false,
+        on: (event, handler) => { handlers[event] = handler; },
+        getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+        isMaximized: () => false,
+        isFullScreen: () => false
+      };
+      const { manager, store } = createHarness({ getMainWindow: () => window });
+      manager.setupWindowStateSaving();
+
+      manager.suppressSaves(1500);
+      handlers.unmaximize();
+      handlers['leave-full-screen']();
+      handlers.resized();
+      await vi.advanceTimersByTimeAsync(600);
+      expect(store.set).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1000);
+      handlers.maximize();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(store.set).toHaveBeenCalledWith('window_state', expect.any(Object));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

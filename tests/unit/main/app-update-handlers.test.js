@@ -16,11 +16,11 @@ const { describeUpdateError } = await import('../../../src/main/modules/update-a
 
 const { register } = await import('../../../src/main/modules/ipc/app-update-handlers.js');
 
-function setup(autoUpdater = null) {
+function setup(autoUpdater = null, extra = {}) {
   const updateState = { downloaded: true, userApprovedInstall: true };
   const analytics = { trackEvent: vi.fn() };
   const debugLog = { info: vi.fn(), error: vi.fn() };
-  register({ autoUpdater, updateState, analytics, debugLog });
+  register({ autoUpdater, updateState, analytics, debugLog, ...extra });
   return { updateState, analytics, debugLog };
 }
 
@@ -209,6 +209,21 @@ describe('app update IPC handlers', () => {
     await expect(invoke('install-update')).resolves.toMatchObject({ success: true });
     await vi.runAllTimersAsync();
     expect(autoUpdater.quitAndInstall).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
+
+  it('installs through the app hook that saves state and skips the close confirmation', async () => {
+    vi.useFakeTimers();
+    const autoUpdater = { quitAndInstall: vi.fn() };
+    const installUpdate = vi.fn(async () => {});
+    setup(autoUpdater, { installUpdate });
+
+    await invoke('install-update');
+    await vi.runAllTimersAsync();
+    await invoke('restart-and-install-new-version');
+
+    expect(installUpdate).toHaveBeenCalledTimes(2);
+    expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 });

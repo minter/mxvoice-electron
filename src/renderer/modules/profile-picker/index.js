@@ -53,6 +53,9 @@ function ensureModal() {
     }
     picker?.focus();
   });
+  // Any close (Esc, Cancel, X, backdrop click): stop taking keys right away,
+  // not after the fade-out
+  modal.addEventListener('hide.bs.modal', () => picker?.deactivate());
   modal.addEventListener('hidden.bs.modal', () => {
     shown = false;
     picker?.destroy();
@@ -60,13 +63,25 @@ function ensureModal() {
     hiding?.resolve();
     hiding = null;
     // The deleted profile can't be returned to: closing lands on Default User
-    if (afterDelete && !switching) {
-      switchTo(DEFAULT_PROFILE).catch((error) => {
-        window.debugLog?.error('Failed to fall back to Default User', { ...CONTEXT, function: 'hidden', error: error?.message });
-      });
-    }
+    if (afterDelete && !switching) fallBackToDefaultUser();
   });
   return modal;
+}
+
+// After Delete Current Profile the window must not stay on the deleted
+// profile (its saves are locked). If the switch fails, ask again.
+async function fallBackToDefaultUser() {
+  let result;
+  try {
+    result = await switchTo(DEFAULT_PROFILE);
+  } catch (error) {
+    result = { success: false, error: error?.message };
+  }
+  if (result?.success) return;
+  window.debugLog?.error('Failed to fall back to Default User; reopening the picker', {
+    ...CONTEXT, function: 'fallBackToDefaultUser', error: result?.error
+  });
+  open({ afterDelete: true });
 }
 
 async function switchTo(name) {
@@ -78,6 +93,7 @@ async function switchTo(name) {
 }
 
 function close() {
+  picker?.deactivate();
   if (!shown) {
     closeWhenShown = true;
     return Promise.resolve();
@@ -101,6 +117,7 @@ async function open(options = {}) {
   // so drop the queued close and keep it open
   if (picker && closeWhenShown) {
     closeWhenShown = false;
+    picker.activate();
     return;
   }
   // Still closing from a moment ago: open once that has finished
@@ -110,6 +127,15 @@ async function open(options = {}) {
   if (picker || opening) return;
   if (!window.bootstrap?.Modal) {
     window.debugLog?.error('Bootstrap Modal unavailable; cannot open Switch Profile', { ...CONTEXT, function: 'open' });
+    return;
+  }
+  // Bootstrap dialogs don't stack: over another open dialog this one would
+  // stay invisible while still capturing Enter and Esc for the whole page
+  const otherDialog = [...document.querySelectorAll('.modal.show')].find((el) => el.id !== MODAL_ID);
+  if (otherDialog) {
+    window.debugLog?.warn('Another dialog is open; not opening Switch Profile over it', {
+      ...CONTEXT, function: 'open', openDialog: otherDialog.id || null
+    });
     return;
   }
   opening = true;

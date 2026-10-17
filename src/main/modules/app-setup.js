@@ -68,8 +68,6 @@ function initializeAppSetup(dependencies) {
   appLifecycle = createAppLifecycle({
     app,
     prepareWindowForClose: () => prepareMainWindowForClose(),
-    // index-modular.js owns the main window reference
-    onClosed: () => {},
     autoBackupTimer,
     analytics,
     appStartTime,
@@ -404,6 +402,24 @@ function manageCategories() {
   return rendererCommands?.manageCategories();
 }
 
+/**
+ * Installing an update: save state, then let the window close without the
+ * "Quit?" confirmation. Await this before autoUpdater.quitAndInstall().
+ */
+function prepareForUpdateInstall() {
+  return windowStateManager?.prepareForUnconfirmedClose();
+}
+
+/** Ignore window-state saves caused by the next `ms` of programmatic resizing */
+function suppressWindowStateSaves(ms) {
+  windowStateManager?.suppressSaves(ms);
+}
+
+/** Sync variant for Electron's 'before-quit-for-update' (no time to save) */
+function allowUnconfirmedClose() {
+  windowStateManager?.allowUnconfirmedClose();
+}
+
 // Setup app lifecycle events. Call after initializeAppSetup(): before it
 // there is no lifecycle to set up, and the call would silently do nothing.
 function setupAppLifecycle() {
@@ -429,6 +445,9 @@ export {
   showAboutDialog,
   setupWindowStateSaving,
   prepareMainWindowForClose,
+  prepareForUpdateInstall,
+  allowUnconfirmedClose,
+  suppressWindowStateSaves,
   saveWindowState,
   loadWindowState
 };
@@ -450,6 +469,9 @@ export default {
   showAboutDialog,
   setupWindowStateSaving,
   prepareMainWindowForClose,
+  prepareForUpdateInstall,
+  allowUnconfirmedClose,
+  suppressWindowStateSaves,
   saveWindowState,
   loadWindowState
 };

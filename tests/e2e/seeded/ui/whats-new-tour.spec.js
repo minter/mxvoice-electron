@@ -256,4 +256,37 @@ test.describe("What's New Tour", () => {
 
     expect(savedDirectories).toEqual(originalDirectories);
   });
+
+});
+
+// Its own app: the tours above leave dialogs and tour actions in flight, and
+// Switch Profile (correctly) won't open over another dialog
+test.describe("What's New Tour: next release", () => {
+  let app; let page;
+
+  test.beforeAll(async () => {
+    ({ app, page } = await launchSeededApp(electron, 'whats-new-tour-next'));
+    await waitForAppReady(page, app);
+  });
+
+  test.afterAll(async () => {
+    await closeApp(app);
+  });
+
+  test('next release tour shows the Switch Profile dialog, then the quit confirmation note', async () => {
+    await page.evaluate(() => window.moduleRegistry.whatsNew.tourManager.launchTour('4.4.0', { markSeen: false }));
+
+    const title = page.locator('.driver-popover-title');
+    await expect(title).toHaveText('Switch Profiles Instantly', { timeout: 5000 });
+    await expect(page.locator('#profileSwitchModal')).toBeVisible();
+    // The tour ignores Next while a step's open/close action is still running
+    await page.waitForFunction(() => !window.moduleRegistry.whatsNew.tourManager._transitioning);
+
+    await page.locator('.driver-popover-next-btn').click();
+    await expect(title).toHaveText('Closing the Window Asks First', { timeout: 5000 });
+    await expect(page.locator('#profileSwitchModal')).toBeHidden();
+
+    await page.locator('.driver-popover-close-btn').click();
+    await expect(page.locator('.driver-overlay')).not.toBeVisible({ timeout: 3000 });
+  });
 });

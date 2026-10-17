@@ -221,3 +221,23 @@ playing will stop." The buttons are Quit and Cancel, and Cancel is the default,
 so a stray Return keeps the show running. Cmd-Q and File > Quit don't ask.
 Cmd-W doesn't close the window in this app (it toggles the waveform), so the
 close button, Alt+F4 or the taskbar are the paths that ask.
+
+Installing an update doesn't ask. `autoUpdater.quitAndInstall()` closes every
+window before `before-quit` fires, so `installUpdateNow()` saves state and lets
+the close through first. Electron's `before-quit-for-update` event is a safety
+net for any other caller.
+
+## Review follow-ups
+
+- The Switch Profile dialog stops taking Enter and Esc the moment it starts
+  closing, not after its fade-out. Otherwise Enter pressed right after Esc
+  would switch profiles instead of playing a song.
+- It won't open over another dialog. Bootstrap dialogs don't stack, so it would
+  stay invisible while still capturing keys.
+- An unknown `--profile=` name opens the launcher, because nothing can be saved
+  for a profile that isn't registered.
+- If the Default User fallback after Delete Current Profile fails, the dialog
+  reopens rather than leaving the deleted profile running.
+- Saves caused by applying another profile's window bounds are ignored for
+  1.5s, so the old layout's interim bounds aren't written into the new profile.
+- Preference saves that don't reach disk report failure.

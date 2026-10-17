@@ -128,7 +128,10 @@ export function register(deps) {
         valueLength: Array.isArray(value) ? value.length : undefined
       });
 
-      await profileManager.saveProfilePreferences(profileName, preferences);
+      // false = not written (disk error, or a profile that no longer exists)
+      if (await profileManager.saveProfilePreferences(profileName, preferences) === false) {
+        return { success: false, error: 'Preferences could not be saved' };
+      }
 
       debugLog?.info('[PROFILE-PREF] Profile preference saved successfully', {
         module: 'ipc-handlers',
@@ -188,6 +191,10 @@ export function register(deps) {
       });
 
       const saveResult = await profileManager.saveProfilePreferences(profileName, updatedPreferences);
+      // false = not written (disk error, or a profile that no longer exists)
+      if (saveResult === false) {
+        return { success: false, error: 'Preferences could not be saved' };
+      }
 
       // Sync prerelease_updates to the global store so the auto-updater picks it up
       // (auto-updater reads from store.get('prerelease_updates'), not profile preferences)
