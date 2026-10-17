@@ -72,6 +72,11 @@
   user-select: none;
 }
 
+.profile-picker .profile-item.disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
 .profile-picker .profile-item.selected {
   background-color: var(--bs-primary) !important;
   border-color: var(--bs-primary) !important;

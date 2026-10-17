@@ -39,37 +39,38 @@ export function filterProfiles(profiles, term = '') {
 }
 
 /**
+ * While switching, the running profile is shown (marked Current) but can't
+ * be chosen: there is nothing to switch to
+ * @param {{ mode: 'startup'|'switch', name: string, currentProfile: string|null }} options
+ */
+export function isSelectable({ mode, name, currentProfile }) {
+  return !(mode === 'switch' && name === currentProfile);
+}
+
+/**
  * Which profile starts selected. At startup Enter opens the profile used
- * most recently. While switching, the running profile is marked instead,
- * so nothing is preselected.
- * @param {{ profiles: Array, mode: 'startup'|'switch' }} options
+ * most recently. While switching, nothing is preselected.
+ * @param {{ profiles: Array, mode: 'startup'|'switch', currentProfile?: string|null }} options
  * @returns {string|null}
  */
-export function initialSelection({ profiles, mode }) {
-  if (!profiles.length) return null;
-  if (profiles.length === 1) return profiles[0].name;
+export function initialSelection({ profiles, mode, currentProfile = null }) {
+  const choices = profiles.filter((profile) => isSelectable({ mode, name: profile.name, currentProfile }));
+  if (!choices.length) return null;
+  if (choices.length === 1) return choices[0].name;
   if (mode === 'switch') return null;
-  return profiles.reduce((latest, profile) => (
+  return choices.reduce((latest, profile) => (
     (profile.last_used || 0) > (latest.last_used || 0) ? profile : latest
   )).name;
 }
 
 /**
  * The primary button names what it will do
- * @param {{ mode: 'startup'|'switch', selected: string|null, currentProfile: string|null }} options
+ * @param {{ mode: 'startup'|'switch', selected: string|null }} options
  */
-export function primaryLabel({ mode, selected, currentProfile }) {
+export function primaryLabel({ mode, selected }) {
   const isSwitch = mode === 'switch';
   if (!selected) return isSwitch ? 'Switch' : 'Open';
-  if (isSwitch && selected === currentProfile) return `Stay on ${selected}`;
   return isSwitch ? `Switch to ${selected}` : `Open ${selected}`;
-}
-
-/**
- * Choosing the running profile while switching just closes the picker
- */
-export function isNoopChoice({ mode, selected, currentProfile }) {
-  return mode === 'switch' && !!selected && selected === currentProfile;
 }
 
 /**

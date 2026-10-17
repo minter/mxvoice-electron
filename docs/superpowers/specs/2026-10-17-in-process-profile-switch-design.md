@@ -82,17 +82,18 @@ Two containers mount it:
   macOS 26 draws a sheet's corners much rounder than the app's dialogs, and
   CSS can't change that.
 
-Shared behavior: dense rows, a description only when set, a Current tag while
-switching, and a primary button that names the target ("Open X" / "Switch to
-X" / "Stay on X"). At startup the most recently used profile is preselected.
+Shared behavior: dense rows, a description only when set, and a primary
+button that names the target ("Open X" / "Switch to X"). While switching, the
+running profile is grayed out with a Current tag and can't be chosen; if it
+has only one other profile, that one starts selected. At startup the most
+recently used profile is preselected.
 New profile is a view inside the picker, not a nested dialog. Enter and Esc
 are captured while the picker is open, so Enter can't reach the main window's
 play-selected shortcut. Esc closes the New profile view first. F-key hotkeys
 still work, as they do under Preferences.
 
 Choosing a profile in the dialog calls `profile:switch-to` with method
-`launcher`. Choosing the running profile, Cancel, Esc or the close button
-just closes the dialog. The session never left memory.
+`launcher`. Cancel, Esc or the close button just closes the dialog. The session never left memory.
 
 If the running profile was just deleted (Delete Current Profile), the renderer
 locks its state saves and opens the dialog with nothing marked current.

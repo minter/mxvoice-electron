@@ -17,7 +17,7 @@ import {
   filterProfiles,
   initialSelection,
   primaryLabel,
-  isNoopChoice,
+  isSelectable,
   validateNewProfileName
 } from './picker-model.js';
 
@@ -154,10 +154,11 @@ export function createProfilePicker({
     root.querySelector('[data-view="list"]').hidden = creating;
     root.querySelector('[data-view="create"]').hidden = !creating;
     launchButton.disabled = !selected;
-    launchButton.textContent = primaryLabel({ mode, selected, currentProfile });
+    launchButton.textContent = primaryLabel({ mode, selected });
   }
 
   function select(name) {
+    if (name && !isSelectable({ mode, name, currentProfile })) return;
     selected = name;
     list.querySelectorAll('.profile-item').forEach((item) => {
       item.classList.toggle('selected', item.dataset.profileName === name);
@@ -175,16 +176,24 @@ export function createProfilePicker({
       list.innerHTML = `<li class="list-group-item profile-picker-empty">${message}</li>`;
       return [];
     }
-    list.innerHTML = visible.map((profile) => `
-      <li class="list-group-item list-group-item-action profile-item${profile.name === selected ? ' selected' : ''}"
-          data-profile-name="${escapeHtml(profile.name)}">
+    list.innerHTML = visible.map((profile) => {
+      const selectable = isSelectable({ mode, name: profile.name, currentProfile });
+      const classes = [
+        'list-group-item',
+        selectable ? 'list-group-item-action' : 'disabled',
+        'profile-item',
+        profile.name === selected ? 'selected' : ''
+      ].filter(Boolean).join(' ');
+      return `
+      <li class="${classes}" data-profile-name="${escapeHtml(profile.name)}"${selectable ? '' : ' aria-disabled="true"'}>
         <div class="profile-info">
           <span class="profile-name">${escapeHtml(profile.name)}</span>
           ${profile.description ? `<span class="profile-description">${escapeHtml(profile.description)}</span>` : ''}
         </div>
-        ${isSwitch && profile.name === currentProfile ? '<span class="profile-current-tag">Current</span>' : ''}
+        ${selectable ? '' : '<span class="profile-current-tag">Current</span>'}
       </li>
-    `).join('');
+    `;
+    }).join('');
     return visible.map((profile) => profile.name);
   }
 
@@ -218,7 +227,7 @@ export function createProfilePicker({
     $('#loading-state').style.display = 'none';
     if (result?.success) {
       profiles = result.profiles || [];
-      if (!keepSelection) selected = initialSelection({ profiles, mode });
+      if (!keepSelection) selected = initialSelection({ profiles, mode, currentProfile });
       renderList();
     } else {
       showError(result?.error || 'Failed to load profiles');
@@ -229,11 +238,7 @@ export function createProfilePicker({
   }
 
   async function choose(name = selected) {
-    if (!name || choosing) return;
-    if (isNoopChoice({ mode, selected: name, currentProfile })) {
-      onCancel?.();
-      return;
-    }
+    if (!name || choosing || !isSelectable({ mode, name, currentProfile })) return;
     choosing = true;
     try {
       const result = await api.choose(name);

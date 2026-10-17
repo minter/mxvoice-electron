@@ -424,18 +424,16 @@ test.describe('Profile Lifecycle', () => {
     await expect(picker).toHaveClass(/modal/);
     expect(await windowCount()).toBe(1);
 
-    // Nothing preselected while switching; the button says what it will do
-    await expect(picker.locator('#launch-btn')).toHaveText('Switch');
-    await picker.locator('.profile-item[data-profile-name="SecondProfile"]').click();
+    // The running profile is shown but can't be chosen; the only other one
+    // starts selected, and the button says what it will do
+    const running = picker.locator('.profile-item[data-profile-name="Default User"]');
+    await expect(running).toHaveClass(/disabled/);
+    await expect(running).toHaveAttribute('aria-disabled', 'true');
     await expect(picker.locator('#launch-btn')).toHaveText('Switch to SecondProfile');
-    await picker.locator('.profile-item[data-profile-name="Default User"]').click();
-    await expect(picker.locator('#launch-btn')).toHaveText('Stay on Default User');
-
-    // Staying closes the dialog without reloading
-    await mainWindow.evaluate(() => { window.__e2eSessionMarker = 'still-here'; });
-    await picker.locator('#launch-btn').click();
-    await expect(picker).toBeHidden();
-    expect(await mainWindow.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
+    await running.click({ force: true });
+    await expect(running).not.toHaveClass(/selected/);
+    await expect(picker.locator('.profile-item[data-profile-name="SecondProfile"]')).toHaveClass(/selected/);
+    await expect(picker.locator('#launch-btn')).toHaveText('Switch to SecondProfile');
   });
 
   test('filtering keeps the Switch Profile dialog its size and drops a hidden selection', async () => {

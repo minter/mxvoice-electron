@@ -5,7 +5,7 @@ import {
   filterProfiles,
   initialSelection,
   primaryLabel,
-  isNoopChoice,
+  isSelectable,
   validateNewProfileName
 } from '../../../src/renderer/modules/profile-picker/picker-model.js';
 
@@ -31,25 +31,30 @@ describe('profile picker model', () => {
 
   it('preselects the most recently used profile at startup only', () => {
     expect(initialSelection({ profiles, mode: 'startup' })).toBe('andy');
-    expect(initialSelection({ profiles, mode: 'switch' })).toBeNull();
-    expect(initialSelection({ profiles: [{ name: 'Solo' }], mode: 'switch' })).toBe('Solo');
+    expect(initialSelection({ profiles, mode: 'switch', currentProfile: 'andy' })).toBeNull();
+    expect(initialSelection({ profiles: [{ name: 'Solo' }], mode: 'startup' })).toBe('Solo');
     expect(initialSelection({ profiles: [], mode: 'startup' })).toBeNull();
     expect(initialSelection({ profiles: [{ name: 'A' }, { name: 'B' }], mode: 'startup' })).toBe('A');
+  });
+
+  it('never preselects the running profile, but preselects the only other one', () => {
+    const two = [{ name: 'Running' }, { name: 'Other' }];
+    expect(initialSelection({ profiles: two, mode: 'switch', currentProfile: 'Running' })).toBe('Other');
+    expect(initialSelection({ profiles: [{ name: 'Running' }], mode: 'switch', currentProfile: 'Running' })).toBeNull();
   });
 
   it('labels the primary button with what it will do', () => {
     expect(primaryLabel({ mode: 'startup', selected: null })).toBe('Open');
     expect(primaryLabel({ mode: 'startup', selected: 'Aaron' })).toBe('Open Aaron');
-    expect(primaryLabel({ mode: 'switch', selected: null, currentProfile: 'andy' })).toBe('Switch');
-    expect(primaryLabel({ mode: 'switch', selected: 'Aaron', currentProfile: 'andy' })).toBe('Switch to Aaron');
-    expect(primaryLabel({ mode: 'switch', selected: 'andy', currentProfile: 'andy' })).toBe('Stay on andy');
+    expect(primaryLabel({ mode: 'switch', selected: null })).toBe('Switch');
+    expect(primaryLabel({ mode: 'switch', selected: 'Aaron' })).toBe('Switch to Aaron');
   });
 
-  it('treats choosing the running profile while switching as a no-op', () => {
-    expect(isNoopChoice({ mode: 'switch', selected: 'andy', currentProfile: 'andy' })).toBe(true);
-    expect(isNoopChoice({ mode: 'switch', selected: 'Aaron', currentProfile: 'andy' })).toBe(false);
-    expect(isNoopChoice({ mode: 'startup', selected: 'andy', currentProfile: 'andy' })).toBe(false);
-    expect(isNoopChoice({ mode: 'switch', selected: null, currentProfile: null })).toBe(false);
+  it('makes only the running profile unselectable, and only while switching', () => {
+    expect(isSelectable({ mode: 'switch', name: 'andy', currentProfile: 'andy' })).toBe(false);
+    expect(isSelectable({ mode: 'switch', name: 'Aaron', currentProfile: 'andy' })).toBe(true);
+    expect(isSelectable({ mode: 'startup', name: 'andy', currentProfile: 'andy' })).toBe(true);
+    expect(isSelectable({ mode: 'switch', name: 'andy', currentProfile: null })).toBe(true);
   });
 
   it('validates new profile names', () => {
