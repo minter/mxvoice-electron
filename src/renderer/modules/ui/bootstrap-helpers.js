@@ -13,10 +13,11 @@ try { debugLog = window.debugLog || null; } catch (_) { /* debugLog may not exis
  * Safely show a Bootstrap modal.
  * @param {string} selector - CSS selector for the modal element
  * @param {Object} [context] - Logging context (module, function)
+ * @param {Object} [options] - Bootstrap Modal options (e.g. { keyboard: false })
  */
-export function safeShowModal(selector, context = {}) {
+export function safeShowModal(selector, context = {}, options) {
   return import('./bootstrap-adapter.js')
-    .then(({ showModal }) => showModal(selector))
+    .then(({ showModal }) => (options ? showModal(selector, options) : showModal(selector)))
     .catch(err => {
       debugLog?.warn(`Failed to show modal ${selector}`, { ...context, error: err?.message });
     });

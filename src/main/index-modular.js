@@ -11,7 +11,7 @@
 // Add immediate logging to see if the file is being loaded
 // Note: debugLog will be initialized later in this file
 
-import { app, dialog } from 'electron';
+import { app, dialog, screen, autoUpdater as nativeAutoUpdater } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import readlines from 'n-readlines';
@@ -68,7 +68,7 @@ import { collectLibraryStats } from './modules/library-stats.js';
 import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-channel.js';
 import { describeUpdateError } from './modules/update-analytics.js';
 import { decideUpdateNotice, runBackgroundCheck, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
-import { trackProfileSwitch } from './modules/profile-switch-analytics.js';
+import { createProfileSwitcher, applyWindowState } from './modules/profile-switcher.js';
 import { quietlyAnnouncedVersion, recordAvailableUpdate, recordDownloadedUpdate } from './modules/pending-update.js';
 
 if (process.env.APP_TEST_MODE === '1') {
@@ -699,31 +699,52 @@ function trackLibraryStats() {
   }
 }
 
-// Initialize all modules with dependencies
-async function initializeModules() {
-  debugLog.info('Starting module initialization', { function: "initializeModules", hasDb: !!db, dbType: typeof db });
-  
-  // Ensure database is initialized before proceeding
-  if (!db) {
-    debugLog.warn('Database not ready, attempting to initialize...', { function: "initializeModules" });
-    try {
-      debugLog.info('Calling initializeMainDatabaseWrapper...', { function: "initializeModules" });
-      await initializeMainDatabaseWrapper();
-      debugLog.info('initializeMainDatabaseWrapper completed', { function: "initializeModules", hasDb: !!db, dbType: typeof db });
-    } catch (error) {
-      debugLog.error('Failed to initialize database for modules', { 
-        function: "initializeModules",
-        error: error.message,
-        stack: error.stack
-      });
-      // Continue without database
-    }
-  } else {
-    debugLog.info('Database already available, proceeding with modules', { function: "initializeModules" });
+// Profile switching runs in-process; created once at app ready
+let profileSwitcher = null;
+
+/**
+ * Install a downloaded update. quitAndInstall() closes every window before
+ * before-quit fires, so save state first. The "Quit Mx. Voice?" confirmation
+ * (which would cancel the install) is skipped from before-quit-for-update,
+ * not here: if this install doesn't quit, closes must still ask and save.
+ */
+async function installUpdateNow() {
+  try {
+    await appSetup.prepareForUpdateInstall();
+  } catch (error) {
+    debugLog.warn('Could not save state before installing the update', { function: 'installUpdateNow', error: error.message });
   }
+  autoUpdater.quitAndInstall();
+}
+
+/**
+ * Initialize main-process services once per process, before any window exists.
+ * ipcMain.handle throws on a second registration of a channel, so none of
+ * this may run from createWindow(). Everything reads the window, profile and
+ * database through live getters.
+ */
+function initializeMainProcessServices() {
+  profileSwitcher = createProfileSwitcher({
+    getMainWindow: () => mainWindow,
+    getCurrentProfile,
+    setCurrentProfile: (name) => { currentProfile = name; },
+    prepareForSwitch: () => appSetup.prepareMainWindowForClose(),
+    profileManager,
+    autoBackupTimer,
+    store,
+    rebuildMenu: () => appSetup.createApplicationMenu(),
+    loadWindowState: (name) => appSetup.loadWindowState(store, name),
+    applyWindowState: (win, state) => {
+      // Its maximize/fullscreen/resize events would otherwise save the old
+      // layout's interim bounds into the new profile (fullscreen exit animates)
+      appSetup.suppressWindowStateSaves(1500);
+      applyWindowState(win, state, screen);
+    },
+    getAnalytics: () => analytics,
+    debugLog
+  });
 
   const dependencies = {
-    mainWindow,
     getMainWindow: () => mainWindow,
     getDb: () => db,
     setDb: (next) => { db = next; },
@@ -738,37 +759,49 @@ async function initializeModules() {
     getCurrentProfile,
     autoBackupTimer,
     analytics,
-    appStartTime
+    appStartTime,
+    profileSwitcher,
+    installUpdate: installUpdateNow
   };
 
-  // Initialize each module
   appSetup.initializeAppSetup(dependencies);
-  
-  debugLog?.info('Initializing IPC handlers', { 
-    function: "initializeModules" 
-  });
-  debugLog?.info('Module dependencies status', { 
-    function: "initializeModules",
-    hasDb: !!dependencies.getDb?.(),
-    hasAutoUpdater: !!dependencies.autoUpdater,
-    autoUpdaterType: typeof dependencies.autoUpdater
-  });
-  
+
+  debugLog.info('Initializing IPC handlers', { function: "initializeMainProcessServices" });
   ipcHandlers.initializeIpcHandlers(dependencies);
-  
-  debugLog?.info('IPC handlers initialized', { 
-    function: "initializeModules" 
-  });
-  
+
   fileOperations.initializeFileOperations(dependencies);
 
-  // Initialize library transfer manager (needs db and store which are now available)
   libraryTransferManager.initializeLibraryTransferManager({
     debugLog,
     getDb: () => db,
     setDb: (next) => { db = next; },
     store
   });
+
+  launcherWindow.initializeLauncherWindow({
+    debugLog,
+    profileManager,
+    mainAppLauncher: async (profileName) => {
+      currentProfile = profileName;
+
+      debugLog.info('Launching main app from launcher', {
+        function: "mainAppLauncher",
+        profile: profileName
+      });
+
+      await createWindow();
+
+      // Start auto-backup timer for this profile
+      autoBackupTimer.startAutoBackupTimer(profileName);
+
+      // Test auto-update scenarios if enabled
+      testAutoUpdateScenarios();
+    }
+  });
+
+  // Hand-off keys from the relaunch-based switch; nothing reads them now
+  store.delete('fallback-profile');
+  store.delete('auto-select-profile');
 }
 
 // Main window creation function
@@ -814,9 +847,6 @@ const createWindow = async () => {
 
     mainWindow = appSetup.createWindow(windowOptions);
 
-    // Initialize modules with dependencies AFTER mainWindow is created
-    await initializeModules();
-
     // Track library stats now that DB is available
     trackLibraryStats();
 
@@ -847,9 +877,6 @@ const createWindow = async () => {
 
 // Setup app lifecycle
 function setupApp() {
-  // Setup app lifecycle events
-  appSetup.setupAppLifecycle();
-  
   // Listen for preference changes that affect auto-updater
   store.onDidChange('prerelease_updates', (newValue) => {
     if (autoUpdater) {
@@ -887,9 +914,35 @@ function setupApp() {
     
     // Initialize auto-backup timer
     autoBackupTimer.initializeAutoBackupTimer({ debugLog });
+
+    initializeMainProcessServices();
+
+    // Quit handling (state flush, backup timer, analytics) and close-to-quit.
+    // Needs app setup, which initializeMainProcessServices() just created.
+    appSetup.setupAppLifecycle();
+
+    // quitAndInstall() is really quitting: the native updater closes the
+    // windows itself next, which must not ask "Quit?" (it would cancel it).
+    // Emitted by Electron's updater (macOS) and by electron-updater.
+    try {
+      nativeAutoUpdater?.on?.('before-quit-for-update', () => appSetup.allowUnconfirmedClose());
+    } catch (error) {
+      debugLog.warn('Native autoUpdater unavailable', { function: 'app ready event', error: error.message });
+    }
     
     // Check if profile was provided via command line
     currentProfile = getProfileFromArgs();
+
+    // An unknown name (typo, deleted, never created) would run a session in
+    // which nothing can be saved: pick a profile in the launcher instead.
+    // A profile whose directory survived a lost registry is registered again.
+    if (currentProfile && !profileManager.adoptProfileDirectory(currentProfile)) {
+      debugLog.warn('Profile from --profile= does not exist; showing the launcher', {
+        function: "app ready event",
+        profile: currentProfile
+      });
+      currentProfile = null;
+    }
 
     if (currentProfile) {
       // Profile provided (or default) - launch main app directly
@@ -910,32 +963,6 @@ function setupApp() {
       // No profile - show launcher window
       debugLog.info('No profile provided, showing launcher', {
         function: "app ready event"
-      });
-      
-      // Initialize launcher window with ability to launch main app
-      launcherWindow.initializeLauncherWindow({
-        debugLog,
-        profileManager,
-        store,
-        mainWindow,
-        mainAppLauncher: async (profileName) => {
-          currentProfile = profileName;
-          // After "Switch Profile", the relaunched app remembers where it came from
-          trackProfileSwitch({ analytics, fromProfile: store.get('fallback-profile'), toProfile: profileName, method: 'launcher' });
-          
-          debugLog.info('Launching main app from launcher', { 
-            function: "mainAppLauncher",
-            profile: profileName 
-          });
-          
-          await createWindow();
-          
-          // Start auto-backup timer for this profile
-          autoBackupTimer.startAutoBackupTimer(profileName);
-          
-          // Test auto-update scenarios if enabled
-          testAutoUpdateScenarios();
-        }
       });
       
       // Show launcher window
@@ -1098,7 +1125,9 @@ function setupApp() {
     if (updateState.userApprovedInstall) {
       try {
         debugLog.info('User approved install earlier; quitting to install now', { function: 'autoUpdater update-downloaded' });
-        autoUpdater.quitAndInstall();
+        installUpdateNow().catch((e) => {
+          debugLog.error('Auto-install on ready failed', { function: 'autoUpdater update-downloaded', error: e?.message });
+        });
       } catch (e) {
         debugLog.error('Auto-install on ready failed', { function: 'autoUpdater update-downloaded', error: e?.message });
       }

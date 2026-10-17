@@ -11,6 +11,10 @@ import * as profileBackupManager from './profile-backup-manager.js';
 let debugLog = null;
 let backupTimer = null;
 let currentProfile = null;
+// Bumped on every start/stop. A backup already running when the timer is
+// restarted (profile switch) must not reschedule itself next to the new
+// timer, even when the same profile is started again.
+let timerGeneration = 0;
 
 /**
  * Initialize the Auto-Backup Timer
@@ -32,11 +36,14 @@ function initializeAutoBackupTimer(dependencies) {
 async function startAutoBackupTimer(profileName) {
   // Clear any existing timer
   stopAutoBackupTimer();
+  const generation = timerGeneration;
   
   currentProfile = profileName;
   
   // Load backup settings
   const preferences = await profileManager.loadProfilePreferences(profileName);
+  // Stopped or restarted while the settings were loading
+  if (generation !== timerGeneration) return;
   const settings = preferences?.backup_settings || {
     autoBackupEnabled: true,
     backupInterval: 30 * 60 * 1000, // 30 minutes default
@@ -64,7 +71,7 @@ async function startAutoBackupTimer(profileName) {
   });
   
   // Schedule first backup check
-  scheduleNextBackup(profileName, settings, interval);
+  scheduleNextBackup(profileName, settings, interval, generation);
 }
 
 /**
@@ -73,7 +80,7 @@ async function startAutoBackupTimer(profileName) {
  * @param {Object} settings - Backup settings
  * @param {number} interval - Interval in milliseconds
  */
-function scheduleNextBackup(profileName, settings, interval) {
+function scheduleNextBackup(profileName, settings, interval, generation = timerGeneration) {
   backupTimer = setTimeout(async () => {
     try {
       debugLog?.info('Auto-backup timer triggered', {
@@ -102,8 +109,8 @@ function scheduleNextBackup(profileName, settings, interval) {
       }
       
       // Schedule next backup
-      if (currentProfile === profileName) {
-        scheduleNextBackup(profileName, settings, interval);
+      if (generation === timerGeneration) {
+        scheduleNextBackup(profileName, settings, interval, generation);
       }
     } catch (error) {
       debugLog?.error('Auto-backup timer error', {
@@ -114,8 +121,8 @@ function scheduleNextBackup(profileName, settings, interval) {
       });
       
       // Continue scheduling even on error
-      if (currentProfile === profileName) {
-        scheduleNextBackup(profileName, settings, interval);
+      if (generation === timerGeneration) {
+        scheduleNextBackup(profileName, settings, interval, generation);
       }
     }
   }, interval);
@@ -125,6 +132,7 @@ function scheduleNextBackup(profileName, settings, interval) {
  * Stop auto-backup timer
  */
 function stopAutoBackupTimer() {
+  timerGeneration++;
   if (backupTimer) {
     clearTimeout(backupTimer);
     backupTimer = null;

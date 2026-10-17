@@ -14,7 +14,7 @@ import readlines from 'n-readlines';
 import { parseFile as parseAudioMetadata } from 'music-metadata';
 
 // Dependencies that will be injected
-let mainWindow;
+let getMainWindow = () => null;
 let store;
 let debugLog;
 
@@ -48,14 +48,14 @@ function parseHotkeyFileLines(lines) {
 
 // Initialize the module with dependencies
 function initializeFileOperations(dependencies) {
-  mainWindow = dependencies.mainWindow;
+  getMainWindow = dependencies.getMainWindow || (() => dependencies.mainWindow);
   store = dependencies.store;
   debugLog = dependencies.debugLog;
   
   debugLog?.info('🔍 Initializing file operations with dependencies:', { 
     module: 'file-operations', 
     function: 'initializeFileOperations', 
-    mainWindowSet: !!dependencies.mainWindow,
+    mainWindowSet: !!getMainWindow(),
     storeSet: !!dependencies.store,
     autoUpdaterSet: !!dependencies.autoUpdater,
     debugLogSet: !!dependencies.debugLog
@@ -64,7 +64,7 @@ function initializeFileOperations(dependencies) {
 
 // Load hotkeys file
 function loadHotkeysFile() {
-  if (!mainWindow) {
+  if (!getMainWindow()) {
     debugLog?.error('❌ mainWindow is not available', { module: 'file-operations', function: 'loadHotkeysFile' });
     return Promise.reject(new Error('mainWindow not available'));
   }
@@ -72,7 +72,7 @@ function loadHotkeysFile() {
   return new Promise((resolve, reject) => {
     const fkey_mapping = {};
     debugLog?.info("Loading hotkeys file", { module: 'file-operations', function: 'loadHotkeysFile' });
-    dialog.showOpenDialog(mainWindow, {
+    dialog.showOpenDialog(getMainWindow(), {
       buttonLabel: 'Open',
       filters: [
         { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
@@ -108,7 +108,7 @@ function loadHotkeysFile() {
         debugLog?.info('📁 fkey_mapping keys:', { module: 'file-operations', function: 'loadHotkeysFile', keys: Object.keys(fkey_mapping) });
         debugLog?.info('📁 fkey_mapping length:', { module: 'file-operations', function: 'loadHotkeysFile', length: fkey_mapping.length });
         debugLog?.info('📁 fkey_mapping content:', { module: 'file-operations', function: 'loadHotkeysFile', content: JSON.stringify(fkey_mapping) });
-        mainWindow.webContents.send('fkey_load', fkey_mapping, title);
+        getMainWindow().webContents.send('fkey_load', fkey_mapping, title);
         resolve({ success: true, fkey_mapping, title });
       }
     }).catch(err => {
@@ -120,7 +120,7 @@ function loadHotkeysFile() {
 
 // Load holding tank file
 function loadHoldingTankFile() {
-  if (!mainWindow) {
+  if (!getMainWindow()) {
     debugLog?.error('❌ mainWindow is not available', { module: 'file-operations', function: 'loadHoldingTankFile' });
     return Promise.reject(new Error('mainWindow not available'));
   }
@@ -128,7 +128,7 @@ function loadHoldingTankFile() {
   return new Promise((resolve, reject) => {
     const song_ids = [];
     debugLog?.info("Loading holding tank file", { module: 'file-operations', function: 'loadHoldingTankFile' });
-    dialog.showOpenDialog(mainWindow, {
+    dialog.showOpenDialog(getMainWindow(), {
       buttonLabel: 'Open',
       filters: [
         { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
@@ -153,7 +153,7 @@ function loadHoldingTankFile() {
           song_ids.push(line.toString().trim());
         }
         debugLog?.info('📁 Main process: Sending holding_tank_load with:', { module: 'file-operations', function: 'loadHoldingTankFile', song_ids: song_ids });
-        mainWindow.webContents.send('holding_tank_load', song_ids);
+        getMainWindow().webContents.send('holding_tank_load', song_ids);
         resolve({ success: true, song_ids });
       }
     }).catch(err => {
@@ -165,7 +165,7 @@ function loadHoldingTankFile() {
 
 // Save hotkeys file
 function saveHotkeysFile(hotkeyArray) {
-  dialog.showSaveDialog(mainWindow, {
+  dialog.showSaveDialog(getMainWindow(), {
     buttonLabel: 'Save',
     filters: [
       { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
@@ -239,7 +239,7 @@ function saveHotkeysFile(hotkeyArray) {
 
 // Save holding tank file
 function saveHoldingTankFile(holdingTankArray) {
-  dialog.showSaveDialog(mainWindow, {
+  dialog.showSaveDialog(getMainWindow(), {
     buttonLabel: 'Save',
     filters: [
       { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
@@ -268,7 +268,7 @@ function saveHoldingTankFile(holdingTankArray) {
 // Add directory dialog
 function addDirectoryDialog() {
   debugLog?.info("Adding directory of songs", { module: 'file-operations', function: 'addDirectoryDialog' });
-  dialog.showOpenDialog(mainWindow, {
+  dialog.showOpenDialog(getMainWindow(), {
     buttonLabel: 'Add All',
     message: 'Choose directory of music to add',
     properties: ['openDirectory']
@@ -279,7 +279,7 @@ function addDirectoryDialog() {
     } else {
       const dirname = result.filePaths[0];
       debugLog?.info(`Processing directory ${dirname}`, { module: 'file-operations', function: 'addDirectoryDialog', dirname: dirname });
-      mainWindow.webContents.send('bulk_add_dialog_load', dirname);
+      getMainWindow().webContents.send('bulk_add_dialog_load', dirname);
     }
   }).catch(err => {
     debugLog?.error('Error adding directory:', { module: 'file-operations', function: 'addDirectoryDialog', error: err });
@@ -289,7 +289,7 @@ function addDirectoryDialog() {
 // Add file dialog
 function addFileDialog() {
   debugLog?.info("Adding new file", { module: 'file-operations', function: 'addFileDialog' });
-  dialog.showOpenDialog(mainWindow, {
+  dialog.showOpenDialog(getMainWindow(), {
     buttonLabel: 'Add',
     filters: [
       { name: 'Audio Files', extensions: ['mp3', 'mp4', 'm4a', 'wav', 'ogg', 'flac', 'opus'] }
@@ -311,7 +311,7 @@ function addFileDialog() {
       } catch (err) {
         debugLog?.warn('Failed to parse audio metadata', { module: 'file-operations', function: 'addFileDialog', error: err?.message, filename });
       }
-      mainWindow.webContents.send('add_dialog_load', filename, metadata);
+      getMainWindow().webContents.send('add_dialog_load', filename, metadata);
     }
   }).catch(err => {
     debugLog?.error('Error adding file:', { module: 'file-operations', function: 'addFileDialog', error: err });

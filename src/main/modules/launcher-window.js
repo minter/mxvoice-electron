@@ -20,20 +20,27 @@ let debugLog = null;
 let profileManager = null;
 let launcherWindow = null;
 let mainAppLauncher = null;
-let store = null;
-let mainWindow = null;
 let profileSelected = false;
 
+// The window stays hidden until the page has sized it to its profile list,
+// so it never appears at the default size first; this is the fallback if the
+// page never reports (for example, profiles failed to load)
+const REVEAL_FALLBACK_MS = 1500;
+let revealFallbackTimer = null;
+
+const LAUNCHER_WIDTH = 420;
+const LAUNCHER_MIN_HEIGHT = 240;
+const LAUNCHER_MAX_HEIGHT = 560;
+
 /**
- * Initialize the launcher window module
+ * Initialize the launcher window module. Registers the launcher IPC handlers,
+ * so call it exactly once per process.
  * @param {Object} dependencies - Module dependencies
  */
 function initializeLauncherWindow(dependencies) {
   debugLog = dependencies.debugLog;
   profileManager = dependencies.profileManager;
   mainAppLauncher = dependencies.mainAppLauncher;
-  store = dependencies.store;
-  mainWindow = dependencies.mainWindow;
   
   debugLog?.info('Launcher window module initialized', { 
     module: 'launcher-window',
@@ -45,7 +52,8 @@ function initializeLauncherWindow(dependencies) {
 }
 
 /**
- * Create and show the launcher window
+ * Create and show the startup launcher window. (Switch Profile later uses
+ * the same picker in a dialog inside the main window.)
  * @returns {Promise<BrowserWindow>} The launcher window
  */
 async function createLauncherWindow() {
@@ -59,16 +67,17 @@ async function createLauncherWindow() {
   
   debugLog?.info('Creating launcher window', { 
     module: 'launcher-window',
-    function: 'createLauncherWindow' 
+    function: 'createLauncherWindow'
   });
   
   launcherWindow = new BrowserWindow({
-    width: 550,
-    height: 650,
-    show: process.env.APP_TEST_MODE !== '1',
+    titleBarStyle: 'hiddenInset',
+    width: LAUNCHER_WIDTH,
+    height: 420,
+    useContentSize: true,
+    show: false,
     resizable: false,
     center: true,
-    titleBarStyle: 'hiddenInset',
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -79,6 +88,9 @@ async function createLauncherWindow() {
   
   // Load the launcher HTML
   const launcherHtmlPath = path.join(__dirname, '..', '..', 'launcher.html');
+  const windowBeingLoaded = launcherWindow;
+  clearTimeout(revealFallbackTimer);
+  revealFallbackTimer = setTimeout(() => revealLauncherWindow(windowBeingLoaded), REVEAL_FALLBACK_MS);
   await launcherWindow.loadFile(launcherHtmlPath);
   
   // Open DevTools in development (disabled by default)
@@ -91,71 +103,28 @@ async function createLauncherWindow() {
   launcherWindow.on('closed', () => {
     debugLog?.info('Launcher window closed', { 
       module: 'launcher-window',
-      function: 'createLauncherWindow' 
+      function: 'createLauncherWindow',
+      profileSelected
     });
     
-    // Check if we have a fallback profile and no profile was selected
-    const fallbackProfile = store.get('fallback-profile');
-    if (!profileSelected) {
-      // Check if main window exists and is not destroyed
-      const mainWindowExists = mainWindow && !mainWindow.isDestroyed();
-      
-      if (!mainWindowExists) {
-        if (fallbackProfile) {
-          // Profile switching scenario: fall back to previous profile
-          debugLog?.info('Launcher closed without profile selection, falling back to previous profile', { 
-            module: 'launcher-window',
-            function: 'createLauncherWindow',
-            fallbackProfile,
-            mainWindowExists,
-            profileSelected 
-          });
-          
-          // Clear the fallback profile
-          store.delete('fallback-profile');
-          
-          // Relaunch with the fallback profile
-          app.relaunch({ args: [...process.argv.slice(1), `--profile=${fallbackProfile}`] });
-          app.exit(0);
-        } else {
-          // Initial launch scenario: no fallback profile, quit the app
-          debugLog?.info('Launcher closed without profile selection and no fallback profile, quitting app', { 
-            module: 'launcher-window',
-            function: 'createLauncherWindow',
-            fallbackProfile,
-            mainWindowExists,
-            profileSelected 
-          });
-          
-          app.quit();
-        }
-      } else {
-        debugLog?.info('Launcher closed but main window still exists, not taking action', { 
-          module: 'launcher-window',
-          function: 'createLauncherWindow',
-          fallbackProfile,
-          mainWindowExists,
-          profileSelected 
-        });
-      }
-    } else if (profileSelected) {
-      debugLog?.info('Launcher closed after profile selection, not taking action', { 
-        module: 'launcher-window',
-        function: 'createLauncherWindow',
-        fallbackProfile: !!fallbackProfile,
-        profileSelected 
-      });
-      
-      // Clear the fallback profile since we successfully launched with a selected profile
-      if (fallbackProfile) {
-        store.delete('fallback-profile');
-      }
-    }
-    
+    clearTimeout(revealFallbackTimer);
     launcherWindow = null;
+    // Closed without choosing: there is no main window to go to
+    if (!profileSelected) app.quit();
   });
   
   return launcherWindow;
+}
+
+/**
+ * Show the launcher once it has its final size (tests keep it hidden)
+ * @param {BrowserWindow} win
+ */
+function revealLauncherWindow(win) {
+  if (!win || win.isDestroyed() || win.isVisible()) return;
+  clearTimeout(revealFallbackTimer);
+  if (process.env.APP_TEST_MODE === '1') return;
+  win.show();
 }
 
 /**
@@ -256,6 +225,18 @@ function registerLauncherHandlers() {
     }
   });
   
+  // Fit the window to the profile list (the page measures itself once)
+  ipcMain.handle('launcher:fit-to-content', (event, height) => {
+    if (!launcherWindow || launcherWindow.isDestroyed() || event.sender !== launcherWindow.webContents) {
+      return { success: false, error: 'Launcher window not available' };
+    }
+    const requested = Number.isFinite(height) ? Math.round(height) : LAUNCHER_MIN_HEIGHT;
+    const clamped = Math.min(LAUNCHER_MAX_HEIGHT, Math.max(LAUNCHER_MIN_HEIGHT, requested));
+    launcherWindow.setContentSize(LAUNCHER_WIDTH, clamped);
+    revealLauncherWindow(launcherWindow);
+    return { success: true, height: clamped };
+  });
+
   // Launch main app with profile
   ipcMain.handle('launcher:launch-app', async (event, profileName) => {
     try {
@@ -267,7 +248,7 @@ function registerLauncherHandlers() {
       
       // Update profile last used
       profileManager.updateProfileLastUsed(profileName);
-      
+
       // Launch main app with profile context
       if (mainAppLauncher) {
         await mainAppLauncher(profileName);

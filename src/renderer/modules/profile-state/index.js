@@ -385,83 +385,6 @@ export function clearProfileRestorationLock() {
 }
 
 /**
- * Switch profiles with state saving
- * Extracts and saves current state before switching profiles
- * @returns {Promise<Object>} Result with success status
- */
-export async function switchProfileWithSave() {
-  try {
-    debugLog?.info('[PROFILE-STATE] Switching profile with state save', {
-      module: 'profile-state',
-      function: 'switchProfileWithSave'
-    });
-    
-    // PROTECTION: Never extract/save during restoration/initialization
-    if (window.isRestoringProfileState) {
-      debugLog?.warn('[PROFILE-STATE] Skipping state save during profile switch - restoration in progress', {
-        module: 'profile-state',
-        function: 'switchProfileWithSave',
-        reason: 'restoration_lock_active'
-      });
-      // Continue with switch - don't block the switch
-      await window.secureElectronAPI.profile.switchProfile();
-      return { success: true, skipped: true };
-    }
-    
-    // Extract current state
-    const state = extractProfileState();
-    
-    // Calculate state contents for logging
-    const hotkeyCount = state.hotkeys.reduce((sum, tab) => sum + Object.keys(tab.hotkeys).length, 0);
-    const holdingTankCount = state.holdingTank.reduce((sum, tab) => sum + tab.songIds.length, 0);
-    
-    debugLog?.info('[PROFILE-STATE] State extracted, saving before switch', {
-      module: 'profile-state',
-      function: 'switchProfileWithSave',
-      hotkeyTabs: state.hotkeys?.length || 0,
-      holdingTankTabs: state.holdingTank?.length || 0,
-      hotkeyCount: hotkeyCount,
-      holdingTankCount: holdingTankCount
-    });
-    
-    // Get current profile name for explicit saving
-    const currentProfileResult = await window.secureElectronAPI.profile.getCurrent();
-    const currentProfile = currentProfileResult?.profile || 'unknown';
-
-    // Save state explicitly before switching
-    const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state, currentProfile);
-
-    if (!saveResult.success) {
-      debugLog?.error('[PROFILE-STATE] Failed to save state before switch', {
-        module: 'profile-state',
-        function: 'switchProfileWithSave',
-        profile: currentProfile,
-        error: saveResult.error
-      });
-      // Continue with switch anyway - better to switch than to block
-    } else {
-      debugLog?.info('[PROFILE-STATE] State saved successfully before switch', {
-        module: 'profile-state',
-        function: 'switchProfileWithSave',
-        profile: currentProfile
-      });
-    }
-    
-    // Now switch profiles (this will close the window and relaunch)
-    await window.secureElectronAPI.profile.switchProfile();
-
-    return { success: true };
-  } catch (error) {
-    debugLog?.error('[PROFILE-STATE] Error during profile switch', {
-      module: 'profile-state',
-      function: 'switchProfileWithSave',
-      error: error.message
-    });
-    return { success: false, error: error.message };
-  }
-}
-
-/**
  * Initialize profile state persistence
  * Sets up auto-save on window close
  * @param {Object} options - Initialization options
@@ -484,7 +407,6 @@ export function initializeProfileState({ hotkeysModule, holdingTankModule } = {}
     saveProfileState,
     flushProfileState,
     loadProfileState,
-    switchProfileWithSave,
     clearProfileRestorationLock
   };
 }
@@ -495,6 +417,5 @@ export default {
   saveProfileState,
   flushProfileState,
   loadProfileState,
-  switchProfileWithSave,
   clearProfileRestorationLock
 };

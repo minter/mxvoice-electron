@@ -33,6 +33,11 @@ describe('bootstrap-helpers', () => {
       expect(adapter.showModal).toHaveBeenCalledWith('#myModal');
     });
 
+    it('passes Bootstrap options through when given', async () => {
+      await safeShowModal('#myModal', {}, { keyboard: false });
+      expect(adapter.showModal).toHaveBeenCalledWith('#myModal', { keyboard: false });
+    });
+
     it('does not throw when the adapter rejects', async () => {
       adapter.showModal.mockRejectedValueOnce(new Error('boom'));
       // Should resolve without throwing

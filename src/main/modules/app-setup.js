@@ -26,7 +26,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Dependencies that will be injected
-let mainWindow;
+let getMainWindow = () => null;
 let store;
 let autoUpdater;
 let fileOperations;
@@ -41,7 +41,7 @@ let appLifecycle;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
-  mainWindow = dependencies.mainWindow;
+  getMainWindow = dependencies.getMainWindow || (() => dependencies.mainWindow);
   store = dependencies.store;
   autoUpdater = dependencies.autoUpdater;
   fileOperations = dependencies.fileOperations;
@@ -51,30 +51,53 @@ function initializeAppSetup(dependencies) {
   analytics = dependencies.analytics;
   appStartTime = dependencies.appStartTime;
   rendererCommands = createRendererCommandDispatcher({
-    getWindow: () => mainWindow,
+    getWindow: () => getMainWindow(),
     debugLog
   });
   windowStateManager = createWindowStateManager({
-    mainWindow,
+    getMainWindow: () => getMainWindow(),
     store,
     debugLog,
     screen,
     profileManager,
     getCurrentProfile,
     log,
-    isQuitting: () => appLifecycle?.isQuitting() || false
+    isQuitting: () => appLifecycle?.isQuitting() || false,
+    confirmClose: (window) => confirmQuitOnWindowClose(window)
   });
   appLifecycle = createAppLifecycle({
     app,
-    BrowserWindow,
     prepareWindowForClose: () => prepareMainWindowForClose(),
-    createWindow,
-    onClosed: () => { mainWindow = null; },
     autoBackupTimer,
     analytics,
     appStartTime,
     debugLog
   });
+}
+
+/**
+ * Closing the main window quits the app (all platforms), so ask first: a
+ * stray click on the close button mid-show would otherwise stop the audio and
+ * exit. Cmd-Q and File > Quit are explicit and don't ask.
+ * @param {BrowserWindow} window
+ * @returns {Promise<boolean>} true to close and quit
+ */
+async function confirmQuitOnWindowClose(window) {
+  if (process.env.APP_TEST_MODE === '1') {
+    // E2E seam: no native dialog. Tests set the answer and read the count.
+    globalThis.__e2eCloseConfirmations = (globalThis.__e2eCloseConfirmations || 0) + 1;
+    return (globalThis.__e2eCloseAnswer || 'quit') === 'quit';
+  }
+  const { response } = await dialog.showMessageBox(window, {
+    type: 'question',
+    buttons: ['Quit', 'Cancel'],
+    // Quitting mid-show is the costly mistake, so Return keeps the app open
+    defaultId: 1,
+    cancelId: 1,
+    message: `Quit ${app.name}?`,
+    detail: `Closing the window quits ${app.name}. Anything playing will stop.`
+  });
+  return response === 0;
 }
 
 // Create the main window
@@ -121,7 +144,7 @@ function createApplicationMenu() {
     app,
     Menu,
     shell,
-    mainWindow,
+    mainWindow: getMainWindow(),
     fileOperations,
     getCurrentProfile,
     showAboutDialog,
@@ -141,7 +164,7 @@ function showAboutDialog() {
     const mutedColor = isDarkMode ? '#bbbbbb' : '#666666';
 
     const aboutWindow = new BrowserWindow({
-      parent: mainWindow,
+      parent: getMainWindow(),
       modal: true,
       width: 460,
       height: 400,
@@ -331,7 +354,7 @@ function showAboutDialog() {
     // Fallback to simple message box if anything fails
     try {
       const name = app.name;
-      dialog.showMessageBox(mainWindow, {
+      dialog.showMessageBox(getMainWindow(), {
         type: 'info',
         title: `About ${name}`,
         message: `${name}`,
@@ -379,9 +402,33 @@ function manageCategories() {
   return rendererCommands?.manageCategories();
 }
 
-// Setup app lifecycle events
+/**
+ * Installing an update: save state now. quitAndInstall() then closes the
+ * window without the close-time flush; the "Quit?" question is skipped from
+ * Electron's before-quit-for-update (allowUnconfirmedClose), which fires only
+ * when the install really quits.
+ */
+function prepareForUpdateInstall() {
+  return windowStateManager?.prepareMainWindowForClose();
+}
+
+/** Ignore window-state saves caused by the next `ms` of programmatic resizing */
+function suppressWindowStateSaves(ms) {
+  windowStateManager?.suppressSaves(ms);
+}
+
+/** The app is closing the window itself right now: don't ask "Quit?" */
+function allowUnconfirmedClose() {
+  windowStateManager?.allowUnconfirmedClose();
+}
+
+// Setup app lifecycle events. Call after initializeAppSetup(): before it
+// there is no lifecycle to set up, and the call would silently do nothing.
 function setupAppLifecycle() {
-  return appLifecycle?.setup();
+  if (!appLifecycle) {
+    throw new Error('setupAppLifecycle() called before initializeAppSetup()');
+  }
+  return appLifecycle.setup();
 }
 
 export {
@@ -399,6 +446,10 @@ export {
   manageCategories,
   showAboutDialog,
   setupWindowStateSaving,
+  prepareMainWindowForClose,
+  prepareForUpdateInstall,
+  allowUnconfirmedClose,
+  suppressWindowStateSaves,
   saveWindowState,
   loadWindowState
 };
@@ -419,6 +470,10 @@ export default {
   manageCategories,
   showAboutDialog,
   setupWindowStateSaving,
+  prepareMainWindowForClose,
+  prepareForUpdateInstall,
+  allowUnconfirmedClose,
+  suppressWindowStateSaves,
   saveWindowState,
   loadWindowState
 };
