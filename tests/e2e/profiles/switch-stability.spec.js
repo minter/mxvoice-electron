@@ -95,12 +95,16 @@ test.describe('Profile switch stability', () => {
     await expect(firstRun).toBeHidden();
     const cdp = await page.context().newCDPSession(page);
     const dialog = page.locator('#profileSwitchModal');
+    // Hidden happens before teardown: the picker (and its document key
+    // listener) goes on Bootstrap's 'hidden', after the backdrop fades out
+    const torndown = () => expect(dialog.locator('#profile-list')).toHaveCount(0);
 
     // First open creates the dialog for this page; count after that
     await page.evaluate(() => window.moduleRegistry.profilePicker.open());
     await expect(dialog.locator('#profile-content')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
+    await torndown();
     const baseline = await documentListenerCount(page, cdp);
 
     for (let i = 0; i < 8; i++) {
@@ -116,6 +120,7 @@ test.describe('Profile switch stability', () => {
       await page.evaluate(() => window.moduleRegistry.profilePicker.close());
       await expect(dialog).toBeHidden();
     }
+    await torndown();
 
     expect(await documentListenerCount(page, cdp)).toBe(baseline);
   });

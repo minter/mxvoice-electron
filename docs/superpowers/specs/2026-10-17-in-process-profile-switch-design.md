@@ -214,3 +214,10 @@ tool shouldn't keep running out of sight. So the Dock `activate` reopen
 handler is gone. It only ever rebuilt a bare window without the app's setup.
 The page's state flush on close or quit gives up after 5s, so a hung page
 can't make the app unquittable.
+
+Because closing the window quits, a close that isn't part of an explicit quit
+asks first: "Quit Mx. Voice? Closing the window quits Mx. Voice. Anything
+playing will stop." The buttons are Quit and Cancel, and Cancel is the default,
+so a stray Return keeps the show running. Cmd-Q and File > Quit don't ask.
+Cmd-W doesn't close the window in this app (it toggles the waveform), so the
+close button, Alt+F4 or the taskbar are the paths that ask.

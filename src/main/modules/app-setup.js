@@ -62,7 +62,8 @@ function initializeAppSetup(dependencies) {
     profileManager,
     getCurrentProfile,
     log,
-    isQuitting: () => appLifecycle?.isQuitting() || false
+    isQuitting: () => appLifecycle?.isQuitting() || false,
+    confirmClose: (window) => confirmQuitOnWindowClose(window)
   });
   appLifecycle = createAppLifecycle({
     app,
@@ -74,6 +75,31 @@ function initializeAppSetup(dependencies) {
     appStartTime,
     debugLog
   });
+}
+
+/**
+ * Closing the main window quits the app (all platforms), so ask first: a
+ * stray click on the close button mid-show would otherwise stop the audio and
+ * exit. Cmd-Q and File > Quit are explicit and don't ask.
+ * @param {BrowserWindow} window
+ * @returns {Promise<boolean>} true to close and quit
+ */
+async function confirmQuitOnWindowClose(window) {
+  if (process.env.APP_TEST_MODE === '1') {
+    // E2E seam: no native dialog. Tests set the answer and read the count.
+    globalThis.__e2eCloseConfirmations = (globalThis.__e2eCloseConfirmations || 0) + 1;
+    return (globalThis.__e2eCloseAnswer || 'quit') === 'quit';
+  }
+  const { response } = await dialog.showMessageBox(window, {
+    type: 'question',
+    buttons: ['Quit', 'Cancel'],
+    // Quitting mid-show is the costly mistake, so Return keeps the app open
+    defaultId: 1,
+    cancelId: 1,
+    message: `Quit ${app.name}?`,
+    detail: `Closing the window quits ${app.name}. Anything playing will stop.`
+  });
+  return response === 0;
 }
 
 // Create the main window

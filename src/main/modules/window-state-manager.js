@@ -8,6 +8,9 @@ function createWindowStateManager({
   getCurrentProfile,
   log,
   isQuitting,
+  // Closing the window quits the app, so a close that isn't part of an
+  // explicit quit (Cmd-Q, File > Quit) is confirmed first: (window) => Promise<boolean>
+  confirmClose = async () => true,
   // A hung page must not block closing or quitting: give up on its flush
   flushTimeoutMs = 5000
 }) {
@@ -109,9 +112,32 @@ function setupWindowStateSaving() {
   });
 
   let closeSaveComplete = false;
+  let closeInProgress = false;
   mainWindow.on('close', async (event) => {
+    // An explicit quit was already confirmed by asking for it
     if (isQuitting() || closeSaveComplete) return;
     event.preventDefault();
+    // Already asking, or already closing: one dialog, one save
+    if (closeInProgress) return;
+    closeInProgress = true;
+
+    let confirmed = true;
+    try {
+      confirmed = await confirmClose(mainWindow);
+    } catch (err) {
+      // Never trap the user in a window they asked to close
+      debugLog?.error('Close confirmation failed; closing anyway', {
+        module: 'app-setup',
+        function: 'setupWindowStateSaving',
+        error: err.message
+      });
+    }
+    if (!confirmed) {
+      closeInProgress = false;
+      debugLog?.info('Window close cancelled', { module: 'app-setup', function: 'setupWindowStateSaving' });
+      return;
+    }
+
     debugLog?.info('Window closing, saving window state...', {
       module: 'app-setup',
       function: 'setupWindowStateSaving'
