@@ -346,10 +346,10 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         window.logInfo('🔀 Setting up profile switch event listener...');
         apiToUse.events.onSwitchProfile(async () => {
           window.logInfo('🔀 Profile switch requested from menu');
-          if (moduleRegistry.profileState && moduleRegistry.profileState.switchProfileWithSave) {
-            await moduleRegistry.profileState.switchProfileWithSave();
+          if (moduleRegistry.profilePicker && moduleRegistry.profilePicker.open) {
+            await moduleRegistry.profilePicker.open();
           } else {
-            window.logError('Profile state module not available for switch');
+            window.logError('Profile picker module not available for switch');
           }
         });
       }
@@ -419,9 +419,10 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               if (confirmed) {
                 const result = await window.secureElectronAPI.profile.deleteProfile(currentProfile.profile);
                 if (result.success) {
-                  // Profile deleted: pick another one. Don't save state first,
-                  // that would write the deleted profile's directory back.
-                  await window.secureElectronAPI.profile.switchProfile();
+                  // Profile deleted: pick another one. Nothing may save into the
+                  // deleted profile now, that would write its directory back.
+                  window.isRestoringProfileState = true;
+                  await moduleRegistry.profilePicker?.open({ afterDelete: true });
                 } else {
                   alert(`Failed to delete profile: ${result.error}`);
                 }

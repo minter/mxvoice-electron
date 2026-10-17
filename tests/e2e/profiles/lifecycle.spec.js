@@ -107,26 +107,32 @@ test.describe('Profile Lifecycle', () => {
     return mainWindow;
   }
 
-  // Switch Profile opens the launcher in this same process, as a modal sheet
-  // over the main window. Returns the launcher page.
-  async function openSwitchPicker(mainWindow) {
-    const launcherPromise = app.waitForEvent('window');
-    await mainWindow.evaluate(() => {
-      void window.moduleRegistry.profileState.switchProfileWithSave();
-    });
-    page = await launcherPromise;
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForSelector('#profile-content', { timeout: 10000 });
-    return page;
+  // Profile → Switch Profile opens the shared picker in a dialog inside the
+  // main window. Returns the dialog.
+  async function sendMenuEvent(channel) {
+    await app.evaluate(({ BrowserWindow }, name) => {
+      BrowserWindow.getAllWindows()
+        .find((win) => win.webContents.getURL().endsWith('index.html'))
+        .webContents.send(name);
+    }, channel);
   }
 
-  // Choose a profile in the open picker; the main window reloads into it.
+  async function openSwitchPicker(mainWindow) {
+    await sendMenuEvent('menu:switch-profile');
+    const dialog = mainWindow.locator('#profileSwitchModal');
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog.locator('#profile-content')).toBeVisible();
+    return dialog;
+  }
+
+  // Choose a profile in the open dialog; the main window reloads into it.
   async function chooseInPicker(mainWindow, profileName) {
-    const profileItem = page.locator(`.profile-item[data-profile-name="${profileName}"]`);
+    const dialog = mainWindow.locator('#profileSwitchModal');
+    const profileItem = dialog.locator(`.profile-item[data-profile-name="${profileName}"]`);
     await profileItem.click();
     await expect(profileItem).toHaveClass(/selected/);
     const reloaded = mainWindow.waitForEvent('load');
-    await page.locator('#launch-btn').click();
+    await dialog.locator('#launch-btn').click();
     await reloaded;
     await waitForProfileReady(mainWindow, profileName);
   }
@@ -139,14 +145,6 @@ test.describe('Profile Lifecycle', () => {
       profileName,
       { timeout: 15000 }
     );
-  }
-
-  async function closeLauncherWindow() {
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()
-        .find((win) => win.webContents.getURL().includes('launcher.html'))
-        ?.close();
-    });
   }
 
   async function windowCount() {
@@ -200,12 +198,9 @@ test.describe('Profile Lifecycle', () => {
       }, 'ToDelete');
     }
 
-    // Reload profile list to reflect the deletion
-    await page.evaluate(() => {
-      if (typeof window.loadProfiles === 'function') {
-        window.loadProfiles();
-      }
-    });
+    // Reload the launcher to reflect the deletion
+    await page.reload();
+    await page.waitForSelector('#profile-content', { state: 'visible', timeout: 10000 });
 
     // Wait for the deleted profile to disappear from the UI
     await expect(page.locator('.profile-item[data-profile-name="ToDelete"]')).toHaveCount(0, { timeout: 10000 });
@@ -350,9 +345,9 @@ test.describe('Profile Lifecycle', () => {
     expect(secondState.hotkeys[0].tabName).toBe('Second Keys');
     expect(secondState.holdingTank[0].tabName).toBe('Second Queue');
 
-    // Same process throughout, launcher gone, no relaunch hand-off keys
+    // Same process and window throughout, no relaunch hand-off keys
     expect(app.process().pid).toBe(pid);
-    await expect.poll(windowCount).toBe(1);
+    expect(await windowCount()).toBe(1);
     const config = JSON.parse(fs.readFileSync(path.join(userDataDir, 'config.json'), 'utf8'));
     expect(config).not.toHaveProperty('fallback-profile');
     expect(config).not.toHaveProperty('auto-select-profile');
@@ -370,8 +365,9 @@ test.describe('Profile Lifecycle', () => {
     await mainWindow.evaluate(() => { window.__e2eSessionMarker = 'still-here'; });
 
     const picker = await openSwitchPicker(mainWindow);
+    expect(await windowCount()).toBe(1);
     await picker.locator('#cancel-switch-btn').click();
-    await expect.poll(windowCount).toBe(1);
+    await expect(picker).toBeHidden();
 
     // Not reloaded: in-memory page state and layout survive the cancel
     expect(await mainWindow.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
@@ -395,17 +391,22 @@ test.describe('Profile Lifecycle', () => {
     // Esc closes the create-profile form first, without leaving the picker
     await picker.locator('#create-profile-btn').click();
     await expect(picker.locator('#create-profile-modal')).toBeVisible();
-    await picker.keyboard.press('Escape');
+    await mainWindow.keyboard.press('Escape');
     await expect(picker.locator('#create-profile-modal')).toBeHidden();
-    expect(await windowCount()).toBe(2);
+    await expect(picker).toBeVisible();
 
-    // The picker closes on keydown, so the keyup half of press() has no page left
-    await picker.keyboard.press('Escape').catch(() => {});
-    await expect.poll(windowCount).toBe(1);
+    await mainWindow.keyboard.press('Escape');
+    await expect(picker).toBeHidden();
+    expect(await mainWindow.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
+
+    // The close button backs out too, and the dialog opens again afterwards
+    await openSwitchPicker(mainWindow);
+    await picker.locator('#modal-close').click();
+    await expect(picker).toBeHidden();
     expect(await mainWindow.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
   });
 
-  test('switch sheet names the running profile, follows its theme and fits its list', async () => {
+  test('Switch Profile dialog names the running profile and what the button will do', async () => {
     await expect(page.locator('#launcher-title')).toHaveText('Choose a profile');
     await expect(page.locator('#launcher-current')).toBeHidden();
     await createProfileInLauncher('SecondProfile');
@@ -413,15 +414,15 @@ test.describe('Profile Lifecycle', () => {
     const mainWindow = await launchProfile('Default User');
     await waitForProfileReady(mainWindow, 'Default User');
     await dismissFirstRunModal(mainWindow);
-    await mainWindow.evaluate(() => window.secureElectronAPI.profile.setPreference('screen_mode', 'dark'));
 
     const picker = await openSwitchPicker(mainWindow);
     await expect(picker.locator('#launcher-title')).toHaveText('Switch profile');
     await expect(picker.locator('#launcher-current')).toHaveText('Current: Default User');
     await expect(picker.locator('.profile-item[data-profile-name="Default User"] .profile-current-tag')).toHaveText('Current');
     await expect(picker.locator('.profile-item[data-profile-name="SecondProfile"] .profile-current-tag')).toHaveCount(0);
-    await expect(picker.locator('html')).toHaveAttribute('data-bs-theme', 'dark');
-    await expect(picker.locator('body')).toHaveClass(/theme-dark/);
+    // A dialog like the app's others, not a second window
+    await expect(picker).toHaveClass(/modal/);
+    expect(await windowCount()).toBe(1);
 
     // Nothing preselected while switching; the button says what it will do
     await expect(picker.locator('#launch-btn')).toHaveText('Switch');
@@ -430,15 +431,41 @@ test.describe('Profile Lifecycle', () => {
     await picker.locator('.profile-item[data-profile-name="Default User"]').click();
     await expect(picker.locator('#launch-btn')).toHaveText('Stay on Default User');
 
-    // Sized to its two rows: no scrolling, and shorter than the initial window
-    await expect.poll(() => picker.evaluate(() => {
-      const list = document.getElementById('profile-list');
-      return list.scrollHeight <= list.clientHeight;
-    })).toBe(true);
-    const launcherHeight = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()
-      .find((win) => win.webContents.getURL().includes('launcher.html')).getContentSize()[1]);
-    expect(launcherHeight).toBeGreaterThanOrEqual(240);
-    expect(launcherHeight).toBeLessThan(420);
+    // Staying closes the dialog without reloading
+    await mainWindow.evaluate(() => { window.__e2eSessionMarker = 'still-here'; });
+    await picker.locator('#launch-btn').click();
+    await expect(picker).toBeHidden();
+    expect(await mainWindow.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
+  });
+
+  test('Enter in the Switch Profile dialog switches instead of playing a song', async () => {
+    await createProfileInLauncher('SecondProfile');
+    const mainWindow = await launchProfile('Default User');
+    await waitForProfileReady(mainWindow, 'Default User');
+    await dismissFirstRunModal(mainWindow);
+
+    const picker = await openSwitchPicker(mainWindow);
+    await picker.locator('.profile-item[data-profile-name="SecondProfile"]').click();
+    const reloaded = mainWindow.waitForEvent('load');
+    await mainWindow.keyboard.press('Enter');
+    await reloaded;
+    await waitForProfileReady(mainWindow, 'SecondProfile');
+  });
+
+  test('a profile created in the Switch Profile dialog is selected, not switched to', async () => {
+    const mainWindow = await launchProfile('Default User');
+    await waitForProfileReady(mainWindow, 'Default User');
+    await dismissFirstRunModal(mainWindow);
+
+    const picker = await openSwitchPicker(mainWindow);
+    await picker.locator('#create-profile-btn').click();
+    await picker.locator('#profile-name-input').fill('Made Here');
+    await picker.locator('#confirm-create-btn').click();
+
+    await expect(picker.locator('.profile-item[data-profile-name="Made Here"]')).toHaveClass(/selected/);
+    await expect(picker.locator('#launch-btn')).toHaveText('Switch to Made Here');
+    expect(await mainWindow.evaluate(() => window.secureElectronAPI.profile.getCurrent()))
+      .toMatchObject({ profile: 'Default User' });
   });
 
   test('the startup launcher preselects the most recently used profile', async () => {
@@ -479,11 +506,7 @@ test.describe('Profile Lifecycle', () => {
     const pid = app.process().pid;
 
     const reloaded = mainWindow.waitForEvent('load');
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()
-        .find((win) => win.webContents.getURL().endsWith('index.html'))
-        .webContents.send('menu:logout');
-    });
+    await sendMenuEvent('menu:logout');
     await reloaded;
     await waitForProfileReady(mainWindow, 'Default User');
 
@@ -503,18 +526,15 @@ test.describe('Profile Lifecycle', () => {
     await dismissFirstRunModal(mainWindow);
 
     mainWindow.once('dialog', (dialog) => dialog.accept());
-    const launcherPromise = app.waitForEvent('window');
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()
-        .find((win) => win.webContents.getURL().endsWith('index.html'))
-        .webContents.send('menu:delete-current-profile');
-    });
-    page = await launcherPromise;
-    await page.waitForSelector('#profile-content', { timeout: 10000 });
-    await expect(page.locator('.profile-item[data-profile-name="Temporary"]')).toHaveCount(0);
+    await sendMenuEvent('menu:delete-current-profile');
+    const picker = mainWindow.locator('#profileSwitchModal');
+    await expect(picker).toBeVisible({ timeout: 10000 });
+    await expect(picker.locator('.profile-item[data-profile-name="Default User"]')).toBeVisible();
+    await expect(picker.locator('.profile-item[data-profile-name="Temporary"]')).toHaveCount(0);
+    await expect(picker.locator('.profile-current-tag')).toHaveCount(0);
 
     const reloaded = mainWindow.waitForEvent('load');
-    await closeLauncherWindow();
+    await picker.locator('#cancel-switch-btn').click();
     await reloaded;
     await waitForProfileReady(mainWindow, 'Default User');
 

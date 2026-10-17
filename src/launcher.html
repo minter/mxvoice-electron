@@ -6,284 +6,67 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:">
   <title>Mx. Voice - Profiles</title>
 
-  <!-- Same stylesheets as the main window, so the picker matches it -->
+  <!-- Same stylesheets as the main window; the picker itself is shared with
+       the Switch Profile dialog (renderer/modules/profile-picker) -->
   <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="stylesheets/fonts.css">
+  <link rel="stylesheet" href="stylesheets/index.css">
   <link rel="stylesheet" href="stylesheets/colors.css">
+  <link rel="stylesheet" href="stylesheets/profile-picker.css">
 
   <style>
+    /* The picker fills the window: dialog parts without the dialog frame */
     html, body {
       height: 100%;
     }
 
     body {
       margin: 0;
-      background-color: var(--panel-color);
-      color: var(--card-text);
-      font-size: 14px;
       overflow: hidden;
+      background-color: var(--panel-color);
     }
 
-    .launcher {
-      display: flex;
-      flex-direction: column;
+    .launcher-modal {
       height: 100%;
     }
 
-    .launcher-header,
-    .launcher-footer {
-      flex: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      background-color: var(--header-color);
+    .launcher-modal .modal-dialog {
+      margin: 0;
+      max-width: none;
+      height: 100%;
     }
 
-    .launcher-header {
-      border-bottom: 1px solid var(--card-border);
+    .launcher-modal .modal-content {
+      height: 100%;
+      border: 0;
+      border-radius: 0;
+    }
+
+    .launcher-modal .modal-header {
       -webkit-app-region: drag;
     }
 
-    /* Standalone window: clear the macOS traffic lights */
-    body.has-titlebar .launcher-header {
+    .launcher-modal .modal-header button {
+      -webkit-app-region: no-drag;
+    }
+
+    /* Clear the macOS traffic lights over the header */
+    body.has-titlebar .launcher-modal .modal-header {
       padding-top: 32px;
     }
 
-    .launcher-header img {
-      width: 22px;
-      height: 22px;
-      border-radius: 5px;
-    }
-
-    .launcher-title {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 600;
-    }
-
-    .launcher-current {
-      margin-left: auto;
-      font-size: 12px;
-      opacity: 0.75;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .launcher-body {
+    .launcher-modal .profile-picker-body {
       flex: 1 1 auto;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      padding: 12px 16px 8px;
-    }
-
-    #profile-content {
-      flex-direction: column;
-      min-height: 0;
-      flex: 1 1 auto;
-    }
-
-    .profile-search {
-      flex: none;
-      margin-bottom: 8px;
-      background-color: var(--input-background);
-      border-color: var(--input-border);
-      color: var(--input-text);
-    }
-
-    .profile-list {
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow-y: auto;
-      margin: 0;
-    }
-
-    .profile-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .profile-item.selected {
-      background-color: var(--bs-primary) !important;
-      border-color: var(--bs-primary) !important;
-      color: #fff !important;
-    }
-
-    .profile-info {
-      min-width: 0;
-      flex: 1 1 auto;
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-    }
-
-    .profile-name {
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    .profile-description {
-      font-size: 12px;
-      opacity: 0.7;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .profile-current-tag {
-      flex: none;
-      font-size: 11px;
-      padding: 1px 6px;
-      border: 1px solid currentColor;
-      border-radius: 4px;
-      opacity: 0.75;
-    }
-
-    .launcher-footer {
-      border-top: 1px solid var(--card-border);
-    }
-
-    .launcher-footer .footer-actions {
-      margin-left: auto;
-      display: flex;
-      gap: 8px;
-    }
-
-    .empty-state,
-    .loading {
-      padding: 24px 8px;
-      text-align: center;
-      opacity: 0.75;
-    }
-
-    .error-message {
-      margin-bottom: 8px;
-      padding: 6px 10px;
-      font-size: 13px;
-    }
-
-    /* Create-profile form: shown/hidden by launcher.js via style.display */
-    #create-profile-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      background-color: rgba(0, 0, 0, 0.45);
-    }
-
-    /* Bootstrap scopes these to .modal; this form uses the parts without it */
-    #create-profile-modal .modal-content {
-      width: 100%;
-      max-width: 360px;
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    #create-profile-modal .modal-header,
-    #create-profile-modal .modal-footer {
-      display: flex;
-      align-items: center;
-      padding: 10px 16px;
-    }
-
-    #create-profile-modal .modal-header .btn-close {
-      margin-left: auto;
-    }
-
-    /* colors.css leaves the close icon dark; it needs to be light on dark */
-    .theme-dark #create-profile-modal .btn-close {
-      filter: invert(1) grayscale(100%) brightness(200%);
-    }
-
-    #create-profile-modal .modal-footer {
-      justify-content: flex-end;
-      gap: 8px;
-    }
-
-    #create-profile-modal .modal-title {
-      font-size: 15px;
-      font-weight: 600;
-    }
-
-    #create-profile-modal .modal-body {
-      padding: 12px 16px;
-    }
-
-    #create-profile-modal .form-control {
-      background-color: var(--input-background);
-      border-color: var(--input-border);
-      color: var(--input-text);
     }
   </style>
 </head>
 <body>
-  <div class="launcher">
-    <div class="launcher-header">
-      <img src="assets/icons/mxvoice-square.png" alt="">
-      <h1 class="launcher-title" id="launcher-title">Choose a profile</h1>
-      <span class="launcher-current" id="launcher-current" hidden></span>
-    </div>
-
-    <div class="launcher-body">
-      <div id="error-container"></div>
-
-      <div id="loading-state" class="loading">Loading profiles…</div>
-
-      <div id="profile-content" style="display: none;">
-        <input
-          type="text"
-          id="profile-search"
-          class="form-control form-control-sm profile-search"
-          placeholder="Search profiles"
-          autocomplete="off"
-        />
-        <ul id="profile-list" class="list-group profile-list"></ul>
-      </div>
-    </div>
-
-    <div class="launcher-footer">
-      <button id="create-profile-btn" class="btn btn-sm btn-secondary">New profile</button>
-      <div class="footer-actions">
-        <!-- Shown when switching from a running session (launcher.js) -->
-        <button id="cancel-switch-btn" class="btn btn-sm btn-secondary" style="display: none;">Cancel</button>
-        <button id="launch-btn" class="btn btn-sm btn-primary" disabled>Open</button>
-      </div>
+  <div class="modal position-static d-block launcher-modal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content" id="picker-root"></div>
     </div>
   </div>
 
-  <!-- Create Profile Modal -->
-  <div id="create-profile-modal" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 class="modal-title">New profile</h2>
-        <button type="button" class="btn-close" id="modal-close" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2">
-          <label for="profile-name-input" class="form-label mb-1">Name</label>
-          <input type="text" id="profile-name-input" class="form-control form-control-sm" placeholder="Saturday show">
-        </div>
-        <div>
-          <label for="profile-description-input" class="form-label mb-1">Description (optional)</label>
-          <input type="text" id="profile-description-input" class="form-control form-control-sm">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button id="cancel-create-btn" class="btn btn-sm btn-secondary">Cancel</button>
-        <button id="confirm-create-btn" class="btn btn-sm btn-primary">Create profile</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="launcher.js"></script>
+  <script type="module" src="launcher.js"></script>
 </body>
 </html>

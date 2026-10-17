@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const handlers = {};
 const ipcMain = { handle: (channel, handler) => { handlers[channel] = handler; } };
-const profileManager = vi.hoisted(() => ({ saveProfileState: vi.fn(async () => ({ success: true })) }));
+const profileManager = vi.hoisted(() => ({
+  saveProfileState: vi.fn(async () => ({ success: true })),
+  getAvailableProfiles: vi.fn(() => [{ name: 'Default User' }]),
+}));
 
 vi.mock('electron', () => ({ default: { ipcMain }, ipcMain }));
 vi.mock('../../../src/main/modules/profile-manager.js', () => profileManager);
@@ -12,7 +15,6 @@ const { trackProfileSwitch } = await import('../../../src/main/modules/profile-s
 
 function setup({ fenced = false } = {}) {
   const profileSwitcher = {
-    openPicker: vi.fn(async () => ({ success: true })),
     switchProfile: vi.fn(async () => ({ success: true })),
     isSavingFenced: () => fenced,
   };
@@ -29,23 +31,26 @@ function setup({ fenced = false } = {}) {
 describe('profile switch handlers', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('Switch Profile opens the in-process picker instead of relaunching', async () => {
-    const { profileSwitcher } = setup();
-    await expect(handlers['profile:switch']({})).resolves.toEqual({ success: true });
-    expect(profileSwitcher.openPicker).toHaveBeenCalled();
+  it('lists profiles for the Switch Profile dialog', async () => {
+    setup();
+    await expect(handlers['profile:list']({})).resolves.toEqual({ success: true, profiles: [{ name: 'Default User' }] });
+    profileManager.getAvailableProfiles.mockImplementationOnce(() => { throw new Error('registry'); });
+    await expect(handlers['profile:list']({})).resolves.toEqual({ success: false, error: 'registry' });
   });
 
-  it('switch-to (Log Out) switches in-process as a direct switch', async () => {
+  it('switch-to switches in-process, as a direct switch unless the picker chose it', async () => {
     const { profileSwitcher } = setup();
     await handlers['profile:switch-to']({}, 'Saturday Show');
-    expect(profileSwitcher.switchProfile).toHaveBeenCalledWith('Saturday Show', { method: 'direct' });
+    expect(profileSwitcher.switchProfile).toHaveBeenLastCalledWith('Saturday Show', { method: 'direct' });
+    await handlers['profile:switch-to']({}, 'Saturday Show', 'launcher');
+    expect(profileSwitcher.switchProfile).toHaveBeenLastCalledWith('Saturday Show', { method: 'launcher' });
+    await handlers['profile:switch-to']({}, 'Saturday Show', 'bogus');
+    expect(profileSwitcher.switchProfile).toHaveBeenLastCalledWith('Saturday Show', { method: 'direct' });
   });
 
   it('reports switcher failures', async () => {
     const { profileSwitcher } = setup();
-    profileSwitcher.openPicker.mockRejectedValue(new Error('no window'));
     profileSwitcher.switchProfile.mockRejectedValue(new Error('busy'));
-    await expect(handlers['profile:switch']({})).resolves.toEqual({ success: false, error: 'no window' });
     await expect(handlers['profile:switch-to']({}, 'X')).resolves.toEqual({ success: false, error: 'busy' });
   });
 

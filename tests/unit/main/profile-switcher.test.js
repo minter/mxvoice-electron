@@ -7,9 +7,6 @@ function setup({ current = 'Default User', existing = ['Default User', 'Saturday
   const profiles = new Set(existing);
   const win = {
     isDestroyed: () => false,
-    hide: vi.fn(() => calls.push('hide')),
-    show: vi.fn(() => calls.push('show')),
-    focus: vi.fn(),
     webContents: {
       executeJavaScript: vi.fn(async (code) => { calls.push(`js:${code}`); }),
       reload: vi.fn(() => calls.push(`reload:${profile}`)),
@@ -36,7 +33,6 @@ function setup({ current = 'Default User', existing = ['Default User', 'Saturday
     rebuildMenu: vi.fn(() => calls.push(`menu:${profile}`)),
     loadWindowState: vi.fn(async (name) => { calls.push(`loadBounds:${name}`); return windowState; }),
     applyWindowState: vi.fn((_win, state) => calls.push(`applyBounds:${state ? 'state' : 'none'}`)),
-    openLauncher: vi.fn(async () => { calls.push('launcher'); }),
     getAnalytics: () => analytics,
     debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   };
@@ -125,78 +121,6 @@ describe('profile switcher', () => {
     noWindow.deps.getMainWindow = () => null;
     const switcherWithoutWindow = createProfileSwitcher(noWindow.deps);
     await expect(switcherWithoutWindow.switchProfile('Saturday Show')).resolves.toMatchObject({ success: false });
-  });
-
-  describe('picker', () => {
-    it('opens the launcher over the visible main window and switches on a choice', async () => {
-      const { switcher, calls, analytics } = setup();
-
-      await switcher.openPicker();
-      expect(switcher.isPickerOpen()).toBe(true);
-      await switcher.onPickerChoice('Saturday Show');
-
-      expect(calls[0]).toBe('launcher');
-      expect(calls).not.toContain('hide');
-      expect(calls).toContain('reload:Saturday Show');
-      expect(calls.at(-1)).toBe('show');
-      expect(analytics.trackEvent).toHaveBeenCalledWith('profile_switched', { method: 'launcher' });
-      expect(switcher.isPickerOpen()).toBe(false);
-    });
-
-    it('cancel re-shows the untouched main window', async () => {
-      const { switcher, calls, win } = setup();
-
-      await switcher.openPicker();
-      await switcher.onPickerCancel();
-
-      expect(calls).toEqual(['launcher', 'show']);
-      expect(win.webContents.reload).not.toHaveBeenCalled();
-    });
-
-    it('choosing the running profile returns to it without reloading', async () => {
-      const { switcher, win } = setup();
-      await switcher.openPicker();
-      await switcher.onPickerChoice('Default User');
-      expect(win.webContents.reload).not.toHaveBeenCalled();
-      expect(win.show).toHaveBeenCalled();
-    });
-
-    it('a failed choice keeps the picker up', async () => {
-      const { switcher, win } = setup();
-      await switcher.openPicker();
-      await expect(switcher.onPickerChoice('Nope')).rejects.toThrow('does not exist');
-      expect(switcher.isPickerOpen()).toBe(true);
-      expect(win.show).not.toHaveBeenCalled();
-    });
-
-    it('after deleting the current profile, locks its saves and cancel falls back to Default User', async () => {
-      const { switcher, profiles, calls, getProfile } = setup({ current: 'Gone', existing: ['Default User', 'Gone'] });
-      profiles.delete('Gone');
-
-      await switcher.openPicker();
-      expect(calls[0]).toBe('js:window.isRestoringProfileState = true');
-      await switcher.onPickerCancel();
-
-      expect(getProfile()).toBe('Default User');
-      expect(calls).toContain('reload:Default User');
-      expect(calls.at(-1)).toBe('show');
-    });
-
-    it('re-focuses the launcher when the picker is already open', async () => {
-      const { switcher, deps, win } = setup();
-      await switcher.openPicker();
-      await switcher.openPicker();
-      expect(deps.openLauncher).toHaveBeenCalledTimes(2);
-      expect(win.hide).not.toHaveBeenCalled();
-    });
-
-    it('returns to the main window when the launcher cannot open', async () => {
-      const { switcher, deps, win } = setup();
-      deps.openLauncher.mockRejectedValue(new Error('no launcher'));
-      await expect(switcher.openPicker()).resolves.toEqual({ success: false, error: 'no launcher' });
-      expect(win.show).toHaveBeenCalled();
-      expect(switcher.isPickerOpen()).toBe(false);
-    });
   });
 });
 

@@ -64,39 +64,39 @@ injected, so the order can be unit-tested. For a switch to `name`, it runs these
 Concurrent switch requests are serialised: a second request while one is
 running is rejected.
 
-### 3. Picker: the launcher as a sheet over the main window
+### 3. Picker: one shared component, two containers
 
-Switch Profile opens the existing launcher window in "switch" mode as a
-modal child of the main window (`parent` + `modal`): a sheet on macOS, a
-dialog the main window can't be clicked behind on Windows. The main window
-stays in view, because a show may be running. Hiding it would take the
-transport controls off screen mid-track and make the app look closed. The
-picker shows a Cancel button. Esc closes the create-profile form first, then
-cancels the switch.
+The picker is one component, `src/renderer/modules/profile-picker/picker-view.js`,
+with its rules in `picker-model.js` and its styles in
+`src/stylesheets/profile-picker.css`. It renders Bootstrap modal parts and
+uses the main window's stylesheets, so it looks like the app's other dialogs.
+Two containers mount it:
 
-Choosing a profile calls `switchProfile(name)`. Choosing the profile already
-running, Cancel, Esc or closing the window returns to the untouched session.
-The session never left memory, so there is nothing to restore, and no store
-key or relaunch is involved. A modal blocks the main window's clicks and
-keyboard shortcuts while it is open. Esc makes getting back to the controls
-one keypress.
+- **Startup:** `src/launcher.js` mounts it as the whole launcher window,
+  because no main window exists yet. The window sizes itself to the list
+  (`launcher:fit-to-content`, 240–560px), stays hidden until it has its size,
+  and quits the app if closed without a choice.
+- **Switch Profile:** `src/renderer/modules/profile-picker/index.js` mounts
+  it in a Bootstrap dialog in the main window, like Preferences, with the
+  same 8px corners and backdrop. A separate macOS sheet window was tried first.
+  macOS 26 draws a sheet's corners much rounder than the app's dialogs, and
+  CSS can't change that.
 
-The picker uses the main window's stylesheets (Bootstrap and `colors.css`), so it
-matches the app. In switch mode it follows the running profile's light/dark
-setting. Startup and switch share one compact layout: a header bar ("Choose a
-profile" / "Switch profile, Current: X"), dense rows with a Current tag, and a
-footer with New profile, Cancel (switch only) and a primary button that names
-the target ("Open X" / "Switch to X"). At startup the most recently used
-profile is preselected. The window sizes itself to the list, up to a cap.
+Shared behavior: dense rows, a description only when set, a Current tag while
+switching, and a primary button that names the target ("Open X" / "Switch to
+X" / "Stay on X"). At startup the most recently used profile is preselected.
+New profile is a view inside the picker, not a nested dialog. Enter and Esc
+are captured while the picker is open, so Enter can't reach the main window's
+play-selected shortcut. Esc closes the New profile view first. F-key hotkeys
+still work, as they do under Preferences.
 
-The alternative was a picker built into the main window. It would keep the
-transport usable while picking, but it means porting the launcher's
-list/create/delete UI, and the reload would tear that picker down. Not worth
-it while the reload exists.
+Choosing a profile in the dialog calls `profile:switch-to` with method
+`launcher`. Choosing the running profile, Cancel, Esc or the close button
+just closes the dialog. The session never left memory.
 
-If the active profile was deleted while the picker was open (or by
-Delete Current Profile), cancelling falls back to `switchProfile('Default
-User')` rather than reviving a deleted profile.
+If the running profile was just deleted (Delete Current Profile), the renderer
+locks its state saves and opens the dialog with nothing marked current.
+Closing it switches to Default User, so a deleted profile is never revived.
 
 Cold start is unchanged: without `--profile=` the launcher opens in
 "startup" mode, and closing it quits the app. `--profile=` still skips the
@@ -106,11 +106,11 @@ launcher.
 
 | Flow | Before | After |
 |---|---|---|
-| Switch Profile | save, relaunch to launcher | save, launcher as a sheet over main |
+| Switch Profile | save, relaunch to launcher | dialog in the main window |
 | Switch → pick | new process | `switchProfile(name)`, reload |
-| Switch → cancel (button, Esc, close) | relaunch with `fallback-profile` | back to main window, untouched |
+| Switch → cancel (button, Esc, close) | relaunch with `fallback-profile` | dialog closes, session untouched |
 | Log Out | relaunch with `--profile=Default User` | `switchProfile('Default User')` |
-| Delete current | delete, then Switch Profile | delete, then picker; cancel → Default User |
+| Delete current | delete, then Switch Profile | delete, then dialog; cancel → Default User |
 
 `fallback-profile` and `auto-select-profile` are no longer written. Startup
 deletes any left over from older versions.
@@ -132,7 +132,7 @@ loading its active board plus a small set of profile preferences (theme,
 font size, fade time, column order, holding-tank mode). The main-process
 steps above stay as they are. So the order is:
 
-1. **This change:** in-process switch, picker as a sheet, page reload. The
+1. **This change:** in-process switch, picker as an in-window dialog, page reload. The
    reload is the clean-start guarantee for now.
 2. **Boards:** build "load board in place, playback untouched". Startup, board
    switch and profile switch use that one load path.
@@ -150,9 +150,9 @@ before the reload and resume afterwards (about a one-second dropout).
 - *Opening and leaving:* replace "Choosing Switch Profile closes the show
   window and opens the launcher, as it does today. Closing that launcher …
   The live session comes back from the recovery copy" with: Switch Profile
-  opens the picker over the show window. Cancelling it, or picking the same
-  person, returns to the live session, which never left memory. Nothing is
-  restored, because nothing was torn down.
+  opens the profile picker as a dialog in the show window. Cancelling it, or
+  picking the same person, returns to the live session, which never left
+  memory. Nothing is restored, because nothing was torn down.
 - *Decisions table, "Backing out of Switch Profile keeps the night":* the
   reason becomes "the session is still in memory while the picker is open".
   It no longer depends on the launcher's fallback profile, which is gone.

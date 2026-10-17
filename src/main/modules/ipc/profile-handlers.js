@@ -238,22 +238,17 @@ export function register(deps) {
     }
   });
 
-  // Profile: Switch via the picker. The main window hides behind the launcher;
-  // the switch itself happens in-process once a profile is chosen.
-  ipcMain.handle(IPC.PROFILE.SWITCH, async () => {
+  // Profile: List profiles (Switch Profile dialog)
+  ipcMain.handle(IPC.PROFILE.LIST, async () => {
     try {
-      debugLog?.info('Profile switch requested, opening profile picker', {
-        module: 'ipc-handlers',
-        function: 'profile:switch'
-      });
-      return await profileSwitcher.openPicker();
+      return { success: true, profiles: await profileManager.getAvailableProfiles() };
     } catch (error) {
-      debugLog?.error('Profile switch error:', { module: 'ipc-handlers', function: 'profile:switch', error: error.message });
+      debugLog?.error('Profile list error:', { module: 'ipc-handlers', function: 'profile:list', error: error.message });
       return { success: false, error: error.message };
     }
   });
 
-  // Profile: Save state before switch (explicit save before the picker opens)
+  // Profile: Save state before switch (explicit save before a switch)
   ipcMain.handle(IPC.PROFILE.SAVE_STATE_BEFORE_SWITCH, async (event, state, profileName) => {
     try {
       const name = profileName || getCurrentProfile();
@@ -351,15 +346,16 @@ export function register(deps) {
           }
         });
 
-  // Profile: Switch to specific profile (Log Out), in-process
-  ipcMain.handle(IPC.PROFILE.SWITCH_TO, async (event, profileName) => {
+  // Profile: Switch to a profile in-process (Switch Profile dialog, Log Out, New Profile)
+  ipcMain.handle(IPC.PROFILE.SWITCH_TO, async (event, profileName, method) => {
     try {
       debugLog?.info('Profile switch to specific profile requested', {
         module: 'ipc-handlers',
         function: 'profile:switch-to',
-        profileName
+        profileName,
+        method
       });
-      return await profileSwitcher.switchProfile(profileName, { method: 'direct' });
+      return await profileSwitcher.switchProfile(profileName, { method: method === 'launcher' ? 'launcher' : 'direct' });
     } catch (error) {
       debugLog?.error('Profile switch to specific profile error:', {
         module: 'ipc-handlers',

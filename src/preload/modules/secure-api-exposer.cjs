@@ -461,8 +461,9 @@ const secureElectronAPI = {
   profile: {
     getCurrent: () => ipcRenderer.invoke(IPC.PROFILE.GET_CURRENT),
     getDirectory: (type) => ipcRenderer.invoke(IPC.PROFILE.GET_DIRECTORY, type),
-    switchProfile: () => ipcRenderer.invoke(IPC.PROFILE.SWITCH),
-    switchToProfile: (name) => ipcRenderer.invoke(IPC.PROFILE.SWITCH_TO, name),
+    listProfiles: () => ipcRenderer.invoke(IPC.PROFILE.LIST),
+    // method: 'launcher' when chosen in the Switch Profile dialog, else 'direct'
+    switchToProfile: (name, method) => ipcRenderer.invoke(IPC.PROFILE.SWITCH_TO, name, method),
     saveState: (state, profileName) => ipcRenderer.invoke(IPC.PROFILE.SAVE_STATE, state, profileName),
     loadState: () => ipcRenderer.invoke(IPC.PROFILE.LOAD_STATE),
     saveStateBeforeSwitch: (state, profileName) => ipcRenderer.invoke(IPC.PROFILE.SAVE_STATE_BEFORE_SWITCH, state, profileName),

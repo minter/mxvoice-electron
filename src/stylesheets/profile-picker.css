@@ -1,0 +1,154 @@
+/* Profile picker: shared by the startup launcher and the Switch Profile
+   dialog (src/renderer/modules/profile-picker/picker-view.js). Colors come
+   from colors.css, so it follows the app theme. */
+
+.profile-picker {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.profile-picker-header {
+  gap: 8px;
+}
+
+.profile-picker-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+
+.profile-picker-current {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-picker-header .btn-close {
+  margin-left: auto;
+}
+
+.profile-picker-current:not([hidden]) + .btn-close {
+  margin-left: 8px;
+}
+
+.profile-picker-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.profile-picker-list-view {
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 8px;
+}
+
+.profile-picker-list-view .form-control,
+.profile-picker-create .form-control {
+  background-color: var(--input-background);
+  border-color: var(--input-border);
+  color: var(--input-text);
+}
+
+.profile-picker-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+}
+
+.profile-picker .profile-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.profile-picker .profile-item.selected {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: #fff !important;
+}
+
+.profile-picker .profile-info {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.profile-picker .profile-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.profile-picker .profile-description {
+  font-size: 12px;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-current-tag {
+  flex: none;
+  font-size: 11px;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  opacity: 0.75;
+}
+
+.profile-picker-empty,
+.profile-picker-loading {
+  padding: 16px 8px;
+  text-align: center;
+  opacity: 0.75;
+}
+
+.profile-picker-error {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.profile-picker-create .form-label {
+  margin-bottom: 4px;
+}
+
+.profile-picker-footer {
+  display: block;
+}
+
+.profile-picker-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-picker-actions[hidden] {
+  display: none;
+}
+
+.profile-picker-spacer {
+  flex: 1 1 auto;
+}
+
+/* Switch Profile dialog: the list scrolls inside the dialog */
+#profileSwitchModal .profile-picker-list {
+  max-height: min(420px, 55vh);
+}
+
+.profile-picker-footer > .profile-picker-actions {
+  margin: 0;
+  width: 100%;
+}

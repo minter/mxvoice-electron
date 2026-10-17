@@ -123,7 +123,7 @@ const IPC = deepFreeze({
     SET_PREFERENCE: 'profile:set-preference',
     SET_PREFERENCES: 'profile:set-preferences',
     GET_ALL_PREFERENCES: 'profile:get-all-preferences',
-    SWITCH: 'profile:switch',
+    LIST: 'profile:list',
     SAVE_STATE_BEFORE_SWITCH: 'profile:save-state-before-switch',
     CREATE: 'profile:create',
     DUPLICATE: 'profile:duplicate',

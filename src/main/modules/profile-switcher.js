@@ -10,8 +10,6 @@
 
 import { trackProfileSwitch } from './profile-switch-analytics.js';
 
-const DEFAULT_PROFILE = 'Default User';
-
 // Stops the old page's debounced collection saves; they would otherwise land
 // in the new profile once currentProfile changes
 const LOCK_RENDERER_SAVES = 'window.isRestoringProfileState = true';
@@ -55,7 +53,6 @@ export function applyWindowState(win, state, screen) {
  * @param {Function} deps.rebuildMenu
  * @param {Function} deps.loadWindowState - (profileName) => Promise<state|null>
  * @param {Function} deps.applyWindowState - (win, state) => void
- * @param {Function} deps.openLauncher - Show the profile picker in switch mode, as a sheet over the main window
  * @param {Function} [deps.getAnalytics]
  * @param {Object} [deps.debugLog]
  */
@@ -70,13 +67,11 @@ export function createProfileSwitcher({
   rebuildMenu,
   loadWindowState,
   applyWindowState: applyState,
-  openLauncher,
   getAnalytics = () => null,
   debugLog
 }) {
   let inFlight = false;
   let savesFenced = false;
-  let pickerOpen = false;
 
   const liveWindow = () => {
     const win = getMainWindow();
@@ -159,67 +154,8 @@ export function createProfileSwitcher({
     }
   }
 
-  function focusMainWindow() {
-    const win = liveWindow();
-    if (!win) return;
-    win.show();
-    win.focus();
-  }
-
-  /**
-   * Show the profile picker over the main window. The main window stays in
-   * view and the session stays in memory until a different profile is chosen.
-   */
-  async function openPicker() {
-    if (pickerOpen) {
-      await openLauncher();
-      return { success: true };
-    }
-    pickerOpen = true;
-
-    const current = getCurrentProfile();
-    const win = liveWindow();
-    if (win && current && !profileManager.profileExists(current)) {
-      // Deleted from the menu: nothing may write it back while the picker is up
-      await step('lock-renderer-saves', () => win.webContents.executeJavaScript(LOCK_RENDERER_SAVES));
-    }
-
-    try {
-      await openLauncher();
-      return { success: true };
-    } catch (error) {
-      pickerOpen = false;
-      focusMainWindow();
-      return { success: false, error: error.message };
-    }
-  }
-
-  /** Launcher callback: a profile was chosen while switching. */
-  async function onPickerChoice(name) {
-    // On failure the picker stays up so the user can choose again or cancel
-    const result = await switchProfile(name, { method: 'launcher' });
-    if (!result.success) throw new Error(result.error);
-    pickerOpen = false;
-    focusMainWindow();
-    return result;
-  }
-
-  /** Launcher callback: closed without choosing. */
-  async function onPickerCancel() {
-    pickerOpen = false;
-    const current = getCurrentProfile();
-    if (!current || !profileManager.profileExists(current)) {
-      await switchProfile(DEFAULT_PROFILE, { method: 'launcher' });
-    }
-    focusMainWindow();
-  }
-
   return {
     switchProfile,
-    openPicker,
-    onPickerChoice,
-    onPickerCancel,
-    isPickerOpen: () => pickerOpen,
     // Implicit (current-profile) state saves are refused while true
     isSavingFenced: () => savesFenced
   };

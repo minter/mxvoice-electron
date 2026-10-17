@@ -20,12 +20,7 @@ let debugLog = null;
 let profileManager = null;
 let launcherWindow = null;
 let mainAppLauncher = null;
-let onSwitchPick = null;
-let onSwitchCancel = null;
 let profileSelected = false;
-// 'startup': no main window yet, closing quits. 'switch': the main window is
-// hidden behind the picker, closing returns to it.
-let launcherMode = 'startup';
 
 // The window stays hidden until the page has sized it to its profile list,
 // so it never appears at the default size first; this is the fallback if the
@@ -46,8 +41,6 @@ function initializeLauncherWindow(dependencies) {
   debugLog = dependencies.debugLog;
   profileManager = dependencies.profileManager;
   mainAppLauncher = dependencies.mainAppLauncher;
-  onSwitchPick = dependencies.onSwitchPick || null;
-  onSwitchCancel = dependencies.onSwitchCancel || null;
   
   debugLog?.info('Launcher window module initialized', { 
     module: 'launcher-window',
@@ -59,16 +52,11 @@ function initializeLauncherWindow(dependencies) {
 }
 
 /**
- * Create and show the launcher window
- * @param {Object} [options]
- * @param {'startup'|'switch'} [options.mode]
- * @param {BrowserWindow} [options.parent] - In switch mode, the main window: the
- *   picker opens as a modal sheet over it so the running show stays in view
- * @param {string} [options.current] - Profile running behind the sheet
- * @param {string} [options.theme] - That profile's screen_mode (auto/light/dark)
+ * Create and show the startup launcher window. (Switch Profile later uses
+ * the same picker in a dialog inside the main window.)
  * @returns {Promise<BrowserWindow>} The launcher window
  */
-async function createLauncherWindow({ mode = 'startup', parent = null, current = null, theme = 'auto' } = {}) {
+async function createLauncherWindow() {
   if (launcherWindow) {
     launcherWindow.focus();
     return launcherWindow;
@@ -76,17 +64,14 @@ async function createLauncherWindow({ mode = 'startup', parent = null, current =
   
   // Reset the profile selected flag for new launcher sessions
   profileSelected = false;
-  launcherMode = mode;
   
   debugLog?.info('Creating launcher window', { 
     module: 'launcher-window',
-    function: 'createLauncherWindow',
-    mode
+    function: 'createLauncherWindow'
   });
   
-  const sheetParent = parent && !parent.isDestroyed() ? parent : null;
   launcherWindow = new BrowserWindow({
-    ...(sheetParent ? { parent: sheetParent, modal: true } : { titleBarStyle: 'hiddenInset' }),
+    titleBarStyle: 'hiddenInset',
     width: LAUNCHER_WIDTH,
     height: 420,
     useContentSize: true,
@@ -103,13 +88,10 @@ async function createLauncherWindow({ mode = 'startup', parent = null, current =
   
   // Load the launcher HTML
   const launcherHtmlPath = path.join(__dirname, '..', '..', 'launcher.html');
-  // The page shows Cancel / handles Esc only when there is a session to return to
-  const query = { mode, theme: theme || 'auto' };
-  if (current) query.current = current;
   const windowBeingLoaded = launcherWindow;
   clearTimeout(revealFallbackTimer);
   revealFallbackTimer = setTimeout(() => revealLauncherWindow(windowBeingLoaded), REVEAL_FALLBACK_MS);
-  await launcherWindow.loadFile(launcherHtmlPath, { query });
+  await launcherWindow.loadFile(launcherHtmlPath);
   
   // Open DevTools in development (disabled by default)
   // Uncomment to enable DevTools for debugging the launcher
@@ -122,27 +104,13 @@ async function createLauncherWindow({ mode = 'startup', parent = null, current =
     debugLog?.info('Launcher window closed', { 
       module: 'launcher-window',
       function: 'createLauncherWindow',
-      mode: launcherMode,
       profileSelected
     });
     
     clearTimeout(revealFallbackTimer);
     launcherWindow = null;
-    if (profileSelected) return;
-
-    if (launcherMode === 'switch') {
-      // Cancelled a switch: go back to the session that is still running
-      Promise.resolve(onSwitchCancel?.()).catch((error) => {
-        debugLog?.error('Launcher: failed to return to the main window', {
-          module: 'launcher-window',
-          function: 'createLauncherWindow',
-          error: error?.message
-        });
-      });
-    } else {
-      // Initial launch without a choice: nothing to return to
-      app.quit();
-    }
+    // Closed without choosing: there is no main window to go to
+    if (!profileSelected) app.quit();
   });
   
   return launcherWindow;
@@ -281,10 +249,9 @@ function registerLauncherHandlers() {
       // Update profile last used
       profileManager.updateProfileLastUsed(profileName);
 
-      // Launch main app with profile context (or switch the running one)
-      const launch = launcherMode === 'switch' ? onSwitchPick : mainAppLauncher;
-      if (launch) {
-        await launch(profileName);
+      // Launch main app with profile context
+      if (mainAppLauncher) {
+        await mainAppLauncher(profileName);
         
         // Mark that a profile was successfully selected
         profileSelected = true;
