@@ -447,7 +447,7 @@ export async function switchProfileWithSave() {
       });
     }
     
-    // Now switch profiles (this will close the window and relaunch)
+    // Now open the profile picker; choosing a profile reloads this window into it
     await window.secureElectronAPI.profile.switchProfile();
 
     return { success: true };

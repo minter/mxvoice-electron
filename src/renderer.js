@@ -419,10 +419,9 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               if (confirmed) {
                 const result = await window.secureElectronAPI.profile.deleteProfile(currentProfile.profile);
                 if (result.success) {
-                  // Profile deleted, switch to launcher to select a different profile
-                  if (moduleRegistry.profileState && moduleRegistry.profileState.switchProfileWithSave) {
-                    await moduleRegistry.profileState.switchProfileWithSave();
-                  }
+                  // Profile deleted: pick another one. Don't save state first,
+                  // that would write the deleted profile's directory back.
+                  await window.secureElectronAPI.profile.switchProfile();
                 } else {
                   alert(`Failed to delete profile: ${result.error}`);
                 }

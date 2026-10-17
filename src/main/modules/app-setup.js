@@ -26,7 +26,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Dependencies that will be injected
-let mainWindow;
+let getMainWindow = () => null;
 let store;
 let autoUpdater;
 let fileOperations;
@@ -41,7 +41,7 @@ let appLifecycle;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
-  mainWindow = dependencies.mainWindow;
+  getMainWindow = dependencies.getMainWindow || (() => dependencies.mainWindow);
   store = dependencies.store;
   autoUpdater = dependencies.autoUpdater;
   fileOperations = dependencies.fileOperations;
@@ -51,11 +51,11 @@ function initializeAppSetup(dependencies) {
   analytics = dependencies.analytics;
   appStartTime = dependencies.appStartTime;
   rendererCommands = createRendererCommandDispatcher({
-    getWindow: () => mainWindow,
+    getWindow: () => getMainWindow(),
     debugLog
   });
   windowStateManager = createWindowStateManager({
-    mainWindow,
+    getMainWindow: () => getMainWindow(),
     store,
     debugLog,
     screen,
@@ -69,7 +69,8 @@ function initializeAppSetup(dependencies) {
     BrowserWindow,
     prepareWindowForClose: () => prepareMainWindowForClose(),
     createWindow,
-    onClosed: () => { mainWindow = null; },
+    // index-modular.js owns the main window reference
+    onClosed: () => {},
     autoBackupTimer,
     analytics,
     appStartTime,
@@ -121,7 +122,7 @@ function createApplicationMenu() {
     app,
     Menu,
     shell,
-    mainWindow,
+    mainWindow: getMainWindow(),
     fileOperations,
     getCurrentProfile,
     showAboutDialog,
@@ -141,7 +142,7 @@ function showAboutDialog() {
     const mutedColor = isDarkMode ? '#bbbbbb' : '#666666';
 
     const aboutWindow = new BrowserWindow({
-      parent: mainWindow,
+      parent: getMainWindow(),
       modal: true,
       width: 460,
       height: 400,
@@ -331,7 +332,7 @@ function showAboutDialog() {
     // Fallback to simple message box if anything fails
     try {
       const name = app.name;
-      dialog.showMessageBox(mainWindow, {
+      dialog.showMessageBox(getMainWindow(), {
         type: 'info',
         title: `About ${name}`,
         message: `${name}`,
@@ -399,6 +400,7 @@ export {
   manageCategories,
   showAboutDialog,
   setupWindowStateSaving,
+  prepareMainWindowForClose,
   saveWindowState,
   loadWindowState
 };
@@ -419,6 +421,7 @@ export default {
   manageCategories,
   showAboutDialog,
   setupWindowStateSaving,
+  prepareMainWindowForClose,
   saveWindowState,
   loadWindowState
 };

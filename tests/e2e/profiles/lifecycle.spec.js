@@ -107,42 +107,50 @@ test.describe('Profile Lifecycle', () => {
     return mainWindow;
   }
 
-  async function launchReplacementProcess() {
-    app = await electron.launch({
-      executablePath: electronPath,
-      args: ['.'],
-      env: {
-        ...process.env,
-        NODE_ENV: 'test',
-        APP_TEST_MODE: '1',
-        DISABLE_HARDWARE_ACCELERATION: '1',
-        AUTO_UPDATE: '0',
-        E2E_USER_DATA_DIR: userDataDir,
-        HOME: fakeHome,
-        APPDATA: fakeHome,
-      },
-    });
-
-    page = await app.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForSelector('#profile-content', { timeout: 10000 });
-  }
-
-  async function switchToLauncher(mainWindow) {
-    // Electron's automatic replacement process is not connected to Playwright.
-    // Suppress only that spawn; the production switch path still saves state,
-    // closes the window, and exits this process. The test launches the observable
-    // replacement process with the same isolated user-data directory.
-    await app.evaluate(({ app: electronApp }) => {
-      electronApp.relaunch = () => {};
-    });
-
-    const processClosed = app.waitForEvent('close', { timeout: 15000 });
+  // Switch Profile opens the launcher in this same process, the main window
+  // hidden behind it. Returns the launcher page.
+  async function openSwitchPicker(mainWindow) {
+    const launcherPromise = app.waitForEvent('window');
     await mainWindow.evaluate(() => {
       void window.moduleRegistry.profileState.switchProfileWithSave();
-    }).catch(() => {});
-    await processClosed;
-    app = null;
+    });
+    page = await launcherPromise;
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForSelector('#profile-content', { timeout: 10000 });
+    return page;
+  }
+
+  // Choose a profile in the open picker; the main window reloads into it.
+  async function chooseInPicker(mainWindow, profileName) {
+    const profileItem = page.locator(`.profile-item[data-profile-name="${profileName}"]`);
+    await profileItem.click();
+    await expect(profileItem).toHaveClass(/selected/);
+    const reloaded = mainWindow.waitForEvent('load');
+    await page.locator('#launch-btn').click();
+    await reloaded;
+    await waitForProfileReady(mainWindow, profileName);
+  }
+
+  async function waitForProfileReady(mainWindow, profileName) {
+    await mainWindow.waitForFunction(
+      async (name) => window.moduleRegistry?.profileState
+        && window.isRestoringProfileState === false
+        && (await window.secureElectronAPI.profile.getCurrent()).profile === name,
+      profileName,
+      { timeout: 15000 }
+    );
+  }
+
+  async function closeLauncherWindow() {
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()
+        .find((win) => win.webContents.getURL().endsWith('launcher.html'))
+        ?.close();
+    });
+  }
+
+  async function windowCount() {
+    return app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter((win) => !win.isDestroyed()).length);
   }
 
   async function renameActiveTab(mainWindow, buttonSelector, name) {
@@ -293,15 +301,13 @@ test.describe('Profile Lifecycle', () => {
     expect(prefsExist).toBe(true);
   });
 
-  test('switching profiles across process relaunch preserves isolated state', async () => {
+  test('switching profiles in-process preserves isolated state', async () => {
     await createProfileInLauncher('SecondProfile', 'For switching');
 
-    let mainWindow = await launchProfile('Default User');
-    await mainWindow.waitForFunction(
-      () => window.moduleRegistry?.profileState && window.isRestoringProfileState === false,
-      { timeout: 15000 }
-    );
+    const mainWindow = await launchProfile('Default User');
+    await waitForProfileReady(mainWindow, 'Default User');
     await dismissFirstRunModal(mainWindow);
+    const pid = app.process().pid;
 
     await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Default Keys');
     await renameActiveTab(mainWindow, '#holding-tank-rename-btn', 'Default Queue');
@@ -311,18 +317,10 @@ test.describe('Profile Lifecycle', () => {
     await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('Default Keys');
     await expect(mainWindow.locator('#holding_tank_tabs a[href="#holding_tank_1"]')).toHaveText('Default Queue');
 
-    await switchToLauncher(mainWindow);
-    await launchReplacementProcess();
-
-    mainWindow = await launchProfile('SecondProfile');
-    await mainWindow.waitForFunction(
-      () => window.moduleRegistry?.profileState && window.isRestoringProfileState === false,
-      { timeout: 15000 }
-    );
+    await openSwitchPicker(mainWindow);
+    await chooseInPicker(mainWindow, 'SecondProfile');
     await dismissFirstRunModal(mainWindow);
 
-    expect(await mainWindow.evaluate(() => window.secureElectronAPI.profile.getCurrent()))
-      .toMatchObject({ success: true, profile: 'SecondProfile' });
     await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('1');
     await expect(mainWindow.locator('#holding_tank_tabs a[href="#holding_tank_1"]')).toHaveText('1');
     expect(await mainWindow.evaluate(async () => (
@@ -335,18 +333,10 @@ test.describe('Profile Lifecycle', () => {
       window.secureElectronAPI.profile.setPreference('e2e_profile_marker', 'second-marker')
     ));
 
-    await switchToLauncher(mainWindow);
-    await launchReplacementProcess();
-
-    mainWindow = await launchProfile('Default User');
-    await mainWindow.waitForFunction(
-      () => window.moduleRegistry?.profileState && window.isRestoringProfileState === false,
-      { timeout: 15000 }
-    );
+    await openSwitchPicker(mainWindow);
+    await chooseInPicker(mainWindow, 'Default User');
     await dismissFirstRunModal(mainWindow);
 
-    expect(await mainWindow.evaluate(() => window.secureElectronAPI.profile.getCurrent()))
-      .toMatchObject({ success: true, profile: 'Default User' });
     await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('Default Keys');
     await expect(mainWindow.locator('#holding_tank_tabs a[href="#holding_tank_1"]')).toHaveText('Default Queue');
     expect(await mainWindow.evaluate(async () => (
@@ -359,5 +349,89 @@ test.describe('Profile Lifecycle', () => {
     ));
     expect(secondState.hotkeys[0].tabName).toBe('Second Keys');
     expect(secondState.holdingTank[0].tabName).toBe('Second Queue');
+
+    // Same process throughout, launcher gone, no relaunch hand-off keys
+    expect(app.process().pid).toBe(pid);
+    await expect.poll(windowCount).toBe(1);
+    const config = JSON.parse(fs.readFileSync(path.join(userDataDir, 'config.json'), 'utf8'));
+    expect(config).not.toHaveProperty('fallback-profile');
+    expect(config).not.toHaveProperty('auto-select-profile');
+  });
+
+  test('cancelling Switch Profile returns to the untouched session', async () => {
+    await createProfileInLauncher('SecondProfile');
+
+    const mainWindow = await launchProfile('Default User');
+    await waitForProfileReady(mainWindow, 'Default User');
+    await dismissFirstRunModal(mainWindow);
+
+    await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Live Keys');
+    await mainWindow.locator('#omni_search').fill('in-flight search');
+    await mainWindow.evaluate(() => { window.__e2eSessionMarker = 'still-here'; });
+
+    await openSwitchPicker(mainWindow);
+    await closeLauncherWindow();
+    await expect.poll(windowCount).toBe(1);
+
+    // Not reloaded: in-memory page state and layout survive the cancel
+    expect(await mainWindow.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
+    await expect(mainWindow.locator('#omni_search')).toHaveValue('in-flight search');
+    await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('Live Keys');
+    await expect(mainWindow.locator('#omni_search')).toBeVisible();
+    expect(await mainWindow.evaluate(() => window.secureElectronAPI.profile.getCurrent()))
+      .toMatchObject({ success: true, profile: 'Default User' });
+  });
+
+  test('Log Out switches to Default User in-process', async () => {
+    await createProfileInLauncher('ShowNight');
+
+    const mainWindow = await launchProfile('ShowNight');
+    await waitForProfileReady(mainWindow, 'ShowNight');
+    await dismissFirstRunModal(mainWindow);
+    await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Show Keys');
+    const pid = app.process().pid;
+
+    const reloaded = mainWindow.waitForEvent('load');
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()
+        .find((win) => win.webContents.getURL().endsWith('index.html'))
+        .webContents.send('menu:logout');
+    });
+    await reloaded;
+    await waitForProfileReady(mainWindow, 'Default User');
+
+    expect(app.process().pid).toBe(pid);
+    const showState = JSON.parse(fs.readFileSync(
+      path.join(userDataDir, 'profiles', 'ShowNight', 'state.json'),
+      'utf8'
+    ));
+    expect(showState.hotkeys[0].tabName).toBe('Show Keys');
+  });
+
+  test('deleting the current profile then cancelling falls back to Default User', async () => {
+    await createProfileInLauncher('Temporary');
+
+    const mainWindow = await launchProfile('Temporary');
+    await waitForProfileReady(mainWindow, 'Temporary');
+    await dismissFirstRunModal(mainWindow);
+
+    mainWindow.once('dialog', (dialog) => dialog.accept());
+    const launcherPromise = app.waitForEvent('window');
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()
+        .find((win) => win.webContents.getURL().endsWith('index.html'))
+        .webContents.send('menu:delete-current-profile');
+    });
+    page = await launcherPromise;
+    await page.waitForSelector('#profile-content', { timeout: 10000 });
+    await expect(page.locator('.profile-item[data-profile-name="Temporary"]')).toHaveCount(0);
+
+    const reloaded = mainWindow.waitForEvent('load');
+    await closeLauncherWindow();
+    await reloaded;
+    await waitForProfileReady(mainWindow, 'Default User');
+
+    // Nothing wrote the deleted profile back to disk
+    expect(fs.existsSync(path.join(userDataDir, 'profiles', 'Temporary'))).toBe(false);
   });
 });

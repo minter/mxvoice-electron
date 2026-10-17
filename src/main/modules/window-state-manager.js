@@ -1,5 +1,6 @@
 function createWindowStateManager({
-  mainWindow,
+  mainWindow: initialWindow = null,
+  getMainWindow = () => initialWindow,
   store,
   debugLog,
   screen,
@@ -12,6 +13,7 @@ function createWindowStateManager({
   let closePreparationPromise = null;
 
 function setupWindowStateSaving() {
+  const mainWindow = getMainWindow();
   if (!mainWindow || !store) {
     debugLog?.warn('Cannot setup window state saving - missing window or store', { 
       module: 'app-setup', 
@@ -147,6 +149,7 @@ function prepareMainWindowForClose() {
       windowStateSaveTimeout = null;
     }
 
+    const mainWindow = getMainWindow();
     if (!mainWindow || mainWindow.isDestroyed()) return;
 
     if (!mainWindow.webContents.isDestroyed()) {

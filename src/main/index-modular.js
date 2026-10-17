@@ -11,7 +11,7 @@
 // Add immediate logging to see if the file is being loaded
 // Note: debugLog will be initialized later in this file
 
-import { app, dialog } from 'electron';
+import { app, dialog, screen } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import readlines from 'n-readlines';
@@ -68,7 +68,7 @@ import { collectLibraryStats } from './modules/library-stats.js';
 import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-channel.js';
 import { describeUpdateError } from './modules/update-analytics.js';
 import { decideUpdateNotice, runBackgroundCheck, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
-import { trackProfileSwitch } from './modules/profile-switch-analytics.js';
+import { createProfileSwitcher, applyWindowState } from './modules/profile-switcher.js';
 import { quietlyAnnouncedVersion, recordAvailableUpdate, recordDownloadedUpdate } from './modules/pending-update.js';
 
 if (process.env.APP_TEST_MODE === '1') {
@@ -699,31 +699,33 @@ function trackLibraryStats() {
   }
 }
 
-// Initialize all modules with dependencies
-async function initializeModules() {
-  debugLog.info('Starting module initialization', { function: "initializeModules", hasDb: !!db, dbType: typeof db });
-  
-  // Ensure database is initialized before proceeding
-  if (!db) {
-    debugLog.warn('Database not ready, attempting to initialize...', { function: "initializeModules" });
-    try {
-      debugLog.info('Calling initializeMainDatabaseWrapper...', { function: "initializeModules" });
-      await initializeMainDatabaseWrapper();
-      debugLog.info('initializeMainDatabaseWrapper completed', { function: "initializeModules", hasDb: !!db, dbType: typeof db });
-    } catch (error) {
-      debugLog.error('Failed to initialize database for modules', { 
-        function: "initializeModules",
-        error: error.message,
-        stack: error.stack
-      });
-      // Continue without database
-    }
-  } else {
-    debugLog.info('Database already available, proceeding with modules', { function: "initializeModules" });
-  }
+// Profile switching runs in-process; created once at app ready
+let profileSwitcher = null;
+
+/**
+ * Initialize main-process services once per process, before any window exists.
+ * ipcMain.handle throws on a second registration of a channel, so none of
+ * this may run from createWindow(). Everything reads the window, profile and
+ * database through live getters.
+ */
+function initializeMainProcessServices() {
+  profileSwitcher = createProfileSwitcher({
+    getMainWindow: () => mainWindow,
+    getCurrentProfile,
+    setCurrentProfile: (name) => { currentProfile = name; },
+    prepareForSwitch: () => appSetup.prepareMainWindowForClose(),
+    profileManager,
+    autoBackupTimer,
+    store,
+    rebuildMenu: () => appSetup.createApplicationMenu(),
+    loadWindowState: (name) => appSetup.loadWindowState(store, name),
+    applyWindowState: (win, state) => applyWindowState(win, state, screen),
+    openLauncher: () => launcherWindow.createLauncherWindow({ mode: 'switch' }),
+    getAnalytics: () => analytics,
+    debugLog
+  });
 
   const dependencies = {
-    mainWindow,
     getMainWindow: () => mainWindow,
     getDb: () => db,
     setDb: (next) => { db = next; },
@@ -738,37 +740,50 @@ async function initializeModules() {
     getCurrentProfile,
     autoBackupTimer,
     analytics,
-    appStartTime
+    appStartTime,
+    profileSwitcher
   };
 
-  // Initialize each module
   appSetup.initializeAppSetup(dependencies);
-  
-  debugLog?.info('Initializing IPC handlers', { 
-    function: "initializeModules" 
-  });
-  debugLog?.info('Module dependencies status', { 
-    function: "initializeModules",
-    hasDb: !!dependencies.getDb?.(),
-    hasAutoUpdater: !!dependencies.autoUpdater,
-    autoUpdaterType: typeof dependencies.autoUpdater
-  });
-  
+
+  debugLog.info('Initializing IPC handlers', { function: "initializeMainProcessServices" });
   ipcHandlers.initializeIpcHandlers(dependencies);
-  
-  debugLog?.info('IPC handlers initialized', { 
-    function: "initializeModules" 
-  });
-  
+
   fileOperations.initializeFileOperations(dependencies);
 
-  // Initialize library transfer manager (needs db and store which are now available)
   libraryTransferManager.initializeLibraryTransferManager({
     debugLog,
     getDb: () => db,
     setDb: (next) => { db = next; },
     store
   });
+
+  launcherWindow.initializeLauncherWindow({
+    debugLog,
+    profileManager,
+    mainAppLauncher: async (profileName) => {
+      currentProfile = profileName;
+
+      debugLog.info('Launching main app from launcher', {
+        function: "mainAppLauncher",
+        profile: profileName
+      });
+
+      await createWindow();
+
+      // Start auto-backup timer for this profile
+      autoBackupTimer.startAutoBackupTimer(profileName);
+
+      // Test auto-update scenarios if enabled
+      testAutoUpdateScenarios();
+    },
+    onSwitchPick: (profileName) => profileSwitcher.onPickerChoice(profileName),
+    onSwitchCancel: () => profileSwitcher.onPickerCancel()
+  });
+
+  // Hand-off keys from the relaunch-based switch; nothing reads them now
+  store.delete('fallback-profile');
+  store.delete('auto-select-profile');
 }
 
 // Main window creation function
@@ -813,9 +828,6 @@ const createWindow = async () => {
     });
 
     mainWindow = appSetup.createWindow(windowOptions);
-
-    // Initialize modules with dependencies AFTER mainWindow is created
-    await initializeModules();
 
     // Track library stats now that DB is available
     trackLibraryStats();
@@ -887,6 +899,8 @@ function setupApp() {
     
     // Initialize auto-backup timer
     autoBackupTimer.initializeAutoBackupTimer({ debugLog });
+
+    initializeMainProcessServices();
     
     // Check if profile was provided via command line
     currentProfile = getProfileFromArgs();
@@ -910,32 +924,6 @@ function setupApp() {
       // No profile - show launcher window
       debugLog.info('No profile provided, showing launcher', {
         function: "app ready event"
-      });
-      
-      // Initialize launcher window with ability to launch main app
-      launcherWindow.initializeLauncherWindow({
-        debugLog,
-        profileManager,
-        store,
-        mainWindow,
-        mainAppLauncher: async (profileName) => {
-          currentProfile = profileName;
-          // After "Switch Profile", the relaunched app remembers where it came from
-          trackProfileSwitch({ analytics, fromProfile: store.get('fallback-profile'), toProfile: profileName, method: 'launcher' });
-          
-          debugLog.info('Launching main app from launcher', { 
-            function: "mainAppLauncher",
-            profile: profileName 
-          });
-          
-          await createWindow();
-          
-          // Start auto-backup timer for this profile
-          autoBackupTimer.startAutoBackupTimer(profileName);
-          
-          // Test auto-update scenarios if enabled
-          testAutoUpdateScenarios();
-        }
       });
       
       // Show launcher window

@@ -1,61 +1,67 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const handlers = {};
-const app = { relaunch: vi.fn(), exit: vi.fn() };
 const ipcMain = { handle: (channel, handler) => { handlers[channel] = handler; } };
+const profileManager = vi.hoisted(() => ({ saveProfileState: vi.fn(async () => ({ success: true })) }));
 
-vi.mock('electron', () => ({ default: { ipcMain, app }, ipcMain, app }));
-vi.mock('../../../src/main/modules/profile-manager.js', () => ({}));
+vi.mock('electron', () => ({ default: { ipcMain }, ipcMain }));
+vi.mock('../../../src/main/modules/profile-manager.js', () => profileManager);
 
 const { register } = await import('../../../src/main/modules/ipc/profile-handlers.js');
 const { trackProfileSwitch } = await import('../../../src/main/modules/profile-switch-analytics.js');
 
-function setup() {
-  const calls = [];
-  const win = { close: vi.fn(() => calls.push('close')) };
-  const analytics = {
-    trackEvent: vi.fn((name) => calls.push(`track:${name}`)),
-    endSession: vi.fn(async () => { calls.push('endSession'); }),
+function setup({ fenced = false } = {}) {
+  const profileSwitcher = {
+    openPicker: vi.fn(async () => ({ success: true })),
+    switchProfile: vi.fn(async () => ({ success: true })),
+    isSavingFenced: () => fenced,
   };
-  app.relaunch.mockImplementation(() => calls.push('relaunch'));
-  app.exit.mockImplementation(() => calls.push('exit'));
   register({
     getCurrentProfile: () => 'Default User',
     getProfileDirectory: vi.fn(),
     store: { set: vi.fn(), get: vi.fn() },
     debugLog: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
-    getMainWindow: () => win,
-    analytics,
+    profileSwitcher,
   });
-  return { calls, analytics };
+  return { profileSwitcher };
 }
 
 describe('profile switch handlers', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('flushes analytics before closing the window, then relaunches (switch via launcher)', async () => {
-    const { calls } = setup();
-
-    await handlers['profile:switch']({});
-
-    expect(calls).toEqual(['endSession', 'close', 'relaunch', 'exit']);
+  it('Switch Profile opens the in-process picker instead of relaunching', async () => {
+    const { profileSwitcher } = setup();
+    await expect(handlers['profile:switch']({})).resolves.toEqual({ success: true });
+    expect(profileSwitcher.openPicker).toHaveBeenCalled();
   });
 
-  it('records the switch, flushes, then closes and relaunches (switch to a named profile)', async () => {
-    const { calls, analytics } = setup();
-
+  it('switch-to (Log Out) switches in-process as a direct switch', async () => {
+    const { profileSwitcher } = setup();
     await handlers['profile:switch-to']({}, 'Saturday Show');
-
-    expect(analytics.trackEvent).toHaveBeenCalledWith('profile_switched', { method: 'direct' });
-    expect(calls).toEqual(['track:profile_switched', 'endSession', 'close', 'relaunch', 'exit']);
+    expect(profileSwitcher.switchProfile).toHaveBeenCalledWith('Saturday Show', { method: 'direct' });
   });
 
-  it('does not record a switch to the profile already in use', async () => {
-    const { analytics } = setup();
+  it('reports switcher failures', async () => {
+    const { profileSwitcher } = setup();
+    profileSwitcher.openPicker.mockRejectedValue(new Error('no window'));
+    profileSwitcher.switchProfile.mockRejectedValue(new Error('busy'));
+    await expect(handlers['profile:switch']({})).resolves.toEqual({ success: false, error: 'no window' });
+    await expect(handlers['profile:switch-to']({}, 'X')).resolves.toEqual({ success: false, error: 'busy' });
+  });
 
-    await handlers['profile:switch-to']({}, 'Default User');
+  it('refuses implicit state saves while a switch is fencing them', async () => {
+    setup({ fenced: true });
+    await expect(handlers['profile:save-state']({}, { hotkeys: [] })).resolves.toMatchObject({ success: false, skipped: true });
+    expect(profileManager.saveProfileState).not.toHaveBeenCalled();
 
-    expect(analytics.trackEvent).not.toHaveBeenCalled();
+    await handlers['profile:save-state']({}, { hotkeys: [] }, 'Default User');
+    expect(profileManager.saveProfileState).toHaveBeenCalledWith('Default User', { hotkeys: [] }, { reason: 'window-close' });
+  });
+
+  it('saves to the current profile when no switch is running', async () => {
+    setup();
+    await handlers['profile:save-state']({}, { hotkeys: [] });
+    expect(profileManager.saveProfileState).toHaveBeenCalledWith('Default User', { hotkeys: [] }, { reason: 'window-close' });
   });
 });
 

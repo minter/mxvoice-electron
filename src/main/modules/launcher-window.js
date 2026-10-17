@@ -20,20 +20,24 @@ let debugLog = null;
 let profileManager = null;
 let launcherWindow = null;
 let mainAppLauncher = null;
-let store = null;
-let mainWindow = null;
+let onSwitchPick = null;
+let onSwitchCancel = null;
 let profileSelected = false;
+// 'startup': no main window yet, closing quits. 'switch': the main window is
+// hidden behind the picker, closing returns to it.
+let launcherMode = 'startup';
 
 /**
- * Initialize the launcher window module
+ * Initialize the launcher window module. Registers the launcher IPC handlers,
+ * so call it exactly once per process.
  * @param {Object} dependencies - Module dependencies
  */
 function initializeLauncherWindow(dependencies) {
   debugLog = dependencies.debugLog;
   profileManager = dependencies.profileManager;
   mainAppLauncher = dependencies.mainAppLauncher;
-  store = dependencies.store;
-  mainWindow = dependencies.mainWindow;
+  onSwitchPick = dependencies.onSwitchPick || null;
+  onSwitchCancel = dependencies.onSwitchCancel || null;
   
   debugLog?.info('Launcher window module initialized', { 
     module: 'launcher-window',
@@ -46,9 +50,10 @@ function initializeLauncherWindow(dependencies) {
 
 /**
  * Create and show the launcher window
+ * @param {{ mode?: 'startup'|'switch' }} [options]
  * @returns {Promise<BrowserWindow>} The launcher window
  */
-async function createLauncherWindow() {
+async function createLauncherWindow({ mode = 'startup' } = {}) {
   if (launcherWindow) {
     launcherWindow.focus();
     return launcherWindow;
@@ -56,10 +61,12 @@ async function createLauncherWindow() {
   
   // Reset the profile selected flag for new launcher sessions
   profileSelected = false;
+  launcherMode = mode;
   
   debugLog?.info('Creating launcher window', { 
     module: 'launcher-window',
-    function: 'createLauncherWindow' 
+    function: 'createLauncherWindow',
+    mode
   });
   
   launcherWindow = new BrowserWindow({
@@ -91,68 +98,27 @@ async function createLauncherWindow() {
   launcherWindow.on('closed', () => {
     debugLog?.info('Launcher window closed', { 
       module: 'launcher-window',
-      function: 'createLauncherWindow' 
+      function: 'createLauncherWindow',
+      mode: launcherMode,
+      profileSelected
     });
     
-    // Check if we have a fallback profile and no profile was selected
-    const fallbackProfile = store.get('fallback-profile');
-    if (!profileSelected) {
-      // Check if main window exists and is not destroyed
-      const mainWindowExists = mainWindow && !mainWindow.isDestroyed();
-      
-      if (!mainWindowExists) {
-        if (fallbackProfile) {
-          // Profile switching scenario: fall back to previous profile
-          debugLog?.info('Launcher closed without profile selection, falling back to previous profile', { 
-            module: 'launcher-window',
-            function: 'createLauncherWindow',
-            fallbackProfile,
-            mainWindowExists,
-            profileSelected 
-          });
-          
-          // Clear the fallback profile
-          store.delete('fallback-profile');
-          
-          // Relaunch with the fallback profile
-          app.relaunch({ args: [...process.argv.slice(1), `--profile=${fallbackProfile}`] });
-          app.exit(0);
-        } else {
-          // Initial launch scenario: no fallback profile, quit the app
-          debugLog?.info('Launcher closed without profile selection and no fallback profile, quitting app', { 
-            module: 'launcher-window',
-            function: 'createLauncherWindow',
-            fallbackProfile,
-            mainWindowExists,
-            profileSelected 
-          });
-          
-          app.quit();
-        }
-      } else {
-        debugLog?.info('Launcher closed but main window still exists, not taking action', { 
+    launcherWindow = null;
+    if (profileSelected) return;
+
+    if (launcherMode === 'switch') {
+      // Cancelled a switch: go back to the session that is still running
+      Promise.resolve(onSwitchCancel?.()).catch((error) => {
+        debugLog?.error('Launcher: failed to return to the main window', {
           module: 'launcher-window',
           function: 'createLauncherWindow',
-          fallbackProfile,
-          mainWindowExists,
-          profileSelected 
+          error: error?.message
         });
-      }
-    } else if (profileSelected) {
-      debugLog?.info('Launcher closed after profile selection, not taking action', { 
-        module: 'launcher-window',
-        function: 'createLauncherWindow',
-        fallbackProfile: !!fallbackProfile,
-        profileSelected 
       });
-      
-      // Clear the fallback profile since we successfully launched with a selected profile
-      if (fallbackProfile) {
-        store.delete('fallback-profile');
-      }
+    } else {
+      // Initial launch without a choice: nothing to return to
+      app.quit();
     }
-    
-    launcherWindow = null;
   });
   
   return launcherWindow;
@@ -267,10 +233,11 @@ function registerLauncherHandlers() {
       
       // Update profile last used
       profileManager.updateProfileLastUsed(profileName);
-      
-      // Launch main app with profile context
-      if (mainAppLauncher) {
-        await mainAppLauncher(profileName);
+
+      // Launch main app with profile context (or switch the running one)
+      const launch = launcherMode === 'switch' ? onSwitchPick : mainAppLauncher;
+      if (launch) {
+        await launch(profileName);
         
         // Mark that a profile was successfully selected
         profileSelected = true;
