@@ -14,6 +14,19 @@ import { trackProfileSwitch } from './profile-switch-analytics.js';
 // in the new profile once currentProfile changes
 const LOCK_RENDERER_SAVES = 'window.isRestoringProfileState = true';
 
+// The flush and lock wait on the page. A hung page must not wedge switching
+// (every later switch would be refused as "already in progress"); the reload
+// at the end replaces it anyway.
+const RENDERER_TIMEOUT_MS = 5000;
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /**
  * Restore a saved window_state onto an existing window.
  * @param {Object} win - BrowserWindow
@@ -55,6 +68,7 @@ export function applyWindowState(win, state, screen) {
  * @param {Function} deps.applyWindowState - (win, state) => void
  * @param {Function} [deps.getAnalytics]
  * @param {Object} [deps.debugLog]
+ * @param {number} [deps.rendererTimeoutMs] - Limit for each wait on the page
  */
 export function createProfileSwitcher({
   getMainWindow,
@@ -68,7 +82,8 @@ export function createProfileSwitcher({
   loadWindowState,
   applyWindowState: applyState,
   getAnalytics = () => null,
-  debugLog
+  debugLog,
+  rendererTimeoutMs = RENDERER_TIMEOUT_MS
 }) {
   let inFlight = false;
   let savesFenced = false;
@@ -118,11 +133,13 @@ export function createProfileSwitcher({
 
       // A just-deleted profile has nothing left to flush into
       if (fromProfile && profileManager.profileExists(fromProfile)) {
-        await step('flush', () => prepareForSwitch());
+        await step('flush', () => withTimeout(prepareForSwitch(), rendererTimeoutMs, 'flush'));
       }
 
       savesFenced = true;
-      await step('lock-renderer-saves', () => win.webContents.executeJavaScript(LOCK_RENDERER_SAVES));
+      await step('lock-renderer-saves', () => withTimeout(
+        win.webContents.executeJavaScript(LOCK_RENDERER_SAVES), rendererTimeoutMs, 'lock-renderer-saves'
+      ));
 
       setCurrentProfile(name);
       await step('last-used', () => profileManager.updateProfileLastUsed(name));

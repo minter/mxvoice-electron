@@ -18,6 +18,13 @@ const MODAL_ID = 'profileSwitchModal';
 const CONTEXT = { module: 'profile-picker' };
 
 let picker = null;
+let opening = false;
+// Bootstrap ignores hide() while the dialog is still animating in, so a
+// close requested then (a quick Esc or Cancel) waits for 'shown'
+let shown = false;
+let closeWhenShown = false;
+// Set from hide() until 'hidden': reopening then waits instead of being dropped
+let hiding = null;
 let afterDelete = false;
 let switching = false;
 
@@ -37,10 +44,21 @@ function ensureModal() {
   `;
   document.body.appendChild(modal);
 
-  modal.addEventListener('shown.bs.modal', () => picker?.focus());
+  modal.addEventListener('shown.bs.modal', () => {
+    shown = true;
+    if (closeWhenShown) {
+      closeWhenShown = false;
+      close();
+      return;
+    }
+    picker?.focus();
+  });
   modal.addEventListener('hidden.bs.modal', () => {
+    shown = false;
     picker?.destroy();
     picker = null;
+    hiding?.resolve();
+    hiding = null;
     // The deleted profile can't be returned to: closing lands on Default User
     if (afterDelete && !switching) {
       switchTo(DEFAULT_PROFILE).catch((error) => {
@@ -60,6 +78,15 @@ async function switchTo(name) {
 }
 
 function close() {
+  if (!shown) {
+    closeWhenShown = true;
+    return Promise.resolve();
+  }
+  if (!hiding) {
+    let resolve;
+    const done = new Promise((r) => { resolve = r; });
+    hiding = { done, resolve };
+  }
   return safeHideModal(`#${MODAL_ID}`, { ...CONTEXT, function: 'close' });
 }
 
@@ -70,14 +97,37 @@ function close() {
  *   switches to Default User
  */
 async function open(options = {}) {
-  if (picker) return;
+  // Closed while still animating in, then reopened: the latest request wins,
+  // so drop the queued close and keep it open
+  if (picker && closeWhenShown) {
+    closeWhenShown = false;
+    return;
+  }
+  // Still closing from a moment ago: open once that has finished
+  if (hiding) await hiding.done;
+  // One picker at a time: a second one would leave the first one's document
+  // key listener behind. `opening` covers the await below.
+  if (picker || opening) return;
+  if (!window.bootstrap?.Modal) {
+    window.debugLog?.error('Bootstrap Modal unavailable; cannot open Switch Profile', { ...CONTEXT, function: 'open' });
+    return;
+  }
+  opening = true;
+  shown = false;
+  closeWhenShown = false;
   afterDelete = !!options.afterDelete;
   switching = false;
 
   let currentProfile = null;
-  if (!afterDelete) {
-    const current = await window.secureElectronAPI.profile.getCurrent();
-    currentProfile = current?.success ? current.profile : null;
+  try {
+    if (!afterDelete) {
+      const current = await window.secureElectronAPI.profile.getCurrent();
+      currentProfile = current?.success ? current.profile : null;
+    }
+  } catch (error) {
+    window.debugLog?.warn('Could not read the current profile', { ...CONTEXT, function: 'open', error: error?.message });
+  } finally {
+    opening = false;
   }
 
   const modal = ensureModal();

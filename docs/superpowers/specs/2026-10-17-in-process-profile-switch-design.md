@@ -116,6 +116,42 @@ launcher.
 `fallback-profile` and `auto-select-profile` are no longer written. Startup
 deletes any left over from older versions.
 
+## Stability (one long-lived process)
+
+The main process and main window now live across every switch, so anything
+registered per switch or per dialog could build up. What we checked:
+
+- **Main process:** IPC handlers, launcher handlers and app setup register
+  once, at app ready. Nothing is registered per switch or per reload. The
+  menu is rebuilt per switch and holds no listeners.
+- **Renderer:** every switch still reloads the page, so its JS state starts
+  clean. The picker dialog is created once per page. Its document key
+  listener exists only while it is open.
+- **Auto-backup timer:** start and stop carry a generation token. A backup
+  that is mid-write during a switch, or a start overtaken while its settings
+  load, can't leave a second timer running.
+- **Hung page:** the switch waits at most 5s each for the page's flush and
+  save lock, so a frozen page can't wedge later switches.
+- **Quick open/close:** opening the dialog twice can't create two pickers.
+  Esc or Cancel during the opening animation is honored. Reopening during
+  the closing animation waits for it to finish.
+
+`tests/e2e/profiles/switch-stability.spec.js` asserts that listener and handler
+counts stay constant across 6 switches and 16 open/close cycles.
+
+Measured on a 60-switch soak, after forced GC:
+
+| | Start | After 60 switches |
+|---|---|---|
+| Main heap | 14.0 MB | 14.9 MB |
+| Renderer JS heap | 5.9 MB | 5.9 MB |
+| Renderer process memory | 133 MB | ~360 MB, back to 237 MB once idle |
+
+Renderer process memory is Chromium's cache and allocator memory, which it
+gives back when idle. It is not app objects: the JS heap stays flat. The first
+Switch Profile dialog on a page adds about 1.4 MB once (its code and DOM). 80
+further open/close cycles add nothing.
+
 ## Audio across a switch, and boards
 
 Today the reload stops playback, so a switch cuts whatever is playing (for

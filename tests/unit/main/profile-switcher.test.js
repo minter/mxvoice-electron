@@ -96,6 +96,20 @@ describe('profile switcher', () => {
     expect(deps.debugLog.warn).toHaveBeenCalledTimes(2);
   });
 
+  it('a page that never answers delays the switch but cannot wedge it', async () => {
+    const { deps, calls } = setup();
+    deps.prepareForSwitch.mockImplementation(() => new Promise(() => {}));
+    deps.getMainWindow().webContents.executeJavaScript.mockImplementation(() => new Promise(() => {}));
+    const switcher = createProfileSwitcher({ ...deps, rendererTimeoutMs: 10 });
+
+    await expect(switcher.switchProfile('Saturday Show')).resolves.toEqual({ success: true });
+    expect(calls).toContain('reload:Saturday Show');
+    expect(deps.debugLog.warn).toHaveBeenCalledWith(expect.stringContaining('flush'), expect.objectContaining({ error: 'flush timed out after 10ms' }));
+
+    // The next switch is not refused as "already in progress"
+    await expect(switcher.switchProfile('Default User')).resolves.toEqual({ success: true });
+  });
+
   it('is a no-op for the profile already in use', async () => {
     const { switcher, win, deps } = setup();
     await expect(switcher.switchProfile('Default User')).resolves.toEqual({ success: true, unchanged: true });
