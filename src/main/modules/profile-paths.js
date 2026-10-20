@@ -39,6 +39,14 @@ function getProfileBoardsPath(profileName) {
   return path.join(getProfileDirectory(profileName), 'boards.json');
 }
 
+function getRecoveryDirectory() {
+  return path.join(getUserDataDirectory(), 'recovery');
+}
+
+function getRecoveryPath(profileName) {
+  return path.join(getRecoveryDirectory(), `${getProfileDirectoryKey(profileName)}.json`);
+}
+
 function getBackupBaseDirectory() {
   return path.join(getUserDataDirectory(), 'profile-backups');
 }
@@ -62,5 +70,7 @@ export {
   getProfileRegistryPath,
   getProfileStatePath,
   getProfilesDirectory,
+  getRecoveryDirectory,
+  getRecoveryPath,
   sanitizeProfileName
 };
