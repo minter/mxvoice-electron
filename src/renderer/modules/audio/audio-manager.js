@@ -580,18 +580,24 @@ async function autoplay_next() {
 
   if (autoplay && holdingTankMode === 'playlist') {
     const now_playing = document.querySelector('.now_playing');
-    let next_song = null;
-
-    if (now_playing) {
-      getDebugLog()?.info('Found currently playing song, finding next', {
+    if (!now_playing) {
+      // The playing row is gone (the holding tank was swapped mid-song), so
+      // there is no next row; leave the operator's selection alone
+      getDebugLog()?.info('No now-playing row; nothing to autoplay', {
         module: 'audio-manager',
         function: 'autoplay_next',
-        currentSongId: now_playing.getAttribute('songid'),
       });
-
-      now_playing.classList.remove('now_playing');
-      next_song = now_playing.nextElementSibling;
+      return;
     }
+
+    getDebugLog()?.info('Found currently playing song, finding next', {
+      module: 'audio-manager',
+      function: 'autoplay_next',
+      currentSongId: now_playing.getAttribute('songid'),
+    });
+
+    now_playing.classList.remove('now_playing');
+    const next_song = now_playing.nextElementSibling;
 
     if (next_song) {
       getDebugLog()?.info('Playing next song in playlist', {

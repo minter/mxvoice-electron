@@ -72,11 +72,17 @@ test.describe('Boards - layout swap during playback', () => {
     await expect(page.locator('.active-hotkey')).toHaveCount(0);
     await expect(page.locator('#selected_row')).toHaveCount(0);
 
+    // The operator picks a row in the new tank while the old song plays out
+    await rows.nth(1).click();
+    await expect(rows.nth(1)).toHaveAttribute('id', 'selected_row');
+
     await seekNearEndAndWaitForCompletion(page);
 
     expect(await page.evaluate(() => window.__nowPlayingHistory)).toEqual([]);
     await expect(page.locator('#song_now_playing')).not.toHaveAttribute('songid');
     await expect(page.locator('.now_playing')).toHaveCount(0);
+    // The old song's end leaves that pick alone
+    await expect(page.locator('#selected_row')).toHaveAttribute('songid', '1001');
   });
 
   test('switching to Playlist mode after a swap does not attach to the new tank', async () => {
