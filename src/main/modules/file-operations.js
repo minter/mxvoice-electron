@@ -150,7 +150,8 @@ function loadHoldingTankFile() {
         let line;
          
         while ((line = line_reader.next())) {
-          song_ids.push(line.toString().trim());
+          const id = line.toString().trim();
+          if (/^\d+$/.test(id)) song_ids.push(id);
         }
         debugLog?.info('📁 Main process: Sending holding_tank_load with:', { module: 'file-operations', function: 'loadHoldingTankFile', song_ids: song_ids });
         getMainWindow().webContents.send('holding_tank_load', song_ids);
@@ -161,108 +162,6 @@ function loadHoldingTankFile() {
       reject(err);
     });
   });
-}
-
-// Save hotkeys file
-function saveHotkeysFile(hotkeyArray) {
-  dialog.showSaveDialog(getMainWindow(), {
-    buttonLabel: 'Save',
-    filters: [
-      { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
-    ],
-    defaultPath: store.get('hotkey_directory'),
-    message: 'Save your Mx. Voice hotkey file'
-  }).then(result => {
-    if (result.canceled == true) {
-      debugLog?.info('Silently exiting hotkey save', { module: 'file-operations', function: 'saveHotkeysFile' });
-      return;
-    }
-    else {
-      const filename = result.filePath;
-      debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'saveHotkeysFile', filename: filename });
-      debugLog?.info(`Hotkey array received:`, { module: 'file-operations', function: 'saveHotkeysFile', hotkeyArray: hotkeyArray });
-      
-      const file = fs.createWriteStream(filename);
-      
-      // Process the first 12 elements as hotkeys (f1 through f12)
-      for (let i = 0; i < 12; i++) {
-        const keyId = `f${i + 1}`;
-        const hotkeyValue = hotkeyArray[i];
-        
-        debugLog?.info(`Processing hotkey ${keyId}:`, { 
-          module: 'file-operations', 
-          function: 'saveHotkeysFile', 
-          index: i, 
-          value: hotkeyValue,
-          type: typeof hotkeyValue
-        });
-        
-        // Handle null, undefined, or empty values as empty hotkeys
-        if (hotkeyValue === null || hotkeyValue === undefined || hotkeyValue === '') {
-          file.write(`${keyId}::\n`);
-        } else if (/^\d+$/.test(hotkeyValue)) {
-          // Valid song ID
-          file.write(`${keyId}::${hotkeyValue}\n`);
-        } else {
-          // Invalid value - treat as empty
-          debugLog?.warn(`Invalid hotkey value for ${keyId}:`, { 
-            module: 'file-operations', 
-            function: 'saveHotkeysFile', 
-            value: hotkeyValue 
-          });
-          file.write(`${keyId}::\n`);
-        }
-      }
-      
-      // Process the 13th element as tab name if it exists
-      if (hotkeyArray.length > 12 && hotkeyArray[12]) {
-        const tabName = hotkeyArray[12];
-        if (typeof tabName === 'string' && tabName.trim()) {
-          file.write(`tab_name::${tabName.replace(/ /g, '_')}\n`);
-        }
-      }
-      
-      file.end();
-      
-      debugLog?.info(`Hotkey file saved successfully to ${filename}`, { 
-        module: 'file-operations', 
-        function: 'saveHotkeysFile', 
-        filename: filename,
-        totalHotkeys: 12,
-        tabNameIncluded: hotkeyArray.length > 12 && !!hotkeyArray[12]
-      });
-    }
-  }).catch(err => {
-    debugLog?.error('Error saving hotkeys file:', { module: 'file-operations', function: 'saveHotkeysFile', error: err });
-  })
-}
-
-// Save holding tank file
-function saveHoldingTankFile(holdingTankArray) {
-  dialog.showSaveDialog(getMainWindow(), {
-    buttonLabel: 'Save',
-    filters: [
-      { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
-    ],
-    defaultPath: store.get('hotkey_directory'),
-    message: 'Save your Mx. Voice holding tank file'
-  }).then(result => {
-    if (result.canceled == true) {
-      debugLog?.info('Silently exiting holding tank save', { module: 'file-operations', function: 'saveHoldingTankFile' });
-      return;
-    }
-    else {
-      const filename = result.filePath;
-      debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'saveHoldingTankFile', filename: filename });
-      const file = fs.createWriteStream(filename);
-      for (let i = 0; i < holdingTankArray.length; i++) {
-        file.write(holdingTankArray[i] + '\n');
-      }
-      file.end();
-    }
-  }).catch(err => {
-    debugLog?.error('Error saving holding tank file:', { module: 'file-operations', function: 'saveHoldingTankFile', error: err });
-  })
 }
 
 // Add directory dialog
@@ -342,8 +241,6 @@ export {
   initializeFileOperations,
   loadHotkeysFile,
   loadHoldingTankFile,
-  saveHotkeysFile,
-  saveHoldingTankFile,
   addDirectoryDialog,
   addFileDialog,
   migrateOldPreferences,
@@ -355,8 +252,6 @@ export default {
   initializeFileOperations,
   loadHotkeysFile,
   loadHoldingTankFile,
-  saveHotkeysFile,
-  saveHoldingTankFile,
   addDirectoryDialog,
   addFileDialog,
   migrateOldPreferences,

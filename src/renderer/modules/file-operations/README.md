@@ -13,14 +13,12 @@ file-operations/
 
 ## Exports and interface
 - Default export: singleton instance
-- Methods: `openHotkeyFile`, `openHoldingTankFile`, `saveHotkeyFile`, `saveHoldingTankFile`, `pickDirectory`, `installUpdate`
+- Methods: `pickDirectory`, `installUpdate`
 
 ## Usage
 ```javascript
 import files from './modules/file-operations/index.js';
 
-files.openHotkeyFile();
-files.saveHoldingTankFile();
 $('#pickBtn').on('click', (e) => files.pickDirectory(e, document.querySelector('#path')));
 ```
 

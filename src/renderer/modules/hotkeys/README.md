@@ -53,10 +53,6 @@ hotkeys/
 - `setLabelFromSongId(song_id, element)` - Set hotkey label from song
 - `clearHotkeys()` - Clear all hotkeys
 
-### File Operations (2)
-- `openHotkeyFile()` - Open hotkey file for import
-- `saveHotkeyFile()` - Save hotkeys to file
-
 ### Playback Functions (2)
 - `playSongFromHotkey(hotkey)` - Play song from hotkey
 - `sendToHotkeys()` - Send selected song to hotkey
@@ -102,12 +98,6 @@ hotkeys.sendToHotkeys();
 ### File Operations
 
 ```javascript
-// Open hotkey file
-hotkeys.openHotkeyFile();
-
-// Save hotkey file
-hotkeys.saveHotkeyFile();
-
 // Export configuration
 const config = hotkeys.exportHotkeyConfig();
 
@@ -190,31 +180,6 @@ Removes all song assignments from hotkeys.
 **Parameters:**
 - `options` - Options object with dependencies
 
-### File Operations
-
-#### `openHotkeyFile(options)`
-Imports hotkey configuration from file.
-
-**Parameters:**
-- `options` - Options object with dependencies
-
-#### `saveHotkeyFile(options)`
-Exports hotkey configuration to file.
-
-**Parameters:**
-- `options` - Options object with dependencies
-
-#### `exportHotkeyConfig()`
-Creates a configuration object for export.
-
-**Returns:** Hotkey configuration object
-
-#### `importHotkeyConfig(config, options)`
-Applies imported configuration to hotkeys.
-
-**Parameters:**
-- `config` - Hotkey configuration object
-- `options` - Options object with dependencies
 
 ### Playback Functions
 

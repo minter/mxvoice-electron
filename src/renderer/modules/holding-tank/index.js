@@ -33,7 +33,6 @@ import { songDrag } from '../drag-drop/drag-drop-functions.js';
 const database = secureDatabase;
 import Dom from '../dom-utils/index.js';
 // Import secure adapters
-import { secureFileDialog } from '../adapters/secure-adapter.js';
 import { customConfirm, customPrompt, scaleScrollable } from '../utils/index.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 import HoldingTankState from './holding-tank-state.js';
@@ -70,10 +69,6 @@ export function clearActiveHoldingTankState() {
   const activeTab = document.querySelector('.holding_tank.active');
   const tabNumber = Number(activeTab?.id?.match(/^holding_tank_(\d)$/)?.[1]);
   return tabNumber ? holdingTankState.clearTab(tabNumber) : false;
-}
-
-function getActiveHoldingTankTabNumber() {
-  return Number(document.querySelector('.holding_tank.active')?.id?.match(/^holding_tank_(\d)$/)?.[1]) || 1;
 }
 
 function updateStateForInsertion(songId, targetEl, insertPosition, existingElement) {
@@ -218,23 +213,23 @@ export async function populateHoldingTank(songIds) {
     databaseAvailable: !!electronAPI?.database
   });
   
-  // Extend tooltip suppression during holding tank population to prevent tooltips
-  // from appearing during DOM updates that happen after file loading
-  const fileButtons = ['hotkey-load-btn', 'hotkey-save-btn', 'holding-tank-load-btn', 'holding-tank-save-btn'];
-  fileButtons.forEach(btnId => {
-    const btn = document.getElementById(btnId);
-    if (btn) {
-      btn.dataset.tooltipSuppressUntil = Date.now() + 3000; // Extend suppression for 3 more seconds
-    }
-  });
-  
   if (!songIds || songIds.length === 0) {
     debugLog?.warn('No song IDs provided to populateHoldingTank', { 
       module: 'holding-tank',
       function: 'populateHoldingTank'
     });
-    return { success: false, error: 'No song IDs provided' };
+    return { success: false, error: 'No song IDs provided', dropped: 0 };
   }
+
+  // One lookup for the whole file; ids missing from the library are dropped
+  const distinctIds = [...new Set(songIds.map(String))];
+  const result = await database.getSongsByIds(distinctIds);
+  if (result?.success === false) throw new Error(result.error || 'Failed to load holding tank metadata');
+  const rows = result?.data || result || [];
+  if (!Array.isArray(rows)) throw new Error('Failed to load holding tank metadata');
+  const foundIds = new Set(rows.map(row => String(row.id)));
+  const validIds = songIds.map(String).filter(songId => foundIds.has(songId));
+  const dropped = distinctIds.filter(songId => !foundIds.has(songId)).length;
 
   clearActiveHoldingTankState();
   Dom.empty('.holding_tank.active');
@@ -244,7 +239,7 @@ export async function populateHoldingTank(songIds) {
   });
   
   let addedCount = 0;
-  for (const songId of songIds) {
+  for (const songId of validIds) {
     debugLog?.info('Adding song ID to holding tank', { 
       module: 'holding-tank',
       function: 'populateHoldingTank',
@@ -261,7 +256,7 @@ export async function populateHoldingTank(songIds) {
     function: 'populateHoldingTank',
     count: addedCount
   });
-  return { success: true, count: addedCount };
+  return { success: true, count: addedCount, dropped };
 }
 
 /**
@@ -459,25 +454,6 @@ export async function clearHoldingTank() {
   }
 }
 
-/**
- * Open holding tank file
- */
-export function openHoldingTankFile() {
-  return secureFileDialog.openHoldingTankFile();
-}
-
-/**
- * Save holding tank to file
- */
-export function saveHoldingTankFile() {
-  debugLog?.info('Renderer starting saveHoldingTankFile', { 
-    module: 'holding-tank',
-    function: 'saveHoldingTankFile'
-  });
-  const holdingTankArray = holdingTankState.toSnapshot()[getActiveHoldingTankTabNumber() - 1]?.songIds || [];
-  return secureFileDialog.saveHoldingTankFile(holdingTankArray);
-}
-
 // Mode management functions moved to dedicated mode-management module
 
 /**
@@ -596,8 +572,6 @@ const holdingTankModule = {
   removeFromHoldingTank,
   removeSelected,
   clearHoldingTank,
-  openHoldingTankFile,
-  saveHoldingTankFile,
   holdingTankDrop,
   sendToHoldingTank,
   renameHoldingTankTab,

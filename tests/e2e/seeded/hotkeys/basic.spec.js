@@ -10,6 +10,7 @@ import {
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'fs';
+import { importHotkeyFile } from '../../../utils/board-e2e.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -923,8 +924,7 @@ test.describe('Hotkeys - save & load', () => {
     }, hotkeyFile);
     
     // 2) Click the Load button to trigger the file picker
-    const loadButton = page.locator('#hotkey-load-btn');
-    await loadButton.click();
+    await importHotkeyFile(app);
 
     // 4) Verify the hotkey assignments match the test file
     const activeTab = page.locator('#hotkeys_list_1');
@@ -965,79 +965,6 @@ test.describe('Hotkeys - save & load', () => {
     console.log('✅ F4: The Wheel (Back And Forth) by Edie Brickell');
     console.log('✅ F12: We Are Family by Sister Sledge');
     console.log('✅ Tab name: Intros');
-  });
-
-  test('save active tab hotkeys with song IDs and renamed tab', async () => {
-    // 1) Do an empty search to get all songs
-    const searchInput = page.locator('#omni_search');
-    await searchInput.clear();
-    await searchInput.press('Enter');
-
-    const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(5, { timeout: 5000 });
-
-    // 2) Click on Tab 2
-    const tab2 = page.locator('#hotkey_tabs a[href="#hotkeys_list_2"]');
-    await tab2.click();
-    await expect(tab2).toHaveClass(/active/);
-
-    // 3) Drag Got The Time to F1 (song ID 1001) - find it by searching for "Anthrax"
-    const gotTheTimeRow = rows.filter({ hasText: 'Anthrax' }).first();
-    const activeTab2 = page.locator('#hotkeys_list_2');
-    const f1Hotkey = activeTab2.locator('[id^="f1_hotkey"] .song');
-    await gotTheTimeRow.dragTo(f1Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await expect(f1Hotkey).toHaveText('Got The Time by Anthrax (0:06)');
-
-    // 4) Drag We Are Family to F5 (song ID 1004) - find it by searching for "Sister Sledge"
-    const weAreFamilyRow = rows.filter({ hasText: 'Sister Sledge' }).first();
-    const f5Hotkey = activeTab2.locator('[id^="f5_hotkey"] .song');
-    await weAreFamilyRow.dragTo(f5Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await expect(f5Hotkey).toHaveText('We Are Family by Sister Sledge (0:07)');
-
-    // 5) Drag Eat It to F8 (song ID 1005) - find it by searching for "Weird Al"
-    const eatItRow = rows.filter({ hasText: 'Weird Al' }).first();
-    const f8Hotkey = activeTab2.locator('[id^="f8_hotkey"] .song');
-    await eatItRow.dragTo(f8Hotkey, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 20, y: 20 } });
-    await expect(f8Hotkey).toHaveText('Eat It by Weird Al Yankovic (0:06)');
-
-    // 6) Rename the tab to "Testing"
-    const editButton = page.locator('#hotkey-rename-btn');
-    await editButton.click();
-    const renameInput = page.locator('.modal .prompt-input');
-    await expect(renameInput).toBeVisible();
-    await renameInput.fill('Testing');
-
-    const okButton = page.locator('.modal:has(.prompt-input) .confirm-btn');
-    await okButton.click();
-    await expect(renameInput).not.toBeVisible();
-
-    await expect(tab2).toHaveText('Testing');
-
-    // 7) Override the file picker to save inside this suite's isolated directory
-    const saveFilePath = path.join(suiteHotkeysDir, 'testing.mrv');
-
-    await app.evaluate(async ({ dialog }) => {
-      const original = dialog.showSaveDialog;
-      globalThis.__restoreSaveDialog = () => (dialog.showSaveDialog = original);
-    });
-
-    await app.evaluate(({ dialog }, filePath) => {
-      dialog.showSaveDialog = async () => ({ canceled: false, filePath });
-    }, saveFilePath);
-
-    // 8) Save and wait for the file to be written
-    await page.locator('#hotkey-save-btn').click();
-    await expect.poll(() => fs.existsSync(saveFilePath), { timeout: 10000 }).toBe(true);
-
-    // 9) Require the saved file to retain all assignments and the renamed tab
-    const fileContent = fs.readFileSync(saveFilePath, 'utf8');
-    expect(fileContent).toContain('f1::1001');
-    expect(fileContent).toContain('f5::1004');
-    expect(fileContent).toContain('f8::1005');
-    expect(fileContent).toContain('tab_name::Testing');
-
-    // 10) Restore the original dialog
-    await app.evaluate(() => { globalThis.__restoreSaveDialog?.(); });
   });
 
   test('tab isolation bug - F1 key and double-click should respect active tab', async () => {
@@ -1361,8 +1288,7 @@ test.describe('Hotkeys - save & load', () => {
       };
     }, hotkeyFile1);
     
-    const loadButton = page.locator('#hotkey-load-btn');
-    await loadButton.click();
+    await importHotkeyFile(app);
 
     // Step 3: Verify that these songs from test-environment.js are in the proper spots
     const activeTab1 = page.locator('#hotkeys_list_1');
@@ -1403,7 +1329,7 @@ test.describe('Hotkeys - save & load', () => {
       };
     }, hotkeyFile2);
     
-    await loadButton.click();
+    await importHotkeyFile(app);
 
     // Step 7: Verify that tab 3 is now titled "Outros"
     await expect(tab3).toHaveText('Outros', { timeout: 5000 });

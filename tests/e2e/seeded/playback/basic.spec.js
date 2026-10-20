@@ -11,6 +11,7 @@ import fs from 'fs';
 import path from 'node:path';
 import os from 'os';
 import { fileURLToPath } from 'node:url';
+import { importHotkeyFile } from '../../../utils/board-e2e.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -1066,8 +1067,7 @@ test.describe('Playback - basic', () => {
       };
     }, hotkeyFile);
     
-    const loadButton = page.locator('#hotkey-load-btn');
-    await loadButton.click();
+    await importHotkeyFile(app);
     
     // Step 3: Verify that songs show up in the hotkeys
     const activeTab = page.locator('#hotkeys_list_3');

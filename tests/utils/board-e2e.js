@@ -113,3 +113,15 @@ export async function quitApp(app) {
 export async function waitForBoardMenuReady(app) {
   await expect.poll(async () => (await boardMenuState(app)).enabled, { timeout: 20000 }).toBe(true);
 }
+
+/** Run a Board menu file import once the board session is ready. */
+async function importLegacyFile(app, label) {
+  await waitForBoardMenuReady(app);
+  await clickBoardMenu(app, label);
+}
+
+/** Board > Import Hotkey File… (the dialog is stubbed by the caller). */
+export const importHotkeyFile = (app) => importLegacyFile(app, 'Import Hotkey File…');
+
+/** Board > Import Holding Tank File… (the dialog is stubbed by the caller). */
+export const importHoldingTankFile = (app) => importLegacyFile(app, 'Import Holding Tank File…');

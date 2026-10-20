@@ -1,12 +1,18 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
+const showOpenDialog = vi.fn();
 vi.mock('electron', () => ({
-  default: { dialog: {}, app: { getPath: vi.fn() } }
+  default: { dialog: { showOpenDialog: (...args) => showOpenDialog(...args) }, app: { getPath: vi.fn() } }
 }));
 vi.mock('music-metadata', () => ({ parseFile: vi.fn() }));
 
 let parseHotkeyFileLines;
+let fileOperations;
 beforeAll(async () => {
+  fileOperations = (await import('../../../src/main/modules/file-operations.js')).default;
   ({ parseHotkeyFileLines } = await import('../../../src/main/modules/file-operations.js'));
 });
 
@@ -37,5 +43,28 @@ describe('hotkey file parsing', () => {
   it('rejects non-numeric song IDs', () => {
     const result = parseHotkeyFileLines(['f4::not-a-song']);
     expect(result.errors).toEqual(['Line 1: invalid song ID for f4']);
+  });
+});
+
+describe('holding tank file import', () => {
+  it('keeps only numeric lines', async () => {
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'hld-')), 'list.hld');
+    fs.writeFileSync(file, '12\n  34 \nabc\n\n5x\n-7\n78\n');
+    const send = vi.fn();
+    fileOperations.initializeFileOperations({
+      getMainWindow: () => ({ webContents: { send } }),
+      store: { get: () => os.tmpdir() }
+    });
+    showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [file] });
+
+    const result = await fileOperations.loadHoldingTankFile();
+
+    expect(result.song_ids).toEqual(['12', '34', '78']);
+    expect(send).toHaveBeenCalledWith('holding_tank_load', ['12', '34', '78']);
+  });
+
+  it('no longer exposes the save functions', () => {
+    expect(fileOperations.saveHotkeysFile).toBeUndefined();
+    expect(fileOperations.saveHoldingTankFile).toBeUndefined();
   });
 });

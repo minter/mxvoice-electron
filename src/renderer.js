@@ -156,7 +156,6 @@ let keyboardManager = null;
 // Data loading and initialization now handled by app-initialization module
 
 // File Operations Module - Functions extracted to src/renderer/modules/file-operations/
-// openHotkeyFile(), openHoldingTankFile(), saveHotkeyFile(), saveHoldingTankFile()
 // pickDirectory(), installUpdate() - All moved to file-operations module
 
 // Import bootstrap module for module loading
@@ -527,7 +526,7 @@ import { setHeaderLabels } from './renderer/modules/boards/header.js';
 
     // Legacy functions moved to modules - keeping only HTML-compatible functions
     // All other functions are now available through moduleRegistry
-    // Example: moduleRegistry.fileOperations.openHotkeyFile() instead of window.openHotkeyFile
+    // Example: moduleRegistry.fileOperations.pickDirectory() instead of window.pickDirectory
 
     // Initialize modules after loading
     try {

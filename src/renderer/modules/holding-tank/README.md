@@ -88,18 +88,6 @@ Clears all songs from the holding tank.
 
 **Returns:** Promise<{success: boolean}>
 
-### File Operations
-
-#### `openHoldingTankFile()`
-Opens a holding tank file for import.
-
-**Returns:** Promise<{success: boolean, error?: string}>
-
-#### `saveHoldingTankFile()`
-Saves the current holding tank to a file.
-
-**Returns:** Promise<{success: boolean, error?: string}>
-
 ### Mode Management
 
 #### `setHoldingTankMode(mode: string)`
@@ -191,24 +179,6 @@ holdingTank.setHoldingTankMode('playlist').then(result => {
 // Check current mode
 const currentMode = holdingTank.getHoldingTankMode();
 console.log('Current mode:', currentMode);
-```
-
-### File Operations
-
-```javascript
-// Save holding tank to file
-holdingTank.saveHoldingTankFile().then(result => {
-  if (result.success) {
-    console.log('Holding tank saved to file');
-  }
-});
-
-// Load holding tank from file
-holdingTank.openHoldingTankFile().then(result => {
-  if (result.success) {
-    console.log('Holding tank loaded from file');
-  }
-});
 ```
 
 ## Event Handlers

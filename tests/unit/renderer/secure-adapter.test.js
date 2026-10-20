@@ -315,25 +315,6 @@ describe('secureFileDialog', () => {
     expect(res.path).toBe('/home');
   });
 
-  it('openHotkeyFile uses secureElectronAPI.fileOperations', async () => {
-    setupSecureAPI('fileOperations', {
-      openHotkeyFile: async () => ({ success: true, data: [] }),
-    });
-
-    const res = await secureFileDialog.openHotkeyFile();
-    expect(res.success).toBe(true);
-  });
-
-  it('saveHotkeyFile passes hotkeyArray', async () => {
-    const arr = [{ key: 'F1', songId: 1 }];
-    setupSecureAPI('fileOperations', {
-      saveHotkeyFile: async (data) => ({ success: true }),
-    });
-
-    await secureFileDialog.saveHotkeyFile(arr);
-    expect(window.secureElectronAPI.fileOperations.saveHotkeyFile).toHaveBeenCalledWith(arr);
-  });
-
   it('returns error when no dialog API available', async () => {
     const res = await secureFileDialog.showFilePicker();
     expect(res.success).toBe(false);

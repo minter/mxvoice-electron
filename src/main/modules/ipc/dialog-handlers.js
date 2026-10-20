@@ -7,7 +7,6 @@ import electron from 'electron';
 const { ipcMain, dialog } = electron;
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
-import fileOperations from '../file-operations.js';
 
 export function register(deps) {
   const { debugLog, getMainWindow } = deps;
@@ -18,23 +17,6 @@ export function register(deps) {
       properties: ['openDirectory']
     });
     return path;
-  });
-
-  // File operations
-  ipcMain.handle(IPC.DIALOG.OPEN_HOTKEY_FILE, async () => {
-    return await fileOperations.loadHotkeysFile();
-  });
-
-  ipcMain.handle(IPC.DIALOG.SAVE_HOTKEY_FILE, async (event, hotkeyArray) => {
-    return await fileOperations.saveHotkeysFile(hotkeyArray);
-  });
-
-  ipcMain.handle(IPC.DIALOG.OPEN_HOLDING_TANK_FILE, async () => {
-    return await fileOperations.loadHoldingTankFile();
-  });
-
-  ipcMain.handle(IPC.DIALOG.SAVE_HOLDING_TANK_FILE, async (event, holdingTankArray) => {
-    return await fileOperations.saveHoldingTankFile(holdingTankArray);
   });
 
   ipcMain.handle(IPC.DIALOG.SHOW_FILE_PICKER, async (event, options = {}) => {

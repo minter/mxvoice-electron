@@ -57,7 +57,7 @@ src/main/
   - User-facing dialogs for opening/saving hotkey (`.mrv`) and holding-tank (`.hld`) files
   - Kicks bulk add / add single file flows in renderer via IPC
   - Migrates legacy preferences into `electron-store`
-  - Exports: `initializeFileOperations`, `loadHotkeysFile`, `saveHotkeysFile`, `loadHoldingTankFile`, `saveHoldingTankFile`, `addDirectoryDialog`, `addFileDialog`, `migrateOldPreferences`
+  - Exports: `initializeFileOperations`, `loadHotkeysFile`, `loadHoldingTankFile`, `addDirectoryDialog`, `addFileDialog`, `migrateOldPreferences`
 
 - `debug-log.js`
   - Main-process DebugLog with level control and preference-backed enablement via `electron-store`

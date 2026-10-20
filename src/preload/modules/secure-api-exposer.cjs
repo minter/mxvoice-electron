@@ -195,10 +195,6 @@ const secureElectronAPI = {
 
   // File operations - secure file management
   fileOperations: {
-    openHotkeyFile: () => ipcRenderer.invoke(IPC.DIALOG.OPEN_HOTKEY_FILE),
-    saveHotkeyFile: (data) => ipcRenderer.invoke(IPC.DIALOG.SAVE_HOTKEY_FILE, data),
-    openHoldingTankFile: () => ipcRenderer.invoke(IPC.DIALOG.OPEN_HOLDING_TANK_FILE),
-    saveHoldingTankFile: (data) => ipcRenderer.invoke(IPC.DIALOG.SAVE_HOLDING_TANK_FILE, data),
     // Pending update for restoring the quiet indicator after a renderer reload
     getPendingUpdate: () => ipcRenderer.invoke(IPC.APP.GET_PENDING_UPDATE),
     // Auto-update operations - Three-stage process

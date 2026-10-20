@@ -24,10 +24,6 @@ const IPC = deepFreeze({
   },
   DIALOG: {
     SHOW_DIRECTORY_PICKER: 'show-directory-picker',
-    OPEN_HOTKEY_FILE: 'open-hotkey-file',
-    SAVE_HOTKEY_FILE: 'save-hotkey-file',
-    OPEN_HOLDING_TANK_FILE: 'open-holding-tank-file',
-    SAVE_HOLDING_TANK_FILE: 'save-holding-tank-file',
     SHOW_FILE_PICKER: 'show-file-picker',
   },
   UI: {

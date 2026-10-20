@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'node:path';
 import os from 'os';
 import { fileURLToPath } from 'node:url';
+import { importHoldingTankFile } from '../../../utils/board-e2e.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,7 +78,7 @@ test.describe('Holding Tank - file operations', () => {
     }, hldPath);
 
     // Click the load holding tank button
-    await page.locator('#holding-tank-load-btn').click();
+    await importHoldingTankFile(app);
 
     // Wait for the holding_tank_load IPC to process (file I/O + DB lookup + DOM population)
     const tankItems = page.locator('#holding_tank_1 li[songid]');
@@ -94,66 +95,6 @@ test.describe('Holding Tank - file operations', () => {
 
     // Restore dialog
     await app.evaluate(() => { globalThis.__restoreTankOpenDialog?.(); });
-  });
-
-  test('save holding tank to .hld file writes correct format', async () => {
-    // First ensure we have items in the holding tank (from previous test or add some)
-    // Add songs to holding tank via drag-drop
-    await performEmptySearch(page);
-    await expect(page.locator('#search_results tbody tr')).not.toHaveCount(0, { timeout: 5000 });
-
-    // Drop a song into the holding tank
-    await page.evaluate(({ songId }) => {
-      const target = document.getElementById('holding_tank_1');
-      if (!target) return;
-      const dataTransfer = new DataTransfer();
-      dataTransfer.setData('text', songId);
-      target.dispatchEvent(new DragEvent('drop', {
-        bubbles: true, cancelable: true, dataTransfer,
-      }));
-    }, { songId: '1004' });
-    // Wait for the drop to be processed by checking the item appeared
-    await expect(page.locator('#holding_tank_1 li[songid="1004"]')).toBeAttached({ timeout: 5000 });
-
-    // Set up save dialog stub
-    const outputPath = path.join(tempDir, 'saved-tank.hld');
-    await app.evaluate(async ({ dialog }) => {
-      const original = dialog.showSaveDialog;
-      globalThis.__restoreTankSaveDialog = () => (dialog.showSaveDialog = original);
-    });
-    await app.evaluate(({ dialog }, filePath) => {
-      dialog.showSaveDialog = async () => ({
-        canceled: false,
-        filePath: filePath,
-      });
-    }, outputPath);
-
-    // Click the save holding tank button
-    await page.locator('#holding-tank-save-btn').click();
-
-    // Wait for file to be written by polling for its existence
-    await expect(async () => {
-      expect(fs.existsSync(outputPath)).toBe(true);
-    }).toPass({ timeout: 5000 });
-
-    // Verify the file was created
-    expect(fs.existsSync(outputPath)).toBe(true);
-
-    // Read and verify the file content
-    const content = fs.readFileSync(outputPath, 'utf-8');
-    console.log('Saved .hld content:', content);
-
-    // Should contain song IDs, one per line
-    const lines = content.split('\n').filter(l => l.trim());
-    expect(lines.length).toBeGreaterThan(0);
-
-    // Each line should be a numeric song ID
-    for (const line of lines) {
-      expect(/^\d+$/.test(line.trim())).toBe(true);
-    }
-
-    // Restore dialog
-    await app.evaluate(() => { globalThis.__restoreTankSaveDialog?.(); });
   });
 
   test('cancel load dialog leaves holding tank unchanged', async () => {
@@ -173,7 +114,7 @@ test.describe('Holding Tank - file operations', () => {
     });
 
     // Click load button
-    await page.locator('#holding-tank-load-btn').click();
+    await importHoldingTankFile(app);
 
     // Brief wait for the canceled dialog round-trip, then verify count is unchanged
     const countAfter = await page.locator('#holding_tank_1 li').count();
@@ -202,21 +143,15 @@ test.describe('Holding Tank - file operations', () => {
     }, hldPath);
 
     // Click load
-    await page.locator('#holding-tank-load-btn').click();
+    await importHoldingTankFile(app);
 
-    // The app should not crash — verify it's still responsive
-    await expect(page.locator('#holding-tank-column')).toBeVisible();
-
-    // Valid song IDs should still be loadable
-    const songIds = await page.evaluate(() => {
-      const items = document.querySelectorAll('#holding_tank_1 li[songid]');
-      return Array.from(items).map(li => li.getAttribute('songid'));
-    });
-
-    // At minimum, the valid IDs should be present (if the app validates them)
-    // or all IDs attempted to load (if it doesn't validate)
-    // Either way, the app should remain functional
-    console.log('Song IDs after invalid load:', songIds);
+    // Non-numeric lines are ignored and ids missing from the library are dropped
+    await expect(page.locator('#holding_tank_1 li[songid]')).toHaveCount(2, { timeout: 5000 });
+    const songIds = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('#holding_tank_1 li[songid]')).map(li => li.getAttribute('songid'))
+    );
+    expect(songIds).toEqual(['1001', '1005']);
+    await expect(page.locator('#file-drop-toast')).toHaveText("1 song in this file isn't in your library.");
 
     // Restore dialog
     await app.evaluate(() => { globalThis.__restoreTankInvalidDialog?.(); });
