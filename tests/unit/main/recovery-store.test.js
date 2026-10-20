@@ -81,6 +81,23 @@ describe('recovery store', () => {
     expect(fs.readdirSync(recoveryDir)).toEqual(['show.json']);
   });
 
+  it('clearHandoff makes a handed-off record an ordinary one, keeping savedAt and the layout', async () => {
+    expect(await store.clearHandoff('Show')).toBe(false);
+    expect(fs.existsSync(recoveryDir)).toBe(false);
+
+    await store.write('Show', { boardId: 'b1', layout: LAYOUT });
+    await store.markHandoff('Show', 'update');
+    clock += 5000;
+    expect(await store.clearHandoff('Show')).toBe(true);
+    const rec = await store.read('Show');
+    expect(rec).toMatchObject({ handoff: null, savedAt: 1700000000000, boardId: 'b1', layout: LAYOUT });
+
+    // A torn record is left alone
+    fs.writeFileSync(pathFor('Show'), '{ torn');
+    expect(await store.clearHandoff('Show')).toBe(false);
+    expect(fs.readFileSync(pathFor('Show'), 'utf8')).toBe('{ torn');
+  });
+
   it('markHandoff rejects unknown reasons', async () => {
     await store.write('Show', { boardId: 'b1', layout: LAYOUT });
     await expect(store.markHandoff('Show', 'bogus')).rejects.toThrow();

@@ -111,6 +111,15 @@ export function createRecoveryStore({
     return true;
   }
 
+  /** Make a handed-off record an ordinary one, keeping savedAt and the layout. */
+  async function clearHandoff(profileName) {
+    assertProfileName(profileName);
+    const record = await load(profileName, { quarantineBad: false });
+    if (!record) return false;
+    await writeJsonAtomic(getRecoveryPath(profileName), { ...record, handoff: null }, { fs });
+    return true;
+  }
+
   async function retire(profileName) {
     assertProfileName(profileName);
     await fs.promises.rm(getRecoveryPath(profileName), { force: true });
@@ -132,7 +141,7 @@ export function createRecoveryStore({
     );
   }
 
-  return { write, read, markHandoff, retire, clearAll };
+  return { write, read, markHandoff, clearHandoff, retire, clearAll };
 }
 
 export default { createRecoveryStore };

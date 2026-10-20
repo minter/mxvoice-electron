@@ -30,6 +30,16 @@ export async function relaunchApp(electron, userDataDir, { profile = 'Default Us
   return { app, page, fakeHome };
 }
 
+/**
+ * Wait until the page has finished opening its board: the restoration lock is
+ * held while the crash prompt is open, so once it is released no prompt can
+ * still be showing. Use before waitForAppReady, whose click would dismiss one.
+ * The predicate must stay synchronous.
+ */
+export async function waitForBoardSettled(page) {
+  await page.waitForFunction(() => window.isRestoringProfileState === false, null, { timeout: 20000 });
+}
+
 /** Kill the main process without any shutdown path, as a crash would. */
 export async function crashApp(app) {
   const child = app.process();

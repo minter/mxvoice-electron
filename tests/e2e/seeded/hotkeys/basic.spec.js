@@ -1,6 +1,6 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import { launchSeededApp, closeApp, clearModalBackdrop, waitForAppReady } from '../../../utils/seeded-launch.js';
-import { crashApp, relaunchApp } from '../../../utils/relaunch.js';
+import { crashApp, relaunchApp, waitForBoardSettled } from '../../../utils/relaunch.js';
 import { readRecovery, recoveryRecordPath } from '../../../utils/seed-boards.js';
 import {
   waitForAudible,
@@ -1647,8 +1647,10 @@ test.describe('Hotkeys - save & load', () => {
         await prompt.getByRole('button', { name: 'Restore show in progress' }).click();
         await expect(prompt).toHaveCount(0);
       }
-      await waitForAppReady(testPage, testApp);
+      // Checked before waitForAppReady, whose click would dismiss a prompt
+      await waitForBoardSettled(testPage);
       await expect(testPage.locator('.modal.show').filter({ hasText: 'Restore show?' })).toHaveCount(0);
+      await waitForAppReady(testPage, testApp);
     };
 
     try {

@@ -227,9 +227,10 @@ async function restoreBackup(backupId) {
       );
       
       // IMPORTANT:
-      // Prevent the close-time flush from saving the current in-memory state
+      // Prevent the close-time flush from saving the current in-memory layout
       // after the backup has been restored on disk but before the new window loads.
-      // Otherwise, the pre-restore models could overwrite the restored state.json.
+      // Otherwise, the pre-restore layout could land in a crash-recovery record
+      // and be offered over the restored boards.
       if (typeof window !== 'undefined') {
         window.isRestoringProfileState = true;
       }

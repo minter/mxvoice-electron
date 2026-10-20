@@ -38,6 +38,13 @@ function fakeRecoveryStore(clock) {
       records.set(profile, { ...record, handoff: reason });
       return true;
     }),
+    clearHandoff: vi.fn(async (profile) => {
+      calls.push(['clearHandoff', profile]);
+      const record = records.get(profile);
+      if (!record) return false;
+      records.set(profile, { ...record, handoff: null });
+      return true;
+    }),
     retire: vi.fn(async (profile) => {
       calls.push(['retire', profile]);
       records.delete(profile);
@@ -63,6 +70,7 @@ function setup({ doc = makeDoc(), loadError = null, profile = 'Alice' } = {}) {
     save: vi.fn(),
   };
   const rebuildMenu = vi.fn();
+  const debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
   const session = createBoardSession({
     boardStore,
     recoveryStore,
@@ -71,9 +79,9 @@ function setup({ doc = makeDoc(), loadError = null, profile = 'Alice' } = {}) {
     rebuildMenu,
     now: clock.now,
     newId: () => 'new-id',
-    debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    debugLog,
   });
-  return { session, boardStore, recoveryStore, rebuildMenu, clock, current, doc };
+  return { session, boardStore, recoveryStore, rebuildMenu, clock, current, doc, debugLog };
 }
 
 async function openReady(ctx) {
@@ -373,6 +381,74 @@ describe('board session', () => {
       expect(failing.session.state().status).toBe('failed');
       await expect(failing.session.startEmpty()).rejects.toThrow();
     }
+  });
+
+  it('a clean exit or switch before the board was ever ready keeps the record', async () => {
+    const record = { version: 1, boardId: 'board-1', savedAt: T0, handoff: null, layout: layoutWith(9) };
+    const states = {
+      // e.g. quit while the crash prompt is still open
+      loading: async (ctx) => { await ctx.session.open(); },
+      failed: async (ctx) => {
+        const opened = await ctx.session.open();
+        ctx.session.reportReady(opened.generation, false);
+      },
+      unreadable: async (ctx) => { await ctx.session.open(); },
+    };
+    for (const [state, reach] of Object.entries(states)) {
+      for (const reason of ['clean-exit', 'switch']) {
+        const ctx = setup(state === 'unreadable' ? { loadError: new BoardStoreError('unreadable') } : {});
+        ctx.recoveryStore.records.set('Alice', record);
+        await reach(ctx);
+        expect(ctx.session.state().status, state).toBe(state);
+        await ctx.session.end(reason);
+        expect(ctx.recoveryStore.retire, `${state} ${reason}`).not.toHaveBeenCalled();
+        expect(ctx.recoveryStore.records.get('Alice'), `${state} ${reason}`).toEqual(record);
+      }
+    }
+
+    // Other exits still retire it, and a library import still clears all
+    const deleted = setup();
+    deleted.recoveryStore.records.set('Alice', record);
+    await deleted.session.open();
+    await deleted.session.end('profile-deleted');
+    expect(deleted.recoveryStore.records.has('Alice')).toBe(false);
+    const imported = setup();
+    imported.recoveryStore.records.set('Alice', record);
+    await imported.session.open();
+    await imported.session.end('library-import');
+    expect(imported.recoveryStore.clearAll).toHaveBeenCalled();
+  });
+
+  it('restoring a handed-off record makes it an ordinary record, so a second crash asks', async () => {
+    for (const savedAt of [T0, T0 - 16 * MINUTE]) {
+      const ctx = setup();
+      ctx.recoveryStore.records.set('Alice', { version: 1, boardId: 'board-1', savedAt, handoff: 'update', layout: layoutWith(9) });
+      await ctx.session.open();
+      await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(9) });
+      expect(ctx.recoveryStore.records.get('Alice')).toEqual({
+        version: 1, boardId: 'board-1', savedAt, handoff: null, layout: layoutWith(9)
+      });
+
+      // The next open (after another crash) reports it without a handoff
+      const reopened = await ctx.session.open();
+      expect(reopened.recovery).toEqual({ savedAt, handoff: null, boardId: 'board-1' });
+    }
+
+    // An ordinary record is not rewritten on restore
+    const plain = setup();
+    plain.recoveryStore.records.set('Alice', { version: 1, boardId: 'board-1', savedAt: T0, handoff: null, layout: layoutWith(9) });
+    await plain.session.open();
+    await plain.session.resolveRecovery('restore');
+    expect(plain.recoveryStore.clearHandoff).not.toHaveBeenCalled();
+  });
+
+  it('a failed report after a failed open is accepted without a stale warning', async () => {
+    const ctx = setup({ loadError: new BoardStoreError('version') });
+    const opened = await ctx.session.open();
+    expect(opened).toMatchObject({ failed: true });
+    ctx.session.reportReady(opened.generation, false);
+    expect(ctx.session.state().status).toBe('failed');
+    expect(ctx.debugLog.info).not.toHaveBeenCalledWith('Ignoring stale board ready report', expect.anything());
   });
 
   it('restore onto a deleted boardId lands on the active board', async () => {

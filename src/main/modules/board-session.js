@@ -25,7 +25,8 @@ export const HANDOFF_MAX_AGE_MS = 15 * 60 * 1000;
 
 const FAILED_CODES = new Set(['io', 'version', 'unregistered', 'shape']);
 const END_REASONS = new Set(['clean-exit', 'switch', 'backup-restore', 'library-import', 'profile-deleted']);
-// Exits that keep the record once it has been handed off to the next open
+// Exits that keep the record once it has been handed off to the next open,
+// or when the board never became ready
 const KEPT_AFTER_HANDOFF = new Set(['clean-exit', 'switch']);
 
 /** Stable comparison of two layouts, ignoring the selected tabs. */
@@ -171,13 +172,19 @@ export function createBoardSession({
     pendingRecovery = null;
     const saved = normalizeLayout(activeBoard().layout);
     if (!record) return { layout: saved };
-    // Restored onto the active board, whatever boardId the record names
-    if (choice === 'restore') return { layout: normalizeLayout(record.layout) };
+    // Restored onto the active board, whatever boardId the record names.
+    // A handoff is spent once restored: another crash before any edit must ask.
+    if (choice === 'restore') {
+      if (record.handoff) await queued(() => recoveryStore.clearHandoff(p));
+      return { layout: normalizeLayout(record.layout) };
+    }
     await queued(() => recoveryStore.retire(p));
     return { layout: saved };
   }
 
   function reportReady(reportedGeneration, ok) {
+    // A failed open() already set 'failed'; the page's failed report confirms it
+    if (!ok && reportedGeneration === generation && status === 'failed') return;
     if (reportedGeneration !== generation || status !== 'loading') {
       debugLog?.info?.('Ignoring stale board ready report', { ...logCtx('reportReady'), reportedGeneration, generation, status });
       return;
@@ -213,7 +220,11 @@ export function createBoardSession({
     if (!profile || ended) return;
     const p = profile;
     const g = generation;
-    const kept = handedOff && KEPT_AFTER_HANDOFF.has(reason);
+    // A board that never became ready (crash prompt still open, failed or
+    // unreadable open) never replaced the record, so quitting or switching
+    // must leave it for the next open
+    const neverReady = status !== 'ready';
+    const kept = (handedOff || neverReady) && KEPT_AFTER_HANDOFF.has(reason);
     const handoffDone = pendingHandoff;
     ended = true;
     fenced = true;

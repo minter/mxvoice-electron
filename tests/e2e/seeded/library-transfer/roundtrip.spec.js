@@ -8,6 +8,7 @@ import {
   closeApp,
   waitForAppReady
 } from '../../../utils/seeded-launch.js';
+import { waitForBoardSettled } from '../../../utils/relaunch.js';
 import { boardsDocument, hotkeyLayout, readRecovery, seedBoards } from '../../../utils/seed-boards.js';
 
 test.describe('Library transfer - real archive round trip', () => {
@@ -35,6 +36,10 @@ test.describe('Library transfer - real archive round trip', () => {
 
     page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
+    // The import cleared every recovery record: no crash prompt. Checked
+    // before waitForAppReady, whose click would dismiss one.
+    await waitForBoardSettled(page);
+    await expect(page.locator('.modal.show').filter({ hasText: 'Restore show?' })).toHaveCount(0);
     await waitForAppReady(page, app);
   }
 
@@ -165,7 +170,6 @@ test.describe('Library transfer - real archive round trip', () => {
 
     await expect(page.locator('#hotkeys_list_1 #f1_hotkey')).toHaveAttribute('songid', '1004');
     await expect(page.locator('#hotkeys_list_1 #f2_hotkey')).not.toHaveAttribute('songid', /.+/);
-    await expect(page.locator('.modal.show').filter({ hasText: 'Restore show?' })).toHaveCount(0);
     expect(readRecovery(userDataDir, 'Default User')).toBeNull();
 
     const importedConfig = JSON.parse(fs.readFileSync(path.join(userDataDir, 'config.json'), 'utf8'));

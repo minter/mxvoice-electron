@@ -2,7 +2,7 @@ import { _electron as electron, test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 import { launchSeededApp, waitForAppReady } from '../../../utils/seeded-launch.js';
-import { crashApp, relaunchApp } from '../../../utils/relaunch.js';
+import { crashApp, relaunchApp, waitForBoardSettled } from '../../../utils/relaunch.js';
 import {
   boardsDocument,
   hotkeyLayout,
@@ -105,9 +105,29 @@ test.describe('Boards - session lifecycle', () => {
     expect(fs.existsSync(recoveryRecordPath(userDataDir, 'Default User'))).toBe(false);
 
     await relaunch();
-    await waitForAppReady(page, app);
+    await waitForBoardSettled(page);
     await expect(restorePrompt(page)).toHaveCount(0);
+    await waitForAppReady(page, app);
     await expect(f1SongId(page)).toHaveAttribute('songid', SAVED_SONG);
+  });
+
+  test('quitting while the prompt is open keeps the night for the next launch', async () => {
+    await launch({ beforeLaunch: seedSavedBoard() });
+    await assignF1(page, LIVE_SONG);
+    await waitForRecoveredF1(userDataDir, 'Default User', LIVE_SONG);
+
+    await crashApp(app);
+    await relaunch();
+    await expect(restorePrompt(page)).toBeVisible({ timeout: 20000 });
+    await quit(app);
+    expect(readRecovery(userDataDir, 'Default User')?.layout.hotkeys[0].hotkeys.f1).toBe(LIVE_SONG);
+
+    await relaunch();
+    const prompt = restorePrompt(page);
+    await expect(prompt).toBeVisible({ timeout: 20000 });
+    await prompt.getByRole('button', { name: 'Restore show in progress' }).click();
+    await waitForAppReady(page, app);
+    await expect(f1SongId(page)).toHaveAttribute('songid', LIVE_SONG);
   });
 
   test('a kill keeps the night behind the prompt', async () => {
