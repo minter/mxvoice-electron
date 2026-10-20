@@ -100,6 +100,25 @@ describe('atomic-json-file', () => {
     expect((await readJsonWithFallback(file)).status).toBe('unreadable');
   });
 
+  it('keepPrevious never replaces a good .prev with a corrupt main file', async () => {
+    nodeFs.writeFileSync(`${file}.prev`, JSON.stringify({ good: true }));
+    nodeFs.writeFileSync(file, '{"a": ');
+    await writeJsonAtomic(file, { a: 2 }, { keepPrevious: true });
+    expect(JSON.parse(nodeFs.readFileSync(`${file}.prev`, 'utf8'))).toEqual({ good: true });
+    expect(JSON.parse(nodeFs.readFileSync(file, 'utf8'))).toEqual({ a: 2 });
+  });
+
+  it('keepPrevious leaves .prev alone when the main file is missing', async () => {
+    nodeFs.writeFileSync(`${file}.prev`, JSON.stringify({ good: true }));
+    await writeJsonAtomic(file, { a: 2 }, { keepPrevious: true });
+    expect(JSON.parse(nodeFs.readFileSync(`${file}.prev`, 'utf8'))).toEqual({ good: true });
+  });
+
+  it('returns recovered from .prev when the main file is missing', async () => {
+    nodeFs.writeFileSync(`${file}.prev`, JSON.stringify({ a: 1 }));
+    expect(await readJsonWithFallback(file)).toEqual({ status: 'recovered', value: { a: 1 } });
+  });
+
   it('reports missing when neither exists', async () => {
     expect(await readJsonWithFallback(file)).toEqual({ status: 'missing' });
   });

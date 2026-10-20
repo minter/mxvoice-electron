@@ -63,10 +63,11 @@ export async function writeJsonAtomic(
     }
 
     if (keepPrevious) {
-      try {
+      // Only a main file that parses may become the previous generation, so a
+      // corrupt main never replaces a good .prev.
+      const current = await readParsed(fs, filePath);
+      if ('value' in current) {
         await fs.promises.copyFile(filePath, `${filePath}.prev`);
-      } catch (error) {
-        if (error?.code !== 'ENOENT') throw error;
       }
     }
 
