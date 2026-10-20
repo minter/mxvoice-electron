@@ -38,6 +38,7 @@ let appStartTime;
 let rendererCommands;
 let windowStateManager;
 let appLifecycle;
+let boardSession;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -50,6 +51,7 @@ function initializeAppSetup(dependencies) {
   autoBackupTimer = dependencies.autoBackupTimer;
   analytics = dependencies.analytics;
   appStartTime = dependencies.appStartTime;
+  boardSession = dependencies.boardSession;
   rendererCommands = createRendererCommandDispatcher({
     getWindow: () => getMainWindow(),
     debugLog
@@ -63,7 +65,8 @@ function initializeAppSetup(dependencies) {
     getCurrentProfile,
     log,
     isQuitting: () => appLifecycle?.isQuitting() || false,
-    confirmClose: (window) => confirmQuitOnWindowClose(window)
+    confirmClose: (window) => confirmQuitOnWindowClose(window),
+    boardSession
   });
   appLifecycle = createAppLifecycle({
     app,
@@ -125,8 +128,9 @@ function setupWindowStateSaving() {
   return windowStateManager?.setupWindowStateSaving();
 }
 
-function prepareMainWindowForClose() {
-  return windowStateManager?.prepareMainWindowForClose();
+/** @param {{ exit?: 'clean'|'switch'|'handoff' }} [options] - see window-state-manager */
+function prepareMainWindowForClose(options) {
+  return windowStateManager?.prepareMainWindowForClose(options);
 }
 
 function saveWindowState(window) {
@@ -403,13 +407,14 @@ function manageCategories() {
 }
 
 /**
- * Installing an update: save state now. quitAndInstall() then closes the
+ * Installing an update: save state now, and hand the board session off so
+ * the relaunch restores the show in progress. quitAndInstall() then closes the
  * window without the close-time flush; the "Quit?" question is skipped from
  * Electron's before-quit-for-update (allowUnconfirmedClose), which fires only
- * when the install really quits.
+ * when the install really quits. The quit's own clean exit keeps the record.
  */
 function prepareForUpdateInstall() {
-  return windowStateManager?.prepareMainWindowForClose();
+  return windowStateManager?.prepareMainWindowForClose({ exit: 'handoff' });
 }
 
 /** Ignore window-state saves caused by the next `ms` of programmatic resizing */

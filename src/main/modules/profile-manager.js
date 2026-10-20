@@ -414,27 +414,30 @@ function updateProfileLastUsed(profileName) {
 }
 
 /**
+ * Why deleteProfile would refuse this profile, checked without deleting, so
+ * a caller can end the profile's session only for a delete that will happen.
+ * @param {string} profileName
+ * @returns {string|null} The refusal, or null when it can be deleted
+ */
+function getDeleteProfileBlocker(profileName) {
+  // Prevent deletion of Default User
+  if (profileName === 'Default User') return 'Cannot delete Default User profile';
+  // Check if profile exists
+  if (!profileExists(profileName)) return 'Profile does not exist';
+  // Get available profiles to ensure we don't delete the last one
+  if (getAvailableProfiles().length <= 1) return 'Cannot delete the last profile';
+  return null;
+}
+
+/**
  * Delete a profile
  * @param {string} profileName - Profile name to delete
  * @returns {Object} Result { success: boolean, error?: string }
  */
 function deleteProfile(profileName) {
   try {
-    // Prevent deletion of Default User
-    if (profileName === 'Default User') {
-      return { success: false, error: 'Cannot delete Default User profile' };
-    }
-    
-    // Check if profile exists
-    if (!profileExists(profileName)) {
-      return { success: false, error: 'Profile does not exist' };
-    }
-    
-    // Get available profiles to ensure we don't delete the last one
-    const profiles = getAvailableProfiles();
-    if (profiles.length <= 1) {
-      return { success: false, error: 'Cannot delete the last profile' };
-    }
+    const blocker = getDeleteProfileBlocker(profileName);
+    if (blocker) return { success: false, error: blocker };
     
     // Load registry
     const registry = loadProfileRegistry();
@@ -972,6 +975,7 @@ export {
   updateProfileLastUsed,
   duplicateProfile,
   deleteProfile,
+  getDeleteProfileBlocker,
   loadProfilePreferences,
   saveProfilePreferences,
   getDefaultPreferences,

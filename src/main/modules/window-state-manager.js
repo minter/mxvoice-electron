@@ -13,6 +13,8 @@ function createWindowStateManager({
   // Closing the window quits the app, so a close that isn't part of an
   // explicit quit (Cmd-Q, File > Quit) is confirmed first: (window) => Promise<boolean>
   confirmClose = async () => true,
+  // Ends or hands off the live board session once state is saved; optional
+  boardSession = null,
   // A hung page must not block closing or quitting: give up on its flush
   flushTimeoutMs = 5000
 }) {
@@ -197,10 +199,14 @@ function setupWindowStateSaving() {
 }
 
 /**
- * Flush renderer state and persist the main window state before it closes.
+ * Flush renderer state and persist the main window state before it closes,
+ * then settle the board session's crash-recovery record for this kind of exit:
+ * 'clean' (close, quit, session end) and 'switch' retire it; 'handoff'
+ * (update install) keeps it for the next launch to restore.
  * Reuses an in-flight preparation so close and quit events cannot overlap saves.
+ * @param {{ exit?: 'clean'|'switch'|'handoff' }} [options]
  */
-function prepareMainWindowForClose() {
+function prepareMainWindowForClose({ exit = 'clean' } = {}) {
   if (closePreparationPromise) return closePreparationPromise;
 
   const preparation = (async () => {
@@ -209,26 +215,10 @@ function prepareMainWindowForClose() {
       windowStateSaveTimeout = null;
     }
 
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-
-    if (!mainWindow.webContents.isDestroyed()) {
-      try {
-        await withTimeout(
-          mainWindow.webContents.executeJavaScript('window.profileStateAPI?.flushProfileState?.()'),
-          flushTimeoutMs,
-          `Page did not flush its state within ${flushTimeoutMs}ms`
-        );
-      } catch (error) {
-        if (!(error instanceof TimeoutError)) throw error;
-        debugLog?.warn('Page did not flush its state in time; closing without it', {
-          module: 'app-setup',
-          function: 'prepareMainWindowForClose',
-          timeoutMs: flushTimeoutMs
-        });
-      }
-    }
-    await saveWindowState(mainWindow);
+    await flushAndSaveWindow();
+    if (!boardSession) return;
+    if (exit === 'handoff') await boardSession.handoff('update');
+    else await boardSession.end(exit === 'switch' ? 'switch' : 'clean-exit');
   })();
   closePreparationPromise = preparation;
   const clearPreparation = () => {
@@ -237,6 +227,30 @@ function prepareMainWindowForClose() {
   preparation.then(clearPreparation, clearPreparation);
 
   return preparation;
+}
+
+// The window may already be gone; the session still has to end
+async function flushAndSaveWindow() {
+  const mainWindow = getMainWindow();
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  if (!mainWindow.webContents.isDestroyed()) {
+    try {
+      await withTimeout(
+        mainWindow.webContents.executeJavaScript('window.profileStateAPI?.flushProfileState?.()'),
+        flushTimeoutMs,
+        `Page did not flush its state within ${flushTimeoutMs}ms`
+      );
+    } catch (error) {
+      if (!(error instanceof TimeoutError)) throw error;
+      debugLog?.warn('Page did not flush its state in time; closing without it', {
+        module: 'app-setup',
+        function: 'prepareMainWindowForClose',
+        timeoutMs: flushTimeoutMs
+      });
+    }
+  }
+  await saveWindowState(mainWindow);
 }
 
 /**

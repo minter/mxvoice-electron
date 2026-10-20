@@ -295,6 +295,67 @@ describe('importLibrary', () => {
     fs.rmSync(importUserData, { recursive: true, force: true });
   });
 
+  it('library import clears all recovery records', async () => {
+    const archivePath = path.join(testUserData, 'for-import.mxvlib');
+    await exportLibrary(archivePath);
+
+    const importUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-import-'));
+    fakeApp.getPath.mockReturnValue(importUserData);
+    const importConfigPath = path.join(importUserData, 'config.json');
+    fs.writeFileSync(importConfigPath, '{}');
+    // An existing profile that the import replaces
+    createTestFile(path.join(importUserData, 'profiles', 'Old Show', 'preferences.json'), '{}');
+
+    // The fence and clear must happen before any profile file moves
+    const profilesAtEnd = [];
+    const boardSession = {
+      end: vi.fn(async () => {
+        profilesAtEnd.push(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show')));
+      })
+    };
+    initializeLibraryTransferManager({
+      debugLog: mockDebugLog,
+      getDb: () => ({ close: vi.fn() }),
+      store: { get: vi.fn(() => undefined), path: importConfigPath },
+      boardSession
+    });
+
+    const result = await importLibrary(archivePath);
+
+    expect(result.success).toBe(true);
+    expect(boardSession.end).toHaveBeenCalledOnce();
+    expect(boardSession.end).toHaveBeenCalledWith('library-import');
+    expect(profilesAtEnd).toEqual([true]);
+    expect(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show'))).toBe(false);
+
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  });
+
+  it('finishes the import when clearing recovery records fails', async () => {
+    const archivePath = path.join(testUserData, 'for-import.mxvlib');
+    await exportLibrary(archivePath);
+    const importUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-import-'));
+    fakeApp.getPath.mockReturnValue(importUserData);
+    const importConfigPath = path.join(importUserData, 'config.json');
+    fs.writeFileSync(importConfigPath, '{}');
+    initializeLibraryTransferManager({
+      debugLog: mockDebugLog,
+      getDb: () => ({ close: vi.fn() }),
+      store: { get: vi.fn(() => undefined), path: importConfigPath },
+      boardSession: { end: vi.fn(async () => { throw new Error('recovery dir locked'); }) }
+    });
+
+    const result = await importLibrary(archivePath);
+
+    expect(result.success).toBe(true);
+    expect(fs.existsSync(path.join(importUserData, 'profiles', 'Default User', 'state.json'))).toBe(true);
+    expect(mockDebugLog.warn).toHaveBeenCalledWith(
+      expect.stringContaining('crash-recovery'),
+      expect.objectContaining({ error: 'recovery dir locked' })
+    );
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  });
+
   it('rejects an invalid archive', async () => {
     const badArchive = path.join(testUserData, 'bad.mxvlib');
     fs.writeFileSync(badArchive, 'not a zip');

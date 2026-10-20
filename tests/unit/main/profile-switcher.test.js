@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createProfileSwitcher, applyWindowState } from '../../../src/main/modules/profile-switcher.js';
+import { createWindowStateManager } from '../../../src/main/modules/window-state-manager.js';
 
 function setup({ current = 'Default User', existing = ['Default User', 'Saturday Show'], preferences = {}, windowState = null } = {}) {
   const calls = [];
@@ -137,6 +138,52 @@ describe('profile switcher', () => {
     noWindow.deps.getMainWindow = () => null;
     const switcherWithoutWindow = createProfileSwitcher(noWindow.deps);
     await expect(switcherWithoutWindow.switchProfile('Saturday Show')).resolves.toMatchObject({ success: false });
+  });
+});
+
+describe('profile switch and the board session', () => {
+  // The app's wiring: prepareForSwitch is the window close preparation as a switch
+  function sessionSetup() {
+    const harness = setup();
+    const boardSession = {
+      end: vi.fn(async (reason) => { harness.calls.push(`end:${reason}:${harness.getProfile()}`); }),
+      handoff: vi.fn(async () => {})
+    };
+    const win = harness.deps.getMainWindow();
+    win.getBounds = () => ({ x: 0, y: 0, width: 800, height: 600 });
+    win.isMaximized = () => false;
+    win.isFullScreen = () => false;
+    win.webContents.isDestroyed = () => false;
+    const manager = createWindowStateManager({
+      getMainWindow: () => win,
+      store: { get: vi.fn(), set: vi.fn() },
+      screen: { getDisplayNearestPoint: () => ({ id: 1 }) },
+      getCurrentProfile: () => null,
+      isQuitting: () => false,
+      boardSession
+    });
+    const switcher = createProfileSwitcher({
+      ...harness.deps,
+      prepareForSwitch: () => manager.prepareMainWindowForClose({ exit: 'switch' })
+    });
+    return { ...harness, switcher, boardSession };
+  }
+
+  it('switch retires the old profile recovery before setCurrentProfile', async () => {
+    const { switcher, calls, boardSession } = sessionSetup();
+    await switcher.switchProfile('Saturday Show');
+    expect(boardSession.end).toHaveBeenCalledOnce();
+    expect(calls.indexOf('end:switch:Default User')).toBeGreaterThan(-1);
+    expect(calls.indexOf('end:switch:Default User')).toBeLessThan(calls.indexOf('current=Saturday Show'));
+    // The page's debounced saves are still locked out after the fence
+    expect(calls.indexOf('js:window.isRestoringProfileState = true')).toBeGreaterThan(calls.indexOf('end:switch:Default User'));
+  });
+
+  it('switch to the same profile retires nothing', async () => {
+    const { switcher, boardSession } = sessionSetup();
+    await switcher.switchProfile('Default User');
+    expect(boardSession.end).not.toHaveBeenCalled();
+    expect(boardSession.handoff).not.toHaveBeenCalled();
   });
 });
 

@@ -11,6 +11,7 @@ import electron from 'electron';
 const { BrowserWindow, ipcMain, app } = electron;
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { deleteProfileWithRecovery } from './profile-delete.js';
 
 // Get __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
@@ -20,6 +21,9 @@ let debugLog = null;
 let profileManager = null;
 let launcherWindow = null;
 let mainAppLauncher = null;
+let boardSession = null;
+let recoveryStore = null;
+let getCurrentProfile = () => null;
 let profileSelected = false;
 
 // The window stays hidden until the page has sized it to its profile list,
@@ -41,6 +45,9 @@ function initializeLauncherWindow(dependencies) {
   debugLog = dependencies.debugLog;
   profileManager = dependencies.profileManager;
   mainAppLauncher = dependencies.mainAppLauncher;
+  boardSession = dependencies.boardSession || null;
+  recoveryStore = dependencies.recoveryStore || null;
+  getCurrentProfile = dependencies.getCurrentProfile || (() => null);
   
   debugLog?.info('Launcher window module initialized', { 
     module: 'launcher-window',
@@ -203,7 +210,9 @@ function registerLauncherHandlers() {
         name 
       });
       
-      const result = await profileManager.deleteProfile(name);
+      const result = await deleteProfileWithRecovery(name, {
+        profileManager, boardSession, recoveryStore, getCurrentProfile, debugLog
+      });
       
       if (result.success) {
         debugLog?.info('Launcher: Profile deleted', { 

@@ -72,6 +72,8 @@ import { createProfileSwitcher, applyWindowState } from './modules/profile-switc
 import { createBoardStore } from './modules/board-store.js';
 import { createRecoveryStore } from './modules/recovery-store.js';
 import { createBoardSession } from './modules/board-session.js';
+import { createRendererGoneHandler } from './modules/renderer-crash-handler.js';
+import { createUpdateInstaller } from './modules/update-install.js';
 import { getProfileBoardsPath, getProfileStatePath, getRecoveryDirectory, getRecoveryPath } from './modules/profile-paths.js';
 import { quietlyAnnouncedVersion, recordAvailableUpdate, recordDownloadedUpdate } from './modules/pending-update.js';
 
@@ -709,20 +711,15 @@ let profileSwitcher = null;
 // The live board session; created once at app ready
 let boardSession = null;
 
-/**
- * Install a downloaded update. quitAndInstall() closes every window before
- * before-quit fires, so save state first. The "Quit Mx. Voice?" confirmation
- * (which would cancel the install) is skipped from before-quit-for-update,
- * not here: if this install doesn't quit, closes must still ask and save.
- */
-async function installUpdateNow() {
-  try {
-    await appSetup.prepareForUpdateInstall();
-  } catch (error) {
-    debugLog.warn('Could not save state before installing the update', { function: 'installUpdateNow', error: error.message });
-  }
-  autoUpdater.quitAndInstall();
-}
+// Offers to reload the main window's page after it dies; created at app ready
+let rendererGoneHandler = null;
+
+// Install a downloaded update: save state and hand the board session off first
+const installUpdateNow = createUpdateInstaller({
+  prepareForUpdateInstall: () => appSetup.prepareForUpdateInstall(),
+  getAutoUpdater: () => autoUpdater,
+  debugLog
+});
 
 /**
  * Initialize main-process services once per process, before any window exists.
@@ -735,7 +732,7 @@ function initializeMainProcessServices() {
     getMainWindow: () => mainWindow,
     getCurrentProfile,
     setCurrentProfile: (name) => { currentProfile = name; },
-    prepareForSwitch: () => appSetup.prepareMainWindowForClose(),
+    prepareForSwitch: () => appSetup.prepareMainWindowForClose({ exit: 'switch' }),
     profileManager,
     autoBackupTimer,
     store,
@@ -767,6 +764,13 @@ function initializeMainProcessServices() {
     rebuildMenu: () => appSetup.createApplicationMenu(),
     debugLog
   });
+  rendererGoneHandler = createRendererGoneHandler({
+    boardSession,
+    dialog,
+    getMainWindow: () => mainWindow,
+    app,
+    debugLog
+  });
 
   const dependencies = {
     getMainWindow: () => mainWindow,
@@ -786,6 +790,7 @@ function initializeMainProcessServices() {
     appStartTime,
     profileSwitcher,
     boardSession,
+    recoveryStore,
     installUpdate: installUpdateNow
   };
 
@@ -800,12 +805,16 @@ function initializeMainProcessServices() {
     debugLog,
     getDb: () => db,
     setDb: (next) => { db = next; },
-    store
+    store,
+    boardSession
   });
 
   launcherWindow.initializeLauncherWindow({
     debugLog,
     profileManager,
+    boardSession,
+    recoveryStore,
+    getCurrentProfile,
     mainAppLauncher: async (profileName) => {
       currentProfile = profileName;
 
@@ -871,6 +880,7 @@ const createWindow = async () => {
     });
 
     mainWindow = appSetup.createWindow(windowOptions);
+    mainWindow.webContents.on('render-process-gone', rendererGoneHandler);
 
     // Track library stats now that DB is available
     trackLibraryStats();

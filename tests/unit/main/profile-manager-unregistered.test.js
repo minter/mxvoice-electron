@@ -42,6 +42,14 @@ describe('unregistered profiles are never recreated on disk', () => {
     expect(profiles.profileExists('Tonight')).toBe(false);
   });
 
+  it('names why a delete would be refused, and deleteProfile refuses the same', () => {
+    expect(profiles.createProfile('Tonight', '')).toEqual({ success: true });
+    expect(profiles.getDeleteProfileBlocker('Default User')).toBe('Cannot delete Default User profile');
+    expect(profiles.getDeleteProfileBlocker('Nobody')).toBe('Profile does not exist');
+    expect(profiles.getDeleteProfileBlocker('Tonight')).toBeNull();
+    expect(profiles.deleteProfile('Nobody')).toEqual({ success: false, error: 'Profile does not exist' });
+  });
+
   it('a name that was never registered is not created either', async () => {
     await profiles.loadProfilePreferences('Nobody');
     await profiles.saveProfilePreferences('Nobody', {});

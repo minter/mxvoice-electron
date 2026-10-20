@@ -11,7 +11,7 @@ import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { getCurrentProfile, debugLog } = deps;
+  const { getCurrentProfile, debugLog, boardSession } = deps;
 
   // Profile Backup: Create backup
   ipcMain.handle(IPC.PROFILE_BACKUP.CREATE, async (_event) => {
@@ -122,6 +122,20 @@ export function register(deps) {
         profileName: currentProfile,
         backupId
       });
+
+      // Fence and retire the crash-recovery record before any file is copied:
+      // a late write would otherwise recreate it, and the restored profile
+      // would open with a crash prompt showing the pre-restore layout
+      try {
+        await boardSession?.end('backup-restore');
+      } catch (error) {
+        debugLog?.error('Could not retire crash recovery before restoring a backup', {
+          module: 'ipc-handlers',
+          function: 'profile:restoreBackup',
+          profileName: currentProfile,
+          error: error.message
+        });
+      }
 
       const result = await profileBackupManager.restoreBackup(currentProfile, backupId);
 

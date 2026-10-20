@@ -15,6 +15,8 @@ const { runBackgroundCheck } = await import('../../../src/main/modules/update-sc
 const { describeUpdateError } = await import('../../../src/main/modules/update-analytics.js');
 
 const { register } = await import('../../../src/main/modules/ipc/app-update-handlers.js');
+const { createUpdateInstaller } = await import('../../../src/main/modules/update-install.js');
+const { createWindowStateManager } = await import('../../../src/main/modules/window-state-manager.js');
 
 function setup(autoUpdater = null, extra = {}) {
   const updateState = { downloaded: true, userApprovedInstall: true };
@@ -225,5 +227,53 @@ describe('app update IPC handlers', () => {
     expect(installUpdate).toHaveBeenCalledTimes(2);
     expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled();
     vi.useRealTimers();
+  });
+
+  describe('installing the update now', () => {
+    function installHarness() {
+      const calls = [];
+      const window = {
+        isDestroyed: () => false,
+        webContents: { isDestroyed: () => false, executeJavaScript: vi.fn(async () => { calls.push('flush'); }) },
+        getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+        isMaximized: () => false,
+        isFullScreen: () => false
+      };
+      const boardSession = {
+        end: vi.fn(async (reason) => { calls.push(`end:${reason}`); }),
+        handoff: vi.fn(async (reason) => { calls.push(`handoff:${reason}`); })
+      };
+      const manager = createWindowStateManager({
+        getMainWindow: () => window,
+        store: { get: vi.fn(), set: vi.fn() },
+        screen: { getDisplayNearestPoint: () => ({ id: 1 }) },
+        getCurrentProfile: () => null,
+        isQuitting: () => false,
+        boardSession
+      });
+      const autoUpdater = { quitAndInstall: vi.fn(() => calls.push('quitAndInstall')) };
+      const debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+      const installUpdate = createUpdateInstaller({
+        prepareForUpdateInstall: () => manager.prepareMainWindowForClose({ exit: 'handoff' }),
+        getAutoUpdater: () => autoUpdater,
+        debugLog
+      });
+      return { calls, installUpdate, autoUpdater, boardSession, debugLog };
+    }
+
+    it('hands the board session off before quitAndInstall, and never retires it', async () => {
+      const { calls, installUpdate, boardSession } = installHarness();
+      await installUpdate();
+      expect(calls).toEqual(['flush', 'handoff:update', 'quitAndInstall']);
+      expect(boardSession.end).not.toHaveBeenCalled();
+    });
+
+    it('still installs when saving state fails', async () => {
+      const { installUpdate, autoUpdater, boardSession, debugLog } = installHarness();
+      boardSession.handoff.mockRejectedValueOnce(new Error('disk full'));
+      await installUpdate();
+      expect(autoUpdater.quitAndInstall).toHaveBeenCalledOnce();
+      expect(debugLog.warn).toHaveBeenCalled();
+    });
   });
 });

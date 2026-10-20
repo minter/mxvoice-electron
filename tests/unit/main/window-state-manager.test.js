@@ -222,6 +222,77 @@ describe('window state manager', () => {
     }
   });
 
+  describe('ending the board session', () => {
+    function sessionHarness({ answer = true } = {}) {
+      const calls = [];
+      const handlers = {};
+      const window = {
+        id: 1,
+        isDestroyed: () => false,
+        on: (event, handler) => { handlers[event] = handler; },
+        close: vi.fn(),
+        webContents: {
+          isDestroyed: () => false,
+          executeJavaScript: vi.fn(async () => { calls.push('flush'); return { success: true }; })
+        },
+        getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+        isMaximized: () => false,
+        isFullScreen: () => false
+      };
+      const boardSession = {
+        end: vi.fn(async (reason) => { calls.push(`end:${reason}`); }),
+        handoff: vi.fn(async (reason) => { calls.push(`handoff:${reason}`); })
+      };
+      const store = { get: vi.fn(), set: vi.fn((key) => { if (key === 'window_state') calls.push('saveWindowState'); }) };
+      const confirmClose = vi.fn(async () => answer);
+      const { manager } = createHarness({ getMainWindow: () => window, store, boardSession, confirmClose });
+      manager.setupWindowStateSaving();
+      return { manager, handlers, calls, boardSession, confirmClose };
+    }
+
+    it('confirmed close flushes, then retires recovery', async () => {
+      const { handlers, calls } = sessionHarness({ answer: true });
+      await handlers.close({ preventDefault: vi.fn() });
+      expect(calls).toEqual(['flush', 'saveWindowState', 'end:clean-exit']);
+    });
+
+    it('cancelled close retires nothing', async () => {
+      const { handlers, boardSession } = sessionHarness({ answer: false });
+      await handlers.close({ preventDefault: vi.fn() });
+      expect(boardSession.end).not.toHaveBeenCalled();
+      expect(boardSession.handoff).not.toHaveBeenCalled();
+    });
+
+    it('update-install preparation marks handoff and does not retire', async () => {
+      const { manager, calls, boardSession } = sessionHarness();
+      await manager.prepareMainWindowForClose({ exit: 'handoff' });
+      expect(calls).toEqual(['flush', 'saveWindowState', 'handoff:update']);
+      expect(boardSession.end).not.toHaveBeenCalled();
+    });
+
+    it('a switch ends the session as a switch', async () => {
+      const { manager, calls } = sessionHarness();
+      await manager.prepareMainWindowForClose({ exit: 'switch' });
+      expect(calls).toEqual(['flush', 'saveWindowState', 'end:switch']);
+    });
+
+    it('quitting and Windows session end are clean exits', async () => {
+      const { manager, handlers, boardSession } = sessionHarness();
+      await manager.prepareMainWindowForClose();
+      expect(boardSession.end).toHaveBeenLastCalledWith('clean-exit');
+      handlers['session-end']();
+      await vi.waitFor(() => expect(boardSession.end).toHaveBeenCalledTimes(2));
+      expect(boardSession.end).toHaveBeenLastCalledWith('clean-exit');
+    });
+
+    it('ends the session even when the window is already gone', async () => {
+      const boardSession = { end: vi.fn(async () => {}), handoff: vi.fn() };
+      const { manager } = createHarness({ getMainWindow: () => null, boardSession });
+      await manager.prepareMainWindowForClose();
+      expect(boardSession.end).toHaveBeenCalledWith('clean-exit');
+    });
+  });
+
   it('Windows session end closes without asking and saves', async () => {
     const handlers = {};
     const window = {

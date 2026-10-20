@@ -31,6 +31,7 @@ let debugLog = null;
 let getDb = () => null;
 let setDb = () => {};
 let store = null;
+let boardSession = null;
 
 async function pathExists(p) {
   try { await fs.promises.access(p); return true; } catch { return false; }
@@ -59,6 +60,7 @@ function initializeLibraryTransferManager(dependencies) {
   getDb = dependencies.getDb;
   setDb = dependencies.setDb || (() => {});
   store = dependencies.store;
+  boardSession = dependencies.boardSession || null;
 
   debugLog?.info('Library Transfer Manager initialized', {
     module: 'library-transfer-manager',
@@ -640,6 +642,18 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       if (await pathExists(extractedProfiles)) {
         progressCallback({ percent: 78, message: 'Importing profiles...' });
         const targetProfilesDir = path.join(userData, 'profiles');
+
+        // Every profile is replaced, so every crash-recovery record is stale.
+        // End the session first: its fence stops a late write from recreating
+        // one before any profile file moves. The database is already
+        // replaced, so a failed clear must not stop the import halfway.
+        try {
+          await boardSession?.end('library-import');
+        } catch (endErr) {
+          debugLog?.warn('Could not clear crash-recovery records before importing profiles', {
+            ...logCtx, error: endErr.message
+          });
+        }
 
         // Remove existing profiles directory and replace
         if (await pathExists(targetProfilesDir)) {

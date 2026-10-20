@@ -8,11 +8,12 @@ const { ipcMain } = electron;
 import path from 'path';
 import { promises as fsPromises } from 'fs';
 import * as profileManager from '../profile-manager.js';
+import { deleteProfileWithRecovery } from '../profile-delete.js';
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { getCurrentProfile, getProfileDirectory, store, debugLog, profileSwitcher } = deps;
+  const { getCurrentProfile, getProfileDirectory, store, debugLog, profileSwitcher, boardSession, recoveryStore } = deps;
 
   // Profile handlers
   ipcMain.handle(IPC.PROFILE.GET_CURRENT, async () => {
@@ -383,8 +384,10 @@ export function register(deps) {
         profileName
       });
 
-      // Delete the profile using the imported profile manager
-      const result = await profileManager.deleteProfile(profileName);
+      // Delete the profile and its crash-recovery record
+      const result = await deleteProfileWithRecovery(profileName, {
+        profileManager, boardSession, recoveryStore, getCurrentProfile, debugLog
+      });
 
       if (result.success) {
         debugLog?.info('Profile deleted successfully', {
