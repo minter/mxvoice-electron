@@ -39,15 +39,15 @@ afterEach(() => {
 
 describe('recovery store', () => {
   it('lives outside the profile directory', async () => {
-    await store.write('Show', { boardId: 'b1', layout: LAYOUT });
+    await store.write('Show', { showId: 'b1', layout: LAYOUT });
     expect(pathFor('Show').startsWith(profilesDir())).toBe(false);
     expect(fs.existsSync(pathFor('Show'))).toBe(true);
   });
 
-  it('round-trips layout, boardId and savedAt, with no .prev and no stray files', async () => {
-    await store.write('Show', { boardId: 'b1', layout: LAYOUT });
+  it('round-trips layout, showId and savedAt, with no .prev and no stray files', async () => {
+    await store.write('Show', { showId: 'b1', layout: LAYOUT });
     expect(await store.read('Show')).toEqual({
-      version: 1, boardId: 'b1', savedAt: clock, handoff: null, layout: LAYOUT
+      version: 1, showId: 'b1', savedAt: clock, handoff: null, layout: LAYOUT
     });
     expect(fs.readdirSync(recoveryDir)).toEqual(['show.json']);
   });
@@ -62,7 +62,7 @@ describe('recovery store', () => {
   });
 
   it('retire removes an existing record', async () => {
-    await store.write('Show', { boardId: 'b1', layout: LAYOUT });
+    await store.write('Show', { showId: 'b1', layout: LAYOUT });
     await store.retire('Show');
     expect(await store.read('Show')).toBeNull();
   });
@@ -71,7 +71,7 @@ describe('recovery store', () => {
     expect(await store.markHandoff('Show', 'update')).toBe(false);
     expect(fs.existsSync(recoveryDir)).toBe(false);
 
-    await store.write('Show', { boardId: 'b1', layout: LAYOUT });
+    await store.write('Show', { showId: 'b1', layout: LAYOUT });
     clock += 5000;
     expect(await store.markHandoff('Show', 'renderer-crash')).toBe(true);
     const rec = await store.read('Show');
@@ -86,12 +86,12 @@ describe('recovery store', () => {
     expect(await store.clearHandoff('Show')).toBe(false);
     expect(fs.existsSync(recoveryDir)).toBe(false);
 
-    await store.write('Show', { boardId: 'b1', layout: LAYOUT });
+    await store.write('Show', { showId: 'b1', layout: LAYOUT });
     await store.markHandoff('Show', 'update');
     clock += 5000;
     expect(await store.clearHandoff('Show')).toBe(true);
     const rec = await store.read('Show');
-    expect(rec).toMatchObject({ handoff: null, savedAt: 1700000000000, boardId: 'b1', layout: LAYOUT });
+    expect(rec).toMatchObject({ handoff: null, savedAt: 1700000000000, showId: 'b1', layout: LAYOUT });
     expect(rec).not.toHaveProperty('handoffAt');
 
     // A torn record is left alone
@@ -101,7 +101,7 @@ describe('recovery store', () => {
   });
 
   it('markHandoff rejects unknown reasons', async () => {
-    await store.write('Show', { boardId: 'b1', layout: LAYOUT });
+    await store.write('Show', { showId: 'b1', layout: LAYOUT });
     await expect(store.markHandoff('Show', 'bogus')).rejects.toThrow();
     await expect(store.markHandoff('Show', undefined)).rejects.toThrow();
   });
@@ -150,8 +150,8 @@ describe('recovery store', () => {
   });
 
   it('clearAll removes every record but leaves other files', async () => {
-    await store.write('A', { boardId: 'a', layout: LAYOUT });
-    await store.write('B', { boardId: 'b', layout: LAYOUT });
+    await store.write('A', { showId: 'a', layout: LAYOUT });
+    await store.write('B', { showId: 'b', layout: LAYOUT });
     fs.writeFileSync(path.join(recoveryDir, 'notes.txt'), 'keep');
     await store.clearAll();
     expect(fs.readdirSync(recoveryDir)).toEqual(['notes.txt']);
@@ -163,7 +163,7 @@ describe('recovery store', () => {
   });
 
   it.each(['', '   ', null, undefined, 42])('rejects invalid profile name %j', async (name) => {
-    await expect(store.write(name, { boardId: 'b', layout: LAYOUT })).rejects.toThrow();
+    await expect(store.write(name, { showId: 'b', layout: LAYOUT })).rejects.toThrow();
     await expect(store.read(name)).rejects.toThrow();
     await expect(store.markHandoff(name, 'update')).rejects.toThrow();
     await expect(store.retire(name)).rejects.toThrow();

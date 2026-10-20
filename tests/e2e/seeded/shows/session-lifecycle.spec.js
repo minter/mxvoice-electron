@@ -2,22 +2,22 @@ import { _electron as electron, test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 import { launchSeededApp, waitForAppReady } from '../../../utils/seeded-launch.js';
-import { crashApp, relaunchApp, waitForBoardSettled } from '../../../utils/relaunch.js';
+import { crashApp, relaunchApp, waitForShowSettled } from '../../../utils/relaunch.js';
 import {
-  boardsDocument,
+  showsDocument,
   hotkeyLayout,
-  readBoards,
+  readShows,
   readRecovery,
   recoveryRecordPath,
-  seedBoards
-} from '../../../utils/seed-boards.js';
+  seedShows
+} from '../../../utils/seed-shows.js';
 
 // Seeded songs: 1001 Got The Time, 1002 The Wheel, 1003, 1004 We Are Family, 1005 Eat It.
 const SAVED_SONG = '1002';
 const LIVE_SONG = '1001';
 
-const seedSavedBoard = (profile = 'Default User', hotkeys = { f1: SAVED_SONG }) => (userDataDir) => {
-  seedBoards(userDataDir, profile, boardsDocument(hotkeyLayout(hotkeys)));
+const seedSavedShow = (profile = 'Default User', hotkeys = { f1: SAVED_SONG }) => (userDataDir) => {
+  seedShows(userDataDir, profile, showsDocument(hotkeyLayout(hotkeys)));
 };
 
 const f1SongId = (page) => page.locator('#hotkeys_list_1 #f1_hotkey');
@@ -47,7 +47,7 @@ async function quit(app) {
 
 // The predicate must be synchronous: waitForFunction treats a returned
 // Promise as truthy
-async function waitForBoardReady(page, profile) {
+async function waitForShowReady(page, profile) {
   await page.waitForFunction(
     () => window.isRestoringProfileState === false && window.__e2eInitialSearchSettled === true,
     null,
@@ -63,14 +63,14 @@ async function switchProfile(page, profile) {
   const reloaded = page.waitForEvent('load');
   await page.evaluate((name) => { void window.secureElectronAPI.profile.switchToProfile(name); }, profile);
   await reloaded;
-  await waitForBoardReady(page, profile);
+  await waitForShowReady(page, profile);
 }
 
 function restorePrompt(page) {
   return page.locator('.modal.show').filter({ hasText: 'Restore show?' });
 }
 
-test.describe('Boards - session lifecycle', () => {
+test.describe('Shows - session lifecycle', () => {
   let app;
   let page;
   let userDataDir;
@@ -78,7 +78,7 @@ test.describe('Boards - session lifecycle', () => {
   const homes = [];
 
   async function launch(options) {
-    ({ app, page, userDataDir, suiteRoot } = await launchSeededApp(electron, 'boards-session', options));
+    ({ app, page, userDataDir, suiteRoot } = await launchSeededApp(electron, 'shows-session', options));
     await waitForAppReady(page, app);
   }
 
@@ -96,7 +96,7 @@ test.describe('Boards - session lifecycle', () => {
   });
 
   test('a clean quit discards the night', async () => {
-    await launch({ beforeLaunch: seedSavedBoard() });
+    await launch({ beforeLaunch: seedSavedShow() });
     await expect(f1SongId(page)).toHaveAttribute('songid', SAVED_SONG);
     await assignF1(page, LIVE_SONG);
     await waitForRecoveredF1(userDataDir, 'Default User', LIVE_SONG);
@@ -105,14 +105,14 @@ test.describe('Boards - session lifecycle', () => {
     expect(fs.existsSync(recoveryRecordPath(userDataDir, 'Default User'))).toBe(false);
 
     await relaunch();
-    await waitForBoardSettled(page);
+    await waitForShowSettled(page);
     await expect(restorePrompt(page)).toHaveCount(0);
     await waitForAppReady(page, app);
     await expect(f1SongId(page)).toHaveAttribute('songid', SAVED_SONG);
   });
 
   test('quitting while the prompt is open keeps the night for the next launch', async () => {
-    await launch({ beforeLaunch: seedSavedBoard() });
+    await launch({ beforeLaunch: seedSavedShow() });
     await assignF1(page, LIVE_SONG);
     await waitForRecoveredF1(userDataDir, 'Default User', LIVE_SONG);
 
@@ -131,7 +131,7 @@ test.describe('Boards - session lifecycle', () => {
   });
 
   test('a kill keeps the night behind the prompt', async () => {
-    await launch({ beforeLaunch: seedSavedBoard() });
+    await launch({ beforeLaunch: seedSavedShow() });
     await assignF1(page, LIVE_SONG);
     await waitForRecoveredF1(userDataDir, 'Default User', LIVE_SONG);
 
@@ -141,19 +141,19 @@ test.describe('Boards - session lifecycle', () => {
     const prompt = restorePrompt(page);
     await expect(prompt).toBeVisible({ timeout: 20000 });
     await expect(prompt).toContainText("Mx. Voice didn't close normally. Restore the show in progress from");
-    await expect(prompt.getByRole('button', { name: 'Open saved board' })).toBeFocused();
+    await expect(prompt.getByRole('button', { name: 'Open saved show' })).toBeFocused();
     await prompt.getByRole('button', { name: 'Restore show in progress' }).click();
     await expect(prompt).toHaveCount(0);
 
     await waitForAppReady(page, app);
     await expect(f1SongId(page)).toHaveAttribute('songid', LIVE_SONG);
-    // The saved board is untouched; the restored layout is still recoverable
-    expect(readBoards(userDataDir, 'Default User').boards[0].layout.hotkeys[0].hotkeys.f1).toBe(SAVED_SONG);
+    // The saved show is untouched; the restored layout is still recoverable
+    expect(readShows(userDataDir, 'Default User').shows[0].layout.hotkeys[0].hotkeys.f1).toBe(SAVED_SONG);
     expect(readRecovery(userDataDir, 'Default User')?.layout.hotkeys[0].hotkeys.f1).toBe(LIVE_SONG);
   });
 
   test('a renderer crash then Reload restores the live layout without a prompt', async () => {
-    await launch({ beforeLaunch: seedSavedBoard() });
+    await launch({ beforeLaunch: seedSavedShow() });
     await assignF1(page, LIVE_SONG);
     await waitForRecoveredF1(userDataDir, 'Default User', LIVE_SONG);
 
@@ -178,8 +178,8 @@ test.describe('Boards - session lifecycle', () => {
     expect(readRecovery(userDataDir, 'Default User')?.handoff).toBeNull();
   });
 
-  test('declining the prompt opens the saved board', async () => {
-    await launch({ beforeLaunch: seedSavedBoard() });
+  test('declining the prompt opens the saved show', async () => {
+    await launch({ beforeLaunch: seedSavedShow() });
     await assignF1(page, LIVE_SONG);
     await waitForRecoveredF1(userDataDir, 'Default User', LIVE_SONG);
 
@@ -188,7 +188,7 @@ test.describe('Boards - session lifecycle', () => {
 
     const prompt = restorePrompt(page);
     await expect(prompt).toBeVisible({ timeout: 20000 });
-    await prompt.getByRole('button', { name: 'Open saved board' }).click();
+    await prompt.getByRole('button', { name: 'Open saved show' }).click();
     await expect(prompt).toHaveCount(0);
 
     await waitForAppReady(page, app);
@@ -204,14 +204,14 @@ test.describe('Boards - session lifecycle', () => {
 
     await crashApp(app);
     await relaunch('Second Show');
-    await waitForBoardReady(page, 'Second Show');
+    await waitForShowReady(page, 'Second Show');
     await expect(restorePrompt(page)).toHaveCount(0);
     await expect(f1SongId(page)).not.toHaveAttribute('songid', /.+/);
     // The crashed profile's record is kept for its own next open
     expect(readRecovery(userDataDir, 'Default User')?.layout.hotkeys[0].hotkeys.f1).toBe(LIVE_SONG);
   });
 
-  test('upgrade: an existing state.json becomes a board named Board; state.json unchanged', async () => {
+  test('upgrade: an existing state.json becomes a show named Show; state.json unchanged', async () => {
     const stateJson = JSON.stringify({
       version: '1.0.0',
       timestamp: 1700000000000,
@@ -230,10 +230,10 @@ test.describe('Boards - session lifecycle', () => {
     await expect(f1SongId(page)).toHaveAttribute('songid', '1003');
     await expect(page.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('Legacy Keys');
     await expect(page.locator('#holding_tank_1 .list-group-item[songid="1004"]')).toHaveCount(1);
-    const doc = readBoards(userDataDir, 'Default User');
-    expect(doc.boards).toHaveLength(1);
-    expect(doc.boards[0].name).toBe('Board');
-    await expect(page.locator('#board-name')).toHaveText('Board');
+    const doc = readShows(userDataDir, 'Default User');
+    expect(doc.shows).toHaveLength(1);
+    expect(doc.shows[0].name).toBe('Show');
+    await expect(page.locator('#show-name')).toHaveText('Show');
 
     // Live edits and a quit never write state.json
     await assignF1(page, LIVE_SONG);
@@ -258,8 +258,8 @@ test.describe('Boards - session lifecycle', () => {
     expect(readRecovery(userDataDir, 'Default User')?.layout.hotkeys[0].hotkeys.f1).toBe(LIVE_SONG);
   });
 
-  test('switch to another profile and back loads the saved board', async () => {
-    await launch({ beforeLaunch: seedSavedBoard() });
+  test('switch to another profile and back loads the saved show', async () => {
+    await launch({ beforeLaunch: seedSavedShow() });
     await page.evaluate(() => window.secureElectronAPI.profile.createProfile('Second Show', ''));
     await assignF1(page, LIVE_SONG);
     await waitForRecoveredF1(userDataDir, 'Default User', LIVE_SONG);
@@ -283,18 +283,18 @@ test.describe('Boards - session lifecycle', () => {
     const reloaded = page.waitForEvent('load');
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('menu:logout'));
     await reloaded;
-    await waitForBoardReady(page, 'Default User');
+    await waitForShowReady(page, 'Default User');
 
     expect(fs.existsSync(recoveryRecordPath(userDataDir, 'Show Night'))).toBe(false);
-    expect(readBoards(userDataDir, 'Show Night').boards[0].layout.hotkeys[0].hotkeys).toEqual({});
+    expect(readShows(userDataDir, 'Show Night').shows[0].layout.hotkeys[0].hotkeys).toEqual({});
     await switchProfile(page, 'Show Night');
     await expect(f1SongId(page)).not.toHaveAttribute('songid', /.+/);
   });
 
-  test('Duplicate Profile copies the saved boards, not the live layout', async () => {
+  test('Duplicate Profile copies the saved shows, not the live layout', async () => {
     await launch();
     await page.evaluate(() => window.secureElectronAPI.profile.createProfile('Source Show', ''));
-    seedSavedBoard('Source Show')(userDataDir);
+    seedSavedShow('Source Show')(userDataDir);
     await switchProfile(page, 'Source Show');
     await expect(f1SongId(page)).toHaveAttribute('songid', SAVED_SONG);
     await assignF1(page, LIVE_SONG);
@@ -307,10 +307,10 @@ test.describe('Boards - session lifecycle', () => {
     const reloaded = page.waitForEvent('load');
     await modal.locator('#duplicateProfileBtn').click();
     await reloaded;
-    await waitForBoardReady(page, 'Copy Show');
+    await waitForShowReady(page, 'Copy Show');
 
     await expect(f1SongId(page)).toHaveAttribute('songid', SAVED_SONG);
-    expect(readBoards(userDataDir, 'Copy Show').boards[0].layout.hotkeys[0].hotkeys.f1).toBe(SAVED_SONG);
-    expect(readBoards(userDataDir, 'Source Show').boards[0].layout.hotkeys[0].hotkeys.f1).toBe(SAVED_SONG);
+    expect(readShows(userDataDir, 'Copy Show').shows[0].layout.hotkeys[0].hotkeys.f1).toBe(SAVED_SONG);
+    expect(readShows(userDataDir, 'Source Show').shows[0].layout.hotkeys[0].hotkeys.f1).toBe(SAVED_SONG);
   });
 });

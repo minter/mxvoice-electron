@@ -49,11 +49,11 @@ describe('customConfirm', () => {
   it('customConfirm with defaultAction cancel resolves false on Return', async () => {
     const answer = customConfirm('Restore?', 'Restore show?', {
       confirmLabel: 'Restore show in progress',
-      cancelLabel: 'Open saved board',
+      cancelLabel: 'Open saved show',
       defaultAction: 'cancel'
     });
     expect(modal.innerHTML).toContain('Restore show in progress');
-    expect(modal.innerHTML).toContain('Open saved board');
+    expect(modal.innerHTML).toContain('Open saved show');
     modal.dispatch('shown.bs.modal');
     expect(document.activeElement).toBe(modal.querySelector('.cancel-btn'));
 
@@ -63,9 +63,9 @@ describe('customConfirm', () => {
   });
 
   it('customConfirm shows <3 Improv literally', async () => {
-    const answer = customConfirm('Open <3 Improv?', '<b>Boards</b>');
+    const answer = customConfirm('Open <3 Improv?', '<b>Shows</b>');
     expect(modal.innerHTML).toContain('Open &lt;3 Improv?');
-    expect(modal.innerHTML).toContain('&lt;b&gt;Boards&lt;/b&gt;');
+    expect(modal.innerHTML).toContain('&lt;b&gt;Shows&lt;/b&gt;');
     expect(modal.innerHTML).not.toContain('<3 Improv');
     modal.querySelector('.confirm-btn').click();
     await expect(answer).resolves.toBe(true);

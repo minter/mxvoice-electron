@@ -1,7 +1,7 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import { launchSeededApp, closeApp, clearModalBackdrop, waitForAppReady } from '../../../utils/seeded-launch.js';
-import { crashApp, relaunchApp, waitForBoardSettled } from '../../../utils/relaunch.js';
-import { readRecovery, recoveryRecordPath } from '../../../utils/seed-boards.js';
+import { crashApp, relaunchApp, waitForShowSettled } from '../../../utils/relaunch.js';
+import { readRecovery, recoveryRecordPath } from '../../../utils/seed-shows.js';
 import {
   waitForAudible,
   waitForSilence,
@@ -10,7 +10,7 @@ import {
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'fs';
-import { importHotkeyFile } from '../../../utils/board-e2e.js';
+import { importHotkeyFile } from '../../../utils/show-e2e.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -1551,7 +1551,7 @@ test.describe('Hotkeys - save & load', () => {
     await expect(restoredF3.locator('.song')).toHaveText('');
   });
 
-  // Boards (Task 9): a relaunch opens the saved board, so live hotkeys only
+  // Shows (Task 9): a relaunch opens the saved show, so live hotkeys only
   // survive through the crash-recovery record. This test now goes through it.
   test('hotkey deletion survives a crash restore', async () => {
     // This test performs multiple app restarts, so it needs more time
@@ -1574,7 +1574,7 @@ test.describe('Hotkeys - save & load', () => {
         await expect(prompt).toHaveCount(0);
       }
       // Checked before waitForAppReady, whose click would dismiss a prompt
-      await waitForBoardSettled(testPage);
+      await waitForShowSettled(testPage);
       await expect(testPage.locator('.modal.show').filter({ hasText: 'Restore show?' })).toHaveCount(0);
       await waitForAppReady(testPage, testApp);
     };
@@ -1622,7 +1622,7 @@ test.describe('Hotkeys - save & load', () => {
         await testPage.keyboard.press('Delete');
         await expect(slot(key)).toHaveText('');
       }
-      // Back to the saved (empty) board, so the recovery record is retired
+      // Back to the saved (empty) show, so the recovery record is retired
       await expect.poll(() => fs.existsSync(recoveryRecordPath(userDataDir, 'Default User')), {
         timeout: 10000
       }).toBe(false);

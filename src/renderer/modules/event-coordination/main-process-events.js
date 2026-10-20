@@ -1,5 +1,5 @@
 import { showDropToast } from '../utils/toast-utils.js';
-import { TOAST_MS, droppedSongsFileMessage, IMPORT_NOT_READY_MESSAGE, NO_SONGS_MESSAGE } from '../boards/messages.js';
+import { TOAST_MS, droppedSongsFileMessage, IMPORT_NOT_READY_MESSAGE, NO_SONGS_MESSAGE } from '../shows/messages.js';
 
 function callFirstAvailable(candidates, args, warn) {
   const handler = candidates.find((candidate) => typeof candidate === 'function');
@@ -24,10 +24,10 @@ function setupMainProcessEventBridge({
     if (typeof events[eventName] === 'function') events[eventName](handler);
   };
 
-  // Legacy file imports only touch a board that has finished loading
-  const boardIsReady = async () => {
+  // Legacy file imports only touch a show that has finished loading
+  const showIsReady = async () => {
     try {
-      const state = await electronAPI?.boards?.getState?.();
+      const state = await electronAPI?.shows?.getState?.();
       return state?.success === true && state.data?.status === 'ready';
     } catch (_error) {
       return false;
@@ -49,7 +49,7 @@ function setupMainProcessEventBridge({
   };
 
   const runImport = async (kind, load, missingWarning) => {
-    if (!(await boardIsReady())) {
+    if (!(await showIsReady())) {
       toast(IMPORT_NOT_READY_MESSAGE, TOAST_MS);
       return;
     }

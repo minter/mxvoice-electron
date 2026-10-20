@@ -67,26 +67,26 @@ describe('profile backup manager orchestration', () => {
     });
   });
 
-  it('listBackups reports board names from the backup', async () => {
-    const boardsFile = path.join(profileDirectory, 'boards.json');
-    const doc = { version: 1, activeBoardId: 'a', boards: [
-      { id: 'a', name: 'Board', layout: {} }, { id: 'b', name: 'Comedy Sports', layout: {} }
+  it('listBackups reports show names from the backup', async () => {
+    const showsFile = path.join(profileDirectory, 'shows.json');
+    const doc = { version: 1, activeShowId: 'a', shows: [
+      { id: 'a', name: 'Show', layout: {} }, { id: 'b', name: 'Comedy Sports', layout: {} }
     ] };
-    await fs.promises.writeFile(boardsFile, JSON.stringify(doc));
+    await fs.promises.writeFile(showsFile, JSON.stringify(doc));
     const created = await manager.createBackup(profileName, { mode: 'manual' });
     const listed = await manager.listBackups(profileName);
-    expect(listed.backups.find((b) => b.id === created.backupId).boards).toEqual(['Board', 'Comedy Sports']);
+    expect(listed.backups.find((b) => b.id === created.backupId).shows).toEqual(['Show', 'Comedy Sports']);
 
-    await fs.promises.writeFile(path.join(manager.getBackupDirectory(profileName), created.backupId, 'boards.json'), '{nope');
+    await fs.promises.writeFile(path.join(manager.getBackupDirectory(profileName), created.backupId, 'shows.json'), '{nope');
     const corrupt = await manager.listBackups(profileName);
-    expect(corrupt.backups.find((b) => b.id === created.backupId).boards).toBeNull();
-    await fs.promises.rm(boardsFile);
+    expect(corrupt.backups.find((b) => b.id === created.backupId).shows).toBeNull();
+    await fs.promises.rm(showsFile);
   });
 
-  it('listBackups reports null boards for a pre-boards backup', async () => {
+  it('listBackups reports null shows for a pre-shows backup', async () => {
     const created = await manager.createBackup(profileName, { mode: 'manual' });
     const listed = await manager.listBackups(profileName);
-    expect(listed.backups.find((b) => b.id === created.backupId).boards).toBeNull();
+    expect(listed.backups.find((b) => b.id === created.backupId).shows).toBeNull();
   });
 
   it('skips change-aware backup creation when disabled', async () => {

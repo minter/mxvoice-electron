@@ -310,7 +310,7 @@ describe('importLibrary', () => {
     // file is replaced
     const profilesAtEnd = [];
     const dbAtEnd = [];
-    const boardSession = {
+    const showSession = {
       end: vi.fn(async () => {
         profilesAtEnd.push(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show')));
         dbAtEnd.push(fs.existsSync(path.join(importUserData, 'mxvoice.db')));
@@ -320,14 +320,14 @@ describe('importLibrary', () => {
       debugLog: mockDebugLog,
       getDb: () => ({ close: vi.fn() }),
       store: { get: vi.fn(() => undefined), path: importConfigPath },
-      boardSession
+      showSession
     });
 
     const result = await importLibrary(archivePath);
 
     expect(result.success).toBe(true);
-    expect(boardSession.end).toHaveBeenCalledOnce();
-    expect(boardSession.end).toHaveBeenCalledWith('library-import');
+    expect(showSession.end).toHaveBeenCalledOnce();
+    expect(showSession.end).toHaveBeenCalledWith('library-import');
     expect(profilesAtEnd).toEqual([true]);
     expect(dbAtEnd).toEqual([false]);
     expect(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show'))).toBe(false);
@@ -352,7 +352,7 @@ describe('importLibrary', () => {
     const importConfigPath = path.join(importUserData, 'config.json');
     fs.writeFileSync(importConfigPath, '{}');
     const dbAtClear = [];
-    const boardSession = { end: vi.fn(async () => {}) };
+    const showSession = { end: vi.fn(async () => {}) };
     const recoveryStore = {
       clearAll: vi.fn(async () => {
         dbAtClear.push(fs.existsSync(path.join(importUserData, 'mxvoice.db')));
@@ -362,7 +362,7 @@ describe('importLibrary', () => {
       debugLog: mockDebugLog,
       getDb: () => ({ close: vi.fn() }),
       store: { get: vi.fn(() => undefined), path: importConfigPath },
-      boardSession,
+      showSession,
       recoveryStore
     });
 
@@ -371,7 +371,7 @@ describe('importLibrary', () => {
     expect(result.success).toBe(true);
     expect(fs.existsSync(path.join(importUserData, 'profiles'))).toBe(false);
     expect(fs.existsSync(path.join(importUserData, 'mxvoice.db'))).toBe(true);
-    expect(boardSession.end).toHaveBeenCalledWith('library-import');
+    expect(showSession.end).toHaveBeenCalledWith('library-import');
     expect(dbAtClear).toEqual([false]);
     fs.rmSync(importUserData, { recursive: true, force: true });
   });
@@ -384,8 +384,8 @@ describe('importLibrary', () => {
       await session.end('clean-exit');
     }],
   ])('clears every recovery record even when the session was %s', async (_label, prepare) => {
-    const { createBoardSession } = await import('../../../src/main/modules/board-session.js');
-    const { createDocument, normalizeLayout } = await import('../../../src/main/modules/board-document.js');
+    const { createShowSession } = await import('../../../src/main/modules/show-session.js');
+    const { createDocument, normalizeLayout } = await import('../../../src/main/modules/show-document.js');
     const archivePath = path.join(testUserData, 'for-import.mxvlib');
     await exportLibrary(archivePath);
     const importUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-import-'));
@@ -402,19 +402,19 @@ describe('importLibrary', () => {
         profilesAtClear.push(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show')));
       }),
     };
-    const doc = createDocument(normalizeLayout(null), { now: Date.now(), newId: () => 'board-1' });
-    const boardSession = createBoardSession({
-      boardStore: { load: vi.fn(async () => ({ doc, source: 'boards' })) },
+    const doc = createDocument(normalizeLayout(null), { now: Date.now(), newId: () => 'show-1' });
+    const showSession = createShowSession({
+      showStore: { load: vi.fn(async () => ({ doc, source: 'shows' })) },
       recoveryStore,
       getCurrentProfile: () => 'Old Show',
     });
-    await prepare(boardSession);
+    await prepare(showSession);
 
     initializeLibraryTransferManager({
       debugLog: mockDebugLog,
       getDb: () => ({ close: vi.fn() }),
       store: { get: vi.fn(() => undefined), path: importConfigPath },
-      boardSession,
+      showSession,
       recoveryStore,
     });
 
@@ -438,7 +438,7 @@ describe('importLibrary', () => {
       debugLog: mockDebugLog,
       getDb: () => ({ close: vi.fn() }),
       store: { get: vi.fn(() => undefined), path: importConfigPath },
-      boardSession: { end: vi.fn(async () => { throw new Error('session busy'); }) },
+      showSession: { end: vi.fn(async () => { throw new Error('session busy'); }) },
       recoveryStore: { clearAll: vi.fn(async () => { throw new Error('recovery dir locked'); }) }
     });
 

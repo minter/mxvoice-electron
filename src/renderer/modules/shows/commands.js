@@ -1,9 +1,9 @@
 /**
- * Board Commands
+ * Show Commands
  *
- * Runs each Board menu command main posts as `menu:board-command`: asks
- * first where the command needs it, calls the board session, and applies
- * the new layout when the active board changed.
+ * Runs each Shows menu command main posts as `menu:show-command`: asks
+ * first where the command needs it, calls the show session, and applies
+ * the new layout when the active show changed.
  *
  * Commands run one at a time; one that arrives while another runs is
  * dropped. A command that would show a dialog is also dropped while any
@@ -14,60 +14,60 @@
 import { droppedSongsMessage, LOAD_FAILED_MESSAGE, TOAST_MS } from './messages.js';
 import { unwrap } from './ipc-result.js';
 
-const LOG_CONTEXT = { module: 'boards', function: 'runBoardCommand' };
+const LOG_CONTEXT = { module: 'shows', function: 'runShowCommand' };
 
-const CHANGE_FAILED_MESSAGE = "Mx. Voice couldn't change the board. Your saved boards were not changed.";
+const CHANGE_FAILED_MESSAGE = "Mx. Voice couldn't change the show. Your saved shows were not changed.";
 // The session refused the command; the menu is rebuilt in main, nothing to tell the user
 const REFUSED_ERRORS = new Set(['busy', 'session not ready']);
 
 let running = false;
 
-/** The current board document; throws 'session not ready' before any prompt. */
+/** The current show document; throws 'session not ready' before any prompt. */
 async function readyDoc({ api }) {
-  const state = unwrap(await api.getState(), 'Reading the board session');
+  const state = unwrap(await api.getState(), 'Reading the show session');
   if (state?.status !== 'ready' || !state.doc) throw new Error('session not ready');
   return state.doc;
 }
 
-function findBoard(doc, boardId) {
-  const board = doc.boards.find((b) => b.id === boardId);
-  if (!board) throw new Error('Board not found.');
-  return board;
+function findShow(doc, showId) {
+  const show = doc.shows.find((b) => b.id === showId);
+  if (!show) throw new Error('Show not found.');
+  return show;
 }
 
 /**
- * The board that becomes active when `boardId` is deleted, by the rule
- * board-document's deleteBoard uses: the next in creation order, or the
- * previous one for the last. Null when it is the only board.
+ * The show that becomes active when `showId` is deleted, by the rule
+ * show-document's deleteShow uses: the next in creation order, or the
+ * previous one for the last. Null when it is the only show.
  */
-export function nextBoardAfterDelete(doc, boardId) {
-  if (doc.boards.length <= 1) return null;
-  const index = doc.boards.findIndex((b) => b.id === boardId);
-  const rest = doc.boards.filter((b) => b.id !== boardId);
+export function nextShowAfterDelete(doc, showId) {
+  if (doc.shows.length <= 1) return null;
+  const index = doc.shows.findIndex((b) => b.id === showId);
+  const rest = doc.shows.filter((b) => b.id !== showId);
   return rest[Math.min(index, rest.length - 1)];
 }
 
 /**
  * Apply a layout the session handed back and report it. A layout that
  * can't be applied is reported failed, as at startup.
- * @returns {Promise<boolean>} whether the board is now ready
+ * @returns {Promise<boolean>} whether the show is now ready
  */
 async function openLoaded({ layout, generation }, deps) {
   const { api } = deps;
   try {
     const { dropped, droppedIds = [] } = await deps.applyLayout(layout);
-    unwrap(await api.reportReady(generation, true, { droppedIds }), 'Reporting the board ready');
+    unwrap(await api.reportReady(generation, true, { droppedIds }), 'Reporting the show ready');
     const message = droppedSongsMessage(dropped);
     if (message) deps.toast(message, TOAST_MS);
     return true;
   } catch (error) {
-    window.debugLog?.error('Could not load the board', { ...LOG_CONTEXT, error: error.message });
+    window.debugLog?.error('Could not load the show', { ...LOG_CONTEXT, error: error.message });
     try {
       await api.reportReady(generation, false);
     } catch (reportError) {
-      window.debugLog?.warn('Could not report the board as failed', { ...LOG_CONTEXT, error: reportError.message });
+      window.debugLog?.warn('Could not report the show as failed', { ...LOG_CONTEXT, error: reportError.message });
     }
-    deps.alert(LOAD_FAILED_MESSAGE, 'Board not loaded');
+    deps.alert(LOAD_FAILED_MESSAGE, 'Show not loaded');
     return false;
   }
 }
@@ -84,103 +84,103 @@ async function promptForName(deps, { message, value, title }, save) {
     const result = await save(name);
     if (result?.success) return true;
     // A name the user can correct re-asks instead of alerting
-    if (result?.code !== 'invalid-name') unwrap(result, 'Saving the board name');
+    if (result?.code !== 'invalid-name') unwrap(result, 'Saving the show name');
     message = result.error;
     value = name;
   }
 }
 
 const handlers = {
-  async switch(boardId, deps) {
-    const loaded = unwrap(await deps.api.activate(boardId), 'Switching boards');
-    return (await openLoaded(loaded, deps)) ? ['board_switched'] : null;
+  async switch(showId, deps) {
+    const loaded = unwrap(await deps.api.activate(showId), 'Switching shows');
+    return (await openLoaded(loaded, deps)) ? ['show_switched'] : null;
   },
 
-  async update(_boardId, deps) {
+  async update(_showId, deps) {
     const doc = await readyDoc(deps);
-    const { name } = findBoard(doc, doc.activeBoardId);
+    const { name } = findShow(doc, doc.activeShowId);
     const confirmed = await deps.confirm(
       `"${name}" will open with the layout on screen now. Its saved layout will be replaced.`,
       `Update "${name}"?`,
       { confirmLabel: 'Update' }
     );
     if (!confirmed) return null;
-    unwrap(await deps.api.updateActive(deps.extractLayout()), 'Updating the board');
-    return ['board_updated'];
+    unwrap(await deps.api.updateActive(deps.extractLayout()), 'Updating the show');
+    return ['show_updated'];
   },
 
-  async new(_boardId, deps) {
+  async new(_showId, deps) {
     await readyDoc(deps);
     const created = await promptForName(
       deps,
-      { message: 'Name for the new board', value: '', title: 'New Board' },
+      { message: 'Name for the new show', value: '', title: 'New Show' },
       (name) => deps.api.create(name, deps.extractLayout())
     );
-    return created ? ['board_created'] : null;
+    return created ? ['show_created'] : null;
   },
 
-  async revert(_boardId, deps) {
+  async revert(_showId, deps) {
     const doc = await readyDoc(deps);
-    const { name } = findBoard(doc, doc.activeBoardId);
+    const { name } = findShow(doc, doc.activeShowId);
     const confirmed = await deps.confirm(
       `Changes since "${name}" was opened will be discarded.`,
       `Revert to "${name}"?`,
       { confirmLabel: 'Revert' }
     );
     if (!confirmed) return null;
-    const loaded = unwrap(await deps.api.revert(), 'Reverting the board');
-    return (await openLoaded(loaded, deps)) ? ['board_reverted'] : null;
+    const loaded = unwrap(await deps.api.revert(), 'Reverting the show');
+    return (await openLoaded(loaded, deps)) ? ['show_reverted'] : null;
   },
 
-  async rename(boardId, deps) {
+  async rename(showId, deps) {
     const doc = await readyDoc(deps);
-    const { name } = findBoard(doc, boardId);
+    const { name } = findShow(doc, showId);
     const renamed = await promptForName(
       deps,
-      { message: 'New name', value: name, title: 'Rename Board' },
-      (newName) => deps.api.rename(boardId, newName)
+      { message: 'New name', value: name, title: 'Rename Show' },
+      (newName) => deps.api.rename(showId, newName)
     );
-    return renamed ? ['board_renamed'] : null;
+    return renamed ? ['show_renamed'] : null;
   },
 
-  async delete(boardId, deps) {
+  async delete(showId, deps) {
     const doc = await readyDoc(deps);
-    const { name } = findBoard(doc, boardId);
-    const wasActive = boardId === doc.activeBoardId;
+    const { name } = findShow(doc, showId);
+    const wasActive = showId === doc.activeShowId;
     let message = "This can't be undone.";
     if (wasActive) {
-      const next = nextBoardAfterDelete(doc, boardId);
+      const next = nextShowAfterDelete(doc, showId);
       message = next
         ? `The layout on screen will be replaced with "${next.name}".`
-        : 'The layout on screen will be replaced with an empty board.';
+        : 'The layout on screen will be replaced with an empty show.';
     }
     const confirmed = await deps.confirm(message, `Delete "${name}"?`, {
       confirmLabel: 'Delete',
       defaultAction: 'cancel'
     });
     if (!confirmed) return null;
-    const removed = unwrap(await deps.api.remove(boardId), 'Deleting the board');
-    // The board is deleted even if the next one then fails to load
+    const removed = unwrap(await deps.api.remove(showId), 'Deleting the show');
+    // The show is deleted even if the next one then fails to load
     if (removed?.activeChanged) await openLoaded(removed, deps);
-    return ['board_deleted', { was_active: wasActive }];
+    return ['show_deleted', { was_active: wasActive }];
   },
 
-  async import(_boardId, deps) {
+  async import(_showId, deps) {
     await readyDoc(deps);
-    const groups = unwrap(await deps.api.listImportable(), 'Listing boards to import');
-    const choice = await deps.chooseImportBoard(groups || []);
+    const groups = unwrap(await deps.api.listImportable(), 'Listing shows to import');
+    const choice = await deps.chooseImportShow(groups || []);
     if (!choice) return null;
-    const loaded = unwrap(await deps.api.importBoard(choice.profile, choice.boardId), 'Importing the board');
-    return (await openLoaded(loaded, deps)) ? ['board_imported'] : null;
+    const loaded = unwrap(await deps.api.importShow(choice.profile, choice.showId), 'Importing the show');
+    return (await openLoaded(loaded, deps)) ? ['show_imported'] : null;
   }
 };
 
 /**
- * Run one Board menu command.
+ * Run one Shows menu command.
  *
- * @param {{ command: string, boardId?: string }} command
+ * @param {{ command: string, showId?: string }} command
  * @param {Object} deps
- * @param {Object} deps.api - secureElectronAPI.boards
+ * @param {Object} deps.api - secureElectronAPI.shows
  * @param {Function} deps.confirm - customConfirm
  * @param {Function} deps.prompt - customPrompt; resolves null on cancel
  * @param {Function} deps.alert
@@ -188,39 +188,39 @@ const handlers = {
  * @param {(name: string, props?: Object) => void} deps.track - analytics; never given names
  * @param {() => boolean} deps.isModalOpen
  * @param {() => Object} deps.extractLayout - the layout on screen
- * @param {(groups: Array) => Promise<{ profile: string, boardId: string }|null>} deps.chooseImportBoard
+ * @param {(groups: Array) => Promise<{ profile: string, showId: string }|null>} deps.chooseImportShow
  * @param {(layout: Object) => Promise<{ dropped: number }>} deps.applyLayout
  * @returns {Promise<void>}
  */
-export async function runBoardCommand({ command, boardId } = {}, deps) {
+export async function runShowCommand({ command, showId } = {}, deps) {
   const handler = Object.hasOwn(handlers, command) ? handlers[command] : null;
   if (!handler) {
-    window.debugLog?.warn('Unknown board command', { ...LOG_CONTEXT, command });
+    window.debugLog?.warn('Unknown show command', { ...LOG_CONTEXT, command });
     return;
   }
   if (running) {
-    window.debugLog?.info('Board command dropped: another is running', { ...LOG_CONTEXT, command });
+    window.debugLog?.info('Show command dropped: another is running', { ...LOG_CONTEXT, command });
     return;
   }
   if (command !== 'switch' && deps.isModalOpen()) {
-    window.debugLog?.info('Board command dropped: a dialog is open', { ...LOG_CONTEXT, command });
+    window.debugLog?.info('Show command dropped: a dialog is open', { ...LOG_CONTEXT, command });
     return;
   }
 
   running = true;
   try {
-    const event = await handler(boardId, deps);
+    const event = await handler(showId, deps);
     if (event) deps.track(event[0], event[1]);
   } catch (error) {
     if (REFUSED_ERRORS.has(error.message)) {
-      window.debugLog?.info('Board command refused by the session', { ...LOG_CONTEXT, command, error: error.message });
+      window.debugLog?.info('Show command refused by the session', { ...LOG_CONTEXT, command, error: error.message });
     } else {
-      window.debugLog?.error('Board command failed', { ...LOG_CONTEXT, command, error: error.message });
-      deps.alert(CHANGE_FAILED_MESSAGE, 'Board not changed');
+      window.debugLog?.error('Show command failed', { ...LOG_CONTEXT, command, error: error.message });
+      deps.alert(CHANGE_FAILED_MESSAGE, 'Show not changed');
     }
   } finally {
     running = false;
   }
 }
 
-export default { runBoardCommand, nextBoardAfterDelete };
+export default { runShowCommand, nextShowAfterDelete };

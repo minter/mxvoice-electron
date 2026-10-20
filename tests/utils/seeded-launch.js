@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 /**
  * @param {Object} [options]
  * @param {(userDataDir: string) => void} [options.beforeLaunch] - seed files
- *   (e.g. boards.json) into the fresh user-data directory before the app starts
+ *   (e.g. shows.json) into the fresh user-data directory before the app starts
  */
 export async function launchSeededApp(electron, suffix = '', { beforeLaunch } = {}) {
   // Create a unique per-suite root and per-suite userDataDir

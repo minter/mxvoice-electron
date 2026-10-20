@@ -8,8 +8,8 @@ import {
   closeApp,
   waitForAppReady
 } from '../../../utils/seeded-launch.js';
-import { waitForBoardSettled } from '../../../utils/relaunch.js';
-import { boardsDocument, hotkeyLayout, readRecovery, seedBoards } from '../../../utils/seed-boards.js';
+import { waitForShowSettled } from '../../../utils/relaunch.js';
+import { showsDocument, hotkeyLayout, readRecovery, seedShows } from '../../../utils/seed-shows.js';
 
 test.describe('Library transfer - real archive round trip', () => {
   let app; let page; let userDataDir; let suiteRoot; let suiteMusicDir;
@@ -38,7 +38,7 @@ test.describe('Library transfer - real archive round trip', () => {
     await page.waitForLoadState('domcontentloaded');
     // The import cleared every recovery record: no crash prompt. Checked
     // before waitForAppReady, whose click would dismiss one.
-    await waitForBoardSettled(page);
+    await waitForShowSettled(page);
     await expect(page.locator('.modal.show').filter({ hasText: 'Restore show?' })).toHaveCount(0);
     await waitForAppReady(page, app);
   }
@@ -76,8 +76,8 @@ test.describe('Library transfer - real archive round trip', () => {
     await page.evaluate(() => (
       window.secureElectronAPI.profile.setPreference('e2e_library_marker', 'exported-state')
     ));
-    // Boards (Task 9): the layout travels as the saved board in boards.json
-    seedBoards(userDataDir, 'Default User', boardsDocument(hotkeyLayout({ f1: '1004' })));
+    // Shows (Task 9): the layout travels as the saved show in shows.json
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1004' })));
     await page.evaluate(() => {
       window.__libraryExportProgress = [];
       window.secureElectronAPI.library.onExportProgress((progress) => {
@@ -112,7 +112,7 @@ test.describe('Library transfer - real archive round trip', () => {
     await page.evaluate(() => (
       window.secureElectronAPI.profile.setPreference('e2e_library_marker', 'mutated-state')
     ));
-    seedBoards(userDataDir, 'Default User', boardsDocument(hotkeyLayout({ f1: '1005' })));
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1005' })));
     // A live edit leaves a recovery record; the import must clear it
     await page.evaluate(async () => {
       await window.moduleRegistry.hotkeys.setLabelFromSongId('1003', document.querySelector('#hotkeys_list_1 #f2_hotkey'));

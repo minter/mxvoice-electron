@@ -27,10 +27,10 @@ function buildHarness() {
     debugLog: { warn: vi.fn() },
     logService: { exportLogs: vi.fn() },
     rendererCommands,
-    getBoardMenuState: () => ({
+    getShowMenuState: () => ({
       status: 'ready',
-      activeBoard: { id: 'b1', name: 'Comedy Sports' },
-      boards: [{ id: 'b1', name: 'Comedy Sports' }]
+      activeShow: { id: 'b1', name: 'Comedy Sports' },
+      shows: [{ id: 'b1', name: 'Comedy Sports' }]
     })
   });
   template.push(...result);
@@ -41,7 +41,7 @@ describe('application menu', () => {
   it('builds and installs the platform menu', () => {
     const { Menu, template } = buildHarness();
     expect(template.map((menu) => menu.label)).toEqual(
-      expect.arrayContaining(['File', 'Edit', 'View', 'Songs', 'Board', 'Profile'])
+      expect.arrayContaining(['File', 'Edit', 'View', 'Songs', 'Shows', 'Profile'])
     );
     expect(Menu.buildFromTemplate).toHaveBeenCalledWith(template);
     expect(Menu.setApplicationMenu).toHaveBeenCalledOnce();
@@ -54,13 +54,13 @@ describe('application menu', () => {
     expect(rendererCommands.toggleWaveform).toHaveBeenCalledOnce();
   });
 
-  it('has a Board menu where Hotkeys was, and no Hotkeys menu or Start a New Session', () => {
+  it('has a Shows menu where Hotkeys was, and no Hotkeys menu or Start a New Session', () => {
     const { template } = buildHarness();
     const labels = template.map((menu) => menu.label);
     expect(labels).not.toContain('Hotkeys');
-    expect(labels.indexOf('Board')).toBe(labels.indexOf('Songs') + 1);
-    const board = template.find((menu) => menu.label === 'Board');
-    expect(board.submenu.map((i) => i.label)).toContain('Update "Comedy Sports"');
+    expect(labels.indexOf('Shows')).toBe(labels.indexOf('Songs') + 1);
+    const show = template.find((menu) => menu.label === 'Shows');
+    expect(show.submenu.map((i) => i.label)).toContain('Update "Comedy Sports"');
     const view = template.find((menu) => menu.label === 'View');
     expect(view.submenu.map((i) => i.label)).not.toContain('Start a New Session');
     const accelerators = [];
@@ -70,7 +70,7 @@ describe('application menu', () => {
     expect(accelerators).not.toContain('CommandOrControl+S');
   });
 
-  it('sends board commands to the window on menu:board-command', async () => {
+  it('sends show commands to the window on menu:show-command', async () => {
     const send = vi.fn();
     const rebuildMenu = vi.fn();
     const Menu = { buildFromTemplate: vi.fn(), setApplicationMenu: vi.fn() };
@@ -79,11 +79,11 @@ describe('application menu', () => {
       mainWindow: { isDestroyed: () => false, webContents: { send } },
       fileOperations: {}, getCurrentProfile: () => 'Default User', showAboutDialog: vi.fn(),
       debugLog: { warn: vi.fn() }, logService: {}, rendererCommands: {},
-      getBoardMenuState: () => ({ status: 'ready', activeBoard: { id: 'b1', name: 'A' }, boards: [{ id: 'b1', name: 'A' }, { id: 'b2', name: 'B' }] }),
+      getShowMenuState: () => ({ status: 'ready', activeShow: { id: 'b1', name: 'A' }, shows: [{ id: 'b1', name: 'A' }, { id: 'b2', name: 'B' }] }),
       rebuildMenu
     });
-    template.find((m) => m.label === 'Board').submenu[1].click();
-    expect(send).toHaveBeenCalledWith('menu:board-command', { command: 'switch', boardId: 'b2' });
+    template.find((m) => m.label === 'Shows').submenu[1].click();
+    expect(send).toHaveBeenCalledWith('menu:show-command', { command: 'switch', showId: 'b2' });
     await new Promise((r) => setImmediate(r));
     expect(rebuildMenu).toHaveBeenCalledOnce();
   });

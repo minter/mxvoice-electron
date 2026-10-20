@@ -115,7 +115,7 @@
               <button id="update_available_button" type="button" class="d-none btn btn-warning btn-sm text-nowrap py-0 ms-3" title="Update available"><i class="fas fa-arrow-circle-up"></i> <span class="update-label">Update</span></button>
               <div id="profile-indicator" class="profile-indicator">
                 <i class="fas fa-user" id="profile-indicator-icon"></i> <span id="profile-name">Loading...</span>
-                <span class="board-separator" hidden>·</span> <i class="fas fa-table-cells" id="board-icon" hidden></i> <span id="board-name" hidden></span>
+                <span class="show-separator" hidden>·</span> <i class="fas fa-table-cells" id="show-icon" hidden></i> <span id="show-name" hidden></span>
               </div>
             </h6>
             <div class="card-body">
@@ -805,21 +805,21 @@
       </div>
     </div>
 
-    <!-- Import Board Modal: rows are built by boards/import-dialog.js -->
-    <div class="modal fade" id="importBoardModal" tabindex="-1" role="dialog" aria-labelledby="importBoardTitle">
+    <!-- Import Show Modal: rows are built by shows/import-dialog.js -->
+    <div class="modal fade" id="importShowModal" tabindex="-1" role="dialog" aria-labelledby="importShowTitle">
       <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h6 class="modal-title" id="importBoardTitle">Import Board</h6>
+            <h6 class="modal-title" id="importShowTitle">Import Show</h6>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <div id="importBoardList" class="list-group" role="listbox" aria-labelledby="importBoardTitle"></div>
-            <p id="importBoardEmpty" class="text-muted mb-0 d-none">No other profiles have saved boards.</p>
+            <div id="importShowList" class="list-group" role="listbox" aria-labelledby="importShowTitle"></div>
+            <p id="importShowEmpty" class="text-muted mb-0 d-none">No other profiles have saved shows.</p>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-primary btn-sm" id="importBoardBtn" disabled>Import</button>
+            <button type="button" class="btn btn-primary btn-sm" id="importShowBtn" disabled>Import</button>
           </div>
         </div>
       </div>

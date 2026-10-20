@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as bd from '../../../src/main/modules/board-document.js';
+import * as bd from '../../../src/main/modules/show-document.js';
 
 const deepFreeze = (o) => {
   if (o && typeof o === 'object' && !Object.isFrozen(o)) {
@@ -19,131 +19,131 @@ const mk = (names = ['A']) => {
   const newId = makeIds();
   let doc = bd.createDocument(bd.emptyLayout(), { name: names[0], now: NOW, newId });
   for (const name of names.slice(1)) {
-    doc = bd.addBoard(doc, { name, layout: bd.emptyLayout(), now: NOW, newId, activate: false }).doc;
+    doc = bd.addShow(doc, { name, layout: bd.emptyLayout(), now: NOW, newId, activate: false }).doc;
   }
   return { doc, newId };
 };
 
-describe('board-document', () => {
-  it('createDocument makes one active board named "Board"', () => {
+describe('show-document', () => {
+  it('createDocument makes one active show named "Show"', () => {
     const doc = bd.createDocument(bd.emptyLayout(), { now: NOW, newId: makeIds() });
     expect(doc.version).toBe(1);
-    expect(doc.boards).toHaveLength(1);
-    expect(doc.boards[0].name).toBe('Board');
-    expect(doc.activeBoardId).toBe(doc.boards[0].id);
-    expect(doc.boards[0].createdAt).toBe(NOW);
-    expect(doc.boards[0].updatedAt).toBe(NOW);
-    expect(bd.BOARD_DOCUMENT_VERSION).toBe(1);
+    expect(doc.shows).toHaveLength(1);
+    expect(doc.shows[0].name).toBe('Show');
+    expect(doc.activeShowId).toBe(doc.shows[0].id);
+    expect(doc.shows[0].createdAt).toBe(NOW);
+    expect(doc.shows[0].updatedAt).toBe(NOW);
+    expect(bd.SHOW_DOCUMENT_VERSION).toBe(1);
   });
 
-  it('validateBoardName rejects empty, >50 chars, and case-insensitive duplicates', () => {
+  it('validateShowName rejects empty, >50 chars, and case-insensitive duplicates', () => {
     const { doc } = mk(['Comedy Sports']);
-    expect(bd.validateBoardName(doc, '   ')).toEqual({ ok: false, error: 'Enter a name for the board.' });
-    expect(bd.validateBoardName(doc, 'x'.repeat(51))).toEqual({
+    expect(bd.validateShowName(doc, '   ')).toEqual({ ok: false, error: 'Enter a name for the show.' });
+    expect(bd.validateShowName(doc, 'x'.repeat(51))).toEqual({
       ok: false,
-      error: 'Board names can be at most 50 characters.',
+      error: 'Show names can be at most 50 characters.',
     });
-    expect(bd.validateBoardName(doc, 'comedy sports')).toEqual({
+    expect(bd.validateShowName(doc, 'comedy sports')).toEqual({
       ok: false,
-      error: 'A board with this name already exists.',
+      error: 'A show with this name already exists.',
     });
-    expect(bd.validateBoardName(doc, '  Fresh  ')).toEqual({ ok: true, name: 'Fresh' });
-    expect(bd.validateBoardName(doc, 'x'.repeat(50)).ok).toBe(true);
+    expect(bd.validateShowName(doc, '  Fresh  ')).toEqual({ ok: true, name: 'Fresh' });
+    expect(bd.validateShowName(doc, 'x'.repeat(50)).ok).toBe(true);
   });
 
-  it('validateBoardName rejects line breaks and other control characters', () => {
+  it('validateShowName rejects line breaks and other control characters', () => {
     const { doc } = mk(['Comedy Sports']);
-    const error = "Board names can't contain line breaks or control characters.";
+    const error = "Show names can't contain line breaks or control characters.";
     for (const name of ['Act\nTwo', 'Act\rTwo', 'Act\tTwo', 'Bell\u0007', 'Del\u007F']) {
-      expect(bd.validateBoardName(doc, name)).toEqual({ ok: false, error });
+      expect(bd.validateShowName(doc, name)).toEqual({ ok: false, error });
     }
-    expect(bd.validateBoardName(doc, 'Act Two – Finale').ok).toBe(true);
+    expect(bd.validateShowName(doc, 'Act Two – Finale').ok).toBe(true);
   });
 
-  it('addBoard and renameBoard name errors carry code invalid-name', () => {
+  it('addShow and renameShow name errors carry code invalid-name', () => {
     const { doc } = mk(['Comedy Sports']);
     const caught = (fn) => { try { fn(); } catch (error) { return error; } return null; };
-    const added = caught(() => bd.addBoard(doc, { name: 'comedy sports', layout: null }));
-    expect(added).toMatchObject({ message: 'A board with this name already exists.', code: 'invalid-name' });
-    const renamed = caught(() => bd.renameBoard(doc, doc.boards[0].id, ' '));
-    expect(renamed).toMatchObject({ message: 'Enter a name for the board.', code: 'invalid-name' });
+    const added = caught(() => bd.addShow(doc, { name: 'comedy sports', layout: null }));
+    expect(added).toMatchObject({ message: 'A show with this name already exists.', code: 'invalid-name' });
+    const renamed = caught(() => bd.renameShow(doc, doc.shows[0].id, ' '));
+    expect(renamed).toMatchObject({ message: 'Enter a name for the show.', code: 'invalid-name' });
     // Other errors have no code
-    expect(caught(() => bd.renameBoard(doc, 'nope', 'X')).code).toBeUndefined();
+    expect(caught(() => bd.renameShow(doc, 'nope', 'X')).code).toBeUndefined();
   });
 
-  it('validateBoardName allows renaming a board to a different casing of itself', () => {
+  it('validateShowName allows renaming a show to a different casing of itself', () => {
     const { doc } = mk(['Comedy Sports']);
-    const id = doc.boards[0].id;
-    expect(bd.validateBoardName(doc, 'COMEDY SPORTS', { exceptId: id })).toEqual({
+    const id = doc.shows[0].id;
+    expect(bd.validateShowName(doc, 'COMEDY SPORTS', { exceptId: id })).toEqual({
       ok: true,
       name: 'COMEDY SPORTS',
     });
-    const renamed = bd.renameBoard(doc, id, 'COMEDY SPORTS', 2000);
-    expect(renamed.boards[0].name).toBe('COMEDY SPORTS');
-    expect(renamed.boards[0].updatedAt).toBe(2000);
+    const renamed = bd.renameShow(doc, id, 'COMEDY SPORTS', 2000);
+    expect(renamed.shows[0].name).toBe('COMEDY SPORTS');
+    expect(renamed.shows[0].updatedAt).toBe(2000);
   });
 
-  it('renameBoard throws the validation message and Board not found', () => {
+  it('renameShow throws the validation message and Show not found', () => {
     const { doc } = mk(['A', 'B']);
-    expect(() => bd.renameBoard(doc, doc.boards[0].id, 'b', 5)).toThrow(
-      'A board with this name already exists.'
+    expect(() => bd.renameShow(doc, doc.shows[0].id, 'b', 5)).toThrow(
+      'A show with this name already exists.'
     );
-    expect(() => bd.renameBoard(doc, 'nope', 'Z', 5)).toThrow('Board not found.');
-    expect(() => bd.updateBoardLayout(doc, 'nope', bd.emptyLayout(), 5)).toThrow('Board not found.');
-    expect(() => bd.deleteBoard(doc, 'nope', { now: 5, newId: makeIds() })).toThrow('Board not found.');
-    expect(() => bd.setActive(doc, 'nope')).toThrow('Board not found.');
+    expect(() => bd.renameShow(doc, 'nope', 'Z', 5)).toThrow('Show not found.');
+    expect(() => bd.updateShowLayout(doc, 'nope', bd.emptyLayout(), 5)).toThrow('Show not found.');
+    expect(() => bd.deleteShow(doc, 'nope', { now: 5, newId: makeIds() })).toThrow('Show not found.');
+    expect(() => bd.setActive(doc, 'nope')).toThrow('Show not found.');
   });
 
-  it('deleting a non-active board keeps the active id', () => {
+  it('deleting a non-active show keeps the active id', () => {
     const { doc, newId } = mk(['A', 'B', 'C']);
-    const r = bd.deleteBoard(doc, doc.boards[1].id, { now: 5, newId });
+    const r = bd.deleteShow(doc, doc.shows[1].id, { now: 5, newId });
     expect(r.activeChanged).toBe(false);
-    expect(r.doc.activeBoardId).toBe(doc.activeBoardId);
-    expect(r.nextActiveId).toBe(doc.activeBoardId);
-    expect(r.doc.boards.map((b) => b.name)).toEqual(['A', 'C']);
+    expect(r.doc.activeShowId).toBe(doc.activeShowId);
+    expect(r.nextActiveId).toBe(doc.activeShowId);
+    expect(r.doc.shows.map((b) => b.name)).toEqual(['A', 'C']);
   });
 
-  it('deleting the active board activates the next in creation order', () => {
+  it('deleting the active show activates the next in creation order', () => {
     const { doc, newId } = mk(['A', 'B', 'C']);
-    const d = bd.setActive(doc, doc.boards[1].id);
-    const r = bd.deleteBoard(d, doc.boards[1].id, { now: 5, newId });
+    const d = bd.setActive(doc, doc.shows[1].id);
+    const r = bd.deleteShow(d, doc.shows[1].id, { now: 5, newId });
     expect(r.activeChanged).toBe(true);
-    expect(r.nextActiveId).toBe(doc.boards[2].id);
-    expect(r.doc.activeBoardId).toBe(doc.boards[2].id);
+    expect(r.nextActiveId).toBe(doc.shows[2].id);
+    expect(r.doc.activeShowId).toBe(doc.shows[2].id);
   });
 
-  it('deleting the last board in the list activates the previous', () => {
+  it('deleting the last show in the list activates the previous', () => {
     const { doc, newId } = mk(['A', 'B', 'C']);
-    const d = bd.setActive(doc, doc.boards[2].id);
-    const r = bd.deleteBoard(d, doc.boards[2].id, { now: 5, newId });
-    expect(r.nextActiveId).toBe(doc.boards[1].id);
-    expect(r.doc.activeBoardId).toBe(doc.boards[1].id);
+    const d = bd.setActive(doc, doc.shows[2].id);
+    const r = bd.deleteShow(d, doc.shows[2].id, { now: 5, newId });
+    expect(r.nextActiveId).toBe(doc.shows[1].id);
+    expect(r.doc.activeShowId).toBe(doc.shows[1].id);
   });
 
-  it('deleting the only board leaves one empty "Board"', () => {
+  it('deleting the only show leaves one empty "Show"', () => {
     const { doc, newId } = mk(['Solo']);
-    const r = bd.deleteBoard(doc, doc.boards[0].id, { now: 7, newId });
+    const r = bd.deleteShow(doc, doc.shows[0].id, { now: 7, newId });
     expect(r.activeChanged).toBe(true);
-    expect(r.doc.boards).toHaveLength(1);
-    expect(r.doc.boards[0].name).toBe('Board');
-    expect(r.doc.boards[0].id).not.toBe(doc.boards[0].id);
-    expect(r.doc.boards[0].layout).toEqual(bd.emptyLayout());
-    expect(r.doc.activeBoardId).toBe(r.doc.boards[0].id);
-    expect(r.nextActiveId).toBe(r.doc.boards[0].id);
+    expect(r.doc.shows).toHaveLength(1);
+    expect(r.doc.shows[0].name).toBe('Show');
+    expect(r.doc.shows[0].id).not.toBe(doc.shows[0].id);
+    expect(r.doc.shows[0].layout).toEqual(bd.emptyLayout());
+    expect(r.doc.activeShowId).toBe(r.doc.shows[0].id);
+    expect(r.nextActiveId).toBe(r.doc.shows[0].id);
   });
 
-  it('addBoard activates by default, can skip, and records importedFrom', () => {
+  it('addShow activates by default, can skip, and records importedFrom', () => {
     const { doc, newId } = mk(['A']);
-    const importedFrom = { profile: 'Derek', boardId: 'x', boardName: 'Y', at: 3 };
-    const r = bd.addBoard(doc, { name: ' B ', layout: bd.emptyLayout(), now: 9, newId, importedFrom });
-    expect(r.board.name).toBe('B');
-    expect(r.board.importedFrom).toEqual(importedFrom);
-    expect(r.doc.activeBoardId).toBe(r.board.id);
-    const r2 = bd.addBoard(r.doc, { name: 'C', layout: bd.emptyLayout(), now: 9, newId, activate: false });
-    expect(r2.doc.activeBoardId).toBe(r.board.id);
-    expect(r2.doc.boards.map((b) => b.name)).toEqual(['A', 'B', 'C']);
-    expect(() => bd.addBoard(r2.doc, { name: 'a', layout: bd.emptyLayout(), now: 9, newId })).toThrow(
-      'A board with this name already exists.'
+    const importedFrom = { profile: 'Derek', showId: 'x', showName: 'Y', at: 3 };
+    const r = bd.addShow(doc, { name: ' B ', layout: bd.emptyLayout(), now: 9, newId, importedFrom });
+    expect(r.show.name).toBe('B');
+    expect(r.show.importedFrom).toEqual(importedFrom);
+    expect(r.doc.activeShowId).toBe(r.show.id);
+    const r2 = bd.addShow(r.doc, { name: 'C', layout: bd.emptyLayout(), now: 9, newId, activate: false });
+    expect(r2.doc.activeShowId).toBe(r.show.id);
+    expect(r2.doc.shows.map((b) => b.name)).toEqual(['A', 'B', 'C']);
+    expect(() => bd.addShow(r2.doc, { name: 'a', layout: bd.emptyLayout(), now: 9, newId })).toThrow(
+      'A show with this name already exists.'
     );
   });
 
@@ -160,7 +160,7 @@ describe('board-document', () => {
     expect(bd.importName(doc, 'Mom & "Pop"', 'Derek')).toBe('Mom & "Pop" (Derek)');
   });
 
-  it('importName clips the board part to stay within 50 characters', () => {
+  it('importName clips the show part to stay within 50 characters', () => {
     const { doc } = mk(['A']);
     const name = bd.importName(doc, 'b'.repeat(60), 'Derek');
     expect(name.length).toBe(50);
@@ -169,7 +169,7 @@ describe('board-document', () => {
     const second = bd.importName(d2, 'b'.repeat(60), 'Derek');
     expect(second.length).toBeLessThanOrEqual(50);
     expect(second.endsWith(' (Derek) 2')).toBe(true);
-    expect(bd.validateBoardName(d2, second).ok).toBe(true);
+    expect(bd.validateShowName(d2, second).ok).toBe(true);
   });
 
   it('importName terminates and stays within 50 chars for very long profiles', () => {
@@ -184,7 +184,7 @@ describe('board-document', () => {
     expect(second.length).toBeLessThanOrEqual(50);
     expect(second).toContain('…');
     expect(second.endsWith(' 2')).toBe(true);
-    expect(bd.validateBoardName(d2, second).ok).toBe(true);
+    expect(bd.validateShowName(d2, second).ok).toBe(true);
   });
 
   it('importName trims leading spaces and throws when no name is free', () => {
@@ -193,7 +193,7 @@ describe('board-document', () => {
     const names = ['Show (Derek)', ...Array.from({ length: 999 }, (_, i) => `Show (Derek) ${i + 2}`)];
     const { doc: full } = mk(names);
     expect(() => bd.importName(full, 'Show', 'Derek')).toThrow(
-      'Could not find a free name for the imported board.'
+      'Could not find a free name for the imported show.'
     );
   });
 
@@ -205,7 +205,7 @@ describe('board-document', () => {
     for (const v of ['x', NaN, 1.5, 0]) {
       expect(bd.parseDocument({ ...doc, version: v })).toEqual({ ok: false, error: 'shape' });
     }
-    const dup = { ...doc, boards: [doc.boards[0], { ...doc.boards[1], id: doc.boards[0].id }] };
+    const dup = { ...doc, shows: [doc.shows[0], { ...doc.shows[1], id: doc.shows[0].id }] };
     expect(bd.parseDocument(dup)).toEqual({ ok: false, error: 'shape' });
   });
 
@@ -236,16 +236,16 @@ describe('board-document', () => {
 
   it('parseDocument rejects bad shapes and normalizes layouts', () => {
     const { doc } = mk(['A']);
-    for (const bad of [null, 'x', {}, { version: 1, boards: [] }, { ...doc, boards: 'no' },
-      { ...doc, activeBoardId: 'zzz' }]) {
+    for (const bad of [null, 'x', {}, { version: 1, shows: [] }, { ...doc, shows: 'no' },
+      { ...doc, activeShowId: 'zzz' }]) {
       expect(bd.parseDocument(bad)).toEqual({ ok: false, error: 'shape' });
     }
     const r = bd.parseDocument({
       ...doc,
-      boards: [{ ...doc.boards[0], layout: { hotkeys: [], holdingTank: [] } }],
+      shows: [{ ...doc.shows[0], layout: { hotkeys: [], holdingTank: [] } }],
     });
     expect(r.ok).toBe(true);
-    expect(r.doc.boards[0].layout.hotkeys).toHaveLength(5);
+    expect(r.doc.shows[0].layout.hotkeys).toHaveLength(5);
   });
 
   it('never mutates its input', () => {
@@ -253,13 +253,13 @@ describe('board-document', () => {
     const frozen = deepFreeze(structuredClone(doc));
     const newId = makeIds();
     const layout = deepFreeze(bd.emptyLayout());
-    const id = frozen.boards[0].id;
+    const id = frozen.shows[0].id;
     expect(() => {
-      bd.addBoard(frozen, { name: 'C', layout, now: 1, newId });
-      bd.updateBoardLayout(frozen, id, layout, 2);
-      bd.renameBoard(frozen, id, 'Z', 3);
-      bd.deleteBoard(frozen, id, { now: 4, newId });
-      bd.setActive(frozen, frozen.boards[1].id);
+      bd.addShow(frozen, { name: 'C', layout, now: 1, newId });
+      bd.updateShowLayout(frozen, id, layout, 2);
+      bd.renameShow(frozen, id, 'Z', 3);
+      bd.deleteShow(frozen, id, { now: 4, newId });
+      bd.setActive(frozen, frozen.shows[1].id);
       bd.importName(frozen, 'A', 'P');
       bd.parseDocument(frozen);
       bd.normalizeLayout(layout);

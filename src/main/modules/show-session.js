@@ -1,9 +1,9 @@
 /**
- * Board Session
+ * Show Session
  *
- * Per-process state for the live session: which profile's active board is
+ * Per-process state for the live session: which profile's active show is
  * open, whether the page has applied it, and whether crash-recovery writes
- * are still allowed. See docs/superpowers/specs/2026-10-17-boards-design.md.
+ * are still allowed. See docs/superpowers/specs/2026-10-17-shows-design.md.
  *
  * The profile is captured at `open()`. Every later recovery write, handoff
  * and retire uses that captured profile, never `getCurrentProfile()`, so a
@@ -13,26 +13,26 @@
  * for any recovery write already in flight, then retires. The fence stays up
  * until the next `open()`.
  *
- * Board mutations need a ready, unfenced session and run one at a time; a
- * second call while one runs is rejected as 'busy'. Each saves the board
+ * Show mutations need a ready, unfenced session and run one at a time; a
+ * second call while one runs is rejected as 'busy'. Each saves the show
  * document first and only then updates the session. The ones that change
- * the active board (activate, revert, deleting the active board, import)
+ * the active show (activate, revert, deleting the active show, import)
  * raise the fence before their first await, retire, and leave the session
  * 'loading' at a new generation for the page to apply and report ready.
  *
- * @module board-session
+ * @module show-session
  */
 
-import { BoardStoreError } from './board-store.js';
+import { ShowStoreError } from './show-store.js';
 import {
-  addBoard,
-  deleteBoard as deleteFromDocument,
+  addShow,
+  deleteShow as deleteFromDocument,
   importName,
   normalizeLayout,
-  renameBoard as renameInDocument,
+  renameShow as renameInDocument,
   setActive,
-  updateBoardLayout
-} from './board-document.js';
+  updateShowLayout
+} from './show-document.js';
 
 // An update or renderer-crash handoff older than this falls back to the
 // normal crash prompt instead of a silent restore.
@@ -41,7 +41,7 @@ export const HANDOFF_MAX_AGE_MS = 15 * 60 * 1000;
 const FAILED_CODES = new Set(['io', 'version', 'unregistered', 'shape']);
 const END_REASONS = new Set(['clean-exit', 'switch', 'backup-restore', 'library-import', 'profile-deleted']);
 // Exits that keep the record once it has been handed off to the next open,
-// or when the board never became ready
+// or when the show never became ready
 const KEPT_AFTER_HANDOFF = new Set(['clean-exit', 'switch']);
 const DEFAULT_PROFILE = 'Default User';
 
@@ -58,7 +58,7 @@ function layoutKey(layout) {
   return JSON.stringify(rest);
 }
 
-/** The layout without the given song ids, as the page shows a board whose songs left the library. */
+/** The layout without the given song ids, as the page shows a show whose songs left the library. */
 function withoutSongs(layout, songIds) {
   const normalized = normalizeLayout(layout);
   if (songIds.size === 0) return normalized;
@@ -77,17 +77,17 @@ function withoutSongs(layout, songIds) {
 
 /**
  * @param {Object} deps
- * @param {Object} deps.boardStore - from createBoardStore
+ * @param {Object} deps.showStore - from createShowStore
  * @param {Object} deps.recoveryStore - from createRecoveryStore
  * @param {() => string[]} [deps.listProfiles] - names of every registered profile
  * @param {() => string|null} deps.getCurrentProfile
  * @param {() => void} [deps.rebuildMenu]
  * @param {() => number} [deps.now]
- * @param {() => string} [deps.newId] - id for a new board
+ * @param {() => string} [deps.newId] - id for a new show
  * @param {Object} [deps.debugLog]
  */
-export function createBoardSession({
-  boardStore,
+export function createShowSession({
+  showStore,
   recoveryStore,
   listProfiles = () => [],
   getCurrentProfile,
@@ -96,7 +96,7 @@ export function createBoardSession({
   newId,
   debugLog
 }) {
-  const logCtx = (fn) => ({ module: 'board-session', function: fn });
+  const logCtx = (fn) => ({ module: 'show-session', function: fn });
 
   let profile = null;
   let status = 'idle';
@@ -113,10 +113,10 @@ export function createBoardSession({
   let pendingRecovery = null;
   // Recovery writes run one at a time, so end() can wait out the last one
   let writeQueue = Promise.resolve();
-  // Set while a board mutation runs
+  // Set while a show mutation runs
   let mutating = false;
   // Song ids the page dropped, as missing from the library, when it applied
-  // this generation's board. The live layout can never hold them, so the
+  // this generation's show. The live layout can never hold them, so the
   // equality check leaves them out of the saved layout.
   let droppedIds = new Set();
 
@@ -134,8 +134,8 @@ export function createBoardSession({
     refreshMenu('setStatus');
   }
 
-  function activeBoard() {
-    return doc?.boards.find((b) => b.id === doc.activeBoardId) ?? null;
+  function activeShow() {
+    return doc?.shows.find((b) => b.id === doc.activeShowId) ?? null;
   }
 
   function queued(task) {
@@ -161,16 +161,16 @@ export function createBoardSession({
 
     let loaded;
     try {
-      loaded = await boardStore.load(profile);
+      loaded = await showStore.load(profile);
     } catch (error) {
       if (myGeneration !== generation) throw new Error('superseded by a newer open', { cause: error });
-      if (error instanceof BoardStoreError && error.code === 'unreadable') {
+      if (error instanceof ShowStoreError && error.code === 'unreadable') {
         setStatus('unreadable');
         return { unreadable: true, generation };
       }
       setStatus('failed');
-      debugLog?.error?.('Could not open the active board', { ...logCtx('open'), code: error?.code, error: error?.message });
-      if (error instanceof BoardStoreError && FAILED_CODES.has(error.code)) {
+      debugLog?.error?.('Could not open the active show', { ...logCtx('open'), code: error?.code, error: error?.message });
+      if (error instanceof ShowStoreError && FAILED_CODES.has(error.code)) {
         return { failed: true, error: error.code, generation };
       }
       throw error;
@@ -181,10 +181,10 @@ export function createBoardSession({
 
     doc = loaded.doc;
     pendingRecovery = record;
-    const board = activeBoard();
+    const show = activeShow();
     const result = {
       doc,
-      board: { ...board, layout: normalizeLayout(board.layout) },
+      show: { ...show, layout: normalizeLayout(show.layout) },
       recovery: recoveryInfo(record),
       generation
     };
@@ -210,34 +210,34 @@ export function createBoardSession({
     return {
       savedAt: record.savedAt,
       handoff: record.handoff && fresh ? record.handoff : null,
-      boardId: record.boardId
+      showId: record.showId
     };
   }
 
   async function startEmpty() {
-    if (status !== 'unreadable') throw new Error('startEmpty is only allowed when the boards are unreadable');
+    if (status !== 'unreadable') throw new Error('startEmpty is only allowed when the shows are unreadable');
     const p = profile;
     const g = generation;
-    const { doc: emptyDoc } = await boardStore.resetUnreadable(p);
+    const { doc: emptyDoc } = await showStore.resetUnreadable(p);
     if (generation !== g) throw new Error('superseded by a newer open');
-    // The show in progress is offered on the empty board, as after open()
+    // The show in progress is offered on the empty show, as after open()
     const record = await readRecord(p, 'startEmpty');
     if (generation !== g) throw new Error('superseded by a newer open');
     doc = emptyDoc;
     pendingRecovery = record;
     setStatus('loading');
-    return { layout: normalizeLayout(activeBoard().layout), generation, recovery: recoveryInfo(record) };
+    return { layout: normalizeLayout(activeShow().layout), generation, recovery: recoveryInfo(record) };
   }
 
   async function resolveRecovery(choice) {
     if (choice !== 'restore' && choice !== 'discard') throw new Error(`Invalid recovery choice: ${String(choice)}`);
-    if (!doc) throw new Error('No board is open');
+    if (!doc) throw new Error('No show is open');
     const p = profile;
     const record = pendingRecovery;
     pendingRecovery = null;
-    const saved = normalizeLayout(activeBoard().layout);
+    const saved = normalizeLayout(activeShow().layout);
     if (!record) return { layout: saved };
-    // Restored onto the active board, whatever boardId the record names.
+    // Restored onto the active show, whatever showId the record names.
     // A handoff is spent once restored: another crash before any edit must ask.
     if (choice === 'restore') {
       if (record.handoff) await queued(() => recoveryStore.clearHandoff(p));
@@ -256,7 +256,7 @@ export function createBoardSession({
     // A failed open() already set 'failed'; the page's failed report confirms it
     if (!ok && reportedGeneration === generation && status === 'failed') return;
     if (reportedGeneration !== generation || status !== 'loading') {
-      debugLog?.info?.('Ignoring stale board ready report', { ...logCtx('reportReady'), reportedGeneration, generation, status });
+      debugLog?.info?.('Ignoring stale show ready report', { ...logCtx('reportReady'), reportedGeneration, generation, status });
       return;
     }
     droppedIds = new Set(ok ? dropped.map(String) : []);
@@ -273,12 +273,12 @@ export function createBoardSession({
     return queued(async () => {
       // Re-checked here: end() may have fenced while this waited its turn
       if (refused(myGeneration)) return { skipped: true };
-      const board = activeBoard();
-      if (layoutKey(normalized) === layoutKey(withoutSongs(board.layout, droppedIds))) {
+      const show = activeShow();
+      if (layoutKey(normalized) === layoutKey(withoutSongs(show.layout, droppedIds))) {
         await recoveryStore.retire(p);
         return { retired: true };
       }
-      await recoveryStore.write(p, { boardId: board.id, layout: normalized });
+      await recoveryStore.write(p, { showId: show.id, layout: normalized });
       return {};
     });
   }
@@ -291,7 +291,7 @@ export function createBoardSession({
     if (!profile || ended) return;
     const p = profile;
     const g = generation;
-    // A board that never became ready (crash prompt still open, failed or
+    // A show that never became ready (crash prompt still open, failed or
     // unreadable open) never replaced the record, so quitting or switching
     // must leave it for the next open
     const neverReady = status !== 'ready';
@@ -336,12 +336,12 @@ export function createBoardSession({
     });
   }
 
-  // --- Board mutations ---
+  // --- Show mutations ---
 
   const idOptions = () => (newId ? { newId } : {});
 
   /**
-   * Run one board mutation. The task gets the profile, generation and doc
+   * Run one show mutation. The task gets the profile, generation and doc
    * captured here and runs synchronously up to its first await, so a task
    * can raise the fence before anything else gets a turn.
    *
@@ -372,7 +372,7 @@ export function createBoardSession({
     if (generation === g && !ended && !handedOff) fenced = false;
   }
 
-  // The board is already saved by now, so a failed retire is only logged:
+  // The show is already saved by now, so a failed retire is only logged:
   // the next recovery write replaces the stale record
   async function retireRecovery(fn, p) {
     try {
@@ -382,22 +382,22 @@ export function createBoardSession({
     }
   }
 
-  /** Save a document that keeps the active board, then adopt it. */
+  /** Save a document that keeps the active show, then adopt it. */
   async function saveInPlace(fn, p, g, nextDoc, { retire }) {
-    await boardStore.save(p, nextDoc);
+    await showStore.save(p, nextDoc);
     assertCurrent(g);
     doc = nextDoc;
     if (retire) await retireRecovery(fn, p);
   }
 
   /**
-   * Finish a mutation that changes the board on screen. The caller has
+   * Finish a mutation that changes the show on screen. The caller has
    * already raised the fence. Saves `nextDoc` (none for a revert), retires,
    * then starts a new generation in 'loading'.
    */
   async function reload(fn, p, g, nextDoc) {
     try {
-      if (nextDoc) await boardStore.save(p, nextDoc);
+      if (nextDoc) await showStore.save(p, nextDoc);
       assertCurrent(g);
     } catch (error) {
       lowerFence(g);
@@ -411,13 +411,13 @@ export function createBoardSession({
     // Writes stay refused while loading, by status and by generation
     if (!handedOff) fenced = false;
     setStatus('loading');
-    return { layout: normalizeLayout(activeBoard().layout), generation };
+    return { layout: normalizeLayout(activeShow().layout), generation };
   }
 
-  function activate(boardId) {
+  function activate(showId) {
     return mutation('activate', ({ p, g, d }) => {
-      if (boardId === d.activeBoardId) throw new Error('already active');
-      const nextDoc = setActive(d, boardId);
+      if (showId === d.activeShowId) throw new Error('already active');
+      const nextDoc = setActive(d, showId);
       fenced = true;
       return reload('activate', p, g, nextDoc);
     });
@@ -432,46 +432,46 @@ export function createBoardSession({
 
   function updateActive(layout) {
     return mutation('updateActive', async ({ p, g, d }) => {
-      const nextDoc = updateBoardLayout(d, d.activeBoardId, normalizeLayout(layout), now());
+      const nextDoc = updateShowLayout(d, d.activeShowId, normalizeLayout(layout), now());
       await saveInPlace('updateActive', p, g, nextDoc, { retire: true });
     });
   }
 
-  function createBoard(name, layout) {
-    return mutation('createBoard', async ({ p, g, d }) => {
-      const { doc: nextDoc, board } = addBoard(d, {
+  function createShow(name, layout) {
+    return mutation('createShow', async ({ p, g, d }) => {
+      const { doc: nextDoc, show } = addShow(d, {
         name,
         layout: normalizeLayout(layout),
         now: now(),
         ...idOptions()
       });
-      await saveInPlace('createBoard', p, g, nextDoc, { retire: true });
-      return { id: board.id, name: board.name };
+      await saveInPlace('createShow', p, g, nextDoc, { retire: true });
+      return { id: show.id, name: show.name };
     });
   }
 
-  function renameBoard(boardId, name) {
-    return mutation('renameBoard', async ({ p, g, d }) => {
-      const nextDoc = renameInDocument(d, boardId, name, now());
-      await saveInPlace('renameBoard', p, g, nextDoc, { retire: false });
-      const renamed = nextDoc.boards.find((b) => b.id === boardId);
+  function renameShow(showId, name) {
+    return mutation('renameShow', async ({ p, g, d }) => {
+      const nextDoc = renameInDocument(d, showId, name, now());
+      await saveInPlace('renameShow', p, g, nextDoc, { retire: false });
+      const renamed = nextDoc.shows.find((b) => b.id === showId);
       return { id: renamed.id, name: renamed.name };
     });
   }
 
-  function deleteBoard(boardId) {
-    return mutation('deleteBoard', async ({ p, g, d }) => {
-      const { doc: nextDoc, activeChanged } = deleteFromDocument(d, boardId, { now: now(), ...idOptions() });
+  function deleteShow(showId) {
+    return mutation('deleteShow', async ({ p, g, d }) => {
+      const { doc: nextDoc, activeChanged } = deleteFromDocument(d, showId, { now: now(), ...idOptions() });
       if (!activeChanged) {
-        await saveInPlace('deleteBoard', p, g, nextDoc, { retire: false });
+        await saveInPlace('deleteShow', p, g, nextDoc, { retire: false });
         return { activeChanged: false };
       }
       fenced = true;
-      return { activeChanged: true, ...(await reload('deleteBoard', p, g, nextDoc)) };
+      return { activeChanged: true, ...(await reload('deleteShow', p, g, nextDoc)) };
     });
   }
 
-  /** Every other registered profile's boards, read without writing. */
+  /** Every other registered profile's shows, read without writing. */
   async function listImportable() {
     const p = profile;
     if (!p) throw new Error('No profile is open');
@@ -480,21 +480,21 @@ export function createBoardSession({
     for (const name of names) {
       let peeked = null;
       try {
-        peeked = await boardStore.peek(name);
+        peeked = await showStore.peek(name);
       } catch (error) {
-        debugLog?.warn?.('Could not read another profile\'s boards', { ...logCtx('listImportable'), error: error.message });
+        debugLog?.warn?.('Could not read another profile\'s shows', { ...logCtx('listImportable'), error: error.message });
       }
       if (!peeked) continue;
       result.push({
         profile: name,
-        boards: peeked.boards.map(({ id, name: boardName, updatedAt }) => ({ id, name: boardName, updatedAt }))
+        shows: peeked.shows.map(({ id, name: showName, updatedAt }) => ({ id, name: showName, updatedAt }))
       });
     }
     return result;
   }
 
-  function importBoard(sourceProfile, boardId) {
-    return mutation('importBoard', async ({ p, g, d }) => {
+  function importShow(sourceProfile, showId) {
+    return mutation('importShow', async ({ p, g, d }) => {
       if (typeof sourceProfile !== 'string' || !listProfiles().includes(sourceProfile)) {
         throw new Error(`Profile "${String(sourceProfile)}" is not registered`);
       }
@@ -503,22 +503,22 @@ export function createBoardSession({
       let nextDoc;
       try {
         // peek never writes the source profile's files
-        const source = (await boardStore.peek(sourceProfile))?.boards.find((b) => b.id === boardId);
-        if (!source) throw new Error('Board not found.');
+        const source = (await showStore.peek(sourceProfile))?.shows.find((b) => b.id === showId);
+        if (!source) throw new Error('Show not found.');
         assertCurrent(g);
         const at = now();
-        nextDoc = addBoard(d, {
+        nextDoc = addShow(d, {
           name: importName(d, source.name, sourceProfile),
           layout: source.layout,
           now: at,
           ...idOptions(),
-          importedFrom: { profile: sourceProfile, boardId, boardName: source.name, at }
+          importedFrom: { profile: sourceProfile, showId, showName: source.name, at }
         }).doc;
       } catch (error) {
         lowerFence(g);
         throw error;
       }
-      return reload('importBoard', p, g, nextDoc);
+      return reload('importShow', p, g, nextDoc);
     });
   }
 
@@ -535,12 +535,12 @@ export function createBoardSession({
     activate,
     revert,
     updateActive,
-    createBoard,
-    renameBoard,
-    deleteBoard,
+    createShow,
+    renameShow,
+    deleteShow,
     listImportable,
-    importBoard
+    importShow
   };
 }
 
-export default { createBoardSession, HANDOFF_MAX_AGE_MS };
+export default { createShowSession, HANDOFF_MAX_AGE_MS };

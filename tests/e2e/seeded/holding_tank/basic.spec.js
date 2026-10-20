@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rms, waitForAudible, waitForSilence, stabilize } from '../../../utils/audio-helpers.js';
 import fs from 'node:fs';
-import { importHoldingTankFile } from '../../../utils/board-e2e.js';
+import { importHoldingTankFile } from '../../../utils/show-e2e.js';
 
 // Helper to detect if we're running in CI environment
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';

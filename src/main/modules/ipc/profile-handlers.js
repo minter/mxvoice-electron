@@ -11,7 +11,7 @@ import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { getCurrentProfile, getProfileDirectory, store, debugLog, profileSwitcher, boardSession, recoveryStore } = deps;
+  const { getCurrentProfile, getProfileDirectory, store, debugLog, profileSwitcher, showSession, recoveryStore } = deps;
 
   // Profile handlers
   ipcMain.handle(IPC.PROFILE.GET_CURRENT, async () => {
@@ -329,7 +329,7 @@ export function register(deps) {
 
       // Delete the profile and its crash-recovery record
       const result = await deleteProfileWithRecovery(profileName, {
-        profileManager, boardSession, recoveryStore, getCurrentProfile, debugLog
+        profileManager, showSession, recoveryStore, getCurrentProfile, debugLog
       });
 
       if (result.success) {

@@ -1,55 +1,55 @@
 /**
- * Boards header
+ * Shows header
  *
- * The search-column header reads "<profile> · <board>". It is a label only.
+ * The search-column header reads "<profile> · <show>". It is a label only.
  * Names are user text, so they are only ever set with textContent.
  */
 
-const LOG_CONTEXT = { module: 'boards', function: 'refreshHeader' };
+const LOG_CONTEXT = { module: 'shows', function: 'refreshHeader' };
 
 /**
- * Set the profile and board names in the header.
- * A missing `profile` leaves the profile as it is; a missing `board` hides the
- * separator, icon and board name.
+ * Set the profile and show names in the header.
+ * A missing `profile` leaves the profile as it is; a missing `show` hides the
+ * separator, icon and show name.
  *
- * @param {{ profile?: string, board?: string|null }} labels
+ * @param {{ profile?: string, show?: string|null }} labels
  * @param {Document} [doc]
  */
-export function setHeaderLabels({ profile, board } = {}, doc = document) {
+export function setHeaderLabels({ profile, show } = {}, doc = document) {
   if (typeof profile === 'string') {
     const profileEl = doc.getElementById('profile-name');
     if (profileEl) profileEl.textContent = profile;
   }
 
-  const boardEl = doc.getElementById('board-name');
-  const parts = [doc.querySelector('.board-separator'), doc.getElementById('board-icon'), boardEl];
-  const hasBoard = Boolean(board);
+  const showEl = doc.getElementById('show-name');
+  const parts = [doc.querySelector('.show-separator'), doc.getElementById('show-icon'), showEl];
+  const hasShow = Boolean(show);
   for (const part of parts) {
-    if (part) part.hidden = !hasBoard;
+    if (part) part.hidden = !hasShow;
   }
-  if (boardEl) {
-    boardEl.textContent = hasBoard ? board : '';
-    if (hasBoard) boardEl.title = board;
-    else boardEl.removeAttribute('title');
+  if (showEl) {
+    showEl.textContent = hasShow ? show : '';
+    if (hasShow) showEl.title = show;
+    else showEl.removeAttribute('title');
   }
 }
 
 /**
- * Show the session's active board in the header. Never throws.
+ * Show the session's active show in the header. Never throws.
  *
  * @param {Object} [options]
- * @param {{ getState: Function }} [options.api] - secureElectronAPI.boards
+ * @param {{ getState: Function }} [options.api] - secureElectronAPI.shows
  * @param {Document} [options.doc]
  */
-export async function refreshHeader({ api = window.secureElectronAPI?.boards, doc } = {}) {
+export async function refreshHeader({ api = window.secureElectronAPI?.shows, doc } = {}) {
   try {
     const result = await api.getState();
-    if (!result?.success) throw new Error(result?.error || 'Reading the board session failed');
-    const { profile, doc: boardDoc } = result.data ?? {};
-    const active = boardDoc?.boards?.find((b) => b.id === boardDoc.activeBoardId);
-    setHeaderLabels({ profile, board: active?.name ?? null }, doc);
+    if (!result?.success) throw new Error(result?.error || 'Reading the show session failed');
+    const { profile, doc: showDoc } = result.data ?? {};
+    const active = showDoc?.shows?.find((b) => b.id === showDoc.activeShowId);
+    setHeaderLabels({ profile, show: active?.name ?? null }, doc);
   } catch (error) {
-    window.debugLog?.warn('Could not refresh the board header', { ...LOG_CONTEXT, error: error.message });
+    window.debugLog?.warn('Could not refresh the show header', { ...LOG_CONTEXT, error: error.message });
   }
 }
 

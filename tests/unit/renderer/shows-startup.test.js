@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 globalThis.window = { debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } };
 
-const { openSessionOnStartup, droppedSongsMessage, initializeBoardCommands } = await import('../../../src/renderer/modules/boards/index.js');
+const { openSessionOnStartup, droppedSongsMessage, initializeShowCommands } = await import('../../../src/renderer/modules/shows/index.js');
 
 const savedLayout = { hotkeys: [{ tabNumber: 1, tabName: 'Saved', hotkeys: { f1: '1001' } }], holdingTank: [], selected: { hotkeyTab: 1, holdingTankTab: 1 } };
 const liveLayout = { hotkeys: [{ tabNumber: 1, tabName: 'Live', hotkeys: { f1: '1002' } }], holdingTank: [], selected: { hotkeyTab: 2, holdingTankTab: 1 } };
@@ -30,13 +30,13 @@ function setup({ open, confirm = vi.fn(async () => false), dropped = 0 } = {}) {
   return { api, deps, calls };
 }
 
-const opened = (recovery = null, extra = {}) => ok({ doc: {}, board: { layout: savedLayout }, recovery, generation: 7, ...extra });
+const opened = (recovery = null, extra = {}) => ok({ doc: {}, show: { layout: savedLayout }, recovery, generation: 7, ...extra });
 
 describe('openSessionOnStartup', () => {
   beforeEach(() => { window.isRestoringProfileState = false; });
 
   it('restores silently when recovery.handoff is "update"', async () => {
-    const { api, deps, calls } = setup({ open: opened({ savedAt: Date.now(), handoff: 'update', boardId: 'b1' }) });
+    const { api, deps, calls } = setup({ open: opened({ savedAt: Date.now(), handoff: 'update', showId: 'b1' }) });
     await expect(openSessionOnStartup(deps)).resolves.toEqual({ status: 'ready' });
     expect(deps.confirm).not.toHaveBeenCalled();
     expect(api.resolveRecovery).toHaveBeenCalledWith('restore');
@@ -45,7 +45,7 @@ describe('openSessionOnStartup', () => {
 
   it('asks once when recovery exists without handoff; default discards', async () => {
     const savedAt = new Date(2026, 9, 20, 21, 5).getTime();
-    const { api, deps, calls } = setup({ open: opened({ savedAt, handoff: null, boardId: 'b1' }) });
+    const { api, deps, calls } = setup({ open: opened({ savedAt, handoff: null, showId: 'b1' }) });
     deps.confirm.mockImplementation(async () => {
       // The restoration lock is held while the question is open
       expect(window.isRestoringProfileState).toBe(true);
@@ -57,7 +57,7 @@ describe('openSessionOnStartup', () => {
     expect(deps.confirm).toHaveBeenCalledWith(
       `Mx. Voice didn't close normally. Restore the show in progress from ${time}?`,
       'Restore show?',
-      { confirmLabel: 'Restore show in progress', cancelLabel: 'Open saved board', defaultAction: 'cancel' }
+      { confirmLabel: 'Restore show in progress', cancelLabel: 'Open saved show', defaultAction: 'cancel' }
     );
     expect(api.resolveRecovery).toHaveBeenCalledWith('discard');
     expect(calls).toEqual(['apply:Saved', 'ready:7:true', 'unlock']);
@@ -65,7 +65,7 @@ describe('openSessionOnStartup', () => {
 
   it('restores the show in progress when the prompt is confirmed', async () => {
     const { api, deps, calls } = setup({
-      open: opened({ savedAt: Date.now(), handoff: null, boardId: 'b1' }),
+      open: opened({ savedAt: Date.now(), handoff: null, showId: 'b1' }),
       confirm: vi.fn(async () => true)
     });
     await openSessionOnStartup(deps);
@@ -73,7 +73,7 @@ describe('openSessionOnStartup', () => {
     expect(calls[0]).toBe('apply:Live');
   });
 
-  it('opens the saved board without asking when there is no recovery', async () => {
+  it('opens the saved show without asking when there is no recovery', async () => {
     const { api, deps, calls } = setup({ open: opened() });
     await openSessionOnStartup(deps);
     expect(deps.confirm).not.toHaveBeenCalled();
@@ -82,7 +82,7 @@ describe('openSessionOnStartup', () => {
   });
 
   it('reports failed and never applies an empty layout when open throws', async () => {
-    const message = "Mx. Voice couldn't load this board. Your saved boards were not changed.";
+    const message = "Mx. Voice couldn't load this show. Your saved shows were not changed.";
 
     const failedStore = setup({ open: ok({ failed: true, error: 'version', generation: 3 }) });
     await expect(openSessionOnStartup(failedStore.deps)).resolves.toEqual({ status: 'failed' });
@@ -90,7 +90,7 @@ describe('openSessionOnStartup', () => {
     expect(failedStore.calls).toEqual(['ready:3:false', 'unlock']);
     expect(failedStore.deps.alert).toHaveBeenCalledWith(message, expect.any(String));
 
-    const rejected = setup({ open: { success: false, error: 'Board session unavailable' } });
+    const rejected = setup({ open: { success: false, error: 'Show session unavailable' } });
     await expect(openSessionOnStartup(rejected.deps)).resolves.toEqual({ status: 'failed' });
     expect(rejected.deps.applyLayout).not.toHaveBeenCalled();
     expect(rejected.api.reportReady).not.toHaveBeenCalled();
@@ -106,7 +106,7 @@ describe('openSessionOnStartup', () => {
   it('after starting empty, a crash record still prompts, and a handoff still restores silently', async () => {
     const savedAt = Date.now();
     const prompted = setup({ open: ok({ unreadable: true, generation: 4 }), confirm: vi.fn(async () => true) });
-    prompted.api.startEmpty.mockResolvedValue(ok({ layout: savedLayout, generation: 8, recovery: { savedAt, handoff: null, boardId: 'b1' } }));
+    prompted.api.startEmpty.mockResolvedValue(ok({ layout: savedLayout, generation: 8, recovery: { savedAt, handoff: null, showId: 'b1' } }));
     await expect(openSessionOnStartup(prompted.deps)).resolves.toEqual({ status: 'ready' });
     expect(prompted.deps.confirm).toHaveBeenCalledTimes(2);
     expect(prompted.deps.confirm.mock.calls[1][1]).toBe('Restore show?');
@@ -115,18 +115,18 @@ describe('openSessionOnStartup', () => {
     expect(prompted.deps.track).toHaveBeenCalledWith('crash_restore_offered');
 
     const handedOff = setup({ open: ok({ unreadable: true, generation: 4 }), confirm: vi.fn(async () => true) });
-    handedOff.api.startEmpty.mockResolvedValue(ok({ layout: savedLayout, generation: 8, recovery: { savedAt, handoff: 'renderer-crash', boardId: 'b1' } }));
+    handedOff.api.startEmpty.mockResolvedValue(ok({ layout: savedLayout, generation: 8, recovery: { savedAt, handoff: 'renderer-crash', showId: 'b1' } }));
     await openSessionOnStartup(handedOff.deps);
     expect(handedOff.deps.confirm).toHaveBeenCalledOnce();
     expect(handedOff.api.resolveRecovery).toHaveBeenCalledWith('restore');
     expect(handedOff.calls).toEqual(['apply:Live', 'ready:8:true', 'unlock']);
   });
 
-  it('an unreadable store offers Start with an empty board or Quit', async () => {
+  it('an unreadable store offers Start with an empty show or Quit', async () => {
     const expectedPrompt = [
-      "Mx. Voice couldn't read this profile's boards. The file has been kept so it can be recovered.",
-      'Boards unreadable',
-      { confirmLabel: 'Start with an empty board', cancelLabel: 'Quit' }
+      "Mx. Voice couldn't read this profile's shows. The file has been kept so it can be recovered.",
+      'Shows unreadable',
+      { confirmLabel: 'Start with an empty show', cancelLabel: 'Quit' }
     ];
 
     const start = setup({ open: ok({ unreadable: true, generation: 4 }), confirm: vi.fn(async () => true) });
@@ -147,31 +147,31 @@ describe('openSessionOnStartup', () => {
   it('shows the store notice and missing songs as one non-blocking toast', async () => {
     const { deps } = setup({ open: opened(null, { notice: 'Opened the previous copy.' }), dropped: 3 });
     await openSessionOnStartup(deps);
-    expect(deps.toast).toHaveBeenCalledWith("Opened the previous copy. 3 songs in this board aren't in the library.", expect.any(Number));
+    expect(deps.toast).toHaveBeenCalledWith("Opened the previous copy. 3 songs in this show aren't in the library.", expect.any(Number));
     // The session is told which songs were dropped
     expect(deps.api.reportReady).toHaveBeenCalledWith(7, true, { droppedIds: ['77'] });
   });
 
   it('words the missing-songs toast in the singular and plural', () => {
     expect(droppedSongsMessage(0)).toBeNull();
-    expect(droppedSongsMessage(1)).toBe("1 song in this board isn't in the library.");
-    expect(droppedSongsMessage(3)).toBe("3 songs in this board aren't in the library.");
+    expect(droppedSongsMessage(1)).toBe("1 song in this show isn't in the library.");
+    expect(droppedSongsMessage(3)).toBe("3 songs in this show aren't in the library.");
   });
 
   it('reports the crash prompt and the choice to analytics', async () => {
-    const asked = setup({ open: opened({ savedAt: Date.now(), handoff: null, boardId: 'b1' }), confirm: vi.fn(async () => true) });
+    const asked = setup({ open: opened({ savedAt: Date.now(), handoff: null, showId: 'b1' }), confirm: vi.fn(async () => true) });
     await openSessionOnStartup(asked.deps);
     expect(asked.deps.track.mock.calls).toEqual([
       ['crash_restore_offered'],
       ['crash_restore_chosen', { choice: 'restore' }]
     ]);
 
-    const declined = setup({ open: opened({ savedAt: Date.now(), handoff: null, boardId: 'b1' }) });
+    const declined = setup({ open: opened({ savedAt: Date.now(), handoff: null, showId: 'b1' }) });
     await openSessionOnStartup(declined.deps);
     expect(declined.deps.track).toHaveBeenLastCalledWith('crash_restore_chosen', { choice: 'discard' });
 
     // A silent handoff restore and a clean open ask nothing
-    const handoff = setup({ open: opened({ savedAt: Date.now(), handoff: 'update', boardId: 'b1' }) });
+    const handoff = setup({ open: opened({ savedAt: Date.now(), handoff: 'update', showId: 'b1' }) });
     await openSessionOnStartup(handoff.deps);
     const clean = setup({ open: opened() });
     await openSessionOnStartup(clean.deps);
@@ -194,23 +194,23 @@ describe('header refresh', () => {
     expect(failed.deps.refreshHeader).toHaveBeenCalledOnce();
   });
 
-  it('refreshes the header after a board command, even a refused one', async () => {
+  it('refreshes the header after a show command, even a refused one', async () => {
     let listener;
-    const onBoardCommand = vi.fn((cb) => { listener = cb; return vi.fn(); });
+    const onShowCommand = vi.fn((cb) => { listener = cb; return vi.fn(); });
     const refreshHeader = vi.fn(async () => {});
     const api = { activate: vi.fn(async () => ({ success: false, error: 'busy' })), reportReady: vi.fn() };
-    initializeBoardCommands({ onBoardCommand, api, applyLayout: vi.fn(), track: vi.fn(), isModalOpen: () => false, refreshHeader });
-    listener({ command: 'switch', boardId: 'b2' });
+    initializeShowCommands({ onShowCommand, api, applyLayout: vi.fn(), track: vi.fn(), isModalOpen: () => false, refreshHeader });
+    listener({ command: 'switch', showId: 'b2' });
     await vi.waitFor(() => expect(refreshHeader).toHaveBeenCalledOnce());
     expect(api.activate).toHaveBeenCalledWith('b2');
   });
 });
 
-describe('initializeBoardCommands', () => {
-  it('runs each menu:board-command with the injected deps', async () => {
+describe('initializeShowCommands', () => {
+  it('runs each menu:show-command with the injected deps', async () => {
     let listener;
     const unsubscribe = vi.fn();
-    const onBoardCommand = vi.fn((cb) => { listener = cb; return unsubscribe; });
+    const onShowCommand = vi.fn((cb) => { listener = cb; return unsubscribe; });
     const api = {
       activate: vi.fn(async () => ok({ layout: savedLayout, generation: 3 })),
       reportReady: vi.fn(async () => ok(null))
@@ -218,15 +218,15 @@ describe('initializeBoardCommands', () => {
     const applyLayout = vi.fn(async () => ({ dropped: 0 }));
     const track = vi.fn();
 
-    expect(initializeBoardCommands({ onBoardCommand, api, applyLayout, track, isModalOpen: () => true })).toBe(unsubscribe);
-    listener({ command: 'switch', boardId: 'b2' });
+    expect(initializeShowCommands({ onShowCommand, api, applyLayout, track, isModalOpen: () => true })).toBe(unsubscribe);
+    listener({ command: 'switch', showId: 'b2' });
     await vi.waitFor(() => expect(api.reportReady).toHaveBeenCalledWith(3, true, { droppedIds: [] }));
     expect(api.activate).toHaveBeenCalledWith('b2');
     expect(applyLayout).toHaveBeenCalledWith(savedLayout);
-    expect(track).toHaveBeenCalledWith('board_switched', undefined);
+    expect(track).toHaveBeenCalledWith('show_switched', undefined);
   });
 
   it('does nothing without the preload event', () => {
-    expect(initializeBoardCommands({ onBoardCommand: null, applyLayout: vi.fn() })).toBeNull();
+    expect(initializeShowCommands({ onShowCommand: null, applyLayout: vi.fn() })).toBeNull();
   });
 });

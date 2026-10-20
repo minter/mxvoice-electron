@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'node:path';
 import os from 'os';
 import { fileURLToPath } from 'node:url';
-import { importHoldingTankFile } from '../../../utils/board-e2e.js';
+import { importHoldingTankFile } from '../../../utils/show-e2e.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

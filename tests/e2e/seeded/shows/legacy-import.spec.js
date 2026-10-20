@@ -3,21 +3,21 @@ import fs from 'fs';
 import os from 'os';
 import path from 'node:path';
 import { launchSeededApp, waitForAppReady } from '../../../utils/seeded-launch.js';
-import { relaunchApp, waitForBoardSettled } from '../../../utils/relaunch.js';
-import { readBoards, seedBoards } from '../../../utils/seed-boards.js';
+import { relaunchApp, waitForShowSettled } from '../../../utils/relaunch.js';
+import { readShows, seedShows } from '../../../utils/seed-shows.js';
 import {
   f1Hotkey,
   importHoldingTankFile,
   importHotkeyFile,
-  multiBoardDocument,
+  multiShowDocument,
   quitApp,
-  waitForBoardMenuReady
-} from '../../../utils/board-e2e.js';
+  waitForShowMenuReady
+} from '../../../utils/show-e2e.js';
 
 // Seeded songs: 1001 Got The Time, 1002 The Wheel, 1003, 1004 We Are Family, 1005 Eat It.
 const PROFILE = 'Default User';
 
-test.describe('Boards - legacy file import', () => {
+test.describe('Shows - legacy file import', () => {
   let app;
   let page;
   let userDataDir;
@@ -34,12 +34,12 @@ test.describe('Boards - legacy file import', () => {
   test.beforeEach(async () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-legacy-import-'));
     ({ app, page, userDataDir, suiteRoot } = await launchSeededApp(electron, 'legacy-import', {
-      beforeLaunch: (dir) => seedBoards(dir, PROFILE, multiBoardDocument([
+      beforeLaunch: (dir) => seedShows(dir, PROFILE, multiShowDocument([
         { name: 'Main Show', hotkeys: { f1: '1002' } }
       ]))
     }));
     await waitForAppReady(page, app);
-    await waitForBoardMenuReady(app);
+    await waitForShowMenuReady(app);
   });
 
   test.afterEach(async () => {
@@ -92,14 +92,14 @@ test.describe('Boards - legacy file import', () => {
     await importHotkeyFile(app);
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1001');
 
-    const saved = readBoards(userDataDir, PROFILE);
-    expect(saved.boards[0].layout.hotkeys[0].hotkeys.f1).toBe('1002');
+    const saved = readShows(userDataDir, PROFILE);
+    expect(saved.shows[0].layout.hotkeys[0].hotkeys.f1).toBe('1002');
 
     await quitApp(app);
     let fakeHome;
     ({ app, page, fakeHome } = await relaunchApp(electron, userDataDir, { profile: PROFILE }));
     homes.push(fakeHome);
-    await waitForBoardSettled(page);
+    await waitForShowSettled(page);
     await waitForAppReady(page, app);
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1002');
   });

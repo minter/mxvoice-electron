@@ -21,7 +21,7 @@ let debugLog = null;
 let profileManager = null;
 let launcherWindow = null;
 let mainAppLauncher = null;
-let boardSession = null;
+let showSession = null;
 let recoveryStore = null;
 let getCurrentProfile = () => null;
 let profileSelected = false;
@@ -45,7 +45,7 @@ function initializeLauncherWindow(dependencies) {
   debugLog = dependencies.debugLog;
   profileManager = dependencies.profileManager;
   mainAppLauncher = dependencies.mainAppLauncher;
-  boardSession = dependencies.boardSession || null;
+  showSession = dependencies.showSession || null;
   recoveryStore = dependencies.recoveryStore || null;
   getCurrentProfile = dependencies.getCurrentProfile || (() => null);
   
@@ -211,7 +211,7 @@ function registerLauncherHandlers() {
       });
       
       const result = await deleteProfileWithRecovery(name, {
-        profileManager, boardSession, recoveryStore, getCurrentProfile, debugLog
+        profileManager, showSession, recoveryStore, getCurrentProfile, debugLog
       });
       
       if (result.success) {

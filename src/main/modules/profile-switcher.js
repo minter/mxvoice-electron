@@ -54,7 +54,7 @@ export function applyWindowState(win, state, screen) {
  * @param {Function} deps.getCurrentProfile
  * @param {Function} deps.setCurrentProfile
  * @param {Function} deps.prepareForSwitch - Flush renderer state and window bounds for the current profile,
- *   then end its board session as a switch, which retires its crash-recovery record (time-limited
+ *   then end its show session as a switch, which retires its crash-recovery record (time-limited
  *   itself, so a hung page can't hold the switch). The session fence and lock-renderer-saves are
  *   two separate guards against the old page's late writes.
  * @param {Object} deps.profileManager - { profileExists, updateProfileLastUsed, loadProfilePreferences }

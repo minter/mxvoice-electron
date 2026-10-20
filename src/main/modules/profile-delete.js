@@ -12,7 +12,7 @@
  * @param {string} profileName
  * @param {Object} deps
  * @param {Object} deps.profileManager - { deleteProfile, getDeleteProfileBlocker }
- * @param {Object} [deps.boardSession] - from createBoardSession
+ * @param {Object} [deps.showSession] - from createShowSession
  * @param {Object} [deps.recoveryStore] - from createRecoveryStore
  * @param {() => string|null} [deps.getCurrentProfile]
  * @param {Object} [deps.debugLog]
@@ -20,7 +20,7 @@
  */
 export async function deleteProfileWithRecovery(profileName, {
   profileManager,
-  boardSession,
+  showSession,
   recoveryStore,
   getCurrentProfile,
   debugLog
@@ -32,9 +32,9 @@ export async function deleteProfileWithRecovery(profileName, {
   // refused one must leave the session running.
   if (profileName === getCurrentProfile?.() && !profileManager.getDeleteProfileBlocker(profileName)) {
     try {
-      await boardSession?.end('profile-deleted');
+      await showSession?.end('profile-deleted');
     } catch (error) {
-      debugLog?.warn('Could not end the board session before deleting its profile', { ...logCtx, error: error.message });
+      debugLog?.warn('Could not end the show session before deleting its profile', { ...logCtx, error: error.message });
     }
   }
 

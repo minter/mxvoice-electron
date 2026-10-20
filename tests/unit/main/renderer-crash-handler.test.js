@@ -1,20 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createRendererGoneHandler } from '../../../src/main/modules/renderer-crash-handler.js';
-import { createBoardSession } from '../../../src/main/modules/board-session.js';
+import { createShowSession } from '../../../src/main/modules/show-session.js';
 import { createWindowStateManager } from '../../../src/main/modules/window-state-manager.js';
-import { createDocument, normalizeLayout } from '../../../src/main/modules/board-document.js';
+import { createDocument, normalizeLayout } from '../../../src/main/modules/show-document.js';
 
 const MESSAGE = "Mx. Voice's window stopped working. Reload it and restore the show in progress?";
 const saved = normalizeLayout({ hotkeys: [{ tabNumber: 1, hotkeys: { f1: '1' } }] });
-// The show in progress differs from the saved board, so it has a record
+// The show in progress differs from the saved show, so it has a record
 const layout = normalizeLayout({ hotkeys: [{ tabNumber: 1, hotkeys: { f1: '9' } }] });
 
 function memoryRecoveryStore() {
   const records = new Map();
   return {
     records,
-    write: vi.fn(async (profile, { boardId, layout: l }) => {
-      records.set(profile, { version: 1, boardId, savedAt: Date.now(), handoff: null, layout: l });
+    write: vi.fn(async (profile, { showId, layout: l }) => {
+      records.set(profile, { version: 1, showId, savedAt: Date.now(), handoff: null, layout: l });
     }),
     read: vi.fn(async (profile) => records.get(profile) ?? null),
     markHandoff: vi.fn(async (profile, reason) => {
@@ -46,29 +46,29 @@ function makeWindow({ destroyed = false } = {}) {
 function setup({ response = 0, window = makeWindow() } = {}) {
   const dialog = { showMessageBox: vi.fn(async () => ({ response })) };
   const app = { quit: vi.fn() };
-  const boardSession = { rendererGone: vi.fn() };
+  const showSession = { rendererGone: vi.fn() };
   const debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-  const handler = createRendererGoneHandler({ boardSession, dialog, getMainWindow: () => window, app, debugLog });
-  return { handler, dialog, app, boardSession, window, debugLog };
+  const handler = createRendererGoneHandler({ showSession, dialog, getMainWindow: () => window, app, debugLog });
+  return { handler, dialog, app, showSession, window, debugLog };
 }
 
 describe('renderer crash handler', () => {
   it('renderer crash marks handoff and the following quit keeps the record', async () => {
     const recoveryStore = memoryRecoveryStore();
-    const doc = createDocument(saved, { now: Date.now(), newId: () => 'board-1' });
-    const boardSession = createBoardSession({
-      boardStore: { load: vi.fn(async () => ({ doc, source: 'boards' })) },
+    const doc = createDocument(saved, { now: Date.now(), newId: () => 'show-1' });
+    const showSession = createShowSession({
+      showStore: { load: vi.fn(async () => ({ doc, source: 'shows' })) },
       recoveryStore,
       getCurrentProfile: () => 'Alice'
     });
-    const opened = await boardSession.open();
-    boardSession.reportReady(opened.generation, true);
-    await boardSession.saveRecovery(layout);
+    const opened = await showSession.open();
+    showSession.reportReady(opened.generation, true);
+    await showSession.saveRecovery(layout);
 
     const window = makeWindow();
     const app = { quit: vi.fn() };
     const dialog = { showMessageBox: vi.fn(async () => ({ response: 1 })) };
-    const handler = createRendererGoneHandler({ boardSession, dialog, getMainWindow: () => window, app });
+    const handler = createRendererGoneHandler({ showSession, dialog, getMainWindow: () => window, app });
     await handler({}, { reason: 'crashed', exitCode: 11 });
     expect(app.quit).toHaveBeenCalledOnce();
 
@@ -79,7 +79,7 @@ describe('renderer crash handler', () => {
       screen: { getDisplayNearestPoint: () => ({ id: 1 }) },
       getCurrentProfile: () => null,
       isQuitting: () => true,
-      boardSession,
+      showSession,
       flushTimeoutMs: 5
     });
     await manager.prepareMainWindowForClose();
@@ -92,7 +92,7 @@ describe('renderer crash handler', () => {
   it('Reload reloads the page; Quit quits', async () => {
     const reload = setup({ response: 0 });
     await reload.handler({}, { reason: 'crashed' });
-    expect(reload.boardSession.rendererGone).toHaveBeenCalledOnce();
+    expect(reload.showSession.rendererGone).toHaveBeenCalledOnce();
     expect(reload.dialog.showMessageBox).toHaveBeenCalledWith(reload.window, expect.objectContaining({
       message: MESSAGE,
       buttons: ['Reload', 'Quit'],
@@ -133,7 +133,7 @@ describe('renderer crash handler', () => {
   it('marks the handoff before asking', async () => {
     const ctx = setup();
     ctx.dialog.showMessageBox.mockImplementation(async () => {
-      expect(ctx.boardSession.rendererGone).toHaveBeenCalled();
+      expect(ctx.showSession.rendererGone).toHaveBeenCalled();
       return { response: 0 };
     });
     await ctx.handler({}, { reason: 'killed' });
@@ -143,14 +143,14 @@ describe('renderer crash handler', () => {
   it('ignores a normal renderer exit', async () => {
     const ctx = setup();
     await ctx.handler({}, { reason: 'clean-exit' });
-    expect(ctx.boardSession.rendererGone).not.toHaveBeenCalled();
+    expect(ctx.showSession.rendererGone).not.toHaveBeenCalled();
     expect(ctx.dialog.showMessageBox).not.toHaveBeenCalled();
   });
 
   it('marks the handoff but asks nothing when the window is gone', async () => {
     const ctx = setup({ window: makeWindow({ destroyed: true }) });
     await ctx.handler({}, { reason: 'crashed' });
-    expect(ctx.boardSession.rendererGone).toHaveBeenCalledOnce();
+    expect(ctx.showSession.rendererGone).toHaveBeenCalledOnce();
     expect(ctx.dialog.showMessageBox).not.toHaveBeenCalled();
 
     const none = setup({ window: null });

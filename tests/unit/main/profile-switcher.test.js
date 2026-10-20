@@ -130,11 +130,11 @@ describe('profile switcher', () => {
   });
 });
 
-describe('profile switch and the board session', () => {
+describe('profile switch and the show session', () => {
   // The app's wiring: prepareForSwitch is the window close preparation as a switch
   function sessionSetup() {
     const harness = setup();
-    const boardSession = {
+    const showSession = {
       end: vi.fn(async (reason) => { harness.calls.push(`end:${reason}:${harness.getProfile()}`); }),
       handoff: vi.fn(async () => {})
     };
@@ -149,19 +149,19 @@ describe('profile switch and the board session', () => {
       screen: { getDisplayNearestPoint: () => ({ id: 1 }) },
       getCurrentProfile: () => null,
       isQuitting: () => false,
-      boardSession
+      showSession
     });
     const switcher = createProfileSwitcher({
       ...harness.deps,
       prepareForSwitch: () => manager.prepareMainWindowForClose({ exit: 'switch' })
     });
-    return { ...harness, switcher, boardSession };
+    return { ...harness, switcher, showSession };
   }
 
   it('switch retires the old profile recovery before setCurrentProfile', async () => {
-    const { switcher, calls, boardSession } = sessionSetup();
+    const { switcher, calls, showSession } = sessionSetup();
     await switcher.switchProfile('Saturday Show');
-    expect(boardSession.end).toHaveBeenCalledOnce();
+    expect(showSession.end).toHaveBeenCalledOnce();
     expect(calls.indexOf('end:switch:Default User')).toBeGreaterThan(-1);
     expect(calls.indexOf('end:switch:Default User')).toBeLessThan(calls.indexOf('current=Saturday Show'));
     // The page's debounced saves are still locked out after the fence
@@ -169,10 +169,10 @@ describe('profile switch and the board session', () => {
   });
 
   it('switch to the same profile retires nothing', async () => {
-    const { switcher, boardSession } = sessionSetup();
+    const { switcher, showSession } = sessionSetup();
     await switcher.switchProfile('Default User');
-    expect(boardSession.end).not.toHaveBeenCalled();
-    expect(boardSession.handoff).not.toHaveBeenCalled();
+    expect(showSession.end).not.toHaveBeenCalled();
+    expect(showSession.handoff).not.toHaveBeenCalled();
   });
 });
 

@@ -1,4 +1,4 @@
-import { setHeaderLabels } from '../boards/header.js';
+import { setHeaderLabels } from '../shows/header.js';
 
 /**
  * Show the new profile creation modal
@@ -155,7 +155,7 @@ async function handleDuplicateProfileSubmit() {
       modal.hide();
       
       // Switch directly to the newly duplicated profile. The copy has the
-      // source's saved boards; the live layout is never flushed into them.
+      // source's saved shows; the live layout is never flushed into them.
       try {
         const switchResult = await window.secureElectronAPI.profile.switchToProfile(targetName);
         if (!switchResult.success) {

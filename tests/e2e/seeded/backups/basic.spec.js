@@ -373,15 +373,15 @@ test.describe('Profile Backups - basic', () => {
     expect(fs.existsSync(path.join(backupPath, 'hotkeys'))).toBe(true);
     expect(fs.existsSync(path.join(backupPath, 'holding-tank'))).toBe(true);
 
-    // Boards (Task 9): the backup's layout is the saved boards. state.json is
+    // Shows (Task 9): the backup's layout is the saved shows. state.json is
     // copied as it is (nothing writes it any more), and the pre-backup flush
     // only writes the crash-recovery record, which lives outside the profile.
     const backupState = JSON.parse(fs.readFileSync(path.join(backupPath, 'state.json'), 'utf8'));
     expect(backupState).toEqual({ test: 'state' });
-    const backupBoards = JSON.parse(fs.readFileSync(path.join(backupPath, 'boards.json'), 'utf8'));
-    expect(backupBoards).toEqual(JSON.parse(fs.readFileSync(path.join(profileDir, 'boards.json'), 'utf8')));
-    expect(backupBoards.boards[0]).toHaveProperty('layout.hotkeys');
-    expect(backupBoards.boards[0]).toHaveProperty('layout.holdingTank');
+    const backupShows = JSON.parse(fs.readFileSync(path.join(backupPath, 'shows.json'), 'utf8'));
+    expect(backupShows).toEqual(JSON.parse(fs.readFileSync(path.join(profileDir, 'shows.json'), 'utf8')));
+    expect(backupShows.shows[0]).toHaveProperty('layout.hotkeys');
+    expect(backupShows.shows[0]).toHaveProperty('layout.holdingTank');
     expect(fs.existsSync(path.join(backupPath, 'recovery'))).toBe(false);
   });
 

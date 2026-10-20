@@ -15,8 +15,8 @@ function createWindowStateManager({
   // Closing the window quits the app, so a close that isn't part of an
   // explicit quit (Cmd-Q, File > Quit) is confirmed first: (window) => Promise<boolean>
   confirmClose = async () => true,
-  // Ends or hands off the live board session once state is saved; optional
-  boardSession = null,
+  // Ends or hands off the live show session once state is saved; optional
+  showSession = null,
   // A hung page must not block closing or quitting: give up on its flush
   flushTimeoutMs = 5000
 }) {
@@ -206,7 +206,7 @@ function setupWindowStateSaving() {
 
 /**
  * Flush renderer state and persist the main window state before it closes,
- * then settle the board session's crash-recovery record for this kind of exit:
+ * then settle the show session's crash-recovery record for this kind of exit:
  * 'clean' (close, quit, session end) and 'switch' retire it; 'handoff'
  * (update install) keeps it for the next launch to restore.
  * Reuses an in-flight preparation so close and quit events cannot overlap saves.
@@ -228,20 +228,20 @@ function prepareMainWindowForClose({ exit = 'clean' } = {}) {
       try {
         await flushAndSaveWindow();
       } finally {
-        await boardSession?.handoff('update');
+        await showSession?.handoff('update');
       }
       return;
     }
 
     await flushAndSaveWindow();
-    if (!boardSession) return;
+    if (!showSession) return;
     if (keepRecoveryOnExit) {
       debugLog?.warn('Keeping crash recovery: the page did not flush its state', {
         module: 'app-setup', function: 'prepareMainWindowForClose', exit
       });
       return;
     }
-    await boardSession.end(exit === 'switch' ? 'switch' : 'clean-exit');
+    await showSession.end(exit === 'switch' ? 'switch' : 'clean-exit');
   })();
   closePreparationPromise = preparation;
   const clearPreparation = () => {

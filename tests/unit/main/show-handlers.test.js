@@ -12,13 +12,13 @@ vi.mock('../../../src/main/modules/profile-manager.js', () => ({
 
 const UUID = '0b6f6f2e-8a51-4d0e-9b8e-3d0c1f2a7e44';
 
-const { register } = await import('../../../src/main/modules/ipc/board-handlers.js');
-const { createBoardSession } = await import('../../../src/main/modules/board-session.js');
-const { createDocument } = await import('../../../src/main/modules/board-document.js');
+const { register } = await import('../../../src/main/modules/ipc/show-handlers.js');
+const { createShowSession } = await import('../../../src/main/modules/show-session.js');
+const { createDocument } = await import('../../../src/main/modules/show-document.js');
 
 function setup(overrides = {}) {
-  const boardSession = {
-    open: vi.fn(async () => ({ doc: {}, board: {}, recovery: null, generation: 1 })),
+  const showSession = {
+    open: vi.fn(async () => ({ doc: {}, show: {}, recovery: null, generation: 1 })),
     startEmpty: vi.fn(async () => ({ layout: {}, generation: 1 })),
     resolveRecovery: vi.fn(async () => ({ layout: { hotkeys: [] } })),
     reportReady: vi.fn(),
@@ -27,155 +27,155 @@ function setup(overrides = {}) {
     activate: vi.fn(async () => ({ layout: {}, generation: 2 })),
     revert: vi.fn(async () => ({ layout: {}, generation: 2 })),
     updateActive: vi.fn(async () => undefined),
-    createBoard: vi.fn(async () => ({ id: UUID, name: 'New' })),
-    renameBoard: vi.fn(async () => ({ id: UUID, name: 'Renamed' })),
-    deleteBoard: vi.fn(async () => ({ activeChanged: false })),
-    listImportable: vi.fn(async () => [{ profile: 'Bob', boards: [] }]),
-    importBoard: vi.fn(async () => ({ layout: {}, generation: 2 })),
+    createShow: vi.fn(async () => ({ id: UUID, name: 'New' })),
+    renameShow: vi.fn(async () => ({ id: UUID, name: 'Renamed' })),
+    deleteShow: vi.fn(async () => ({ activeChanged: false })),
+    listImportable: vi.fn(async () => [{ profile: 'Bob', shows: [] }]),
+    importShow: vi.fn(async () => ({ layout: {}, generation: 2 })),
     ...overrides,
   };
-  register({ boardSession, debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
-  return { boardSession };
+  register({ showSession, debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
+  return { showSession };
 }
 
-describe('board IPC handlers', () => {
+describe('show IPC handlers', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('report-ready rejects dropped ids that are not a short list of numeric strings', async () => {
-    const { boardSession } = setup();
+    const { showSession } = setup();
     for (const droppedIds of ['12', [12], ['12', 'x'], ['1;DROP'], Array.from({ length: 10001 }, (_, i) => String(i))]) {
-      const result = await handlers['board:report-ready']({}, 3, true, { droppedIds });
+      const result = await handlers['show:report-ready']({}, 3, true, { droppedIds });
       expect(result).toMatchObject({ success: false, error: 'Invalid dropped song ids' });
     }
-    expect(boardSession.reportReady).not.toHaveBeenCalled();
+    expect(showSession.reportReady).not.toHaveBeenCalled();
   });
 
   it('wraps results as { success, data }', async () => {
-    const { boardSession } = setup();
+    const { showSession } = setup();
 
-    await expect(handlers['board:open']({})).resolves.toEqual({
-      success: true, data: { doc: {}, board: {}, recovery: null, generation: 1 },
+    await expect(handlers['show:open']({})).resolves.toEqual({
+      success: true, data: { doc: {}, show: {}, recovery: null, generation: 1 },
     });
-    await expect(handlers['board:start-empty']({})).resolves.toEqual({
+    await expect(handlers['show:start-empty']({})).resolves.toEqual({
       success: true, data: { layout: {}, generation: 1 },
     });
-    await expect(handlers['board:resolve-recovery']({}, 'restore')).resolves.toEqual({
+    await expect(handlers['show:resolve-recovery']({}, 'restore')).resolves.toEqual({
       success: true, data: { layout: { hotkeys: [] } },
     });
-    expect(boardSession.resolveRecovery).toHaveBeenCalledWith('restore');
-    await expect(handlers['board:report-ready']({}, 3, true)).resolves.toEqual({ success: true, data: null });
-    expect(boardSession.reportReady).toHaveBeenCalledWith(3, true, { droppedIds: [] });
-    await handlers['board:report-ready']({}, 4, true, { droppedIds: ['12', '7'] });
-    expect(boardSession.reportReady).toHaveBeenLastCalledWith(4, true, { droppedIds: ['12', '7'] });
-    await expect(handlers['board:get-state']({})).resolves.toEqual({
+    expect(showSession.resolveRecovery).toHaveBeenCalledWith('restore');
+    await expect(handlers['show:report-ready']({}, 3, true)).resolves.toEqual({ success: true, data: null });
+    expect(showSession.reportReady).toHaveBeenCalledWith(3, true, { droppedIds: [] });
+    await handlers['show:report-ready']({}, 4, true, { droppedIds: ['12', '7'] });
+    expect(showSession.reportReady).toHaveBeenLastCalledWith(4, true, { droppedIds: ['12', '7'] });
+    await expect(handlers['show:get-state']({})).resolves.toEqual({
       success: true, data: { profile: 'Alice', status: 'ready', doc: null, generation: 1 },
     });
 
-    boardSession.open.mockRejectedValueOnce(new Error('boom'));
-    await expect(handlers['board:open']({})).resolves.toEqual({ success: false, error: 'boom' });
-    boardSession.resolveRecovery.mockRejectedValueOnce(new Error('Invalid recovery choice: bogus'));
-    await expect(handlers['board:resolve-recovery']({}, 'bogus')).resolves.toEqual({
+    showSession.open.mockRejectedValueOnce(new Error('boom'));
+    await expect(handlers['show:open']({})).resolves.toEqual({ success: false, error: 'boom' });
+    showSession.resolveRecovery.mockRejectedValueOnce(new Error('Invalid recovery choice: bogus'));
+    await expect(handlers['show:resolve-recovery']({}, 'bogus')).resolves.toEqual({
       success: false, error: 'Invalid recovery choice: bogus',
     });
   });
 
   it('SAVE_RECOVERY never takes a profile name from the renderer', async () => {
-    const { boardSession } = setup();
+    const { showSession } = setup();
     const layout = { hotkeys: [] };
 
-    await expect(handlers['board:save-recovery']({}, layout, 'Bob', { profile: 'Bob' })).resolves.toEqual({
+    await expect(handlers['show:save-recovery']({}, layout, 'Bob', { profile: 'Bob' })).resolves.toEqual({
       success: true, data: {},
     });
-    expect(boardSession.saveRecovery).toHaveBeenCalledTimes(1);
-    expect(boardSession.saveRecovery.mock.calls[0]).toEqual([layout]);
+    expect(showSession.saveRecovery).toHaveBeenCalledTimes(1);
+    expect(showSession.saveRecovery.mock.calls[0]).toEqual([layout]);
   });
 
   it('reports an unavailable session instead of throwing', async () => {
     register({ debugLog: null });
-    await expect(handlers['board:open']({})).resolves.toMatchObject({ success: false });
+    await expect(handlers['show:open']({})).resolves.toMatchObject({ success: false });
   });
 
-  it('passes board mutations through to the session', async () => {
-    const { boardSession } = setup();
+  it('passes show mutations through to the session', async () => {
+    const { showSession } = setup();
     const layout = { hotkeys: [] };
 
-    await expect(handlers['board:activate']({}, UUID)).resolves.toEqual({ success: true, data: { layout: {}, generation: 2 } });
-    expect(boardSession.activate).toHaveBeenCalledWith(UUID);
-    await expect(handlers['board:revert']({})).resolves.toEqual({ success: true, data: { layout: {}, generation: 2 } });
-    await expect(handlers['board:update-active']({}, layout)).resolves.toEqual({ success: true, data: null });
-    expect(boardSession.updateActive).toHaveBeenCalledWith(layout);
-    await expect(handlers['board:create']({}, 'New', layout)).resolves.toEqual({ success: true, data: { id: UUID, name: 'New' } });
-    expect(boardSession.createBoard).toHaveBeenCalledWith('New', layout);
-    await expect(handlers['board:rename']({}, UUID, 'Renamed')).resolves.toMatchObject({ success: true });
-    expect(boardSession.renameBoard).toHaveBeenCalledWith(UUID, 'Renamed');
-    await expect(handlers['board:delete']({}, UUID)).resolves.toEqual({ success: true, data: { activeChanged: false } });
-    expect(boardSession.deleteBoard).toHaveBeenCalledWith(UUID);
-    await expect(handlers['board:list-importable']({})).resolves.toEqual({ success: true, data: [{ profile: 'Bob', boards: [] }] });
-    await expect(handlers['board:import']({}, 'Bob', UUID)).resolves.toEqual({ success: true, data: { layout: {}, generation: 2 } });
-    expect(boardSession.importBoard).toHaveBeenCalledWith('Bob', UUID);
+    await expect(handlers['show:activate']({}, UUID)).resolves.toEqual({ success: true, data: { layout: {}, generation: 2 } });
+    expect(showSession.activate).toHaveBeenCalledWith(UUID);
+    await expect(handlers['show:revert']({})).resolves.toEqual({ success: true, data: { layout: {}, generation: 2 } });
+    await expect(handlers['show:update-active']({}, layout)).resolves.toEqual({ success: true, data: null });
+    expect(showSession.updateActive).toHaveBeenCalledWith(layout);
+    await expect(handlers['show:create']({}, 'New', layout)).resolves.toEqual({ success: true, data: { id: UUID, name: 'New' } });
+    expect(showSession.createShow).toHaveBeenCalledWith('New', layout);
+    await expect(handlers['show:rename']({}, UUID, 'Renamed')).resolves.toMatchObject({ success: true });
+    expect(showSession.renameShow).toHaveBeenCalledWith(UUID, 'Renamed');
+    await expect(handlers['show:delete']({}, UUID)).resolves.toEqual({ success: true, data: { activeChanged: false } });
+    expect(showSession.deleteShow).toHaveBeenCalledWith(UUID);
+    await expect(handlers['show:list-importable']({})).resolves.toEqual({ success: true, data: [{ profile: 'Bob', shows: [] }] });
+    await expect(handlers['show:import']({}, 'Bob', UUID)).resolves.toEqual({ success: true, data: { layout: {}, generation: 2 } });
+    expect(showSession.importShow).toHaveBeenCalledWith('Bob', UUID);
 
     // Session errors come back wrapped, with the exact message
-    boardSession.renameBoard.mockRejectedValueOnce(new Error('A board with this name already exists.'));
-    await expect(handlers['board:rename']({}, UUID, 'Dup')).resolves.toEqual({
-      success: false, error: 'A board with this name already exists.',
+    showSession.renameShow.mockRejectedValueOnce(new Error('A show with this name already exists.'));
+    await expect(handlers['show:rename']({}, UUID, 'Dup')).resolves.toEqual({
+      success: false, error: 'A show with this name already exists.',
     });
     // A name validation error also carries its code
-    boardSession.createBoard.mockRejectedValueOnce(
-      Object.assign(new Error('Enter a name for the board.'), { code: 'invalid-name' })
+    showSession.createShow.mockRejectedValueOnce(
+      Object.assign(new Error('Enter a name for the show.'), { code: 'invalid-name' })
     );
-    await expect(handlers['board:create']({}, ' ', {})).resolves.toEqual({
-      success: false, error: 'Enter a name for the board.', code: 'invalid-name',
+    await expect(handlers['show:create']({}, ' ', {})).resolves.toEqual({
+      success: false, error: 'Enter a name for the show.', code: 'invalid-name',
     });
     // Other codes are not passed on
-    boardSession.revert.mockRejectedValueOnce(Object.assign(new Error('disk full'), { code: 'ENOSPC' }));
-    await expect(handlers['board:revert']({})).resolves.toEqual({ success: false, error: 'disk full' });
+    showSession.revert.mockRejectedValueOnce(Object.assign(new Error('disk full'), { code: 'ENOSPC' }));
+    await expect(handlers['show:revert']({})).resolves.toEqual({ success: false, error: 'disk full' });
   });
 
   it('rejects an unregistered profile on IMPORT', async () => {
-    const { boardSession } = setup();
+    const { showSession } = setup();
     for (const profile of ['Mallory', '../Bob', 42, undefined]) {
-      await expect(handlers['board:import']({}, profile, UUID)).resolves.toMatchObject({ success: false });
+      await expect(handlers['show:import']({}, profile, UUID)).resolves.toMatchObject({ success: false });
     }
-    expect(boardSession.importBoard).not.toHaveBeenCalled();
+    expect(showSession.importShow).not.toHaveBeenCalled();
   });
 
-  it('rejects a board id that is not a UUID', async () => {
-    const { boardSession } = setup();
+  it('rejects a show id that is not a UUID', async () => {
+    const { showSession } = setup();
     for (const id of ['../../x', '', 42, null, `${UUID}x`, UUID.toUpperCase()]) {
-      await expect(handlers['board:activate']({}, id)).resolves.toMatchObject({ success: false });
-      await expect(handlers['board:rename']({}, id, 'Name')).resolves.toMatchObject({ success: false });
-      await expect(handlers['board:delete']({}, id)).resolves.toMatchObject({ success: false });
-      await expect(handlers['board:import']({}, 'Bob', id)).resolves.toMatchObject({ success: false });
+      await expect(handlers['show:activate']({}, id)).resolves.toMatchObject({ success: false });
+      await expect(handlers['show:rename']({}, id, 'Name')).resolves.toMatchObject({ success: false });
+      await expect(handlers['show:delete']({}, id)).resolves.toMatchObject({ success: false });
+      await expect(handlers['show:import']({}, 'Bob', id)).resolves.toMatchObject({ success: false });
     }
-    expect(boardSession.activate).not.toHaveBeenCalled();
-    expect(boardSession.renameBoard).not.toHaveBeenCalled();
-    expect(boardSession.deleteBoard).not.toHaveBeenCalled();
-    expect(boardSession.importBoard).not.toHaveBeenCalled();
+    expect(showSession.activate).not.toHaveBeenCalled();
+    expect(showSession.renameShow).not.toHaveBeenCalled();
+    expect(showSession.deleteShow).not.toHaveBeenCalled();
+    expect(showSession.importShow).not.toHaveBeenCalled();
   });
 
   it('rejects inherited object names such as "constructor" and "__proto__" on IMPORT', async () => {
     const recoveryStore = { read: vi.fn(async () => null), retire: vi.fn(), write: vi.fn(), markHandoff: vi.fn() };
-    const boardStore = {
+    const showStore = {
       load: vi.fn(async () => ({ doc: createDocument(null, { now: 1, newId: () => UUID }) })),
       peek: vi.fn(async () => createDocument(null, { now: 1, newId: () => UUID })),
       save: vi.fn(),
     };
-    const boardSession = createBoardSession({
-      boardStore,
+    const showSession = createShowSession({
+      showStore,
       recoveryStore,
       listProfiles: () => Object.values(registry).map((p) => p.name),
       getCurrentProfile: () => 'Alice',
     });
-    const opened = await boardSession.open();
-    boardSession.reportReady(opened.generation, true);
-    register({ boardSession, debugLog: null });
+    const opened = await showSession.open();
+    showSession.reportReady(opened.generation, true);
+    register({ showSession, debugLog: null });
 
     for (const profile of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) {
-      await expect(handlers['board:import']({}, profile, UUID)).resolves.toEqual({
+      await expect(handlers['show:import']({}, profile, UUID)).resolves.toEqual({
         success: false, error: `Profile "${profile}" is not registered`,
       });
     }
-    expect(boardStore.peek).not.toHaveBeenCalled();
-    expect(boardStore.save).not.toHaveBeenCalled();
+    expect(showStore.peek).not.toHaveBeenCalled();
+    expect(showStore.save).not.toHaveBeenCalled();
   });
 });

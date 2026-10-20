@@ -9,7 +9,7 @@ import path from 'path';
  * confirmation; an explicit quit (Cmd-Q, File > Quit) doesn't ask. Quitting
  * runs the shutdown path: page state flushed, then exit.
  *
- * Boards (Task 9): a clean quit discards the live layout. The flush now goes
+ * Shows (Task 9): a clean quit discards the live layout. The flush now goes
  * to the crash-recovery record, which the exit then retires, so these tests
  * check that nothing of the night is left behind instead of that it was saved.
  */
@@ -59,12 +59,12 @@ test.describe('Quitting', () => {
     return page;
   }
 
-  // The renamed tab is in neither the saved board nor a recovery record, and
+  // The renamed tab is in neither the saved show nor a recovery record, and
   // nothing wrote state.json
   function expectNightDiscarded() {
     const profileDir = path.join(userDataDir, 'profiles', 'Default User');
-    const boards = JSON.parse(fs.readFileSync(path.join(profileDir, 'boards.json'), 'utf8'));
-    expect(boards.boards[0].layout.hotkeys[0].tabName).toBeNull();
+    const shows = JSON.parse(fs.readFileSync(path.join(profileDir, 'shows.json'), 'utf8'));
+    expect(shows.shows[0].layout.hotkeys[0].tabName).toBeNull();
     expect(fs.existsSync(path.join(userDataDir, 'recovery', 'default user.json'))).toBe(false);
     expect(fs.existsSync(path.join(profileDir, 'state.json'))).toBe(false);
   }

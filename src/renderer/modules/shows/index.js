@@ -1,10 +1,10 @@
 /**
- * Boards Module
+ * Shows Module
  *
- * Opens the profile's active saved board when the page starts, asking about
+ * Opens the profile's active saved show when the page starts, asking about
  * a show in progress first if the app didn't close normally, then runs the
- * Board menu commands (commands.js). Live edits go to the crash-recovery
- * record through profile-state; only a Board menu command saves a board.
+ * Shows menu commands (commands.js). Live edits go to the crash-recovery
+ * record through profile-state; only a Shows menu command saves a show.
  */
 
 import { applyLayout } from './layout-applier.js';
@@ -15,16 +15,16 @@ import { isAnyModalOpen } from '../ui/bootstrap-helpers.js';
 import { clearProfileRestorationLock, extractLayout } from '../profile-state/index.js';
 import { droppedSongsMessage, LOAD_FAILED_MESSAGE, TOAST_MS } from './messages.js';
 import { unwrap } from './ipc-result.js';
-import { runBoardCommand } from './commands.js';
-import { chooseImportBoard } from './import-dialog.js';
+import { runShowCommand } from './commands.js';
+import { chooseImportShow } from './import-dialog.js';
 import { refreshHeader } from './header.js';
 
 export { droppedSongsMessage };
 
-const LOG_CONTEXT = { module: 'boards', function: 'openSessionOnStartup' };
+const LOG_CONTEXT = { module: 'shows', function: 'openSessionOnStartup' };
 
 const UNREADABLE_MESSAGE =
-  "Mx. Voice couldn't read this profile's boards. The file has been kept so it can be recovered.";
+  "Mx. Voice couldn't read this profile's shows. The file has been kept so it can be recovered.";
 
 function crashMessage(savedAt) {
   const time = new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -44,18 +44,18 @@ export function buildLayoutDeps({ hotkeys, holdingTank }) {
   };
 }
 
-// Analytics never receive board or profile names
+// Analytics never receive show or profile names
 function trackEvent(name, props) {
   try {
     window.secureElectronAPI?.analytics?.trackEvent?.(name, props);
   } catch (error) {
-    window.debugLog?.warn('Could not send a board analytics event', { module: 'boards', function: 'trackEvent', error: error.message });
+    window.debugLog?.warn('Could not send a show analytics event', { module: 'shows', function: 'trackEvent', error: error.message });
   }
 }
 
 function defaultDeps(overrides) {
   const deps = {
-    api: window.secureElectronAPI?.boards,
+    api: window.secureElectronAPI?.shows,
     confirm: customConfirm,
     prompt: customPrompt,
     alert: (message, title) => { void customAlert(message, title); },
@@ -65,7 +65,7 @@ function defaultDeps(overrides) {
     clearRestorationLock: clearProfileRestorationLock,
     isModalOpen: () => isAnyModalOpen(),
     extractLayout,
-    chooseImportBoard: (groups) => chooseImportBoard(groups),
+    chooseImportShow: (groups) => chooseImportShow(groups),
     refreshHeader: () => refreshHeader(),
     ...overrides
   };
@@ -78,7 +78,7 @@ function defaultDeps(overrides) {
 
 /**
  * Settle a show in progress: a fresh handoff restores silently, any other
- * record asks, and no record opens the saved board.
+ * record asks, and no record opens the saved show.
  * @returns {Promise<Object>} the layout to apply
  */
 async function resolveRecovery(recovery, deps) {
@@ -89,23 +89,23 @@ async function resolveRecovery(recovery, deps) {
     deps.track('crash_restore_offered');
     const restore = await deps.confirm(crashMessage(recovery.savedAt), 'Restore show?', {
       confirmLabel: 'Restore show in progress',
-      cancelLabel: 'Open saved board',
+      cancelLabel: 'Open saved show',
       defaultAction: 'cancel'
     });
     choice = restore ? 'restore' : 'discard';
     deps.track('crash_restore_chosen', { choice });
   }
   const { layout } = unwrap(await deps.api.resolveRecovery(choice), 'Resolving recovery');
-  window.debugLog?.info('Opening board', { ...LOG_CONTEXT, choice, handoff: recovery?.handoff ?? null });
+  window.debugLog?.info('Opening show', { ...LOG_CONTEXT, choice, handoff: recovery?.handoff ?? null });
   return layout;
 }
 
 /**
- * Open the current profile's active board.
+ * Open the current profile's active show.
  *
- * Holds the restoration lock until the board has been reported, ready or not.
+ * Holds the restoration lock until the show has been reported, ready or not.
  * On failure the startup (empty) layout is left as it is and never reported
- * as the board.
+ * as the show.
  *
  * @param {Object} [overrides] - hotkeys and holdingTank modules, or test doubles
  *   for api, confirm, alert, toast, quit, applyLayout and clearRestorationLock
@@ -117,23 +117,23 @@ export async function openSessionOnStartup(overrides = {}) {
   window.isRestoringProfileState = true;
   let generation = null;
   try {
-    const opened = unwrap(await api.open(), 'Opening the board');
+    const opened = unwrap(await api.open(), 'Opening the show');
     generation = opened.generation;
     let layout;
 
     if (opened.failed) {
-      throw new Error(`The board could not be opened (${opened.error})`);
+      throw new Error(`The show could not be opened (${opened.error})`);
     } else if (opened.unreadable) {
-      const startEmpty = await deps.confirm(UNREADABLE_MESSAGE, 'Boards unreadable', {
-        confirmLabel: 'Start with an empty board',
+      const startEmpty = await deps.confirm(UNREADABLE_MESSAGE, 'Shows unreadable', {
+        confirmLabel: 'Start with an empty show',
         cancelLabel: 'Quit'
       });
       if (!startEmpty) {
-        window.debugLog?.info('Quitting: boards unreadable', LOG_CONTEXT);
+        window.debugLog?.info('Quitting: shows unreadable', LOG_CONTEXT);
         await deps.quit();
         return { status: 'failed' };
       }
-      const empty = unwrap(await api.startEmpty(), 'Starting an empty board');
+      const empty = unwrap(await api.startEmpty(), 'Starting an empty show');
       generation = empty.generation;
       layout = empty.recovery ? await resolveRecovery(empty.recovery, deps) : empty.layout;
     } else {
@@ -141,21 +141,21 @@ export async function openSessionOnStartup(overrides = {}) {
     }
 
     const { dropped, droppedIds = [] } = await deps.applyLayout(layout);
-    unwrap(await api.reportReady(generation, true, { droppedIds }), 'Reporting the board ready');
+    unwrap(await api.reportReady(generation, true, { droppedIds }), 'Reporting the show ready');
 
     const message = [opened.notice, droppedSongsMessage(dropped)].filter(Boolean).join(' ');
     if (message) deps.toast(message, TOAST_MS);
     return { status: 'ready' };
   } catch (error) {
-    window.debugLog?.error('Could not open the board', { ...LOG_CONTEXT, error: error.message });
+    window.debugLog?.error('Could not open the show', { ...LOG_CONTEXT, error: error.message });
     if (generation !== null) {
       try {
         await api.reportReady(generation, false);
       } catch (reportError) {
-        window.debugLog?.warn('Could not report the board as failed', { ...LOG_CONTEXT, error: reportError.message });
+        window.debugLog?.warn('Could not report the show as failed', { ...LOG_CONTEXT, error: reportError.message });
       }
     }
-    deps.alert(LOAD_FAILED_MESSAGE, 'Board not loaded');
+    deps.alert(LOAD_FAILED_MESSAGE, 'Show not loaded');
     return { status: 'failed' };
   } finally {
     deps.clearRestorationLock();
@@ -164,26 +164,26 @@ export async function openSessionOnStartup(overrides = {}) {
 }
 
 /**
- * Run each Board menu command (`menu:board-command`) from now on. Call once,
+ * Run each Shows menu command (`menu:show-command`) from now on. Call once,
  * after openSessionOnStartup.
  *
  * @param {Object} [overrides] - hotkeys and holdingTank modules, or test doubles
- *   for onBoardCommand and any runBoardCommand dependency
+ *   for onShowCommand and any runShowCommand dependency
  * @returns {Function|null} unsubscribe, or null without the preload event
  */
-export function initializeBoardCommands(overrides = {}) {
-  const { onBoardCommand = window.secureElectronAPI?.events?.onBoardCommand, ...rest } = overrides;
-  if (typeof onBoardCommand !== 'function') {
-    window.debugLog?.error('Board menu commands unavailable', { module: 'boards', function: 'initializeBoardCommands' });
+export function initializeShowCommands(overrides = {}) {
+  const { onShowCommand = window.secureElectronAPI?.events?.onShowCommand, ...rest } = overrides;
+  if (typeof onShowCommand !== 'function') {
+    window.debugLog?.error('Shows menu commands unavailable', { module: 'shows', function: 'initializeShowCommands' });
     return null;
   }
   const deps = defaultDeps(rest);
-  return onBoardCommand((command) => { void runBoardCommand(command, deps).finally(() => deps.refreshHeader()); });
+  return onShowCommand((command) => { void runShowCommand(command, deps).finally(() => deps.refreshHeader()); });
 }
 
 export default {
   openSessionOnStartup,
-  initializeBoardCommands,
+  initializeShowCommands,
   buildLayoutDeps,
   droppedSongsMessage
 };

@@ -1,14 +1,14 @@
 /**
  * Profile State Persistence Module
  *
- * Serializes the live layout and writes it to the board session's
+ * Serializes the live layout and writes it to the show session's
  * crash-recovery record:
  * - All hotkey tabs (song IDs + custom tab names)
  * - All holding tank tabs (song IDs + custom tab names)
  * - The selected hotkey and holding tank tabs
  *
- * Saved boards are opened by the boards module at startup; nothing here
- * writes a saved board. A clean quit discards the record, a crash offers it
+ * Saved shows are opened by the shows module at startup; nothing here
+ * writes a saved show. A clean quit discards the record, a crash offers it
  * back.
  */
 
@@ -112,8 +112,8 @@ export function extractLayout() {
  * IMPORTANT: This function takes no parameters. It serializes the initialized collection models.
  * 
  * CRITICAL DATA PROTECTION:
- * - Will NOT save if restoration is in progress (the lock covers opening the board)
- * - The main process also refuses recovery writes until the board is ready
+ * - Will NOT save if restoration is in progress (the lock covers opening the show)
+ * - The main process also refuses recovery writes until the show is ready
  * 
  * @returns {Promise<Object>} Result with success status
  */
@@ -170,10 +170,10 @@ async function _saveProfileStateImmediate() {
       hasData: hasData
     });
     
-    const writeResult = await window.secureElectronAPI.boards.saveRecovery(state);
+    const writeResult = await window.secureElectronAPI.shows.saveRecovery(state);
     
     // { skipped } (session not ready) and { retired } (matches the saved
-    // board) are successes too: a backup's pre-flush must not abort on them
+    // show) are successes too: a backup's pre-flush must not abort on them
     if (writeResult?.success) {
       debugLog?.info('[PROFILE-STATE] Profile state saved successfully', { 
         module: 'profile-state',
@@ -200,7 +200,7 @@ async function _saveProfileStateImmediate() {
 
 /**
  * Clear the profile restoration lock
- * Called by the boards module once the board has been opened and reported
+ * Called by the shows module once the show has been opened and reported
  * This allows recovery saves to proceed normally
  */
 export function clearProfileRestorationLock() {

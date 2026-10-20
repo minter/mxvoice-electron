@@ -1,23 +1,23 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import { launchSeededApp, closeApp, waitForAppReady } from '../../../utils/seeded-launch.js';
 import {
-  boardsDocument,
+  showsDocument,
   hotkeyLayout,
-  profileBoardsPath,
-  readBoards,
+  profileShowsPath,
+  readShows,
   recoveryRecordPath,
-  seedBoards
-} from '../../../utils/seed-boards.js';
+  seedShows
+} from '../../../utils/seed-shows.js';
 import fs from 'fs';
 import path from 'path';
 
-test.describe('Profile backups, duplicate and delete with boards', () => {
+test.describe('Profile backups, duplicate and delete with shows', () => {
   let app;
   let page;
   let userDataDir;
 
   test.beforeAll(async () => {
-    ({ app, page, userDataDir } = await launchSeededApp(electron, 'boards-backup'));
+    ({ app, page, userDataDir } = await launchSeededApp(electron, 'shows-backup'));
     await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
   });
 
@@ -25,23 +25,23 @@ test.describe('Profile backups, duplicate and delete with boards', () => {
     await closeApp(app);
   });
 
-  const twoBoards = () => ({
+  const twoShows = () => ({
     version: 1,
-    activeBoardId: 'b2',
-    boards: [
-      { id: 'b1', name: 'Board', createdAt: 1, updatedAt: 1, layout: hotkeyLayout({ f1: '1001' }) },
+    activeShowId: 'b2',
+    shows: [
+      { id: 'b1', name: 'Show', createdAt: 1, updatedAt: 1, layout: hotkeyLayout({ f1: '1001' }) },
       { id: 'b2', name: 'Comedy Sports', createdAt: 2, updatedAt: 2, layout: hotkeyLayout({ f1: '1002' }) }
     ]
   });
 
-  test('restoring a pre-boards backup migrates it into "Board"', async () => {
-    seedBoards(userDataDir, 'Default User', boardsDocument(hotkeyLayout({ f1: '1001' })));
+  test('restoring a pre-shows backup migrates it into "Show"', async () => {
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1001' })));
     const created = await page.evaluate(() => window.secureElectronAPI.profile.createBackup());
     expect(created.success).toBe(true);
 
-    // Turn the backup into a pre-boards one: only state.json and preferences.json
+    // Turn the backup into a pre-shows one: only state.json and preferences.json
     const backupDir = path.join(userDataDir, 'profile-backups', 'Default User', created.backupId);
-    fs.rmSync(path.join(backupDir, 'boards.json'), { force: true });
+    fs.rmSync(path.join(backupDir, 'shows.json'), { force: true });
     fs.writeFileSync(path.join(backupDir, 'state.json'), JSON.stringify({
       version: '1.0.0',
       timestamp: 1700000000000,
@@ -53,35 +53,35 @@ test.describe('Profile backups, duplicate and delete with boards', () => {
     }
 
     const listed = await page.evaluate(() => window.secureElectronAPI.profile.listBackups());
-    expect(listed.backups.find((b) => b.id === created.backupId).boards).toBeNull();
+    expect(listed.backups.find((b) => b.id === created.backupId).shows).toBeNull();
 
-    // The live profile now has a different, multi-board document
-    seedBoards(userDataDir, 'Default User', twoBoards());
+    // The live profile now has a different, multi-show document
+    seedShows(userDataDir, 'Default User', twoShows());
     const restored = await page.evaluate((id) => window.secureElectronAPI.profile.restoreBackup(id), created.backupId);
     expect(restored.success).toBe(true);
-    expect(fs.existsSync(profileBoardsPath(userDataDir, 'Default User'))).toBe(false);
+    expect(fs.existsSync(profileShowsPath(userDataDir, 'Default User'))).toBe(false);
 
     await page.reload();
     await waitForAppReady(page, app);
 
-    const doc = readBoards(userDataDir, 'Default User');
-    expect(doc.boards).toHaveLength(1);
-    expect(doc.boards[0].name).toBe('Board');
-    expect(doc.boards[0].layout.hotkeys[0].hotkeys.f1).toBe('1003');
+    const doc = readShows(userDataDir, 'Default User');
+    expect(doc.shows).toHaveLength(1);
+    expect(doc.shows[0].name).toBe('Show');
+    expect(doc.shows[0].layout.hotkeys[0].hotkeys.f1).toBe('1003');
   });
 
-  test('backup list reports the board names of a boards backup', async () => {
-    seedBoards(userDataDir, 'Default User', twoBoards());
+  test('backup list reports the show names of a shows backup', async () => {
+    seedShows(userDataDir, 'Default User', twoShows());
     const created = await page.evaluate(() => window.secureElectronAPI.profile.createBackup());
     expect(created.success).toBe(true);
     const listed = await page.evaluate(() => window.secureElectronAPI.profile.listBackups());
-    expect(listed.backups.find((b) => b.id === created.backupId).boards).toEqual(['Board', 'Comedy Sports']);
+    expect(listed.backups.find((b) => b.id === created.backupId).shows).toEqual(['Show', 'Comedy Sports']);
   });
 
-  test('duplicate profile copies boards and the active board, not recovery', async () => {
+  test('duplicate profile copies shows and the active show, not recovery', async () => {
     const created = await page.evaluate(() => window.secureElectronAPI.profile.createProfile('Source Show', ''));
     expect(created.success).toBe(true);
-    seedBoards(userDataDir, 'Source Show', twoBoards());
+    seedShows(userDataDir, 'Source Show', twoShows());
     const recoveryFile = recoveryRecordPath(userDataDir, 'Source Show');
     fs.mkdirSync(path.dirname(recoveryFile), { recursive: true });
     fs.writeFileSync(recoveryFile, JSON.stringify({ savedAt: Date.now(), layout: hotkeyLayout({ f1: '1004' }) }));
@@ -89,8 +89,8 @@ test.describe('Profile backups, duplicate and delete with boards', () => {
     const dup = await page.evaluate(() => window.secureElectronAPI.profile.duplicateProfile('Source Show', 'Copy Show', ''));
     expect(dup.success).toBe(true);
 
-    expect(readBoards(userDataDir, 'Copy Show')).toEqual(readBoards(userDataDir, 'Source Show'));
-    expect(readBoards(userDataDir, 'Copy Show').activeBoardId).toBe('b2');
+    expect(readShows(userDataDir, 'Copy Show')).toEqual(readShows(userDataDir, 'Source Show'));
+    expect(readShows(userDataDir, 'Copy Show').activeShowId).toBe('b2');
     expect(fs.existsSync(recoveryRecordPath(userDataDir, 'Copy Show'))).toBe(false);
     expect(fs.existsSync(recoveryFile)).toBe(true);
   });

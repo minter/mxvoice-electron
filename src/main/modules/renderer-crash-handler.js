@@ -1,7 +1,7 @@
 /**
  * Renderer Crash Handler
  *
- * The main window's page died (crash, out of memory, killed). Hand the board
+ * The main window's page died (crash, out of memory, killed). Hand the show
  * session off first, so the crash-recovery record survives whatever comes
  * next, then offer to reload: the reloaded page restores the show in
  * progress. Quitting keeps the record for the next launch.
@@ -17,7 +17,7 @@ const QUIT = 1;
 
 /**
  * @param {Object} deps
- * @param {Object} deps.boardSession - from createBoardSession
+ * @param {Object} deps.showSession - from createShowSession
  * @param {Object} deps.dialog - Electron dialog
  * @param {() => Object|null} deps.getMainWindow
  * @param {Object} deps.app - Electron app
@@ -25,7 +25,7 @@ const QUIT = 1;
  * @returns {(event: Object, details: { reason: string, exitCode?: number }) => Promise<void>}
  *   listener for webContents 'render-process-gone'
  */
-export function createRendererGoneHandler({ boardSession, dialog, getMainWindow, app, debugLog }) {
+export function createRendererGoneHandler({ showSession, dialog, getMainWindow, app, debugLog }) {
   const logCtx = { module: 'renderer-crash-handler', function: 'onRenderProcessGone' };
 
   return async (_event, details = {}) => {
@@ -33,7 +33,7 @@ export function createRendererGoneHandler({ boardSession, dialog, getMainWindow,
     if (details.reason === 'clean-exit') return;
 
     debugLog?.error('Main window renderer is gone', { ...logCtx, reason: details.reason, exitCode: details.exitCode });
-    boardSession.rendererGone();
+    showSession.rendererGone();
 
     const window = getMainWindow();
     if (!window || window.isDestroyed()) return;

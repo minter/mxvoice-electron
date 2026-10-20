@@ -31,7 +31,7 @@ let debugLog = null;
 let getDb = () => null;
 let setDb = () => {};
 let store = null;
-let boardSession = null;
+let showSession = null;
 let recoveryStore = null;
 
 async function pathExists(p) {
@@ -61,7 +61,7 @@ function initializeLibraryTransferManager(dependencies) {
   getDb = dependencies.getDb;
   setDb = dependencies.setDb || (() => {});
   store = dependencies.store;
-  boardSession = dependencies.boardSession || null;
+  showSession = dependencies.showSession || null;
   recoveryStore = dependencies.recoveryStore || null;
 
   debugLog?.info('Library Transfer Manager initialized', {
@@ -570,9 +570,9 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       // all directly: with no open session (or one already ended) end()
       // clears nothing. Neither failure may stop the import.
       try {
-        await boardSession?.end('library-import');
+        await showSession?.end('library-import');
       } catch (endErr) {
-        debugLog?.warn('Could not end the board session before importing the library', {
+        debugLog?.warn('Could not end the show session before importing the library', {
           ...logCtx, error: endErr.message
         });
       }

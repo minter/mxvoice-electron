@@ -2,7 +2,7 @@ import { _electron as electron, test, expect } from '@playwright/test';
 import fs from 'fs';
 import { launchSeededApp, closeApp, waitForAppReady } from '../../../utils/seeded-launch.js';
 import { crashApp, relaunchApp } from '../../../utils/relaunch.js';
-import { boardsDocument, readRecovery, seedBoards } from '../../../utils/seed-boards.js';
+import { showsDocument, readRecovery, seedShows } from '../../../utils/seed-shows.js';
 
 /**
  * Regression Test for Hotkey songid Attribute Loss Bug
@@ -16,7 +16,7 @@ import { boardsDocument, readRecovery, seedBoards } from '../../../utils/seed-bo
  * This test verifies:
  * 1. Duplicate song assignments within same tab preserve songid on both hotkeys
  * 2. Swap operations correctly transfer songid attributes
- * 3. songid attributes survive a crash restore and opening a saved board
+ * 3. songid attributes survive a crash restore and opening a saved show
  */
 
 test.describe('Hotkeys - songid Persistence Bug Regression', () => {
@@ -197,11 +197,11 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
     console.log('✅ TEST PASSED: songid preserved through swap at different positions');
   });
 
-  // Boards (Task 9): the live layout no longer persists on its own. A
-  // relaunch opens the saved board, and live edits come back only through the
+  // Shows (Task 9): the live layout no longer persists on its own. A
+  // relaunch opens the saved show, and live edits come back only through the
   // crash prompt, so the old save/restore check is split across those paths.
   // "survives Update" becomes possible when Phase 3 adds Update; until then
-  // the saved board is seeded directly.
+  // the saved show is seeded directly.
   const slotSongIds = (target) => target.evaluate(() => Object.fromEntries(['f1', 'f6', 'f12'].map((key) => {
     const li = document.querySelector(`#hotkeys_list_1 #${key}_hotkey`);
     return [key, { li: li?.getAttribute('songid') ?? null, span: li?.querySelector('span')?.getAttribute('songid') ?? null }];
@@ -245,9 +245,9 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
     }
   });
 
-  test('songid survives a saved board', async () => {
-    const launched = await launchSeededApp(electron, 'hotkeys-songid-board', {
-      beforeLaunch: (dir) => seedBoards(dir, 'Default User', boardsDocument({
+  test('songid survives a saved show', async () => {
+    const launched = await launchSeededApp(electron, 'hotkeys-songid-show', {
+      beforeLaunch: (dir) => seedShows(dir, 'Default User', showsDocument({
         hotkeys: [{ tabNumber: 1, tabName: null, hotkeys: { f1: '1003', f6: '1001', f12: '1002' } }],
         holdingTank: []
       }))

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 globalThis.window = { debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } };
 
-const { applyLayout, fetchSongsById } = await import('../../../src/renderer/modules/boards/layout-applier.js');
+const { applyLayout, fetchSongsById } = await import('../../../src/renderer/modules/shows/layout-applier.js');
 
 function fakeElement(id = '', classes = [], attributes = {}) {
   const classSet = new Set(classes);
@@ -68,7 +68,7 @@ function createDeps(overrides = {}) {
   const nowPlaying = fakeElement('song_now_playing', [], { songid: '2' });
   const doc = fakeDocument([playing, selectedRow, activeHotkey, nowPlaying]);
   const win = { currentSelectedHotkey: 'f1_hotkey' };
-  const sharedState = fakeSharedState({ boardGeneration: 4, sound: { id: 'sound' }, autoplay: true });
+  const sharedState = fakeSharedState({ showGeneration: 4, sound: { id: 'sound' }, autoplay: true });
   const showTab = vi.fn();
   return {
     calls,
@@ -101,12 +101,12 @@ describe('applyLayout', () => {
 
     expect(deps.getSongsByIds).toHaveBeenCalledTimes(1);
     expect(deps.getSongsByIds.mock.calls[0][0].sort()).toEqual(['1', '2', '3', '9']);
-    expect(calls).toEqual(['hotkeys', 'holdingTank:false', 'boardGeneration:false']);
+    expect(calls).toEqual(['hotkeys', 'holdingTank:false', 'showGeneration:false']);
     const songsById = deps.hotkeys.applyHotkeySnapshot.mock.calls[0][1];
     expect(deps.hotkeys.applyHotkeySnapshot).toHaveBeenCalledWith(layout.hotkeys, songsById);
     expect(deps.holdingTank.applyHoldingTankSnapshot).toHaveBeenCalledWith(layout.holdingTank, songsById);
     expect([...songsById.keys()].sort()).toEqual(['1', '2', '3']);
-    expect(deps.sharedState.values.get('boardGeneration')).toBe(5);
+    expect(deps.sharedState.values.get('showGeneration')).toBe(5);
   });
 
   it('clears now_playing, selected_row and active-hotkey', async () => {
@@ -128,7 +128,7 @@ describe('applyLayout', () => {
     await applyLayout(layout, deps);
 
     expect(deps.sharedState.set).toHaveBeenCalledTimes(1);
-    expect(deps.sharedState.set).toHaveBeenCalledWith('boardGeneration', 5);
+    expect(deps.sharedState.set).toHaveBeenCalledWith('showGeneration', 5);
     expect(deps.sharedState.values.get('sound')).toBe(sound);
     expect(deps.sharedState.values.get('autoplay')).toBe(true);
     expect(elements.nowPlaying.id).toBe('song_now_playing');
@@ -161,7 +161,7 @@ describe('applyLayout', () => {
     expect(deps.getSongsByIds).not.toHaveBeenCalled();
     expect(deps.showTab).toHaveBeenCalledWith('#hotkey_tabs li:nth-child(1) a', expect.any(Object));
     expect(deps.showTab).toHaveBeenCalledWith('#holding_tank_tabs li:nth-child(1) a', expect.any(Object));
-    expect(deps.sharedState.values.get('boardGeneration')).toBe(1);
+    expect(deps.sharedState.values.get('showGeneration')).toBe(1);
   });
 
   it.each([

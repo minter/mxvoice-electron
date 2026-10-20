@@ -36,7 +36,7 @@ import Dom from '../dom-utils/index.js';
 import { customConfirm, customPrompt, scaleScrollable } from '../utils/index.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 import HoldingTankState from './holding-tank-state.js';
-import { fetchSongsById } from '../boards/layout-applier.js';
+import { fetchSongsById } from '../shows/layout-applier.js';
 
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'

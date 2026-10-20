@@ -149,14 +149,14 @@ class ModeManagementModule {
         }
       );
 
-      // A song started before a board swap belongs to the old layout; never
+      // A song started before a show swap belongs to the old layout; never
       // reattach it to the holding tank that the swap loaded
-      const startedOnThisBoard =
-        sharedState.get('nowPlayingSource') === sharedState.get('boardGeneration');
+      const startedOnThisShow =
+        sharedState.get('nowPlayingSource') === sharedState.get('showGeneration');
 
       // If there's a song loaded (playing or paused), show it in playlist mode
-      if (currentSongId && (isCurrentlyPlaying || isPaused) && !startedOnThisBoard) {
-        debugLog?.info('Not reattaching a song started before a board swap', {
+      if (currentSongId && (isCurrentlyPlaying || isPaused) && !startedOnThisShow) {
+        debugLog?.info('Not reattaching a song started before a show swap', {
           module: 'mode-management',
           function: 'setHoldingTankMode',
           songId: currentSongId,

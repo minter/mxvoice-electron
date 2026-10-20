@@ -1,7 +1,7 @@
 /**
- * Board IPC handlers.
+ * Show IPC handlers.
  *
- * Thin wrappers over the main-process board session. The session captured
+ * Thin wrappers over the main-process show session. The session captured
  * its profile at open, so no handler takes the current profile's name from
  * the renderer. IMPORT names a source profile, checked against the registry.
  */
@@ -12,14 +12,14 @@ import ipcChannels from '../../../shared/ipc-channels.cjs';
 import * as profileManager from '../profile-manager.js';
 const { IPC } = ipcChannels;
 
-const BOARD_ID = /^[0-9a-f-]{36}$/;
+const SHOW_ID = /^[0-9a-f-]{36}$/;
 
-function checkBoardId(boardId) {
-  if (typeof boardId !== 'string' || !BOARD_ID.test(boardId)) throw new Error('Invalid board id');
+function checkShowId(showId) {
+  if (typeof showId !== 'string' || !SHOW_ID.test(showId)) throw new Error('Invalid show id');
 }
 
 const SONG_ID = /^\d+$/;
-// More ids than any board can hold
+// More ids than any show can hold
 const MAX_DROPPED_IDS = 10000;
 
 function checkDroppedIds(details) {
@@ -40,23 +40,23 @@ function checkProfile(profile) {
 }
 
 export function register(deps) {
-  const { boardSession, debugLog } = deps;
+  const { showSession, debugLog } = deps;
 
   // Every handler returns { success: true, data } or { success: false, error },
-  // plus code 'invalid-name' for a board name validation failure
+  // plus code 'invalid-name' for a show name validation failure
   function handle(channel, name, run) {
     ipcMain.handle(channel, async (_event, ...args) => {
       try {
-        if (!boardSession) throw new Error('Board session unavailable');
+        if (!showSession) throw new Error('Show session unavailable');
         const data = await run(...args);
         return { success: true, data: data === undefined ? null : data };
       } catch (error) {
-        debugLog?.error?.('Board IPC failed', {
-          module: 'board-handlers',
+        debugLog?.error?.('Show IPC failed', {
+          module: 'show-handlers',
           function: name,
           error: error.message
         });
-        // A board name the user can correct says so, so the page re-asks
+        // A show name the user can correct says so, so the page re-asks
         return error?.code === 'invalid-name'
           ? { success: false, error: error.message, code: 'invalid-name' }
           : { success: false, error: error.message };
@@ -64,34 +64,34 @@ export function register(deps) {
     });
   }
 
-  handle(IPC.BOARDS.OPEN, 'open', () => boardSession.open());
-  handle(IPC.BOARDS.START_EMPTY, 'startEmpty', () => boardSession.startEmpty());
-  handle(IPC.BOARDS.RESOLVE_RECOVERY, 'resolveRecovery', (choice) => boardSession.resolveRecovery(choice));
-  handle(IPC.BOARDS.REPORT_READY, 'reportReady', (generation, ok, details) => {
+  handle(IPC.SHOWS.OPEN, 'open', () => showSession.open());
+  handle(IPC.SHOWS.START_EMPTY, 'startEmpty', () => showSession.startEmpty());
+  handle(IPC.SHOWS.RESOLVE_RECOVERY, 'resolveRecovery', (choice) => showSession.resolveRecovery(choice));
+  handle(IPC.SHOWS.REPORT_READY, 'reportReady', (generation, ok, details) => {
     const droppedIds = checkDroppedIds(details);
-    return boardSession.reportReady(generation, ok === true, { droppedIds });
+    return showSession.reportReady(generation, ok === true, { droppedIds });
   });
-  handle(IPC.BOARDS.SAVE_RECOVERY, 'saveRecovery', (layout) => boardSession.saveRecovery(layout));
-  handle(IPC.BOARDS.GET_STATE, 'getState', () => boardSession.state());
-  handle(IPC.BOARDS.ACTIVATE, 'activate', (boardId) => {
-    checkBoardId(boardId);
-    return boardSession.activate(boardId);
+  handle(IPC.SHOWS.SAVE_RECOVERY, 'saveRecovery', (layout) => showSession.saveRecovery(layout));
+  handle(IPC.SHOWS.GET_STATE, 'getState', () => showSession.state());
+  handle(IPC.SHOWS.ACTIVATE, 'activate', (showId) => {
+    checkShowId(showId);
+    return showSession.activate(showId);
   });
-  handle(IPC.BOARDS.REVERT, 'revert', () => boardSession.revert());
-  handle(IPC.BOARDS.UPDATE_ACTIVE, 'updateActive', (layout) => boardSession.updateActive(layout));
-  handle(IPC.BOARDS.CREATE, 'createBoard', (name, layout) => boardSession.createBoard(name, layout));
-  handle(IPC.BOARDS.RENAME, 'renameBoard', (boardId, name) => {
-    checkBoardId(boardId);
-    return boardSession.renameBoard(boardId, name);
+  handle(IPC.SHOWS.REVERT, 'revert', () => showSession.revert());
+  handle(IPC.SHOWS.UPDATE_ACTIVE, 'updateActive', (layout) => showSession.updateActive(layout));
+  handle(IPC.SHOWS.CREATE, 'createShow', (name, layout) => showSession.createShow(name, layout));
+  handle(IPC.SHOWS.RENAME, 'renameShow', (showId, name) => {
+    checkShowId(showId);
+    return showSession.renameShow(showId, name);
   });
-  handle(IPC.BOARDS.DELETE, 'deleteBoard', (boardId) => {
-    checkBoardId(boardId);
-    return boardSession.deleteBoard(boardId);
+  handle(IPC.SHOWS.DELETE, 'deleteShow', (showId) => {
+    checkShowId(showId);
+    return showSession.deleteShow(showId);
   });
-  handle(IPC.BOARDS.LIST_IMPORTABLE, 'listImportable', () => boardSession.listImportable());
-  handle(IPC.BOARDS.IMPORT, 'importBoard', (profile, boardId) => {
+  handle(IPC.SHOWS.LIST_IMPORTABLE, 'listImportable', () => showSession.listImportable());
+  handle(IPC.SHOWS.IMPORT, 'importShow', (profile, showId) => {
     checkProfile(profile);
-    checkBoardId(boardId);
-    return boardSession.importBoard(profile, boardId);
+    checkShowId(showId);
+    return showSession.importShow(profile, showId);
   });
 }

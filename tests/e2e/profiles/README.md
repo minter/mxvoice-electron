@@ -25,7 +25,7 @@ Test coverage:
 - ✅ **Repeated switching preserves data** - Switch A → B → A → B → A multiple times without data loss
 - ✅ **Quit/restart preserves data** - Close app, restart with same profile, data should persist
 - ✅ **New profiles start empty** - Fresh profiles should not inherit data from other profiles
-- ✅ **boards.json and recovery** - The saved board is opened on start; live edits are only in the crash-recovery record
+- ✅ **shows.json and recovery** - The saved show is opened on start; live edits are only in the crash-recovery record
 
 **Root cause of the bug:** Race condition during profile state restoration where partial DOM state was saved during restoration, overwriting good state.json files. The fix introduces a restoration lock (`window.isRestoringProfileState`) that prevents saves during DOM reconstruction.
 

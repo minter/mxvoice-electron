@@ -43,7 +43,7 @@ describe('profile change detector', () => {
     try {
       const profileDir = path.join(root, 'profiles', 'Show');
       realFs.mkdirSync(profileDir, { recursive: true });
-      realFs.writeFileSync(path.join(profileDir, 'boards.json'), '{}');
+      realFs.writeFileSync(path.join(profileDir, 'shows.json'), '{}');
       const detector = createProfileChangeDetector({
         fs: realFs, path, crypto,
         getProfileDirectory: () => profileDir,

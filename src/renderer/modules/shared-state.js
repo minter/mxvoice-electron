@@ -24,9 +24,9 @@ const VALID_KEYS = new Set([
   // UI state
   'holdingTankMode',
   'fontSize',
-  // Board state: boardGeneration counts layouts applied in place, and
+  // Show state: showGeneration counts layouts applied in place, and
   // nowPlayingSource is the generation the current song was started on
-  'boardGeneration',
+  'showGeneration',
   'nowPlayingSource',
   // Data state
   'categories',
@@ -47,8 +47,8 @@ class SharedState {
       holdingTankMode: "storage", // 'storage' or 'playlist'
       fontSize: 11,
 
-      // Board state
-      boardGeneration: 0,
+      // Show state
+      showGeneration: 0,
       nowPlayingSource: null,
 
       // Data state
@@ -150,7 +150,7 @@ class SharedState {
       loop: false,
       holdingTankMode: "storage",
       fontSize: 11,
-      boardGeneration: 0,
+      showGeneration: 0,
       nowPlayingSource: null,
       categories: {}
     };

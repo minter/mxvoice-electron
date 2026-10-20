@@ -17,7 +17,7 @@ vi.mock('../../../src/main/modules/profile-manager.js', () => profiles);
 const { register } = await import('../../../src/main/modules/ipc/profile-backup-handlers.js');
 const debugLog = { info: vi.fn(), error: vi.fn() };
 let activeProfile;
-let boardSession;
+let showSession;
 
 function invoke(channel, ...args) {
   return handlers[channel]({}, ...args);
@@ -26,8 +26,8 @@ function invoke(channel, ...args) {
 beforeEach(() => {
   vi.clearAllMocks();
   activeProfile = 'Default User';
-  boardSession = { end: vi.fn(async () => {}) };
-  register({ getCurrentProfile: () => activeProfile, debugLog, boardSession });
+  showSession = { end: vi.fn(async () => {}) };
+  register({ getCurrentProfile: () => activeProfile, debugLog, showSession });
 });
 
 describe('profile backup IPC handlers', () => {
@@ -66,7 +66,7 @@ describe('profile backup IPC handlers', () => {
 
   it('restoreBackup retires the current recovery', async () => {
     const order = [];
-    boardSession.end.mockImplementation(async (reason) => { order.push(`end:${reason}`); });
+    showSession.end.mockImplementation(async (reason) => { order.push(`end:${reason}`); });
     backup.restoreBackup.mockImplementation(async () => { order.push('restore'); return { success: true }; });
 
     await expect(invoke('profile:restoreBackup', 'backup-1')).resolves.toEqual({ success: true });
@@ -74,7 +74,7 @@ describe('profile backup IPC handlers', () => {
   });
 
   it('restores even if retiring the recovery fails', async () => {
-    boardSession.end.mockRejectedValue(new Error('recovery dir locked'));
+    showSession.end.mockRejectedValue(new Error('recovery dir locked'));
     backup.restoreBackup.mockResolvedValue({ success: true });
     await expect(invoke('profile:restoreBackup', 'backup-1')).resolves.toEqual({ success: true });
     expect(backup.restoreBackup).toHaveBeenCalledWith('Default User', 'backup-1');
@@ -83,7 +83,7 @@ describe('profile backup IPC handlers', () => {
   it('touches no session without an active profile', async () => {
     activeProfile = null;
     await invoke('profile:restoreBackup', 'backup-1');
-    expect(boardSession.end).not.toHaveBeenCalled();
+    expect(showSession.end).not.toHaveBeenCalled();
   });
 
   it('returns default settings when the profile has none', async () => {

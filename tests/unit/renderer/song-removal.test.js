@@ -23,7 +23,7 @@ describe('song removal contracts', () => {
     const hotkeys = { clearSong: vi.fn((id) => { delete hotkeyTabs[0].hotkeys.f1; expect(id).toBe('42'); }), getHotkeySnapshot: () => structuredClone(hotkeyTabs) };
     const holdingTank = { clearSongFromHoldingTankState: vi.fn(() => { tankTabs[0].songIds = ['7']; }), getHoldingTankSnapshot: () => structuredClone(tankTabs) };
     const saveRecovery = vi.fn(async () => ({ success: true, data: {} }));
-    window.secureElectronAPI = { boards: { saveRecovery } };
+    window.secureElectronAPI = { shows: { saveRecovery } };
     window.isRestoringProfileState = false;
     profileState.initializeProfileState({ hotkeysModule: hotkeys, holdingTankModule: holdingTank });
     removal.configureSongRemovalDependencies({ moduleRegistry: { hotkeys, holdingTank, profileState } });

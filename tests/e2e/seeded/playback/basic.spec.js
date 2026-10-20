@@ -11,7 +11,7 @@ import fs from 'fs';
 import path from 'node:path';
 import os from 'os';
 import { fileURLToPath } from 'node:url';
-import { importHotkeyFile } from '../../../utils/board-e2e.js';
+import { importHotkeyFile } from '../../../utils/show-e2e.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);

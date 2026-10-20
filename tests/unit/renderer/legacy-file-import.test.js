@@ -101,7 +101,7 @@ describe('legacy file import bridge', () => {
     setupMainProcessEventBridge({
       electronAPI: {
         events,
-        boards: { getState: async () => ({ success: true, data: { status } }) },
+        shows: { getState: async () => ({ success: true, data: { status } }) },
         analytics: { trackEvent }
       },
       moduleRegistry,
@@ -118,7 +118,7 @@ describe('legacy file import bridge', () => {
     };
   });
 
-  it('ignores a load until the board is ready and says why', async () => {
+  it('ignores a load until the show is ready and says why', async () => {
     bridge('loading');
     await handlers.onFkeyLoad({ f1: '1' }, '');
     await handlers.onHoldingTankLoad(['1']);
@@ -126,7 +126,7 @@ describe('legacy file import bridge', () => {
     expect(moduleRegistry.hotkeys.populateHotkeys).not.toHaveBeenCalled();
     expect(moduleRegistry.holdingTank.populateHoldingTank).not.toHaveBeenCalled();
     expect(toast).toHaveBeenCalledTimes(2);
-    expect(toast.mock.calls[0][0]).toBe('Wait for the board to finish loading, then import again.');
+    expect(toast.mock.calls[0][0]).toBe('Wait for the show to finish loading, then import again.');
     expect(trackEvent).not.toHaveBeenCalled();
   });
 

@@ -167,36 +167,36 @@ test.describe('Native menu wiring', () => {
     expect(await findMenuItem('Delete Current Profile...')).toEqual({ found: true, enabled: false });
   });
 
-  test('Board menu replaces Hotkeys and Start a New Session', async () => {
-    const boardName = await app.evaluate(({ app: electronApp }) => {
+  test('Shows menu replaces Hotkeys and Start a New Session', async () => {
+    const showName = await app.evaluate(({ app: electronApp }) => {
       const fs = process.mainModule.require('fs');
       const path = process.mainModule.require('path');
-      const file = path.join(electronApp.getPath('userData'), 'profiles', 'Default User', 'boards.json');
+      const file = path.join(electronApp.getPath('userData'), 'profiles', 'Default User', 'shows.json');
       const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
-      return doc.boards.find((b) => b.id === doc.activeBoardId).name;
+      return doc.shows.find((b) => b.id === doc.activeShowId).name;
     });
-    expect(boardName).toBeTruthy();
+    expect(showName).toBeTruthy();
 
     const topLevel = await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.map((i) => i.label));
-    expect(topLevel).toContain('Board');
+    expect(topLevel).toContain('Shows');
     expect(topLevel).not.toContain('Hotkeys');
 
-    expect(await findMenuItem(boardName)).toEqual({ found: true, enabled: true });
-    expect(await findMenuItem(`Update "${boardName}"`)).toEqual({ found: true, enabled: true });
-    expect(await findMenuItem(`Revert to "${boardName}"`)).toEqual({ found: true, enabled: true });
+    expect(await findMenuItem(showName)).toEqual({ found: true, enabled: true });
+    expect(await findMenuItem(`Update "${showName}"`)).toEqual({ found: true, enabled: true });
+    expect(await findMenuItem(`Revert to "${showName}"`)).toEqual({ found: true, enabled: true });
     expect(await findMenuItem('Import Hotkey File…')).toEqual({ found: true, enabled: true });
     expect(await findMenuItem('Start a New Session')).toEqual({ found: false });
     expect(await findMenuItem('Open Hotkeys File')).toEqual({ found: false });
   });
 
-  test('Board menu commands reach the renderer as menu:board-command', async () => {
+  test('Shows menu commands reach the renderer as menu:show-command', async () => {
     await page.evaluate(() => {
-      window.__boardCommands = [];
+      window.__showCommands = [];
       // Task 11 consumes this in the renderer; here we listen at the preload boundary.
-      window.secureElectronAPI.events.onBoardCommand((payload) => window.__boardCommands.push(payload));
+      window.secureElectronAPI.events.onShowCommand((payload) => window.__showCommands.push(payload));
     });
-    await triggerMenuItem('New Board…');
-    await expect.poll(() => page.evaluate(() => window.__boardCommands)).toEqual([
+    await triggerMenuItem('New Show…');
+    await expect.poll(() => page.evaluate(() => window.__showCommands)).toEqual([
       { command: 'new' }
     ]);
   });

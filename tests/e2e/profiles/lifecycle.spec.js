@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
-import { boardsDocument, readBoards, recoveryRecordPath, seedBoards } from '../../utils/seed-boards.js';
+import { showsDocument, readShows, recoveryRecordPath, seedShows } from '../../utils/seed-shows.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -299,20 +299,20 @@ test.describe('Profile Lifecycle', () => {
     // Verify the new profile has a preferences.json
     const prefsExist = fs.existsSync(path.join(userDataDir, 'profiles', 'CopyOfOriginal', 'preferences.json'));
     expect(prefsExist).toBe(true);
-    // and the source's saved boards
-    expect(readBoards(userDataDir, 'CopyOfOriginal')).toEqual(readBoards(userDataDir, 'Original'));
+    // and the source's saved shows
+    expect(readShows(userDataDir, 'CopyOfOriginal')).toEqual(readShows(userDataDir, 'Original'));
   });
 
-  // Boards (Task 9): a switch discards the live layout, so each profile now
-  // opens on its saved board. The isolation check seeds boards.json for both.
-  test('switching profiles in-process opens each profile on its own saved board', async () => {
+  // Shows (Task 9): a switch discards the live layout, so each profile now
+  // opens on its saved show. The isolation check seeds shows.json for both.
+  test('switching profiles in-process opens each profile on its own saved show', async () => {
     await createProfileInLauncher('SecondProfile', 'For switching');
-    const namedTabs = (keys, queue) => boardsDocument({
+    const namedTabs = (keys, queue) => showsDocument({
       hotkeys: [{ tabNumber: 1, tabName: keys, hotkeys: {} }],
       holdingTank: [{ tabNumber: 1, tabName: queue, songIds: [] }]
     });
-    seedBoards(userDataDir, 'Default User', namedTabs('Default Keys', 'Default Queue'));
-    seedBoards(userDataDir, 'SecondProfile', namedTabs('Second Keys', 'Second Queue'));
+    seedShows(userDataDir, 'Default User', namedTabs('Default Keys', 'Default Queue'));
+    seedShows(userDataDir, 'SecondProfile', namedTabs('Second Keys', 'Second Queue'));
 
     const mainWindow = await launchProfile('Default User');
     await waitForProfileReady(mainWindow, 'Default User');
@@ -351,7 +351,7 @@ test.describe('Profile Lifecycle', () => {
       await window.secureElectronAPI.profile.getPreference('e2e_profile_marker')
     ))).toMatchObject({ success: true, value: 'default-marker' });
 
-    expect(readBoards(userDataDir, 'SecondProfile').boards[0].layout.hotkeys[0].tabName).toBe('Second Keys');
+    expect(readShows(userDataDir, 'SecondProfile').shows[0].layout.hotkeys[0].tabName).toBe('Second Keys');
     expect(fs.existsSync(recoveryRecordPath(userDataDir, 'SecondProfile'))).toBe(false);
 
     // Same process and window throughout, no relaunch hand-off keys
@@ -546,9 +546,9 @@ test.describe('Profile Lifecycle', () => {
     await waitForProfileReady(mainWindow, 'Default User');
 
     expect(app.process().pid).toBe(pid);
-    // Boards (Task 9): Log Out discards the live layout; the saved board and
+    // Shows (Task 9): Log Out discards the live layout; the saved show and
     // recovery are untouched by it
-    expect(readBoards(userDataDir, 'ShowNight').boards[0].layout.hotkeys[0].tabName).toBeNull();
+    expect(readShows(userDataDir, 'ShowNight').shows[0].layout.hotkeys[0].tabName).toBeNull();
     expect(fs.existsSync(recoveryRecordPath(userDataDir, 'ShowNight'))).toBe(false);
     expect(fs.existsSync(path.join(userDataDir, 'profiles', 'ShowNight', 'state.json'))).toBe(false);
   });

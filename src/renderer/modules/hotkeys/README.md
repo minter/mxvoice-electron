@@ -12,7 +12,7 @@ The Hotkeys Module provides comprehensive F1-F12 hotkey functionality for quick 
 - Direct playback from hotkeys
 
 ### 📁 File Import/Export
-- Import legacy hotkey files (Board → Import Hotkey File…); saving is done with boards
+- Import legacy hotkey files (Shows → Import Hotkey File…); saving is done with shows
 
 ### 🏷️ Tab Management
 - Multiple hotkey sets (5 tabs)
@@ -26,7 +26,7 @@ The Hotkeys Module provides comprehensive F1-F12 hotkey functionality for quick 
 
 ### 💾 Persistence
 - `HotkeyState` is authoritative in memory.
-- Per-profile boards (`boards.json`) and the crash-recovery record are the only persistence paths.
+- Per-profile shows (`shows.json`) and the crash-recovery record are the only persistence paths.
 - The DOM is rendered from model state and is never serialized as storage.
 
 ## Module Structure
@@ -81,7 +81,7 @@ const hotkeys = new HotkeysModule({
 
 ```javascript
 // Record the live layout for crash recovery
-hotkeys.requestProfileStateSave(); // writes the crash-recovery record, not a saved board
+hotkeys.requestProfileStateSave(); // writes the crash-recovery record, not a saved show
 
 // Clear all hotkeys
 hotkeys.clearHotkeys();
@@ -255,7 +255,7 @@ The module automatically sets up the following event listeners:
 
 ## Profile Integration
 
-Hotkey snapshots are written by Profile State to the crash-recovery record; boards are applied through the boards module's layout applier.
+Hotkey snapshots are written by Profile State to the crash-recovery record; shows are applied through the shows module's layout applier.
 
 ## Testing
 

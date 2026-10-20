@@ -1,32 +1,32 @@
 /**
- * Board Store
+ * Show Store
  *
- * Reads and writes a profile's boards.json. The first time a profile is opened
- * after the upgrade there is no boards.json, so the store migrates the
- * profile's state.json (or state.json.backup) into a single board. state.json
+ * Reads and writes a profile's shows.json. The first time a profile is opened
+ * after the upgrade there is no shows.json, so the store migrates the
+ * profile's state.json (or state.json.backup) into a single show. state.json
  * is never written or deleted.
  *
- * Recovery rules for boards.json: a file that fails to parse or fails
+ * Recovery rules for shows.json: a file that fails to parse or fails
  * `parseDocument` with 'shape' is treated as corrupt; it is quarantined and
  * `<file>.prev` is tried. A future-version document ('version') or an I/O read
  * error ('io') throws and leaves every file untouched.
  *
- * @module board-store
+ * @module show-store
  */
 
 import nodeFs from 'fs';
 import path from 'path';
 import { quarantine, writeJsonAtomic } from './atomic-json-file.js';
-import { createDocument, normalizeLayout, parseDocument } from './board-document.js';
+import { createDocument, normalizeLayout, parseDocument } from './show-document.js';
 
 export const RECOVERY_NOTICE =
-  "Mx. Voice couldn't read this profile's boards and opened the previous copy.";
+  "Mx. Voice couldn't read this profile's shows and opened the previous copy.";
 
 /** Error thrown by the store; `code` is 'unreadable'|'version'|'unregistered'|'io'|'shape'. */
-export class BoardStoreError extends Error {
+export class ShowStoreError extends Error {
   constructor(code, message) {
     super(message || code);
-    this.name = 'BoardStoreError';
+    this.name = 'ShowStoreError';
     this.code = code;
   }
 }
@@ -50,18 +50,18 @@ async function readRaw(fs, filePath) {
 }
 
 /**
- * Classify one boards file: 'missing', 'bad' (unparseable or wrong shape) or
- * 'good'. Throws BoardStoreError for 'version' and 'io'.
+ * Classify one shows file: 'missing', 'bad' (unparseable or wrong shape) or
+ * 'good'. Throws ShowStoreError for 'version' and 'io'.
  */
 async function classify(fs, filePath) {
   const raw = await readRaw(fs, filePath);
   if (raw.missing) return { state: 'missing' };
-  if (raw.ioError) throw new BoardStoreError('io', raw.ioError);
+  if (raw.ioError) throw new ShowStoreError('io', raw.ioError);
   if (raw.parseError) return { state: 'bad' };
   const parsed = parseDocument(raw.value);
   if (parsed.ok) return { state: 'good', doc: parsed.doc };
   if (parsed.error === 'version') {
-    throw new BoardStoreError('version', 'boards file was written by a newer version');
+    throw new ShowStoreError('version', 'shows file was written by a newer version');
   }
   return { state: 'bad' };
 }
@@ -69,23 +69,23 @@ async function classify(fs, filePath) {
 /**
  * @param {Object} deps
  * @param {Object} [deps.fs]
- * @param {(profileName: string) => string} deps.getProfileBoardsPath
+ * @param {(profileName: string) => string} deps.getProfileShowsPath
  * @param {(profileName: string) => string} deps.getProfileStatePath
  * @param {(profileName: string) => boolean|Promise<boolean>} deps.profileExists
  * @param {Object} [deps.debugLog]
  * @param {number|(() => number)} [deps.now]
  * @param {() => string} [deps.newId]
  */
-export function createBoardStore({
+export function createShowStore({
   fs = nodeFs,
-  getProfileBoardsPath,
+  getProfileShowsPath,
   getProfileStatePath,
   profileExists,
   debugLog,
   now,
   newId
 }) {
-  const logCtx = (fn) => ({ module: 'board-store', function: fn });
+  const logCtx = (fn) => ({ module: 'show-store', function: fn });
   const docOptions = () => {
     const options = {};
     if (now !== undefined) options.now = typeof now === 'function' ? now() : now;
@@ -108,19 +108,19 @@ export function createBoardStore({
 
   async function requireRegistered(profileName) {
     if (!(await profileExists(profileName))) {
-      throw new BoardStoreError('unregistered', `Profile "${profileName}" is not registered`);
+      throw new ShowStoreError('unregistered', `Profile "${profileName}" is not registered`);
     }
   }
 
   /**
-   * Inspect the profile's boards files without writing.
+   * Inspect the profile's shows files without writing.
    * Returns { kind: 'main'|'prev'|'none'|'unreadable', doc?, mainBad? }.
    */
   async function inspect(profileName) {
-    const boardsPath = getProfileBoardsPath(profileName);
-    const main = await classify(fs, boardsPath);
+    const showsPath = getProfileShowsPath(profileName);
+    const main = await classify(fs, showsPath);
     if (main.state === 'good') return { kind: 'main', doc: main.doc };
-    const prev = await classify(fs, `${boardsPath}.prev`);
+    const prev = await classify(fs, `${showsPath}.prev`);
     if (prev.state === 'good') return { kind: 'prev', doc: prev.doc, mainBad: main.state === 'bad' };
     if (main.state === 'missing' && prev.state === 'missing') return { kind: 'none' };
     return { kind: 'unreadable' };
@@ -135,8 +135,8 @@ export function createBoardStore({
     ];
     for (const [file, source] of candidates) {
       const raw = await readRaw(fs, file);
-      // An unreadable (not absent) state file must not be replaced by an empty board.
-      if (raw.ioError) throw new BoardStoreError('io', raw.ioError);
+      // An unreadable (not absent) state file must not be replaced by an empty show.
+      if (raw.ioError) throw new ShowStoreError('io', raw.ioError);
       if ('value' in raw && isObject(raw.value)) {
         return { doc: createDocument(normalizeLayout(raw.value), docOptions()), source };
       }
@@ -145,32 +145,32 @@ export function createBoardStore({
   }
 
   async function writeNew(profileName, doc) {
-    const boardsPath = getProfileBoardsPath(profileName);
-    await fs.promises.mkdir(path.dirname(boardsPath), { recursive: true });
-    await writeJsonAtomic(boardsPath, doc, { keepPrevious: false, fs });
+    const showsPath = getProfileShowsPath(profileName);
+    await fs.promises.mkdir(path.dirname(showsPath), { recursive: true });
+    await writeJsonAtomic(showsPath, doc, { keepPrevious: false, fs });
   }
 
   function load(profileName) {
     return serialized(profileName, async () => {
       await requireRegistered(profileName);
       const found = await inspect(profileName);
-      if (found.kind === 'main') return { doc: found.doc, source: 'boards' };
+      if (found.kind === 'main') return { doc: found.doc, source: 'shows' };
       if (found.kind === 'unreadable') {
-        throw new BoardStoreError('unreadable', 'boards.json and its previous copy are unreadable');
+        throw new ShowStoreError('unreadable', 'shows.json and its previous copy are unreadable');
       }
       if (found.kind === 'prev') {
-        const boardsPath = getProfileBoardsPath(profileName);
+        const showsPath = getProfileShowsPath(profileName);
         if (found.mainBad) {
-          const moved = await quarantine(boardsPath, { fs });
-          debugLog?.warn?.('Quarantined unreadable boards file', { ...logCtx('load'), moved });
+          const moved = await quarantine(showsPath, { fs });
+          debugLog?.warn?.('Quarantined unreadable shows file', { ...logCtx('load'), moved });
         }
         // keepPrevious: false leaves .prev intact for the next recovery.
-        await writeJsonAtomic(boardsPath, found.doc, { keepPrevious: false, fs });
+        await writeJsonAtomic(showsPath, found.doc, { keepPrevious: false, fs });
         return { doc: found.doc, source: 'recovered', notice: RECOVERY_NOTICE };
       }
       const migrated = await buildMigration(profileName);
       await writeNew(profileName, migrated.doc);
-      debugLog?.info?.('Migrated state.json into boards', { ...logCtx('load'), source: migrated.source });
+      debugLog?.info?.('Migrated state.json into shows', { ...logCtx('load'), source: migrated.source });
       return migrated;
     });
   }
@@ -183,13 +183,13 @@ export function createBoardStore({
       if (found.kind === 'none') return (await buildMigration(profileName)).doc;
       return null;
     } catch (error) {
-      if (error instanceof BoardStoreError) return null;
+      if (error instanceof ShowStoreError) return null;
       throw error;
     }
   }
 
   /**
-   * Quarantine whatever is left of boards.json and its previous copy, then
+   * Quarantine whatever is left of shows.json and its previous copy, then
    * write an empty document. It does not try migration, because it is only
    * called after `load` threw 'unreadable'.
    */
@@ -199,8 +199,8 @@ export function createBoardStore({
       const found = await inspect(profileName);
       // Never destroy a document that turned out to be readable after all.
       if (found.kind === 'main' || found.kind === 'prev') return { doc: found.doc };
-      const boardsPath = getProfileBoardsPath(profileName);
-      for (const file of [boardsPath, `${boardsPath}.prev`]) {
+      const showsPath = getProfileShowsPath(profileName);
+      for (const file of [showsPath, `${showsPath}.prev`]) {
         try {
           await quarantine(file, { fs });
         } catch (error) {
@@ -216,15 +216,15 @@ export function createBoardStore({
   function save(profileName, doc) {
     return serialized(profileName, async () => {
       await requireRegistered(profileName);
-      if (!parseDocument(doc).ok) throw new BoardStoreError('shape', 'Refusing to save an invalid board document');
-      const boardsPath = getProfileBoardsPath(profileName);
+      if (!parseDocument(doc).ok) throw new ShowStoreError('shape', 'Refusing to save an invalid show document');
+      const showsPath = getProfileShowsPath(profileName);
       // Throws 'io' or 'version' for a main file we must not overwrite.
-      await classify(fs, boardsPath);
-      await writeJsonAtomic(boardsPath, doc, { keepPrevious: true, fs });
+      await classify(fs, showsPath);
+      await writeJsonAtomic(showsPath, doc, { keepPrevious: true, fs });
     });
   }
 
   return { load, peek, resetUnreadable, save };
 }
 
-export default { createBoardStore, BoardStoreError };
+export default { createShowStore, ShowStoreError };

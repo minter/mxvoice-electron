@@ -164,7 +164,7 @@ import AppBootstrap from './renderer/modules/app-bootstrap/index.js';
 // Import app initialization module for centralized initialization
 import AppInitialization from './renderer/modules/app-initialization/index.js';
 
-import { setHeaderLabels } from './renderer/modules/boards/header.js';
+import { setHeaderLabels } from './renderer/modules/shows/header.js';
 
 // Load and display current profile
 (async function loadProfileIndicator() {
@@ -320,22 +320,22 @@ import { setHeaderLabels } from './renderer/modules/boards/header.js';
         holdingTankModule: moduleRegistry.holdingTank
       });
       
-      // Open the profile's active board (asks first after a crash). Holds,
+      // Open the profile's active show (asks first after a crash). Holds,
       // then clears, the restoration lock.
-      window.logInfo('📂 Opening the active board...');
-      if (moduleRegistry.boards?.openSessionOnStartup) {
-        const openResult = await moduleRegistry.boards.openSessionOnStartup({
+      window.logInfo('📂 Opening the active show...');
+      if (moduleRegistry.shows?.openSessionOnStartup) {
+        const openResult = await moduleRegistry.shows.openSessionOnStartup({
           hotkeys: moduleRegistry.hotkeys,
           holdingTank: moduleRegistry.holdingTank
         });
-        window.logInfo(`Board session: ${openResult.status}`);
-        // Board menu commands; the session refuses them until it is ready
-        moduleRegistry.boards.initializeBoardCommands?.({
+        window.logInfo(`Show session: ${openResult.status}`);
+        // Shows menu commands; the session refuses them until it is ready
+        moduleRegistry.shows.initializeShowCommands?.({
           hotkeys: moduleRegistry.hotkeys,
           holdingTank: moduleRegistry.holdingTank
         });
       } else {
-        window.logError('Boards module not available; no board was opened');
+        window.logError('Shows module not available; no show was opened');
         moduleRegistry.profileState.clearProfileRestorationLock?.();
       }
       
@@ -582,13 +582,13 @@ import { setHeaderLabels } from './renderer/modules/boards/header.js';
     if (window.electronTest?.isE2E) {
       window.__e2eInitialSearchSettled = true;
       // Test-only hook: E2E specs cannot import renderer ES modules, so expose
-      // the board layout applier wired to the live modules. electronTest is
+      // the show layout applier wired to the live modules. electronTest is
       // only exposed by the preload when APP_TEST_MODE=1.
-      window.__boardsTest = {
+      window.__showsTest = {
         applyLayout: async (layout) => {
           const [{ applyLayout }, { buildLayoutDeps }] = await Promise.all([
-            import('./renderer/modules/boards/layout-applier.js'),
-            import('./renderer/modules/boards/index.js')
+            import('./renderer/modules/shows/layout-applier.js'),
+            import('./renderer/modules/shows/index.js')
           ]);
           return applyLayout(layout, buildLayoutDeps(moduleRegistry));
         }

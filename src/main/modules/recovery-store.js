@@ -5,7 +5,7 @@
  * progress, for crash recovery. Records live in userData/recovery, outside the
  * profile directories, so profile backups and switches never touch them.
  *
- * Record: { version: 1, boardId, savedAt, handoff, layout }. `handoff` is null
+ * Record: { version: 1, showId, savedAt, handoff, layout }. `handoff` is null
  * for a normal autosave, or 'update' / 'renderer-crash' once the main process
  * knows why the app is about to restart; a handed-off record also carries
  * `handoffAt`, when it was marked.
@@ -57,12 +57,12 @@ export function createRecoveryStore({
     }
   }
 
-  async function write(profileName, { boardId, layout }) {
+  async function write(profileName, { showId, layout }) {
     assertProfileName(profileName);
     await fs.promises.mkdir(getRecoveryDirectory(), { recursive: true });
     const record = {
       version: RECOVERY_VERSION,
-      boardId,
+      showId,
       savedAt: now(),
       handoff: null,
       layout

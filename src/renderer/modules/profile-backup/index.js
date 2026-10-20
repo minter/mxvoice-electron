@@ -165,7 +165,7 @@ function createBackupListItem(backup) {
   // Add restore button handler
   restoreBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    await restoreBackup(backup.id, backup.boards);
+    await restoreBackup(backup.id, backup.shows);
   });
   
   return item;
@@ -185,33 +185,33 @@ function formatBytes(bytes) {
 }
 
 /**
- * Explain which boards a restore brings in and which it replaces
- * @param {string[]|null} backupBoards - Board names in the backup, null for a pre-boards backup
+ * Explain which shows a restore brings in and which it replaces
+ * @param {string[]|null} backupShows - Show names in the backup, null for a pre-shows backup
  * @returns {Promise<string>}
  */
-async function describeBoardReplacement(backupBoards) {
-  if (!Array.isArray(backupBoards)) {
-    return 'This backup is from before boards. Its layout will become a board named Board, and it may be a layout from the middle of a show.';
+async function describeShowReplacement(backupShows) {
+  if (!Array.isArray(backupShows)) {
+    return 'This backup is from before shows. Its layout will become a show named Show, and it may be a layout from the middle of a show.';
   }
   let count = null;
   try {
-    const state = await electronAPI.boards?.getState?.();
-    const boards = state?.data?.doc?.boards;
-    if (Array.isArray(boards)) count = boards.length;
+    const state = await electronAPI.shows?.getState?.();
+    const shows = state?.data?.doc?.shows;
+    if (Array.isArray(shows)) count = shows.length;
   } catch {
     // Fall back to wording without a count.
   }
-  const has = `This backup has ${backupBoards.length} ${backupBoards.length === 1 ? 'board' : 'boards'}: ${backupBoards.join(', ')}.`;
-  if (count === null) return `${has} Your current boards will be replaced.`;
-  return `${has} Your ${count === 1 ? '1 current board' : `${count} current boards`} will be replaced.`;
+  const has = `This backup has ${backupShows.length} ${backupShows.length === 1 ? 'show' : 'shows'}: ${backupShows.join(', ')}.`;
+  if (count === null) return `${has} Your current shows will be replaced.`;
+  return `${has} Your ${count === 1 ? '1 current show' : `${count} current shows`} will be replaced.`;
 }
 
 /**
  * Restore from backup
  * @param {string} backupId - Backup ID to restore
- * @param {string[]|null} [backupBoards] - Board names in the backup, null for a pre-boards backup
+ * @param {string[]|null} [backupShows] - Show names in the backup, null for a pre-shows backup
  */
-async function restoreBackup(backupId, backupBoards = null) {
+async function restoreBackup(backupId, backupShows = null) {
   try {
     if (!electronAPI || !electronAPI.profile) {
       error('Electron API not available', {
@@ -223,9 +223,9 @@ async function restoreBackup(backupId, backupBoards = null) {
     
     // Confirm restore
     const { customConfirm } = await import('../utils/index.js');
-    const boardsNote = await describeBoardReplacement(backupBoards);
+    const showsNote = await describeShowReplacement(backupShows);
     const confirmed = await customConfirm(
-      `This will replace your current profile with the selected backup. ${boardsNote} A backup of your current profile will be created first. Continue?`,
+      `This will replace your current profile with the selected backup. ${showsNote} A backup of your current profile will be created first. Continue?`,
       'Restore Backup'
     );
     
@@ -254,7 +254,7 @@ async function restoreBackup(backupId, backupBoards = null) {
       // Prevent the close-time flush from saving the current in-memory layout
       // after the backup has been restored on disk but before the new window loads.
       // Otherwise, the pre-restore layout could land in a crash-recovery record
-      // and be offered over the restored boards.
+      // and be offered over the restored shows.
       if (typeof window !== 'undefined') {
         window.isRestoringProfileState = true;
       }
@@ -427,7 +427,7 @@ async function createBackupNow() {
       return;
     }
 
-    // Boards are saved data, so there is nothing to flush before a backup, and
+    // Shows are saved data, so there is nothing to flush before a backup, and
     // crash recovery is deliberately not backed up.
     if (typeof window !== 'undefined' && window.isRestoringProfileState) {
       // If a restoration is currently in progress, we should not attempt a backup at all

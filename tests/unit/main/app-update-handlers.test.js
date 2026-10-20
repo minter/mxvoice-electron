@@ -239,7 +239,7 @@ describe('app update IPC handlers', () => {
         isMaximized: () => false,
         isFullScreen: () => false
       };
-      const boardSession = {
+      const showSession = {
         end: vi.fn(async (reason) => { calls.push(`end:${reason}`); }),
         handoff: vi.fn(async (reason) => { calls.push(`handoff:${reason}`); })
       };
@@ -249,7 +249,7 @@ describe('app update IPC handlers', () => {
         screen: { getDisplayNearestPoint: () => ({ id: 1 }) },
         getCurrentProfile: () => null,
         isQuitting: () => false,
-        boardSession
+        showSession
       });
       const autoUpdater = { quitAndInstall: vi.fn(() => calls.push('quitAndInstall')) };
       const debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
@@ -258,19 +258,19 @@ describe('app update IPC handlers', () => {
         getAutoUpdater: () => autoUpdater,
         debugLog
       });
-      return { calls, installUpdate, autoUpdater, boardSession, debugLog };
+      return { calls, installUpdate, autoUpdater, showSession, debugLog };
     }
 
-    it('hands the board session off before quitAndInstall, and never retires it', async () => {
-      const { calls, installUpdate, boardSession } = installHarness();
+    it('hands the show session off before quitAndInstall, and never retires it', async () => {
+      const { calls, installUpdate, showSession } = installHarness();
       await installUpdate();
       expect(calls).toEqual(['flush', 'handoff:update', 'quitAndInstall']);
-      expect(boardSession.end).not.toHaveBeenCalled();
+      expect(showSession.end).not.toHaveBeenCalled();
     });
 
     it('still installs when saving state fails', async () => {
-      const { installUpdate, autoUpdater, boardSession, debugLog } = installHarness();
-      boardSession.handoff.mockRejectedValueOnce(new Error('disk full'));
+      const { installUpdate, autoUpdater, showSession, debugLog } = installHarness();
+      showSession.handoff.mockRejectedValueOnce(new Error('disk full'));
       await installUpdate();
       expect(autoUpdater.quitAndInstall).toHaveBeenCalledOnce();
       expect(debugLog.warn).toHaveBeenCalled();

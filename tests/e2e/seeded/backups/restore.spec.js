@@ -1,7 +1,7 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import electronPath from 'electron';
 import { launchSeededApp, closeApp, waitForAppReady } from '../../../utils/seeded-launch.js';
-import { boardsDocument, hotkeyLayout, seedBoards } from '../../../utils/seed-boards.js';
+import { showsDocument, hotkeyLayout, seedShows } from '../../../utils/seed-shows.js';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -192,14 +192,14 @@ test.describe('Profile Backups - restore', () => {
   });
 
   test('restore creates a pre-restore backup', async () => {
-    // Write a saved board (Boards, Task 9: boards.json holds the layout)
-    seedBoards(userDataDir, 'Default User', boardsDocument(hotkeyLayout({ f1: '1001' })));
+    // Write a saved show (Shows, Task 9: shows.json holds the layout)
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1001' })));
 
     // Create a backup
     await createBackup();
 
-    // Modify the saved board
-    seedBoards(userDataDir, 'Default User', boardsDocument(hotkeyLayout({ f1: '1002' })));
+    // Modify the saved show
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1002' })));
 
     // Count existing backups
     const metadataBefore = JSON.parse(
@@ -274,10 +274,10 @@ test.describe('Profile Backups - restore', () => {
     await expect(page.evaluate((key) => (
       window.secureElectronAPI.profile.setPreference(key, 'backed-up-state')
     ), markerKey)).resolves.toMatchObject({ success: true });
-    // Boards (Task 9): the backed-up layout is the saved board, not the live one
-    seedBoards(userDataDir, 'Default User', boardsDocument(hotkeyLayout({ f1: '1004' })));
+    // Shows (Task 9): the backed-up layout is the saved show, not the live one
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1004' })));
     await createBackup();
-    seedBoards(userDataDir, 'Default User', boardsDocument(hotkeyLayout({ f1: '1005' })));
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1005' })));
 
     const metadataPath = path.join(backupDir, 'backup-metadata.json');
     const metadataBefore = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
@@ -312,7 +312,7 @@ test.describe('Profile Backups - restore', () => {
     await expect(page.evaluate(async (key) => (
       window.secureElectronAPI.profile.getPreference(key)
     ), markerKey)).resolves.toMatchObject({ success: true, value: 'backed-up-state' });
-    // The reloaded page opened the restored board
+    // The reloaded page opened the restored show
     await expect(page.locator('#hotkeys_list_1 #f1_hotkey')).toHaveAttribute('songid', '1004');
 
     const metadataAfter = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));

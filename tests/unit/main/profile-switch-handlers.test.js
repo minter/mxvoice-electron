@@ -54,7 +54,7 @@ describe('profile switch handlers', () => {
     await expect(handlers['profile:switch-to']({}, 'X')).resolves.toEqual({ success: false, error: 'busy' });
   });
 
-  it('registers no state.json channels: live edits go to the board session', () => {
+  it('registers no state.json channels: live edits go to the show session', () => {
     setup();
     expect(handlers['profile:load-state']).toBeUndefined();
     expect(handlers['profile:save-state']).toBeUndefined();
@@ -67,7 +67,7 @@ describe('profile delete handler', () => {
 
   function setupDelete({ current = 'Saturday Show' } = {}) {
     const calls = [];
-    const boardSession = { end: vi.fn(async (reason) => { calls.push(`end:${reason}`); }) };
+    const showSession = { end: vi.fn(async (reason) => { calls.push(`end:${reason}`); }) };
     const recoveryStore = { retire: vi.fn(async (name) => { calls.push(`retire:${name}`); }) };
     const debugLog = { info: vi.fn(), error: vi.fn(), warn: vi.fn() };
     profileManager.deleteProfile.mockImplementation((name) => { calls.push(`delete:${name}`); return { success: true }; });
@@ -77,17 +77,17 @@ describe('profile delete handler', () => {
       store: { set: vi.fn(), get: vi.fn() },
       debugLog,
       profileSwitcher: { switchProfile: vi.fn() },
-      boardSession,
+      showSession,
       recoveryStore,
     });
-    return { calls, boardSession, recoveryStore, debugLog };
+    return { calls, showSession, recoveryStore, debugLog };
   }
 
   it('deleteProfile removes its recovery record', async () => {
-    const { calls, boardSession } = setupDelete({ current: 'Default User' });
+    const { calls, showSession } = setupDelete({ current: 'Default User' });
     await expect(handlers['profile:delete']({}, 'Old Show')).resolves.toEqual({ success: true });
     expect(calls).toEqual(['delete:Old Show', 'retire:Old Show']);
-    expect(boardSession.end).not.toHaveBeenCalled();
+    expect(showSession.end).not.toHaveBeenCalled();
   });
 
   it('deleting the current profile ends its session before deleting', async () => {
@@ -97,11 +97,11 @@ describe('profile delete handler', () => {
   });
 
   it('a delete that will be refused leaves the session and record alone', async () => {
-    const { boardSession, recoveryStore } = setupDelete({ current: 'Default User' });
+    const { showSession, recoveryStore } = setupDelete({ current: 'Default User' });
     profileManager.getDeleteProfileBlocker.mockReturnValue('Cannot delete Default User profile');
     profileManager.deleteProfile.mockReturnValue({ success: false, error: 'Cannot delete Default User profile' });
     await expect(handlers['profile:delete']({}, 'Default User')).resolves.toMatchObject({ success: false });
-    expect(boardSession.end).not.toHaveBeenCalled();
+    expect(showSession.end).not.toHaveBeenCalled();
     expect(recoveryStore.retire).not.toHaveBeenCalled();
   });
 

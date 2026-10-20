@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 globalThis.window = globalThis.window || {};
 window.debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-const { chooseImportBoard } = await import('../../../src/renderer/modules/boards/import-dialog.js');
+const { chooseImportShow } = await import('../../../src/renderer/modules/shows/import-dialog.js');
 
 // Just enough DOM for the dialog: no innerHTML, so a name can only arrive as text
 class FakeElement {
@@ -49,101 +49,101 @@ class FakeElement {
 
 function setup() {
   const elements = {
-    importBoardModal: new FakeElement('div', 'importBoardModal'),
-    importBoardList: new FakeElement('div', 'importBoardList'),
-    importBoardEmpty: new FakeElement('p', 'importBoardEmpty'),
-    importBoardBtn: new FakeElement('button', 'importBoardBtn')
+    importShowModal: new FakeElement('div', 'importShowModal'),
+    importShowList: new FakeElement('div', 'importShowList'),
+    importShowEmpty: new FakeElement('p', 'importShowEmpty'),
+    importShowBtn: new FakeElement('button', 'importShowBtn')
   };
-  elements.importBoardEmpty.classList.add('d-none');
+  elements.importShowEmpty.classList.add('d-none');
   const doc = {
     getElementById: (id) => elements[id] ?? null,
     createElement: (tag) => new FakeElement(tag)
   };
   const show = vi.fn(async () => {});
-  const hide = vi.fn(async () => { elements.importBoardModal.dispatch('hidden.bs.modal'); });
+  const hide = vi.fn(async () => { elements.importShowModal.dispatch('hidden.bs.modal'); });
   return { elements, options: { document: doc, show, hide }, show, hide };
 }
 
 const groups = [
-  { profile: 'Derek', boards: [{ id: 'd1', name: 'Comedy Sports', updatedAt: 1 }, { id: 'd2', name: '<b>Late</b>', updatedAt: 2 }] },
-  { profile: 'Empty Profile', boards: [] },
-  { profile: 'Sam', boards: [{ id: 's1', name: 'Kids Show', updatedAt: 3 }] }
+  { profile: 'Derek', shows: [{ id: 'd1', name: 'Comedy Sports', updatedAt: 1 }, { id: 'd2', name: '<b>Late</b>', updatedAt: 2 }] },
+  { profile: 'Empty Profile', shows: [] },
+  { profile: 'Sam', shows: [{ id: 's1', name: 'Kids Show', updatedAt: 3 }] }
 ];
 
 const rowsOf = (list) => list.children.filter((el) => el.getAttribute('role') === 'option');
 const headersOf = (list) => list.children.filter((el) => el.getAttribute('role') !== 'option');
 
-describe('chooseImportBoard', () => {
-  it('lists boards grouped under their profile as plain text', async () => {
+describe('chooseImportShow', () => {
+  it('lists shows grouped under their profile as plain text', async () => {
     const { elements, options, show } = setup();
-    void chooseImportBoard(groups, options);
-    await vi.waitFor(() => expect(show).toHaveBeenCalledWith('#importBoardModal', expect.any(Object), { backdrop: true, keyboard: true }));
+    void chooseImportShow(groups, options);
+    await vi.waitFor(() => expect(show).toHaveBeenCalledWith('#importShowModal', expect.any(Object), { backdrop: true, keyboard: true }));
 
-    const list = elements.importBoardList;
+    const list = elements.importShowList;
     expect(headersOf(list).map((el) => el.textContent)).toEqual(['Derek', 'Sam']);
     expect(list.children.map((el) => el.textContent)).toEqual(['Derek', 'Comedy Sports', '<b>Late</b>', 'Sam', 'Kids Show']);
-    expect(elements.importBoardEmpty.classList.contains('d-none')).toBe(true);
-    expect(elements.importBoardBtn.disabled).toBe(true);
+    expect(elements.importShowEmpty.classList.contains('d-none')).toBe(true);
+    expect(elements.importShowBtn.disabled).toBe(true);
   });
 
-  it('enables Import once a row is selected and resolves with that board', async () => {
+  it('enables Import once a row is selected and resolves with that show', async () => {
     const { elements, options, hide } = setup();
-    const chosen = chooseImportBoard(groups, options);
-    await vi.waitFor(() => expect(rowsOf(elements.importBoardList)).toHaveLength(3));
+    const chosen = chooseImportShow(groups, options);
+    await vi.waitFor(() => expect(rowsOf(elements.importShowList)).toHaveLength(3));
 
-    const [first, , kids] = rowsOf(elements.importBoardList);
+    const [first, , kids] = rowsOf(elements.importShowList);
     first.click();
-    expect(elements.importBoardBtn.disabled).toBe(false);
+    expect(elements.importShowBtn.disabled).toBe(false);
     expect(first.classList.contains('active')).toBe(true);
     kids.click();
     expect(first.classList.contains('active')).toBe(false);
     expect(kids.getAttribute('aria-selected')).toBe('true');
 
-    elements.importBoardBtn.click();
-    await expect(chosen).resolves.toEqual({ profile: 'Sam', boardId: 's1' });
-    expect(hide).toHaveBeenCalledWith('#importBoardModal', expect.any(Object));
+    elements.importShowBtn.click();
+    await expect(chosen).resolves.toEqual({ profile: 'Sam', showId: 's1' });
+    expect(hide).toHaveBeenCalledWith('#importShowModal', expect.any(Object));
   });
 
   it('a double-click imports that row', async () => {
     const { elements, options } = setup();
-    const chosen = chooseImportBoard(groups, options);
-    await vi.waitFor(() => expect(rowsOf(elements.importBoardList)).toHaveLength(3));
-    rowsOf(elements.importBoardList)[0].dispatch('dblclick');
-    await expect(chosen).resolves.toEqual({ profile: 'Derek', boardId: 'd1' });
+    const chosen = chooseImportShow(groups, options);
+    await vi.waitFor(() => expect(rowsOf(elements.importShowList)).toHaveLength(3));
+    rowsOf(elements.importShowList)[0].dispatch('dblclick');
+    await expect(chosen).resolves.toEqual({ profile: 'Derek', showId: 'd1' });
   });
 
   it('closing the dialog resolves null, and a later open starts clean', async () => {
     const { elements, options } = setup();
-    const first = chooseImportBoard(groups, options);
-    await vi.waitFor(() => expect(rowsOf(elements.importBoardList)).toHaveLength(3));
-    rowsOf(elements.importBoardList)[0].click();
-    elements.importBoardModal.dispatch('hidden.bs.modal');
+    const first = chooseImportShow(groups, options);
+    await vi.waitFor(() => expect(rowsOf(elements.importShowList)).toHaveLength(3));
+    rowsOf(elements.importShowList)[0].click();
+    elements.importShowModal.dispatch('hidden.bs.modal');
     await expect(first).resolves.toBeNull();
 
-    const second = chooseImportBoard(groups, options);
-    await vi.waitFor(() => expect(rowsOf(elements.importBoardList)).toHaveLength(3));
-    expect(elements.importBoardBtn.disabled).toBe(true);
+    const second = chooseImportShow(groups, options);
+    await vi.waitFor(() => expect(rowsOf(elements.importShowList)).toHaveLength(3));
+    expect(elements.importShowBtn.disabled).toBe(true);
     // The first open's listeners are gone: one click resolves the second only
-    rowsOf(elements.importBoardList)[2].click();
-    elements.importBoardBtn.click();
-    await expect(second).resolves.toEqual({ profile: 'Sam', boardId: 's1' });
+    rowsOf(elements.importShowList)[2].click();
+    elements.importShowBtn.click();
+    await expect(second).resolves.toEqual({ profile: 'Sam', showId: 's1' });
   });
 
-  it('with no other boards it says so and keeps Import disabled', async () => {
+  it('with no other shows it says so and keeps Import disabled', async () => {
     const { elements, options } = setup();
-    const chosen = chooseImportBoard([{ profile: 'Empty Profile', boards: [] }], options);
-    await vi.waitFor(() => expect(elements.importBoardEmpty.classList.contains('d-none')).toBe(false));
-    expect(elements.importBoardEmpty.textContent).toBe('No other profiles have saved boards.');
-    expect(elements.importBoardList.children).toEqual([]);
-    expect(elements.importBoardBtn.disabled).toBe(true);
-    elements.importBoardBtn.click();
-    elements.importBoardModal.dispatch('hidden.bs.modal');
+    const chosen = chooseImportShow([{ profile: 'Empty Profile', shows: [] }], options);
+    await vi.waitFor(() => expect(elements.importShowEmpty.classList.contains('d-none')).toBe(false));
+    expect(elements.importShowEmpty.textContent).toBe('No other profiles have saved shows.');
+    expect(elements.importShowList.children).toEqual([]);
+    expect(elements.importShowBtn.disabled).toBe(true);
+    elements.importShowBtn.click();
+    elements.importShowModal.dispatch('hidden.bs.modal');
     await expect(chosen).resolves.toBeNull();
   });
 
   it('resolves null when the dialog markup is missing', async () => {
     const { options } = setup();
     options.document = { getElementById: () => null, createElement: () => new FakeElement('div') };
-    await expect(chooseImportBoard(groups, options)).resolves.toBeNull();
+    await expect(chooseImportShow(groups, options)).resolves.toBeNull();
   });
 });

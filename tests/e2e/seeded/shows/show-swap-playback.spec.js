@@ -9,7 +9,7 @@ const tankLayout = (songIds, hotkeys = {}) => ({
 });
 
 async function applyLayout(page, layout) {
-  return page.evaluate((value) => window.__boardsTest.applyLayout(value), layout);
+  return page.evaluate((value) => window.__showsTest.applyLayout(value), layout);
 }
 
 // Record every songid #song_now_playing takes, so a song that starts and is
@@ -36,11 +36,11 @@ async function seekNearEndAndWaitForCompletion(page) {
   await page.waitForTimeout(1500);
 }
 
-test.describe('Boards - layout swap during playback', () => {
+test.describe('Shows - layout swap during playback', () => {
   let app; let page;
 
   test.beforeEach(async () => {
-    ({ app, page } = await launchSeededApp(electron, 'board-swap-playback'));
+    ({ app, page } = await launchSeededApp(electron, 'show-swap-playback'));
     await waitForAppReady(page, app);
   });
 
@@ -144,8 +144,8 @@ test.describe('Boards - layout swap during playback', () => {
       if (song) song.textContent = 'Eat It by Weird Al Yankovic (0:06)';
     });
     await expect(tank.locator('.list-group-item')).toHaveCount(2);
-    // Startup applied the saved board once (Task 9); no swap happens after it
-    const generation = await page.evaluate(() => window.sharedState.get('boardGeneration'));
+    // Startup applied the saved show once (Task 9); no swap happens after it
+    const generation = await page.evaluate(() => window.sharedState.get('showGeneration'));
     expect(generation).toBe(1);
 
     await page.keyboard.press('F1');
@@ -156,7 +156,7 @@ test.describe('Boards - layout swap during playback', () => {
     await expect(page.locator('#playlist_mode_btn')).toHaveClass(/active/);
 
     await expect(tank.locator('.list-group-item[songid="1005"]')).toHaveClass(/now_playing/);
-    expect(await page.evaluate(() => window.sharedState.get('boardGeneration'))).toBe(generation);
+    expect(await page.evaluate(() => window.sharedState.get('showGeneration'))).toBe(generation);
     await page.locator('#stop_button').click();
     await expect(page.locator('#stop_button')).toBeDisabled({ timeout: 5000 });
   });

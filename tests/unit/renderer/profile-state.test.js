@@ -21,7 +21,7 @@ describe('profile state writes the crash-recovery record', () => {
   beforeEach(() => {
     window.isRestoringProfileState = false;
     window.secureElectronAPI = {
-      boards: { saveRecovery: vi.fn().mockResolvedValue({ success: true, data: {} }) }
+      shows: { saveRecovery: vi.fn().mockResolvedValue({ success: true, data: {} }) }
     };
     profileState.initializeProfileState({
       hotkeysModule: { getHotkeySnapshot: () => [{ tabNumber: 1, tabName: 'Act One', hotkeys: { f1: '5' } }] },
@@ -37,8 +37,8 @@ describe('profile state writes the crash-recovery record', () => {
 
     expect(flushed).toEqual({ success: true });
     await expect(pending).resolves.toEqual({ success: true });
-    expect(window.secureElectronAPI.boards.saveRecovery).toHaveBeenCalledOnce();
-    expect(window.secureElectronAPI.boards.saveRecovery).toHaveBeenCalledWith({
+    expect(window.secureElectronAPI.shows.saveRecovery).toHaveBeenCalledOnce();
+    expect(window.secureElectronAPI.shows.saveRecovery).toHaveBeenCalledWith({
       hotkeys: [{ tabNumber: 1, tabName: 'Act One', hotkeys: { f1: '5' } }],
       holdingTank: [{ tabNumber: 1, tabName: null, songIds: ['9'] }],
       selected: { hotkeyTab: 1, holdingTankTab: 1 }
@@ -46,21 +46,21 @@ describe('profile state writes the crash-recovery record', () => {
   });
 
   it('a skipped or retired recovery save is still a success', async () => {
-    window.secureElectronAPI.boards.saveRecovery.mockResolvedValueOnce({ success: true, data: { skipped: true } });
+    window.secureElectronAPI.shows.saveRecovery.mockResolvedValueOnce({ success: true, data: { skipped: true } });
     await expect(flushProfileState()).resolves.toEqual({ success: true });
-    window.secureElectronAPI.boards.saveRecovery.mockResolvedValueOnce({ success: true, data: { retired: true } });
+    window.secureElectronAPI.shows.saveRecovery.mockResolvedValueOnce({ success: true, data: { retired: true } });
     await expect(flushProfileState()).resolves.toEqual({ success: true });
   });
 
   it('reports a failed recovery write', async () => {
-    window.secureElectronAPI.boards.saveRecovery.mockResolvedValueOnce({ success: false, error: 'disk full' });
+    window.secureElectronAPI.shows.saveRecovery.mockResolvedValueOnce({ success: false, error: 'disk full' });
     await expect(flushProfileState()).resolves.toEqual({ success: false, error: 'disk full' });
   });
 
   it('does not write while the restoration lock is held', async () => {
     window.isRestoringProfileState = true;
     await expect(flushProfileState()).resolves.toMatchObject({ success: false, skipped: true });
-    expect(window.secureElectronAPI.boards.saveRecovery).not.toHaveBeenCalled();
+    expect(window.secureElectronAPI.shows.saveRecovery).not.toHaveBeenCalled();
   });
 
   it('extractLayout reads the selected tabs from the active tab links', () => {

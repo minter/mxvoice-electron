@@ -1,4 +1,4 @@
-import { buildBoardMenu } from './board-menu.js';
+import { buildShowMenu } from './show-menu.js';
 
 function buildApplicationMenu({
   app,
@@ -11,12 +11,12 @@ function buildApplicationMenu({
   debugLog,
   logService,
   rendererCommands,
-  getBoardMenuState,
+  getShowMenuState,
   rebuildMenu
 }) {
-  const boardSend = (command, boardId) => {
+  const showSend = (command, showId) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('menu:board-command', { command, boardId });
+      mainWindow.webContents.send('menu:show-command', { command, showId });
     }
   };
   const application_menu = [
@@ -134,9 +134,9 @@ function buildApplicationMenu({
         },
       ],
     },
-    buildBoardMenu(
-      getBoardMenuState ? getBoardMenuState() : { status: 'idle', activeBoard: null, boards: [] },
-      { platform: process.platform, send: boardSend, fileOperations, rebuild: rebuildMenu }
+    buildShowMenu(
+      getShowMenuState ? getShowMenuState() : { status: 'idle', activeShow: null, shows: [] },
+      { platform: process.platform, send: showSend, fileOperations, rebuild: rebuildMenu }
     ),
     {
       label: "Categories",

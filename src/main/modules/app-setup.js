@@ -38,7 +38,7 @@ let appStartTime;
 let rendererCommands;
 let windowStateManager;
 let appLifecycle;
-let boardSession;
+let showSession;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -51,7 +51,7 @@ function initializeAppSetup(dependencies) {
   autoBackupTimer = dependencies.autoBackupTimer;
   analytics = dependencies.analytics;
   appStartTime = dependencies.appStartTime;
-  boardSession = dependencies.boardSession;
+  showSession = dependencies.showSession;
   rendererCommands = createRendererCommandDispatcher({
     getWindow: () => getMainWindow(),
     debugLog
@@ -66,7 +66,7 @@ function initializeAppSetup(dependencies) {
     log,
     isQuitting: () => appLifecycle?.isQuitting() || false,
     confirmClose: (window) => confirmQuitOnWindowClose(window),
-    boardSession
+    showSession
   });
   appLifecycle = createAppLifecycle({
     app,
@@ -155,11 +155,11 @@ function createApplicationMenu() {
     debugLog,
     logService: getLogService(),
     rendererCommands,
-    getBoardMenuState: () => {
-      const { status, doc } = boardSession?.state?.() ?? {};
-      const boards = (doc?.boards ?? []).map((b) => ({ id: b.id, name: b.name }));
-      const activeBoard = boards.find((b) => b.id === doc?.activeBoardId) ?? null;
-      return { status: status ?? 'idle', activeBoard, boards };
+    getShowMenuState: () => {
+      const { status, doc } = showSession?.state?.() ?? {};
+      const shows = (doc?.shows ?? []).map((b) => ({ id: b.id, name: b.name }));
+      const activeShow = shows.find((b) => b.id === doc?.activeShowId) ?? null;
+      return { status: status ?? 'idle', activeShow, shows };
     },
     rebuildMenu: () => createApplicationMenu()
   });
@@ -410,7 +410,7 @@ function manageCategories() {
 }
 
 /**
- * Installing an update: save state now, and hand the board session off so
+ * Installing an update: save state now, and hand the show session off so
  * the relaunch restores the show in progress. quitAndInstall() then closes the
  * window without the close-time flush; the "Quit?" question is skipped from
  * Electron's before-quit-for-update (allowUnconfirmedClose), which fires only

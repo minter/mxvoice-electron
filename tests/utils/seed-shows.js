@@ -7,20 +7,20 @@ function sanitizeProfileName(name) {
   return name.replace(/[^a-zA-Z0-9\s\-_]/g, '').trim();
 }
 
-export function profileBoardsPath(userDataDir, profileName) {
-  return path.join(userDataDir, 'profiles', sanitizeProfileName(profileName), 'boards.json');
+export function profileShowsPath(userDataDir, profileName) {
+  return path.join(userDataDir, 'profiles', sanitizeProfileName(profileName), 'shows.json');
 }
 
 /**
- * A boards document with one active board holding `layout`.
+ * A shows document with one active show holding `layout`.
  * Layout tabs use the state.json shapes; missing tabs are filled in on load.
  */
-export function boardsDocument(layout, { name = 'Board', id = 'seeded-board' } = {}) {
+export function showsDocument(layout, { name = 'Show', id = 'seeded-show' } = {}) {
   const now = Date.now();
   return {
     version: 1,
-    activeBoardId: id,
-    boards: [{ id, name, createdAt: now, updatedAt: now, layout }]
+    activeShowId: id,
+    shows: [{ id, name, createdAt: now, updatedAt: now, layout }]
   };
 }
 
@@ -34,11 +34,11 @@ export function hotkeyLayout(hotkeys, { tabName = null } = {}) {
 }
 
 /**
- * Write a profile's boards.json directly. Until Phase 3 adds Update, this is
- * the only way for an E2E to have a saved board that differs from the live one.
+ * Write a profile's shows.json directly. Until Phase 3 adds Update, this is
+ * the only way for an E2E to have a saved show that differs from the live one.
  */
-export function seedBoards(userDataDir, profileName, doc) {
-  const file = profileBoardsPath(userDataDir, profileName);
+export function seedShows(userDataDir, profileName, doc) {
+  const file = profileShowsPath(userDataDir, profileName);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(doc, null, 2));
   return file;
@@ -58,6 +58,6 @@ export function readRecovery(userDataDir, profileName) {
   }
 }
 
-export function readBoards(userDataDir, profileName) {
-  return JSON.parse(fs.readFileSync(profileBoardsPath(userDataDir, profileName), 'utf8'));
+export function readShows(userDataDir, profileName) {
+  return JSON.parse(fs.readFileSync(profileShowsPath(userDataDir, profileName), 'utf8'));
 }

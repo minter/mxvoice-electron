@@ -1,22 +1,22 @@
 import { expect } from '@playwright/test';
 
 /**
- * Helpers for driving the Board menu and its dialogs in E2E.
+ * Helpers for driving the Shows menu and its dialogs in E2E.
  * Menu items are clicked from main, as native-menu-wiring.spec.js does.
  */
 
-// Board ids must look like UUIDs: the board IPC handlers reject anything else
-export const BOARD_IDS = [
+// Show ids must look like UUIDs: the show IPC handlers reject anything else
+export const SHOW_IDS = [
   '00000000-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-000000000002',
   '00000000-0000-4000-8000-000000000003'
 ];
 
-/** A boards document; `boards` is [{ name, hotkeys }], the first is active unless `active` says otherwise. */
-export function multiBoardDocument(boards, { active = 0 } = {}) {
+/** A shows document; `shows` is [{ name, hotkeys }], the first is active unless `active` says otherwise. */
+export function multiShowDocument(shows, { active = 0 } = {}) {
   const now = Date.now();
-  const docBoards = boards.map(({ name, hotkeys = {} }, index) => ({
-    id: BOARD_IDS[index],
+  const docShows = shows.map(({ name, hotkeys = {} }, index) => ({
+    id: SHOW_IDS[index],
     name,
     createdAt: now + index,
     updatedAt: now + index,
@@ -26,14 +26,14 @@ export function multiBoardDocument(boards, { active = 0 } = {}) {
       selected: { hotkeyTab: 1, holdingTankTab: 1 }
     }
   }));
-  return { version: 1, activeBoardId: docBoards[active].id, boards: docBoards };
+  return { version: 1, activeShowId: docShows[active].id, shows: docShows };
 }
 
 /**
- * Click Board > ...labels from main. Retries while the item is missing or
- * disabled, since the menu is rebuilt once a board finishes loading.
+ * Click Show > ...labels from main. Retries while the item is missing or
+ * disabled, since the menu is rebuilt once a show finishes loading.
  */
-export async function clickBoardMenu(app, ...labels) {
+export async function clickShowMenu(app, ...labels) {
   await expect(async () => {
     const result = await app.evaluate(({ Menu, BrowserWindow }, path) => {
       let items = Menu.getApplicationMenu()?.items;
@@ -47,18 +47,18 @@ export async function clickBoardMenu(app, ...labels) {
       const win = BrowserWindow.getAllWindows()[0];
       item.click({}, win, win.webContents);
       return { ok: true };
-    }, ['Board', ...labels]);
+    }, ['Shows', ...labels]);
     expect(result).toEqual({ ok: true });
   }).toPass({ timeout: 10000 });
 }
 
-/** The labels of the board radio items, and which one is checked. */
-export async function boardMenuState(app) {
+/** The labels of the show radio items, and which one is checked. */
+export async function showMenuState(app) {
   return app.evaluate(({ Menu }) => {
-    const board = Menu.getApplicationMenu()?.items.find((item) => item.label === 'Board');
-    const radios = (board?.submenu?.items ?? []).filter((item) => item.type === 'radio');
+    const show = Menu.getApplicationMenu()?.items.find((item) => item.label === 'Shows');
+    const radios = (show?.submenu?.items ?? []).filter((item) => item.type === 'radio');
     return {
-      boards: radios.map((item) => item.label),
+      shows: radios.map((item) => item.label),
       checked: radios.find((item) => item.checked)?.label ?? null,
       enabled: radios.every((item) => item.enabled !== false)
     };
@@ -109,19 +109,19 @@ export async function quitApp(app) {
   await exited;
 }
 
-/** Wait until the board session is ready (the menu radios are enabled). */
-export async function waitForBoardMenuReady(app) {
-  await expect.poll(async () => (await boardMenuState(app)).enabled, { timeout: 20000 }).toBe(true);
+/** Wait until the show session is ready (the menu radios are enabled). */
+export async function waitForShowMenuReady(app) {
+  await expect.poll(async () => (await showMenuState(app)).enabled, { timeout: 20000 }).toBe(true);
 }
 
-/** Run a Board menu file import once the board session is ready. */
+/** Run a Shows menu file import once the show session is ready. */
 async function importLegacyFile(app, label) {
-  await waitForBoardMenuReady(app);
-  await clickBoardMenu(app, label);
+  await waitForShowMenuReady(app);
+  await clickShowMenu(app, label);
 }
 
-/** Board > Import Hotkey File… (the dialog is stubbed by the caller). */
+/** Show > Import Hotkey File… (the dialog is stubbed by the caller). */
 export const importHotkeyFile = (app) => importLegacyFile(app, 'Import Hotkey File…');
 
-/** Board > Import Holding Tank File… (the dialog is stubbed by the caller). */
+/** Show > Import Holding Tank File… (the dialog is stubbed by the caller). */
 export const importHoldingTankFile = (app) => importLegacyFile(app, 'Import Holding Tank File…');

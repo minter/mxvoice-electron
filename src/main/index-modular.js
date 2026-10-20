@@ -69,12 +69,12 @@ import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-chan
 import { describeUpdateError } from './modules/update-analytics.js';
 import { decideUpdateNotice, runBackgroundCheck, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
 import { createProfileSwitcher, applyWindowState } from './modules/profile-switcher.js';
-import { createBoardStore } from './modules/board-store.js';
+import { createShowStore } from './modules/show-store.js';
 import { createRecoveryStore } from './modules/recovery-store.js';
-import { createBoardSession } from './modules/board-session.js';
+import { createShowSession } from './modules/show-session.js';
 import { createRendererGoneHandler } from './modules/renderer-crash-handler.js';
 import { createUpdateInstaller } from './modules/update-install.js';
-import { getProfileBoardsPath, getProfileStatePath, getRecoveryDirectory, getRecoveryPath } from './modules/profile-paths.js';
+import { getProfileShowsPath, getProfileStatePath, getRecoveryDirectory, getRecoveryPath } from './modules/profile-paths.js';
 import { quietlyAnnouncedVersion, recordAvailableUpdate, recordDownloadedUpdate } from './modules/pending-update.js';
 
 if (process.env.APP_TEST_MODE === '1') {
@@ -708,13 +708,13 @@ function trackLibraryStats() {
 // Profile switching runs in-process; created once at app ready
 let profileSwitcher = null;
 
-// The live board session; created once at app ready
-let boardSession = null;
+// The live show session; created once at app ready
+let showSession = null;
 
 // Offers to reload the main window's page after it dies; created at app ready
 let rendererGoneHandler = null;
 
-// Install a downloaded update: save state and hand the board session off first
+// Install a downloaded update: save state and hand the show session off first
 const installUpdateNow = createUpdateInstaller({
   prepareForUpdateInstall: () => appSetup.prepareForUpdateInstall(),
   getAutoUpdater: () => autoUpdater,
@@ -748,16 +748,16 @@ function initializeMainProcessServices() {
     debugLog
   });
 
-  const boardStore = createBoardStore({
+  const showStore = createShowStore({
     fs,
-    getProfileBoardsPath,
+    getProfileShowsPath,
     getProfileStatePath,
     profileExists: (name) => profileManager.profileExists(name),
     debugLog
   });
   const recoveryStore = createRecoveryStore({ fs, getRecoveryPath, getRecoveryDirectory, debugLog });
-  boardSession = createBoardSession({
-    boardStore,
+  showSession = createShowSession({
+    showStore,
     recoveryStore,
     listProfiles: () => profileManager.getAvailableProfiles().map((p) => p.name),
     getCurrentProfile,
@@ -765,7 +765,7 @@ function initializeMainProcessServices() {
     debugLog
   });
   rendererGoneHandler = createRendererGoneHandler({
-    boardSession,
+    showSession,
     dialog,
     getMainWindow: () => mainWindow,
     app,
@@ -789,7 +789,7 @@ function initializeMainProcessServices() {
     analytics,
     appStartTime,
     profileSwitcher,
-    boardSession,
+    showSession,
     recoveryStore,
     installUpdate: installUpdateNow
   };
@@ -806,14 +806,14 @@ function initializeMainProcessServices() {
     getDb: () => db,
     setDb: (next) => { db = next; },
     store,
-    boardSession,
+    showSession,
     recoveryStore
   });
 
   launcherWindow.initializeLauncherWindow({
     debugLog,
     profileManager,
-    boardSession,
+    showSession,
     recoveryStore,
     getCurrentProfile,
     mainAppLauncher: async (profileName) => {

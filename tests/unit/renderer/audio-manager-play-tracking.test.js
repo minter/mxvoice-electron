@@ -70,11 +70,11 @@ describe('playSongFromId song_played tracking', () => {
   });
 });
 
-describe('playSongFromId board generation stamp', () => {
-  it('records the board generation the song was started on', async () => {
+describe('playSongFromId show generation stamp', () => {
+  it('records the show generation the song was started on', async () => {
     const sharedState = (await import('../../../src/renderer/modules/shared-state.js')).default;
     loadSongForPlayback.mockResolvedValue({ success: false, error: 'missing' });
-    sharedState.set('boardGeneration', 3);
+    sharedState.set('showGeneration', 3);
     sharedState.set('nowPlayingSource', null);
 
     await manager.playSongFromId('7', { trigger_method: 'hotkey' });
@@ -82,7 +82,7 @@ describe('playSongFromId board generation stamp', () => {
     expect(sharedState.get('nowPlayingSource')).toBe(3);
   });
 
-  it('defaults the stamp to generation 0 before any board is applied', async () => {
+  it('defaults the stamp to generation 0 before any show is applied', async () => {
     const sharedState = (await import('../../../src/renderer/modules/shared-state.js')).default;
     loadSongForPlayback.mockResolvedValue({ success: false, error: 'missing' });
     sharedState.reset();

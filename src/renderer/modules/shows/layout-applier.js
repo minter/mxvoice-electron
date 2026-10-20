@@ -1,16 +1,16 @@
 /**
- * Board Layout Applier
+ * Show Layout Applier
  *
  * Swaps the whole hotkey and holding-tank layout in place without touching
  * playback. The playing sound, #song_now_playing and autoplay are left alone;
- * only the marks that point into the old layout are cleared, and the board
+ * only the marks that point into the old layout are cleared, and the show
  * generation is bumped so Playlist mode never reattaches a song that started
  * before the swap.
  */
 
 import { safeShowTab } from '../ui/bootstrap-helpers.js';
 
-const LOG_CONTEXT = { module: 'boards', function: 'applyLayout' };
+const LOG_CONTEXT = { module: 'shows', function: 'applyLayout' };
 
 function tabNumber(value) {
   const number = Number(value);
@@ -44,10 +44,10 @@ function clearLayoutMarks(doc, win) {
 }
 
 /**
- * Apply a board layout in place.
+ * Apply a show layout in place.
  *
  * Fetches every song once, then, synchronously, clears the old layout's marks,
- * applies both collections, selects the saved tabs and bumps boardGeneration.
+ * applies both collections, selects the saved tabs and bumps showGeneration.
  * A failed fetch throws before anything is changed.
  *
  * @param {{ hotkeys: Array, holdingTank: Array, selected?: { hotkeyTab: number, holdingTankTab: number } }} layout
@@ -88,10 +88,10 @@ export async function applyLayout(layout, deps) {
   holdingTank.applyHoldingTankSnapshot(holdingTankSnapshot, songsById);
   showTab(`#hotkey_tabs li:nth-child(${tabNumber(layout?.selected?.hotkeyTab)}) a`, LOG_CONTEXT);
   showTab(`#holding_tank_tabs li:nth-child(${tabNumber(layout?.selected?.holdingTankTab)}) a`, LOG_CONTEXT);
-  sharedState.set('boardGeneration', (Number(sharedState.get('boardGeneration')) || 0) + 1);
+  sharedState.set('showGeneration', (Number(sharedState.get('showGeneration')) || 0) + 1);
 
   const droppedIds = songIds.filter(songId => !songsById.has(songId));
   const dropped = droppedIds.length;
-  win?.debugLog?.info('Board layout applied', { ...LOG_CONTEXT, songCount: songIds.length, dropped });
+  win?.debugLog?.info('Show layout applied', { ...LOG_CONTEXT, songCount: songIds.length, dropped });
   return { dropped, droppedIds };
 }

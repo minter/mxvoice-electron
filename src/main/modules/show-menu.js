@@ -1,6 +1,6 @@
 /**
- * Board menu: pure builder, driven by a snapshot of the board session.
- * Clicks post `menu:board-command` to the renderer through `send`, except the
+ * Shows menu: pure builder, driven by a snapshot of the show session.
+ * Clicks post `menu:show-command` to the renderer through `send`, except the
  * two legacy imports, which stay in main (file-operations).
  */
 
@@ -11,32 +11,32 @@ function escapeLabel(name, platform) {
 }
 
 /**
- * @param {Object} state - { status, activeBoard, boards } from the board session
+ * @param {Object} state - { status, activeShow, shows } from the show session
  * @param {Object} [options]
  * @param {Function} [options.rebuild] - rebuilds the application menu from the session
  */
-function buildBoardMenu(state, { platform, send, fileOperations, rebuild } = {}) {
+function buildShowMenu(state, { platform, send, fileOperations, rebuild } = {}) {
   const status = state?.status ?? 'idle';
-  const activeBoard = state?.activeBoard ?? null;
-  const boards = Array.isArray(state?.boards) ? state.boards : [];
+  const activeShow = state?.activeShow ?? null;
+  const shows = Array.isArray(state?.shows) ? state.shows : [];
   const ready = status === 'ready';
   const label = (name) => escapeLabel(name, platform);
-  const emit = (command, boardId) => () => send?.(command, boardId);
+  const emit = (command, showId) => () => send?.(command, showId);
 
-  const quoted = (verb) => (activeBoard ? `${verb} "${label(activeBoard.name)}"` : verb);
-  const perBoard = (command) => boards.map((board) => ({
-    label: `${label(board.name)}…`,
+  const quoted = (verb) => (activeShow ? `${verb} "${label(activeShow.name)}"` : verb);
+  const perShow = (command) => shows.map((show) => ({
+    label: `${label(show.name)}…`,
     enabled: ready,
-    click: emit(command, board.id)
+    click: emit(command, show.id)
   }));
 
   return {
-    label: 'Board',
+    label: 'Shows',
     submenu: [
-      ...boards.map((board) => {
-        const isActive = activeBoard?.id === board.id;
+      ...shows.map((show) => {
+        const isActive = activeShow?.id === show.id;
         return {
-          label: label(board.name),
+          label: label(show.name),
           type: 'radio',
           checked: isActive,
           enabled: ready,
@@ -45,20 +45,20 @@ function buildBoardMenu(state, { platform, send, fileOperations, rebuild } = {})
           // so rebuild from the session at once; a switch that lands rebuilds again.
           click: () => {
             if (isActive) return;
-            send?.('switch', board.id);
+            send?.('switch', show.id);
             // Not inside Electron's own click dispatch: replacing the menu there is risky on Windows and Linux
             setImmediate(() => rebuild?.());
           }
         };
       }),
       { type: 'separator' },
-      { label: quoted('Update'), enabled: ready && !!activeBoard, click: emit('update') },
-      { label: 'New Board…', enabled: ready, click: emit('new') },
-      { label: quoted('Revert to'), enabled: ready && !!activeBoard, click: emit('revert') },
-      { label: 'Rename Board', enabled: ready, submenu: perBoard('rename') },
-      { label: 'Delete Board', enabled: ready, submenu: perBoard('delete') },
+      { label: quoted('Update'), enabled: ready && !!activeShow, click: emit('update') },
+      { label: 'New Show…', enabled: ready, click: emit('new') },
+      { label: quoted('Revert to'), enabled: ready && !!activeShow, click: emit('revert') },
+      { label: 'Rename Show', enabled: ready, submenu: perShow('rename') },
+      { label: 'Delete Show', enabled: ready, submenu: perShow('delete') },
       { type: 'separator' },
-      { label: 'Import Board…', enabled: ready, click: emit('import') },
+      { label: 'Import Show…', enabled: ready, click: emit('import') },
       {
         label: 'Import Hotkey File…',
         click: () => { fileOperations?.loadHotkeysFile?.(); }
@@ -71,5 +71,5 @@ function buildBoardMenu(state, { platform, send, fileOperations, rebuild } = {})
   };
 }
 
-export { buildBoardMenu };
-export default buildBoardMenu;
+export { buildShowMenu };
+export default buildShowMenu;

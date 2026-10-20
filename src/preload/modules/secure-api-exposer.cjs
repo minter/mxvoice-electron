@@ -369,10 +369,10 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('delete_selected_song', handler);
     },
     
-    onBoardCommand: (callback) => {
+    onShowCommand: (callback) => {
       const handler = (_event, ...args) => callback(...args);
-      ipcRenderer.on('menu:board-command', handler);
-      return () => ipcRenderer.removeListener('menu:board-command', handler);
+      ipcRenderer.on('menu:show-command', handler);
+      return () => ipcRenderer.removeListener('menu:show-command', handler);
     },
 
     onSwitchProfile: (callback) => {
@@ -492,22 +492,22 @@ const secureElectronAPI = {
     }
   },
 
-  // Boards: the session in main captured the profile at open
-  boards: {
-    open: () => ipcRenderer.invoke(IPC.BOARDS.OPEN),
-    startEmpty: () => ipcRenderer.invoke(IPC.BOARDS.START_EMPTY),
-    resolveRecovery: (choice) => ipcRenderer.invoke(IPC.BOARDS.RESOLVE_RECOVERY, choice),
-    reportReady: (generation, ok, details) => ipcRenderer.invoke(IPC.BOARDS.REPORT_READY, generation, ok, details),
-    saveRecovery: (layout) => ipcRenderer.invoke(IPC.BOARDS.SAVE_RECOVERY, layout),
-    getState: () => ipcRenderer.invoke(IPC.BOARDS.GET_STATE),
-    activate: (boardId) => ipcRenderer.invoke(IPC.BOARDS.ACTIVATE, boardId),
-    revert: () => ipcRenderer.invoke(IPC.BOARDS.REVERT),
-    updateActive: (layout) => ipcRenderer.invoke(IPC.BOARDS.UPDATE_ACTIVE, layout),
-    create: (name, layout) => ipcRenderer.invoke(IPC.BOARDS.CREATE, name, layout),
-    rename: (boardId, name) => ipcRenderer.invoke(IPC.BOARDS.RENAME, boardId, name),
-    remove: (boardId) => ipcRenderer.invoke(IPC.BOARDS.DELETE, boardId),
-    listImportable: () => ipcRenderer.invoke(IPC.BOARDS.LIST_IMPORTABLE),
-    importBoard: (profile, boardId) => ipcRenderer.invoke(IPC.BOARDS.IMPORT, profile, boardId)
+  // Shows: the session in main captured the profile at open
+  shows: {
+    open: () => ipcRenderer.invoke(IPC.SHOWS.OPEN),
+    startEmpty: () => ipcRenderer.invoke(IPC.SHOWS.START_EMPTY),
+    resolveRecovery: (choice) => ipcRenderer.invoke(IPC.SHOWS.RESOLVE_RECOVERY, choice),
+    reportReady: (generation, ok, details) => ipcRenderer.invoke(IPC.SHOWS.REPORT_READY, generation, ok, details),
+    saveRecovery: (layout) => ipcRenderer.invoke(IPC.SHOWS.SAVE_RECOVERY, layout),
+    getState: () => ipcRenderer.invoke(IPC.SHOWS.GET_STATE),
+    activate: (showId) => ipcRenderer.invoke(IPC.SHOWS.ACTIVATE, showId),
+    revert: () => ipcRenderer.invoke(IPC.SHOWS.REVERT),
+    updateActive: (layout) => ipcRenderer.invoke(IPC.SHOWS.UPDATE_ACTIVE, layout),
+    create: (name, layout) => ipcRenderer.invoke(IPC.SHOWS.CREATE, name, layout),
+    rename: (showId, name) => ipcRenderer.invoke(IPC.SHOWS.RENAME, showId, name),
+    remove: (showId) => ipcRenderer.invoke(IPC.SHOWS.DELETE, showId),
+    listImportable: () => ipcRenderer.invoke(IPC.SHOWS.LIST_IMPORTABLE),
+    importShow: (profile, showId) => ipcRenderer.invoke(IPC.SHOWS.IMPORT, profile, showId)
   },
 
   // Utility functions

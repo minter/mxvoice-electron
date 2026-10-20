@@ -295,7 +295,7 @@ test.describe("What's New Tour: next release", () => {
     await expect(title).toHaveText('Closing the Window Asks First', { timeout: 5000 });
     await expect(page.locator('#profileSwitchModal')).toBeHidden();
 
-    for (const expected of ['Your Layout Is Now a Board', 'The Board Menu', 'Which Board Is Loaded', "Copy Someone's Board"]) {
+    for (const expected of ['Your Layout Is Now a Show', 'The Shows Menu', 'Which Show Is Loaded', "Copy Someone's Show"]) {
       await page.waitForFunction(() => !window.moduleRegistry.whatsNew.tourManager._transitioning);
       await page.locator('.driver-popover-next-btn').click();
       await expect(title).toHaveText(expected, { timeout: 5000 });

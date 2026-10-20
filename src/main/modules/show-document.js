@@ -1,7 +1,7 @@
 /**
- * Board Document
+ * Show Document
  *
- * Pure data model for a profile's saved boards. A board is a named snapshot of
+ * Pure data model for a profile's saved shows. A show is a named snapshot of
  * the hotkey and holding-tank layout. Every function returns a new document
  * and never mutates its input; there is no I/O here. `now` and `newId` are
  * injectable so tests are deterministic.
@@ -9,22 +9,22 @@
  * Layout tabs keep exactly the shapes written to state.json today, so a 4.3.x
  * state.json migrates as-is.
  *
- * @module board-document
+ * @module show-document
  */
 
 import { randomUUID } from 'node:crypto';
 
-export const BOARD_DOCUMENT_VERSION = 1;
-export const MAX_BOARD_NAME_LENGTH = 50;
+export const SHOW_DOCUMENT_VERSION = 1;
+export const MAX_SHOW_NAME_LENGTH = 50;
 const MAX_IMPORT_NAME_ATTEMPTS = 1000;
 const TAB_COUNT = 5;
 const HOTKEY_KEYS = Array.from({ length: 12 }, (_, i) => `f${i + 1}`);
 
-const ERR_EMPTY = 'Enter a name for the board.';
-const ERR_LONG = `Board names can be at most ${MAX_BOARD_NAME_LENGTH} characters.`;
-const ERR_DUPLICATE = 'A board with this name already exists.';
-const ERR_CONTROL = "Board names can't contain line breaks or control characters.";
-const ERR_NOT_FOUND = 'Board not found.';
+const ERR_EMPTY = 'Enter a name for the show.';
+const ERR_LONG = `Show names can be at most ${MAX_SHOW_NAME_LENGTH} characters.`;
+const ERR_DUPLICATE = 'A show with this name already exists.';
+const ERR_CONTROL = "Show names can't contain line breaks or control characters.";
+const ERR_NOT_FOUND = 'Show not found.';
 
 const defaultNow = () => Date.now();
 const defaultNewId = () => randomUUID();
@@ -34,7 +34,7 @@ const foldName = (s) => s.toLocaleLowerCase('en-US');
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u001F\u007F]/;
 
-/** A name validation failure; board IPC results pass its code on. */
+/** A name validation failure; show IPC results pass its code on. */
 function nameError(message) {
   return Object.assign(new Error(message), { code: 'invalid-name' });
 }
@@ -97,122 +97,122 @@ export function normalizeLayout(raw) {
   };
 }
 
-function makeBoard({ id, name, layout, now, importedFrom }) {
-  const board = { id, name, createdAt: now, updatedAt: now };
-  if (importedFrom) board.importedFrom = { ...importedFrom };
-  board.layout = normalizeLayout(layout);
-  return board;
+function makeShow({ id, name, layout, now, importedFrom }) {
+  const show = { id, name, createdAt: now, updatedAt: now };
+  if (importedFrom) show.importedFrom = { ...importedFrom };
+  show.layout = normalizeLayout(layout);
+  return show;
 }
 
-export function createDocument(layout, { name = 'Board', now = defaultNow(), newId = defaultNewId } = {}) {
-  const board = makeBoard({ id: newId(), name, layout, now });
-  return { version: BOARD_DOCUMENT_VERSION, activeBoardId: board.id, boards: [board] };
+export function createDocument(layout, { name = 'Show', now = defaultNow(), newId = defaultNewId } = {}) {
+  const show = makeShow({ id: newId(), name, layout, now });
+  return { version: SHOW_DOCUMENT_VERSION, activeShowId: show.id, shows: [show] };
 }
 
-export function validateBoardName(doc, name, { exceptId } = {}) {
+export function validateShowName(doc, name, { exceptId } = {}) {
   const trimmed = typeof name === 'string' ? name.trim() : '';
   if (!trimmed) return { ok: false, error: ERR_EMPTY };
-  if (trimmed.length > MAX_BOARD_NAME_LENGTH) return { ok: false, error: ERR_LONG };
+  if (trimmed.length > MAX_SHOW_NAME_LENGTH) return { ok: false, error: ERR_LONG };
   if (CONTROL_CHARS.test(trimmed)) return { ok: false, error: ERR_CONTROL };
   const folded = foldName(trimmed);
-  const clash = doc.boards.some((b) => b.id !== exceptId && foldName(b.name) === folded);
+  const clash = doc.shows.some((b) => b.id !== exceptId && foldName(b.name) === folded);
   if (clash) return { ok: false, error: ERR_DUPLICATE };
   return { ok: true, name: trimmed };
 }
 
-function indexOfBoard(doc, id) {
-  const index = doc.boards.findIndex((b) => b.id === id);
+function indexOfShow(doc, id) {
+  const index = doc.shows.findIndex((b) => b.id === id);
   if (index === -1) throw new Error(ERR_NOT_FOUND);
   return index;
 }
 
-function replaceBoard(doc, index, board) {
-  const boards = doc.boards.slice();
-  boards[index] = board;
-  return { ...doc, boards };
+function replaceShow(doc, index, show) {
+  const shows = doc.shows.slice();
+  shows[index] = show;
+  return { ...doc, shows };
 }
 
-export function addBoard(
+export function addShow(
   doc,
   { name, layout, now = defaultNow(), newId = defaultNewId, activate = true, importedFrom } = {}
 ) {
-  const check = validateBoardName(doc, name);
+  const check = validateShowName(doc, name);
   if (!check.ok) throw nameError(check.error);
-  const board = makeBoard({ id: newId(), name: check.name, layout, now, importedFrom });
+  const show = makeShow({ id: newId(), name: check.name, layout, now, importedFrom });
   return {
     doc: {
       ...doc,
-      activeBoardId: activate ? board.id : doc.activeBoardId,
-      boards: [...doc.boards, board],
+      activeShowId: activate ? show.id : doc.activeShowId,
+      shows: [...doc.shows, show],
     },
-    board,
+    show,
   };
 }
 
-export function updateBoardLayout(doc, id, layout, now = defaultNow()) {
-  const index = indexOfBoard(doc, id);
-  return replaceBoard(doc, index, {
-    ...doc.boards[index],
+export function updateShowLayout(doc, id, layout, now = defaultNow()) {
+  const index = indexOfShow(doc, id);
+  return replaceShow(doc, index, {
+    ...doc.shows[index],
     layout: normalizeLayout(layout),
     updatedAt: now,
   });
 }
 
-export function renameBoard(doc, id, name, now = defaultNow()) {
-  const index = indexOfBoard(doc, id);
-  const check = validateBoardName(doc, name, { exceptId: id });
+export function renameShow(doc, id, name, now = defaultNow()) {
+  const index = indexOfShow(doc, id);
+  const check = validateShowName(doc, name, { exceptId: id });
   if (!check.ok) throw nameError(check.error);
-  return replaceBoard(doc, index, { ...doc.boards[index], name: check.name, updatedAt: now });
+  return replaceShow(doc, index, { ...doc.shows[index], name: check.name, updatedAt: now });
 }
 
-export function deleteBoard(doc, id, { now = defaultNow(), newId = defaultNewId } = {}) {
-  const index = indexOfBoard(doc, id);
-  if (doc.boards.length === 1) {
+export function deleteShow(doc, id, { now = defaultNow(), newId = defaultNewId } = {}) {
+  const index = indexOfShow(doc, id);
+  if (doc.shows.length === 1) {
     const fresh = createDocument(emptyLayout(), { now, newId });
-    return { doc: fresh, nextActiveId: fresh.activeBoardId, activeChanged: true };
+    return { doc: fresh, nextActiveId: fresh.activeShowId, activeChanged: true };
   }
-  const boards = doc.boards.filter((b) => b.id !== id);
-  if (doc.activeBoardId !== id) {
+  const shows = doc.shows.filter((b) => b.id !== id);
+  if (doc.activeShowId !== id) {
     return {
-      doc: { ...doc, boards },
-      nextActiveId: doc.activeBoardId,
+      doc: { ...doc, shows },
+      nextActiveId: doc.activeShowId,
       activeChanged: false,
     };
   }
-  const next = boards[Math.min(index, boards.length - 1)];
+  const next = shows[Math.min(index, shows.length - 1)];
   return {
-    doc: { ...doc, boards, activeBoardId: next.id },
+    doc: { ...doc, shows, activeShowId: next.id },
     nextActiveId: next.id,
     activeChanged: true,
   };
 }
 
 export function setActive(doc, id) {
-  indexOfBoard(doc, id);
-  return { ...doc, activeBoardId: id };
+  indexOfShow(doc, id);
+  return { ...doc, activeShowId: id };
 }
 
-export function importName(doc, boardName, sourceProfile) {
-  const taken = new Set(doc.boards.map((b) => foldName(b.name)));
-  const board = String(boardName ?? '').trim() || 'Board';
+export function importName(doc, showName, sourceProfile) {
+  const taken = new Set(doc.shows.map((b) => foldName(b.name)));
+  const show = String(showName ?? '').trim() || 'Show';
   const profile = String(sourceProfile ?? '');
   for (let n = 1; n <= MAX_IMPORT_NAME_ATTEMPTS; n++) {
     const suffix = n === 1 ? '' : ` ${n}`;
     // " (" + ")" add 3 characters around the profile.
-    const room = MAX_BOARD_NAME_LENGTH - 3 - profile.length - suffix.length;
+    const room = MAX_SHOW_NAME_LENGTH - 3 - profile.length - suffix.length;
     let candidate;
     if (room >= 1) {
-      candidate = `${board.slice(0, room).trimEnd()} (${profile})${suffix}`;
+      candidate = `${show.slice(0, room).trimEnd()} (${profile})${suffix}`;
     } else {
-      // Board part is down to one character; clip the profile and mark it.
-      const profileRoom = MAX_BOARD_NAME_LENGTH - 1 - 3 - suffix.length;
+      // Show part is down to one character; clip the profile and mark it.
+      const profileRoom = MAX_SHOW_NAME_LENGTH - 1 - 3 - suffix.length;
       const clipped =
         profile.length > profileRoom ? `${profile.slice(0, profileRoom - 1)}…` : profile;
-      candidate = `${board.slice(0, 1)} (${clipped})${suffix}`;
+      candidate = `${show.slice(0, 1)} (${clipped})${suffix}`;
     }
     if (!taken.has(foldName(candidate))) return candidate;
   }
-  throw new Error('Could not find a free name for the imported board.');
+  throw new Error('Could not find a free name for the imported show.');
 }
 
 function futureVersion(version) {
@@ -222,37 +222,37 @@ function futureVersion(version) {
       : typeof version === 'string' && /^\s*\d+\s*$/.test(version)
         ? Number(version)
         : NaN;
-  return Number.isInteger(num) && num > BOARD_DOCUMENT_VERSION;
+  return Number.isInteger(num) && num > SHOW_DOCUMENT_VERSION;
 }
 
 export function parseDocument(raw) {
   if (!isObject(raw)) return { ok: false, error: 'shape' };
-  if (raw.version !== BOARD_DOCUMENT_VERSION) {
+  if (raw.version !== SHOW_DOCUMENT_VERSION) {
     return { ok: false, error: futureVersion(raw.version) ? 'version' : 'shape' };
   }
-  if (!Array.isArray(raw.boards) || raw.boards.length === 0) return { ok: false, error: 'shape' };
-  if (!raw.boards.every((b) => isObject(b) && typeof b.id === 'string' && typeof b.name === 'string')) {
+  if (!Array.isArray(raw.shows) || raw.shows.length === 0) return { ok: false, error: 'shape' };
+  if (!raw.shows.every((b) => isObject(b) && typeof b.id === 'string' && typeof b.name === 'string')) {
     return { ok: false, error: 'shape' };
   }
-  if (new Set(raw.boards.map((b) => b.id)).size !== raw.boards.length) {
+  if (new Set(raw.shows.map((b) => b.id)).size !== raw.shows.length) {
     return { ok: false, error: 'shape' };
   }
-  if (!raw.boards.some((b) => b.id === raw.activeBoardId)) return { ok: false, error: 'shape' };
-  const boards = raw.boards.map((b) => ({ ...b, layout: normalizeLayout(b.layout) }));
-  return { ok: true, doc: { ...raw, boards } };
+  if (!raw.shows.some((b) => b.id === raw.activeShowId)) return { ok: false, error: 'shape' };
+  const shows = raw.shows.map((b) => ({ ...b, layout: normalizeLayout(b.layout) }));
+  return { ok: true, doc: { ...raw, shows } };
 }
 
 export default {
-  BOARD_DOCUMENT_VERSION,
-  MAX_BOARD_NAME_LENGTH,
+  SHOW_DOCUMENT_VERSION,
+  MAX_SHOW_NAME_LENGTH,
   emptyLayout,
   normalizeLayout,
   createDocument,
-  validateBoardName,
-  addBoard,
-  updateBoardLayout,
-  renameBoard,
-  deleteBoard,
+  validateShowName,
+  addShow,
+  updateShowLayout,
+  renameShow,
+  deleteShow,
   setActive,
   importName,
   parseDocument,

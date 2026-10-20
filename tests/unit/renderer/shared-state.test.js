@@ -30,13 +30,13 @@ describe('SharedState', () => {
       expect(sharedState.get('categories')).toEqual({});
     });
 
-    it('starts on board generation 0 with no now-playing source, and resets to it', () => {
-      expect(sharedState.get('boardGeneration')).toBe(0);
+    it('starts on show generation 0 with no now-playing source, and resets to it', () => {
+      expect(sharedState.get('showGeneration')).toBe(0);
       expect(sharedState.get('nowPlayingSource')).toBe(null);
-      sharedState.set('boardGeneration', 3);
+      sharedState.set('showGeneration', 3);
       sharedState.set('nowPlayingSource', 3);
       sharedState.reset();
-      expect(sharedState.get('boardGeneration')).toBe(0);
+      expect(sharedState.get('showGeneration')).toBe(0);
       expect(sharedState.get('nowPlayingSource')).toBe(null);
       expect(mockDebugLog.warn).not.toHaveBeenCalled();
     });

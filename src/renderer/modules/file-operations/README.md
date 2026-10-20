@@ -1,6 +1,6 @@
 ## File Operations Module
 
-Directory picking and update installation. (Hotkey and holding-tank files are import-only, through the Board menu handled in the main process.)
+Directory picking and update installation. (Hotkey and holding-tank files are import-only, through the Shows menu handled in the main process.)
 
 ### Structure
 ```

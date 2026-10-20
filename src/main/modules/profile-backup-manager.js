@@ -26,7 +26,7 @@ import { createBackupDirectoryScanner } from './backup-directory-scanner.js';
 import { createBackupFileOperations } from './backup-file-operations.js';
 import { selectBackupsForRetention } from './backup-retention-policy.js';
 import { createProfileChangeDetector } from './profile-change-detector.js';
-import { parseDocument } from './board-document.js';
+import { parseDocument } from './show-document.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -300,17 +300,17 @@ async function createBackup(profileName, options = {}) {
 }
 
 /**
- * Board names in a backup's boards.json, in document order.
- * Null for a pre-boards backup or any unreadable file; never throws.
+ * Show names in a backup's shows.json, in document order.
+ * Null for a pre-shows backup or any unreadable file; never throws.
  * @param {string} profileName - Profile name
  * @param {string} backupId - Backup ID
  * @returns {Promise<string[]|null>}
  */
-async function readBackupBoardNames(profileName, backupId) {
+async function readBackupShowNames(profileName, backupId) {
   try {
-    const file = path.join(getBackupDirectory(profileName), backupId, 'boards.json');
+    const file = path.join(getBackupDirectory(profileName), backupId, 'shows.json');
     const parsed = parseDocument(JSON.parse(await fs.promises.readFile(file, 'utf8')));
-    return parsed.ok ? parsed.doc.boards.map((b) => b.name) : null;
+    return parsed.ok ? parsed.doc.shows.map((b) => b.name) : null;
   } catch {
     return null;
   }
@@ -327,7 +327,7 @@ async function listBackups(profileName) {
     const backups = await Promise.all(
       (metadata.backups || []).map(async (backup) => ({
         ...backup,
-        boards: await readBackupBoardNames(profileName, backup.id)
+        shows: await readBackupShowNames(profileName, backup.id)
       }))
     );
 

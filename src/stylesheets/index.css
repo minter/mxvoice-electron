@@ -970,13 +970,13 @@ legend {
   white-space: nowrap;
 }
 
-.board-separator[hidden],
-#board-icon[hidden],
-#board-name[hidden] {
+.show-separator[hidden],
+#show-icon[hidden],
+#show-name[hidden] {
   display: none;
 }
 
-#board-name {
+#show-name {
   max-width: 16ch;
   overflow: hidden;
   text-overflow: ellipsis;

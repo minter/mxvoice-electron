@@ -20,7 +20,7 @@ try {
 import * as hotkeyOperations from './hotkey-operations.js';
 import * as hotkeyUI from './hotkey-ui.js';
 import HotkeyState from './hotkey-state.js';
-import { fetchSongsById } from '../boards/layout-applier.js';
+import { fetchSongsById } from '../shows/layout-applier.js';
 
 // Import secure adapters for UI operations
 import { customConfirm, customPrompt } from '../utils/index.js';
