@@ -184,6 +184,10 @@ async function initializeMainDatabase() {
       await setupDatabaseSchema(dbInstance);
       setupDatabaseIndexes(dbInstance);
       migrateDatabase(dbInstance);
+      if (ensureAutoincrementIds(dbInstance, { dbPath, fs }).rebuilt) {
+        // DROP TABLE removed the indexes; they are IF NOT EXISTS so re-run is safe
+        setupDatabaseIndexes(dbInstance);
+      }
 
       debugLog?.info('Database initialization completed successfully', {
         module: 'database-setup',
@@ -214,6 +218,10 @@ async function initializeMainDatabase() {
       await setupDatabaseSchema(dbInstance);
       setupDatabaseIndexes(dbInstance);
       migrateDatabase(dbInstance);
+      if (ensureAutoincrementIds(dbInstance, { dbPath: ':memory:', fs }).rebuilt) {
+        // DROP TABLE removed the indexes; they are IF NOT EXISTS so re-run is safe
+        setupDatabaseIndexes(dbInstance);
+      }
 
       return dbInstance;
     } catch (fallbackError) {
@@ -243,7 +251,7 @@ async function setupDatabaseSchema(db) {
     
     const mrvoiceStmt = db.prepare(`
       CREATE TABLE IF NOT EXISTS mrvoice (
-        id INTEGER PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         artist TEXT,
         category TEXT,
@@ -338,6 +346,66 @@ function migrateDatabase(db) {
 }
 
 /**
+ * One-time rebuild of mrvoice so ids use AUTOINCREMENT and are never reused.
+ * Never throws: on failure the table is left untouched.
+ */
+function ensureAutoincrementIds(db, { dbPath, fs: fsImpl = fs } = {}) {
+  const ctx = { module: 'database-setup', function: 'ensureAutoincrementIds' };
+  try {
+    const row = db.get("SELECT sql FROM sqlite_master WHERE type='table' AND name='mrvoice'");
+    if (!row || /AUTOINCREMENT/i.test(row.sql || '')) return { rebuilt: false };
+
+    const started = Date.now();
+    if (dbPath && dbPath !== ':memory:') {
+      const backupPath = `${dbPath}.pre-autoincrement`;
+      try {
+        if (!fsImpl.existsSync(backupPath)) fsImpl.copyFileSync(dbPath, backupPath);
+      } catch (error) {
+        debugLog?.error('Backup before AUTOINCREMENT rebuild failed; skipping rebuild', { ...ctx, error: error.message });
+        return { rebuilt: false, error: error.message };
+      }
+    }
+
+    try {
+      const columns = db.all('PRAGMA table_info(mrvoice)');
+      const quote = (n) => `"${String(n).replace(/"/g, '""')}"`;
+      const defs = columns.map((c) => {
+        if (c.name === 'id') return '"id" INTEGER PRIMARY KEY AUTOINCREMENT';
+        let def = `${quote(c.name)} ${c.type || ''}`.trim();
+        if (c.notnull) def += ' NOT NULL';
+        if (c.dflt_value !== null && c.dflt_value !== undefined) def += ` DEFAULT ${c.dflt_value}`;
+        return def;
+      });
+      const names = columns.map((c) => quote(c.name)).join(', ');
+
+      db.exec('BEGIN');
+      db.exec(`CREATE TABLE mrvoice_new (${defs.join(', ')})`);
+      db.exec(`INSERT INTO mrvoice_new (${names}) SELECT ${names} FROM mrvoice`);
+      db.exec('DROP TABLE mrvoice');
+      db.exec('ALTER TABLE mrvoice_new RENAME TO mrvoice');
+      db.exec("DELETE FROM sqlite_sequence WHERE name='mrvoice'");
+      db.exec("INSERT INTO sqlite_sequence (name, seq) VALUES ('mrvoice', (SELECT IFNULL(MAX(id),0) FROM mrvoice))");
+      db.exec('COMMIT');
+    } catch (error) {
+      try {
+        if (db.inTransaction) db.exec('ROLLBACK');
+      } catch (rollbackError) {
+        debugLog?.error('Rollback failed', { ...ctx, error: rollbackError.message });
+      }
+      debugLog?.error('AUTOINCREMENT rebuild failed; mrvoice left unchanged', { ...ctx, error: error.message });
+      return { rebuilt: false, error: error.message };
+    }
+
+    const durationMs = Date.now() - started;
+    debugLog?.info('Rebuilt mrvoice with AUTOINCREMENT ids', { ...ctx, durationMs });
+    return { rebuilt: true, durationMs };
+  } catch (error) {
+    debugLog?.error('AUTOINCREMENT check failed', { ...ctx, error: error.message });
+    return { rebuilt: false, error: error.message };
+  }
+}
+
+/**
  * Get the current database instance
  */
 function getMainDatabase() {
@@ -346,6 +414,7 @@ function getMainDatabase() {
 
 export {
   initializeMainDatabase,
+  ensureAutoincrementIds,
   getMainDatabase,
   isTestDatabaseFallbackAllowed
 };
@@ -356,6 +425,7 @@ export default {
   setupDatabaseSchema,
   setupDatabaseIndexes,
   migrateDatabase,
+  ensureAutoincrementIds,
   getMainDatabase,
   isTestDatabaseFallbackAllowed
 };
