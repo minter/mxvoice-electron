@@ -70,7 +70,7 @@ describe('application menu', () => {
     expect(accelerators).not.toContain('CommandOrControl+S');
   });
 
-  it('sends board commands to the window on menu:board-command', () => {
+  it('sends board commands to the window on menu:board-command', async () => {
     const send = vi.fn();
     const rebuildMenu = vi.fn();
     const Menu = { buildFromTemplate: vi.fn(), setApplicationMenu: vi.fn() };
@@ -84,6 +84,7 @@ describe('application menu', () => {
     });
     template.find((m) => m.label === 'Board').submenu[1].click();
     expect(send).toHaveBeenCalledWith('menu:board-command', { command: 'switch', boardId: 'b2' });
+    await new Promise((r) => setImmediate(r));
     expect(rebuildMenu).toHaveBeenCalledOnce();
   });
 

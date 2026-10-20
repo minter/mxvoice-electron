@@ -64,9 +64,11 @@ describe('board menu', () => {
 
   // Electron moves the radio check natively; the renderer may drop the
   // switch, so the menu is rebuilt from the session's state straight away
-  it('clicking a non-active board sends switch and then rebuilds the menu', () => {
+  it('clicking a non-active board sends switch and then rebuilds the menu', async () => {
     const { menu, calls } = build(readyState());
     menu.submenu[1].click();
+    expect(calls).toEqual(['send:switch:b2']);
+    await new Promise((r) => setImmediate(r));
     expect(calls).toEqual(['send:switch:b2', 'rebuild']);
   });
 

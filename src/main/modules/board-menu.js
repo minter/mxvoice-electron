@@ -46,7 +46,8 @@ function buildBoardMenu(state, { platform, send, fileOperations, rebuild } = {})
           click: () => {
             if (isActive) return;
             send?.('switch', board.id);
-            rebuild?.();
+            // Not inside Electron's own click dispatch: replacing the menu there is risky on Windows and Linux
+            setImmediate(() => rebuild?.());
           }
         };
       }),
