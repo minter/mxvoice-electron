@@ -93,8 +93,37 @@ test.describe('Tab actions - ⋯ menu and right-click', () => {
     await expect(hotkeyTab(page, 1)).toHaveText('1');
     await openTabActions(page, 'hotkeys');
     await expect(menuItem(page, 'rename')).toHaveText('Rename "Openers"…');
+    await page.keyboard.press('Escape');
+    // An unnamed tab is "Tab N" in the menu, though its tab shows the number
+    await hotkeyTab(page, 1).click();
+    await openTabActions(page, 'hotkeys');
+    await expect(menuItem(page, 'rename')).toHaveText('Rename "Tab 1"…');
+    await page.keyboard.press('Escape');
+    // A tab the user named "1" keeps "1"
+    await chooseTabAction(page, 'hotkeys', 'rename');
+    await shownDialog(page, 'Rename Tab').locator('.prompt-input').fill('1');
+    await shownDialog(page, 'Rename Tab').getByRole('button', { name: 'OK', exact: true }).click();
+    await expect(shownDialog(page, 'Rename Tab')).toHaveCount(0, { timeout: 5000 });
+    await expect(hotkeyTab(page, 1)).toHaveText('1');
+    await openTabActions(page, 'hotkeys');
+    await expect(menuItem(page, 'clear')).toHaveText('Clear "1"…');
+    await page.keyboard.press('Escape');
+    await hotkeyTab(page, 2).click();
+    await openTabActions(page, 'hotkeys');
+    await expect(menuItem(page, 'rename')).toHaveText('Rename "Openers"…');
     // A click elsewhere closes it
     await page.click('body', { position: { x: 1, y: 1 } });
+    await expect(tabActionsMenu(page)).toBeHidden();
+
+    // So does switching tabs in either strip (here from a shortcut, no click)
+    await openTabActions(page, 'hotkeys');
+    await page.evaluate(() => window.moduleRegistry.hotkeys.switchToHotkeyTab(3));
+    await expect(hotkeyTab(page, 3)).toHaveClass(/active/);
+    await expect(tabActionsMenu(page)).toBeHidden();
+
+    // And any scroll
+    await openTabActions(page, 'holdingTank');
+    await page.evaluate(() => document.getElementById('holding_tank').dispatchEvent(new Event('scroll')));
     await expect(tabActionsMenu(page)).toBeHidden();
   });
 
@@ -103,7 +132,7 @@ test.describe('Tab actions - ⋯ menu and right-click', () => {
     await expect(dot).toBeHidden();
 
     await chooseTabAction(page, 'holdingTank', 'clear');
-    const dialog = shownDialog(page, 'Clear "1"?');
+    const dialog = shownDialog(page, 'Clear "Tab 1"?');
     await expect(dialog).toBeVisible();
     await expect(dialog.locator('.modal-body')).toHaveText(CLEAR_TAB_MESSAGE);
     await expect(dialog.locator('.confirm-btn')).toHaveText('Clear');
@@ -122,7 +151,7 @@ test.describe('Tab actions - ⋯ menu and right-click', () => {
 
     // Hotkeys too
     await chooseTabAction(page, 'hotkeys', 'clear');
-    const hotkeyDialog = shownDialog(page, 'Clear "1"?');
+    const hotkeyDialog = shownDialog(page, 'Clear "Tab 1"?');
     await hotkeyDialog.getByRole('button', { name: 'Clear', exact: true }).click();
     await expect(hotkeyDialog).toHaveCount(0, { timeout: 5000 });
     await expect(hotkeySong(page, 1, 'f1')).toHaveText('');
@@ -132,13 +161,13 @@ test.describe('Tab actions - ⋯ menu and right-click', () => {
 
   test("Clear's confirm defaults to Cancel", async () => {
     await chooseTabAction(page, 'holdingTank', 'clear');
-    const dialog = shownDialog(page, 'Clear "1"?');
+    const dialog = shownDialog(page, 'Clear "Tab 1"?');
     const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
-    // Cancel is the default, so it has the focus
+    // Cancel is the default, so it has the focus and Return takes it
     await expect(cancel).toBeFocused({ timeout: 5000 });
     await expect(dialog.locator('.confirm-btn')).not.toBeFocused();
 
-    await cancel.click();
+    await page.keyboard.press('Enter');
     await expect(dialog).toHaveCount(0, { timeout: 5000 });
     await expect(holdingItems(page, 1)).toHaveCount(2);
   });

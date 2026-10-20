@@ -53,6 +53,31 @@ describe('tabLabel', () => {
   it('is "Tab" with no tab at all', () => {
     expect(tabLabel(null)).toBe('Tab');
   });
+
+  describe('from the model', () => {
+    const tabs = [
+      { tabNumber: 1, tabName: null },
+      { tabNumber: 2, tabName: '1' },
+      { tabNumber: 3, tabName: 'Intros' }
+    ];
+
+    it('is "Tab N" for an unnamed tab, though its link shows the number', () => {
+      expect(tabLabel(link('1', '#hotkeys_list_1'), tabs)).toBe('Tab 1');
+    });
+
+    it('keeps a name the user gave, even "1"', () => {
+      expect(tabLabel(link('1', '#hotkeys_list_2'), tabs)).toBe('1');
+      expect(tabLabel(link('Intros', '#holding_tank_3'), tabs)).toBe('Intros');
+    });
+
+    it('is "Tab N" for a tab missing from the snapshot', () => {
+      expect(tabLabel(link('4', '#holding_tank_4'), tabs)).toBe('Tab 4');
+    });
+
+    it('falls back to the link text without a tab number', () => {
+      expect(tabLabel(link('Odd', '#elsewhere'), tabs)).toBe('Odd');
+    });
+  });
 });
 
 describe('tabActionItems', () => {
@@ -96,7 +121,8 @@ describe('clear confirm', () => {
 
   it('asks about the given tab and passes on the answer', async () => {
     const confirm = vi.fn().mockResolvedValue(false);
-    await expect(confirmClearTab(link('', '#holding_tank_2'), confirm)).resolves.toBe(false);
+    const tabs = [{ tabNumber: 2, tabName: null }];
+    await expect(confirmClearTab(link('2', '#holding_tank_2'), confirm, tabs)).resolves.toBe(false);
     expect(confirm).toHaveBeenCalledWith(
       'Removes all songs from this tab. The songs stay in your library.',
       'Clear "Tab 2"?',
@@ -168,6 +194,7 @@ function createDom() {
     appendChild(kid) { this.append(kid); return kid; }
     replaceChildren(...kids) { this.children = []; this.append(...kids); }
     addEventListener(type, handler) { (this.listeners[type] ||= []).push(handler); }
+    removeEventListener(type, handler) { this.listeners[type] = (this.listeners[type] || []).filter((h) => h !== handler); }
     matches(selector) {
       if (selector === 'button') return this.tag === 'button';
       if (selector === '[data-action]') return 'data-action' in this.attrs;
@@ -212,7 +239,7 @@ function createDom() {
     };
     const pending = [];
     for (let el = target; el && !event.stopped; el = el.parent) {
-      (el.listeners[type] || []).forEach((handler) => pending.push(handler(event)));
+      (el.listeners[type] || []).slice().forEach((handler) => pending.push(handler(event)));
     }
     if (!event.stopped) (doc.listeners[type] || []).forEach((handler) => pending.push(handler(event)));
     await Promise.all(pending);
@@ -253,7 +280,10 @@ function createDom() {
     const [, id, href] = selector.match(/^#(\w+) \.nav-link\[href="([^"]+)"\]$/);
     const links = [...doc.getElementById(id).descendants()].filter((el) => el.classes.has('nav-link'));
     links.forEach((el) => el.classes.delete('active'));
-    links.find((el) => el.getAttribute('href') === href).classes.add('active');
+    const shown = links.find((el) => el.getAttribute('href') === href);
+    shown.classes.add('active');
+    // Bootstrap fires shown.bs.tab once the fade ends
+    setTimeout(() => dispatch(shown, 'shown.bs.tab'), 5);
   };
 
   return { doc, win, dispatch, fire, hotkeys, holding, outside, select };
@@ -263,8 +293,16 @@ describe('installTabActionsMenus', () => {
   const setup = () => {
     const dom = createDom();
     const registry = {
-      hotkeys: { renameHotkeyTab: vi.fn(), clearHotkeys: vi.fn() },
-      holdingTank: { renameHoldingTankTab: vi.fn(), clearHoldingTank: vi.fn() }
+      hotkeys: {
+        renameHotkeyTab: vi.fn(),
+        clearHotkeys: vi.fn(),
+        getHotkeySnapshot: () => [{ tabNumber: 1, tabName: null }, { tabNumber: 2, tabName: 'Intros' }, { tabNumber: 3, tabName: null }]
+      },
+      holdingTank: {
+        renameHoldingTankTab: vi.fn(),
+        clearHoldingTank: vi.fn(),
+        getHoldingTankSnapshot: () => [{ tabNumber: 1, tabName: null }, { tabNumber: 2, tabName: null }, { tabNumber: 3, tabName: 'Walk-ons' }]
+      }
     };
     const showTab = vi.fn(async (selector) => dom.select(selector));
     const debugLog = { error: vi.fn(), debug: vi.fn() };
@@ -353,7 +391,7 @@ describe('installTabActionsMenus', () => {
     const t = setup();
     await t.dispatch(t.hotkeys.links[0], 'contextmenu', { clientX: 10, clientY: 10 });
     expect(t.showTab).not.toHaveBeenCalled();
-    expect(t.labels()).toEqual(['Rename "1"…', 'Clear "1"…']);
+    expect(t.labels()).toEqual(['Rename "Tab 1"…', 'Clear "Tab 1"…']);
   });
 
   it('right-clicking the ⋯ itself does nothing special', async () => {
@@ -400,6 +438,46 @@ describe('installTabActionsMenus', () => {
     await t.dispatch(t.hotkeys.button, 'click');
     await t.fire('resize');
     expect(t.menu.style.display).toBe('none');
+  });
+
+  it('closes when either strip shows another tab, and on any scroll', async () => {
+    const t = setup();
+    await t.dispatch(t.hotkeys.button, 'click');
+    await t.dispatch(t.holding.links[1], 'shown.bs.tab');
+    expect(t.menu.style.display).toBe('none');
+
+    await t.dispatch(t.holding.button, 'click');
+    await t.dispatch(t.hotkeys.links[2], 'shown.bs.tab');
+    expect(t.menu.style.display).toBe('none');
+
+    await t.dispatch(t.hotkeys.button, 'click');
+    await t.fire('scroll');
+    expect(t.menu.style.display).toBe('none');
+    expect(t.handlers.find((h) => h.name === 'tabActionsScroll')).toMatchObject({ event: 'scroll', options: true });
+  });
+
+  it('opens after a right-click switch finishes, so its shown.bs.tab does not close it', async () => {
+    const t = setup();
+    await t.dispatch(t.hotkeys.links[1], 'contextmenu', { clientX: 5, clientY: 5 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(t.menu.style.display).toBe('block');
+    expect(t.labels()).toEqual(['Rename "Intros"…', 'Clear "Intros"…']);
+  });
+
+  it('still opens if the switch never reports shown', async () => {
+    vi.useFakeTimers();
+    try {
+      const t = setup();
+      t.showTab.mockImplementation(async () => {});
+      const pending = t.dispatch(t.hotkeys.links[2], 'contextmenu', { clientX: 5, clientY: 5 });
+      await vi.advanceTimersByTimeAsync(999);
+      expect(t.menu.style.display).toBe('none');
+      await vi.advanceTimersByTimeAsync(1);
+      await pending;
+      expect(t.menu.style.display).toBe('block');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('logs a failed action', async () => {

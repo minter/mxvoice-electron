@@ -287,6 +287,9 @@ test.describe("What's New Tour: next release", () => {
 
     // A preview: nothing selected, and Enter during the tour can't switch profiles
     await expect(page.locator('#profileSwitchModal #launch-btn')).toHaveText('Switch');
+    // Enter goes to the focused element, and the tour focuses its close (×)
+    // button, so press it with the dialog itself focused
+    await page.evaluate(() => document.getElementById('profileSwitchModal').focus());
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
     expect(await page.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');

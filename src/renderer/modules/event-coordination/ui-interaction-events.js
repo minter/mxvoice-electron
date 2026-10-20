@@ -73,7 +73,7 @@ export default class UIInteractionEvents {
 
     // Rename and Clear for the selected tab: the ⋯ menu and tab right-clicks
     installTabActionsMenus({ moduleRegistry: this.moduleRegistry, debugLog: this.debugLog })
-      .forEach(({ name, element, event, handler }) => this.uiHandlers.set(name, { element, event, handler }));
+      .forEach(({ name, element, event, handler, options }) => this.uiHandlers.set(name, { element, event, handler, options }));
   }
 
   /**
@@ -514,11 +514,11 @@ export default class UIInteractionEvents {
         const target = handler.element;
         if (!target) continue;
         if (target === window) {
-          window.removeEventListener(handler.event, handler.handler);
+          window.removeEventListener(handler.event, handler.handler, handler.options);
         } else if (typeof target === 'string') {
           document.querySelectorAll(target).forEach((el) => el.removeEventListener(handler.event, handler.handler));
         } else if (target instanceof Element || target === document) {
-          target.removeEventListener(handler.event, handler.handler);
+          target.removeEventListener(handler.event, handler.handler, handler.options);
         }
         this.debugLog?.debug(`Removed UI handler: ${name}`);
       }

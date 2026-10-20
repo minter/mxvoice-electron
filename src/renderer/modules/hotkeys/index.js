@@ -372,7 +372,7 @@ class HotkeysModule {
    * Removes all song assignments from hotkeys
    */
   async clearHotkeys() {
-    const confirmed = await confirmClearTab(document.querySelector('#hotkey_tabs .nav-link.active'), customConfirm);
+    const confirmed = await confirmClearTab(document.querySelector('#hotkey_tabs .nav-link.active'), customConfirm, this.state.toSnapshot());
     if (confirmed) {
       debugLog?.info('🧹 Executing clearHotkeys logic after confirmation...', { module: 'hotkeys', function: 'clearHotkeys' });
       

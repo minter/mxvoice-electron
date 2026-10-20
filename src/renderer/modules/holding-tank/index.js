@@ -441,7 +441,7 @@ export function removeSelected() {
  * Clear all songs from the holding tank
  */
 export async function clearHoldingTank() {
-  const confirmed = await confirmClearTab(document.querySelector('#holding_tank_tabs .nav-link.active'), customConfirm);
+  const confirmed = await confirmClearTab(document.querySelector('#holding_tank_tabs .nav-link.active'), customConfirm, holdingTankState.toSnapshot());
   if (confirmed) {
     clearActiveHoldingTankState();
     Dom.empty('.holding_tank.active');

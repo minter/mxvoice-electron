@@ -256,13 +256,9 @@ export class NavigationShortcuts {
   handlePlaySelected() {
     try {
       this.logDebug('Play selected requested');
-      
-      // Don't play if modal is open
-      const modal = document.getElementById('songFormModal');
-      if (modal && modal.classList.contains('show')) {
-        return false;
-      }
-      
+
+      // Under a dialog (the song form included) the overlay shortcut guard
+      // keeps Return from reaching this handler
       const playSelected = this.dependencies.moduleRegistry?.audio?.playSelected;
       if (typeof playSelected === 'function') {
         playSelected();

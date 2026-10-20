@@ -12,27 +12,37 @@ import { safeShowTab } from './bootstrap-helpers.js';
 const MENU_ID = 'mxv-tab-actions-menu';
 const LOG_CONTEXT = { module: 'tab-actions-menu' };
 
-/** Rename and clear for each tab strip, by the strip's element id */
+/** Tabs (the model's snapshot), rename and clear for each tab strip, by the strip's element id */
 export const TAB_PANELS = {
   hotkey_tabs: {
+    tabs: (registry) => registry?.hotkeys?.getHotkeySnapshot?.(),
     rename: (registry) => registry?.hotkeys?.renameHotkeyTab?.(),
     clear: (registry) => registry?.hotkeys?.clearHotkeys?.()
   },
   holding_tank_tabs: {
+    tabs: (registry) => registry?.holdingTank?.getHoldingTankSnapshot?.(),
     rename: (registry) => registry?.holdingTank?.renameHoldingTankTab?.(),
     clear: (registry) => registry?.holdingTank?.clearHoldingTank?.()
   }
 };
 
 /**
- * The name to show for a tab: its label, or "Tab N" when it has none.
+ * The name to show for a tab: the name the user gave it, or "Tab N" when it
+ * has none. The model knows which: an unnamed tab still shows its number
+ * as link text, and a tab the user named "1" keeps "1".
  * @param {Element|null} link - the tab's .nav-link
+ * @param {Array<{ tabNumber: number, tabName: string|null }>} [tabs] - the panel's snapshot
  * @returns {string}
  */
-export function tabLabel(link) {
-  const name = (link?.textContent || '').trim();
-  if (name) return name;
-  const number = link?.getAttribute?.('href')?.match(/(\d+)$/)?.[1];
+export function tabLabel(link, tabs) {
+  const number = Number(link?.getAttribute?.('href')?.match(/(\d+)$/)?.[1]) || null;
+  if (Array.isArray(tabs) && number) {
+    const name = tabs.find((tab) => tab.tabNumber === number)?.tabName;
+    return name ? String(name) : `Tab ${number}`;
+  }
+  // No model: fall back to the link text
+  const text = (link?.textContent || '').trim();
+  if (text) return text;
   return number ? `Tab ${number}` : 'Tab';
 }
 
@@ -63,10 +73,11 @@ export function clearTabConfirmArgs(label) {
  * Ask before clearing a tab.
  * @param {Element|null} link - the tab's .nav-link
  * @param {Function} confirm - customConfirm
+ * @param {Array} [tabs] - the panel's snapshot, for tabLabel
  * @returns {Promise<boolean>}
  */
-export function confirmClearTab(link, confirm) {
-  return confirm(...clearTabConfirmArgs(tabLabel(link)));
+export function confirmClearTab(link, confirm, tabs) {
+  return confirm(...clearTabConfirmArgs(tabLabel(link, tabs)));
 }
 
 /**
@@ -105,6 +116,19 @@ export function renderTabActionItems(menu, label, doc = document) {
   menu.replaceChildren(...buttons);
 }
 
+// Resolves when Bootstrap has finished showing the tab, or after a second
+function waitForTabShown(link) {
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      link.removeEventListener('shown.bs.tab', done);
+      resolve();
+    };
+    const timer = setTimeout(done, 1000);
+    link.addEventListener('shown.bs.tab', done);
+  });
+}
+
 /**
  * Wire the ⋯ buttons and tab right-clicks of both tab strips.
  * @param {Object} options
@@ -113,7 +137,7 @@ export function renderTabActionItems(menu, label, doc = document) {
  * @param {Object} [options.debugLog]
  * @param {Document} [options.doc]
  * @param {Window} [options.win]
- * @returns {Array<{ name: string, element: EventTarget, event: string, handler: Function }>}
+ * @returns {Array<{ name: string, element: EventTarget, event: string, handler: Function, options?: boolean }>}
  *   the listeners added, for the caller to remove
  */
 export function installTabActionsMenus({
@@ -124,9 +148,9 @@ export function installTabActionsMenus({
   win = window
 } = {}) {
   const handlers = [];
-  const listen = (name, element, event, handler) => {
-    element.addEventListener(event, handler);
-    handlers.push({ name, element, event, handler });
+  const listen = (name, element, event, handler, options) => {
+    element.addEventListener(event, handler, options);
+    handlers.push({ name, element, event, handler, options });
   };
 
   let menu = doc.getElementById(MENU_ID);
@@ -152,7 +176,7 @@ export function installTabActionsMenus({
   const open = (tabsId, x, y, { alignRight = false, trigger = null } = {}) => {
     hide();
     const link = doc.querySelector(`#${tabsId} .nav-link.active`);
-    renderTabActionItems(menu, tabLabel(link), doc);
+    renderTabActionItems(menu, tabLabel(link, TAB_PANELS[tabsId].tabs(moduleRegistry)), doc);
 
     menu.style.visibility = 'hidden';
     menu.style.display = 'block';
@@ -203,10 +227,16 @@ export function installTabActionsMenus({
       const { clientX, clientY } = event;
       const href = link.getAttribute('href');
       if (!link.classList.contains('active') && href) {
+        // Open once the switch is done: its shown.bs.tab closes the menu
+        const shown = waitForTabShown(link);
         await showTab(`#${tabsId} .nav-link[href="${href}"]`, { ...LOG_CONTEXT, function: 'contextmenu' });
+        await shown;
       }
       open(tabsId, clientX, clientY);
     });
+
+    // Switching tabs (a click, F-key tab shortcuts, a show loading) closes it
+    listen(`tabActionsTabShown:${tabsId}`, strip, 'shown.bs.tab', hide);
   });
 
   // Any click outside the menu and the ⋯ buttons closes it
@@ -228,6 +258,8 @@ export function installTabActionsMenus({
   });
   listen('tabActionsBlur', win, 'blur', hide);
   listen('tabActionsResize', win, 'resize', hide);
+  // Any scroll, in any panel: the menu is fixed and would float off its tab
+  listen('tabActionsScroll', win, 'scroll', hide, true);
 
   debugLog?.debug?.('Tab actions menus installed', LOG_CONTEXT);
   return handlers;
