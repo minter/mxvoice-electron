@@ -127,8 +127,9 @@ export function createShowSession({
   let droppedIds = new Set();
   // The layout on screen differs from the saved active show
   let dirty = false;
-  // Counts the recovery writes saveRecovery performs, and keeps the last
-  // one's layout, so a Save can tell whether the screen moved on while it ran
+  // Counts the recovery saves (writes and retires) saveRecovery performs, and
+  // keeps the last one's layout, so a Save can tell what is on screen once it
+  // has run
   let recoveryWriteSeq = 0;
   let lastWrittenLayout = null;
 
@@ -289,7 +290,8 @@ export function createShowSession({
 
   const refused = (myGeneration) => status !== 'ready' || fenced || myGeneration !== generation;
 
-  // Every outcome reports `dirty`; a skipped or failed save leaves it as it was
+  // Every outcome reports `dirty`; a skipped save leaves it as it was. A
+  // failed write or retire still sets it, since it says what is on screen.
   function saveRecovery(layout) {
     const myGeneration = generation;
     const p = profile;
@@ -300,15 +302,16 @@ export function createShowSession({
       if (refused(myGeneration)) return { skipped: true, dirty: visibleDirty() };
       const show = activeShow();
       const equal = matchesSaved(normalized);
+      recoveryWriteSeq += 1;
+      lastWrittenLayout = normalized;
+      // Set before the await: a newer generation, which sets its own, can't
+      // have started yet, and a failed write or retire must not leave it stale
+      if (myGeneration === generation) dirty = !equal;
       if (equal) {
         await recoveryStore.retire(p);
       } else {
         await recoveryStore.write(p, { showId: show.id, layout: normalized });
-        recoveryWriteSeq += 1;
-        lastWrittenLayout = normalized;
       }
-      // A newer generation has already set its own
-      if (myGeneration === generation) dirty = !equal;
       return equal ? { retired: true, dirty: visibleDirty() } : { dirty: visibleDirty() };
     });
   }
@@ -416,7 +419,9 @@ export function createShowSession({
    * Save a document that keeps the active show, then adopt it. With
    * `writeSeq` (captured before the first await), the screen was saved as
    * the show, so the recovery record is retired and dirty cleared, unless a
-   * recovery write of a different layout landed while the save ran.
+   * recovery save of a different layout landed while the save ran. Then the
+   * screen still differs from the new show: dirty stays set and the record
+   * holds that layout, written back if it was retired as equal to the old show.
    */
   async function saveInPlace(fn, p, g, nextDoc, { writeSeq = null } = {}) {
     await showStore.save(p, nextDoc);
@@ -425,15 +430,19 @@ export function createShowSession({
     if (writeSeq === null) return;
     try {
       await queued(async () => {
+        if (generation !== g) return;
         const movedOn = recoveryWriteSeq !== writeSeq && !matchesSaved(lastWrittenLayout);
-        if (movedOn || generation !== g) return;
-        // The layout on screen is now the saved show
-        dirty = false;
-        await recoveryStore.retire(p);
+        dirty = movedOn;
+        if (!movedOn) {
+          // The layout on screen is now the saved show
+          await recoveryStore.retire(p);
+        } else if (!fenced) {
+          await recoveryStore.write(p, { showId: activeShow().id, layout: lastWrittenLayout });
+        }
       });
     } catch (error) {
       // The show is already saved; the next recovery write replaces the stale record
-      debugLog?.warn?.('Could not retire the recovery record', { ...logCtx(fn), error: error.message });
+      debugLog?.warn?.('Could not retire or update the recovery record', { ...logCtx(fn), error: error.message });
     }
   }
 

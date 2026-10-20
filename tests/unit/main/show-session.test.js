@@ -998,11 +998,22 @@ describe('show session dirty flag', () => {
     expect(dirty(ctx)).toBe(false);
   });
 
-  it('a failed recovery write leaves dirty unchanged', async () => {
+  it('a failed recovery write still marks the layout on screen dirty', async () => {
     const ctx = setup();
     await openReady(ctx);
     ctx.recoveryStore.write.mockRejectedValueOnce(new Error('disk full'));
     await expect(ctx.session.saveRecovery(layoutWith(9))).rejects.toThrow('disk full');
+    // The screen differs from the saved show whether or not the copy was written
+    expect(dirty(ctx)).toBe(true);
+  });
+
+  it('a failed retire as equal still clears dirty', async () => {
+    const ctx = setup();
+    await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+    expect(dirty(ctx)).toBe(true);
+    ctx.recoveryStore.retire.mockRejectedValueOnce(new Error('disk full'));
+    await expect(ctx.session.saveRecovery(layoutWith(1))).rejects.toThrow('disk full');
     expect(dirty(ctx)).toBe(false);
   });
 
@@ -1085,6 +1096,24 @@ describe('show session dirty flag', () => {
 
       expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
       expect(dirty(ctx)).toBe(false);
+    });
+
+    it(`${name} stays dirty and keeps a record when the edit was undone to the old show while it saved`, async () => {
+      const ctx = setup();
+      await openReady(ctx);
+      await ctx.session.saveRecovery(layoutWith(9));
+      const held = holdNextSave(ctx);
+      const saving = save(ctx.session);
+      await vi.waitFor(() => expect(held.release).toBeTypeOf('function'));
+
+      // Undone to the old saved layout: retired as equal against the old show
+      await expect(ctx.session.saveRecovery(layoutWith(1))).resolves.toEqual({ retired: true, dirty: false });
+      held.release();
+      await saving;
+
+      // The screen now differs from the show just saved
+      expect(dirty(ctx)).toBe(true);
+      expect(ctx.recoveryStore.records.get('Alice')?.layout).toEqual(layoutWith(1));
     });
   }
 

@@ -3,12 +3,14 @@ import fs from 'fs';
 import { launchSeededApp, waitForAppReady } from '../../../utils/seeded-launch.js';
 import { profileShowsPath, readShows, seedShows } from '../../../utils/seed-shows.js';
 import {
+  answerChoice,
   answerConfirm,
   assignF1,
   showMenuState,
   clickShowMenu,
   f1Hotkey,
   multiShowDocument,
+  shownDialog,
   waitForShowMenuReady
 } from '../../../utils/show-e2e.js';
 
@@ -109,6 +111,35 @@ test.describe('Shows - Import Show', () => {
 
     await expect.poll(() => activeShow(readShows(userDataDir, 'Jesse')).layout.hotkeys[0].hotkeys.f1).toBe('1001');
     expect(fs.readFileSync(profileShowsPath(userDataDir, 'Derek'), 'utf8')).toBe(derekBefore);
+  });
+
+  test('with unsaved changes, the save prompt comes after a show is chosen and before it is imported', async () => {
+    await launchJesseAndDerek();
+    await assignF1(page, '1001');
+    await expect(page.locator('#show-dirty')).toBeVisible({ timeout: 10000 });
+
+    // Cancelling the import dialog asks nothing
+    let dialog = await openImportDialog();
+    await expect(page.locator('.modal.show')).toHaveCount(1);
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+    await page.waitForTimeout(500);
+    await expect(page.locator('.modal.show')).toHaveCount(0);
+
+    // Choosing a show asks before anything is replaced; Cancel imports nothing
+    await importComedySports();
+    await answerChoice(page, 'Unsaved changes', 'Cancel', { message: 'Save changes to "Jesse Show"?' });
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1001');
+    expect(readShows(userDataDir, 'Jesse').shows.map((b) => b.name)).toEqual(['Jesse Show']);
+
+    // Save keeps the edit in Jesse's show, then imports
+    await importComedySports();
+    await expect(shownDialog(page, 'Unsaved changes')).toBeVisible({ timeout: 10000 });
+    await answerChoice(page, 'Unsaved changes', 'Save');
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1004');
+    const doc = readShows(userDataDir, 'Jesse');
+    expect(doc.shows.map((b) => b.name)).toEqual(['Jesse Show', 'Comedy Sports (Derek)']);
+    expect(doc.shows[0].layout.hotkeys[0].hotkeys.f1).toBe('1001');
   });
 
   test('the import list never shows the current profile', async () => {

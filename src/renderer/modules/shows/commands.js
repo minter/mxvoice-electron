@@ -99,26 +99,35 @@ async function saveActive(deps) {
 /**
  * Whether the layout on screen differs from the saved show. The pending
  * recovery save is flushed first, since the session judges what it has been sent.
+ * A flush that failed counts as unsaved changes: the session never saw the
+ * latest layout, so it can't say the screen matches the saved show.
  */
 async function hasUnsavedChanges(deps) {
+  let flushFailed = false;
   try {
-    await deps.flushRecovery?.();
+    const result = await deps.flushRecovery?.();
+    // A save skipped by the restoration lock is not a failure
+    flushFailed = result?.success === false && !result.skipped;
+    if (flushFailed) window.debugLog?.warn('Could not flush the recovery save', { ...LOG_CONTEXT, error: result.error });
   } catch (error) {
+    flushFailed = true;
     window.debugLog?.warn('Could not flush the recovery save', { ...LOG_CONTEXT, error: error.message });
   }
   const state = unwrap(await deps.api.getState(), 'Reading the show session');
-  return state?.status === 'ready' && !!state.doc && state.dirty === true ? state : null;
+  if (state?.status !== 'ready' || !state.doc) return null;
+  return state.dirty === true || flushFailed ? state : null;
 }
 
 /**
  * Before the layout on screen is replaced: when it has unsaved changes, ask
  * to save them. Save writes the show first (a failure throws, so nothing is
  * replaced); Cancel and a dismissed prompt both stop.
- * @returns {Promise<boolean>} whether to go on
+ * @returns {Promise<{ proceed: boolean, saved?: string }>} whether to go on,
+ *   and the name of the show Save wrote
  */
 async function settleUnsavedChanges(trigger, deps, state = null) {
   const unsaved = state || await hasUnsavedChanges(deps);
-  if (!unsaved) return true;
+  if (!unsaved) return { proceed: true };
   const { name } = findShow(unsaved.doc, unsaved.doc.activeShowId);
   const choice = await deps.choose(
     `Save changes to "${name}"?`,
@@ -132,9 +141,12 @@ async function settleUnsavedChanges(trigger, deps, state = null) {
   );
   const answer = choice === 'save' || choice === 'discard' ? choice : 'cancel';
   deps.track('show_save_prompt', { choice: answer, trigger });
-  if (answer === 'cancel') return false;
-  if (answer === 'save') await saveActive(deps);
-  return true;
+  if (answer === 'cancel') return { proceed: false };
+  if (answer === 'save') {
+    await saveActive(deps);
+    return { proceed: true, saved: name };
+  }
+  return { proceed: true };
 }
 
 const handlers = {
@@ -145,8 +157,18 @@ const handlers = {
       window.debugLog?.info('Show command dropped: a dialog is open', { ...LOG_CONTEXT, command: 'switch' });
       return null;
     }
-    if (!(await settleUnsavedChanges('switch', deps, unsaved))) return null;
-    const loaded = unwrap(await deps.api.activate(showId), 'Switching shows');
+    const { proceed, saved } = await settleUnsavedChanges('switch', deps, unsaved);
+    if (!proceed) return null;
+    let loaded;
+    try {
+      loaded = unwrap(await deps.api.activate(showId), 'Switching shows');
+    } catch (error) {
+      if (saved === undefined) throw error;
+      // The prompt's Save went through, so "not changed" would be wrong
+      window.debugLog?.error('Show command failed after saving', { ...LOG_CONTEXT, command: 'switch', error: error.message });
+      deps.alert(`Your changes to "${saved}" were saved, but Mx. Voice couldn't open the other show.`, 'Show not opened');
+      return null;
+    }
     return (await openLoaded(loaded, deps)) ? ['show_switched'] : null;
   },
 
@@ -218,10 +240,12 @@ const handlers = {
 
   async import(_showId, deps) {
     await readyDoc(deps);
-    if (!(await settleUnsavedChanges('import', deps))) return null;
     const groups = unwrap(await deps.api.listImportable(), 'Listing shows to import');
+    // An empty list still opens the dialog, which says there is nothing to import
     const choice = await deps.chooseImportShow(groups || []);
     if (!choice) return null;
+    // Asked only once there is a show to import, and before it replaces the screen
+    if (!(await settleUnsavedChanges('import', deps)).proceed) return null;
     const loaded = unwrap(await deps.api.importShow(choice.profile, choice.showId), 'Importing the show');
     return (await openLoaded(loaded, deps)) ? ['show_imported'] : null;
   }
