@@ -7,6 +7,8 @@
  * @module event-handlers
  */
 
+import { setTabLabel } from './tab-label.js';
+
 /**
  * Initialize the Event Handlers module
  * @param {Object} options - Configuration options
@@ -46,7 +48,7 @@ function initializeEventHandlers(options = {}) {
     const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#hotkey_tabs .nav-link.active');
-      if (link) link.textContent = newName;
+      setTabLabel(link, newName);
       const tabNumber = Number(link?.getAttribute('href')?.match(/^#hotkeys_list_(\d)$/)?.[1]);
       moduleRegistry.hotkeys?.renameHotkeyStateTab?.(tabNumber, newName);
       moduleRegistry.hotkeys?.requestProfileStateSave?.();
@@ -64,7 +66,7 @@ function initializeEventHandlers(options = {}) {
     const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#holding_tank_tabs .nav-link.active');
-      if (link) link.textContent = newName;
+      setTabLabel(link, newName);
       const tabNumber = Number(link?.getAttribute('href')?.match(/^#holding_tank_(\d)$/)?.[1]);
       moduleRegistry.holdingTank?.renameHoldingTankStateTab?.(tabNumber, newName);
       moduleRegistry.holdingTank?.requestProfileStateSave?.();

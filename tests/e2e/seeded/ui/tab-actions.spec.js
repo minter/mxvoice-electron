@@ -3,7 +3,7 @@ import fs from 'fs';
 import { launchSeededApp, waitForAppReady } from '../../../utils/seeded-launch.js';
 import { readRecovery, seedShows, showsDocument } from '../../../utils/seed-shows.js';
 import { shownDialog } from '../../../utils/show-e2e.js';
-import { CLEAR_TAB_MESSAGE, TAB_STRIPS, chooseTabAction, openTabActions, tabActionsMenu } from '../../../utils/tab-actions.js';
+import { CLEAR_TAB_MESSAGE, TAB_STRIPS, chooseTabAction, openTabActions, renameSelectedTab, tabActionsMenu } from '../../../utils/tab-actions.js';
 
 // Seeded songs: 1001 Got The Time, 1002 The Wheel, 1003, 1004 We Are Family, 1005 Eat It.
 const PROFILE = 'Default User';
@@ -234,5 +234,38 @@ test.describe('Tab actions - ⋯ menu and right-click', () => {
     await holdingPrompt.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.locator('.prompt-input')).toHaveCount(0, { timeout: 5000 });
     await expect(holdingTab(page, 3)).toHaveText('Walk-ons');
+  });
+
+  test('long tab names stay on one line, are truncated, and show in full on hover', async () => {
+    const hrefs = { hotkeys: (n) => `#hotkeys_list_${n}`, holdingTank: (n) => `#holding_tank_${n}` };
+    for (const [panel, strip] of Object.entries(TAB_STRIPS)) {
+      const heightBefore = (await page.locator(strip).boundingBox()).height;
+      const names = [];
+      for (let n = 1; n <= 5; n++) {
+        const name = `${panel === 'hotkeys' ? 'Hotkey' : 'Holding'} section number ${n} long`;
+        names.push(name);
+        await page.locator(`${strip} a[href="${hrefs[panel](n)}"]`).click();
+        await renameSelectedTab(page, panel, name);
+      }
+
+      const items = await page.locator(`${strip} > li`).evaluateAll((els) => els.map((el) => el.getBoundingClientRect().top));
+      expect(items).toHaveLength(6);
+      expect(new Set(items.map((top) => Math.round(top))).size).toBe(1);
+      expect((await page.locator(strip).boundingBox()).height).toBeCloseTo(heightBefore, 0);
+
+      const links = page.locator(`${strip} a.nav-link`);
+      const metrics = await links.evaluateAll((els) => els.map((el) => ({ truncated: el.scrollWidth > el.clientWidth, title: el.getAttribute('title') })));
+      expect(metrics.some((m) => m.truncated)).toBe(true);
+      expect(metrics.map((m) => m.title)).toEqual(names);
+
+      const stripBox = await page.locator(strip).boundingBox();
+      const button = page.locator(`${strip} .tab-actions-btn`);
+      await expect(button).toBeVisible();
+      const buttonBox = await button.boundingBox();
+      expect(buttonBox.x).toBeGreaterThanOrEqual(stripBox.x);
+      expect(buttonBox.x + buttonBox.width).toBeLessThanOrEqual(stripBox.x + stripBox.width + 1);
+      expect(buttonBox.y).toBeGreaterThanOrEqual(stripBox.y);
+      expect(buttonBox.y + buttonBox.height).toBeLessThanOrEqual(stripBox.y + stripBox.height + 1);
+    }
   });
 });

@@ -1057,3 +1057,31 @@ legend {
   box-shadow: 0 0 0 0.25rem rgba(255, 77, 77, 0.25) !important;
   outline: none !important;
 }
+
+/* Tab rows never wrap: the five tabs share the width equally and a long name
+   is cut off with an ellipsis (its full name is the link's tooltip). The ⋯
+   item keeps its own fixed width at the right. */
+#hotkey_tabs.nav-fill,
+#holding_tank_tabs.nav-fill {
+  flex-wrap: nowrap;
+}
+
+#hotkey_tabs.nav-fill .nav-item,
+#holding_tank_tabs.nav-fill .nav-item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+#hotkey_tabs.nav-fill .nav-item.tab-actions-item,
+#holding_tank_tabs.nav-fill .nav-item.tab-actions-item {
+  flex: 0 0 auto;
+}
+
+#hotkey_tabs .nav-link,
+#holding_tank_tabs .nav-link {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

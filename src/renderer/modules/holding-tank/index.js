@@ -35,6 +35,7 @@ import Dom from '../dom-utils/index.js';
 // Import secure adapters
 import { customConfirm, customPrompt, scaleScrollable } from '../utils/index.js';
 import { confirmClearTab } from '../ui/tab-actions-menu.js';
+import { setTabLabel } from '../ui/tab-label.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 import HoldingTankState from './holding-tank-state.js';
 import { fetchSongsById } from '../shows/layout-applier.js';
@@ -132,7 +133,7 @@ export function applyHoldingTankSnapshot(snapshot, songsById) {
 
   for (const tab of holdingTankState.toSnapshot()) {
     const tabLink = document.querySelector(`#holding_tank_tabs .nav-item:nth-child(${tab.tabNumber}) a`);
-    if (tabLink) tabLink.textContent = tab.tabName || String(tab.tabNumber);
+    setTabLabel(tabLink, tab.tabName, tab.tabNumber);
     const tabContent = document.getElementById(`holding_tank_${tab.tabNumber}`);
     if (!tabContent) continue;
     tabContent.replaceChildren();
@@ -492,7 +493,7 @@ export async function renameHoldingTankTab() {
   const currentName = Dom.text('#holding_tank_tabs .nav-link.active');
   const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
   if (newName && newName.trim() !== "") {
-    Dom.text('#holding_tank_tabs .nav-link.active', newName);
+    setTabLabel(document.querySelector('#holding_tank_tabs .nav-link.active'), newName);
     const tabNumber = Number(document.querySelector('#holding_tank_tabs .nav-link.active')
       ?.getAttribute('href')?.match(/^#holding_tank_(\d)$/)?.[1]);
     if (tabNumber) holdingTankState.renameTab(tabNumber, newName);

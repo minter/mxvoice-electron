@@ -25,6 +25,7 @@ import { fetchSongsById } from '../shows/layout-applier.js';
 // Import secure adapters for UI operations
 import { customConfirm, customPrompt } from '../utils/index.js';
 import { confirmClearTab } from '../ui/tab-actions-menu.js';
+import { setTabLabel } from '../ui/tab-label.js';
 
 /**
  * Hotkeys Module Class
@@ -186,7 +187,7 @@ class HotkeysModule {
 
     for (const tab of this.state.toSnapshot()) {
       const tabLink = document.querySelector(`#hotkey_tabs .nav-item:nth-child(${tab.tabNumber}) a`);
-      if (tabLink) tabLink.textContent = tab.tabName || String(tab.tabNumber);
+      setTabLabel(tabLink, tab.tabName, tab.tabNumber);
       const tabContent = document.getElementById(`hotkeys_list_${tab.tabNumber}`);
       for (let keyNumber = 1; keyNumber <= 12; keyNumber++) {
         const key = `f${keyNumber}`;
@@ -320,7 +321,7 @@ class HotkeysModule {
 
     if (title) {
       const active = document.querySelector('#hotkey_tabs li a.active');
-      if (active) active.textContent = title;
+      setTabLabel(active, title);
       if (tabNumber) this.state.renameTab(tabNumber, title);
     }
 
@@ -585,7 +586,7 @@ class HotkeysModule {
     );
     if (newName && newName.trim() !== '') {
       const active = document.querySelector('#hotkey_tabs .nav-link.active');
-      if (active) active.textContent = newName;
+      if (active) setTabLabel(active, newName);
       const tabNumber = Number(active?.getAttribute('href')?.match(/^#hotkeys_list_(\d)$/)?.[1]);
       if (tabNumber) this.state.renameTab(tabNumber, newName);
       this.requestProfileStateSave();
