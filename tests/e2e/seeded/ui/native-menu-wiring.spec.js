@@ -182,8 +182,8 @@ test.describe('Native menu wiring', () => {
     expect(topLevel).not.toContain('Hotkeys');
 
     expect(await findMenuItem(showName)).toEqual({ found: true, enabled: true });
-    expect(await findMenuItem(`Save "${showName}"`)).toEqual({ found: true, enabled: true });
-    expect(await findMenuItem(`Revert to "${showName}"`)).toEqual({ found: true, enabled: true });
+    expect(await findMenuItem(`Save "${showName}"…`)).toEqual({ found: true, enabled: true });
+    expect(await findMenuItem('Revert to Saved…')).toEqual({ found: true, enabled: false });
     expect(await findMenuItem('Import Hotkey File…')).toEqual({ found: true, enabled: true });
     expect(await findMenuItem('Start a New Session')).toEqual({ found: false });
     expect(await findMenuItem('Open Hotkeys File')).toEqual({ found: false });

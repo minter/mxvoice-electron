@@ -45,7 +45,7 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 ## State Management
 
 - **Shared state** — `window.sharedState` (singleton Map) holds runtime state: currentSong, hotkeys, holding-tank data, animation frame IDs.
-- **Show session status** — the main-process show session is `idle` / `loading` / `ready` / `failed` / `unreadable` (`idle` before the first open and after it ends). Save, Save As, Revert, Rename and Delete need `ready`; recovery writes are refused until then. The Shows menu is rebuilt from the session.
+- **Show session status** — the main-process show session is `idle` / `loading` / `ready` / `failed` / `unreadable` (`idle` before the first open and after it ends). Save, Save As, Revert, Rename and Delete need `ready`, and Revert to Saved also needs `dirty`; recovery writes are refused until then. The Shows menu is rebuilt from the session, including whenever the visible `dirty` flag flips.
 - **Unsaved-changes dot** — the session's `dirty` flag (in `state()` and in each `saveRecovery` result) is set when a recovery save writes and cleared when it retires as equal, and by open, switch, revert, import, deleting the active show, Save, Save As and startEmpty; restoring a recovery record sets it. `profile-state` passes each result's `dirty` to the header through the `show-dirty-changed` window event, which shows `#show-dirty`.
 - **Cross-module events** — modules communicate via `window.addEventListener('custom-event')` for search, categories, audio control.
 

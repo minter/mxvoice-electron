@@ -8,7 +8,8 @@ const shows = [
 const readyState = (activeId = 'b1') => ({
   status: 'ready',
   activeShow: shows.find((b) => b.id === activeId),
-  shows
+  shows,
+  dirty: true
 });
 
 function build(state, platform = 'darwin') {
@@ -34,27 +35,35 @@ describe('Shows menu', () => {
   it('uses the specified items in order', () => {
     const { menu } = build(readyState());
     expect(labels(menu)).toEqual([
-      'Comedy Sports', 'Mom & Pop', '---', 'Save "Comedy Sports"', 'Save As…',
-      'Revert to "Comedy Sports"', 'Rename "Comedy Sports"…', 'Delete "Comedy Sports"…', '---',
+      'Comedy Sports', 'Mom & Pop', '---', 'Save "Comedy Sports"…', 'Save As…',
+      'Revert to Saved…', 'Rename "Comedy Sports"…', 'Delete "Comedy Sports"…', '---',
       'Import Show…', 'Import Hotkey File…', 'Import Holding Tank File…'
     ]);
     walk(menu.submenu, (item) => expect(item.submenu, item.label).toBeUndefined());
   });
 
-  it('names the active show in Save, Revert, Rename and Delete', () => {
+  it('names the active show in Save, Rename and Delete; Revert names none', () => {
     const { menu } = build(readyState('b2'));
-    expect(find(menu, 'Save "Mom & Pop"')).toBeTruthy();
-    expect(find(menu, 'Revert to "Mom & Pop"')).toBeTruthy();
+    expect(find(menu, 'Save "Mom & Pop"…')).toBeTruthy();
+    expect(find(menu, 'Revert to Saved…')).toBeTruthy();
     expect(find(menu, 'Rename "Mom & Pop"…')).toBeTruthy();
     expect(find(menu, 'Delete "Mom & Pop"…')).toBeTruthy();
+  });
+
+  it('enables Revert to Saved only when ready with unsaved changes', () => {
+    const revert = (state) => find(build(state).menu, 'Revert to Saved…').enabled;
+    expect(revert(readyState())).toBe(true);
+    expect(revert({ ...readyState(), dirty: false })).toBe(false);
+    expect(revert({ ...readyState(), dirty: undefined })).toBe(false);
+    expect(revert({ ...readyState(), status: 'loading' })).toBe(false);
   });
 
   it('sends switch with a show id and every other command without one', () => {
     const { menu, send } = build(readyState());
     menu.submenu[1].click();
-    find(menu, 'Save "Comedy Sports"').click();
+    find(menu, 'Save "Comedy Sports"…').click();
     find(menu, 'Save As…').click();
-    find(menu, 'Revert to "Comedy Sports"').click();
+    find(menu, 'Revert to Saved…').click();
     find(menu, 'Rename "Comedy Sports"…').click();
     find(menu, 'Delete "Comedy Sports"…').click();
     find(menu, 'Import Show…').click();
@@ -105,22 +114,21 @@ describe('Shows menu', () => {
   it('renders nameless disabled items and no shows without a session', () => {
     const { menu } = build({ status: 'idle', activeShow: null, shows: [] });
     expect(labels(menu)).toEqual([
-      '---', 'Save', 'Save As…', 'Revert to', 'Rename…', 'Delete…', '---',
+      '---', 'Save…', 'Save As…', 'Revert to Saved…', 'Rename…', 'Delete…', '---',
       'Import Show…', 'Import Hotkey File…', 'Import Holding Tank File…'
     ]);
-    expect(find(menu, 'Save').enabled).toBe(false);
+    expect(find(menu, 'Save…').enabled).toBe(false);
     expect(find(menu, 'Rename…').enabled).toBe(false);
     expect(find(menu, 'Delete…').enabled).toBe(false);
   });
 
   it('escapes & on win32 and linux, not on darwin', () => {
     const state = readyState('b2');
-    expect(find(build(state, 'darwin').menu, 'Save "Mom & Pop"')).toBeTruthy();
+    expect(find(build(state, 'darwin').menu, 'Save "Mom & Pop"…')).toBeTruthy();
     for (const platform of ['win32', 'linux']) {
       const { menu } = build(state, platform);
       expect(menu.submenu[1].label).toBe('Mom && Pop');
-      expect(find(menu, 'Save "Mom && Pop"')).toBeTruthy();
-      expect(find(menu, 'Revert to "Mom && Pop"')).toBeTruthy();
+      expect(find(menu, 'Save "Mom && Pop"…')).toBeTruthy();
       expect(find(menu, 'Rename "Mom && Pop"…')).toBeTruthy();
       expect(find(menu, 'Delete "Mom && Pop"…')).toBeTruthy();
     }

@@ -94,7 +94,7 @@ test.describe('Shows - menu commands', () => {
     await assignF1(page, '1001');
     await expect.poll(() => readRecovery(userDataDir, PROFILE)?.layout?.hotkeys?.[0]?.hotkeys?.f1 ?? null, { timeout: 10000 }).toBe('1001');
 
-    await clickShowMenu(app, 'Save "Main Show"');
+    await clickShowMenu(app, 'Save "Main Show"…');
     await answerConfirm(page, 'Save "Main Show"?', 'Save', {
       message: '"Main Show" will open with the layout on screen now. Its saved layout will be replaced.'
     });
@@ -111,7 +111,7 @@ test.describe('Shows - menu commands', () => {
     await launch([{ name: 'Main Show' }]);
     await assignF1(page, '1004');
 
-    await clickShowMenu(app, 'Save "Main Show"');
+    await clickShowMenu(app, 'Save "Main Show"…');
     await answerConfirm(page, 'Save "Main Show"?', 'Save');
     await expect.poll(() => f1Of(activeShow(readShows(userDataDir, PROFILE)))).toBe('1004');
 
@@ -126,7 +126,7 @@ test.describe('Shows - menu commands', () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }]);
     await assignF1(page, '1001');
 
-    await clickShowMenu(app, 'Save "Main Show"');
+    await clickShowMenu(app, 'Save "Main Show"…');
     await answerConfirm(page, 'Save "Main Show"?', 'Cancel');
 
     expect(f1Of(activeShow(readShows(userDataDir, PROFILE)))).toBe('1002');
@@ -145,7 +145,7 @@ test.describe('Shows - menu commands', () => {
     await expect(dot).toHaveText('•');
     await expect(page.locator('#show-name')).toHaveText('Main Show');
 
-    await clickShowMenu(app, 'Save "Main Show"');
+    await clickShowMenu(app, 'Save "Main Show"…');
     await answerConfirm(page, 'Save "Main Show"?', 'Save');
     await expect(dot).toBeHidden({ timeout: 10000 });
 
@@ -156,13 +156,31 @@ test.describe('Shows - menu commands', () => {
     await expect(dot).toBeHidden({ timeout: 10000 });
   });
 
+  test('Revert to Saved is enabled only while there are unsaved changes', async () => {
+    await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }]);
+    const revertEnabled = () => app.evaluate(({ Menu }) => {
+      const shows = Menu.getApplicationMenu().items.find((i) => i.label === 'Shows');
+      return shows.submenu.items.find((i) => i.label === 'Revert to Saved…')?.enabled;
+    });
+    await expect.poll(revertEnabled).toBe(false);
+
+    await assignF1(page, '1001');
+    await expect(page.locator('#show-dirty')).toBeVisible({ timeout: 10000 });
+    await expect.poll(revertEnabled).toBe(true);
+
+    await clickShowMenu(app, 'Save "Main Show"…');
+    await answerConfirm(page, 'Save "Main Show"?', 'Save');
+    await expect(page.locator('#show-dirty')).toBeHidden({ timeout: 10000 });
+    await expect.poll(revertEnabled).toBe(false);
+  });
+
   test('revert brings back the saved show', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }]);
     await assignF1(page, '1001');
 
-    await clickShowMenu(app, 'Revert to "Main Show"');
-    await answerConfirm(page, 'Revert to "Main Show"?', 'Revert', {
-      message: 'Changes since "Main Show" was opened will be discarded.'
+    await clickShowMenu(app, 'Revert to Saved…');
+    await answerConfirm(page, 'Revert to Saved?', 'Revert', {
+      message: 'Changes since "Main Show" was last saved will be discarded.'
     });
 
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1002');
@@ -305,7 +323,7 @@ test.describe('Shows - menu commands', () => {
 
     await clickShowMenu(app, 'Save As…');
     await expect(shownDialog(page, 'Save As')).toBeVisible({ timeout: 10000 });
-    await clickShowMenu(app, 'Revert to "Main Show"');
+    await clickShowMenu(app, 'Rename "Main Show"…');
     await page.waitForTimeout(500);
     await expect(page.locator('.modal.show')).toHaveCount(1);
 

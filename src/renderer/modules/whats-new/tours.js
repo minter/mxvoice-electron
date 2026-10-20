@@ -30,7 +30,7 @@ export default {
         },
         {
           title: 'The Shows Menu',
-          description: 'Use the Shows menu to switch shows, Save the show on screen, Save As a new show, Revert to the saved one, or Rename or Delete the show on screen. To tidy another show, switch to it first. Switching to another show, or importing one, asks whether to save your changes first.',
+          description: 'Use the Shows menu to switch shows, Save the show on screen, Save As a new show, Revert to Saved (available when you have unsaved changes), or Rename or Delete the show on screen. To tidy another show, switch to it first. Switching to another show, or importing one, asks whether to save your changes first.',
         },
         {
           element: '#profile-indicator',

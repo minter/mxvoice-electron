@@ -92,7 +92,7 @@ Restoring a crashed session loads it as the live layout. It still does not chang
 
 Two explicit ways to keep the layout on screen:
 
-- **Save "Comedy Sports"** replaces that saved show with the layout now on screen. The show's name is part of the command, and the command asks for a single confirmation that names the show, because replacing a show is the irreversible mistake. Anything changed after the save still disappears on the next clean exit.
+- **Save "Comedy Sports"…** replaces that saved show with the layout now on screen. The show's name is part of the command, and the command asks for a single confirmation that names the show, because replacing a show is the irreversible mistake. Anything changed after the save still disappears on the next clean exit.
 - **Save As...** takes the layout now on screen, asks for a name, and adds a show. The new show becomes the active one. The show it came from keeps its saved layout, and Save As does not ask whether to discard it.
 
 While the layout on screen differs from the saved show, the header shows a dot after the show's name. Saving clears it. So does changing the layout back to what was saved.
@@ -108,7 +108,7 @@ Save is allowed to store an empty layout, because someone may want a show to ope
 
 Clearing a tab changes the live session only.
 
-**Revert to "Comedy Sports"** replaces the live session with the active show as it was saved. It asks once, then reloads the show. It replaces View → Start a New Session, which goes away.
+**Revert to Saved…** replaces the live session with the active show as it was saved. It is enabled only when the session is ready and there are unsaved changes (the header dot); otherwise it is disabled and does nothing. It asks once, then reloads the show. It replaces View → Start a New Session, which goes away.
 
 Switching shows, reverting, importing a show, or deleting the active show can happen while audio is playing. The song that is already playing continues, and its name stays in the now-playing display. Stop still stops it. The marks that point at the old layout are cleared: the playing-row highlight, the selected row and the active hotkey. Playlist mode does not advance into the holding tank that just loaded, even if the operator switches to Playlist mode afterwards. The operator chooses the next sound.
 
@@ -141,9 +141,9 @@ The menu contains:
 
 - The profile's shows, with a check on the active one. Choosing one switches shows.
 - A separator
-- Save "Comedy Sports"
+- Save "Comedy Sports"…
 - Save As...
-- Revert to "Comedy Sports"
+- Revert to Saved…
 - Rename "Comedy Sports"...
 - Delete "Comedy Sports"...
 - A separator, then Import Show...
@@ -264,7 +264,8 @@ These are settled. A review that reopens them should say what new fact contradic
 | Own Shows menu, header is a label | Profile is who. The show is what is loaded. The header has to show which show is loaded, and it cannot hold replace and delete. |
 | Backing out of Switch Profile keeps the night | The picker opens over the live show. Cancelling it, or picking the same person, changes nothing, so opening the picker can never destroy the show. |
 | Song ids are never reused | A show stores bare ids. If an id could later mean a different song, an old show would silently play the wrong track. A missing song is dropped and counted instead. |
-| Revert to the saved show | It replaces Start a New Session. People need a way back to the prepared layout in the middle of a night, and it names the show it returns to. |
+| Revert to the saved show | It replaces Start a New Session. People need a way back to the prepared layout in the middle of a night. |
+| Revert only with unsaved changes | With nothing changed there is nothing to discard, so the item is disabled. The header dot and the menu agree on whether the show has changed. |
 | Rename and Delete act on the current show | Like Save and Revert, each command names the show it changes, and that show is the one on screen. Nothing is renamed or deleted that the person cannot see. Tidying another show means switching to it first. |
 | Delete loads the next show now | The header and the screen have to stay on a real show. Delete of the active show is a switch, and delete of the last show shows the empty replacement immediately. Its own confirmation replaces the save prompt. |
 | A show change does not take over playback | The current song finishes or is stopped by the operator. The holding tank that just loaded does not start playing by itself. |

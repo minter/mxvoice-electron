@@ -11,7 +11,7 @@ function escapeLabel(name, platform) {
 }
 
 /**
- * @param {Object} state - { status, activeShow, shows } from the show session
+ * @param {Object} state - { status, activeShow, shows, dirty } from the show session
  * @param {Object} [options]
  * @param {Function} [options.rebuild] - rebuilds the application menu from the session
  */
@@ -48,9 +48,10 @@ function buildShowMenu(state, { platform, send, fileOperations, rebuild } = {}) 
         };
       }),
       { type: 'separator' },
-      { label: quoted('Save'), enabled: hasActive, click: emit('save') },
+      { label: `${quoted('Save')}…`, enabled: hasActive, click: emit('save') },
       { label: 'Save As…', enabled: ready, click: emit('save-as') },
-      { label: quoted('Revert to'), enabled: hasActive, click: emit('revert') },
+      // Revert has nothing to discard unless the layout on screen differs from the saved show
+      { label: 'Revert to Saved…', enabled: ready && !!state?.dirty, click: emit('revert') },
       // Both act on the show on screen; the renderer reads it from the session
       { label: `${quoted('Rename')}…`, enabled: hasActive, click: emit('rename') },
       { label: `${quoted('Delete')}…`, enabled: hasActive, click: emit('delete') },

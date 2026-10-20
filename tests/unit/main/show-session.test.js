@@ -234,6 +234,23 @@ describe('show session', () => {
     expect(ctx.rebuildMenu).toHaveBeenCalledTimes(1);
   });
 
+  it('rebuilds the menu when the visible dirty flag flips, not on a dirty-to-dirty write', async () => {
+    const ctx = setup();
+    await openReady(ctx);
+    ctx.rebuildMenu.mockClear();
+
+    await ctx.session.saveRecovery(layoutWith(9));
+    expect(ctx.session.state().dirty).toBe(true);
+    expect(ctx.rebuildMenu).toHaveBeenCalledTimes(1);
+
+    await ctx.session.saveRecovery(layoutWith(8));
+    expect(ctx.rebuildMenu).toHaveBeenCalledTimes(1);
+
+    await ctx.session.saveRecovery(layoutWith(1));
+    expect(ctx.session.state().dirty).toBe(false);
+    expect(ctx.rebuildMenu).toHaveBeenCalledTimes(2);
+  });
+
   it('end() fences before it retires, so a late saveRecovery cannot recreate the record', async () => {
     const ctx = setup();
     await openReady(ctx);

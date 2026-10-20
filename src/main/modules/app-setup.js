@@ -156,10 +156,10 @@ function createApplicationMenu() {
     logService: getLogService(),
     rendererCommands,
     getShowMenuState: () => {
-      const { status, doc } = showSession?.state?.() ?? {};
+      const { status, doc, dirty } = showSession?.state?.() ?? {};
       const shows = (doc?.shows ?? []).map((b) => ({ id: b.id, name: b.name }));
       const activeShow = shows.find((b) => b.id === doc?.activeShowId) ?? null;
-      return { status: status ?? 'idle', activeShow, shows };
+      return { status: status ?? 'idle', activeShow, shows, dirty: !!dirty };
     },
     rebuildMenu: () => createApplicationMenu()
   });

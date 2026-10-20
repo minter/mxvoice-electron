@@ -24,10 +24,14 @@ const REFUSED_ERRORS = new Set(['busy', 'session not ready']);
 let running = false;
 
 /** The current show document; throws 'session not ready' before any prompt. */
-async function readyDoc({ api }) {
+async function readyState({ api }) {
   const state = unwrap(await api.getState(), 'Reading the show session');
   if (state?.status !== 'ready' || !state.doc) throw new Error('session not ready');
-  return state.doc;
+  return state;
+}
+
+async function readyDoc(deps) {
+  return (await readyState(deps)).doc;
 }
 
 function findShow(doc, showId) {
@@ -196,12 +200,14 @@ const handlers = {
   },
 
   async revert(_showId, deps) {
-    const doc = await readyDoc(deps);
+    const { doc, dirty } = await readyState(deps);
+    // Nothing to discard; the menu item is disabled then, this is a backstop
+    if (!dirty) return null;
     const { name } = findShow(doc, doc.activeShowId);
     const confirmed = await deps.confirm(
-      `Changes since "${name}" was opened will be discarded.`,
-      `Revert to "${name}"?`,
-      { confirmLabel: 'Revert' }
+      `Changes since "${name}" was last saved will be discarded.`,
+      'Revert to Saved?',
+      { confirmLabel: 'Revert', defaultAction: 'cancel' }
     );
     if (!confirmed) return null;
     const loaded = unwrap(await deps.api.revert(), 'Reverting the show');

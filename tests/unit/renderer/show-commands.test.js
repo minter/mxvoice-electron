@@ -106,21 +106,28 @@ describe('runShowCommand', () => {
   });
 
   it('revert asks, then reloads the saved show', async () => {
-    const { api, deps, calls } = setup();
+    const { api, deps, calls } = setup({ dirty: true });
     await runShowCommand({ command: 'revert' }, deps);
     expect(deps.confirm).toHaveBeenCalledWith(
-      'Changes since "Main Show" was opened will be discarded.',
-      'Revert to "Main Show"?',
-      { confirmLabel: 'Revert' }
+      'Changes since "Main Show" was last saved will be discarded.',
+      'Revert to Saved?',
+      { confirmLabel: 'Revert', defaultAction: 'cancel' }
     );
     expect(api.revert).toHaveBeenCalledOnce();
     expect(calls).toEqual(['apply:Reverted', 'ready:6:true']);
     expect(deps.track).toHaveBeenCalledWith('show_reverted', undefined);
 
-    const cancelled = setup();
+    const cancelled = setup({ dirty: true });
     cancelled.deps.confirm.mockResolvedValue(false);
     await runShowCommand({ command: 'revert' }, cancelled.deps);
     expect(cancelled.api.revert).not.toHaveBeenCalled();
+  });
+
+  it('revert does nothing when there are no unsaved changes', async () => {
+    const { api, deps } = setup({ dirty: false });
+    await runShowCommand({ command: 'revert' }, deps);
+    expect(deps.confirm).not.toHaveBeenCalled();
+    expect(api.revert).not.toHaveBeenCalled();
   });
 
   it('save-as creates a show from the on-screen layout', async () => {

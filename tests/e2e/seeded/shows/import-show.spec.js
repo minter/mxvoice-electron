@@ -106,7 +106,7 @@ test.describe('Shows - Import Show', () => {
     await waitForShowMenuReady(app);
     await assignF1(page, '1001');
 
-    await clickShowMenu(app, 'Save "Comedy Sports (Derek)"');
+    await clickShowMenu(app, 'Save "Comedy Sports (Derek)"…');
     await answerConfirm(page, 'Save "Comedy Sports (Derek)"?', 'Save');
 
     await expect.poll(() => activeShow(readShows(userDataDir, 'Jesse')).layout.hotkeys[0].hotkeys.f1).toBe('1001');

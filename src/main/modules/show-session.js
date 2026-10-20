@@ -159,6 +159,13 @@ export function createShowSession({
 
   const visibleDirty = () => status === 'ready' && dirty;
 
+  // The Shows menu's Revert item follows the visible flag, so rebuild only when it flips
+  function setDirty(next) {
+    const before = visibleDirty();
+    dirty = next;
+    if (visibleDirty() !== before) refreshMenu('setDirty');
+  }
+
   const state = () => ({ profile, status, doc, generation, dirty: visibleDirty() });
 
   async function open() {
@@ -171,7 +178,7 @@ export function createShowSession({
     pendingHandoff = null;
     pendingRecovery = null;
     droppedIds = new Set();
-    dirty = false;
+    setDirty(false);
     doc = null;
     setStatus('loading');
 
@@ -241,7 +248,7 @@ export function createShowSession({
     if (generation !== g) throw new Error('superseded by a newer open');
     doc = emptyDoc;
     pendingRecovery = record;
-    dirty = false;
+    setDirty(false);
     setStatus('loading');
     return { layout: normalizeLayout(activeShow().layout), generation, recovery: recoveryInfo(record) };
   }
@@ -258,11 +265,11 @@ export function createShowSession({
     // A handoff is spent once restored: another crash before any edit must ask.
     if (choice === 'restore') {
       // The restored layout is the recovery copy, not the saved show
-      dirty = true;
+      setDirty(true);
       if (record.handoff) await queued(() => recoveryStore.clearHandoff(p));
       return { layout: normalizeLayout(record.layout) };
     }
-    dirty = false;
+    setDirty(false);
     await queued(() => recoveryStore.retire(p));
     return { layout: saved };
   }
@@ -306,7 +313,7 @@ export function createShowSession({
       lastWrittenLayout = normalized;
       // Set before the await: a newer generation, which sets its own, can't
       // have started yet, and a failed write or retire must not leave it stale
-      if (myGeneration === generation) dirty = !equal;
+      if (myGeneration === generation) setDirty(!equal);
       if (equal) {
         await recoveryStore.retire(p);
       } else {
@@ -432,7 +439,7 @@ export function createShowSession({
       await queued(async () => {
         if (generation !== g) return;
         const movedOn = recoveryWriteSeq !== writeSeq && !matchesSaved(lastWrittenLayout);
-        dirty = movedOn;
+        setDirty(movedOn);
         if (!movedOn) {
           // The layout on screen is now the saved show
           await recoveryStore.retire(p);
@@ -464,7 +471,7 @@ export function createShowSession({
     assertCurrent(g);
     generation += 1;
     pendingRecovery = null;
-    dirty = false;
+    setDirty(false);
     // Writes stay refused while loading, by status and by generation
     if (!handedOff) fenced = false;
     setStatus('loading');
