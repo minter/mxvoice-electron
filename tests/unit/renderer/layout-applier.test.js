@@ -141,7 +141,7 @@ describe('applyLayout', () => {
     });
 
     // '2' is in both collections and counts once; '2', '3' and '9' are missing.
-    await expect(applyLayout(layout, deps)).resolves.toEqual({ dropped: 3 });
+    await expect(applyLayout(layout, deps)).resolves.toEqual({ dropped: 3, droppedIds: ['2', '3', '9'] });
   });
 
   it('selects the saved tabs', async () => {

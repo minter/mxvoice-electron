@@ -96,9 +96,10 @@ describe('runBoardCommand', () => {
 
   it('toasts songs missing from the library after loading a board', async () => {
     const { deps } = setup();
-    deps.applyLayout.mockResolvedValue({ dropped: 2 });
+    deps.applyLayout.mockResolvedValue({ dropped: 2, droppedIds: ['31', '32'] });
     await runBoardCommand({ command: 'switch', boardId: 'b3' }, deps);
     expect(deps.toast).toHaveBeenCalledWith("2 songs in this board aren't in the library.", expect.any(Number));
+    expect(deps.api.reportReady).toHaveBeenCalledWith(5, true, { droppedIds: ['31', '32'] });
   });
 
   it('revert asks, then reloads the saved board', async () => {

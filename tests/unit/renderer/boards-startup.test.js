@@ -19,7 +19,7 @@ function setup({ open, confirm = vi.fn(async () => false), dropped = 0 } = {}) {
   const deps = {
     api,
     confirm,
-    applyLayout: vi.fn(async (layout) => { calls.push(`apply:${layout.hotkeys[0]?.tabName}`); return { dropped }; }),
+    applyLayout: vi.fn(async (layout) => { calls.push(`apply:${layout.hotkeys[0]?.tabName}`); return { dropped, droppedIds: dropped ? ['77'] : [] }; }),
     alert: vi.fn(),
     toast: vi.fn(),
     quit: vi.fn(async () => ok(null)),
@@ -129,6 +129,8 @@ describe('openSessionOnStartup', () => {
     const { deps } = setup({ open: opened(null, { notice: 'Opened the previous copy.' }), dropped: 3 });
     await openSessionOnStartup(deps);
     expect(deps.toast).toHaveBeenCalledWith("Opened the previous copy. 3 songs in this board aren't in the library.", expect.any(Number));
+    // The session is told which songs were dropped
+    expect(deps.api.reportReady).toHaveBeenCalledWith(7, true, { droppedIds: ['77'] });
   });
 
   it('words the missing-songs toast in the singular and plural', () => {
@@ -199,7 +201,7 @@ describe('initializeBoardCommands', () => {
 
     expect(initializeBoardCommands({ onBoardCommand, api, applyLayout, track, isModalOpen: () => true })).toBe(unsubscribe);
     listener({ command: 'switch', boardId: 'b2' });
-    await vi.waitFor(() => expect(api.reportReady).toHaveBeenCalledWith(3, true));
+    await vi.waitFor(() => expect(api.reportReady).toHaveBeenCalledWith(3, true, { droppedIds: [] }));
     expect(api.activate).toHaveBeenCalledWith('b2');
     expect(applyLayout).toHaveBeenCalledWith(savedLayout);
     expect(track).toHaveBeenCalledWith('board_switched', undefined);

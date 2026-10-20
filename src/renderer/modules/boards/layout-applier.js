@@ -59,7 +59,8 @@ function clearLayoutMarks(doc, win) {
  * @param {Function} [deps.showTab] - defaults to safeShowTab
  * @param {Document} [deps.document]
  * @param {Window} [deps.window]
- * @returns {Promise<{ dropped: number }>} distinct song ids missing from the library
+ * @returns {Promise<{ dropped: number, droppedIds: string[] }>} the distinct song
+ *   ids missing from the library, and how many
  */
 export async function applyLayout(layout, deps) {
   const {
@@ -89,7 +90,8 @@ export async function applyLayout(layout, deps) {
   showTab(`#holding_tank_tabs li:nth-child(${tabNumber(layout?.selected?.holdingTankTab)}) a`, LOG_CONTEXT);
   sharedState.set('boardGeneration', (Number(sharedState.get('boardGeneration')) || 0) + 1);
 
-  const dropped = songIds.filter(songId => !songsById.has(songId)).length;
+  const droppedIds = songIds.filter(songId => !songsById.has(songId));
+  const dropped = droppedIds.length;
   win?.debugLog?.info('Board layout applied', { ...LOG_CONTEXT, songCount: songIds.length, dropped });
-  return { dropped };
+  return { dropped, droppedIds };
 }

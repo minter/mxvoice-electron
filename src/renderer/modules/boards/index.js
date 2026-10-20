@@ -135,8 +135,8 @@ export async function openSessionOnStartup(overrides = {}) {
       window.debugLog?.info('Opening board', { ...LOG_CONTEXT, choice, handoff: opened.recovery?.handoff ?? null });
     }
 
-    const { dropped } = await deps.applyLayout(layout);
-    unwrap(await api.reportReady(generation, true), 'Reporting the board ready');
+    const { dropped, droppedIds = [] } = await deps.applyLayout(layout);
+    unwrap(await api.reportReady(generation, true, { droppedIds }), 'Reporting the board ready');
 
     const message = [opened.notice, droppedSongsMessage(dropped)].filter(Boolean).join(' ');
     if (message) deps.toast(message, TOAST_MS);

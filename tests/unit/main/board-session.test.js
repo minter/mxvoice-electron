@@ -178,6 +178,31 @@ describe('board session', () => {
     expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
   });
 
+  it('a no-op save after a board loaded with missing songs retires instead of writing', async () => {
+    // The saved board names song 2, which was deleted from the library
+    const saved = normalizeLayout({
+      hotkeys: [{ tabNumber: 1, hotkeys: { f1: '1', f2: '2' } }],
+      holdingTank: [{ tabNumber: 1, songIds: ['2', '1'] }],
+    });
+    const ctx = setup({ doc: makeDoc(saved) });
+    const opened = await ctx.session.open();
+    ctx.session.reportReady(opened.generation, true, { droppedIds: ['2'] });
+    ctx.recoveryStore.records.set('Alice', { version: 1, boardId: 'x', savedAt: T0, handoff: null, layout: layoutWith(5) });
+
+    // What the page shows: the board without song 2
+    await expect(ctx.session.saveRecovery(layoutWith(1))).resolves.toEqual({ retired: true });
+    expect(ctx.recoveryStore.write).not.toHaveBeenCalled();
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+
+    // A real edit still writes
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({});
+
+    // The next open starts without the old dropped ids
+    const again = await ctx.session.open();
+    ctx.session.reportReady(again.generation, true);
+    await expect(ctx.session.saveRecovery(layoutWith(1))).resolves.toEqual({});
+  });
+
   it('recovery writes go to the profile captured at open, even after getCurrentProfile changes', async () => {
     const ctx = setup();
     await openReady(ctx);

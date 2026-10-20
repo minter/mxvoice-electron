@@ -41,6 +41,15 @@ function setup(overrides = {}) {
 describe('board IPC handlers', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('report-ready rejects dropped ids that are not a short list of numeric strings', async () => {
+    const { boardSession } = setup();
+    for (const droppedIds of ['12', [12], ['12', 'x'], ['1;DROP'], Array.from({ length: 10001 }, (_, i) => String(i))]) {
+      const result = await handlers['board:report-ready']({}, 3, true, { droppedIds });
+      expect(result).toMatchObject({ success: false, error: 'Invalid dropped song ids' });
+    }
+    expect(boardSession.reportReady).not.toHaveBeenCalled();
+  });
+
   it('wraps results as { success, data }', async () => {
     const { boardSession } = setup();
 
@@ -55,7 +64,9 @@ describe('board IPC handlers', () => {
     });
     expect(boardSession.resolveRecovery).toHaveBeenCalledWith('restore');
     await expect(handlers['board:report-ready']({}, 3, true)).resolves.toEqual({ success: true, data: null });
-    expect(boardSession.reportReady).toHaveBeenCalledWith(3, true);
+    expect(boardSession.reportReady).toHaveBeenCalledWith(3, true, { droppedIds: [] });
+    await handlers['board:report-ready']({}, 4, true, { droppedIds: ['12', '7'] });
+    expect(boardSession.reportReady).toHaveBeenLastCalledWith(4, true, { droppedIds: ['12', '7'] });
     await expect(handlers['board:get-state']({})).resolves.toEqual({
       success: true, data: { profile: 'Alice', status: 'ready', doc: null, generation: 1 },
     });

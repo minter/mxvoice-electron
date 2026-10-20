@@ -18,6 +18,19 @@ function checkBoardId(boardId) {
   if (typeof boardId !== 'string' || !BOARD_ID.test(boardId)) throw new Error('Invalid board id');
 }
 
+const SONG_ID = /^\d+$/;
+// More ids than any board can hold
+const MAX_DROPPED_IDS = 10000;
+
+function checkDroppedIds(details) {
+  const droppedIds = details?.droppedIds ?? [];
+  const valid = Array.isArray(droppedIds)
+    && droppedIds.length <= MAX_DROPPED_IDS
+    && droppedIds.every((id) => typeof id === 'string' && SONG_ID.test(id));
+  if (!valid) throw new Error('Invalid dropped song ids');
+  return droppedIds;
+}
+
 // profileExists uses `in`, so inherited names such as 'constructor' pass it;
 // the session's listProfiles() check is what rejects those and is required
 function checkProfile(profile) {
@@ -50,7 +63,10 @@ export function register(deps) {
   handle(IPC.BOARDS.OPEN, 'open', () => boardSession.open());
   handle(IPC.BOARDS.START_EMPTY, 'startEmpty', () => boardSession.startEmpty());
   handle(IPC.BOARDS.RESOLVE_RECOVERY, 'resolveRecovery', (choice) => boardSession.resolveRecovery(choice));
-  handle(IPC.BOARDS.REPORT_READY, 'reportReady', (generation, ok) => boardSession.reportReady(generation, ok === true));
+  handle(IPC.BOARDS.REPORT_READY, 'reportReady', (generation, ok, details) => {
+    const droppedIds = checkDroppedIds(details);
+    return boardSession.reportReady(generation, ok === true, { droppedIds });
+  });
   handle(IPC.BOARDS.SAVE_RECOVERY, 'saveRecovery', (layout) => boardSession.saveRecovery(layout));
   handle(IPC.BOARDS.GET_STATE, 'getState', () => boardSession.state());
   handle(IPC.BOARDS.ACTIVATE, 'activate', (boardId) => {

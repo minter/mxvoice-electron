@@ -58,6 +58,23 @@ function layoutKey(layout) {
   return JSON.stringify(rest);
 }
 
+/** The layout without the given song ids, as the page shows a board whose songs left the library. */
+function withoutSongs(layout, songIds) {
+  const normalized = normalizeLayout(layout);
+  if (songIds.size === 0) return normalized;
+  return {
+    ...normalized,
+    hotkeys: normalized.hotkeys.map((tab) => ({
+      ...tab,
+      hotkeys: Object.fromEntries(Object.entries(tab.hotkeys).filter(([, id]) => !songIds.has(String(id))))
+    })),
+    holdingTank: normalized.holdingTank.map((tab) => ({
+      ...tab,
+      songIds: tab.songIds.filter((id) => !songIds.has(String(id)))
+    }))
+  };
+}
+
 /**
  * @param {Object} deps
  * @param {Object} deps.boardStore - from createBoardStore
@@ -98,6 +115,10 @@ export function createBoardSession({
   let writeQueue = Promise.resolve();
   // Set while a board mutation runs
   let mutating = false;
+  // Song ids the page dropped, as missing from the library, when it applied
+  // this generation's board. The live layout can never hold them, so the
+  // equality check leaves them out of the saved layout.
+  let droppedIds = new Set();
 
   function refreshMenu(fn) {
     try {
@@ -134,6 +155,7 @@ export function createBoardSession({
     ended = false;
     pendingHandoff = null;
     pendingRecovery = null;
+    droppedIds = new Set();
     doc = null;
     setStatus('loading');
 
@@ -214,13 +236,19 @@ export function createBoardSession({
     return { layout: saved };
   }
 
-  function reportReady(reportedGeneration, ok) {
+  /**
+   * @param {number} reportedGeneration
+   * @param {boolean} ok
+   * @param {{ droppedIds?: string[] }} [details] - song ids the page dropped as missing from the library
+   */
+  function reportReady(reportedGeneration, ok, { droppedIds: dropped = [] } = {}) {
     // A failed open() already set 'failed'; the page's failed report confirms it
     if (!ok && reportedGeneration === generation && status === 'failed') return;
     if (reportedGeneration !== generation || status !== 'loading') {
       debugLog?.info?.('Ignoring stale board ready report', { ...logCtx('reportReady'), reportedGeneration, generation, status });
       return;
     }
+    droppedIds = new Set(ok ? dropped.map(String) : []);
     setStatus(ok ? 'ready' : 'failed');
   }
 
@@ -235,7 +263,7 @@ export function createBoardSession({
       // Re-checked here: end() may have fenced while this waited its turn
       if (refused(myGeneration)) return { skipped: true };
       const board = activeBoard();
-      if (layoutKey(normalized) === layoutKey(board.layout)) {
+      if (layoutKey(normalized) === layoutKey(withoutSongs(board.layout, droppedIds))) {
         await recoveryStore.retire(p);
         return { retired: true };
       }

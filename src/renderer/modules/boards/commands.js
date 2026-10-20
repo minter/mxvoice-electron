@@ -67,8 +67,8 @@ export function nextBoardAfterDelete(doc, boardId) {
 async function openLoaded({ layout, generation }, deps) {
   const { api } = deps;
   try {
-    const { dropped } = await deps.applyLayout(layout);
-    unwrap(await api.reportReady(generation, true), 'Reporting the board ready');
+    const { dropped, droppedIds = [] } = await deps.applyLayout(layout);
+    unwrap(await api.reportReady(generation, true, { droppedIds }), 'Reporting the board ready');
     const message = droppedSongsMessage(dropped);
     if (message) deps.toast(message, TOAST_MS);
     return true;
