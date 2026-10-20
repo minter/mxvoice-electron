@@ -63,8 +63,7 @@ function setupMainProcessEventBridge({
     ['onIncreaseFontSize', 'increaseFontSize', 'increase_font_size'],
     ['onDecreaseFontSize', 'decreaseFontSize', 'decrease_font_size'],
     ['onToggleWaveform', 'toggleWaveform', 'toggle_wave_form'],
-    ['onToggleAdvancedSearch', 'toggleAdvancedSearch', 'toggle_advanced_search'],
-    ['onCloseAllTabs', 'closeAllTabs', 'close_all_tabs']
+    ['onToggleAdvancedSearch', 'toggleAdvancedSearch', 'toggle_advanced_search']
   ];
   uiEvents.forEach(([eventName, commandName, channelName]) => {
     register(eventName, () => callFirstAvailable(

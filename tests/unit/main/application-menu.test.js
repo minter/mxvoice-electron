@@ -12,7 +12,6 @@ function buildHarness() {
     decreaseFontSize: vi.fn(),
     toggleWaveform: vi.fn(),
     toggleAdvancedSearch: vi.fn(),
-    closeAllTabs: vi.fn(),
     editSelectedSong: vi.fn(),
     deleteSelectedSong: vi.fn(),
     manageCategories: vi.fn()
@@ -27,7 +26,12 @@ function buildHarness() {
     showAboutDialog: vi.fn(),
     debugLog: { warn: vi.fn() },
     logService: { exportLogs: vi.fn() },
-    rendererCommands
+    rendererCommands,
+    getBoardMenuState: () => ({
+      status: 'ready',
+      activeBoard: { id: 'b1', name: 'Comedy Sports' },
+      boards: [{ id: 'b1', name: 'Comedy Sports' }]
+    })
   });
   template.push(...result);
   return { Menu, rendererCommands, template };
@@ -37,7 +41,7 @@ describe('application menu', () => {
   it('builds and installs the platform menu', () => {
     const { Menu, template } = buildHarness();
     expect(template.map((menu) => menu.label)).toEqual(
-      expect.arrayContaining(['File', 'Edit', 'View', 'Songs', 'Profile'])
+      expect.arrayContaining(['File', 'Edit', 'View', 'Songs', 'Board', 'Profile'])
     );
     expect(Menu.buildFromTemplate).toHaveBeenCalledWith(template);
     expect(Menu.setApplicationMenu).toHaveBeenCalledOnce();
@@ -48,6 +52,36 @@ describe('application menu', () => {
     const viewMenu = template.find((menu) => menu.label === 'View');
     viewMenu.submenu.find((item) => item.label === 'Show/Hide Waveform').click();
     expect(rendererCommands.toggleWaveform).toHaveBeenCalledOnce();
+  });
+
+  it('has a Board menu where Hotkeys was, and no Hotkeys menu or Start a New Session', () => {
+    const { template } = buildHarness();
+    const labels = template.map((menu) => menu.label);
+    expect(labels).not.toContain('Hotkeys');
+    expect(labels.indexOf('Board')).toBe(labels.indexOf('Songs') + 1);
+    const board = template.find((menu) => menu.label === 'Board');
+    expect(board.submenu.map((i) => i.label)).toContain('Update "Comedy Sports"');
+    const view = template.find((menu) => menu.label === 'View');
+    expect(view.submenu.map((i) => i.label)).not.toContain('Start a New Session');
+    const accelerators = [];
+    const walk = (items) => items.forEach((i) => { accelerators.push(i.accelerator); if (i.submenu) walk(i.submenu); });
+    walk(template);
+    expect(accelerators).not.toContain('CommandOrControl+O');
+    expect(accelerators).not.toContain('CommandOrControl+S');
+  });
+
+  it('sends board commands to the window on menu:board-command', () => {
+    const send = vi.fn();
+    const Menu = { buildFromTemplate: vi.fn(), setApplicationMenu: vi.fn() };
+    const template = buildApplicationMenu({
+      app: { name: 'Mx. Voice' }, Menu, shell: {},
+      mainWindow: { isDestroyed: () => false, webContents: { send } },
+      fileOperations: {}, getCurrentProfile: () => 'Default User', showAboutDialog: vi.fn(),
+      debugLog: { warn: vi.fn() }, logService: {}, rendererCommands: {},
+      getBoardMenuState: () => ({ status: 'ready', activeBoard: { id: 'b1', name: 'A' }, boards: [{ id: 'b1', name: 'A' }, { id: 'b2', name: 'B' }] })
+    });
+    template.find((m) => m.label === 'Board').submenu[1].click();
+    expect(send).toHaveBeenCalledWith('menu:board-command', { command: 'switch', boardId: 'b2' });
   });
 
   it('disables destructive actions for the default profile', () => {

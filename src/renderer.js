@@ -679,7 +679,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
 // Legacy functions removed - now handled by modules:
 // - toggle_selected_row() -> moduleRegistry.ui.toggleSelectedRow()
 // - loop_on() -> moduleRegistry.audio.loop_on()
-// - closeAllTabs() -> moduleRegistry.ui.closeAllTabs()
 
 // Keyboard shortcuts now handled by the keyboard-manager module
 // This function is kept for backward compatibility but now uses the KeyboardManager

@@ -167,11 +167,37 @@ test.describe('Native menu wiring', () => {
     expect(await findMenuItem('Delete Current Profile...')).toEqual({ found: true, enabled: false });
   });
 
-  test('Start a New Session reloads the renderer through the menu bridge', async () => {
-    const navigation = page.waitForEvent('domcontentloaded');
-    await triggerMenuItem('Start a New Session');
-    await navigation;
-    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
-    await expect(page.locator('#hotkeys-column')).toBeVisible();
+  test('Board menu replaces Hotkeys and Start a New Session', async () => {
+    const boardName = await app.evaluate(({ app: electronApp }) => {
+      const fs = process.mainModule.require('fs');
+      const path = process.mainModule.require('path');
+      const file = path.join(electronApp.getPath('userData'), 'profiles', 'Default User', 'boards.json');
+      const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return doc.boards.find((b) => b.id === doc.activeBoardId).name;
+    });
+    expect(boardName).toBeTruthy();
+
+    const topLevel = await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.map((i) => i.label));
+    expect(topLevel).toContain('Board');
+    expect(topLevel).not.toContain('Hotkeys');
+
+    expect(await findMenuItem(boardName)).toEqual({ found: true, enabled: true });
+    expect(await findMenuItem(`Update "${boardName}"`)).toEqual({ found: true, enabled: true });
+    expect(await findMenuItem(`Revert to "${boardName}"`)).toEqual({ found: true, enabled: true });
+    expect(await findMenuItem('Import Hotkey File…')).toEqual({ found: true, enabled: true });
+    expect(await findMenuItem('Start a New Session')).toEqual({ found: false });
+    expect(await findMenuItem('Open Hotkeys File')).toEqual({ found: false });
+  });
+
+  test('Board menu commands reach the renderer as menu:board-command', async () => {
+    await page.evaluate(() => {
+      window.__boardCommands = [];
+      // Task 11 consumes this in the renderer; here we listen at the preload boundary.
+      window.secureElectronAPI.events.onBoardCommand((payload) => window.__boardCommands.push(payload));
+    });
+    await triggerMenuItem('New Board…');
+    await expect.poll(() => page.evaluate(() => window.__boardCommands)).toEqual([
+      { command: 'new' }
+    ]);
   });
 });

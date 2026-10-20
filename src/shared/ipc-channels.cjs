@@ -35,7 +35,6 @@ const IPC = deepFreeze({
     DECREASE_FONT_SIZE: 'decrease-font-size',
     TOGGLE_WAVEFORM: 'toggle-waveform',
     TOGGLE_ADVANCED_SEARCH: 'toggle-advanced-search',
-    CLOSE_ALL_TABS: 'close-all-tabs',
     MANAGE_CATEGORIES: 'manage-categories',
     SHOW_PREFERENCES: 'show-preferences',
   },

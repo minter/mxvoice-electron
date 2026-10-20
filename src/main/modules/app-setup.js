@@ -154,7 +154,13 @@ function createApplicationMenu() {
     showAboutDialog,
     debugLog,
     logService: getLogService(),
-    rendererCommands
+    rendererCommands,
+    getBoardMenuState: () => {
+      const { status, doc } = boardSession?.state?.() ?? {};
+      const boards = (doc?.boards ?? []).map((b) => ({ id: b.id, name: b.name }));
+      const activeBoard = boards.find((b) => b.id === doc?.activeBoardId) ?? null;
+      return { status: status ?? 'idle', activeBoard, boards };
+    }
   });
 }
 // UI operation functions
@@ -390,10 +396,6 @@ function toggleAdvancedSearch() {
   return rendererCommands?.toggleAdvancedSearch();
 }
 
-function closeAllTabs() {
-  return rendererCommands?.closeAllTabs();
-}
-
 function sendDeleteSong() {
   return rendererCommands?.deleteSelectedSong();
 }
@@ -445,7 +447,6 @@ export {
   decreaseFontSize,
   toggleWaveform,
   toggleAdvancedSearch,
-  closeAllTabs,
   sendDeleteSong,
   sendEditSong,
   manageCategories,
@@ -469,7 +470,6 @@ export default {
   decreaseFontSize,
   toggleWaveform,
   toggleAdvancedSearch,
-  closeAllTabs,
   sendDeleteSong,
   sendEditSong,
   manageCategories,

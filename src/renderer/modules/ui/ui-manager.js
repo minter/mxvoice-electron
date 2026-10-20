@@ -73,46 +73,11 @@ export default function initializeUIManager(options = {}) {
     debugLog?.warn('deleteSelectedSong not available in songManagement');
   }
 
-  function closeAllTabs() {
-    const reload = () => { 
-      try { 
-        location.reload(); 
-      } catch (error) {
-        debugLog?.warn('Failed to reload page', { 
-          module: 'ui-manager', 
-          function: 'reload',
-          error: error?.message || 'Unknown error' 
-        });
-      } 
-    };
-    try {
-        if (electronAPI && electronAPI.store) {
-          // Note: In the boards architecture, hotkeys and holding_tank are auto-saved to the crash-recovery record
-          // This clears any legacy stored data. Profile preferences (font_size, column_order) are intentionally preserved.
-          Promise.all([
-          secureStore.delete('column_order'), // Legacy cleanup
-          secureStore.delete('font-size'), // Legacy cleanup (old key)
-          secureStore.delete('font_size') // Current key cleanup
-        ]).finally(reload);
-      } else {
-        reload();
-      }
-    } catch (error) {
-      debugLog?.warn('Failed to clear store data during closeAllTabs', { 
-        module: 'ui-manager', 
-        function: 'closeAllTabs',
-        error: error?.message || 'Unknown error' 
-      });
-      reload();
-    }
-  }
-  
   return {
     scaleScrollable,
     getFontSize,
     setFontSize,
     editSelectedSong,
-    deleteSelectedSong,
-    closeAllTabs
+    deleteSelectedSong
   };
 }

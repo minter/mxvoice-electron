@@ -284,7 +284,6 @@ const secureElectronAPI = {
     decreaseFontSize: () => ipcRenderer.invoke(IPC.UI.DECREASE_FONT_SIZE),
     toggleWaveform: () => ipcRenderer.invoke(IPC.UI.TOGGLE_WAVEFORM),
     toggleAdvancedSearch: () => ipcRenderer.invoke(IPC.UI.TOGGLE_ADVANCED_SEARCH),
-    closeAllTabs: () => ipcRenderer.invoke(IPC.UI.CLOSE_ALL_TABS),
     showPreferences: () => ipcRenderer.invoke(IPC.UI.SHOW_PREFERENCES),
     manageCategories: () => ipcRenderer.invoke(IPC.UI.MANAGE_CATEGORIES),
     editSelectedSong: () => ipcRenderer.invoke(IPC.DATABASE.EDIT_SELECTED_SONG),
@@ -349,13 +348,6 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('toggle_advanced_search', handler);
     },
 
-    // Close all tabs event
-    onCloseAllTabs: (callback) => {
-      const handler = (_event, ...args) => callback(...args);
-      ipcRenderer.on('close_all_tabs', handler);
-      return () => ipcRenderer.removeListener('close_all_tabs', handler);
-    },
-    
     // Additional UI events
     onManageCategories: (callback) => {
       const handler = (_event, ...args) => callback(...args);
@@ -381,6 +373,12 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('delete_selected_song', handler);
     },
     
+    onBoardCommand: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:board-command', handler);
+      return () => ipcRenderer.removeListener('menu:board-command', handler);
+    },
+
     onSwitchProfile: (callback) => {
       const handler = (_event, ...args) => callback(...args);
       ipcRenderer.on('menu:switch-profile', handler);

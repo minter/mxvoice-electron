@@ -28,10 +28,6 @@ export function register(deps) {
     getMainWindow().webContents.send("toggle_advanced_search");
   });
 
-  ipcMain.handle(IPC.UI.CLOSE_ALL_TABS, async () => {
-    getMainWindow().webContents.send("close_all_tabs");
-  });
-
   // Category operations
   ipcMain.handle(IPC.UI.MANAGE_CATEGORIES, async () => {
     getMainWindow().webContents.send('manage_categories');

@@ -1,3 +1,5 @@
+import { buildBoardMenu } from './board-menu.js';
+
 function buildApplicationMenu({
   app,
   Menu,
@@ -8,8 +10,14 @@ function buildApplicationMenu({
   showAboutDialog,
   debugLog,
   logService,
-  rendererCommands
+  rendererCommands,
+  getBoardMenuState
 }) {
+  const boardSend = (command, boardId) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('menu:board-command', { command, boardId });
+    }
+  };
   const application_menu = [
     {
       label: "File",
@@ -90,13 +98,6 @@ function buildApplicationMenu({
             rendererCommands.toggleAdvancedSearch();
           },
         },
-        { type: "separator" },
-        {
-          label: "Start a New Session",
-          click: () => {
-            rendererCommands.closeAllTabs();
-          },
-        },
       ],
     },
     {
@@ -132,27 +133,10 @@ function buildApplicationMenu({
         },
       ],
     },
-    {
-      label: "Hotkeys",
-      submenu: [
-        {
-          label: "Open Hotkeys File",
-          accelerator: "CommandOrControl+O",
-          click: () => {
-            if (fileOperations && fileOperations.loadHotkeysFile) {
-              fileOperations.loadHotkeysFile();
-            }
-          },
-        },
-        {
-          label: "Save Hotkeys To File",
-          accelerator: "CommandOrControl+S",
-          click: () => {
-            mainWindow.webContents.send("start_hotkey_save");
-          },
-        },
-      ],
-    },
+    buildBoardMenu(
+      getBoardMenuState ? getBoardMenuState() : { status: 'idle', activeBoard: null, boards: [] },
+      { platform: process.platform, send: boardSend, fileOperations }
+    ),
     {
       label: "Categories",
       submenu: [
