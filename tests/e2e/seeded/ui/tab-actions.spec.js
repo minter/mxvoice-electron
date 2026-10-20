@@ -268,4 +268,16 @@ test.describe('Tab actions - ⋯ menu and right-click', () => {
       expect(buttonBox.y + buttonBox.height).toBeLessThanOrEqual(stripBox.y + stripBox.height + 1);
     }
   });
+
+  test('a short label leaves room for a longer one beside it', async () => {
+    const names = ['Preshow', '2', 'Post-Show', '4', '5'];
+    for (let n = 1; n <= 5; n++) {
+      await holdingTab(page, n).click();
+      await renameSelectedTab(page, 'holdingTank', names[n - 1]);
+    }
+    const postShow = page.locator('#holding_tank_tabs a.nav-link[title="Post-Show"]');
+    await expect(postShow).toHaveText('Post-Show');
+    const fits = await postShow.evaluate((el) => el.scrollWidth <= el.clientWidth);
+    expect(fits).toBe(true);
+  });
 });

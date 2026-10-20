@@ -1058,9 +1058,10 @@ legend {
   outline: none !important;
 }
 
-/* Tab rows never wrap: the five tabs share the width equally and a long name
-   is cut off with an ellipsis (its full name is the link's tooltip). The ⋯
-   item keeps its own fixed width at the right. */
+/* Tab rows never wrap: each tab is sized by its content, so short labels leave
+   room for long names, and when the row is too narrow every tab shrinks and a
+   long name is cut off with an ellipsis (its full name is the link's tooltip).
+   The ⋯ item keeps its own fixed width at the right. */
 #hotkey_tabs.nav-fill,
 #holding_tank_tabs.nav-fill {
   flex-wrap: nowrap;
@@ -1068,8 +1069,8 @@ legend {
 
 #hotkey_tabs.nav-fill .nav-item,
 #holding_tank_tabs.nav-fill .nav-item {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 2.5rem;
 }
 
 #hotkey_tabs.nav-fill .nav-item.tab-actions-item,
