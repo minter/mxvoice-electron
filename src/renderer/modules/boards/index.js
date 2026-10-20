@@ -2,31 +2,28 @@
  * Boards Module
  *
  * Opens the profile's active saved board when the page starts, asking about
- * a show in progress first if the app didn't close normally. Live edits go
- * to the crash-recovery record through profile-state; nothing here saves a
- * board.
+ * a show in progress first if the app didn't close normally, then runs the
+ * Board menu commands (commands.js). Live edits go to the crash-recovery
+ * record through profile-state; only a Board menu command saves a board.
  */
 
 import { applyLayout } from './layout-applier.js';
 import sharedState from '../shared-state.js';
-import { customAlert, customConfirm } from '../utils/modal-utils.js';
+import { customAlert, customConfirm, customPrompt } from '../utils/modal-utils.js';
 import { showDropToast } from '../utils/toast-utils.js';
-import { clearProfileRestorationLock } from '../profile-state/index.js';
+import { isAnyModalOpen } from '../ui/bootstrap-helpers.js';
+import { clearProfileRestorationLock, extractLayout } from '../profile-state/index.js';
+import { droppedSongsMessage, TOAST_MS } from './messages.js';
+import { runBoardCommand } from './commands.js';
+import { chooseImportBoard } from './import-dialog.js';
+
+export { droppedSongsMessage };
 
 const LOG_CONTEXT = { module: 'boards', function: 'openSessionOnStartup' };
-const TOAST_MS = 6000;
 
 const UNREADABLE_MESSAGE =
   "Mx. Voice couldn't read this profile's boards. The file has been kept so it can be recovered.";
 const LOAD_FAILED_MESSAGE = "Mx. Voice couldn't load this board. Your saved boards were not changed.";
-
-/** "N song(s) in this board aren't in the library.", or null for none. */
-export function droppedSongsMessage(dropped) {
-  if (!dropped) return null;
-  return dropped === 1
-    ? "1 song in this board isn't in the library."
-    : `${dropped} songs in this board aren't in the library.`;
-}
 
 function crashMessage(savedAt) {
   const time = new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -51,14 +48,28 @@ export function buildLayoutDeps({ hotkeys, holdingTank }) {
   };
 }
 
+// Analytics never receive board or profile names
+function trackEvent(name, props) {
+  try {
+    window.secureElectronAPI?.analytics?.trackEvent?.(name, props);
+  } catch (error) {
+    window.debugLog?.warn('Could not send a board analytics event', { module: 'boards', function: 'trackEvent', error: error.message });
+  }
+}
+
 function defaultDeps(overrides) {
   const deps = {
     api: window.secureElectronAPI?.boards,
     confirm: customConfirm,
+    prompt: customPrompt,
     alert: (message, title) => { void customAlert(message, title); },
     toast: showDropToast,
+    track: trackEvent,
     quit: () => window.secureElectronAPI?.app?.quit?.(),
     clearRestorationLock: clearProfileRestorationLock,
+    isModalOpen: () => isAnyModalOpen(),
+    extractLayout,
+    chooseImportBoard: (groups) => chooseImportBoard(groups),
     ...overrides
   };
   if (!deps.applyLayout) {
@@ -109,12 +120,14 @@ export async function openSessionOnStartup(overrides = {}) {
       if (opened.recovery?.handoff) {
         choice = 'restore';
       } else if (opened.recovery) {
+        deps.track('crash_restore_offered');
         const restore = await deps.confirm(crashMessage(opened.recovery.savedAt), 'Restore show?', {
           confirmLabel: 'Restore show in progress',
           cancelLabel: 'Open saved board',
           defaultAction: 'cancel'
         });
         choice = restore ? 'restore' : 'discard';
+        deps.track('crash_restore_chosen', { choice });
       }
       layout = unwrap(await api.resolveRecovery(choice), 'Resolving recovery').layout;
       window.debugLog?.info('Opening board', { ...LOG_CONTEXT, choice, handoff: opened.recovery?.handoff ?? null });
@@ -142,8 +155,27 @@ export async function openSessionOnStartup(overrides = {}) {
   }
 }
 
+/**
+ * Run each Board menu command (`menu:board-command`) from now on. Call once,
+ * after openSessionOnStartup.
+ *
+ * @param {Object} [overrides] - hotkeys and holdingTank modules, or test doubles
+ *   for onBoardCommand and any runBoardCommand dependency
+ * @returns {Function|null} unsubscribe, or null without the preload event
+ */
+export function initializeBoardCommands(overrides = {}) {
+  const { onBoardCommand = window.secureElectronAPI?.events?.onBoardCommand, ...rest } = overrides;
+  if (typeof onBoardCommand !== 'function') {
+    window.debugLog?.error('Board menu commands unavailable', { module: 'boards', function: 'initializeBoardCommands' });
+    return null;
+  }
+  const deps = defaultDeps(rest);
+  return onBoardCommand((command) => { void runBoardCommand(command, deps); });
+}
+
 export default {
   openSessionOnStartup,
+  initializeBoardCommands,
   buildLayoutDeps,
   droppedSongsMessage
 };

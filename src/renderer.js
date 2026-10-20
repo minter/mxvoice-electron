@@ -334,6 +334,11 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
           holdingTank: moduleRegistry.holdingTank
         });
         window.logInfo(`Board session: ${openResult.status}`);
+        // Board menu commands; the session refuses them until it is ready
+        moduleRegistry.boards.initializeBoardCommands?.({
+          hotkeys: moduleRegistry.hotkeys,
+          holdingTank: moduleRegistry.holdingTank
+        });
       } else {
         window.logError('Boards module not available; no board was opened');
         moduleRegistry.profileState.clearProfileRestorationLock?.();

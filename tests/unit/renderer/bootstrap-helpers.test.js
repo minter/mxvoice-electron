@@ -14,7 +14,7 @@ vi.mock('../../../src/renderer/modules/ui/bootstrap-adapter.js', () => ({
   showTab: vi.fn(),
 }));
 
-const { safeShowModal, safeHideModal, safeShowTab } = await import(
+const { safeShowModal, safeHideModal, safeShowTab, isAnyModalOpen, findOpenModal } = await import(
   '../../../src/renderer/modules/ui/bootstrap-helpers.js'
 );
 
@@ -87,6 +87,35 @@ describe('bootstrap-helpers', () => {
         expect.stringContaining('#badTab'),
         expect.objectContaining({ error: 'tab fail' }),
       );
+    });
+  });
+
+  // ── isAnyModalOpen ──────────────────────────────────────────────────
+
+  describe('isAnyModalOpen', () => {
+    const withOpenModals = (ids) => {
+      globalThis.document = {
+        querySelectorAll: vi.fn((selector) => (selector === '.modal.show' ? ids.map((id) => ({ id })) : []))
+      };
+    };
+
+    it('is false when no dialog is shown', () => {
+      withOpenModals([]);
+      expect(isAnyModalOpen()).toBe(false);
+      expect(findOpenModal()).toBeNull();
+    });
+
+    it('is true when any dialog is shown', () => {
+      withOpenModals(['preferencesModal']);
+      expect(isAnyModalOpen()).toBe(true);
+      expect(findOpenModal().id).toBe('preferencesModal');
+    });
+
+    it('ignores the dialog named as the exception', () => {
+      withOpenModals(['profileSwitchModal']);
+      expect(isAnyModalOpen('profileSwitchModal')).toBe(false);
+      withOpenModals(['profileSwitchModal', '']);
+      expect(isAnyModalOpen('profileSwitchModal')).toBe(true);
     });
   });
 });

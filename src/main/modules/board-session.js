@@ -301,16 +301,20 @@ export function createBoardSession({
    * Run one board mutation. The task gets the profile, generation and doc
    * captured here and runs synchronously up to its first await, so a task
    * can raise the fence before anything else gets a turn.
+   *
+   * The menu is rebuilt however the mutation ends: Electron moves a radio
+   * check on click, so a rejected switch must put the check back.
    */
   async function mutation(fn, task) {
-    if (mutating) throw new Error('busy');
-    if (status !== 'ready' || fenced) throw new Error('session not ready');
+    if (mutating || status !== 'ready' || fenced) {
+      refreshMenu(fn);
+      throw new Error(mutating ? 'busy' : 'session not ready');
+    }
     mutating = true;
     try {
-      const result = await task({ p: profile, g: generation, d: doc });
-      refreshMenu(fn);
-      return result;
+      return await task({ p: profile, g: generation, d: doc });
     } finally {
+      refreshMenu(fn);
       mutating = false;
     }
   }

@@ -48,3 +48,23 @@ export function safeShowTab(selector, context = {}) {
       debugLog?.warn(`Failed to show tab ${selector}`, { ...context, error: err?.message });
     });
 }
+
+/**
+ * The Bootstrap dialog showing now, other than `exceptId`, or null.
+ * Bootstrap dialogs don't stack: one opened over another stays invisible
+ * while still capturing Enter and Esc for the whole page.
+ * @param {string} [exceptId] - id of a dialog to ignore (the caller's own)
+ * @returns {Element|null}
+ */
+export function findOpenModal(exceptId) {
+  return [...document.querySelectorAll('.modal.show')].find((el) => el.id !== exceptId) ?? null;
+}
+
+/**
+ * Whether a Bootstrap dialog other than `exceptId` is showing.
+ * @param {string} [exceptId]
+ * @returns {boolean}
+ */
+export function isAnyModalOpen(exceptId) {
+  return findOpenModal(exceptId) !== null;
+}

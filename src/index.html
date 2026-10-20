@@ -816,6 +816,26 @@
       </div>
     </div>
 
+    <!-- Import Board Modal: rows are built by boards/import-dialog.js -->
+    <div class="modal fade" id="importBoardModal" tabindex="-1" role="dialog" aria-labelledby="importBoardTitle">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title" id="importBoardTitle">Import Board</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="importBoardList" class="list-group" role="listbox" aria-labelledby="importBoardTitle"></div>
+            <p id="importBoardEmpty" class="text-muted mb-0 d-none">No other profiles have saved boards.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" id="importBoardBtn" disabled>Import</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Custom Input Modal -->
     <div class="modal fade" id="inputModal" role="dialog">
       <div class="modal-dialog modal-dialog-centered" role="document">

@@ -601,6 +601,38 @@ describe('board session mutations', () => {
     await expect(ctx.session.renameBoard('board-2', 'Again')).resolves.toBeDefined();
   });
 
+  // Electron moves a radio check on click, so the menu must be rebuilt from
+  // the session even when the switch never happened
+  it('a rejected or failed mutation still rebuilds the menu', async () => {
+    const notReady = setup({ doc: twoBoardDoc() });
+    await notReady.session.open();
+    notReady.rebuildMenu.mockClear();
+    await expect(notReady.session.activate('board-2')).rejects.toThrow('session not ready');
+    expect(notReady.rebuildMenu).toHaveBeenCalledTimes(1);
+
+    const ctx = setup({ doc: twoBoardDoc() });
+    await openReady(ctx);
+    let release;
+    ctx.boardStore.save.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+    const first = ctx.session.renameBoard('board-2', 'Renamed');
+    ctx.rebuildMenu.mockClear();
+    await expect(ctx.session.activate('board-2')).rejects.toThrow('busy');
+    expect(ctx.rebuildMenu).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+    release();
+    await first;
+
+    ctx.rebuildMenu.mockClear();
+    await expect(ctx.session.activate('missing')).rejects.toThrow('Board not found.');
+    expect(ctx.rebuildMenu).toHaveBeenCalledTimes(1);
+
+    ctx.rebuildMenu.mockClear();
+    ctx.boardStore.save.mockRejectedValueOnce(new Error('disk full'));
+    await expect(ctx.session.activate('board-2')).rejects.toThrow('disk full');
+    expect(ctx.rebuildMenu).toHaveBeenCalled();
+    expect(ctx.session.state()).toMatchObject({ status: 'ready' });
+  });
+
   it('activate of the active board is rejected and changes nothing', async () => {
     const ctx = setup({ doc: twoBoardDoc() });
     const opened = await openReady(ctx);

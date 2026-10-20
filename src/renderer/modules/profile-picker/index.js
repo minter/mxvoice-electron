@@ -12,7 +12,7 @@
 
 import { createProfilePicker } from './picker-view.js';
 import { DEFAULT_PROFILE } from './picker-model.js';
-import { safeShowModal, safeHideModal } from '../ui/bootstrap-helpers.js';
+import { safeShowModal, safeHideModal, findOpenModal } from '../ui/bootstrap-helpers.js';
 
 const MODAL_ID = 'profileSwitchModal';
 const CONTEXT = { module: 'profile-picker' };
@@ -159,7 +159,7 @@ async function open(options = {}) {
   }
   // Bootstrap dialogs don't stack: over another open dialog this one would
   // stay invisible while still capturing Enter and Esc for the whole page
-  const otherDialog = [...document.querySelectorAll('.modal.show')].find((el) => el.id !== MODAL_ID);
+  const otherDialog = findOpenModal(MODAL_ID);
   if (otherDialog) {
     window.debugLog?.warn('Another dialog is open; not opening Switch Profile over it', {
       ...CONTEXT, function: 'open', openDialog: otherDialog.id || null

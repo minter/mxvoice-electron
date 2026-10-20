@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 globalThis.window = { debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } };
 
-const { openSessionOnStartup, droppedSongsMessage } = await import('../../../src/renderer/modules/boards/index.js');
+const { openSessionOnStartup, droppedSongsMessage, initializeBoardCommands } = await import('../../../src/renderer/modules/boards/index.js');
 
 const savedLayout = { hotkeys: [{ tabNumber: 1, tabName: 'Saved', hotkeys: { f1: '1001' } }], holdingTank: [], selected: { hotkeyTab: 1, holdingTankTab: 1 } };
 const liveLayout = { hotkeys: [{ tabNumber: 1, tabName: 'Live', hotkeys: { f1: '1002' } }], holdingTank: [], selected: { hotkeyTab: 2, holdingTankTab: 1 } };
@@ -23,7 +23,8 @@ function setup({ open, confirm = vi.fn(async () => false), dropped = 0 } = {}) {
     alert: vi.fn(),
     toast: vi.fn(),
     quit: vi.fn(async () => ok(null)),
-    clearRestorationLock: vi.fn(() => { calls.push('unlock'); })
+    clearRestorationLock: vi.fn(() => { calls.push('unlock'); }),
+    track: vi.fn()
   };
   return { api, deps, calls };
 }
@@ -133,5 +134,51 @@ describe('openSessionOnStartup', () => {
     expect(droppedSongsMessage(0)).toBeNull();
     expect(droppedSongsMessage(1)).toBe("1 song in this board isn't in the library.");
     expect(droppedSongsMessage(3)).toBe("3 songs in this board aren't in the library.");
+  });
+
+  it('reports the crash prompt and the choice to analytics', async () => {
+    const asked = setup({ open: opened({ savedAt: Date.now(), handoff: null, boardId: 'b1' }), confirm: vi.fn(async () => true) });
+    await openSessionOnStartup(asked.deps);
+    expect(asked.deps.track.mock.calls).toEqual([
+      ['crash_restore_offered'],
+      ['crash_restore_chosen', { choice: 'restore' }]
+    ]);
+
+    const declined = setup({ open: opened({ savedAt: Date.now(), handoff: null, boardId: 'b1' }) });
+    await openSessionOnStartup(declined.deps);
+    expect(declined.deps.track).toHaveBeenLastCalledWith('crash_restore_chosen', { choice: 'discard' });
+
+    // A silent handoff restore and a clean open ask nothing
+    const handoff = setup({ open: opened({ savedAt: Date.now(), handoff: 'update', boardId: 'b1' }) });
+    await openSessionOnStartup(handoff.deps);
+    const clean = setup({ open: opened() });
+    await openSessionOnStartup(clean.deps);
+    expect(handoff.deps.track).not.toHaveBeenCalled();
+    expect(clean.deps.track).not.toHaveBeenCalled();
+  });
+});
+
+describe('initializeBoardCommands', () => {
+  it('runs each menu:board-command with the injected deps', async () => {
+    let listener;
+    const unsubscribe = vi.fn();
+    const onBoardCommand = vi.fn((cb) => { listener = cb; return unsubscribe; });
+    const api = {
+      activate: vi.fn(async () => ok({ layout: savedLayout, generation: 3 })),
+      reportReady: vi.fn(async () => ok(null))
+    };
+    const applyLayout = vi.fn(async () => ({ dropped: 0 }));
+    const track = vi.fn();
+
+    expect(initializeBoardCommands({ onBoardCommand, api, applyLayout, track, isModalOpen: () => true })).toBe(unsubscribe);
+    listener({ command: 'switch', boardId: 'b2' });
+    await vi.waitFor(() => expect(api.reportReady).toHaveBeenCalledWith(3, true));
+    expect(api.activate).toHaveBeenCalledWith('b2');
+    expect(applyLayout).toHaveBeenCalledWith(savedLayout);
+    expect(track).toHaveBeenCalledWith('board_switched', undefined);
+  });
+
+  it('does nothing without the preload event', () => {
+    expect(initializeBoardCommands({ onBoardCommand: null, applyLayout: vi.fn() })).toBeNull();
   });
 });
