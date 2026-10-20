@@ -132,37 +132,34 @@ const handlers = {
     return (await openLoaded(loaded, deps)) ? ['show_reverted'] : null;
   },
 
-  async rename(showId, deps) {
+  // Rename and Delete act on the show on screen, whatever id came with the command
+  async rename(_showId, deps) {
     const doc = await readyDoc(deps);
-    const { name } = findShow(doc, showId);
+    const { id, name } = findShow(doc, doc.activeShowId);
     const renamed = await promptForName(
       deps,
       { message: 'New name', value: name, title: 'Rename Show' },
-      (newName) => deps.api.rename(showId, newName)
+      (newName) => deps.api.rename(id, newName)
     );
     return renamed ? ['show_renamed'] : null;
   },
 
-  async delete(showId, deps) {
+  async delete(_showId, deps) {
     const doc = await readyDoc(deps);
-    const { name } = findShow(doc, showId);
-    const wasActive = showId === doc.activeShowId;
-    let message = "This can't be undone.";
-    if (wasActive) {
-      const next = nextShowAfterDelete(doc, showId);
-      message = next
-        ? `The layout on screen will be replaced with "${next.name}".`
-        : 'The layout on screen will be replaced with an empty show.';
-    }
+    const { id, name } = findShow(doc, doc.activeShowId);
+    const next = nextShowAfterDelete(doc, id);
+    const message = next
+      ? `The layout on screen will be replaced with "${next.name}".`
+      : 'The layout on screen will be replaced with an empty show.';
     const confirmed = await deps.confirm(message, `Delete "${name}"?`, {
       confirmLabel: 'Delete',
       defaultAction: 'cancel'
     });
     if (!confirmed) return null;
-    const removed = unwrap(await deps.api.remove(showId), 'Deleting the show');
+    const removed = unwrap(await deps.api.remove(id), 'Deleting the show');
     // The show is deleted even if the next one then fails to load
     if (removed?.activeChanged) await openLoaded(removed, deps);
-    return ['show_deleted', { was_active: wasActive }];
+    return ['show_deleted'];
   },
 
   async import(_showId, deps) {

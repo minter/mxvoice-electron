@@ -159,36 +159,31 @@ describe('runShowCommand', () => {
     expect(deps.alert).toHaveBeenCalledOnce();
   });
 
-  it('rename prompts with the current name and re-prompts on a validation error', async () => {
+  it('rename targets the active show, prompting with its name and re-prompting on a validation error', async () => {
     const { api, deps } = setup();
     api.rename.mockResolvedValueOnce(nameFail('A show with this name already exists.'));
     deps.prompt.mockResolvedValueOnce('Encore').mockResolvedValueOnce('Finale');
-    await runShowCommand({ command: 'rename', showId: 'b1' }, deps);
+    await runShowCommand({ command: 'rename' }, deps);
     expect(deps.prompt.mock.calls).toEqual([
-      ['New name', 'Opening', 'Rename Show'],
+      ['New name', 'Main Show', 'Rename Show'],
       ['A show with this name already exists.', 'Encore', 'Rename Show']
     ]);
-    expect(api.rename).toHaveBeenLastCalledWith('b1', 'Finale');
+    expect(api.rename).toHaveBeenLastCalledWith('b2', 'Finale');
     expect(deps.track).toHaveBeenCalledWith('show_renamed', undefined);
   });
 
-  it('deleting a non-active show does not apply a layout', async () => {
-    const { api, deps, calls } = setup();
+  it('rename and delete ignore a show id and act on the active show', async () => {
+    const { api, deps } = setup();
+    deps.prompt.mockResolvedValueOnce('Finale');
+    await runShowCommand({ command: 'rename', showId: 'b1' }, deps);
     await runShowCommand({ command: 'delete', showId: 'b1' }, deps);
-    expect(deps.confirm).toHaveBeenCalledWith(
-      "This can't be undone.",
-      'Delete "Opening"?',
-      { confirmLabel: 'Delete', defaultAction: 'cancel' }
-    );
-    expect(api.remove).toHaveBeenCalledWith('b1');
-    expect(deps.applyLayout).not.toHaveBeenCalled();
-    expect(calls).toEqual([]);
-    expect(deps.track).toHaveBeenCalledWith('show_deleted', { was_active: false });
+    expect(api.rename).toHaveBeenCalledWith('b2', 'Finale');
+    expect(api.remove).toHaveBeenCalledWith('b2');
   });
 
   it('deleting the active show names the next one and loads it', async () => {
     const { api, deps, calls } = setup();
-    await runShowCommand({ command: 'delete', showId: 'b2' }, deps);
+    await runShowCommand({ command: 'delete' }, deps);
     expect(deps.confirm).toHaveBeenCalledWith(
       'The layout on screen will be replaced with "Encore".',
       'Delete "Main Show"?',
@@ -196,23 +191,23 @@ describe('runShowCommand', () => {
     );
     expect(api.remove).toHaveBeenCalledWith('b2');
     expect(calls).toEqual(['apply:Next', 'ready:7:true']);
-    expect(deps.track).toHaveBeenCalledWith('show_deleted', { was_active: true });
+    expect(deps.track).toHaveBeenCalledWith('show_deleted', undefined);
   });
 
   it('a delete whose next show fails to load is still counted', async () => {
     const { deps, calls } = setup();
     deps.applyLayout.mockRejectedValue(new Error('song fetch failed'));
-    await runShowCommand({ command: 'delete', showId: 'b2' }, deps);
+    await runShowCommand({ command: 'delete' }, deps);
     expect(calls).toEqual(['ready:7:false']);
     expect(deps.alert).toHaveBeenCalledWith("Mx. Voice couldn't load this show. Your saved shows were not changed.", 'Show not loaded');
-    expect(deps.track).toHaveBeenCalledWith('show_deleted', { was_active: true });
+    expect(deps.track).toHaveBeenCalledWith('show_deleted', undefined);
   });
 
   it('deleting the only show offers an empty show; cancelling deletes nothing', async () => {
     const doc = { version: 1, activeShowId: 'b1', shows: [show('b1', 'Solo')] };
     const { api, deps } = setup({ doc });
     deps.confirm.mockResolvedValue(false);
-    await runShowCommand({ command: 'delete', showId: 'b1' }, deps);
+    await runShowCommand({ command: 'delete' }, deps);
     expect(deps.confirm).toHaveBeenCalledWith(
       'The layout on screen will be replaced with an empty show.',
       'Delete "Solo"?',
@@ -313,7 +308,7 @@ describe('runShowCommand', () => {
 
     deps.prompt.mockResolvedValueOnce('Secret Name');
     await runShowCommand({ command: 'new' }, deps);
-    await runShowCommand({ command: 'delete', showId: 'b1' }, deps);
+    await runShowCommand({ command: 'delete' }, deps);
     const sent = JSON.stringify(deps.track.mock.calls);
     for (const name of ['Secret Name', 'Opening', 'Main Show', 'Jesse', 'Derek']) expect(sent).not.toContain(name);
   });

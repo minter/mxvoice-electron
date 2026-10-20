@@ -35,30 +35,32 @@ describe('Shows menu', () => {
     const { menu } = build(readyState());
     expect(labels(menu)).toEqual([
       'Comedy Sports', 'Mom & Pop', '---', 'Update "Comedy Sports"', 'New Show…',
-      'Revert to "Comedy Sports"', 'Rename Show', 'Delete Show', '---',
+      'Revert to "Comedy Sports"', 'Rename "Comedy Sports"…', 'Delete "Comedy Sports"…', '---',
       'Import Show…', 'Import Hotkey File…', 'Import Holding Tank File…'
     ]);
-    expect(find(menu, 'Rename Show').submenu.map((i) => i.label)).toEqual(['Comedy Sports…', 'Mom & Pop…']);
+    walk(menu.submenu, (item) => expect(item.submenu, item.label).toBeUndefined());
   });
 
-  it('names the active show in Update and Revert', () => {
-    const { menu } = build(readyState());
-    expect(find(menu, 'Update "Comedy Sports"')).toBeTruthy();
-    expect(find(menu, 'Revert to "Comedy Sports"')).toBeTruthy();
+  it('names the active show in Update, Revert, Rename and Delete', () => {
+    const { menu } = build(readyState('b2'));
+    expect(find(menu, 'Update "Mom & Pop"')).toBeTruthy();
+    expect(find(menu, 'Revert to "Mom & Pop"')).toBeTruthy();
+    expect(find(menu, 'Rename "Mom & Pop"…')).toBeTruthy();
+    expect(find(menu, 'Delete "Mom & Pop"…')).toBeTruthy();
   });
 
-  it('sends commands with show ids', () => {
+  it('sends switch with a show id and every other command without one', () => {
     const { menu, send } = build(readyState());
     menu.submenu[1].click();
     find(menu, 'Update "Comedy Sports"').click();
     find(menu, 'New Show…').click();
     find(menu, 'Revert to "Comedy Sports"').click();
-    find(menu, 'Rename Show').submenu[1].click();
-    find(menu, 'Delete Show').submenu[0].click();
+    find(menu, 'Rename "Comedy Sports"…').click();
+    find(menu, 'Delete "Comedy Sports"…').click();
     find(menu, 'Import Show…').click();
     expect(send.mock.calls).toEqual([
       ['switch', 'b2'], ['update', undefined], ['new', undefined], ['revert', undefined],
-      ['rename', 'b2'], ['delete', 'b1'], ['import', undefined]
+      ['rename', undefined], ['delete', undefined], ['import', undefined]
     ]);
   });
 
@@ -103,10 +105,12 @@ describe('Shows menu', () => {
   it('renders nameless disabled items and no shows without a session', () => {
     const { menu } = build({ status: 'idle', activeShow: null, shows: [] });
     expect(labels(menu)).toEqual([
-      '---', 'Update', 'New Show…', 'Revert to', 'Rename Show', 'Delete Show', '---',
+      '---', 'Update', 'New Show…', 'Revert to', 'Rename…', 'Delete…', '---',
       'Import Show…', 'Import Hotkey File…', 'Import Holding Tank File…'
     ]);
     expect(find(menu, 'Update').enabled).toBe(false);
+    expect(find(menu, 'Rename…').enabled).toBe(false);
+    expect(find(menu, 'Delete…').enabled).toBe(false);
   });
 
   it('escapes & on win32 and linux, not on darwin', () => {
@@ -117,7 +121,8 @@ describe('Shows menu', () => {
       expect(menu.submenu[1].label).toBe('Mom && Pop');
       expect(find(menu, 'Update "Mom && Pop"')).toBeTruthy();
       expect(find(menu, 'Revert to "Mom && Pop"')).toBeTruthy();
-      expect(find(menu, 'Delete Show').submenu[1].label).toBe('Mom && Pop…');
+      expect(find(menu, 'Rename "Mom && Pop"…')).toBeTruthy();
+      expect(find(menu, 'Delete "Mom && Pop"…')).toBeTruthy();
     }
   });
 

@@ -165,7 +165,7 @@ test.describe('Shows - menu commands', () => {
       { name: 'Encore', hotkeys: { f1: '1005' } }
     ], { active: 1 });
 
-    await clickShowMenu(app, 'Delete Show', 'Main Show…');
+    await clickShowMenu(app, 'Delete "Main Show"…');
     const dialog = shownDialog(page, 'Delete "Main Show"?');
     await expect(dialog).toBeVisible({ timeout: 10000 });
     // Delete is destructive: Return takes Cancel
@@ -181,24 +181,25 @@ test.describe('Shows - menu commands', () => {
     await expect.poll(async () => showMenuState(app)).toMatchObject({ shows: ['Opening', 'Encore'], checked: 'Encore', enabled: true });
   });
 
-  test('delete a non-active show keeps the live layout', async () => {
+  test('deleting another show means switching to it first', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }, { name: 'Encore', hotkeys: { f1: '1003' } }]);
-    await assignF1(page, '1001');
-    await expect.poll(() => readRecovery(userDataDir, PROFILE)?.layout?.hotkeys?.[0]?.hotkeys?.f1 ?? null, { timeout: 10000 }).toBe('1001');
-
-    await clickShowMenu(app, 'Delete Show', 'Encore…');
-    await answerConfirm(page, 'Delete "Encore"?', 'Delete', { message: "This can't be undone." });
+    await clickShowMenu(app, 'Encore');
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1003');
+    await clickShowMenu(app, 'Delete "Encore"…');
+    await answerConfirm(page, 'Delete "Encore"?', 'Delete', {
+      message: 'The layout on screen will be replaced with "Main Show".'
+    });
 
     await expect.poll(() => readShows(userDataDir, PROFILE).shows.map((b) => b.name)).toEqual(['Main Show']);
-    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1001');
-    expect(readRecovery(userDataDir, PROFILE)?.layout.hotkeys[0].hotkeys.f1).toBe('1001');
-    await expect.poll(async () => (await showMenuState(app)).shows).toEqual(['Main Show']);
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1002');
+    await expect(page.locator('#show-name')).toHaveText('Main Show');
+    await expect.poll(async () => showMenuState(app)).toMatchObject({ shows: ['Main Show'], checked: 'Main Show' });
   });
 
   test('rename changes the show name in the menu', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }]);
 
-    await clickShowMenu(app, 'Rename Show', 'Main Show…');
+    await clickShowMenu(app, 'Rename "Main Show"…');
     const dialog = shownDialog(page, 'Rename Show');
     await expect(dialog.locator('.prompt-input')).toHaveValue('Main Show', { timeout: 10000 });
     await answerPrompt(page, 'Rename Show', 'Friday Show', { message: 'New name' });

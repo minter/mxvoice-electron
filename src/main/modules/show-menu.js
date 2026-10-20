@@ -24,11 +24,7 @@ function buildShowMenu(state, { platform, send, fileOperations, rebuild } = {}) 
   const emit = (command, showId) => () => send?.(command, showId);
 
   const quoted = (verb) => (activeShow ? `${verb} "${label(activeShow.name)}"` : verb);
-  const perShow = (command) => shows.map((show) => ({
-    label: `${label(show.name)}…`,
-    enabled: ready,
-    click: emit(command, show.id)
-  }));
+  const hasActive = ready && !!activeShow;
 
   return {
     label: 'Shows',
@@ -52,11 +48,12 @@ function buildShowMenu(state, { platform, send, fileOperations, rebuild } = {}) 
         };
       }),
       { type: 'separator' },
-      { label: quoted('Update'), enabled: ready && !!activeShow, click: emit('update') },
+      { label: quoted('Update'), enabled: hasActive, click: emit('update') },
       { label: 'New Show…', enabled: ready, click: emit('new') },
-      { label: quoted('Revert to'), enabled: ready && !!activeShow, click: emit('revert') },
-      { label: 'Rename Show', enabled: ready, submenu: perShow('rename') },
-      { label: 'Delete Show', enabled: ready, submenu: perShow('delete') },
+      { label: quoted('Revert to'), enabled: hasActive, click: emit('revert') },
+      // Both act on the show on screen; the renderer reads it from the session
+      { label: `${quoted('Rename')}…`, enabled: hasActive, click: emit('rename') },
+      { label: `${quoted('Delete')}…`, enabled: hasActive, click: emit('delete') },
       { type: 'separator' },
       { label: 'Import Show…', enabled: ready, click: emit('import') },
       {
