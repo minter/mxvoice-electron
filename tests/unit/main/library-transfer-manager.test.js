@@ -306,11 +306,14 @@ describe('importLibrary', () => {
     // An existing profile that the import replaces
     createTestFile(path.join(importUserData, 'profiles', 'Old Show', 'preferences.json'), '{}');
 
-    // The fence and clear must happen before any profile file moves
+    // The fence and clear must happen before the database or any profile
+    // file is replaced
     const profilesAtEnd = [];
+    const dbAtEnd = [];
     const boardSession = {
       end: vi.fn(async () => {
         profilesAtEnd.push(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show')));
+        dbAtEnd.push(fs.existsSync(path.join(importUserData, 'mxvoice.db')));
       })
     };
     initializeLibraryTransferManager({
@@ -326,8 +329,50 @@ describe('importLibrary', () => {
     expect(boardSession.end).toHaveBeenCalledOnce();
     expect(boardSession.end).toHaveBeenCalledWith('library-import');
     expect(profilesAtEnd).toEqual([true]);
+    expect(dbAtEnd).toEqual([false]);
     expect(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show'))).toBe(false);
 
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  });
+
+  it('ends the session and clears recovery records even when the archive has no profiles', async () => {
+    // Export an archive without a profiles directory
+    const profilesDir = path.join(testUserData, 'profiles');
+    const asideDir = path.join(testUserData, 'profiles-aside');
+    fs.renameSync(profilesDir, asideDir);
+    const archivePath = path.join(testUserData, 'no-profiles.mxvlib');
+    try {
+      await exportLibrary(archivePath);
+    } finally {
+      fs.renameSync(asideDir, profilesDir);
+    }
+
+    const importUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-import-'));
+    fakeApp.getPath.mockReturnValue(importUserData);
+    const importConfigPath = path.join(importUserData, 'config.json');
+    fs.writeFileSync(importConfigPath, '{}');
+    const dbAtClear = [];
+    const boardSession = { end: vi.fn(async () => {}) };
+    const recoveryStore = {
+      clearAll: vi.fn(async () => {
+        dbAtClear.push(fs.existsSync(path.join(importUserData, 'mxvoice.db')));
+      })
+    };
+    initializeLibraryTransferManager({
+      debugLog: mockDebugLog,
+      getDb: () => ({ close: vi.fn() }),
+      store: { get: vi.fn(() => undefined), path: importConfigPath },
+      boardSession,
+      recoveryStore
+    });
+
+    const result = await importLibrary(archivePath);
+
+    expect(result.success).toBe(true);
+    expect(fs.existsSync(path.join(importUserData, 'profiles'))).toBe(false);
+    expect(fs.existsSync(path.join(importUserData, 'mxvoice.db'))).toBe(true);
+    expect(boardSession.end).toHaveBeenCalledWith('library-import');
+    expect(dbAtClear).toEqual([false]);
     fs.rmSync(importUserData, { recursive: true, force: true });
   });
 

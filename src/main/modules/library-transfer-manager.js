@@ -564,6 +564,26 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       const defaultHotkeyDir = path.join(userData, 'hotkeys');
       const defaultDbDir = userData;
 
+      // The library is replaced, so every crash-recovery record is stale.
+      // End the session first: its fence stops a late write from recreating
+      // one before the database or any profile file moves. Then clear them
+      // all directly: with no open session (or one already ended) end()
+      // clears nothing. Neither failure may stop the import.
+      try {
+        await boardSession?.end('library-import');
+      } catch (endErr) {
+        debugLog?.warn('Could not end the board session before importing the library', {
+          ...logCtx, error: endErr.message
+        });
+      }
+      try {
+        await recoveryStore?.clearAll();
+      } catch (clearErr) {
+        debugLog?.warn('Could not clear crash-recovery records before importing the library', {
+          ...logCtx, error: clearErr.message
+        });
+      }
+
       // Import database
       const extractedDb = path.join(tempDir, 'database', 'mxvoice.db');
       if (await pathExists(extractedDb)) {
@@ -644,27 +664,6 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       if (await pathExists(extractedProfiles)) {
         progressCallback({ percent: 78, message: 'Importing profiles...' });
         const targetProfilesDir = path.join(userData, 'profiles');
-
-        // Every profile is replaced, so every crash-recovery record is stale.
-        // End the session first: its fence stops a late write from recreating
-        // one before any profile file moves. Then clear them all directly:
-        // with no open session (or one already ended) end() clears nothing.
-        // The database is already replaced, so neither failure may stop the
-        // import halfway.
-        try {
-          await boardSession?.end('library-import');
-        } catch (endErr) {
-          debugLog?.warn('Could not end the board session before importing profiles', {
-            ...logCtx, error: endErr.message
-          });
-        }
-        try {
-          await recoveryStore?.clearAll();
-        } catch (clearErr) {
-          debugLog?.warn('Could not clear crash-recovery records before importing profiles', {
-            ...logCtx, error: clearErr.message
-          });
-        }
 
         // Remove existing profiles directory and replace
         if (await pathExists(targetProfilesDir)) {
