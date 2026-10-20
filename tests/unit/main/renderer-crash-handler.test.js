@@ -107,6 +107,29 @@ describe('renderer crash handler', () => {
     expect(quit.window.webContents.reload).not.toHaveBeenCalled();
   });
 
+  it('in test mode answers from the E2E seam instead of a native dialog', async () => {
+    const prev = process.env.APP_TEST_MODE;
+    process.env.APP_TEST_MODE = '1';
+    try {
+      globalThis.__e2eRendererCrashPrompts = 0;
+      const reload = setup();
+      await reload.handler({}, { reason: 'crashed' });
+      expect(reload.dialog.showMessageBox).not.toHaveBeenCalled();
+      expect(reload.window.webContents.reload).toHaveBeenCalledOnce();
+
+      globalThis.__e2eRendererCrashAnswer = 'quit';
+      const quit = setup();
+      await quit.handler({}, { reason: 'crashed' });
+      expect(quit.app.quit).toHaveBeenCalledOnce();
+      expect(globalThis.__e2eRendererCrashPrompts).toBe(2);
+    } finally {
+      if (prev === undefined) delete process.env.APP_TEST_MODE;
+      else process.env.APP_TEST_MODE = prev;
+      delete globalThis.__e2eRendererCrashAnswer;
+      delete globalThis.__e2eRendererCrashPrompts;
+    }
+  });
+
   it('marks the handoff before asking', async () => {
     const ctx = setup();
     ctx.dialog.showMessageBox.mockImplementation(async () => {

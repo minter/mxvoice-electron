@@ -77,6 +77,7 @@ describe('recovery store', () => {
     const rec = await store.read('Show');
     expect(rec.handoff).toBe('renderer-crash');
     expect(rec.savedAt).toBe(1700000000000);
+    expect(rec.handoffAt).toBe(1700000005000);
     expect(rec.layout).toEqual(LAYOUT);
     expect(fs.readdirSync(recoveryDir)).toEqual(['show.json']);
   });
@@ -91,6 +92,7 @@ describe('recovery store', () => {
     expect(await store.clearHandoff('Show')).toBe(true);
     const rec = await store.read('Show');
     expect(rec).toMatchObject({ handoff: null, savedAt: 1700000000000, boardId: 'b1', layout: LAYOUT });
+    expect(rec).not.toHaveProperty('handoffAt');
 
     // A torn record is left alone
     fs.writeFileSync(pathFor('Show'), '{ torn');

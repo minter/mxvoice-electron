@@ -173,7 +173,8 @@ export function createBoardSession({
       generation
     };
     if (record) {
-      const fresh = now() - record.savedAt <= HANDOFF_MAX_AGE_MS;
+      // Measured from the handoff: a crash long after the last edit is still fresh
+      const fresh = now() - (record.handoffAt ?? record.savedAt) <= HANDOFF_MAX_AGE_MS;
       result.recovery = {
         savedAt: record.savedAt,
         handoff: record.handoff && fresh ? record.handoff : null,
@@ -277,6 +278,9 @@ export function createBoardSession({
     const p = profile;
     fenced = true;
     handedOff = true;
+    // Before ready the record isn't this session's: it's an earlier crash
+    // still waiting at the prompt, and the never-ready rule keeps it as is
+    if (status !== 'ready') return;
     // Queued, so a mutation's retire can't land between its read and write
     // and have the old record written back
     await queued(() => recoveryStore.markHandoff(p, reason));

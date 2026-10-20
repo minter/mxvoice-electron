@@ -7,7 +7,8 @@
  *
  * Record: { version: 1, boardId, savedAt, handoff, layout }. `handoff` is null
  * for a normal autosave, or 'update' / 'renderer-crash' once the main process
- * knows why the app is about to restart.
+ * knows why the app is about to restart; a handed-off record also carries
+ * `handoffAt`, when it was marked.
  *
  * Only `write` creates the recovery directory; `retire` and `markHandoff`
  * never create anything.
@@ -107,7 +108,7 @@ export function createRecoveryStore({
     // An unreadable record is left untouched here; read() is what quarantines.
     const record = await load(profileName, { quarantineBad: false });
     if (!record) return false;
-    await writeJsonAtomic(getRecoveryPath(profileName), { ...record, handoff: reason }, { fs });
+    await writeJsonAtomic(getRecoveryPath(profileName), { ...record, handoff: reason, handoffAt: now() }, { fs });
     return true;
   }
 
@@ -116,7 +117,8 @@ export function createRecoveryStore({
     assertProfileName(profileName);
     const record = await load(profileName, { quarantineBad: false });
     if (!record) return false;
-    await writeJsonAtomic(getRecoveryPath(profileName), { ...record, handoff: null }, { fs });
+    const { handoffAt: _handoffAt, ...rest } = record;
+    await writeJsonAtomic(getRecoveryPath(profileName), { ...rest, handoff: null }, { fs });
     return true;
   }
 

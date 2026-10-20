@@ -152,6 +152,32 @@ test.describe('Boards - session lifecycle', () => {
     expect(readRecovery(userDataDir, 'Default User')?.layout.hotkeys[0].hotkeys.f1).toBe(LIVE_SONG);
   });
 
+  test('a renderer crash then Reload restores the live layout without a prompt', async () => {
+    await launch({ beforeLaunch: seedSavedBoard() });
+    await assignF1(page, LIVE_SONG);
+    await waitForRecoveredF1(userDataDir, 'Default User', LIVE_SONG);
+
+    // The native Reload/Quit dialog is answered by the test seam (Reload)
+    await app.evaluate(() => { globalThis.__e2eRendererCrashAnswer = 'reload'; });
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.forcefullyCrashRenderer());
+    await expect.poll(() => app.evaluate(() => globalThis.__e2eRendererCrashPrompts || 0), { timeout: 20000 }).toBe(1);
+    expect(readRecovery(userDataDir, 'Default User')?.handoff).toBe('renderer-crash');
+
+    // Playwright's page stays marked crashed after the reload, so read the
+    // reloaded page through the main process
+    const inPage = (expr) => app.evaluate(
+      ({ BrowserWindow }, code) => BrowserWindow.getAllWindows()[0].webContents.executeJavaScript(code),
+      expr
+    ).catch(() => null);
+    await expect.poll(() => inPage('window.isRestoringProfileState === false && !!window.__e2eInitialSearchSettled'), {
+      timeout: 20000
+    }).toBe(true);
+    expect(await inPage(`document.querySelectorAll('.modal.show').length`)).toBe(0);
+    expect(await inPage(`document.querySelector('#hotkeys_list_1 #f1_hotkey').getAttribute('songid')`)).toBe(LIVE_SONG);
+    // The handoff is spent: another crash before any edit would ask
+    expect(readRecovery(userDataDir, 'Default User')?.handoff).toBeNull();
+  });
+
   test('declining the prompt opens the saved board', async () => {
     await launch({ beforeLaunch: seedSavedBoard() });
     await assignF1(page, LIVE_SONG);

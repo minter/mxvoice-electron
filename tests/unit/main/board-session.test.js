@@ -38,14 +38,15 @@ function fakeRecoveryStore(clock) {
       calls.push(['markHandoff', profile, reason]);
       const record = records.get(profile);
       if (!record) return false;
-      records.set(profile, { ...record, handoff: reason });
+      records.set(profile, { ...record, handoff: reason, handoffAt: clock.now() });
       return true;
     }),
     clearHandoff: vi.fn(async (profile) => {
       calls.push(['clearHandoff', profile]);
       const record = records.get(profile);
       if (!record) return false;
-      records.set(profile, { ...record, handoff: null });
+      const { handoffAt: _handoffAt, ...rest } = record;
+      records.set(profile, { ...rest, handoff: null });
       return true;
     }),
     retire: vi.fn(async (profile) => {
@@ -283,6 +284,56 @@ describe('board session', () => {
       await other.session.end(reason);
       expect(other.recoveryStore.records.has('Alice'), reason).toBe(!retired);
     }
+  });
+
+  it('a renderer crash long after the last edit still restores silently on reopen', async () => {
+    const ctx = setup();
+    await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+    const boardId = ctx.doc.activeBoardId;
+
+    // The operator stops editing; the renderer crashes 20 minutes later
+    ctx.clock.t = T0 + 20 * MINUTE;
+    ctx.session.rendererGone();
+    await ctx.session.end('clean-exit');
+
+    ctx.clock.t = T0 + 21 * MINUTE;
+    const reopened = await ctx.session.open();
+    expect(reopened.recovery).toEqual({ savedAt: T0, handoff: 'renderer-crash', boardId });
+
+    // The window is measured from the handoff, not the edit
+    ctx.clock.t = T0 + 36 * MINUTE;
+    expect((await ctx.session.open()).recovery.handoff).toBeNull();
+  });
+
+  it('a renderer crash while the startup crash prompt is open does not hand off the old record', async () => {
+    const ctx = setup();
+    const record = { version: 1, boardId: 'board-1', savedAt: T0 - MINUTE, handoff: null, layout: layoutWith(9) };
+    ctx.recoveryStore.records.set('Alice', record);
+    const opened = await ctx.session.open();
+    expect(opened.recovery.handoff).toBeNull();
+    expect(ctx.session.state().status).toBe('loading');
+
+    ctx.session.rendererGone();
+    await ctx.session.end('clean-exit');
+
+    expect(ctx.recoveryStore.markHandoff).not.toHaveBeenCalled();
+    expect(ctx.recoveryStore.records.get('Alice')).toEqual(record);
+    // Still fenced: no write lands from the crashed page
+    await expect(ctx.session.saveRecovery(layoutWith(5))).resolves.toEqual({ skipped: true });
+    // The reload prompts again
+    expect((await ctx.session.open()).recovery).toEqual({ savedAt: T0 - MINUTE, handoff: null, boardId: 'board-1' });
+  });
+
+  it('handoff before ready fences without marking the record', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.records.set('Alice', { version: 1, boardId: 'board-1', savedAt: T0, handoff: null, layout: layoutWith(9) });
+    const opened = await ctx.session.open();
+    await ctx.session.handoff('update');
+    expect(ctx.recoveryStore.markHandoff).not.toHaveBeenCalled();
+    // A late ready report can't reopen writes: the fence is up
+    ctx.session.reportReady(opened.generation, true);
+    await expect(ctx.session.saveRecovery(layoutWith(5))).resolves.toEqual({ skipped: true });
   });
 
   it('an open() during end() keeps its own profile and status', async () => {

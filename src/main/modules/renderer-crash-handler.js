@@ -13,6 +13,7 @@ export const RENDERER_GONE_MESSAGE =
   "Mx. Voice's window stopped working. Reload it and restore the show in progress?";
 
 const RELOAD = 0;
+const QUIT = 1;
 
 /**
  * @param {Object} deps
@@ -39,13 +40,19 @@ export function createRendererGoneHandler({ boardSession, dialog, getMainWindow,
 
     let response;
     try {
-      ({ response } = await dialog.showMessageBox(window, {
-        type: 'error',
-        buttons: ['Reload', 'Quit'],
-        defaultId: RELOAD,
-        cancelId: RELOAD,
-        message: RENDERER_GONE_MESSAGE
-      }));
+      if (process.env.APP_TEST_MODE === '1') {
+        // E2E seam: no native dialog. Tests set the answer and read the count.
+        globalThis.__e2eRendererCrashPrompts = (globalThis.__e2eRendererCrashPrompts || 0) + 1;
+        response = (globalThis.__e2eRendererCrashAnswer || 'reload') === 'reload' ? RELOAD : QUIT;
+      } else {
+        ({ response } = await dialog.showMessageBox(window, {
+          type: 'error',
+          buttons: ['Reload', 'Quit'],
+          defaultId: RELOAD,
+          cancelId: RELOAD,
+          message: RENDERER_GONE_MESSAGE
+        }));
+      }
     } catch (error) {
       // No way to ask: quitting keeps the record for the next launch
       debugLog?.error('Could not ask about the stopped window; quitting', { ...logCtx, error: error.message });
