@@ -33,7 +33,8 @@ vi.mock('../../../src/renderer/modules/dom-utils/index.js', () => ({
 
 globalThis.window = { debugLog: { info() {}, warn() {}, error() {}, debug() {} } };
 const { default: initializeHoldingTank } = await import('../../../src/renderer/modules/holding-tank/index.js');
-const tank = initializeHoldingTank({ moduleRegistry: { profileState: { saveProfileState: vi.fn(async () => {}) } }, electronAPI: {} });
+const saveProfileState = vi.fn(async () => {});
+const tank = initializeHoldingTank({ moduleRegistry: { profileState: { saveProfileState } }, electronAPI: {} });
 
 const row = (id) => ({ id, title: `T${id}`, artist: 'A', time: '0:01' });
 
@@ -76,13 +77,17 @@ describe('populateHoldingTank import', () => {
     expect(getSongsByIds.mock.calls[0][0]).toEqual(['1', '2']);
   });
 
-  it('empties the tab and reports every id when none are in the library', async () => {
+  it('leaves the tab untouched and reports every id when none are in the library', async () => {
     getSongsByIds.mockResolvedValue({ success: true, data: [] });
     globalThis.__tab.items.push({ getAttribute: () => '7' });
+    const before = tank.getHoldingTankSnapshot();
 
-    const outcome = await tank.populateHoldingTank(['5', '6']);
+    const outcome = await tank.populateHoldingTank(['5', '6', '5']);
 
-    expect(outcome).toMatchObject({ success: true, count: 0, dropped: 2 });
-    expect(globalThis.__tab.items).toHaveLength(0);
+    // success: false makes the bridge say the file has no songs, untracked
+    expect(outcome).toMatchObject({ success: false, dropped: 2 });
+    expect(globalThis.__tab.items).toHaveLength(1);
+    expect(tank.getHoldingTankSnapshot()).toEqual(before);
+    expect(saveProfileState).not.toHaveBeenCalled();
   });
 });

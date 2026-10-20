@@ -230,6 +230,15 @@ export async function populateHoldingTank(songIds) {
   const songsById = new Map(rows.map(row => [String(row.id), row]));
   const validIds = songIds.map(String).filter(songId => songsById.has(songId));
   const dropped = distinctIds.filter(songId => !songsById.has(songId)).length;
+  if (validIds.length === 0) {
+    // Nothing to import: the current tab is left as it is
+    debugLog?.warn('None of the file\'s songs are in the library', {
+      module: 'holding-tank',
+      function: 'populateHoldingTank',
+      dropped
+    });
+    return { success: false, error: 'No songs in the library', dropped };
+  }
 
   clearActiveHoldingTankState();
   Dom.empty('.holding_tank.active');

@@ -286,11 +286,13 @@ class HotkeysModule {
   /**
    * Populate the active hotkey tab from an imported file.
    * Every id is looked up with one batch query; ids missing from the library
-   * are dropped. An empty file leaves the tab untouched.
+   * are dropped. An empty file, or one whose songs are all missing from the
+   * library, leaves the tab untouched.
    *
    * @param {Object} fkeys - Object mapping f1..f12 to song ids
    * @param {string} title - Title for the hotkey tab
-   * @returns {Promise<{ dropped: number }>} distinct ids missing from the library
+   * @returns {Promise<{ dropped: number, success?: false, error?: string }>}
+   *   distinct ids missing from the library; success false when none were found
    */
   async _populateHotkeysImpl(fkeys, title) {
     if (!fkeys || Object.keys(fkeys).length === 0) {
@@ -310,6 +312,11 @@ class HotkeysModule {
       const rows = result?.data || result || [];
       if (!Array.isArray(rows)) throw new Error(result?.error || 'Failed to load hotkey song metadata');
       rows.forEach(row => songsById.set(String(row.id), row));
+    }
+    const dropped = songIds.filter(id => !songsById.has(id)).length;
+    if (songIds.length > 0 && dropped === songIds.length) {
+      // Nothing to import: the current tab is left as it is
+      return { success: false, error: 'No songs in the library', dropped };
     }
 
     // `.active` is set as soon as a tab is clicked; `.show` waits for the fade
@@ -349,7 +356,7 @@ class HotkeysModule {
 
     // One save after the whole tab is populated
     this.requestProfileStateSave();
-    return { dropped: songIds.filter(id => !songsById.has(id)).length };
+    return { dropped };
   }
 
   /**

@@ -54,14 +54,18 @@ describe('hotkey file import onto the current tab', () => {
     expect(hotkeys.requestProfileStateSave).toHaveBeenCalledTimes(1);
   });
 
-  it('clears the tab when a file has lines but no valid ids', async () => {
-    const { hotkeys } = hotkeysHarness([]);
+  it('leaves the tab untouched when none of the file\'s ids are in the library', async () => {
+    const { hotkeys, slots } = hotkeysHarness([]);
     hotkeys.state.assign(1, 'f5', '7');
+    slots.f5.setAttribute('songid', '7');
 
-    const outcome = await hotkeys._populateHotkeysImpl({ f1: '999' }, '');
+    const outcome = await hotkeys._populateHotkeysImpl({ f1: '999', f2: '998' }, 'Other Show');
 
-    expect(outcome).toEqual({ dropped: 1 });
-    expect(Object.values(hotkeys.state.toSnapshot()[0].hotkeys)).toEqual([]);
+    // success: false makes the bridge say the file has no songs, untracked
+    expect(outcome).toMatchObject({ success: false, dropped: 2 });
+    expect(hotkeys.state.toSnapshot()[0]).toMatchObject({ tabName: null, hotkeys: { f5: '7' } });
+    expect(slots.f5.attrs.get('songid')).toBe('7');
+    expect(hotkeys.requestProfileStateSave).not.toHaveBeenCalled();
   });
 
   it('keeps the DOM in step with the model when a file repeats an id', async () => {
