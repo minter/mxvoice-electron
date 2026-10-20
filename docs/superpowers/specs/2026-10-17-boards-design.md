@@ -101,7 +101,7 @@ Switching boards, reverting, importing a board, or deleting the active board can
 
 Import Board lists the other profiles on this computer and the saved boards in each. It does not list the current profile, and it does not list anyone's live session.
 
-Choosing Derek → Comedy Sports adds a new board to Jesse's profile and makes it active. Derek's board is untouched. If Jesse already has a board of that name, the new one is named after the board and the profile it came from, for example "Comedy Sports (Derek)", with 2, 3 and so on added if that name is also taken. The copy remembers where it came from. Import never overwrites an existing board.
+Choosing Derek → Comedy Sports adds a new board to Jesse's profile and makes it active. Derek's board is untouched. The copy is always named after the board and the profile it came from, for example "Comedy Sports (Derek)". If Jesse already has a board with that name, 2, 3 and so on are added. The copy remembers where it came from. Import never overwrites an existing board.
 
 ### Old hotkey and holding-tank files
 
@@ -135,7 +135,7 @@ The menu contains:
 
 The words Open, Save, and Save As do not appear. They teach people that the night is a document they are supposed to save.
 
-Nothing in the Board menu has a keyboard shortcut. The function keys belong to playback. Open and Save shortcuts (Cmd/Ctrl+O and Cmd/Ctrl+S) are left unbound rather than reassigned, because those keys teach people that the night is a document.
+Nothing in the Board menu has a keyboard shortcut. Open and Save shortcuts (Cmd/Ctrl+O and Cmd/Ctrl+S) are left unbound rather than reassigned, because those keys teach people that the night is a document.
 
 ### Header
 
