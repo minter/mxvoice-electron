@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import { boardsDocument, readBoards, recoveryRecordPath, seedBoards } from '../../utils/seed-boards.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -298,36 +299,44 @@ test.describe('Profile Lifecycle', () => {
     // Verify the new profile has a preferences.json
     const prefsExist = fs.existsSync(path.join(userDataDir, 'profiles', 'CopyOfOriginal', 'preferences.json'));
     expect(prefsExist).toBe(true);
+    // and the source's saved boards
+    expect(readBoards(userDataDir, 'CopyOfOriginal')).toEqual(readBoards(userDataDir, 'Original'));
   });
 
-  test('switching profiles in-process preserves isolated state', async () => {
+  // Boards (Task 9): a switch discards the live layout, so each profile now
+  // opens on its saved board. The isolation check seeds boards.json for both.
+  test('switching profiles in-process opens each profile on its own saved board', async () => {
     await createProfileInLauncher('SecondProfile', 'For switching');
+    const namedTabs = (keys, queue) => boardsDocument({
+      hotkeys: [{ tabNumber: 1, tabName: keys, hotkeys: {} }],
+      holdingTank: [{ tabNumber: 1, tabName: queue, songIds: [] }]
+    });
+    seedBoards(userDataDir, 'Default User', namedTabs('Default Keys', 'Default Queue'));
+    seedBoards(userDataDir, 'SecondProfile', namedTabs('Second Keys', 'Second Queue'));
 
     const mainWindow = await launchProfile('Default User');
     await waitForProfileReady(mainWindow, 'Default User');
     await dismissFirstRunModal(mainWindow);
     const pid = app.process().pid;
 
-    await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Default Keys');
-    await renameActiveTab(mainWindow, '#holding-tank-rename-btn', 'Default Queue');
+    await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('Default Keys');
+    await expect(mainWindow.locator('#holding_tank_tabs a[href="#holding_tank_1"]')).toHaveText('Default Queue');
     await mainWindow.evaluate(() => (
       window.secureElectronAPI.profile.setPreference('e2e_profile_marker', 'default-marker')
     ));
-    await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('Default Keys');
-    await expect(mainWindow.locator('#holding_tank_tabs a[href="#holding_tank_1"]')).toHaveText('Default Queue');
 
     await openSwitchPicker(mainWindow);
     await chooseInPicker(mainWindow, 'SecondProfile');
     await dismissFirstRunModal(mainWindow);
 
-    await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('1');
-    await expect(mainWindow.locator('#holding_tank_tabs a[href="#holding_tank_1"]')).toHaveText('1');
+    await expect(mainWindow.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText('Second Keys');
+    await expect(mainWindow.locator('#holding_tank_tabs a[href="#holding_tank_1"]')).toHaveText('Second Queue');
     expect(await mainWindow.evaluate(async () => (
       await window.secureElectronAPI.profile.getPreference('e2e_profile_marker')
     )).value).not.toBe('default-marker');
 
-    await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Second Keys');
-    await renameActiveTab(mainWindow, '#holding-tank-rename-btn', 'Second Queue');
+    // A live rename is discarded by the switch away
+    await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Live Rename');
     await mainWindow.evaluate(() => (
       window.secureElectronAPI.profile.setPreference('e2e_profile_marker', 'second-marker')
     ));
@@ -342,12 +351,8 @@ test.describe('Profile Lifecycle', () => {
       await window.secureElectronAPI.profile.getPreference('e2e_profile_marker')
     ))).toMatchObject({ success: true, value: 'default-marker' });
 
-    const secondState = JSON.parse(fs.readFileSync(
-      path.join(userDataDir, 'profiles', 'SecondProfile', 'state.json'),
-      'utf8'
-    ));
-    expect(secondState.hotkeys[0].tabName).toBe('Second Keys');
-    expect(secondState.holdingTank[0].tabName).toBe('Second Queue');
+    expect(readBoards(userDataDir, 'SecondProfile').boards[0].layout.hotkeys[0].tabName).toBe('Second Keys');
+    expect(fs.existsSync(recoveryRecordPath(userDataDir, 'SecondProfile'))).toBe(false);
 
     // Same process and window throughout, no relaunch hand-off keys
     expect(app.process().pid).toBe(pid);
@@ -526,7 +531,7 @@ test.describe('Profile Lifecycle', () => {
     await expect(page.locator('#cancel-switch-btn')).toBeHidden();
   });
 
-  test('Log Out switches to Default User in-process', async () => {
+  test('Log Out switches to Default User in-process and discards the live layout', async () => {
     await createProfileInLauncher('ShowNight');
 
     const mainWindow = await launchProfile('ShowNight');
@@ -541,11 +546,11 @@ test.describe('Profile Lifecycle', () => {
     await waitForProfileReady(mainWindow, 'Default User');
 
     expect(app.process().pid).toBe(pid);
-    const showState = JSON.parse(fs.readFileSync(
-      path.join(userDataDir, 'profiles', 'ShowNight', 'state.json'),
-      'utf8'
-    ));
-    expect(showState.hotkeys[0].tabName).toBe('Show Keys');
+    // Boards (Task 9): Log Out discards the live layout; the saved board and
+    // recovery are untouched by it
+    expect(readBoards(userDataDir, 'ShowNight').boards[0].layout.hotkeys[0].tabName).toBeNull();
+    expect(fs.existsSync(recoveryRecordPath(userDataDir, 'ShowNight'))).toBe(false);
+    expect(fs.existsSync(path.join(userDataDir, 'profiles', 'ShowNight', 'state.json'))).toBe(false);
   });
 
   test('deleting the current profile then cancelling falls back to Default User', async () => {

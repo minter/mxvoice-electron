@@ -8,6 +8,7 @@ import {
   closeApp,
   waitForAppReady
 } from '../../../utils/seeded-launch.js';
+import { boardsDocument, hotkeyLayout, readRecovery, seedBoards } from '../../../utils/seed-boards.js';
 
 test.describe('Library transfer - real archive round trip', () => {
   let app; let page; let userDataDir; let suiteRoot; let suiteMusicDir;
@@ -70,6 +71,8 @@ test.describe('Library transfer - real archive round trip', () => {
     await page.evaluate(() => (
       window.secureElectronAPI.profile.setPreference('e2e_library_marker', 'exported-state')
     ));
+    // Boards (Task 9): the layout travels as the saved board in boards.json
+    seedBoards(userDataDir, 'Default User', boardsDocument(hotkeyLayout({ f1: '1004' })));
     await page.evaluate(() => {
       window.__libraryExportProgress = [];
       window.secureElectronAPI.library.onExportProgress((progress) => {
@@ -104,6 +107,13 @@ test.describe('Library transfer - real archive round trip', () => {
     await page.evaluate(() => (
       window.secureElectronAPI.profile.setPreference('e2e_library_marker', 'mutated-state')
     ));
+    seedBoards(userDataDir, 'Default User', boardsDocument(hotkeyLayout({ f1: '1005' })));
+    // A live edit leaves a recovery record; the import must clear it
+    await page.evaluate(async () => {
+      await window.moduleRegistry.hotkeys.setLabelFromSongId('1003', document.querySelector('#hotkeys_list_1 #f2_hotkey'));
+      await window.moduleRegistry.hotkeys.requestProfileStateSave();
+    });
+    await expect.poll(() => readRecovery(userDataDir, 'Default User')).not.toBeNull();
 
     const mutatedCount = await page.evaluate(() => window.secureElectronAPI.database.countSongs());
     expect(mutatedCount.data[0].count).toBe(4);
@@ -152,6 +162,11 @@ test.describe('Library transfer - real archive round trip', () => {
     expect(await page.evaluate(async () => (
       await window.secureElectronAPI.profile.getPreference('e2e_library_marker')
     ))).toMatchObject({ success: true, value: 'exported-state' });
+
+    await expect(page.locator('#hotkeys_list_1 #f1_hotkey')).toHaveAttribute('songid', '1004');
+    await expect(page.locator('#hotkeys_list_1 #f2_hotkey')).not.toHaveAttribute('songid', /.+/);
+    await expect(page.locator('.modal.show').filter({ hasText: 'Restore show?' })).toHaveCount(0);
+    expect(readRecovery(userDataDir, 'Default User')).toBeNull();
 
     const importedConfig = JSON.parse(fs.readFileSync(path.join(userDataDir, 'config.json'), 'utf8'));
     expect(importedConfig.database_directory).toBe(userDataDir);

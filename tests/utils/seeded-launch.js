@@ -8,7 +8,12 @@ import electronPath from 'electron';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export async function launchSeededApp(electron, suffix = '') {
+/**
+ * @param {Object} [options]
+ * @param {(userDataDir: string) => void} [options.beforeLaunch] - seed files
+ *   (e.g. boards.json) into the fresh user-data directory before the app starts
+ */
+export async function launchSeededApp(electron, suffix = '', { beforeLaunch } = {}) {
   // Create a unique per-suite root and per-suite userDataDir
   const suiteId = `${suffix || 'suite'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const suiteRoot = path.join(__dirname, `../fixtures/suites/${suiteId}`);
@@ -56,6 +61,7 @@ export async function launchSeededApp(electron, suffix = '') {
     browser_height: 800,
   };
   fs.writeFileSync(path.join(userDataDir, 'config.json'), JSON.stringify(config, null, 2));
+  beforeLaunch?.(userDataDir);
 
   // Diagnostics: output isolated paths and file listings
   try {

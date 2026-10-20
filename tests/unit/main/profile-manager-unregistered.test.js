@@ -11,7 +11,6 @@ vi.mock('electron', () => ({
 
 const profiles = await import('../../../src/main/modules/profile-manager.js');
 const profileDirectory = (name) => path.join(userDataDirectory, 'profiles', name);
-const state = { hotkeys: [{ tabNumber: 1, hotkeys: { f1: '1' } }], holdingTank: [] };
 
 beforeAll(() => {
   profiles.initializeProfileManager({
@@ -29,14 +28,13 @@ describe('unregistered profiles are never recreated on disk', () => {
     fs.rmSync(path.join(userDataDirectory, 'profiles.json'), { force: true });
   });
 
-  it('a just-deleted profile stays deleted when its preferences and state are read or written', async () => {
+  it('a just-deleted profile stays deleted when its preferences are read or written', async () => {
     expect(profiles.createProfile('Tonight', '')).toEqual({ success: true });
     expect(fs.existsSync(profileDirectory('Tonight'))).toBe(true);
     expect(profiles.deleteProfile('Tonight')).toEqual({ success: true });
 
     await expect(profiles.loadProfilePreferences('Tonight')).resolves.toMatchObject({ screen_mode: 'auto' });
     await expect(profiles.saveProfilePreferences('Tonight', { font_size: 12 })).resolves.toBe(false);
-    await expect(profiles.saveProfileState('Tonight', state)).resolves.toMatchObject({ success: false, skipped: true });
 
     expect(fs.existsSync(profileDirectory('Tonight'))).toBe(false);
     expect(profiles.profileExists('Tonight')).toBe(false);
@@ -53,7 +51,6 @@ describe('unregistered profiles are never recreated on disk', () => {
   it('a name that was never registered is not created either', async () => {
     await profiles.loadProfilePreferences('Nobody');
     await profiles.saveProfilePreferences('Nobody', {});
-    await profiles.saveProfileState('Nobody', state);
     expect(fs.existsSync(profileDirectory('Nobody'))).toBe(false);
   });
 
@@ -66,7 +63,7 @@ describe('unregistered profiles are never recreated on disk', () => {
 
     expect(preferences).toMatchObject({ screen_mode: 'auto' });
     expect(fs.existsSync(path.join(profileDirectory('Default User'), 'preferences.json'))).toBe(true);
-    await expect(profiles.saveProfileState('Default User', state)).resolves.toEqual({ success: true });
+    await expect(profiles.saveProfilePreferences('Default User', { font_size: 12 })).resolves.toBe(true);
   });
 
   it('re-registers a profile whose directory survived a lost registry', async () => {
@@ -77,7 +74,7 @@ describe('unregistered profiles are never recreated on disk', () => {
 
     expect(profiles.adoptProfileDirectory('Survivor')).toBe(true);
     expect(profiles.profileExists('Survivor')).toBe(true);
-    await expect(profiles.saveProfileState('Survivor', state)).resolves.toEqual({ success: true });
+    await expect(profiles.saveProfilePreferences('Survivor', { font_size: 12 })).resolves.toBe(true);
   });
 
   it('does not adopt a name without a directory, or one that collides with a registered profile', () => {

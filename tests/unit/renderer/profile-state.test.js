@@ -1,43 +1,35 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 globalThis.window = {
   debugLog: { error: vi.fn(), info: vi.fn(), warn: vi.fn() }
 };
 
-const { flushProfileState, loadProfileState, saveProfileState } = await import('../../../src/renderer/modules/profile-state/index.js');
+const profileState = await import('../../../src/renderer/modules/profile-state/index.js');
+const { extractLayout, flushProfileState, saveProfileState } = profileState;
 
-describe('profile state restoration', () => {
+function activeTabs(hotkeyHref, holdingTankHref) {
+  const links = { '#hotkey_tabs': hotkeyHref, '#holding_tank_tabs': holdingTankHref };
+  return {
+    querySelector: (selector) => {
+      const href = links[selector.split(' ')[0]];
+      return href ? { getAttribute: () => href } : null;
+    }
+  };
+}
+
+describe('profile state writes the crash-recovery record', () => {
   beforeEach(() => {
     window.isRestoringProfileState = false;
     window.secureElectronAPI = {
-      profile: {
-        getCurrent: vi.fn().mockResolvedValue({ success: true, profile: 'Default User' }),
-        loadState: vi.fn(),
-        saveState: vi.fn().mockResolvedValue({ success: true })
-      }
+      boards: { saveRecovery: vi.fn().mockResolvedValue({ success: true, data: {} }) }
     };
-  });
-
-  it('restores empty collections so custom tab names are not discarded', async () => {
-    window.secureElectronAPI.profile.loadState.mockResolvedValue({
-      success: true,
-      loaded: true,
-      data: JSON.stringify({
-        version: '1.0.0',
-        hotkeys: [{ tabNumber: 2, tabName: 'Act Two', hotkeys: {} }],
-        holdingTank: [{ tabNumber: 3, tabName: 'Standby', songIds: [] }]
-      })
+    profileState.initializeProfileState({
+      hotkeysModule: { getHotkeySnapshot: () => [{ tabNumber: 1, tabName: 'Act One', hotkeys: { f1: '5' } }] },
+      holdingTankModule: { getHoldingTankSnapshot: () => [{ tabNumber: 1, tabName: null, songIds: ['9'] }] }
     });
-    const hotkeysModule = { restoreHotkeySnapshot: vi.fn().mockResolvedValue([]) };
-    const holdingTankModule = { restoreHoldingTankSnapshot: vi.fn().mockResolvedValue([]) };
-
-    const result = await loadProfileState({ hotkeysModule, holdingTankModule });
-
-    expect(result).toEqual({ success: true, loaded: true });
-    expect(hotkeysModule.restoreHotkeySnapshot).toHaveBeenCalledOnce();
-    expect(holdingTankModule.restoreHoldingTankSnapshot).toHaveBeenCalledOnce();
-    expect(window.isRestoringProfileState).toBe(true);
   });
+
+  afterEach(() => { delete globalThis.document; });
 
   it('flushes a pending debounced save for a lifecycle transition', async () => {
     const pending = saveProfileState();
@@ -45,6 +37,37 @@ describe('profile state restoration', () => {
 
     expect(flushed).toEqual({ success: true });
     await expect(pending).resolves.toEqual({ success: true });
-    expect(window.secureElectronAPI.profile.saveState).toHaveBeenCalledOnce();
+    expect(window.secureElectronAPI.boards.saveRecovery).toHaveBeenCalledOnce();
+    expect(window.secureElectronAPI.boards.saveRecovery).toHaveBeenCalledWith({
+      hotkeys: [{ tabNumber: 1, tabName: 'Act One', hotkeys: { f1: '5' } }],
+      holdingTank: [{ tabNumber: 1, tabName: null, songIds: ['9'] }],
+      selected: { hotkeyTab: 1, holdingTankTab: 1 }
+    });
+  });
+
+  it('a skipped or retired recovery save is still a success', async () => {
+    window.secureElectronAPI.boards.saveRecovery.mockResolvedValueOnce({ success: true, data: { skipped: true } });
+    await expect(flushProfileState()).resolves.toEqual({ success: true });
+    window.secureElectronAPI.boards.saveRecovery.mockResolvedValueOnce({ success: true, data: { retired: true } });
+    await expect(flushProfileState()).resolves.toEqual({ success: true });
+  });
+
+  it('reports a failed recovery write', async () => {
+    window.secureElectronAPI.boards.saveRecovery.mockResolvedValueOnce({ success: false, error: 'disk full' });
+    await expect(flushProfileState()).resolves.toEqual({ success: false, error: 'disk full' });
+  });
+
+  it('does not write while the restoration lock is held', async () => {
+    window.isRestoringProfileState = true;
+    await expect(flushProfileState()).resolves.toMatchObject({ success: false, skipped: true });
+    expect(window.secureElectronAPI.boards.saveRecovery).not.toHaveBeenCalled();
+  });
+
+  it('extractLayout reads the selected tabs from the active tab links', () => {
+    globalThis.document = activeTabs('#hotkeys_list_3', '#holding_tank_5');
+    expect(extractLayout().selected).toEqual({ hotkeyTab: 3, holdingTankTab: 5 });
+
+    globalThis.document = activeTabs('#hotkeys_list_9', null);
+    expect(extractLayout().selected).toEqual({ hotkeyTab: 1, holdingTankTab: 1 });
   });
 });

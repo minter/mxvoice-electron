@@ -5,8 +5,6 @@
 
 import electron from 'electron';
 const { ipcMain } = electron;
-import path from 'path';
-import { promises as fsPromises } from 'fs';
 import * as profileManager from '../profile-manager.js';
 import { deleteProfileWithRecovery } from '../profile-delete.js';
 import ipcChannels from '../../../shared/ipc-channels.cjs';
@@ -37,46 +35,6 @@ export function register(deps) {
       return { success: false, error: error.message };
     }
   });
-
-  ipcMain.handle(IPC.PROFILE.LOAD_STATE, async () => {
-    try {
-      const stateFile = path.join(getProfileDirectory('state'), 'state.json');
-      try {
-        const data = await fsPromises.readFile(stateFile, 'utf8');
-        return { success: true, loaded: true, data };
-      } catch (error) {
-        if (error.code === 'ENOENT') return { success: true, loaded: false };
-        throw error;
-      }
-    } catch (error) {
-      debugLog?.error('Load profile state error', {
-        module: 'ipc-handlers',
-        function: 'profile:load-state',
-        error: error.message
-      });
-      return { success: false, error: error.message };
-    }
-  });
-
-  // Profile: Save state (called on window close)
-  ipcMain.handle(IPC.PROFILE.SAVE_STATE, async (event, state, profileName) => {
-    try {
-      // Mid-switch, "the current profile" is about to change under this save
-      if (!profileName && profileSwitcher?.isSavingFenced()) {
-        return { success: false, skipped: true, error: 'Profile switch in progress' };
-      }
-      const name = profileName || getCurrentProfile();
-      return await profileManager.saveProfileState(name, state, { reason: 'window-close' });
-    } catch (error) {
-      debugLog?.error('Error saving profile state', {
-        module: 'ipc-handlers',
-        function: 'profile:save-state',
-        error: error.message
-      });
-      return { success: false, error: error.message };
-    }
-  });
-
 
   // Profile: Get preference value
   ipcMain.handle(IPC.PROFILE.GET_PREFERENCE, async (event, key) => {
@@ -252,21 +210,6 @@ export function register(deps) {
       return { success: true, profiles: await profileManager.getAvailableProfiles() };
     } catch (error) {
       debugLog?.error('Profile list error:', { module: 'ipc-handlers', function: 'profile:list', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
-  // Profile: Save state before switch (explicit save before a switch)
-  ipcMain.handle(IPC.PROFILE.SAVE_STATE_BEFORE_SWITCH, async (event, state, profileName) => {
-    try {
-      const name = profileName || getCurrentProfile();
-      return await profileManager.saveProfileState(name, state, { reason: 'profile-switch' });
-    } catch (error) {
-      debugLog?.error('Error saving profile state before switch', {
-        module: 'ipc-handlers',
-        function: 'profile:save-state-before-switch',
-        error: error.message
-      });
       return { success: false, error: error.message };
     }
   });

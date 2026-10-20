@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const handlers = {};
 const ipcMain = { handle: (channel, handler) => { handlers[channel] = handler; } };
 const profileManager = vi.hoisted(() => ({
-  saveProfileState: vi.fn(async () => ({ success: true })),
   getAvailableProfiles: vi.fn(() => [{ name: 'Default User' }]),
   deleteProfile: vi.fn(() => ({ success: true })),
   getDeleteProfileBlocker: vi.fn(() => null),
@@ -15,10 +14,9 @@ vi.mock('../../../src/main/modules/profile-manager.js', () => profileManager);
 const { register } = await import('../../../src/main/modules/ipc/profile-handlers.js');
 const { trackProfileSwitch } = await import('../../../src/main/modules/profile-switch-analytics.js');
 
-function setup({ fenced = false } = {}) {
+function setup() {
   const profileSwitcher = {
     switchProfile: vi.fn(async () => ({ success: true })),
-    isSavingFenced: () => fenced,
   };
   register({
     getCurrentProfile: () => 'Default User',
@@ -56,19 +54,11 @@ describe('profile switch handlers', () => {
     await expect(handlers['profile:switch-to']({}, 'X')).resolves.toEqual({ success: false, error: 'busy' });
   });
 
-  it('refuses implicit state saves while a switch is fencing them', async () => {
-    setup({ fenced: true });
-    await expect(handlers['profile:save-state']({}, { hotkeys: [] })).resolves.toMatchObject({ success: false, skipped: true });
-    expect(profileManager.saveProfileState).not.toHaveBeenCalled();
-
-    await handlers['profile:save-state']({}, { hotkeys: [] }, 'Default User');
-    expect(profileManager.saveProfileState).toHaveBeenCalledWith('Default User', { hotkeys: [] }, { reason: 'window-close' });
-  });
-
-  it('saves to the current profile when no switch is running', async () => {
+  it('registers no state.json channels: live edits go to the board session', () => {
     setup();
-    await handlers['profile:save-state']({}, { hotkeys: [] });
-    expect(profileManager.saveProfileState).toHaveBeenCalledWith('Default User', { hotkeys: [] }, { reason: 'window-close' });
+    expect(handlers['profile:load-state']).toBeUndefined();
+    expect(handlers['profile:save-state']).toBeUndefined();
+    expect(handlers['profile:save-state-before-switch']).toBeUndefined();
   });
 });
 
@@ -86,7 +76,7 @@ describe('profile delete handler', () => {
       getProfileDirectory: vi.fn(),
       store: { set: vi.fn(), get: vi.fn() },
       debugLog,
-      profileSwitcher: { switchProfile: vi.fn(), isSavingFenced: () => false },
+      profileSwitcher: { switchProfile: vi.fn() },
       boardSession,
       recoveryStore,
     });

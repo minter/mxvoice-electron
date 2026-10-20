@@ -4,6 +4,8 @@
  * Provides modal dialog utilities for the MxVoice Electron application
  */
 
+import { escapeHtml } from '../dom-utils/escape-html.js';
+
 /**
  * Hide a dynamically created dialog and remove its element from the DOM.
  * Removal happens on 'hidden.bs.modal' rather than a fixed timer so the
@@ -28,29 +30,39 @@ function hideAndRemoveModal(modal) {
 /**
  * Custom confirmation dialog
  *
- * @param {string} message - The confirmation message
+ * Esc, a backdrop click and the close button all answer false.
+ *
+ * @param {string} message - The confirmation message, shown as plain text
  * @param {string} title - The dialog title (default: 'Confirm')
+ * @param {Object} [options]
+ * @param {string} [options.confirmLabel='Confirm']
+ * @param {string} [options.cancelLabel='Cancel']
+ * @param {'confirm'|'cancel'} [options.defaultAction='confirm'] - 'cancel' focuses
+ *   the cancel button, so Return takes it
  * @returns {Promise<boolean>} - Promise that resolves to true if confirmed, false if cancelled
  */
-export function customConfirm(message, title = 'Confirm') {
+export function customConfirm(message, title = 'Confirm', {
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  defaultAction = 'confirm'
+} = {}) {
   return new Promise((resolve) => {
     const modal = document.createElement('div');
     modal.className = 'modal fade';
-    const safeTitle = window.DOMPurify ? window.DOMPurify.sanitize(title) : title;
-    const safeMessage = window.DOMPurify ? window.DOMPurify.sanitize(message) : message;
+    modal.setAttribute('tabindex', '-1');
     modal.innerHTML = `
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">${safeTitle}</h5>
+            <h5 class="modal-title">${escapeHtml(title)}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <p>${safeMessage}</p>
+            <p>${escapeHtml(message)}</p>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-primary confirm-btn">Confirm</button>
+            <button type="button" class="btn btn-secondary cancel-btn" data-bs-dismiss="modal">${escapeHtml(cancelLabel)}</button>
+            <button type="button" class="btn btn-primary confirm-btn">${escapeHtml(confirmLabel)}</button>
           </div>
         </div>
       </div>
@@ -60,27 +72,26 @@ export function customConfirm(message, title = 'Confirm') {
 
     const confirmBtn = modal.querySelector('.confirm-btn');
     const closeBtn = modal.querySelector('.btn-close');
-    const cancelBtn = modal.querySelector('.btn-secondary');
+    const cancelBtn = modal.querySelector('.cancel-btn');
 
-    const cleanup = () => {
+    let hasResolved = false;
+    const answer = (value) => {
+      if (hasResolved) return;
+      hasResolved = true;
       // Use Bootstrap 5 API to hide and remove
       hideAndRemoveModal(modal);
+      resolve(value);
     };
 
-    confirmBtn.addEventListener('click', () => {
-      cleanup();
-      resolve(true);
-    });
+    confirmBtn.addEventListener('click', () => answer(true));
+    closeBtn.addEventListener('click', () => answer(false));
+    cancelBtn.addEventListener('click', () => answer(false));
+    // Esc or a backdrop click
+    modal.addEventListener('hidden.bs.modal', () => answer(false), { once: true });
 
-    closeBtn.addEventListener('click', () => {
-      cleanup();
-      resolve(false);
-    });
-
-    cancelBtn.addEventListener('click', () => {
-      cleanup();
-      resolve(false);
-    });
+    if (defaultAction === 'cancel') {
+      modal.addEventListener('shown.bs.modal', () => cancelBtn.focus(), { once: true });
+    }
 
     // Show modal via Bootstrap 5 API
     const instance = new bootstrap.Modal(modal, { backdrop: true, keyboard: true });

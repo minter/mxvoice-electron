@@ -138,7 +138,9 @@ test.describe('Boards - layout swap during playback', () => {
       if (song) song.textContent = 'Eat It by Weird Al Yankovic (0:06)';
     });
     await expect(tank.locator('.list-group-item')).toHaveCount(2);
-    expect(await page.evaluate(() => window.sharedState.get('boardGeneration'))).toBe(0);
+    // Startup applied the saved board once (Task 9); no swap happens after it
+    const generation = await page.evaluate(() => window.sharedState.get('boardGeneration'));
+    expect(generation).toBe(1);
 
     await page.keyboard.press('F1');
     await expect(page.locator('#pause_button')).toBeVisible({ timeout: 5000 });
@@ -148,6 +150,7 @@ test.describe('Boards - layout swap during playback', () => {
     await expect(page.locator('#playlist_mode_btn')).toHaveClass(/active/);
 
     await expect(tank.locator('.list-group-item[songid="1005"]')).toHaveClass(/now_playing/);
+    expect(await page.evaluate(() => window.sharedState.get('boardGeneration'))).toBe(generation);
     await page.locator('#stop_button').click();
     await expect(page.locator('#stop_button')).toBeDisabled({ timeout: 5000 });
   });

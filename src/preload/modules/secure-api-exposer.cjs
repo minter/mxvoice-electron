@@ -464,9 +464,6 @@ const secureElectronAPI = {
     listProfiles: () => ipcRenderer.invoke(IPC.PROFILE.LIST),
     // method: 'launcher' when chosen in the Switch Profile dialog, else 'direct'
     switchToProfile: (name, method) => ipcRenderer.invoke(IPC.PROFILE.SWITCH_TO, name, method),
-    saveState: (state, profileName) => ipcRenderer.invoke(IPC.PROFILE.SAVE_STATE, state, profileName),
-    loadState: () => ipcRenderer.invoke(IPC.PROFILE.LOAD_STATE),
-    saveStateBeforeSwitch: (state, profileName) => ipcRenderer.invoke(IPC.PROFILE.SAVE_STATE_BEFORE_SWITCH, state, profileName),
     getPreference: (key) => ipcRenderer.invoke(IPC.PROFILE.GET_PREFERENCE, key),
     setPreference: (key, value) => ipcRenderer.invoke(IPC.PROFILE.SET_PREFERENCE, key, value),
     setPreferences: (preferencesObject) => ipcRenderer.invoke(IPC.PROFILE.SET_PREFERENCES, preferencesObject),

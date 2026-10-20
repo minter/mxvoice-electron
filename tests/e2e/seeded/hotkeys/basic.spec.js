@@ -1,5 +1,7 @@
 import { _electron as electron, test, expect } from '@playwright/test';
-import { launchSeededApp, closeApp, clearModalBackdrop } from '../../../utils/seeded-launch.js';
+import { launchSeededApp, closeApp, clearModalBackdrop, waitForAppReady } from '../../../utils/seeded-launch.js';
+import { crashApp, relaunchApp } from '../../../utils/relaunch.js';
+import { readRecovery, recoveryRecordPath } from '../../../utils/seed-boards.js';
 import {
   waitForAudible,
   waitForSilence,
@@ -8,8 +10,6 @@ import {
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'fs';
-import os from 'os';
-import electronPath from 'electron';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -1625,278 +1625,87 @@ test.describe('Hotkeys - save & load', () => {
     await expect(restoredF3.locator('.song')).toHaveText('');
   });
 
-  test('hotkey deletion persists across app restart', async () => {
+  // Boards (Task 9): a relaunch opens the saved board, so live hotkeys only
+  // survive through the crash-recovery record. This test now goes through it.
+  test('hotkey deletion survives a crash restore', async () => {
     // This test performs multiple app restarts, so it needs more time
     test.setTimeout(120000); // 2 minutes
-    // This test verifies the exact bug scenario:
-    // 1. Add hotkeys to tab 1
-    // 2. Quit (hotkeys get saved)
-    // 3. Restart with that profile (hotkeys load correctly)
-    // 4. Delete all hotkeys from tab 1
-    // 5. Quit (deletions should be saved but aren't - bug!)
-    // 6. Restart (hotkeys come back because deletion wasn't saved - bug manifests!)
-    //
-    // CORRECT RESULT: No hotkeys in tab 1 after restart
-    // EXPECTED RESULT WITHOUT BUGFIX: Same songs are in the tab 1 hotkeys
-    
-    // This is a standalone test - we need our own app instance to restart it
-    let testApp, testPage, userDataDir, fakeHome;
-    
+    // The original bug: deleting hotkeys wasn't saved, so they came back.
+    // 1. Add hotkeys to tab 1, crash, restore the show: the hotkeys are back
+    // 2. Delete them, crash again: they stay deleted
+    let testApp, testPage, userDataDir;
+    const homes = [];
+
+    const relaunchAfterCrash = async ({ expectPrompt }) => {
+      await crashApp(testApp);
+      const relaunched = await relaunchApp(electron, userDataDir);
+      ({ app: testApp, page: testPage } = relaunched);
+      homes.push(relaunched.fakeHome);
+      if (expectPrompt) {
+        const prompt = testPage.locator('.modal.show').filter({ hasText: 'Restore show?' });
+        await expect(prompt).toBeVisible({ timeout: 20000 });
+        await prompt.getByRole('button', { name: 'Restore show in progress' }).click();
+        await expect(prompt).toHaveCount(0);
+      }
+      await waitForAppReady(testPage, testApp);
+      await expect(testPage.locator('.modal.show').filter({ hasText: 'Restore show?' })).toHaveCount(0);
+    };
+
     try {
-      // ========================================
-      // PART 1: Setup - Add hotkeys and save them
-      // ========================================
-      
-      // Launch initial app instance with isolated environment
       const launchResult = await launchSeededApp(electron, 'hotkeys-persistence');
       testApp = launchResult.app;
       testPage = launchResult.page;
       userDataDir = launchResult.userDataDir;
-      
-      // Ensure window is visible and focused
-      await testApp.evaluate(async ({ BrowserWindow }) => {
-        const win = BrowserWindow.getAllWindows()[0];
-        win.show();
-        if (win.isMinimized()) win.restore();
-        win.focus();
-      });
-      await testPage.bringToFront();
-      await testPage.click('body');
-      await testPage.waitForLoadState('domcontentloaded');
-      await testPage.waitForFunction(
-        () => window.moduleRegistry?.hotkeys && typeof window.moduleRegistry.hotkeys.populateHotkeys === 'function',
-        { timeout: 15000 }
-      );
+      await waitForAppReady(testPage, testApp);
 
       // Ensure we're on Tab 1
-      const tab1 = testPage.locator('#hotkey_tabs a[href="#hotkeys_list_1"]');
-      await tab1.click();
+      await testPage.locator('#hotkey_tabs a[href="#hotkeys_list_1"]').click();
 
       // Load search results
       const searchInput = testPage.locator('#omni_search');
       await searchInput.clear();
       await searchInput.press('Enter');
-
       const rows = testPage.locator('#search_results tbody tr');
       await expect(rows).toHaveCount(5, { timeout: 5000 });
 
       // Add multiple hotkeys to Tab 1 (F1, F2, F3)
-      const activeTab = testPage.locator('#hotkeys_list_1');
-      const f1Hotkey = activeTab.locator('[id^="f1_hotkey"] .song');
-      const f2Hotkey = activeTab.locator('[id^="f2_hotkey"] .song');
-      const f3Hotkey = activeTab.locator('[id^="f3_hotkey"] .song');
-
-      // Drag first song to F1
-      await rows.nth(0).dragTo(f1Hotkey, {
-        force: true,
-        sourcePosition: { x: 10, y: 10 },
-        targetPosition: { x: 20, y: 20 }
-      });
-
-      // Drag second song to F2
-      await rows.nth(1).dragTo(f2Hotkey, {
-        force: true,
-        sourcePosition: { x: 10, y: 10 },
-        targetPosition: { x: 20, y: 20 }
-      });
-
-      // Drag third song to F3
-      await rows.nth(2).dragTo(f3Hotkey, {
-        force: true,
-        sourcePosition: { x: 10, y: 10 },
-        targetPosition: { x: 20, y: 20 }
-      });
-
-      // Verify hotkeys were assigned
-      await expect(f1Hotkey).not.toHaveText('');
-      await expect(f2Hotkey).not.toHaveText('');
-      await expect(f3Hotkey).not.toHaveText('');
-      const f1Text = await f1Hotkey.textContent();
-      const f2Text = await f2Hotkey.textContent();
-      const f3Text = await f3Hotkey.textContent();
-      console.log('✅ Hotkeys assigned - F1:', f1Text, 'F2:', f2Text, 'F3:', f3Text);
-
-      // Explicitly save profile state before closing
-      // (beforeunload's async IPC save may not complete before process exits)
-      await testPage.evaluate(async () => {
-        if (window.moduleRegistry?.profileState?.saveProfileState) {
-          await window.moduleRegistry.profileState.saveProfileState();
-        }
-      });
-
-      // Close the app (hotkeys should be saved)
-      await closeApp(testApp);
-      console.log('✅ App closed (hotkeys should be saved)');
-      
-      // ========================================
-      // PART 2: Verify hotkeys loaded correctly
-      // ========================================
-      
-      // Restart the app with the same userDataDir
-      fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
-      
-      testApp = await electron.launch({
-        executablePath: electronPath,
-        args: ['.', '--profile=Default User'],
-        env: {
-          ...process.env,
-          NODE_ENV: 'test',
-          APP_TEST_MODE: '1',
-          DISABLE_HARDWARE_ACCELERATION: '1',
-          AUTO_UPDATE: '0',
-          E2E_USER_DATA_DIR: userDataDir,
-          HOME: fakeHome,
-          APPDATA: fakeHome,
-        },
-      });
-      
-      testPage = await testApp.firstWindow();
-      await testPage.waitForLoadState('domcontentloaded');
-      await testPage.waitForFunction(
-        () => window.moduleRegistry?.hotkeys,
-        { timeout: 15000 }
-      );
-
-      // Ensure window is visible and focused
-      await testApp.evaluate(async ({ BrowserWindow }) => {
-        const win = BrowserWindow.getAllWindows()[0];
-        win.show();
-        if (win.isMinimized()) win.restore();
-        win.focus();
-      });
-      await testPage.bringToFront();
-      await testPage.click('body');
-
-      // Verify hotkeys loaded correctly
-      const activeTabAfterFirstRestart = testPage.locator('#hotkeys_list_1');
-      const f1AfterFirstRestart = activeTabAfterFirstRestart.locator('[id^="f1_hotkey"] .song');
-      const f2AfterFirstRestart = activeTabAfterFirstRestart.locator('[id^="f2_hotkey"] .song');
-      const f3AfterFirstRestart = activeTabAfterFirstRestart.locator('[id^="f3_hotkey"] .song');
-
-      // Wait for hotkeys to load by checking that they have content
-      await expect(f1AfterFirstRestart).not.toHaveText('', { timeout: 10000 });
-
-      const f1TextAfterFirstRestart = await f1AfterFirstRestart.textContent();
-      const f2TextAfterFirstRestart = await f2AfterFirstRestart.textContent();
-      const f3TextAfterFirstRestart = await f3AfterFirstRestart.textContent();
-      console.log('🔍 After first restart - F1:', f1TextAfterFirstRestart, 'F2:', f2TextAfterFirstRestart, 'F3:', f3TextAfterFirstRestart);
-
-      // Verify hotkeys are still there (baseline check)
-      expect(f1TextAfterFirstRestart?.trim()).not.toBe('');
-      expect(f2TextAfterFirstRestart?.trim()).not.toBe('');
-      expect(f3TextAfterFirstRestart?.trim()).not.toBe('');
-      console.log('✅ Hotkeys loaded correctly after first restart');
-
-      // ========================================
-      // PART 3: Delete all hotkeys from tab 1
-      // ========================================
-
-      // Ensure we're on Tab 1
-      const tab1AfterRestart = testPage.locator('#hotkey_tabs a[href="#hotkeys_list_1"]');
-      await tab1AfterRestart.click();
-
-      // Delete F1 hotkey
-      const f1HotkeyLi = activeTabAfterFirstRestart.locator('[id^="f1_hotkey"]');
-      await f1HotkeyLi.click();
-      await testPage.keyboard.press('Delete');
-      
-      // Delete F2 hotkey
-      const f2HotkeyLi = activeTabAfterFirstRestart.locator('[id^="f2_hotkey"]');
-      await f2HotkeyLi.click();
-      await testPage.keyboard.press('Delete');
-
-      // Delete F3 hotkey
-      const f3HotkeyLi = activeTabAfterFirstRestart.locator('[id^="f3_hotkey"]');
-      await f3HotkeyLi.click();
-      await testPage.keyboard.press('Delete');
-      
-      // Verify all hotkeys are cleared in the DOM
-      await expect(f1AfterFirstRestart).toHaveText('');
-      await expect(f2AfterFirstRestart).toHaveText('');
-      await expect(f3AfterFirstRestart).toHaveText('');
-      console.log('✅ All hotkeys deleted from DOM');
-      
-      // CRITICAL: Wait for save to complete
-      // With the fix, requestProfileStateSave is async and should complete
-      // We need to explicitly wait for any pending saves to complete
-      // Try to trigger a save and wait for it to complete by calling saveProfileState directly
-      await testPage.evaluate(async () => {
-        if (window.moduleRegistry?.profileState?.saveProfileState) {
-          try {
-            await window.moduleRegistry.profileState.saveProfileState();
-            console.log('✅ Profile state saved explicitly before close');
-          } catch (err) {
-            console.error('❌ Failed to save profile state before close:', err);
-          }
-        }
-      });
-
-      // Close the app (deletions should now be saved)
-      await closeApp(testApp);
-      console.log('✅ App closed (deletions should be saved)');
-      
-      // ========================================
-      // PART 4: Verify deletions persisted (or bug manifests)
-      // ========================================
-      
-      // Restart the app with the same userDataDir again
-      fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
-      
-      testApp = await electron.launch({
-        executablePath: electronPath,
-        args: ['.', '--profile=Default User'],
-        env: {
-          ...process.env,
-          NODE_ENV: 'test',
-          APP_TEST_MODE: '1',
-          DISABLE_HARDWARE_ACCELERATION: '1',
-          AUTO_UPDATE: '0',
-          E2E_USER_DATA_DIR: userDataDir,
-          HOME: fakeHome,
-          APPDATA: fakeHome,
-        },
-      });
-      
-      testPage = await testApp.firstWindow();
-      await testPage.waitForLoadState('domcontentloaded');
-      await testPage.waitForFunction(
-        () => window.moduleRegistry?.hotkeys,
-        { timeout: 15000 }
-      );
-
-      // Ensure window is visible and focused
-      await testApp.evaluate(async ({ BrowserWindow }) => {
-        const win = BrowserWindow.getAllWindows()[0];
-        win.show();
-        if (win.isMinimized()) win.restore();
-        win.focus();
-      });
-      await testPage.bringToFront();
-      await testPage.click('body');
-
-      // CRITICAL ASSERTION: Verify deletions persisted
-      const activeTabAfterSecondRestart = testPage.locator('#hotkeys_list_1');
-      const f1AfterSecondRestart = activeTabAfterSecondRestart.locator('[id^="f1_hotkey"] .song');
-      const f2AfterSecondRestart = activeTabAfterSecondRestart.locator('[id^="f2_hotkey"] .song');
-      const f3AfterSecondRestart = activeTabAfterSecondRestart.locator('[id^="f3_hotkey"] .song');
-      
-      const f1TextAfterSecondRestart = await f1AfterSecondRestart.textContent();
-      const f2TextAfterSecondRestart = await f2AfterSecondRestart.textContent();
-      const f3TextAfterSecondRestart = await f3AfterSecondRestart.textContent();
-      console.log('🔍 After second restart (should be empty) - F1:', f1TextAfterSecondRestart, 'F2:', f2TextAfterSecondRestart, 'F3:', f3TextAfterSecondRestart);
-      
-      // CORRECT RESULT: No hotkeys in tab 1 (deletions persisted)
-      // BUG RESULT: Same songs are still there (deletions didn't save)
-      await expect(f1AfterSecondRestart).toHaveText('');
-      await expect(f2AfterSecondRestart).toHaveText('');
-      await expect(f3AfterSecondRestart).toHaveText('');
-      
-      console.log('✅ Hotkey deletions persisted across app restart');
-    } finally {
-      // Cleanup
-      if (testApp) {
-        await closeApp(testApp);
+      const slot = (key) => testPage.locator(`#hotkeys_list_1 [id^="${key}_hotkey"] .song`);
+      for (const [index, key] of ['f1', 'f2', 'f3'].entries()) {
+        await rows.nth(index).dragTo(slot(key), {
+          force: true,
+          sourcePosition: { x: 10, y: 10 },
+          targetPosition: { x: 20, y: 20 }
+        });
+        await expect(slot(key)).not.toHaveText('');
       }
+      await expect.poll(() => Object.keys(readRecovery(userDataDir, 'Default User')?.layout?.hotkeys?.[0]?.hotkeys || {}).sort(), {
+        timeout: 10000
+      }).toEqual(['f1', 'f2', 'f3']);
+
+      await relaunchAfterCrash({ expectPrompt: true });
+      for (const key of ['f1', 'f2', 'f3']) {
+        await expect(slot(key)).not.toHaveText('', { timeout: 10000 });
+      }
+
+      // Delete all three hotkeys
+      await testPage.locator('#hotkey_tabs a[href="#hotkeys_list_1"]').click();
+      for (const key of ['f1', 'f2', 'f3']) {
+        await testPage.locator(`#hotkeys_list_1 [id^="${key}_hotkey"]`).click();
+        await testPage.keyboard.press('Delete');
+        await expect(slot(key)).toHaveText('');
+      }
+      // Back to the saved (empty) board, so the recovery record is retired
+      await expect.poll(() => fs.existsSync(recoveryRecordPath(userDataDir, 'Default User')), {
+        timeout: 10000
+      }).toBe(false);
+
+      await relaunchAfterCrash({ expectPrompt: false });
+      for (const key of ['f1', 'f2', 'f3']) {
+        await expect(slot(key)).toHaveText('');
+      }
+    } finally {
+      if (testApp) await closeApp(testApp).catch(() => {});
+      for (const home of homes) fs.rmSync(home, { recursive: true, force: true });
     }
   });
 });

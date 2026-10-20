@@ -325,17 +325,18 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         holdingTankModule: moduleRegistry.holdingTank
       });
       
-      // Load saved profile state (hotkeys + holding tank)
-      window.logInfo('📂 Loading profile state...');
-      const loadResult = await moduleRegistry.profileState.loadProfileState({
-        hotkeysModule: moduleRegistry.hotkeys,
-        holdingTankModule: moduleRegistry.holdingTank
-      });
-      
-      if (loadResult.loaded) {
-        window.logInfo('✅ Profile state restored successfully');
+      // Open the profile's active board (asks first after a crash). Holds,
+      // then clears, the restoration lock.
+      window.logInfo('📂 Opening the active board...');
+      if (moduleRegistry.boards?.openSessionOnStartup) {
+        const openResult = await moduleRegistry.boards.openSessionOnStartup({
+          hotkeys: moduleRegistry.hotkeys,
+          holdingTank: moduleRegistry.holdingTank
+        });
+        window.logInfo(`Board session: ${openResult.status}`);
       } else {
-        window.logInfo('ℹ️ No previous state found, starting fresh');
+        window.logError('Boards module not available; no board was opened');
+        moduleRegistry.profileState.clearProfileRestorationLock?.();
       }
       
       // Set up profile event listeners
@@ -360,23 +361,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         apiToUse.events.onLogout(async () => {
           window.logInfo('🚪 Logout requested from menu');
           try {
-            // Save current state before logging out
-            window.logInfo('💾 Saving current profile state before logout...');
-            if (moduleRegistry.profileState && moduleRegistry.profileState.extractProfileState) {
-              try {
-                const state = moduleRegistry.profileState.extractProfileState();
-                const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state);
-                
-                if (!saveResult.success) {
-                  window.logError('Failed to save state before logout:', saveResult.error);
-                } else {
-                  window.logInfo('✅ State saved successfully before logout');
-                }
-              } catch (stateError) {
-                window.logError('Error saving state before logout:', stateError);
-              }
-            }
-            
+            // The switch ends this profile's session, which discards its live layout
             const result = await window.secureElectronAPI.profile.switchToProfile('Default User');
             if (!result.success) {
               window.logError('Failed to logout (switch to Default Profile):', result.error);
@@ -518,12 +503,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       }
     }
     
-    // Clear profile restoration lock now that app initialization is complete.
-    if (moduleRegistry.profileState && moduleRegistry.profileState.clearProfileRestorationLock) {
-      moduleRegistry.profileState.clearProfileRestorationLock();
-      window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
-    }
-
     // Restore holding tank mode (playlist/storage) from profile preferences
     // This runs after full initialization to ensure all UI elements and modules are ready
     if (moduleRegistry.holdingTank?.initHoldingTank) {
@@ -607,16 +586,11 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       // only exposed by the preload when APP_TEST_MODE=1.
       window.__boardsTest = {
         applyLayout: async (layout) => {
-          const [{ applyLayout }, { default: sharedState }] = await Promise.all([
+          const [{ applyLayout }, { buildLayoutDeps }] = await Promise.all([
             import('./renderer/modules/boards/layout-applier.js'),
-            import('./renderer/modules/shared-state.js')
+            import('./renderer/modules/boards/index.js')
           ]);
-          return applyLayout(layout, {
-            hotkeys: moduleRegistry.hotkeys,
-            holdingTank: moduleRegistry.holdingTank,
-            getSongsByIds: (ids) => window.secureElectronAPI.database.getSongsByIds(ids),
-            sharedState
-          });
+          return applyLayout(layout, buildLayoutDeps(moduleRegistry));
         }
       };
     }

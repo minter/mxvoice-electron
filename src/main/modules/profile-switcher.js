@@ -83,7 +83,6 @@ export function createProfileSwitcher({
   rendererTimeoutMs = RENDERER_TIMEOUT_MS
 }) {
   let inFlight = false;
-  let savesFenced = false;
 
   const liveWindow = () => {
     const win = getMainWindow();
@@ -133,7 +132,6 @@ export function createProfileSwitcher({
         await step('flush', () => prepareForSwitch());
       }
 
-      savesFenced = true;
       await step('lock-renderer-saves', () => withTimeout(
         win.webContents.executeJavaScript(LOCK_RENDERER_SAVES),
         rendererTimeoutMs,
@@ -161,20 +159,14 @@ export function createProfileSwitcher({
 
       trackProfileSwitch({ analytics: getAnalytics(), fromProfile, toProfile: name, method });
 
-      savesFenced = false;
       if (!win.isDestroyed()) win.webContents.reload();
       return { success: true };
     } finally {
-      savesFenced = false;
       inFlight = false;
     }
   }
 
-  return {
-    switchProfile,
-    // Implicit (current-profile) state saves are refused while true
-    isSavingFenced: () => savesFenced
-  };
+  return { switchProfile };
 }
 
 export default createProfileSwitcher;

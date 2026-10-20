@@ -1,5 +1,8 @@
 import { _electron as electron, test, expect } from '@playwright/test';
-import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
+import fs from 'fs';
+import { launchSeededApp, closeApp, waitForAppReady } from '../../../utils/seeded-launch.js';
+import { crashApp, relaunchApp } from '../../../utils/relaunch.js';
+import { boardsDocument, readRecovery, seedBoards } from '../../../utils/seed-boards.js';
 
 /**
  * Regression Test for Hotkey songid Attribute Loss Bug
@@ -13,7 +16,7 @@ import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
  * This test verifies:
  * 1. Duplicate song assignments within same tab preserve songid on both hotkeys
  * 2. Swap operations correctly transfer songid attributes
- * 3. songid attributes persist after profile state save/restore
+ * 3. songid attributes survive a crash restore and opening a saved board
  */
 
 test.describe('Hotkeys - songid Persistence Bug Regression', () => {
@@ -194,120 +197,73 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
     console.log('✅ TEST PASSED: songid preserved through swap at different positions');
   });
 
-  test('songid should persist after profile state save and restore', async () => {
-    console.log('\n🧪 TEST: songid should survive profile state save/restore cycle');
+  // Boards (Task 9): the live layout no longer persists on its own. A
+  // relaunch opens the saved board, and live edits come back only through the
+  // crash prompt, so the old save/restore check is split across those paths.
+  // "survives Update" becomes possible when Phase 3 adds Update; until then
+  // the saved board is seeded directly.
+  const slotSongIds = (target) => target.evaluate(() => Object.fromEntries(['f1', 'f6', 'f12'].map((key) => {
+    const li = document.querySelector(`#hotkeys_list_1 #${key}_hotkey`);
+    return [key, { li: li?.getAttribute('songid') ?? null, span: li?.querySelector('span')?.getAttribute('songid') ?? null }];
+  })));
 
-    // Step 1: Assign songs to multiple hotkeys, ensuring proper swap scenario
-    // First assign song to F1
-    await page.evaluate(() => {
-      const hotkeysModule = window.moduleRegistry?.hotkeys;
-      const f1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
-      if (f1 && hotkeysModule?.setLabelFromSongId) {
-        hotkeysModule.setLabelFromSongId('1001', f1);
-      }
+  test('songid survives a crash restore', async () => {
+    const launched = await launchSeededApp(electron, 'hotkeys-songid-crash');
+    let runningApp = launched.app;
+    const { userDataDir, suiteRoot } = launched;
+    let fakeHome;
+    try {
+      await waitForAppReady(launched.page, runningApp);
+      await launched.page.evaluate(async () => {
+        const hotkeysModule = window.moduleRegistry.hotkeys;
+        await hotkeysModule.setLabelFromSongId('1001', document.querySelector('#hotkeys_list_1 #f1_hotkey'));
+        await hotkeysModule.setLabelFromSongId('1002', document.querySelector('#hotkeys_list_1 #f6_hotkey'));
+        await hotkeysModule.setLabelFromSongId('1003', document.querySelector('#hotkeys_list_1 #f12_hotkey'));
+        await hotkeysModule.requestProfileStateSave();
+      });
+      await expect.poll(() => readRecovery(userDataDir, 'Default User')?.layout?.hotkeys?.[0]?.hotkeys ?? null, {
+        timeout: 10000
+      }).toEqual({ f1: '1001', f6: '1002', f12: '1003' });
+
+      await crashApp(runningApp);
+      let relaunchedPage;
+      ({ app: runningApp, page: relaunchedPage, fakeHome } = await relaunchApp(electron, userDataDir));
+      const prompt = relaunchedPage.locator('.modal.show').filter({ hasText: 'Restore show?' });
+      await expect(prompt).toBeVisible({ timeout: 20000 });
+      await prompt.getByRole('button', { name: 'Restore show in progress' }).click();
+      await waitForAppReady(relaunchedPage, runningApp);
+
+      expect(await slotSongIds(relaunchedPage)).toEqual({
+        f1: { li: '1001', span: null },
+        f6: { li: '1002', span: null },
+        f12: { li: '1003', span: null }
+      });
+    } finally {
+      await closeApp(runningApp).catch(() => {});
+      if (fakeHome) fs.rmSync(fakeHome, { recursive: true, force: true });
+      fs.rmSync(suiteRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('songid survives a saved board', async () => {
+    const launched = await launchSeededApp(electron, 'hotkeys-songid-board', {
+      beforeLaunch: (dir) => seedBoards(dir, 'Default User', boardsDocument({
+        hotkeys: [{ tabNumber: 1, tabName: null, hotkeys: { f1: '1003', f6: '1001', f12: '1002' } }],
+        holdingTank: []
+      }))
     });
-
-    // Then assign different songs to F6 and F12
-    await page.evaluate(() => {
-      const hotkeysModule = window.moduleRegistry?.hotkeys;
-
-      const f6 = document.querySelector('#hotkeys_list_1 #f6_hotkey');
-      if (f6 && hotkeysModule?.setLabelFromSongId) {
-        hotkeysModule.setLabelFromSongId('1002', f6);
-      }
-
-      const f12 = document.querySelector('#hotkeys_list_1 #f12_hotkey');
-      if (f12 && hotkeysModule?.setLabelFromSongId) {
-        hotkeysModule.setLabelFromSongId('1003', f12);
-      }
-    });
-
-    // Verify initial state
-    const beforeSave = await page.evaluate(() => {
-      const f1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
-      const f6 = document.querySelector('#hotkeys_list_1 #f6_hotkey');
-      const f12 = document.querySelector('#hotkeys_list_1 #f12_hotkey');
-
-      return {
-        f1: f1?.getAttribute('songid'),
-        f6: f6?.getAttribute('songid'),
-        f12: f12?.getAttribute('songid')
-      };
-    });
-
-    console.log('📊 Before save:', beforeSave);
-    expect(beforeSave.f1).toBe('1001');
-    expect(beforeSave.f6).toBe('1002');
-    expect(beforeSave.f12).toBe('1003');
-
-    // Step 2: Trigger profile state save
-    await page.evaluate(async () => {
-      if (window.moduleRegistry?.profileState?.saveProfileState) {
-        await window.moduleRegistry.profileState.saveProfileState();
-        console.log('✅ Profile state saved');
-      }
-    });
-
-    // Step 3: Clear ALL hotkeys (simulating a fresh start)
-    await page.evaluate(() => {
-      for (let key = 1; key <= 12; key++) {
-        const tabContent = document.getElementById('hotkeys_list_1');
-        const hotkey = tabContent?.querySelector(`#f${key}_hotkey`);
-        if (hotkey) {
-          hotkey.removeAttribute('songid');
-          const span = hotkey.querySelector('span');
-          if (span) span.textContent = '';
-        }
-      }
-      console.log('🧹 Cleared all hotkeys');
-    });
-
-    // Verify all cleared
-    const afterClear = await page.evaluate(() => {
-      const f1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
-      const f6 = document.querySelector('#hotkeys_list_1 #f6_hotkey');
-      const f12 = document.querySelector('#hotkeys_list_1 #f12_hotkey');
-
-      return {
-        f1: f1?.getAttribute('songid'),
-        f6: f6?.getAttribute('songid'),
-        f12: f12?.getAttribute('songid')
-      };
-    });
-
-    console.log('📊 After clear:', afterClear);
-    expect(afterClear.f1).toBeNull();
-    expect(afterClear.f6).toBeNull();
-    expect(afterClear.f12).toBeNull();
-
-    // Step 4: Restore from profile state
-    await page.evaluate(async () => {
-      if (window.moduleRegistry?.profileState?.loadProfileState) {
-        await window.moduleRegistry.profileState.loadProfileState();
-        console.log('✅ Profile state restored');
-      }
-    });
-
-    // Step 5: Verify all songids were restored
-    const afterRestore = await page.evaluate(() => {
-      const f1 = document.querySelector('#hotkeys_list_1 #f1_hotkey');
-      const f6 = document.querySelector('#hotkeys_list_1 #f6_hotkey');
-      const f12 = document.querySelector('#hotkeys_list_1 #f12_hotkey');
-
-      return {
-        f1: f1?.getAttribute('songid'),
-        f6: f6?.getAttribute('songid'),
-        f12: f12?.getAttribute('songid')
-      };
-    });
-
-    console.log('📊 After restore:', afterRestore);
-
-    expect(afterRestore.f1).toBe('1001');
-    expect(afterRestore.f6).toBe('1002');
-    expect(afterRestore.f12).toBe('1003');
-
-    console.log('✅ TEST PASSED: All songids restored correctly');
+    try {
+      await waitForAppReady(launched.page, launched.app);
+      expect(await slotSongIds(launched.page)).toEqual({
+        f1: { li: '1003', span: null },
+        f6: { li: '1001', span: null },
+        f12: { li: '1002', span: null }
+      });
+      await expect(launched.page.locator('#hotkeys_list_1 #f6_hotkey span')).not.toHaveText('');
+    } finally {
+      await closeApp(launched.app).catch(() => {});
+      fs.rmSync(launched.suiteRoot, { recursive: true, force: true });
+    }
   });
 
   test('REGRESSION: swap with both hotkeys populated should preserve songid', async () => {

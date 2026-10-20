@@ -8,6 +8,10 @@ import path from 'path';
  * Closing the last window quits on every platform (macOS included), after a
  * confirmation; an explicit quit (Cmd-Q, File > Quit) doesn't ask. Quitting
  * runs the shutdown path: page state flushed, then exit.
+ *
+ * Boards (Task 9): a clean quit discards the live layout. The flush now goes
+ * to the crash-recovery record, which the exit then retires, so these tests
+ * check that nothing of the night is left behind instead of that it was saved.
  */
 test.describe('Quitting', () => {
   let app;
@@ -55,12 +59,17 @@ test.describe('Quitting', () => {
     return page;
   }
 
-  function savedHotkeyTabName() {
-    const state = JSON.parse(fs.readFileSync(path.join(userDataDir, 'profiles', 'Default User', 'state.json'), 'utf8'));
-    return state.hotkeys[0].tabName;
+  // The renamed tab is in neither the saved board nor a recovery record, and
+  // nothing wrote state.json
+  function expectNightDiscarded() {
+    const profileDir = path.join(userDataDir, 'profiles', 'Default User');
+    const boards = JSON.parse(fs.readFileSync(path.join(profileDir, 'boards.json'), 'utf8'));
+    expect(boards.boards[0].layout.hotkeys[0].tabName).toBeNull();
+    expect(fs.existsSync(path.join(userDataDir, 'recovery', 'default user.json'))).toBe(false);
+    expect(fs.existsSync(path.join(profileDir, 'state.json'))).toBe(false);
   }
 
-  test('closing the main window quits the app and keeps its state', async () => {
+  test('closing the main window quits the app and discards the live layout', async () => {
     await readyWithRenamedHotkeyTab('Closed Keys');
 
     const exited = app.waitForEvent('close', { timeout: 20000 });
@@ -68,7 +77,7 @@ test.describe('Quitting', () => {
     await exited;
     app = null;
 
-    expect(savedHotkeyTabName()).toBe('Closed Keys');
+    expectNightDiscarded();
   });
 
   test('closing the window asks first, and Cancel keeps the app running', async () => {
@@ -88,7 +97,7 @@ test.describe('Quitting', () => {
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
     await exited;
     app = null;
-    expect(savedHotkeyTabName()).toBe('Still Here');
+    expectNightDiscarded();
   });
 
   test('Cmd-Q quits without asking', async () => {
@@ -100,18 +109,19 @@ test.describe('Quitting', () => {
     await app.evaluate(({ app: electronApp }) => electronApp.quit());
     await exited;
     app = null;
-    expect(savedHotkeyTabName()).toBe('Explicit Quit');
+    expectNightDiscarded();
   });
 
-  test('quitting saves a change made just before it', async () => {
+  test('quitting right after a change leaves no recovery record behind', async () => {
     await readyWithRenamedHotkeyTab('Quit Keys');
 
-    // Cmd-Q right away, before the debounced save would have run
+    // Cmd-Q right away, before the debounced save would have run: the exit
+    // flush must not land after the record is retired
     const exited = app.waitForEvent('close', { timeout: 20000 });
     await app.evaluate(({ app: electronApp }) => electronApp.quit());
     await exited;
     app = null;
 
-    expect(savedHotkeyTabName()).toBe('Quit Keys');
+    expectNightDiscarded();
   });
 });

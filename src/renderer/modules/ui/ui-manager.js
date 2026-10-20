@@ -87,7 +87,7 @@ export default function initializeUIManager(options = {}) {
     };
     try {
         if (electronAPI && electronAPI.store) {
-          // Note: In the new profile architecture, hotkeys and holding_tank are auto-saved to state.json
+          // Note: In the boards architecture, hotkeys and holding_tank are auto-saved to the crash-recovery record
           // This clears any legacy stored data. Profile preferences (font_size, column_order) are intentionally preserved.
           Promise.all([
           secureStore.delete('column_order'), // Legacy cleanup

@@ -28,7 +28,7 @@ The Hotkeys Module provides comprehensive F1-F12 hotkey functionality for quick 
 
 ### 💾 Persistence
 - `HotkeyState` is authoritative in memory.
-- Per-profile `state.json` is the only persistence path.
+- Per-profile boards (`boards.json`) and the crash-recovery record are the only persistence paths.
 - The DOM is rendered from model state and is never serialized as storage.
 
 ## Module Structure
@@ -280,7 +280,7 @@ The module automatically sets up the following event listeners:
 
 ## Profile Integration
 
-Hotkey snapshots are saved by Profile State to `profiles/<ProfileName>/state.json` and restored through `restoreHotkeySnapshot()`.
+Hotkey snapshots are written by Profile State to the crash-recovery record; boards are applied through the boards module's layout applier.
 
 ## Testing
 

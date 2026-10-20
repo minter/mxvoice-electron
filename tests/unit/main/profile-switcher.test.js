@@ -20,7 +20,7 @@ function setup({ current = 'Default User', existing = ['Default User', 'Saturday
     getMainWindow: () => win,
     getCurrentProfile: () => profile,
     setCurrentProfile: (name) => { profile = name; calls.push(`current=${name}`); },
-    prepareForSwitch: vi.fn(async () => { calls.push(`flush:${profile}:fenced=${switcher.isSavingFenced()}`); }),
+    prepareForSwitch: vi.fn(async () => { calls.push(`flush:${profile}`); }),
     profileManager: {
       profileExists: (name) => profiles.has(name),
       updateProfileLastUsed: vi.fn((name) => calls.push(`lastUsed:${name}`)),
@@ -48,7 +48,7 @@ describe('profile switcher', () => {
     await expect(switcher.switchProfile('Saturday Show')).resolves.toEqual({ success: true });
 
     expect(calls).toEqual([
-      'flush:Default User:fenced=false',
+      'flush:Default User',
       'js:window.isRestoringProfileState = true',
       'current=Saturday Show',
       'lastUsed:Saturday Show',
@@ -61,17 +61,6 @@ describe('profile switcher', () => {
       'track:profile_switched:direct',
       'reload:Saturday Show',
     ]);
-  });
-
-  it('fences implicit state saves from the flush until the reload', async () => {
-    const { switcher, deps } = setup();
-    const fencedAt = {};
-    deps.rebuildMenu.mockImplementation(() => { fencedAt.menu = switcher.isSavingFenced(); });
-
-    await switcher.switchProfile('Saturday Show');
-
-    expect(fencedAt.menu).toBe(true);
-    expect(switcher.isSavingFenced()).toBe(false);
   });
 
   it('leaves the global prerelease flag alone when the new profile has no preference', async () => {
