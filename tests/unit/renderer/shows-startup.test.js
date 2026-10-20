@@ -198,8 +198,8 @@ describe('header refresh', () => {
     let listener;
     const onShowCommand = vi.fn((cb) => { listener = cb; return vi.fn(); });
     const refreshHeader = vi.fn(async () => {});
-    const api = { activate: vi.fn(async () => ({ success: false, error: 'busy' })), reportReady: vi.fn() };
-    initializeShowCommands({ onShowCommand, api, applyLayout: vi.fn(), track: vi.fn(), isModalOpen: () => false, refreshHeader });
+    const api = { getState: vi.fn(async () => ok({ status: 'ready', doc: {}, dirty: false })), activate: vi.fn(async () => ({ success: false, error: 'busy' })), reportReady: vi.fn() };
+    initializeShowCommands({ onShowCommand, api, applyLayout: vi.fn(), track: vi.fn(), isModalOpen: () => false, refreshHeader, flushRecovery: vi.fn() });
     listener({ command: 'switch', showId: 'b2' });
     await vi.waitFor(() => expect(refreshHeader).toHaveBeenCalledOnce());
     expect(api.activate).toHaveBeenCalledWith('b2');
@@ -212,13 +212,14 @@ describe('initializeShowCommands', () => {
     const unsubscribe = vi.fn();
     const onShowCommand = vi.fn((cb) => { listener = cb; return unsubscribe; });
     const api = {
+      getState: vi.fn(async () => ok({ status: 'ready', doc: {}, dirty: false })),
       activate: vi.fn(async () => ok({ layout: savedLayout, generation: 3 })),
       reportReady: vi.fn(async () => ok(null))
     };
     const applyLayout = vi.fn(async () => ({ dropped: 0 }));
     const track = vi.fn();
 
-    expect(initializeShowCommands({ onShowCommand, api, applyLayout, track, isModalOpen: () => true })).toBe(unsubscribe);
+    expect(initializeShowCommands({ onShowCommand, api, applyLayout, track, isModalOpen: () => true, flushRecovery: vi.fn() })).toBe(unsubscribe);
     listener({ command: 'switch', showId: 'b2' });
     await vi.waitFor(() => expect(api.reportReady).toHaveBeenCalledWith(3, true, { droppedIds: [] }));
     expect(api.activate).toHaveBeenCalledWith('b2');

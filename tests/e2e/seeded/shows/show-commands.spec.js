@@ -4,6 +4,7 @@ import { launchSeededApp, waitForAppReady } from '../../../utils/seeded-launch.j
 import { relaunchApp, waitForShowSettled } from '../../../utils/relaunch.js';
 import { readShows, readRecovery, recoveryRecordPath, seedShows } from '../../../utils/seed-shows.js';
 import {
+  answerChoice,
   answerConfirm,
   answerPrompt,
   assignF1,
@@ -178,6 +179,57 @@ test.describe('Shows - menu commands', () => {
     await expect.poll(async () => showMenuState(app)).toMatchObject({ checked: 'Encore', enabled: true });
     expect(activeShow(readShows(userDataDir, PROFILE)).name).toBe('Encore');
     // No dialog is shown for a switch
+    await expect(page.locator('.modal.show')).toHaveCount(0);
+  });
+
+  test('switching with unsaved changes: Cancel stays put and the menu check stays', async () => {
+    await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }, { name: 'Encore', hotkeys: { f1: '1003' } }]);
+    await assignF1(page, '1001');
+    await expect(page.locator('#show-dirty')).toBeVisible({ timeout: 10000 });
+
+    await clickShowMenu(app, 'Encore');
+    const dialog = shownDialog(page, 'Unsaved changes');
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    // Cancel is the default, so Return takes it
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+    await answerChoice(page, 'Unsaved changes', 'Cancel', { message: 'Save changes to "Main Show"?' });
+
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1001');
+    await expect(page.locator('#show-name')).toHaveText('Main Show');
+    await expect.poll(async () => showMenuState(app)).toMatchObject({ checked: 'Main Show', enabled: true });
+    const doc = readShows(userDataDir, PROFILE);
+    expect(activeShow(doc).name).toBe('Main Show');
+    expect(f1Of(activeShow(doc))).toBe('1002');
+  });
+
+  test("switching with unsaved changes: Don't Save loads the other show and drops the edit", async () => {
+    await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }, { name: 'Encore', hotkeys: { f1: '1003' } }]);
+    await assignF1(page, '1001');
+
+    await clickShowMenu(app, 'Encore');
+    await answerChoice(page, 'Unsaved changes', "Don't Save");
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1003');
+    await expect(page.locator('#show-name')).toHaveText('Encore');
+
+    await clickShowMenu(app, 'Main Show');
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1002');
+    // The edit is gone, so switching back asked nothing
+    await expect(page.locator('.modal.show')).toHaveCount(0);
+    expect(f1Of(readShows(userDataDir, PROFILE).shows[0])).toBe('1002');
+  });
+
+  test('switching with unsaved changes: Save keeps the edit in the first show', async () => {
+    await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }, { name: 'Encore', hotkeys: { f1: '1003' } }]);
+    await assignF1(page, '1001');
+
+    await clickShowMenu(app, 'Encore');
+    await answerChoice(page, 'Unsaved changes', 'Save');
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1003');
+    await expect(page.locator('#show-name')).toHaveText('Encore');
+    expect(f1Of(readShows(userDataDir, PROFILE).shows[0])).toBe('1001');
+
+    await clickShowMenu(app, 'Main Show');
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1001');
     await expect(page.locator('.modal.show')).toHaveCount(0);
   });
 

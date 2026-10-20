@@ -9,10 +9,10 @@
 
 import { applyLayout } from './layout-applier.js';
 import sharedState from '../shared-state.js';
-import { customAlert, customConfirm, customPrompt } from '../utils/modal-utils.js';
+import { customAlert, customChoice, customConfirm, customPrompt } from '../utils/modal-utils.js';
 import { showDropToast } from '../utils/toast-utils.js';
 import { isAnyModalOpen } from '../ui/bootstrap-helpers.js';
-import { clearProfileRestorationLock, extractLayout } from '../profile-state/index.js';
+import { clearProfileRestorationLock, extractLayout, flushProfileState } from '../profile-state/index.js';
 import { droppedSongsMessage, LOAD_FAILED_MESSAGE, TOAST_MS } from './messages.js';
 import { unwrap } from './ipc-result.js';
 import { runShowCommand } from './commands.js';
@@ -57,6 +57,8 @@ function defaultDeps(overrides) {
   const deps = {
     api: window.secureElectronAPI?.shows,
     confirm: customConfirm,
+    choose: customChoice,
+    flushRecovery: flushProfileState,
     prompt: customPrompt,
     alert: (message, title) => { void customAlert(message, title); },
     toast: showDropToast,

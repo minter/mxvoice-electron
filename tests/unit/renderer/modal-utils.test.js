@@ -41,7 +41,7 @@ globalThis.bootstrap = {
   )
 };
 
-const { customConfirm } = await import('../../../src/renderer/modules/utils/modal-utils.js');
+const { customConfirm, customChoice } = await import('../../../src/renderer/modules/utils/modal-utils.js');
 
 describe('customConfirm', () => {
   beforeEach(() => { document.activeElement = null; });
@@ -85,5 +85,56 @@ describe('customConfirm', () => {
     const closed = customConfirm('Again?');
     modal.querySelector('.btn-close').click();
     await expect(closed).resolves.toBe(false);
+  });
+});
+
+describe('customChoice', () => {
+  beforeEach(() => { document.activeElement = null; });
+
+  const CHOICES = [
+    { value: 'discard', label: "Don't Save", variant: 'secondary' },
+    { value: 'cancel', label: 'Cancel', variant: 'outline' },
+    { value: 'save', label: 'Save', variant: 'primary' }
+  ];
+  const open = () => customChoice('Save changes to "<3 Improv"?', '<b>Unsaved</b>', CHOICES, { defaultValue: 'cancel' });
+
+  it('renders the buttons in order with their variants, escaped', () => {
+    open();
+    const html = modal.innerHTML;
+    expect(html.indexOf('Don&#39;t Save')).toBeGreaterThan(-1);
+    expect(html.indexOf('>Don&#39;t Save<')).toBeLessThan(html.indexOf('>Cancel<'));
+    expect(html.indexOf('>Cancel<')).toBeLessThan(html.indexOf('>Save<'));
+    expect(html).toContain('btn btn-secondary choice-btn');
+    expect(html).toContain('btn btn-outline-secondary choice-btn');
+    expect(html).toContain('btn btn-primary choice-btn');
+    expect(html).toContain('&lt;3 Improv');
+    expect(html).toContain('&lt;b&gt;Unsaved&lt;/b&gt;');
+    expect(html).not.toContain('<3 Improv');
+  });
+
+  it('focuses the default button, and clicking a button resolves its value', async () => {
+    const answer = open();
+    modal.dispatch('shown.bs.modal');
+    expect(document.activeElement).toBe(modal.querySelector('[data-choice-index="1"]'));
+    modal.querySelector('[data-choice-index="2"]').click();
+    await expect(answer).resolves.toBe('save');
+  });
+
+  it('Esc, backdrop and the close button resolve the default value', async () => {
+    const dismissed = open();
+    modal.dispatch('hidden.bs.modal');
+    await expect(dismissed).resolves.toBe('cancel');
+
+    const closed = open();
+    modal.querySelector('.btn-close').click();
+    await expect(closed).resolves.toBe('cancel');
+  });
+
+  it('resolves exactly once', async () => {
+    const answer = open();
+    modal.querySelector('[data-choice-index="0"]').click();
+    modal.dispatch('hidden.bs.modal');
+    modal.querySelector('.btn-close').click();
+    await expect(answer).resolves.toBe('discard');
   });
 });

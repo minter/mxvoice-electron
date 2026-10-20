@@ -100,6 +100,72 @@ export function customConfirm(message, title = 'Confirm', {
 }
 
 /**
+ * Custom multi-choice dialog
+ *
+ * Buttons appear in the order given. The default button is focused, so Return
+ * takes it, and Esc, a backdrop click and the close button resolve to it too.
+ *
+ * @param {string} message - The message, shown as plain text
+ * @param {string} title - The dialog title
+ * @param {Array<{ value: string, label: string, variant?: 'primary'|'secondary'|'outline' }>} choices
+ * @param {Object} options
+ * @param {string} options.defaultValue - The value of the default button
+ * @returns {Promise<string>} - The chosen value
+ */
+export function customChoice(message, title, choices, { defaultValue } = {}) {
+  const VARIANT_CLASSES = { primary: 'btn-primary', secondary: 'btn-secondary', outline: 'btn-outline-secondary' };
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.setAttribute('tabindex', '-1');
+    const buttons = choices.map(({ label, variant = 'secondary' }, index) =>
+      `<button type="button" class="btn ${VARIANT_CLASSES[variant] || VARIANT_CLASSES.secondary} choice-btn" data-choice-index="${index}">${escapeHtml(label)}</button>`
+    ).join('');
+    modal.innerHTML = `
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">${escapeHtml(title)}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>${escapeHtml(message)}</p>
+          </div>
+          <div class="modal-footer">${buttons}</div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    let hasResolved = false;
+    const answer = (value) => {
+      if (hasResolved) return;
+      hasResolved = true;
+      hideAndRemoveModal(modal);
+      resolve(value);
+    };
+
+    choices.forEach(({ value }, index) => {
+      modal.querySelector(`[data-choice-index="${index}"]`).addEventListener('click', () => answer(value));
+    });
+    modal.querySelector('.btn-close').addEventListener('click', () => answer(defaultValue));
+    // Esc or a backdrop click
+    modal.addEventListener('hidden.bs.modal', () => answer(defaultValue), { once: true });
+
+    const defaultIndex = choices.findIndex(({ value }) => value === defaultValue);
+    if (defaultIndex >= 0) {
+      modal.addEventListener('shown.bs.modal', () => {
+        modal.querySelector(`[data-choice-index="${defaultIndex}"]`).focus();
+      }, { once: true });
+    }
+
+    const instance = new bootstrap.Modal(modal, { backdrop: true, keyboard: true });
+    instance.show();
+  });
+}
+
+/**
  * Custom prompt dialog
  * 
  * @param {string} message - The prompt message
@@ -326,6 +392,7 @@ export function restoreFocusToSearch(selector = '#search-input') {
 // Default export for module loading
 export default {
   customConfirm,
+  customChoice,
   customPrompt,
   customAlert,
   restoreFocusToSearch

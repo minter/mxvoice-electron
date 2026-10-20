@@ -22,10 +22,10 @@ const threeShows = () => ({
   shows: [show('b1', 'Opening'), show('b2', 'Main Show'), show('b3', 'Encore')]
 });
 
-function setup({ doc = threeShows(), status = 'ready', modalOpen = false } = {}) {
+function setup({ doc = threeShows(), status = 'ready', modalOpen = false, dirty = false } = {}) {
   const calls = [];
   const api = {
-    getState: vi.fn(async () => ok({ profile: 'Jesse', status, doc, generation: 4 })),
+    getState: vi.fn(async () => ok({ profile: 'Jesse', status, doc, generation: 4, dirty })),
     activate: vi.fn(async () => loaded(5, 'Switched')),
     revert: vi.fn(async () => loaded(6, 'Reverted')),
     updateActive: vi.fn(async () => ok(null)),
@@ -41,6 +41,8 @@ function setup({ doc = threeShows(), status = 'ready', modalOpen = false } = {})
   const deps = {
     api,
     confirm: vi.fn(async () => true),
+    choose: vi.fn(async () => 'cancel'),
+    flushRecovery: vi.fn(async () => ({ success: true })),
     prompt: vi.fn(async () => null),
     alert: vi.fn(),
     toast: vi.fn(),
@@ -276,6 +278,14 @@ describe('runShowCommand', () => {
     expect(api.activate).toHaveBeenCalledWith('b3');
   });
 
+  it('a dirty switch is dropped while another dialog is open; a clean one still runs', async () => {
+    const dirtyOpen = setup({ modalOpen: true, dirty: true });
+    await runShowCommand({ command: 'switch', showId: 'b3' }, dirtyOpen.deps);
+    expect(dirtyOpen.deps.choose).not.toHaveBeenCalled();
+    expect(dirtyOpen.api.activate).not.toHaveBeenCalled();
+    expect(dirtyOpen.deps.track).not.toHaveBeenCalled();
+  });
+
   it('does not prompt when the session is not ready', async () => {
     const { api, deps } = setup({ status: 'loading' });
     await runShowCommand({ command: 'save' }, deps);
@@ -311,5 +321,109 @@ describe('runShowCommand', () => {
     await runShowCommand({ command: 'delete' }, deps);
     const sent = JSON.stringify(deps.track.mock.calls);
     for (const name of ['Secret Name', 'Opening', 'Main Show', 'Jesse', 'Derek']) expect(sent).not.toContain(name);
+  });
+
+  describe('asking to save unsaved changes', () => {
+    const CHOICES = [
+      { value: 'discard', label: "Don't Save", variant: 'secondary' },
+      { value: 'cancel', label: 'Cancel', variant: 'outline' },
+      { value: 'save', label: 'Save', variant: 'primary' }
+    ];
+
+    it('a clean switch or import asks nothing', async () => {
+      const { api, deps } = setup();
+      await runShowCommand({ command: 'switch', showId: 'b3' }, deps);
+      await runShowCommand({ command: 'import' }, deps);
+      expect(deps.choose).not.toHaveBeenCalled();
+      expect(api.activate).toHaveBeenCalledOnce();
+      expect(api.importShow).toHaveBeenCalledOnce();
+    });
+
+    for (const [command, trigger] of [['switch', 'switch'], ['import', 'import']]) {
+      const proceeded = (api) => (command === 'switch' ? api.activate : api.importShow);
+
+      it(`${command}: asks naming the show, with Cancel as the default`, async () => {
+        const { api, deps } = setup({ dirty: true });
+        await runShowCommand({ command, showId: 'b3' }, deps);
+        expect(deps.choose).toHaveBeenCalledWith('Save changes to "Main Show"?', 'Unsaved changes', CHOICES, { defaultValue: 'cancel' });
+        expect(proceeded(api)).not.toHaveBeenCalled();
+      });
+
+      it(`${command}: Cancel stops, saves nothing, and tracks only the choice`, async () => {
+        const { api, deps } = setup({ dirty: true });
+        deps.choose.mockResolvedValue('cancel');
+        await runShowCommand({ command, showId: 'b3' }, deps);
+        expect(api.updateActive).not.toHaveBeenCalled();
+        expect(proceeded(api)).not.toHaveBeenCalled();
+        expect(deps.chooseImportShow).not.toHaveBeenCalled();
+        expect(deps.track).toHaveBeenCalledOnce();
+        expect(deps.track).toHaveBeenCalledWith('show_save_prompt', { choice: 'cancel', trigger });
+      });
+
+      it(`${command}: Don't Save goes on without saving`, async () => {
+        const { api, deps } = setup({ dirty: true });
+        deps.choose.mockResolvedValue('discard');
+        await runShowCommand({ command, showId: 'b3' }, deps);
+        expect(api.updateActive).not.toHaveBeenCalled();
+        expect(proceeded(api)).toHaveBeenCalledOnce();
+        expect(deps.track).toHaveBeenCalledWith('show_save_prompt', { choice: 'discard', trigger });
+      });
+
+      it(`${command}: Save writes the show without its own confirm, then goes on`, async () => {
+        const { api, deps, calls } = setup({ dirty: true });
+        deps.choose.mockResolvedValue('save');
+        api.updateActive.mockImplementation(async () => { calls.push('save'); return ok(null); });
+        await runShowCommand({ command, showId: 'b3' }, deps);
+        expect(deps.confirm).not.toHaveBeenCalled();
+        expect(api.updateActive).toHaveBeenCalledWith(liveLayout);
+        expect(proceeded(api)).toHaveBeenCalledOnce();
+        expect(calls[0]).toBe('save');
+        expect(deps.track).toHaveBeenCalledWith('show_save_prompt', { choice: 'save', trigger });
+      });
+
+      it(`${command}: a failed Save alerts and does not go on`, async () => {
+        const { api, deps } = setup({ dirty: true });
+        deps.choose.mockResolvedValue('save');
+        api.updateActive.mockResolvedValue(fail('disk full'));
+        await runShowCommand({ command, showId: 'b3' }, deps);
+        expect(deps.alert).toHaveBeenCalledOnce();
+        expect(proceeded(api)).not.toHaveBeenCalled();
+        expect(deps.chooseImportShow).not.toHaveBeenCalled();
+      });
+    }
+
+    it('an unexpected answer counts as Cancel', async () => {
+      const { api, deps } = setup({ dirty: true });
+      deps.choose.mockResolvedValue(undefined);
+      await runShowCommand({ command: 'switch', showId: 'b3' }, deps);
+      expect(api.activate).not.toHaveBeenCalled();
+      expect(deps.track).toHaveBeenCalledWith('show_save_prompt', { choice: 'cancel', trigger: 'switch' });
+    });
+
+    it('the import dialog opens only after the prompt is answered', async () => {
+      const { deps } = setup({ dirty: true });
+      deps.choose.mockResolvedValue('discard');
+      await runShowCommand({ command: 'import' }, deps);
+      expect(deps.choose.mock.invocationCallOrder[0]).toBeLessThan(deps.chooseImportShow.mock.invocationCallOrder[0]);
+    });
+
+    it('flushes the recovery save before reading the dirty flag', async () => {
+      const { api, deps } = setup({ dirty: true });
+      await runShowCommand({ command: 'switch', showId: 'b3' }, deps);
+      expect(deps.flushRecovery.mock.invocationCallOrder[0]).toBeLessThan(api.getState.mock.invocationCallOrder[0]);
+    });
+
+    it('a flush that throws still reads the state', async () => {
+      const { deps } = setup({ dirty: true });
+      deps.flushRecovery.mockRejectedValue(new Error('boom'));
+      await runShowCommand({ command: 'switch', showId: 'b3' }, deps);
+      expect(deps.choose).toHaveBeenCalledOnce();
+    });
+
+    it('revert, delete and save-as get no new prompt', async () => {
+      const { deps } = setup({ dirty: true });
+      for (const command of ['revert', 'delete', 'save-as']) await runShowCommand({ command }, deps);
+      expect(deps.choose).not.toHaveBeenCalled();
+    });
   });
 });

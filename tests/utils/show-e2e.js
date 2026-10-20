@@ -79,6 +79,16 @@ export async function answerConfirm(page, title, button, { message } = {}) {
   await shown.waitForElementState('hidden');
 }
 
+/** Answer a customChoice dialog titled `title` by clicking the button labelled `button`. */
+export async function answerChoice(page, title, button, { message } = {}) {
+  const dialog = shownDialog(page, title);
+  await expect(dialog).toBeVisible({ timeout: 10000 });
+  if (message) await expect(dialog.locator('.modal-body')).toHaveText(message);
+  const shown = await dialog.elementHandle();
+  await dialog.getByRole('button', { name: button, exact: true }).click();
+  await shown.waitForElementState('hidden');
+}
+
 /** Type into a customPrompt dialog titled `title` and press OK. */
 export async function answerPrompt(page, title, value, { message } = {}) {
   const dialog = shownDialog(page, title);

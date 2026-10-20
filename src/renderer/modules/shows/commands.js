@@ -7,8 +7,9 @@
  *
  * Commands run one at a time; one that arrives while another runs is
  * dropped. A command that would show a dialog is also dropped while any
- * Bootstrap dialog is open, since dialogs don't stack. Switch shows nothing
- * and still runs.
+ * Bootstrap dialog is open, since dialogs don't stack. Switch is a dialog only
+ * when the show on screen has unsaved changes; otherwise it shows nothing and
+ * still runs.
  */
 
 import { droppedSongsMessage, LOAD_FAILED_MESSAGE, TOAST_MS } from './messages.js';
@@ -90,8 +91,61 @@ async function promptForName(deps, { message, value, title }, save) {
   }
 }
 
+/** Write the layout on screen into the active show. */
+async function saveActive(deps) {
+  unwrap(await deps.api.updateActive(deps.extractLayout()), 'Saving the show');
+}
+
+/**
+ * Whether the layout on screen differs from the saved show. The pending
+ * recovery save is flushed first, since the session judges what it has been sent.
+ */
+async function hasUnsavedChanges(deps) {
+  try {
+    await deps.flushRecovery?.();
+  } catch (error) {
+    window.debugLog?.warn('Could not flush the recovery save', { ...LOG_CONTEXT, error: error.message });
+  }
+  const state = unwrap(await deps.api.getState(), 'Reading the show session');
+  return state?.status === 'ready' && !!state.doc && state.dirty === true ? state : null;
+}
+
+/**
+ * Before the layout on screen is replaced: when it has unsaved changes, ask
+ * to save them. Save writes the show first (a failure throws, so nothing is
+ * replaced); Cancel and a dismissed prompt both stop.
+ * @returns {Promise<boolean>} whether to go on
+ */
+async function settleUnsavedChanges(trigger, deps, state = null) {
+  const unsaved = state || await hasUnsavedChanges(deps);
+  if (!unsaved) return true;
+  const { name } = findShow(unsaved.doc, unsaved.doc.activeShowId);
+  const choice = await deps.choose(
+    `Save changes to "${name}"?`,
+    'Unsaved changes',
+    [
+      { value: 'discard', label: "Don't Save", variant: 'secondary' },
+      { value: 'cancel', label: 'Cancel', variant: 'outline' },
+      { value: 'save', label: 'Save', variant: 'primary' }
+    ],
+    { defaultValue: 'cancel' }
+  );
+  const answer = choice === 'save' || choice === 'discard' ? choice : 'cancel';
+  deps.track('show_save_prompt', { choice: answer, trigger });
+  if (answer === 'cancel') return false;
+  if (answer === 'save') await saveActive(deps);
+  return true;
+}
+
 const handlers = {
   async switch(showId, deps) {
+    // Dialogs don't stack: a switch that would ask is dropped behind another dialog
+    const unsaved = await hasUnsavedChanges(deps);
+    if (unsaved && deps.isModalOpen()) {
+      window.debugLog?.info('Show command dropped: a dialog is open', { ...LOG_CONTEXT, command: 'switch' });
+      return null;
+    }
+    if (!(await settleUnsavedChanges('switch', deps, unsaved))) return null;
     const loaded = unwrap(await deps.api.activate(showId), 'Switching shows');
     return (await openLoaded(loaded, deps)) ? ['show_switched'] : null;
   },
@@ -105,7 +159,7 @@ const handlers = {
       { confirmLabel: 'Save' }
     );
     if (!confirmed) return null;
-    unwrap(await deps.api.updateActive(deps.extractLayout()), 'Saving the show');
+    await saveActive(deps);
     return ['show_saved'];
   },
 
@@ -164,6 +218,7 @@ const handlers = {
 
   async import(_showId, deps) {
     await readyDoc(deps);
+    if (!(await settleUnsavedChanges('import', deps))) return null;
     const groups = unwrap(await deps.api.listImportable(), 'Listing shows to import');
     const choice = await deps.chooseImportShow(groups || []);
     if (!choice) return null;
@@ -179,6 +234,8 @@ const handlers = {
  * @param {Object} deps
  * @param {Object} deps.api - secureElectronAPI.shows
  * @param {Function} deps.confirm - customConfirm
+ * @param {Function} deps.choose - customChoice
+ * @param {() => Promise<*>} [deps.flushRecovery] - flushProfileState; makes `dirty` current
  * @param {Function} deps.prompt - customPrompt; resolves null on cancel
  * @param {Function} deps.alert
  * @param {Function} deps.toast
