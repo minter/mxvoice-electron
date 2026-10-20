@@ -61,7 +61,7 @@ globalThis.window = { debugLog: { error: vi.fn(), info: vi.fn(), warn: vi.fn() }
 globalThis.document = createFakeDocument();
 const { HotkeysModule } = await import('../../../src/renderer/modules/hotkeys/index.js');
 const { default: HotkeyState } = await import('../../../src/renderer/modules/hotkeys/hotkey-state.js');
-const { restoreHoldingTankSnapshot, collectSongIds: collectHoldingTankSongIds, applyHoldingTankSnapshot } = await import('../../../src/renderer/modules/holding-tank/index.js');
+const { collectSongIds: collectHoldingTankSongIds, applyHoldingTankSnapshot, getHoldingTankSnapshot } = await import('../../../src/renderer/modules/holding-tank/index.js');
 const hotkeyOperations = await import('../../../src/renderer/modules/hotkeys/hotkey-operations.js');
 
 describe('state model rendering', () => {
@@ -69,20 +69,16 @@ describe('state model rendering', () => {
     globalThis.document = createFakeDocument();
   });
 
-  it('renders renamed and hidden hotkey tabs while clearing empty slots', async () => {
+  it('renders renamed and hidden hotkey tabs while clearing empty slots', () => {
     const module = Object.create(HotkeysModule.prototype);
     module.state = new HotkeyState();
-    module.electronAPI = { database: { getSongsByIds: vi.fn().mockResolvedValue({
-      success: true,
-      data: [{ id: 17, title: 'Entrance', artist: 'Cast', time: '0:12' }]
-    }) } };
     const staleSlot = document.getElementById('hotkeys_list_2').hotkeys.f2;
     staleSlot.setAttribute('songid', 'stale');
     staleSlot.span.textContent = 'Stale label';
 
-    await module.restoreHotkeySnapshot([
+    module.applyHotkeySnapshot([
       { tabNumber: 2, tabName: 'Act Two', hotkeys: { f1: '17' } }
-    ]);
+    ], new Map([['17', { id: 17, title: 'Entrance', artist: 'Cast', time: '0:12' }]]));
 
     expect(document.hotkeyLinks[1].textContent).toBe('Act Two');
     expect(document.getElementById('hotkeys_list_2').hotkeys.f1.getAttribute('songid')).toBe('17');
@@ -91,20 +87,15 @@ describe('state model rendering', () => {
     expect(staleSlot.span.textContent).toBe('');
   });
 
-  it('filters missing songs and renders ordered holding-tank entries on hidden tabs', async () => {
-    window.secureElectronAPI = { database: { getSongsByIds: vi.fn().mockResolvedValue({
-      success: true,
-      data: [{ id: 18, title: 'Finale', artist: 'Cast', time: '1:00' }]
-    }) } };
-
-    const snapshot = await restoreHoldingTankSnapshot([
+  it('filters missing songs and renders ordered holding-tank entries on hidden tabs', () => {
+    applyHoldingTankSnapshot([
       { tabNumber: 4, tabName: 'Finale', songIds: ['missing', '18'] }
-    ]);
+    ], new Map([['18', { id: 18, title: 'Finale', artist: 'Cast', time: '1:00' }]]));
 
     expect(document.holdingLinks[3].textContent).toBe('Finale');
     expect(document.getElementById('holding_tank_4').children).toHaveLength(1);
     expect(document.getElementById('holding_tank_4').children[0].textContent).toBe('Finale by Cast (1:00)');
-    expect(snapshot[3].songIds).toEqual(['18']);
+    expect(getHoldingTankSnapshot()[3].songIds).toEqual(['18']);
   });
 
   it('collects distinct hotkey song ids and applies a hotkey snapshot synchronously', () => {

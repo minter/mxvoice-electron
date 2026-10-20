@@ -20,6 +20,7 @@ try {
 import * as hotkeyOperations from './hotkey-operations.js';
 import * as hotkeyUI from './hotkey-ui.js';
 import HotkeyState from './hotkey-state.js';
+import { fetchSongsById } from '../boards/layout-applier.js';
 
 // Import secure adapters for UI operations
 import { customConfirm, customPrompt } from '../utils/index.js';
@@ -168,27 +169,6 @@ class HotkeysModule {
     return [...new Set(tabs.flatMap(tab => Object.values(tab.hotkeys)))];
   }
 
-  async restoreHotkeySnapshot(snapshot) {
-    const songIds = this.collectSongIds(snapshot);
-    const songsById = new Map();
-
-    if (songIds.length > 0) {
-      if (!this.electronAPI?.database?.getSongsByIds) {
-        throw new Error('Batch song lookup is unavailable during hotkey restore');
-      }
-      const result = await this.electronAPI.database.getSongsByIds(songIds);
-      if (result?.success === false) {
-        throw new Error(result.error || 'Failed to load hotkey song metadata');
-      }
-      const rows = result?.data || result || [];
-      if (!Array.isArray(rows)) throw new Error(result?.error || 'Failed to load hotkey song metadata');
-      rows.forEach(row => songsById.set(String(row.id), row));
-    }
-
-    this.applyHotkeySnapshot(snapshot, songsById);
-    return this.state.toSnapshot();
-  }
-
   /**
    * Load a hotkey snapshot into the model and render it into the existing
    * slot elements, synchronously. Songs missing from songsById are dropped.
@@ -300,19 +280,8 @@ class HotkeysModule {
     }
 
     const songIds = [...new Set(Object.values(fkeys).filter(Boolean).map(String))];
-    const songsById = new Map();
-    if (songIds.length > 0) {
-      if (!this.electronAPI?.database?.getSongsByIds) {
-        throw new Error('Batch song lookup is unavailable during hotkey import');
-      }
-      const result = await this.electronAPI.database.getSongsByIds(songIds);
-      if (result?.success === false) {
-        throw new Error(result.error || 'Failed to load hotkey song metadata');
-      }
-      const rows = result?.data || result || [];
-      if (!Array.isArray(rows)) throw new Error(result?.error || 'Failed to load hotkey song metadata');
-      rows.forEach(row => songsById.set(String(row.id), row));
-    }
+    const database = this.electronAPI?.database;
+    const songsById = await fetchSongsById(songIds, database?.getSongsByIds && ((ids) => database.getSongsByIds(ids)));
     const dropped = songIds.filter(id => !songsById.has(id)).length;
     if (songIds.length > 0 && dropped === songIds.length) {
       // Nothing to import: the current tab is left as it is

@@ -36,6 +36,7 @@ import Dom from '../dom-utils/index.js';
 import { customConfirm, customPrompt, scaleScrollable } from '../utils/index.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 import HoldingTankState from './holding-tank-state.js';
+import { fetchSongsById } from '../boards/layout-applier.js';
 
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'
@@ -111,20 +112,6 @@ export function moveHoldingTankItem(sourceTabNumber, sourceIndex, targetTabNumbe
 export function collectSongIds(snapshot) {
   const tabs = new HoldingTankState(snapshot).toSnapshot();
   return [...new Set(tabs.flatMap(tab => tab.songIds))];
-}
-
-export async function restoreHoldingTankSnapshot(snapshot) {
-  const songIds = collectSongIds(snapshot);
-  const songsById = new Map();
-  if (songIds.length > 0) {
-    const result = await database.getSongsByIds(songIds);
-    if (result?.success === false) throw new Error(result.error || 'Failed to load holding tank metadata');
-    const rows = result?.data || result || [];
-    if (!Array.isArray(rows)) throw new Error('Failed to load holding tank metadata');
-    rows.forEach(row => songsById.set(String(row.id), row));
-  }
-  applyHoldingTankSnapshot(snapshot, songsById);
-  return holdingTankState.toSnapshot();
 }
 
 /**
@@ -223,11 +210,7 @@ export async function populateHoldingTank(songIds) {
 
   // One lookup for the whole file; ids missing from the library are dropped
   const distinctIds = [...new Set(songIds.map(String))];
-  const result = await database.getSongsByIds(distinctIds);
-  if (result?.success === false) throw new Error(result.error || 'Failed to load holding tank metadata');
-  const rows = result?.data || result || [];
-  if (!Array.isArray(rows)) throw new Error('Failed to load holding tank metadata');
-  const songsById = new Map(rows.map(row => [String(row.id), row]));
+  const songsById = await fetchSongsById(distinctIds, (ids) => database.getSongsByIds(ids));
   const validIds = songIds.map(String).filter(songId => songsById.has(songId));
   const dropped = distinctIds.filter(songId => !songsById.has(songId)).length;
   if (validIds.length === 0) {
@@ -603,7 +586,6 @@ const holdingTankModule = {
   clearActiveHoldingTankState,
   renameHoldingTankStateTab,
   moveHoldingTankItem,
-  restoreHoldingTankSnapshot,
   collectSongIds,
   applyHoldingTankSnapshot
 };

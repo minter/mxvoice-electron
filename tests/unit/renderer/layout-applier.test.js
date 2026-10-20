@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 globalThis.window = { debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } };
 
-const { applyLayout } = await import('../../../src/renderer/modules/boards/layout-applier.js');
+const { applyLayout, fetchSongsById } = await import('../../../src/renderer/modules/boards/layout-applier.js');
 
 function fakeElement(id = '', classes = [], attributes = {}) {
   const classSet = new Set(classes);
@@ -181,5 +181,25 @@ describe('applyLayout', () => {
     expect(elements.selectedRow.id).toBe('selected_row');
     expect(elements.activeHotkey.classList.contains('active-hotkey')).toBe(true);
     expect(deps.window.currentSelectedHotkey).toBe('f1_hotkey');
+  });
+});
+
+describe('fetchSongsById', () => {
+  it('looks every id up in one query and keys the rows by string id', async () => {
+    const getSongsByIds = vi.fn(async () => ({ success: true, data: [{ id: 7, title: 'A' }] }));
+    const songs = await fetchSongsById(['7', '8'], getSongsByIds);
+    expect(getSongsByIds).toHaveBeenCalledOnce();
+    expect(getSongsByIds).toHaveBeenCalledWith(['7', '8']);
+    expect([...songs.keys()]).toEqual(['7']);
+  });
+
+  it('makes no query for no ids, even without a lookup', async () => {
+    await expect(fetchSongsById([], undefined)).resolves.toEqual(new Map());
+  });
+
+  it('throws on a failed, malformed or missing lookup', async () => {
+    await expect(fetchSongsById(['1'], async () => ({ success: false, error: 'db closed' }))).rejects.toThrow('db closed');
+    await expect(fetchSongsById(['1'], async () => ({ success: true, data: 'nope' }))).rejects.toThrow('song metadata');
+    await expect(fetchSongsById(['1'], undefined)).rejects.toThrow('unavailable');
   });
 });

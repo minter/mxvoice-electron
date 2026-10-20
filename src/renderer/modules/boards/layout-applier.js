@@ -17,13 +17,20 @@ function tabNumber(value) {
   return Number.isInteger(number) && number >= 1 && number <= 5 ? number : 1;
 }
 
-async function fetchSongs(songIds, getSongsByIds) {
+/**
+ * Look up every song id with one batch query.
+ * @param {string[]} ids - distinct song ids
+ * @param {(ids: string[]) => Promise<{ success: boolean, data?: Array }>} getSongsByIds
+ * @returns {Promise<Map<string, Object>>} library rows keyed by string id
+ */
+export async function fetchSongsById(ids, getSongsByIds) {
   const songsById = new Map();
-  if (songIds.length === 0) return songsById;
-  const result = await getSongsByIds(songIds);
-  if (result?.success === false) throw new Error(result.error || 'Failed to load board song metadata');
+  if (ids.length === 0) return songsById;
+  if (typeof getSongsByIds !== 'function') throw new Error('Batch song lookup is unavailable');
+  const result = await getSongsByIds(ids);
+  if (result?.success === false) throw new Error(result.error || 'Failed to load song metadata');
   const rows = result?.data || result || [];
-  if (!Array.isArray(rows)) throw new Error('Failed to load board song metadata');
+  if (!Array.isArray(rows)) throw new Error('Failed to load song metadata');
   rows.forEach(row => songsById.set(String(row.id), row));
   return songsById;
 }
@@ -71,7 +78,7 @@ export async function applyLayout(layout, deps) {
     ...hotkeys.collectSongIds(hotkeySnapshot),
     ...holdingTank.collectSongIds(holdingTankSnapshot)
   ])];
-  const songsById = await fetchSongs(songIds, getSongsByIds);
+  const songsById = await fetchSongsById(songIds, getSongsByIds);
 
   // Everything below runs in one synchronous step, so no playback callback
   // can observe a half-applied layout.
