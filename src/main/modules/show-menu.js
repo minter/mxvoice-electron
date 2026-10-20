@@ -48,8 +48,8 @@ function buildShowMenu(state, { platform, send, fileOperations, rebuild } = {}) 
         };
       }),
       { type: 'separator' },
-      { label: quoted('Update'), enabled: hasActive, click: emit('update') },
-      { label: 'New Show…', enabled: ready, click: emit('new') },
+      { label: quoted('Save'), enabled: hasActive, click: emit('save') },
+      { label: 'Save As…', enabled: ready, click: emit('save-as') },
       { label: quoted('Revert to'), enabled: hasActive, click: emit('revert') },
       // Both act on the show on screen; the renderer reads it from the session
       { label: `${quoted('Rename')}…`, enabled: hasActive, click: emit('rename') },

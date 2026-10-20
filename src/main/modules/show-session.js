@@ -20,6 +20,11 @@
  * raise the fence before their first await, retire, and leave the session
  * 'loading' at a new generation for the page to apply and report ready.
  *
+ * `dirty` says whether the layout on screen differs from the saved active
+ * show. The recovery write decides it: a write sets it, a retire as equal
+ * clears it. Anything that puts the saved show on screen, or saves the
+ * screen as the show, clears it; restoring a recovery record sets it.
+ *
  * @module show-session
  */
 
@@ -119,6 +124,8 @@ export function createShowSession({
   // this generation's show. The live layout can never hold them, so the
   // equality check leaves them out of the saved layout.
   let droppedIds = new Set();
+  // The layout on screen differs from the saved active show
+  let dirty = false;
 
   function refreshMenu(fn) {
     try {
@@ -144,7 +151,7 @@ export function createShowSession({
     return run;
   }
 
-  const state = () => ({ profile, status, doc, generation });
+  const state = () => ({ profile, status, doc, generation, dirty });
 
   async function open() {
     profile = getCurrentProfile();
@@ -156,6 +163,7 @@ export function createShowSession({
     pendingHandoff = null;
     pendingRecovery = null;
     droppedIds = new Set();
+    dirty = false;
     doc = null;
     setStatus('loading');
 
@@ -225,6 +233,7 @@ export function createShowSession({
     if (generation !== g) throw new Error('superseded by a newer open');
     doc = emptyDoc;
     pendingRecovery = record;
+    dirty = false;
     setStatus('loading');
     return { layout: normalizeLayout(activeShow().layout), generation, recovery: recoveryInfo(record) };
   }
@@ -240,9 +249,12 @@ export function createShowSession({
     // Restored onto the active show, whatever showId the record names.
     // A handoff is spent once restored: another crash before any edit must ask.
     if (choice === 'restore') {
+      // The restored layout is the recovery copy, not the saved show
+      dirty = true;
       if (record.handoff) await queued(() => recoveryStore.clearHandoff(p));
       return { layout: normalizeLayout(record.layout) };
     }
+    dirty = false;
     await queued(() => recoveryStore.retire(p));
     return { layout: saved };
   }
@@ -265,21 +277,22 @@ export function createShowSession({
 
   const refused = (myGeneration) => status !== 'ready' || fenced || myGeneration !== generation;
 
+  // Every outcome reports `dirty`; a skipped or failed save leaves it as it was
   function saveRecovery(layout) {
     const myGeneration = generation;
     const p = profile;
-    if (refused(myGeneration)) return Promise.resolve({ skipped: true });
+    if (refused(myGeneration)) return Promise.resolve({ skipped: true, dirty });
     const normalized = normalizeLayout(layout);
     return queued(async () => {
       // Re-checked here: end() may have fenced while this waited its turn
-      if (refused(myGeneration)) return { skipped: true };
+      if (refused(myGeneration)) return { skipped: true, dirty };
       const show = activeShow();
-      if (layoutKey(normalized) === layoutKey(withoutSongs(show.layout, droppedIds))) {
-        await recoveryStore.retire(p);
-        return { retired: true };
-      }
-      await recoveryStore.write(p, { showId: show.id, layout: normalized });
-      return {};
+      const equal = layoutKey(normalized) === layoutKey(withoutSongs(show.layout, droppedIds));
+      if (equal) await recoveryStore.retire(p);
+      else await recoveryStore.write(p, { showId: show.id, layout: normalized });
+      // A newer generation has already set its own
+      if (myGeneration === generation) dirty = !equal;
+      return equal ? { retired: true, dirty } : { dirty };
     });
   }
 
@@ -387,7 +400,11 @@ export function createShowSession({
     await showStore.save(p, nextDoc);
     assertCurrent(g);
     doc = nextDoc;
-    if (retire) await retireRecovery(fn, p);
+    if (retire) {
+      // The layout on screen is now the saved show
+      dirty = false;
+      await retireRecovery(fn, p);
+    }
   }
 
   /**
@@ -408,6 +425,7 @@ export function createShowSession({
     assertCurrent(g);
     generation += 1;
     pendingRecovery = null;
+    dirty = false;
     // Writes stay refused while loading, by status and by generation
     if (!handedOff) fenced = false;
     setStatus('loading');

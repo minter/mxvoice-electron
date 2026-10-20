@@ -54,24 +54,24 @@ function setup({ doc = threeShows(), status = 'ready', modalOpen = false } = {})
 }
 
 describe('runShowCommand', () => {
-  it('update asks once, naming the show, and stores the on-screen layout', async () => {
+  it('save asks once, naming the show, and stores the on-screen layout', async () => {
     const { api, deps } = setup();
-    await runShowCommand({ command: 'update' }, deps);
+    await runShowCommand({ command: 'save' }, deps);
     expect(deps.confirm).toHaveBeenCalledOnce();
     expect(deps.confirm).toHaveBeenCalledWith(
       '"Main Show" will open with the layout on screen now. Its saved layout will be replaced.',
-      'Update "Main Show"?',
-      { confirmLabel: 'Update' }
+      'Save "Main Show"?',
+      { confirmLabel: 'Save' }
     );
     expect(api.updateActive).toHaveBeenCalledWith(liveLayout);
     expect(deps.applyLayout).not.toHaveBeenCalled();
-    expect(deps.track).toHaveBeenCalledWith('show_updated', undefined);
+    expect(deps.track).toHaveBeenCalledWith('show_saved', undefined);
   });
 
-  it('cancelling update writes nothing', async () => {
+  it('cancelling save writes nothing', async () => {
     const { api, deps } = setup();
     deps.confirm.mockResolvedValue(false);
-    await runShowCommand({ command: 'update' }, deps);
+    await runShowCommand({ command: 'save' }, deps);
     expect(api.updateActive).not.toHaveBeenCalled();
     expect(deps.extractLayout).not.toHaveBeenCalled();
     expect(deps.track).not.toHaveBeenCalled();
@@ -121,16 +121,16 @@ describe('runShowCommand', () => {
     expect(cancelled.api.revert).not.toHaveBeenCalled();
   });
 
-  it('new creates a show from the on-screen layout', async () => {
+  it('save-as creates a show from the on-screen layout', async () => {
     const { api, deps } = setup();
     deps.prompt.mockResolvedValueOnce('Late Show');
-    await runShowCommand({ command: 'new' }, deps);
-    expect(deps.prompt).toHaveBeenCalledWith('Name for the new show', '', 'New Show');
+    await runShowCommand({ command: 'save-as' }, deps);
+    expect(deps.prompt).toHaveBeenCalledWith('Name for the new show', '', 'Save As');
     expect(api.create).toHaveBeenCalledWith('Late Show', liveLayout);
-    expect(deps.track).toHaveBeenCalledWith('show_created', undefined);
+    expect(deps.track).toHaveBeenCalledWith('show_saved_as', undefined);
   });
 
-  it('new re-prompts on a duplicate name with the validation message', async () => {
+  it('save-as re-prompts on a duplicate name with the validation message', async () => {
     const { api, deps } = setup();
     api.create
       .mockResolvedValueOnce(nameFail('A show with this name already exists.'))
@@ -139,11 +139,11 @@ describe('runShowCommand', () => {
       .mockResolvedValueOnce('Opening')
       .mockResolvedValueOnce('Act\nTwo')
       .mockResolvedValueOnce(null);
-    await runShowCommand({ command: 'new' }, deps);
+    await runShowCommand({ command: 'save-as' }, deps);
     expect(deps.prompt.mock.calls).toEqual([
-      ['Name for the new show', '', 'New Show'],
-      ['A show with this name already exists.', 'Opening', 'New Show'],
-      ["Show names can't contain line breaks or control characters.", 'Act\nTwo', 'New Show']
+      ['Name for the new show', '', 'Save As'],
+      ['A show with this name already exists.', 'Opening', 'Save As'],
+      ["Show names can't contain line breaks or control characters.", 'Act\nTwo', 'Save As']
     ]);
     expect(api.create).toHaveBeenCalledTimes(2);
     expect(deps.track).not.toHaveBeenCalled();
@@ -154,7 +154,7 @@ describe('runShowCommand', () => {
     const { api, deps } = setup();
     api.create.mockResolvedValueOnce(fail('A show with this name already exists.'));
     deps.prompt.mockResolvedValueOnce('Opening');
-    await runShowCommand({ command: 'new' }, deps);
+    await runShowCommand({ command: 'save-as' }, deps);
     expect(deps.prompt).toHaveBeenCalledOnce();
     expect(deps.alert).toHaveBeenCalledOnce();
   });
@@ -246,7 +246,7 @@ describe('runShowCommand', () => {
     const { api, deps } = setup();
     let answer;
     deps.confirm.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
-    const first = runShowCommand({ command: 'update' }, deps);
+    const first = runShowCommand({ command: 'save' }, deps);
     await vi.waitFor(() => expect(answer).toBeTypeOf('function'));
 
     await runShowCommand({ command: 'switch', showId: 'b3' }, deps);
@@ -262,9 +262,9 @@ describe('runShowCommand', () => {
     expect(api.activate).toHaveBeenCalledOnce();
   });
 
-  it('update is dropped while Preferences is open; switch still runs', async () => {
+  it('save is dropped while Preferences is open; switch still runs', async () => {
     const { api, deps } = setup({ modalOpen: true });
-    for (const command of ['update', 'new', 'revert', 'rename', 'delete', 'import']) {
+    for (const command of ['save', 'save-as', 'revert', 'rename', 'delete', 'import']) {
       await runShowCommand({ command, showId: 'b1' }, deps);
     }
     expect(deps.confirm).not.toHaveBeenCalled();
@@ -278,7 +278,7 @@ describe('runShowCommand', () => {
 
   it('does not prompt when the session is not ready', async () => {
     const { api, deps } = setup({ status: 'loading' });
-    await runShowCommand({ command: 'update' }, deps);
+    await runShowCommand({ command: 'save' }, deps);
     expect(deps.confirm).not.toHaveBeenCalled();
     expect(api.updateActive).not.toHaveBeenCalled();
     expect(deps.alert).not.toHaveBeenCalled();
@@ -293,7 +293,7 @@ describe('runShowCommand', () => {
 
     const broken = setup();
     broken.api.updateActive.mockResolvedValue(fail('disk full'));
-    await runShowCommand({ command: 'update' }, broken.deps);
+    await runShowCommand({ command: 'save' }, broken.deps);
     expect(broken.deps.alert).toHaveBeenCalledWith(
       "Mx. Voice couldn't change the show. Your saved shows were not changed.",
       'Show not changed'
@@ -303,11 +303,11 @@ describe('runShowCommand', () => {
 
   it('ignores unknown commands and never sends names to analytics', async () => {
     const { deps } = setup();
-    await runShowCommand({ command: 'import-hotkey-file' }, deps);
+    for (const command of ['import-hotkey-file', 'update', 'new']) await runShowCommand({ command }, deps);
     expect(deps.api.getState).not.toHaveBeenCalled();
 
     deps.prompt.mockResolvedValueOnce('Secret Name');
-    await runShowCommand({ command: 'new' }, deps);
+    await runShowCommand({ command: 'save-as' }, deps);
     await runShowCommand({ command: 'delete' }, deps);
     const sent = JSON.stringify(deps.track.mock.calls);
     for (const name of ['Secret Name', 'Opening', 'Main Show', 'Jesse', 'Derek']) expect(sent).not.toContain(name);

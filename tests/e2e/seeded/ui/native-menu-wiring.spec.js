@@ -182,7 +182,7 @@ test.describe('Native menu wiring', () => {
     expect(topLevel).not.toContain('Hotkeys');
 
     expect(await findMenuItem(showName)).toEqual({ found: true, enabled: true });
-    expect(await findMenuItem(`Update "${showName}"`)).toEqual({ found: true, enabled: true });
+    expect(await findMenuItem(`Save "${showName}"`)).toEqual({ found: true, enabled: true });
     expect(await findMenuItem(`Revert to "${showName}"`)).toEqual({ found: true, enabled: true });
     expect(await findMenuItem('Import Hotkey File…')).toEqual({ found: true, enabled: true });
     expect(await findMenuItem('Start a New Session')).toEqual({ found: false });
@@ -195,9 +195,9 @@ test.describe('Native menu wiring', () => {
       // Task 11 consumes this in the renderer; here we listen at the preload boundary.
       window.secureElectronAPI.events.onShowCommand((payload) => window.__showCommands.push(payload));
     });
-    await triggerMenuItem('New Show…');
+    await triggerMenuItem('Save As…');
     await expect.poll(() => page.evaluate(() => window.__showCommands)).toEqual([
-      { command: 'new' }
+      { command: 'save-as' }
     ]);
   });
 });

@@ -96,27 +96,27 @@ const handlers = {
     return (await openLoaded(loaded, deps)) ? ['show_switched'] : null;
   },
 
-  async update(_showId, deps) {
+  async save(_showId, deps) {
     const doc = await readyDoc(deps);
     const { name } = findShow(doc, doc.activeShowId);
     const confirmed = await deps.confirm(
       `"${name}" will open with the layout on screen now. Its saved layout will be replaced.`,
-      `Update "${name}"?`,
-      { confirmLabel: 'Update' }
+      `Save "${name}"?`,
+      { confirmLabel: 'Save' }
     );
     if (!confirmed) return null;
-    unwrap(await deps.api.updateActive(deps.extractLayout()), 'Updating the show');
-    return ['show_updated'];
+    unwrap(await deps.api.updateActive(deps.extractLayout()), 'Saving the show');
+    return ['show_saved'];
   },
 
-  async new(_showId, deps) {
+  async 'save-as'(_showId, deps) {
     await readyDoc(deps);
     const created = await promptForName(
       deps,
-      { message: 'Name for the new show', value: '', title: 'New Show' },
+      { message: 'Name for the new show', value: '', title: 'Save As' },
       (name) => deps.api.create(name, deps.extractLayout())
     );
-    return created ? ['show_created'] : null;
+    return created ? ['show_saved_as'] : null;
   },
 
   async revert(_showId, deps) {

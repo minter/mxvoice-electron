@@ -972,8 +972,14 @@ legend {
 
 .show-separator[hidden],
 #show-icon[hidden],
-#show-name[hidden] {
+#show-name[hidden],
+#show-dirty[hidden] {
   display: none;
+}
+
+/* Stays visible when a long show name is truncated */
+#show-dirty {
+  flex-shrink: 0;
 }
 
 #show-name {

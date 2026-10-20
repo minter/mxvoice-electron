@@ -26,16 +26,16 @@ export default {
         },
         {
           title: 'Your Layout Is Now a Show',
-          description: 'The hotkeys and holding tank you had are saved as a show named Show. Quitting puts it back next time. From now on, changes made during a show are kept only if you Update the show or create a New Show.',
+          description: 'The hotkeys and holding tank you had are saved as a show named Show. Quitting puts it back next time. From now on, changes made during a show are kept only if you Save the show or use Save As to make a new one.',
         },
         {
           title: 'The Shows Menu',
-          description: 'Use the Shows menu to switch shows, Update the show on screen, start a New Show, Revert to the saved one, or Rename and Delete shows.',
+          description: 'Use the Shows menu to switch shows, Save the show on screen, Save As a new show, Revert to the saved one, or Rename or Delete the show on screen. To tidy another show, switch to it first.',
         },
         {
           element: '#profile-indicator',
           title: 'Which Show Is Loaded',
-          description: 'The header now shows your profile and the show that is loaded.',
+          description: 'The header now shows your profile and the show that is loaded. A dot after the show name means the layout on screen has unsaved changes.',
           side: 'bottom',
           align: 'center',
           skipIfMissing: true,

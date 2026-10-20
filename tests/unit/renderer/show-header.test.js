@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 globalThis.window = globalThis.window || {};
 window.debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+const listeners = {};
+window.addEventListener = vi.fn((type, fn) => { listeners[type] = fn; });
 
-const { refreshHeader, setHeaderLabels } = await import('../../../src/renderer/modules/shows/header.js');
+const { refreshHeader, setHeaderLabels, setDirty } = await import('../../../src/renderer/modules/shows/header.js');
 
 // No DOM library: elements that record textContent and refuse innerHTML
 function element() {
@@ -22,10 +24,12 @@ let els;
 let doc;
 const show = () => els.show;
 const hiddenParts = () => [els.separator, els.icon, els.show].map((el) => el.hidden);
+const dotShown = () => !els.dirty.hidden;
 
 function resetDom() {
-  els = { profile: element(), separator: element(), icon: element(), show: element() };
-  const byId = { 'profile-name': els.profile, 'show-icon': els.icon, 'show-name': els.show };
+  els = { profile: element(), separator: element(), icon: element(), show: element(), dirty: element() };
+  els.dirty.hidden = true;
+  const byId = { 'profile-name': els.profile, 'show-icon': els.icon, 'show-name': els.show, 'show-dirty': els.dirty };
   doc = {
     getElementById: (id) => byId[id] ?? null,
     querySelector: (selector) => (selector === '.show-separator' ? els.separator : null)
@@ -64,6 +68,45 @@ describe('setHeaderLabels', () => {
   });
 });
 
+describe('setDirty', () => {
+  beforeEach(() => { resetDom(); });
+
+  it('shows the dot after the show name only while dirty', () => {
+    setHeaderLabels({ profile: 'Default User', show: 'Main' }, doc);
+    expect(dotShown()).toBe(false);
+    setDirty(true, doc);
+    expect(dotShown()).toBe(true);
+    // The name itself is unchanged
+    expect(show().textContent).toBe('Main');
+    setDirty(false, doc);
+    expect(dotShown()).toBe(false);
+  });
+
+  it('never shows the dot without a show, and hides it when the show goes', () => {
+    setHeaderLabels({ profile: 'Default User', show: null }, doc);
+    setDirty(true, doc);
+    expect(dotShown()).toBe(false);
+
+    setHeaderLabels({ show: 'Main' }, doc);
+    setDirty(true, doc);
+    setHeaderLabels({ show: null }, doc);
+    expect(dotShown()).toBe(false);
+  });
+
+  it('follows the show-dirty-changed event', () => {
+    globalThis.document = doc;
+    try {
+      setHeaderLabels({ show: 'Main' }, doc);
+      listeners['show-dirty-changed']({ detail: { dirty: true } });
+      expect(dotShown()).toBe(true);
+      listeners['show-dirty-changed']({ detail: { dirty: false } });
+      expect(dotShown()).toBe(false);
+    } finally {
+      delete globalThis.document;
+    }
+  });
+});
+
 describe('refreshHeader', () => {
   beforeEach(() => { resetDom(); });
   const api = (data, success = true) => ({ getState: vi.fn(async () => (success ? { success, data } : { success, error: 'x' })) });
@@ -73,6 +116,15 @@ describe('refreshHeader', () => {
     await refreshHeader({ doc, api: api({ profile: 'Default User', status: 'ready', doc: showDoc }) });
     expect(show().textContent).toBe('Two');
     expect(els.profile.textContent).toBe('Default User');
+    expect(dotShown()).toBe(false);
+  });
+
+  it('shows the dot when the session is dirty, and clears it when not', async () => {
+    const showDoc = { activeShowId: 'b1', shows: [{ id: 'b1', name: 'One' }] };
+    await refreshHeader({ doc, api: api({ profile: 'Default User', status: 'ready', doc: showDoc, dirty: true }) });
+    expect(dotShown()).toBe(true);
+    await refreshHeader({ doc, api: api({ profile: 'Default User', status: 'ready', doc: showDoc, dirty: false }) });
+    expect(dotShown()).toBe(false);
   });
 
   it('shows no show when the session has no document', async () => {

@@ -52,6 +52,32 @@ describe('profile state writes the crash-recovery record', () => {
     await expect(flushProfileState()).resolves.toEqual({ success: true });
   });
 
+  it('announces the session\'s dirty flag after each recovery save that reports one', async () => {
+    const save = window.secureElectronAPI.shows.saveRecovery;
+    const dirtyEvents = [];
+    window.dispatchEvent = vi.fn((event) => { dirtyEvents.push([event.type, event.detail]); return true; });
+    try {
+      save.mockResolvedValueOnce({ success: true, data: { dirty: true } });
+      await flushProfileState();
+      save.mockResolvedValueOnce({ success: true, data: { retired: true, dirty: false } });
+      await flushProfileState();
+      save.mockResolvedValueOnce({ success: true, data: { skipped: true, dirty: true } });
+      await flushProfileState();
+      // No boolean dirty, or a failed save: nothing announced
+      save.mockResolvedValueOnce({ success: true, data: {} });
+      await flushProfileState();
+      save.mockResolvedValueOnce({ success: false, error: 'disk full' });
+      await flushProfileState();
+      expect(dirtyEvents).toEqual([
+        ['show-dirty-changed', { dirty: true }],
+        ['show-dirty-changed', { dirty: false }],
+        ['show-dirty-changed', { dirty: true }]
+      ]);
+    } finally {
+      delete window.dispatchEvent;
+    }
+  });
+
   it('reports a failed recovery write', async () => {
     window.secureElectronAPI.shows.saveRecovery.mockResolvedValueOnce({ success: false, error: 'disk full' });
     await expect(flushProfileState()).resolves.toEqual({ success: false, error: 'disk full' });

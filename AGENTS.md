@@ -32,7 +32,7 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 - **Directory structure** — `userData/profiles/<SanitizedName>/` contains `preferences.json`, `shows.json` (saved shows + active show; `shows.json.prev` is the last good copy), `state.json` (frozen), `hotkeys/` subdirectory.
 - **Profile name sanitization is critical** — `sanitizeProfileName()` removes special chars. A profile's `shows.json` lives in its sanitized directory, and its recovery record (`userData/recovery/<sanitized name, lowercased>.json`) is keyed by the same sanitized name; sanitize inconsistently and shows or recovery load from the wrong place.
 - **"Default User"** — auto-created on first run. Cannot be deleted. Switched via launcher UI or `--profile=` CLI arg.
-- **Shows** — a show is a saved hotkey + holding-tank layout. Only Shows menu commands (Update/New/Revert/Rename/Delete/Import) change a saved show; opening a profile can also create `shows.json` (migration) or repair it from `.prev`. A clean quit, profile switch or Log Out discards the live layout.
+- **Shows** — a show is a saved hotkey + holding-tank layout. Only Shows menu commands (Save/Save As/Revert/Rename/Delete/Import) change a saved show; Rename and Delete act on the active show only; opening a profile can also create `shows.json` (migration) or repair it from `.prev`. A clean quit, profile switch or Log Out discards the live layout.
 - **Crash recovery** — live-session snapshots go to `userData/recovery/<key>.json`, outside the profile dir. After a crash the next open offers to restore it (default: the saved show). `saveProfileState()` writes only there, behind the restoration lock.
 - **`state.json` is frozen** — a migration source only, never written. First open of a profile (or a restored pre-shows backup) turns it into a show named "Show".
 
@@ -45,7 +45,8 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 ## State Management
 
 - **Shared state** — `window.sharedState` (singleton Map) holds runtime state: currentSong, hotkeys, holding-tank data, animation frame IDs.
-- **Show session status** — the main-process show session is `idle` / `loading` / `ready` / `failed` / `unreadable` (`idle` before the first open and after it ends). Update, New, Revert and Delete need `ready`; recovery writes are refused until then. The Shows menu is rebuilt from the session.
+- **Show session status** — the main-process show session is `idle` / `loading` / `ready` / `failed` / `unreadable` (`idle` before the first open and after it ends). Save, Save As, Revert, Rename and Delete need `ready`; recovery writes are refused until then. The Shows menu is rebuilt from the session.
+- **Unsaved-changes dot** — the session's `dirty` flag (in `state()` and in each `saveRecovery` result) is set when a recovery save writes and cleared when it retires as equal, and by open, switch, revert, import, Save, Save As and startEmpty; restoring a recovery record sets it. `profile-state` passes each result's `dirty` to the header through the `show-dirty-changed` window event, which shows `#show-dirty`.
 - **Cross-module events** — modules communicate via `window.addEventListener('custom-event')` for search, categories, audio control.
 
 ## Auto-Update

@@ -34,16 +34,16 @@ describe('Shows menu', () => {
   it('uses the specified items in order', () => {
     const { menu } = build(readyState());
     expect(labels(menu)).toEqual([
-      'Comedy Sports', 'Mom & Pop', '---', 'Update "Comedy Sports"', 'New Show…',
+      'Comedy Sports', 'Mom & Pop', '---', 'Save "Comedy Sports"', 'Save As…',
       'Revert to "Comedy Sports"', 'Rename "Comedy Sports"…', 'Delete "Comedy Sports"…', '---',
       'Import Show…', 'Import Hotkey File…', 'Import Holding Tank File…'
     ]);
     walk(menu.submenu, (item) => expect(item.submenu, item.label).toBeUndefined());
   });
 
-  it('names the active show in Update, Revert, Rename and Delete', () => {
+  it('names the active show in Save, Revert, Rename and Delete', () => {
     const { menu } = build(readyState('b2'));
-    expect(find(menu, 'Update "Mom & Pop"')).toBeTruthy();
+    expect(find(menu, 'Save "Mom & Pop"')).toBeTruthy();
     expect(find(menu, 'Revert to "Mom & Pop"')).toBeTruthy();
     expect(find(menu, 'Rename "Mom & Pop"…')).toBeTruthy();
     expect(find(menu, 'Delete "Mom & Pop"…')).toBeTruthy();
@@ -52,14 +52,14 @@ describe('Shows menu', () => {
   it('sends switch with a show id and every other command without one', () => {
     const { menu, send } = build(readyState());
     menu.submenu[1].click();
-    find(menu, 'Update "Comedy Sports"').click();
-    find(menu, 'New Show…').click();
+    find(menu, 'Save "Comedy Sports"').click();
+    find(menu, 'Save As…').click();
     find(menu, 'Revert to "Comedy Sports"').click();
     find(menu, 'Rename "Comedy Sports"…').click();
     find(menu, 'Delete "Comedy Sports"…').click();
     find(menu, 'Import Show…').click();
     expect(send.mock.calls).toEqual([
-      ['switch', 'b2'], ['update', undefined], ['new', undefined], ['revert', undefined],
+      ['switch', 'b2'], ['save', undefined], ['save-as', undefined], ['revert', undefined],
       ['rename', undefined], ['delete', undefined], ['import', undefined]
     ]);
   });
@@ -99,38 +99,36 @@ describe('Shows menu', () => {
       });
     }
     const { menu } = build(readyState());
-    expect(find(menu, 'New Show…').enabled).toBe(true);
+    expect(find(menu, 'Save As…').enabled).toBe(true);
   });
 
   it('renders nameless disabled items and no shows without a session', () => {
     const { menu } = build({ status: 'idle', activeShow: null, shows: [] });
     expect(labels(menu)).toEqual([
-      '---', 'Update', 'New Show…', 'Revert to', 'Rename…', 'Delete…', '---',
+      '---', 'Save', 'Save As…', 'Revert to', 'Rename…', 'Delete…', '---',
       'Import Show…', 'Import Hotkey File…', 'Import Holding Tank File…'
     ]);
-    expect(find(menu, 'Update').enabled).toBe(false);
+    expect(find(menu, 'Save').enabled).toBe(false);
     expect(find(menu, 'Rename…').enabled).toBe(false);
     expect(find(menu, 'Delete…').enabled).toBe(false);
   });
 
   it('escapes & on win32 and linux, not on darwin', () => {
     const state = readyState('b2');
-    expect(find(build(state, 'darwin').menu, 'Update "Mom & Pop"')).toBeTruthy();
+    expect(find(build(state, 'darwin').menu, 'Save "Mom & Pop"')).toBeTruthy();
     for (const platform of ['win32', 'linux']) {
       const { menu } = build(state, platform);
       expect(menu.submenu[1].label).toBe('Mom && Pop');
-      expect(find(menu, 'Update "Mom && Pop"')).toBeTruthy();
+      expect(find(menu, 'Save "Mom && Pop"')).toBeTruthy();
       expect(find(menu, 'Revert to "Mom && Pop"')).toBeTruthy();
       expect(find(menu, 'Rename "Mom && Pop"…')).toBeTruthy();
       expect(find(menu, 'Delete "Mom && Pop"…')).toBeTruthy();
     }
   });
 
-  it('has no accelerators and no Open/Save wording', () => {
+  // Save replaces a prepared show and asks first; no reflex keystroke reaches it
+  it('has no accelerators', () => {
     const { menu } = build(readyState());
-    walk(menu.submenu, (item) => {
-      expect(item.accelerator).toBeUndefined();
-      expect(item.label ?? '').not.toMatch(/\b(Open|Save)\b/);
-    });
+    walk(menu.submenu, (item) => expect(item.accelerator).toBeUndefined());
   });
 });

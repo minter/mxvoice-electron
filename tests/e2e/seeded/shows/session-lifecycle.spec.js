@@ -147,6 +147,8 @@ test.describe('Shows - session lifecycle', () => {
 
     await waitForAppReady(page, app);
     await expect(f1SongId(page)).toHaveAttribute('songid', LIVE_SONG);
+    // The restored layout is not the saved show
+    await expect(page.locator('#show-dirty')).toBeVisible();
     // The saved show is untouched; the restored layout is still recoverable
     expect(readShows(userDataDir, 'Default User').shows[0].layout.hotkeys[0].hotkeys.f1).toBe(SAVED_SONG);
     expect(readRecovery(userDataDir, 'Default User')?.layout.hotkeys[0].hotkeys.f1).toBe(LIVE_SONG);

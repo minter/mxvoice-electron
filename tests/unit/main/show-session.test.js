@@ -145,20 +145,20 @@ describe('show session', () => {
   it('saveRecovery is refused while loading, failed or fenced', async () => {
     const ctx = setup();
     const opened = await ctx.session.open();
-    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true });
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toMatchObject({ skipped: true });
 
     ctx.session.reportReady(opened.generation, false);
     expect(ctx.session.state().status).toBe('failed');
-    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true });
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toMatchObject({ skipped: true });
 
     await openReady(ctx);
     await ctx.session.handoff('update');
-    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true });
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toMatchObject({ skipped: true });
     expect(ctx.recoveryStore.write).not.toHaveBeenCalled();
 
     // A ready, unfenced session writes
     await openReady(ctx);
-    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ dirty: true });
     expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({
       showId: ctx.doc.activeShowId,
       layout: layoutWith(9),
@@ -171,7 +171,7 @@ describe('show session', () => {
     ctx.recoveryStore.records.set('Alice', { version: 1, showId: 'x', savedAt: T0, handoff: null, layout: layoutWith(5) });
 
     const sameButSelected = { ...layoutWith(1), selected: { hotkeyTab: 3, holdingTankTab: 2 } };
-    await expect(ctx.session.saveRecovery(sameButSelected)).resolves.toEqual({ retired: true });
+    await expect(ctx.session.saveRecovery(sameButSelected)).resolves.toEqual({ retired: true, dirty: false });
 
     expect(ctx.recoveryStore.write).not.toHaveBeenCalled();
     expect(ctx.recoveryStore.retire).toHaveBeenCalledWith('Alice');
@@ -190,17 +190,17 @@ describe('show session', () => {
     ctx.recoveryStore.records.set('Alice', { version: 1, showId: 'x', savedAt: T0, handoff: null, layout: layoutWith(5) });
 
     // What the page shows: the show without song 2
-    await expect(ctx.session.saveRecovery(layoutWith(1))).resolves.toEqual({ retired: true });
+    await expect(ctx.session.saveRecovery(layoutWith(1))).resolves.toEqual({ retired: true, dirty: false });
     expect(ctx.recoveryStore.write).not.toHaveBeenCalled();
     expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
 
     // A real edit still writes
-    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ dirty: true });
 
     // The next open starts without the old dropped ids
     const again = await ctx.session.open();
     ctx.session.reportReady(again.generation, true);
-    await expect(ctx.session.saveRecovery(layoutWith(1))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(1))).resolves.toEqual({ dirty: true });
   });
 
   it('recovery writes go to the profile captured at open, even after getCurrentProfile changes', async () => {
@@ -254,8 +254,8 @@ describe('show session', () => {
     releaseWrite();
     await Promise.all([inFlight, ending]);
 
-    await expect(late).resolves.toEqual({ skipped: true });
-    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({ skipped: true });
+    await expect(late).resolves.toMatchObject({ skipped: true });
+    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toMatchObject({ skipped: true });
     expect(ctx.recoveryStore.calls).toEqual([['write', 'Alice'], ['retire', 'Alice']]);
     expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
     expect(ctx.session.state().status).toBe('idle');
@@ -345,7 +345,7 @@ describe('show session', () => {
     expect(ctx.recoveryStore.markHandoff).not.toHaveBeenCalled();
     expect(ctx.recoveryStore.records.get('Alice')).toEqual(record);
     // Still fenced: no write lands from the crashed page
-    await expect(ctx.session.saveRecovery(layoutWith(5))).resolves.toEqual({ skipped: true });
+    await expect(ctx.session.saveRecovery(layoutWith(5))).resolves.toMatchObject({ skipped: true });
     // The reload prompts again
     expect((await ctx.session.open()).recovery).toEqual({ savedAt: T0 - MINUTE, handoff: null, showId: 'show-1' });
   });
@@ -358,7 +358,7 @@ describe('show session', () => {
     expect(ctx.recoveryStore.markHandoff).not.toHaveBeenCalled();
     // A late ready report can't reopen writes: the fence is up
     ctx.session.reportReady(opened.generation, true);
-    await expect(ctx.session.saveRecovery(layoutWith(5))).resolves.toEqual({ skipped: true });
+    await expect(ctx.session.saveRecovery(layoutWith(5))).resolves.toMatchObject({ skipped: true });
   });
 
   it('an open() during end() keeps its own profile and status', async () => {
@@ -384,7 +384,7 @@ describe('show session', () => {
     expect(ctx.session.state()).toMatchObject({ profile: 'Bob', status: 'loading', generation: opened.generation });
     ctx.session.reportReady(opened.generation, true);
     expect(ctx.session.state().status).toBe('ready');
-    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ dirty: true });
     expect(ctx.recoveryStore.write).toHaveBeenLastCalledWith('Bob', expect.anything());
   });
 
@@ -681,7 +681,7 @@ describe('show session mutations', () => {
     expect(ready.recoveryStore.records.has('Alice')).toBe(false);
     expect(ready.rebuildMenu).toHaveBeenCalled();
     // Not fenced afterwards
-    await expect(ready.session.saveRecovery(layoutWith(6))).resolves.toEqual({});
+    await expect(ready.session.saveRecovery(layoutWith(6))).resolves.toEqual({ dirty: true });
   });
 
   it('a second mutation while one runs is rejected as busy', async () => {
@@ -746,7 +746,7 @@ describe('show session mutations', () => {
     expect(ctx.showStore.save).not.toHaveBeenCalled();
     expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
     expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation });
-    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({ dirty: true });
   });
 
   it('activate fences and retires recovery before returning the new layout', async () => {
@@ -767,7 +767,7 @@ describe('show session mutations', () => {
     const result = await activating;
     await inFlight;
 
-    await expect(late).resolves.toEqual({ skipped: true });
+    await expect(late).resolves.toMatchObject({ skipped: true });
     expect(result).toEqual({ layout: layoutWith(2), generation: opened.generation + 1 });
     expect(ctx.recoveryStore.calls).toEqual([['write', 'Alice'], ['retire', 'Alice']]);
     expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
@@ -776,12 +776,12 @@ describe('show session mutations', () => {
     expect(ctx.session.state().doc.activeShowId).toBe('show-2');
 
     // Writes stay refused while loading; the new generation's ready report unfences
-    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true });
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toMatchObject({ skipped: true });
     ctx.session.reportReady(opened.generation, true);
     expect(ctx.session.state().status).toBe('loading');
     ctx.session.reportReady(result.generation, true);
     expect(ctx.session.state().status).toBe('ready');
-    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ dirty: true });
     expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ showId: 'show-2', layout: layoutWith(9) });
   });
 
@@ -797,7 +797,7 @@ describe('show session mutations', () => {
     expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
     expect(ctx.session.state().status).toBe('loading');
     ctx.session.reportReady(result.generation, true);
-    await expect(ctx.session.saveRecovery(layoutWith(7))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(7))).resolves.toEqual({ dirty: true });
   });
 
   it('a failed save leaves the doc, recovery and status unchanged', async () => {
@@ -822,7 +822,7 @@ describe('show session mutations', () => {
     }
     expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
     // The fence came back down, and the lock was released
-    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({ dirty: true });
     ctx.showStore.save.mockResolvedValue(undefined);
     await expect(ctx.session.renameShow('show-2', 'Renamed')).resolves.toBeDefined();
   });
@@ -842,7 +842,7 @@ describe('show session mutations', () => {
     expect(doc.shows.at(-1)).toMatchObject({ name: 'Show Two', layout: layoutWith(9), createdAt: T0 });
     expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation });
     expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
-    await expect(ctx.session.saveRecovery(layoutWith(3))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(3))).resolves.toEqual({ dirty: true });
     expect(ctx.recoveryStore.records.get('Alice').showId).toBe('new-id');
   });
 
@@ -874,7 +874,7 @@ describe('show session mutations', () => {
     expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation });
     expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
     expect(ctx.recoveryStore.records.has('Alice')).toBe(true);
-    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({ dirty: true });
   });
 
   it('deleting the active show fences, retires and loads the next show', async () => {
@@ -890,7 +890,7 @@ describe('show session mutations', () => {
     const result = await deleting;
     await inFlight;
 
-    await expect(late).resolves.toEqual({ skipped: true });
+    await expect(late).resolves.toMatchObject({ skipped: true });
     expect(result).toEqual({ activeChanged: true, layout: layoutWith(2), generation: opened.generation + 1 });
     expect(ctx.recoveryStore.calls).toEqual([['write', 'Alice'], ['retire', 'Alice']]);
     expect(ctx.session.state()).toMatchObject({ status: 'loading', generation: result.generation });
@@ -943,7 +943,7 @@ describe('show session mutations', () => {
 
     ctx.session.reportReady(result.generation, true);
     expect(ctx.session.state().status).toBe('ready');
-    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true });
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toMatchObject({ skipped: true });
     await expect(ctx.session.updateActive(layoutWith(9))).rejects.toThrow('session not ready');
 
     // A failed save during a handoff leaves the fence up too
@@ -956,7 +956,7 @@ describe('show session mutations', () => {
     await failing.session.handoff('update');
     fail(new Error('disk full'));
     await expect(updating).rejects.toThrow('disk full');
-    await expect(failing.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true });
+    await expect(failing.session.saveRecovery(layoutWith(9))).resolves.toMatchObject({ skipped: true });
   });
 
   it('a mutation superseded by end() does not touch the ended session', async () => {
@@ -970,6 +970,103 @@ describe('show session mutations', () => {
     release();
     await expect(activating).rejects.toThrow('superseded');
     expect(ctx.session.state().status).toBe('idle');
+  });
+});
+
+describe('show session dirty flag', () => {
+  const dirty = (ctx) => ctx.session.state().dirty;
+
+  it('a recovery write sets dirty, a retire as equal clears it, and a skipped save leaves it', async () => {
+    const ctx = setup();
+    const opened = await ctx.session.open();
+    expect(dirty(ctx)).toBe(false);
+    // Skipped while loading: unchanged
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true, dirty: false });
+    ctx.session.reportReady(opened.generation, true);
+
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ dirty: true });
+    expect(dirty(ctx)).toBe(true);
+    // Fenced: skipped, still dirty
+    await ctx.session.handoff('update');
+    await expect(ctx.session.saveRecovery(layoutWith(1))).resolves.toEqual({ skipped: true, dirty: true });
+    expect(dirty(ctx)).toBe(true);
+
+    // Undone back to the saved show
+    await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+    await expect(ctx.session.saveRecovery(layoutWith(1))).resolves.toEqual({ retired: true, dirty: false });
+    expect(dirty(ctx)).toBe(false);
+  });
+
+  it('a failed recovery write leaves dirty unchanged', async () => {
+    const ctx = setup();
+    await openReady(ctx);
+    ctx.recoveryStore.write.mockRejectedValueOnce(new Error('disk full'));
+    await expect(ctx.session.saveRecovery(layoutWith(9))).rejects.toThrow('disk full');
+    expect(dirty(ctx)).toBe(false);
+  });
+
+  it('open clears dirty; restoring a recovery record sets it, discarding clears it', async () => {
+    const ctx = setup();
+    await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+    expect(dirty(ctx)).toBe(true);
+
+    await ctx.session.open();
+    expect(dirty(ctx)).toBe(false);
+    await ctx.session.resolveRecovery('restore');
+    expect(dirty(ctx)).toBe(true);
+
+    await ctx.session.open();
+    expect(dirty(ctx)).toBe(false);
+    await ctx.session.resolveRecovery('discard');
+    expect(dirty(ctx)).toBe(false);
+
+    // Restore with no record keeps the saved layout, so nothing is unsaved
+    ctx.recoveryStore.records.clear();
+    await ctx.session.open();
+    await ctx.session.resolveRecovery('restore');
+    expect(dirty(ctx)).toBe(false);
+  });
+
+  it('save, save as, activate, revert, deleting the active show and import clear dirty', async () => {
+    const ctx = setup({ doc: twoShowDoc(), profiles: ['Alice', 'Bob'] });
+    ctx.showStore.peek.mockResolvedValue(twoShowDoc());
+    await openReady(ctx);
+    const steps = [
+      ['updateActive', () => ctx.session.updateActive(layoutWith(9))],
+      ['createShow', () => ctx.session.createShow('Third', layoutWith(9))],
+      ['activate', () => ctx.session.activate('show-2')],
+      ['revert', () => ctx.session.revert()],
+      ['importShow', () => ctx.session.importShow('Bob', 'show-1')],
+      ['deleteShow', () => ctx.session.deleteShow(ctx.session.state().doc.activeShowId)],
+    ];
+    for (const [name, step] of steps) {
+      if (ctx.session.state().status !== 'ready') ctx.session.reportReady(ctx.session.state().generation, true);
+      await ctx.session.saveRecovery(layoutWith(42));
+      expect(dirty(ctx), `${name}: before`).toBe(true);
+      await step();
+      expect(dirty(ctx), `${name}: after`).toBe(false);
+    }
+  });
+
+  it('rename and a failed save leave dirty as it was', async () => {
+    const ctx = setup({ doc: twoShowDoc() });
+    await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+    await ctx.session.renameShow('show-1', 'Opening');
+    expect(dirty(ctx)).toBe(true);
+    ctx.showStore.save.mockRejectedValueOnce(new ShowStoreError('io', 'disk full'));
+    await expect(ctx.session.updateActive(layoutWith(9))).rejects.toThrow('disk full');
+    expect(dirty(ctx)).toBe(true);
+  });
+
+  it('startEmpty clears dirty', async () => {
+    const ctx = setup({ loadError: new ShowStoreError('unreadable', 'bad json') });
+    await ctx.session.open();
+    expect(ctx.session.state().status).toBe('unreadable');
+    await ctx.session.startEmpty();
+    expect(dirty(ctx)).toBe(false);
   });
 });
 
@@ -1066,7 +1163,7 @@ describe('show session imports', () => {
     await expect(ctx.session.importShow('Bob', 'missing')).rejects.toThrow('Show not found.');
     // A rejected import leaves the session as it was
     expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation });
-    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({});
+    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({ dirty: true });
 
     const result = await ctx.session.importShow('Bob', 'show-2');
 

@@ -143,6 +143,12 @@ export async function flushProfileState() {
   return result;
 }
 
+/** Tell the shows header whether the layout on screen differs from the saved show. */
+function announceDirty(dirty) {
+  if (typeof dirty !== 'boolean' || typeof window.dispatchEvent !== 'function') return;
+  window.dispatchEvent(new CustomEvent('show-dirty-changed', { detail: { dirty } }));
+}
+
 async function _saveProfileStateImmediate() {
   try {
     // PROTECTION: Never save during restoration/initialization (race condition protection)
@@ -175,6 +181,7 @@ async function _saveProfileStateImmediate() {
     // { skipped } (session not ready) and { retired } (matches the saved
     // show) are successes too: a backup's pre-flush must not abort on them
     if (writeResult?.success) {
+      announceDirty(writeResult.data?.dirty);
       debugLog?.info('[PROFILE-STATE] Profile state saved successfully', { 
         module: 'profile-state',
         function: 'saveProfileState',

@@ -55,14 +55,14 @@ test.describe('Shows - menu commands', () => {
     if (suiteRoot) fs.rmSync(suiteRoot, { recursive: true, force: true });
   });
 
-  test('new show from the live layout becomes active and survives a quit', async () => {
+  test('save as from the live layout becomes active and survives a quit', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }]);
     await expect(page.locator('#show-name')).toHaveText('Main Show');
     await expect(page.locator('#profile-name')).toHaveText(PROFILE);
     await assignF1(page, '1001');
 
-    await clickShowMenu(app, 'New Show…');
-    await answerPrompt(page, 'New Show', 'Late Show', { message: 'Name for the new show' });
+    await clickShowMenu(app, 'Save As…');
+    await answerPrompt(page, 'Save As', 'Late Show', { message: 'Name for the new show' });
 
     await expect.poll(() => activeShow(readShows(userDataDir, PROFILE)).name).toBe('Late Show');
     await expect(page.locator('#show-name')).toHaveText('Late Show');
@@ -78,23 +78,23 @@ test.describe('Shows - menu commands', () => {
     expect(await showMenuState(app)).toMatchObject({ shows: ['Main Show', 'Late Show'], checked: 'Late Show' });
   });
 
-  test('new re-prompts on a duplicate name', async () => {
+  test('save as re-prompts on a duplicate name', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }]);
 
-    await clickShowMenu(app, 'New Show…');
-    await answerPrompt(page, 'New Show', 'main show');
-    await answerPrompt(page, 'New Show', 'Second Show', { message: 'A show with this name already exists.' });
+    await clickShowMenu(app, 'Save As…');
+    await answerPrompt(page, 'Save As', 'main show');
+    await answerPrompt(page, 'Save As', 'Second Show', { message: 'A show with this name already exists.' });
 
     await expect.poll(() => readShows(userDataDir, PROFILE).shows.map((b) => b.name)).toEqual(['Main Show', 'Second Show']);
   });
 
-  test('update then quit reopens with the updated layout', async () => {
+  test('save then quit reopens with the saved layout', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }]);
     await assignF1(page, '1001');
     await expect.poll(() => readRecovery(userDataDir, PROFILE)?.layout?.hotkeys?.[0]?.hotkeys?.f1 ?? null, { timeout: 10000 }).toBe('1001');
 
-    await clickShowMenu(app, 'Update "Main Show"');
-    await answerConfirm(page, 'Update "Main Show"?', 'Update', {
+    await clickShowMenu(app, 'Save "Main Show"');
+    await answerConfirm(page, 'Save "Main Show"?', 'Save', {
       message: '"Main Show" will open with the layout on screen now. Its saved layout will be replaced.'
     });
 
@@ -106,12 +106,12 @@ test.describe('Shows - menu commands', () => {
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1001');
   });
 
-  test('songid survives Update', async () => {
+  test('songid survives Save', async () => {
     await launch([{ name: 'Main Show' }]);
     await assignF1(page, '1004');
 
-    await clickShowMenu(app, 'Update "Main Show"');
-    await answerConfirm(page, 'Update "Main Show"?', 'Update');
+    await clickShowMenu(app, 'Save "Main Show"');
+    await answerConfirm(page, 'Save "Main Show"?', 'Save');
     await expect.poll(() => f1Of(activeShow(readShows(userDataDir, PROFILE)))).toBe('1004');
 
     await quitAndRelaunch();
@@ -121,15 +121,38 @@ test.describe('Shows - menu commands', () => {
     await expect(f1Hotkey(page).locator('span')).not.toHaveText('');
   });
 
-  test('cancelling update keeps the saved show', async () => {
+  test('cancelling save keeps the saved show', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }]);
     await assignF1(page, '1001');
 
-    await clickShowMenu(app, 'Update "Main Show"');
-    await answerConfirm(page, 'Update "Main Show"?', 'Cancel');
+    await clickShowMenu(app, 'Save "Main Show"');
+    await answerConfirm(page, 'Save "Main Show"?', 'Cancel');
 
     expect(f1Of(activeShow(readShows(userDataDir, PROFILE)))).toBe('1002');
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1001');
+  });
+
+  test('the header dot marks unsaved changes until Save, or until the edit is undone', async () => {
+    await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }]);
+    const dot = page.locator('#show-dirty');
+    await expect(dot).toBeHidden();
+    await expect(dot).toHaveAttribute('title', 'Unsaved changes');
+
+    // The recovery save is debounced, so the dot follows shortly after an edit
+    await assignF1(page, '1001');
+    await expect(dot).toBeVisible({ timeout: 10000 });
+    await expect(dot).toHaveText('•');
+    await expect(page.locator('#show-name')).toHaveText('Main Show');
+
+    await clickShowMenu(app, 'Save "Main Show"');
+    await answerConfirm(page, 'Save "Main Show"?', 'Save');
+    await expect(dot).toBeHidden({ timeout: 10000 });
+
+    // An edit put back to the saved show leaves nothing unsaved
+    await assignF1(page, '1003');
+    await expect(dot).toBeVisible({ timeout: 10000 });
+    await assignF1(page, '1001');
+    await expect(dot).toBeHidden({ timeout: 10000 });
   });
 
   test('revert brings back the saved show', async () => {
@@ -213,8 +236,8 @@ test.describe('Shows - menu commands', () => {
   test('a switch dropped behind a prompt leaves the menu check on the active show', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }, { name: 'Encore', hotkeys: { f1: '1003' } }]);
 
-    await clickShowMenu(app, 'New Show…');
-    const prompt = shownDialog(page, 'New Show');
+    await clickShowMenu(app, 'Save As…');
+    const prompt = shownDialog(page, 'Save As');
     await expect(prompt).toBeVisible({ timeout: 10000 });
     await clickShowMenu(app, 'Encore');
     await prompt.getByRole('button', { name: 'Cancel' }).click();
@@ -228,13 +251,13 @@ test.describe('Shows - menu commands', () => {
   test('a show command is dropped while another dialog is open', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }, { name: 'Encore', hotkeys: { f1: '1003' } }]);
 
-    await clickShowMenu(app, 'New Show…');
-    await expect(shownDialog(page, 'New Show')).toBeVisible({ timeout: 10000 });
+    await clickShowMenu(app, 'Save As…');
+    await expect(shownDialog(page, 'Save As')).toBeVisible({ timeout: 10000 });
     await clickShowMenu(app, 'Revert to "Main Show"');
     await page.waitForTimeout(500);
     await expect(page.locator('.modal.show')).toHaveCount(1);
 
-    await shownDialog(page, 'New Show').getByRole('button', { name: 'Cancel' }).click();
+    await shownDialog(page, 'Save As').getByRole('button', { name: 'Cancel' }).click();
     await expect(page.locator('.modal.show')).toHaveCount(0);
     expect(readShows(userDataDir, PROFILE).shows.map((b) => b.name)).toEqual(['Main Show', 'Encore']);
   });
