@@ -62,7 +62,7 @@ test.describe('Boards - layout swap during playback', () => {
     await recordNowPlaying(page);
 
     const result = await applyLayout(page, tankLayout(['1005', '1001'], { f1: '1004' }));
-    expect(result).toEqual({ dropped: 0 });
+    expect(result).toEqual({ dropped: 0, droppedIds: [] });
 
     await expect(rows).toHaveCount(2);
     await expect(rows.nth(1)).toHaveAttribute('songid', '1001');
