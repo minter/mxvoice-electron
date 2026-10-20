@@ -25,6 +25,9 @@ describe('profile paths', () => {
     expect(profilePaths.getProfileStatePath(profileName)).toBe(
       path.join(userDataDirectory, 'profiles', sanitizedName, 'state.json')
     );
+    expect(profilePaths.getProfileBoardsPath(profileName)).toBe(
+      path.join(userDataDirectory, 'profiles', sanitizedName, 'boards.json')
+    );
     expect(profilePaths.getBackupDirectory(profileName)).toBe(
       path.join(userDataDirectory, 'profile-backups', sanitizedName)
     );

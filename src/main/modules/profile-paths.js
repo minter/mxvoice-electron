@@ -35,6 +35,10 @@ function getProfileStatePath(profileName) {
   return path.join(getProfileDirectory(profileName), 'state.json');
 }
 
+function getProfileBoardsPath(profileName) {
+  return path.join(getProfileDirectory(profileName), 'boards.json');
+}
+
 function getBackupBaseDirectory() {
   return path.join(getUserDataDirectory(), 'profile-backups');
 }
@@ -51,6 +55,7 @@ export {
   getBackupBaseDirectory,
   getBackupDirectory,
   getBackupMetadataPath,
+  getProfileBoardsPath,
   getProfileDirectory,
   getProfileDirectoryKey,
   getProfilePreferencesPath,
