@@ -144,6 +144,14 @@ const IPC = deepFreeze({
     IMPORT: 'library:import',
     IMPORT_CONFIRM: 'library:import-confirm',
   },
+  BOARDS: {
+    OPEN: 'board:open',
+    START_EMPTY: 'board:start-empty',
+    RESOLVE_RECOVERY: 'board:resolve-recovery',
+    REPORT_READY: 'board:report-ready',
+    SAVE_RECOVERY: 'board:save-recovery',
+    GET_STATE: 'board:get-state',
+  },
   ANALYTICS: {
     TRACK_EVENT: 'analytics:track-event',
     GET_OPT_OUT_STATUS: 'analytics:get-opt-out-status',

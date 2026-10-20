@@ -501,6 +501,16 @@ const secureElectronAPI = {
     }
   },
 
+  // Boards: the session in main captured the profile at open
+  boards: {
+    open: () => ipcRenderer.invoke(IPC.BOARDS.OPEN),
+    startEmpty: () => ipcRenderer.invoke(IPC.BOARDS.START_EMPTY),
+    resolveRecovery: (choice) => ipcRenderer.invoke(IPC.BOARDS.RESOLVE_RECOVERY, choice),
+    reportReady: (generation, ok) => ipcRenderer.invoke(IPC.BOARDS.REPORT_READY, generation, ok),
+    saveRecovery: (layout) => ipcRenderer.invoke(IPC.BOARDS.SAVE_RECOVERY, layout),
+    getState: () => ipcRenderer.invoke(IPC.BOARDS.GET_STATE)
+  },
+
   // Utility functions
   utils: {
     generateId: () => ipcRenderer.invoke(IPC.UTILITY.GENERATE_ID),

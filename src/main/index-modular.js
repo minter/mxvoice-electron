@@ -69,6 +69,10 @@ import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-chan
 import { describeUpdateError } from './modules/update-analytics.js';
 import { decideUpdateNotice, runBackgroundCheck, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
 import { createProfileSwitcher, applyWindowState } from './modules/profile-switcher.js';
+import { createBoardStore } from './modules/board-store.js';
+import { createRecoveryStore } from './modules/recovery-store.js';
+import { createBoardSession } from './modules/board-session.js';
+import { getProfileBoardsPath, getProfileStatePath, getRecoveryDirectory, getRecoveryPath } from './modules/profile-paths.js';
 import { quietlyAnnouncedVersion, recordAvailableUpdate, recordDownloadedUpdate } from './modules/pending-update.js';
 
 if (process.env.APP_TEST_MODE === '1') {
@@ -702,6 +706,9 @@ function trackLibraryStats() {
 // Profile switching runs in-process; created once at app ready
 let profileSwitcher = null;
 
+// The live board session; created once at app ready
+let boardSession = null;
+
 /**
  * Install a downloaded update. quitAndInstall() closes every window before
  * before-quit fires, so save state first. The "Quit Mx. Voice?" confirmation
@@ -744,6 +751,23 @@ function initializeMainProcessServices() {
     debugLog
   });
 
+  const boardStore = createBoardStore({
+    fs,
+    getProfileBoardsPath,
+    getProfileStatePath,
+    profileExists: (name) => profileManager.profileExists(name),
+    debugLog
+  });
+  const recoveryStore = createRecoveryStore({ fs, getRecoveryPath, getRecoveryDirectory, debugLog });
+  boardSession = createBoardSession({
+    boardStore,
+    recoveryStore,
+    profileManager,
+    getCurrentProfile,
+    rebuildMenu: () => appSetup.createApplicationMenu(),
+    debugLog
+  });
+
   const dependencies = {
     getMainWindow: () => mainWindow,
     getDb: () => db,
@@ -761,6 +785,7 @@ function initializeMainProcessServices() {
     analytics,
     appStartTime,
     profileSwitcher,
+    boardSession,
     installUpdate: installUpdateNow
   };
 

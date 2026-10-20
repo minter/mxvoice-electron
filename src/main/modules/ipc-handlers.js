@@ -21,6 +21,7 @@ import * as profileHandlers from './ipc/profile-handlers.js';
 import * as profileBackupHandlers from './ipc/profile-backup-handlers.js';
 import * as libraryHandlers from './ipc/library-handlers.js';
 import * as analyticsHandlers from './ipc/analytics-handlers.js';
+import * as boardHandlers from './ipc/board-handlers.js';
 
 // Dependencies that will be injected
 let getMainWindow = () => null;
@@ -35,6 +36,7 @@ let logService;
 let updateState;
 let analytics;
 let profileSwitcher;
+let boardSession;
 let installUpdate;
 
 // Initialize the module with dependencies
@@ -51,6 +53,7 @@ function initializeIpcHandlers(dependencies) {
   updateState = dependencies.updateState || { downloaded: false };
   analytics = dependencies.analytics;
   profileSwitcher = dependencies.profileSwitcher;
+  boardSession = dependencies.boardSession;
   installUpdate = dependencies.installUpdate;
 
   // Initialize file operations module
@@ -69,6 +72,7 @@ function initializeIpcHandlers(dependencies) {
     updateState,
     analytics,
     profileSwitcher,
+    boardSession,
     installUpdate,
   };
 
@@ -92,6 +96,7 @@ function registerAllHandlers(deps) {
   profileBackupHandlers.register(deps);
   libraryHandlers.register(deps);
   analyticsHandlers.register(deps);
+  boardHandlers.register(deps);
 
   debugLog?.info('✅ All IPC handlers registered successfully (context isolation ready)', {
     module: 'ipc-handlers',
