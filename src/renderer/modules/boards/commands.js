@@ -11,28 +11,16 @@
  * and still runs.
  */
 
-import { droppedSongsMessage, TOAST_MS } from './messages.js';
+import { droppedSongsMessage, LOAD_FAILED_MESSAGE, TOAST_MS } from './messages.js';
+import { unwrap } from './ipc-result.js';
 
 const LOG_CONTEXT = { module: 'boards', function: 'runBoardCommand' };
 
 const CHANGE_FAILED_MESSAGE = "Mx. Voice couldn't change the board. Your saved boards were not changed.";
-const LOAD_FAILED_MESSAGE = "Mx. Voice couldn't load this board.";
-
-// The board-document name checks; these re-prompt instead of alerting
-const NAME_ERRORS = new Set([
-  'Enter a name for the board.',
-  'Board names can be at most 50 characters.',
-  'A board with this name already exists.'
-]);
 // The session refused the command; the menu is rebuilt in main, nothing to tell the user
 const REFUSED_ERRORS = new Set(['busy', 'session not ready']);
 
 let running = false;
-
-function unwrap(result, step) {
-  if (!result?.success) throw new Error(result?.error || `${step} failed`);
-  return result.data;
-}
 
 /** The current board document; throws 'session not ready' before any prompt. */
 async function readyDoc({ api }) {
@@ -95,7 +83,8 @@ async function promptForName(deps, { message, value, title }, save) {
     if (name === null || name === undefined) return false;
     const result = await save(name);
     if (result?.success) return true;
-    if (!NAME_ERRORS.has(result?.error)) unwrap(result, 'Saving the board name');
+    // A name the user can correct re-asks instead of alerting
+    if (result?.code !== 'invalid-name') unwrap(result, 'Saving the board name');
     message = result.error;
     value = name;
   }

@@ -42,7 +42,8 @@ function checkProfile(profile) {
 export function register(deps) {
   const { boardSession, debugLog } = deps;
 
-  // Every handler returns { success: true, data } or { success: false, error }
+  // Every handler returns { success: true, data } or { success: false, error },
+  // plus code 'invalid-name' for a board name validation failure
   function handle(channel, name, run) {
     ipcMain.handle(channel, async (_event, ...args) => {
       try {
@@ -55,7 +56,10 @@ export function register(deps) {
           function: name,
           error: error.message
         });
-        return { success: false, error: error.message };
+        // A board name the user can correct says so, so the page re-asks
+        return error?.code === 'invalid-name'
+          ? { success: false, error: error.message, code: 'invalid-name' }
+          : { success: false, error: error.message };
       }
     });
   }

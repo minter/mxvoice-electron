@@ -13,7 +13,8 @@ import { customAlert, customConfirm, customPrompt } from '../utils/modal-utils.j
 import { showDropToast } from '../utils/toast-utils.js';
 import { isAnyModalOpen } from '../ui/bootstrap-helpers.js';
 import { clearProfileRestorationLock, extractLayout } from '../profile-state/index.js';
-import { droppedSongsMessage, TOAST_MS } from './messages.js';
+import { droppedSongsMessage, LOAD_FAILED_MESSAGE, TOAST_MS } from './messages.js';
+import { unwrap } from './ipc-result.js';
 import { runBoardCommand } from './commands.js';
 import { chooseImportBoard } from './import-dialog.js';
 import { refreshHeader } from './header.js';
@@ -24,16 +25,10 @@ const LOG_CONTEXT = { module: 'boards', function: 'openSessionOnStartup' };
 
 const UNREADABLE_MESSAGE =
   "Mx. Voice couldn't read this profile's boards. The file has been kept so it can be recovered.";
-const LOAD_FAILED_MESSAGE = "Mx. Voice couldn't load this board. Your saved boards were not changed.";
 
 function crashMessage(savedAt) {
   const time = new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   return `Mx. Voice didn't close normally. Restore the show in progress from ${time}?`;
-}
-
-function unwrap(result, step) {
-  if (!result?.success) throw new Error(result?.error || `${step} failed`);
-  return result.data;
 }
 
 /**

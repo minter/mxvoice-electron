@@ -6,7 +6,8 @@ window.debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 const { runBoardCommand, nextBoardAfterDelete } = await import('../../../src/renderer/modules/boards/commands.js');
 
 const ok = (data = null) => ({ success: true, data });
-const fail = (error) => ({ success: false, error });
+const fail = (error, code) => ({ success: false, error, ...(code ? { code } : {}) });
+const nameFail = (error) => fail(error, 'invalid-name');
 
 const liveLayout = { hotkeys: [{ tabNumber: 1, tabName: 'Live', hotkeys: { f1: '1001' } }], holdingTank: [], selected: { hotkeyTab: 1, holdingTankTab: 1 } };
 const loaded = (generation = 5, tabName = 'Loaded') => ok({
@@ -90,7 +91,7 @@ describe('runBoardCommand', () => {
     deps.applyLayout.mockRejectedValue(new Error('song fetch failed'));
     await runBoardCommand({ command: 'switch', boardId: 'b3' }, deps);
     expect(calls).toEqual(['ready:5:false']);
-    expect(deps.alert).toHaveBeenCalledWith("Mx. Voice couldn't load this board.", 'Board not loaded');
+    expect(deps.alert).toHaveBeenCalledWith("Mx. Voice couldn't load this board. Your saved boards were not changed.", 'Board not loaded');
     expect(deps.track).not.toHaveBeenCalled();
   });
 
@@ -132,26 +133,35 @@ describe('runBoardCommand', () => {
   it('new re-prompts on a duplicate name with the validation message', async () => {
     const { api, deps } = setup();
     api.create
-      .mockResolvedValueOnce(fail('A board with this name already exists.'))
-      .mockResolvedValueOnce(fail('Board names can be at most 50 characters.'));
+      .mockResolvedValueOnce(nameFail('A board with this name already exists.'))
+      .mockResolvedValueOnce(nameFail("Board names can't contain line breaks or control characters."));
     deps.prompt
       .mockResolvedValueOnce('Opening')
-      .mockResolvedValueOnce('x'.repeat(51))
+      .mockResolvedValueOnce('Act\nTwo')
       .mockResolvedValueOnce(null);
     await runBoardCommand({ command: 'new' }, deps);
     expect(deps.prompt.mock.calls).toEqual([
       ['Name for the new board', '', 'New Board'],
       ['A board with this name already exists.', 'Opening', 'New Board'],
-      ['Board names can be at most 50 characters.', 'x'.repeat(51), 'New Board']
+      ["Board names can't contain line breaks or control characters.", 'Act\nTwo', 'New Board']
     ]);
     expect(api.create).toHaveBeenCalledTimes(2);
     expect(deps.track).not.toHaveBeenCalled();
     expect(deps.alert).not.toHaveBeenCalled();
   });
 
+  it('an error without the invalid-name code alerts instead of re-prompting', async () => {
+    const { api, deps } = setup();
+    api.create.mockResolvedValueOnce(fail('A board with this name already exists.'));
+    deps.prompt.mockResolvedValueOnce('Opening');
+    await runBoardCommand({ command: 'new' }, deps);
+    expect(deps.prompt).toHaveBeenCalledOnce();
+    expect(deps.alert).toHaveBeenCalledOnce();
+  });
+
   it('rename prompts with the current name and re-prompts on a validation error', async () => {
     const { api, deps } = setup();
-    api.rename.mockResolvedValueOnce(fail('A board with this name already exists.'));
+    api.rename.mockResolvedValueOnce(nameFail('A board with this name already exists.'));
     deps.prompt.mockResolvedValueOnce('Encore').mockResolvedValueOnce('Finale');
     await runBoardCommand({ command: 'rename', boardId: 'b1' }, deps);
     expect(deps.prompt.mock.calls).toEqual([
@@ -194,7 +204,7 @@ describe('runBoardCommand', () => {
     deps.applyLayout.mockRejectedValue(new Error('song fetch failed'));
     await runBoardCommand({ command: 'delete', boardId: 'b2' }, deps);
     expect(calls).toEqual(['ready:7:false']);
-    expect(deps.alert).toHaveBeenCalledWith("Mx. Voice couldn't load this board.", 'Board not loaded');
+    expect(deps.alert).toHaveBeenCalledWith("Mx. Voice couldn't load this board. Your saved boards were not changed.", 'Board not loaded');
     expect(deps.track).toHaveBeenCalledWith('board_deleted', { was_active: true });
   });
 

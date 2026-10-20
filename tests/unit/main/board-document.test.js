@@ -51,6 +51,26 @@ describe('board-document', () => {
     expect(bd.validateBoardName(doc, 'x'.repeat(50)).ok).toBe(true);
   });
 
+  it('validateBoardName rejects line breaks and other control characters', () => {
+    const { doc } = mk(['Comedy Sports']);
+    const error = "Board names can't contain line breaks or control characters.";
+    for (const name of ['Act\nTwo', 'Act\rTwo', 'Act\tTwo', 'Bell\u0007', 'Del\u007F']) {
+      expect(bd.validateBoardName(doc, name)).toEqual({ ok: false, error });
+    }
+    expect(bd.validateBoardName(doc, 'Act Two – Finale').ok).toBe(true);
+  });
+
+  it('addBoard and renameBoard name errors carry code invalid-name', () => {
+    const { doc } = mk(['Comedy Sports']);
+    const caught = (fn) => { try { fn(); } catch (error) { return error; } return null; };
+    const added = caught(() => bd.addBoard(doc, { name: 'comedy sports', layout: null }));
+    expect(added).toMatchObject({ message: 'A board with this name already exists.', code: 'invalid-name' });
+    const renamed = caught(() => bd.renameBoard(doc, doc.boards[0].id, ' '));
+    expect(renamed).toMatchObject({ message: 'Enter a name for the board.', code: 'invalid-name' });
+    // Other errors have no code
+    expect(caught(() => bd.renameBoard(doc, 'nope', 'X')).code).toBeUndefined();
+  });
+
   it('validateBoardName allows renaming a board to a different casing of itself', () => {
     const { doc } = mk(['Comedy Sports']);
     const id = doc.boards[0].id;

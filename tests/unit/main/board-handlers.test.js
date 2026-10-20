@@ -119,6 +119,16 @@ describe('board IPC handlers', () => {
     await expect(handlers['board:rename']({}, UUID, 'Dup')).resolves.toEqual({
       success: false, error: 'A board with this name already exists.',
     });
+    // A name validation error also carries its code
+    boardSession.createBoard.mockRejectedValueOnce(
+      Object.assign(new Error('Enter a name for the board.'), { code: 'invalid-name' })
+    );
+    await expect(handlers['board:create']({}, ' ', {})).resolves.toEqual({
+      success: false, error: 'Enter a name for the board.', code: 'invalid-name',
+    });
+    // Other codes are not passed on
+    boardSession.revert.mockRejectedValueOnce(Object.assign(new Error('disk full'), { code: 'ENOSPC' }));
+    await expect(handlers['board:revert']({})).resolves.toEqual({ success: false, error: 'disk full' });
   });
 
   it('rejects an unregistered profile on IMPORT', async () => {

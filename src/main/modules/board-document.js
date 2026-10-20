@@ -23,6 +23,7 @@ const HOTKEY_KEYS = Array.from({ length: 12 }, (_, i) => `f${i + 1}`);
 const ERR_EMPTY = 'Enter a name for the board.';
 const ERR_LONG = `Board names can be at most ${MAX_BOARD_NAME_LENGTH} characters.`;
 const ERR_DUPLICATE = 'A board with this name already exists.';
+const ERR_CONTROL = "Board names can't contain line breaks or control characters.";
 const ERR_NOT_FOUND = 'Board not found.';
 
 const defaultNow = () => Date.now();
@@ -30,6 +31,13 @@ const defaultNewId = () => randomUUID();
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isNumericId = (v) => typeof v === 'string' && /^\d+$/.test(v);
 const foldName = (s) => s.toLocaleLowerCase('en-US');
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u001F\u007F]/;
+
+/** A name validation failure; board IPC results pass its code on. */
+function nameError(message) {
+  return Object.assign(new Error(message), { code: 'invalid-name' });
+}
 
 function pickSelected(value) {
   return Number.isInteger(value) && value >= 1 && value <= TAB_COUNT ? value : 1;
@@ -105,6 +113,7 @@ export function validateBoardName(doc, name, { exceptId } = {}) {
   const trimmed = typeof name === 'string' ? name.trim() : '';
   if (!trimmed) return { ok: false, error: ERR_EMPTY };
   if (trimmed.length > MAX_BOARD_NAME_LENGTH) return { ok: false, error: ERR_LONG };
+  if (CONTROL_CHARS.test(trimmed)) return { ok: false, error: ERR_CONTROL };
   const folded = foldName(trimmed);
   const clash = doc.boards.some((b) => b.id !== exceptId && foldName(b.name) === folded);
   if (clash) return { ok: false, error: ERR_DUPLICATE };
@@ -128,7 +137,7 @@ export function addBoard(
   { name, layout, now = defaultNow(), newId = defaultNewId, activate = true, importedFrom } = {}
 ) {
   const check = validateBoardName(doc, name);
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) throw nameError(check.error);
   const board = makeBoard({ id: newId(), name: check.name, layout, now, importedFrom });
   return {
     doc: {
@@ -152,7 +161,7 @@ export function updateBoardLayout(doc, id, layout, now = defaultNow()) {
 export function renameBoard(doc, id, name, now = defaultNow()) {
   const index = indexOfBoard(doc, id);
   const check = validateBoardName(doc, name, { exceptId: id });
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) throw nameError(check.error);
   return replaceBoard(doc, index, { ...doc.boards[index], name: check.name, updatedAt: now });
 }
 
