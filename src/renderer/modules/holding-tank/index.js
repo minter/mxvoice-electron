@@ -112,9 +112,14 @@ export function moveHoldingTankItem(sourceTabNumber, sourceIndex, targetTabNumbe
   return holdingTankState.move(sourceTabNumber, sourceIndex, targetTabNumber, targetIndex);
 }
 
+/** Distinct song ids a holding-tank snapshot lists, normalized as the model stores them. */
+export function collectSongIds(snapshot) {
+  const tabs = new HoldingTankState(snapshot).toSnapshot();
+  return [...new Set(tabs.flatMap(tab => tab.songIds))];
+}
+
 export async function restoreHoldingTankSnapshot(snapshot) {
-  loadHoldingTankSnapshot(snapshot);
-  const songIds = [...new Set(holdingTankState.toSnapshot().flatMap(tab => tab.songIds))];
+  const songIds = collectSongIds(snapshot);
   const songsById = new Map();
   if (songIds.length > 0) {
     const result = await database.getSongsByIds(songIds);
@@ -122,9 +127,23 @@ export async function restoreHoldingTankSnapshot(snapshot) {
     const rows = result?.data || result || [];
     if (!Array.isArray(rows)) throw new Error('Failed to load holding tank metadata');
     rows.forEach(row => songsById.set(String(row.id), row));
+  }
+  applyHoldingTankSnapshot(snapshot, songsById);
+  return holdingTankState.toSnapshot();
+}
+
+/**
+ * Load a holding-tank snapshot into the model and rebuild each tab's rows
+ * inside the existing list containers, synchronously. Songs missing from
+ * songsById are dropped.
+ * @returns {{ dropped: number }} distinct song ids missing from the library
+ */
+export function applyHoldingTankSnapshot(snapshot, songsById) {
+  loadHoldingTankSnapshot(snapshot);
+  const missing = collectSongIds(snapshot).filter(songId => !songsById.has(String(songId)));
+  if (missing.length > 0) {
     holdingTankState.batch(() => {
-      songIds.filter(songId => !songsById.has(String(songId)))
-        .forEach(songId => holdingTankState.clearSong(songId));
+      missing.forEach(songId => holdingTankState.clearSong(songId));
     });
   }
 
@@ -147,7 +166,7 @@ export async function restoreHoldingTankSnapshot(snapshot) {
       tabContent.appendChild(element);
     }
   }
-  return holdingTankState.toSnapshot();
+  return { dropped: missing.length };
 }
 
 /**
@@ -595,7 +614,9 @@ const holdingTankModule = {
   clearActiveHoldingTankState,
   renameHoldingTankStateTab,
   moveHoldingTankItem,
-  restoreHoldingTankSnapshot
+  restoreHoldingTankSnapshot,
+  collectSongIds,
+  applyHoldingTankSnapshot
 };
 
 function initializeHoldingTank(options = {}) {

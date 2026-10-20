@@ -423,6 +423,10 @@ async function playSongFromId(song_id, options = {}) {
     return;
   }
 
+  // Stamp the board this song was started on, so Playlist mode never
+  // reattaches it to a holding tank that a later board swap loaded
+  sharedState.set('nowPlayingSource', sharedState.get('boardGeneration') ?? 0);
+
   // Cache crossfade preference for the time tracker to use synchronously
   if (!options.crossfade) {
     try {

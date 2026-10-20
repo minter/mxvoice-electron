@@ -165,9 +165,14 @@ class HotkeysModule {
     this.state.loadFromSnapshot(snapshot, { notify: false });
   }
 
+  /** Distinct song ids a hotkey snapshot assigns, normalized as the model stores them. */
+  collectSongIds(snapshot) {
+    const tabs = new HotkeyState(snapshot).toSnapshot();
+    return [...new Set(tabs.flatMap(tab => Object.values(tab.hotkeys)))];
+  }
+
   async restoreHotkeySnapshot(snapshot) {
-    this.loadHotkeySnapshot(snapshot);
-    const songIds = [...new Set(this.state.toSnapshot().flatMap(tab => Object.values(tab.hotkeys)))];
+    const songIds = this.collectSongIds(snapshot);
     const songsById = new Map();
 
     if (songIds.length > 0) {
@@ -181,9 +186,23 @@ class HotkeysModule {
       const rows = result?.data || result || [];
       if (!Array.isArray(rows)) throw new Error(result?.error || 'Failed to load hotkey song metadata');
       rows.forEach(row => songsById.set(String(row.id), row));
+    }
+
+    this.applyHotkeySnapshot(snapshot, songsById);
+    return this.state.toSnapshot();
+  }
+
+  /**
+   * Load a hotkey snapshot into the model and render it into the existing
+   * slot elements, synchronously. Songs missing from songsById are dropped.
+   * @returns {{ dropped: number }} distinct song ids missing from the library
+   */
+  applyHotkeySnapshot(snapshot, songsById) {
+    this.loadHotkeySnapshot(snapshot);
+    const missing = this.collectSongIds(snapshot).filter(songId => !songsById.has(String(songId)));
+    if (missing.length > 0) {
       this.state.batch(() => {
-        songIds.filter(songId => !songsById.has(String(songId)))
-          .forEach(songId => this.state.clearSong(songId));
+        missing.forEach(songId => this.state.clearSong(songId));
       });
     }
 
@@ -207,7 +226,7 @@ class HotkeysModule {
         }
       }
     }
-    return this.state.toSnapshot();
+    return { dropped: missing.length };
   }
 
   getActiveTabNumber() {

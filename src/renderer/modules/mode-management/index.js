@@ -149,8 +149,19 @@ class ModeManagementModule {
         }
       );
 
+      // A song started before a board swap belongs to the old layout; never
+      // reattach it to the holding tank that the swap loaded
+      const startedOnThisBoard =
+        sharedState.get('nowPlayingSource') === sharedState.get('boardGeneration');
+
       // If there's a song loaded (playing or paused), show it in playlist mode
-      if (currentSongId && (isCurrentlyPlaying || isPaused)) {
+      if (currentSongId && (isCurrentlyPlaying || isPaused) && !startedOnThisBoard) {
+        debugLog?.info('Not reattaching a song started before a board swap', {
+          module: 'mode-management',
+          function: 'setHoldingTankMode',
+          songId: currentSongId,
+        });
+      } else if (currentSongId && (isCurrentlyPlaying || isPaused)) {
         // Find the track in the holding tank with this song ID and add the now_playing class
         const trackElement = document.querySelector(
           `#holding_tank .list-group-item[songid="${currentSongId}"]`

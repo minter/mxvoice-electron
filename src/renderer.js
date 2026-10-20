@@ -602,6 +602,23 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     // E2E readiness checks key on this to avoid racing app initialization.
     if (window.electronTest?.isE2E) {
       window.__e2eInitialSearchSettled = true;
+      // Test-only hook: E2E specs cannot import renderer ES modules, so expose
+      // the board layout applier wired to the live modules. electronTest is
+      // only exposed by the preload when APP_TEST_MODE=1.
+      window.__boardsTest = {
+        applyLayout: async (layout) => {
+          const [{ applyLayout }, { default: sharedState }] = await Promise.all([
+            import('./renderer/modules/boards/layout-applier.js'),
+            import('./renderer/modules/shared-state.js')
+          ]);
+          return applyLayout(layout, {
+            hotkeys: moduleRegistry.hotkeys,
+            holdingTank: moduleRegistry.holdingTank,
+            getSongsByIds: (ids) => window.secureElectronAPI.database.getSongsByIds(ids),
+            sharedState
+          });
+        }
+      };
     }
 
     // Auto-trigger What's New tour if applicable
