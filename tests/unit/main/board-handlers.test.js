@@ -4,6 +4,12 @@ const handlers = {};
 const ipcMain = { handle: (channel, handler) => { handlers[channel] = handler; } };
 
 vi.mock('electron', () => ({ default: { ipcMain }, ipcMain }));
+const registeredProfiles = new Set(['Alice', 'Bob']);
+vi.mock('../../../src/main/modules/profile-manager.js', () => ({
+  profileExists: (name) => registeredProfiles.has(name),
+}));
+
+const UUID = '0b6f6f2e-8a51-4d0e-9b8e-3d0c1f2a7e44';
 
 const { register } = await import('../../../src/main/modules/ipc/board-handlers.js');
 
@@ -15,6 +21,14 @@ function setup(overrides = {}) {
     reportReady: vi.fn(),
     saveRecovery: vi.fn(async () => ({})),
     state: vi.fn(() => ({ profile: 'Alice', status: 'ready', doc: null, generation: 1 })),
+    activate: vi.fn(async () => ({ layout: {}, generation: 2 })),
+    revert: vi.fn(async () => ({ layout: {}, generation: 2 })),
+    updateActive: vi.fn(async () => undefined),
+    createBoard: vi.fn(async () => ({ id: UUID, name: 'New' })),
+    renameBoard: vi.fn(async () => ({ id: UUID, name: 'Renamed' })),
+    deleteBoard: vi.fn(async () => ({ activeChanged: false })),
+    listImportable: vi.fn(async () => [{ profile: 'Bob', boards: [] }]),
+    importBoard: vi.fn(async () => ({ layout: {}, generation: 2 })),
     ...overrides,
   };
   register({ boardSession, debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
@@ -65,5 +79,53 @@ describe('board IPC handlers', () => {
   it('reports an unavailable session instead of throwing', async () => {
     register({ debugLog: null });
     await expect(handlers['board:open']({})).resolves.toMatchObject({ success: false });
+  });
+
+  it('passes board mutations through to the session', async () => {
+    const { boardSession } = setup();
+    const layout = { hotkeys: [] };
+
+    await expect(handlers['board:activate']({}, UUID)).resolves.toEqual({ success: true, data: { layout: {}, generation: 2 } });
+    expect(boardSession.activate).toHaveBeenCalledWith(UUID);
+    await expect(handlers['board:revert']({})).resolves.toEqual({ success: true, data: { layout: {}, generation: 2 } });
+    await expect(handlers['board:update-active']({}, layout)).resolves.toEqual({ success: true, data: null });
+    expect(boardSession.updateActive).toHaveBeenCalledWith(layout);
+    await expect(handlers['board:create']({}, 'New', layout)).resolves.toEqual({ success: true, data: { id: UUID, name: 'New' } });
+    expect(boardSession.createBoard).toHaveBeenCalledWith('New', layout);
+    await expect(handlers['board:rename']({}, UUID, 'Renamed')).resolves.toMatchObject({ success: true });
+    expect(boardSession.renameBoard).toHaveBeenCalledWith(UUID, 'Renamed');
+    await expect(handlers['board:delete']({}, UUID)).resolves.toEqual({ success: true, data: { activeChanged: false } });
+    expect(boardSession.deleteBoard).toHaveBeenCalledWith(UUID);
+    await expect(handlers['board:list-importable']({})).resolves.toEqual({ success: true, data: [{ profile: 'Bob', boards: [] }] });
+    await expect(handlers['board:import']({}, 'Bob', UUID)).resolves.toEqual({ success: true, data: { layout: {}, generation: 2 } });
+    expect(boardSession.importBoard).toHaveBeenCalledWith('Bob', UUID);
+
+    // Session errors come back wrapped, with the exact message
+    boardSession.renameBoard.mockRejectedValueOnce(new Error('A board with this name already exists.'));
+    await expect(handlers['board:rename']({}, UUID, 'Dup')).resolves.toEqual({
+      success: false, error: 'A board with this name already exists.',
+    });
+  });
+
+  it('rejects an unregistered profile on IMPORT', async () => {
+    const { boardSession } = setup();
+    for (const profile of ['Mallory', '../Bob', 42, undefined]) {
+      await expect(handlers['board:import']({}, profile, UUID)).resolves.toMatchObject({ success: false });
+    }
+    expect(boardSession.importBoard).not.toHaveBeenCalled();
+  });
+
+  it('rejects a board id that is not a UUID', async () => {
+    const { boardSession } = setup();
+    for (const id of ['../../x', '', 42, null, `${UUID}x`, UUID.toUpperCase()]) {
+      await expect(handlers['board:activate']({}, id)).resolves.toMatchObject({ success: false });
+      await expect(handlers['board:rename']({}, id, 'Name')).resolves.toMatchObject({ success: false });
+      await expect(handlers['board:delete']({}, id)).resolves.toMatchObject({ success: false });
+      await expect(handlers['board:import']({}, 'Bob', id)).resolves.toMatchObject({ success: false });
+    }
+    expect(boardSession.activate).not.toHaveBeenCalled();
+    expect(boardSession.renameBoard).not.toHaveBeenCalled();
+    expect(boardSession.deleteBoard).not.toHaveBeenCalled();
+    expect(boardSession.importBoard).not.toHaveBeenCalled();
   });
 });

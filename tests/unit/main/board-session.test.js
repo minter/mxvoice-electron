@@ -1,7 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import nodeFs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { createBoardSession } from '../../../src/main/modules/board-session.js';
-import { BoardStoreError } from '../../../src/main/modules/board-store.js';
-import { createDocument, normalizeLayout } from '../../../src/main/modules/board-document.js';
+import { BoardStoreError, createBoardStore } from '../../../src/main/modules/board-store.js';
+import { addBoard, createDocument, normalizeLayout } from '../../../src/main/modules/board-document.js';
 
 const MINUTE = 60 * 1000;
 const T0 = 1_000_000_000_000;
@@ -56,11 +59,11 @@ function fakeRecoveryStore(clock) {
   };
 }
 
-function setup({ doc = makeDoc(), loadError = null, profile = 'Alice' } = {}) {
+function setup({ doc = makeDoc(), loadError = null, profile = 'Alice', profiles = ['Alice'], boardStore: realStore } = {}) {
   const clock = { t: T0, now: () => clock.t };
   const current = { profile };
   const recoveryStore = fakeRecoveryStore(clock);
-  const boardStore = {
+  const boardStore = realStore ?? {
     load: vi.fn(async () => {
       if (loadError) throw loadError;
       return { doc, source: 'boards' };
@@ -71,14 +74,15 @@ function setup({ doc = makeDoc(), loadError = null, profile = 'Alice' } = {}) {
   };
   const rebuildMenu = vi.fn();
   const debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+  let idCount = 0;
   const session = createBoardSession({
     boardStore,
     recoveryStore,
-    profileManager: { profileExists: () => true },
+    listProfiles: () => profiles,
     getCurrentProfile: () => current.profile,
     rebuildMenu,
     now: clock.now,
-    newId: () => 'new-id',
+    newId: () => (++idCount === 1 ? 'new-id' : `new-id-${idCount}`),
     debugLog,
   });
   return { session, boardStore, recoveryStore, rebuildMenu, clock, current, doc, debugLog };
@@ -517,5 +521,380 @@ describe('board session', () => {
     ctx.recoveryStore.markHandoff.mockRejectedValueOnce(new Error('disk'));
     expect(() => ctx.session.rendererGone()).not.toThrow();
     await expect(ctx.session.end('clean-exit')).resolves.toBeUndefined();
+  });
+});
+
+/** Two boards; board-1 is active. */
+function twoBoardDoc() {
+  let n = 0;
+  const newId = () => `board-${++n}`;
+  const first = createDocument(layoutWith(1), { now: T0, newId });
+  return addBoard(first, { name: 'Second', layout: layoutWith(2), now: T0, newId, activate: false }).doc;
+}
+
+/** Make the next recovery write hang until released. */
+function holdNextWrite(ctx) {
+  const held = {};
+  ctx.recoveryStore.write.mockImplementationOnce(async (profile, { boardId, layout }) => {
+    await new Promise((resolve) => { held.release = resolve; });
+    ctx.recoveryStore.calls.push(['write', profile]);
+    ctx.recoveryStore.records.set(profile, { version: 1, boardId, savedAt: T0, handoff: null, layout });
+  });
+  return held;
+}
+
+describe('board session mutations', () => {
+  it('updateActive is refused unless ready', async () => {
+    const ctx = setup();
+    await expect(ctx.session.updateActive(layoutWith(5))).rejects.toThrow('session not ready');
+    const opened = await ctx.session.open();
+    await expect(ctx.session.updateActive(layoutWith(5))).rejects.toThrow('session not ready');
+    ctx.session.reportReady(opened.generation, true);
+
+    // A fenced session (handed off) is refused too
+    await ctx.session.handoff('update');
+    for (const call of [
+      () => ctx.session.updateActive(layoutWith(5)),
+      () => ctx.session.activate('board-1'),
+      () => ctx.session.revert(),
+      () => ctx.session.createBoard('New', layoutWith(5)),
+      () => ctx.session.renameBoard('board-1', 'Renamed'),
+      () => ctx.session.deleteBoard('board-1'),
+      () => ctx.session.importBoard('Bob', 'board-1'),
+    ]) {
+      await expect(call()).rejects.toThrow('session not ready');
+    }
+    expect(ctx.boardStore.save).not.toHaveBeenCalled();
+
+    // A ready session saves the board, then retires recovery; still ready, same generation
+    const ready = setup();
+    const readyOpened = await openReady(ready);
+    await ready.session.saveRecovery(layoutWith(5));
+    ready.rebuildMenu.mockClear();
+    await ready.session.updateActive({ ...layoutWith(5), extra: true });
+    const saved = ready.boardStore.save.mock.calls[0][1];
+    expect(ready.boardStore.save).toHaveBeenCalledWith('Alice', expect.anything());
+    expect(saved.boards[0].layout).toEqual(layoutWith(5));
+    expect(ready.session.state()).toMatchObject({ status: 'ready', generation: readyOpened.generation, doc: saved });
+    expect(ready.recoveryStore.records.has('Alice')).toBe(false);
+    expect(ready.rebuildMenu).toHaveBeenCalled();
+    // Not fenced afterwards
+    await expect(ready.session.saveRecovery(layoutWith(6))).resolves.toEqual({});
+  });
+
+  it('a second mutation while one runs is rejected as busy', async () => {
+    const ctx = setup({ doc: twoBoardDoc() });
+    await openReady(ctx);
+    let release;
+    ctx.boardStore.save.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+
+    const first = ctx.session.renameBoard('board-2', 'Renamed');
+    await expect(ctx.session.updateActive(layoutWith(5))).rejects.toThrow('busy');
+    await expect(ctx.session.activate('board-2')).rejects.toThrow('busy');
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+    release();
+    await first;
+
+    expect(ctx.boardStore.save).toHaveBeenCalledTimes(1);
+    expect(ctx.session.state().doc.boards[1].name).toBe('Renamed');
+    // Free again once the first settles
+    await expect(ctx.session.renameBoard('board-2', 'Again')).resolves.toBeDefined();
+  });
+
+  it('activate of the active board is rejected and changes nothing', async () => {
+    const ctx = setup({ doc: twoBoardDoc() });
+    const opened = await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+
+    await expect(ctx.session.activate('board-1')).rejects.toThrow('already active');
+    await expect(ctx.session.activate('missing')).rejects.toThrow('Board not found.');
+
+    expect(ctx.boardStore.save).not.toHaveBeenCalled();
+    expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
+    expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation });
+    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({});
+  });
+
+  it('activate fences and retires recovery before returning the new layout', async () => {
+    const ctx = setup({ doc: twoBoardDoc() });
+    const opened = await openReady(ctx);
+
+    // A recovery write of the old layout is already in flight
+    const held = holdNextWrite(ctx);
+    const inFlight = ctx.session.saveRecovery(layoutWith(8));
+    await vi.waitFor(() => expect(held.release).toBeTypeOf('function'));
+
+    const activating = ctx.session.activate('board-2');
+    // Fenced synchronously: a later write of the old layout is skipped
+    const late = ctx.session.saveRecovery(layoutWith(9));
+    await Promise.resolve();
+    expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
+    held.release();
+    const result = await activating;
+    await inFlight;
+
+    await expect(late).resolves.toEqual({ skipped: true });
+    expect(result).toEqual({ layout: layoutWith(2), generation: opened.generation + 1 });
+    expect(ctx.recoveryStore.calls).toEqual([['write', 'Alice'], ['retire', 'Alice']]);
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+    expect(ctx.boardStore.save.mock.calls[0][1].activeBoardId).toBe('board-2');
+    expect(ctx.session.state()).toMatchObject({ status: 'loading', generation: result.generation });
+    expect(ctx.session.state().doc.activeBoardId).toBe('board-2');
+
+    // Writes stay refused while loading; the new generation's ready report unfences
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true });
+    ctx.session.reportReady(opened.generation, true);
+    expect(ctx.session.state().status).toBe('loading');
+    ctx.session.reportReady(result.generation, true);
+    expect(ctx.session.state().status).toBe('ready');
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({});
+    expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ boardId: 'board-2', layout: layoutWith(9) });
+  });
+
+  it('revert retires recovery and reloads the saved active board', async () => {
+    const ctx = setup({ doc: twoBoardDoc() });
+    const opened = await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+
+    const result = await ctx.session.revert();
+
+    expect(result).toEqual({ layout: layoutWith(1), generation: opened.generation + 1 });
+    expect(ctx.boardStore.save).not.toHaveBeenCalled();
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+    expect(ctx.session.state().status).toBe('loading');
+    ctx.session.reportReady(result.generation, true);
+    await expect(ctx.session.saveRecovery(layoutWith(7))).resolves.toEqual({});
+  });
+
+  it('a failed save leaves the doc, recovery and status unchanged', async () => {
+    const ctx = setup({ doc: twoBoardDoc() });
+    const opened = await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+    const record = ctx.recoveryStore.records.get('Alice');
+    const docBefore = ctx.session.state().doc;
+    ctx.boardStore.save.mockRejectedValue(new BoardStoreError('io', 'disk full'));
+
+    for (const call of [
+      () => ctx.session.activate('board-2'),
+      () => ctx.session.updateActive(layoutWith(5)),
+      () => ctx.session.createBoard('New', layoutWith(5)),
+      () => ctx.session.renameBoard('board-2', 'Renamed'),
+      () => ctx.session.deleteBoard('board-1'),
+      () => ctx.session.deleteBoard('board-2'),
+    ]) {
+      await expect(call()).rejects.toThrow('disk full');
+      expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation, doc: docBefore });
+      expect(ctx.recoveryStore.records.get('Alice')).toBe(record);
+    }
+    expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
+    // The fence came back down, and the lock was released
+    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({});
+    ctx.boardStore.save.mockResolvedValue(undefined);
+    await expect(ctx.session.renameBoard('board-2', 'Renamed')).resolves.toBeDefined();
+  });
+
+  it('createBoard makes the new board active and stays ready', async () => {
+    const ctx = setup();
+    const opened = await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+
+    await expect(ctx.session.createBoard('  ', layoutWith(9))).rejects.toThrow('Enter a name for the board.');
+    await expect(ctx.session.createBoard('board', layoutWith(9))).rejects.toThrow('A board with this name already exists.');
+    const created = await ctx.session.createBoard('Show Two', layoutWith(9));
+
+    expect(created).toEqual({ id: 'new-id', name: 'Show Two' });
+    const { doc } = ctx.session.state();
+    expect(doc.activeBoardId).toBe('new-id');
+    expect(doc.boards.at(-1)).toMatchObject({ name: 'Show Two', layout: layoutWith(9), createdAt: T0 });
+    expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation });
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+    await expect(ctx.session.saveRecovery(layoutWith(3))).resolves.toEqual({});
+    expect(ctx.recoveryStore.records.get('Alice').boardId).toBe('new-id');
+  });
+
+  it('renameBoard keeps status and rejects invalid names with the exact message', async () => {
+    const ctx = setup({ doc: twoBoardDoc() });
+    await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+
+    await expect(ctx.session.renameBoard('board-1', 'second')).rejects.toThrow('A board with this name already exists.');
+    await expect(ctx.session.renameBoard('board-1', 'x'.repeat(51))).rejects.toThrow('Board names can be at most 50 characters.');
+    await expect(ctx.session.renameBoard('nope', 'Fine')).rejects.toThrow('Board not found.');
+    expect(ctx.boardStore.save).not.toHaveBeenCalled();
+    ctx.rebuildMenu.mockClear();
+
+    await ctx.session.renameBoard('board-1', ' Opening ');
+    expect(ctx.session.state().doc.boards[0].name).toBe('Opening');
+    expect(ctx.session.state().status).toBe('ready');
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(true);
+    expect(ctx.rebuildMenu).toHaveBeenCalled();
+  });
+
+  it('deleting a non-active board leaves status ready and recovery intact', async () => {
+    const ctx = setup({ doc: twoBoardDoc() });
+    const opened = await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+
+    await expect(ctx.session.deleteBoard('board-2')).resolves.toEqual({ activeChanged: false });
+    expect(ctx.session.state().doc.boards.map((b) => b.id)).toEqual(['board-1']);
+    expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation });
+    expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(true);
+    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({});
+  });
+
+  it('deleting the active board fences, retires and loads the next board', async () => {
+    const ctx = setup({ doc: twoBoardDoc() });
+    const opened = await openReady(ctx);
+    const held = holdNextWrite(ctx);
+    const inFlight = ctx.session.saveRecovery(layoutWith(8));
+    await vi.waitFor(() => expect(held.release).toBeTypeOf('function'));
+
+    const deleting = ctx.session.deleteBoard('board-1');
+    const late = ctx.session.saveRecovery(layoutWith(9));
+    held.release();
+    const result = await deleting;
+    await inFlight;
+
+    await expect(late).resolves.toEqual({ skipped: true });
+    expect(result).toEqual({ activeChanged: true, layout: layoutWith(2), generation: opened.generation + 1 });
+    expect(ctx.recoveryStore.calls).toEqual([['write', 'Alice'], ['retire', 'Alice']]);
+    expect(ctx.session.state()).toMatchObject({ status: 'loading', generation: result.generation });
+    expect(ctx.session.state().doc.activeBoardId).toBe('board-2');
+  });
+
+  it('a mutation superseded by end() does not touch the ended session', async () => {
+    const ctx = setup({ doc: twoBoardDoc() });
+    await openReady(ctx);
+    let release;
+    ctx.boardStore.save.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+    const activating = ctx.session.activate('board-2');
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+    await ctx.session.end('clean-exit');
+    release();
+    await expect(activating).rejects.toThrow('superseded');
+    expect(ctx.session.state().status).toBe('idle');
+  });
+});
+
+describe('board session imports', () => {
+  const dirs = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) nodeFs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  /** A real board store over a temp profiles directory, with every fs write recorded. */
+  function realStoreSetup(registered) {
+    const root = nodeFs.mkdtempSync(path.join(os.tmpdir(), 'board-import-'));
+    dirs.push(root);
+    const writes = [];
+    const MUTATORS = new Set(['writeFile', 'rename', 'copyFile', 'rm', 'mkdir', 'unlink', 'appendFile']);
+    const promises = new Proxy(nodeFs.promises, {
+      get(target, key) {
+        const value = target[key];
+        if (typeof value !== 'function') return value;
+        return (...args) => {
+          if (MUTATORS.has(key) || (key === 'open' && args[1] !== 'r')) writes.push([key, String(args[0])]);
+          return value.apply(target, args);
+        };
+      },
+    });
+    const fs = { ...nodeFs, promises };
+    const dir = (name) => path.join(root, name);
+    const boardStore = createBoardStore({
+      fs,
+      getProfileBoardsPath: (name) => path.join(dir(name), 'boards.json'),
+      getProfileStatePath: (name) => path.join(dir(name), 'state.json'),
+      profileExists: (name) => registered.includes(name),
+    });
+    const writeFile = (name, file, value) => {
+      nodeFs.mkdirSync(dir(name), { recursive: true });
+      nodeFs.writeFileSync(path.join(dir(name), file), typeof value === 'string' ? value : JSON.stringify(value));
+    };
+    const snapshot = (name) => {
+      if (!nodeFs.existsSync(dir(name))) return {};
+      return Object.fromEntries(nodeFs.readdirSync(dir(name)).map((f) => [f, nodeFs.readFileSync(path.join(dir(name), f))]));
+    };
+    return { boardStore, writes, writeFile, snapshot, dir };
+  }
+
+  it('listImportable excludes the current profile, includes never-opened profiles, and writes nothing', async () => {
+    const registered = ['Alice', 'zed', 'Default User', 'Bob', 'Carol'];
+    const store = realStoreSetup(registered);
+    const bobDoc = twoBoardDoc();
+    store.writeFile('Bob', 'boards.json', bobDoc);
+    store.writeFile('zed', 'boards.json', makeDoc());
+    // Never opened since the upgrade: only a state.json
+    store.writeFile('Default User', 'state.json', layoutWith(4));
+    // Unreadable: skipped
+    store.writeFile('Carol', 'boards.json', '{ not json');
+    store.writeFile('Carol', 'boards.json.prev', '{ not json');
+
+    const ctx = setup({ boardStore: store.boardStore, profiles: registered });
+    await expect(ctx.session.listImportable()).rejects.toThrow('No profile is open');
+    await openReady(ctx);
+    store.writes.length = 0;
+    const before = Object.fromEntries(registered.filter((p) => p !== 'Alice').map((p) => [p, store.snapshot(p)]));
+
+    const list = await ctx.session.listImportable();
+
+    expect(list.map((entry) => entry.profile)).toEqual(['Default User', 'Bob', 'zed']);
+    expect(list[0].boards).toEqual([{ id: expect.any(String), name: 'Board', updatedAt: expect.any(Number) }]);
+    expect(list[1].boards).toEqual([
+      { id: 'board-1', name: 'Board', updatedAt: T0 },
+      { id: 'board-2', name: 'Second', updatedAt: T0 },
+    ]);
+    expect(store.writes).toEqual([]);
+    for (const [name, files] of Object.entries(before)) expect(store.snapshot(name), name).toEqual(files);
+    expect(nodeFs.existsSync(path.join(store.dir('Default User'), 'boards.json'))).toBe(false);
+
+    // Allowed while loading, too: it only needs an opened profile
+    await ctx.session.revert();
+    await expect(ctx.session.listImportable()).resolves.toHaveLength(3);
+  });
+
+  it('importBoard names the copy "<name> (<profile>)" and leaves the source files byte-identical', async () => {
+    const registered = ['Alice', 'Bob'];
+    const store = realStoreSetup(registered);
+    store.writeFile('Alice', 'boards.json', makeDoc());
+    store.writeFile('Bob', 'boards.json', twoBoardDoc());
+    // Bob's board name clashes with nothing; Alice already has "Board"
+    const ctx = setup({ boardStore: store.boardStore, profiles: registered });
+    const opened = await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+    const bobBefore = store.snapshot('Bob');
+    store.writes.length = 0;
+
+    await expect(ctx.session.importBoard('Alice', 'board-1')).rejects.toThrow('Cannot import from the current profile');
+    await expect(ctx.session.importBoard('Mallory', 'board-1')).rejects.toThrow('not registered');
+    await expect(ctx.session.importBoard('Bob', 'missing')).rejects.toThrow('Board not found.');
+    // A rejected import leaves the session as it was
+    expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation });
+    await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({});
+
+    const result = await ctx.session.importBoard('Bob', 'board-2');
+
+    expect(result).toEqual({ layout: layoutWith(2), generation: opened.generation + 1 });
+    const { doc, status } = ctx.session.state();
+    expect(status).toBe('loading');
+    const copy = doc.boards.find((b) => b.id === doc.activeBoardId);
+    expect(copy).toMatchObject({
+      id: 'new-id',
+      name: 'Second (Bob)',
+      layout: layoutWith(2),
+      importedFrom: { profile: 'Bob', boardId: 'board-2', boardName: 'Second', at: T0 },
+    });
+    // Saved to Alice only; Bob's files untouched
+    const onDisk = JSON.parse(nodeFs.readFileSync(path.join(store.dir('Alice'), 'boards.json'), 'utf8'));
+    expect(onDisk.activeBoardId).toBe('new-id');
+    expect(store.writes.every(([, file]) => !file.startsWith(store.dir('Bob')))).toBe(true);
+    expect(store.writes.length).toBeGreaterThan(0);
+    expect(store.snapshot('Bob')).toEqual(bobBefore);
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+
+    // A second import of the same board gets a numbered name
+    ctx.session.reportReady(result.generation, true);
+    await ctx.session.importBoard('Bob', 'board-2');
+    expect(ctx.session.state().doc.boards.at(-1).name).toBe('Second (Bob) 2');
   });
 });

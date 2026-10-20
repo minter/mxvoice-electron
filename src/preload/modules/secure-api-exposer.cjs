@@ -505,7 +505,15 @@ const secureElectronAPI = {
     resolveRecovery: (choice) => ipcRenderer.invoke(IPC.BOARDS.RESOLVE_RECOVERY, choice),
     reportReady: (generation, ok) => ipcRenderer.invoke(IPC.BOARDS.REPORT_READY, generation, ok),
     saveRecovery: (layout) => ipcRenderer.invoke(IPC.BOARDS.SAVE_RECOVERY, layout),
-    getState: () => ipcRenderer.invoke(IPC.BOARDS.GET_STATE)
+    getState: () => ipcRenderer.invoke(IPC.BOARDS.GET_STATE),
+    activate: (boardId) => ipcRenderer.invoke(IPC.BOARDS.ACTIVATE, boardId),
+    revert: () => ipcRenderer.invoke(IPC.BOARDS.REVERT),
+    updateActive: (layout) => ipcRenderer.invoke(IPC.BOARDS.UPDATE_ACTIVE, layout),
+    create: (name, layout) => ipcRenderer.invoke(IPC.BOARDS.CREATE, name, layout),
+    rename: (boardId, name) => ipcRenderer.invoke(IPC.BOARDS.RENAME, boardId, name),
+    remove: (boardId) => ipcRenderer.invoke(IPC.BOARDS.DELETE, boardId),
+    listImportable: () => ipcRenderer.invoke(IPC.BOARDS.LIST_IMPORTABLE),
+    importBoard: (profile, boardId) => ipcRenderer.invoke(IPC.BOARDS.IMPORT, profile, boardId)
   },
 
   // Utility functions

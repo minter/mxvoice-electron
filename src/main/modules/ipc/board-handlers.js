@@ -2,13 +2,27 @@
  * Board IPC handlers.
  *
  * Thin wrappers over the main-process board session. The session captured
- * its profile at open, so no handler takes a profile name from the renderer.
+ * its profile at open, so no handler takes the current profile's name from
+ * the renderer. IMPORT names a source profile, checked against the registry.
  */
 
 import electron from 'electron';
 const { ipcMain } = electron;
 import ipcChannels from '../../../shared/ipc-channels.cjs';
+import * as profileManager from '../profile-manager.js';
 const { IPC } = ipcChannels;
+
+const BOARD_ID = /^[0-9a-f-]{36}$/;
+
+function checkBoardId(boardId) {
+  if (typeof boardId !== 'string' || !BOARD_ID.test(boardId)) throw new Error('Invalid board id');
+}
+
+function checkProfile(profile) {
+  if (typeof profile !== 'string' || !profileManager.profileExists(profile)) {
+    throw new Error('Profile is not registered');
+  }
+}
 
 export function register(deps) {
   const { boardSession, debugLog } = deps;
@@ -37,4 +51,25 @@ export function register(deps) {
   handle(IPC.BOARDS.REPORT_READY, 'reportReady', (generation, ok) => boardSession.reportReady(generation, ok === true));
   handle(IPC.BOARDS.SAVE_RECOVERY, 'saveRecovery', (layout) => boardSession.saveRecovery(layout));
   handle(IPC.BOARDS.GET_STATE, 'getState', () => boardSession.state());
+  handle(IPC.BOARDS.ACTIVATE, 'activate', (boardId) => {
+    checkBoardId(boardId);
+    return boardSession.activate(boardId);
+  });
+  handle(IPC.BOARDS.REVERT, 'revert', () => boardSession.revert());
+  handle(IPC.BOARDS.UPDATE_ACTIVE, 'updateActive', (layout) => boardSession.updateActive(layout));
+  handle(IPC.BOARDS.CREATE, 'createBoard', (name, layout) => boardSession.createBoard(name, layout));
+  handle(IPC.BOARDS.RENAME, 'renameBoard', (boardId, name) => {
+    checkBoardId(boardId);
+    return boardSession.renameBoard(boardId, name);
+  });
+  handle(IPC.BOARDS.DELETE, 'deleteBoard', (boardId) => {
+    checkBoardId(boardId);
+    return boardSession.deleteBoard(boardId);
+  });
+  handle(IPC.BOARDS.LIST_IMPORTABLE, 'listImportable', () => boardSession.listImportable());
+  handle(IPC.BOARDS.IMPORT, 'importBoard', (profile, boardId) => {
+    checkProfile(profile);
+    checkBoardId(boardId);
+    return boardSession.importBoard(profile, boardId);
+  });
 }

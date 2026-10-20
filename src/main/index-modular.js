@@ -759,7 +759,7 @@ function initializeMainProcessServices() {
   boardSession = createBoardSession({
     boardStore,
     recoveryStore,
-    profileManager,
+    listProfiles: () => profileManager.getAvailableProfiles().map((p) => p.name),
     getCurrentProfile,
     rebuildMenu: () => appSetup.createApplicationMenu(),
     debugLog
