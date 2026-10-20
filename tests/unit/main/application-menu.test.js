@@ -60,7 +60,7 @@ describe('application menu', () => {
     expect(labels).not.toContain('Hotkeys');
     expect(labels.indexOf('Shows')).toBe(labels.indexOf('Songs') + 1);
     const show = template.find((menu) => menu.label === 'Shows');
-    expect(show.submenu.map((i) => i.label)).toContain('Save "Comedy Sports"');
+    expect(show.submenu.map((i) => i.label)).toContain('Save "Comedy Sports"…');
     const view = template.find((menu) => menu.label === 'View');
     expect(view.submenu.map((i) => i.label)).not.toContain('Start a New Session');
     const accelerators = [];
