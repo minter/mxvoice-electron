@@ -63,21 +63,33 @@ export async function refreshHeader({ api = window.secureElectronAPI?.shows, doc
   try {
     const result = await api.getState();
     if (!result?.success) throw new Error(result?.error || 'Reading the show session failed');
-    const { profile, doc: showDoc, dirty } = result.data ?? {};
+    const { profile, status, doc: showDoc, dirty } = result.data ?? {};
     const active = showDoc?.shows?.find((b) => b.id === showDoc.activeShowId);
     setHeaderLabels({ profile, show: active?.name ?? null }, doc);
-    setDirty(dirty === true, doc);
+    // The session already reads clean outside 'ready'; checked here too
+    setDirty(status === 'ready' && dirty === true, doc);
   } catch (error) {
     window.debugLog?.warn('Could not refresh the show header', { ...LOG_CONTEXT, error: error.message });
   }
 }
 
-// profile-state announces each recovery save's result; listening here keeps
-// it from importing the header
-if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-  window.addEventListener('show-dirty-changed', (event) => {
-    setDirty(event?.detail?.dirty === true);
+let listenersInstalled = false;
+
+/**
+ * Follow the `show-dirty-changed` event profile-state sends after each
+ * recovery save, so profile-state never imports the header. Safe to call
+ * more than once.
+ *
+ * @param {Object} [options]
+ * @param {Window} [options.target]
+ * @param {Document} [options.doc]
+ */
+export function installHeaderListeners({ target = window, doc } = {}) {
+  if (listenersInstalled || typeof target?.addEventListener !== 'function') return;
+  listenersInstalled = true;
+  target.addEventListener('show-dirty-changed', (event) => {
+    setDirty(event?.detail?.dirty === true, doc ?? document);
   });
 }
 
-export default { setHeaderLabels, setDirty, refreshHeader };
+export default { setHeaderLabels, setDirty, refreshHeader, installHeaderListeners };

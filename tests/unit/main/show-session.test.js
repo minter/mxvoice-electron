@@ -1006,27 +1006,119 @@ describe('show session dirty flag', () => {
     expect(dirty(ctx)).toBe(false);
   });
 
-  it('open clears dirty; restoring a recovery record sets it, discarding clears it', async () => {
+  it('open clears dirty; restoring a recovery record sets it once ready, discarding clears it', async () => {
     const ctx = setup();
     await openReady(ctx);
     await ctx.session.saveRecovery(layoutWith(9));
     expect(dirty(ctx)).toBe(true);
 
-    await ctx.session.open();
+    let opened = await ctx.session.open();
     expect(dirty(ctx)).toBe(false);
     await ctx.session.resolveRecovery('restore');
+    // Not ready yet: nothing on screen is the show
+    expect(dirty(ctx)).toBe(false);
+    ctx.session.reportReady(opened.generation, true);
     expect(dirty(ctx)).toBe(true);
 
-    await ctx.session.open();
-    expect(dirty(ctx)).toBe(false);
+    opened = await ctx.session.open();
     await ctx.session.resolveRecovery('discard');
+    ctx.session.reportReady(opened.generation, true);
     expect(dirty(ctx)).toBe(false);
 
     // Restore with no record keeps the saved layout, so nothing is unsaved
     ctx.recoveryStore.records.clear();
-    await ctx.session.open();
+    opened = await ctx.session.open();
     await ctx.session.resolveRecovery('restore');
+    ctx.session.reportReady(opened.generation, true);
     expect(dirty(ctx)).toBe(false);
+  });
+
+  it('a restore whose layout fails to apply never reads dirty', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.records.set('Alice', { version: 1, showId: 'x', savedAt: T0, handoff: null, layout: layoutWith(7) });
+    const opened = await ctx.session.open();
+    await ctx.session.resolveRecovery('restore');
+    ctx.session.reportReady(opened.generation, false);
+    expect(ctx.session.state()).toMatchObject({ status: 'failed', dirty: false });
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true, dirty: false });
+  });
+
+  /** Make the next show save hang until released. */
+  function holdNextSave(ctx) {
+    const held = {};
+    ctx.showStore.save.mockImplementationOnce(() => new Promise((resolve) => { held.release = resolve; }));
+    return held;
+  }
+
+  for (const [name, save] of [
+    ['updateActive', (session) => session.updateActive(layoutWith(9))],
+    ['createShow', (session) => session.createShow('Late Show', layoutWith(9))],
+  ]) {
+    it(`${name} keeps the record and dirty when a different layout was written while it saved`, async () => {
+      const ctx = setup();
+      await openReady(ctx);
+      await ctx.session.saveRecovery(layoutWith(9));
+      const held = holdNextSave(ctx);
+      const saving = save(ctx.session);
+      await vi.waitFor(() => expect(held.release).toBeTypeOf('function'));
+
+      // An edit after the layout was taken lands while the show is saved
+      await expect(ctx.session.saveRecovery(layoutWith(10))).resolves.toEqual({ dirty: true });
+      held.release();
+      await saving;
+
+      expect(ctx.recoveryStore.records.get('Alice')?.layout).toEqual(layoutWith(10));
+      expect(dirty(ctx)).toBe(true);
+    });
+
+    it(`${name} still retires when the write that landed while it saved is the saved layout`, async () => {
+      const ctx = setup();
+      await openReady(ctx);
+      const held = holdNextSave(ctx);
+      const saving = save(ctx.session);
+      await vi.waitFor(() => expect(held.release).toBeTypeOf('function'));
+
+      // The debounced save of the same layout, compared against the old show
+      await ctx.session.saveRecovery(layoutWith(9));
+      held.release();
+      await saving;
+
+      expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+      expect(dirty(ctx)).toBe(false);
+    });
+  }
+
+  // activate and revert retire through the write queue, so they always run
+  // after an in-flight write; open() starts a new generation at once
+  it('a write that finishes after a newer open does not mark the new session dirty', async () => {
+    const ctx = setup();
+    await openReady(ctx);
+    const held = holdNextWrite(ctx);
+    const inFlight = ctx.session.saveRecovery(layoutWith(8));
+    await vi.waitFor(() => expect(held.release).toBeTypeOf('function'));
+
+    const opened = await ctx.session.open();
+    held.release();
+    await inFlight;
+    ctx.session.reportReady(opened.generation, true);
+    expect(dirty(ctx)).toBe(false);
+  });
+
+  it('a write held while activate or revert runs leaves the new generation clean', async () => {
+    for (const run of [(session) => session.activate('show-2'), (session) => session.revert()]) {
+      const ctx = setup({ doc: twoShowDoc() });
+      await openReady(ctx);
+      const held = holdNextWrite(ctx);
+      const inFlight = ctx.session.saveRecovery(layoutWith(8));
+      await vi.waitFor(() => expect(held.release).toBeTypeOf('function'));
+
+      const reloading = run(ctx.session);
+      held.release();
+      const result = await reloading;
+      await inFlight;
+      ctx.session.reportReady(result.generation, true);
+      expect(dirty(ctx)).toBe(false);
+    }
   });
 
   it('save, save as, activate, revert, deleting the active show and import clear dirty', async () => {

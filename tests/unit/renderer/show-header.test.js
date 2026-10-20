@@ -2,10 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 globalThis.window = globalThis.window || {};
 window.debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-const listeners = {};
-window.addEventListener = vi.fn((type, fn) => { listeners[type] = fn; });
-
-const { refreshHeader, setHeaderLabels, setDirty } = await import('../../../src/renderer/modules/shows/header.js');
+const { refreshHeader, setHeaderLabels, setDirty, installHeaderListeners } = await import('../../../src/renderer/modules/shows/header.js');
 
 // No DOM library: elements that record textContent and refuse innerHTML
 function element() {
@@ -93,17 +90,19 @@ describe('setDirty', () => {
     expect(dotShown()).toBe(false);
   });
 
-  it('follows the show-dirty-changed event', () => {
-    globalThis.document = doc;
-    try {
-      setHeaderLabels({ show: 'Main' }, doc);
-      listeners['show-dirty-changed']({ detail: { dirty: true } });
-      expect(dotShown()).toBe(true);
-      listeners['show-dirty-changed']({ detail: { dirty: false } });
-      expect(dotShown()).toBe(false);
-    } finally {
-      delete globalThis.document;
-    }
+  it('follows the show-dirty-changed event once installed, installing only once', () => {
+    const target = { addEventListener: vi.fn() };
+    installHeaderListeners({ target, doc });
+    installHeaderListeners({ target, doc });
+    expect(target.addEventListener).toHaveBeenCalledOnce();
+    const [type, listener] = target.addEventListener.mock.calls[0];
+    expect(type).toBe('show-dirty-changed');
+
+    setHeaderLabels({ show: 'Main' }, doc);
+    listener({ detail: { dirty: true } });
+    expect(dotShown()).toBe(true);
+    listener({ detail: { dirty: false } });
+    expect(dotShown()).toBe(false);
   });
 });
 
@@ -125,6 +124,14 @@ describe('refreshHeader', () => {
     expect(dotShown()).toBe(true);
     await refreshHeader({ doc, api: api({ profile: 'Default User', status: 'ready', doc: showDoc, dirty: false }) });
     expect(dotShown()).toBe(false);
+  });
+
+  it('shows no dot while the session is not ready, even if it says dirty', async () => {
+    const showDoc = { activeShowId: 'b1', shows: [{ id: 'b1', name: 'One' }] };
+    for (const status of ['loading', 'failed']) {
+      await refreshHeader({ doc, api: api({ profile: 'Default User', status, doc: showDoc, dirty: true }) });
+      expect(dotShown(), status).toBe(false);
+    }
   });
 
   it('shows no show when the session has no document', async () => {

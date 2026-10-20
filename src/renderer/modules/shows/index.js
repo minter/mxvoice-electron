@@ -17,7 +17,7 @@ import { droppedSongsMessage, LOAD_FAILED_MESSAGE, TOAST_MS } from './messages.j
 import { unwrap } from './ipc-result.js';
 import { runShowCommand } from './commands.js';
 import { chooseImportShow } from './import-dialog.js';
-import { refreshHeader } from './header.js';
+import { installHeaderListeners, refreshHeader } from './header.js';
 
 export { droppedSongsMessage };
 
@@ -114,6 +114,7 @@ async function resolveRecovery(recovery, deps) {
 export async function openSessionOnStartup(overrides = {}) {
   const deps = defaultDeps(overrides);
   const { api } = deps;
+  installHeaderListeners();
   window.isRestoringProfileState = true;
   let generation = null;
   try {

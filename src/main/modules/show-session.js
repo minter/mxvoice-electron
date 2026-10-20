@@ -24,6 +24,7 @@
  * show. The recovery write decides it: a write sets it, a retire as equal
  * clears it. Anything that puts the saved show on screen, or saves the
  * screen as the show, clears it; restoring a recovery record sets it.
+ * Outside 'ready' it reads false: no layout on screen is the show's then.
  *
  * @module show-session
  */
@@ -126,6 +127,10 @@ export function createShowSession({
   let droppedIds = new Set();
   // The layout on screen differs from the saved active show
   let dirty = false;
+  // Counts the recovery writes saveRecovery performs, and keeps the last
+  // one's layout, so a Save can tell whether the screen moved on while it ran
+  let recoveryWriteSeq = 0;
+  let lastWrittenLayout = null;
 
   function refreshMenu(fn) {
     try {
@@ -151,7 +156,9 @@ export function createShowSession({
     return run;
   }
 
-  const state = () => ({ profile, status, doc, generation, dirty });
+  const visibleDirty = () => status === 'ready' && dirty;
+
+  const state = () => ({ profile, status, doc, generation, dirty: visibleDirty() });
 
   async function open() {
     profile = getCurrentProfile();
@@ -275,24 +282,34 @@ export function createShowSession({
     setStatus(ok ? 'ready' : 'failed');
   }
 
+  /** Whether a layout is the saved active show, as the page shows it. */
+  function matchesSaved(layout) {
+    return layoutKey(layout) === layoutKey(withoutSongs(activeShow().layout, droppedIds));
+  }
+
   const refused = (myGeneration) => status !== 'ready' || fenced || myGeneration !== generation;
 
   // Every outcome reports `dirty`; a skipped or failed save leaves it as it was
   function saveRecovery(layout) {
     const myGeneration = generation;
     const p = profile;
-    if (refused(myGeneration)) return Promise.resolve({ skipped: true, dirty });
+    if (refused(myGeneration)) return Promise.resolve({ skipped: true, dirty: visibleDirty() });
     const normalized = normalizeLayout(layout);
     return queued(async () => {
       // Re-checked here: end() may have fenced while this waited its turn
-      if (refused(myGeneration)) return { skipped: true, dirty };
+      if (refused(myGeneration)) return { skipped: true, dirty: visibleDirty() };
       const show = activeShow();
-      const equal = layoutKey(normalized) === layoutKey(withoutSongs(show.layout, droppedIds));
-      if (equal) await recoveryStore.retire(p);
-      else await recoveryStore.write(p, { showId: show.id, layout: normalized });
+      const equal = matchesSaved(normalized);
+      if (equal) {
+        await recoveryStore.retire(p);
+      } else {
+        await recoveryStore.write(p, { showId: show.id, layout: normalized });
+        recoveryWriteSeq += 1;
+        lastWrittenLayout = normalized;
+      }
       // A newer generation has already set its own
       if (myGeneration === generation) dirty = !equal;
-      return equal ? { retired: true, dirty } : { dirty };
+      return equal ? { retired: true, dirty: visibleDirty() } : { dirty: visibleDirty() };
     });
   }
 
@@ -395,15 +412,28 @@ export function createShowSession({
     }
   }
 
-  /** Save a document that keeps the active show, then adopt it. */
-  async function saveInPlace(fn, p, g, nextDoc, { retire }) {
+  /**
+   * Save a document that keeps the active show, then adopt it. With
+   * `writeSeq` (captured before the first await), the screen was saved as
+   * the show, so the recovery record is retired and dirty cleared, unless a
+   * recovery write of a different layout landed while the save ran.
+   */
+  async function saveInPlace(fn, p, g, nextDoc, { writeSeq = null } = {}) {
     await showStore.save(p, nextDoc);
     assertCurrent(g);
     doc = nextDoc;
-    if (retire) {
-      // The layout on screen is now the saved show
-      dirty = false;
-      await retireRecovery(fn, p);
+    if (writeSeq === null) return;
+    try {
+      await queued(async () => {
+        const movedOn = recoveryWriteSeq !== writeSeq && !matchesSaved(lastWrittenLayout);
+        if (movedOn || generation !== g) return;
+        // The layout on screen is now the saved show
+        dirty = false;
+        await recoveryStore.retire(p);
+      });
+    } catch (error) {
+      // The show is already saved; the next recovery write replaces the stale record
+      debugLog?.warn?.('Could not retire the recovery record', { ...logCtx(fn), error: error.message });
     }
   }
 
@@ -450,20 +480,22 @@ export function createShowSession({
 
   function updateActive(layout) {
     return mutation('updateActive', async ({ p, g, d }) => {
+      const writeSeq = recoveryWriteSeq;
       const nextDoc = updateShowLayout(d, d.activeShowId, normalizeLayout(layout), now());
-      await saveInPlace('updateActive', p, g, nextDoc, { retire: true });
+      await saveInPlace('updateActive', p, g, nextDoc, { writeSeq });
     });
   }
 
   function createShow(name, layout) {
     return mutation('createShow', async ({ p, g, d }) => {
+      const writeSeq = recoveryWriteSeq;
       const { doc: nextDoc, show } = addShow(d, {
         name,
         layout: normalizeLayout(layout),
         now: now(),
         ...idOptions()
       });
-      await saveInPlace('createShow', p, g, nextDoc, { retire: true });
+      await saveInPlace('createShow', p, g, nextDoc, { writeSeq });
       return { id: show.id, name: show.name };
     });
   }
@@ -471,7 +503,7 @@ export function createShowSession({
   function renameShow(showId, name) {
     return mutation('renameShow', async ({ p, g, d }) => {
       const nextDoc = renameInDocument(d, showId, name, now());
-      await saveInPlace('renameShow', p, g, nextDoc, { retire: false });
+      await saveInPlace('renameShow', p, g, nextDoc);
       const renamed = nextDoc.shows.find((b) => b.id === showId);
       return { id: renamed.id, name: renamed.name };
     });
@@ -481,7 +513,7 @@ export function createShowSession({
     return mutation('deleteShow', async ({ p, g, d }) => {
       const { doc: nextDoc, activeChanged } = deleteFromDocument(d, showId, { now: now(), ...idOptions() });
       if (!activeChanged) {
-        await saveInPlace('deleteShow', p, g, nextDoc, { retire: false });
+        await saveInPlace('deleteShow', p, g, nextDoc);
         return { activeChanged: false };
       }
       fenced = true;
