@@ -119,6 +119,57 @@ describe('atomic-json-file', () => {
     expect(await readJsonWithFallback(file)).toEqual({ status: 'recovered', value: { a: 1 } });
   });
 
+  it('a copy failure midway leaves the existing .prev byte-identical', async () => {
+    await writeJsonAtomic(file, { a: 1 });
+    nodeFs.writeFileSync(`${file}.prev`, JSON.stringify({ good: true }));
+    const before = nodeFs.readFileSync(`${file}.prev`);
+    const copyFile = vi.fn(async (src, dest) => {
+      nodeFs.writeFileSync(dest, '{"tru');
+      throw Object.assign(new Error('ENOSPC'), { code: 'ENOSPC' });
+    });
+    const fakeFs = { ...nodeFs, promises: { ...nodeFs.promises, copyFile } };
+    await expect(writeJsonAtomic(file, { a: 2 }, { keepPrevious: true, fs: fakeFs })).rejects.toThrow('ENOSPC');
+    expect(nodeFs.readFileSync(`${file}.prev`).equals(before)).toBe(true);
+    expect(JSON.parse(nodeFs.readFileSync(file, 'utf8'))).toEqual({ a: 1 });
+    expect(nodeFs.readdirSync(dir).sort()).toEqual(['data.json', 'data.json.prev']);
+  });
+
+  it('returns error, not .prev, when the main file cannot be read', async () => {
+    nodeFs.writeFileSync(file, JSON.stringify({ a: 1 }));
+    nodeFs.writeFileSync(`${file}.prev`, JSON.stringify({ stale: true }));
+    const readFile = vi.fn(async (p, enc) => {
+      if (p === file) throw Object.assign(new Error('locked'), { code: 'EACCES' });
+      return nodeFs.promises.readFile(p, enc);
+    });
+    const fakeFs = { ...nodeFs, promises: { ...nodeFs.promises, readFile } };
+    const result = await readJsonWithFallback(file, { fs: fakeFs });
+    expect(result.status).toBe('error');
+    expect(result.value).toBeUndefined();
+    expect(result.error).toContain('locked');
+  });
+
+  it('keepPrevious does not touch .prev when the main read errors', async () => {
+    nodeFs.writeFileSync(file, JSON.stringify({ a: 1 }));
+    nodeFs.writeFileSync(`${file}.prev`, JSON.stringify({ keep: true }));
+    const readFile = vi.fn(async (p, enc) => {
+      if (p === file) throw Object.assign(new Error('locked'), { code: 'EBUSY' });
+      return nodeFs.promises.readFile(p, enc);
+    });
+    const fakeFs = { ...nodeFs, promises: { ...nodeFs.promises, readFile } };
+    await writeJsonAtomic(file, { a: 2 }, { keepPrevious: true, fs: fakeFs });
+    expect(JSON.parse(nodeFs.readFileSync(`${file}.prev`, 'utf8'))).toEqual({ keep: true });
+  });
+
+  it('skips directory fsync on win32', async () => {
+    const open = vi.fn((p, f) => nodeFs.promises.open(p, f));
+    const fakeFs = { ...nodeFs, promises: { ...nodeFs.promises, open } };
+    await writeJsonAtomic(file, { a: 1 }, { fs: fakeFs, platform: 'win32' });
+    expect(open.mock.calls.map((c) => c[0])).not.toContain(dir);
+    open.mockClear();
+    await writeJsonAtomic(file, { a: 1 }, { fs: fakeFs, platform: 'darwin' });
+    expect(open.mock.calls.map((c) => c[0])).toContain(dir);
+  });
+
   it('reports missing when neither exists', async () => {
     expect(await readJsonWithFallback(file)).toEqual({ status: 'missing' });
   });
@@ -127,6 +178,7 @@ describe('atomic-json-file', () => {
     nodeFs.writeFileSync(file, 'bad');
     const moved = await quarantine(file);
     expect(moved.startsWith(`${file}.corrupt-`)).toBe(true);
+    expect(moved.slice(`${file}.corrupt-`.length)).not.toMatch(/[:.]/);
     expect(nodeFs.existsSync(file)).toBe(false);
     expect(nodeFs.readFileSync(moved, 'utf8')).toBe('bad');
   });

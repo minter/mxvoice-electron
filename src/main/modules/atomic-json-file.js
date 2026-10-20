@@ -53,6 +53,7 @@ export async function writeJsonAtomic(
   const json = JSON.stringify(value, null, 2);
   const tempPath = `${filePath}.tmp-${process.pid}-${++tempCounter}`;
 
+  let prevTempPath = null;
   try {
     const handle = await fs.promises.open(tempPath, 'w');
     try {
@@ -67,13 +68,25 @@ export async function writeJsonAtomic(
       // corrupt main never replaces a good .prev.
       const current = await readParsed(fs, filePath);
       if ('value' in current) {
-        await fs.promises.copyFile(filePath, `${filePath}.prev`);
+        // Copy to a temp sibling and rename, so a crash mid-copy can't leave
+        // a truncated .prev.
+        prevTempPath = `${tempPath}.prev`;
+        await fs.promises.copyFile(filePath, prevTempPath);
+        const prevHandle = await fs.promises.open(prevTempPath, 'r+');
+        try {
+          await prevHandle.sync();
+        } finally {
+          await prevHandle.close();
+        }
+        await renameWithRetry(fs, prevTempPath, `${filePath}.prev`, platform);
+        prevTempPath = null;
       }
     }
 
     await renameWithRetry(fs, tempPath, filePath, platform);
   } catch (error) {
     await fs.promises.rm(tempPath, { force: true }).catch(() => {});
+    if (prevTempPath) await fs.promises.rm(prevTempPath, { force: true }).catch(() => {});
     throw error;
   }
 
@@ -97,7 +110,7 @@ async function readParsed(fs, filePath) {
     text = await fs.promises.readFile(filePath, 'utf8');
   } catch (error) {
     if (error?.code === 'ENOENT') return { missing: true };
-    return { error: error.message };
+    return { ioError: error.message };
   }
   try {
     return { value: JSON.parse(text) };
@@ -112,11 +125,14 @@ async function readParsed(fs, filePath) {
  * @param {string} filePath
  * @param {Object} [options]
  * @param {Object} [options.fs]
- * @returns {Promise<{status: 'ok'|'missing'|'recovered'|'unreadable', value?: *, error?: string}>}
+ * @returns {Promise<{status: 'ok'|'missing'|'recovered'|'unreadable'|'error', value?: *, error?: string}>}
  */
 export async function readJsonWithFallback(filePath, { fs = nodeFs } = {}) {
   const main = await readParsed(fs, filePath);
   if ('value' in main) return { status: 'ok', value: main.value };
+  // An existing main file we couldn't read (locked, permissions) must never be
+  // replaced by stale .prev data.
+  if (main.ioError) return { status: 'error', error: main.ioError };
 
   const prev = await readParsed(fs, `${filePath}.prev`);
   if (main.missing) {
