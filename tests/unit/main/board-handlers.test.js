@@ -4,14 +4,17 @@ const handlers = {};
 const ipcMain = { handle: (channel, handler) => { handlers[channel] = handler; } };
 
 vi.mock('electron', () => ({ default: { ipcMain }, ipcMain }));
-const registeredProfiles = new Set(['Alice', 'Bob']);
+// Same `in` lookup as the real profileExists, so inherited names pass it
+const registry = { Alice: { name: 'Alice' }, Bob: { name: 'Bob' } };
 vi.mock('../../../src/main/modules/profile-manager.js', () => ({
-  profileExists: (name) => registeredProfiles.has(name),
+  profileExists: (name) => name in registry,
 }));
 
 const UUID = '0b6f6f2e-8a51-4d0e-9b8e-3d0c1f2a7e44';
 
 const { register } = await import('../../../src/main/modules/ipc/board-handlers.js');
+const { createBoardSession } = await import('../../../src/main/modules/board-session.js');
+const { createDocument } = await import('../../../src/main/modules/board-document.js');
 
 function setup(overrides = {}) {
   const boardSession = {
@@ -127,5 +130,31 @@ describe('board IPC handlers', () => {
     expect(boardSession.renameBoard).not.toHaveBeenCalled();
     expect(boardSession.deleteBoard).not.toHaveBeenCalled();
     expect(boardSession.importBoard).not.toHaveBeenCalled();
+  });
+
+  it('rejects inherited object names such as "constructor" and "__proto__" on IMPORT', async () => {
+    const recoveryStore = { read: vi.fn(async () => null), retire: vi.fn(), write: vi.fn(), markHandoff: vi.fn() };
+    const boardStore = {
+      load: vi.fn(async () => ({ doc: createDocument(null, { now: 1, newId: () => UUID }) })),
+      peek: vi.fn(async () => createDocument(null, { now: 1, newId: () => UUID })),
+      save: vi.fn(),
+    };
+    const boardSession = createBoardSession({
+      boardStore,
+      recoveryStore,
+      listProfiles: () => Object.values(registry).map((p) => p.name),
+      getCurrentProfile: () => 'Alice',
+    });
+    const opened = await boardSession.open();
+    boardSession.reportReady(opened.generation, true);
+    register({ boardSession, debugLog: null });
+
+    for (const profile of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+      await expect(handlers['board:import']({}, profile, UUID)).resolves.toEqual({
+        success: false, error: `Profile "${profile}" is not registered`,
+      });
+    }
+    expect(boardStore.peek).not.toHaveBeenCalled();
+    expect(boardStore.save).not.toHaveBeenCalled();
   });
 });

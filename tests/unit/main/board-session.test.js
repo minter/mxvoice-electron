@@ -763,6 +763,68 @@ describe('board session mutations', () => {
     expect(ctx.session.state().doc.activeBoardId).toBe('board-2');
   });
 
+  it('a renderer-crash handoff during a mutation cannot write the old record back after the retire', async () => {
+    for (const run of [
+      (ctx) => ctx.session.activate('board-2'),
+      (ctx) => ctx.session.updateActive(layoutWith(5)),
+    ]) {
+      const ctx = setup({ doc: twoBoardDoc() });
+      await openReady(ctx);
+      await ctx.session.saveRecovery(layoutWith(8));
+      // markHandoff loads, then writes: give the retire a chance to slip between
+      ctx.recoveryStore.markHandoff.mockImplementationOnce(async (profile, reason) => {
+        const record = ctx.recoveryStore.records.get(profile);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        ctx.recoveryStore.calls.push(['markHandoff', profile, reason]);
+        if (!record) return false;
+        ctx.recoveryStore.records.set(profile, { ...record, handoff: reason });
+        return true;
+      });
+      let release;
+      ctx.boardStore.save.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+
+      const mutating = run(ctx);
+      await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+      ctx.session.rendererGone();
+      release();
+      await mutating;
+      await vi.waitFor(() => expect(ctx.recoveryStore.markHandoff).toHaveBeenCalled());
+      await ctx.session.end('clean-exit');
+
+      // Mark and retire ran in queue order, so the old layout is gone
+      expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+    }
+  });
+
+  it('a handoff during a mutation keeps the fence up afterwards', async () => {
+    const ctx = setup({ doc: twoBoardDoc() });
+    await openReady(ctx);
+    let release;
+    ctx.boardStore.save.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+    const activating = ctx.session.activate('board-2');
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+    await ctx.session.handoff('update');
+    release();
+    const result = await activating;
+
+    ctx.session.reportReady(result.generation, true);
+    expect(ctx.session.state().status).toBe('ready');
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true });
+    await expect(ctx.session.updateActive(layoutWith(9))).rejects.toThrow('session not ready');
+
+    // A failed save during a handoff leaves the fence up too
+    const failing = setup({ doc: twoBoardDoc() });
+    await openReady(failing);
+    let fail;
+    failing.boardStore.save.mockImplementationOnce(() => new Promise((_, reject) => { fail = reject; }));
+    const updating = failing.session.updateActive(layoutWith(5));
+    await vi.waitFor(() => expect(fail).toBeTypeOf('function'));
+    await failing.session.handoff('update');
+    fail(new Error('disk full'));
+    await expect(updating).rejects.toThrow('disk full');
+    await expect(failing.session.saveRecovery(layoutWith(9))).resolves.toEqual({ skipped: true });
+  });
+
   it('a mutation superseded by end() does not touch the ended session', async () => {
     const ctx = setup({ doc: twoBoardDoc() });
     await openReady(ctx);

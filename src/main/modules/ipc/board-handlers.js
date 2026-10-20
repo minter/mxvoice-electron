@@ -18,6 +18,8 @@ function checkBoardId(boardId) {
   if (typeof boardId !== 'string' || !BOARD_ID.test(boardId)) throw new Error('Invalid board id');
 }
 
+// profileExists uses `in`, so inherited names such as 'constructor' pass it;
+// the session's listProfiles() check is what rejects those and is required
 function checkProfile(profile) {
   if (typeof profile !== 'string' || !profileManager.profileExists(profile)) {
     throw new Error('Profile is not registered');

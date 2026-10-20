@@ -277,8 +277,9 @@ export function createBoardSession({
     const p = profile;
     fenced = true;
     handedOff = true;
-    await writeQueue;
-    await recoveryStore.markHandoff(p, reason);
+    // Queued, so a mutation's retire can't land between its read and write
+    // and have the old record written back
+    await queued(() => recoveryStore.markHandoff(p, reason));
   }
 
   function rendererGone() {
