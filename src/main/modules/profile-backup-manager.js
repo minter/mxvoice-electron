@@ -26,6 +26,7 @@ import { createBackupDirectoryScanner } from './backup-directory-scanner.js';
 import { createBackupFileOperations } from './backup-file-operations.js';
 import { selectBackupsForRetention } from './backup-retention-policy.js';
 import { createProfileChangeDetector } from './profile-change-detector.js';
+import { parseDocument } from './board-document.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -299,6 +300,23 @@ async function createBackup(profileName, options = {}) {
 }
 
 /**
+ * Board names in a backup's boards.json, in document order.
+ * Null for a pre-boards backup or any unreadable file; never throws.
+ * @param {string} profileName - Profile name
+ * @param {string} backupId - Backup ID
+ * @returns {Promise<string[]|null>}
+ */
+async function readBackupBoardNames(profileName, backupId) {
+  try {
+    const file = path.join(getBackupDirectory(profileName), backupId, 'boards.json');
+    const parsed = parseDocument(JSON.parse(await fs.promises.readFile(file, 'utf8')));
+    return parsed.ok ? parsed.doc.boards.map((b) => b.name) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * List all backups for a profile
  * @param {string} profileName - Profile name
  * @returns {Promise<{success: boolean, backups?: Array, error?: string}>}
@@ -306,10 +324,16 @@ async function createBackup(profileName, options = {}) {
 async function listBackups(profileName) {
   try {
     const metadata = await readMetadataSafe(profileName);
-    
+    const backups = await Promise.all(
+      (metadata.backups || []).map(async (backup) => ({
+        ...backup,
+        boards: await readBackupBoardNames(profileName, backup.id)
+      }))
+    );
+
     return {
       success: true,
-      backups: metadata.backups || []
+      backups
     };
   } catch (error) {
     debugLog?.error('Failed to list backups', {

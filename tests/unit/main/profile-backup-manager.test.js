@@ -67,6 +67,28 @@ describe('profile backup manager orchestration', () => {
     });
   });
 
+  it('listBackups reports board names from the backup', async () => {
+    const boardsFile = path.join(profileDirectory, 'boards.json');
+    const doc = { version: 1, activeBoardId: 'a', boards: [
+      { id: 'a', name: 'Board', layout: {} }, { id: 'b', name: 'Comedy Sports', layout: {} }
+    ] };
+    await fs.promises.writeFile(boardsFile, JSON.stringify(doc));
+    const created = await manager.createBackup(profileName, { mode: 'manual' });
+    const listed = await manager.listBackups(profileName);
+    expect(listed.backups.find((b) => b.id === created.backupId).boards).toEqual(['Board', 'Comedy Sports']);
+
+    await fs.promises.writeFile(path.join(manager.getBackupDirectory(profileName), created.backupId, 'boards.json'), '{nope');
+    const corrupt = await manager.listBackups(profileName);
+    expect(corrupt.backups.find((b) => b.id === created.backupId).boards).toBeNull();
+    await fs.promises.rm(boardsFile);
+  });
+
+  it('listBackups reports null boards for a pre-boards backup', async () => {
+    const created = await manager.createBackup(profileName, { mode: 'manual' });
+    const listed = await manager.listBackups(profileName);
+    expect(listed.backups.find((b) => b.id === created.backupId).boards).toBeNull();
+  });
+
   it('skips change-aware backup creation when disabled', async () => {
     await expect(manager.createBackupIfChanged(profileName, { autoBackupEnabled: false })).resolves.toEqual({
       success: true, created: false, reason: 'auto-backup disabled'

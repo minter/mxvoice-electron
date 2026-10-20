@@ -37,6 +37,7 @@ let updateState;
 let analytics;
 let profileSwitcher;
 let boardSession;
+let recoveryStore;
 let installUpdate;
 
 // Initialize the module with dependencies
@@ -54,6 +55,7 @@ function initializeIpcHandlers(dependencies) {
   analytics = dependencies.analytics;
   profileSwitcher = dependencies.profileSwitcher;
   boardSession = dependencies.boardSession;
+  recoveryStore = dependencies.recoveryStore;
   installUpdate = dependencies.installUpdate;
 
   // Initialize file operations module
@@ -73,6 +75,7 @@ function initializeIpcHandlers(dependencies) {
     analytics,
     profileSwitcher,
     boardSession,
+    recoveryStore,
     installUpdate,
   };
 

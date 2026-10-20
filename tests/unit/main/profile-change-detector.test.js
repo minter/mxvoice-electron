@@ -35,4 +35,29 @@ describe('profile change detector', () => {
     });
     await expect(detector.hasChanged('Show')).resolves.toEqual({ changed: true });
   });
+
+  it('auto-backup hash ignores recovery writes', async () => {
+    const os = await import('node:os');
+    const realFs = (await import('node:fs')).default;
+    const root = realFs.mkdtempSync(path.join(os.tmpdir(), 'mxv-hash-'));
+    try {
+      const profileDir = path.join(root, 'profiles', 'Show');
+      realFs.mkdirSync(profileDir, { recursive: true });
+      realFs.writeFileSync(path.join(profileDir, 'boards.json'), '{}');
+      const detector = createProfileChangeDetector({
+        fs: realFs, path, crypto,
+        getProfileDirectory: () => profileDir,
+        pathExists: async () => true,
+        readMetadata: vi.fn(),
+        getDebugLog: () => null
+      });
+      const before = await detector.calculateHash('Show');
+      // The recovery record lives in userData/recovery, outside the profile dir.
+      realFs.mkdirSync(path.join(root, 'recovery'), { recursive: true });
+      realFs.writeFileSync(path.join(root, 'recovery', 'show.json'), '{"x":1}');
+      expect(await detector.calculateHash('Show')).toBe(before);
+    } finally {
+      realFs.rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

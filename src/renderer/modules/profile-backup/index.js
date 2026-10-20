@@ -165,7 +165,7 @@ function createBackupListItem(backup) {
   // Add restore button handler
   restoreBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    await restoreBackup(backup.id);
+    await restoreBackup(backup.id, backup.boards);
   });
   
   return item;
@@ -185,10 +185,33 @@ function formatBytes(bytes) {
 }
 
 /**
+ * Explain which boards a restore brings in and which it replaces
+ * @param {string[]|null} backupBoards - Board names in the backup, null for a pre-boards backup
+ * @returns {Promise<string>}
+ */
+async function describeBoardReplacement(backupBoards) {
+  if (!Array.isArray(backupBoards)) {
+    return 'This backup is from before boards. Its layout will become a board named Board, and it may be a layout from the middle of a show.';
+  }
+  let count = null;
+  try {
+    const state = await electronAPI.boards?.getState?.();
+    const boards = state?.data?.doc?.boards;
+    if (Array.isArray(boards)) count = boards.length;
+  } catch {
+    // Fall back to wording without a count.
+  }
+  const has = `This backup has ${backupBoards.length} ${backupBoards.length === 1 ? 'board' : 'boards'}: ${backupBoards.join(', ')}.`;
+  if (count === null) return `${has} Your current boards will be replaced.`;
+  return `${has} Your ${count === 1 ? '1 current board' : `${count} current boards`} will be replaced.`;
+}
+
+/**
  * Restore from backup
  * @param {string} backupId - Backup ID to restore
+ * @param {string[]|null} [backupBoards] - Board names in the backup, null for a pre-boards backup
  */
-async function restoreBackup(backupId) {
+async function restoreBackup(backupId, backupBoards = null) {
   try {
     if (!electronAPI || !electronAPI.profile) {
       error('Electron API not available', {
@@ -200,8 +223,9 @@ async function restoreBackup(backupId) {
     
     // Confirm restore
     const { customConfirm } = await import('../utils/index.js');
+    const boardsNote = await describeBoardReplacement(backupBoards);
     const confirmed = await customConfirm(
-      'This will replace your current profile with the selected backup. A backup of your current profile will be created first. Continue?',
+      `This will replace your current profile with the selected backup. ${boardsNote} A backup of your current profile will be created first. Continue?`,
       'Restore Backup'
     );
     
@@ -403,61 +427,9 @@ async function createBackupNow() {
       return;
     }
 
-    // First, ensure the current profile state (hotkeys, holding tank, etc.) is flushed to disk
-    // so that the backup represents the exact current UI state.
-    if (typeof window !== 'undefined' && !window.isRestoringProfileState) {
-      const hasProfileStateModule =
-        typeof moduleRegistry.profileState?.saveProfileState === 'function';
-
-      if (hasProfileStateModule) {
-        info('Saving profile state before manual backup', {
-          module: 'profile-backup',
-          function: 'createBackupNow'
-        });
-
-        let saveResult = null;
-        try {
-          saveResult = await moduleRegistry.profileState.saveProfileState();
-        } catch (err) {
-          error('Error saving profile state before backup', {
-            module: 'profile-backup',
-            function: 'createBackupNow',
-            error: err.message
-          });
-        }
-
-        // If state save failed or was skipped, do NOT proceed with backup
-        if (!saveResult || saveResult.success === false || saveResult.skipped) {
-          const reason =
-            (saveResult && saveResult.error) ||
-            (saveResult && saveResult.skipped && 'Profile state save was skipped') ||
-            'Unknown error';
-
-          // More specific message when restoration lock is active
-          const message =
-            saveResult && saveResult.skipped
-              ? 'Cannot create a backup while your profile is still being restored. Please wait for the app to finish loading and then try again.'
-              : `Failed to save the current profile state before creating a backup: ${reason}`;
-
-          error('Aborting manual backup because profile state could not be saved', {
-            module: 'profile-backup',
-            function: 'createBackupNow',
-            reason
-          });
-
-          const { customConfirm } = await import('../utils/index.js');
-          await customConfirm(message, 'Backup Not Created');
-          return;
-        }
-      } else {
-        // When profile state module is not available (legacy/edge cases), we still allow
-        // the backup to proceed, but log a warning since we cannot guarantee exact UI state.
-        warn('Profile state module not available - proceeding with backup without explicit state save', {
-          module: 'profile-backup',
-          function: 'createBackupNow'
-        });
-      }
-    } else if (typeof window !== 'undefined' && window.isRestoringProfileState) {
+    // Boards are saved data, so there is nothing to flush before a backup, and
+    // crash recovery is deliberately not backed up.
+    if (typeof window !== 'undefined' && window.isRestoringProfileState) {
       // If a restoration is currently in progress, we should not attempt a backup at all
       // because the on-disk state is in flux and not a reliable snapshot.
       warn('Refusing to create backup while profile restoration is in progress', {
