@@ -12,6 +12,8 @@
   --input-background: white;
   --input-border: #ced4da;
   --input-text: rgb(36, 36, 36);
+  --tab-actions-muted: rgb(130, 137, 150);
+  --tab-actions-hover-bg: rgba(255, 255, 255, 0.08);
 }
 
 /* Light theme (default) */
@@ -29,6 +31,8 @@
   --input-background: white;
   --input-border: #ced4da;
   --input-text: rgb(33, 37, 41);
+  --tab-actions-muted: rgb(108, 117, 125);
+  --tab-actions-hover-bg: rgba(0, 0, 0, 0.06);
 }
 
 /* Dark theme */
@@ -46,6 +50,8 @@
   --input-background: rgb(45, 45, 45);
   --input-border: #505050;
   --input-text: rgb(226, 226, 226);
+  --tab-actions-muted: rgb(150, 150, 150);
+  --tab-actions-hover-bg: rgba(255, 255, 255, 0.08);
 }
 
 /* Light mode playlist styling */
@@ -92,6 +98,8 @@
     --input-background: rgb(45, 45, 45);
     --input-border: #505050;
     --input-text: rgb(226, 226, 226);
+    --tab-actions-muted: rgb(150, 150, 150);
+    --tab-actions-hover-bg: rgba(255, 255, 255, 0.08);
   }
 }
 
@@ -423,7 +431,6 @@ input[type="range"]::-webkit-slider-runnable-track {
   border-bottom: 0;
 }
 
-.icon-bar a:hover,
 h6 a:hover {
   color: gray;
 }
@@ -557,6 +564,24 @@ table td {
   background: var(--context-menu-list);
   background-color: var(--context-menu-list);
   color: var(--card-text);
+}
+
+/* Tab actions ⋯: quiet until hovered, like the old header icons */
+.tab-actions-btn {
+  color: var(--tab-actions-muted);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.tab-actions-btn:hover,
+.tab-actions-btn:focus-visible,
+.tab-actions-btn[aria-expanded="true"] {
+  color: var(--card-text);
+  background-color: var(--tab-actions-hover-bg);
+}
+
+.tab-actions-menu-item i,
+.tab-actions-menu-item svg {
+  color: var(--tab-actions-muted);
 }
 
 /* New native context menu styling to match app theme */

@@ -43,7 +43,7 @@ function initializeEventHandlers(options = {}) {
    */
   async function renameHotkeyTab() {
     const currentName = document.querySelector('#hotkey_tabs .nav-link.active')?.textContent || '';
-    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
+    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#hotkey_tabs .nav-link.active');
       if (link) link.textContent = newName;
@@ -61,7 +61,7 @@ function initializeEventHandlers(options = {}) {
    */
   async function renameHoldingTankTab() {
     const currentName = document.querySelector('#holding_tank_tabs .nav-link.active')?.textContent || '';
-    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Holding Tank Tab");
+    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#holding_tank_tabs .nav-link.active');
       if (link) link.textContent = newName;

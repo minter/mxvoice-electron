@@ -24,6 +24,7 @@ import { fetchSongsById } from '../shows/layout-applier.js';
 
 // Import secure adapters for UI operations
 import { customConfirm, customPrompt } from '../utils/index.js';
+import { confirmClearTab } from '../ui/tab-actions-menu.js';
 
 /**
  * Hotkeys Module Class
@@ -371,7 +372,7 @@ class HotkeysModule {
    * Removes all song assignments from hotkeys
    */
   async clearHotkeys() {
-    const confirmed = await customConfirm('Are you sure you want clear your hotkeys?');
+    const confirmed = await confirmClearTab(document.querySelector('#hotkey_tabs .nav-link.active'), customConfirm);
     if (confirmed) {
       debugLog?.info('🧹 Executing clearHotkeys logic after confirmation...', { module: 'hotkeys', function: 'clearHotkeys' });
       
@@ -580,7 +581,7 @@ class HotkeysModule {
     const newName = await customPrompt(
       'Enter a new name for this tab:',
       currentName,
-      'Rename Hotkey Tab'
+      'Rename Tab'
     );
     if (newName && newName.trim() !== '') {
       const active = document.querySelector('#hotkey_tabs .nav-link.active');

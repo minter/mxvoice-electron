@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { rms, waitForAudible, waitForSilence, stabilize } from '../../../utils/audio-helpers.js';
 import fs from 'node:fs';
 import { importHoldingTankFile } from '../../../utils/show-e2e.js';
+import { chooseTabAction, clearSelectedTab } from '../../../utils/tab-actions.js';
 
 // Helper to detect if we're running in CI environment
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
@@ -170,9 +171,8 @@ test.describe('Holding Tank - basic', () => {
     await tab1.click();
     await expect(tab1).toHaveText('1');
     
-    // Click the Edit button in the toolbar (it's an icon with onclick, not a button with text)
-    const editButton = page.locator('#holding-tank-rename-btn');
-    await editButton.click();
+    // Choose Rename from the tab row's ⋯ menu
+    await chooseTabAction(page, 'holdingTank', 'rename');
 
     // Wait for modal to appear
     const renameInput = page.locator('.modal .prompt-input');
@@ -197,8 +197,8 @@ test.describe('Holding Tank - basic', () => {
     await tab2.click();
     await expect(tab2).toHaveText('2');
     
-    // Click the edit button
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'holdingTank', 'rename');
 
     // Wait for modal to appear
     await expect(renameInput).toBeVisible();
@@ -222,8 +222,8 @@ test.describe('Holding Tank - basic', () => {
     await tab3.click();
     await expect(tab3).toHaveText('3');
     
-    // Click Edit in the toolbar
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'holdingTank', 'rename');
 
     // Wait for modal to appear
     await expect(renameInput).toBeVisible();
@@ -247,8 +247,8 @@ test.describe('Holding Tank - basic', () => {
     await tab4.click();
     await expect(tab4).toHaveText('4');
     
-    // Click the Edit button
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'holdingTank', 'rename');
 
     // Wait for modal to appear
     await expect(renameInput).toBeVisible();
@@ -271,8 +271,8 @@ test.describe('Holding Tank - basic', () => {
     await tab5.click();
     await expect(tab5).toHaveText('5');
     
-    // Click Edit
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'holdingTank', 'rename');
 
     // Wait for modal to appear
     await expect(renameInput).toBeVisible();
@@ -390,16 +390,7 @@ test.describe('Holding Tank - basic', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.click();
 
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click();
-
-    // Click Confirm in the modal
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-
-    // Wait for modal to close and clear operation to complete
-    await expect(confirmButton).not.toBeVisible();
+    await clearSelectedTab(page, 'holdingTank');
     await clearModalBackdrop(page);
 
     // Verify holding tank is now empty
@@ -426,16 +417,7 @@ test.describe('Holding Tank - basic', () => {
     const preClearSearchInput = page.locator('#omni_search');
     await preClearSearchInput.click();
 
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click();
-
-    // Click Confirm in the modal
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-
-    // Wait for modal to close and clear operation to complete
-    await expect(confirmButton).not.toBeVisible();
+    await clearSelectedTab(page, 'holdingTank');
     await clearModalBackdrop(page);
 
     // Verify holding tank is now empty
@@ -556,12 +538,7 @@ test.describe('Holding Tank - basic', () => {
     const searchInputDismiss = page.locator('#omni_search');
     await searchInputDismiss.click();
 
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click();
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-    await expect(confirmButton).not.toBeVisible();
+    await clearSelectedTab(page, 'holdingTank');
     await clearModalBackdrop(page);
 
     // Verify tab 1 is empty
@@ -633,12 +610,7 @@ test.describe('Holding Tank - basic', () => {
     const tab1List = page.locator('#holding_tank_1');
     const existingItems = await tab1List.locator('.list-group-item').count();
     if (existingItems > 0) {
-      const clearButton = page.locator('#holding-tank-clear-btn');
-      await clearButton.click();
-      const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-      await expect(confirmButton).toBeVisible({ timeout: 5000 });
-      await confirmButton.click();
-      await expect(confirmButton).not.toBeVisible();
+      await clearSelectedTab(page, 'holdingTank');
       await clearModalBackdrop(page);
     }
 
@@ -792,12 +764,7 @@ test.describe('Holding Tank - basic', () => {
     const tab1List = page.locator('#holding_tank_1');
     const itemCount = await tab1List.locator('.list-group-item').count();
     if (itemCount > 0) {
-      const clearButton = page.locator('#holding-tank-clear-btn');
-      await clearButton.click();
-      const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-      await expect(confirmButton).toBeVisible({ timeout: 5000 });
-      await confirmButton.click();
-      await expect(confirmButton).not.toBeVisible();
+      await clearSelectedTab(page, 'holdingTank');
       await clearModalBackdrop(page);
     }
 
@@ -917,12 +884,7 @@ test.describe('Holding Tank - basic', () => {
     const tab1List = page.locator('#holding_tank_1');
     const itemCount = await tab1List.locator('.list-group-item').count();
     if (itemCount > 0) {
-      const clearButton = page.locator('#holding-tank-clear-btn');
-      await clearButton.click();
-      const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-      await expect(confirmButton).toBeVisible({ timeout: 5000 });
-      await confirmButton.click();
-      await expect(confirmButton).not.toBeVisible();
+      await clearSelectedTab(page, 'holdingTank');
       await clearModalBackdrop(page);
     }
 
@@ -988,12 +950,7 @@ test.describe('Holding Tank - basic', () => {
   test('double-click playback works in holding tank tab 4', async () => {
     // 1) Clear the holding tank first to ensure clean state
     await clearModalBackdrop(page);
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click();
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-    await expect(confirmButton).not.toBeVisible();
+    await clearSelectedTab(page, 'holdingTank');
     await clearModalBackdrop(page);
 
     // Verify that the active tab (tab 1) is empty after clearing

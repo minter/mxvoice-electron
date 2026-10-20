@@ -3,6 +3,7 @@ import electronPath from 'electron';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { renameSelectedTab } from '../../utils/tab-actions.js';
 
 /**
  * Closing the last window quits on every platform (macOS included), after a
@@ -51,10 +52,7 @@ test.describe('Quitting', () => {
     await firstRun.getByRole('button', { name: 'Got It!' }).click();
     await expect(firstRun).toBeHidden();
 
-    await page.locator('#hotkey-rename-btn').click();
-    const prompt = page.locator('.modal:visible .prompt-input');
-    await prompt.fill(name);
-    await page.locator('.modal:visible .confirm-btn').click();
+    await renameSelectedTab(page, 'hotkeys', name);
     await expect(page.locator('#hotkey_tabs a[href="#hotkeys_list_1"]')).toHaveText(name);
     return page;
   }

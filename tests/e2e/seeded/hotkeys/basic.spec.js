@@ -2,6 +2,7 @@ import { _electron as electron, test, expect } from '@playwright/test';
 import { launchSeededApp, closeApp, clearModalBackdrop, waitForAppReady } from '../../../utils/seeded-launch.js';
 import { crashApp, relaunchApp, waitForShowSettled } from '../../../utils/relaunch.js';
 import { readRecovery, recoveryRecordPath } from '../../../utils/seed-shows.js';
+import { chooseTabAction } from '../../../utils/tab-actions.js';
 import {
   waitForAudible,
   waitForSilence,
@@ -487,9 +488,8 @@ test.describe('Hotkeys - save & load', () => {
     await tab1.click();
     await expect(tab1).toHaveText('1');
     
-    // Click the Edit button in the toolbar (it's an icon with onclick, not a button with text)
-    const editButton = page.locator('#hotkey-rename-btn');
-    await editButton.click();
+    // Choose Rename from the tab row's ⋯ menu
+    await chooseTabAction(page, 'hotkeys', 'rename');
 
     // Wait for modal to appear
     const renameInput = page.locator('.modal .prompt-input');
@@ -510,8 +510,8 @@ test.describe('Hotkeys - save & load', () => {
     await tab2.click();
     await expect(tab2).toHaveText('2');
     
-    // Click the edit button
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'hotkeys', 'rename');
     await expect(renameInput).toBeVisible();
 
     // In the modal, enter "Second"
@@ -531,8 +531,8 @@ test.describe('Hotkeys - save & load', () => {
     await tab3.click();
     await expect(tab3).toHaveText('3');
     
-    // Click Edit in the toolbar
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'hotkeys', 'rename');
     await expect(renameInput).toBeVisible();
 
     // Enter "Third" as the new name
@@ -552,8 +552,8 @@ test.describe('Hotkeys - save & load', () => {
     await tab4.click();
     await expect(tab4).toHaveText('4');
     
-    // Click the Edit button
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'hotkeys', 'rename');
     await expect(renameInput).toBeVisible();
 
     // Enter "Fourth" as the new title
@@ -572,8 +572,8 @@ test.describe('Hotkeys - save & load', () => {
     await tab5.click();
     await expect(tab5).toHaveText('5');
     
-    // Click Edit
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'hotkeys', 'rename');
     await expect(renameInput).toBeVisible();
 
     // Enter "Fifth" in the text field

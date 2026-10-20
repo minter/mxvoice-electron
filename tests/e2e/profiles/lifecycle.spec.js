@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
 import { showsDocument, readShows, recoveryRecordPath, seedShows } from '../../utils/seed-shows.js';
+import { renameSelectedTab } from '../../utils/tab-actions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -156,13 +157,8 @@ test.describe('Profile Lifecycle', () => {
     return app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter((win) => !win.isDestroyed()).length);
   }
 
-  async function renameActiveTab(mainWindow, buttonSelector, name) {
-    await mainWindow.locator(buttonSelector).click();
-    const prompt = mainWindow.locator('.modal:visible .prompt-input');
-    await expect(prompt).toBeVisible();
-    await prompt.fill(name);
-    await mainWindow.locator('.modal:visible .confirm-btn').click();
-    await expect(prompt).not.toBeVisible({ timeout: 5000 });
+  async function renameActiveTab(mainWindow, panel, name) {
+    await renameSelectedTab(mainWindow, panel, name);
   }
 
   async function dismissFirstRunModal(mainWindow) {
@@ -336,7 +332,7 @@ test.describe('Profile Lifecycle', () => {
     )).value).not.toBe('default-marker');
 
     // A live rename is discarded by the switch away
-    await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Live Rename');
+    await renameActiveTab(mainWindow, 'hotkeys', 'Live Rename');
     await mainWindow.evaluate(() => (
       window.secureElectronAPI.profile.setPreference('e2e_profile_marker', 'second-marker')
     ));
@@ -369,7 +365,7 @@ test.describe('Profile Lifecycle', () => {
     await waitForProfileReady(mainWindow, 'Default User');
     await dismissFirstRunModal(mainWindow);
 
-    await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Live Keys');
+    await renameActiveTab(mainWindow, 'hotkeys', 'Live Keys');
     await mainWindow.locator('#omni_search').fill('in-flight search');
     await mainWindow.evaluate(() => { window.__e2eSessionMarker = 'still-here'; });
 
@@ -537,7 +533,7 @@ test.describe('Profile Lifecycle', () => {
     const mainWindow = await launchProfile('ShowNight');
     await waitForProfileReady(mainWindow, 'ShowNight');
     await dismissFirstRunModal(mainWindow);
-    await renameActiveTab(mainWindow, '#hotkey-rename-btn', 'Show Keys');
+    await renameActiveTab(mainWindow, 'hotkeys', 'Show Keys');
     const pid = app.process().pid;
 
     const reloaded = mainWindow.waitForEvent('load');

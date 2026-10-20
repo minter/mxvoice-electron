@@ -5,6 +5,8 @@
  * Includes modals, tabs, window resize, and form interactions.
  */
 
+import { installTabActionsMenus } from '../ui/tab-actions-menu.js';
+
 export default class UIInteractionEvents {
   constructor(dependencies = {}) {
     this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
@@ -55,11 +57,7 @@ export default class UIInteractionEvents {
   attachToolbarEvents() {
     const actions = {
       storage_mode_btn: () => this.moduleRegistry.modeManagement?.setHoldingTankMode?.('storage'),
-      playlist_mode_btn: () => this.moduleRegistry.modeManagement?.setHoldingTankMode?.('playlist'),
-      'holding-tank-rename-btn': () => this.moduleRegistry.holdingTank?.renameHoldingTankTab?.(),
-      'holding-tank-clear-btn': () => this.moduleRegistry.holdingTank?.clearHoldingTank?.(),
-      'hotkey-rename-btn': () => this.moduleRegistry.hotkeys?.renameHotkeyTab?.(),
-      'hotkey-clear-btn': () => this.moduleRegistry.hotkeys?.clearHotkeys?.()
+      playlist_mode_btn: () => this.moduleRegistry.modeManagement?.setHoldingTankMode?.('playlist')
     };
 
     Object.entries(actions).forEach(([id, action]) => {
@@ -72,6 +70,10 @@ export default class UIInteractionEvents {
       element.addEventListener('click', handler);
       this.uiHandlers.set(`toolbar:${id}`, { element, event: 'click', handler });
     });
+
+    // Rename and Clear for the selected tab: the ⋯ menu and tab right-clicks
+    installTabActionsMenus({ moduleRegistry: this.moduleRegistry, debugLog: this.debugLog })
+      .forEach(({ name, element, event, handler }) => this.uiHandlers.set(name, { element, event, handler }));
   }
 
   /**

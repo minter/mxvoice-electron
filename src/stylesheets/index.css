@@ -80,17 +80,7 @@ input[type="text"]:focus {
   }
   
   .mode-toggle {
-    margin-right: 8px; /* Add some spacing from the icon bar */
-  }
-  
-  .icon-bar {
-    column-gap: 4px; /* Reduce spacing between icons */
-    row-gap: 2px;
-  }
-  
-  .icon-bar a {
-    padding: 6px; /* Slightly more padding for better touch targets */
-    font-size: 14px; /* Slightly smaller icons to fit better */
+    margin-right: 8px;
   }
 }
 
@@ -99,15 +89,6 @@ input[type="text"]:focus {
   .mode-toggle .mode-btn {
     padding: 6px;
     min-width: 32px;
-  }
-  
-  .icon-bar {
-    column-gap: 2px;
-  }
-  
-  .icon-bar a {
-    padding: 4px;
-    font-size: 12px;
   }
 }
 
@@ -241,30 +222,47 @@ h6.card-header {
   font-size: 11px;
 }
 
-.icon-bar {
-  margin-left: auto; /* push to the right in flex header */
+
+/* Tab actions: the ⋯ at the end of the hotkey and holding tank tab rows.
+   Its own fixed-width item, so the nav-fill tabs don't stretch it. */
+.nav-fill .nav-item.tab-actions-item {
+  flex: 0 0 auto;
   display: flex;
-  flex-wrap: wrap; /* wrap icons to next line when needed */
-  column-gap: 8px;
-  row-gap: 4px;
-  max-width: 100%;
+  align-items: stretch;
 }
 
-.icon-bar a {
-  margin-left: 7px;
-  font-size: 16px;
-  text-decoration: none;
-  color: var(--card-text);
-  transition: all 0.2s ease;
-  padding: 4px;
+.tab-actions-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  padding: 0 0.25rem;
+  font-size: 14px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
   border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.icon-bar a:hover {
-  color: #007bff;
-  background: rgba(0, 123, 255, 0.1);
-  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
-  filter: brightness(1.1);
+.tab-actions-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+.tab-actions-menu .tab-actions-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.tab-actions-menu .tab-actions-menu-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #search_form {

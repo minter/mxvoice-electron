@@ -52,8 +52,7 @@ export default class HotkeysEvents {
       // Drag and drop events
       this.attachDragDropEvents();
 
-      // Tab management events
-      this.attachTabEvents();
+      // Tab double-click to rename is in ui-interaction-events
 
       this.eventsAttached = true;
       this.debugLog?.info('Hotkeys event handlers attached successfully');
@@ -210,44 +209,6 @@ export default class HotkeysEvents {
 
     } catch (error) {
       this.debugLog?.error('Failed to attach hotkey drag and drop events:', error);
-    }
-  }
-
-  /**
-   * Attach tab management events
-   */
-  attachTabEvents() {
-    try {
-      const hotkeyTabs = document.getElementById('hotkey_tabs');
-      if (!hotkeyTabs) {
-        this.debugLog?.debug('No hotkey tabs found for tab events');
-        return;
-      }
-
-      // Double-click to rename tab
-      const tabDoubleClickHandler = (event) => {
-        if (event.target && event.target.closest('.nav-link')) {
-          if (this.moduleRegistry?.hotkeys?.renameHotkeyTab) {
-            this.moduleRegistry.hotkeys.renameHotkeyTab();
-          } else {
-            this.debugLog?.warn('Hotkeys module rename functionality not available');
-          }
-        }
-      };
-
-      hotkeyTabs.addEventListener('dblclick', tabDoubleClickHandler);
-
-      // Store handler for cleanup
-      this.hotkeyHandlers.set('tabDoubleClick', {
-        element: hotkeyTabs,
-        event: 'dblclick',
-        handler: tabDoubleClickHandler
-      });
-
-      this.debugLog?.debug('Hotkey tab events attached');
-
-    } catch (error) {
-      this.debugLog?.error('Failed to attach hotkey tab events:', error);
     }
   }
 

@@ -34,6 +34,7 @@ const database = secureDatabase;
 import Dom from '../dom-utils/index.js';
 // Import secure adapters
 import { customConfirm, customPrompt, scaleScrollable } from '../utils/index.js';
+import { confirmClearTab } from '../ui/tab-actions-menu.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 import HoldingTankState from './holding-tank-state.js';
 import { fetchSongsById } from '../shows/layout-applier.js';
@@ -440,7 +441,7 @@ export function removeSelected() {
  * Clear all songs from the holding tank
  */
 export async function clearHoldingTank() {
-  const confirmed = await customConfirm("Are you sure you want clear your holding tank?");
+  const confirmed = await confirmClearTab(document.querySelector('#holding_tank_tabs .nav-link.active'), customConfirm);
   if (confirmed) {
     clearActiveHoldingTankState();
     Dom.empty('.holding_tank.active');
@@ -489,7 +490,7 @@ export function sendToHoldingTank() {
  */
 export async function renameHoldingTankTab() {
   const currentName = Dom.text('#holding_tank_tabs .nav-link.active');
-  const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Holding Tank Tab");
+  const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
   if (newName && newName.trim() !== "") {
     Dom.text('#holding_tank_tabs .nav-link.active', newName);
     const tabNumber = Number(document.querySelector('#holding_tank_tabs .nav-link.active')

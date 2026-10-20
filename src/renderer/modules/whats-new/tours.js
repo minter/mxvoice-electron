@@ -44,6 +44,14 @@ export default {
           title: "Copy Someone's Show",
           description: 'Shows → Import Show copies a saved show from another profile on this computer. Your copy is yours to change.',
         },
+        {
+          element: '#hotkey_tabs .tab-actions-btn',
+          title: 'Tab Actions Moved',
+          description: 'To rename or clear a hotkey or holding tank tab, use the ⋯ menu at the end of its tab row, or right-click the tab. Clear empties only that tab; the songs stay in your library. Double-click a tab to rename it, as before.',
+          side: 'bottom',
+          align: 'end',
+          skipIfMissing: true,
+        },
       ],
     },
     '4.3.0': {
