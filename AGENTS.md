@@ -23,16 +23,18 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 
 ## Database
 
-- **SQLite via WASM** (`node-sqlite3-wasm`) — not a Node.js native binding. Tables: `categories`, `mrvoice` (songs).
+- **SQLite via WASM** (`node-sqlite3-wasm`) — not a Node.js native binding. Tables: `categories`, `mrvoice` (songs). `mrvoice` uses `AUTOINCREMENT`, so song ids are never reused (boards store song ids); older tables are rebuilt once on startup.
 - **Raw SQL via IPC** — renderer calls `secureDatabase.query(sql, params)` / `secureDatabase.execute()` which invoke main-process handlers. No ORM.
 - **Schema auto-migration** — `CREATE TABLE IF NOT EXISTS` + idempotent `ALTER TABLE ADD COLUMN` for new columns. No migration framework.
 
 ## Profile System
 
-- **Directory structure** — `userData/profiles/<SanitizedName>/` contains `preferences.json`, `state.json` (hotkeys/holding-tank), `hotkeys/` subdirectory.
+- **Directory structure** — `userData/profiles/<SanitizedName>/` contains `preferences.json`, `boards.json` (saved boards + active board; `boards.json.prev` is the last good copy), `state.json` (frozen), `hotkeys/` subdirectory.
 - **Profile name sanitization is critical** — `sanitizeProfileName()` removes special chars. Inconsistent sanitization causes state to save/load from wrong directories.
 - **"Default User"** — auto-created on first run. Cannot be deleted. Switched via launcher UI or `--profile=` CLI arg.
-- **State persistence** — hotkeys/holding-tank auto-saved to `state.json` with restoration lock to prevent empty saves during app init.
+- **Boards** — a board is a saved hotkey + holding-tank layout. Only Board menu commands (Update/New/Revert/Rename/Delete/Import) write `boards.json`. A clean quit, profile switch or Log Out discards the live layout.
+- **Crash recovery** — live-session snapshots go to `userData/recovery/<key>.json`, outside the profile dir. After a crash the next open offers to restore it (default: the saved board). `saveProfileState()` writes only there, behind the restoration lock.
+- **`state.json` is frozen** — a migration source only, never written. First open of a profile (or a restored pre-boards backup) turns it into a board named "Board".
 
 ## Dark/Light Theming
 
@@ -43,6 +45,7 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 ## State Management
 
 - **Shared state** — `window.sharedState` (singleton Map) holds runtime state: currentSong, hotkeys, holding-tank data, animation frame IDs.
+- **Board session status** — the main-process board session is `loading` / `ready` / `failed` / `unreadable`. Update, New, Revert and Delete need `ready`; recovery writes are refused until then. The Board menu is rebuilt from the session.
 - **Cross-module events** — modules communicate via `window.addEventListener('custom-event')` for search, categories, audio control.
 
 ## Auto-Update
@@ -55,7 +58,7 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 
 1. Create module in `src/renderer/modules/<name>/index.js` with `export default`
 2. Register in `src/renderer/modules/app-bootstrap/module-config.js`
-3. For menu-triggered features: add IPC handler in `src/preload/modules/secure-api-exposer.cjs`, menu item in `src/main/modules/app-setup.js` (both macOS and Windows/Linux sections), listener in `src/renderer.js`
+3. For menu-triggered features: add IPC handler in `src/preload/modules/secure-api-exposer.cjs`, menu item in `src/main/modules/app-setup.js` (both macOS and Windows/Linux sections), listener in `src/renderer.js`. Board menu items live in `src/main/modules/board-menu.js`.
 
 ## What's New Tour
 

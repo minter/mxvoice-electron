@@ -24,6 +24,26 @@ export default {
           title: 'Closing the Window Asks First',
           description: 'Closing the main window quits Mx. Voice, so it now asks first: a stray click mid-show can\'t stop the music. Choosing Quit from the menu still quits right away.',
         },
+        {
+          title: 'Your Layout Is Now a Board',
+          description: 'The hotkeys and holding tank you had are saved as a board named Board. Quitting puts it back next time. From now on, changes made during a show are kept only if you Update the board or create a New Board.',
+        },
+        {
+          title: 'The Board Menu',
+          description: 'Use the Board menu to switch boards, Update the board on screen, start a New Board, Revert to the saved one, or Rename and Delete boards.',
+        },
+        {
+          element: '#profile-indicator',
+          title: 'Which Board Is Loaded',
+          description: 'The header now shows your profile and the board that is loaded.',
+          side: 'bottom',
+          align: 'center',
+          skipIfMissing: true,
+        },
+        {
+          title: "Copy Someone's Board",
+          description: 'Board → Import Board copies a saved board from another profile on this computer. Your copy is yours to change.',
+        },
       ],
     },
     '4.3.0': {

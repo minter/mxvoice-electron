@@ -12,9 +12,7 @@ The Hotkeys Module provides comprehensive F1-F12 hotkey functionality for quick 
 - Direct playback from hotkeys
 
 ### 📁 File Import/Export
-- Save/load hotkey configurations to files
-- Backup and restore hotkey states
-- Import/export functionality for sharing configurations
+- Import legacy hotkey files (Board → Import Hotkey File…); saving is done with boards
 
 ### 🏷️ Tab Management
 - Multiple hotkey sets (5 tabs)
@@ -82,8 +80,8 @@ const hotkeys = new HotkeysModule({
 ### Core Operations
 
 ```javascript
-// Save hotkeys to the active profile state
-hotkeys.requestProfileStateSave();
+// Record the live layout for crash recovery
+hotkeys.requestProfileStateSave(); // writes the crash-recovery record, not a saved board
 
 // Clear all hotkeys
 hotkeys.clearHotkeys();
