@@ -312,19 +312,27 @@ class HotkeysModule {
       rows.forEach(row => songsById.set(String(row.id), row));
     }
 
-    const activeTab = document.querySelector('.hotkeys.show.active');
+    // `.active` is set as soon as a tab is clicked; `.show` waits for the fade
+    const activeTab = document.querySelector('.hotkeys.active');
     const tabNumber = Number(activeTab?.id?.match(/^hotkeys_list_(\d)$/)?.[1]);
     if (tabNumber) this.state.clearTab(tabNumber);
 
+    // Assign in file order, then render from the model so repeats stay in sync
+    for (let keyNumber = 1; keyNumber <= 12; keyNumber++) {
+      const key = `f${keyNumber}`;
+      const hotkeyElement = document.querySelector(`.hotkeys.active [id^="${key}_hotkey"]`);
+      const songId = fkeys[key];
+      if (hotkeyElement && songId && songsById.has(String(songId))) this.assignHotkey(hotkeyElement, songId);
+    }
+    const assigned = this.state.toSnapshot().find(tab => tab.tabNumber === tabNumber)?.hotkeys || {};
     for (let keyNumber = 1; keyNumber <= 12; keyNumber++) {
       const key = `f${keyNumber}`;
       const hotkeyElement = document.querySelector(`.hotkeys.active [id^="${key}_hotkey"]`);
       if (!hotkeyElement) continue;
-      const songId = fkeys[key];
+      const songId = assigned[key];
       const row = songId ? songsById.get(String(songId)) : null;
       const span = hotkeyElement.querySelector('span.song');
       if (row) {
-        this.assignHotkey(hotkeyElement, songId);
         hotkeyElement.setAttribute('songid', songId);
         if (span) span.textContent = `${row.title || '[Unknown Title]'} by ${row.artist || '[Unknown Artist]'} (${row.time || '[??:??]'})`;
       } else {

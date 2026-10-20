@@ -1,11 +1,10 @@
 ## File Operations Module
 
-File import/export for hotkeys and holding tank, directory picking, and update installation.
+Directory picking and update installation. (Hotkey and holding-tank files are import-only, through the Board menu handled in the main process.)
 
 ### Structure
 ```
 file-operations/
-├── file-operations.js   # open/save hotkey/holding tank
 ├── system-operations.js # pickDirectory, installUpdate
 ├── index.js             # Singleton with bound methods
 └── README.md

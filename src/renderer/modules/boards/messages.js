@@ -21,3 +21,4 @@ export function droppedSongsFileMessage(dropped) {
 }
 
 export const IMPORT_NOT_READY_MESSAGE = 'Wait for the board to finish loading, then import again.';
+export const NO_SONGS_MESSAGE = 'This file has no songs to import.';

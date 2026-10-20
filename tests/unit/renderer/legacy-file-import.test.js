@@ -29,7 +29,7 @@ function hotkeysHarness(rows) {
   hotkeys.requestProfileStateSave = vi.fn();
   hotkeys.electronAPI = { database: { getSongsByIds: vi.fn(async () => ({ success: true, data: rows })) } };
   globalThis.document.querySelector = (selector) => {
-    if (selector === '.hotkeys.show.active') return { id: 'hotkeys_list_1' };
+    if (selector === '.hotkeys.active') return { id: 'hotkeys_list_1' };
     const key = selector.match(/\[id\^="(f\d+)_hotkey"\]/)?.[1];
     return key ? slots[key] : null;
   };
@@ -62,6 +62,17 @@ describe('hotkey file import onto the current tab', () => {
 
     expect(outcome).toEqual({ dropped: 1 });
     expect(Object.values(hotkeys.state.toSnapshot()[0].hotkeys)).toEqual([]);
+  });
+
+  it('keeps the DOM in step with the model when a file repeats an id', async () => {
+    const { hotkeys, slots } = hotkeysHarness([{ id: 1001, title: 'A', artist: 'B', time: '1:00' }]);
+
+    await hotkeys._populateHotkeysImpl({ f1: '1001', f2: '1001' }, '');
+
+    const modelKeys = Object.entries(hotkeys.state.toSnapshot()[0].hotkeys).filter(([, id]) => id === '1001').map(([key]) => key);
+    expect(modelKeys).toHaveLength(1);
+    const domKeys = Object.entries(slots).filter(([, el]) => el.attrs.get('songid') === '1001').map(([key]) => key);
+    expect(domKeys).toEqual(modelKeys);
   });
 
   it('leaves the tab untouched for an empty file', async () => {
@@ -130,6 +141,14 @@ describe('legacy file import bridge', () => {
 
     expect(toast.mock.calls[0][0]).toBe("1 song in this file isn't in your library.");
     expect(trackEvent).toHaveBeenCalledWith('legacy_file_imported', { kind: 'holding_tank' });
+  });
+
+  it('does not track an import that found no songs and says so', async () => {
+    moduleRegistry.holdingTank.populateHoldingTank = vi.fn(async () => ({ success: false, error: 'No song IDs provided', dropped: 0 }));
+    bridge('ready');
+    await handlers.onHoldingTankLoad([]);
+    expect(toast.mock.calls[0][0]).toBe('This file has no songs to import.');
+    expect(trackEvent).not.toHaveBeenCalled();
   });
 
   it('shows no toast when nothing was dropped', async () => {

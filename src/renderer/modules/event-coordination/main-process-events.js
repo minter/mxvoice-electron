@@ -1,5 +1,5 @@
 import { showDropToast } from '../utils/toast-utils.js';
-import { TOAST_MS, droppedSongsFileMessage, IMPORT_NOT_READY_MESSAGE } from '../boards/messages.js';
+import { TOAST_MS, droppedSongsFileMessage, IMPORT_NOT_READY_MESSAGE, NO_SONGS_MESSAGE } from '../boards/messages.js';
 
 function callFirstAvailable(candidates, args, warn) {
   const handler = candidates.find((candidate) => typeof candidate === 'function');
@@ -35,6 +35,10 @@ function setupMainProcessEventBridge({
   };
 
   const finishImport = (kind, outcome) => {
+    if (outcome?.success === false) {
+      toast(NO_SONGS_MESSAGE, TOAST_MS);
+      return;
+    }
     const message = droppedSongsFileMessage(outcome?.dropped);
     if (message) toast(message, TOAST_MS);
     try {

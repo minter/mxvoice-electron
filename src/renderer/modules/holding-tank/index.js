@@ -227,9 +227,9 @@ export async function populateHoldingTank(songIds) {
   if (result?.success === false) throw new Error(result.error || 'Failed to load holding tank metadata');
   const rows = result?.data || result || [];
   if (!Array.isArray(rows)) throw new Error('Failed to load holding tank metadata');
-  const foundIds = new Set(rows.map(row => String(row.id)));
-  const validIds = songIds.map(String).filter(songId => foundIds.has(songId));
-  const dropped = distinctIds.filter(songId => !foundIds.has(songId)).length;
+  const songsById = new Map(rows.map(row => [String(row.id), row]));
+  const validIds = songIds.map(String).filter(songId => songsById.has(songId));
+  const dropped = distinctIds.filter(songId => !songsById.has(songId)).length;
 
   clearActiveHoldingTankState();
   Dom.empty('.holding_tank.active');
@@ -238,16 +238,16 @@ export async function populateHoldingTank(songIds) {
     function: 'populateHoldingTank'
   });
   
-  let addedCount = 0;
   for (const songId of validIds) {
     debugLog?.info('Adding song ID to holding tank', { 
       module: 'holding-tank',
       function: 'populateHoldingTank',
       songId: songId
     });
-    const result = await addToHoldingTank(songId, Dom.$('.holding_tank.active'));
-    if (result?.success) addedCount += 1;
+    insertSongRow(songsById.get(songId), songId, Dom.$('.holding_tank.active'));
   }
+  // A repeated id moves its row rather than adding another
+  const addedCount = new Set(validIds).size;
 
   await requestProfileStateSave();
   scaleScrollable();
@@ -260,6 +260,49 @@ export async function populateHoldingTank(songIds) {
 }
 
 /**
+ * Insert a song row into a holding tank list. Synchronous; the caller supplies
+ * the library row and saves state afterwards.
+ */
+function insertSongRow(row, song_id, element, insertPosition) {
+  const title = row.title || "[Unknown Title]";
+  const artist = row.artist || "[Unknown Artist]";
+  const time = row.time || "[??:??]";
+
+  const existing_song = document.querySelector(`.holding_tank.active .list-group-item[songid="${song_id}"]`);
+  let song_row;
+  if (existing_song) {
+    song_row = existing_song; // already in DOM; will be moved below
+  } else {
+    song_row = document.createElement("li");
+    song_row.style.fontSize = `11px`; // Default font size since getFontSize was removed
+    song_row.className = "song list-group-item context-menu";
+    song_row.setAttribute("draggable", "true");
+    song_row.addEventListener('dragstart', songDrag);
+    song_row.setAttribute("songid", song_id);
+    song_row.textContent = `${title} by ${artist} (${time})`;
+  }
+
+  const targetEl = element && element.nodeType ? element : Dom.$(element);
+
+  updateStateForInsertion(song_id, targetEl, insertPosition, existing_song);
+
+  // Support precise insertion when a position is specified (from drop indicator)
+  if (insertPosition === 'before' && targetEl?.matches?.('li')) {
+    targetEl.parentNode.insertBefore(song_row, targetEl);
+  } else if (insertPosition === 'after' && targetEl?.matches?.('li')) {
+    targetEl.parentNode.insertBefore(song_row, targetEl.nextSibling);
+  } else if (targetEl?.matches?.('li')) {
+    targetEl.insertAdjacentElement('afterend', song_row);
+  } else if (targetEl?.matches?.('div')) {
+    const ul = targetEl.querySelector('ul.active');
+    (ul || targetEl).appendChild(song_row);
+  } else if (targetEl?.appendChild) {
+    targetEl.appendChild(song_row);
+  }
+  return { success: true, songId: song_id, title: title };
+}
+
+/**
  * Add a song to the holding tank
  * @param {string} song_id - The song ID to add
  * @param {Element|string} element - The target element or selector for insertion
@@ -268,45 +311,8 @@ export async function populateHoldingTank(songIds) {
 export function addToHoldingTank(song_id, element, insertPosition) {
   return database.getSongById(song_id).then(result => {
     if (result.success && result.data.length > 0) {
-      const row = result.data[0];
-      const title = row.title || "[Unknown Title]";
-      const artist = row.artist || "[Unknown Artist]";
-      const time = row.time || "[??:??]";
-
-      const existing_song = document.querySelector(`.holding_tank.active .list-group-item[songid="${song_id}"]`);
-      let song_row;
-      if (existing_song) {
-        song_row = existing_song; // already in DOM; will be moved below
-      } else {
-        song_row = document.createElement("li");
-        song_row.style.fontSize = `11px`; // Default font size since getFontSize was removed
-        song_row.className = "song list-group-item context-menu";
-        song_row.setAttribute("draggable", "true");
-        song_row.addEventListener('dragstart', songDrag);
-        song_row.setAttribute("songid", song_id);
-        song_row.textContent = `${title} by ${artist} (${time})`;
-      }
-
-      const targetEl = element && element.nodeType ? element : Dom.$(element);
-
-      updateStateForInsertion(song_id, targetEl, insertPosition, existing_song);
-
-      // Support precise insertion when a position is specified (from drop indicator)
-      if (insertPosition === 'before' && targetEl?.matches?.('li')) {
-        targetEl.parentNode.insertBefore(song_row, targetEl);
-      } else if (insertPosition === 'after' && targetEl?.matches?.('li')) {
-        targetEl.parentNode.insertBefore(song_row, targetEl.nextSibling);
-      } else if (targetEl?.matches?.('li')) {
-        targetEl.insertAdjacentElement('afterend', song_row);
-      } else if (targetEl?.matches?.('div')) {
-        const ul = targetEl.querySelector('ul.active');
-        (ul || targetEl).appendChild(song_row);
-      } else if (targetEl?.appendChild) {
-        targetEl.appendChild(song_row);
-      }
-
       // Note: Save is now done by caller, not here, to avoid N saves during batch operations
-      return { success: true, songId: song_id, title: title };
+      return insertSongRow(result.data[0], song_id, element, insertPosition);
     } else {
       debugLog?.warn('Failed to get song by ID', {
         module: 'holding-tank',

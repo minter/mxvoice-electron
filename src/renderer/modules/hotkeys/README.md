@@ -181,6 +181,18 @@ Removes all song assignments from hotkeys.
 - `options` - Options object with dependencies
 
 
+#### `exportHotkeyConfig()`
+Creates a configuration object for export.
+
+**Returns:** Hotkey configuration object
+
+#### `importHotkeyConfig(config, options)`
+Applies imported configuration to hotkeys.
+
+**Parameters:**
+- `config` - Hotkey configuration object
+- `options` - Options object with dependencies
+
 ### Playback Functions
 
 #### `playSongFromHotkey(hotkey, options)`
