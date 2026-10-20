@@ -26,7 +26,7 @@ export default {
         },
         {
           title: 'Your Layout Is Now a Show',
-          description: 'The hotkeys and holding tank you had are saved as a show named Show. Quitting puts it back next time. From now on, changes made during a show are kept only if you Save the show or use Save As to make a new one.',
+          description: 'The hotkeys and holding tank you had are saved as a show named Default Show. Quitting puts it back next time. From now on, changes made during a show are kept only if you Save the show or use Save As to make a new one.',
         },
         {
           title: 'The Shows Menu',

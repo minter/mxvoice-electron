@@ -229,11 +229,11 @@ Save, Save As, Revert and Delete are disabled until the show has finished loadin
 
 ## Release
 
-The upgrade creates each profile's first show from the layout already stored for that profile, and marks it active. Name it **Show**. The person can rename it. Do not try to guess a show name, and do not try to pick a `.mrv` or `.hld` file for them.
+The upgrade creates each profile's first show from the layout already stored for that profile, and marks it active. Name it **Default Show**. The person can rename it. Do not try to guess a show name, and do not try to pick a `.mrv` or `.hld` file for them.
 
 That first show is whatever the app saved last. For many people that is the end of the last show, not the layout they wish they had prepared. This is the sharp edge of the release. The app has no earlier "good" copy except whatever is in those old files and in profile backups, and both of those may also be wreckage. Release notes need to say, in plain language:
 
-- The layout you had is now a show named Show.
+- The layout you had is now a show named Default Show.
 - From this version on, changes during a show are kept only if you Save that show or use Save As to make a new one.
 - Quitting puts the saved show back next time. A dot after the show's name means there are changes that quitting will throw away.
 - Switching to another show asks whether to save your changes first.

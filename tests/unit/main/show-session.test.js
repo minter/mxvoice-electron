@@ -833,7 +833,7 @@ describe('show session mutations', () => {
     await ctx.session.saveRecovery(layoutWith(9));
 
     await expect(ctx.session.createShow('  ', layoutWith(9))).rejects.toThrow('Enter a name for the show.');
-    await expect(ctx.session.createShow('show', layoutWith(9))).rejects.toThrow('A show with this name already exists.');
+    await expect(ctx.session.createShow('default show', layoutWith(9))).rejects.toThrow('A show with this name already exists.');
     const created = await ctx.session.createShow('Show Two', layoutWith(9));
 
     expect(created).toEqual({ id: 'new-id', name: 'Show Two' });
@@ -1253,9 +1253,9 @@ describe('show session imports', () => {
     const list = await ctx.session.listImportable();
 
     expect(list.map((entry) => entry.profile)).toEqual(['Default User', 'Bob', 'zed']);
-    expect(list[0].shows).toEqual([{ id: expect.any(String), name: 'Show', updatedAt: expect.any(Number) }]);
+    expect(list[0].shows).toEqual([{ id: expect.any(String), name: 'Default Show', updatedAt: expect.any(Number) }]);
     expect(list[1].shows).toEqual([
-      { id: 'show-1', name: 'Show', updatedAt: T0 },
+      { id: 'show-1', name: 'Default Show', updatedAt: T0 },
       { id: 'show-2', name: 'Second', updatedAt: T0 },
     ]);
     expect(store.writes).toEqual([]);
@@ -1272,7 +1272,7 @@ describe('show session imports', () => {
     const store = realStoreSetup(registered);
     store.writeFile('Alice', 'shows.json', makeDoc());
     store.writeFile('Bob', 'shows.json', twoShowDoc());
-    // Bob's show name clashes with nothing; Alice already has "Show"
+    // Bob's show name clashes with nothing; Alice already has "Default Show"
     const ctx = setup({ showStore: store.showStore, profiles: registered });
     const opened = await openReady(ctx);
     await ctx.session.saveRecovery(layoutWith(9));

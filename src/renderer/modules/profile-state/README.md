@@ -7,7 +7,7 @@ process's crash-recovery record through `secureElectronAPI.shows.saveRecovery`.
 Saved layouts live in the profile's `shows.json` and are opened at startup by
 the shows module (`src/renderer/modules/shows/`). Nothing here writes a saved
 show or `state.json`; a 4.3.x `state.json` is migrated into a show named
-"Show" by the main process the first time the profile opens, and is never
+"Default Show" by the main process the first time the profile opens, and is never
 changed.
 
 - A clean quit, a profile switch and Log Out discard the live layout (the main

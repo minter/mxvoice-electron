@@ -213,7 +213,7 @@ test.describe('Shows - session lifecycle', () => {
     expect(readRecovery(userDataDir, 'Default User')?.layout.hotkeys[0].hotkeys.f1).toBe(LIVE_SONG);
   });
 
-  test('upgrade: an existing state.json becomes a show named Show; state.json unchanged', async () => {
+  test('upgrade: an existing state.json becomes a show named Default Show; state.json unchanged', async () => {
     const stateJson = JSON.stringify({
       version: '1.0.0',
       timestamp: 1700000000000,
@@ -234,8 +234,8 @@ test.describe('Shows - session lifecycle', () => {
     await expect(page.locator('#holding_tank_1 .list-group-item[songid="1004"]')).toHaveCount(1);
     const doc = readShows(userDataDir, 'Default User');
     expect(doc.shows).toHaveLength(1);
-    expect(doc.shows[0].name).toBe('Show');
-    await expect(page.locator('#show-name')).toHaveText('Show');
+    expect(doc.shows[0].name).toBe('Default Show');
+    await expect(page.locator('#show-name')).toHaveText('Default Show');
 
     // Live edits and a quit never write state.json
     await assignF1(page, LIVE_SONG);

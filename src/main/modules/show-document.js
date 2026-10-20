@@ -16,6 +16,7 @@ import { randomUUID } from 'node:crypto';
 
 export const SHOW_DOCUMENT_VERSION = 1;
 export const MAX_SHOW_NAME_LENGTH = 50;
+export const DEFAULT_SHOW_NAME = 'Default Show';
 const MAX_IMPORT_NAME_ATTEMPTS = 1000;
 const TAB_COUNT = 5;
 const HOTKEY_KEYS = Array.from({ length: 12 }, (_, i) => `f${i + 1}`);
@@ -104,7 +105,7 @@ function makeShow({ id, name, layout, now, importedFrom }) {
   return show;
 }
 
-export function createDocument(layout, { name = 'Show', now = defaultNow(), newId = defaultNewId } = {}) {
+export function createDocument(layout, { name = DEFAULT_SHOW_NAME, now = defaultNow(), newId = defaultNewId } = {}) {
   const show = makeShow({ id: newId(), name, layout, now });
   return { version: SHOW_DOCUMENT_VERSION, activeShowId: show.id, shows: [show] };
 }
@@ -194,7 +195,7 @@ export function setActive(doc, id) {
 
 export function importName(doc, showName, sourceProfile) {
   const taken = new Set(doc.shows.map((b) => foldName(b.name)));
-  const show = String(showName ?? '').trim() || 'Show';
+  const show = String(showName ?? '').trim() || DEFAULT_SHOW_NAME;
   const profile = String(sourceProfile ?? '');
   for (let n = 1; n <= MAX_IMPORT_NAME_ATTEMPTS; n++) {
     const suffix = n === 1 ? '' : ` ${n}`;
@@ -245,6 +246,7 @@ export function parseDocument(raw) {
 export default {
   SHOW_DOCUMENT_VERSION,
   MAX_SHOW_NAME_LENGTH,
+  DEFAULT_SHOW_NAME,
   emptyLayout,
   normalizeLayout,
   createDocument,

@@ -25,11 +25,11 @@ const mk = (names = ['A']) => {
 };
 
 describe('show-document', () => {
-  it('createDocument makes one active show named "Show"', () => {
+  it('createDocument makes one active show named "Default Show"', () => {
     const doc = bd.createDocument(bd.emptyLayout(), { now: NOW, newId: makeIds() });
     expect(doc.version).toBe(1);
     expect(doc.shows).toHaveLength(1);
-    expect(doc.shows[0].name).toBe('Show');
+    expect(doc.shows[0].name).toBe('Default Show');
     expect(doc.activeShowId).toBe(doc.shows[0].id);
     expect(doc.shows[0].createdAt).toBe(NOW);
     expect(doc.shows[0].updatedAt).toBe(NOW);
@@ -120,12 +120,12 @@ describe('show-document', () => {
     expect(r.doc.activeShowId).toBe(doc.shows[1].id);
   });
 
-  it('deleting the only show leaves one empty "Show"', () => {
+  it('deleting the only show leaves one empty "Default Show"', () => {
     const { doc, newId } = mk(['Solo']);
     const r = bd.deleteShow(doc, doc.shows[0].id, { now: 7, newId });
     expect(r.activeChanged).toBe(true);
     expect(r.doc.shows).toHaveLength(1);
-    expect(r.doc.shows[0].name).toBe('Show');
+    expect(r.doc.shows[0].name).toBe('Default Show');
     expect(r.doc.shows[0].id).not.toBe(doc.shows[0].id);
     expect(r.doc.shows[0].layout).toEqual(bd.emptyLayout());
     expect(r.doc.activeShowId).toBe(r.doc.shows[0].id);

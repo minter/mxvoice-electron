@@ -7,7 +7,7 @@ describe('restore confirmation',()=>{const run=async(shows,doc)=>{customConfirm.
 const docOf=n=>({shows:Array.from({length:n},()=>({}))});
 it('lists backup shows and the current count',async()=>{const m=await run(['Show','Comedy Sports'],docOf(4));expect(m).toContain('This backup has 2 shows: Show, Comedy Sports. Your 4 current shows will be replaced.');});
 it('uses singular forms',async()=>{const m=await run(['X'],docOf(1));expect(m).toContain('This backup has 1 show: X. Your 1 current show will be replaced.');});
-it('explains a pre-shows backup',async()=>{const m=await run(null,docOf(3));expect(m).toContain('This backup is from before shows. Its layout will become a show named Show, and it may be a layout from the middle of a show.');});
+it('explains a pre-shows backup',async()=>{const m=await run(null,docOf(3));expect(m).toContain('This backup is from before shows. Its layout will become a show named Default Show, and it may be a layout from the middle of a show.');});
 it('omits the number when the current doc is unavailable',async()=>{const m=await run(['A','B'],null);expect(m).toContain('This backup has 2 shows: A, B. Your current shows will be replaced.');});
 it('uses pre-shows wording for a pre-shows backup even without a doc',async()=>{const m=await run(null,null);expect(m).toContain('before shows');});});
 it('refuses backups while restoration is active',async()=>{window.isRestoringProfileState=true;const createBackup=vi.fn();backup.reinitializeProfileBackup({electronAPI:{profile:{createBackup}},moduleRegistry:{}});await backup.createBackupNow();expect(createBackup).not.toHaveBeenCalled();expect(customConfirm).toHaveBeenCalledWith(expect.stringContaining('still being restored'),'Backup Not Created');});});

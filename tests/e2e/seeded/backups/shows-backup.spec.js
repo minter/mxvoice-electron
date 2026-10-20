@@ -34,7 +34,7 @@ test.describe('Profile backups, duplicate and delete with shows', () => {
     ]
   });
 
-  test('restoring a pre-shows backup migrates it into "Show"', async () => {
+  test('restoring a pre-shows backup migrates it into "Default Show"', async () => {
     seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1001' })));
     const created = await page.evaluate(() => window.secureElectronAPI.profile.createBackup());
     expect(created.success).toBe(true);
@@ -66,7 +66,7 @@ test.describe('Profile backups, duplicate and delete with shows', () => {
 
     const doc = readShows(userDataDir, 'Default User');
     expect(doc.shows).toHaveLength(1);
-    expect(doc.shows[0].name).toBe('Show');
+    expect(doc.shows[0].name).toBe('Default Show');
     expect(doc.shows[0].layout.hotkeys[0].hotkeys.f1).toBe('1003');
   });
 

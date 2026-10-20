@@ -34,7 +34,7 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 - **"Default User"** — auto-created on first run. Cannot be deleted. Switched via launcher UI or `--profile=` CLI arg.
 - **Shows** — a show is a saved hotkey + holding-tank layout. Only Shows menu commands (Save/Save As/Revert/Rename/Delete/Import) change a saved show; Rename and Delete act on the active show only; opening a profile can also create `shows.json` (migration) or repair it from `.prev`. Switching shows and Import Show ask to save unsaved changes first; quit, closing the window, profile switch and Log Out never ask and discard the live layout.
 - **Crash recovery** — live-session snapshots go to `userData/recovery/<key>.json`, outside the profile dir. After a crash the next open offers to restore it (default: the saved show). `saveProfileState()` writes only there, behind the restoration lock.
-- **`state.json` is frozen** — a migration source only, never written. First open of a profile (or a restored pre-shows backup) turns it into a show named "Show".
+- **`state.json` is frozen** — a migration source only, never written. First open of a profile (or a restored pre-shows backup) turns it into a show named "Default Show".
 
 ## Dark/Light Theming
 

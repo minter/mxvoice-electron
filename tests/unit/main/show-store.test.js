@@ -58,13 +58,13 @@ afterEach(() => {
 });
 
 describe('show store', () => {
-  it('migrates state.json into one show named "Show" and leaves state.json byte-identical', async () => {
+  it('migrates state.json into one show named "Default Show" and leaves state.json byte-identical', async () => {
     const state = fs.readFileSync(FIXTURE, 'utf8');
     addProfile('p', { 'state.json': state });
     const { doc, source } = await store.load('p');
     expect(source).toBe('migrated-state');
     expect(doc.shows).toHaveLength(1);
-    expect(doc.shows[0].name).toBe('Show');
+    expect(doc.shows[0].name).toBe('Default Show');
     expect(doc.activeShowId).toBe(doc.shows[0].id);
     expect(fs.readFileSync(statePath('p'), 'utf8')).toBe(state);
     expect(JSON.parse(fs.readFileSync(showsPath('p'), 'utf8')).shows[0].id).toBe(doc.shows[0].id);
@@ -80,11 +80,11 @@ describe('show store', () => {
     expect(doc.shows[0].layout.hotkeys[0].hotkeys.f1).toBe('101');
   });
 
-  it('creates an empty "Show" when the profile has no state at all', async () => {
+  it('creates an empty "Default Show" when the profile has no state at all', async () => {
     addProfile('p');
     const { doc, source } = await store.load('p');
     expect(source).toBe('migrated-empty');
-    expect(doc.shows[0].name).toBe('Show');
+    expect(doc.shows[0].name).toBe('Default Show');
     expect(doc.shows[0].layout.hotkeys).toHaveLength(5);
     expect(fs.existsSync(showsPath('p'))).toBe(true);
   });
@@ -247,14 +247,14 @@ describe('show store', () => {
     const { doc } = await store.load('p');
     await store.save('p', { ...doc, shows: [{ ...doc.shows[0], name: 'Renamed' }] });
     expect(JSON.parse(fs.readFileSync(showsPath('p'), 'utf8')).shows[0].name).toBe('Renamed');
-    expect(JSON.parse(fs.readFileSync(`${showsPath('p')}.prev`, 'utf8')).shows[0].name).toBe('Show');
+    expect(JSON.parse(fs.readFileSync(`${showsPath('p')}.prev`, 'utf8')).shows[0].name).toBe('Default Show');
   });
 
   it('peek migrates in memory and leaves the profile directory byte-identical', async () => {
     addProfile('p', { 'state.json': fs.readFileSync(FIXTURE, 'utf8') });
     const before = snapshot('p');
     const doc = await store.peek('p');
-    expect(doc.shows[0].name).toBe('Show');
+    expect(doc.shows[0].name).toBe('Default Show');
     expect(doc.shows[0].layout.hotkeys[0].hotkeys.f1).toBe('101');
     expect(snapshot('p')).toEqual(before);
   });
@@ -271,7 +271,7 @@ describe('show store', () => {
     expect(listing('bad')).toEqual(['shows.json']);
   });
 
-  it('resetUnreadable quarantines the bad files and writes one empty "Show"', async () => {
+  it('resetUnreadable quarantines the bad files and writes one empty "Default Show"', async () => {
     addProfile('p', {
       'shows.json': '{ bad',
       'shows.json.prev': '{ also bad',
@@ -279,7 +279,7 @@ describe('show store', () => {
     });
     const { doc } = await store.resetUnreadable('p');
     expect(doc.shows).toHaveLength(1);
-    expect(doc.shows[0].name).toBe('Show');
+    expect(doc.shows[0].name).toBe('Default Show');
     expect(doc.shows[0].layout.hotkeys[0].hotkeys).toEqual({});
     const files = listing('p');
     expect(files.filter((f) => f.startsWith('shows.json.corrupt-'))).toHaveLength(1);

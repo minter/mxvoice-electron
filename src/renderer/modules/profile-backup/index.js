@@ -191,7 +191,7 @@ function formatBytes(bytes) {
  */
 async function describeShowReplacement(backupShows) {
   if (!Array.isArray(backupShows)) {
-    return 'This backup is from before shows. Its layout will become a show named Show, and it may be a layout from the middle of a show.';
+    return 'This backup is from before shows. Its layout will become a show named Default Show, and it may be a layout from the middle of a show.';
   }
   let count = null;
   try {
