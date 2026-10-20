@@ -191,6 +191,50 @@ describe('board store', () => {
     expect(await store.peek('p')).toBeNull();
   });
 
+  it('throws io and creates nothing when state.json cannot be read', async () => {
+    addProfile('p');
+    fs.mkdirSync(statePath('p'));
+    const before = listing('p');
+    await expect(store.load('p')).rejects.toMatchObject({ code: 'io' });
+    expect(listing('p')).toEqual(before);
+    expect(fs.existsSync(boardsPath('p'))).toBe(false);
+    expect(await store.peek('p')).toBeNull();
+  });
+
+  it('throws io when state.json is corrupt and state.json.backup cannot be read', async () => {
+    addProfile('p', { 'state.json': '{ bad' });
+    fs.mkdirSync(`${statePath('p')}.backup`);
+    await expect(store.load('p')).rejects.toMatchObject({ code: 'io' });
+    expect(fs.existsSync(boardsPath('p'))).toBe(false);
+  });
+
+  it('save refuses an invalid document', async () => {
+    addProfile('p', { 'boards.json': JSON.stringify(validDoc()) });
+    const before = snapshot('p');
+    await expect(store.save('p', { version: 1, boards: [] })).rejects.toMatchObject({ code: 'shape' });
+    expect(snapshot('p')).toEqual(before);
+  });
+
+  it('save refuses to overwrite a future-version file', async () => {
+    addProfile('p', { 'boards.json': JSON.stringify({ version: 2, boards: [] }) });
+    const before = snapshot('p');
+    await expect(store.save('p', validDoc())).rejects.toMatchObject({ code: 'version' });
+    expect(snapshot('p')).toEqual(before);
+  });
+
+  it('save refuses when the existing main file cannot be read', async () => {
+    addProfile('p');
+    fs.mkdirSync(boardsPath('p'));
+    await expect(store.save('p', validDoc())).rejects.toMatchObject({ code: 'io' });
+    expect(fs.statSync(boardsPath('p')).isDirectory()).toBe(true);
+  });
+
+  it('save overwrites a corrupt main file', async () => {
+    addProfile('p', { 'boards.json': '{ bad' });
+    await store.save('p', validDoc());
+    expect(JSON.parse(fs.readFileSync(boardsPath('p'), 'utf8')).activeBoardId).toBe('good');
+  });
+
   it('refuses to load, save or migrate for an unregistered profile', async () => {
     fs.mkdirSync(dirOf('ghost'), { recursive: true });
     await expect(store.load('ghost')).rejects.toMatchObject({ code: 'unregistered' });

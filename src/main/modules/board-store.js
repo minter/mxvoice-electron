@@ -22,7 +22,7 @@ import { createDocument, normalizeLayout, parseDocument } from './board-document
 export const RECOVERY_NOTICE =
   "Mx. Voice couldn't read this profile's boards and opened the previous copy.";
 
-/** Error thrown by the store; `code` is 'unreadable'|'version'|'unregistered'|'io'. */
+/** Error thrown by the store; `code` is 'unreadable'|'version'|'unregistered'|'io'|'shape'. */
 export class BoardStoreError extends Error {
   constructor(code, message) {
     super(message || code);
@@ -135,6 +135,8 @@ export function createBoardStore({
     ];
     for (const [file, source] of candidates) {
       const raw = await readRaw(fs, file);
+      // An unreadable (not absent) state file must not be replaced by an empty board.
+      if (raw.ioError) throw new BoardStoreError('io', raw.ioError);
       if ('value' in raw && isObject(raw.value)) {
         return { doc: createDocument(normalizeLayout(raw.value), docOptions()), source };
       }
@@ -186,6 +188,11 @@ export function createBoardStore({
     }
   }
 
+  /**
+   * Quarantine whatever is left of boards.json and its previous copy, then
+   * write an empty document. It does not try migration, because it is only
+   * called after `load` threw 'unreadable'.
+   */
   function resetUnreadable(profileName) {
     return serialized(profileName, async () => {
       await requireRegistered(profileName);
@@ -209,7 +216,11 @@ export function createBoardStore({
   function save(profileName, doc) {
     return serialized(profileName, async () => {
       await requireRegistered(profileName);
-      await writeJsonAtomic(getProfileBoardsPath(profileName), doc, { keepPrevious: true, fs });
+      if (!parseDocument(doc).ok) throw new BoardStoreError('shape', 'Refusing to save an invalid board document');
+      const boardsPath = getProfileBoardsPath(profileName);
+      // Throws 'io' or 'version' for a main file we must not overwrite.
+      await classify(fs, boardsPath);
+      await writeJsonAtomic(boardsPath, doc, { keepPrevious: true, fs });
     });
   }
 
