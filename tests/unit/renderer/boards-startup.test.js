@@ -103,6 +103,25 @@ describe('openSessionOnStartup', () => {
     expect(applyThrows.deps.alert).toHaveBeenCalledWith(message, expect.any(String));
   });
 
+  it('after starting empty, a crash record still prompts, and a handoff still restores silently', async () => {
+    const savedAt = Date.now();
+    const prompted = setup({ open: ok({ unreadable: true, generation: 4 }), confirm: vi.fn(async () => true) });
+    prompted.api.startEmpty.mockResolvedValue(ok({ layout: savedLayout, generation: 8, recovery: { savedAt, handoff: null, boardId: 'b1' } }));
+    await expect(openSessionOnStartup(prompted.deps)).resolves.toEqual({ status: 'ready' });
+    expect(prompted.deps.confirm).toHaveBeenCalledTimes(2);
+    expect(prompted.deps.confirm.mock.calls[1][1]).toBe('Restore show?');
+    expect(prompted.api.resolveRecovery).toHaveBeenCalledWith('restore');
+    expect(prompted.calls).toEqual(['apply:Live', 'ready:8:true', 'unlock']);
+    expect(prompted.deps.track).toHaveBeenCalledWith('crash_restore_offered');
+
+    const handedOff = setup({ open: ok({ unreadable: true, generation: 4 }), confirm: vi.fn(async () => true) });
+    handedOff.api.startEmpty.mockResolvedValue(ok({ layout: savedLayout, generation: 8, recovery: { savedAt, handoff: 'renderer-crash', boardId: 'b1' } }));
+    await openSessionOnStartup(handedOff.deps);
+    expect(handedOff.deps.confirm).toHaveBeenCalledOnce();
+    expect(handedOff.api.resolveRecovery).toHaveBeenCalledWith('restore');
+    expect(handedOff.calls).toEqual(['apply:Live', 'ready:8:true', 'unlock']);
+  });
+
   it('an unreadable store offers Start with an empty board or Quit', async () => {
     const expectedPrompt = [
       "Mx. Voice couldn't read this profile's boards. The file has been kept so it can be recovered.",

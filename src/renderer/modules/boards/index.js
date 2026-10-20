@@ -82,6 +82,30 @@ function defaultDeps(overrides) {
 }
 
 /**
+ * Settle a show in progress: a fresh handoff restores silently, any other
+ * record asks, and no record opens the saved board.
+ * @returns {Promise<Object>} the layout to apply
+ */
+async function resolveRecovery(recovery, deps) {
+  let choice = 'discard';
+  if (recovery?.handoff) {
+    choice = 'restore';
+  } else if (recovery) {
+    deps.track('crash_restore_offered');
+    const restore = await deps.confirm(crashMessage(recovery.savedAt), 'Restore show?', {
+      confirmLabel: 'Restore show in progress',
+      cancelLabel: 'Open saved board',
+      defaultAction: 'cancel'
+    });
+    choice = restore ? 'restore' : 'discard';
+    deps.track('crash_restore_chosen', { choice });
+  }
+  const { layout } = unwrap(await deps.api.resolveRecovery(choice), 'Resolving recovery');
+  window.debugLog?.info('Opening board', { ...LOG_CONTEXT, choice, handoff: recovery?.handoff ?? null });
+  return layout;
+}
+
+/**
  * Open the current profile's active board.
  *
  * Holds the restoration lock until the board has been reported, ready or not.
@@ -116,23 +140,9 @@ export async function openSessionOnStartup(overrides = {}) {
       }
       const empty = unwrap(await api.startEmpty(), 'Starting an empty board');
       generation = empty.generation;
-      layout = empty.layout;
+      layout = empty.recovery ? await resolveRecovery(empty.recovery, deps) : empty.layout;
     } else {
-      let choice = 'discard';
-      if (opened.recovery?.handoff) {
-        choice = 'restore';
-      } else if (opened.recovery) {
-        deps.track('crash_restore_offered');
-        const restore = await deps.confirm(crashMessage(opened.recovery.savedAt), 'Restore show?', {
-          confirmLabel: 'Restore show in progress',
-          cancelLabel: 'Open saved board',
-          defaultAction: 'cancel'
-        });
-        choice = restore ? 'restore' : 'discard';
-        deps.track('crash_restore_chosen', { choice });
-      }
-      layout = unwrap(await api.resolveRecovery(choice), 'Resolving recovery').layout;
-      window.debugLog?.info('Opening board', { ...LOG_CONTEXT, choice, handoff: opened.recovery?.handoff ?? null });
+      layout = await resolveRecovery(opened.recovery, deps);
     }
 
     const { dropped, droppedIds = [] } = await deps.applyLayout(layout);

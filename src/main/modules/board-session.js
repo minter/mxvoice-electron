@@ -176,13 +176,7 @@ export function createBoardSession({
       throw error;
     }
 
-    let record = null;
-    try {
-      record = await recoveryStore.read(profile);
-    } catch (error) {
-      // A recovery record that can't be read is treated as no record
-      debugLog?.warn?.('Could not read the recovery record', { ...logCtx('open'), error: error.message });
-    }
+    const record = await readRecord(profile, 'open');
     if (myGeneration !== generation) throw new Error('superseded by a newer open');
 
     doc = loaded.doc;
@@ -191,20 +185,33 @@ export function createBoardSession({
     const result = {
       doc,
       board: { ...board, layout: normalizeLayout(board.layout) },
-      recovery: null,
+      recovery: recoveryInfo(record),
       generation
     };
-    if (record) {
-      // Measured from the handoff: a crash long after the last edit is still fresh
-      const fresh = now() - (record.handoffAt ?? record.savedAt) <= HANDOFF_MAX_AGE_MS;
-      result.recovery = {
-        savedAt: record.savedAt,
-        handoff: record.handoff && fresh ? record.handoff : null,
-        boardId: record.boardId
-      };
-    }
     if (loaded.notice) result.notice = loaded.notice;
     return result;
+  }
+
+  async function readRecord(p, fn) {
+    try {
+      return await recoveryStore.read(p);
+    } catch (error) {
+      // A recovery record that can't be read is treated as no record
+      debugLog?.warn?.('Could not read the recovery record', { ...logCtx(fn), error: error.message });
+      return null;
+    }
+  }
+
+  /** What the page needs to know about a record, or null without one. */
+  function recoveryInfo(record) {
+    if (!record) return null;
+    // Measured from the handoff: a crash long after the last edit is still fresh
+    const fresh = now() - (record.handoffAt ?? record.savedAt) <= HANDOFF_MAX_AGE_MS;
+    return {
+      savedAt: record.savedAt,
+      handoff: record.handoff && fresh ? record.handoff : null,
+      boardId: record.boardId
+    };
   }
 
   async function startEmpty() {
@@ -213,9 +220,13 @@ export function createBoardSession({
     const g = generation;
     const { doc: emptyDoc } = await boardStore.resetUnreadable(p);
     if (generation !== g) throw new Error('superseded by a newer open');
+    // The show in progress is offered on the empty board, as after open()
+    const record = await readRecord(p, 'startEmpty');
+    if (generation !== g) throw new Error('superseded by a newer open');
     doc = emptyDoc;
+    pendingRecovery = record;
     setStatus('loading');
-    return { layout: normalizeLayout(activeBoard().layout), generation };
+    return { layout: normalizeLayout(activeBoard().layout), generation, recovery: recoveryInfo(record) };
   }
 
   async function resolveRecovery(choice) {

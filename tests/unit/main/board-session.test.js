@@ -449,7 +449,7 @@ describe('board session', () => {
 
     const empty = await ctx.session.startEmpty();
     expect(ctx.boardStore.resetUnreadable).toHaveBeenCalledWith('Alice');
-    expect(empty).toEqual({ layout: normalizeLayout(null), generation: 1 });
+    expect(empty).toEqual({ layout: normalizeLayout(null), generation: 1, recovery: null });
     expect(ctx.session.state().status).toBe('loading');
     await expect(ctx.session.startEmpty()).rejects.toThrow();
 
@@ -461,6 +461,32 @@ describe('board session', () => {
       expect(failing.session.state().status).toBe('failed');
       await expect(failing.session.startEmpty()).rejects.toThrow();
     }
+  });
+
+  it('startEmpty reports the recovery record as open() would, with the same handoff rules', async () => {
+    const record = { version: 1, boardId: 'board-1', savedAt: T0 - MINUTE, layout: layoutWith(9) };
+    const cases = [
+      [{ handoff: null }, null],
+      [{ handoff: 'renderer-crash', handoffAt: T0 - MINUTE }, 'renderer-crash'],
+      [{ handoff: 'update', handoffAt: T0 - 16 * MINUTE }, null],
+    ];
+    for (const [extra, handoff] of cases) {
+      const ctx = setup({ loadError: new BoardStoreError('unreadable') });
+      ctx.recoveryStore.records.set('Alice', { ...record, ...extra });
+      await ctx.session.open();
+      const empty = await ctx.session.startEmpty();
+      expect(empty.recovery).toEqual({ savedAt: T0 - MINUTE, handoff, boardId: 'board-1' });
+      // Restoring lands the show in progress on the empty board
+      await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(9) });
+    }
+
+    // Discarding retires the record and keeps the empty board
+    const discard = setup({ loadError: new BoardStoreError('unreadable') });
+    discard.recoveryStore.records.set('Alice', { ...record, handoff: null });
+    await discard.session.open();
+    await discard.session.startEmpty();
+    await expect(discard.session.resolveRecovery('discard')).resolves.toEqual({ layout: normalizeLayout(null) });
+    expect(discard.recoveryStore.records.has('Alice')).toBe(false);
   });
 
   it('a clean exit or switch before the board was ever ready keeps the record', async () => {
