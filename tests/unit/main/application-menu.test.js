@@ -72,16 +72,19 @@ describe('application menu', () => {
 
   it('sends board commands to the window on menu:board-command', () => {
     const send = vi.fn();
+    const rebuildMenu = vi.fn();
     const Menu = { buildFromTemplate: vi.fn(), setApplicationMenu: vi.fn() };
     const template = buildApplicationMenu({
       app: { name: 'Mx. Voice' }, Menu, shell: {},
       mainWindow: { isDestroyed: () => false, webContents: { send } },
       fileOperations: {}, getCurrentProfile: () => 'Default User', showAboutDialog: vi.fn(),
       debugLog: { warn: vi.fn() }, logService: {}, rendererCommands: {},
-      getBoardMenuState: () => ({ status: 'ready', activeBoard: { id: 'b1', name: 'A' }, boards: [{ id: 'b1', name: 'A' }, { id: 'b2', name: 'B' }] })
+      getBoardMenuState: () => ({ status: 'ready', activeBoard: { id: 'b1', name: 'A' }, boards: [{ id: 'b1', name: 'A' }, { id: 'b2', name: 'B' }] }),
+      rebuildMenu
     });
     template.find((m) => m.label === 'Board').submenu[1].click();
     expect(send).toHaveBeenCalledWith('menu:board-command', { command: 'switch', boardId: 'b2' });
+    expect(rebuildMenu).toHaveBeenCalledOnce();
   });
 
   it('disables destructive actions for the default profile', () => {

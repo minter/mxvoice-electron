@@ -11,7 +11,8 @@ function buildApplicationMenu({
   debugLog,
   logService,
   rendererCommands,
-  getBoardMenuState
+  getBoardMenuState,
+  rebuildMenu
 }) {
   const boardSend = (command, boardId) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -135,7 +136,7 @@ function buildApplicationMenu({
     },
     buildBoardMenu(
       getBoardMenuState ? getBoardMenuState() : { status: 'idle', activeBoard: null, boards: [] },
-      { platform: process.platform, send: boardSend, fileOperations }
+      { platform: process.platform, send: boardSend, fileOperations, rebuild: rebuildMenu }
     ),
     {
       label: "Categories",

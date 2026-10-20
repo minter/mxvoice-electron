@@ -188,6 +188,15 @@ describe('runBoardCommand', () => {
     expect(deps.track).toHaveBeenCalledWith('board_deleted', { was_active: true });
   });
 
+  it('a delete whose next board fails to load is still counted', async () => {
+    const { deps, calls } = setup();
+    deps.applyLayout.mockRejectedValue(new Error('song fetch failed'));
+    await runBoardCommand({ command: 'delete', boardId: 'b2' }, deps);
+    expect(calls).toEqual(['ready:7:false']);
+    expect(deps.alert).toHaveBeenCalledWith("Mx. Voice couldn't load this board.", 'Board not loaded');
+    expect(deps.track).toHaveBeenCalledWith('board_deleted', { was_active: true });
+  });
+
   it('deleting the only board offers an empty board; cancelling deletes nothing', async () => {
     const doc = { version: 1, activeBoardId: 'b1', boards: [board('b1', 'Solo')] };
     const { api, deps } = setup({ doc });

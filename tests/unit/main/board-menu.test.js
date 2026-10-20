@@ -12,10 +12,12 @@ const readyState = (activeId = 'b1') => ({
 });
 
 function build(state, platform = 'darwin') {
-  const send = vi.fn();
+  const calls = [];
+  const send = vi.fn((command, boardId) => calls.push(`send:${command}:${boardId}`));
+  const rebuild = vi.fn(() => calls.push('rebuild'));
   const fileOperations = { loadHotkeysFile: vi.fn(), loadHoldingTankFile: vi.fn() };
-  const menu = buildBoardMenu(state, { platform, send, fileOperations });
-  return { menu, send, fileOperations };
+  const menu = buildBoardMenu(state, { platform, send, fileOperations, rebuild });
+  return { menu, send, rebuild, calls, fileOperations };
 }
 const labels = (menu) => menu.submenu.map((i) => i.label ?? '---');
 const find = (menu, label) => menu.submenu.find((i) => i.label === label);
@@ -58,6 +60,14 @@ describe('board menu', () => {
       ['switch', 'b2'], ['update', undefined], ['new', undefined], ['revert', undefined],
       ['rename', 'b2'], ['delete', 'b1'], ['import', undefined]
     ]);
+  });
+
+  // Electron moves the radio check natively; the renderer may drop the
+  // switch, so the menu is rebuilt from the session's state straight away
+  it('clicking a non-active board sends switch and then rebuilds the menu', () => {
+    const { menu, calls } = build(readyState());
+    menu.submenu[1].click();
+    expect(calls).toEqual(['send:switch:b2', 'rebuild']);
   });
 
   it('clicking the active board sends no command', () => {

@@ -171,7 +171,8 @@ const handlers = {
     });
     if (!confirmed) return null;
     const removed = unwrap(await deps.api.remove(boardId), 'Deleting the board');
-    if (removed?.activeChanged && !(await openLoaded(removed, deps))) return null;
+    // The board is deleted even if the next one then fails to load
+    if (removed?.activeChanged) await openLoaded(removed, deps);
     return ['board_deleted', { was_active: wasActive }];
   },
 

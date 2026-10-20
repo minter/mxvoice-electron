@@ -201,6 +201,21 @@ test.describe('Boards - menu commands', () => {
     expect(readBoards(userDataDir, PROFILE).boards[0].name).toBe('Friday Show');
   });
 
+  test('a switch dropped behind a prompt leaves the menu check on the active board', async () => {
+    await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }, { name: 'Encore', hotkeys: { f1: '1003' } }]);
+
+    await clickBoardMenu(app, 'New Board…');
+    const prompt = shownDialog(page, 'New Board');
+    await expect(prompt).toBeVisible({ timeout: 10000 });
+    await clickBoardMenu(app, 'Encore');
+    await prompt.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.locator('.modal.show')).toHaveCount(0);
+
+    expect(await boardMenuState(app)).toMatchObject({ checked: 'Main Show', enabled: true });
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1002');
+    expect(activeBoard(readBoards(userDataDir, PROFILE)).name).toBe('Main Show');
+  });
+
   test('a board command is dropped while another dialog is open', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }, { name: 'Encore', hotkeys: { f1: '1003' } }]);
 

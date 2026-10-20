@@ -10,7 +10,12 @@ function escapeLabel(name, platform) {
   return platform === 'win32' || platform === 'linux' ? text.replace(/&/g, '&&') : text;
 }
 
-function buildBoardMenu(state, { platform, send, fileOperations } = {}) {
+/**
+ * @param {Object} state - { status, activeBoard, boards } from the board session
+ * @param {Object} [options]
+ * @param {Function} [options.rebuild] - rebuilds the application menu from the session
+ */
+function buildBoardMenu(state, { platform, send, fileOperations, rebuild } = {}) {
   const status = state?.status ?? 'idle';
   const activeBoard = state?.activeBoard ?? null;
   const boards = Array.isArray(state?.boards) ? state.boards : [];
@@ -36,7 +41,13 @@ function buildBoardMenu(state, { platform, send, fileOperations } = {}) {
           checked: isActive,
           enabled: ready,
           // Electron fires click on an already-checked radio; that must not act as a Revert.
-          click: () => { if (!isActive) send?.('switch', board.id); }
+          // It also moves the check itself, and the renderer may drop the switch,
+          // so rebuild from the session at once; a switch that lands rebuilds again.
+          click: () => {
+            if (isActive) return;
+            send?.('switch', board.id);
+            rebuild?.();
+          }
         };
       }),
       { type: 'separator' },

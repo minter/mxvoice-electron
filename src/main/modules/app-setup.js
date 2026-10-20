@@ -160,7 +160,8 @@ function createApplicationMenu() {
       const boards = (doc?.boards ?? []).map((b) => ({ id: b.id, name: b.name }));
       const activeBoard = boards.find((b) => b.id === doc?.activeBoardId) ?? null;
       return { status: status ?? 'idle', activeBoard, boards };
-    }
+    },
+    rebuildMenu: () => createApplicationMenu()
   });
 }
 // UI operation functions
