@@ -64,6 +64,8 @@ export function createBoardSession({
   // clean exit or switch must keep it
   let handedOff = false;
   let pendingHandoff = null;
+  // Set once end() has run for this session; cleared by the next open()
+  let ended = false;
   // The record reported by open(), until resolveRecovery() settles it
   let pendingRecovery = null;
   // Recovery writes run one at a time, so end() can wait out the last one
@@ -97,6 +99,7 @@ export function createBoardSession({
     const myGeneration = generation;
     fenced = false;
     handedOff = false;
+    ended = false;
     pendingHandoff = null;
     pendingRecovery = null;
     doc = null;
@@ -119,7 +122,13 @@ export function createBoardSession({
       throw error;
     }
 
-    const record = await recoveryStore.read(profile);
+    let record = null;
+    try {
+      record = await recoveryStore.read(profile);
+    } catch (error) {
+      // A recovery record that can't be read is treated as no record
+      debugLog?.warn?.('Could not read the recovery record', { ...logCtx('open'), error: error.message });
+    }
     if (myGeneration !== generation) throw new Error('superseded by a newer open');
 
     doc = loaded.doc;
@@ -145,7 +154,10 @@ export function createBoardSession({
 
   async function startEmpty() {
     if (status !== 'unreadable') throw new Error('startEmpty is only allowed when the boards are unreadable');
-    const { doc: emptyDoc } = await boardStore.resetUnreadable(profile);
+    const p = profile;
+    const g = generation;
+    const { doc: emptyDoc } = await boardStore.resetUnreadable(p);
+    if (generation !== g) throw new Error('superseded by a newer open');
     doc = emptyDoc;
     setStatus('loading');
     return { layout: normalizeLayout(activeBoard().layout), generation };
@@ -154,13 +166,14 @@ export function createBoardSession({
   async function resolveRecovery(choice) {
     if (choice !== 'restore' && choice !== 'discard') throw new Error(`Invalid recovery choice: ${String(choice)}`);
     if (!doc) throw new Error('No board is open');
+    const p = profile;
     const record = pendingRecovery;
     pendingRecovery = null;
     const saved = normalizeLayout(activeBoard().layout);
     if (!record) return { layout: saved };
     // Restored onto the active board, whatever boardId the record names
     if (choice === 'restore') return { layout: normalizeLayout(record.layout) };
-    await queued(() => recoveryStore.retire(profile));
+    await queued(() => recoveryStore.retire(p));
     return { layout: saved };
   }
 
@@ -176,6 +189,7 @@ export function createBoardSession({
 
   function saveRecovery(layout) {
     const myGeneration = generation;
+    const p = profile;
     if (refused(myGeneration)) return Promise.resolve({ skipped: true });
     const normalized = normalizeLayout(layout);
     return queued(async () => {
@@ -183,43 +197,51 @@ export function createBoardSession({
       if (refused(myGeneration)) return { skipped: true };
       const board = activeBoard();
       if (layoutKey(normalized) === layoutKey(board.layout)) {
-        await recoveryStore.retire(profile);
+        await recoveryStore.retire(p);
         return { retired: true };
       }
-      await recoveryStore.write(profile, { boardId: board.id, layout: normalized });
+      await recoveryStore.write(p, { boardId: board.id, layout: normalized });
       return {};
     });
   }
 
-  async function settlePendingHandoff() {
-    if (pendingHandoff) await pendingHandoff;
-  }
-
+  // end() and handoff() capture the session they were called for. An open()
+  // that runs while they await must not have its profile retired or marked,
+  // or its status overwritten.
   async function end(reason) {
     if (!END_REASONS.has(reason)) throw new Error(`Invalid session end reason: ${String(reason)}`);
-    if (!profile) return;
+    if (!profile || ended) return;
+    const p = profile;
+    const g = generation;
+    const kept = handedOff && KEPT_AFTER_HANDOFF.has(reason);
+    const handoffDone = pendingHandoff;
+    ended = true;
     fenced = true;
-    await settlePendingHandoff();
+    if (handoffDone) await handoffDone;
     await writeQueue;
     if (reason === 'library-import') {
       await recoveryStore.clearAll();
-    } else if (!(handedOff && KEPT_AFTER_HANDOFF.has(reason))) {
-      await recoveryStore.retire(profile);
+    } else if (!kept) {
+      await recoveryStore.retire(p);
     }
-    pendingRecovery = null;
-    setStatus('idle');
+    if (generation === g) {
+      pendingRecovery = null;
+      setStatus('idle');
+    }
   }
 
   async function handoff(reason) {
-    if (!profile) return;
+    if (!profile || ended) return;
+    const p = profile;
     fenced = true;
     handedOff = true;
     await writeQueue;
-    await recoveryStore.markHandoff(profile, reason);
+    await recoveryStore.markHandoff(p, reason);
   }
 
   function rendererGone() {
-    if (!profile) return;
+    if (!profile || ended) return;
+    // handoff() captures the profile before its first await
     pendingHandoff = handoff('renderer-crash').catch((error) => {
       debugLog?.error?.('Could not mark the recovery record after a renderer crash', {
         ...logCtx('rendererGone'),

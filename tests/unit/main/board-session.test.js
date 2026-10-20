@@ -222,8 +222,15 @@ describe('board session', () => {
     expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
     expect(ctx.session.state().status).toBe('idle');
 
-    // end() is idempotent, and a no-op before any open
+    // end() is idempotent: once ended, end() and handoff() touch no store
     await ctx.session.end('clean-exit');
+    await ctx.session.end('backup-restore');
+    await ctx.session.handoff('update');
+    ctx.session.rendererGone();
+    await Promise.resolve();
+    expect(ctx.recoveryStore.calls).toEqual([['write', 'Alice'], ['retire', 'Alice']]);
+
+    // ...and a no-op before any open
     const idle = setup();
     await idle.session.end('clean-exit');
     await idle.session.handoff('update');
@@ -250,15 +257,98 @@ describe('board session', () => {
 
     ctx.session.rendererGone();
     await ctx.session.end('clean-exit');
-    await ctx.session.end('switch');
 
     expect(ctx.recoveryStore.markHandoff).toHaveBeenCalledWith('Alice', 'renderer-crash');
     expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
     expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ handoff: 'renderer-crash', layout: layoutWith(9) });
 
-    // Other exits still retire it
-    await ctx.session.end('backup-restore');
+    // switch keeps it too; other exits still retire it
+    for (const [reason, retired] of [['switch', false], ['backup-restore', true], ['profile-deleted', true]]) {
+      const other = setup();
+      await openReady(other);
+      await other.session.saveRecovery(layoutWith(9));
+      other.session.rendererGone();
+      await other.session.end(reason);
+      expect(other.recoveryStore.records.has('Alice'), reason).toBe(!retired);
+    }
+  });
+
+  it('an open() during end() keeps its own profile and status', async () => {
+    const ctx = setup();
+    await openReady(ctx);
+    let releaseWrite;
+    ctx.recoveryStore.write.mockImplementationOnce(async (profile) => {
+      await new Promise((resolve) => { releaseWrite = resolve; });
+      ctx.recoveryStore.calls.push(['write', profile]);
+    });
+    const inFlight = ctx.session.saveRecovery(layoutWith(8));
+    await vi.waitFor(() => expect(releaseWrite).toBeTypeOf('function'));
+
+    const ending = ctx.session.end('switch');
+    ctx.current.profile = 'Bob';
+    const opening = ctx.session.open();
+    releaseWrite();
+    await Promise.all([inFlight, ending]);
+    const opened = await opening;
+
     expect(ctx.recoveryStore.retire).toHaveBeenCalledWith('Alice');
+    expect(ctx.recoveryStore.retire).not.toHaveBeenCalledWith('Bob');
+    expect(ctx.session.state()).toMatchObject({ profile: 'Bob', status: 'loading', generation: opened.generation });
+    ctx.session.reportReady(opened.generation, true);
+    expect(ctx.session.state().status).toBe('ready');
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({});
+    expect(ctx.recoveryStore.write).toHaveBeenLastCalledWith('Bob', expect.anything());
+  });
+
+  it('a renderer-crash handoff marks the profile it was called for, even across an open()', async () => {
+    const ctx = setup();
+    await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+    let release;
+    const marked = [];
+    ctx.recoveryStore.markHandoff.mockImplementationOnce(async (profile, reason) => {
+      await new Promise((resolve) => { release = resolve; });
+      marked.push([profile, reason]);
+    });
+
+    ctx.session.rendererGone();
+    ctx.current.profile = 'Bob';
+    const opened = await ctx.session.open();
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+    release();
+    await vi.waitFor(() => expect(marked).toEqual([['Alice', 'renderer-crash']]));
+
+    expect(ctx.recoveryStore.markHandoff).not.toHaveBeenCalledWith('Bob', expect.anything());
+    ctx.session.reportReady(opened.generation, true);
+    expect(ctx.session.state()).toMatchObject({ profile: 'Bob', status: 'ready' });
+    // Bob's session was not handed off, so its clean exit retires Bob only
+    await ctx.session.end('clean-exit');
+    expect(ctx.recoveryStore.retire).toHaveBeenCalledWith('Bob');
+    expect(ctx.recoveryStore.retire).not.toHaveBeenCalledWith('Alice');
+  });
+
+  it('an unreadable recovery record opens as no recovery', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.read.mockRejectedValueOnce(new Error('EACCES'));
+    const opened = await ctx.session.open();
+    expect(opened.recovery).toBeNull();
+    expect(ctx.session.state().doc).toBe(ctx.doc);
+  });
+
+  it('startEmpty superseded by a newer open does not touch the new session', async () => {
+    const ctx = setup({ loadError: new BoardStoreError('unreadable') });
+    await ctx.session.open();
+    let release;
+    ctx.boardStore.resetUnreadable.mockImplementationOnce(async () => {
+      await new Promise((resolve) => { release = resolve; });
+      return { doc: makeDoc(normalizeLayout(null)) };
+    });
+    const empty = ctx.session.startEmpty();
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+    await ctx.session.open();
+    release();
+    await expect(empty).rejects.toThrow('superseded');
+    expect(ctx.session.state()).toMatchObject({ status: 'unreadable', doc: null, generation: 2 });
   });
 
   it('an unreadable store gives status unreadable; startEmpty resets it', async () => {
