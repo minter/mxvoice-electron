@@ -1,3 +1,5 @@
+import { setHeaderLabels } from '../boards/header.js';
+
 /**
  * Show the new profile creation modal
  */
@@ -183,10 +185,7 @@ async function refreshProfileIndicator() {
   try {
     const result = await window.secureElectronAPI.profile.getCurrent();
     if (result.success) {
-      const profileNameElement = document.getElementById('profile-name');
-      if (profileNameElement) {
-        profileNameElement.textContent = `Profile: ${result.profile}`;
-      }
+      setHeaderLabels({ profile: result.profile });
     }
   } catch (error) {
     window.logError('Failed to refresh profile indicator:', error);

@@ -165,21 +165,17 @@ import AppBootstrap from './renderer/modules/app-bootstrap/index.js';
 // Import app initialization module for centralized initialization
 import AppInitialization from './renderer/modules/app-initialization/index.js';
 
+import { setHeaderLabels } from './renderer/modules/boards/header.js';
+
 // Load and display current profile
 (async function loadProfileIndicator() {
   try {
     const result = await window.secureElectronAPI.profile.getCurrent();
     if (result.success && result.profile) {
-      const profileNameElement = document.getElementById('profile-name');
-      if (profileNameElement) {
-        profileNameElement.textContent = result.profile;
-      }
+      setHeaderLabels({ profile: result.profile });
     } else {
       // Handle case where no profile is available (launcher mode)
-      const profileNameElement = document.getElementById('profile-name');
-      if (profileNameElement) {
-        profileNameElement.textContent = 'No Profile';
-      }
+      setHeaderLabels({ profile: 'No Profile' });
     }
   } catch (error) {
     // Use debugLog if available, fallback to console for early initialization

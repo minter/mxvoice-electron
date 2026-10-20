@@ -57,12 +57,15 @@ test.describe('Boards - menu commands', () => {
 
   test('new board from the live layout becomes active and survives a quit', async () => {
     await launch([{ name: 'Main Show', hotkeys: { f1: '1002' } }]);
+    await expect(page.locator('#board-name')).toHaveText('Main Show');
+    await expect(page.locator('#profile-name')).toHaveText(PROFILE);
     await assignF1(page, '1001');
 
     await clickBoardMenu(app, 'New Board…');
     await answerPrompt(page, 'New Board', 'Late Show', { message: 'Name for the new board' });
 
     await expect.poll(() => activeBoard(readBoards(userDataDir, PROFILE)).name).toBe('Late Show');
+    await expect(page.locator('#board-name')).toHaveText('Late Show');
     const doc = readBoards(userDataDir, PROFILE);
     expect(doc.boards.map((b) => b.name)).toEqual(['Main Show', 'Late Show']);
     expect(f1Of(activeBoard(doc))).toBe('1001');
@@ -71,6 +74,7 @@ test.describe('Boards - menu commands', () => {
 
     await quitAndRelaunch();
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1001');
+    await expect(page.locator('#board-name')).toHaveText('Late Show');
     expect(await boardMenuState(app)).toMatchObject({ boards: ['Main Show', 'Late Show'], checked: 'Late Show' });
   });
 
@@ -147,6 +151,7 @@ test.describe('Boards - menu commands', () => {
 
     await clickBoardMenu(app, 'Encore');
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1003');
+    await expect(page.locator('#board-name')).toHaveText('Encore');
     await expect.poll(async () => boardMenuState(app)).toMatchObject({ checked: 'Encore', enabled: true });
     expect(activeBoard(readBoards(userDataDir, PROFILE)).name).toBe('Encore');
     // No dialog is shown for a switch
@@ -170,6 +175,7 @@ test.describe('Boards - menu commands', () => {
     });
 
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1005');
+    await expect(page.locator('#board-name')).toHaveText('Encore');
     await expect.poll(() => readBoards(userDataDir, PROFILE).boards.map((b) => b.name)).toEqual(['Opening', 'Encore']);
     expect(activeBoard(readBoards(userDataDir, PROFILE)).name).toBe('Encore');
     await expect.poll(async () => boardMenuState(app)).toMatchObject({ boards: ['Opening', 'Encore'], checked: 'Encore', enabled: true });
@@ -199,6 +205,8 @@ test.describe('Boards - menu commands', () => {
 
     await expect.poll(async () => boardMenuState(app)).toMatchObject({ boards: ['Friday Show'], checked: 'Friday Show' });
     expect(readBoards(userDataDir, PROFILE).boards[0].name).toBe('Friday Show');
+    await expect(page.locator('#board-name')).toHaveText('Friday Show');
+    await expect(page.locator('#board-name')).toHaveAttribute('title', 'Friday Show');
   });
 
   test('a switch dropped behind a prompt leaves the menu check on the active board', async () => {

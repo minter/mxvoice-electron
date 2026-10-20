@@ -970,6 +970,19 @@ legend {
   white-space: nowrap;
 }
 
+.board-separator[hidden],
+#board-icon[hidden],
+#board-name[hidden] {
+  display: none;
+}
+
+#board-name {
+  max-width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #update_available_button {
   flex-shrink: 0;
 }

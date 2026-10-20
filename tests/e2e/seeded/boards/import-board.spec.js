@@ -87,6 +87,7 @@ test.describe('Boards - Import Board', () => {
     const doc = readBoards(userDataDir, 'Jesse');
     expect(doc.boards.map((b) => b.name)).toEqual(['Jesse Board', 'Comedy Sports (Derek)']);
     expect(activeBoard(doc).name).toBe('Comedy Sports (Derek)');
+    await expect(page.locator('#board-name')).toHaveText('Comedy Sports (Derek)');
     await expect.poll(async () => boardMenuState(app)).toMatchObject({
       boards: ['Jesse Board', 'Comedy Sports (Derek)'],
       checked: 'Comedy Sports (Derek)',

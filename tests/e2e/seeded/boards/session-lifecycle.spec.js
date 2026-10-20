@@ -207,6 +207,7 @@ test.describe('Boards - session lifecycle', () => {
     const doc = readBoards(userDataDir, 'Default User');
     expect(doc.boards).toHaveLength(1);
     expect(doc.boards[0].name).toBe('Board');
+    await expect(page.locator('#board-name')).toHaveText('Board');
 
     // Live edits and a quit never write state.json
     await assignF1(page, LIVE_SONG);

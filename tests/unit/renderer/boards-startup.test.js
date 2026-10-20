@@ -24,7 +24,8 @@ function setup({ open, confirm = vi.fn(async () => false), dropped = 0 } = {}) {
     toast: vi.fn(),
     quit: vi.fn(async () => ok(null)),
     clearRestorationLock: vi.fn(() => { calls.push('unlock'); }),
-    track: vi.fn()
+    track: vi.fn(),
+    refreshHeader: vi.fn(async () => {})
   };
   return { api, deps, calls };
 }
@@ -155,6 +156,32 @@ describe('openSessionOnStartup', () => {
     await openSessionOnStartup(clean.deps);
     expect(handoff.deps.track).not.toHaveBeenCalled();
     expect(clean.deps.track).not.toHaveBeenCalled();
+  });
+});
+
+describe('header refresh', () => {
+  beforeEach(() => { window.isRestoringProfileState = false; });
+
+  it('refreshes the header after startup finishes, ready or failed', async () => {
+    const ready = setup({ open: opened() });
+    await openSessionOnStartup(ready.deps);
+    expect(ready.deps.refreshHeader).toHaveBeenCalledOnce();
+    expect(ready.deps.refreshHeader.mock.invocationCallOrder[0]).toBeGreaterThan(ready.deps.clearRestorationLock.mock.invocationCallOrder[0]);
+
+    const failed = setup({ open: ok({ failed: true, error: 'boom', generation: 4 }) });
+    await openSessionOnStartup(failed.deps);
+    expect(failed.deps.refreshHeader).toHaveBeenCalledOnce();
+  });
+
+  it('refreshes the header after a board command, even a refused one', async () => {
+    let listener;
+    const onBoardCommand = vi.fn((cb) => { listener = cb; return vi.fn(); });
+    const refreshHeader = vi.fn(async () => {});
+    const api = { activate: vi.fn(async () => ({ success: false, error: 'busy' })), reportReady: vi.fn() };
+    initializeBoardCommands({ onBoardCommand, api, applyLayout: vi.fn(), track: vi.fn(), isModalOpen: () => false, refreshHeader });
+    listener({ command: 'switch', boardId: 'b2' });
+    await vi.waitFor(() => expect(refreshHeader).toHaveBeenCalledOnce());
+    expect(api.activate).toHaveBeenCalledWith('b2');
   });
 });
 

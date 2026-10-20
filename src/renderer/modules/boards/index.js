@@ -16,6 +16,7 @@ import { clearProfileRestorationLock, extractLayout } from '../profile-state/ind
 import { droppedSongsMessage, TOAST_MS } from './messages.js';
 import { runBoardCommand } from './commands.js';
 import { chooseImportBoard } from './import-dialog.js';
+import { refreshHeader } from './header.js';
 
 export { droppedSongsMessage };
 
@@ -70,6 +71,7 @@ function defaultDeps(overrides) {
     isModalOpen: () => isAnyModalOpen(),
     extractLayout,
     chooseImportBoard: (groups) => chooseImportBoard(groups),
+    refreshHeader: () => refreshHeader(),
     ...overrides
   };
   if (!deps.applyLayout) {
@@ -152,6 +154,7 @@ export async function openSessionOnStartup(overrides = {}) {
     return { status: 'failed' };
   } finally {
     deps.clearRestorationLock();
+    await deps.refreshHeader();
   }
 }
 
@@ -170,7 +173,7 @@ export function initializeBoardCommands(overrides = {}) {
     return null;
   }
   const deps = defaultDeps(rest);
-  return onBoardCommand((command) => { void runBoardCommand(command, deps); });
+  return onBoardCommand((command) => { void runBoardCommand(command, deps).finally(() => deps.refreshHeader()); });
 }
 
 export default {
