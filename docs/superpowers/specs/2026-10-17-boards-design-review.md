@@ -1,6 +1,6 @@
 # Boards — Adversarial Review
 
-Reviews `2026-10-17-boards-design.md` against the code at `56d1f9d`. I checked every code claim below myself or had it confirmed by a second read. Where a finding touches a decision listed in the brief's "Decisions that look like open questions" table, I name the new fact. I do not reargue those decisions.
+Reviews `2026-10-17-shows-design.md` against the code at `56d1f9d`. I checked every code claim below myself or had it confirmed by a second read. Where a finding touches a decision listed in the brief's "Decisions that look like open questions" table, I name the new fact. I do not reargue those decisions.
 
 **Overall.** The product model (profile = person, board = show, live session = disposable) is sound and fits the problem well. The weak point is that the brief assumes the app can tell a clean exit from a crash, and can tell a profile switch from a back-out. **The code cannot do either today.** Several of the exit paths the brief depends on are also racy or not wired up. Most of the risk is in that plumbing, not in the UI.
 

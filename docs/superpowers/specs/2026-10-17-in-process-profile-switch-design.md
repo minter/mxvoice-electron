@@ -163,7 +163,7 @@ tank. Songs live in the shared library, so the track is valid in every
 profile.
 
 That needs a swap inside the running page instead of a reload, and boards
-(2026-10-17-boards-design.md) already requires exactly that swap: a board
+(2026-10-17-shows-design.md) already requires exactly that swap: a board
 switch keeps the playing song going. Under boards, entering a profile means
 loading its active board plus a small set of profile preferences (theme,
 font size, fade time, column order, holding-tank mode). The main-process
