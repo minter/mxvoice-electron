@@ -1,16 +1,21 @@
 /**
  * Overlay shortcut guard
  *
- * Mousetrap's stopCallback only skips text fields. While a dialog or a menu
- * is open, Return, Space and Esc belong to it: Return takes the focused
- * button, and Esc closes the dialog without stopping playback. Hotkeys
- * F1-F12 keep working under dialogs on purpose.
+ * Mousetrap's stopCallback only skips text fields. While a dialog, the tab
+ * actions menu or a What's New tour is open, Return, Space and Esc belong to
+ * it: Return takes the focused button, and Esc closes the dialog without
+ * stopping playback. Hotkeys F1-F12 keep working under them on purpose.
+ *
+ * The song context menu is left out: it never takes the focus, so Esc there
+ * must still stop playback (and it closes the menu too).
  */
 
 const FUNCTION_KEY_COMBO = /(^|\+)f([1-9]|1[0-2])$/;
 const OPEN_DIALOG = '.modal.show, .modal[aria-modal="true"]';
 // Shown with style.display 'block', hidden with 'none'
-const MENU_IDS = ['mxv-tab-actions-menu', 'mxv-context-menu'];
+const MENU_IDS = ['mxv-tab-actions-menu'];
+// driver.js sets this on <body> while a tour runs
+const TOUR_ACTIVE_CLASS = 'driver-active';
 
 /** @param {string} combo - a Mousetrap combo such as 'f1' or 'shift+esc' */
 export function isFunctionKeyCombo(combo) {
@@ -18,12 +23,14 @@ export function isFunctionKeyCombo(combo) {
 }
 
 /**
- * Whether a dialog (showing or still closing) or one of the app's menus is open.
+ * Whether a dialog (showing or still closing), the tab actions menu or a
+ * tour is open.
  * @param {Document} doc
  */
 export function isOverlayOpen(doc) {
   if (!doc) return false;
   if (doc.querySelector(OPEN_DIALOG)) return true;
+  if (doc.body?.classList?.contains(TOUR_ACTIVE_CLASS)) return true;
   return MENU_IDS.some((id) => {
     const display = doc.getElementById(id)?.style?.display;
     return Boolean(display) && display !== 'none';

@@ -7,15 +7,16 @@ const {
   installOverlayShortcutGuard
 } = await import('../../../src/renderer/modules/keyboard-manager/overlay-shortcut-guard.js');
 
-// A document with an optional shown dialog and the two menus' display styles
-function fakeDoc({ modal = false, tabMenu, songMenu } = {}) {
+// A document with an optional shown dialog, tour, and the two menus' display styles
+function fakeDoc({ modal = false, tabMenu, songMenu, tour = false } = {}) {
   const menus = {
     'mxv-tab-actions-menu': tabMenu === undefined ? null : { style: { display: tabMenu } },
     'mxv-context-menu': songMenu === undefined ? null : { style: { display: songMenu } }
   };
   return {
     querySelector: vi.fn((selector) => (modal && selector.includes('.modal') ? {} : null)),
-    getElementById: (id) => menus[id] ?? null
+    getElementById: (id) => menus[id] ?? null,
+    body: { classList: { contains: (name) => tour && name === 'driver-active' } }
   };
 }
 
@@ -46,9 +47,16 @@ describe('isOverlayOpen', () => {
     expect(doc.querySelector).toHaveBeenCalledWith('.modal.show, .modal[aria-modal="true"]');
   });
 
-  it('is true while the tab actions menu or the song menu shows', () => {
+  it('is true while the tab actions menu shows', () => {
     expect(isOverlayOpen(fakeDoc({ tabMenu: 'block', songMenu: 'none' }))).toBe(true);
-    expect(isOverlayOpen(fakeDoc({ tabMenu: 'none', songMenu: 'block' }))).toBe(true);
+  });
+
+  it('is false while only the song menu shows: it takes no keys, so Esc must still stop playback', () => {
+    expect(isOverlayOpen(fakeDoc({ tabMenu: 'none', songMenu: 'block' }))).toBe(false);
+  });
+
+  it("is true during a What's New tour", () => {
+    expect(isOverlayOpen(fakeDoc({ tour: true }))).toBe(true);
   });
 
   it('is false without a document', () => {
@@ -62,9 +70,17 @@ describe('shouldStopShortcut', () => {
     for (const combo of ['return', 'space', 'esc', 'shift+esc', 'down', 'tab']) {
       expect(shouldStopShortcut({ combo, doc: fakeDoc({ modal: true }), baseStop })).toBe(true);
       expect(shouldStopShortcut({ combo, doc: fakeDoc({ tabMenu: 'block' }), baseStop })).toBe(true);
-      expect(shouldStopShortcut({ combo, doc: fakeDoc({ songMenu: 'block' }), baseStop })).toBe(true);
+      expect(shouldStopShortcut({ combo, doc: fakeDoc({ tour: true }), baseStop })).toBe(true);
     }
     expect(baseStop).not.toHaveBeenCalled();
+  });
+
+  it('leaves app shortcuts on the base rule while the song menu shows', () => {
+    expect(shouldStopShortcut({ combo: 'esc', doc: fakeDoc({ songMenu: 'block' }), baseStop: () => false })).toBe(false);
+  });
+
+  it('keeps hotkeys F1-F12 on the base rule under a tour', () => {
+    expect(shouldStopShortcut({ combo: 'f3', doc: fakeDoc({ tour: true }), baseStop: () => false })).toBe(false);
   });
 
   it('keeps hotkeys F1-F12 on the base rule under a dialog', () => {

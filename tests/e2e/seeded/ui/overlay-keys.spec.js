@@ -126,6 +126,39 @@ test.describe('Keys under dialogs and menus', () => {
     await expect(nowPlaying(page)).not.toHaveAttribute('songid');
   });
 
+  test('Esc with the song menu open closes it and still stops playback', async () => {
+    await playSelected();
+    // The song menu never takes the focus, so Esc stays the stop key
+    const other = page.locator('#search_results tbody tr').filter({ hasText: 'We Are Family' });
+    await other.click({ button: 'right' });
+    const songMenu = page.locator('#mxv-context-menu');
+    await expect(songMenu).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(songMenu).toBeHidden();
+    await expect(nowPlaying(page)).not.toHaveAttribute('songid', { timeout: 5000 });
+    await expect(page.locator('#stop_button')).toBeDisabled({ timeout: 5000 });
+  });
+
+  test('Return on the song form volume slider plays nothing', async () => {
+    // The slider has class="mousetrap", so Mousetrap's own rule lets keys
+    // through there; the dialog guard is what stops Return
+    const row = page.locator('#search_results tbody tr').filter({ hasText: 'Got The Time' });
+    await row.click({ button: 'right' });
+    await page.locator('#mxv-context-menu .mxv-context-item').filter({ hasText: 'Edit' }).click();
+    const form = page.locator('#songFormModal');
+    await expect(form).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#songFormModalTitle')).toContainText('Edit This Song');
+    const slider = page.locator('#song-form-volume');
+    await slider.focus();
+    await expect(slider).toBeFocused();
+
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+    await expect(nowPlaying(page)).not.toHaveAttribute('songid');
+    await expect(page.locator('#stop_button')).toBeDisabled();
+  });
+
   test('F1 still plays its hotkey while a dialog is open', async () => {
     await chooseTabAction(page, 'hotkeys', 'clear');
     const dialog = shownDialog(page, 'Clear "Tab 1"?');

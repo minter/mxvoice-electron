@@ -305,6 +305,11 @@ export class TourManager {
       nextBtnText: 'Next',
       prevBtnText: 'Previous',
       doneBtnText: 'Done',
+      // Return takes the focused button, so focus Next (Done on the last
+      // step), not Driver.js's default ×. Deferred: Driver.js focuses after render.
+      onPopoverRender: (popover) => {
+        requestAnimationFrame(() => popover?.nextButton?.focus?.());
+      },
       // Intercept Next/Prev to run pre/post actions before Driver.js moves
       onNextClick: async () => {
         // Ignore clicks while a transition is mid-flight, otherwise a fast or

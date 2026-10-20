@@ -285,17 +285,13 @@ test.describe("What's New Tour: next release", () => {
     // The tour ignores Next while a step's open/close action is still running
     await page.waitForFunction(() => !window.moduleRegistry.whatsNew.tourManager._transitioning);
 
-    // A preview: nothing selected, and Enter during the tour can't switch profiles
+    // A preview: nothing selected, and Enter during the tour can't switch
+    // profiles. The tour focuses Next, so Enter advances it instead.
     await expect(page.locator('#profileSwitchModal #launch-btn')).toHaveText('Switch');
-    // Enter goes to the focused element, and the tour focuses its close (×)
-    // button, so press it with the dialog itself focused
-    await page.evaluate(() => document.getElementById('profileSwitchModal').focus());
+    await expect(page.locator('.driver-popover-next-btn')).toBeFocused({ timeout: 5000 });
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-    expect(await page.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
-
-    await page.locator('.driver-popover-next-btn').click();
     await expect(title).toHaveText('Closing the Window Asks First', { timeout: 5000 });
+    expect(await page.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
     await expect(page.locator('#profileSwitchModal')).toBeHidden();
 
     for (const expected of ['Your Layout Is Now a Show', 'The Shows Menu', 'Which Show Is Loaded', "Copy Someone's Show", 'Tab Actions Moved']) {

@@ -327,6 +327,28 @@ describe('TourManager', () => {
       return mockDriverFactory.mock.calls.at(-1)[0];
     }
 
+    it('focuses Next on each step after Driver.js has placed its own focus', async () => {
+      const cleanup = appendEls(['f0']);
+      const m = new TourManager({ tours: { '4.3.0': { title: 't', steps: [{ element: '#f0', title: 'A', description: 'a' }] } } });
+      await m.launchTour('4.3.0', { markSeen: false });
+      const frames = [];
+      const previousRaf = globalThis.requestAnimationFrame;
+      globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+      try {
+        const nextButton = { focus: vi.fn() };
+        lastDriverConfig().onPopoverRender({ nextButton });
+        expect(nextButton.focus).not.toHaveBeenCalled();
+        frames.forEach((callback) => callback());
+        expect(nextButton.focus).toHaveBeenCalledTimes(1);
+        // A popover without a Next button is fine
+        expect(() => lastDriverConfig().onPopoverRender({})).not.toThrow();
+        frames.splice(0).forEach((callback) => callback());
+      } finally {
+        globalThis.requestAnimationFrame = previousRaf;
+        cleanup();
+      }
+    });
+
     it('ignores a Next click while a transition is already running', async () => {
       const cleanup = appendEls(['s0', 's1', 's2']);
       let resolveSlow;

@@ -261,6 +261,11 @@ export default class DOMInitialization {
       };
       
       document.addEventListener('click', hideAndRestore);
+      // Esc closes it too. Not stopped here: the Esc shortcut still stops
+      // playback, since this menu never takes the focus.
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && menu.style.display !== 'none') hideAndRestore();
+      });
       window.addEventListener('blur', hideAndRestore);
       window.addEventListener('resize', hideAndRestore);
 
