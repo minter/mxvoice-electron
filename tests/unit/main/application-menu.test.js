@@ -88,6 +88,17 @@ describe('application menu', () => {
     expect(rebuildMenu).toHaveBeenCalledOnce();
   });
 
+  it('has no top-level Categories menu and puts Manage Categories at the end of Songs', () => {
+    const { rendererCommands, template } = buildHarness();
+    expect(template.map((menu) => menu.label)).not.toContain('Categories');
+    const songs = template.find((menu) => menu.label === 'Songs');
+    const last = songs.submenu[songs.submenu.length - 1];
+    expect(songs.submenu[songs.submenu.length - 2]).toEqual({ type: 'separator' });
+    expect(last.label).toBe('Manage Categories…');
+    last.click();
+    expect(rendererCommands.manageCategories).toHaveBeenCalledOnce();
+  });
+
   it('disables destructive actions for the default profile', () => {
     const { template } = buildHarness();
     const profileMenu = template.find((menu) => menu.label === 'Profile');

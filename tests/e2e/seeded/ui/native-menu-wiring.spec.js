@@ -114,7 +114,7 @@ test.describe('Native menu wiring', () => {
 
   test('menu commands open renderer-owned modals and the What\'s New tour', async () => {
     const commands = [
-      ['Manage Categories', '#categoryManagementModal'],
+      ['Manage Categories…', '#categoryManagementModal'],
       ['Preferences', '#preferencesModal'],
       ['New Profile...', '#newProfileModal'],
       ['Duplicate Profile...', '#duplicateProfileModal'],

@@ -132,23 +132,19 @@ function buildApplicationMenu({
             rendererCommands.deleteSelectedSong();
           },
         },
-      ],
-    },
-    buildShowMenu(
-      getShowMenuState ? getShowMenuState() : { status: 'idle', activeShow: null, shows: [] },
-      { platform: process.platform, send: showSend, fileOperations, rebuild: rebuildMenu }
-    ),
-    {
-      label: "Categories",
-      submenu: [
+        { type: 'separator' },
         {
-          label: "Manage Categories",
+          label: "Manage Categories…",
           click: () => {
             rendererCommands.manageCategories();
           },
         },
       ],
     },
+    buildShowMenu(
+      getShowMenuState ? getShowMenuState() : { status: 'idle', activeShow: null, shows: [] },
+      { platform: process.platform, send: showSend, fileOperations, rebuild: rebuildMenu }
+    ),
     {
       label: "Profile",
       submenu: [
