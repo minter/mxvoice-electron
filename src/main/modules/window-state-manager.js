@@ -1,5 +1,7 @@
 import { withTimeout, TimeoutError } from './with-timeout.js';
 
+const EXIT_KINDS = new Set(['clean', 'switch', 'handoff']);
+
 function createWindowStateManager({
   mainWindow: initialWindow = null,
   getMainWindow = () => initialWindow,
@@ -20,6 +22,10 @@ function createWindowStateManager({
 }) {
   let windowStateSaveTimeout = null;
   let closePreparationPromise = null;
+  // Set when the page failed to flush (an error, not a timeout): its latest
+  // state may be only in the crash-recovery record, so later clean exits and
+  // switches keep it. Cleared by the next successful flush.
+  let keepRecoveryOnExit = false;
   // Set only at the moment the app is really closing the window itself
   // (Electron's before-quit-for-update, Windows session end): there is nothing
   // to confirm, and a preventDefault would cancel the install or shutdown.
@@ -207,6 +213,7 @@ function setupWindowStateSaving() {
  * @param {{ exit?: 'clean'|'switch'|'handoff' }} [options]
  */
 function prepareMainWindowForClose({ exit = 'clean' } = {}) {
+  if (!EXIT_KINDS.has(exit)) throw new Error(`Invalid exit kind: ${String(exit)}`);
   if (closePreparationPromise) return closePreparationPromise;
 
   const preparation = (async () => {
@@ -215,10 +222,26 @@ function prepareMainWindowForClose({ exit = 'clean' } = {}) {
       windowStateSaveTimeout = null;
     }
 
+    if (exit === 'handoff') {
+      // The handoff only marks the existing record, so it runs even when
+      // the flush fails
+      try {
+        await flushAndSaveWindow();
+      } finally {
+        await boardSession?.handoff('update');
+      }
+      return;
+    }
+
     await flushAndSaveWindow();
     if (!boardSession) return;
-    if (exit === 'handoff') await boardSession.handoff('update');
-    else await boardSession.end(exit === 'switch' ? 'switch' : 'clean-exit');
+    if (keepRecoveryOnExit) {
+      debugLog?.warn('Keeping crash recovery: the page did not flush its state', {
+        module: 'app-setup', function: 'prepareMainWindowForClose', exit
+      });
+      return;
+    }
+    await boardSession.end(exit === 'switch' ? 'switch' : 'clean-exit');
   })();
   closePreparationPromise = preparation;
   const clearPreparation = () => {
@@ -241,8 +264,12 @@ async function flushAndSaveWindow() {
         flushTimeoutMs,
         `Page did not flush its state within ${flushTimeoutMs}ms`
       );
+      keepRecoveryOnExit = false;
     } catch (error) {
-      if (!(error instanceof TimeoutError)) throw error;
+      if (!(error instanceof TimeoutError)) {
+        keepRecoveryOnExit = true;
+        throw error;
+      }
       debugLog?.warn('Page did not flush its state in time; closing without it', {
         module: 'app-setup',
         function: 'prepareMainWindowForClose',

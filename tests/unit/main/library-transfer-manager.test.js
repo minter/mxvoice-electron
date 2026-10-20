@@ -331,6 +331,57 @@ describe('importLibrary', () => {
     fs.rmSync(importUserData, { recursive: true, force: true });
   });
 
+  it.each([
+    ['never opened', async () => {}],
+    ['already ended', async (session) => {
+      const opened = await session.open();
+      session.reportReady(opened.generation, true);
+      await session.end('clean-exit');
+    }],
+  ])('clears every recovery record even when the session was %s', async (_label, prepare) => {
+    const { createBoardSession } = await import('../../../src/main/modules/board-session.js');
+    const { createDocument, normalizeLayout } = await import('../../../src/main/modules/board-document.js');
+    const archivePath = path.join(testUserData, 'for-import.mxvlib');
+    await exportLibrary(archivePath);
+    const importUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-import-'));
+    fakeApp.getPath.mockReturnValue(importUserData);
+    const importConfigPath = path.join(importUserData, 'config.json');
+    fs.writeFileSync(importConfigPath, '{}');
+    createTestFile(path.join(importUserData, 'profiles', 'Old Show', 'preferences.json'), '{}');
+
+    const profilesAtClear = [];
+    const recoveryStore = {
+      retire: vi.fn(async () => {}),
+      markHandoff: vi.fn(async () => true),
+      clearAll: vi.fn(async () => {
+        profilesAtClear.push(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show')));
+      }),
+    };
+    const doc = createDocument(normalizeLayout(null), { now: Date.now(), newId: () => 'board-1' });
+    const boardSession = createBoardSession({
+      boardStore: { load: vi.fn(async () => ({ doc, source: 'boards' })) },
+      recoveryStore,
+      getCurrentProfile: () => 'Old Show',
+    });
+    await prepare(boardSession);
+
+    initializeLibraryTransferManager({
+      debugLog: mockDebugLog,
+      getDb: () => ({ close: vi.fn() }),
+      store: { get: vi.fn(() => undefined), path: importConfigPath },
+      boardSession,
+      recoveryStore,
+    });
+
+    const result = await importLibrary(archivePath);
+
+    expect(result.success).toBe(true);
+    expect(recoveryStore.clearAll).toHaveBeenCalled();
+    // Before the profiles directory was replaced
+    expect(profilesAtClear[0]).toBe(true);
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  });
+
   it('finishes the import when clearing recovery records fails', async () => {
     const archivePath = path.join(testUserData, 'for-import.mxvlib');
     await exportLibrary(archivePath);
@@ -342,7 +393,8 @@ describe('importLibrary', () => {
       debugLog: mockDebugLog,
       getDb: () => ({ close: vi.fn() }),
       store: { get: vi.fn(() => undefined), path: importConfigPath },
-      boardSession: { end: vi.fn(async () => { throw new Error('recovery dir locked'); }) }
+      boardSession: { end: vi.fn(async () => { throw new Error('session busy'); }) },
+      recoveryStore: { clearAll: vi.fn(async () => { throw new Error('recovery dir locked'); }) }
     });
 
     const result = await importLibrary(archivePath);

@@ -247,7 +247,7 @@ describe('window state manager', () => {
       const confirmClose = vi.fn(async () => answer);
       const { manager } = createHarness({ getMainWindow: () => window, store, boardSession, confirmClose });
       manager.setupWindowStateSaving();
-      return { manager, handlers, calls, boardSession, confirmClose };
+      return { manager, handlers, calls, boardSession, confirmClose, window };
     }
 
     it('confirmed close flushes, then retires recovery', async () => {
@@ -283,6 +283,44 @@ describe('window state manager', () => {
       handlers['session-end']();
       await vi.waitFor(() => expect(boardSession.end).toHaveBeenCalledTimes(2));
       expect(boardSession.end).toHaveBeenLastCalledWith('clean-exit');
+    });
+
+    it('a close whose flush failed keeps the record through the quit that follows', async () => {
+      const { manager, boardSession, window } = sessionHarness();
+      // The close button: the page's flush fails outright
+      window.webContents.executeJavaScript.mockRejectedValueOnce(new Error('page script threw'));
+      await expect(manager.prepareMainWindowForClose()).rejects.toThrow('page script threw');
+      // window-all-closed → before-quit: the window is gone, a fresh preparation runs
+      window.isDestroyed = () => true;
+      await manager.prepareMainWindowForClose();
+      expect(boardSession.end).not.toHaveBeenCalled();
+    });
+
+    it('an update handoff is marked even when the flush throws, and the quit keeps the record', async () => {
+      const { manager, boardSession, window } = sessionHarness();
+      window.webContents.executeJavaScript.mockRejectedValueOnce(new Error('page script threw'));
+      await expect(manager.prepareMainWindowForClose({ exit: 'handoff' })).rejects.toThrow('page script threw');
+      expect(boardSession.handoff).toHaveBeenCalledWith('update');
+      // quitAndInstall → before-quit
+      window.isDestroyed = () => true;
+      await manager.prepareMainWindowForClose();
+      expect(boardSession.end).not.toHaveBeenCalled();
+    });
+
+    it('a later successful flush clears the keep-the-record latch', async () => {
+      const { manager, boardSession, window } = sessionHarness();
+      window.webContents.executeJavaScript.mockRejectedValueOnce(new Error('page script threw'));
+      await expect(manager.prepareMainWindowForClose({ exit: 'switch' })).rejects.toThrow();
+      expect(boardSession.end).not.toHaveBeenCalled();
+      // The reloaded page is healthy again
+      await manager.prepareMainWindowForClose();
+      expect(boardSession.end).toHaveBeenCalledWith('clean-exit');
+    });
+
+    it('rejects an unknown exit kind', () => {
+      const { manager, boardSession } = sessionHarness();
+      expect(() => manager.prepareMainWindowForClose({ exit: 'reboot' })).toThrow(/exit/);
+      expect(boardSession.end).not.toHaveBeenCalled();
     });
 
     it('ends the session even when the window is already gone', async () => {

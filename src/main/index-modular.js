@@ -806,7 +806,8 @@ function initializeMainProcessServices() {
     getDb: () => db,
     setDb: (next) => { db = next; },
     store,
-    boardSession
+    boardSession,
+    recoveryStore
   });
 
   launcherWindow.initializeLauncherWindow({
