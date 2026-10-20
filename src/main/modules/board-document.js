@@ -16,6 +16,7 @@ import { randomUUID } from 'node:crypto';
 
 export const BOARD_DOCUMENT_VERSION = 1;
 export const MAX_BOARD_NAME_LENGTH = 50;
+const MAX_IMPORT_NAME_ATTEMPTS = 1000;
 const TAB_COUNT = 5;
 const HOTKEY_KEYS = Array.from({ length: 12 }, (_, i) => `f${i + 1}`);
 
@@ -184,31 +185,52 @@ export function setActive(doc, id) {
 
 export function importName(doc, boardName, sourceProfile) {
   const taken = new Set(doc.boards.map((b) => foldName(b.name)));
-  const tail = ` (${sourceProfile})`;
-  for (let n = 1; ; n++) {
+  const board = String(boardName ?? '').trim() || 'Board';
+  const profile = String(sourceProfile ?? '');
+  for (let n = 1; n <= MAX_IMPORT_NAME_ATTEMPTS; n++) {
     const suffix = n === 1 ? '' : ` ${n}`;
-    const room = MAX_BOARD_NAME_LENGTH - tail.length - suffix.length;
-    // Clip the board name; if the profile part alone is too long, clip the whole string.
-    let candidate =
-      room >= 1
-        ? `${String(boardName).slice(0, room).trimEnd()}${tail}${suffix}`
-        : `${tail}${suffix}`.trim().slice(0, MAX_BOARD_NAME_LENGTH);
+    // " (" + ")" add 3 characters around the profile.
+    const room = MAX_BOARD_NAME_LENGTH - 3 - profile.length - suffix.length;
+    let candidate;
+    if (room >= 1) {
+      candidate = `${board.slice(0, room).trimEnd()} (${profile})${suffix}`;
+    } else {
+      // Board part is down to one character; clip the profile and mark it.
+      const profileRoom = MAX_BOARD_NAME_LENGTH - 1 - 3 - suffix.length;
+      const clipped =
+        profile.length > profileRoom ? `${profile.slice(0, profileRoom - 1)}…` : profile;
+      candidate = `${board.slice(0, 1)} (${clipped})${suffix}`;
+    }
     if (!taken.has(foldName(candidate))) return candidate;
   }
+  throw new Error('Could not find a free name for the imported board.');
+}
+
+function futureVersion(version) {
+  const num =
+    typeof version === 'number'
+      ? version
+      : typeof version === 'string' && /^\s*\d+\s*$/.test(version)
+        ? Number(version)
+        : NaN;
+  return Number.isInteger(num) && num > BOARD_DOCUMENT_VERSION;
 }
 
 export function parseDocument(raw) {
   if (!isObject(raw)) return { ok: false, error: 'shape' };
-  if (typeof raw.version === 'number' && raw.version > BOARD_DOCUMENT_VERSION) {
-    return { ok: false, error: 'version' };
+  if (raw.version !== BOARD_DOCUMENT_VERSION) {
+    return { ok: false, error: futureVersion(raw.version) ? 'version' : 'shape' };
   }
   if (!Array.isArray(raw.boards) || raw.boards.length === 0) return { ok: false, error: 'shape' };
   if (!raw.boards.every((b) => isObject(b) && typeof b.id === 'string' && typeof b.name === 'string')) {
     return { ok: false, error: 'shape' };
   }
+  if (new Set(raw.boards.map((b) => b.id)).size !== raw.boards.length) {
+    return { ok: false, error: 'shape' };
+  }
   if (!raw.boards.some((b) => b.id === raw.activeBoardId)) return { ok: false, error: 'shape' };
   const boards = raw.boards.map((b) => ({ ...b, layout: normalizeLayout(b.layout) }));
-  return { ok: true, doc: { ...raw, version: BOARD_DOCUMENT_VERSION, boards } };
+  return { ok: true, doc: { ...raw, boards } };
 }
 
 export default {

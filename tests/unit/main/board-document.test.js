@@ -152,6 +152,43 @@ describe('board-document', () => {
     expect(bd.validateBoardName(d2, second).ok).toBe(true);
   });
 
+  it('importName terminates and stays within 50 chars for very long profiles', () => {
+    const { doc } = mk(['A']);
+    const profile = 'p'.repeat(50);
+    const first = bd.importName(doc, 'Show', profile);
+    expect(first.length).toBeLessThanOrEqual(50);
+    expect(first).toContain('…');
+    const { doc: d2 } = mk(['A', first]);
+    const second = bd.importName(d2, 'Show', profile);
+    expect(second).not.toBe(first);
+    expect(second.length).toBeLessThanOrEqual(50);
+    expect(second).toContain('…');
+    expect(second.endsWith(' 2')).toBe(true);
+    expect(bd.validateBoardName(d2, second).ok).toBe(true);
+  });
+
+  it('importName trims leading spaces and throws when no name is free', () => {
+    const { doc } = mk(['A']);
+    expect(bd.importName(doc, '   Show  ', 'Derek')).toBe('Show (Derek)');
+    const names = ['Show (Derek)', ...Array.from({ length: 999 }, (_, i) => `Show (Derek) ${i + 2}`)];
+    const { doc: full } = mk(names);
+    expect(() => bd.importName(full, 'Show', 'Derek')).toThrow(
+      'Could not find a free name for the imported board.'
+    );
+  });
+
+  it('parseDocument handles version edge cases and duplicate ids', () => {
+    const { doc } = mk(['A', 'B']);
+    expect(bd.parseDocument({ ...doc, version: '2' })).toEqual({ ok: false, error: 'version' });
+    const { version, ...noVersion } = doc;
+    expect(bd.parseDocument(noVersion)).toEqual({ ok: false, error: 'shape' });
+    for (const v of ['x', NaN, 1.5, 0]) {
+      expect(bd.parseDocument({ ...doc, version: v })).toEqual({ ok: false, error: 'shape' });
+    }
+    const dup = { ...doc, boards: [doc.boards[0], { ...doc.boards[1], id: doc.boards[0].id }] };
+    expect(bd.parseDocument(dup)).toEqual({ ok: false, error: 'shape' });
+  });
+
   it('normalizeLayout pads to 5 tabs and drops non-numeric ids', () => {
     const l = bd.normalizeLayout({
       hotkeys: [
