@@ -799,10 +799,11 @@ test.describe('Holding Tank - basic', () => {
     await expect(contextMenu).toBeVisible({ timeout: 10000 });
 
     // Verify expected items exist (Play, Edit, Remove from Holding Tank)
-    const menuItems = contextMenu.locator('.mxv-context-item');
+    // Mark as Unplayed is there too, hidden for a song not played tonight
+    const menuItems = contextMenu.locator('.mxv-context-item:visible');
     await expect(menuItems).toHaveCount(3);
 
-    const playBtn = contextMenu.locator('button:has-text("Play")');
+    const playBtn = contextMenu.getByRole('button', { name: 'Play', exact: true });
     await expect(playBtn).toBeVisible();
     await expect(contextMenu.locator('button:has-text("Edit")')).toBeVisible();
     let removeButton = contextMenu.locator('button:has-text("Remove from Holding Tank")');
