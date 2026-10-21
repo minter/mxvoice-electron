@@ -1297,6 +1297,13 @@ describe('show session imports', () => {
     const listedId = list[0].shows[0].id;
     await ctx.session.importShow('Bob', listedId);
 
+    const aliceDoc = JSON.parse(nodeFs.readFileSync(path.join(store.dir('Alice'), 'shows.json'), 'utf8'));
+    const copy = aliceDoc.shows.find((show) => show.name === 'Default Show (Bob)');
+    expect(copy).toBeTruthy();
+    expect(aliceDoc.activeShowId).toBe(copy.id);
+    expect(copy.id).not.toBe(listedId);
+    expect(copy.importedFrom).toMatchObject({ profile: 'Bob', showId: listedId, showName: 'Default Show' });
+
     expect(store.snapshot('Bob')).toEqual(bobBefore);
     expect(nodeFs.existsSync(path.join(store.dir('Bob'), 'shows.json'))).toBe(false);
   });
