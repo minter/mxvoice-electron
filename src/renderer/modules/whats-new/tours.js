@@ -46,7 +46,7 @@ export default {
         },
         {
           title: "See What You've Played",
-          description: "A ▶ count appears next to any track you've played tonight, in the hotkeys, the holding tank and search results. Right-click a song and choose Mark as Unplayed to clear just that one, or use Songs → Mark All Songs as Unplayed to clear them all.",
+          description: "A ▶ count appears next to any track you've played tonight, in the hotkeys, the holding tank and search results. Right-click a song and choose Mark as Unplayed to clear just that one, or use Shows → Mark All Songs as Unplayed to clear them all.",
         },
         {
           title: "Copy Someone's Show",

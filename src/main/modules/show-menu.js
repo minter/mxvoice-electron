@@ -16,21 +16,7 @@ function escapeLabel(name, platform) {
 }
 
 /**
- * Mark All Songs as Unplayed, for the Songs menu: played counts belong to
- * the songs, not the show, and carry across show switches.
- * @param {Object} state - { status, hasPlayed } from the show session
- */
-function buildUnplayedItem(state, { send } = {}) {
-  return {
-    label: 'Mark All Songs as Unplayed',
-    // Clears every played count at once, without asking: they are only a reminder
-    enabled: state?.status === 'ready' && !!state?.hasPlayed,
-    click: () => send?.('reset-played')
-  };
-}
-
-/**
- * @param {Object} state - { status, activeShow, shows, dirty } from the show session
+ * @param {Object} state - { status, activeShow, shows, dirty, hasPlayed } from the show session
  * @param {Object} [options]
  * @param {Function} [options.rebuild] - rebuilds the application menu from the session
  * @param {Function} [options.swatchImage] - (colorKey|null) => NativeImage for the Color items
@@ -78,7 +64,11 @@ function buildShowMenu(state, { platform, send, rebuild, swatchImage } = {}) {
       buildColorMenu(activeShow, { enabled: hasActive, send, rebuild, swatchImage }),
       { label: `${quoted('Delete')}…`, enabled: hasActive, click: emit('delete') },
       { type: 'separator' },
-      { label: 'Import Show from Another Profile…', enabled: ready, click: emit('import') }
+      { label: 'Import Show from Another Profile…', enabled: ready, click: emit('import') },
+      { type: 'separator' },
+      // Tonight's played counts, which carry across show switches: a group of their own, so it
+      // doesn't read as a change to the saved show. Clears them all without asking; they are only a reminder.
+      { label: 'Mark All Songs as Unplayed', enabled: ready && !!state?.hasPlayed, click: emit('reset-played') }
     ]
   };
 }
@@ -106,5 +96,5 @@ function buildColorMenu(activeShow, { enabled, send, rebuild, swatchImage }) {
   };
 }
 
-export { buildShowMenu, buildUnplayedItem };
+export { buildShowMenu };
 export default buildShowMenu;

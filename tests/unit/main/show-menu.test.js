@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildShowMenu, buildUnplayedItem } from '../../../src/main/modules/show-menu.js';
+import { buildShowMenu } from '../../../src/main/modules/show-menu.js';
 
 const shows = [
   { id: 'b1', name: 'Comedy Sports' },
@@ -36,7 +36,7 @@ describe('Shows menu', () => {
     expect(labels(menu)).toEqual([
       'Comedy Sports', 'Mom & Pop', '---', 'Save "Comedy Sports"…', 'Save As…', 'Revert to Saved…', '---',
       'Rename "Comedy Sports"…', 'Color', 'Delete "Comedy Sports"…', '---',
-      'Import Show from Another Profile…'
+      'Import Show from Another Profile…', '---', 'Mark All Songs as Unplayed'
     ]);
     // Color is the only nested menu
     walk(menu.submenu, (item) => expect(item.submenu, item.label).toBe(item.label === 'Color' ? item.submenu : undefined));
@@ -67,21 +67,15 @@ describe('Shows menu', () => {
     expect(revert({ ...readyState(), status: 'loading' })).toBe(false);
   });
 
-  it('has no played-count item: Mark All Songs as Unplayed is in the Songs menu', () => {
-    const { menu } = build({ ...readyState(), hasPlayed: true });
-    walk(menu.submenu, (item) => expect(item.label ?? '').not.toMatch(/Played|Unplayed/));
-  });
-
-  it('Mark All Songs as Unplayed is enabled only when ready with any played count, and sends reset-played', () => {
-    const item = (state, send) => buildUnplayedItem(state, { send });
-    expect(item({ ...readyState(), hasPlayed: true })).toMatchObject({ label: 'Mark All Songs as Unplayed', enabled: true });
-    expect(item(readyState()).enabled).toBe(false);
-    expect(item({ ...readyState(), hasPlayed: false }).enabled).toBe(false);
-    expect(item({ ...readyState(), hasPlayed: true, status: 'loading' }).enabled).toBe(false);
-    expect(item(undefined).enabled).toBe(false);
-    const send = vi.fn();
-    item({ ...readyState(), hasPlayed: true }, send).click();
-    expect(send).toHaveBeenCalledWith('reset-played');
+  it('enables Mark All Songs as Unplayed only when ready with any played count, and sends reset-played', () => {
+    const unplayed = (state) => find(build(state).menu, 'Mark All Songs as Unplayed');
+    expect(unplayed({ ...readyState(), hasPlayed: true }).enabled).toBe(true);
+    expect(unplayed(readyState()).enabled).toBe(false);
+    expect(unplayed({ ...readyState(), hasPlayed: false }).enabled).toBe(false);
+    expect(unplayed({ ...readyState(), hasPlayed: true, status: 'loading' }).enabled).toBe(false);
+    const { menu, send } = build({ ...readyState(), hasPlayed: true });
+    find(menu, 'Mark All Songs as Unplayed').click();
+    expect(send).toHaveBeenCalledWith('reset-played', undefined);
   });
 
   it('sends switch with a show id and every other command without one', () => {
@@ -190,7 +184,7 @@ describe('Shows menu', () => {
     const { menu } = build({ status: 'idle', activeShow: null, shows: [] });
     expect(labels(menu)).toEqual([
       '---', 'Save…', 'Save As…', 'Revert to Saved…', '---', 'Rename…', 'Color', 'Delete…', '---',
-      'Import Show from Another Profile…'
+      'Import Show from Another Profile…', '---', 'Mark All Songs as Unplayed'
     ]);
     expect(find(menu, 'Save…').enabled).toBe(false);
     expect(find(menu, 'Rename…').enabled).toBe(false);

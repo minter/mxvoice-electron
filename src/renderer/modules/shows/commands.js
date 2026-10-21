@@ -251,7 +251,7 @@ const handlers = {
     return ['show_color_set', { color: color ?? 'none' }];
   },
 
-  // Songs → Mark All Songs as Unplayed: the counts are only a reminder, so nothing asks first
+  // Shows → Mark All Songs as Unplayed: the counts are only a reminder, so nothing asks first
   async 'reset-played'(_showId, deps) {
     deps.playedCounts.clearAll();
     return ['played_reset'];

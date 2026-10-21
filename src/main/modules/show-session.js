@@ -284,7 +284,7 @@ export function createShowSession({
     };
   }
 
-  // The Songs menu's Mark All Songs as Unplayed item follows whether any count is set
+  // The Shows menu's Mark All Songs as Unplayed item follows whether any count is set
   function setPlayed(next) {
     const before = played.size > 0;
     played = next;

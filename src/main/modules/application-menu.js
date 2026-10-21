@@ -1,4 +1,4 @@
-import { buildShowMenu, buildUnplayedItem } from './show-menu.js';
+import { buildShowMenu } from './show-menu.js';
 
 function buildApplicationMenu({
   app,
@@ -20,7 +20,6 @@ function buildApplicationMenu({
       mainWindow.webContents.send('menu:show-command', { command, showId, ...extra });
     }
   };
-  const showMenuState = getShowMenuState ? getShowMenuState() : { status: 'idle', activeShow: null, shows: [] };
   const application_menu = [
     {
       label: "File",
@@ -134,7 +133,6 @@ function buildApplicationMenu({
             rendererCommands.deleteSelectedSong();
           },
         },
-        buildUnplayedItem(showMenuState, { send: showSend }),
         { type: 'separator' },
         {
           label: "Manage Categories…",
@@ -145,7 +143,7 @@ function buildApplicationMenu({
       ],
     },
     buildShowMenu(
-      showMenuState,
+      getShowMenuState ? getShowMenuState() : { status: 'idle', activeShow: null, shows: [] },
       { platform: process.platform, send: showSend, rebuild: rebuildMenu, swatchImage }
     ),
     {

@@ -92,10 +92,9 @@ describe('application menu', () => {
     expect(teal.icon).toBe('swatch:teal');
     teal.click();
     expect(send).toHaveBeenLastCalledWith('menu:show-command', { command: 'set-color', showId: null, color: 'teal' });
-    // Played counts are the songs', so their reset is in the Songs menu, after the song items
-    const songs = template.find((m) => m.label === 'Songs').submenu;
-    const unplayed = songs.find((i) => i.label === 'Mark All Songs as Unplayed');
-    expect(songs.indexOf(unplayed)).toBe(songs.findIndex((i) => i.label === 'Delete Selected Song') + 1);
+    // Tonight's played counts reset from the Shows menu, not Songs, which is the library
+    expect(template.find((m) => m.label === 'Songs').submenu.map((i) => i.label)).not.toContain('Mark All Songs as Unplayed');
+    const unplayed = shows.find((i) => i.label === 'Mark All Songs as Unplayed');
     expect(unplayed.enabled).toBe(true);
     unplayed.click();
     expect(send).toHaveBeenLastCalledWith('menu:show-command', { command: 'reset-played', showId: undefined });

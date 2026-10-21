@@ -34,11 +34,6 @@ export function multiShowDocument(shows, { active = 0 } = {}) {
  * disabled, since the menu is rebuilt once a show finishes loading.
  */
 export async function clickShowMenu(app, ...labels) {
-  await clickAppMenu(app, 'Shows', ...labels);
-}
-
-/** Click any top-level menu > ...labels from main, retrying like clickShowMenu. */
-export async function clickAppMenu(app, menu, ...labels) {
   await expect(async () => {
     const result = await app.evaluate(({ Menu, BrowserWindow }, path) => {
       let items = Menu.getApplicationMenu()?.items;
@@ -52,7 +47,7 @@ export async function clickAppMenu(app, menu, ...labels) {
       const win = BrowserWindow.getAllWindows()[0];
       item.click({}, win, win.webContents);
       return { ok: true };
-    }, [menu, ...labels]);
+    }, ['Shows', ...labels]);
     expect(result).toEqual({ ok: true });
   }).toPass({ timeout: 10000 });
 }

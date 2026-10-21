@@ -149,8 +149,9 @@ The menu contains:
 - Color, a submenu: None, Teal, Blue, Purple, Pink, Coral, Amber, Green, with a check on the current show's color
 - Delete "Comedy Sports"…, last in its group because it is the destructive one
 - A separator, then Import Show from Another Profile…
+- A separator, then Mark All Songs as Unplayed
 
-The first group keeps the show; the second changes the show itself. Import names where the show comes from, so nobody looks for a file. Played counts are not in this menu: they belong to the songs and carry across show switches, so their reset is in the Songs menu.
+The first group keeps the show; the second changes the show itself. Import names where the show comes from, so nobody looks for a file. Mark All Songs as Unplayed is about tonight, not the saved show (the counts carry across show switches), so it sits in a group of its own. It is not in the Songs menu, which manages the library, nor in Profile, which manages who is at the machine.
 
 Save and Save As are the words people already know for keeping their work, so the menu uses them. What keeps the night from becoming a document is the rest of the design: a clean exit never asks, and the saved show comes back next time.
 
@@ -172,7 +173,7 @@ A sound operator needs to see which tracks have already been played tonight with
 
 A song played at least once shows a small muted pill, ▶ and the count, after its name in a hotkey slot, after its title in a holding tank row, and at the end of its Title cell in search results. The pill never dims a row and never changes F-key badges, now-playing or selection styling. It stays visible when a hotkey name is cut off with an ellipsis. Its styles live in their own stylesheet (`played-counts.css`), with the two colors in `colors.css`.
 
-The counts belong to the profile's session, not to a show. They start empty whenever a profile opens, and they carry across show switches, Revert, Import and Save. They are not part of the show document, and they never affect the unsaved-changes dot or the comparison with the saved show. **Songs → Mark All Songs as Unplayed** clears them all without asking; it is enabled when the show is ready and any song has been played. **Mark as Unplayed** in a song's right-click menu (search result, holding tank row or hotkey slot) clears that one song, and is shown only for a song played tonight.
+The counts belong to the profile's session, not to a show. They start empty whenever a profile opens, and they carry across show switches, Revert, Import and Save. They are not part of the show document, and they never affect the unsaved-changes dot or the comparison with the saved show. **Shows → Mark All Songs as Unplayed** clears them all without asking; it is enabled when the show is ready and any song has been played. **Mark as Unplayed** in a song's right-click menu (search result, holding tank row or hotkey slot) clears that one song, and is shown only for a song played tonight.
 
 For crash safety the counts are written, on every change, to `userData/recovery/<key>.played.json` beside the recovery copy, with the same profile, fence and queue rules. A clean exit, a profile switch and the other exits in the table below retire it wherever they retire the recovery copy, and a library import clears it with the rest. Retiring the recovery copy because the layout matches the saved show leaves it alone. A played file counts as a show in progress: after a crash with counts but no layout change, the next open asks as usual; Restore brings back the counts (with the saved show, or with the recovery copy when there is one), and Open saved show clears them. An update install or a window crash restores them silently, like the layout.
 

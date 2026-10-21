@@ -78,7 +78,7 @@ export function clear(id) {
   tellMain('clear', 'clearPlayed', songId);
 }
 
-/** Songs → Mark All Songs as Unplayed: clear every count. */
+/** Shows → Mark All Songs as Unplayed: clear every count. */
 export function clearAll() {
   if (counts.size === 0) return;
   const songIds = [...counts.keys()];
