@@ -80,14 +80,17 @@ describe('application menu', () => {
       fileOperations: {}, getCurrentProfile: () => 'Default User', showAboutDialog: vi.fn(),
       debugLog: { warn: vi.fn() }, logService: {}, rendererCommands: {},
       getShowMenuState: () => ({ status: 'ready', activeShow: { id: 'b1', name: 'A' }, shows: [{ id: 'b1', name: 'A' }, { id: 'b2', name: 'B' }] }),
-      rebuildMenu
+      rebuildMenu,
+      swatchImage: (key) => `swatch:${key}`
     });
     template.find((m) => m.label === 'Shows').submenu[1].click();
     expect(send).toHaveBeenCalledWith('menu:show-command', { command: 'switch', showId: 'b2' });
     await new Promise((r) => setImmediate(r));
     expect(rebuildMenu).toHaveBeenCalledOnce();
     const shows = template.find((m) => m.label === 'Shows').submenu;
-    shows.find((i) => i.label === 'Color').submenu.find((i) => i.label === 'Teal').click();
+    const teal = shows.find((i) => i.label === 'Color').submenu.find((i) => i.label === 'Teal');
+    expect(teal.icon).toBe('swatch:teal');
+    teal.click();
     expect(send).toHaveBeenLastCalledWith('menu:show-command', { command: 'set-color', showId: null, color: 'teal' });
   });
 

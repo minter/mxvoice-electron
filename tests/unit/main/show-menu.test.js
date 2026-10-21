@@ -132,6 +132,20 @@ describe('Shows menu', () => {
     }
   });
 
+  it('gives every Color item the swatch icon for its key, None a null key', () => {
+    const swatchImage = vi.fn((key) => ({ swatch: key }));
+    const menu = buildShowMenu({ ...readyState(), activeShow: { ...shows[0], color: 'blue' } }, { swatchImage });
+    const color = find(menu, 'Color');
+    expect(color.submenu.map((i) => i.icon)).toEqual([
+      { swatch: null }, { swatch: 'teal' }, { swatch: 'blue' }, { swatch: 'purple' },
+      { swatch: 'pink' }, { swatch: 'coral' }, { swatch: 'amber' }, { swatch: 'green' }
+    ]);
+    // The radio check still shows next to the icon
+    expect(color.submenu.find((i) => i.label === 'Blue')).toMatchObject({ type: 'radio', checked: true });
+    // Without a factory the items carry no icon
+    for (const item of find(build(readyState()).menu, 'Color').submenu) expect(item).not.toHaveProperty('icon');
+  });
+
   it('disables the Color submenu unless ready', () => {
     for (const status of ['idle', 'loading', 'failed', 'unreadable']) {
       const color = find(build({ ...readyState(), status }).menu, 'Color');

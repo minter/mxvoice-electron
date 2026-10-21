@@ -115,6 +115,36 @@ test.describe('Shows - show color', () => {
     expect((await colorMenuState(app)).checked).toBe('Teal');
   });
 
+  test('every Color item shows a swatch: a filled circle, or a hollow ring for None', async () => {
+    await launch([{ name: 'Main Show' }]);
+    const icons = await app.evaluate(({ Menu }) => {
+      const shows = Menu.getApplicationMenu()?.items.find((item) => item.label === 'Shows');
+      const color = shows?.submenu?.items.find((item) => item.label === 'Color');
+      return (color?.submenu?.items ?? []).map((item) => {
+        const icon = item.icon;
+        if (!icon || icon.isEmpty()) return { label: item.label, icon: null };
+        // Center pixel of the 1x bitmap, BGRA
+        const bitmap = icon.toBitmap({ scaleFactor: 1 });
+        const i = (8 * 16 + 8) * 4;
+        return {
+          label: item.label,
+          type: item.type,
+          size: icon.getSize(),
+          scaleFactors: icon.getScaleFactors(),
+          center: [bitmap[i + 2], bitmap[i + 1], bitmap[i], bitmap[i + 3]]
+        };
+      });
+    });
+    expect(icons.map((i) => i.label)).toEqual(['None', 'Teal', 'Blue', 'Purple', 'Pink', 'Coral', 'Amber', 'Green']);
+    for (const icon of icons) {
+      expect(icon.type, icon.label).toBe('radio');
+      expect(icon.size, icon.label).toEqual({ width: 16, height: 16 });
+      expect(icon.scaleFactors, icon.label).toEqual(expect.arrayContaining([1, 2]));
+    }
+    expect(icons[0].center[3]).toBe(0);
+    expect(icons.find((i) => i.label === 'Teal').center).toEqual([0x0f, 0x6e, 0x56, 255]);
+  });
+
   test('switching to an uncolored show, None and Save As', async () => {
     await launch([{ name: 'Main Show' }, { name: 'Plain Show' }]);
     const plainGutter = (await surfaces(page)).gutter;
