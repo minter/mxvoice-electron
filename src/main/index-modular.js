@@ -758,6 +758,17 @@ function initializeMainProcessServices() {
     getProfileDirectoryKey,
     hasUsableDirectoryKey,
     profileExists: (name) => profileManager.profileExists(name),
+    // 3.x/4.0 kept hotkeys and the holding tank in the global config.json
+    getLegacyConfigPath: () => path.join(app.getPath('userData'), 'config.json'),
+    loadProfilePreferences: (name) => profileManager.loadProfilePreferences(name),
+    markMigrationCompleted: async (name) => {
+      const preferences = await profileManager.loadProfilePreferences(name);
+      if (!preferences) throw new Error('Preferences could not be read');
+      preferences.migration_completed = true;
+      if (await profileManager.saveProfilePreferences(name, preferences) === false) {
+        throw new Error('Preferences could not be saved');
+      }
+    },
     debugLog
   });
   const recoveryStore = createRecoveryStore({ fs, getRecoveryPath, getRecoveryDirectory, debugLog });

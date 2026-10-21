@@ -4,7 +4,10 @@
  * Reads and writes a profile's shows.json. The first time a profile is opened
  * after the upgrade there is no shows.json, so the store migrates the
  * profile's state.json (or state.json.backup) into a single show. state.json
- * is never written or deleted.
+ * is never written or deleted. For "Default User" with neither state file, the
+ * 3.x/4.0 hotkeys and holding tank in the global config.json are migrated
+ * instead, once (the `migration_completed` preference); config.json is never
+ * written.
  *
  * Recovery rules for shows.json: a file that fails to parse or fails
  * `parseDocument` with 'shape' is treated as corrupt; it is quarantined and
@@ -19,6 +22,10 @@ import path from 'path';
 import { createHash } from 'node:crypto';
 import { quarantine, writeJsonAtomic } from './atomic-json-file.js';
 import { createDocument, normalizeLayout, parseDocument } from './show-document.js';
+import { parseLegacyConfigLayout } from './legacy-config-layout.js';
+
+/** The only profile that inherits the pre-profiles (3.x/4.0) hotkeys and holding tank. */
+const LEGACY_PROFILE = 'Default User';
 
 export const RECOVERY_NOTICE =
   "Mx. Voice couldn't read this profile's shows and opened the previous copy.";
@@ -89,6 +96,9 @@ async function classify(fs, filePath) {
  * @param {number|(() => number)} [deps.now]
  * @param {() => string} [deps.newId]
  * @param {(profileName: string) => string} [deps.getProfileDirectoryKey] - keys the migrated show id
+ * @param {() => string} [deps.getLegacyConfigPath] - the global config.json; omitted, no legacy migration
+ * @param {(profileName: string) => Object|null|Promise<Object|null>} [deps.loadProfilePreferences]
+ * @param {(profileName: string) => void|Promise<void>} [deps.markMigrationCompleted] - sets migration_completed
  */
 export function createShowStore({
   fs = nodeFs,
@@ -97,6 +107,9 @@ export function createShowStore({
   profileExists,
   getProfileDirectoryKey = (name) => String(name),
   hasUsableDirectoryKey = (name) => getProfileDirectoryKey(name) !== '',
+  getLegacyConfigPath,
+  loadProfilePreferences = () => null,
+  markMigrationCompleted = () => {},
   debugLog,
   now,
   newId
@@ -156,22 +169,57 @@ export function createShowStore({
     newId: () => migratedShowId(getProfileDirectoryKey(profileName))
   });
 
-  /** Build the migrated document from state.json, then state.json.backup, in memory. */
+  /**
+   * The 3.x/4.0 layout in config.json, or null. Applies only to Default User,
+   * once (until migration_completed is true). Throws 'io' when config.json
+   * exists but can't be read, so an empty show isn't saved in its place.
+   */
+  async function legacyConfigLayout(profileName) {
+    if (profileName !== LEGACY_PROFILE || !getLegacyConfigPath) return null;
+    const preferences = await loadProfilePreferences(profileName);
+    if (preferences?.migration_completed === true) return null;
+    const raw = await readRaw(fs, getLegacyConfigPath());
+    if (raw.ioError) throw new ShowStoreError('io', raw.ioError);
+    if (!('value' in raw)) return null;
+    return parseLegacyConfigLayout(raw.value);
+  }
+
+  /**
+   * Build the migrated document in memory from state.json, then
+   * state.json.backup, then (Default User only, when neither exists) the
+   * legacy config.json.
+   */
   async function buildMigration(profileName) {
     const statePath = getProfileStatePath(profileName);
     const candidates = [
       [statePath, 'migrated-state'],
       [`${statePath}.backup`, 'migrated-state-backup']
     ];
+    let anyStateFile = false;
     for (const [file, source] of candidates) {
       const raw = await readRaw(fs, file);
       // An unreadable (not absent) state file must not be replaced by an empty show.
       if (raw.ioError) throw new ShowStoreError('io', raw.ioError);
+      if (!raw.missing) anyStateFile = true;
       if ('value' in raw && isObject(raw.value)) {
         return { doc: createDocument(normalizeLayout(raw.value), migrationOptions(profileName)), source };
       }
     }
+    const legacy = anyStateFile ? null : await legacyConfigLayout(profileName);
+    if (legacy) {
+      return { doc: createDocument(normalizeLayout(legacy), migrationOptions(profileName)), source: 'migrated-legacy-config' };
+    }
     return { doc: createDocument(normalizeLayout(null), migrationOptions(profileName)), source: 'migrated-empty' };
+  }
+
+  /** Record that config.json was migrated, so it is never migrated again. */
+  async function recordLegacyMigration(profileName) {
+    try {
+      await markMigrationCompleted(profileName);
+    } catch (error) {
+      // The show is saved, so the next load reads it; only a lost shows.json would re-migrate.
+      debugLog?.warn?.('Could not record migration_completed', { ...logCtx('load'), error: error?.message });
+    }
   }
 
   async function writeNew(profileName, doc) {
@@ -202,6 +250,7 @@ export function createShowStore({
       const migrated = await buildMigration(profileName);
       await writeNew(profileName, migrated.doc);
       debugLog?.info?.('Migrated state.json into shows', { ...logCtx('load'), source: migrated.source });
+      if (migrated.source === 'migrated-legacy-config') await recordLegacyMigration(profileName);
       return migrated;
     });
   }

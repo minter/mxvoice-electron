@@ -17,8 +17,8 @@ export default defineConfig({
         // previously E2E-only modules gain focused unit coverage.
         lines: 51,
         functions: 53,
-        statements: 51,
-        branches: 46,
+        statements: 52,
+        branches: 47,
       },
       reportOnFailure: true,
     },

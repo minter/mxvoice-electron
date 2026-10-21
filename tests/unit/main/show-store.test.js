@@ -20,7 +20,7 @@ const listing = (name) => fs.readdirSync(dirOf(name)).sort();
 const snapshot = (name) =>
   Object.fromEntries(listing(name).map((f) => [f, fs.readFileSync(path.join(dirOf(name), f), 'utf8')]));
 
-function makeStore() {
+function makeStore(extra = {}) {
   return createShowStore({
     fs,
     getProfileShowsPath: showsPath,
@@ -29,7 +29,8 @@ function makeStore() {
     debugLog: { info() {}, warn() {}, error() {} },
     getProfileDirectoryKey: (name) => name.toLowerCase(),
     now: () => 1700000000000,
-    newId: () => `id-${++idCounter}`
+    newId: () => `id-${++idCounter}`,
+    ...extra
   });
 }
 
@@ -325,5 +326,185 @@ describe('show store', () => {
     const layout = doc.shows[0].layout;
     expect(layout.hotkeys).toEqual(state.hotkeys);
     expect(layout.holdingTank).toEqual(state.holdingTank);
+  });
+
+  describe('3.x/4.0 config.json migration into the Default Show', () => {
+    const DEFAULT = 'Default User';
+    const LEGACY_HOTKEYS =
+      '<div id="hotkey-tab-content" class="tab-content">' +
+      '<ul class="list-group list-group-flush tab-pane fade show active hotkeys" id="hotkeys_list_1" role="tabpanel">' +
+      '<li class="list-group-item text-nowrap unselectable" id="f1_hotkey" songid="31"><div class="badge">F1</div>' +
+      '<span draggable="true" class="song" ondragstart="songDrag(event)" songid="31">A by B (1:00)</span></li>' +
+      '<li class="list-group-item text-nowrap unselectable" id="f2_hotkey"><div class="badge">F2</div>' +
+      '<span draggable="true" class="song" ondragstart="songDrag(event)"></span></li></ul>' +
+      '<ul class="list-group list-group-flush tab-pane fade hotkeys" id="hotkeys_list_3" role="tabpanel">' +
+      '<li class="list-group-item text-nowrap unselectable" id="f4_hotkey" songid="34"><div class="badge">F4</div></li></ul></div>';
+    const LEGACY_TANK =
+      '<ul id="holding_tank_1" class="list-group tab-pane fade show active holding_tank" role="tabpanel">' +
+      '<li style="font-size: 11px;" class="song list-group-item" draggable="true" ondragstart="songDrag(event)" songid="40">x</li>' +
+      '<li style="font-size: 11px;" class="song list-group-item" draggable="true" ondragstart="songDrag(event)" songid="41">y</li></ul>';
+    const configPath = () => path.join(root, 'config.json');
+    let prefs;
+    let marked;
+    let prefsRead;
+
+    function legacyStore(overrides = {}) {
+      return makeStore({
+        getLegacyConfigPath: configPath,
+        loadProfilePreferences: async (name) => {
+          prefsRead.push(name);
+          return prefs;
+        },
+        markMigrationCompleted: async (name) => {
+          marked.push(name);
+        },
+        ...overrides
+      });
+    }
+
+    function writeConfig(content) {
+      fs.writeFileSync(configPath(), content);
+      return content;
+    }
+
+    beforeEach(() => {
+      prefs = { screen_mode: 'auto' };
+      marked = [];
+      prefsRead = [];
+      store = legacyStore();
+    });
+
+    it('migrates Default User hotkeys and holding tank, leaves config.json untouched, and records it', async () => {
+      const config = writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS, holding_tank: LEGACY_TANK, font_size: 11 }));
+      addProfile(DEFAULT);
+      const { doc, source } = await store.load(DEFAULT);
+      expect(source).toBe('migrated-legacy-config');
+      expect(doc.shows).toHaveLength(1);
+      expect(doc.shows[0].name).toBe('Default Show');
+      const layout = doc.shows[0].layout;
+      expect(layout.hotkeys.map((t) => t.hotkeys)).toEqual([{ f1: '31' }, {}, { f4: '34' }, {}, {}]);
+      expect(layout.holdingTank.map((t) => t.songIds)).toEqual([['40', '41'], [], [], [], []]);
+      expect(JSON.parse(fs.readFileSync(showsPath(DEFAULT), 'utf8')).shows[0].layout).toEqual(layout);
+      expect(fs.readFileSync(configPath(), 'utf8')).toBe(config);
+      expect(marked).toEqual([DEFAULT]);
+      expect((await store.load(DEFAULT)).source).toBe('shows');
+      expect(marked).toEqual([DEFAULT]);
+    });
+
+    it('migrates the holding tank alone', async () => {
+      writeConfig(JSON.stringify({ holding_tank: LEGACY_TANK }));
+      addProfile(DEFAULT);
+      const { doc, source } = await store.load(DEFAULT);
+      expect(source).toBe('migrated-legacy-config');
+      expect(doc.shows[0].layout.holdingTank[0].songIds).toEqual(['40', '41']);
+    });
+
+    it('peek shows the legacy layout without writing or recording anything', async () => {
+      writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS }));
+      addProfile(DEFAULT);
+      const doc = await store.peek(DEFAULT);
+      expect(doc.shows[0].layout.hotkeys[0].hotkeys).toEqual({ f1: '31' });
+      expect(fs.existsSync(showsPath(DEFAULT))).toBe(false);
+      expect(marked).toEqual([]);
+      expect((await store.load(DEFAULT)).doc.shows[0].id).toBe(doc.shows[0].id);
+    });
+
+    it('never applies to another profile', async () => {
+      writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS, holding_tank: LEGACY_TANK }));
+      addProfile('Work');
+      const { doc, source } = await store.load('Work');
+      expect(source).toBe('migrated-empty');
+      expect(doc.shows[0].layout.hotkeys[0].hotkeys).toEqual({});
+      expect(prefsRead).toEqual([]);
+      expect(marked).toEqual([]);
+    });
+
+    it('prefers state.json over config.json', async () => {
+      writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS }));
+      addProfile(DEFAULT, { 'state.json': fs.readFileSync(FIXTURE, 'utf8') });
+      expect((await store.load(DEFAULT)).source).toBe('migrated-state');
+      expect(marked).toEqual([]);
+    });
+
+    it('does not use config.json when state.json exists but is not JSON', async () => {
+      writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS }));
+      addProfile(DEFAULT, { 'state.json': '{ corrupt' });
+      const { doc, source } = await store.load(DEFAULT);
+      expect(source).toBe('migrated-empty');
+      expect(doc.shows[0].layout.hotkeys[0].hotkeys).toEqual({});
+      expect(marked).toEqual([]);
+    });
+
+    it('does not use config.json when only state.json.backup exists', async () => {
+      writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS }));
+      addProfile(DEFAULT, { 'state.json.backup': '{ corrupt' });
+      const { source } = await store.load(DEFAULT);
+      expect(source).toBe('migrated-empty');
+      expect(marked).toEqual([]);
+    });
+
+    it('does not migrate again once migration_completed is true', async () => {
+      writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS }));
+      prefs = { migration_completed: true };
+      addProfile(DEFAULT);
+      const { doc, source } = await store.load(DEFAULT);
+      expect(source).toBe('migrated-empty');
+      expect(doc.shows[0].layout.hotkeys[0].hotkeys).toEqual({});
+      expect(marked).toEqual([]);
+    });
+
+    it('still migrates when the preferences cannot be read', async () => {
+      writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS }));
+      prefs = null;
+      addProfile(DEFAULT);
+      expect((await store.load(DEFAULT)).source).toBe('migrated-legacy-config');
+    });
+
+    it('creates an empty show when config.json is missing, has no songs or is not JSON', async () => {
+      addProfile(DEFAULT);
+      expect((await store.load(DEFAULT)).source).toBe('migrated-empty');
+
+      for (const content of [JSON.stringify({ hotkeys: '<ul id="hotkeys_list_1"></ul>', holding_tank: 7 }), '{ not json', '[]']) {
+        fs.rmSync(showsPath(DEFAULT));
+        writeConfig(content);
+        const { doc, source } = await legacyStore().load(DEFAULT);
+        expect(source).toBe('migrated-empty');
+        expect(doc.shows[0].layout.holdingTank[0].songIds).toEqual([]);
+        expect(fs.existsSync(showsPath(DEFAULT))).toBe(true);
+        expect(fs.readFileSync(configPath(), 'utf8')).toBe(content);
+      }
+      expect(marked).toEqual([]);
+    });
+
+    it('throws io and saves nothing when config.json cannot be read', async () => {
+      fs.mkdirSync(configPath()); // reading a directory fails with EISDIR
+      addProfile(DEFAULT);
+      await expect(store.load(DEFAULT)).rejects.toMatchObject({ code: 'io' });
+      expect(fs.existsSync(showsPath(DEFAULT))).toBe(false);
+      expect(await store.peek(DEFAULT)).toBeNull();
+      expect(marked).toEqual([]);
+    });
+
+    it('keeps the migrated show when recording migration_completed fails', async () => {
+      writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS }));
+      addProfile(DEFAULT);
+      const warnings = [];
+      const failing = legacyStore({
+        markMigrationCompleted: async () => {
+          throw new Error('disk full');
+        },
+        debugLog: { info() {}, warn: (msg) => warnings.push(msg), error() {} }
+      });
+      const { source } = await failing.load(DEFAULT);
+      expect(source).toBe('migrated-legacy-config');
+      expect(fs.existsSync(showsPath(DEFAULT))).toBe(true);
+      expect(warnings).toHaveLength(1);
+    });
+
+    it('does nothing with config.json when no config path is provided', async () => {
+      writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS }));
+      addProfile(DEFAULT);
+      expect((await makeStore().load(DEFAULT)).source).toBe('migrated-empty');
+    });
   });
 });
