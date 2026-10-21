@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSquirrelReadiness, createUpdateInstaller } from '../../../src/main/modules/update-install.js';
 
-function setup({ timeoutMs = 15000, prepareError = null, quitThrows = null, squirrel = false } = {}) {
+function setup({ timeoutMs = 15000, installReadyTimeoutMs, prepareError = null, quitThrows = null, squirrel = false } = {}) {
   const updater = new EventEmitter();
   // The app's own error handler (index-modular.js) is always attached
   updater.on('error', () => {});
@@ -46,6 +46,7 @@ function setup({ timeoutMs = 15000, prepareError = null, quitThrows = null, squi
     notifyInstallFailed,
     debugLog,
     timeoutMs,
+    ...(installReadyTimeoutMs === undefined ? {} : { installReadyTimeoutMs }),
   });
   // The persistent backstop listener is always there
   const nativeQuitBaseline = native.listenerCount('before-quit-for-update');
@@ -170,8 +171,8 @@ describe('update install on macOS (Squirrel.Mac)', () => {
   it('does not hand off or quit until Squirrel has the update, then starts the quit timer', async () => {
     const ctx = setup({ squirrel: true, timeoutMs: 1000 });
     const install = ctx.installUpdateNow();
-    // Long past the quit timeout: still waiting, session still live
-    await vi.advanceTimersByTimeAsync(60_000);
+    // Long past the quit timeout, short of the wait's ceiling: still waiting, session still live
+    await vi.advanceTimersByTimeAsync(119_999);
     expect(ctx.prepareForUpdateInstall).not.toHaveBeenCalled();
     expect(ctx.updater.quitAndInstall).not.toHaveBeenCalled();
     expect(ctx.cancelHandoff).not.toHaveBeenCalled();
@@ -187,6 +188,42 @@ describe('update install on macOS (Squirrel.Mac)', () => {
     expect(ctx.cancelHandoff).not.toHaveBeenCalled();
   });
 
+  it('a Squirrel wait past 120000 ms drops the attempt, notifies, and a later Squirrel download does not quit', async () => {
+    const ctx = setup({ squirrel: true, timeoutMs: 1000 });
+    const install = ctx.installUpdateNow();
+    await vi.advanceTimersByTimeAsync(119_999);
+    expect(ctx.notifyInstallFailed).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    await install;
+    expect(ctx.notifyInstallFailed).toHaveBeenCalledTimes(1);
+    expect(ctx.debugLog.warn).toHaveBeenCalledWith(
+      'Squirrel did not have the update in time; the install is dropped', expect.objectContaining({ waitedMs: 120000 })
+    );
+    // Nothing was handed off, so nothing is given back
+    expect(ctx.prepareForUpdateInstall).not.toHaveBeenCalled();
+    expect(ctx.cancelHandoff).not.toHaveBeenCalled();
+
+    // Squirrel finishes afterwards: the dropped attempt never quits
+    ctx.native.emit('update-downloaded');
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(ctx.prepareForUpdateInstall).not.toHaveBeenCalled();
+    expect(ctx.updater.quitAndInstall).not.toHaveBeenCalled();
+    expect(ctx.notifyInstallFailed).toHaveBeenCalledTimes(1);
+
+    // A new request now that Squirrel has it installs at once
+    await ctx.installUpdateNow();
+    expect(ctx.order).toEqual(['prepare', 'quitAndInstall']);
+  });
+
+  it('the ceiling can be set', async () => {
+    const ctx = setup({ squirrel: true, installReadyTimeoutMs: 500 });
+    const install = ctx.installUpdateNow();
+    await vi.advanceTimersByTimeAsync(500);
+    await install;
+    expect(ctx.notifyInstallFailed).toHaveBeenCalledTimes(1);
+  });
+
   it('installs at once when Squirrel already has the update', async () => {
     const ctx = setup({ squirrel: true });
     ctx.native.emit('update-downloaded');
@@ -194,7 +231,7 @@ describe('update install on macOS (Squirrel.Mac)', () => {
     expect(ctx.order).toEqual(['prepare', 'quitAndInstall']);
   });
 
-  it('an updater error while waiting for Squirrel hands off and gives back nothing', async () => {
+  it('an updater error while waiting for Squirrel does not hand off', async () => {
     const ctx = setup({ squirrel: true, timeoutMs: 1000 });
     const install = ctx.installUpdateNow();
     // A background check fails meanwhile
@@ -254,7 +291,7 @@ describe('update install on macOS (Squirrel.Mac)', () => {
     await vi.advanceTimersByTimeAsync(1000);
     expect(ctx.cancelHandoff).toHaveBeenCalledTimes(1);
     ctx.native.emit('before-quit-for-update');
-    await vi.advanceTimersByTimeAsync(0);
+    // Synchronously, within the event: handoff() fences before its first await
     expect(ctx.handOffAgain).toHaveBeenCalledTimes(1);
     // Once
     ctx.native.emit('before-quit-for-update');
@@ -270,5 +307,14 @@ describe('update install on macOS (Squirrel.Mac)', () => {
     ctx.native.emit('before-quit-for-update');
     await vi.advanceTimersByTimeAsync(0);
     expect(ctx.debugLog.error).toHaveBeenCalledWith('Could not hand the show session off again', expect.objectContaining({ error: 'disk full' }));
+  });
+
+  it('a hand-off-again that throws synchronously is logged, not thrown', async () => {
+    const ctx = setup({ timeoutMs: 1000 });
+    ctx.handOffAgain.mockImplementationOnce(() => { throw new Error('no session'); });
+    await ctx.installUpdateNow();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(() => ctx.native.emit('before-quit-for-update')).not.toThrow();
+    expect(ctx.debugLog.error).toHaveBeenCalledWith('Could not hand the show session off again', expect.objectContaining({ error: 'no session' }));
   });
 });

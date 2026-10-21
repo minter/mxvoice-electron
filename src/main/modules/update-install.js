@@ -13,6 +13,9 @@
  * before that finishes only queues the quit for whenever it does. So the
  * install first waits, with the session still live, for Squirrel to have the
  * update (`waitForInstallReady`); a Squirrel error then only tells the user.
+ * The wait has a ceiling (`installReadyTimeoutMs`): past it the attempt is
+ * dropped, the user is told, and a Squirrel fetch that finishes later never
+ * quits for it. The session was never handed off, so nothing is given back.
  *
  * Then the quit phase: an install that doesn't quit (the updater reports an
  * error, quitAndInstall throws, or no quit starts within `timeoutMs`) gives
@@ -39,7 +42,8 @@
  *   for the process's life, to the updater quitting to install
  * @param {() => void} [deps.notifyInstallFailed] - tell the user the install didn't happen
  * @param {Object} [deps.debugLog]
- * @param {number} [deps.timeoutMs]
+ * @param {number} [deps.timeoutMs] - how long the quit may take to start
+ * @param {number} [deps.installReadyTimeoutMs] - how long to wait for Squirrel.Mac
  * @returns {() => Promise<void>}
  */
 export function createUpdateInstaller({
@@ -52,7 +56,8 @@ export function createUpdateInstaller({
   onQuitForUpdate,
   notifyInstallFailed,
   debugLog,
-  timeoutMs = 15000
+  timeoutMs = 15000,
+  installReadyTimeoutMs = 120000
 }) {
   const logCtx = { module: 'update-install', function: 'installUpdateNow' };
   // The attempt until it settles (quit started, or given back); a second
@@ -82,25 +87,54 @@ export function createUpdateInstaller({
     notify();
   }
 
-  // Backstop: the updater quits for the update after all
+  // Backstop: the updater quits for the update after all. Called at once:
+  // handoff() raises its fence before its first await, so no recovery write
+  // gets a turn before the session is fenced again.
   onQuitForUpdate?.(() => {
     if (!givenBack) return;
     givenBack = false;
     debugLog?.warn('The updater is quitting after the session was given back; handing it off again', logCtx);
-    Promise.resolve()
-      .then(() => handOffAgain?.())
-      .catch((error) => {
-        debugLog?.error('Could not hand the show session off again', { ...logCtx, error: error.message });
-      });
+    const failed = (error) => {
+      debugLog?.error('Could not hand the show session off again', { ...logCtx, error: error.message });
+    };
+    try {
+      Promise.resolve(handOffAgain?.()).catch(failed);
+    } catch (error) {
+      failed(error);
+    }
   });
+
+  // Resolves true once Squirrel has the update, false past the ceiling.
+  // electron-updater starts Squirrel's fetch itself right after its own
+  // download only because autoInstallOnAppQuit is left at its default, true
+  // (MacUpdater); with it false nothing would fetch and this would only end
+  // at the ceiling.
+  function untilInstallReady() {
+    let timer = null;
+    const ceiling = new Promise((resolve) => {
+      timer = setTimeout(() => resolve(false), installReadyTimeoutMs);
+    });
+    return Promise.race([waitForInstallReady().then(() => true), ceiling])
+      .finally(() => clearTimeout(timer));
+  }
 
   async function attempt() {
     if (waitForInstallReady) {
+      let ready;
       try {
-        await waitForInstallReady();
+        ready = await untilInstallReady();
       } catch (error) {
         // Nothing was handed off yet: the show never stopped saving
         debugLog?.warn('The update could not be made ready to install', { ...logCtx, error: error?.message });
+        pending = null;
+        notify();
+        return;
+      }
+      if (!ready) {
+        // Dropped: a fetch that finishes later must not quit mid-show
+        debugLog?.warn('Squirrel did not have the update in time; the install is dropped', {
+          ...logCtx, waitedMs: installReadyTimeoutMs
+        });
         pending = null;
         notify();
         return;
