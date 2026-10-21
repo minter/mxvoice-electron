@@ -60,6 +60,10 @@ export default {
           align: 'end',
           skipIfMissing: true,
         },
+        {
+          title: 'Fade Out With One Hand',
+          description: 'Tap Esc to stop the music right away, as before. Hold Esc to fade it out instead, leaving your other hand free for the lights. Press Esc again during a fade to cut it. Shift+Esc still fades too.',
+        },
       ],
     },
     '4.3.0': {

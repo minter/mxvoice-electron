@@ -143,6 +143,73 @@ test.describe('Playback - fade out', () => {
     await expect(page.locator('#play_button')).toBeVisible({ timeout: 5000 });
   });
 
+  /**
+   * Helper: hold Esc past the tap window, then let go
+   */
+  async function holdEscape() {
+    await page.keyboard.down('Escape');
+    // Longer than HOLD_TO_FADE_MS (300ms), so this is a hold, not a tap
+    await page.waitForTimeout(600);
+    await page.keyboard.up('Escape');
+  }
+
+  const isFadingOut = () => page.evaluate(() => window.moduleRegistry.audio.isFadingOut());
+
+  test('holding Esc fades out instead of cutting', async () => {
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 2);
+    });
+    await startPlayback();
+
+    await holdEscape();
+
+    // Still playing after the key is released: the fade is running
+    expect(await isFadingOut()).toBe(true);
+    await expect(page.locator('#pause_button')).toBeVisible();
+
+    if (!isCI) await waitForSilence(page, 1e-3, 4000);
+    await expect(page.locator('#play_button')).toBeVisible({ timeout: 5000 });
+    expect(await isFadingOut()).toBe(false);
+  });
+
+  test('tapping Esc during a fade cuts at once', async () => {
+    // Long enough that a cut and a finished fade can't be confused
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 5);
+    });
+    await startPlayback();
+
+    await holdEscape();
+    expect(await isFadingOut()).toBe(true);
+
+    await page.keyboard.press('Escape');
+
+    // Well inside the 5 second fade
+    await expect(page.locator('#play_button')).toBeVisible({ timeout: 1000 });
+    expect(await isFadingOut()).toBe(false);
+    if (!isCI) {
+      await stabilize(page, 300);
+      expect(await rms(page)).toBeLessThan(1e-3);
+    }
+  });
+
+  test('Esc in the search field: hold fades, tap cuts', async () => {
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 5);
+    });
+    await startPlayback();
+
+    // Search fields handle Esc themselves; Mousetrap skips text inputs
+    await page.locator('#omni_search').focus();
+    await holdEscape();
+    expect(await isFadingOut()).toBe(true);
+    await expect(page.locator('#pause_button')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#play_button')).toBeVisible({ timeout: 1000 });
+    expect(await isFadingOut()).toBe(false);
+  });
+
   test('fade-pause preserves song position for resume', async () => {
     // Set fade duration
     await page.evaluate(async () => {

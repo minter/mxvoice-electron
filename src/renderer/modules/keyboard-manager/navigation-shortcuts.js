@@ -7,6 +7,8 @@
  * Extracted from renderer.js as part of Phase 5 modularization.
  */
 
+import { EscapeStopGesture } from './escape-stop-gesture.js';
+
 /**
  * NavigationShortcuts class handles navigation and control shortcuts
  */
@@ -17,6 +19,11 @@ export class NavigationShortcuts {
     this.searchField = null;
     this.bindings = new Map();
     this.isInitialized = false;
+    // Tap Esc to cut, hold it to fade out
+    this.escapeGesture = new EscapeStopGesture({
+      stop: (fadeOut) => this.handleStopPlaying(fadeOut),
+      isFadingOut: () => this.dependencies.moduleRegistry?.audio?.isFadingOut?.() === true
+    });
   }
 
   /**
@@ -110,12 +117,18 @@ export class NavigationShortcuts {
       // Register shortcuts only in the bindings registry (avoid double registration)
       // The keyboard manager will handle the actual Mousetrap bindings
       
+      // Esc keydown goes through the registry; its keyup ends a tap. Both
+      // pass Mousetrap's stopCallback, so the overlay guard covers them.
       this.bindings.set("esc", {
         key: "esc",
-        handler: (_event) => this.handleStopPlaying(false), // Explicitly pass false for fadeOut
+        handler: (event) => this.escapeGesture.keyDown(event),
         context: 'global+search',
-        description: 'Stop playing audio'
+        description: 'Stop playing audio (tap), or fade it out (hold)'
       });
+      Mousetrap.bind("esc", () => {
+        this.escapeGesture.keyUp();
+        return false;
+      }, 'keyup');
 
       this.bindings.set("shift+esc", {
         key: "shift+esc",
@@ -333,6 +346,8 @@ export class NavigationShortcuts {
           Mousetrap.unbind(key);
         }
       }
+      Mousetrap.unbind("esc", 'keyup');
+      this.escapeGesture.cancelHold();
       
       this.bindings.clear();
       this.searchField = null;

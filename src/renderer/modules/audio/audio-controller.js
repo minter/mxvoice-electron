@@ -24,12 +24,27 @@ try {
   // Debug logger not available
 }
 
+// The sound a stop-with-fade is fading out, until it is unloaded
+let fadingOutSound = null;
+
 /**
- * Stop audio playback
+ * Whether the current sound is fading out after a stop
+ * @returns {boolean}
+ */
+function isFadingOut() {
+  return fadingOutSound !== null && sharedState.get('sound') === fadingOutSound;
+}
+
+/**
+ * Stop audio playback. A stop while the current sound is already fading
+ * out cuts it, so a second press never restarts or stretches the fade.
  * 
  * @param {boolean} fadeOut - Whether to fade out the audio
  */
 function stopPlaying(fadeOut = false) {
+  if (fadeOut && isFadingOut()) {
+    fadeOut = false;
+  }
   debugLog?.info('stopPlaying called with parameters', { 
     module: 'audio-controller',
     function: 'stopPlaying',
@@ -87,7 +102,12 @@ function stopPlaying(fadeOut = false) {
         function: 'stopPlaying',
         fadeOut: fadeOut
       });
+      fadingOutSound = sound;
       secureStore.get("fade_out_seconds").then(result => {
+        // Cut or replaced while the fade length was being read
+        if (sharedState.get('sound') !== sound) {
+          return;
+        }
         if (!result.success || !result.value) {
           debugLog?.warn('Failed to get fade_out_seconds:', { 
             module: 'audio-controller',
@@ -174,6 +194,7 @@ function stopPlaying(fadeOut = false) {
         function: 'stopPlaying',
         fadeOut: fadeOut
       });
+      fadingOutSound = null;
       sound.unload();
       if (sharedState.get('sound') === sound) {
         sharedState.set('sound', null);
@@ -385,6 +406,7 @@ function loop_on(bool) {
 // Export individual functions for direct access
 export {
   stopPlaying,
+  isFadingOut,
   pausePlaying,
   getPlaybackSelectionSongId,
   resetUIState,
@@ -397,6 +419,7 @@ export {
 // Default export for module loading
 export default {
   stopPlaying,
+  isFadingOut,
   pausePlaying,
   getPlaybackSelectionSongId,
   resetUIState,
