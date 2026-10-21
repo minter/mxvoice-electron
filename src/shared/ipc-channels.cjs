@@ -159,6 +159,9 @@ const IPC = deepFreeze({
     LIST_IMPORTABLE: 'show:list-importable',
     IMPORT: 'show:import',
     SET_COLOR: 'show:set-color',
+    // Played counts for the night, per song id
+    RECORD_PLAY: 'show:record-play',
+    CLEAR_PLAYED: 'show:clear-played',
   },
   ANALYTICS: {
     TRACK_EVENT: 'analytics:track-event',

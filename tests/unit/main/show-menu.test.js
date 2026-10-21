@@ -35,7 +35,7 @@ describe('Shows menu', () => {
     const { menu } = build(readyState());
     expect(labels(menu)).toEqual([
       'Comedy Sports', 'Mom & Pop', '---', 'Save "Comedy Sports"…', 'Save As…',
-      'Revert to Saved…', 'Rename "Comedy Sports"…', 'Delete "Comedy Sports"…', 'Color', '---',
+      'Revert to Saved…', 'Reset Played', 'Rename "Comedy Sports"…', 'Delete "Comedy Sports"…', 'Color', '---',
       'Import Show…'
     ]);
     // Color is the only nested menu
@@ -57,6 +57,17 @@ describe('Shows menu', () => {
     expect(revert({ ...readyState(), dirty: false })).toBe(false);
     expect(revert({ ...readyState(), dirty: undefined })).toBe(false);
     expect(revert({ ...readyState(), status: 'loading' })).toBe(false);
+  });
+
+  it('enables Reset Played only when ready with any played count, and sends reset-played', () => {
+    const reset = (state) => find(build(state).menu, 'Reset Played');
+    expect(reset({ ...readyState(), hasPlayed: true }).enabled).toBe(true);
+    expect(reset(readyState()).enabled).toBe(false);
+    expect(reset({ ...readyState(), hasPlayed: false }).enabled).toBe(false);
+    expect(reset({ ...readyState(), hasPlayed: true, status: 'loading' }).enabled).toBe(false);
+    const { menu, send } = build({ ...readyState(), hasPlayed: true });
+    find(menu, 'Reset Played').click();
+    expect(send).toHaveBeenCalledWith('reset-played', undefined);
   });
 
   it('sends switch with a show id and every other command without one', () => {
@@ -164,7 +175,7 @@ describe('Shows menu', () => {
   it('renders nameless disabled items and no shows without a session', () => {
     const { menu } = build({ status: 'idle', activeShow: null, shows: [] });
     expect(labels(menu)).toEqual([
-      '---', 'Save…', 'Save As…', 'Revert to Saved…', 'Rename…', 'Delete…', 'Color', '---',
+      '---', 'Save…', 'Save As…', 'Revert to Saved…', 'Reset Played', 'Rename…', 'Delete…', 'Color', '---',
       'Import Show…'
     ]);
     expect(find(menu, 'Save…').enabled).toBe(false);

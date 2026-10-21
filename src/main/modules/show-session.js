@@ -26,6 +26,14 @@
  * screen as the show, clears it; restoring a recovery record sets it.
  * Outside 'ready' it reads false: no layout on screen is the show's then.
  *
+ * Played counts (per song id, for the night) live here too, persisted to
+ * their own file by recoveryStore.writePlayed on every change. They belong
+ * to the session, not the show: they start empty at open(), carry across
+ * show changes (so a show mutation's fence doesn't stop them), never touch
+ * `dirty`, and are retired by end() wherever the layout record is. A played
+ * file found at open() counts as a show in progress; plays are refused
+ * until resolveRecovery() settles it, so they can't replace it first.
+ *
  * @module show-session
  */
 
@@ -51,6 +59,11 @@ const END_REASONS = new Set(['clean-exit', 'switch', 'backup-restore', 'library-
 // or when the show never became ready
 const KEPT_AFTER_HANDOFF = new Set(['clean-exit', 'switch']);
 const DEFAULT_PROFILE = 'Default User';
+const SONG_ID = /^\d+$/;
+
+function checkSongId(songId) {
+  if (typeof songId !== 'string' || !SONG_ID.test(songId)) throw new Error('Invalid song id');
+}
 
 /** Default User first, then case-insensitive by name, as the profile picker sorts. */
 function compareProfiles(a, b) {
@@ -133,6 +146,12 @@ export function createShowSession({
   // has run
   let recoveryWriteSeq = 0;
   let lastWrittenLayout = null;
+  // Played counts for the night: song id -> count. `openSeq` tells a played
+  // write which open() it belongs to, since counts outlive generations.
+  let played = new Map();
+  let openSeq = 0;
+  // The played record read by open(), until resolveRecovery() settles it
+  let pendingPlayed = null;
 
   function refreshMenu(fn) {
     try {
@@ -167,7 +186,9 @@ export function createShowSession({
     if (visibleDirty() !== before) refreshMenu('setDirty');
   }
 
-  const state = () => ({ profile, status, doc, generation, dirty: visibleDirty() });
+  const state = () => ({ profile, status, doc, generation, dirty: visibleDirty(), hasPlayed: played.size > 0 });
+
+  const playedCounts = () => Object.fromEntries(played);
 
   async function open() {
     profile = getCurrentProfile();
@@ -178,6 +199,9 @@ export function createShowSession({
     ended = false;
     pendingHandoff = null;
     pendingRecovery = null;
+    pendingPlayed = null;
+    openSeq += 1;
+    setPlayed(new Map());
     droppedIds = new Set();
     setDirty(false);
     doc = null;
@@ -201,15 +225,17 @@ export function createShowSession({
     }
 
     const record = await readRecord(profile, 'open');
+    const playedRecord = await readPlayedRecord(profile, 'open');
     if (myGeneration !== generation) throw new Error('superseded by a newer open');
 
     doc = loaded.doc;
     pendingRecovery = record;
+    pendingPlayed = playedRecord;
     const show = activeShow();
     const result = {
       doc,
       show: { ...show, layout: normalizeLayout(show.layout) },
-      recovery: recoveryInfo(record),
+      recovery: recoveryInfo(record, playedRecord),
       generation
     };
     if (loaded.notice) result.notice = loaded.notice;
@@ -226,16 +252,37 @@ export function createShowSession({
     }
   }
 
-  /** What the page needs to know about a record, or null without one. */
-  function recoveryInfo(record) {
-    if (!record) return null;
+  async function readPlayedRecord(p, fn) {
+    try {
+      return (await recoveryStore.readPlayed?.(p)) ?? null;
+    } catch (error) {
+      debugLog?.warn?.('Could not read the played counts', { ...logCtx(fn), error: error.message });
+      return null;
+    }
+  }
+
+  /**
+   * What the page needs to know about a show in progress, or null without
+   * one: a layout record, a played file, or both. The layout record's
+   * handoff decides when there is one; the time is the later of the two.
+   */
+  function recoveryInfo(record, playedRecord = null) {
+    const source = record ?? playedRecord;
+    if (!source) return null;
     // Measured from the handoff: a crash long after the last edit is still fresh
-    const fresh = now() - (record.handoffAt ?? record.savedAt) <= HANDOFF_MAX_AGE_MS;
+    const fresh = now() - (source.handoffAt ?? source.savedAt) <= HANDOFF_MAX_AGE_MS;
     return {
-      savedAt: record.savedAt,
-      handoff: record.handoff && fresh ? record.handoff : null,
-      showId: record.showId
+      savedAt: Math.max(record?.savedAt ?? -Infinity, playedRecord?.savedAt ?? -Infinity),
+      handoff: source.handoff && fresh ? source.handoff : null,
+      showId: record?.showId ?? null
     };
+  }
+
+  // The Shows menu's Reset Played item follows whether any count is set
+  function setPlayed(next) {
+    const before = played.size > 0;
+    played = next;
+    if ((played.size > 0) !== before) refreshMenu('setPlayed');
   }
 
   async function startEmpty() {
@@ -246,12 +293,14 @@ export function createShowSession({
     if (generation !== g) throw new Error('superseded by a newer open');
     // The show in progress is offered on the empty show, as after open()
     const record = await readRecord(p, 'startEmpty');
+    const playedRecord = await readPlayedRecord(p, 'startEmpty');
     if (generation !== g) throw new Error('superseded by a newer open');
     doc = emptyDoc;
     pendingRecovery = record;
+    pendingPlayed = playedRecord;
     setDirty(false);
     setStatus('loading');
-    return { layout: normalizeLayout(activeShow().layout), generation, recovery: recoveryInfo(record) };
+    return { layout: normalizeLayout(activeShow().layout), generation, recovery: recoveryInfo(record, playedRecord) };
   }
 
   async function resolveRecovery(choice) {
@@ -259,20 +308,28 @@ export function createShowSession({
     if (!doc) throw new Error('No show is open');
     const p = profile;
     const record = pendingRecovery;
+    const playedRecord = pendingPlayed;
     pendingRecovery = null;
+    pendingPlayed = null;
     const saved = normalizeLayout(activeShow().layout);
-    if (!record) return { layout: saved };
+    if (!record && !playedRecord) return { layout: saved, counts: playedCounts() };
     // Restored onto the active show, whatever showId the record names.
     // A handoff is spent once restored: another crash before any edit must ask.
     if (choice === 'restore') {
       // The restored layout is the recovery copy, not the saved show
-      setDirty(true);
-      if (record.handoff) await queued(() => recoveryStore.clearHandoff(p));
-      return { layout: normalizeLayout(record.layout) };
+      if (record) setDirty(true);
+      if (playedRecord) setPlayed(new Map(Object.entries(playedRecord.counts)));
+      if (record?.handoff) await queued(() => recoveryStore.clearHandoff(p));
+      if (playedRecord?.handoff) await queued(() => recoveryStore.writePlayed(p, playedCounts()));
+      return { layout: record ? normalizeLayout(record.layout) : saved, counts: playedCounts() };
     }
     setDirty(false);
-    await queued(() => recoveryStore.retire(p));
-    return { layout: saved };
+    setPlayed(new Map());
+    await queued(async () => {
+      if (record) await recoveryStore.retire(p);
+      if (playedRecord) await recoveryStore.retirePlayed(p);
+    });
+    return { layout: saved, counts: {} };
   }
 
   /**
@@ -337,6 +394,9 @@ export function createShowSession({
     // must leave it for the next open
     const neverReady = status !== 'ready';
     const kept = (handedOff || neverReady) && KEPT_AFTER_HANDOFF.has(reason);
+    // The counts are kept only when handed off or still waiting at the
+    // prompt: a quit while a show change loads has nothing to restore
+    const keptPlayed = (handedOff || !!pendingPlayed) && KEPT_AFTER_HANDOFF.has(reason);
     const handoffDone = pendingHandoff;
     ended = true;
     fenced = true;
@@ -344,11 +404,14 @@ export function createShowSession({
     await writeQueue;
     if (reason === 'library-import') {
       await recoveryStore.clearAll();
-    } else if (!kept) {
-      await recoveryStore.retire(p);
+    } else {
+      if (!kept) await recoveryStore.retire(p);
+      if (!keptPlayed) await recoveryStore.retirePlayed(p);
     }
     if (generation === g) {
       pendingRecovery = null;
+      pendingPlayed = null;
+      setPlayed(new Map());
       setStatus('idle');
     }
   }
@@ -358,12 +421,19 @@ export function createShowSession({
     const p = profile;
     fenced = true;
     handedOff = true;
+    // The counts are this session's once any played file at open is settled,
+    // whatever show is loading; the next open restores them silently
+    const markPlayed = !pendingPlayed && played.size > 0;
     // Before ready the record isn't this session's: it's an earlier crash
     // still waiting at the prompt, and the never-ready rule keeps it as is
-    if (status !== 'ready') return;
+    const markLayout = status === 'ready';
+    if (!markPlayed && !markLayout) return;
     // Queued, so a mutation's retire can't land between its read and write
     // and have the old record written back
-    await queued(() => recoveryStore.markHandoff(p, reason));
+    await queued(async () => {
+      if (markLayout) await recoveryStore.markHandoff(p, reason);
+      if (markPlayed) await recoveryStore.writePlayed(p, playedCounts(), { handoff: reason });
+    });
   }
 
   function rendererGone() {
@@ -376,6 +446,49 @@ export function createShowSession({
       });
     });
     return pendingHandoff;
+  }
+
+  // --- Played counts ---
+
+  // Refused once the session has ended or handed off, and while a played
+  // file from open() waits to be restored or discarded
+  const playedRefused = () => !profile || ended || handedOff || !!pendingPlayed;
+
+  /** Write the counts as they are now, for the open() they were recorded in. */
+  function persistPlayed(fn) {
+    const p = profile;
+    const mySeq = openSeq;
+    return queued(async () => {
+      // Re-checked here: end() or a handoff may have run while this waited its turn
+      if (mySeq !== openSeq || playedRefused()) return false;
+      await recoveryStore.writePlayed(p, playedCounts());
+      return true;
+    }).catch((error) => {
+      debugLog?.warn?.('Could not save the played counts', { ...logCtx(fn), error: error.message });
+      return false;
+    });
+  }
+
+  /** One more play of a song, counted when its playback started. */
+  async function recordPlay(songId) {
+    checkSongId(songId);
+    if (playedRefused()) return { skipped: true };
+    const next = new Map(played);
+    next.set(songId, (next.get(songId) ?? 0) + 1);
+    setPlayed(next);
+    await persistPlayed('recordPlay');
+    return { count: next.get(songId) };
+  }
+
+  /** Clear one song's count, or every count with null. */
+  async function clearPlayed(songId) {
+    if (songId !== null) checkSongId(songId);
+    if (playedRefused()) return { skipped: true };
+    const next = new Map(songId === null ? [] : played);
+    next.delete(songId);
+    setPlayed(next);
+    await persistPlayed('clearPlayed');
+    return { count: 0 };
   }
 
   // --- Show mutations ---
@@ -612,6 +725,8 @@ export function createShowSession({
     end,
     handoff,
     rendererGone,
+    recordPlay,
+    clearPlayed,
     activate,
     revert,
     updateActive,

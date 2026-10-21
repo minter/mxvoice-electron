@@ -13,6 +13,12 @@
  * Only `write` creates the recovery directory; `retire` and `markHandoff`
  * never create anything.
  *
+ * Next to it, `<key>.played.json` holds the night's per-song played counts:
+ * { version: 1, savedAt, handoff, counts: { <songId>: n } }, with `handoffAt`
+ * once handed off. It is a separate file so retiring the layout record (a
+ * layout equal to the saved show) never loses the counts. `clearAll` removes
+ * it with the rest, since it ends in .json.
+ *
  * @module recovery-store
  */
 
@@ -31,10 +37,20 @@ function assertProfileName(name) {
   }
 }
 
+const SONG_ID = /^\d+$/;
+
+/** Only digit-string song ids with a positive whole count; null when none are left. */
+function validCounts(counts) {
+  if (!isObject(counts)) return null;
+  const entries = Object.entries(counts).filter(([id, n]) => SONG_ID.test(id) && Number.isInteger(n) && n > 0);
+  return entries.length ? Object.fromEntries(entries) : null;
+}
+
 export function createRecoveryStore({
   fs = nodeFs,
   getRecoveryPath,
   getRecoveryDirectory,
+  getPlayedPath = (profileName) => getRecoveryPath(profileName).replace(/\.json$/, '.played.json'),
   debugLog = null,
   now = Date.now
 } = {}) {
@@ -70,9 +86,8 @@ export function createRecoveryStore({
     await writeJsonAtomic(getRecoveryPath(profileName), record, { fs });
   }
 
-  async function load(profileName, { quarantineBad }) {
+  async function load(profileName, { quarantineBad, filePath = getRecoveryPath(profileName) }) {
     assertProfileName(profileName);
-    const filePath = getRecoveryPath(profileName);
     const raw = await readRaw(filePath);
     if (raw.missing) return null;
     if (raw.ioError) {
@@ -143,7 +158,40 @@ export function createRecoveryStore({
     );
   }
 
-  return { write, read, markHandoff, clearHandoff, retire, clearAll };
+  /**
+   * Write the played counts, replacing the file; no counts removes it.
+   * @param {Object} counts - { <songId>: n }
+   * @param {{ handoff?: string|null }} [options]
+   */
+  async function writePlayed(profileName, counts, { handoff = null } = {}) {
+    assertProfileName(profileName);
+    if (handoff !== null && !HANDOFF_REASONS.has(handoff)) {
+      throw new Error(`Invalid recovery handoff reason: ${String(handoff)}`);
+    }
+    const valid = validCounts(counts);
+    if (!valid) {
+      await retirePlayed(profileName);
+      return;
+    }
+    await fs.promises.mkdir(getRecoveryDirectory(), { recursive: true });
+    const at = now();
+    const record = { version: RECOVERY_VERSION, savedAt: at, handoff, ...(handoff ? { handoffAt: at } : {}), counts: valid };
+    await writeJsonAtomic(getPlayedPath(profileName), record, { fs });
+  }
+
+  /** The played record, or null when missing, unreadable or empty. */
+  async function readPlayed(profileName) {
+    const record = await load(profileName, { quarantineBad: true, filePath: getPlayedPath(profileName) });
+    const counts = validCounts(record?.counts);
+    return counts ? { ...record, counts } : null;
+  }
+
+  async function retirePlayed(profileName) {
+    assertProfileName(profileName);
+    await fs.promises.rm(getPlayedPath(profileName), { force: true });
+  }
+
+  return { write, read, markHandoff, clearHandoff, retire, clearAll, writePlayed, readPlayed, retirePlayed };
 }
 
 export default { createRecoveryStore };

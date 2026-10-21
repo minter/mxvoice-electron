@@ -68,7 +68,10 @@ describe('profile delete handler', () => {
   function setupDelete({ current = 'Saturday Show' } = {}) {
     const calls = [];
     const showSession = { end: vi.fn(async (reason) => { calls.push(`end:${reason}`); }) };
-    const recoveryStore = { retire: vi.fn(async (name) => { calls.push(`retire:${name}`); }) };
+    const recoveryStore = {
+      retire: vi.fn(async (name) => { calls.push(`retire:${name}`); }),
+      retirePlayed: vi.fn(async (name) => { calls.push(`retirePlayed:${name}`); }),
+    };
     const debugLog = { info: vi.fn(), error: vi.fn(), warn: vi.fn() };
     profileManager.deleteProfile.mockImplementation((name) => { calls.push(`delete:${name}`); return { success: true }; });
     register({
@@ -83,17 +86,17 @@ describe('profile delete handler', () => {
     return { calls, showSession, recoveryStore, debugLog };
   }
 
-  it('deleteProfile removes its recovery record', async () => {
+  it('deleteProfile removes its recovery record and played counts', async () => {
     const { calls, showSession } = setupDelete({ current: 'Default User' });
     await expect(handlers['profile:delete']({}, 'Old Show')).resolves.toEqual({ success: true });
-    expect(calls).toEqual(['delete:Old Show', 'retire:Old Show']);
+    expect(calls).toEqual(['delete:Old Show', 'retire:Old Show', 'retirePlayed:Old Show']);
     expect(showSession.end).not.toHaveBeenCalled();
   });
 
   it('deleting the current profile ends its session before deleting', async () => {
     const { calls } = setupDelete({ current: 'Saturday Show' });
     await handlers['profile:delete']({}, 'Saturday Show');
-    expect(calls).toEqual(['end:profile-deleted', 'delete:Saturday Show', 'retire:Saturday Show']);
+    expect(calls).toEqual(['end:profile-deleted', 'delete:Saturday Show', 'retire:Saturday Show', 'retirePlayed:Saturday Show']);
   });
 
   it('a delete that will be refused leaves the session and record alone', async () => {

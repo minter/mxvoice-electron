@@ -43,6 +43,7 @@ export async function deleteProfileWithRecovery(profileName, {
   if (result?.success) {
     try {
       await recoveryStore?.retire(profileName);
+      await recoveryStore?.retirePlayed?.(profileName);
     } catch (error) {
       debugLog?.warn('Could not remove the deleted profile\'s crash-recovery record', { ...logCtx, error: error.message });
     }

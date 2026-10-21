@@ -501,7 +501,9 @@ const secureElectronAPI = {
     remove: (showId) => ipcRenderer.invoke(IPC.SHOWS.DELETE, showId),
     listImportable: () => ipcRenderer.invoke(IPC.SHOWS.LIST_IMPORTABLE),
     importShow: (profile, showId) => ipcRenderer.invoke(IPC.SHOWS.IMPORT, profile, showId),
-    setColor: (showId, color) => ipcRenderer.invoke(IPC.SHOWS.SET_COLOR, showId, color)
+    setColor: (showId, color) => ipcRenderer.invoke(IPC.SHOWS.SET_COLOR, showId, color),
+    recordPlay: (songId) => ipcRenderer.invoke(IPC.SHOWS.RECORD_PLAY, songId),
+    clearPlayed: (songId) => ipcRenderer.invoke(IPC.SHOWS.CLEAR_PLAYED, songId)
   },
 
   // Utility functions
