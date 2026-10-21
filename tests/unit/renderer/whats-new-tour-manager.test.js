@@ -399,6 +399,60 @@ describe('TourManager', () => {
       cleanup();
     });
 
+    it('closing the tour while a step transition is in flight leaves no popover and never moves the dead tour', async () => {
+      const cleanup = appendEls(['s0', 's1', 's2']);
+      let resolvePost;
+      const tours = {
+        tours: {
+          '4.3.0': {
+            title: 't',
+            steps: [
+              {
+                element: '#s0',
+                title: 'A',
+                description: 'a',
+                postAction: { type: 'function', name: 'slowPost' },
+              },
+              { element: '#s1', title: 'B', description: 'b' },
+              { element: '#s2', title: 'C', description: 'c' },
+            ],
+          },
+        },
+      };
+      const m = new TourManager(tours);
+      // Only the first call blocks; cleanup runs the same postAction again.
+      m.registerHelper('slowPost', () => (resolvePost
+        ? Promise.resolve()
+        : new Promise((resolve) => { resolvePost = resolve; })));
+      // Real Driver.js removes the popover on destroy; mimic that.
+      mockDriver.destroy.mockImplementation(() => {
+        document.querySelectorAll('.driver-popover').forEach((el) => el.remove());
+      });
+      const popover = document.createElement('div');
+      popover.className = 'driver-popover';
+      document.body.appendChild(popover);
+
+      await m.launchTour('4.3.0', { markSeen: false });
+      const cfg = lastDriverConfig();
+
+      const pNext = cfg.onNextClick();
+      await Promise.resolve();
+      await vi.waitFor(() => expect(resolvePost).toBeTypeOf('function'));
+      const pClose = cfg.onDestroyStarted();
+
+      resolvePost();
+      await pNext;
+      await pClose;
+
+      expect(mockDriver.moveTo).not.toHaveBeenCalled();
+      expect(mockDriver.destroy).toHaveBeenCalled();
+      expect(m.activeDriver).toBeNull();
+      expect(document.querySelector('.driver-popover')).toBeNull();
+
+      mockDriver.destroy.mockReset();
+      cleanup();
+    });
+
     it('does not block the recursive skip path for runtime-skipped steps', async () => {
       // s1 has a preAction (so it survives pre-filtering) but its element is
       // absent at runtime, forcing the recursive skip-forward inside

@@ -182,6 +182,9 @@ export class TourManager {
   }
 
   async launchTour(version, { markSeen = true } = {}) {
+    // A tour that is still closing (waiting out a transition, running cleanup)
+    // must finish first, or its late teardown would remove this new popover.
+    if (this._closingPromise) await this._closingPromise;
     if (this.activeDriver) {
       const previousDriver = this.activeDriver;
       previousDriver.destroy();
@@ -236,7 +239,12 @@ export class TourManager {
      * target step's preAction reopens the same modal, skip both to avoid
      * a visible close/reopen flicker.
      */
-    const transitionTo = async (targetIndex) => {
+    const performTransition = async (targetIndex) => {
+      // The driver this transition belongs to. If the tour is closed (or
+      // replaced) while an action is awaited, bail before touching Driver.js,
+      // otherwise moveTo would draw a popover on a destroyed tour.
+      const startDriver = this.activeDriver;
+      const isStale = () => this._tourClosing || this.activeDriver !== startDriver;
       // Mark a transition as in flight. Nested recursive calls (the skip path
       // below) see wasTransitioning === true and must NOT clear the flag when
       // they finish — only the outermost call clears it.
@@ -262,12 +270,14 @@ export class TourManager {
         if (currentStep && postAction && !skipBoth) {
           await this.executeAction(postAction);
           await this.waitForDomSettle();
+          if (isStale()) return;
         }
 
         // PreAction for target step (unless redundant with previous postAction)
         if (targetStep && preAction && !skipBoth) {
           await this.executeAction(preAction);
           await this.waitForDomSettle();
+          if (isStale()) return;
         }
 
         // Runtime skip check after preAction
@@ -279,6 +289,7 @@ export class TourManager {
           if (targetStep.postAction) {
             await this.executeAction(targetStep.postAction);
             await this.waitForDomSettle();
+            if (isStale()) return;
           }
           // Skip forward or backward depending on direction. This recursive
           // call is intentionally not gated by the click guard — it continues
@@ -291,11 +302,24 @@ export class TourManager {
           return;
         }
 
+        if (isStale()) return;
         currentStepIndex = targetIndex;
-        this.activeDriver.moveTo(targetIndex);
+        startDriver.moveTo(targetIndex);
       } finally {
         if (!wasTransitioning) this._transitioning = false;
       }
+    };
+
+    // Tracks the outermost in-flight transition so closing the tour can wait
+    // for it to finish or bail before cleaning up.
+    let transitionInFlight = null;
+    const transitionTo = (targetIndex) => {
+      if (transitionInFlight) return performTransition(targetIndex);
+      const run = performTransition(targetIndex).finally(() => {
+        transitionInFlight = null;
+      });
+      transitionInFlight = run;
+      return run;
     };
 
     this.activeDriver = driver({
@@ -338,13 +362,23 @@ export class TourManager {
         if (this._tourClosing) return;
         this._tourClosing = true;
         const driverRef = this.activeDriver;
-        try {
-          await this.cleanupFromStep(activeSteps, currentStepIndex);
-          await onComplete();
-          if (driverRef) driverRef.destroy();
-        } finally {
-          this._tourClosing = false;
-        }
+        const closing = (async () => {
+          try {
+            // Let any in-flight step transition finish or bail first, so
+            // cleanup runs for the step actually shown.
+            if (transitionInFlight) {
+              await transitionInFlight.catch(() => {});
+            }
+            await this.cleanupFromStep(activeSteps, currentStepIndex);
+            await onComplete();
+            if (driverRef) driverRef.destroy();
+          } finally {
+            this._tourClosing = false;
+            this._closingPromise = null;
+          }
+        })();
+        this._closingPromise = closing;
+        await closing;
       },
     });
 
