@@ -61,6 +61,21 @@ Coordinator rulings, recorded in the ledger:
 - [ ] Add the test `the newest tour key matches the package version's major.minor`. It reads the keys of `tours.js`'s default export and `package.json`'s version, and expects the highest key's `X.Y` to equal the package's `X.Y`.
 - [ ] Run the full gates, then commit.
 
+### Task 0b: Closing the tour mid-transition must not leave a popover behind
+
+Found while running Task 0's gates. At version 4.4.0, `tests/e2e/seeded/ui/whats-new-tour.spec.js` "tour-opened preferences…" fails because an earlier test leaves a popover open: "Closing the Window Asks First", with `tourManager.activeDriver === null`. The sequence: the 4.4.0 tour opens; Next is clicked, and step 1's postAction (`closeSwitchProfileForTour`) is still awaiting; × is clicked. `onDestroyStarted` cleans up and destroys, then the in-flight `transitionTo` resumes and shows step 2 on a dead tour. A user who clicks × right after Next gets a stuck popover over the window.
+
+**Files:** `src/renderer/modules/whats-new/tour-manager.js` (`launchTour`'s `transitionTo` and `onDestroyStarted`), `tests/unit/renderer/whats-new-tour-manager.test.js`
+
+**Interfaces:** no new exports. Behavior:
+- `transitionTo` captures the driver it started with. After every await, it stops without calling `moveTo` if the tour is closing or `this.activeDriver` is no longer that driver.
+- `onDestroyStarted` waits for any in-flight transition to finish or bail before running cleanup, so `cleanupFromStep` runs on the step actually shown.
+- No `.driver-popover` remains after a destroy.
+
+- [ ] Write the failing unit test `closing the tour while a step transition is in flight leaves no popover and never moves the dead tour`. Use a deferred postAction that resolves after destroy starts, and assert `moveTo` is not called after destroy.
+- [ ] Implement until it passes. Then run the whole `tests/e2e/seeded/ui/whats-new-tour.spec.js` twice; all 8 tests must pass both times.
+- [ ] Commit: `fix(whats-new): closing the tour mid-step leaves no popover behind`
+
 ### Task 1: Startup prompts can't be dismissed or hidden into a destructive answer
 
 **Files:**
