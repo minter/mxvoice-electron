@@ -59,10 +59,11 @@ describe('profile backup manager orchestration', () => {
     await expect(manager.createBackup('Missing Profile')).resolves.toEqual({
       success: false, error: 'Profile directory does not exist'
     });
-    await expect(manager.restoreBackup(profileName, 'backup-missing')).resolves.toEqual({
+    const missingId = 'backup-2001-01-01T00-00-00-000Z';
+    await expect(manager.restoreBackup(profileName, missingId)).resolves.toEqual({
       success: false, error: 'Backup does not exist'
     });
-    await expect(manager.deleteBackup(profileName, 'backup-missing')).resolves.toEqual({
+    await expect(manager.deleteBackup(profileName, missingId)).resolves.toEqual({
       success: false, error: 'Backup does not exist'
     });
   });
@@ -87,6 +88,56 @@ describe('profile backup manager orchestration', () => {
     const created = await manager.createBackup(profileName, { mode: 'manual' });
     const listed = await manager.listBackups(profileName);
     expect(listed.backups.find((b) => b.id === created.backupId).shows).toBeNull();
+  });
+
+  describe('backup ID validation', () => {
+    const invalidIds = [
+      ['parent traversal', '../../profiles'],
+      ['traversal inside a valid-looking id', 'backup-2001-01-01T00-00-00-000Z/../../..'],
+      ['traversal to a sibling profile', '../Other Profile/backup-2001-01-01T00-00-00-000Z'],
+      ['absolute path', path.join(userDataDirectory, 'profiles')],
+      ['empty id', ''],
+      ['non-string id', undefined],
+      ['malformed id', 'backup-missing'],
+      ['metadata file', 'backup-metadata.json']
+    ];
+
+    it.each(invalidIds)('rejects %s in deleteBackup and leaves files intact', async (_label, backupId) => {
+      await expect(manager.deleteBackup(profileName, backupId)).resolves.toEqual({
+        success: false, error: 'Invalid backup ID'
+      });
+      await expect(fs.promises.access(path.join(profileDirectory, 'preferences.json'))).resolves.toBeUndefined();
+      await expect(fs.promises.access(manager.getBackupDirectory(profileName))).resolves.toBeUndefined();
+    });
+
+    it.each(invalidIds)('rejects %s in restoreBackup', async (_label, backupId) => {
+      await expect(manager.restoreBackup(profileName, backupId)).resolves.toEqual({
+        success: false, error: 'Invalid backup ID'
+      });
+    });
+
+    it('does not delete a directory outside the backup folder via traversal', async () => {
+      const victim = path.join(userDataDirectory, 'profiles', 'Victim');
+      await fs.promises.mkdir(victim, { recursive: true });
+      await fs.promises.writeFile(path.join(victim, 'keep.txt'), 'keep');
+
+      await expect(manager.deleteBackup(profileName, '../../profiles/Victim')).resolves.toEqual({
+        success: false, error: 'Invalid backup ID'
+      });
+      await expect(fs.promises.readFile(path.join(victim, 'keep.txt'), 'utf8')).resolves.toBe('keep');
+    });
+
+    it('still deletes pre-restore backups created by restoreBackup', async () => {
+      const created = await manager.createBackup(profileName);
+      await expect(manager.restoreBackup(profileName, created.backupId)).resolves.toEqual({ success: true });
+
+      const { backups } = await manager.listBackups(profileName);
+      const preRestore = backups.find((backup) => backup.mode === 'pre-restore');
+      expect(preRestore.id).toMatch(/^pre-restore-backup-/);
+
+      await expect(manager.deleteBackup(profileName, preRestore.id)).resolves.toEqual({ success: true });
+      await expect(manager.deleteBackup(profileName, created.backupId)).resolves.toEqual({ success: true });
+    });
   });
 
   it('skips change-aware backup creation when disabled', async () => {

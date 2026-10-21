@@ -27,6 +27,7 @@ import { createBackupFileOperations } from './backup-file-operations.js';
 import { selectBackupsForRetention } from './backup-retention-policy.js';
 import { createProfileChangeDetector } from './profile-change-detector.js';
 import { parseDocument } from './show-document.js';
+import { isPathInside } from './ipc/guards.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -116,6 +117,24 @@ function generateBackupId() {
   const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
   
   return `backup-${year}-${month}-${day}T${hours}-${minutes}-${seconds}-${milliseconds}Z`;
+}
+
+// Matches IDs from generateBackupId(), optionally with the prefix restoreBackup() adds
+const BACKUP_ID_PATTERN = /^(?:pre-restore-)?backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
+
+/**
+ * Resolve a backup ID (which may come from IPC) to its directory, rejecting
+ * anything that isn't a well-formed ID or would escape the backup directory.
+ * @param {string} profileName - Profile name
+ * @param {string} backupId - Backup ID
+ * @returns {string|null} Backup path, or null if the ID is invalid
+ */
+function resolveBackupPath(profileName, backupId) {
+  if (typeof backupId !== 'string' || !BACKUP_ID_PATTERN.test(backupId)) return null;
+  const backupDir = getBackupDirectory(profileName);
+  const backupPath = path.join(backupDir, backupId);
+  if (!isPathInside(backupPath, backupDir)) return null;
+  return backupPath;
 }
 
 /**
@@ -379,7 +398,10 @@ async function getBackupMetadata(profileName) {
 async function restoreBackup(profileName, backupId) {
   try {
     const backupDir = getBackupDirectory(profileName);
-    const backupPath = path.join(backupDir, backupId);
+    const backupPath = resolveBackupPath(profileName, backupId);
+    if (!backupPath) {
+      return { success: false, error: 'Invalid backup ID' };
+    }
     const profileDir = getProfileDirectory(profileName);
     
     if (!await pathExists(backupPath)) {
@@ -452,8 +474,10 @@ async function restoreBackup(profileName, backupId) {
  */
 async function deleteBackup(profileName, backupId) {
   try {
-    const backupDir = getBackupDirectory(profileName);
-    const backupPath = path.join(backupDir, backupId);
+    const backupPath = resolveBackupPath(profileName, backupId);
+    if (!backupPath) {
+      return { success: false, error: 'Invalid backup ID' };
+    }
     
     if (!await pathExists(backupPath)) {
       return { success: false, error: 'Backup does not exist' };
