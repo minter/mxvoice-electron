@@ -15,6 +15,19 @@ function getProfileDirectoryKey(name) {
   return sanitizeProfileName(name).toLocaleLowerCase('en-US');
 }
 
+/**
+ * False for a name that sanitizes to nothing (for example only non-Latin
+ * characters or emoji). Such a name would map to the shared parent folder,
+ * so no per-profile path may be built from it.
+ */
+function hasUsableDirectoryKey(name) {
+  return typeof name === 'string' && getProfileDirectoryKey(name) !== '';
+}
+
+function requireUsableDirectoryKey(name) {
+  if (!hasUsableDirectoryKey(name)) throw new Error('Profile name has no usable folder name');
+}
+
 function getProfilesDirectory() {
   return path.join(getUserDataDirectory(), 'profiles');
 }
@@ -24,6 +37,7 @@ function getProfileRegistryPath() {
 }
 
 function getProfileDirectory(profileName) {
+  requireUsableDirectoryKey(profileName);
   return path.join(getProfilesDirectory(), sanitizeProfileName(profileName));
 }
 
@@ -44,6 +58,7 @@ function getRecoveryDirectory() {
 }
 
 function getRecoveryPath(profileName) {
+  requireUsableDirectoryKey(profileName);
   return path.join(getRecoveryDirectory(), `${getProfileDirectoryKey(profileName)}.json`);
 }
 
@@ -52,6 +67,7 @@ function getBackupBaseDirectory() {
 }
 
 function getBackupDirectory(profileName) {
+  requireUsableDirectoryKey(profileName);
   return path.join(getBackupBaseDirectory(), sanitizeProfileName(profileName));
 }
 
@@ -72,5 +88,6 @@ export {
   getProfilesDirectory,
   getRecoveryDirectory,
   getRecoveryPath,
+  hasUsableDirectoryKey,
   sanitizeProfileName
 };

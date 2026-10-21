@@ -18,7 +18,8 @@ import {
   getBackupBaseDirectory,
   getBackupDirectory,
   getBackupMetadataPath,
-  getProfileDirectory
+  getProfileDirectory,
+  hasUsableDirectoryKey
 } from './profile-paths.js';
 import { createBackupMetadataCoordinator } from './backup-metadata-coordinator.js';
 import { createBackupMetadataStore } from './backup-metadata-store.js';
@@ -398,6 +399,9 @@ async function getBackupMetadata(profileName) {
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 async function checkBackupRestorable(profileName, backupId) {
+  if (!hasUsableDirectoryKey(profileName)) {
+    return { success: false, error: 'Profile name has no usable folder name' };
+  }
   const backupPath = resolveBackupPath(profileName, backupId);
   if (!backupPath) {
     return { success: false, error: 'Invalid backup ID' };

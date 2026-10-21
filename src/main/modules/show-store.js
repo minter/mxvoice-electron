@@ -96,6 +96,7 @@ export function createShowStore({
   getProfileStatePath,
   profileExists,
   getProfileDirectoryKey = (name) => String(name),
+  hasUsableDirectoryKey = (name) => getProfileDirectoryKey(name) !== '',
   debugLog,
   now,
   newId
@@ -124,6 +125,14 @@ export function createShowStore({
   async function requireRegistered(profileName) {
     if (!(await profileExists(profileName))) {
       throw new ShowStoreError('unregistered', `Profile "${profileName}" is not registered`);
+    }
+  }
+
+  // A name that sanitizes to nothing has no folder, so its shows are unreachable
+  // and nothing may be written for it (its path would be the shared profiles folder).
+  function requireUsableFolder(profileName) {
+    if (!hasUsableDirectoryKey(profileName)) {
+      throw new ShowStoreError('unreadable', "This profile's name can't be used for a folder");
     }
   }
 
@@ -174,6 +183,7 @@ export function createShowStore({
   function load(profileName) {
     return serialized(profileName, async () => {
       await requireRegistered(profileName);
+      requireUsableFolder(profileName);
       const found = await inspect(profileName);
       if (found.kind === 'main') return { doc: found.doc, source: 'shows' };
       if (found.kind === 'unreadable') {
@@ -199,6 +209,7 @@ export function createShowStore({
   async function peek(profileName) {
     try {
       if (!(await profileExists(profileName))) return null;
+      if (!hasUsableDirectoryKey(profileName)) return null;
       const found = await inspect(profileName);
       if (found.kind === 'main' || found.kind === 'prev') return found.doc;
       if (found.kind === 'none') return (await buildMigration(profileName)).doc;
@@ -217,6 +228,8 @@ export function createShowStore({
   function resetUnreadable(profileName) {
     return serialized(profileName, async () => {
       await requireRegistered(profileName);
+      // No folder to quarantine or write: offer an empty show that is never saved
+      if (!hasUsableDirectoryKey(profileName)) return { doc: createDocument(normalizeLayout(null), docOptions()) };
       const found = await inspect(profileName);
       // Never destroy a document that turned out to be readable after all.
       if (found.kind === 'main' || found.kind === 'prev') return { doc: found.doc };
@@ -237,6 +250,7 @@ export function createShowStore({
   function save(profileName, doc) {
     return serialized(profileName, async () => {
       await requireRegistered(profileName);
+      requireUsableFolder(profileName);
       if (!parseDocument(doc).ok) throw new ShowStoreError('shape', 'Refusing to save an invalid show document');
       const showsPath = getProfileShowsPath(profileName);
       // Throws 'io' or 'version' for a main file we must not overwrite.

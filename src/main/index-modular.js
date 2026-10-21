@@ -74,7 +74,7 @@ import { createRecoveryStore } from './modules/recovery-store.js';
 import { createShowSession } from './modules/show-session.js';
 import { createRendererGoneHandler } from './modules/renderer-crash-handler.js';
 import { createUpdateInstaller } from './modules/update-install.js';
-import { getProfileDirectoryKey, getProfileShowsPath, getProfileStatePath, getRecoveryDirectory, getRecoveryPath } from './modules/profile-paths.js';
+import { getProfileDirectoryKey, hasUsableDirectoryKey, getProfileShowsPath, getProfileStatePath, getRecoveryDirectory, getRecoveryPath } from './modules/profile-paths.js';
 import { quietlyAnnouncedVersion, recordAvailableUpdate, recordDownloadedUpdate } from './modules/pending-update.js';
 
 if (process.env.APP_TEST_MODE === '1') {
@@ -134,6 +134,9 @@ export function getProfileDirectory(type) {
   const profile = getCurrentProfile();
   if (!profile) {
     throw new Error('No current profile set');
+  }
+  if (!hasUsableDirectoryKey(profile)) {
+    throw new Error('Profile name has no usable folder name');
   }
   const sanitized = profileManager.sanitizeProfileName(profile);
   const profilesDir = profileManager.getProfilesDirectory();
@@ -753,6 +756,7 @@ function initializeMainProcessServices() {
     getProfileShowsPath,
     getProfileStatePath,
     getProfileDirectoryKey,
+    hasUsableDirectoryKey,
     profileExists: (name) => profileManager.profileExists(name),
     debugLog
   });

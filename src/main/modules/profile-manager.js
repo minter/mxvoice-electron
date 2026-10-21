@@ -18,6 +18,7 @@ import {
   getProfileDirectory,
   getProfileDirectoryKey,
   getProfilePreferencesPath,
+  hasUsableDirectoryKey,
   getProfileRegistryPath,
   getProfilesDirectory,
   sanitizeProfileName
@@ -417,11 +418,16 @@ function updateProfileLastUsed(profileName) {
  * @param {string} profileName
  * @returns {string|null} The refusal, or null when it can be deleted
  */
+const UNUSABLE_FOLDER_DELETE_MESSAGE =
+  "This profile's name can't be used for a folder, so Mx. Voice can't delete it safely. Rename it in a newer version or contact support.";
+
 function getDeleteProfileBlocker(profileName) {
   // Prevent deletion of Default User
   if (profileName === 'Default User') return 'Cannot delete Default User profile';
   // Check if profile exists
   if (!profileExists(profileName)) return 'Profile does not exist';
+  // A name with no usable folder name would resolve to the shared profiles folder
+  if (!hasUsableDirectoryKey(profileName)) return UNUSABLE_FOLDER_DELETE_MESSAGE;
   // Get available profiles to ensure we don't delete the last one
   if (getAvailableProfiles().length <= 1) return 'Cannot delete the last profile';
   return null;
@@ -453,6 +459,11 @@ function deleteProfile(profileName) {
       exists: fs.existsSync(profileDir)
     });
     
+    // Last line of defence: never remove the folder that holds every profile
+    if (path.resolve(profileDir) === path.resolve(getProfilesDirectory())) {
+      return { success: false, error: UNUSABLE_FOLDER_DELETE_MESSAGE };
+    }
+
     if (fs.existsSync(profileDir)) {
       // List contents before deletion for debugging
       const contents = fs.readdirSync(profileDir);
@@ -709,6 +720,10 @@ async function duplicateProfile(sourceProfileName, targetProfileName, descriptio
       return { success: false, error: 'Source profile does not exist' };
     }
     
+    if (!hasUsableDirectoryKey(sourceProfileName)) {
+      return { success: false, error: 'Profile name has no usable folder name' };
+    }
+
     // Check if target profile already exists
     if (profileExists(targetProfileName)) {
       return { success: false, error: 'Target profile already exists' };
