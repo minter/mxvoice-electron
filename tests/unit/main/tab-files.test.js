@@ -46,6 +46,21 @@ describe('hotkey tab file writer', () => {
     expect(formatHotkeyTabFile({ tabNumber: 1, tabName: '   ', hotkeys: {} })).not.toContain('tab_name');
   });
 
+  it('strips CR, LF and other control characters from the tab name, so it cannot add lines', () => {
+    const text = formatHotkeyTabFile({ tabName: 'Evil\r\nf1::9999\ttab\u0000x', hotkeys: { f1: '1' } });
+    const lines = text.split('\n');
+    expect(lines).toHaveLength(14);
+    expect(lines[0]).toBe('f1::1');
+    expect(lines[12]).toBe('tab_name::Evilf1::9999tabx');
+    const parsed = fileOperations.parseHotkeyFileLines(lines);
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.hotkeys.f1).toBe('1');
+  });
+
+  it('leaves out tab_name when the name is only control characters', () => {
+    expect(formatHotkeyTabFile({ tabName: '\r\n\t', hotkeys: {} })).not.toContain('tab_name');
+  });
+
   it('round-trips through the reader', () => {
     const text = formatHotkeyTabFile({ tabName: 'A B', hotkeys: { f2: '5' } });
     const parsed = fileOperations.parseHotkeyFileLines(text.split('\n'));

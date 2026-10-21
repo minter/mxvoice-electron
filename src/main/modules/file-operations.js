@@ -75,7 +75,9 @@ const HOLDING_TANK_FILTERS = [{ name: 'Mx. Voice Holding Tank Files', extensions
 function formatHotkeyTabFile(tab) {
   const hotkeys = tab?.hotkeys || {};
   const lines = HOTKEY_KEYS.map((key) => `${key}::${hotkeys[key] ?? ''}`);
-  const tabName = typeof tab?.tabName === 'string' ? tab.tabName.trim() : '';
+  // Control characters (CR, LF, tab, ...) are dropped: a name must not add lines to the file
+  // eslint-disable-next-line no-control-regex
+  const tabName = typeof tab?.tabName === 'string' ? tab.tabName.replace(/[\u0000-\u001F\u007F]/g, '').trim() : '';
   if (tabName) lines.push(`tab_name::${tabName.replace(/ /g, '_')}`);
   return `${lines.join('\n')}\n`;
 }

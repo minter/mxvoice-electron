@@ -9,11 +9,18 @@
 
 import { customAlert, customConfirm } from '../utils/modal-utils.js';
 import { showDropToast } from '../utils/toast-utils.js';
-import { TOAST_MS, droppedSongsFileMessage, IMPORT_NOT_READY_MESSAGE, NO_SONGS_MESSAGE } from '../shows/messages.js';
+import { TOAST_MS, droppedSongsFileMessage, IMPORT_NOT_READY_MESSAGE, NO_SONGS_MESSAGE, SHOW_CHANGED_MESSAGE } from '../shows/messages.js';
 
 const LOG_CONTEXT = { module: 'tab-files' };
 const SAVE_TITLE = 'Save Tab to File';
 const LOAD_TITLE = 'Load Tab from File';
+const TAB_STRIPS = { hotkeys: '#hotkey_tabs', holding_tank: '#holding_tank_tabs' };
+
+// The panel's selected tab number, from its active tab link
+function selectedTabNumber(kind) {
+  const href = document.querySelector(`${TAB_STRIPS[kind]} .nav-link.active`)?.getAttribute('href');
+  return Number(href?.match(/(\d+)$/)?.[1]) || null;
+}
 
 /** Per panel: the tab from the model, and how its files are saved, loaded and populated */
 export const TAB_FILE_KINDS = {
@@ -56,7 +63,8 @@ function resolveDeps(deps) {
     electronAPI: deps.electronAPI || window.secureElectronAPI,
     confirm: deps.confirm || customConfirm,
     alert: deps.alert || customAlert,
-    toast: deps.toast || showDropToast
+    toast: deps.toast || showDropToast,
+    activeTabNumber: deps.activeTabNumber || selectedTabNumber
   };
 }
 
@@ -68,14 +76,27 @@ function track(electronAPI, event, kind) {
   }
 }
 
-// A file only loads into a show that has finished loading
-async function showIsReady(electronAPI) {
+// The show session as a load sees it; null when it can't be read
+async function readShowState(electronAPI) {
   try {
     const state = await electronAPI?.shows?.getState?.();
-    return state?.success === true && state.data?.status === 'ready';
+    if (state?.success !== true) return null;
+    return { ready: state.data?.status === 'ready', generation: state.data?.generation, activeShowId: state.data?.doc?.activeShowId ?? null };
   } catch (_error) {
-    return false;
+    return null;
   }
+}
+
+/*
+ * The app menu stays usable while the open dialog and the confirm are up, so a
+ * switch, revert or import can land meanwhile. A finished switch is ready again
+ * with another show, so the same show and the same selected tab must still be there.
+ */
+function sameShowAndTab(before, after, kind, tabNumber, activeTabNumber) {
+  return !!after?.ready
+    && after.generation === before.generation
+    && after.activeShowId === before.activeShowId
+    && activeTabNumber(kind) === tabNumber;
 }
 
 /**
@@ -113,15 +134,16 @@ export async function saveTabToFile(kind, { tabNumber, label } = {}, deps = {}) 
  * before they are replaced; an empty tab loads without asking.
  * @param {'hotkeys'|'holding_tank'} kind
  * @param {{ tabNumber: number, label: string }} target - the selected tab and its label
- * @param {Object} [deps] - registry, electronAPI, confirm, alert, toast (defaults: the app's)
- * @returns {Promise<{ status: 'loaded'|'canceled'|'declined'|'empty'|'not-ready'|'unavailable' } | { status: 'error', error: string }>}
+ * @param {Object} [deps] - registry, electronAPI, confirm, alert, toast, activeTabNumber (defaults: the app's)
+ * @returns {Promise<{ status: 'loaded'|'canceled'|'declined'|'empty'|'not-ready'|'show-changed'|'unavailable' } | { status: 'error', error: string }>}
  */
 export async function loadTabFromFile(kind, { tabNumber, label } = {}, deps = {}) {
   const panel = TAB_FILE_KINDS[kind];
   if (!panel) return { status: 'unavailable' };
-  const { registry, electronAPI, confirm, alert, toast } = resolveDeps(deps);
+  const { registry, electronAPI, confirm, alert, toast, activeTabNumber } = resolveDeps(deps);
 
-  if (!(await showIsReady(electronAPI))) {
+  const before = await readShowState(electronAPI);
+  if (!before?.ready) {
     toast(IMPORT_NOT_READY_MESSAGE, TOAST_MS);
     return { status: 'not-ready' };
   }
@@ -141,6 +163,12 @@ export async function loadTabFromFile(kind, { tabNumber, label } = {}, deps = {}
 
     if (panel.hasSongs(panel.tab(registry, tabNumber)) && !(await confirm(...replaceTabConfirmArgs(label)))) {
       return { status: 'declined' };
+    }
+
+    if (!sameShowAndTab(before, await readShowState(electronAPI), kind, tabNumber, activeTabNumber)) {
+      toast(SHOW_CHANGED_MESSAGE, TOAST_MS);
+      window.debugLog?.warn('Show changed while a tab file was open; not loaded', { ...LOG_CONTEXT, function: 'loadTabFromFile', kind, tabNumber });
+      return { status: 'show-changed' };
     }
 
     const outcome = await panel.populate(registry, result.data);
