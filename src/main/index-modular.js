@@ -73,7 +73,7 @@ import { createShowStore } from './modules/show-store.js';
 import { createRecoveryStore } from './modules/recovery-store.js';
 import { createShowSession } from './modules/show-session.js';
 import { createRendererGoneHandler } from './modules/renderer-crash-handler.js';
-import { createUpdateInstaller } from './modules/update-install.js';
+import { createSquirrelReadiness, createUpdateInstaller } from './modules/update-install.js';
 import { getProfileDirectoryKey, hasUsableDirectoryKey, getProfileShowsPath, getProfileStatePath, getRecoveryDirectory, getRecoveryPath } from './modules/profile-paths.js';
 import { quietlyAnnouncedVersion, recordAvailableUpdate, recordDownloadedUpdate } from './modules/pending-update.js';
 
@@ -735,20 +735,52 @@ function notifyUpdateNotInstalled() {
   });
 }
 
+// macOS: Squirrel.Mac fetches each update from electron-updater after its
+// download; the install waits for that. Tracked from startup, before the
+// update-downloaded handlers below are registered.
+let squirrelReadiness = null;
+if (process.platform === 'darwin') {
+  try {
+    squirrelReadiness = createSquirrelReadiness({ nativeUpdater: nativeAutoUpdater, updater: autoUpdater });
+  } catch (error) {
+    debugLog.warn('Native autoUpdater unavailable', { function: 'createSquirrelReadiness', error: error.message });
+  }
+}
+
+// The native updater quitting to install; Electron's updater (macOS) and
+// electron-updater both emit it
+function onNativeQuitForUpdate(listener) {
+  try {
+    nativeAutoUpdater?.on?.('before-quit-for-update', listener);
+    return () => nativeAutoUpdater?.removeListener?.('before-quit-for-update', listener);
+  } catch (error) {
+    debugLog.warn('Native autoUpdater unavailable', { function: 'onNativeQuitForUpdate', error: error.message });
+    return () => {};
+  }
+}
+
 // Install a downloaded update: save state and hand the show session off
 // first. One that doesn't quit gives the session back and says so.
 const installUpdateNow = createUpdateInstaller({
   prepareForUpdateInstall: () => appSetup.prepareForUpdateInstall(),
   getAutoUpdater: () => autoUpdater,
+  waitForInstallReady: squirrelReadiness ? () => squirrelReadiness.waitUntilReady() : undefined,
   cancelHandoff: async () => {
     // before-quit-for-update may have fired: closes must ask and save again
     appSetup.requireCloseConfirmation();
     await showSession?.cancelHandoff();
   },
+  // handoff() fences synchronously, before its first await
+  handOffAgain: () => showSession?.handoff('update'),
   onQuitStarted: (listener) => {
     app.on('before-quit', listener);
-    return () => app.removeListener('before-quit', listener);
+    const offNative = onNativeQuitForUpdate(listener);
+    return () => {
+      app.removeListener('before-quit', listener);
+      offNative();
+    };
   },
+  onQuitForUpdate: onNativeQuitForUpdate,
   notifyInstallFailed: notifyUpdateNotInstalled,
   debugLog
 });
