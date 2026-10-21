@@ -32,6 +32,7 @@ function setup(overrides = {}) {
     deleteShow: vi.fn(async () => ({ activeChanged: false })),
     listImportable: vi.fn(async () => [{ profile: 'Bob', shows: [] }]),
     importShow: vi.fn(async () => ({ layout: {}, generation: 2 })),
+    setShowColor: vi.fn(async () => ({ id: UUID, color: 'teal' })),
     ...overrides,
   };
   register({ showSession, debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
@@ -129,6 +130,22 @@ describe('show IPC handlers', () => {
     // Other codes are not passed on
     showSession.revert.mockRejectedValueOnce(Object.assign(new Error('disk full'), { code: 'ENOSPC' }));
     await expect(handlers['show:revert']({})).resolves.toEqual({ success: false, error: 'disk full' });
+  });
+
+  it('SET_COLOR passes a palette color or null through and rejects anything else', async () => {
+    const { showSession } = setup();
+    await expect(handlers['show:set-color']({}, UUID, 'teal')).resolves.toEqual({ success: true, data: { id: UUID, color: 'teal' } });
+    expect(showSession.setShowColor).toHaveBeenCalledWith(UUID, 'teal');
+    await expect(handlers['show:set-color']({}, UUID, null)).resolves.toMatchObject({ success: true });
+    expect(showSession.setShowColor).toHaveBeenLastCalledWith(UUID, null);
+    showSession.setShowColor.mockClear();
+    for (const color of ['Teal', '#0F6E56', 'mauve', '', undefined, 3, {}, 'constructor', '__proto__']) {
+      await expect(handlers['show:set-color']({}, UUID, color), String(color)).resolves.toMatchObject({ success: false });
+    }
+    for (const id of ['../../x', '', 42, null, UUID.toUpperCase()]) {
+      await expect(handlers['show:set-color']({}, id, 'teal')).resolves.toMatchObject({ success: false });
+    }
+    expect(showSession.setShowColor).not.toHaveBeenCalled();
   });
 
   it('rejects an unregistered profile on IMPORT', async () => {

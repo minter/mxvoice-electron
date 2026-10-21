@@ -146,6 +146,7 @@ The menu contains:
 - Revert to Saved…
 - Rename "Comedy Sports"...
 - Delete "Comedy Sports"...
+- Color, a submenu: None, Teal, Blue, Purple, Pink, Coral, Amber, Green, with a check on the current show's color
 - A separator, then Import Show...
 - Import Hotkey File... and Import Holding Tank File...
 
@@ -156,6 +157,12 @@ Nothing in the Shows menu has a keyboard shortcut. Cmd/Ctrl+O and Cmd/Ctrl+S are
 ### Header
 
 The search-column header already shows the profile name. It also shows the active show name, so the loaded show is visible without opening a menu. A dot after the name means the layout on screen has unsaved changes. The header is a label. It does not open the Shows menu. Commands that replace or delete a show do not belong on that label.
+
+### Show color
+
+A show can have an accent color, so the operator can tell at a glance which show is loaded. Shows → Color sets it for the show on screen, with no prompt; None takes it off. The color is stored on the show as a palette key (`teal`, `blue`, `purple`, `pink`, `coral`, `amber`, `green`) or null; an unknown key reads as no color, and a document with colors still opens in a build without them. The migrated Default Show starts with none.
+
+The color appears in three places only, in light and dark mode: the window background behind the panels (the gutters around and between the three panels and the transport, painted by `.container-fluid`; the 200 stop of the palette in light mode, the 600 stop in dark), a 2px accent under the active hotkey and holding-tank tab, and a pill around the show name in the header. Panels, headers, tab rows, song rows, F-key badges, the Holding/Playlist toggle, the transport, dialogs and the ⋯ menus are never colored, and no text sits directly on the colored background. The styles live in their own stylesheet, keyed on `html[data-show-color]`, so the feature can be removed by dropping the file or the attribute.
 
 ### What comes off the panels
 
@@ -268,4 +275,5 @@ These are settled. A review that reopens them should say what new fact contradic
 | Revert only with unsaved changes | With nothing changed there is nothing to discard, so the item is disabled. The header dot and the menu agree on whether the show has changed. |
 | Rename and Delete act on the current show | Like Save and Revert, each command names the show it changes, and that show is the one on screen. Nothing is renamed or deleted that the person cannot see. Tidying another show means switching to it first. |
 | Delete loads the next show now | The header and the screen have to stay on a real show. Delete of the active show is a switch, and delete of the last show shows the empty replacement immediately. Its own confirmation replaces the save prompt. |
+| Color is a show property, saved at once | Like the name, it describes the show, not the layout on screen, so choosing a color saves immediately and never touches the layout or the unsaved-changes dot. Save As and Import Show copy it, since the copy is the same show to the operator. |
 | A show change does not take over playback | The current song finishes or is stopped by the operator. The holding tank that just loaded does not start playing by itself. |

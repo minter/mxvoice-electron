@@ -36,6 +36,7 @@ function setup({ doc = threeShows(), status = 'ready', modalOpen = false, dirty 
       : ok({ activeChanged: false }))),
     listImportable: vi.fn(async () => ok([{ profile: 'Derek', shows: [{ id: 'd1', name: 'Comedy Sports', updatedAt: 1 }] }])),
     importShow: vi.fn(async () => loaded(8, 'Imported')),
+    setColor: vi.fn(async (id, color) => ok({ id, color })),
     reportReady: vi.fn(async (generation, ready) => { calls.push(`ready:${generation}:${ready}`); return ok(null); })
   };
   const deps = {
@@ -249,6 +250,34 @@ describe('runShowCommand', () => {
     cancelled.deps.chooseImportShow.mockResolvedValue(null);
     await runShowCommand({ command: 'import' }, cancelled.deps);
     expect(cancelled.api.importShow).not.toHaveBeenCalled();
+  });
+
+  it('set-color colors the active show at once, asking nothing and leaving the layout alone', async () => {
+    const { api, deps } = setup();
+    await runShowCommand({ command: 'set-color', showId: 'b1', color: 'teal' }, deps);
+    expect(api.setColor).toHaveBeenCalledWith('b2', 'teal');
+    expect(deps.confirm).not.toHaveBeenCalled();
+    expect(deps.prompt).not.toHaveBeenCalled();
+    expect(deps.choose).not.toHaveBeenCalled();
+    expect(deps.applyLayout).not.toHaveBeenCalled();
+    expect(api.updateActive).not.toHaveBeenCalled();
+    expect(deps.track).toHaveBeenCalledWith('show_color_set', { color: 'teal' });
+
+    await runShowCommand({ command: 'set-color' }, deps);
+    expect(api.setColor).toHaveBeenLastCalledWith('b2', null);
+    expect(deps.track).toHaveBeenLastCalledWith('show_color_set', { color: 'none' });
+  });
+
+  it('set-color does nothing before the session is ready, and alerts when the save fails', async () => {
+    const notReady = setup({ status: 'loading' });
+    await runShowCommand({ command: 'set-color', color: 'teal' }, notReady.deps);
+    expect(notReady.api.setColor).not.toHaveBeenCalled();
+    expect(notReady.deps.alert).not.toHaveBeenCalled();
+
+    const failing = setup();
+    failing.api.setColor.mockResolvedValueOnce(fail('disk full'));
+    await runShowCommand({ command: 'set-color', color: 'teal' }, failing.deps);
+    expect(failing.deps.alert).toHaveBeenCalledOnce();
   });
 
   it('a command arriving while another runs is dropped', async () => {

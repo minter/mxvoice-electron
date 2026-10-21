@@ -12,6 +12,7 @@ import * as profileManager from './profile-manager.js';
 import { isAllowedAboutExternalUrl } from './about-external-url.js';
 import { createRendererCommandDispatcher } from './renderer-command-dispatcher.js';
 import { buildApplicationMenu } from './application-menu.js';
+import { swatchImage } from './color-swatch-image.js';
 import { createWindowStateManager } from './window-state-manager.js';
 import { createMainWindow } from './main-window-factory.js';
 import { createAppLifecycle } from './app-lifecycle.js';
@@ -157,11 +158,12 @@ function createApplicationMenu() {
     rendererCommands,
     getShowMenuState: () => {
       const { status, doc, dirty } = showSession?.state?.() ?? {};
-      const shows = (doc?.shows ?? []).map((b) => ({ id: b.id, name: b.name }));
+      const shows = (doc?.shows ?? []).map((b) => ({ id: b.id, name: b.name, color: b.color ?? null }));
       const activeShow = shows.find((b) => b.id === doc?.activeShowId) ?? null;
       return { status: status ?? 'idle', activeShow, shows, dirty: !!dirty };
     },
-    rebuildMenu: () => createApplicationMenu()
+    rebuildMenu: () => createApplicationMenu(),
+    swatchImage
   });
 }
 // UI operation functions

@@ -294,7 +294,7 @@ test.describe("What's New Tour: next release", () => {
     expect(await page.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
     await expect(page.locator('#profileSwitchModal')).toBeHidden();
 
-    for (const expected of ['Your Layout Is Now a Show', 'The Shows Menu', 'Which Show Is Loaded', "Copy Someone's Show", 'Tab Actions Moved']) {
+    for (const expected of ['Your Layout Is Now a Show', 'The Shows Menu', 'Which Show Is Loaded', 'Color-Code Your Shows', "Copy Someone's Show", 'Tab Actions Moved']) {
       await page.waitForFunction(() => !window.moduleRegistry.whatsNew.tourManager._transitioning);
       await page.locator('.driver-popover-next-btn').click();
       await expect(title).toHaveText(expected, { timeout: 5000 });

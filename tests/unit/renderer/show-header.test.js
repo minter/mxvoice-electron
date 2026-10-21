@@ -28,6 +28,7 @@ function resetDom() {
   els.dirty.hidden = true;
   const byId = { 'profile-name': els.profile, 'show-icon': els.icon, 'show-name': els.show, 'show-dirty': els.dirty };
   doc = {
+    documentElement: { dataset: {} },
     getElementById: (id) => byId[id] ?? null,
     querySelector: (selector) => (selector === '.show-separator' ? els.separator : null)
   };
@@ -138,6 +139,21 @@ describe('refreshHeader', () => {
     await refreshHeader({ doc, api: api({ profile: 'Default User', status: 'failed', doc: null }) });
     expect(hiddenParts()).toEqual([true, true, true]);
     expect(els.profile.textContent).toBe('Default User');
+  });
+
+  it('applies the active show\'s color to <html>, and removes it for an uncolored or missing show', async () => {
+    const showDoc = { activeShowId: 'b2', shows: [{ id: 'b1', name: 'One' }, { id: 'b2', name: 'Two', color: 'teal' }] };
+    await refreshHeader({ doc, api: api({ profile: 'Default User', status: 'ready', doc: showDoc }) });
+    expect(doc.documentElement.dataset.showColor).toBe('teal');
+    await refreshHeader({ doc, api: api({ profile: 'Default User', status: 'ready', doc: { ...showDoc, activeShowId: 'b1' } }) });
+    expect('showColor' in doc.documentElement.dataset).toBe(false);
+    await refreshHeader({ doc, api: api({ profile: 'Default User', status: 'ready', doc: showDoc }) });
+    await refreshHeader({ doc, api: api({ profile: 'Default User', status: 'failed', doc: null }) });
+    expect('showColor' in doc.documentElement.dataset).toBe(false);
+    // A state that can't be read leaves the color as it was
+    await refreshHeader({ doc, api: api({ profile: 'Default User', status: 'ready', doc: showDoc }) });
+    await refreshHeader({ doc, api: api(null, false) });
+    expect(doc.documentElement.dataset.showColor).toBe('teal');
   });
 
   it('never throws when the state cannot be read', async () => {

@@ -37,6 +37,7 @@ import {
   normalizeLayout,
   renameShow as renameInDocument,
   setActive,
+  setShowColor as setColorInDocument,
   updateShowLayout
 } from './show-document.js';
 
@@ -505,9 +506,11 @@ export function createShowSession({
   function createShow(name, layout) {
     return mutation('createShow', async ({ p, g, d }) => {
       const writeSeq = recoveryWriteSeq;
+      // Save As carries the current show's color to the copy
       const { doc: nextDoc, show } = addShow(d, {
         name,
         layout: normalizeLayout(layout),
+        color: d.shows.find((b) => b.id === d.activeShowId)?.color ?? null,
         now: now(),
         ...idOptions()
       });
@@ -522,6 +525,15 @@ export function createShowSession({
       await saveInPlace('renameShow', p, g, nextDoc);
       const renamed = nextDoc.shows.find((b) => b.id === showId);
       return { id: renamed.id, name: renamed.name };
+    });
+  }
+
+  // A show property, like the name: saved at once, layout and dirty untouched
+  function setShowColor(showId, color) {
+    return mutation('setShowColor', async ({ p, g, d }) => {
+      const nextDoc = setColorInDocument(d, showId, color, now());
+      await saveInPlace('setShowColor', p, g, nextDoc);
+      return { id: showId, color };
     });
   }
 
@@ -576,6 +588,7 @@ export function createShowSession({
         nextDoc = addShow(d, {
           name: importName(d, source.name, sourceProfile),
           layout: source.layout,
+          color: source.color,
           now: at,
           ...idOptions(),
           importedFrom: { profile: sourceProfile, showId, showName: source.name, at }
@@ -603,6 +616,7 @@ export function createShowSession({
     updateActive,
     createShow,
     renameShow,
+    setShowColor,
     deleteShow,
     listImportable,
     importShow

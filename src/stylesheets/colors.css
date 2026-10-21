@@ -485,7 +485,6 @@ table td {
 
 /* Column drag and drop styles */
 .column-drop-zone {
-  width: 8px;
   background: transparent;
   transition: all 0.2s ease;
   cursor: col-resize;
@@ -499,7 +498,6 @@ table td {
 .column-drop-zone.drop-zone-active {
   background: var(--highlight-color);
   opacity: 0.8;
-  width: 12px;
 }
 
 .column-dragging {

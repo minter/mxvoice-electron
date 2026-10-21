@@ -12,11 +12,12 @@ function buildApplicationMenu({
   logService,
   rendererCommands,
   getShowMenuState,
-  rebuildMenu
+  rebuildMenu,
+  swatchImage
 }) {
-  const showSend = (command, showId) => {
+  const showSend = (command, showId, extra) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('menu:show-command', { command, showId });
+      mainWindow.webContents.send('menu:show-command', { command, showId, ...extra });
     }
   };
   const application_menu = [
@@ -143,7 +144,7 @@ function buildApplicationMenu({
     },
     buildShowMenu(
       getShowMenuState ? getShowMenuState() : { status: 'idle', activeShow: null, shows: [] },
-      { platform: process.platform, send: showSend, fileOperations, rebuild: rebuildMenu }
+      { platform: process.platform, send: showSend, fileOperations, rebuild: rebuildMenu, swatchImage }
     ),
     {
       label: "Profile",

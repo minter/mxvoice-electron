@@ -244,6 +244,13 @@ const handlers = {
     return ['show_deleted'];
   },
 
+  // Shows → Color: a show property, like the name, saved at once without asking
+  async 'set-color'(_showId, deps, { color = null } = {}) {
+    const doc = await readyDoc(deps);
+    unwrap(await deps.api.setColor(doc.activeShowId, color), 'Setting the show color');
+    return ['show_color_set', { color: color ?? 'none' }];
+  },
+
   async import(_showId, deps) {
     await readyDoc(deps);
     const groups = unwrap(await deps.api.listImportable(), 'Listing shows to import');
@@ -260,7 +267,7 @@ const handlers = {
 /**
  * Run one Shows menu command.
  *
- * @param {{ command: string, showId?: string }} command
+ * @param {{ command: string, showId?: string, color?: string|null }} command
  * @param {Object} deps
  * @param {Object} deps.api - secureElectronAPI.shows
  * @param {Function} deps.confirm - customConfirm
@@ -276,7 +283,7 @@ const handlers = {
  * @param {(layout: Object) => Promise<{ dropped: number }>} deps.applyLayout
  * @returns {Promise<void>}
  */
-export async function runShowCommand({ command, showId } = {}, deps) {
+export async function runShowCommand({ command, showId, ...details } = {}, deps) {
   const handler = Object.hasOwn(handlers, command) ? handlers[command] : null;
   if (!handler) {
     window.debugLog?.warn('Unknown show command', { ...LOG_CONTEXT, command });
@@ -293,7 +300,7 @@ export async function runShowCommand({ command, showId } = {}, deps) {
 
   running = true;
   try {
-    const event = await handler(showId, deps);
+    const event = await handler(showId, deps, details);
     if (event) deps.track(event[0], event[1]);
   } catch (error) {
     if (REFUSED_ERRORS.has(error.message)) {

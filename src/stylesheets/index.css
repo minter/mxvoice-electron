@@ -3,6 +3,11 @@
   /* To change tooltip delay globally, modify this value */
   /* Examples: 500ms = 0.5 seconds, 2000ms = 2 seconds */
   --tooltip-delay: 1500ms;
+
+  /* One spacing value for the window background around and between the
+     panels: every outer edge, every gap between top panels, and the gap
+     above the player panel */
+  --panel-gap: 12px;
 }
 
 body {
@@ -21,19 +26,21 @@ input[type="text"]:focus {
 }
 
 #top-row {
-  height: calc(100vh - 140px);
+  flex: 1 1 auto; /* fills the window above the player row */
+  min-height: 0;
   display: flex;
   flex-direction: row;
-  gap: 8px;
-  padding: 8px;
+  gap: var(--panel-gap);
+  padding: var(--panel-gap);
   overflow-x: auto; /* allow horizontal scroll if columns cannot shrink further */
   overflow-y: hidden;
 }
 
 #player-row {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: row;
-  padding: 8px;
+  padding: 0 var(--panel-gap) var(--panel-gap); /* the top row's padding is the gap above */
   overflow: hidden;
   z-index: 1001; /* Ensure player row appears above waveform */
 }
@@ -684,6 +691,15 @@ h6 a {
   margin-right: 0;
 }
 
+/* Drag-and-drop targets between the top panels. They sit exactly in the
+   row gap: the negative margins cancel their own width plus one gap, so the
+   panels are a single --panel-gap apart whether or not the zones exist. */
+#top-row .column-drop-zone {
+  flex: 0 0 var(--panel-gap);
+  width: var(--panel-gap);
+  margin: 0 calc(-1 * var(--panel-gap));
+}
+
 /* Responsive breakpoints */
 @media screen and (max-width: 1400px) {
   #holding-tank-column,
@@ -705,7 +721,13 @@ h6 a {
 @media screen and (max-width: 934px) {
   #top-row {
     flex-direction: column;
-    height: calc(100vh - 160px);
+  }
+
+  #top-row .column-drop-zone {
+    width: auto;
+    height: var(--panel-gap);
+    flex-basis: var(--panel-gap);
+    margin: calc(-1 * var(--panel-gap)) 0;
   }
 
   #holding-tank-column,
@@ -714,7 +736,6 @@ h6 a {
     min-width: auto;
     max-width: none;
     width: 100%;
-    margin-bottom: 8px;
   }
 
   #player {
@@ -872,8 +893,8 @@ h6 a {
 #waveform-container {
   position: absolute;
   bottom: 140px; /* Position higher above the player panel to avoid overlap */
-  left: 8px;
-  right: 8px;
+  left: var(--panel-gap);
+  right: var(--panel-gap);
   z-index: 1000;
   pointer-events: none; /* Allow clicks to pass through when hidden */
 }

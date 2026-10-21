@@ -4,6 +4,12 @@
  * two legacy imports, which stay in main (file-operations).
  */
 
+import { SHOW_COLORS } from './show-document.js';
+
+const COLOR_LABELS = {
+  teal: 'Teal', blue: 'Blue', purple: 'Purple', pink: 'Pink', coral: 'Coral', amber: 'Amber', green: 'Green'
+};
+
 // Windows/Linux treat '&' in a label as a mnemonic marker; macOS does not.
 function escapeLabel(name, platform) {
   const text = String(name ?? '');
@@ -14,8 +20,9 @@ function escapeLabel(name, platform) {
  * @param {Object} state - { status, activeShow, shows, dirty } from the show session
  * @param {Object} [options]
  * @param {Function} [options.rebuild] - rebuilds the application menu from the session
+ * @param {Function} [options.swatchImage] - (colorKey|null) => NativeImage for the Color items
  */
-function buildShowMenu(state, { platform, send, fileOperations, rebuild } = {}) {
+function buildShowMenu(state, { platform, send, fileOperations, rebuild, swatchImage } = {}) {
   const status = state?.status ?? 'idle';
   const activeShow = state?.activeShow ?? null;
   const shows = Array.isArray(state?.shows) ? state.shows : [];
@@ -55,6 +62,7 @@ function buildShowMenu(state, { platform, send, fileOperations, rebuild } = {}) 
       // Both act on the show on screen; the renderer reads it from the session
       { label: `${quoted('Rename')}…`, enabled: hasActive, click: emit('rename') },
       { label: `${quoted('Delete')}…`, enabled: hasActive, click: emit('delete') },
+      buildColorMenu(activeShow, { enabled: hasActive, send, rebuild, swatchImage }),
       { type: 'separator' },
       { label: 'Import Show…', enabled: ready, click: emit('import') },
       {
@@ -66,6 +74,29 @@ function buildShowMenu(state, { platform, send, fileOperations, rebuild } = {}) 
         click: () => { fileOperations?.loadHoldingTankFile?.(); }
       }
     ]
+  };
+}
+
+/** Shows → Color: None, then the palette; sets the active show's accent color. */
+function buildColorMenu(activeShow, { enabled, send, rebuild, swatchImage }) {
+  const current = SHOW_COLORS.includes(activeShow?.color) ? activeShow.color : null;
+  const item = (label, color) => ({
+    label,
+    // The swatch sits beside the radio check; None is a hollow ring
+    ...(swatchImage ? { icon: swatchImage(color) } : {}),
+    type: 'radio',
+    checked: current === color,
+    enabled,
+    click: () => {
+      send?.('set-color', null, { color });
+      // As for the show radio list: Electron moved the check; rebuild from the session after the click
+      setImmediate(() => rebuild?.());
+    }
+  });
+  return {
+    label: 'Color',
+    enabled,
+    submenu: [item('None', null), ...SHOW_COLORS.map((key) => item(COLOR_LABELS[key], key))]
   };
 }
 
