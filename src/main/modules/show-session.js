@@ -334,10 +334,8 @@ export function createShowSession({
     }
     setDirty(false);
     setPlayed(new Map());
-    await queued(async () => {
-      if (record) await recoveryStore.retire(p);
-      await recoveryStore.retirePlayed(p);
-    });
+    // Set aside, not deleted: a wrong answer at the prompt stays recoverable
+    await queued(() => recoveryStore.discard(p));
     return { layout: saved, counts: {} };
   }
 

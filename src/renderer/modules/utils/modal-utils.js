@@ -6,6 +6,10 @@
 
 import { escapeHtml } from '../dom-utils/escape-html.js';
 
+// Every dialog made here carries this, so hideAllModals() leaves it open: a
+// question must be answered by the person, never closed by another modal
+const PROMPT_ATTRIBUTE = 'data-mxv-prompt';
+
 /**
  * Hide a dynamically created dialog and remove its element from the DOM.
  * Removal happens on 'hidden.bs.modal' rather than a fixed timer so the
@@ -30,7 +34,10 @@ function hideAndRemoveModal(modal) {
 /**
  * Custom confirmation dialog
  *
- * Esc, a backdrop click and the close button all answer false.
+ * Esc, a backdrop click and the close button all answer false. With
+ * `dismissible: false` there is no close button, Esc and the backdrop do
+ * nothing, and only the two buttons answer: an outside hide() is refused, and
+ * if the dialog is hidden anyway it shows itself again.
  *
  * @param {string} message - The confirmation message, shown as plain text
  * @param {string} title - The dialog title (default: 'Confirm')
@@ -39,29 +46,36 @@ function hideAndRemoveModal(modal) {
  * @param {string} [options.cancelLabel='Cancel']
  * @param {'confirm'|'cancel'} [options.defaultAction='confirm'] - 'cancel' focuses
  *   the cancel button, so Return takes it
+ * @param {boolean} [options.dismissible=true] - false: only the buttons answer
  * @returns {Promise<boolean>} - Promise that resolves to true if confirmed, false if cancelled
  */
 export function customConfirm(message, title = 'Confirm', {
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
-  defaultAction = 'confirm'
+  defaultAction = 'confirm',
+  dismissible = true
 } = {}) {
   return new Promise((resolve) => {
     const modal = document.createElement('div');
     modal.className = 'modal fade';
     modal.setAttribute('tabindex', '-1');
+    modal.setAttribute(PROMPT_ATTRIBUTE, 'true');
+    const dismiss = dismissible ? ' data-bs-dismiss="modal"' : '';
+    const closeButton = dismissible
+      ? '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'
+      : '';
     modal.innerHTML = `
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">${escapeHtml(title)}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            ${closeButton}
           </div>
           <div class="modal-body">
             <p>${escapeHtml(message)}</p>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary cancel-btn" data-bs-dismiss="modal">${escapeHtml(cancelLabel)}</button>
+            <button type="button" class="btn btn-secondary cancel-btn"${dismiss}>${escapeHtml(cancelLabel)}</button>
             <button type="button" class="btn btn-primary confirm-btn">${escapeHtml(confirmLabel)}</button>
           </div>
         </div>
@@ -71,7 +85,6 @@ export function customConfirm(message, title = 'Confirm', {
     document.body.appendChild(modal);
 
     const confirmBtn = modal.querySelector('.confirm-btn');
-    const closeBtn = modal.querySelector('.btn-close');
     const cancelBtn = modal.querySelector('.cancel-btn');
 
     let hasResolved = false;
@@ -84,17 +97,31 @@ export function customConfirm(message, title = 'Confirm', {
     };
 
     confirmBtn.addEventListener('click', () => answer(true));
-    closeBtn.addEventListener('click', () => answer(false));
     cancelBtn.addEventListener('click', () => answer(false));
-    // Esc or a backdrop click
-    modal.addEventListener('hidden.bs.modal', () => answer(false), { once: true });
 
-    if (defaultAction === 'cancel') {
-      modal.addEventListener('shown.bs.modal', () => cancelBtn.focus(), { once: true });
+    const instance = new bootstrap.Modal(modal, dismissible
+      ? { backdrop: true, keyboard: true }
+      : { backdrop: 'static', keyboard: false });
+
+    if (dismissible) {
+      modal.querySelector('.btn-close').addEventListener('click', () => answer(false));
+      // Esc or a backdrop click
+      modal.addEventListener('hidden.bs.modal', () => answer(false), { once: true });
+    } else {
+      // Only the buttons answer: refuse any other hide, and come back if
+      // hidden anyway
+      modal.addEventListener('hide.bs.modal', (event) => {
+        if (!hasResolved) event.preventDefault();
+      });
+      modal.addEventListener('hidden.bs.modal', () => {
+        if (!hasResolved) instance.show();
+      });
     }
 
-    // Show modal via Bootstrap 5 API
-    const instance = new bootstrap.Modal(modal, { backdrop: true, keyboard: true });
+    if (defaultAction === 'cancel') {
+      modal.addEventListener('shown.bs.modal', () => cancelBtn.focus(), dismissible ? { once: true } : undefined);
+    }
+
     instance.show();
   });
 }
@@ -118,6 +145,7 @@ export function customChoice(message, title, choices, { defaultValue } = {}) {
     const modal = document.createElement('div');
     modal.className = 'modal fade';
     modal.setAttribute('tabindex', '-1');
+    modal.setAttribute(PROMPT_ATTRIBUTE, 'true');
     const buttons = choices.map(({ label, variant = 'secondary' }, index) =>
       `<button type="button" class="btn ${VARIANT_CLASSES[variant] || VARIANT_CLASSES.secondary} choice-btn" data-choice-index="${index}">${escapeHtml(label)}</button>`
     ).join('');
@@ -177,6 +205,7 @@ export function customPrompt(message, defaultValue = '', title = 'Input') {
   return new Promise((resolve) => {
     const modal = document.createElement('div');
     modal.className = 'modal fade';
+    modal.setAttribute(PROMPT_ATTRIBUTE, 'true');
     // Create modal structure safely without innerHTML
     const modalDialog = document.createElement('div');
     modalDialog.className = 'modal-dialog';
@@ -304,6 +333,7 @@ export function customAlert(message, title = 'Alert') {
   return new Promise((resolve) => {
     const modal = document.createElement('div');
     modal.className = 'modal fade';
+    modal.setAttribute(PROMPT_ATTRIBUTE, 'true');
     
     const modalDialog = document.createElement('div');
     modalDialog.className = 'modal-dialog';

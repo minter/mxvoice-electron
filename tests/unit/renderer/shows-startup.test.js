@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 globalThis.window = { debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } };
 
-const { openSessionOnStartup, droppedSongsMessage, initializeShowCommands } = await import('../../../src/renderer/modules/shows/index.js');
+const { openSessionOnStartup, droppedSongsMessage, initializeShowCommands, whenStartupSettled } = await import('../../../src/renderer/modules/shows/index.js');
 
 const savedLayout = { hotkeys: [{ tabNumber: 1, tabName: 'Saved', hotkeys: { f1: '1001' } }], holdingTank: [], selected: { hotkeyTab: 1, holdingTankTab: 1 } };
 const liveLayout = { hotkeys: [{ tabNumber: 1, tabName: 'Live', hotkeys: { f1: '1002' } }], holdingTank: [], selected: { hotkeyTab: 2, holdingTankTab: 1 } };
@@ -37,6 +37,37 @@ const opened = (recovery = null, extra = {}) => ok({ doc: {}, show: { layout: sa
 describe('openSessionOnStartup', () => {
   beforeEach(() => { window.isRestoringProfileState = false; });
 
+  // Runs first: the gate settles once per page
+  it('whenStartupSettled resolves only once the startup prompt is answered and the show opened', async () => {
+    let answer;
+    const { deps } = setup({
+      open: opened({ savedAt: Date.now(), handoff: null, showId: 'b1' }),
+      confirm: vi.fn(() => new Promise((resolve) => { answer = resolve; }))
+    });
+    let settled = false;
+    void whenStartupSettled().then(() => { settled = true; });
+    const opening = openSessionOnStartup(deps);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(deps.confirm).toHaveBeenCalledOnce();
+    expect(settled).toBe(false);
+
+    answer(false);
+    await opening;
+    await Promise.resolve();
+    expect(settled).toBe(true);
+  });
+
+  it('the crash prompt and the unreadable prompt are opened with dismissible:false', async () => {
+    const crash = setup({ open: opened({ savedAt: Date.now(), handoff: null, showId: 'b1' }) });
+    await openSessionOnStartup(crash.deps);
+    expect(crash.deps.confirm.mock.calls[0][2]).toMatchObject({ dismissible: false, defaultAction: 'cancel' });
+
+    const unreadable = setup({ open: ok({ unreadable: true, generation: 4 }), confirm: vi.fn(async () => true) });
+    unreadable.api.startEmpty.mockResolvedValue(ok({ layout: savedLayout, generation: 8, recovery: { savedAt: Date.now(), handoff: null, showId: 'b1' } }));
+    await openSessionOnStartup(unreadable.deps);
+    expect(unreadable.deps.confirm.mock.calls.map((call) => call[2].dismissible)).toEqual([false, false]);
+  });
+
   it('restores silently when recovery.handoff is "update"', async () => {
     const { api, deps, calls } = setup({ open: opened({ savedAt: Date.now(), handoff: 'update', showId: 'b1' }) });
     await expect(openSessionOnStartup(deps)).resolves.toEqual({ status: 'ready' });
@@ -62,7 +93,7 @@ describe('openSessionOnStartup', () => {
     expect(deps.confirm).toHaveBeenCalledWith(
       `Mx. Voice didn't close normally. Restore the show in progress from ${time}?`,
       'Restore show?',
-      { confirmLabel: 'Restore show in progress', cancelLabel: 'Open saved show', defaultAction: 'cancel' }
+      { confirmLabel: 'Restore show in progress', cancelLabel: 'Open saved show', defaultAction: 'cancel', dismissible: false }
     );
     expect(api.resolveRecovery).toHaveBeenCalledWith('discard');
     expect(calls).toEqual(['apply:Saved', 'ready:7:true', 'unlock']);
@@ -157,7 +188,7 @@ describe('openSessionOnStartup', () => {
     const expectedPrompt = [
       "Mx. Voice couldn't read this profile's shows. The file has been kept so it can be recovered.",
       'Shows unreadable',
-      { confirmLabel: 'Start with an empty show', cancelLabel: 'Quit' }
+      { confirmLabel: 'Start with an empty show', cancelLabel: 'Quit', dismissible: false }
     ];
 
     const start = setup({ open: ok({ unreadable: true, generation: 4 }), confirm: vi.fn(async () => true) });

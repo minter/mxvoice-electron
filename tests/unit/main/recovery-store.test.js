@@ -219,6 +219,51 @@ describe('recovery store', () => {
       expect(fs.existsSync(pathFor('Show'))).toBe(true);
     });
 
+    it('resolveRecovery discard keeps the record as <key>.discarded.json and the played counts as <key>.played.discarded.json', async () => {
+      const discardedPath = path.join(recoveryDir, 'show.discarded.json');
+      const playedDiscardedPath = path.join(recoveryDir, 'show.played.discarded.json');
+      // An older discarded copy is replaced
+      await store.write('Show', { showId: 'old', layout: LAYOUT });
+      await store.writePlayed('Show', { 3: 1 });
+      await store.discard('Show');
+      await store.write('Show', { showId: 'b1', layout: LAYOUT });
+      await store.writePlayed('Show', { 12: 2 });
+      await store.discard('Show');
+
+      expect(fs.existsSync(pathFor('Show'))).toBe(false);
+      expect(fs.existsSync(playedPath('Show'))).toBe(false);
+      expect(JSON.parse(fs.readFileSync(discardedPath, 'utf8'))).toMatchObject({ showId: 'b1', layout: LAYOUT });
+      expect(JSON.parse(fs.readFileSync(playedDiscardedPath, 'utf8')).counts).toEqual({ 12: 2 });
+      // A discarded copy is never read back as the show in progress
+      expect(await store.read('Show')).toBeNull();
+      expect(await store.readPlayed('Show')).toBeNull();
+    });
+
+    it('discard tolerates missing files, and only the layout or only the played file', async () => {
+      await expect(store.discard('Show')).resolves.toBeUndefined();
+      await store.writePlayed('Show', { 12: 1 });
+      await store.discard('Show');
+      expect(fs.readdirSync(recoveryDir)).toEqual(['show.played.discarded.json']);
+      await expect(store.discard('')).rejects.toThrow();
+    });
+
+    it('discard rethrows an error other than a missing file', async () => {
+      const failingFs = {
+        ...fs,
+        promises: { ...fs.promises, rename: async () => { throw Object.assign(new Error('busy'), { code: 'EBUSY' }); } }
+      };
+      await expect(makeStore({ fs: failingFs }).discard('Show')).rejects.toThrow('busy');
+    });
+
+    it('clearAll removes discarded copies', async () => {
+      await store.write('A', { showId: 'a', layout: LAYOUT });
+      await store.writePlayed('A', { 1: 1 });
+      await store.discard('A');
+      expect(fs.readdirSync(recoveryDir).sort()).toEqual(['a.discarded.json', 'a.played.discarded.json']);
+      await store.clearAll();
+      expect(fs.readdirSync(recoveryDir)).toEqual([]);
+    });
+
     it('clearAll removes played files too', async () => {
       await store.writePlayed('A', { 1: 1 });
       await store.write('B', { showId: 'b', layout: LAYOUT });

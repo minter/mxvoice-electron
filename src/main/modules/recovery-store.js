@@ -10,7 +10,7 @@
  * knows why the app is about to restart; a handed-off record also carries
  * `handoffAt`, when it was marked.
  *
- * Only `write` creates the recovery directory; `retire` and `markHandoff`
+ * Only `write` creates the recovery directory; `retire`, `discard` and `markHandoff`
  * never create anything.
  *
  * Next to it, `<key>.played.json` holds the night's per-song played counts:
@@ -18,6 +18,11 @@
  * once handed off. It is a separate file so retiring the layout record (a
  * layout equal to the saved show) never loses the counts. `clearAll` removes
  * it with the rest, since it ends in .json.
+ *
+ * `discard` sets both files aside instead of deleting them, as
+ * `<key>.discarded.json` and `<key>.played.discarded.json`, replacing any older
+ * copy, so a show in progress declined at the crash prompt can still be dug
+ * out by hand. Nothing reads them back; `clearAll` removes them too.
  *
  * @module recovery-store
  */
@@ -142,6 +147,22 @@ export function createRecoveryStore({
     await fs.promises.rm(getRecoveryPath(profileName), { force: true });
   }
 
+  /** Rename a file to its .discarded.json copy, replacing an older one; a missing file is fine. */
+  async function setAside(filePath) {
+    try {
+      await fs.promises.rename(filePath, filePath.replace(/\.json$/, '.discarded.json'));
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  }
+
+  /** Set the layout record and the played counts aside as discarded copies. */
+  async function discard(profileName) {
+    assertProfileName(profileName);
+    await setAside(getRecoveryPath(profileName));
+    await setAside(getPlayedPath(profileName));
+  }
+
   async function clearAll() {
     const dir = getRecoveryDirectory();
     let entries;
@@ -191,7 +212,7 @@ export function createRecoveryStore({
     await fs.promises.rm(getPlayedPath(profileName), { force: true });
   }
 
-  return { write, read, markHandoff, clearHandoff, retire, clearAll, writePlayed, readPlayed, retirePlayed };
+  return { write, read, markHandoff, clearHandoff, retire, discard, clearAll, writePlayed, readPlayed, retirePlayed };
 }
 
 export default { createRecoveryStore };

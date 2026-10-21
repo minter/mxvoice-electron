@@ -20,8 +20,9 @@ import { chooseImportShow } from './import-dialog.js';
 import { installHeaderListeners, refreshHeader } from './header.js';
 import playedCounts from './played-counts.js';
 import { installPlayedPills } from './played-pills.js';
+import { settleStartup, whenStartupSettled } from './startup-gate.js';
 
-export { droppedSongsMessage };
+export { droppedSongsMessage, whenStartupSettled };
 
 const LOG_CONTEXT = { module: 'shows', function: 'openSessionOnStartup' };
 
@@ -102,7 +103,8 @@ async function resolveRecovery(recovery, deps) {
     const restore = await deps.confirm(crashMessage(recovery.savedAt), 'Restore show?', {
       confirmLabel: 'Restore show in progress',
       cancelLabel: 'Open saved show',
-      defaultAction: 'cancel'
+      defaultAction: 'cancel',
+      dismissible: false
     });
     choice = restore ? 'restore' : 'discard';
     deps.track('crash_restore_chosen', { choice });
@@ -141,7 +143,8 @@ export async function openSessionOnStartup(overrides = {}) {
     } else if (opened.unreadable) {
       const startEmpty = await deps.confirm(UNREADABLE_MESSAGE, 'Shows unreadable', {
         confirmLabel: 'Start with an empty show',
-        cancelLabel: 'Quit'
+        cancelLabel: 'Quit',
+        dismissible: false
       });
       if (!startEmpty) {
         window.debugLog?.info('Quitting: shows unreadable', LOG_CONTEXT);
@@ -178,8 +181,13 @@ export async function openSessionOnStartup(overrides = {}) {
     deps.alert(LOAD_FAILED_MESSAGE, 'Show not loaded');
     return { status: 'failed' };
   } finally {
-    deps.clearRestorationLock();
-    await deps.refreshHeader();
+    try {
+      deps.clearRestorationLock();
+      await deps.refreshHeader();
+    } finally {
+      // Lets the release notes show, now that no startup prompt is waiting
+      settleStartup();
+    }
   }
 }
 
@@ -203,6 +211,7 @@ export function initializeShowCommands(overrides = {}) {
 
 export default {
   openSessionOnStartup,
+  whenStartupSettled,
   initializeShowCommands,
   buildLayoutDeps,
   droppedSongsMessage

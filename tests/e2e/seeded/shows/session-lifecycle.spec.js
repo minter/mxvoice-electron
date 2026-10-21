@@ -154,6 +154,38 @@ test.describe('Shows - session lifecycle', () => {
     expect(readRecovery(userDataDir, 'Default User')?.layout.hotkeys[0].hotkeys.f1).toBe(LIVE_SONG);
   });
 
+  test("an update notice during the crash prompt doesn't answer it", async () => {
+    await launch({ beforeLaunch: seedSavedShow() });
+    await assignF1(page, LIVE_SONG);
+    await waitForRecoveredF1(userDataDir, 'Default User', LIVE_SONG);
+
+    await crashApp(app);
+    await relaunch();
+
+    const prompt = restorePrompt(page);
+    await expect(prompt).toBeVisible({ timeout: 20000 });
+    // The show-modal listener must be attached, or the dispatch proves nothing
+    await page.waitForFunction(() => window.__e2eEventHandlersAttached === true, null, { timeout: 15000 });
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('mxvoice:show-modal', { detail: { selector: '#newReleaseModal' } }));
+    });
+    // Esc doesn't answer it either
+    await page.keyboard.press('Escape');
+
+    // Long enough for the release notes to have closed the prompt
+    await page.waitForTimeout(1000);
+    await expect(prompt).toBeVisible();
+    await expect(page.locator('#newReleaseModal')).not.toBeVisible();
+    expect(fs.existsSync(recoveryRecordPath(userDataDir, 'Default User'))).toBe(true);
+
+    await prompt.getByRole('button', { name: 'Restore show in progress' }).click();
+    await expect(prompt).toHaveCount(0);
+    await expect(f1SongId(page)).toHaveAttribute('songid', LIVE_SONG);
+    // The release notes were held back, not dropped
+    await expect(page.locator('#newReleaseModal')).toBeVisible({ timeout: 10000 });
+    expect(readRecovery(userDataDir, 'Default User')?.layout.hotkeys[0].hotkeys.f1).toBe(LIVE_SONG);
+  });
+
   test('a renderer crash then Reload restores the live layout without a prompt', async () => {
     await launch({ beforeLaunch: seedSavedShow() });
     await assignF1(page, LIVE_SONG);

@@ -97,10 +97,21 @@ export default class UIInteractionEvents {
     
     // Listen for preload-dispatched modal show events
     try {
-      const showModalListener = (e) => {
+      const showModalListener = async (e) => {
         const selector = e?.detail?.selector;
         if (!selector) return;
-        import('../ui/bootstrap-helpers.js').then(({ safeShowModal }) => safeShowModal(selector, { module: 'ui-interaction-events' }));
+        try {
+          // Release notes wait until any startup prompt is answered: showing
+          // them would close (hideAllModals) whatever modal is open
+          if (selector === '#newReleaseModal') {
+            const { whenStartupSettled } = await import('../shows/startup-gate.js');
+            await whenStartupSettled();
+          }
+          const { safeShowModal } = await import('../ui/bootstrap-helpers.js');
+          safeShowModal(selector, { module: 'ui-interaction-events' });
+        } catch (error) {
+          this.debugLog?.warn('Could not show a modal', { module: 'ui-interaction-events', function: 'showModalListener', selector, error: error?.message });
+        }
       };
       window.addEventListener('mxvoice:show-modal', showModalListener);
       this.uiHandlers.set('mxvoiceShowModal', { element: window, event: 'mxvoice:show-modal', handler: showModalListener });

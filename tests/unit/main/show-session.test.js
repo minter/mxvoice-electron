@@ -26,6 +26,7 @@ function makeDoc(layout = layoutWith(1)) {
 function fakeRecoveryStore(clock) {
   const records = new Map();
   const played = new Map();
+  const discarded = new Map();
   const calls = [];
   return {
     records,
@@ -72,6 +73,14 @@ function fakeRecoveryStore(clock) {
     }),
     readPlayed: vi.fn(async (profile) => played.get(profile) ?? null),
     retirePlayed: vi.fn(async (profile) => { played.delete(profile); }),
+    // Soft discard: both files are set aside, never read back
+    discarded,
+    discard: vi.fn(async (profile) => {
+      calls.push(['discard', profile]);
+      discarded.set(profile, { record: records.get(profile) ?? null, played: played.get(profile) ?? null });
+      records.delete(profile);
+      played.delete(profile);
+    }),
   };
 }
 
@@ -630,11 +639,12 @@ describe('show session', () => {
 
     await expect(ctx.session.resolveRecovery('bogus')).rejects.toThrow('Invalid recovery choice');
     await expect(ctx.session.resolveRecovery('discard')).resolves.toEqual({ layout: layoutWith(1), counts: {} });
-    expect(ctx.recoveryStore.retire).toHaveBeenCalledWith('Alice');
+    expect(ctx.recoveryStore.discard).toHaveBeenCalledWith('Alice');
 
     // Nothing reported: just the saved layout, nothing retired
-    ctx.recoveryStore.retire.mockClear();
+    ctx.recoveryStore.discard.mockClear();
     await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(1), counts: {} });
+    expect(ctx.recoveryStore.discard).not.toHaveBeenCalled();
     expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
   });
 
@@ -1708,14 +1718,26 @@ describe('show session played counts', () => {
     await expect(ctx.session.recordPlay('5')).resolves.toEqual({ count: 1 });
   });
 
-  it('discard always retires the played file', async () => {
+  it('discard always sets the played file aside', async () => {
     const ctx = setup();
     ctx.recoveryStore.records.set('Alice', {
       version: 1, showId: ctx.doc.activeShowId, savedAt: T0, handoff: null, layout: layoutWith(9),
     });
     await ctx.session.open();
     await ctx.session.resolveRecovery('discard');
-    expect(ctx.recoveryStore.retirePlayed).toHaveBeenCalledWith('Alice');
+    expect(ctx.recoveryStore.discard).toHaveBeenCalledWith('Alice');
+  });
+
+  it('resolveRecovery discard keeps the record and the played counts as discarded copies, retiring neither', async () => {
+    const ctx = setup();
+    const record = { version: 1, showId: ctx.doc.activeShowId, savedAt: T0, handoff: null, layout: layoutWith(9) };
+    ctx.recoveryStore.records.set('Alice', record);
+    ctx.recoveryStore.played.set('Alice', playedRecord({ 12: 1 }));
+    await ctx.session.open();
+    await ctx.session.resolveRecovery('discard');
+    expect(ctx.recoveryStore.discarded.get('Alice')).toEqual({ record, played: playedRecord({ 12: 1 }) });
+    expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
+    expect(ctx.recoveryStore.retirePlayed).not.toHaveBeenCalled();
   });
 
   it('rejects an invalid song id', async () => {

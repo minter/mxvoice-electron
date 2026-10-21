@@ -34,10 +34,25 @@ globalThis.document = {
   createElement: () => { modal = fakeElement(); return modal; },
   body: { appendChild: vi.fn() }
 };
+// As Bootstrap's hide(): 'hide.bs.modal' first, and nothing more if a
+// listener prevents it
+function fakeInstance(element) {
+  return {
+    show: vi.fn(),
+    hide: () => {
+      let prevented = false;
+      element.dispatch('hide.bs.modal', { preventDefault: () => { prevented = true; } });
+      if (!prevented) element.dispatch('hidden.bs.modal');
+    }
+  };
+}
 globalThis.bootstrap = {
   Modal: Object.assign(
-    vi.fn(function Modal() { this.show = vi.fn(); }),
-    { getOrCreateInstance: () => ({ hide: () => modal.dispatch('hidden.bs.modal') }) }
+    vi.fn(function Modal(element, options) {
+      Object.assign(this, fakeInstance(element), { options });
+      element.instance = this;
+    }),
+    { getOrCreateInstance: (element) => element.instance || (element.instance = fakeInstance(element)) }
   )
 };
 
@@ -85,6 +100,74 @@ describe('customConfirm', () => {
     const closed = customConfirm('Again?');
     modal.querySelector('.btn-close').click();
     await expect(closed).resolves.toBe(false);
+  });
+});
+
+describe('customConfirm with dismissible:false', () => {
+  beforeEach(() => { document.activeElement = null; });
+
+  const open = () => customConfirm('Restore?', 'Restore show?', {
+    confirmLabel: 'Restore show in progress',
+    cancelLabel: 'Open saved show',
+    defaultAction: 'cancel',
+    dismissible: false
+  });
+  const settledState = (promise) => {
+    const state = { settled: false };
+    promise.then((value) => { state.settled = true; state.value = value; });
+    return state;
+  };
+
+  it('customConfirm with dismissible:false ignores Esc, backdrop and an outside hide, and resolves only from its buttons', async () => {
+    const answer = open();
+    const state = settledState(answer);
+    const instance = modal.instance;
+
+    // Esc and a backdrop click do nothing; there is no close button
+    expect(instance.options).toEqual({ backdrop: 'static', keyboard: false });
+    expect(modal.innerHTML).not.toContain('btn-close');
+    expect(modal.innerHTML).not.toContain('data-bs-dismiss');
+
+    // An outside hide() is refused
+    bootstrap.Modal.getOrCreateInstance(modal).hide();
+    await Promise.resolve();
+    expect(state.settled).toBe(false);
+    expect(modal.remove).not.toHaveBeenCalled();
+
+    // Hidden anyway: it shows itself again, still unanswered
+    instance.show.mockClear();
+    modal.dispatch('hidden.bs.modal');
+    await Promise.resolve();
+    expect(instance.show).toHaveBeenCalledOnce();
+    expect(state.settled).toBe(false);
+
+    // Return still takes the default button
+    modal.dispatch('shown.bs.modal');
+    expect(document.activeElement).toBe(modal.querySelector('.cancel-btn'));
+    document.activeElement.click();
+    await expect(answer).resolves.toBe(false);
+    // Its own hide is not refused or re-shown
+    expect(modal.remove).toHaveBeenCalled();
+    instance.show.mockClear();
+    modal.dispatch('hidden.bs.modal');
+    expect(instance.show).not.toHaveBeenCalled();
+
+    const confirmed = open();
+    modal.querySelector('.confirm-btn').click();
+    await expect(confirmed).resolves.toBe(true);
+  });
+
+  it('a dismissible confirm keeps Esc, backdrop and close', () => {
+    customConfirm('Are you sure?');
+    expect(modal.instance.options).toEqual({ backdrop: true, keyboard: true });
+    expect(modal.innerHTML).toContain('btn-close');
+  });
+
+  it('every dialog it creates is marked data-mxv-prompt', () => {
+    customConfirm('Are you sure?');
+    expect(modal.setAttribute).toHaveBeenCalledWith('data-mxv-prompt', 'true');
+    customChoice('Pick', 'Pick', [{ value: 'a', label: 'A' }], { defaultValue: 'a' });
+    expect(modal.setAttribute).toHaveBeenCalledWith('data-mxv-prompt', 'true');
   });
 });
 

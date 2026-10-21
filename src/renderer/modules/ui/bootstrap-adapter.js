@@ -32,8 +32,11 @@ export function hideModal(selector) {
   instance.hide();
 }
 
+// A modal-utils question (data-mxv-prompt) is left open: only its own
+// buttons may close it
 export function hideAllModals() {
   document.querySelectorAll('.modal.show').forEach((element) => {
+    if (element.hasAttribute('data-mxv-prompt')) return;
     const bs = (typeof window !== 'undefined' ? window.bootstrap : undefined) || (typeof bootstrap !== 'undefined' ? bootstrap : undefined);
     if (!bs || !bs.Modal) return;
     bs.Modal.getOrCreateInstance(element).hide();
