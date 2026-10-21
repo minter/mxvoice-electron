@@ -10,7 +10,6 @@ import electron from 'electron';
 const { dialog, app } = electron;
 import fs from 'fs';
 import path from 'path';
-import readlines from 'n-readlines';
 import { parseFile as parseAudioMetadata } from 'music-metadata';
 
 // Dependencies that will be injected
@@ -62,106 +61,187 @@ function initializeFileOperations(dependencies) {
   });
 }
 
-// Load hotkeys file
-function loadHotkeysFile() {
-  if (!getMainWindow()) {
-    debugLog?.error('❌ mainWindow is not available', { module: 'file-operations', function: 'loadHotkeysFile' });
-    return Promise.reject(new Error('mainWindow not available'));
+const HOTKEY_KEYS = Array.from({ length: 12 }, (_, i) => `f${i + 1}`);
+const SONG_ID = /^\d+$/;
+const HOTKEY_FILTERS = [{ name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }];
+const HOLDING_TANK_FILTERS = [{ name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }];
+
+/**
+ * A hotkey tab as a .mrv file: f1:: to f12:: in order, then tab_name:: (spaces
+ * as _) when the tab has a name. Older versions read and write this format.
+ * @param {{ tabName?: string|null, hotkeys?: Object }} tab - a tab of the hotkeys snapshot
+ * @returns {string}
+ */
+function formatHotkeyTabFile(tab) {
+  const hotkeys = tab?.hotkeys || {};
+  const lines = HOTKEY_KEYS.map((key) => `${key}::${hotkeys[key] ?? ''}`);
+  const tabName = typeof tab?.tabName === 'string' ? tab.tabName.trim() : '';
+  if (tabName) lines.push(`tab_name::${tabName.replace(/ /g, '_')}`);
+  return `${lines.join('\n')}\n`;
+}
+
+/**
+ * A holding tank tab as a .hld file: one song id per line.
+ * @param {Array<string|number>} songIds
+ * @returns {string}
+ */
+function formatHoldingTankTabFile(songIds) {
+  return songIds.map((id) => `${id}\n`).join('');
+}
+
+/**
+ * The save dialog's default file name: the tab label plus the extension, with
+ * characters that are invalid in file names replaced by -.
+ * @param {string} label - "Preshow", or "Tab 2" for an unnamed tab
+ * @param {string} extension - 'mrv' or 'hld'
+ */
+function tabFileName(label, extension) {
+  // eslint-disable-next-line no-control-regex
+  const base = String(label ?? '').replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-').trim();
+  return `${base || 'Tab'}.${extension}`;
+}
+
+function hotkeyTabError(tab) {
+  if (!tab || typeof tab !== 'object' || !tab.hotkeys || typeof tab.hotkeys !== 'object') return 'Invalid hotkey tab';
+  for (const [key, songId] of Object.entries(tab.hotkeys)) {
+    if (!HOTKEY_KEYS.includes(key)) return `Invalid hotkey key "${key}"`;
+    if (songId !== null && songId !== undefined && songId !== '' && !SONG_ID.test(String(songId))) {
+      return `Invalid song ID for ${key}`;
+    }
   }
-  
-  return new Promise((resolve, reject) => {
-    const fkey_mapping = {};
-    debugLog?.info("Loading hotkeys file", { module: 'file-operations', function: 'loadHotkeysFile' });
-    dialog.showOpenDialog(getMainWindow(), {
-      buttonLabel: 'Open',
-      filters: [
-        { name: 'Mx. Voice Hotkey Files', extensions: ['mrv'] }
-      ],
-      defaultPath: store.get('hotkey_directory'),
-      message: 'Select your Mx. Voice hotkey file',
-      properties: ['openFile']
-    }).then(result => {
-      if (result.canceled == true) {
-        debugLog?.info('Silently exiting hotkey load', { module: 'file-operations', function: 'loadHotkeysFile' });
-        resolve({ success: false, canceled: true });
-        return;
-      }
-      else {
-        const filename = result.filePaths[0];
-        debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'loadHotkeysFile', filename: filename });
-        const lineReader = new readlines(filename);
-        const lines = [];
-        let line;
-        while ((line = lineReader.next())) lines.push(line.toString());
-        const parsed = parseHotkeyFileLines(lines);
-        Object.assign(fkey_mapping, parsed.hotkeys);
-        const title = parsed.title;
-        if (parsed.errors.length) {
-          const error = `Invalid hotkey file:\n${parsed.errors.join('\n')}`;
-          debugLog?.warn(error, { module: 'file-operations', function: 'loadHotkeysFile', filename });
-          dialog.showErrorBox('Could not import hotkeys', error);
-          resolve({ success: false, error, validationErrors: parsed.errors });
-          return;
-        }
-        debugLog?.info('📁 Main process: Sending fkey_load with:', { module: 'file-operations', function: 'loadHotkeysFile', fkey_mapping: fkey_mapping, title: title });
-        debugLog?.info('📁 fkey_mapping type:', { module: 'file-operations', function: 'loadHotkeysFile', type: typeof fkey_mapping });
-        debugLog?.info('📁 fkey_mapping keys:', { module: 'file-operations', function: 'loadHotkeysFile', keys: Object.keys(fkey_mapping) });
-        debugLog?.info('📁 fkey_mapping length:', { module: 'file-operations', function: 'loadHotkeysFile', length: fkey_mapping.length });
-        debugLog?.info('📁 fkey_mapping content:', { module: 'file-operations', function: 'loadHotkeysFile', content: JSON.stringify(fkey_mapping) });
-        getMainWindow().webContents.send('fkey_load', fkey_mapping, title);
-        resolve({ success: true, fkey_mapping, title });
-      }
-    }).catch(err => {
-      debugLog?.error('Error loading hotkeys file:', { module: 'file-operations', function: 'loadHotkeysFile', error: err });
-      reject(err);
+  return null;
+}
+
+// Electron's dialogs take the window first when there is one
+function showDialog(kind, options) {
+  const win = getMainWindow();
+  return win ? dialog[kind](win, options) : dialog[kind](options);
+}
+
+function tabDefaultPath(label, extension) {
+  const name = tabFileName(label, extension);
+  const directory = store?.get?.('hotkey_directory');
+  return directory ? path.join(directory, name) : name;
+}
+
+async function saveTabFile({ label, extension, filters, message, contents, functionName }) {
+  try {
+    const result = await showDialog('showSaveDialog', {
+      buttonLabel: 'Save',
+      filters,
+      defaultPath: tabDefaultPath(label, extension),
+      message
     });
+    if (result?.canceled || !result?.filePath) {
+      debugLog?.info('Tab save canceled', { module: 'file-operations', function: functionName });
+      return { success: true, data: { canceled: true } };
+    }
+    await fs.promises.writeFile(result.filePath, contents, 'utf8');
+    debugLog?.info('Tab saved to file', { module: 'file-operations', function: functionName, filename: result.filePath });
+    return { success: true, data: { path: result.filePath } };
+  } catch (error) {
+    debugLog?.error('Error saving tab file', { module: 'file-operations', function: functionName, error: error?.message });
+    return { success: false, error: error?.message || String(error) };
+  }
+}
+
+/**
+ * Save a hotkey tab to a .mrv file the user picks.
+ * @param {{ tabName?: string|null, hotkeys: Object }} tab - a tab of the hotkeys snapshot
+ * @param {string} label - the tab label, for the default file name
+ * @returns {Promise<{ success: true, data: { path: string } | { canceled: true } } | { success: false, error: string }>}
+ */
+async function saveHotkeyTabFile(tab, label) {
+  const error = hotkeyTabError(tab);
+  if (error) {
+    debugLog?.warn(error, { module: 'file-operations', function: 'saveHotkeyTabFile' });
+    return { success: false, error };
+  }
+  return saveTabFile({
+    label,
+    extension: 'mrv',
+    filters: HOTKEY_FILTERS,
+    message: 'Save your Mx. Voice hotkey file',
+    contents: formatHotkeyTabFile(tab),
+    functionName: 'saveHotkeyTabFile'
   });
 }
 
-// Load holding tank file
-function loadHoldingTankFile() {
-  if (!getMainWindow()) {
-    debugLog?.error('❌ mainWindow is not available', { module: 'file-operations', function: 'loadHoldingTankFile' });
-    return Promise.reject(new Error('mainWindow not available'));
+/**
+ * Save a holding tank tab to a .hld file the user picks.
+ * @param {Array<string|number>} songIds - the tab's songs, in order
+ * @param {string} label - the tab label, for the default file name
+ */
+async function saveHoldingTankTabFile(songIds, label) {
+  if (!Array.isArray(songIds) || !songIds.every((id) => SONG_ID.test(String(id)))) {
+    const error = 'Invalid holding tank song IDs';
+    debugLog?.warn(error, { module: 'file-operations', function: 'saveHoldingTankTabFile' });
+    return { success: false, error };
   }
-  
-  return new Promise((resolve, reject) => {
-    const song_ids = [];
-    debugLog?.info("Loading holding tank file", { module: 'file-operations', function: 'loadHoldingTankFile' });
-    dialog.showOpenDialog(getMainWindow(), {
-      buttonLabel: 'Open',
-      filters: [
-        { name: 'Mx. Voice Holding Tank Files', extensions: ['hld'] }
-      ],
-      defaultPath: store.get('hotkey_directory'),
-      message: 'Select your Mx. Voice holding tank file',
-      properties: ['openFile']
-    }).then(result => {
-      if (result.canceled == true) {
-        debugLog?.info('Silently exiting holding tank load', { module: 'file-operations', function: 'loadHoldingTankFile' });
-        resolve({ success: false, canceled: true });
-        return;
-      }
-      else {
-        const filename = result.filePaths[0];
-        debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: 'loadHoldingTankFile', filename: filename });
-        const line_reader = new readlines(filename);
-
-        let line;
-         
-        while ((line = line_reader.next())) {
-          const id = line.toString().trim();
-          if (/^\d+$/.test(id)) song_ids.push(id);
-        }
-        debugLog?.info('📁 Main process: Sending holding_tank_load with:', { module: 'file-operations', function: 'loadHoldingTankFile', song_ids: song_ids });
-        getMainWindow().webContents.send('holding_tank_load', song_ids);
-        resolve({ success: true, song_ids });
-      }
-    }).catch(err => {
-      debugLog?.error('Error loading holding tank file:', { module: 'file-operations', function: 'loadHoldingTankFile', error: err });
-      reject(err);
-    });
+  return saveTabFile({
+    label,
+    extension: 'hld',
+    filters: HOLDING_TANK_FILTERS,
+    message: 'Save your Mx. Voice holding tank file',
+    contents: formatHoldingTankTabFile(songIds),
+    functionName: 'saveHoldingTankTabFile'
   });
+}
+
+// Show the open dialog and read the picked file's lines; null when canceled
+async function openTabFile({ filters, message, functionName }) {
+  const result = await showDialog('showOpenDialog', {
+    buttonLabel: 'Open',
+    filters,
+    defaultPath: store?.get?.('hotkey_directory'),
+    message,
+    properties: ['openFile']
+  });
+  if (result?.canceled || !result?.filePaths?.length) {
+    debugLog?.info('Tab load canceled', { module: 'file-operations', function: functionName });
+    return null;
+  }
+  const filename = result.filePaths[0];
+  debugLog?.info(`Processing file ${filename}`, { module: 'file-operations', function: functionName, filename });
+  const text = await fs.promises.readFile(filename, 'utf8');
+  return { filename, lines: text.split(/\r?\n/) };
+}
+
+/**
+ * Pick a .mrv file and parse it.
+ * @returns {Promise<{ success: true, data: { hotkeys: Object, tabName: string|null } | { canceled: true } } | { success: false, error: string }>}
+ */
+async function loadHotkeyTabFile() {
+  try {
+    const file = await openTabFile({ filters: HOTKEY_FILTERS, message: 'Select your Mx. Voice hotkey file', functionName: 'loadHotkeyTabFile' });
+    if (!file) return { success: true, data: { canceled: true } };
+    const parsed = parseHotkeyFileLines(file.lines);
+    if (parsed.errors.length) {
+      const error = `This isn't a valid hotkey file: ${parsed.errors.join('; ')}.`;
+      debugLog?.warn(error, { module: 'file-operations', function: 'loadHotkeyTabFile', filename: file.filename });
+      return { success: false, error };
+    }
+    return { success: true, data: { hotkeys: parsed.hotkeys, tabName: parsed.title || null } };
+  } catch (error) {
+    debugLog?.error('Error loading hotkey file', { module: 'file-operations', function: 'loadHotkeyTabFile', error: error?.message });
+    return { success: false, error: error?.message || String(error) };
+  }
+}
+
+/**
+ * Pick a .hld file and read its song ids. Lines that aren't ids are ignored.
+ * @returns {Promise<{ success: true, data: { songIds: string[] } | { canceled: true } } | { success: false, error: string }>}
+ */
+async function loadHoldingTankTabFile() {
+  try {
+    const file = await openTabFile({ filters: HOLDING_TANK_FILTERS, message: 'Select your Mx. Voice holding tank file', functionName: 'loadHoldingTankTabFile' });
+    if (!file) return { success: true, data: { canceled: true } };
+    const songIds = file.lines.map((line) => line.trim()).filter((id) => SONG_ID.test(id));
+    return { success: true, data: { songIds } };
+  } catch (error) {
+    debugLog?.error('Error loading holding tank file', { module: 'file-operations', function: 'loadHoldingTankTabFile', error: error?.message });
+    return { success: false, error: error?.message || String(error) };
+  }
 }
 
 // Add directory dialog
@@ -239,8 +319,13 @@ function migrateOldPreferences() {
 
 export {
   initializeFileOperations,
-  loadHotkeysFile,
-  loadHoldingTankFile,
+  saveHotkeyTabFile,
+  saveHoldingTankTabFile,
+  loadHotkeyTabFile,
+  loadHoldingTankTabFile,
+  formatHotkeyTabFile,
+  formatHoldingTankTabFile,
+  tabFileName,
   addDirectoryDialog,
   addFileDialog,
   migrateOldPreferences,
@@ -250,8 +335,13 @@ export {
 // Default export for module loading
 export default {
   initializeFileOperations,
-  loadHotkeysFile,
-  loadHoldingTankFile,
+  saveHotkeyTabFile,
+  saveHoldingTankTabFile,
+  loadHotkeyTabFile,
+  loadHoldingTankTabFile,
+  formatHotkeyTabFile,
+  formatHoldingTankTabFile,
+  tabFileName,
   addDirectoryDialog,
   addFileDialog,
   migrateOldPreferences,

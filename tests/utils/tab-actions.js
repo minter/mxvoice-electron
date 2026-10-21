@@ -47,3 +47,74 @@ export async function clearSelectedTab(page, panel) {
   await confirmButton.click();
   await expect(confirmButton).not.toBeVisible({ timeout: 5000 });
 }
+
+// Whether the panel's selected tab has songs in the model: the rule the app uses to ask before replacing
+function selectedTabHasSongs(page, panel) {
+  return page.evaluate((which) => {
+    const registry = window.moduleRegistry;
+    const strip = which === 'hotkeys' ? '#hotkey_tabs' : '#holding_tank_tabs';
+    const number = Number(document.querySelector(`${strip} .nav-link.active`)?.getAttribute('href')?.match(/(\d+)$/)?.[1]);
+    const tabs = which === 'hotkeys' ? registry?.hotkeys?.getHotkeySnapshot?.() : registry?.holdingTank?.getHoldingTankSnapshot?.();
+    const tab = tabs?.find((t) => t.tabNumber === number);
+    return which === 'hotkeys' ? Object.values(tab?.hotkeys || {}).some(Boolean) : (tab?.songIds?.length || 0) > 0;
+  }, panel);
+}
+
+/** Make main's next open dialogs pick `filePath` (or cancel, for null) */
+export async function stubOpenDialog(app, filePath) {
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = async () => (file ? { canceled: false, filePaths: [file] } : { canceled: true, filePaths: [] });
+  }, filePath);
+}
+
+/** Make main's next save dialogs pick `filePath` (or cancel, for null); records each dialog's options */
+export async function stubSaveDialog(app, filePath) {
+  await app.evaluate(({ dialog }, file) => {
+    globalThis.__saveDialogOptions = [];
+    dialog.showSaveDialog = async (...args) => {
+      globalThis.__saveDialogOptions.push(args.at(-1));
+      return file ? { canceled: false, filePath: file } : { canceled: true, filePath: '' };
+    };
+  }, filePath);
+}
+
+/** The options main passed to each stubbed save dialog */
+export function saveDialogOptions(app) {
+  return app.evaluate(() => globalThis.__saveDialogOptions ?? []);
+}
+
+/** Wait until the show session is ready: loads are ignored before then */
+export async function waitForShowReady(page) {
+  await expect.poll(
+    () => page.evaluate(async () => (await window.secureElectronAPI.shows.getState())?.data?.status),
+    { timeout: 20000 }
+  ).toBe('ready');
+}
+
+/** The Load Tab from File replace confirm */
+export function replaceTabDialog(page) {
+  return page.locator('.modal.show').filter({ has: page.locator('.modal-title', { hasText: 'Load Tab from File' }) });
+}
+
+/**
+ * ⋯ > Load Tab from File… on a panel's selected tab (stub the open dialog first).
+ * confirm: 'auto' answers Replace when the tab has songs in the model (as the app decides); 'replace' or 'cancel'
+ * answer the replace confirm; 'none' expects none (a canceled dialog, a bad file).
+ */
+export async function loadTabFromFile(page, panel, { confirm = 'auto' } = {}) {
+  await waitForShowReady(page);
+  let answer = confirm;
+  if (answer === 'auto') answer = (await selectedTabHasSongs(page, panel)) ? 'replace' : 'none';
+  await chooseTabAction(page, panel, 'load');
+  if (answer === 'none') return;
+  const dialog = replaceTabDialog(page);
+  await expect(dialog).toBeVisible({ timeout: 10000 });
+  const shown = await dialog.elementHandle();
+  await dialog.getByRole('button', { name: answer === 'replace' ? 'Replace' : 'Cancel', exact: true }).click();
+  await shown.waitForElementState('hidden');
+}
+
+/** ⋯ > Save Tab to File… on a panel's selected tab (stub the save dialog first) */
+export async function saveTabToFile(page, panel) {
+  await chooseTabAction(page, panel, 'save');
+}

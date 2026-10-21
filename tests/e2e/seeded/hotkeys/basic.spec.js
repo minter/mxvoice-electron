@@ -2,7 +2,7 @@ import { _electron as electron, test, expect } from '@playwright/test';
 import { launchSeededApp, closeApp, clearModalBackdrop, waitForAppReady } from '../../../utils/seeded-launch.js';
 import { crashApp, relaunchApp, waitForShowSettled } from '../../../utils/relaunch.js';
 import { readRecovery, recoveryRecordPath } from '../../../utils/seed-shows.js';
-import { chooseTabAction } from '../../../utils/tab-actions.js';
+import { chooseTabAction, loadTabFromFile } from '../../../utils/tab-actions.js';
 import {
   waitForAudible,
   waitForSilence,
@@ -11,7 +11,6 @@ import {
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'fs';
-import { importHotkeyFile } from '../../../utils/show-e2e.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -51,6 +50,9 @@ test.describe('Hotkeys - save & load', () => {
 
       // Clear all hotkeys in all tabs by manually clearing the DOM
       await page.evaluate(() => {
+        // Empty the model too: actions such as Load Tab from File read it, not the DOM
+        window.moduleRegistry?.hotkeys?.loadHotkeySnapshot?.([]);
+
         // Clear all tabs (1-5)
         for (let tab = 1; tab <= 5; tab++) {
           for (let key = 1; key <= 12; key++) {
@@ -776,7 +778,7 @@ test.describe('Hotkeys - save & load', () => {
     }, hotkeyFile);
     
     // 2) Click the Load button to trigger the file picker
-    await importHotkeyFile(app);
+    await loadTabFromFile(page, 'hotkeys');
 
     // 4) Verify the hotkey assignments match the test file
     const activeTab = page.locator('#hotkeys_list_1');
@@ -1140,7 +1142,7 @@ test.describe('Hotkeys - save & load', () => {
       };
     }, hotkeyFile1);
     
-    await importHotkeyFile(app);
+    await loadTabFromFile(page, 'hotkeys');
 
     // Step 3: Verify that these songs from test-environment.js are in the proper spots
     const activeTab1 = page.locator('#hotkeys_list_1');
@@ -1181,7 +1183,7 @@ test.describe('Hotkeys - save & load', () => {
       };
     }, hotkeyFile2);
     
-    await importHotkeyFile(app);
+    await loadTabFromFile(page, 'hotkeys');
 
     // Step 7: Verify that tab 3 is now titled "Outros"
     await expect(tab3).toHaveText('Outros', { timeout: 5000 });

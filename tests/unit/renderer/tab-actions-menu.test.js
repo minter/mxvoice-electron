@@ -81,10 +81,13 @@ describe('tabLabel', () => {
 });
 
 describe('tabActionItems', () => {
-  it('labels Rename and Clear for the tab', () => {
+  it('labels Rename and Clear for the tab, then a separator, Save and Load', () => {
     expect(tabActionItems('Intros')).toEqual([
       { action: 'rename', icon: 'fa-pen', text: 'Rename "Intros"…' },
-      { action: 'clear', icon: 'fa-eraser', text: 'Clear "Intros"…' }
+      { action: 'clear', icon: 'fa-eraser', text: 'Clear "Intros"…' },
+      { separator: true },
+      { action: 'save', icon: 'fa-file-export', text: 'Save Tab to File…' },
+      { action: 'load', icon: 'fa-file-import', text: 'Load Tab from File…' }
     ]);
   });
 });
@@ -96,8 +99,8 @@ describe('renderTabActionItems', () => {
     menu.children.push('stale');
     renderTabActionItems(menu, '<b>Tab</b>', doc);
 
-    expect(menu.children).toHaveLength(2);
-    const [rename, clear] = menu.children;
+    expect(menu.children).toHaveLength(5);
+    const [rename, clear, separator, save, load] = menu.children;
     expect(rename.tag).toBe('button');
     expect(rename.type).toBe('button');
     expect(rename.className).toBe('mxv-context-item tab-actions-menu-item');
@@ -107,6 +110,15 @@ describe('renderTabActionItems', () => {
     expect(clear.attrs['data-action']).toBe('clear');
     expect(clear.children[0].className).toBe('fas fa-eraser fa-fw');
     expect(clear.children[1].textContent).toBe('Clear "<b>Tab</b>"…');
+    expect(separator.tag).toBe('div');
+    expect(separator.className).toBe('mxv-context-separator');
+    expect(separator.attrs).toEqual({ role: 'separator' });
+    expect(save.attrs['data-action']).toBe('save');
+    expect(save.children[0].className).toBe('fas fa-file-export fa-fw');
+    expect(save.children[1].textContent).toBe('Save Tab to File…');
+    expect(load.attrs['data-action']).toBe('load');
+    expect(load.children[0].className).toBe('fas fa-file-import fa-fw');
+    expect(load.children[1].textContent).toBe('Load Tab from File…');
   });
 });
 
@@ -157,10 +169,38 @@ describe('runTabAction', () => {
     expect(r.hotkeys.clearHotkeys).not.toHaveBeenCalled();
   });
 
+  it('saves and loads the given tab of each panel as its kind', async () => {
+    const r = {
+      hotkeys: { getHotkeySnapshot: () => [{ tabNumber: 2, tabName: 'Intros', hotkeys: { f1: '1' } }] },
+      holdingTank: { getHoldingTankSnapshot: () => [{ tabNumber: 1, tabName: null, songIds: ['7'] }] }
+    };
+    const fileOperations = {
+      saveHotkeyTab: vi.fn(async () => ({ success: true, data: { canceled: true } })),
+      saveHoldingTankTab: vi.fn(async () => ({ success: true, data: { canceled: true } })),
+      loadHotkeyTab: vi.fn(async () => ({ success: true, data: { canceled: true } })),
+      loadHoldingTankTab: vi.fn(async () => ({ success: true, data: { canceled: true } }))
+    };
+    window.secureElectronAPI = { fileOperations, shows: { getState: async () => ({ success: true, data: { status: 'ready' } }) } };
+    try {
+      await runTabAction('hotkey_tabs', 'save', r, { tabNumber: 2, label: 'Intros' });
+      expect(fileOperations.saveHotkeyTab).toHaveBeenCalledWith({ tabNumber: 2, tabName: 'Intros', hotkeys: { f1: '1' } }, 'Intros');
+      await runTabAction('holding_tank_tabs', 'save', r, { tabNumber: 1, label: 'Tab 1' });
+      expect(fileOperations.saveHoldingTankTab).toHaveBeenCalledWith(['7'], 'Tab 1');
+      await runTabAction('hotkey_tabs', 'load', r, { tabNumber: 2, label: 'Intros' });
+      expect(fileOperations.loadHotkeyTab).toHaveBeenCalledTimes(1);
+      await runTabAction('holding_tank_tabs', 'load', r, { tabNumber: 1, label: 'Tab 1' });
+      expect(fileOperations.loadHoldingTankTab).toHaveBeenCalledTimes(1);
+    } finally {
+      delete window.secureElectronAPI;
+    }
+  });
+
   it('ignores an unknown panel or action, and a module that is not loaded', () => {
     const r = registry();
     expect(() => runTabAction('search_tabs', 'rename', r)).not.toThrow();
     expect(() => runTabAction('hotkey_tabs', 'delete', r)).not.toThrow();
+    // tabs is the snapshot reader, not an action
+    expect(runTabAction('hotkey_tabs', 'tabs', { hotkeys: { getHotkeySnapshot: () => [] } })).toBeUndefined();
     expect(() => runTabAction('hotkey_tabs', 'clear', {})).not.toThrow();
     expect(r.hotkeys.renameHotkeyTab).not.toHaveBeenCalled();
     expect(r.hotkeys.clearHotkeys).not.toHaveBeenCalled();
@@ -309,7 +349,7 @@ describe('installTabActionsMenus', () => {
     const handlers = installTabActionsMenus({ moduleRegistry: registry, showTab, debugLog, doc: dom.doc, win: dom.win });
     const menu = dom.doc.getElementById('mxv-tab-actions-menu');
     const item = (action) => menu.children.find((el) => el.getAttribute('data-action') === action);
-    const labels = () => menu.children.map((el) => el.children[1].textContent);
+    const labels = () => menu.children.filter((el) => el.getAttribute('data-action')).map((el) => el.children[1].textContent);
     return { ...dom, registry, showTab, debugLog, handlers, menu, item, labels };
   };
 
@@ -336,7 +376,7 @@ describe('installTabActionsMenus', () => {
     const event = await t.dispatch(t.hotkeys.glyph, 'click');
     expect(event.defaultPrevented).toBe(true);
     expect(t.menu.style.display).toBe('block');
-    expect(t.labels()).toEqual(['Rename "Intros"…', 'Clear "Intros"…']);
+    expect(t.labels()).toEqual(['Rename "Intros"…', 'Clear "Intros"…', 'Save Tab to File…', 'Load Tab from File…']);
     expect(t.menu.style.left).toBe('700px');
     expect(t.menu.style.top).toBe('100px');
     expect(t.hotkeys.button.getAttribute('aria-expanded')).toBe('true');
@@ -361,6 +401,30 @@ describe('installTabActionsMenus', () => {
     expect(t.menu.style.display).toBe('none');
   });
 
+  it('Save and Load act on the selected tab of that panel, with its label', async () => {
+    const t = setup();
+    const fileOperations = {
+      saveHoldingTankTab: vi.fn(async () => ({ success: true, data: { canceled: true } })),
+      loadHotkeyTab: vi.fn(async () => ({ success: true, data: { canceled: true } }))
+    };
+    window.secureElectronAPI = { fileOperations, shows: { getState: async () => ({ success: true, data: { status: 'ready' } }) } };
+    try {
+      await t.dispatch(t.holding.links[2], 'contextmenu', { clientX: 5, clientY: 5 });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await t.dispatch(t.item('save'), 'click');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(fileOperations.saveHoldingTankTab).toHaveBeenCalledWith([], 'Walk-ons');
+      expect(t.menu.style.display).toBe('none');
+
+      await t.dispatch(t.hotkeys.button, 'click');
+      await t.dispatch(t.item('load'), 'click');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(fileOperations.loadHotkeyTab).toHaveBeenCalledTimes(1);
+    } finally {
+      delete window.secureElectronAPI;
+    }
+  });
+
   it('switching from one panel’s ⋯ to the other relabels for that panel', async () => {
     const t = setup();
     await t.dispatch(t.hotkeys.button, 'click');
@@ -379,7 +443,7 @@ describe('installTabActionsMenus', () => {
     expect(t.showTab).toHaveBeenCalledWith('#holding_tank_tabs .nav-link[href="#holding_tank_3"]', expect.objectContaining({ module: 'tab-actions-menu' }));
     expect(t.holding.links[2].classList.contains('active')).toBe(true);
     expect(t.menu.style.display).toBe('block');
-    expect(t.labels()).toEqual(['Rename "Walk-ons"…', 'Clear "Walk-ons"…']);
+    expect(t.labels()).toEqual(['Rename "Walk-ons"…', 'Clear "Walk-ons"…', 'Save Tab to File…', 'Load Tab from File…']);
     expect(t.menu.style.left).toBe('120px');
     expect(t.menu.style.top).toBe('90px');
 
@@ -391,7 +455,7 @@ describe('installTabActionsMenus', () => {
     const t = setup();
     await t.dispatch(t.hotkeys.links[0], 'contextmenu', { clientX: 10, clientY: 10 });
     expect(t.showTab).not.toHaveBeenCalled();
-    expect(t.labels()).toEqual(['Rename "Tab 1"…', 'Clear "Tab 1"…']);
+    expect(t.labels()).toEqual(['Rename "Tab 1"…', 'Clear "Tab 1"…', 'Save Tab to File…', 'Load Tab from File…']);
   });
 
   it('right-clicking the ⋯ itself does nothing special', async () => {
@@ -461,7 +525,7 @@ describe('installTabActionsMenus', () => {
     await t.dispatch(t.hotkeys.links[1], 'contextmenu', { clientX: 5, clientY: 5 });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(t.menu.style.display).toBe('block');
-    expect(t.labels()).toEqual(['Rename "Intros"…', 'Clear "Intros"…']);
+    expect(t.labels()).toEqual(['Rename "Intros"…', 'Clear "Intros"…', 'Save Tab to File…', 'Load Tab from File…']);
   });
 
   it('still opens if the switch never reports shown', async () => {

@@ -16,9 +16,8 @@ function build(state, platform = 'darwin') {
   const calls = [];
   const send = vi.fn((command, showId) => calls.push(`send:${command}:${showId}`));
   const rebuild = vi.fn(() => calls.push('rebuild'));
-  const fileOperations = { loadHotkeysFile: vi.fn(), loadHoldingTankFile: vi.fn() };
-  const menu = buildShowMenu(state, { platform, send, fileOperations, rebuild });
-  return { menu, send, rebuild, calls, fileOperations };
+  const menu = buildShowMenu(state, { platform, send, rebuild });
+  return { menu, send, rebuild, calls };
 }
 const labels = (menu) => menu.submenu.map((i) => i.label ?? '---');
 const find = (menu, label) => menu.submenu.find((i) => i.label === label);
@@ -37,7 +36,7 @@ describe('Shows menu', () => {
     expect(labels(menu)).toEqual([
       'Comedy Sports', 'Mom & Pop', '---', 'Save "Comedy Sports"…', 'Save As…',
       'Revert to Saved…', 'Rename "Comedy Sports"…', 'Delete "Comedy Sports"…', 'Color', '---',
-      'Import Show…', 'Import Hotkey File…', 'Import Holding Tank File…'
+      'Import Show…'
     ]);
     // Color is the only nested menu
     walk(menu.submenu, (item) => expect(item.submenu, item.label).toBe(item.label === 'Color' ? item.submenu : undefined));
@@ -91,13 +90,9 @@ describe('Shows menu', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('runs the legacy imports in main, not through send', () => {
-    const { menu, send, fileOperations } = build(readyState());
-    find(menu, 'Import Hotkey File…').click();
-    find(menu, 'Import Holding Tank File…').click();
-    expect(fileOperations.loadHotkeysFile).toHaveBeenCalledOnce();
-    expect(fileOperations.loadHoldingTankFile).toHaveBeenCalledOnce();
-    expect(send).not.toHaveBeenCalled();
+  it('has no hotkey or holding tank file imports: tabs load files from their ⋯ menu', () => {
+    const { menu } = build(readyState());
+    walk(menu.submenu, (item) => expect(item.label ?? '').not.toMatch(/Hotkey File|Holding Tank File/));
   });
 
   it('disables show commands unless status is ready', () => {
@@ -170,7 +165,7 @@ describe('Shows menu', () => {
     const { menu } = build({ status: 'idle', activeShow: null, shows: [] });
     expect(labels(menu)).toEqual([
       '---', 'Save…', 'Save As…', 'Revert to Saved…', 'Rename…', 'Delete…', 'Color', '---',
-      'Import Show…', 'Import Hotkey File…', 'Import Holding Tank File…'
+      'Import Show…'
     ]);
     expect(find(menu, 'Save…').enabled).toBe(false);
     expect(find(menu, 'Rename…').enabled).toBe(false);

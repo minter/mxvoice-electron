@@ -144,7 +144,7 @@ function buildApplicationMenu({
     },
     buildShowMenu(
       getShowMenuState ? getShowMenuState() : { status: 'idle', activeShow: null, shows: [] },
-      { platform: process.platform, send: showSend, fileOperations, rebuild: rebuildMenu, swatchImage }
+      { platform: process.platform, send: showSend, rebuild: rebuildMenu, swatchImage }
     ),
     {
       label: "Profile",

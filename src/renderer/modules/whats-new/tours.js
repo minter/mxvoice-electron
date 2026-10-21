@@ -51,7 +51,7 @@ export default {
         {
           element: '#hotkey_tabs .tab-actions-btn',
           title: 'Tab Actions Moved',
-          description: 'To rename or clear a hotkey or holding tank tab, use the ⋯ menu at the end of its tab row, or right-click the tab. Clear empties only that tab; the songs stay in your library. Double-click a tab to rename it, as before.',
+          description: 'To rename, clear, save or load a hotkey or holding tank tab, use the ⋯ menu at the end of its tab row, or right-click the tab. Clear empties only that tab; the songs stay in your library. Save Tab to File keeps one tab, like a pre-show playlist, and Load Tab from File puts it into any show. Double-click a tab to rename it, as before.',
           side: 'bottom',
           align: 'end',
           skipIfMissing: true,

@@ -1,7 +1,7 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import { TEST_CONFIG } from '../../../config/test-environment.js';
 import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
-import { chooseTabAction, clearTabDialog } from '../../../utils/tab-actions.js';
+import { chooseTabAction, clearTabDialog, loadTabFromFile } from '../../../utils/tab-actions.js';
 import { 
   rms, 
   waitForAudible, 
@@ -12,7 +12,6 @@ import fs from 'fs';
 import path from 'node:path';
 import os from 'os';
 import { fileURLToPath } from 'node:url';
-import { importHotkeyFile } from '../../../utils/show-e2e.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -1068,7 +1067,7 @@ test.describe('Playback - basic', () => {
       };
     }, hotkeyFile);
     
-    await importHotkeyFile(app);
+    await loadTabFromFile(page, 'hotkeys');
     
     // Step 3: Verify that songs show up in the hotkeys
     const activeTab = page.locator('#hotkeys_list_3');

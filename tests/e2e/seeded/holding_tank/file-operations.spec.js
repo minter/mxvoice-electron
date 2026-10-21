@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'node:path';
 import os from 'os';
 import { fileURLToPath } from 'node:url';
-import { importHoldingTankFile } from '../../../utils/show-e2e.js';
+import { loadTabFromFile } from '../../../utils/tab-actions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,10 +77,10 @@ test.describe('Holding Tank - file operations', () => {
       });
     }, hldPath);
 
-    // Click the load holding tank button
-    await importHoldingTankFile(app);
+    // ⋯ > Load Tab from File…
+    await loadTabFromFile(page, 'holdingTank');
 
-    // Wait for the holding_tank_load IPC to process (file I/O + DB lookup + DOM population)
+    // Wait for the load to process (file I/O + DB lookup + DOM population)
     const tankItems = page.locator('#holding_tank_1 li[songid]');
     await expect(tankItems).toHaveCount(3, { timeout: 10000 });
 
@@ -113,8 +113,8 @@ test.describe('Holding Tank - file operations', () => {
       });
     });
 
-    // Click load button
-    await importHoldingTankFile(app);
+    // ⋯ > Load Tab from File…; the canceled dialog asks nothing
+    await loadTabFromFile(page, 'holdingTank', { confirm: 'none' });
 
     // Brief wait for the canceled dialog round-trip, then verify count is unchanged
     const countAfter = await page.locator('#holding_tank_1 li').count();
@@ -142,8 +142,8 @@ test.describe('Holding Tank - file operations', () => {
       });
     }, hldPath);
 
-    // Click load
-    await importHoldingTankFile(app);
+    // ⋯ > Load Tab from File…
+    await loadTabFromFile(page, 'holdingTank');
 
     // Non-numeric lines are ignored and ids missing from the library are dropped
     await expect(page.locator('#holding_tank_1 li[songid]')).toHaveCount(2, { timeout: 5000 });

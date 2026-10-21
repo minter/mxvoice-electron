@@ -1,6 +1,6 @@
 ## File Operations Module
 
-Directory picking and update installation. (Hotkey and holding-tank files are import-only, through the Shows menu handled in the main process.)
+Directory picking and update installation. (Hotkey and holding-tank tab files are saved and loaded from each tab's ⋯ menu; see `ui/tab-files.js`.)
 
 ### Structure
 ```

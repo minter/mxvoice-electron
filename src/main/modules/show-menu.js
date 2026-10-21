@@ -1,7 +1,6 @@
 /**
  * Shows menu: pure builder, driven by a snapshot of the show session.
- * Clicks post `menu:show-command` to the renderer through `send`, except the
- * two legacy imports, which stay in main (file-operations).
+ * Clicks post `menu:show-command` to the renderer through `send`.
  */
 
 import { SHOW_COLORS } from './show-document.js';
@@ -22,7 +21,7 @@ function escapeLabel(name, platform) {
  * @param {Function} [options.rebuild] - rebuilds the application menu from the session
  * @param {Function} [options.swatchImage] - (colorKey|null) => NativeImage for the Color items
  */
-function buildShowMenu(state, { platform, send, fileOperations, rebuild, swatchImage } = {}) {
+function buildShowMenu(state, { platform, send, rebuild, swatchImage } = {}) {
   const status = state?.status ?? 'idle';
   const activeShow = state?.activeShow ?? null;
   const shows = Array.isArray(state?.shows) ? state.shows : [];
@@ -64,15 +63,7 @@ function buildShowMenu(state, { platform, send, fileOperations, rebuild, swatchI
       { label: `${quoted('Delete')}…`, enabled: hasActive, click: emit('delete') },
       buildColorMenu(activeShow, { enabled: hasActive, send, rebuild, swatchImage }),
       { type: 'separator' },
-      { label: 'Import Show…', enabled: ready, click: emit('import') },
-      {
-        label: 'Import Hotkey File…',
-        click: () => { fileOperations?.loadHotkeysFile?.(); }
-      },
-      {
-        label: 'Import Holding Tank File…',
-        click: () => { fileOperations?.loadHoldingTankFile?.(); }
-      }
+      { label: 'Import Show…', enabled: ready, click: emit('import') }
     ]
   };
 }

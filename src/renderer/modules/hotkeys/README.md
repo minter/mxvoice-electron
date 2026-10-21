@@ -12,7 +12,7 @@ The Hotkeys Module provides comprehensive F1-F12 hotkey functionality for quick 
 - Direct playback from hotkeys
 
 ### 📁 File Import/Export
-- Import legacy hotkey files (Shows → Import Hotkey File…); saving is done with shows
+- Save a tab to a `.mrv` file, or load one, from the tab's ⋯ menu (`ui/tab-files.js`); a whole layout is kept with shows
 
 ### 🏷️ Tab Management
 - Multiple hotkey sets (5 tabs)

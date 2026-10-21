@@ -608,6 +608,11 @@ table td {
   background-color: var(--header-color);
 }
 
+.mxv-context-separator {
+  margin: 0.25rem 0;
+  border-top: 1px solid var(--card-border);
+}
+
 .holding_tank li {
   border: 1px solid var(--holding-tank-item);
   background-color: var(--holding-tank-item);

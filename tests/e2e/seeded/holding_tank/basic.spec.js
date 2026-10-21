@@ -4,8 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rms, waitForAudible, waitForSilence, stabilize } from '../../../utils/audio-helpers.js';
 import fs from 'node:fs';
-import { importHoldingTankFile } from '../../../utils/show-e2e.js';
-import { chooseTabAction, clearSelectedTab } from '../../../utils/tab-actions.js';
+import { chooseTabAction, clearSelectedTab, loadTabFromFile } from '../../../utils/tab-actions.js';
 
 // Helper to detect if we're running in CI environment
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
@@ -333,7 +332,7 @@ test.describe('Holding Tank - basic', () => {
     }, holdingTankFile);
     
     // 2) Click the Load button to trigger the file picker
-    await importHoldingTankFile(app);
+    await loadTabFromFile(page, 'holdingTank');
 
     // 3) Wait for the file to be loaded and processed by checking for expected items
     const activeTab = page.locator('#holding_tank_1');
@@ -989,7 +988,7 @@ test.describe('Holding Tank - basic', () => {
     }, holdingTankFile);
     
     // Click the Load button to trigger the file picker
-    await importHoldingTankFile(app);
+    await loadTabFromFile(page, 'holdingTank');
 
     // Wait for the file to be loaded and processed - check for expected items
     const tab4Items = tab4List.locator('.list-group-item');

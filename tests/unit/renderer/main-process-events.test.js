@@ -24,7 +24,13 @@ function createHarness(overrides = {}) {
 describe('main process event bridge', () => {
   it('registers every supported main-process event', () => {
     const { handlers } = createHarness();
-    expect(Object.keys(handlers)).toHaveLength(12);
+    expect(Object.keys(handlers)).toHaveLength(10);
+  });
+
+  it('no longer listens for main-initiated hotkey or holding tank loads', () => {
+    const { handlers } = createHarness();
+    expect(handlers.onFkeyLoad).toBeUndefined();
+    expect(handlers.onHoldingTankLoad).toBeUndefined();
   });
 
   it('routes song editing to the song management module', () => {

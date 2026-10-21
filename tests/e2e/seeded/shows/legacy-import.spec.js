@@ -5,14 +5,8 @@ import path from 'node:path';
 import { launchSeededApp, waitForAppReady } from '../../../utils/seeded-launch.js';
 import { relaunchApp, waitForShowSettled } from '../../../utils/relaunch.js';
 import { readShows, seedShows } from '../../../utils/seed-shows.js';
-import {
-  f1Hotkey,
-  importHoldingTankFile,
-  importHotkeyFile,
-  multiShowDocument,
-  quitApp,
-  waitForShowMenuReady
-} from '../../../utils/show-e2e.js';
+import { f1Hotkey, multiShowDocument, quitApp, waitForShowMenuReady } from '../../../utils/show-e2e.js';
+import { loadTabFromFile } from '../../../utils/tab-actions.js';
 
 // Seeded songs: 1001 Got The Time, 1002 The Wheel, 1003, 1004 We Are Family, 1005 Eat It.
 const PROFILE = 'Default User';
@@ -56,12 +50,12 @@ test.describe('Shows - legacy file import', () => {
     }
   });
 
-  test('a hotkey file import skips songs missing from the library', async () => {
+  test('loading a hotkey file skips songs missing from the library', async () => {
     const file = path.join(tempDir, 'old.mrv');
     fs.writeFileSync(file, ['f1::1001', 'f2::99999', 'f3::1003'].join('\n'));
     await stubOpenDialog(file);
 
-    await importHotkeyFile(app);
+    await loadTabFromFile(page, 'hotkeys');
 
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1001');
     await expect(page.locator('#hotkeys_list_1 #f3_hotkey')).toHaveAttribute('songid', '1003');
@@ -69,12 +63,12 @@ test.describe('Shows - legacy file import', () => {
     await expect(page.locator('#file-drop-toast')).toHaveText("1 song in this file isn't in your library.");
   });
 
-  test('a holding-tank file import ignores non-numeric lines', async () => {
+  test('loading a holding-tank file ignores non-numeric lines', async () => {
     const file = path.join(tempDir, 'old.hld');
     fs.writeFileSync(file, ['1004', 'not-an-id', '1002'].join('\n'));
     await stubOpenDialog(file);
 
-    await importHoldingTankFile(app);
+    await loadTabFromFile(page, 'holdingTank');
 
     await expect(page.locator('#holding_tank_1 li[songid]')).toHaveCount(2, { timeout: 5000 });
     const ids = await page.locator('#holding_tank_1 li[songid]').evaluateAll(
@@ -84,12 +78,12 @@ test.describe('Shows - legacy file import', () => {
     await expect(page.locator('#file-drop-toast')).toHaveCount(0);
   });
 
-  test('importing a file changes only the live session', async () => {
+  test('loading a file changes only the live session', async () => {
     const file = path.join(tempDir, 'old.mrv');
     fs.writeFileSync(file, 'f1::1001\n');
     await stubOpenDialog(file);
 
-    await importHotkeyFile(app);
+    await loadTabFromFile(page, 'hotkeys');
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1001');
 
     const saved = readShows(userDataDir, PROFILE);

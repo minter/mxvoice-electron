@@ -517,8 +517,7 @@ import { setHeaderLabels } from './renderer/modules/shows/header.js';
       setupMainProcessEventBridge({
         electronAPI: window.secureElectronAPI,
         moduleRegistry,
-        logWarn: window.logWarn,
-        logError: window.logError
+        logWarn: window.logWarn
       });
     } catch (bridgeError) {
       window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });

@@ -26,6 +26,13 @@ const IPC = deepFreeze({
     SHOW_DIRECTORY_PICKER: 'show-directory-picker',
     SHOW_FILE_PICKER: 'show-file-picker',
   },
+  // A hotkey or holding tank tab saved to, or loaded from, a .mrv/.hld file
+  FILE: {
+    SAVE_HOTKEY_TAB: 'file:save-hotkey-tab',
+    SAVE_HOLDING_TANK_TAB: 'file:save-holding-tank-tab',
+    LOAD_HOTKEY_TAB: 'file:load-hotkey-tab',
+    LOAD_HOLDING_TANK_TAB: 'file:load-holding-tank-tab',
+  },
   UI: {
     INCREASE_FONT_SIZE: 'increase-font-size',
     DECREASE_FONT_SIZE: 'decrease-font-size',

@@ -2,29 +2,43 @@
  * Tab actions menu
  *
  * The ⋯ button at the end of the hotkey and holding tank tab rows, and a
- * right-click on any of their tabs, open one small menu: Rename and Clear for
- * the selected tab. It looks like the song context menu (same classes) and
- * calls the panels' own rename and clear functions.
+ * right-click on any of their tabs, open one small menu for the selected tab:
+ * Rename and Clear, then Save Tab to File and Load Tab from File. It looks like
+ * the song context menu (same classes) and calls the panels' own rename and
+ * clear functions, and tab-files.js for the files.
  */
 
 import { safeShowTab } from './bootstrap-helpers.js';
+import { saveTabToFile, loadTabFromFile } from './tab-files.js';
 
 const MENU_ID = 'mxv-tab-actions-menu';
 const LOG_CONTEXT = { module: 'tab-actions-menu' };
 
-/** Tabs (the model's snapshot), rename and clear for each tab strip, by the strip's element id */
+/**
+ * Tabs (the model's snapshot) and the actions for each tab strip, by the
+ * strip's element id. Save and load get the selected tab's number and label.
+ */
 export const TAB_PANELS = {
   hotkey_tabs: {
     tabs: (registry) => registry?.hotkeys?.getHotkeySnapshot?.(),
     rename: (registry) => registry?.hotkeys?.renameHotkeyTab?.(),
-    clear: (registry) => registry?.hotkeys?.clearHotkeys?.()
+    clear: (registry) => registry?.hotkeys?.clearHotkeys?.(),
+    save: (registry, target) => saveTabToFile('hotkeys', target, { registry }),
+    load: (registry, target) => loadTabFromFile('hotkeys', target, { registry })
   },
   holding_tank_tabs: {
     tabs: (registry) => registry?.holdingTank?.getHoldingTankSnapshot?.(),
     rename: (registry) => registry?.holdingTank?.renameHoldingTankTab?.(),
-    clear: (registry) => registry?.holdingTank?.clearHoldingTank?.()
+    clear: (registry) => registry?.holdingTank?.clearHoldingTank?.(),
+    save: (registry, target) => saveTabToFile('holding_tank', target, { registry }),
+    load: (registry, target) => loadTabFromFile('holding_tank', target, { registry })
   }
 };
+
+// The tab number from a link's href (#hotkeys_list_2, #holding_tank_3)
+function tabNumberOf(link) {
+  return Number(link?.getAttribute?.('href')?.match(/(\d+)$/)?.[1]) || null;
+}
 
 /**
  * The name to show for a tab: the name the user gave it, or "Tab N" when it
@@ -35,7 +49,7 @@ export const TAB_PANELS = {
  * @returns {string}
  */
 export function tabLabel(link, tabs) {
-  const number = Number(link?.getAttribute?.('href')?.match(/(\d+)$/)?.[1]) || null;
+  const number = tabNumberOf(link);
   if (Array.isArray(tabs) && number) {
     const name = tabs.find((tab) => tab.tabNumber === number)?.tabName;
     return name ? String(name) : `Tab ${number}`;
@@ -48,12 +62,15 @@ export function tabLabel(link, tabs) {
 
 /**
  * @param {string} label - from tabLabel
- * @returns {Array<{ action: string, icon: string, text: string }>}
+ * @returns {Array<{ action: string, icon: string, text: string } | { separator: true }>}
  */
 export function tabActionItems(label) {
   return [
     { action: 'rename', icon: 'fa-pen', text: `Rename "${label}"…` },
-    { action: 'clear', icon: 'fa-eraser', text: `Clear "${label}"…` }
+    { action: 'clear', icon: 'fa-eraser', text: `Clear "${label}"…` },
+    { separator: true },
+    { action: 'save', icon: 'fa-file-export', text: 'Save Tab to File…' },
+    { action: 'load', icon: 'fa-file-import', text: 'Load Tab from File…' }
   ];
 }
 
@@ -83,13 +100,15 @@ export function confirmClearTab(link, confirm, tabs) {
 /**
  * Run a menu action on the selected tab of a strip.
  * @param {string} tabsId - 'hotkey_tabs' or 'holding_tank_tabs'
- * @param {string} action - 'rename' or 'clear'
+ * @param {string} action - 'rename', 'clear', 'save' or 'load'
  * @param {Object} registry - window.moduleRegistry
+ * @param {{ tabNumber: number|null, label: string }} [target] - the selected tab, for save and load
  */
-export function runTabAction(tabsId, action, registry) {
+export function runTabAction(tabsId, action, registry, target) {
+  if (action === 'tabs') return undefined;
   const run = TAB_PANELS[tabsId]?.[action];
   if (!run) return undefined;
-  return run(registry);
+  return run(registry, target);
 }
 
 /**
@@ -99,7 +118,13 @@ export function runTabAction(tabsId, action, registry) {
  * @param {Document} [doc]
  */
 export function renderTabActionItems(menu, label, doc = document) {
-  const buttons = tabActionItems(label).map(({ action, icon, text }) => {
+  const buttons = tabActionItems(label).map(({ action, icon, text, separator }) => {
+    if (separator) {
+      const rule = doc.createElement('div');
+      rule.className = 'mxv-context-separator';
+      rule.setAttribute('role', 'separator');
+      return rule;
+    }
     const button = doc.createElement('button');
     button.type = 'button';
     button.className = 'mxv-context-item tab-actions-menu-item';
@@ -163,7 +188,7 @@ export function installTabActionsMenus({
     doc.body.appendChild(menu);
   }
 
-  let current = null; // { tabsId, trigger }
+  let current = null; // { tabsId, trigger, target }
 
   const hide = () => {
     if (menu.style.display === 'none') return;
@@ -176,7 +201,8 @@ export function installTabActionsMenus({
   const open = (tabsId, x, y, { alignRight = false, trigger = null } = {}) => {
     hide();
     const link = doc.querySelector(`#${tabsId} .nav-link.active`);
-    renderTabActionItems(menu, tabLabel(link, TAB_PANELS[tabsId].tabs(moduleRegistry)), doc);
+    const label = tabLabel(link, TAB_PANELS[tabsId].tabs(moduleRegistry));
+    renderTabActionItems(menu, label, doc);
 
     menu.style.visibility = 'hidden';
     menu.style.display = 'block';
@@ -188,7 +214,7 @@ export function installTabActionsMenus({
     menu.style.top = `${top}px`;
     menu.style.visibility = '';
 
-    current = { tabsId, trigger };
+    current = { tabsId, trigger, target: { tabNumber: tabNumberOf(link), label } };
     trigger?.setAttribute('aria-expanded', 'true');
     menu.querySelector('button')?.focus();
   };
@@ -197,9 +223,9 @@ export function installTabActionsMenus({
     const item = event.target?.closest?.('[data-action]');
     if (!item || !current) return;
     event.stopPropagation();
-    const { tabsId } = current;
+    const { tabsId, target } = current;
     hide();
-    Promise.resolve(runTabAction(tabsId, item.getAttribute('data-action'), moduleRegistry))
+    Promise.resolve(runTabAction(tabsId, item.getAttribute('data-action'), moduleRegistry, target))
       .catch((error) => debugLog?.error('Tab action failed', { ...LOG_CONTEXT, function: 'runTabAction', tabsId, error: error?.message }));
   });
 

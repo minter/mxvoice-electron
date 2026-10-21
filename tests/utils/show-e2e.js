@@ -123,15 +123,3 @@ export async function quitApp(app) {
 export async function waitForShowMenuReady(app) {
   await expect.poll(async () => (await showMenuState(app)).enabled, { timeout: 20000 }).toBe(true);
 }
-
-/** Run a Shows menu file import once the show session is ready. */
-async function importLegacyFile(app, label) {
-  await waitForShowMenuReady(app);
-  await clickShowMenu(app, label);
-}
-
-/** Show > Import Hotkey File… (the dialog is stubbed by the caller). */
-export const importHotkeyFile = (app) => importLegacyFile(app, 'Import Hotkey File…');
-
-/** Show > Import Holding Tank File… (the dialog is stubbed by the caller). */
-export const importHoldingTankFile = (app) => importLegacyFile(app, 'Import Holding Tank File…');

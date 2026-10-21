@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'node:path';
 import os from 'os';
 import { fileURLToPath } from 'node:url';
-import { importHotkeyFile } from '../../../utils/show-e2e.js';
+import { loadTabFromFile } from '../../../utils/tab-actions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,10 +78,10 @@ test.describe('Hotkeys - file operations', () => {
       });
     }, mrvPath);
 
-    // Click the load hotkey button
-    await importHotkeyFile(app);
+    // ⋯ > Load Tab from File…
+    await loadTabFromFile(page, 'hotkeys');
 
-    // Wait for the fkey_load IPC to be processed
+    // Wait for the load to be processed
     const f1Hotkey = page.locator('#hotkeys_list_1 #f1_hotkey');
     await expect(f1Hotkey).toHaveAttribute('songid', '1001', { timeout: 5000 });
     const f1SongId = await f1Hotkey.getAttribute('songid');
@@ -119,8 +119,8 @@ test.describe('Hotkeys - file operations', () => {
       });
     });
 
-    // Click load button
-    await importHotkeyFile(app);
+    // ⋯ > Load Tab from File…; the canceled dialog asks nothing
+    await loadTabFromFile(page, 'hotkeys', { confirm: 'none' });
 
     // Verify F1 is unchanged
     const f1After = await page.locator('#hotkeys_list_1 #f1_hotkey').getAttribute('songid');

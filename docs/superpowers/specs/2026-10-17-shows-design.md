@@ -122,14 +122,14 @@ Choosing Derek → Comedy Sports adds a new show to Jesse's profile and makes it
 
 Those files predate profiles and tabs. A `.mrv` file is one hotkey tab. A `.hld` file is one holding-tank list. People still have them, and some of those files are the show they actually prepared, while the layout the app has been auto-saving is the wreckage.
 
-Import onto the current tab:
+Each tab's ⋯ menu (and the right-click menu on a tab) has **Save Tab to File…** and **Load Tab from File…**, after Rename and Clear. They act on the selected tab of that panel.
 
-- A hotkey file fills the current hotkey tab. If the file has a tab name, that name is applied.
-- A holding-tank file fills the current holding-tank tab. These files have no tab name.
+- Save writes the selected hotkey tab as a `.mrv` file (`f1::<id>` to `f12::<id>`, then `tab_name::<name>` with spaces as `_` when the tab has a name) or the selected holding-tank tab as a `.hld` file (one song id per line). These are the formats older versions read and write, so files go both ways. The save dialog opens in the hotkey folder, with the tab label as the file name, for example `Preshow.hld` or `Tab 2.mrv`.
+- Load fills the selected tab from a file. A hotkey file's tab name, if it has one, is applied. If the tab already has songs, it asks first (`Replace the songs in "Preshow"?`, Cancel is the default); an empty tab loads without asking. Songs missing from the library are skipped and counted, and a file with no songs says so. A load waits until the show has finished loading.
 
-Import changes the live session only. The saved show changes when the person then uses Save or Save As. There is no scan of the hotkey folder and no automatic show per file. The app cannot tell which files were a show.
+Loading changes the live session only. The saved show changes when the person then uses Save or Save As. There is no scan of the hotkey folder and no automatic show per file. The app cannot tell which files were a show.
 
-Saving new `.mrv` and `.hld` files goes away. A whole show is the unit worth keeping and the unit worth copying. This version does not add a show file for other computers.
+A show keeps the whole night. A tab file is a reusable piece, such as a pre-show playlist or a standard set of drops, to load into several shows. This version does not add a show file for other computers.
 
 ## UI
 
@@ -148,7 +148,6 @@ The menu contains:
 - Delete "Comedy Sports"...
 - Color, a submenu: None, Teal, Blue, Purple, Pink, Coral, Amber, Green, with a check on the current show's color
 - A separator, then Import Show...
-- Import Hotkey File... and Import Holding Tank File...
 
 Save and Save As are the words people already know for keeping their work, so the menu uses them. What keeps the night from becoming a document is the rest of the design: a clean exit never asks, and the saved show comes back next time.
 
@@ -168,7 +167,7 @@ The color appears in three places only, in light and dark mode: the window backg
 
 Remove the open-folder and save icons from the Holding Tank header and the Hotkeys header. Rename and clear stay.
 
-Remove the Hotkeys menu. Its only items are Open Hotkeys File and Save Hotkeys To File. Those commands move to the Shows menu as the two legacy imports, and the save command is not replaced.
+Remove the Hotkeys menu. Its only items are Open Hotkeys File and Save Hotkeys To File. Those commands move to each tab's ⋯ menu as Load Tab from File… and Save Tab to File…, acting on one tab.
 
 ### What does not move
 
@@ -244,14 +243,14 @@ That first show is whatever the app saved last. For many people that is the end 
 - From this version on, changes during a show are kept only if you Save that show or use Save As to make a new one.
 - Quitting puts the saved show back next time. A dot after the show's name means there are changes that quitting will throw away.
 - Switching to another show asks whether to save your changes first.
-- If the real show is still in an old hotkey or holding-tank file, import it onto the tabs and then Save or Save As.
+- If the real show is still in an old hotkey or holding-tank file, load it onto the tabs (Load Tab from File… in the tab's ⋯ menu) and then Save or Save As.
 - Other people's saved shows can be copied with Import Show.
 
 First launch after the upgrade should not ask them to save, and should not offer a pile of imported files. One short note that this layout is now their show is enough. They already have the import commands if the layout is wrong.
 
 Profile backups created before the upgrade contain `state.json` and no shows. Restoring one of those backups should run the same migration: that layout becomes a show. Say so in the restore path, because that layout may be a mid-show backup rather than a prepared show.
 
-People who use the folder and save icons as the way they keep a show will find those icons gone. The replacement is Save and Save As, plus Import Show for another person on this computer. Legacy import remains for files they already have.
+People who use the folder and save icons as the way they keep a show will find those icons gone. The replacement is Save and Save As, plus Import Show for another person on this computer. Tab files still save and load from each tab's ⋯ menu.
 
 ## Decisions that look like open questions
 
@@ -267,7 +266,7 @@ These are settled. A review that reopens them should say what new fact contradic
 | Copy, never link or overwrite | Jesse's edits must not change Derek's show, and a second import must not clobber a show she already has. |
 | No private flag | It would not be real privacy, and it would hide the show Jesse is supposed to find. |
 | No show file, no shared folder, no send step | On this computer the show already lives in the owner's profile. |
-| Legacy save removed, legacy import kept | New files of one tab are a second, worse copy of a show. Old files are still how some prepared shows exist. |
+| Tabs can be saved to and loaded from files | A show keeps the whole night; a tab file is a reusable piece (a pre-show playlist, a standard set of drops) to load into several shows. The file formats are unchanged, so old files still load and new files work in older versions. |
 | Own Shows menu, header is a label | Profile is who. The show is what is loaded. The header has to show which show is loaded, and it cannot hold replace and delete. |
 | Backing out of Switch Profile keeps the night | The picker opens over the live show. Cancelling it, or picking the same person, changes nothing, so opening the picker can never destroy the show. |
 | Song ids are never reused | A show stores bare ids. If an id could later mean a different song, an old show would silently play the wrong track. A missing song is dropped and counted instead. |

@@ -198,7 +198,7 @@ test.describe('Preferences - basic', () => {
     
     await expect(dbLabel).toContainText('Database File Location');
     await expect(musicLabel).toContainText('Audio Files');
-    await expect(hotkeyLabel).toContainText('Folder for importing old hotkey and holding-tank files');
+    await expect(hotkeyLabel).toContainText('Folder for hotkey and holding-tank files');
     
     // Close modal
     await page.locator('#preferencesModal .btn-close').click();

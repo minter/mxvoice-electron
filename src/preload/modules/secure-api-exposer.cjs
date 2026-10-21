@@ -195,6 +195,11 @@ const secureElectronAPI = {
 
   // File operations - secure file management
   fileOperations: {
+    // A hotkey or holding tank tab to or from a .mrv/.hld file; each shows its own dialog
+    saveHotkeyTab: (tab, label) => ipcRenderer.invoke(IPC.FILE.SAVE_HOTKEY_TAB, tab, label),
+    saveHoldingTankTab: (songIds, label) => ipcRenderer.invoke(IPC.FILE.SAVE_HOLDING_TANK_TAB, songIds, label),
+    loadHotkeyTab: () => ipcRenderer.invoke(IPC.FILE.LOAD_HOTKEY_TAB),
+    loadHoldingTankTab: () => ipcRenderer.invoke(IPC.FILE.LOAD_HOLDING_TANK_TAB),
     // Pending update for restoring the quiet indicator after a renderer reload
     getPendingUpdate: () => ipcRenderer.invoke(IPC.APP.GET_PENDING_UPDATE),
     // Auto-update operations - Three-stage process
@@ -288,18 +293,6 @@ const secureElectronAPI = {
   
   // Event listeners - secure event handling (limited and safe)
   events: {
-    onFkeyLoad: (callback) => {
-      const handler = (_event, ...args) => callback(...args);
-      ipcRenderer.on('fkey_load', handler);
-      return () => ipcRenderer.removeListener('fkey_load', handler);
-    },
-    
-    onHoldingTankLoad: (callback) => {
-      const handler = (_event, ...args) => callback(...args);
-      ipcRenderer.on('holding_tank_load', handler);
-      return () => ipcRenderer.removeListener('holding_tank_load', handler);
-    },
-    
     onBulkAddDialogLoad: (callback) => {
       const handler = (_event, ...args) => callback(...args);
       ipcRenderer.on('bulk_add_dialog_load', handler);

@@ -20,7 +20,7 @@ export function droppedSongsFileMessage(dropped) {
     : `${dropped} songs in this file aren't in your library.`;
 }
 
-export const IMPORT_NOT_READY_MESSAGE = 'Wait for the show to finish loading, then import again.';
+export const IMPORT_NOT_READY_MESSAGE = 'Wait for the show to finish loading, then try again.';
 export const NO_SONGS_MESSAGE = 'This file has no songs to import.';
 
 export const LOAD_FAILED_MESSAGE = "Mx. Voice couldn't load this show. Your saved shows were not changed.";
