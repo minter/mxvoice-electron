@@ -60,15 +60,13 @@ await loadProfileState({
 });
 ```
 
-### Switch Profile with Save
+### Switch Profile
 
-```javascript
-import { switchProfileWithSave } from './modules/profile-state/index.js';
-
-// Switch profiles after explicitly saving current state
-// This is automatically called when user selects "Switch Profile..." from menu
-await switchProfileWithSave();
-```
+Switch Profile opens the shared profile picker in a dialog
+(`modules/profile-picker`). Choosing a profile calls
+`profile.switchToProfile(name)`. The main process flushes this window's state
+through `window.profileStateAPI.flushProfileState()` before it switches and
+reloads the window.
 
 **Note:** Profile switching now explicitly saves state *before* initiating the switch, ensuring no data loss even if the window closes immediately.
 
@@ -165,7 +163,7 @@ A global flag `window.isRestoringProfileState` protects against saves during the
    - Module initialization
    - Event registration
 3. **Cleared after complete init:** `clearProfileRestorationLock()` called after app is fully ready
-4. **Checked at the lifecycle boundary:** `saveProfileState()`, `switchProfileWithSave()`, and the `beforeunload` handler check this flag. Hotkeys and holding tank do not need their own checks.
+4. **Checked at the lifecycle boundary:** `saveProfileState()` and the main process's pre-switch flush check this flag. Hotkeys and holding tank do not need their own checks.
 
 This prevents the critical race condition where:
 - Profile loads with valid state (4 hotkeys, 1 holding tank song)
@@ -219,7 +217,6 @@ clearProfileRestorationLock(); // Now saves are allowed
 ### Layer 2: Save Function Protection
 All save functions check the restoration lock:
 - `saveProfileState()` - Checks lock, returns early if active
-- `switchProfileWithSave()` - Checks lock, skips save if active  
 - `beforeunload` handler - Checks lock, returns early if active
 
 ### Layer 3: Automatic Backup
@@ -295,9 +292,6 @@ export function loadProfileState(options): Promise<{success: boolean, loaded: bo
 // Clear restoration lock after full app initialization (IMPORTANT!)
 export function clearProfileRestorationLock(): void
   // Call this ONLY after complete app initialization including song table population
-
-// Switch profiles with explicit state save
-export function switchProfileWithSave(): Promise<{success: boolean, error?: string}>
 ```
 
 ## Dependencies

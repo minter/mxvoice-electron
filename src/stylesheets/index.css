@@ -919,6 +919,12 @@ legend {
   color: #fff !important;
 }
 
+/* .hotkeys span sets its own text color, so it doesn't inherit the white above */
+.hotkeys .list-group-item.active-hotkey span,
+.hotkeys .list-group-item.selected-row span {
+  color: #fff !important;
+}
+
 /* Profile indicator styles */
 /* A flex item (not absolutely positioned) so it shares the header with the
    update indicator and long profile names truncate instead of overlapping */

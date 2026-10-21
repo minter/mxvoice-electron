@@ -4,16 +4,15 @@
  */
 
 import electron from 'electron';
-const { ipcMain, app } = electron;
+const { ipcMain } = electron;
 import path from 'path';
 import { promises as fsPromises } from 'fs';
 import * as profileManager from '../profile-manager.js';
-import { trackProfileSwitch } from '../profile-switch-analytics.js';
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { getCurrentProfile, getProfileDirectory, store, debugLog, getMainWindow, analytics } = deps;
+  const { getCurrentProfile, getProfileDirectory, store, debugLog, profileSwitcher } = deps;
 
   // Profile handlers
   ipcMain.handle(IPC.PROFILE.GET_CURRENT, async () => {
@@ -61,6 +60,10 @@ export function register(deps) {
   // Profile: Save state (called on window close)
   ipcMain.handle(IPC.PROFILE.SAVE_STATE, async (event, state, profileName) => {
     try {
+      // Mid-switch, "the current profile" is about to change under this save
+      if (!profileName && profileSwitcher?.isSavingFenced()) {
+        return { success: false, skipped: true, error: 'Profile switch in progress' };
+      }
       const name = profileName || getCurrentProfile();
       return await profileManager.saveProfileState(name, state, { reason: 'window-close' });
     } catch (error) {
@@ -125,7 +128,10 @@ export function register(deps) {
         valueLength: Array.isArray(value) ? value.length : undefined
       });
 
-      await profileManager.saveProfilePreferences(profileName, preferences);
+      // false = not written (disk error, or a profile that no longer exists)
+      if (await profileManager.saveProfilePreferences(profileName, preferences) === false) {
+        return { success: false, error: 'Preferences could not be saved' };
+      }
 
       debugLog?.info('[PROFILE-PREF] Profile preference saved successfully', {
         module: 'ipc-handlers',
@@ -185,6 +191,10 @@ export function register(deps) {
       });
 
       const saveResult = await profileManager.saveProfilePreferences(profileName, updatedPreferences);
+      // false = not written (disk error, or a profile that no longer exists)
+      if (saveResult === false) {
+        return { success: false, error: 'Preferences could not be saved' };
+      }
 
       // Sync prerelease_updates to the global store so the auto-updater picks it up
       // (auto-updater reads from store.get('prerelease_updates'), not profile preferences)
@@ -235,50 +245,17 @@ export function register(deps) {
     }
   });
 
-  ipcMain.handle(IPC.PROFILE.SWITCH, async () => {
+  // Profile: List profiles (Switch Profile dialog)
+  ipcMain.handle(IPC.PROFILE.LIST, async () => {
     try {
-      debugLog?.info('Profile switch requested, will save state and relaunch', {
-        module: 'ipc-handlers',
-        function: 'profile:switch'
-      });
-
-      // Note: State must be saved BEFORE we tell the renderer we're switching
-      // The renderer should call profile:save-state-before-switch first
-
-      // Save current profile name for fallback if launcher is closed without selection
-      const currentProfile = getCurrentProfile();
-      if (currentProfile) {
-        // Store the current profile as the fallback profile
-        store.set('fallback-profile', currentProfile);
-        debugLog?.info('Saved fallback profile for launcher close scenario', {
-          module: 'ipc-handlers',
-          function: 'profile:switch',
-          fallbackProfile: currentProfile
-        });
-      }
-
-      // app.exit() skips before-quit, so flush analytics first. Do it before
-      // closing the window: closing can trigger the quit path on Windows.
-      await analytics?.endSession();
-
-      // Close main window and relaunch launcher
-      const win = getMainWindow();
-      if (win) {
-        win.close();
-      }
-
-      // Relaunch the app without profile argument to show launcher
-      app.relaunch({ args: process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')) });
-      app.exit(0);
-
-      return { success: true };
+      return { success: true, profiles: await profileManager.getAvailableProfiles() };
     } catch (error) {
-      debugLog?.error('Profile switch error:', { module: 'ipc-handlers', function: 'profile:switch', error: error.message });
+      debugLog?.error('Profile list error:', { module: 'ipc-handlers', function: 'profile:list', error: error.message });
       return { success: false, error: error.message };
     }
   });
 
-  // Profile: Save state before switch (explicit save before the relaunch lifecycle)
+  // Profile: Save state before switch (explicit save before a switch)
   ipcMain.handle(IPC.PROFILE.SAVE_STATE_BEFORE_SWITCH, async (event, state, profileName) => {
     try {
       const name = profileName || getCurrentProfile();
@@ -376,44 +353,16 @@ export function register(deps) {
           }
         });
 
-  // Profile: Switch to specific profile
-  ipcMain.handle(IPC.PROFILE.SWITCH_TO, async (event, profileName) => {
+  // Profile: Switch to a profile in-process (Switch Profile dialog, Log Out, New Profile)
+  ipcMain.handle(IPC.PROFILE.SWITCH_TO, async (event, profileName, method) => {
     try {
       debugLog?.info('Profile switch to specific profile requested', {
         module: 'ipc-handlers',
         function: 'profile:switch-to',
-        profileName
+        profileName,
+        method
       });
-
-      // Save current profile name for fallback if launcher is closed without selection
-      const currentProfile = getCurrentProfile();
-      if (currentProfile) {
-        store.set('fallback-profile', currentProfile);
-        debugLog?.info('Saved fallback profile before switch', {
-          module: 'ipc-handlers',
-          function: 'profile:switch-to',
-          fallbackProfile: currentProfile
-        });
-      }
-
-      // Set the target profile as the fallback so launcher will auto-select it
-      store.set('auto-select-profile', profileName);
-
-      trackProfileSwitch({ analytics, fromProfile: currentProfile, toProfile: profileName, method: 'direct' });
-
-      // app.exit() skips before-quit, so flush analytics first. Do it before
-      // closing the window: closing can trigger the quit path on Windows.
-      await analytics?.endSession();
-
-      // Close main window and relaunch launcher
-      const win = getMainWindow();
-      if (win) {
-        win.close();
-      }
-      app.relaunch({ args: [...process.argv.slice(1).filter(arg => !arg.startsWith('--profile=')), `--profile=${profileName}`] });
-      app.exit(0);
-
-      return { success: true };
+      return await profileSwitcher.switchProfile(profileName, { method: method === 'launcher' ? 'launcher' : 'direct' });
     } catch (error) {
       debugLog?.error('Profile switch to specific profile error:', {
         module: 'ipc-handlers',

@@ -137,7 +137,7 @@ test.describe('Native menu wiring', () => {
   test('profile, backup, and library menu events reach their registered handlers', async () => {
     await page.evaluate(() => {
       window.__nativeMenuCalls = { switchProfile: 0, createBackup: 0, exportLibrary: 0, importLibrary: 0 };
-      window.moduleRegistry.profileState.switchProfileWithSave = async () => {
+      window.moduleRegistry.profilePicker.open = async () => {
         window.__nativeMenuCalls.switchProfile += 1;
       };
       window.moduleRegistry.profileBackup.createBackupNow = async () => {

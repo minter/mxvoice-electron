@@ -4,6 +4,7 @@ import { populateCategorySelect, getCategoryDescription } from '../categories/ca
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 import { customAlert } from '../utils/modal-utils.js';
 import { showDropToast } from '../utils/toast-utils.js';
+import { escapeHtml } from '../dom-utils/escape-html.js';
 
 /**
  * Multi-Song Import Module
@@ -391,15 +392,3 @@ function addSongToSearchResultsUI(id, song) {
   results.appendChild(row);
 }
 
-/**
- * Minimal HTML escaping to prevent XSS in UI
- */
-function escapeHtml(text) {
-  if (!text) return '';
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}

@@ -6,6 +6,26 @@ import { MULTI_SONG_THRESHOLD } from '../bulk-operations/multi-song-import.js';
  */
 export default {
   tours: {
+    // Next release: rename the key to match package.json when it is bumped
+    '4.4.0': {
+      title: "What's New in 4.4.0",
+      steps: [
+        {
+          element: '#profileSwitchModal .modal-content',
+          title: 'Switch Profiles Instantly',
+          description: 'Profile → Switch Profile now opens right here instead of restarting the app. Your current profile is grayed out; pick another to switch, or press Esc to go back to what you were doing.',
+          side: 'right',
+          align: 'center',
+          preAction: { type: 'function', name: 'openSwitchProfileForTour' },
+          postAction: { type: 'function', name: 'closeSwitchProfileForTour' },
+          skipIfMissing: true,
+        },
+        {
+          title: 'Closing the Window Asks First',
+          description: 'Closing the main window quits Mx. Voice, so it now asks first: a stray click mid-show can\'t stop the music. Choosing Quit from the menu still quits right away.',
+        },
+      ],
+    },
     '4.3.0': {
       title: "What's New in 4.3.0",
       steps: [

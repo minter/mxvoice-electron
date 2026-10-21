@@ -54,4 +54,195 @@ describe('window state manager', () => {
     store.get.mockReturnValue({ width: 700 });
     await expect(manager.loadWindowState(store, 'Show Profile')).resolves.toEqual({ width: 700 });
   });
+
+  it('gives up on a page that never flushes, and still saves the window state', async () => {
+    vi.useFakeTimers();
+    try {
+      const window = {
+        isDestroyed: () => false,
+        webContents: { isDestroyed: () => false, executeJavaScript: vi.fn(() => new Promise(() => {})) },
+        getBounds: () => ({ x: 1, y: 2, width: 800, height: 600 }),
+        isMaximized: () => false,
+        isFullScreen: () => false
+      };
+      const { manager, store } = createHarness({ getMainWindow: () => window, flushTimeoutMs: 50 });
+
+      const closing = manager.prepareMainWindowForClose();
+      await vi.advanceTimersByTimeAsync(50);
+      await closing;
+
+      expect(window.webContents.executeJavaScript).toHaveBeenCalled();
+      expect(store.set).toHaveBeenCalledWith('window_state', expect.objectContaining({ width: 800 }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  describe('closing the window', () => {
+    function closableWindow() {
+      const handlers = {};
+      const window = {
+        id: 1,
+        isDestroyed: () => false,
+        on: (event, handler) => { handlers[event] = handler; },
+        close: vi.fn(() => handlers.close({ preventDefault: vi.fn() })),
+        webContents: { isDestroyed: () => false, executeJavaScript: vi.fn(async () => ({ success: true })) },
+        getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+        isMaximized: () => false,
+        isFullScreen: () => false
+      };
+      return { window, handlers };
+    }
+
+    function setup({ answer = true, quitting = false } = {}) {
+      const { window, handlers } = closableWindow();
+      const confirmClose = vi.fn(async () => {
+        if (answer instanceof Error) throw answer;
+        return answer;
+      });
+      const { manager } = createHarness({ getMainWindow: () => window, confirmClose, isQuitting: () => quitting });
+      manager.setupWindowStateSaving();
+      const close = async () => {
+        const event = { preventDefault: vi.fn() };
+        await handlers.close(event);
+        return event;
+      };
+      return { window, confirmClose, close };
+    }
+
+    it('asks first, and keeps the window open when the user cancels', async () => {
+      const { window, confirmClose, close } = setup({ answer: false });
+      const event = await close();
+      expect(confirmClose).toHaveBeenCalledWith(window);
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(window.webContents.executeJavaScript).not.toHaveBeenCalled();
+      expect(window.close).not.toHaveBeenCalled();
+
+      // Asking again next time, not stuck
+      await close();
+      expect(confirmClose).toHaveBeenCalledTimes(2);
+    });
+
+    it('saves state and closes once the user confirms', async () => {
+      const { window, confirmClose, close } = setup({ answer: true });
+      await close();
+      expect(confirmClose).toHaveBeenCalledOnce();
+      expect(window.webContents.executeJavaScript).toHaveBeenCalledOnce();
+      expect(window.close).toHaveBeenCalledOnce();
+    });
+
+    it('does not ask during an explicit quit (Cmd-Q, File > Quit)', async () => {
+      const { confirmClose, close } = setup({ quitting: true });
+      const event = await close();
+      expect(confirmClose).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('shows one dialog for repeated clicks while it is up', async () => {
+      const { window, handlers } = closableWindow();
+      let answer;
+      const confirmClose = vi.fn(() => new Promise((resolve) => { answer = resolve; }));
+      const { manager } = createHarness({ getMainWindow: () => window, confirmClose });
+      manager.setupWindowStateSaving();
+      const first = handlers.close({ preventDefault: vi.fn() });
+      await handlers.close({ preventDefault: vi.fn() });
+      expect(confirmClose).toHaveBeenCalledOnce();
+      answer(false);
+      await first;
+    });
+
+    it('closes anyway if the dialog itself fails', async () => {
+      const { window, close } = setup({ answer: new Error('no dialog') });
+      await close();
+      expect(window.close).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('a close the app makes itself (update install, session end) does not ask', async () => {
+    const handlers = {};
+    const window = {
+      id: 1,
+      isDestroyed: () => false,
+      on: (event, handler) => { handlers[event] = handler; },
+      close: vi.fn(),
+      webContents: { isDestroyed: () => false, executeJavaScript: vi.fn(async () => ({ success: true })) },
+      getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+      isMaximized: () => false,
+      isFullScreen: () => false
+    };
+    const confirmClose = vi.fn(async () => false);
+    const { manager } = createHarness({ getMainWindow: () => window, confirmClose });
+    manager.setupWindowStateSaving();
+
+    // Until it is really happening, a close still asks
+    await handlers.close({ preventDefault: vi.fn() });
+    expect(confirmClose).toHaveBeenCalledOnce();
+
+    manager.allowUnconfirmedClose();
+    const event = { preventDefault: vi.fn() };
+    await handlers.close(event);
+    expect(confirmClose).toHaveBeenCalledOnce();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('ignores resize, maximize and fullscreen saves while another profile is being applied', async () => {
+    vi.useFakeTimers();
+    try {
+      const handlers = {};
+      const window = {
+        id: 1,
+        isDestroyed: () => false,
+        on: (event, handler) => { handlers[event] = handler; },
+        webContents: { isDestroyed: () => false },
+        getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+        isMaximized: () => false,
+        isFullScreen: () => false
+      };
+      const { manager, store } = createHarness({ getMainWindow: () => window });
+      manager.setupWindowStateSaving();
+
+      manager.suppressSaves(1500);
+      handlers.unmaximize();
+      handlers['leave-full-screen']();
+      handlers.resized();
+      await vi.advanceTimersByTimeAsync(600);
+      expect(store.set).not.toHaveBeenCalled();
+
+      // Once settled, the actual state is saved once, with no event needed
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(store.set).toHaveBeenCalledWith('window_state', expect.objectContaining({ width: 800 }));
+
+      // Later events save normally again
+      store.set.mockClear();
+      handlers.maximize();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(store.set).toHaveBeenCalledWith('window_state', expect.any(Object));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('Windows session end closes without asking and saves', async () => {
+    const handlers = {};
+    const window = {
+      id: 1,
+      isDestroyed: () => false,
+      on: (event, handler) => { handlers[event] = handler; },
+      close: vi.fn(),
+      webContents: { isDestroyed: () => false, executeJavaScript: vi.fn(async () => ({ success: true })) },
+      getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+      isMaximized: () => false,
+      isFullScreen: () => false
+    };
+    const confirmClose = vi.fn(async () => false);
+    const { manager } = createHarness({ getMainWindow: () => window, confirmClose });
+    manager.setupWindowStateSaving();
+
+    handlers['session-end']();
+    expect(window.webContents.executeJavaScript).toHaveBeenCalledOnce();
+    const event = { preventDefault: vi.fn() };
+    await handlers.close(event);
+    expect(confirmClose).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
 });

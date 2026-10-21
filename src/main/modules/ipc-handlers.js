@@ -34,6 +34,8 @@ let debugLog;
 let logService;
 let updateState;
 let analytics;
+let profileSwitcher;
+let installUpdate;
 
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
@@ -48,6 +50,8 @@ function initializeIpcHandlers(dependencies) {
   logService = dependencies.logService;
   updateState = dependencies.updateState || { downloaded: false };
   analytics = dependencies.analytics;
+  profileSwitcher = dependencies.profileSwitcher;
+  installUpdate = dependencies.installUpdate;
 
   // Initialize file operations module
   fileOperations.initializeFileOperations(dependencies);
@@ -64,6 +68,8 @@ function initializeIpcHandlers(dependencies) {
     logService,
     updateState,
     analytics,
+    profileSwitcher,
+    installUpdate,
   };
 
   registerAllHandlers(deps);

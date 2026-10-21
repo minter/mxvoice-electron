@@ -24,6 +24,11 @@ const stateFile = (name) =>
 describe('saveProfileState', () => {
   beforeEach(() => {
     fs.rmSync(path.join(userDataDir, 'profiles'), { recursive: true, force: true });
+    // Saves only go to registered profiles
+    fs.writeFileSync(path.join(userDataDir, 'profiles.json'), JSON.stringify({
+      profiles: { 'My Show': { name: 'My Show' } },
+      metadata: { version: '1.0.0' }
+    }));
   });
   afterAll(() => {
     fs.rmSync(userDataDir, { recursive: true, force: true });
