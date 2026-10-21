@@ -164,16 +164,15 @@ test.describe('Shows - show color', () => {
       const showName = document.getElementById('show-name');
       const headers = ['#holding-tank-column', '#search-column', '#hotkeys-column']
         .map((column) => document.querySelector(`${column} .card-header`));
-      const original = { theme: html.getAttribute('data-bs-theme'), classes: body.className };
+      const original = body.className;
       // Headers animate color changes; measure end states
       const still = Object.assign(document.createElement('style'), { textContent: '* { transition: none !important; }' });
       document.head.append(still);
       const out = [];
       for (const mode of ['light', 'dark']) {
-        // The window's mode is the body class; data-bs-theme is set too
+        // The window's mode is the body class theme-management sets
         body.classList.remove('theme-light', 'theme-dark');
         body.classList.add(`theme-${mode}`);
-        html.setAttribute('data-bs-theme', mode);
         delete html.dataset.showColor;
         const plain = getComputedStyle(headers[2]).backgroundColor;
         for (const key of palette) {
@@ -193,12 +192,30 @@ test.describe('Shows - show color', () => {
         }
       }
       still.remove();
-      body.className = original.classes;
-      if (original.theme === null) html.removeAttribute('data-bs-theme');
-      else html.setAttribute('data-bs-theme', original.theme);
+      body.className = original;
       delete html.dataset.showColor;
       return out;
     }, PALETTE);
+
+    // Light tokens apply without any body.theme-* class; the band paints above the headers
+    const extras = await page.evaluate(() => {
+      const body = document.body;
+      const original = body.className;
+      document.documentElement.dataset.showColor = 'teal';
+      body.classList.remove('theme-light', 'theme-dark');
+      const band = getComputedStyle(body, '::before');
+      const out = {
+        noClassBand: getComputedStyle(body).getPropertyValue('--show-band').trim(),
+        bandZ: Number(band.zIndex),
+        bandPosition: band.position,
+        headerZ: getComputedStyle(document.querySelector('#hotkeys-column .card-header')).zIndex
+      };
+      body.className = original;
+      delete document.documentElement.dataset.showColor;
+      return out;
+    });
+    expect(extras.noClassBand.toUpperCase()).toBe('#0F6E56');
+    expect(extras).toMatchObject({ bandZ: 1001, bandPosition: 'fixed', headerZ: 'auto' });
 
     expect(results).toHaveLength(PALETTE.length * 2);
     for (const { mode, key, tinted, headerContrast, pillContrast } of results) {

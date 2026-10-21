@@ -39,7 +39,7 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 
 ## Dark/Light Theming
 
-- Uses `data-bs-theme` attribute on `<html>` (Bootstrap 5 standard). System preference detected via `matchMedia`.
+- The main window uses `body.theme-light` / `body.theme-dark`, applied by `theme-management`. `data-bs-theme` on `<html>` is used only by the launcher window. System preference detected via `matchMedia`.
 - User preference stored per-profile as `screen_mode` (auto/light/dark).
 - Structural styles in `index.css`, color-dependent styles in `colors.css` (separate light/dark sections).
 

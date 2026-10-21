@@ -12,8 +12,8 @@
  * Text keeps its existing colors.
  *
  * Stops per key: light 50/100/600/800, dark 900/800/400/100. The window's
- * mode is the body's theme-light/theme-dark class; data-bs-theme on <html>
- * is honored too.
+ * mode is the body's theme-light/theme-dark class (theme-management); light
+ * applies whenever body.theme-dark is absent.
  */
 
 /* --- Palette stops --- */
@@ -53,10 +53,9 @@
   --sc-d900: #173404; --sc-d800: #27500A; --sc-d400: #97C459; --sc-d100: #C0DD97;
 }
 
-/* --- Tokens: light (the default) and dark --- */
+/* --- Tokens: light (the default, with or without body.theme-light) and dark --- */
 
-[data-show-color] body,
-[data-show-color][data-bs-theme="light"] body {
+[data-show-color] body {
   --show-band: var(--sc-l600);
   --show-tint: var(--sc-l50);
   --show-chip-bg: var(--sc-l100);
@@ -64,8 +63,7 @@
   --show-tab-accent: var(--sc-l600);
 }
 
-[data-show-color] body.theme-dark,
-[data-show-color][data-bs-theme="dark"] body {
+[data-show-color] body.theme-dark {
   --show-band: var(--sc-d400);
   --show-tint: var(--sc-d800);
   --show-chip-bg: var(--sc-d900);
@@ -74,7 +72,8 @@
 }
 
 /* (a) Band across the top of the window. Fixed and click-through, so it
-   neither moves the layout nor blocks the headers it overlaps; below dialogs. */
+   neither moves the layout nor blocks the headers it overlaps. Above the
+   panels (1000), below Bootstrap dropdowns and dialogs. */
 [data-show-color] body::before {
   content: "";
   position: fixed;
@@ -84,7 +83,7 @@
   height: 4px;
   background: var(--show-band);
   pointer-events: none;
-  z-index: 1025;
+  z-index: 1001;
 }
 
 /* (b) Panel headers and tab strips: 30% of the usual header, 70% tint */
@@ -104,10 +103,12 @@
   box-shadow: inset 0 -2px 0 var(--show-tab-accent);
 }
 
-/* (d) Show name as a pill; the unsaved dot after it keeps the header text color */
+/* (d) Show name as a pill; the unsaved dot after it keeps the header text color.
+   The padding is added to index.css's 16ch so colored names truncate at the same length. */
 [data-show-color] #show-name {
   background-color: var(--show-chip-bg);
   color: var(--show-chip-fg);
   padding: 0 8px;
+  max-width: calc(16ch + 16px);
   border-radius: 999px;
 }
