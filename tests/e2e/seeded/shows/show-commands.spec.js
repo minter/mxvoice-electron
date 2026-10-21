@@ -96,7 +96,7 @@ test.describe('Shows - menu commands', () => {
 
     await clickShowMenu(app, 'Save "Main Show"…');
     await answerConfirm(page, 'Save "Main Show"?', 'Save', {
-      message: '"Main Show" will open with the layout on screen now. Its saved layout will be replaced.'
+      message: 'This replaces the saved version of "Main Show" with the layout on screen now.'
     });
 
     await expect.poll(() => f1Of(activeShow(readShows(userDataDir, PROFILE)))).toBe('1001');

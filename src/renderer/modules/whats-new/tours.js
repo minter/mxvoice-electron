@@ -46,11 +46,11 @@ export default {
         },
         {
           title: "See What You've Played",
-          description: "A ▶ count appears next to any track you've played tonight, in the hotkeys, the holding tank and search results. Shows → Reset Played clears them; right-click a song and choose Mark as Unplayed to clear just that one.",
+          description: "A ▶ count appears next to any track you've played tonight, in the hotkeys, the holding tank and search results. Right-click a song and choose Mark as Unplayed to clear just that one, or use Songs → Mark All Songs as Unplayed to clear them all.",
         },
         {
           title: "Copy Someone's Show",
-          description: 'Shows → Import Show copies a saved show from another profile on this computer. Your copy is yours to change.',
+          description: 'Shows → Import Show from Another Profile copies a saved show from another profile on this computer. Your copy is yours to change.',
         },
         {
           element: '#hotkey_tabs .tab-actions-btn',

@@ -4,7 +4,7 @@ import path from 'path';
 import { launchSeededApp, waitForAppReady } from '../../../utils/seeded-launch.js';
 import { crashApp, relaunchApp, waitForShowSettled } from '../../../utils/relaunch.js';
 import { seedShows } from '../../../utils/seed-shows.js';
-import { SHOW_IDS, clickShowMenu, quitApp, waitForShowMenuReady } from '../../../utils/show-e2e.js';
+import { SHOW_IDS, clickAppMenu, clickShowMenu, quitApp, waitForShowMenuReady } from '../../../utils/show-e2e.js';
 
 // Seeded songs: 1001 Got The Time, 1002 The Wheel, 1003, 1004 We Are Family (0:07), 1005 Eat It (0:06).
 const PROFILE = 'Default User';
@@ -58,8 +58,8 @@ async function search(page, term) {
 
 async function resetPlayedEnabled(app) {
   return app.evaluate(({ Menu }) => {
-    const shows = Menu.getApplicationMenu()?.items.find((item) => item.label === 'Shows');
-    return shows?.submenu?.items.find((item) => item.label === 'Reset Played')?.enabled ?? null;
+    const songs = Menu.getApplicationMenu()?.items.find((item) => item.label === 'Songs');
+    return songs?.submenu?.items.find((item) => item.label === 'Mark All Songs as Unplayed')?.enabled ?? null;
   });
 }
 
@@ -108,7 +108,7 @@ test.describe('Shows - played counts', () => {
     if (suiteRoot) fs.rmSync(suiteRoot, { recursive: true, force: true });
   });
 
-  test('a play shows ▶ n wherever the song appears; unplay, show switch and Reset Played', async () => {
+  test('a play shows ▶ n wherever the song appears; unplay, show switch and Mark All Songs as Unplayed', async () => {
     await launch();
     await expect(page.locator('.played-pill')).toHaveCount(0);
     expect(await resetPlayedEnabled(app)).toBe(false);
@@ -172,8 +172,8 @@ test.describe('Shows - played counts', () => {
     await expect(hotkeyPill(page, 2)).toHaveAttribute('data-count', '1');
     expect(await resetPlayedEnabled(app)).toBe(true);
 
-    // Reset Played clears them all, without asking
-    await clickShowMenu(app, 'Reset Played');
+    // Songs → Mark All Songs as Unplayed clears them all, without asking
+    await clickAppMenu(app, 'Songs', 'Mark All Songs as Unplayed');
     await expect(page.locator('.played-pill')).toHaveCount(0);
     await expect(page.locator('.modal.show')).toHaveCount(0);
     await expect.poll(() => resetPlayedEnabled(app)).toBe(false);

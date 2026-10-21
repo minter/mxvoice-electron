@@ -116,10 +116,10 @@ test.describe('Native menu wiring', () => {
     const commands = [
       ['Manage Categories…', '#categoryManagementModal'],
       ['Preferences', '#preferencesModal'],
-      ['New Profile...', '#newProfileModal'],
-      ['Duplicate Profile...', '#duplicateProfileModal'],
-      ['Restore from Backup...', '#backupRestoreModal'],
-      ['Backup Settings...', '#backupSettingsModal']
+      ['New Profile…', '#newProfileModal'],
+      ['Duplicate Profile…', '#duplicateProfileModal'],
+      ['Restore from Backup…', '#backupRestoreModal'],
+      ['Backup Settings…', '#backupSettingsModal']
     ];
 
     for (const [label, selector] of commands) {
@@ -151,10 +151,10 @@ test.describe('Native menu wiring', () => {
       };
     });
 
-    await triggerMenuItem('Switch Profile...');
+    await triggerMenuItem('Switch Profile…');
     await triggerMenuItem('Create Backup Now');
-    await triggerMenuItem('Export Library...');
-    await triggerMenuItem('Import Library...');
+    await triggerMenuItem('Export Library…');
+    await triggerMenuItem('Import Library…');
 
     await expect.poll(() => page.evaluate(() => window.__nativeMenuCalls)).toEqual({
       switchProfile: 1,
@@ -164,7 +164,7 @@ test.describe('Native menu wiring', () => {
     });
 
     expect(await findMenuItem('Log Out')).toEqual({ found: true, enabled: false });
-    expect(await findMenuItem('Delete Current Profile...')).toEqual({ found: true, enabled: false });
+    expect(await findMenuItem('Delete Current Profile…')).toEqual({ found: true, enabled: false });
   });
 
   test('Shows menu replaces Hotkeys and Start a New Session', async () => {

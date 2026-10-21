@@ -180,7 +180,7 @@ const handlers = {
     const doc = await readyDoc(deps);
     const { name } = findShow(doc, doc.activeShowId);
     const confirmed = await deps.confirm(
-      `"${name}" will open with the layout on screen now. Its saved layout will be replaced.`,
+      `This replaces the saved version of "${name}" with the layout on screen now.`,
       `Save "${name}"?`,
       { confirmLabel: 'Save' }
     );
@@ -251,7 +251,7 @@ const handlers = {
     return ['show_color_set', { color: color ?? 'none' }];
   },
 
-  // Shows → Reset Played: the counts are only a reminder, so nothing asks first
+  // Songs → Mark All Songs as Unplayed: the counts are only a reminder, so nothing asks first
   async 'reset-played'(_showId, deps) {
     deps.playedCounts.clearAll();
     return ['played_reset'];

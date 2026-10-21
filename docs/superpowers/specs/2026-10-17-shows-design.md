@@ -142,12 +142,15 @@ The menu contains:
 - The profile's shows, with a check on the active one. Choosing one switches shows.
 - A separator
 - Save "Comedy Sports"…
-- Save As...
+- Save As…
 - Revert to Saved…
-- Rename "Comedy Sports"...
-- Delete "Comedy Sports"...
+- A separator
+- Rename "Comedy Sports"…
 - Color, a submenu: None, Teal, Blue, Purple, Pink, Coral, Amber, Green, with a check on the current show's color
-- A separator, then Import Show...
+- Delete "Comedy Sports"…, last in its group because it is the destructive one
+- A separator, then Import Show from Another Profile…
+
+The first group keeps the show; the second changes the show itself. Import names where the show comes from, so nobody looks for a file. Played counts are not in this menu: they belong to the songs and carry across show switches, so their reset is in the Songs menu.
 
 Save and Save As are the words people already know for keeping their work, so the menu uses them. What keeps the night from becoming a document is the rest of the design: a clean exit never asks, and the saved show comes back next time.
 
@@ -167,9 +170,9 @@ The color appears in three places only, in light and dark mode: the window backg
 
 A sound operator needs to see which tracks have already been played tonight without taking them off the panels; some drops are played again and again. Each song has a played count for the night. It goes up by one the moment playback starts, from any source: a hotkey (F-key, double-click or the context menu's Play), the holding tank, search, autoplay or a playlist advance and its crossfade, and the play button. Finishing, pausing, resuming or stopping does not count, and a song that fails to load does not count. Counts are per song, not per slot, so a song on F1 and in the holding tank shows the same count in both.
 
-A song played at least once shows a small muted pill, ▶ and the count, after its name in a hotkey slot, at the right end of its holding tank row, and at the end of its Title cell in search results. The pill never dims a row and never changes F-key badges, now-playing or selection styling. It stays visible when a hotkey name is cut off with an ellipsis. Its styles live in their own stylesheet (`played-counts.css`), with the two colors in `colors.css`.
+A song played at least once shows a small muted pill, ▶ and the count, after its name in a hotkey slot, after its title in a holding tank row, and at the end of its Title cell in search results. The pill never dims a row and never changes F-key badges, now-playing or selection styling. It stays visible when a hotkey name is cut off with an ellipsis. Its styles live in their own stylesheet (`played-counts.css`), with the two colors in `colors.css`.
 
-The counts belong to the profile's session, not to a show. They start empty whenever a profile opens, and they carry across show switches, Revert, Import and Save. They are not part of the show document, and they never affect the unsaved-changes dot or the comparison with the saved show. **Shows → Reset Played**, after Revert to Saved, clears them all without asking; it is enabled when the show is ready and any song has been played. **Mark as Unplayed** in a song's right-click menu (search result, holding tank row or hotkey slot) clears that one song, and is shown only for a song played tonight.
+The counts belong to the profile's session, not to a show. They start empty whenever a profile opens, and they carry across show switches, Revert, Import and Save. They are not part of the show document, and they never affect the unsaved-changes dot or the comparison with the saved show. **Songs → Mark All Songs as Unplayed** clears them all without asking; it is enabled when the show is ready and any song has been played. **Mark as Unplayed** in a song's right-click menu (search result, holding tank row or hotkey slot) clears that one song, and is shown only for a song played tonight.
 
 For crash safety the counts are written, on every change, to `userData/recovery/<key>.played.json` beside the recovery copy, with the same profile, fence and queue rules. A clean exit, a profile switch and the other exits in the table below retire it wherever they retire the recovery copy, and a library import clears it with the rest. Retiring the recovery copy because the layout matches the saved show leaves it alone. A played file counts as a show in progress: after a crash with counts but no layout change, the next open asks as usual; Restore brings back the counts (with the saved show, or with the recovery copy when there is one), and Open saved show clears them. An update install or a window crash restores them silently, like the layout.
 

@@ -16,7 +16,21 @@ function escapeLabel(name, platform) {
 }
 
 /**
- * @param {Object} state - { status, activeShow, shows, dirty, hasPlayed } from the show session
+ * Mark All Songs as Unplayed, for the Songs menu: played counts belong to
+ * the songs, not the show, and carry across show switches.
+ * @param {Object} state - { status, hasPlayed } from the show session
+ */
+function buildUnplayedItem(state, { send } = {}) {
+  return {
+    label: 'Mark All Songs as Unplayed',
+    // Clears every played count at once, without asking: they are only a reminder
+    enabled: state?.status === 'ready' && !!state?.hasPlayed,
+    click: () => send?.('reset-played')
+  };
+}
+
+/**
+ * @param {Object} state - { status, activeShow, shows, dirty } from the show session
  * @param {Object} [options]
  * @param {Function} [options.rebuild] - rebuilds the application menu from the session
  * @param {Function} [options.swatchImage] - (colorKey|null) => NativeImage for the Color items
@@ -58,14 +72,13 @@ function buildShowMenu(state, { platform, send, rebuild, swatchImage } = {}) {
       { label: `${quoted('Save')}…`, enabled: hasActive && !!state?.dirty, click: emit('save') },
       { label: 'Save As…', enabled: ready, click: emit('save-as') },
       { label: 'Revert to Saved…', enabled: ready && !!state?.dirty, click: emit('revert') },
-      // Clears every played count at once, without asking: they are only a reminder
-      { label: 'Reset Played', enabled: ready && !!state?.hasPlayed, click: emit('reset-played') },
-      // Both act on the show on screen; the renderer reads it from the session
-      { label: `${quoted('Rename')}…`, enabled: hasActive, click: emit('rename') },
-      { label: `${quoted('Delete')}…`, enabled: hasActive, click: emit('delete') },
-      buildColorMenu(activeShow, { enabled: hasActive, send, rebuild, swatchImage }),
       { type: 'separator' },
-      { label: 'Import Show…', enabled: ready, click: emit('import') }
+      // These act on the show on screen; the renderer reads it from the session. Delete goes last.
+      { label: `${quoted('Rename')}…`, enabled: hasActive, click: emit('rename') },
+      buildColorMenu(activeShow, { enabled: hasActive, send, rebuild, swatchImage }),
+      { label: `${quoted('Delete')}…`, enabled: hasActive, click: emit('delete') },
+      { type: 'separator' },
+      { label: 'Import Show from Another Profile…', enabled: ready, click: emit('import') }
     ]
   };
 }
@@ -93,5 +106,5 @@ function buildColorMenu(activeShow, { enabled, send, rebuild, swatchImage }) {
   };
 }
 
-export { buildShowMenu };
+export { buildShowMenu, buildUnplayedItem };
 export default buildShowMenu;

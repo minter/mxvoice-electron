@@ -1,4 +1,4 @@
-import { buildShowMenu } from './show-menu.js';
+import { buildShowMenu, buildUnplayedItem } from './show-menu.js';
 
 function buildApplicationMenu({
   app,
@@ -20,12 +20,13 @@ function buildApplicationMenu({
       mainWindow.webContents.send('menu:show-command', { command, showId, ...extra });
     }
   };
+  const showMenuState = getShowMenuState ? getShowMenuState() : { status: 'idle', activeShow: null, shows: [] };
   const application_menu = [
     {
       label: "File",
       submenu: [
         {
-          label: "Export Library...",
+          label: "Export Library…",
           click: () => {
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu:export-library');
@@ -33,7 +34,7 @@ function buildApplicationMenu({
           },
         },
         {
-          label: "Import Library...",
+          label: "Import Library…",
           click: () => {
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu:import-library');
@@ -133,6 +134,7 @@ function buildApplicationMenu({
             rendererCommands.deleteSelectedSong();
           },
         },
+        buildUnplayedItem(showMenuState, { send: showSend }),
         { type: 'separator' },
         {
           label: "Manage Categories…",
@@ -143,14 +145,14 @@ function buildApplicationMenu({
       ],
     },
     buildShowMenu(
-      getShowMenuState ? getShowMenuState() : { status: 'idle', activeShow: null, shows: [] },
+      showMenuState,
       { platform: process.platform, send: showSend, rebuild: rebuildMenu, swatchImage }
     ),
     {
       label: "Profile",
       submenu: [
         {
-          label: "Switch Profile...",
+          label: "Switch Profile…",
           click: async () => {
             // Send message to renderer to handle profile switch with state save
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -170,7 +172,7 @@ function buildApplicationMenu({
         },
         { type: "separator" },
         {
-          label: "New Profile...",
+          label: "New Profile…",
           click: () => {
             // Send message to renderer to handle new profile creation
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -179,7 +181,7 @@ function buildApplicationMenu({
           },
         },
         {
-          label: "Duplicate Profile...",
+          label: "Duplicate Profile…",
           click: () => {
             // Send message to renderer to handle profile duplication
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -189,7 +191,7 @@ function buildApplicationMenu({
         },
         { type: "separator" },
         {
-          label: "Delete Current Profile...",
+          label: "Delete Current Profile…",
           enabled: getCurrentProfile ? getCurrentProfile() !== 'Default User' : true,
           click: () => {
             // Send message to renderer to handle current profile deletion
@@ -209,7 +211,7 @@ function buildApplicationMenu({
           },
         },
         {
-          label: "Restore from Backup...",
+          label: "Restore from Backup…",
           click: () => {
             // Send message to renderer to handle backup restore
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -218,7 +220,7 @@ function buildApplicationMenu({
           },
         },
         {
-          label: "Backup Settings...",
+          label: "Backup Settings…",
           click: () => {
             // Send message to renderer to handle backup settings
             if (mainWindow && !mainWindow.isDestroyed()) {

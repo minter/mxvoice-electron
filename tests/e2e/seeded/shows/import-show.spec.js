@@ -57,7 +57,7 @@ test.describe('Shows - Import Show', () => {
   }
 
   async function openImportDialog() {
-    await clickShowMenu(app, 'Import Show…');
+    await clickShowMenu(app, 'Import Show from Another Profile…');
     const dialog = page.locator('#importShowModal');
     await expect(dialog).toBeVisible({ timeout: 10000 });
     return dialog;

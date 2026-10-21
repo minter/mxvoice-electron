@@ -62,7 +62,7 @@ describe('runShowCommand', () => {
     await runShowCommand({ command: 'save' }, deps);
     expect(deps.confirm).toHaveBeenCalledOnce();
     expect(deps.confirm).toHaveBeenCalledWith(
-      '"Main Show" will open with the layout on screen now. Its saved layout will be replaced.',
+      'This replaces the saved version of "Main Show" with the layout on screen now.',
       'Save "Main Show"?',
       { confirmLabel: 'Save' }
     );

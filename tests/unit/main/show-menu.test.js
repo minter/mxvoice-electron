@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildShowMenu } from '../../../src/main/modules/show-menu.js';
+import { buildShowMenu, buildUnplayedItem } from '../../../src/main/modules/show-menu.js';
 
 const shows = [
   { id: 'b1', name: 'Comedy Sports' },
@@ -34,9 +34,9 @@ describe('Shows menu', () => {
   it('uses the specified items in order', () => {
     const { menu } = build(readyState());
     expect(labels(menu)).toEqual([
-      'Comedy Sports', 'Mom & Pop', '---', 'Save "Comedy Sports"…', 'Save As…',
-      'Revert to Saved…', 'Reset Played', 'Rename "Comedy Sports"…', 'Delete "Comedy Sports"…', 'Color', '---',
-      'Import Show…'
+      'Comedy Sports', 'Mom & Pop', '---', 'Save "Comedy Sports"…', 'Save As…', 'Revert to Saved…', '---',
+      'Rename "Comedy Sports"…', 'Color', 'Delete "Comedy Sports"…', '---',
+      'Import Show from Another Profile…'
     ]);
     // Color is the only nested menu
     walk(menu.submenu, (item) => expect(item.submenu, item.label).toBe(item.label === 'Color' ? item.submenu : undefined));
@@ -67,15 +67,21 @@ describe('Shows menu', () => {
     expect(revert({ ...readyState(), status: 'loading' })).toBe(false);
   });
 
-  it('enables Reset Played only when ready with any played count, and sends reset-played', () => {
-    const reset = (state) => find(build(state).menu, 'Reset Played');
-    expect(reset({ ...readyState(), hasPlayed: true }).enabled).toBe(true);
-    expect(reset(readyState()).enabled).toBe(false);
-    expect(reset({ ...readyState(), hasPlayed: false }).enabled).toBe(false);
-    expect(reset({ ...readyState(), hasPlayed: true, status: 'loading' }).enabled).toBe(false);
-    const { menu, send } = build({ ...readyState(), hasPlayed: true });
-    find(menu, 'Reset Played').click();
-    expect(send).toHaveBeenCalledWith('reset-played', undefined);
+  it('has no played-count item: Mark All Songs as Unplayed is in the Songs menu', () => {
+    const { menu } = build({ ...readyState(), hasPlayed: true });
+    walk(menu.submenu, (item) => expect(item.label ?? '').not.toMatch(/Played|Unplayed/));
+  });
+
+  it('Mark All Songs as Unplayed is enabled only when ready with any played count, and sends reset-played', () => {
+    const item = (state, send) => buildUnplayedItem(state, { send });
+    expect(item({ ...readyState(), hasPlayed: true })).toMatchObject({ label: 'Mark All Songs as Unplayed', enabled: true });
+    expect(item(readyState()).enabled).toBe(false);
+    expect(item({ ...readyState(), hasPlayed: false }).enabled).toBe(false);
+    expect(item({ ...readyState(), hasPlayed: true, status: 'loading' }).enabled).toBe(false);
+    expect(item(undefined).enabled).toBe(false);
+    const send = vi.fn();
+    item({ ...readyState(), hasPlayed: true }, send).click();
+    expect(send).toHaveBeenCalledWith('reset-played');
   });
 
   it('sends switch with a show id and every other command without one', () => {
@@ -86,7 +92,7 @@ describe('Shows menu', () => {
     find(menu, 'Revert to Saved…').click();
     find(menu, 'Rename "Comedy Sports"…').click();
     find(menu, 'Delete "Comedy Sports"…').click();
-    find(menu, 'Import Show…').click();
+    find(menu, 'Import Show from Another Profile…').click();
     expect(send.mock.calls).toEqual([
       ['switch', 'b2'], ['save', undefined], ['save-as', undefined], ['revert', undefined],
       ['rename', undefined], ['delete', undefined], ['import', undefined]
@@ -183,8 +189,8 @@ describe('Shows menu', () => {
   it('renders nameless disabled items and no shows without a session', () => {
     const { menu } = build({ status: 'idle', activeShow: null, shows: [] });
     expect(labels(menu)).toEqual([
-      '---', 'Save…', 'Save As…', 'Revert to Saved…', 'Reset Played', 'Rename…', 'Delete…', 'Color', '---',
-      'Import Show…'
+      '---', 'Save…', 'Save As…', 'Revert to Saved…', '---', 'Rename…', 'Color', 'Delete…', '---',
+      'Import Show from Another Profile…'
     ]);
     expect(find(menu, 'Save…').enabled).toBe(false);
     expect(find(menu, 'Rename…').enabled).toBe(false);

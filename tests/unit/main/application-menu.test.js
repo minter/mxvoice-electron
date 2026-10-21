@@ -79,7 +79,7 @@ describe('application menu', () => {
       mainWindow: { isDestroyed: () => false, webContents: { send } },
       fileOperations: {}, getCurrentProfile: () => 'Default User', showAboutDialog: vi.fn(),
       debugLog: { warn: vi.fn() }, logService: {}, rendererCommands: {},
-      getShowMenuState: () => ({ status: 'ready', activeShow: { id: 'b1', name: 'A' }, shows: [{ id: 'b1', name: 'A' }, { id: 'b2', name: 'B' }] }),
+      getShowMenuState: () => ({ status: 'ready', activeShow: { id: 'b1', name: 'A' }, shows: [{ id: 'b1', name: 'A' }, { id: 'b2', name: 'B' }], hasPlayed: true }),
       rebuildMenu,
       swatchImage: (key) => `swatch:${key}`
     });
@@ -92,6 +92,22 @@ describe('application menu', () => {
     expect(teal.icon).toBe('swatch:teal');
     teal.click();
     expect(send).toHaveBeenLastCalledWith('menu:show-command', { command: 'set-color', showId: null, color: 'teal' });
+    // Played counts are the songs', so their reset is in the Songs menu, after the song items
+    const songs = template.find((m) => m.label === 'Songs').submenu;
+    const unplayed = songs.find((i) => i.label === 'Mark All Songs as Unplayed');
+    expect(songs.indexOf(unplayed)).toBe(songs.findIndex((i) => i.label === 'Delete Selected Song') + 1);
+    expect(unplayed.enabled).toBe(true);
+    unplayed.click();
+    expect(send).toHaveBeenLastCalledWith('menu:show-command', { command: 'reset-played', showId: undefined });
+  });
+
+  it('writes the ellipsis as one character in every menu label', () => {
+    const { template } = buildHarness();
+    const labels = [];
+    const walk = (items) => items.forEach((i) => { if (i.label) labels.push(i.label); if (i.submenu) walk(i.submenu); });
+    walk(template);
+    expect(labels.filter((label) => label.includes('...'))).toEqual([]);
+    expect(labels).toEqual(expect.arrayContaining(['Export Library…', 'Switch Profile…', 'Backup Settings…']));
   });
 
   it('has no top-level Categories menu and puts Manage Categories at the end of Songs', () => {
@@ -108,6 +124,6 @@ describe('application menu', () => {
   it('disables destructive actions for the default profile', () => {
     const { template } = buildHarness();
     const profileMenu = template.find((menu) => menu.label === 'Profile');
-    expect(profileMenu.submenu.find((item) => item.label === 'Delete Current Profile...').enabled).toBe(false);
+    expect(profileMenu.submenu.find((item) => item.label === 'Delete Current Profile…').enabled).toBe(false);
   });
 });
