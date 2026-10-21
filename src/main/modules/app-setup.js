@@ -80,6 +80,20 @@ function initializeAppSetup(dependencies) {
 }
 
 /**
+ * Detail line of the window-close Quit confirmation. Quitting never saves the
+ * show, so say so when the show on screen has unsaved changes.
+ * @param {string} appName
+ * @param {{ dirty?: boolean, doc?: object }} [state] - show session state
+ * @returns {string}
+ */
+function quitDetail(appName, state) {
+  const base = `Closing the window quits ${appName}. Anything playing will stop`;
+  if (!state?.dirty) return `${base}.`;
+  const active = state.doc?.shows?.find((b) => b.id === state.doc?.activeShowId);
+  return `${base}, and changes to "${active?.name ?? 'the show'}" since it was last saved won't be kept.`;
+}
+
+/**
  * Closing the main window quits the app (all platforms), so ask first: a
  * stray click on the close button mid-show would otherwise stop the audio and
  * exit. Cmd-Q and File > Quit are explicit and don't ask.
@@ -99,7 +113,7 @@ async function confirmQuitOnWindowClose(window) {
     defaultId: 1,
     cancelId: 1,
     message: `Quit ${app.name}?`,
-    detail: `Closing the window quits ${app.name}. Anything playing will stop.`
+    detail: quitDetail(app.name, showSession?.state?.())
   });
   return response === 0;
 }
@@ -447,6 +461,7 @@ function setupAppLifecycle() {
 }
 
 export {
+  quitDetail,
   initializeAppSetup,
   createWindow,
   createApplicationMenu,

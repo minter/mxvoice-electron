@@ -22,11 +22,11 @@ export default {
         },
         {
           title: 'Closing the Window Asks First',
-          description: 'Closing the main window quits Mx. Voice, so it now asks first: a stray click mid-show can\'t stop the music. Choosing Quit from the menu still quits right away.',
+          description: 'Closing the main window quits Mx. Voice, so it now asks first: a stray click mid-show can\'t stop the music. Quit (Exit on Windows) in the menu still quits right away.',
         },
         {
           title: 'Your Layout Is Now a Show',
-          description: 'The hotkeys and holding tank you had are saved as a show named Default Show. Quitting puts it back next time. From now on, changes made during a show are kept only if you Save the show or use Save As to make a new one.',
+          description: 'The hotkeys and holding tank you had are saved as a show named Default Show. Quitting or switching profiles doesn\'t save the show. Next time, it opens as you last saved it. From now on, changes made during a show are kept only if you Save the show or use Save As to make a new one.',
         },
         {
           title: 'The Shows Menu',
