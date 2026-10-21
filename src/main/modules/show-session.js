@@ -129,6 +129,9 @@ export function createShowSession({
   // clean exit or switch must keep it
   let handedOff = false;
   let pendingHandoff = null;
+  // What the last handoff marked, so cancelHandoff() unmarks only that: a
+  // record from an earlier crash, still at the prompt, keeps its own mark
+  let handoffMarks = { layout: false, played: false };
   // Set once end() has run for this session; cleared by the next open()
   let ended = false;
   // The record reported by open(), until resolveRecovery() settles it
@@ -436,12 +439,37 @@ export function createShowSession({
     // Before ready the record isn't this session's: it's an earlier crash
     // still waiting at the prompt, and the never-ready rule keeps it as is
     const markLayout = status === 'ready';
+    handoffMarks = { layout: markLayout, played: markPlayed };
     if (!markPlayed && !markLayout) return;
     // Queued, so a mutation's retire can't land between its read and write
     // and have the old record written back
     await queued(async () => {
       if (markLayout) await recoveryStore.markHandoff(p, reason);
       if (markPlayed) await recoveryStore.writePlayed(p, playedCounts(), { handoff: reason });
+    });
+  }
+
+  /**
+   * An update install that never quit: the session is this process's again.
+   * Lowers the handoff's fence and clears the marks it left, so recovery
+   * writes, Save, plays and a later clean exit behave as if it never ran.
+   * A mutation still running keeps its own fence; it lowers it as it ends.
+   */
+  async function cancelHandoff() {
+    if (!profile || ended || !handedOff) return;
+    const p = profile;
+    const mySeq = openSeq;
+    const marks = handoffMarks;
+    handedOff = false;
+    handoffMarks = { layout: false, played: false };
+    if (!mutating) fenced = false;
+    if (!marks.layout && !marks.played) return;
+    await queued(async () => {
+      // A newer open() reset the session itself; its records aren't ours
+      if (mySeq !== openSeq) return;
+      if (marks.layout) await recoveryStore.clearHandoff(p);
+      // The counts as they are now: plays are counted again from here
+      if (marks.played && played.size > 0) await recoveryStore.writePlayed(p, playedCounts());
     });
   }
 
@@ -733,6 +761,7 @@ export function createShowSession({
     saveRecovery,
     end,
     handoff,
+    cancelHandoff,
     rendererGone,
     recordPlay,
     clearPlayed,

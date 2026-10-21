@@ -717,10 +717,39 @@ let showSession = null;
 // Offers to reload the main window's page after it dies; created at app ready
 let rendererGoneHandler = null;
 
-// Install a downloaded update: save state and hand the show session off first
+const UPDATE_NOT_INSTALLED_MESSAGE = "The update couldn't be installed. Mx. Voice will keep running; try again from the menu later.";
+
+/** Tell the user an update install didn't quit; the show keeps running. */
+function notifyUpdateNotInstalled() {
+  if (process.env.APP_TEST_MODE === '1') {
+    // E2E seam: no native dialog. Tests read the count and the message.
+    globalThis.__e2eUpdateNotInstalled = (globalThis.__e2eUpdateNotInstalled || 0) + 1;
+    globalThis.__e2eUpdateNotInstalledMessage = UPDATE_NOT_INSTALLED_MESSAGE;
+    return;
+  }
+  const options = { type: 'warning', buttons: ['OK'], message: UPDATE_NOT_INSTALLED_MESSAGE };
+  const parent = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+  const shown = parent ? dialog.showMessageBox(parent, options) : dialog.showMessageBox(options);
+  shown.catch((error) => {
+    debugLog.warn('Could not show the update-not-installed message', { function: 'notifyUpdateNotInstalled', error: error.message });
+  });
+}
+
+// Install a downloaded update: save state and hand the show session off
+// first. One that doesn't quit gives the session back and says so.
 const installUpdateNow = createUpdateInstaller({
   prepareForUpdateInstall: () => appSetup.prepareForUpdateInstall(),
   getAutoUpdater: () => autoUpdater,
+  cancelHandoff: async () => {
+    // before-quit-for-update may have fired: closes must ask and save again
+    appSetup.requireCloseConfirmation();
+    await showSession?.cancelHandoff();
+  },
+  onQuitStarted: (listener) => {
+    app.on('before-quit', listener);
+    return () => app.removeListener('before-quit', listener);
+  },
+  notifyInstallFailed: notifyUpdateNotInstalled,
   debugLog
 });
 

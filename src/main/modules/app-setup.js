@@ -432,6 +432,11 @@ function allowUnconfirmedClose() {
   windowStateManager?.allowUnconfirmedClose();
 }
 
+/** An update install didn't quit after all: closes ask "Quit?" again */
+function requireCloseConfirmation() {
+  windowStateManager?.requireCloseConfirmation();
+}
+
 // Setup app lifecycle events. Call after initializeAppSetup(): before it
 // there is no lifecycle to set up, and the call would silently do nothing.
 function setupAppLifecycle() {
@@ -458,6 +463,7 @@ export {
   prepareMainWindowForClose,
   prepareForUpdateInstall,
   allowUnconfirmedClose,
+  requireCloseConfirmation,
   suppressWindowStateSaves,
   saveWindowState,
   loadWindowState
@@ -481,6 +487,7 @@ export default {
   prepareMainWindowForClose,
   prepareForUpdateInstall,
   allowUnconfirmedClose,
+  requireCloseConfirmation,
   suppressWindowStateSaves,
   saveWindowState,
   loadWindowState

@@ -1754,3 +1754,86 @@ describe('show session played counts', () => {
     await expect(ctx.session.clearPlayed('1x')).rejects.toThrow('Invalid song id');
   });
 });
+
+describe('show session cancelHandoff', () => {
+  async function readyWithPlays(ctx) {
+    const opened = await ctx.session.open();
+    await ctx.session.resolveRecovery('discard');
+    ctx.session.reportReady(opened.generation, true);
+    await ctx.session.saveRecovery(layoutWith(9));
+    await ctx.session.recordPlay('12');
+    return opened;
+  }
+
+  it('cancelHandoff after handoff(\'update\') re-enables saveRecovery, Save and recordPlay', async () => {
+    const ctx = setup();
+    await readyWithPlays(ctx);
+    await ctx.session.handoff('update');
+    expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ handoff: 'update' });
+    expect(ctx.recoveryStore.played.get('Alice')).toMatchObject({ handoff: 'update' });
+    await expect(ctx.session.saveRecovery(layoutWith(8))).resolves.toMatchObject({ skipped: true });
+    await expect(ctx.session.recordPlay('12')).resolves.toEqual({ skipped: true });
+
+    await ctx.session.cancelHandoff();
+
+    // The marks are gone from both files, the layout and counts kept
+    const record = ctx.recoveryStore.records.get('Alice');
+    expect(record).toMatchObject({ handoff: null, layout: layoutWith(9) });
+    expect(record).not.toHaveProperty('handoffAt');
+    const played = ctx.recoveryStore.played.get('Alice');
+    expect(played).toMatchObject({ handoff: null, counts: { 12: 1 } });
+    expect(played).not.toHaveProperty('handoffAt');
+
+    await expect(ctx.session.saveRecovery(layoutWith(8))).resolves.toEqual({ dirty: true });
+    expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ handoff: null, layout: layoutWith(8) });
+    await expect(ctx.session.recordPlay('12')).resolves.toEqual({ count: 2 });
+    expect(ctx.recoveryStore.played.get('Alice').counts).toEqual({ 12: 2 });
+    await ctx.session.updateActive(layoutWith(8));
+    expect(ctx.showStore.save).toHaveBeenCalledTimes(1);
+    expect(ctx.session.state().dirty).toBe(false);
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+  });
+
+  it('a clean exit after cancelHandoff retires the record', async () => {
+    const ctx = setup();
+    await readyWithPlays(ctx);
+    await ctx.session.handoff('update');
+    await ctx.session.cancelHandoff();
+
+    await ctx.session.end('clean-exit');
+
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+    expect(ctx.recoveryStore.played.has('Alice')).toBe(false);
+  });
+
+  it('cancelHandoff without a handoff, or after end(), touches nothing', async () => {
+    const ctx = setup();
+    await readyWithPlays(ctx);
+    await ctx.session.cancelHandoff();
+    expect(ctx.recoveryStore.clearHandoff).not.toHaveBeenCalled();
+
+    await ctx.session.handoff('update');
+    await ctx.session.end('clean-exit');
+    const writes = ctx.recoveryStore.writePlayed.mock.calls.length;
+    await ctx.session.cancelHandoff();
+    expect(ctx.recoveryStore.clearHandoff).not.toHaveBeenCalled();
+    expect(ctx.recoveryStore.writePlayed).toHaveBeenCalledTimes(writes);
+    // The handed-off record stays for the next launch
+    expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ handoff: 'update' });
+  });
+
+  it('cancelHandoff before ready leaves an earlier crash\'s mark and lets the prompt settle it', async () => {
+    const ctx = setup();
+    const crash = { version: 1, showId: 'show-1', savedAt: T0, handoff: 'renderer-crash', handoffAt: T0, layout: layoutWith(9) };
+    ctx.recoveryStore.records.set('Alice', crash);
+    await ctx.session.open();
+    await ctx.session.handoff('update');
+    await ctx.session.cancelHandoff();
+
+    expect(ctx.recoveryStore.clearHandoff).not.toHaveBeenCalled();
+    expect(ctx.recoveryStore.records.get('Alice')).toEqual(crash);
+    // Not handed off any more: quitting at the prompt keeps the record as never-ready
+    await ctx.session.end('clean-exit');
+    expect(ctx.recoveryStore.records.get('Alice')).toEqual(crash);
+  });
+});

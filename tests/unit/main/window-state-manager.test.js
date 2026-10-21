@@ -185,6 +185,30 @@ describe('window state manager', () => {
     expect(event.preventDefault).not.toHaveBeenCalled();
   });
 
+  it('an update install that did not quit asks again on the next close', async () => {
+    const handlers = {};
+    const window = {
+      id: 1,
+      isDestroyed: () => false,
+      on: (event, handler) => { handlers[event] = handler; },
+      close: vi.fn(),
+      webContents: { isDestroyed: () => false, executeJavaScript: vi.fn(async () => ({ success: true })) },
+      getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+      isMaximized: () => false,
+      isFullScreen: () => false
+    };
+    const confirmClose = vi.fn(async () => false);
+    const { manager } = createHarness({ getMainWindow: () => window, confirmClose });
+    manager.setupWindowStateSaving();
+
+    manager.allowUnconfirmedClose();
+    manager.requireCloseConfirmation();
+    const event = { preventDefault: vi.fn() };
+    await handlers.close(event);
+    expect(confirmClose).toHaveBeenCalledOnce();
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+  });
+
   it('ignores resize, maximize and fullscreen saves while another profile is being applied', async () => {
     vi.useFakeTimers();
     try {

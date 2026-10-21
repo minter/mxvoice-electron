@@ -474,6 +474,8 @@ async function loadWindowState(storeInstance = store, currentProfile = null) {
   return {
     suppressSaves,
     allowUnconfirmedClose: () => { closeWithoutConfirm = true; },
+    // An update install that announced its quit but never quit: closes ask again
+    requireCloseConfirmation: () => { closeWithoutConfirm = false; },
     loadWindowState,
     prepareMainWindowForClose,
     saveWindowState,
