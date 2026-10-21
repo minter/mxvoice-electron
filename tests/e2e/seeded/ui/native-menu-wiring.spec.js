@@ -182,7 +182,8 @@ test.describe('Native menu wiring', () => {
     expect(topLevel).not.toContain('Hotkeys');
 
     expect(await findMenuItem(showName)).toEqual({ found: true, enabled: true });
-    expect(await findMenuItem(`Save "${showName}"…`)).toEqual({ found: true, enabled: true });
+    // Nothing changed yet, so there is nothing to save or revert
+    expect(await findMenuItem(`Save "${showName}"…`)).toEqual({ found: true, enabled: false });
     expect(await findMenuItem('Revert to Saved…')).toEqual({ found: true, enabled: false });
     expect(await findMenuItem('Import Hotkey File…')).toEqual({ found: false });
     expect(await findMenuItem('Import Holding Tank File…')).toEqual({ found: false });

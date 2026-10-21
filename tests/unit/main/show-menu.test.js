@@ -51,6 +51,14 @@ describe('Shows menu', () => {
     expect(find(menu, 'Delete "Mom & Pop"…')).toBeTruthy();
   });
 
+  it('enables Save only when ready with unsaved changes', () => {
+    const save = (state) => find(build(state).menu, 'Save "Comedy Sports"…').enabled;
+    expect(save(readyState())).toBe(true);
+    expect(save({ ...readyState(), dirty: false })).toBe(false);
+    expect(save({ ...readyState(), dirty: undefined })).toBe(false);
+    expect(save({ ...readyState(), status: 'loading' })).toBe(false);
+  });
+
   it('enables Revert to Saved only when ready with unsaved changes', () => {
     const revert = (state) => find(build(state).menu, 'Revert to Saved…').enabled;
     expect(revert(readyState())).toBe(true);

@@ -54,9 +54,9 @@ function buildShowMenu(state, { platform, send, rebuild, swatchImage } = {}) {
         };
       }),
       { type: 'separator' },
-      { label: `${quoted('Save')}…`, enabled: hasActive, click: emit('save') },
+      // Save and Revert have nothing to do unless the layout on screen differs from the saved show
+      { label: `${quoted('Save')}…`, enabled: hasActive && !!state?.dirty, click: emit('save') },
       { label: 'Save As…', enabled: ready, click: emit('save-as') },
-      // Revert has nothing to discard unless the layout on screen differs from the saved show
       { label: 'Revert to Saved…', enabled: ready && !!state?.dirty, click: emit('revert') },
       // Clears every played count at once, without asking: they are only a reminder
       { label: 'Reset Played', enabled: ready && !!state?.hasPlayed, click: emit('reset-played') },
