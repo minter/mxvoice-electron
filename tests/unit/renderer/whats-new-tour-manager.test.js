@@ -579,6 +579,36 @@ describe('TourManager', () => {
 
       document.body.removeChild(el);
     });
+
+    it('marks the tour seen once shown, before it is closed', async () => {
+      // A profile switch reloads the page mid-tour; the tour never closes, so
+      // waiting for close would show it again on the next visit to this profile
+      mockGetPreference.mockResolvedValue({ success: true, value: [] });
+      const el = document.createElement('div');
+      el.id = 'some-element';
+      document.body.appendChild(el);
+
+      await manager.launchTour('4.3.0', { markSeen: true });
+
+      expect(mockDriver.drive).toHaveBeenCalled();
+      expect(mockDriver.destroy).not.toHaveBeenCalled();
+      expect(mockSetPreference).toHaveBeenCalledWith('tours_seen', ['4.3.0']);
+
+      document.body.removeChild(el);
+    });
+
+    it('does not mark the tour seen when replayed on demand', async () => {
+      const el = document.createElement('div');
+      el.id = 'some-element';
+      document.body.appendChild(el);
+
+      await manager.launchTour('4.3.0', { markSeen: false });
+      await mockDriverFactory.mock.calls.at(-1)[0].onDestroyStarted();
+
+      expect(mockSetPreference).not.toHaveBeenCalled();
+
+      document.body.removeChild(el);
+    });
   });
 });
 

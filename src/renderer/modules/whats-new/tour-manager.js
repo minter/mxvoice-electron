@@ -228,7 +228,6 @@ export class TourManager {
     const themeClass = this.getThemeClass();
 
     const onComplete = async () => {
-      if (markSeen) await this.markTourSeen(version);
       this.activeDriver = null;
       this.currentSteps = null;
     };
@@ -400,5 +399,9 @@ export class TourManager {
     }
 
     this.activeDriver.drive();
+
+    // Seen once shown, not once closed: a profile switch or quit mid-tour
+    // reloads the page without closing it, and the tour would show again
+    if (markSeen) await this.markTourSeen(version);
   }
 }
