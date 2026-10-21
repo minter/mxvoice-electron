@@ -25,6 +25,7 @@ function makeDoc(layout = layoutWith(1)) {
 /** In-memory recovery store with the real store's contract. */
 function fakeRecoveryStore(clock) {
   const records = new Map();
+  const played = new Map();
   const calls = [];
   return {
     records,
@@ -56,7 +57,21 @@ function fakeRecoveryStore(clock) {
     clearAll: vi.fn(async () => {
       calls.push(['clearAll']);
       records.clear();
+      played.clear();
     }),
+    // Played counts: their own file, so their calls are kept apart from `calls`
+    played,
+    writePlayed: vi.fn(async (profile, counts, { handoff = null } = {}) => {
+      if (Object.keys(counts).length === 0) {
+        played.delete(profile);
+        return;
+      }
+      played.set(profile, {
+        version: 1, savedAt: clock.now(), handoff, ...(handoff ? { handoffAt: clock.now() } : {}), counts: { ...counts },
+      });
+    }),
+    readPlayed: vi.fn(async (profile) => played.get(profile) ?? null),
+    retirePlayed: vi.fn(async (profile) => { played.delete(profile); }),
   };
 }
 
@@ -509,7 +524,7 @@ describe('show session', () => {
       const empty = await ctx.session.startEmpty();
       expect(empty.recovery).toEqual({ savedAt: T0 - MINUTE, handoff, showId: 'show-1' });
       // Restoring lands the show in progress on the empty show
-      await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(9) });
+      await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(9), counts: {} });
     }
 
     // Discarding retires the record and keeps the empty show
@@ -517,7 +532,7 @@ describe('show session', () => {
     discard.recoveryStore.records.set('Alice', { ...record, handoff: null });
     await discard.session.open();
     await discard.session.startEmpty();
-    await expect(discard.session.resolveRecovery('discard')).resolves.toEqual({ layout: normalizeLayout(null) });
+    await expect(discard.session.resolveRecovery('discard')).resolves.toEqual({ layout: normalizeLayout(null), counts: {} });
     expect(discard.recoveryStore.records.has('Alice')).toBe(false);
   });
 
@@ -562,7 +577,7 @@ describe('show session', () => {
       const ctx = setup();
       ctx.recoveryStore.records.set('Alice', { version: 1, showId: 'show-1', savedAt, handoff: 'update', layout: layoutWith(9) });
       await ctx.session.open();
-      await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(9) });
+      await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(9), counts: {} });
       expect(ctx.recoveryStore.records.get('Alice')).toEqual({
         version: 1, showId: 'show-1', savedAt, handoff: null, layout: layoutWith(9)
       });
@@ -599,7 +614,7 @@ describe('show session', () => {
     expect(opened.recovery.showId).toBe('deleted-show');
 
     const restored = await ctx.session.resolveRecovery('restore');
-    expect(restored).toEqual({ layout: normalizeLayout({ hotkeys: [{ tabNumber: 1, hotkeys: { f2: '7' } }] }) });
+    expect(restored).toEqual({ layout: normalizeLayout({ hotkeys: [{ tabNumber: 1, hotkeys: { f2: '7' } }] }), counts: {} });
     expect(ctx.recoveryStore.records.has('Alice')).toBe(true);
 
     // Later writes from the restored session go to the active show
@@ -614,12 +629,12 @@ describe('show session', () => {
     await ctx.session.open();
 
     await expect(ctx.session.resolveRecovery('bogus')).rejects.toThrow('Invalid recovery choice');
-    await expect(ctx.session.resolveRecovery('discard')).resolves.toEqual({ layout: layoutWith(1) });
+    await expect(ctx.session.resolveRecovery('discard')).resolves.toEqual({ layout: layoutWith(1), counts: {} });
     expect(ctx.recoveryStore.retire).toHaveBeenCalledWith('Alice');
 
     // Nothing reported: just the saved layout, nothing retired
     ctx.recoveryStore.retire.mockClear();
-    await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(1) });
+    await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(1), counts: {} });
     expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
   });
 
@@ -1428,5 +1443,285 @@ describe('show session imports', () => {
     ctx.session.reportReady(ctx.session.state().generation, true);
     await ctx.session.importShow('Bob', 'show-1');
     expect(ctx.session.state().doc.shows.at(-1).color).toBeNull();
+  });
+});
+
+describe('show session played counts', () => {
+  const playedRecord = (counts, extra = {}) => ({ version: 1, savedAt: T0 - MINUTE, handoff: null, counts, ...extra });
+
+  async function readyWithoutRecovery(ctx) {
+    const opened = await ctx.session.open();
+    await ctx.session.resolveRecovery('discard');
+    ctx.session.reportReady(opened.generation, true);
+    return opened;
+  }
+
+  it('recordPlay counts per song and persists every change through the store', async () => {
+    const ctx = setup();
+    await readyWithoutRecovery(ctx);
+    expect(ctx.session.state().hasPlayed).toBe(false);
+    ctx.rebuildMenu.mockClear();
+
+    await expect(ctx.session.recordPlay('12')).resolves.toEqual({ count: 1 });
+    await expect(ctx.session.recordPlay('12')).resolves.toEqual({ count: 2 });
+    await ctx.session.recordPlay('7');
+
+    expect(ctx.recoveryStore.played.get('Alice').counts).toEqual({ 12: 2, 7: 1 });
+    expect(ctx.recoveryStore.writePlayed).toHaveBeenCalledTimes(3);
+    expect(ctx.session.state().hasPlayed).toBe(true);
+    // The menu is rebuilt when Reset Played becomes available, not on every play
+    expect(ctx.rebuildMenu).toHaveBeenCalledTimes(1);
+    // Played counts are not part of the show: dirty and the layout record are untouched
+    expect(ctx.session.state().dirty).toBe(false);
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+  });
+
+  it('clearPlayed clears one song or all of them', async () => {
+    const ctx = setup();
+    await readyWithoutRecovery(ctx);
+    await ctx.session.recordPlay('12');
+    await ctx.session.recordPlay('7');
+
+    await ctx.session.clearPlayed('12');
+    expect(ctx.recoveryStore.played.get('Alice').counts).toEqual({ 7: 1 });
+    ctx.rebuildMenu.mockClear();
+    await ctx.session.clearPlayed(null);
+    expect(ctx.recoveryStore.played.has('Alice')).toBe(false);
+    expect(ctx.session.state().hasPlayed).toBe(false);
+    expect(ctx.rebuildMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it('plays go to the profile captured at open and are refused once the session ends', async () => {
+    const ctx = setup();
+    await readyWithoutRecovery(ctx);
+    ctx.current.profile = 'Bob';
+    await ctx.session.recordPlay('12');
+    expect(ctx.recoveryStore.played.has('Alice')).toBe(true);
+    expect(ctx.recoveryStore.played.has('Bob')).toBe(false);
+
+    // A play already queued when end() starts lands before end() retires
+    const pending = ctx.session.recordPlay('12');
+    await ctx.session.end('clean-exit');
+    await pending;
+    expect(ctx.recoveryStore.played.has('Alice')).toBe(false);
+    await expect(ctx.session.recordPlay('12')).resolves.toMatchObject({ skipped: true });
+    expect(ctx.recoveryStore.played.has('Alice')).toBe(false);
+  });
+
+  it('open() reports recovery for a played-only file', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.played.set('Alice', playedRecord({ 12: 2 }));
+
+    const opened = await ctx.session.open();
+
+    expect(opened.recovery).toEqual({ savedAt: T0 - MINUTE, handoff: null, showId: null });
+    // Counts start empty until the recovery is settled
+    expect(ctx.session.state().hasPlayed).toBe(false);
+  });
+
+  it('restore returns the counts with the saved show when there is no layout record', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.played.set('Alice', playedRecord({ 12: 2 }));
+    const opened = await ctx.session.open();
+
+    // A play before the recovery is settled must not replace the pending file
+    await expect(ctx.session.recordPlay('5')).resolves.toMatchObject({ skipped: true });
+    await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(1), counts: { 12: 2 } });
+    ctx.session.reportReady(opened.generation, true);
+
+    // The saved show is on screen, so nothing is unsaved
+    expect(ctx.session.state()).toMatchObject({ dirty: false, hasPlayed: true });
+    await ctx.session.recordPlay('12');
+    expect(ctx.recoveryStore.played.get('Alice').counts).toEqual({ 12: 3 });
+  });
+
+  it('restore returns the layout record and the counts together', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.records.set('Alice', {
+      version: 1, showId: ctx.doc.activeShowId, savedAt: T0 - 2 * MINUTE, handoff: null, layout: layoutWith(9),
+    });
+    ctx.recoveryStore.played.set('Alice', playedRecord({ 12: 1 }));
+    const opened = await ctx.session.open();
+    // The later of the two times
+    expect(opened.recovery.savedAt).toBe(T0 - MINUTE);
+
+    await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(9), counts: { 12: 1 } });
+    ctx.session.reportReady(opened.generation, true);
+    expect(ctx.session.state().dirty).toBe(true);
+  });
+
+  it('discard clears both the layout record and the played file', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.records.set('Alice', {
+      version: 1, showId: ctx.doc.activeShowId, savedAt: T0, handoff: null, layout: layoutWith(9),
+    });
+    ctx.recoveryStore.played.set('Alice', playedRecord({ 12: 1 }));
+    await ctx.session.open();
+
+    await expect(ctx.session.resolveRecovery('discard')).resolves.toEqual({ layout: layoutWith(1), counts: {} });
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+    expect(ctx.recoveryStore.played.has('Alice')).toBe(false);
+    expect(ctx.session.state().hasPlayed).toBe(false);
+  });
+
+  it('a layout equal to the saved show retires the layout record but leaves the played file', async () => {
+    const ctx = setup();
+    await readyWithoutRecovery(ctx);
+    await ctx.session.recordPlay('12');
+    await ctx.session.saveRecovery(layoutWith(9));
+
+    await expect(ctx.session.saveRecovery(layoutWith(1))).resolves.toMatchObject({ retired: true });
+
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+    expect(ctx.recoveryStore.played.get('Alice').counts).toEqual({ 12: 1 });
+  });
+
+  it('a show switch, Revert and Save keep the counts', async () => {
+    const ctx = setup({ doc: twoShowDoc() });
+    const opened = await readyWithoutRecovery(ctx);
+    await ctx.session.recordPlay('12');
+
+    const switched = await ctx.session.activate('show-2');
+    expect(ctx.session.state().hasPlayed).toBe(true);
+    // Plays while the next show loads still count
+    await ctx.session.recordPlay('12');
+    ctx.session.reportReady(switched.generation, true);
+    const reverted = await ctx.session.revert();
+    ctx.session.reportReady(reverted.generation, true);
+    await ctx.session.updateActive(layoutWith(5));
+
+    expect(opened.generation).not.toBe(reverted.generation);
+    expect(ctx.recoveryStore.played.get('Alice').counts).toEqual({ 12: 2 });
+    expect(ctx.recoveryStore.retirePlayed).not.toHaveBeenCalled();
+  });
+
+  it('a profile switch clears the counts; the next profile starts fresh', async () => {
+    const ctx = setup({ profiles: ['Alice', 'Bob'] });
+    await readyWithoutRecovery(ctx);
+    await ctx.session.recordPlay('12');
+
+    await ctx.session.end('switch');
+    expect(ctx.recoveryStore.played.has('Alice')).toBe(false);
+    expect(ctx.session.state().hasPlayed).toBe(false);
+
+    ctx.current.profile = 'Bob';
+    const opened = await ctx.session.open();
+    expect(opened.recovery).toBeNull();
+    expect(ctx.session.state().hasPlayed).toBe(false);
+  });
+
+  it('every exit that retires the layout record retires the played file; library import clears all', async () => {
+    for (const reason of ['clean-exit', 'switch', 'backup-restore', 'profile-deleted', 'library-import']) {
+      const ctx = setup();
+      await readyWithoutRecovery(ctx);
+      await ctx.session.recordPlay('12');
+      await ctx.session.end(reason);
+      expect(ctx.recoveryStore.played.has('Alice'), reason).toBe(false);
+    }
+  });
+
+  it('a played-only file pending at the prompt is kept by a clean exit, as the layout record is', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.played.set('Alice', playedRecord({ 12: 2 }));
+    await ctx.session.open();
+    ctx.session.rendererGone();
+    await ctx.session.end('clean-exit');
+    expect(ctx.recoveryStore.played.get('Alice')).toEqual(playedRecord({ 12: 2 }));
+  });
+
+  it('a quit while a show change loads retires the counts', async () => {
+    const ctx = setup({ doc: twoShowDoc() });
+    await readyWithoutRecovery(ctx);
+    await ctx.session.recordPlay('12');
+    await ctx.session.activate('show-2');
+    expect(ctx.session.state().status).toBe('loading');
+    await ctx.session.end('clean-exit');
+    expect(ctx.recoveryStore.played.has('Alice')).toBe(false);
+  });
+
+  for (const [name, handOff] of [
+    ['an update handoff', (session) => session.handoff('update')],
+    ['a renderer crash', (session) => session.rendererGone()],
+  ]) {
+    it(`${name} restores the counts silently, with or without a layout change`, async () => {
+      const ctx = setup();
+      await readyWithoutRecovery(ctx);
+      await ctx.session.recordPlay('12');
+      await ctx.session.recordPlay('12');
+
+      await handOff(ctx.session);
+      // Handed off: a late play from the old page can't land
+      await expect(ctx.session.recordPlay('12')).resolves.toMatchObject({ skipped: true });
+      await ctx.session.end('clean-exit');
+      expect(ctx.recoveryStore.played.get('Alice')).toMatchObject({ handoff: expect.any(String), counts: { 12: 2 } });
+
+      const opened = await ctx.session.open();
+      expect(opened.recovery.handoff).not.toBeNull();
+      await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(1), counts: { 12: 2 } });
+      // Spent once restored: another crash before any change must ask
+      expect(ctx.recoveryStore.played.get('Alice')).toMatchObject({ handoff: null, counts: { 12: 2 } });
+    });
+  }
+
+  for (const [name, loadError] of [
+    ['a failed', new ShowStoreError('version')],
+    ['an unreadable', new ShowStoreError('unreadable')],
+  ]) {
+    it(`${name} open never overwrites or retires a crash's played file`, async () => {
+      for (const reason of ['clean-exit', 'switch']) {
+        const ctx = setup({ loadError });
+        ctx.recoveryStore.played.set('Alice', playedRecord({ 12: 2 }));
+        await ctx.session.open();
+        await expect(ctx.session.recordPlay('5')).resolves.toMatchObject({ skipped: true });
+        await expect(ctx.session.clearPlayed(null)).resolves.toMatchObject({ skipped: true });
+        await ctx.session.end(reason);
+        expect(ctx.recoveryStore.played.get('Alice'), reason).toEqual(playedRecord({ 12: 2 }));
+      }
+    });
+  }
+
+  it('an unreadable store started empty settles the played file like open(): restore or discard', async () => {
+    const ctx = setup({ loadError: new ShowStoreError('unreadable') });
+    ctx.recoveryStore.played.set('Alice', playedRecord({ 12: 2 }));
+    await ctx.session.open();
+    const empty = await ctx.session.startEmpty();
+    expect(empty.recovery).toMatchObject({ showId: null });
+    await expect(ctx.session.recordPlay('5')).resolves.toMatchObject({ skipped: true });
+    await expect(ctx.session.resolveRecovery('restore')).resolves.toMatchObject({ counts: { 12: 2 } });
+    await expect(ctx.session.recordPlay('5')).resolves.toEqual({ count: 1 });
+
+    // With nothing pending, starting empty settles at once
+    const plain = setup({ loadError: new ShowStoreError('unreadable') });
+    await plain.session.open();
+    await plain.session.startEmpty();
+    await expect(plain.session.recordPlay('5')).resolves.toEqual({ count: 1 });
+  });
+
+  it('plays are refused while a layout record waits at the prompt, even without a played file', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.records.set('Alice', {
+      version: 1, showId: ctx.doc.activeShowId, savedAt: T0, handoff: null, layout: layoutWith(9),
+    });
+    await ctx.session.open();
+    await expect(ctx.session.recordPlay('5')).resolves.toMatchObject({ skipped: true });
+    await ctx.session.resolveRecovery('restore');
+    await expect(ctx.session.recordPlay('5')).resolves.toEqual({ count: 1 });
+  });
+
+  it('discard always retires the played file', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.records.set('Alice', {
+      version: 1, showId: ctx.doc.activeShowId, savedAt: T0, handoff: null, layout: layoutWith(9),
+    });
+    await ctx.session.open();
+    await ctx.session.resolveRecovery('discard');
+    expect(ctx.recoveryStore.retirePlayed).toHaveBeenCalledWith('Alice');
+  });
+
+  it('rejects an invalid song id', async () => {
+    const ctx = setup();
+    await readyWithoutRecovery(ctx);
+    await expect(ctx.session.recordPlay('abc')).rejects.toThrow('Invalid song id');
+    await expect(ctx.session.clearPlayed('1x')).rejects.toThrow('Invalid song id');
   });
 });

@@ -162,6 +162,71 @@ describe('recovery store', () => {
     expect(fs.existsSync(recoveryDir)).toBe(false);
   });
 
+  describe('played counts', () => {
+    const playedPath = (name) => path.join(recoveryDir, `${name.toLowerCase()}.played.json`);
+
+    it('writes <key>.played.json next to the layout record and reads it back', async () => {
+      await store.writePlayed('Show', { 12: 2, 7: 1 });
+      expect(fs.existsSync(playedPath('Show'))).toBe(true);
+      expect(await store.readPlayed('Show')).toEqual({
+        version: 1, savedAt: clock, handoff: null, counts: { 12: 2, 7: 1 }
+      });
+      // The layout record is a different file
+      expect(await store.read('Show')).toBeNull();
+    });
+
+    it('a handed-off write carries handoffAt; an ordinary one does not', async () => {
+      await store.writePlayed('Show', { 12: 1 }, { handoff: 'update' });
+      expect(await store.readPlayed('Show')).toEqual({
+        version: 1, savedAt: clock, handoff: 'update', handoffAt: clock, counts: { 12: 1 }
+      });
+      await expect(store.writePlayed('Show', { 12: 1 }, { handoff: 'bogus' })).rejects.toThrow();
+    });
+
+    it('writing no counts removes the file', async () => {
+      await store.writePlayed('Show', { 12: 1 });
+      await store.writePlayed('Show', {});
+      expect(fs.existsSync(playedPath('Show'))).toBe(false);
+      expect(await store.readPlayed('Show')).toBeNull();
+    });
+
+    it('drops invalid entries and reads a file with none left as no counts', async () => {
+      fs.mkdirSync(recoveryDir, { recursive: true });
+      fs.writeFileSync(playedPath('Show'), JSON.stringify({
+        version: 1, savedAt: 5, handoff: null, counts: { 12: 3, abc: 2, 9: 0, 8: -1, 7: 1.5, 6: '2' }
+      }));
+      expect((await store.readPlayed('Show')).counts).toEqual({ 12: 3 });
+      fs.writeFileSync(playedPath('Show'), JSON.stringify({ version: 1, savedAt: 5, counts: { abc: 1 } }));
+      expect(await store.readPlayed('Show')).toBeNull();
+    });
+
+    it('a torn played file reads as null and is quarantined', async () => {
+      fs.mkdirSync(recoveryDir, { recursive: true });
+      fs.writeFileSync(playedPath('Show'), '{"version":1,');
+      expect(await store.readPlayed('Show')).toBeNull();
+      const names = fs.readdirSync(recoveryDir);
+      expect(names.some((n) => n.startsWith('show.played.json.corrupt-'))).toBe(true);
+    });
+
+    it('retire leaves the played file; retirePlayed removes only it', async () => {
+      await store.write('Show', { showId: 'b1', layout: LAYOUT });
+      await store.writePlayed('Show', { 12: 1 });
+      await store.retire('Show');
+      expect(fs.existsSync(playedPath('Show'))).toBe(true);
+      await store.write('Show', { showId: 'b1', layout: LAYOUT });
+      await store.retirePlayed('Show');
+      expect(fs.existsSync(playedPath('Show'))).toBe(false);
+      expect(fs.existsSync(pathFor('Show'))).toBe(true);
+    });
+
+    it('clearAll removes played files too', async () => {
+      await store.writePlayed('A', { 1: 1 });
+      await store.write('B', { showId: 'b', layout: LAYOUT });
+      await store.clearAll();
+      expect(fs.readdirSync(recoveryDir)).toEqual([]);
+    });
+  });
+
   it.each(['', '   ', null, undefined, 42])('rejects invalid profile name %j', async (name) => {
     await expect(store.write(name, { showId: 'b', layout: LAYOUT })).rejects.toThrow();
     await expect(store.read(name)).rejects.toThrow();

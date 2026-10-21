@@ -25,7 +25,9 @@ function setup({ open, confirm = vi.fn(async () => false), dropped = 0 } = {}) {
     quit: vi.fn(async () => ok(null)),
     clearRestorationLock: vi.fn(() => { calls.push('unlock'); }),
     track: vi.fn(),
-    refreshHeader: vi.fn(async () => {})
+    refreshHeader: vi.fn(async () => {}),
+    loadPlayedCounts: vi.fn(),
+    installPlayedPills: vi.fn()
   };
   return { api, deps, calls };
 }
@@ -44,7 +46,10 @@ describe('openSessionOnStartup', () => {
   });
 
   it('asks once when recovery exists without handoff; default discards', async () => {
-    const savedAt = new Date(2026, 9, 20, 21, 5).getTime();
+    // Today: the time alone
+    const today = new Date();
+    today.setHours(21, 5, 0, 0);
+    const savedAt = today.getTime();
     const { api, deps, calls } = setup({ open: opened({ savedAt, handoff: null, showId: 'b1' }) });
     deps.confirm.mockImplementation(async () => {
       // The restoration lock is held while the question is open
@@ -63,6 +68,18 @@ describe('openSessionOnStartup', () => {
     expect(calls).toEqual(['apply:Saved', 'ready:7:true', 'unlock']);
   });
 
+  it('names the day as well when the show in progress is not from today', async () => {
+    const savedAt = new Date(2020, 0, 7, 21, 42).getTime();
+    const { deps } = setup({ open: opened({ savedAt, handoff: null, showId: null }) });
+    await openSessionOnStartup(deps);
+    const when = new Date(savedAt).toLocaleString([], {
+      weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+    });
+    expect(deps.confirm.mock.calls[0][0]).toBe(`Mx. Voice didn't close normally. Restore the show in progress from ${when}?`);
+    // e.g. "Tue, Jan 7, 9:42 PM" in en-US
+    expect(when).toMatch(/7/);
+  });
+
   it('restores the show in progress when the prompt is confirmed', async () => {
     const { api, deps, calls } = setup({
       open: opened({ savedAt: Date.now(), handoff: null, showId: 'b1' }),
@@ -71,6 +88,20 @@ describe('openSessionOnStartup', () => {
     await openSessionOnStartup(deps);
     expect(api.resolveRecovery).toHaveBeenCalledWith('restore');
     expect(calls[0]).toBe('apply:Live');
+  });
+
+  it('loads the played counts the recovery hands back before applying the layout', async () => {
+    const { api, deps, calls } = setup({ open: opened({ savedAt: Date.now(), handoff: 'renderer-crash', showId: null }) });
+    api.resolveRecovery.mockResolvedValueOnce(ok({ layout: savedLayout, counts: { 12: 2 } }));
+    deps.loadPlayedCounts.mockImplementation((counts) => { calls.push(`played:${JSON.stringify(counts)}`); });
+    await openSessionOnStartup(deps);
+    expect(deps.installPlayedPills).toHaveBeenCalled();
+    expect(calls).toEqual(['played:{"12":2}', 'apply:Saved', 'ready:7:true', 'unlock']);
+
+    // Without counts in the result, none are loaded
+    const plain = setup({ open: opened() });
+    await openSessionOnStartup(plain.deps);
+    expect(plain.deps.loadPlayedCounts).toHaveBeenCalledWith({});
   });
 
   it('opens the saved show without asking when there is no recovery', async () => {
@@ -136,6 +167,8 @@ describe('openSessionOnStartup', () => {
     expect(start.api.resolveRecovery).not.toHaveBeenCalled();
     // startEmpty's generation is the one reported
     expect(start.calls).toEqual(['apply:Saved', 'ready:8:true', 'unlock']);
+    // Nothing to restore: the night's counts start, empty
+    expect(start.deps.loadPlayedCounts).toHaveBeenCalledWith({});
 
     const quit = setup({ open: ok({ unreadable: true, generation: 4 }), confirm: vi.fn(async () => false) });
     await openSessionOnStartup(quit.deps);

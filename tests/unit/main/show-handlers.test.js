@@ -33,6 +33,8 @@ function setup(overrides = {}) {
     listImportable: vi.fn(async () => [{ profile: 'Bob', shows: [] }]),
     importShow: vi.fn(async () => ({ layout: {}, generation: 2 })),
     setShowColor: vi.fn(async () => ({ id: UUID, color: 'teal' })),
+    recordPlay: vi.fn(async () => ({ count: 1 })),
+    clearPlayed: vi.fn(async () => ({ count: 0 })),
     ...overrides,
   };
   register({ showSession, debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
@@ -146,6 +148,24 @@ describe('show IPC handlers', () => {
       await expect(handlers['show:set-color']({}, id, 'teal')).resolves.toMatchObject({ success: false });
     }
     expect(showSession.setShowColor).not.toHaveBeenCalled();
+  });
+
+  it('RECORD_PLAY and CLEAR_PLAYED take digit-string song ids; CLEAR_PLAYED also null', async () => {
+    const { showSession } = setup();
+    await expect(handlers['show:record-play']({}, '12')).resolves.toEqual({ success: true, data: { count: 1 } });
+    expect(showSession.recordPlay).toHaveBeenCalledWith('12');
+    await handlers['show:clear-played']({}, '12');
+    await handlers['show:clear-played']({}, null);
+    expect(showSession.clearPlayed.mock.calls).toEqual([['12'], [null]]);
+
+    for (const bad of [12, '', '1x', ' 1', null, undefined, ['1']]) {
+      await expect(handlers['show:record-play']({}, bad)).resolves.toMatchObject({ success: false, error: 'Invalid song id' });
+    }
+    for (const bad of [12, '', 'x', undefined]) {
+      await expect(handlers['show:clear-played']({}, bad)).resolves.toMatchObject({ success: false, error: 'Invalid song id' });
+    }
+    expect(showSession.recordPlay).toHaveBeenCalledTimes(1);
+    expect(showSession.clearPlayed).toHaveBeenCalledTimes(2);
   });
 
   it('rejects an unregistered profile on IMPORT', async () => {

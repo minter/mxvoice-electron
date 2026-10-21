@@ -397,6 +397,7 @@ describe('importLibrary', () => {
     const profilesAtClear = [];
     const recoveryStore = {
       retire: vi.fn(async () => {}),
+      retirePlayed: vi.fn(async () => {}),
       markHandoff: vi.fn(async () => true),
       clearAll: vi.fn(async () => {
         profilesAtClear.push(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show')));

@@ -21,6 +21,7 @@ import { completeActivePlayback, handlePlaybackCompleted } from './playback-comp
 import { parseCrossfadePreference, prepareForPlaybackReplacement } from './playback-replacement.js';
 import { loadSongForPlayback } from './playback-song-loader.js';
 import { resolvePlaybackTrigger, trackSongPlayed } from './playback-analytics.js';
+import { recordPlay } from '../shows/played-counts.js';
 import {
   calculatePlaybackVolume,
   getCrossfadePolicy,
@@ -297,6 +298,8 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
               });
             }
 
+            // Howler fires play again on every resume; the night's count goes up once per start
+            let counted = false;
             let sound = createPlaybackSound({
               createHowl,
               source: sound_path,
@@ -307,6 +310,11 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                   ?.classList.contains('active') || false,
               debugLog: getDebugLog(),
               onPlay: function () {
+                // A loop restart (options.replay) is the play the operator already started
+                if (!counted && !options.replay) {
+                  counted = true;
+                  recordPlay(song_id);
+                }
                 handlePlaybackStarted({
                   sound,
                   howlerContext: this,
@@ -405,6 +413,7 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
  * @param {boolean} options.crossfade - Whether to crossfade from current track
  * @param {number} options.crossfadeSeconds - Crossfade duration in seconds
  * @param {string} options.trigger_method - Analytics source of the play (hotkey, search_result, ...)
+ * @param {boolean} options.replay - a loop restart, not counted as another play
  */
 async function playSongFromId(song_id, options = {}) {
   getDebugLog()?.info('Playing song from ID', {

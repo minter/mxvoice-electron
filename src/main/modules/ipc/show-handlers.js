@@ -25,6 +25,10 @@ function checkShowColor(color) {
 }
 
 const SONG_ID = /^\d+$/;
+
+function checkSongId(songId) {
+  if (typeof songId !== 'string' || !SONG_ID.test(songId)) throw new Error('Invalid song id');
+}
 // More ids than any show can hold
 const MAX_DROPPED_IDS = 10000;
 
@@ -99,6 +103,15 @@ export function register(deps) {
     checkProfile(profile);
     checkShowId(showId);
     return showSession.importShow(profile, showId);
+  });
+  handle(IPC.SHOWS.RECORD_PLAY, 'recordPlay', (songId) => {
+    checkSongId(songId);
+    return showSession.recordPlay(songId);
+  });
+  // null clears every song's count
+  handle(IPC.SHOWS.CLEAR_PLAYED, 'clearPlayed', (songId) => {
+    if (songId !== null) checkSongId(songId);
+    return showSession.clearPlayed(songId);
   });
   handle(IPC.SHOWS.SET_COLOR, 'setShowColor', (showId, color) => {
     checkShowId(showId);

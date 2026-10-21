@@ -18,6 +18,8 @@ import { unwrap } from './ipc-result.js';
 import { runShowCommand } from './commands.js';
 import { chooseImportShow } from './import-dialog.js';
 import { installHeaderListeners, refreshHeader } from './header.js';
+import playedCounts from './played-counts.js';
+import { installPlayedPills } from './played-pills.js';
 
 export { droppedSongsMessage };
 
@@ -26,8 +28,12 @@ const LOG_CONTEXT = { module: 'shows', function: 'openSessionOnStartup' };
 const UNREADABLE_MESSAGE =
   "Mx. Voice couldn't read this profile's shows. The file has been kept so it can be recovered.";
 
+// The time alone for today; with the day otherwise, e.g. "Tue, Oct 21, 9:42 PM"
 function crashMessage(savedAt) {
-  const time = new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const saved = new Date(savedAt);
+  const time = saved.toDateString() === new Date().toDateString()
+    ? saved.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : saved.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   return `Mx. Voice didn't close normally. Restore the show in progress from ${time}?`;
 }
 
@@ -69,6 +75,9 @@ function defaultDeps(overrides) {
     extractLayout,
     chooseImportShow: (groups) => chooseImportShow(groups),
     refreshHeader: () => refreshHeader(),
+    loadPlayedCounts: (counts) => playedCounts.load(counts),
+    installPlayedPills,
+    playedCounts,
     ...overrides
   };
   if (!deps.applyLayout) {
@@ -80,7 +89,8 @@ function defaultDeps(overrides) {
 
 /**
  * Settle a show in progress: a fresh handoff restores silently, any other
- * record asks, and no record opens the saved show.
+ * record asks, and no record opens the saved show. The night's played counts
+ * come back with it (none unless restored).
  * @returns {Promise<Object>} the layout to apply
  */
 async function resolveRecovery(recovery, deps) {
@@ -97,7 +107,8 @@ async function resolveRecovery(recovery, deps) {
     choice = restore ? 'restore' : 'discard';
     deps.track('crash_restore_chosen', { choice });
   }
-  const { layout } = unwrap(await deps.api.resolveRecovery(choice), 'Resolving recovery');
+  const { layout, counts } = unwrap(await deps.api.resolveRecovery(choice), 'Resolving recovery');
+  deps.loadPlayedCounts(counts ?? {});
   window.debugLog?.info('Opening show', { ...LOG_CONTEXT, choice, handoff: recovery?.handoff ?? null });
   return layout;
 }
@@ -117,6 +128,7 @@ export async function openSessionOnStartup(overrides = {}) {
   const deps = defaultDeps(overrides);
   const { api } = deps;
   installHeaderListeners();
+  deps.installPlayedPills();
   window.isRestoringProfileState = true;
   let generation = null;
   try {
@@ -138,7 +150,12 @@ export async function openSessionOnStartup(overrides = {}) {
       }
       const empty = unwrap(await api.startEmpty(), 'Starting an empty show');
       generation = empty.generation;
-      layout = empty.recovery ? await resolveRecovery(empty.recovery, deps) : empty.layout;
+      if (empty.recovery) {
+        layout = await resolveRecovery(empty.recovery, deps);
+      } else {
+        layout = empty.layout;
+        deps.loadPlayedCounts({});
+      }
     } else {
       layout = await resolveRecovery(opened.recovery, deps);
     }

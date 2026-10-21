@@ -46,6 +46,12 @@ export async function deleteProfileWithRecovery(profileName, {
     } catch (error) {
       debugLog?.warn('Could not remove the deleted profile\'s crash-recovery record', { ...logCtx, error: error.message });
     }
+    // Its own try: a failed record retire must not leave the played counts behind
+    try {
+      await recoveryStore?.retirePlayed?.(profileName);
+    } catch (error) {
+      debugLog?.warn('Could not remove the deleted profile\'s played counts', { ...logCtx, error: error.message });
+    }
   }
   return result;
 }

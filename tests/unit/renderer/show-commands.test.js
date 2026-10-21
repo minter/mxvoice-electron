@@ -280,6 +280,18 @@ describe('runShowCommand', () => {
     expect(failing.deps.alert).toHaveBeenCalledOnce();
   });
 
+  it('reset-played clears every played count at once, asking nothing', async () => {
+    const { api, deps } = setup();
+    deps.playedCounts = { clearAll: vi.fn() };
+    await runShowCommand({ command: 'reset-played' }, deps);
+    expect(deps.playedCounts.clearAll).toHaveBeenCalledOnce();
+    expect(deps.confirm).not.toHaveBeenCalled();
+    expect(deps.choose).not.toHaveBeenCalled();
+    expect(api.getState).not.toHaveBeenCalled();
+    expect(deps.alert).not.toHaveBeenCalled();
+    expect(deps.track).toHaveBeenCalledWith('played_reset', undefined);
+  });
+
   it('a command arriving while another runs is dropped', async () => {
     const { api, deps } = setup();
     let answer;

@@ -1312,7 +1312,8 @@ test.describe('Hotkeys - save & load', () => {
 
     const contextMenu = page.locator('#mxv-context-menu');
     await expect(contextMenu).toBeVisible({ timeout: 2000 });
-    const playBtn = contextMenu.locator('button:has-text("Play")');
+    // Exact: Mark as Unplayed also contains "play"
+    const playBtn = contextMenu.getByRole('button', { name: 'Play', exact: true });
     await expect(playBtn).toBeVisible();
     await playBtn.click();
 

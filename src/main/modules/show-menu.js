@@ -16,7 +16,7 @@ function escapeLabel(name, platform) {
 }
 
 /**
- * @param {Object} state - { status, activeShow, shows, dirty } from the show session
+ * @param {Object} state - { status, activeShow, shows, dirty, hasPlayed } from the show session
  * @param {Object} [options]
  * @param {Function} [options.rebuild] - rebuilds the application menu from the session
  * @param {Function} [options.swatchImage] - (colorKey|null) => NativeImage for the Color items
@@ -58,6 +58,8 @@ function buildShowMenu(state, { platform, send, rebuild, swatchImage } = {}) {
       { label: 'Save As…', enabled: ready, click: emit('save-as') },
       // Revert has nothing to discard unless the layout on screen differs from the saved show
       { label: 'Revert to Saved…', enabled: ready && !!state?.dirty, click: emit('revert') },
+      // Clears every played count at once, without asking: they are only a reminder
+      { label: 'Reset Played', enabled: ready && !!state?.hasPlayed, click: emit('reset-played') },
       // Both act on the show on screen; the renderer reads it from the session
       { label: `${quoted('Rename')}…`, enabled: hasActive, click: emit('rename') },
       { label: `${quoted('Delete')}…`, enabled: hasActive, click: emit('delete') },

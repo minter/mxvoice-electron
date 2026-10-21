@@ -107,7 +107,7 @@ async function saveActive(deps) {
  * latest layout, so it can't say the screen matches the saved show.
  */
 async function hasUnsavedChanges(deps) {
-  let flushFailed = false;
+  let flushFailed;
   try {
     const result = await deps.flushRecovery?.();
     // A save skipped by the restoration lock is not a failure
@@ -251,6 +251,12 @@ const handlers = {
     return ['show_color_set', { color: color ?? 'none' }];
   },
 
+  // Shows → Reset Played: the counts are only a reminder, so nothing asks first
+  async 'reset-played'(_showId, deps) {
+    deps.playedCounts.clearAll();
+    return ['played_reset'];
+  },
+
   async import(_showId, deps) {
     await readyDoc(deps);
     const groups = unwrap(await deps.api.listImportable(), 'Listing shows to import');
@@ -281,6 +287,7 @@ const handlers = {
  * @param {() => Object} deps.extractLayout - the layout on screen
  * @param {(groups: Array) => Promise<{ profile: string, showId: string }|null>} deps.chooseImportShow
  * @param {(layout: Object) => Promise<{ dropped: number }>} deps.applyLayout
+ * @param {{ clearAll: Function }} deps.playedCounts - played-counts.js
  * @returns {Promise<void>}
  */
 export async function runShowCommand({ command, showId, ...details } = {}, deps) {

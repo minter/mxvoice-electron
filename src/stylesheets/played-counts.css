@@ -1,0 +1,48 @@
+/*
+ * Played counts
+ *
+ * The "▶ n" pill on a hotkey slot, holding tank row or search result whose
+ * song was played tonight (src/renderer/modules/shows/played-pills.js).
+ * Structure only; colors are in colors.css. Without this file the pill is
+ * an unstyled icon, and no row, badge, now-playing or selection style
+ * depends on it.
+ */
+
+.played-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 500;
+  font-style: normal;
+  /* Shorter than any row's line, so a pill never changes a row's height */
+  line-height: 14px;
+  white-space: nowrap;
+  vertical-align: middle;
+  /* Clicks, drags and right-clicks go to the row */
+  pointer-events: none;
+}
+
+.played-pill i {
+  font-size: 7px;
+}
+
+/* The count is drawn, not text, so the row's text never changes */
+.played-pill::after {
+  content: attr(data-count);
+}
+
+/* Hotkeys: right after the song name, which keeps its ellipsis and shrinks
+   to leave the pill room */
+.hotkeys li:has(> .played-pill) > span.song {
+  width: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* Holding tank: right after the title, inline, so rows keep their full
+   width. A title that ends at the row's edge can wrap once it has a count. */
