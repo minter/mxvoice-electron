@@ -130,9 +130,8 @@ test.describe("What's New Tour", () => {
 
     await page.evaluate(async () => {
       await window.secureElectronAPI.profile.setPreference('tours_seen', []);
-      if (window.moduleRegistry?.whatsNew?.showWhatsNew) {
-        await window.moduleRegistry.whatsNew.showWhatsNew();
-      }
+      // The 4.3.0 tour is the one with a step that opens Preferences
+      await window.moduleRegistry.whatsNew.tourManager.launchTour('4.3.0', { markSeen: false });
     });
 
     // Advance through the tour until the Preferences modal opens. Each "Next"
