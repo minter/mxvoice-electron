@@ -185,7 +185,7 @@ describe('played pills', () => {
     deliver();
   });
 
-  it('puts the pill after the hotkey name, first in a holding tank row, and at the end of a search title', () => {
+  it('puts the pill after the hotkey name, after a holding tank title, and at the end of a search title', () => {
     slot(1).setAttribute('songid', '12');
     const row = tankRow('12');
     deliver();
@@ -193,7 +193,7 @@ describe('played pills', () => {
     const td = searchCell('12');
 
     expect(slot(1).children.at(-1)).toBe(pillOf(slot(1)));
-    expect(row.children[0]).toBe(pillOf(row));
+    expect(row.children.at(-1)).toBe(pillOf(row));
     expect(td.children.at(-1)).toBe(pillOf(td));
     for (const host of [slot(1), row, td]) {
       expect(pillOf(host).dataset.count).toBe('1');

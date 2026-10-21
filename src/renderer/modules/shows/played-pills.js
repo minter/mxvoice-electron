@@ -2,7 +2,7 @@
  * Played Pills
  *
  * The small "▶ n" pill on every row that shows a song played tonight: a
- * hotkey slot (after the song name), a holding tank row (at its right end)
+ * hotkey slot (after the song name), a holding tank row (after the title)
  * and a search result (at the end of the Title cell). Shown only for a count
  * of 1 or more. The count is drawn from `data-count` by CSS, so the pill adds
  * no text to the row and never carries a `songid` itself.
@@ -41,8 +41,8 @@ function createPill(n) {
 }
 
 /**
- * Bring one host's pill in line with its song's count. A holding tank row
- * holds its text directly, so its pill goes first and floats to the right.
+ * Bring one host's pill in line with its song's count. The pill goes at the
+ * end of the host, right after its text.
  */
 function syncHost(host, songId) {
   const n = songId ? count(songId) : 0;
@@ -55,8 +55,7 @@ function syncHost(host, songId) {
     if (pill.dataset.count !== String(n)) setCount(pill, n);
     return;
   }
-  if (host.closest('.holding_tank')) host.prepend(createPill(n));
-  else host.append(createPill(n));
+  host.append(createPill(n));
 }
 
 function syncRow(li) {

@@ -180,22 +180,12 @@ test.describe('Shows - played counts', () => {
     await expect.poll(() => fs.existsSync(playedPath(userDataDir))).toBe(false);
   });
 
-  test('a holding tank title that fits on one line still fits once it has a count', async () => {
+  test('a holding tank row keeps its full width; the pill sits right after the title', async () => {
     await launch();
     const row = page.locator(`#holding_tank_1 li[songid="${FAMILY}"]`);
-    // Lengthen the title until one more word would wrap it
-    const height = await row.evaluate((li) => {
-      const oneLine = li.offsetHeight;
-      let text = li.textContent;
-      for (let i = 0; i < 400; i++) {
-        li.textContent = `${text} word`;
-        if (li.offsetHeight > oneLine) break;
-        text = li.textContent;
-      }
-      li.textContent = text;
-      return oneLine;
-    });
-    expect(await row.evaluate((li) => li.offsetHeight)).toBe(height);
+    // No width is held back for a pill that isn't there
+    const before = await row.evaluate((li) => ({ height: li.offsetHeight, padding: getComputedStyle(li).paddingRight }));
+    expect(before.padding).not.toBe('52px');
 
     // A play counted for it, as playback start does
     await page.evaluate(async (id) => {
@@ -203,11 +193,13 @@ test.describe('Shows - played counts', () => {
       played.recordPlay(id);
     }, FAMILY);
     await expect(tankPill(page, FAMILY)).toHaveAttribute('data-count', '1');
-    expect(await row.evaluate((li) => li.offsetHeight)).toBe(height);
-    // Inside the row, at its right end
+    // A short title stays on one line, and the row's padding is unchanged
+    expect(await row.evaluate((li) => li.offsetHeight)).toBe(before.height);
+    expect(await row.evaluate((li) => getComputedStyle(li).paddingRight)).toBe(before.padding);
+    // Inline, after the text: the last child, inside the row
+    expect(await row.evaluate((li) => li.lastElementChild?.classList.contains('played-pill'))).toBe(true);
     const [rowBox, pillBox] = [await row.boundingBox(), await tankPill(page, FAMILY).boundingBox()];
     expect(pillBox.x + pillBox.width).toBeLessThanOrEqual(rowBox.x + rowBox.width);
-    expect(pillBox.x).toBeGreaterThan(rowBox.x + rowBox.width / 2);
   });
 
   test('a kill with counts and no layout change asks; Restore keeps them, Open saved show clears them', async () => {
