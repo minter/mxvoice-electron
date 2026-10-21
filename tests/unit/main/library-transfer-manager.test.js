@@ -372,7 +372,8 @@ describe('importLibrary', () => {
     expect(fs.existsSync(path.join(importUserData, 'profiles'))).toBe(false);
     expect(fs.existsSync(path.join(importUserData, 'mxvoice.db'))).toBe(true);
     expect(showSession.end).toHaveBeenCalledWith('library-import');
-    expect(dbAtClear).toEqual([false]);
+    // Once the import has committed
+    expect(dbAtClear).toEqual([true]);
     fs.rmSync(importUserData, { recursive: true, force: true });
   });
 
@@ -423,8 +424,8 @@ describe('importLibrary', () => {
 
     expect(result.success).toBe(true);
     expect(recoveryStore.clearAll).toHaveBeenCalled();
-    // Before the profiles directory was replaced
-    expect(profilesAtClear[0]).toBe(true);
+    // After the profiles directory was replaced
+    expect(profilesAtClear).toEqual([false]);
     fs.rmSync(importUserData, { recursive: true, force: true });
   });
 
@@ -462,6 +463,86 @@ describe('importLibrary', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/invalid archive/i);
+  });
+
+  function importTarget({ showSession, recoveryStore }) {
+    const importUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-import-'));
+    fakeApp.getPath.mockReturnValue(importUserData);
+    const importConfigPath = path.join(importUserData, 'config.json');
+    fs.writeFileSync(importConfigPath, '{}');
+    createTestFile(path.join(importUserData, 'mxvoice.db'), 'current-db');
+    createTestFile(path.join(importUserData, 'profiles', 'Old Show', 'preferences.json'), '{}');
+    initializeLibraryTransferManager({
+      debugLog: mockDebugLog,
+      getDb: () => ({ close: vi.fn() }),
+      store: { get: vi.fn(() => undefined), path: importConfigPath },
+      showSession,
+      recoveryStore
+    });
+    return importUserData;
+  }
+
+  it('a library import that fails validation leaves the session and recovery files alone', async () => {
+    // An archive with no database: the export finds none to include
+    fs.rmSync(path.join(testUserData, 'mxvoice.db'));
+    const noDbArchive = path.join(testUserData, 'no-db.mxvlib');
+    await exportLibrary(noDbArchive);
+    const badArchive = path.join(testUserData, 'bad.mxvlib');
+    fs.writeFileSync(badArchive, 'not a zip');
+
+    const showSession = { end: vi.fn(async () => {}) };
+    const recoveryStore = { clearAll: vi.fn(async () => {}) };
+    const importUserData = importTarget({ showSession, recoveryStore });
+
+    for (const [archive, error] of [[noDbArchive, /no database/i], [badArchive, /invalid archive/i]]) {
+      const result = await importLibrary(archive);
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(error);
+      expect(result.sessionEnded).toBeUndefined();
+    }
+    expect(showSession.end).not.toHaveBeenCalled();
+    expect(recoveryStore.clearAll).not.toHaveBeenCalled();
+    expect(fs.readFileSync(path.join(importUserData, 'mxvoice.db'), 'utf-8')).toBe('current-db');
+    expect(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show'))).toBe(true);
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  });
+
+  it('clearAll runs only after a successful import', async () => {
+    const archivePath = path.join(testUserData, 'for-import.mxvlib');
+    await exportLibrary(archivePath);
+    const order = [];
+    const showSession = { end: vi.fn(async () => { order.push('end'); }) };
+    const recoveryStore = { clearAll: vi.fn(async () => { order.push('clearAll'); }) };
+
+    // A failure after end: the music folder can't be created over a file
+    const failing = importTarget({ showSession, recoveryStore });
+    createTestFile(path.join(failing, 'mp3'), 'in the way');
+    const failed = await importLibrary(archivePath);
+    expect(failed).toMatchObject({ success: false, sessionEnded: true });
+    expect(order).toEqual(['end']);
+    expect(recoveryStore.clearAll).not.toHaveBeenCalled();
+    fs.rmSync(failing, { recursive: true, force: true });
+
+    // A successful import clears them once every file is in place
+    order.length = 0;
+    const atClear = [];
+    const target = importTarget({
+      showSession,
+      recoveryStore: {
+        clearAll: vi.fn(async () => {
+          order.push('clearAll');
+          atClear.push({
+            oldProfile: fs.existsSync(path.join(target, 'profiles', 'Old Show')),
+            hotkeys: fs.existsSync(path.join(target, 'hotkeys', 'set1.mrv')),
+            config: JSON.parse(fs.readFileSync(path.join(target, 'config.json'), 'utf-8')).fade_out_seconds
+          });
+        })
+      }
+    });
+    await expect(importLibrary(archivePath)).resolves.toEqual({ success: true, requiresRestart: true });
+    expect(order).toEqual(['end', 'clearAll']);
+    expect(atClear).toEqual([{ oldProfile: false, hotkeys: true, config: 2 }]);
+    fs.rmSync(target, { recursive: true, force: true });
   });
 });
 

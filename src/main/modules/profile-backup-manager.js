@@ -390,6 +390,27 @@ async function getBackupMetadata(profileName) {
 }
 
 /**
+ * Whether a backup can be restored: a well-formed id that this profile's
+ * metadata lists and whose folder exists. Checked before the show session
+ * ends, so a restore that can't start leaves the session running.
+ * @param {string} profileName - Profile name
+ * @param {string} backupId - Backup ID (may come from IPC)
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function checkBackupRestorable(profileName, backupId) {
+  const backupPath = resolveBackupPath(profileName, backupId);
+  if (!backupPath) {
+    return { success: false, error: 'Invalid backup ID' };
+  }
+  const metadata = await readMetadataSafe(profileName);
+  const listed = (metadata?.backups || []).some((backup) => backup.id === backupId);
+  if (!listed || !await pathExists(backupPath)) {
+    return { success: false, error: 'Backup does not exist' };
+  }
+  return { success: true };
+}
+
+/**
  * Restore a profile from a backup
  * @param {string} profileName - Profile name
  * @param {string} backupId - Backup ID to restore from
@@ -653,6 +674,7 @@ export {
   createBackup,
   listBackups,
   getBackupMetadata,
+  checkBackupRestorable,
   restoreBackup,
   deleteBackup,
   cleanupOldBackups,

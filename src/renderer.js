@@ -409,6 +409,11 @@ import { settleStartup } from './renderer/modules/shows/startup-gate.js';
                   // deleted profile now, that would write its directory back.
                   window.isRestoringProfileState = true;
                   await moduleRegistry.profilePicker?.open({ afterDelete: true });
+                } else if (result.sessionEnded) {
+                  // The show session ended before the delete failed: reload to
+                  // reopen it from disk, or Shows and autosave stay off
+                  alert(`Failed to delete profile: ${result.error} Mx. Voice will reload the show.`);
+                  window.location.reload();
                 } else {
                   alert(`Failed to delete profile: ${result.error}`);
                 }

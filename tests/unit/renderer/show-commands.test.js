@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 globalThis.window = globalThis.window || {};
 window.debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-const { runShowCommand, nextShowAfterDelete } = await import('../../../src/renderer/modules/shows/commands.js');
+const { runShowCommand, nextShowAfterDelete, askToSaveUnsavedChanges } = await import('../../../src/renderer/modules/shows/commands.js');
 
 const ok = (data = null) => ({ success: true, data });
 const fail = (error, code) => ({ success: false, error, ...(code ? { code } : {}) });
@@ -542,6 +542,90 @@ describe('runShowCommand', () => {
     it('revert, delete and save-as get no new prompt', async () => {
       const { deps } = setup({ dirty: true });
       for (const command of ['revert', 'delete', 'save-as']) await runShowCommand({ command }, deps);
+      expect(deps.choose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('askToSaveUnsavedChanges (restore and export)', () => {
+    it('goes on at once when nothing is unsaved or the session is not ready', async () => {
+      for (const options of [{}, { dirty: true, status: 'loading' }, { dirty: true, doc: null }]) {
+        const { deps } = setup(options);
+        await expect(askToSaveUnsavedChanges('restore', deps)).resolves.toBe(true);
+        expect(deps.choose).not.toHaveBeenCalled();
+      }
+    });
+
+    it('asks naming the show; Cancel stops and saves nothing', async () => {
+      const { api, deps } = setup({ dirty: true });
+      deps.choose.mockResolvedValue('cancel');
+      await expect(askToSaveUnsavedChanges('restore', deps)).resolves.toBe(false);
+      expect(deps.choose).toHaveBeenCalledWith('Save changes to "Main Show"?', 'Unsaved changes', expect.any(Array), { defaultValue: 'cancel' });
+      expect(api.updateActive).not.toHaveBeenCalled();
+      expect(deps.track).toHaveBeenCalledWith('show_save_prompt', { choice: 'cancel', trigger: 'restore' });
+    });
+
+    it("Save writes the show and goes on; Don't Save goes on without saving", async () => {
+      const saved = setup({ dirty: true });
+      saved.deps.choose.mockResolvedValue('save');
+      await expect(askToSaveUnsavedChanges('export', saved.deps)).resolves.toBe(true);
+      expect(saved.api.updateActive).toHaveBeenCalledWith(liveLayout);
+      expect(saved.deps.track).toHaveBeenCalledWith('show_save_prompt', { choice: 'save', trigger: 'export' });
+
+      const discarded = setup({ dirty: true });
+      discarded.deps.choose.mockResolvedValue('discard');
+      await expect(askToSaveUnsavedChanges('export', discarded.deps)).resolves.toBe(true);
+      expect(discarded.api.updateActive).not.toHaveBeenCalled();
+    });
+
+    it('a failed Save shows the failure alert and stops', async () => {
+      const { api, deps } = setup({ dirty: true });
+      deps.choose.mockResolvedValue('save');
+      api.updateActive.mockResolvedValue(fail('disk full'));
+      await expect(askToSaveUnsavedChanges('restore', deps)).resolves.toBe(false);
+      expect(deps.alert).toHaveBeenCalledWith(
+        "Mx. Voice couldn't change the show. Your saved shows were not changed.",
+        'Show not changed'
+      );
+    });
+
+    it('a Save the session refuses stops without an alert', async () => {
+      const { api, deps } = setup({ dirty: true });
+      deps.choose.mockResolvedValue('save');
+      api.updateActive.mockResolvedValue(fail('busy'));
+      await expect(askToSaveUnsavedChanges('restore', deps)).resolves.toBe(false);
+      expect(deps.alert).not.toHaveBeenCalled();
+    });
+
+    it("stops without asking while another dialog is open; the caller's own dialog doesn't count", async () => {
+      const { deps } = setup({ dirty: true });
+      deps.isModalOpen.mockImplementation((exceptId) => exceptId !== 'backupRestoreModal');
+      await expect(askToSaveUnsavedChanges('export', deps)).resolves.toBe(false);
+      expect(deps.choose).not.toHaveBeenCalled();
+
+      deps.choose.mockResolvedValue('discard');
+      await expect(askToSaveUnsavedChanges('restore', deps, { allowOver: 'backupRestoreModal' })).resolves.toBe(true);
+      expect(deps.choose).toHaveBeenCalledOnce();
+    });
+
+    it('stops while a show command runs, and a show command waits out its prompt', async () => {
+      const { api, deps } = setup({ dirty: true });
+      let answer;
+      deps.choose.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+      const asking = askToSaveUnsavedChanges('restore', deps);
+      await vi.waitFor(() => expect(deps.choose).toHaveBeenCalled());
+      // A command arriving meanwhile is dropped, as behind any running command
+      await runShowCommand({ command: 'save' }, deps);
+      expect(api.updateActive).not.toHaveBeenCalled();
+      // ...and a second prompt is refused
+      await expect(askToSaveUnsavedChanges('export', deps)).resolves.toBe(false);
+      answer('cancel');
+      await expect(asking).resolves.toBe(false);
+    });
+
+    it('goes on when the session cannot be read, as when it is not ready', async () => {
+      const { api, deps } = setup({ dirty: true });
+      api.getState.mockRejectedValue(new Error('ipc closed'));
+      await expect(askToSaveUnsavedChanges('restore', deps)).resolves.toBe(true);
       expect(deps.choose).not.toHaveBeenCalled();
     });
   });

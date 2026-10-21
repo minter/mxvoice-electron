@@ -316,17 +316,24 @@ describe('show session', () => {
     expect(idle.recoveryStore.calls).toEqual([]);
   });
 
-  it('end("library-import") clears every record', async () => {
+  it('end("library-import") fences and leaves every record for the import to clear once it commits', async () => {
     const ctx = setup();
     await openReady(ctx);
     ctx.recoveryStore.records.set('Alice', { version: 1 });
     ctx.recoveryStore.records.set('Bob', { version: 1 });
+    ctx.recoveryStore.played.set('Alice', { version: 1, counts: { 12: 1 } });
 
     await ctx.session.end('library-import');
 
-    expect(ctx.recoveryStore.clearAll).toHaveBeenCalled();
+    // A failed import reloads the page, and the show in progress comes back
+    expect(ctx.recoveryStore.clearAll).not.toHaveBeenCalled();
     expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
-    expect(ctx.recoveryStore.records.size).toBe(0);
+    expect(ctx.recoveryStore.retirePlayed).not.toHaveBeenCalled();
+    expect(ctx.recoveryStore.records.size).toBe(2);
+    expect(ctx.recoveryStore.played.has('Alice')).toBe(true);
+    // Fenced: no late write lands before the import replaces the files
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toMatchObject({ skipped: true });
+    expect(ctx.recoveryStore.write).not.toHaveBeenCalled();
   });
 
   it('after rendererGone, end("clean-exit") keeps the record', async () => {
@@ -568,7 +575,7 @@ describe('show session', () => {
       }
     }
 
-    // Other exits still retire it, and a library import still clears all
+    // Other exits still retire it; a library import leaves it for the import to clear
     const deleted = setup();
     deleted.recoveryStore.records.set('Alice', record);
     await deleted.session.open();
@@ -578,7 +585,7 @@ describe('show session', () => {
     imported.recoveryStore.records.set('Alice', record);
     await imported.session.open();
     await imported.session.end('library-import');
-    expect(imported.recoveryStore.clearAll).toHaveBeenCalled();
+    expect(imported.recoveryStore.records.has('Alice')).toBe(true);
   });
 
   it('restoring a handed-off record makes it an ordinary record, so a second crash asks', async () => {
@@ -1620,8 +1627,8 @@ describe('show session played counts', () => {
     expect(ctx.session.state().hasPlayed).toBe(false);
   });
 
-  it('every exit that retires the layout record retires the played file; library import clears all', async () => {
-    for (const reason of ['clean-exit', 'switch', 'backup-restore', 'profile-deleted', 'library-import']) {
+  it('every exit that retires the layout record retires the played file', async () => {
+    for (const reason of ['clean-exit', 'switch', 'backup-restore', 'profile-deleted']) {
       const ctx = setup();
       await readyWithoutRecovery(ctx);
       await ctx.session.recordPlay('12');

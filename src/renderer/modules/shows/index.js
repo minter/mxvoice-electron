@@ -15,7 +15,7 @@ import { isAnyModalOpen } from '../ui/bootstrap-helpers.js';
 import { clearProfileRestorationLock, extractLayout, flushProfileState } from '../profile-state/index.js';
 import { droppedSongsMessage, LOAD_FAILED_MESSAGE, TOAST_MS } from './messages.js';
 import { unwrap } from './ipc-result.js';
-import { runShowCommand } from './commands.js';
+import { askToSaveUnsavedChanges as askToSave, runShowCommand } from './commands.js';
 import { chooseImportShow } from './import-dialog.js';
 import { installHeaderListeners, refreshHeader } from './header.js';
 import playedCounts from './played-counts.js';
@@ -72,7 +72,7 @@ function defaultDeps(overrides) {
     track: trackEvent,
     quit: () => window.secureElectronAPI?.app?.quit?.(),
     clearRestorationLock: clearProfileRestorationLock,
-    isModalOpen: () => isAnyModalOpen(),
+    isModalOpen: (exceptId) => isAnyModalOpen(exceptId),
     extractLayout,
     chooseImportShow: (groups) => chooseImportShow(groups),
     refreshHeader: () => refreshHeader(),
@@ -197,6 +197,21 @@ async function openSession(overrides) {
 }
 
 /**
+ * Before Restore Backup or Export Library: when the show on screen has
+ * unsaved changes, ask Save / Don't Save / Cancel, as switching shows does.
+ *
+ * @param {'restore'|'export'} trigger
+ * @param {{ allowOver?: string }} [options] - id of the caller's own open
+ *   dialog, which the prompt may open over
+ * @returns {Promise<boolean>} true to go on, false to stop (Cancel or a
+ *   failed Save, which alerts). True at once when nothing is unsaved or the
+ *   session isn't ready.
+ */
+export function askToSaveUnsavedChanges(trigger, options) {
+  return askToSave(trigger, defaultDeps({}), options);
+}
+
+/**
  * Run each Shows menu command (`menu:show-command`) from now on. Call once,
  * after openSessionOnStartup.
  *
@@ -217,6 +232,7 @@ export function initializeShowCommands(overrides = {}) {
 export default {
   openSessionOnStartup,
   whenStartupSettled,
+  askToSaveUnsavedChanges,
   initializeShowCommands,
   buildLayoutDeps,
   droppedSongsMessage

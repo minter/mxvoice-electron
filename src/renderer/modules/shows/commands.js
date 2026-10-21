@@ -153,6 +153,55 @@ async function settleUnsavedChanges(trigger, deps, state = null) {
   return { proceed: true };
 }
 
+/**
+ * Before an action that replaces or captures the profile outside the Shows
+ * menu (Restore Backup, Export Library): ask to save unsaved changes. Runs
+ * like a show command: dropped while one runs or while another dialog is
+ * open, and a show command arriving while it asks is dropped.
+ *
+ * @param {'restore'|'export'} trigger - for analytics
+ * @param {Object} deps - as runShowCommand's
+ * @param {{ allowOver?: string }} [options] - id of the caller's own open
+ *   dialog, which the prompt may open over
+ * @returns {Promise<boolean>} true to go on (nothing unsaved, session not
+ *   ready, Save or Don't Save); false to stop (Cancel, a failed Save, or the
+ *   prompt couldn't be shown)
+ */
+export async function askToSaveUnsavedChanges(trigger, deps, { allowOver } = {}) {
+  const context = { ...LOG_CONTEXT, function: 'askToSaveUnsavedChanges', trigger };
+  if (running) {
+    window.debugLog?.info('Unsaved-changes prompt dropped: a show command is running', context);
+    return false;
+  }
+  running = true;
+  try {
+    let unsaved;
+    try {
+      unsaved = await hasUnsavedChanges(deps);
+    } catch (error) {
+      // As when the session isn't ready: there is no show to ask about
+      window.debugLog?.warn('Could not read the show session; going on without asking', { ...context, error: error.message });
+      return true;
+    }
+    if (!unsaved) return true;
+    if (deps.isModalOpen(allowOver)) {
+      window.debugLog?.info('Unsaved-changes prompt dropped: a dialog is open', context);
+      return false;
+    }
+    return (await settleUnsavedChanges(trigger, deps, unsaved)).proceed;
+  } catch (error) {
+    if (REFUSED_ERRORS.has(error.message)) {
+      window.debugLog?.info('Save refused by the session', { ...context, error: error.message });
+    } else {
+      window.debugLog?.error('Could not save the show', { ...context, error: error.message });
+      deps.alert(CHANGE_FAILED_MESSAGE, 'Show not changed');
+    }
+    return false;
+  } finally {
+    running = false;
+  }
+}
+
 const handlers = {
   async switch(showId, deps) {
     // Dialogs don't stack: a switch that would ask is dropped behind another dialog
@@ -321,4 +370,4 @@ export async function runShowCommand({ command, showId, ...details } = {}, deps)
   }
 }
 
-export default { runShowCommand, nextShowAfterDelete };
+export default { runShowCommand, nextShowAfterDelete, askToSaveUnsavedChanges };

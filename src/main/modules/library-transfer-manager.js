@@ -514,6 +514,9 @@ async function validateArchive(archivePath) {
  */
 async function importLibrary(archivePath, progressCallback = () => {}) {
   const logCtx = { module: 'library-transfer-manager', function: 'importLibrary' };
+  // Once the session has ended, a failure must say so: the page reloads to
+  // reopen the session from disk, or Shows and autosave stay disabled
+  let sessionEnded = false;
 
   try {
     progressCallback({ percent: 0, message: 'Validating archive...' });
@@ -564,11 +567,19 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       const defaultHotkeyDir = path.join(userData, 'hotkeys');
       const defaultDbDir = userData;
 
+      // An archive without a database can't be imported. Checked before the
+      // session ends, so a refused import leaves the show running.
+      const extractedDb = path.join(tempDir, 'database', 'mxvoice.db');
+      if (!await pathExists(extractedDb)) {
+        debugLog?.warn('Archive has no database', logCtx);
+        return { success: false, error: 'Invalid archive: it has no database.' };
+      }
+
       // The library is replaced, so every crash-recovery record is stale.
       // End the session first: its fence stops a late write from recreating
-      // one before the database or any profile file moves. Then clear them
-      // all directly: with no open session (or one already ended) end()
-      // clears nothing. Neither failure may stop the import.
+      // one before the database or any profile file moves. The records are
+      // cleared once the import has committed. A failed end may not stop it.
+      sessionEnded = Boolean(showSession);
       try {
         await showSession?.end('library-import');
       } catch (endErr) {
@@ -576,66 +587,56 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
           ...logCtx, error: endErr.message
         });
       }
-      try {
-        await recoveryStore?.clearAll();
-      } catch (clearErr) {
-        debugLog?.warn('Could not clear crash-recovery records before importing the library', {
-          ...logCtx, error: clearErr.message
-        });
-      }
 
       // Import database
-      const extractedDb = path.join(tempDir, 'database', 'mxvoice.db');
-      if (await pathExists(extractedDb)) {
-        progressCallback({ percent: 55, message: 'Importing database...' });
+      progressCallback({ percent: 55, message: 'Importing database...' });
 
-        // Close existing database if open
-        const currentDb = getDb();
-        if (currentDb && typeof currentDb.close === 'function') {
-          try {
-            currentDb.close();
-            setDb(null);
-            debugLog?.info('Closed existing database for import', logCtx);
-          } catch (closeErr) {
-            debugLog?.warn('Could not close existing database', { ...logCtx, error: closeErr.message });
-          }
+      // Close existing database if open
+      const currentDb = getDb();
+      if (currentDb && typeof currentDb.close === 'function') {
+        try {
+          currentDb.close();
+          setDb(null);
+          debugLog?.info('Closed existing database for import', logCtx);
+        } catch (closeErr) {
+          debugLog?.warn('Could not close existing database', { ...logCtx, error: closeErr.message });
         }
+      }
 
-        const targetDbPath = path.join(defaultDbDir, 'mxvoice.db');
-        await fs.promises.copyFile(extractedDb, targetDbPath);
-        debugLog?.info('Database imported', { ...logCtx, targetDbPath });
+      const targetDbPath = path.join(defaultDbDir, 'mxvoice.db');
+      await fs.promises.copyFile(extractedDb, targetDbPath);
+      debugLog?.info('Database imported', { ...logCtx, targetDbPath });
 
-        // Update database filenames for any music files that were renamed during extraction
-        // (e.g., colons replaced with underscores on Windows)
-        const musicRenames = new Map();
-        for (const [original, sanitized] of renamedFiles) {
-          if (original.startsWith('music/')) {
-            const origName = path.basename(original);
-            const sanitizedName = path.basename(sanitized);
-            musicRenames.set(origName, sanitizedName);
-          }
+      // Update database filenames for any music files that were renamed during extraction
+      // (e.g., colons replaced with underscores on Windows)
+      const musicRenames = new Map();
+      for (const [original, sanitized] of renamedFiles) {
+        if (original.startsWith('music/')) {
+          const origName = path.basename(original);
+          const sanitizedName = path.basename(sanitized);
+          musicRenames.set(origName, sanitizedName);
         }
+      }
 
-        if (musicRenames.size > 0) {
-          try {
-            const { Database } = await import('node-sqlite3-wasm');
-            const importedDb = new Database(targetDbPath);
-            let updatedCount = 0;
-            for (const [origName, sanitizedName] of musicRenames) {
-              const stmt = importedDb.prepare('UPDATE mrvoice SET filename = ? WHERE filename = ?');
-              const result = stmt.run([sanitizedName, origName]);
-              updatedCount += result.changes || 0;
-              stmt.finalize();
-            }
-            importedDb.close();
-            debugLog?.info('Updated sanitized filenames in database', {
-              ...logCtx, renamedCount: musicRenames.size, updatedRows: updatedCount
-            });
-          } catch (dbFixErr) {
-            debugLog?.warn('Could not update sanitized filenames in database', {
-              ...logCtx, error: dbFixErr.message
-            });
+      if (musicRenames.size > 0) {
+        try {
+          const { Database } = await import('node-sqlite3-wasm');
+          const importedDb = new Database(targetDbPath);
+          let updatedCount = 0;
+          for (const [origName, sanitizedName] of musicRenames) {
+            const stmt = importedDb.prepare('UPDATE mrvoice SET filename = ? WHERE filename = ?');
+            const result = stmt.run([sanitizedName, origName]);
+            updatedCount += result.changes || 0;
+            stmt.finalize();
           }
+          importedDb.close();
+          debugLog?.info('Updated sanitized filenames in database', {
+            ...logCtx, renamedCount: musicRenames.size, updatedRows: updatedCount
+          });
+        } catch (dbFixErr) {
+          debugLog?.warn('Could not update sanitized filenames in database', {
+            ...logCtx, error: dbFixErr.message
+          });
         }
       }
 
@@ -723,6 +724,17 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
         }
       }
 
+      // Committed: every record is stale now. Cleared directly, since end()
+      // leaves them (and with no open session, or one already ended, it never
+      // ran). A failure here may not fail the import.
+      try {
+        await recoveryStore?.clearAll();
+      } catch (clearErr) {
+        debugLog?.warn('Could not clear crash-recovery records after importing the library', {
+          ...logCtx, error: clearErr.message
+        });
+      }
+
       progressCallback({ percent: 100, message: 'Import complete! Restarting...' });
 
       debugLog?.info('Library import complete', { ...logCtx, manifest });
@@ -737,8 +749,10 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       }
     }
   } catch (error) {
-    debugLog?.error('Library import failed', { ...logCtx, error: error.message });
-    return { success: false, error: error.message };
+    debugLog?.error('Library import failed', { ...logCtx, error: error.message, sessionEnded });
+    return sessionEnded
+      ? { success: false, error: error.message, sessionEnded: true }
+      : { success: false, error: error.message };
   }
 }
 

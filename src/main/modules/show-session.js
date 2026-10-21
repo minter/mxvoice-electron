@@ -410,9 +410,10 @@ export function createShowSession({
     fenced = true;
     if (handoffDone) await handoffDone;
     await writeQueue;
-    if (reason === 'library-import') {
-      await recoveryStore.clearAll();
-    } else {
+    // A library import clears every record itself, once it has committed: one
+    // that fails after this fence reloads the page, and the show in progress
+    // must still be there
+    if (reason !== 'library-import') {
       if (!kept) await recoveryStore.retire(p);
       if (!keptPlayed) await recoveryStore.retirePlayed(p);
     }

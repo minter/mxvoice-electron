@@ -68,6 +68,28 @@ describe('profile backup manager orchestration', () => {
     });
   });
 
+  it('checkBackupRestorable accepts a listed backup whose folder exists, and nothing else', async () => {
+    const created = await manager.createBackup(profileName, { mode: 'manual' });
+    await expect(manager.checkBackupRestorable(profileName, created.backupId)).resolves.toEqual({ success: true });
+
+    // A well-formed id this profile's metadata doesn't list
+    await expect(manager.checkBackupRestorable(profileName, 'backup-2001-01-01T00-00-00-000Z')).resolves.toEqual({
+      success: false, error: 'Backup does not exist'
+    });
+
+    // Listed, but its folder is gone
+    await fs.promises.rm(path.join(manager.getBackupDirectory(profileName), created.backupId), { recursive: true });
+    await expect(manager.checkBackupRestorable(profileName, created.backupId)).resolves.toEqual({
+      success: false, error: 'Backup does not exist'
+    });
+
+    // Another profile's backup is not this profile's
+    const other = await manager.createBackup(profileName, { mode: 'manual' });
+    await expect(manager.checkBackupRestorable('Missing Profile', other.backupId)).resolves.toEqual({
+      success: false, error: 'Backup does not exist'
+    });
+  });
+
   it('listBackups reports show names from the backup', async () => {
     const showsFile = path.join(profileDirectory, 'shows.json');
     const doc = { version: 1, activeShowId: 'a', shows: [
@@ -108,6 +130,12 @@ describe('profile backup manager orchestration', () => {
       });
       await expect(fs.promises.access(path.join(profileDirectory, 'preferences.json'))).resolves.toBeUndefined();
       await expect(fs.promises.access(manager.getBackupDirectory(profileName))).resolves.toBeUndefined();
+    });
+
+    it.each(invalidIds)('rejects %s in checkBackupRestorable', async (_label, backupId) => {
+      await expect(manager.checkBackupRestorable(profileName, backupId)).resolves.toEqual({
+        success: false, error: 'Invalid backup ID'
+      });
     });
 
     it.each(invalidIds)('rejects %s in restoreBackup', async (_label, backupId) => {

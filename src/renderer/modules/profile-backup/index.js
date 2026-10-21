@@ -10,6 +10,8 @@ let electronAPI = null;
 let moduleRegistry = {};
 let isCreatingBackup = false; // Lock to prevent duplicate backup creation
 
+const SESSION_RELOAD_SENTENCE = 'Mx. Voice will reload the show.';
+
 /**
  * Initialize the Profile Backup module
  * @param {Object} options - Configuration options
@@ -221,6 +223,14 @@ async function restoreBackup(backupId, backupShows = null) {
       return;
     }
     
+    // The restore replaces the show on screen, and its unsaved changes live
+    // only in the crash-recovery record, which no backup includes: ask first.
+    // The prompt opens over this dialog's backup list.
+    const { askToSaveUnsavedChanges } = await import('../shows/index.js');
+    if (!await askToSaveUnsavedChanges('restore', { allowOver: 'backupRestoreModal' })) {
+      return;
+    }
+
     // Confirm restore
     const { customConfirm } = await import('../utils/index.js');
     const showsNote = await describeShowReplacement(backupShows);
@@ -270,6 +280,19 @@ async function restoreBackup(backupId, backupShows = null) {
       });
       
       const { customConfirm } = await import('../utils/index.js');
+      if (result.sessionEnded) {
+        // The show session ended before the restore failed: reload to reopen
+        // it from disk, or Shows and autosave stay off until a restart
+        await customConfirm(
+          `Failed to restore backup: ${result.error} ${SESSION_RELOAD_SENTENCE}`,
+          'Restore Failed'
+        );
+        if (typeof window !== 'undefined') {
+          window.isRestoringProfileState = true;
+        }
+        window.location.reload();
+        return;
+      }
       await customConfirm(
         `Failed to restore backup: ${result.error}`,
         'Restore Failed'

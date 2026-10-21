@@ -16,7 +16,9 @@
  * @param {Object} [deps.recoveryStore] - from createRecoveryStore
  * @param {() => string|null} [deps.getCurrentProfile]
  * @param {Object} [deps.debugLog]
- * @returns {Promise<{ success: boolean, error?: string }>} deleteProfile's result
+ * @returns {Promise<{ success: boolean, error?: string, sessionEnded?: boolean }>}
+ *   deleteProfile's result; `sessionEnded` when it failed after the current
+ *   profile's session was ended
  */
 export async function deleteProfileWithRecovery(profileName, {
   profileManager,
@@ -30,7 +32,9 @@ export async function deleteProfileWithRecovery(profileName, {
   // Deleting the profile in use: fence its session first so no late recovery
   // write lands after the delete. Only for a delete that will happen; a
   // refused one must leave the session running.
+  let sessionEnded = false;
   if (profileName === getCurrentProfile?.() && !profileManager.getDeleteProfileBlocker(profileName)) {
+    sessionEnded = Boolean(showSession);
     try {
       await showSession?.end('profile-deleted');
     } catch (error) {
@@ -38,7 +42,20 @@ export async function deleteProfileWithRecovery(profileName, {
     }
   }
 
-  const result = await profileManager.deleteProfile(profileName);
+  let result;
+  try {
+    result = await profileManager.deleteProfile(profileName);
+  } catch (error) {
+    if (!sessionEnded) throw error;
+    result = { success: false, error: error.message };
+  }
+
+  // A delete that failed after the session ended (a Windows file lock, say)
+  // leaves the profile in place: the page reloads to reopen its session
+  if (!result?.success && sessionEnded) {
+    debugLog?.warn('Profile delete failed after its show session ended', { ...logCtx, error: result?.error });
+    return { ...result, success: false, sessionEnded: true };
+  }
 
   if (result?.success) {
     try {

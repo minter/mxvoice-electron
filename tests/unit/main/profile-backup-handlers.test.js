@@ -4,7 +4,7 @@ const handlers = {};
 const ipcMain = { handle: (channel, handler) => { handlers[channel] = handler; } };
 const backup = {
   createBackup: vi.fn(), listBackups: vi.fn(), getBackupMetadata: vi.fn(),
-  restoreBackup: vi.fn(), deleteBackup: vi.fn()
+  restoreBackup: vi.fn(), deleteBackup: vi.fn(), checkBackupRestorable: vi.fn()
 };
 const profiles = {
   loadProfilePreferences: vi.fn(), saveProfilePreferences: vi.fn()
@@ -15,7 +15,7 @@ vi.mock('../../../src/main/modules/profile-backup-manager.js', () => backup);
 vi.mock('../../../src/main/modules/profile-manager.js', () => profiles);
 
 const { register } = await import('../../../src/main/modules/ipc/profile-backup-handlers.js');
-const debugLog = { info: vi.fn(), error: vi.fn() };
+const debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 let activeProfile;
 let showSession;
 
@@ -27,6 +27,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   activeProfile = 'Default User';
   showSession = { end: vi.fn(async () => {}) };
+  backup.checkBackupRestorable.mockResolvedValue({ success: true });
   register({ getCurrentProfile: () => activeProfile, debugLog, showSession });
 });
 
@@ -78,6 +79,44 @@ describe('profile backup IPC handlers', () => {
     backup.restoreBackup.mockResolvedValue({ success: true });
     await expect(invoke('profile:restoreBackup', 'backup-1')).resolves.toEqual({ success: true });
     expect(backup.restoreBackup).toHaveBeenCalledWith('Default User', 'backup-1');
+  });
+
+  it('restore of a missing backup fails before ending the session', async () => {
+    backup.checkBackupRestorable.mockResolvedValue({ success: false, error: 'Backup does not exist' });
+
+    await expect(invoke('profile:restoreBackup', 'backup-1')).resolves.toEqual({
+      success: false, error: 'Backup does not exist'
+    });
+    expect(backup.checkBackupRestorable).toHaveBeenCalledWith('Default User', 'backup-1');
+    expect(showSession.end).not.toHaveBeenCalled();
+    expect(backup.restoreBackup).not.toHaveBeenCalled();
+  });
+
+  it('a pre-check that throws fails before ending the session', async () => {
+    backup.checkBackupRestorable.mockRejectedValue(new Error('metadata unreadable'));
+    await expect(invoke('profile:restoreBackup', 'backup-1')).resolves.toEqual({
+      success: false, error: 'metadata unreadable'
+    });
+    expect(showSession.end).not.toHaveBeenCalled();
+  });
+
+  it('a restore that fails after end returns sessionEnded', async () => {
+    backup.restoreBackup.mockResolvedValue({ success: false, error: 'EBUSY: resource busy or locked' });
+    await expect(invoke('profile:restoreBackup', 'backup-1')).resolves.toEqual({
+      success: false, error: 'EBUSY: resource busy or locked', sessionEnded: true
+    });
+    expect(showSession.end).toHaveBeenCalledWith('backup-restore');
+
+    // A throw after end is the same, and so is a failed end
+    backup.restoreBackup.mockRejectedValue(new Error('EPERM'));
+    await expect(invoke('profile:restoreBackup', 'backup-1')).resolves.toEqual({
+      success: false, error: 'EPERM', sessionEnded: true
+    });
+    showSession.end.mockRejectedValue(new Error('recovery dir locked'));
+    backup.restoreBackup.mockResolvedValue({ success: false, error: 'EBUSY' });
+    await expect(invoke('profile:restoreBackup', 'backup-1')).resolves.toEqual({
+      success: false, error: 'EBUSY', sessionEnded: true
+    });
   });
 
   it('touches no session without an active profile', async () => {
