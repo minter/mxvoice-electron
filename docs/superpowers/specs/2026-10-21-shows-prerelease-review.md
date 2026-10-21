@@ -116,3 +116,33 @@ Failed restore, import and delete after `end()`; empty-key and aliased legacy pr
 - **Session:** captured-profile writes, generation and openSeq guards, the Save race, the never-ready keep rule, crash-loop protection, renderer-crash hand-off order.
 - **Renderer:** restoration lock always released, recovery never captures a half-applied layout, playback survives a swap, command serialization, the save-changes prompt defaults to Cancel.
 - **IPC/security:** show IPC validated; no XSS (all names via `textContent` or escaping); removed channels fully gone; packaging includes all new files; coverage floors raised, no skipped tests.
+
+---
+
+## Status after the must-fix plan (2026-10-21)
+
+Plan: `docs/superpowers/plans/2026-10-21-shows-must-fix.md`. Every task was reviewed and a final whole-branch review was run.
+
+| Item | Status | Commits |
+|---|---|---|
+| 1.1 Crash and unreadable prompts | Fixed. They can't be dismissed or hidden by another modal, the release notes wait until startup settles, and "Open saved show" sets the record aside as `<key>.discarded.json`. A failed set-aside no longer fails the open. | 3b894b12, 9b261036, c01c86d4 |
+| 1.2 Silent quit/switch | Kept silent (user decision). The close-window confirm now says unsaved changes won't be kept, and the tour and release notes say it plainly. | d773ed7a |
+| 1.3 Restore, export, import, delete | Fixed. Restore and Export ask to save first. Each operation validates before ending the session. On a failure after that point the window reloads, or the app restarts after an import. Import clears recovery only after it commits. A failed delete keeps the layout and counts, and a failed restore keeps the counts. | 255d71e1, c01c86d4 |
+| 1.4 Empty folder name | Fixed. The path helpers throw, delete, backup, restore and duplicate refuse, and `rmSync` asserts it never targets the profiles folder. | 2aea2754 |
+| 1.5 3.x/4.0 migration | Fixed. Default User with no `state.json` migrates `config.json` `hotkeys`/`holding_tank`. An unreadable config is never saved as empty. | 241a87d6 |
+| 1.6 Update install that doesn't quit | Fixed. `cancelHandoff`, a 15 s quit timer, and on macOS a wait for Squirrel (with a 2 min ceiling) before handing off, plus a `before-quit-for-update` backstop. The unused `RESTART_AND_INSTALL` IPC was removed. | e586eb1a, 27331cac, d50edcda, e890c0b6 |
+| 1.7 Housekeeping | Done. Version 4.4.0, a test that the tour key matches the package version, and `main` merged (PR 825). The v4.3.2-only fixes were already present. | e29796d4, b44b807c, 42424f72 |
+| Found while fixing | The tour left a popover on screen when closed mid-step. Fixed. | e9d2f0e0, fc977f81 |
+
+### Deferred (follow-ups; none blocks the release per the final review)
+
+- An empty-folder-name legacy profile is now safe but degraded: it opens to the unreadable prompt, with no crash recovery and no preferences. A follow-up could migrate it to a safe folder name.
+- A failed library import restarts into the crash prompt ("didn't close normally"). The data is safe; the wording is off.
+- A static modal (release notes, Preferences) can open beneath an open prompt.
+- Export with unsaved changes is silently dropped while a dialog is open.
+- Restore failure messages use a confirm (OK/Cancel); an alert would read better.
+- Renamed 3.x tab names aren't migrated (matches 4.3.2).
+- Missing tests: the `renderer.js` delete-failure branch (the script isn't unit-testable); the wiring of the dirty quit detail into the dialog; a seeded E2E for a 3.x `config.json`; an E2E for the save prompt over the restore dialog; the update not-installed notice.
+- The coverage floor for lines is at 52 against a measured 52.03.
+- Before release: run the 5 audio-output E2E tests (playback basic/fade, hotkey stop, holding-tank mode playback, first-run play) on CI macOS/Windows. They failed locally on 2026-10-21 on both new and pre-change code with both Electron versions, so it's an environment issue, but confirm.
+- From review sections 2–3, still open: failed show load or apply leaves the session `failed` with no retry (2.1); F-keys don't work while a text prompt has focus (2.3); the tour auto-starts after a profile switch (2.4); the dropped-songs toast repeats (2.5); `profiles.json` can shrink when its read fails (2.6); aliased recovery keys (2.7); Windows shutdown (2.8); startup failure copy (2.9); picker keyboard (2.10); downgrade notes (2.11); `mrvoice.db` on import (2.13); plus the section 3 polish items.
