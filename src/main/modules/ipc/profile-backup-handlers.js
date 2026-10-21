@@ -11,7 +11,7 @@ import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { getCurrentProfile, debugLog, showSession } = deps;
+  const { getCurrentProfile, debugLog, showSession, recoveryStore } = deps;
 
   // Profile Backup: Create backup
   ipcMain.handle(IPC.PROFILE_BACKUP.CREATE, async (_event) => {
@@ -163,6 +163,18 @@ export function register(deps) {
           profileName: currentProfile,
           backupId
         });
+        // end() left the night's played counts in case the restore failed;
+        // it succeeded, so they go, as the layout record already has
+        try {
+          await recoveryStore?.retirePlayed?.(currentProfile);
+        } catch (error) {
+          debugLog?.warn('Could not retire the played counts after restoring a backup', {
+            module: 'ipc-handlers',
+            function: 'profile:restoreBackup',
+            profileName: currentProfile,
+            error: error.message
+          });
+        }
       } else {
         debugLog?.error('Failed to restore profile backup', {
           module: 'ipc-handlers',

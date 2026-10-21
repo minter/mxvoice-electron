@@ -30,7 +30,8 @@
  * their own file by recoveryStore.writePlayed on every change. They belong
  * to the session, not the show: they start empty at open(), carry across
  * show changes (so a show mutation's fence doesn't stop them), never touch
- * `dirty`, and are retired by end() wherever the layout record is. A played
+ * `dirty`, and are retired by end() wherever the layout record is, except
+ * a backup restore, which retires them itself once it succeeds. A played
  * file found at open() counts as a show in progress. Until the open is
  * settled (resolveRecovery(), or an open or startEmpty with nothing pending)
  * plays are refused and a clean exit or switch keeps the file, so a failed,
@@ -60,6 +61,10 @@ const END_REASONS = new Set(['clean-exit', 'switch', 'backup-restore', 'library-
 // Exits that keep the record once it has been handed off to the next open,
 // or when the show never became ready
 const KEPT_AFTER_HANDOFF = new Set(['clean-exit', 'switch']);
+// Exits whose caller retires both files itself, once its work has succeeded
+const RETIRED_BY_CALLER = new Set(['library-import', 'profile-deleted']);
+// Exits whose caller retires the played file itself, once its work has succeeded
+const PLAYED_RETIRED_BY_CALLER = new Set(['backup-restore']);
 const DEFAULT_PROFILE = 'Default User';
 const SONG_ID = /^\d+$/;
 
@@ -331,15 +336,25 @@ export function createShowSession({
       // The restored layout is the recovery copy, not the saved show
       if (record) setDirty(true);
       if (playedRecord) setPlayed(new Map(Object.entries(playedRecord.counts)));
-      if (record?.handoff) await queued(() => recoveryStore.clearHandoff(p));
-      if (playedRecord?.handoff) await queued(() => recoveryStore.writePlayed(p, playedCounts()));
+      if (record?.handoff) await bestEffort('resolveRecovery', 'Could not clear the recovery handoff', () => recoveryStore.clearHandoff(p));
+      if (playedRecord?.handoff) await bestEffort('resolveRecovery', 'Could not save the restored played counts', () => recoveryStore.writePlayed(p, playedCounts()));
       return { layout: record ? normalizeLayout(record.layout) : saved, counts: playedCounts() };
     }
     setDirty(false);
     setPlayed(new Map());
     // Set aside, not deleted: a wrong answer at the prompt stays recoverable
-    await queued(() => recoveryStore.discard(p));
+    await bestEffort('resolveRecovery', 'Could not set the show in progress aside', () => recoveryStore.discard(p));
     return { layout: saved, counts: {} };
+  }
+
+  // Bookkeeping that must not fail the open: the layout is already decided,
+  // and a file left behind is only offered again at the next open
+  async function bestEffort(fn, message, task) {
+    try {
+      await queued(task);
+    } catch (error) {
+      debugLog?.warn?.(message, { ...logCtx(fn), error: error.message });
+    }
   }
 
   /**
@@ -413,12 +428,14 @@ export function createShowSession({
     fenced = true;
     if (handoffDone) await handoffDone;
     await writeQueue;
-    // A library import clears every record itself, once it has committed: one
-    // that fails after this fence reloads the page, and the show in progress
-    // must still be there
-    if (reason !== 'library-import') {
+    // A library import and a profile delete clear the records themselves,
+    // once they have succeeded: one that fails after this fence reloads the
+    // page, and the show in progress must still be there. A backup restore
+    // retires the layout now (the user already chose Save or Don't Save) but
+    // leaves the night's played counts for the restore to retire on success.
+    if (!RETIRED_BY_CALLER.has(reason)) {
       if (!kept) await recoveryStore.retire(p);
-      if (!keptPlayed) await recoveryStore.retirePlayed(p);
+      if (!keptPlayed && !PLAYED_RETIRED_BY_CALLER.has(reason)) await recoveryStore.retirePlayed(p);
     }
     if (generation === g) {
       pendingRecovery = null;

@@ -18,6 +18,7 @@ const { register } = await import('../../../src/main/modules/ipc/profile-backup-
 const debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 let activeProfile;
 let showSession;
+let recoveryStore;
 
 function invoke(channel, ...args) {
   return handlers[channel]({}, ...args);
@@ -27,8 +28,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   activeProfile = 'Default User';
   showSession = { end: vi.fn(async () => {}) };
+  recoveryStore = { retirePlayed: vi.fn(async () => {}) };
   backup.checkBackupRestorable.mockResolvedValue({ success: true });
-  register({ getCurrentProfile: () => activeProfile, debugLog, showSession });
+  register({ getCurrentProfile: () => activeProfile, debugLog, showSession, recoveryStore });
 });
 
 describe('profile backup IPC handlers', () => {
@@ -65,13 +67,29 @@ describe('profile backup IPC handlers', () => {
     expect(backup.deleteBackup).toHaveBeenCalledWith('Default User', 'backup-1');
   });
 
-  it('restoreBackup retires the current recovery', async () => {
+  it('restoreBackup retires the current recovery, and the played counts once the restore succeeds', async () => {
     const order = [];
     showSession.end.mockImplementation(async (reason) => { order.push(`end:${reason}`); });
     backup.restoreBackup.mockImplementation(async () => { order.push('restore'); return { success: true }; });
+    recoveryStore.retirePlayed.mockImplementation(async (name) => { order.push(`retirePlayed:${name}`); });
 
     await expect(invoke('profile:restoreBackup', 'backup-1')).resolves.toEqual({ success: true });
-    expect(order).toEqual(['end:backup-restore', 'restore']);
+    expect(order).toEqual(['end:backup-restore', 'restore', 'retirePlayed:Default User']);
+  });
+
+  it('a failed restore keeps the played counts', async () => {
+    backup.restoreBackup.mockResolvedValue({ success: false, error: 'EBUSY' });
+    await invoke('profile:restoreBackup', 'backup-1');
+    backup.restoreBackup.mockRejectedValue(new Error('EPERM'));
+    await invoke('profile:restoreBackup', 'backup-1');
+    expect(recoveryStore.retirePlayed).not.toHaveBeenCalled();
+  });
+
+  it('a failed played retire after a successful restore is only logged', async () => {
+    backup.restoreBackup.mockResolvedValue({ success: true });
+    recoveryStore.retirePlayed.mockRejectedValue(new Error('EPERM'));
+    await expect(invoke('profile:restoreBackup', 'backup-1')).resolves.toEqual({ success: true });
+    expect(debugLog.warn).toHaveBeenCalledWith('Could not retire the played counts after restoring a backup', expect.objectContaining({ error: 'EPERM' }));
   });
 
   it('restores even if retiring the recovery fails', async () => {

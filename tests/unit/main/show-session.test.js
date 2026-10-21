@@ -3,6 +3,7 @@ import nodeFs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createShowSession } from '../../../src/main/modules/show-session.js';
+import { deleteProfileWithRecovery } from '../../../src/main/modules/profile-delete.js';
 import { ShowStoreError, createShowStore } from '../../../src/main/modules/show-store.js';
 import { addShow, createDocument, normalizeLayout } from '../../../src/main/modules/show-document.js';
 
@@ -348,8 +349,9 @@ describe('show session', () => {
     expect(ctx.recoveryStore.retire).not.toHaveBeenCalled();
     expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ handoff: 'renderer-crash', layout: layoutWith(9) });
 
-    // switch keeps it too; other exits still retire it
-    for (const [reason, retired] of [['switch', false], ['backup-restore', true], ['profile-deleted', true]]) {
+    // switch keeps it too, and a profile delete leaves it for the delete to
+    // retire once it succeeds; a backup restore still retires it
+    for (const [reason, retired] of [['switch', false], ['backup-restore', true], ['profile-deleted', false]]) {
       const other = setup();
       await openReady(other);
       await other.session.saveRecovery(layoutWith(9));
@@ -575,12 +577,18 @@ describe('show session', () => {
       }
     }
 
-    // Other exits still retire it; a library import leaves it for the import to clear
+    // A backup restore still retires it; a library import or a profile
+    // delete leaves it for the import or delete to clear once it succeeds
+    const restored = setup();
+    restored.recoveryStore.records.set('Alice', record);
+    await restored.session.open();
+    await restored.session.end('backup-restore');
+    expect(restored.recoveryStore.records.has('Alice')).toBe(false);
     const deleted = setup();
     deleted.recoveryStore.records.set('Alice', record);
     await deleted.session.open();
     await deleted.session.end('profile-deleted');
-    expect(deleted.recoveryStore.records.has('Alice')).toBe(false);
+    expect(deleted.recoveryStore.records.has('Alice')).toBe(true);
     const imported = setup();
     imported.recoveryStore.records.set('Alice', record);
     await imported.session.open();
@@ -1627,14 +1635,33 @@ describe('show session played counts', () => {
     expect(ctx.session.state().hasPlayed).toBe(false);
   });
 
-  it('every exit that retires the layout record retires the played file', async () => {
-    for (const reason of ['clean-exit', 'switch', 'backup-restore', 'profile-deleted']) {
+  it('a clean exit or switch retires the played file; a restore, delete or import leaves it for the caller', async () => {
+    for (const [reason, retired] of [
+      ['clean-exit', true], ['switch', true], ['backup-restore', false], ['profile-deleted', false], ['library-import', false],
+    ]) {
       const ctx = setup();
       await readyWithoutRecovery(ctx);
       await ctx.session.recordPlay('12');
       await ctx.session.end(reason);
-      expect(ctx.recoveryStore.played.has('Alice'), reason).toBe(false);
+      expect(ctx.recoveryStore.played.has('Alice'), reason).toBe(!retired);
     }
+  });
+
+  it('a failed restore keeps the night\'s played counts but retires the layout record', async () => {
+    const ctx = setup();
+    await readyWithoutRecovery(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+    await ctx.session.recordPlay('12');
+
+    await ctx.session.end('backup-restore');
+
+    // The user already chose Save or Don't Save, so the layout record goes
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+    expect(ctx.recoveryStore.played.get('Alice')?.counts).toEqual({ 12: 1 });
+    // The page reloads after the failure, and the counts are offered again
+    const reopened = await ctx.session.open();
+    expect(reopened.recovery).not.toBeNull();
+    await expect(ctx.session.resolveRecovery('restore')).resolves.toMatchObject({ counts: { 12: 1 } });
   });
 
   it('a played-only file pending at the prompt is kept by a clean exit, as the layout record is', async () => {
@@ -1835,5 +1862,84 @@ describe('show session cancelHandoff', () => {
     // Not handed off any more: quitting at the prompt keeps the record as never-ready
     await ctx.session.end('clean-exit');
     expect(ctx.recoveryStore.records.get('Alice')).toEqual(crash);
+  });
+});
+
+describe('deleting the current profile', () => {
+  async function readyWithShowInProgress() {
+    const ctx = setup();
+    await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+    await ctx.session.recordPlay('12');
+    return ctx;
+  }
+
+  function deleteDeps(ctx, deleteProfile) {
+    return {
+      profileManager: { getDeleteProfileBlocker: () => null, deleteProfile: vi.fn(deleteProfile) },
+      showSession: ctx.session,
+      recoveryStore: ctx.recoveryStore,
+      getCurrentProfile: () => ctx.current.profile,
+      debugLog: ctx.debugLog,
+    };
+  }
+
+  it('a failed current-profile delete keeps the recovery record and played counts', async () => {
+    const ctx = await readyWithShowInProgress();
+
+    await expect(deleteProfileWithRecovery('Alice', deleteDeps(ctx, async () => ({ success: false, error: 'EBUSY' }))))
+      .resolves.toEqual({ success: false, error: 'EBUSY', sessionEnded: true });
+
+    expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ layout: layoutWith(9) });
+    expect(ctx.recoveryStore.played.get('Alice')?.counts).toEqual({ 12: 1 });
+    // The page reloads, and the show in progress is still there to restore
+    const reopened = await ctx.session.open();
+    expect(reopened.recovery).not.toBeNull();
+    await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(9), counts: { 12: 1 } });
+  });
+
+  it('a successful delete still retires both', async () => {
+    const ctx = await readyWithShowInProgress();
+
+    await expect(deleteProfileWithRecovery('Alice', deleteDeps(ctx, async () => ({ success: true }))))
+      .resolves.toEqual({ success: true });
+
+    expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
+    expect(ctx.recoveryStore.played.has('Alice')).toBe(false);
+    expect(ctx.session.state().status).toBe('idle');
+  });
+});
+
+describe('settling the show in progress at open', () => {
+  const crashRecord = (extra = {}) => ({ version: 1, showId: 'show-1', savedAt: T0, handoff: null, layout: layoutWith(7), ...extra });
+
+  it('a failed set-aside still opens the saved show', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.records.set('Alice', crashRecord());
+    ctx.recoveryStore.discard.mockRejectedValueOnce(Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' }));
+    const opened = await ctx.session.open();
+
+    await expect(ctx.session.resolveRecovery('discard')).resolves.toEqual({ layout: layoutWith(1), counts: {} });
+    expect(ctx.debugLog.warn).toHaveBeenCalledWith('Could not set the show in progress aside', expect.objectContaining({
+      error: 'EPERM: operation not permitted'
+    }));
+    // The open goes on as normal: the page reports ready and the show saves
+    ctx.session.reportReady(opened.generation, true);
+    expect(ctx.session.state()).toMatchObject({ status: 'ready', dirty: false });
+    await ctx.session.saveRecovery(layoutWith(8));
+    expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ layout: layoutWith(8) });
+  });
+
+  it('a failed handoff clear or played write still restores the show in progress', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.records.set('Alice', crashRecord({ handoff: 'update', handoffAt: T0 }));
+    ctx.recoveryStore.played.set('Alice', { version: 1, savedAt: T0, handoff: 'update', handoffAt: T0, counts: { 12: 2 } });
+    ctx.recoveryStore.clearHandoff.mockRejectedValueOnce(new Error('EPERM'));
+    ctx.recoveryStore.writePlayed.mockRejectedValueOnce(new Error('EPERM'));
+    await ctx.session.open();
+
+    await expect(ctx.session.resolveRecovery('restore')).resolves.toEqual({ layout: layoutWith(7), counts: { 12: 2 } });
+    expect(ctx.debugLog.warn).toHaveBeenCalledWith('Could not clear the recovery handoff', expect.anything());
+    expect(ctx.debugLog.warn).toHaveBeenCalledWith('Could not save the restored played counts', expect.anything());
   });
 });
