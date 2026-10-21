@@ -41,6 +41,10 @@ export default {
           skipIfMissing: true,
         },
         {
+          title: 'Color-Code Your Shows',
+          description: 'Shows → Color gives the current show an accent color, so you can see which show is loaded at a glance.',
+        },
+        {
           title: "Copy Someone's Show",
           description: 'Shows → Import Show copies a saved show from another profile on this computer. Your copy is yours to change.',
         },
