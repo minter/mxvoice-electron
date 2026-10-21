@@ -53,6 +53,22 @@ function setup({ response = 0, window = makeWindow() } = {}) {
 }
 
 describe('renderer crash handler', () => {
+  it.each([[0, 'reload'], [1, 'quit']])('waits for the handoff write before acting on %s', async (response) => {
+    const { handler, showSession, window, app } = setup({ response });
+    let release;
+    showSession.rendererGone.mockReturnValue(new Promise((resolve) => { release = resolve; }));
+
+    const done = handler({}, { reason: 'crashed' });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(window.webContents.reload).not.toHaveBeenCalled();
+    expect(app.quit).not.toHaveBeenCalled();
+
+    release();
+    await done;
+    expect(window.webContents.reload).toHaveBeenCalledTimes(response === 0 ? 1 : 0);
+    expect(app.quit).toHaveBeenCalledTimes(response === 0 ? 0 : 1);
+  });
+
   it('renderer crash marks handoff and the following quit keeps the record', async () => {
     const recoveryStore = memoryRecoveryStore();
     const doc = createDocument(saved, { now: Date.now(), newId: () => 'show-1' });

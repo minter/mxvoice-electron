@@ -328,6 +328,21 @@ describe('show session', () => {
     }
   });
 
+  it('rendererGone returns a promise that resolves after markHandoff', async () => {
+    const ctx = setup();
+    await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(9));
+
+    const pending = ctx.session.rendererGone();
+    expect(pending).toBeInstanceOf(Promise);
+    await pending;
+    expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ handoff: 'renderer-crash' });
+
+    // A no-op still returns a resolved promise
+    const idle = setup();
+    await expect(idle.session.rendererGone()).resolves.toBeUndefined();
+  });
+
   it('a renderer crash long after the last edit still restores silently on reopen', async () => {
     const ctx = setup();
     await openReady(ctx);

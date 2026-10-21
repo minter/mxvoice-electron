@@ -367,7 +367,7 @@ export function createShowSession({
   }
 
   function rendererGone() {
-    if (!profile || ended) return;
+    if (!profile || ended) return Promise.resolve();
     // handoff() captures the profile before its first await
     pendingHandoff = handoff('renderer-crash').catch((error) => {
       debugLog?.error?.('Could not mark the recovery record after a renderer crash', {
@@ -375,6 +375,7 @@ export function createShowSession({
         error: error.message
       });
     });
+    return pendingHandoff;
   }
 
   // --- Show mutations ---

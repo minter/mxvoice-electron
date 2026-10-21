@@ -163,7 +163,7 @@ test.describe('Shows - session lifecycle', () => {
     await app.evaluate(() => { globalThis.__e2eRendererCrashAnswer = 'reload'; });
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.forcefullyCrashRenderer());
     await expect.poll(() => app.evaluate(() => globalThis.__e2eRendererCrashPrompts || 0), { timeout: 20000 }).toBe(1);
-    expect(readRecovery(userDataDir, 'Default User')?.handoff).toBe('renderer-crash');
+    await expect.poll(() => readRecovery(userDataDir, 'Default User')?.handoff ?? null).toBe('renderer-crash');
 
     // Playwright's page stays marked crashed after the reload, so read the
     // reloaded page through the main process

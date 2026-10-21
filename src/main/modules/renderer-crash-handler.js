@@ -33,7 +33,8 @@ export function createRendererGoneHandler({ showSession, dialog, getMainWindow, 
     if (details.reason === 'clean-exit') return;
 
     debugLog?.error('Main window renderer is gone', { ...logCtx, reason: details.reason, exitCode: details.exitCode });
-    showSession.rendererGone();
+    // Started now, awaited before reload/quit so the record is marked first
+    const handedOff = showSession.rendererGone();
 
     const window = getMainWindow();
     if (!window || window.isDestroyed()) return;
@@ -56,10 +57,12 @@ export function createRendererGoneHandler({ showSession, dialog, getMainWindow, 
     } catch (error) {
       // No way to ask: quitting keeps the record for the next launch
       debugLog?.error('Could not ask about the stopped window; quitting', { ...logCtx, error: error.message });
+      await handedOff;
       app.quit();
       return;
     }
 
+    await handedOff;
     if (response === RELOAD) {
       const live = getMainWindow();
       if (live && !live.isDestroyed()) live.webContents.reload();
