@@ -248,6 +248,63 @@ describe('show-document', () => {
     expect(r.doc.shows[0].layout.hotkeys).toHaveLength(5);
   });
 
+  it('SHOW_COLORS lists the palette keys in menu order', () => {
+    expect(bd.SHOW_COLORS).toEqual(['teal', 'blue', 'purple', 'pink', 'coral', 'amber', 'green']);
+  });
+
+  it('a new or migrated show starts with no color', () => {
+    const doc = bd.createDocument(bd.emptyLayout(), { now: NOW, newId: makeIds() });
+    expect(doc.shows[0].color).toBeNull();
+    const { show } = bd.addShow(doc, { name: 'B', layout: bd.emptyLayout(), now: NOW, newId: makeIds() });
+    expect(show.color).toBeNull();
+  });
+
+  it('setShowColor sets a palette key or null, and rejects anything else', () => {
+    const { doc } = mk(['A', 'B']);
+    const id = doc.shows[1].id;
+    const teal = bd.setShowColor(doc, id, 'teal', 2000);
+    expect(teal.shows[1]).toMatchObject({ color: 'teal', updatedAt: 2000 });
+    expect(teal.shows[1].layout).toBe(doc.shows[1].layout);
+    expect(teal.shows[0]).toBe(doc.shows[0]);
+    expect(teal.activeShowId).toBe(doc.activeShowId);
+    expect(bd.setShowColor(teal, id, null, 3000).shows[1].color).toBeNull();
+    for (const bad of ['Teal', '#0F6E56', 'mauve', '', 3, undefined, {}, 'constructor']) {
+      expect(() => bd.setShowColor(doc, id, bad, 1), String(bad)).toThrow('Invalid show color');
+    }
+    expect(() => bd.setShowColor(doc, 'missing', 'teal', 1)).toThrow('Show not found.');
+  });
+
+  it('addShow keeps a given palette color and drops anything else to null (Save As, Import)', () => {
+    const { doc } = mk(['A']);
+    const newId = makeIds();
+    expect(bd.addShow(doc, { name: 'Copy', layout: bd.emptyLayout(), now: NOW, newId, color: 'amber' }).show.color)
+      .toBe('amber');
+    expect(bd.addShow(doc, { name: 'Copy', layout: bd.emptyLayout(), now: NOW, newId, color: 'mauve' }).show.color)
+      .toBeNull();
+  });
+
+  it('parseDocument keeps a valid color, nulls an invalid one, and still accepts the document', () => {
+    const { doc } = mk(['A', 'B', 'C']);
+    const raw = {
+      ...doc,
+      shows: [
+        { ...doc.shows[0], color: 'green' },
+        { ...doc.shows[1], color: 'chartreuse' },
+        { ...doc.shows[2], color: 7 },
+      ],
+    };
+    const r = bd.parseDocument(raw);
+    expect(r.ok).toBe(true);
+    expect(r.doc.shows.map((b) => b.color)).toEqual(['green', null, null]);
+    // A document from before colors reads as uncolored
+    const { color: _c, ...plain } = doc.shows[0];
+    expect(bd.parseDocument({ ...doc, shows: [plain] }).doc.shows[0].color).toBeNull();
+  });
+
+  it('normalizeLayout ignores a show color passed alongside the layout', () => {
+    expect(bd.normalizeLayout({ color: 'teal' })).toEqual(bd.emptyLayout());
+  });
+
   it('never mutates its input', () => {
     const { doc } = mk(['A', 'B']);
     const frozen = deepFreeze(structuredClone(doc));
@@ -258,6 +315,7 @@ describe('show-document', () => {
       bd.addShow(frozen, { name: 'C', layout, now: 1, newId });
       bd.updateShowLayout(frozen, id, layout, 2);
       bd.renameShow(frozen, id, 'Z', 3);
+      bd.setShowColor(frozen, id, 'teal', 3);
       bd.deleteShow(frozen, id, { now: 4, newId });
       bd.setActive(frozen, frozen.shows[1].id);
       bd.importName(frozen, 'A', 'P');

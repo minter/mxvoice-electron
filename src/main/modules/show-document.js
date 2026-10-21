@@ -17,6 +17,8 @@ import { randomUUID } from 'node:crypto';
 export const SHOW_DOCUMENT_VERSION = 1;
 export const MAX_SHOW_NAME_LENGTH = 50;
 export const DEFAULT_SHOW_NAME = 'Default Show';
+// Accent color keys, in Shows → Color menu order. A show stores the key or null.
+export const SHOW_COLORS = Object.freeze(['teal', 'blue', 'purple', 'pink', 'coral', 'amber', 'green']);
 const MAX_IMPORT_NAME_ATTEMPTS = 1000;
 const TAB_COUNT = 5;
 const HOTKEY_KEYS = Array.from({ length: 12 }, (_, i) => `f${i + 1}`);
@@ -26,6 +28,7 @@ const ERR_LONG = `Show names can be at most ${MAX_SHOW_NAME_LENGTH} characters.`
 const ERR_DUPLICATE = 'A show with this name already exists.';
 const ERR_CONTROL = "Show names can't contain line breaks or control characters.";
 const ERR_NOT_FOUND = 'Show not found.';
+const ERR_COLOR = 'Invalid show color';
 
 const defaultNow = () => Date.now();
 const defaultNewId = () => randomUUID();
@@ -39,6 +42,13 @@ const CONTROL_CHARS = /[\u0000-\u001F\u007F]/;
 function nameError(message) {
   return Object.assign(new Error(message), { code: 'invalid-name' });
 }
+
+export function isShowColor(value) {
+  return typeof value === 'string' && SHOW_COLORS.includes(value);
+}
+
+/** A palette key, or null for anything else, including a key from a newer build. */
+const showColor = (value) => (isShowColor(value) ? value : null);
 
 function pickSelected(value) {
   return Number.isInteger(value) && value >= 1 && value <= TAB_COUNT ? value : 1;
@@ -98,8 +108,8 @@ export function normalizeLayout(raw) {
   };
 }
 
-function makeShow({ id, name, layout, now, importedFrom }) {
-  const show = { id, name, createdAt: now, updatedAt: now };
+function makeShow({ id, name, layout, now, importedFrom, color }) {
+  const show = { id, name, createdAt: now, updatedAt: now, color: showColor(color) };
   if (importedFrom) show.importedFrom = { ...importedFrom };
   show.layout = normalizeLayout(layout);
   return show;
@@ -135,11 +145,11 @@ function replaceShow(doc, index, show) {
 
 export function addShow(
   doc,
-  { name, layout, now = defaultNow(), newId = defaultNewId, activate = true, importedFrom } = {}
+  { name, layout, now = defaultNow(), newId = defaultNewId, activate = true, importedFrom, color = null } = {}
 ) {
   const check = validateShowName(doc, name);
   if (!check.ok) throw nameError(check.error);
-  const show = makeShow({ id: newId(), name: check.name, layout, now, importedFrom });
+  const show = makeShow({ id: newId(), name: check.name, layout, now, importedFrom, color });
   return {
     doc: {
       ...doc,
@@ -164,6 +174,12 @@ export function renameShow(doc, id, name, now = defaultNow()) {
   const check = validateShowName(doc, name, { exceptId: id });
   if (!check.ok) throw nameError(check.error);
   return replaceShow(doc, index, { ...doc.shows[index], name: check.name, updatedAt: now });
+}
+
+export function setShowColor(doc, id, color, now = defaultNow()) {
+  if (color !== null && !isShowColor(color)) throw new Error(ERR_COLOR);
+  const index = indexOfShow(doc, id);
+  return replaceShow(doc, index, { ...doc.shows[index], color, updatedAt: now });
 }
 
 export function deleteShow(doc, id, { now = defaultNow(), newId = defaultNewId } = {}) {
@@ -239,7 +255,7 @@ export function parseDocument(raw) {
     return { ok: false, error: 'shape' };
   }
   if (!raw.shows.some((b) => b.id === raw.activeShowId)) return { ok: false, error: 'shape' };
-  const shows = raw.shows.map((b) => ({ ...b, layout: normalizeLayout(b.layout) }));
+  const shows = raw.shows.map((b) => ({ ...b, color: showColor(b.color), layout: normalizeLayout(b.layout) }));
   return { ok: true, doc: { ...raw, shows } };
 }
 
@@ -247,6 +263,8 @@ export default {
   SHOW_DOCUMENT_VERSION,
   MAX_SHOW_NAME_LENGTH,
   DEFAULT_SHOW_NAME,
+  SHOW_COLORS,
+  isShowColor,
   emptyLayout,
   normalizeLayout,
   createDocument,
@@ -254,6 +272,7 @@ export default {
   addShow,
   updateShowLayout,
   renameShow,
+  setShowColor,
   deleteShow,
   setActive,
   importName,

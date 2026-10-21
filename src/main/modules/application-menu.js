@@ -14,9 +14,9 @@ function buildApplicationMenu({
   getShowMenuState,
   rebuildMenu
 }) {
-  const showSend = (command, showId) => {
+  const showSend = (command, showId, extra) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('menu:show-command', { command, showId });
+      mainWindow.webContents.send('menu:show-command', { command, showId, ...extra });
     }
   };
   const application_menu = [

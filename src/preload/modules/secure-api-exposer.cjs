@@ -507,7 +507,8 @@ const secureElectronAPI = {
     rename: (showId, name) => ipcRenderer.invoke(IPC.SHOWS.RENAME, showId, name),
     remove: (showId) => ipcRenderer.invoke(IPC.SHOWS.DELETE, showId),
     listImportable: () => ipcRenderer.invoke(IPC.SHOWS.LIST_IMPORTABLE),
-    importShow: (profile, showId) => ipcRenderer.invoke(IPC.SHOWS.IMPORT, profile, showId)
+    importShow: (profile, showId) => ipcRenderer.invoke(IPC.SHOWS.IMPORT, profile, showId),
+    setColor: (showId, color) => ipcRenderer.invoke(IPC.SHOWS.SET_COLOR, showId, color)
   },
 
   // Utility functions

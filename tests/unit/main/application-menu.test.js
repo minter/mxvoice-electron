@@ -86,6 +86,9 @@ describe('application menu', () => {
     expect(send).toHaveBeenCalledWith('menu:show-command', { command: 'switch', showId: 'b2' });
     await new Promise((r) => setImmediate(r));
     expect(rebuildMenu).toHaveBeenCalledOnce();
+    const shows = template.find((m) => m.label === 'Shows').submenu;
+    shows.find((i) => i.label === 'Color').submenu.find((i) => i.label === 'Teal').click();
+    expect(send).toHaveBeenLastCalledWith('menu:show-command', { command: 'set-color', showId: null, color: 'teal' });
   });
 
   it('has no top-level Categories menu and puts Manage Categories at the end of Songs', () => {

@@ -10,12 +10,18 @@ import electron from 'electron';
 const { ipcMain } = electron;
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 import * as profileManager from '../profile-manager.js';
+import { isShowColor } from '../show-document.js';
 const { IPC } = ipcChannels;
 
 const SHOW_ID = /^[0-9a-f-]{36}$/;
 
 function checkShowId(showId) {
   if (typeof showId !== 'string' || !SHOW_ID.test(showId)) throw new Error('Invalid show id');
+}
+
+// A palette key, or null to clear the color
+function checkShowColor(color) {
+  if (color !== null && !isShowColor(color)) throw new Error('Invalid show color');
 }
 
 const SONG_ID = /^\d+$/;
@@ -93,5 +99,10 @@ export function register(deps) {
     checkProfile(profile);
     checkShowId(showId);
     return showSession.importShow(profile, showId);
+  });
+  handle(IPC.SHOWS.SET_COLOR, 'setShowColor', (showId, color) => {
+    checkShowId(showId);
+    checkShowColor(color);
+    return showSession.setShowColor(showId, color);
   });
 }

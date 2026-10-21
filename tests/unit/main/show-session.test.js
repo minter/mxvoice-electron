@@ -680,6 +680,7 @@ describe('show session mutations', () => {
       () => ctx.session.renameShow('show-1', 'Renamed'),
       () => ctx.session.deleteShow('show-1'),
       () => ctx.session.importShow('Bob', 'show-1'),
+      () => ctx.session.setShowColor('show-1', 'teal'),
     ]) {
       await expect(call()).rejects.toThrow('session not ready');
     }
@@ -861,6 +862,50 @@ describe('show session mutations', () => {
     expect(ctx.recoveryStore.records.has('Alice')).toBe(false);
     await expect(ctx.session.saveRecovery(layoutWith(3))).resolves.toEqual({ dirty: true });
     expect(ctx.recoveryStore.records.get('Alice').showId).toBe('new-id');
+  });
+
+  it('setShowColor is refused unless ready, saves at once, and leaves dirty, recovery and the layout alone', async () => {
+    const ctx = setup({ doc: twoShowDoc() });
+    await expect(ctx.session.setShowColor('show-1', 'teal')).rejects.toThrow('session not ready');
+    const opened = await ctx.session.open();
+    await expect(ctx.session.setShowColor('show-1', 'teal')).rejects.toThrow('session not ready');
+    ctx.session.reportReady(opened.generation, true);
+    expect(ctx.showStore.save).not.toHaveBeenCalled();
+
+    await ctx.session.saveRecovery(layoutWith(9));
+    const record = ctx.recoveryStore.records.get('Alice');
+    const layoutBefore = ctx.session.state().doc.shows[0].layout;
+    ctx.recoveryStore.calls.length = 0;
+    ctx.rebuildMenu.mockClear();
+
+    await expect(ctx.session.setShowColor('show-1', 'mauve')).rejects.toThrow('Invalid show color');
+    await expect(ctx.session.setShowColor('nope', 'teal')).rejects.toThrow('Show not found.');
+    expect(ctx.showStore.save).not.toHaveBeenCalled();
+
+    const result = await ctx.session.setShowColor('show-1', 'teal');
+    expect(result).toEqual({ id: 'show-1', color: 'teal' });
+    const saved = ctx.showStore.save.mock.calls[0][1];
+    expect(saved.shows[0].color).toBe('teal');
+    expect(saved.shows[0].layout).toEqual(layoutBefore);
+    expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation, dirty: true, doc: saved });
+    expect(ctx.recoveryStore.records.get('Alice')).toBe(record);
+    expect(ctx.recoveryStore.calls).toEqual([]);
+    expect(ctx.rebuildMenu).toHaveBeenCalled();
+
+    // A clean session stays clean; a non-active show can be colored too
+    await ctx.session.updateActive(layoutWith(9));
+    expect(ctx.session.state().dirty).toBe(false);
+    await ctx.session.setShowColor('show-2', null);
+    expect(ctx.session.state().dirty).toBe(false);
+    expect(ctx.session.state().doc.shows[1].color).toBeNull();
+  });
+
+  it('createShow (Save As) copies the active show\'s color', async () => {
+    const ctx = setup();
+    await openReady(ctx);
+    await ctx.session.setShowColor(ctx.doc.activeShowId, 'coral');
+    await ctx.session.createShow('Show Two', layoutWith(9));
+    expect(ctx.session.state().doc.shows.at(-1)).toMatchObject({ name: 'Show Two', color: 'coral' });
   });
 
   it('renameShow keeps status and rejects invalid names with the exact message', async () => {
@@ -1351,5 +1396,22 @@ describe('show session imports', () => {
     ctx.session.reportReady(result.generation, true);
     await ctx.session.importShow('Bob', 'show-2');
     expect(ctx.session.state().doc.shows.at(-1).name).toBe('Second (Bob) 2');
+  });
+
+  it('importShow copies the source show\'s color', async () => {
+    const registered = ['Alice', 'Bob'];
+    const store = realStoreSetup(registered);
+    store.writeFile('Alice', 'shows.json', makeDoc());
+    const bob = twoShowDoc();
+    store.writeFile('Bob', 'shows.json', { ...bob, shows: [bob.shows[0], { ...bob.shows[1], color: 'purple' }] });
+    const ctx = setup({ showStore: store.showStore, profiles: registered });
+    await openReady(ctx);
+
+    await ctx.session.importShow('Bob', 'show-2');
+    const { doc } = ctx.session.state();
+    expect(doc.shows.find((b) => b.id === doc.activeShowId)).toMatchObject({ name: 'Second (Bob)', color: 'purple' });
+    ctx.session.reportReady(ctx.session.state().generation, true);
+    await ctx.session.importShow('Bob', 'show-1');
+    expect(ctx.session.state().doc.shows.at(-1).color).toBeNull();
   });
 });

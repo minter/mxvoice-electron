@@ -151,6 +151,7 @@ const IPC = deepFreeze({
     DELETE: 'show:delete',
     LIST_IMPORTABLE: 'show:list-importable',
     IMPORT: 'show:import',
+    SET_COLOR: 'show:set-color',
   },
   ANALYTICS: {
     TRACK_EVENT: 'analytics:track-event',

@@ -36,10 +36,12 @@ describe('Shows menu', () => {
     const { menu } = build(readyState());
     expect(labels(menu)).toEqual([
       'Comedy Sports', 'Mom & Pop', '---', 'Save "Comedy Sports"…', 'Save As…',
-      'Revert to Saved…', 'Rename "Comedy Sports"…', 'Delete "Comedy Sports"…', '---',
+      'Revert to Saved…', 'Rename "Comedy Sports"…', 'Delete "Comedy Sports"…', 'Color', '---',
       'Import Show…', 'Import Hotkey File…', 'Import Holding Tank File…'
     ]);
-    walk(menu.submenu, (item) => expect(item.submenu, item.label).toBeUndefined());
+    // Color is the only nested menu
+    walk(menu.submenu, (item) => expect(item.submenu, item.label).toBe(item.label === 'Color' ? item.submenu : undefined));
+    expect(find(menu, 'Color').submenu).toHaveLength(8);
   });
 
   it('names the active show in Save, Rename and Delete; Revert names none', () => {
@@ -111,10 +113,49 @@ describe('Shows menu', () => {
     expect(find(menu, 'Save As…').enabled).toBe(true);
   });
 
+  it('has a Color submenu of radio items, None first, checked on the active show\'s color', () => {
+    const state = { ...readyState(), activeShow: { ...shows[0], color: 'pink' } };
+    const color = find(build(state).menu, 'Color');
+    expect(color.enabled).toBe(true);
+    expect(color.submenu.map((i) => i.label)).toEqual([
+      'None', 'Teal', 'Blue', 'Purple', 'Pink', 'Coral', 'Amber', 'Green'
+    ]);
+    for (const item of color.submenu) {
+      expect(item.type).toBe('radio');
+      expect(item.enabled).toBe(true);
+      expect(item.checked, item.label).toBe(item.label === 'Pink');
+    }
+    // No color, or one this build doesn't know, checks None
+    for (const value of [null, undefined, 'mauve']) {
+      const plain = find(build({ ...readyState(), activeShow: { ...shows[0], color: value } }).menu, 'Color');
+      expect(plain.submenu.filter((i) => i.checked).map((i) => i.label)).toEqual(['None']);
+    }
+  });
+
+  it('disables the Color submenu unless ready', () => {
+    for (const status of ['idle', 'loading', 'failed', 'unreadable']) {
+      const color = find(build({ ...readyState(), status }).menu, 'Color');
+      expect(color.enabled, status).toBe(false);
+      for (const item of color.submenu) expect(item.enabled, `${status}: ${item.label}`).toBe(false);
+    }
+  });
+
+  it('a Color click sends set-color with the key, then rebuilds after the click', async () => {
+    const { menu, send, calls } = build(readyState());
+    const color = find(menu, 'Color');
+    color.submenu.find((i) => i.label === 'Teal').click();
+    expect(send).toHaveBeenCalledWith('set-color', null, { color: 'teal' });
+    expect(calls).toEqual(['send:set-color:null']);
+    await new Promise((r) => setImmediate(r));
+    expect(calls).toEqual(['send:set-color:null', 'rebuild']);
+    color.submenu.find((i) => i.label === 'None').click();
+    expect(send).toHaveBeenLastCalledWith('set-color', null, { color: null });
+  });
+
   it('renders nameless disabled items and no shows without a session', () => {
     const { menu } = build({ status: 'idle', activeShow: null, shows: [] });
     expect(labels(menu)).toEqual([
-      '---', 'Save…', 'Save As…', 'Revert to Saved…', 'Rename…', 'Delete…', '---',
+      '---', 'Save…', 'Save As…', 'Revert to Saved…', 'Rename…', 'Delete…', 'Color', '---',
       'Import Show…', 'Import Hotkey File…', 'Import Holding Tank File…'
     ]);
     expect(find(menu, 'Save…').enabled).toBe(false);
