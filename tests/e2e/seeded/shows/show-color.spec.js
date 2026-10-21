@@ -32,14 +32,23 @@ function colorMenuState(app) {
   });
 }
 
-// Headers animate color changes; cancel that so the computed color is the end state
-const headerBackground = (page) =>
+// The surfaces as computed with transitions off: the gutter (.container-fluid paints the
+// window behind the panels), a panel card, a card header and the transport card
+const surfaces = (page) =>
   page.evaluate(() => {
-    const header = document.querySelector('#hotkeys-column .card-header');
-    header.style.transition = 'none';
-    const color = getComputedStyle(header).backgroundColor;
-    header.style.removeProperty('transition');
-    return color;
+    const still = Object.assign(document.createElement('style'), { textContent: '* { transition: none !important; }' });
+    document.head.append(still);
+    const bg = (selector) => getComputedStyle(document.querySelector(selector)).backgroundColor;
+    const out = {
+      gutter: bg('.container-fluid'),
+      card: bg('#hotkeys-column .card'),
+      header: bg('#hotkeys-column .card-header'),
+      searchHeader: bg('#search-column .card-header'),
+      tabs: bg('#hotkey_tabs'),
+      transport: bg('#player-panel')
+    };
+    still.remove();
+    return out;
   });
 
 test.describe('Shows - show color', () => {
@@ -82,7 +91,7 @@ test.describe('Shows - show color', () => {
       checked: 'None',
       enabled: true
     });
-    const plainHeader = await headerBackground(page);
+    const plain = await surfaces(page);
     const plainScroll = await page.evaluate(() => document.documentElement.scrollHeight);
 
     await clickShowMenu(app, 'Color', 'Teal');
@@ -90,8 +99,11 @@ test.describe('Shows - show color', () => {
     await expect(page.locator('html[data-show-color="teal"]')).toHaveCount(1);
     await expect.poll(() => activeShow(readShows(userDataDir, PROFILE)).color).toBe('teal');
     await expect.poll(async () => (await colorMenuState(app)).checked).toBe('Teal');
-    expect(await headerBackground(page)).not.toBe(plainHeader);
-    // The band never changes the layout
+    // Only the gutter changes; panels, headers, tabs and the transport stay neutral
+    const colored = await surfaces(page);
+    expect(colored.gutter).not.toBe(plain.gutter);
+    expect({ ...colored, gutter: null }).toEqual({ ...plain, gutter: null });
+    // The color never changes the layout
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(plainScroll);
     // A color is a show property: the layout is untouched and nothing reads unsaved
     expect(activeShow(readShows(userDataDir, PROFILE)).layout.hotkeys[0].hotkeys.f1).toBe('1001');
@@ -105,8 +117,10 @@ test.describe('Shows - show color', () => {
 
   test('switching to an uncolored show, None and Save As', async () => {
     await launch([{ name: 'Main Show' }, { name: 'Plain Show' }]);
+    const plainGutter = (await surfaces(page)).gutter;
     await clickShowMenu(app, 'Color', 'Purple');
     await expect(page.locator('html[data-show-color="purple"]')).toHaveCount(1);
+    expect((await surfaces(page)).gutter).not.toBe(plainGutter);
 
     // An uncolored show takes the color away; switching back brings it back
     await clickShowMenu(app, 'Plain Show');
@@ -130,10 +144,11 @@ test.describe('Shows - show color', () => {
     await clickShowMenu(app, 'Color', 'None');
     await expect.poll(() => showColorAttr(page)).toBeNull();
     await expect.poll(() => activeShow(readShows(userDataDir, PROFILE)).color).toBeNull();
+    expect((await surfaces(page)).gutter).toBe(plainGutter);
     expect(readShows(userDataDir, PROFILE).shows.find((b) => b.name === 'Main Show').color).toBe('purple');
   });
 
-  test('header text and the show-name pill stay readable on every color, in light and dark mode', async () => {
+  test('panels stay unchanged and the pill stays readable on every color, in light and dark mode', async () => {
     await launch([{ name: 'Main Show' }]);
     const results = await page.evaluate((palette) => {
       // Computed colors come back as rgb(), color(srgb …) or oklab(); a canvas reads any of them
@@ -162,10 +177,25 @@ test.describe('Shows - show color', () => {
       const html = document.documentElement;
       const body = document.body;
       const showName = document.getElementById('show-name');
-      const headers = ['#holding-tank-column', '#search-column', '#hotkeys-column']
-        .map((column) => document.querySelector(`${column} .card-header`));
+      const wrapper = document.querySelector('.container-fluid');
+      const panelSelectors = ['#holding-tank-column .card', '#search-column .card', '#hotkeys-column .card',
+        '#holding-tank-column .card-header', '#search-column .card-header', '#hotkeys-column .card-header',
+        '#hotkey_tabs', '#holding_tank_tabs', '#player-panel'];
+      const panels = () => panelSelectors.map((s) => getComputedStyle(document.querySelector(s)).backgroundColor).join('|');
+      // Text drawn directly on the gutter: a non-blank text node whose nearest painted
+      // ancestor is the wrapper itself, or the wrapper's panel rows (#top-row, #player-row)
+      const bare = [];
+      const walker = document.createTreeWalker(wrapper, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (!node.nodeValue.trim()) continue;
+        let el = node.parentElement;
+        while (el && el !== wrapper) {
+          if (getComputedStyle(el).backgroundColor !== 'rgba(0, 0, 0, 0)') break;
+          el = el.parentElement;
+        }
+        if (el === wrapper && node.parentElement.offsetParent !== null) bare.push(node.parentElement.id || node.parentElement.tagName);
+      }
       const original = body.className;
-      // Headers animate color changes; measure end states
       const still = Object.assign(document.createElement('style'), { textContent: '* { transition: none !important; }' });
       document.head.append(still);
       const out = [];
@@ -174,19 +204,16 @@ test.describe('Shows - show color', () => {
         body.classList.remove('theme-light', 'theme-dark');
         body.classList.add(`theme-${mode}`);
         delete html.dataset.showColor;
-        const plain = getComputedStyle(headers[2]).backgroundColor;
+        const plainPanels = panels();
+        const plainGutter = getComputedStyle(wrapper).backgroundColor;
         for (const key of palette) {
           html.dataset.showColor = key;
-          const headerContrast = Math.min(...headers.map((h) => {
-            const style = getComputedStyle(h);
-            return contrast(style.color, style.backgroundColor);
-          }));
           const pill = getComputedStyle(showName);
           out.push({
             mode,
             key,
-            tinted: getComputedStyle(headers[2]).backgroundColor !== plain,
-            headerContrast,
+            gutterChanged: getComputedStyle(wrapper).backgroundColor !== plainGutter,
+            panelsUnchanged: panels() === plainPanels,
             pillContrast: contrast(pill.color, pill.backgroundColor)
           });
         }
@@ -194,33 +221,28 @@ test.describe('Shows - show color', () => {
       still.remove();
       body.className = original;
       delete html.dataset.showColor;
-      return out;
+      return { out, bare };
     }, PALETTE);
 
-    // Light tokens apply without any body.theme-* class; the band paints above the headers
-    const extras = await page.evaluate(() => {
+    // Light tokens apply without any body.theme-* class
+    const noClassBg = await page.evaluate(() => {
       const body = document.body;
       const original = body.className;
       document.documentElement.dataset.showColor = 'teal';
       body.classList.remove('theme-light', 'theme-dark');
-      const band = getComputedStyle(body, '::before');
-      const out = {
-        noClassBand: getComputedStyle(body).getPropertyValue('--show-band').trim(),
-        bandZ: Number(band.zIndex),
-        bandPosition: band.position,
-        headerZ: getComputedStyle(document.querySelector('#hotkeys-column .card-header')).zIndex
-      };
+      const value = getComputedStyle(body).getPropertyValue('--show-bg').trim();
       body.className = original;
       delete document.documentElement.dataset.showColor;
-      return out;
+      return value;
     });
-    expect(extras.noClassBand.toUpperCase()).toBe('#0F6E56');
-    expect(extras).toMatchObject({ bandZ: 1001, bandPosition: 'fixed', headerZ: 'auto' });
+    expect(noClassBg.toUpperCase()).toBe('#5DCAA5');
 
-    expect(results).toHaveLength(PALETTE.length * 2);
-    for (const { mode, key, tinted, headerContrast, pillContrast } of results) {
-      expect(tinted, `${mode} ${key}: header tinted`).toBe(true);
-      expect(headerContrast, `${mode} ${key}: header text`).toBeGreaterThanOrEqual(4.5);
+    // Nothing is drawn directly on the gutter, so there is no text to keep readable
+    expect(results.bare).toEqual([]);
+    expect(results.out).toHaveLength(PALETTE.length * 2);
+    for (const { mode, key, gutterChanged, panelsUnchanged, pillContrast } of results.out) {
+      expect(gutterChanged, `${mode} ${key}: gutter colored`).toBe(true);
+      expect(panelsUnchanged, `${mode} ${key}: panels unchanged`).toBe(true);
       expect(pillContrast, `${mode} ${key}: show-name pill`).toBeGreaterThanOrEqual(4.5);
     }
   });
