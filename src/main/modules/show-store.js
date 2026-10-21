@@ -16,6 +16,7 @@
 
 import nodeFs from 'fs';
 import path from 'path';
+import { createHash } from 'node:crypto';
 import { quarantine, writeJsonAtomic } from './atomic-json-file.js';
 import { createDocument, normalizeLayout, parseDocument } from './show-document.js';
 
@@ -29,6 +30,18 @@ export class ShowStoreError extends Error {
     this.name = 'ShowStoreError';
     this.code = code;
   }
+}
+
+/**
+ * A deterministic, UUID-v4-shaped id for a profile's migrated Default Show, so
+ * peek() (used by Import Show) and the real migration in load() agree.
+ */
+export function migratedShowId(directoryKey) {
+  const hex = createHash('sha256').update(`mxvoice:migrated-show:${directoryKey}`).digest('hex').slice(0, 32).split('');
+  hex[12] = '4';
+  hex[16] = '89ab'[parseInt(hex[16], 16) % 4];
+  const h = hex.join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -75,12 +88,14 @@ async function classify(fs, filePath) {
  * @param {Object} [deps.debugLog]
  * @param {number|(() => number)} [deps.now]
  * @param {() => string} [deps.newId]
+ * @param {(profileName: string) => string} [deps.getProfileDirectoryKey] - keys the migrated show id
  */
 export function createShowStore({
   fs = nodeFs,
   getProfileShowsPath,
   getProfileStatePath,
   profileExists,
+  getProfileDirectoryKey = (name) => String(name),
   debugLog,
   now,
   newId
@@ -126,6 +141,12 @@ export function createShowStore({
     return { kind: 'unreadable' };
   }
 
+  // Migration-created documents get a per-profile id (not newId) so peek and load agree.
+  const migrationOptions = (profileName) => ({
+    ...docOptions(),
+    newId: () => migratedShowId(getProfileDirectoryKey(profileName))
+  });
+
   /** Build the migrated document from state.json, then state.json.backup, in memory. */
   async function buildMigration(profileName) {
     const statePath = getProfileStatePath(profileName);
@@ -138,10 +159,10 @@ export function createShowStore({
       // An unreadable (not absent) state file must not be replaced by an empty show.
       if (raw.ioError) throw new ShowStoreError('io', raw.ioError);
       if ('value' in raw && isObject(raw.value)) {
-        return { doc: createDocument(normalizeLayout(raw.value), docOptions()), source };
+        return { doc: createDocument(normalizeLayout(raw.value), migrationOptions(profileName)), source };
       }
     }
-    return { doc: createDocument(normalizeLayout(null), docOptions()), source: 'migrated-empty' };
+    return { doc: createDocument(normalizeLayout(null), migrationOptions(profileName)), source: 'migrated-empty' };
   }
 
   async function writeNew(profileName, doc) {

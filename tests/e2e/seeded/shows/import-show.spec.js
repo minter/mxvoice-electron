@@ -1,7 +1,8 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import fs from 'fs';
+import path from 'path';
 import { launchSeededApp, waitForAppReady } from '../../../utils/seeded-launch.js';
-import { profileShowsPath, readShows, seedShows } from '../../../utils/seed-shows.js';
+import { hotkeyLayout, profileShowsPath, readShows, seedShows } from '../../../utils/seed-shows.js';
 import {
   answerChoice,
   answerConfirm,
@@ -95,6 +96,35 @@ test.describe('Shows - Import Show', () => {
       checked: 'Comedy Sports (Derek)',
       enabled: true
     });
+  });
+
+  test('imports the Default Show of a profile that has only a state.json', async () => {
+    ({ app, page, userDataDir, suiteRoot } = await launchSeededApp(electron, 'import-show'));
+    await waitForAppReady(page, app);
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.createProfile('Jesse', '');
+      await window.secureElectronAPI.profile.createProfile('Derek', '');
+    });
+    seedShows(userDataDir, 'Jesse', multiShowDocument([{ name: 'Jesse Show', hotkeys: { f1: '1003' } }]));
+    // Derek was never opened on this version: state.json only, no shows.json
+    const derekDir = path.dirname(profileShowsPath(userDataDir, 'Derek'));
+    fs.mkdirSync(derekDir, { recursive: true });
+    fs.rmSync(profileShowsPath(userDataDir, 'Derek'), { force: true });
+    fs.writeFileSync(path.join(derekDir, 'state.json'), JSON.stringify(hotkeyLayout({ f1: '1004', f2: '1005' })));
+    await switchProfile('Jesse');
+
+    const dialog = await openImportDialog();
+    // Default User also lists a Default Show: take the one under Derek's header
+    await dialog.locator('#importShowList [role="presentation"]:has-text("Derek") + [role="option"]').click();
+    await dialog.locator('#importShowBtn').click();
+    await expect(dialog).toBeHidden();
+
+    await expect(f1Hotkey(page)).toHaveAttribute('songid', '1004');
+    await expect(page.locator('#hotkeys_list_1 #f2_hotkey')).toHaveAttribute('songid', '1005');
+    const doc = readShows(userDataDir, 'Jesse');
+    expect(activeShow(doc).name).toBe('Default Show (Derek)');
+    await expect(page.locator('#show-name')).toHaveText('Default Show (Derek)');
+    expect(fs.existsSync(profileShowsPath(userDataDir, 'Derek'))).toBe(false);
   });
 
   test('editing and updating the copy leaves Derek\'s show unchanged', async () => {

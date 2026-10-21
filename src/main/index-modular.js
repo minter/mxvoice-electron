@@ -74,7 +74,7 @@ import { createRecoveryStore } from './modules/recovery-store.js';
 import { createShowSession } from './modules/show-session.js';
 import { createRendererGoneHandler } from './modules/renderer-crash-handler.js';
 import { createUpdateInstaller } from './modules/update-install.js';
-import { getProfileShowsPath, getProfileStatePath, getRecoveryDirectory, getRecoveryPath } from './modules/profile-paths.js';
+import { getProfileDirectoryKey, getProfileShowsPath, getProfileStatePath, getRecoveryDirectory, getRecoveryPath } from './modules/profile-paths.js';
 import { quietlyAnnouncedVersion, recordAvailableUpdate, recordDownloadedUpdate } from './modules/pending-update.js';
 
 if (process.env.APP_TEST_MODE === '1') {
@@ -752,6 +752,7 @@ function initializeMainProcessServices() {
     fs,
     getProfileShowsPath,
     getProfileStatePath,
+    getProfileDirectoryKey,
     profileExists: (name) => profileManager.profileExists(name),
     debugLog
   });

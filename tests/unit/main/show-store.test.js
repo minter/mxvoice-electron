@@ -27,6 +27,7 @@ function makeStore() {
     getProfileStatePath: statePath,
     profileExists: async (name) => registered.has(name),
     debugLog: { info() {}, warn() {}, error() {} },
+    getProfileDirectoryKey: (name) => name.toLowerCase(),
     now: () => 1700000000000,
     newId: () => `id-${++idCounter}`
   });
@@ -58,6 +59,29 @@ afterEach(() => {
 });
 
 describe('show store', () => {
+  describe('migrated show id', () => {
+    it('is stable across peek() calls and equals the id load() writes', async () => {
+      addProfile('p', { 'state.json': fs.readFileSync(FIXTURE, 'utf8') });
+      const first = (await store.peek('p')).shows[0].id;
+      const second = (await store.peek('p')).shows[0].id;
+      expect(second).toBe(first);
+      expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+      expect(first).toMatch(/^[0-9a-f-]{36}$/);
+      const { doc } = await store.load('p');
+      expect(doc.shows[0].id).toBe(first);
+      expect(doc.activeShowId).toBe(first);
+    });
+
+    it('is stable for an empty migration and differs between profiles', async () => {
+      addProfile('a');
+      addProfile('b');
+      const a = (await store.peek('a')).shows[0].id;
+      expect((await store.peek('a')).shows[0].id).toBe(a);
+      expect((await store.load('a')).doc.shows[0].id).toBe(a);
+      expect((await store.peek('b')).shows[0].id).not.toBe(a);
+    });
+  });
+
   it('migrates state.json into one show named "Default Show" and leaves state.json byte-identical', async () => {
     const state = fs.readFileSync(FIXTURE, 'utf8');
     addProfile('p', { 'state.json': state });
@@ -102,7 +126,6 @@ describe('show store', () => {
     const second = await store.load('p');
     expect(second.source).toBe('shows');
     expect(second.doc).toEqual(first.doc);
-    expect(idCounter).toBe(1);
   });
 
   it('recovers from .prev, quarantines the bad file and promotes .prev', async () => {

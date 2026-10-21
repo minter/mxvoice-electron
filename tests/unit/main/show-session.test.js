@@ -1284,6 +1284,23 @@ describe('show session imports', () => {
     await expect(ctx.session.listImportable()).resolves.toHaveLength(3);
   });
 
+  it('importShow imports the listed Default Show of a never-opened profile without writing its files', async () => {
+    const registered = ['Alice', 'Bob'];
+    const store = realStoreSetup(registered);
+    store.writeFile('Alice', 'shows.json', makeDoc());
+    store.writeFile('Bob', 'state.json', layoutWith(4));
+    const ctx = setup({ showStore: store.showStore, profiles: registered });
+    await openReady(ctx);
+    const bobBefore = store.snapshot('Bob');
+
+    const list = await ctx.session.listImportable();
+    const listedId = list[0].shows[0].id;
+    await ctx.session.importShow('Bob', listedId);
+
+    expect(store.snapshot('Bob')).toEqual(bobBefore);
+    expect(nodeFs.existsSync(path.join(store.dir('Bob'), 'shows.json'))).toBe(false);
+  });
+
   it('importShow names the copy "<name> (<profile>)" and leaves the source files byte-identical', async () => {
     const registered = ['Alice', 'Bob'];
     const store = realStoreSetup(registered);
