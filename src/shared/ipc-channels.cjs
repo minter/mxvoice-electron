@@ -104,7 +104,6 @@ const IPC = deepFreeze({
     GET_NAME: 'app-get-name',
     QUIT: 'app-quit',
     RESTART: 'app-restart',
-    RESTART_AND_INSTALL: 'restart-and-install-new-version',
     CHECK_FOR_UPDATE: 'check-for-update',
     DOWNLOAD_UPDATE: 'download-update',
     INSTALL_UPDATE: 'install-update',

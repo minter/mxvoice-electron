@@ -222,10 +222,11 @@ describe('app update IPC handlers', () => {
 
     await invoke('install-update');
     await vi.runAllTimersAsync();
-    await invoke('restart-and-install-new-version');
 
-    expect(installUpdate).toHaveBeenCalledTimes(2);
+    expect(installUpdate).toHaveBeenCalledTimes(1);
     expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled();
+    // install-update, gated on a finished download, is the only way to install
+    expect(handlers['restart-and-install-new-version']).toBeUndefined();
     vi.useRealTimers();
   });
 

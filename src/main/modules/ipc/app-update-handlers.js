@@ -66,20 +66,6 @@ export function register(deps) {
     }
   });
 
-  ipcMain.handle(IPC.APP.RESTART_AND_INSTALL, async () => {
-    try {
-      if (autoUpdater) {
-        await installUpdate();
-        return { success: true };
-      } else {
-        throw new Error('Auto updater not available');
-      }
-    } catch (error) {
-      debugLog?.error('Restart and install error:', { module: 'ipc-handlers', function: 'restart-and-install-new-version', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
   // Auto-update handlers - Three-stage process for better UX
 
   // Stage 1: Check for updates (no download)
