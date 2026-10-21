@@ -9,6 +9,8 @@
  * and from the `show-dirty-changed` event after each recovery save.
  */
 
+import { applyShowColor } from './show-color.js';
+
 const LOG_CONTEXT = { module: 'shows', function: 'refreshHeader' };
 
 /**
@@ -66,6 +68,7 @@ export async function refreshHeader({ api = window.secureElectronAPI?.shows, doc
     const { profile, status, doc: showDoc, dirty } = result.data ?? {};
     const active = showDoc?.shows?.find((b) => b.id === showDoc.activeShowId);
     setHeaderLabels({ profile, show: active?.name ?? null }, doc);
+    applyShowColor(active?.color ?? null, doc);
     // The session already reads clean outside 'ready'; checked here too
     setDirty(status === 'ready' && dirty === true, doc);
   } catch (error) {
