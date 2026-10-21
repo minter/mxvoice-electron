@@ -184,10 +184,13 @@ export class TourManager {
   async launchTour(version, { markSeen = true } = {}) {
     // A tour that is still closing (waiting out a transition, running cleanup)
     // must finish first, or its late teardown would remove this new popover.
-    if (this._closingPromise) await this._closingPromise;
+    if (this._closingPromise) await this._closingPromise.catch(() => {});
     if (this.activeDriver) {
       const previousDriver = this.activeDriver;
       previousDriver.destroy();
+      // destroy() may start a close that waits on an in-flight transition;
+      // let it finish so its late teardown cannot hit the new tour.
+      if (this._closingPromise) await this._closingPromise.catch(() => {});
       await this.waitForDomSettle();
       if (this.activeDriver === previousDriver) {
         this.activeDriver = null;

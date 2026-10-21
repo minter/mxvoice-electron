@@ -425,12 +425,9 @@ describe('TourManager', () => {
         ? Promise.resolve()
         : new Promise((resolve) => { resolvePost = resolve; })));
       // Real Driver.js removes the popover on destroy; mimic that.
-      mockDriver.destroy.mockImplementation(() => {
-        document.querySelectorAll('.driver-popover').forEach((el) => el.remove());
-      });
-      const popover = document.createElement('div');
-      popover.className = 'driver-popover';
-      document.body.appendChild(popover);
+      // document is faked in this file, so track the popover ourselves.
+      const popovers = new Set([{}]);
+      mockDriver.destroy.mockImplementation(() => popovers.clear());
 
       await m.launchTour('4.3.0', { markSeen: false });
       const cfg = lastDriverConfig();
@@ -440,6 +437,9 @@ describe('TourManager', () => {
       await vi.waitFor(() => expect(resolvePost).toBeTypeOf('function'));
       const pClose = cfg.onDestroyStarted();
 
+      await new Promise((r) => setTimeout(r, 0));
+      expect(mockDriver.destroy).not.toHaveBeenCalled();
+
       resolvePost();
       await pNext;
       await pClose;
@@ -447,9 +447,80 @@ describe('TourManager', () => {
       expect(mockDriver.moveTo).not.toHaveBeenCalled();
       expect(mockDriver.destroy).toHaveBeenCalled();
       expect(m.activeDriver).toBeNull();
-      expect(document.querySelector('.driver-popover')).toBeNull();
+      expect(popovers.size).toBe(0);
 
       mockDriver.destroy.mockReset();
+      cleanup();
+    });
+
+    it('launching a tour while an old close is pending does not let the old close tear down the new tour', async () => {
+      const cleanup = appendEls(['s0', 's1']);
+      let resolvePost;
+      const tours = {
+        tours: {
+          '4.3.0': {
+            title: 't',
+            steps: [
+              {
+                element: '#s0',
+                title: 'A',
+                description: 'a',
+                postAction: { type: 'function', name: 'slowPost' },
+              },
+              { element: '#s1', title: 'B', description: 'b' },
+            ],
+          },
+        },
+      };
+      const m = new TourManager(tours);
+      m.registerHelper('slowPost', () => (resolvePost
+        ? Promise.resolve()
+        : new Promise((resolve) => { resolvePost = resolve; })));
+
+      const oldDriver = { drive: vi.fn(), moveTo: vi.fn(), destroy: vi.fn() };
+      const newDriver = { drive: vi.fn(), moveTo: vi.fn(), destroy: vi.fn() };
+      mockDriverFactory.mockImplementationOnce(() => oldDriver);
+      mockDriverFactory.mockImplementationOnce(() => newDriver);
+      // document is faked in this file, so track popovers ourselves.
+      const popovers = new Set();
+      let oldCfg;
+      // Real Driver.js: the first destroy() runs onDestroyStarted; the
+      // finalizing destroy() removes every popover on the page.
+      oldDriver.destroy.mockImplementation(() => {
+        if (oldDriver.closeStarted) {
+          popovers.clear();
+          return;
+        }
+        oldDriver.closeStarted = true;
+        oldCfg.onDestroyStarted();
+      });
+      // The new tour draws its popover when driven.
+      newDriver.drive.mockImplementation(() => {
+        const el = document.createElement('div');
+        el.className = 'driver-popover';
+        popovers.add(el);
+      });
+
+      await m.launchTour('4.3.0', { markSeen: false });
+      oldCfg = mockDriverFactory.mock.calls.at(-1)[0];
+
+      const pNext = oldCfg.onNextClick();
+      await vi.waitFor(() => expect(resolvePost).toBeTypeOf('function'));
+
+      const pLaunch = m.launchTour('4.3.0', { markSeen: false });
+      await new Promise((r) => setTimeout(r, 0));
+      expect(newDriver.drive).not.toHaveBeenCalled();
+
+      resolvePost();
+      await pNext;
+      await pLaunch;
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(newDriver.drive).toHaveBeenCalled();
+      expect(m.activeDriver).toBe(newDriver);
+      expect(popovers.size).toBe(1);
+
       cleanup();
     });
 
