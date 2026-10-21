@@ -51,6 +51,19 @@ const surfaces = (page) =>
     return out;
   });
 
+// Header height, and the vertical centers of the show-name pill and the profile name
+const pillMetrics = (page) =>
+  page.evaluate(() => {
+    const box = (selector) => document.querySelector(selector).getBoundingClientRect();
+    const mid = (r) => (r.top + r.bottom) / 2;
+    return {
+      header: box('#search-column .card-header').height,
+      pillMid: mid(box('#show-name')),
+      profileMid: mid(box('#profile-name')),
+      padding: getComputedStyle(document.querySelector('#show-name')).padding
+    };
+  });
+
 test.describe('Shows - show color', () => {
   let app;
   let page;
@@ -93,6 +106,7 @@ test.describe('Shows - show color', () => {
     });
     const plain = await surfaces(page);
     const plainScroll = await page.evaluate(() => document.documentElement.scrollHeight);
+    const plainPill = await pillMetrics(page);
 
     await clickShowMenu(app, 'Color', 'Teal');
 
@@ -105,6 +119,11 @@ test.describe('Shows - show color', () => {
     expect({ ...colored, gutter: null }).toEqual({ ...plain, gutter: null });
     // The color never changes the layout
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(plainScroll);
+    // The padded pill keeps the header height and sits centered on the profile name
+    const pill = await pillMetrics(page);
+    expect(pill.header).toBe(plainPill.header);
+    expect(Math.abs(pill.pillMid - pill.profileMid)).toBeLessThanOrEqual(1);
+    expect(pill.padding).toBe('2px 12px');
     // A color is a show property: the layout is untouched and nothing reads unsaved
     expect(activeShow(readShows(userDataDir, PROFILE)).layout.hotkeys[0].hotkeys.f1).toBe('1001');
     await expect(page.locator('#show-dirty')).toBeHidden();

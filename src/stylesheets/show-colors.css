@@ -96,7 +96,7 @@
 [data-show-color] #show-name {
   background-color: var(--show-chip-bg);
   color: var(--show-chip-fg);
-  padding: 0 8px;
-  max-width: calc(16ch + 16px);
+  padding: 2px 12px;
+  max-width: calc(16ch + 24px); /* 16ch of name, as uncolored, plus the side padding */
   border-radius: 999px;
 }
