@@ -86,6 +86,13 @@ describe('profile delete handler', () => {
     return { calls, showSession, recoveryStore, debugLog };
   }
 
+  it('a failed recovery-record retire still removes the played counts', async () => {
+    const { calls, recoveryStore } = setupDelete({ current: 'Default User' });
+    recoveryStore.retire.mockRejectedValueOnce(new Error('locked'));
+    await expect(handlers['profile:delete']({}, 'Old Show')).resolves.toEqual({ success: true });
+    expect(calls).toEqual(['delete:Old Show', 'retirePlayed:Old Show']);
+  });
+
   it('deleteProfile removes its recovery record and played counts', async () => {
     const { calls, showSession } = setupDelete({ current: 'Default User' });
     await expect(handlers['profile:delete']({}, 'Old Show')).resolves.toEqual({ success: true });

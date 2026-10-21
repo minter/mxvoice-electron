@@ -46,7 +46,10 @@ describe('openSessionOnStartup', () => {
   });
 
   it('asks once when recovery exists without handoff; default discards', async () => {
-    const savedAt = new Date(2026, 9, 20, 21, 5).getTime();
+    // Today: the time alone
+    const today = new Date();
+    today.setHours(21, 5, 0, 0);
+    const savedAt = today.getTime();
     const { api, deps, calls } = setup({ open: opened({ savedAt, handoff: null, showId: 'b1' }) });
     deps.confirm.mockImplementation(async () => {
       // The restoration lock is held while the question is open
@@ -63,6 +66,18 @@ describe('openSessionOnStartup', () => {
     );
     expect(api.resolveRecovery).toHaveBeenCalledWith('discard');
     expect(calls).toEqual(['apply:Saved', 'ready:7:true', 'unlock']);
+  });
+
+  it('names the day as well when the show in progress is not from today', async () => {
+    const savedAt = new Date(2020, 0, 7, 21, 42).getTime();
+    const { deps } = setup({ open: opened({ savedAt, handoff: null, showId: null }) });
+    await openSessionOnStartup(deps);
+    const when = new Date(savedAt).toLocaleString([], {
+      weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+    });
+    expect(deps.confirm.mock.calls[0][0]).toBe(`Mx. Voice didn't close normally. Restore the show in progress from ${when}?`);
+    // e.g. "Tue, Jan 7, 9:42 PM" in en-US
+    expect(when).toMatch(/7/);
   });
 
   it('restores the show in progress when the prompt is confirmed', async () => {
@@ -152,6 +167,8 @@ describe('openSessionOnStartup', () => {
     expect(start.api.resolveRecovery).not.toHaveBeenCalled();
     // startEmpty's generation is the one reported
     expect(start.calls).toEqual(['apply:Saved', 'ready:8:true', 'unlock']);
+    // Nothing to restore: the night's counts start, empty
+    expect(start.deps.loadPlayedCounts).toHaveBeenCalledWith({});
 
     const quit = setup({ open: ok({ unreadable: true, generation: 4 }), confirm: vi.fn(async () => false) });
     await openSessionOnStartup(quit.deps);

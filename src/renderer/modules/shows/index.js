@@ -28,8 +28,12 @@ const LOG_CONTEXT = { module: 'shows', function: 'openSessionOnStartup' };
 const UNREADABLE_MESSAGE =
   "Mx. Voice couldn't read this profile's shows. The file has been kept so it can be recovered.";
 
+// The time alone for today; with the day otherwise, e.g. "Tue, Oct 21, 9:42 PM"
 function crashMessage(savedAt) {
-  const time = new Date(savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const saved = new Date(savedAt);
+  const time = saved.toDateString() === new Date().toDateString()
+    ? saved.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : saved.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   return `Mx. Voice didn't close normally. Restore the show in progress from ${time}?`;
 }
 
@@ -146,7 +150,12 @@ export async function openSessionOnStartup(overrides = {}) {
       }
       const empty = unwrap(await api.startEmpty(), 'Starting an empty show');
       generation = empty.generation;
-      layout = empty.recovery ? await resolveRecovery(empty.recovery, deps) : empty.layout;
+      if (empty.recovery) {
+        layout = await resolveRecovery(empty.recovery, deps);
+      } else {
+        layout = empty.layout;
+        deps.loadPlayedCounts({});
+      }
     } else {
       layout = await resolveRecovery(opened.recovery, deps);
     }

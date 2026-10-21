@@ -6,7 +6,7 @@
  * to the profile's session, not to a show: they start empty when the profile
  * opens and carry across show changes. Main keeps a copy for crash restore
  * (show:record-play, show:clear-played); `load` takes the counts a restore
- * hands back.
+ * hands back, and nothing is counted before it (the session isn't settled).
  *
  * Every change dispatches `played-counts-changed` on window with
  * `{ songIds }`, the songs whose count changed, or null when any may have.
@@ -18,6 +18,9 @@ const SONG_ID = /^\d+$/;
 const LOG_CONTEXT = { module: 'played-counts' };
 
 const counts = new Map();
+// Nothing counts until the session's counts are loaded: until then main
+// refuses them too (a crash prompt open, or an open that failed)
+let settled = false;
 
 /** The song id as a digit string, or null for anything else. */
 function songIdOf(id) {
@@ -60,7 +63,7 @@ export function hasAny() {
 /** Count one play of a song whose playback just started. */
 export function recordPlay(id) {
   const songId = songIdOf(id);
-  if (!songId) return;
+  if (!songId || !settled) return;
   counts.set(songId, (counts.get(songId) ?? 0) + 1);
   changed([songId]);
   tellMain('recordPlay', 'recordPlay', songId);
@@ -86,6 +89,7 @@ export function clearAll() {
 
 /** Replace the counts with ones main restored; main already has them. */
 export function load(map) {
+  settled = true;
   counts.clear();
   for (const [id, n] of Object.entries(map ?? {})) {
     const songId = songIdOf(id);

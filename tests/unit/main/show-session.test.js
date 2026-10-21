@@ -1663,6 +1663,61 @@ describe('show session played counts', () => {
     });
   }
 
+  for (const [name, loadError] of [
+    ['a failed', new ShowStoreError('version')],
+    ['an unreadable', new ShowStoreError('unreadable')],
+  ]) {
+    it(`${name} open never overwrites or retires a crash's played file`, async () => {
+      for (const reason of ['clean-exit', 'switch']) {
+        const ctx = setup({ loadError });
+        ctx.recoveryStore.played.set('Alice', playedRecord({ 12: 2 }));
+        await ctx.session.open();
+        await expect(ctx.session.recordPlay('5')).resolves.toMatchObject({ skipped: true });
+        await expect(ctx.session.clearPlayed(null)).resolves.toMatchObject({ skipped: true });
+        await ctx.session.end(reason);
+        expect(ctx.recoveryStore.played.get('Alice'), reason).toEqual(playedRecord({ 12: 2 }));
+      }
+    });
+  }
+
+  it('an unreadable store started empty settles the played file like open(): restore or discard', async () => {
+    const ctx = setup({ loadError: new ShowStoreError('unreadable') });
+    ctx.recoveryStore.played.set('Alice', playedRecord({ 12: 2 }));
+    await ctx.session.open();
+    const empty = await ctx.session.startEmpty();
+    expect(empty.recovery).toMatchObject({ showId: null });
+    await expect(ctx.session.recordPlay('5')).resolves.toMatchObject({ skipped: true });
+    await expect(ctx.session.resolveRecovery('restore')).resolves.toMatchObject({ counts: { 12: 2 } });
+    await expect(ctx.session.recordPlay('5')).resolves.toEqual({ count: 1 });
+
+    // With nothing pending, starting empty settles at once
+    const plain = setup({ loadError: new ShowStoreError('unreadable') });
+    await plain.session.open();
+    await plain.session.startEmpty();
+    await expect(plain.session.recordPlay('5')).resolves.toEqual({ count: 1 });
+  });
+
+  it('plays are refused while a layout record waits at the prompt, even without a played file', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.records.set('Alice', {
+      version: 1, showId: ctx.doc.activeShowId, savedAt: T0, handoff: null, layout: layoutWith(9),
+    });
+    await ctx.session.open();
+    await expect(ctx.session.recordPlay('5')).resolves.toMatchObject({ skipped: true });
+    await ctx.session.resolveRecovery('restore');
+    await expect(ctx.session.recordPlay('5')).resolves.toEqual({ count: 1 });
+  });
+
+  it('discard always retires the played file', async () => {
+    const ctx = setup();
+    ctx.recoveryStore.records.set('Alice', {
+      version: 1, showId: ctx.doc.activeShowId, savedAt: T0, handoff: null, layout: layoutWith(9),
+    });
+    await ctx.session.open();
+    await ctx.session.resolveRecovery('discard');
+    expect(ctx.recoveryStore.retirePlayed).toHaveBeenCalledWith('Alice');
+  });
+
   it('rejects an invalid song id', async () => {
     const ctx = setup();
     await readyWithoutRecovery(ctx);

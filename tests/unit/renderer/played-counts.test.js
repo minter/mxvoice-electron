@@ -10,11 +10,21 @@ window.addEventListener('played-counts-changed', (event) => events.push(event.de
 
 const played = await import('../../../src/renderer/modules/shows/played-counts.js');
 
+// Before the first load (the show session settled), nothing counts, as in main
+played.recordPlay('12');
+const countBeforeLoad = played.count('12');
+const callsBeforeLoad = recordPlay.mock.calls.length;
+
 describe('played counts', () => {
   beforeEach(() => {
     played.load({});
     events.length = 0;
     vi.clearAllMocks();
+  });
+
+  it('counts nothing until the session hands over its counts', () => {
+    expect(countBeforeLoad).toBe(0);
+    expect(callsBeforeLoad).toBe(0);
   });
 
   it('recordPlay counts per song, tells main, and dispatches the changed song', () => {

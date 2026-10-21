@@ -310,7 +310,8 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                   ?.classList.contains('active') || false,
               debugLog: getDebugLog(),
               onPlay: function () {
-                if (!counted) {
+                // A loop restart (options.replay) is the play the operator already started
+                if (!counted && !options.replay) {
                   counted = true;
                   recordPlay(song_id);
                 }
@@ -412,6 +413,7 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
  * @param {boolean} options.crossfade - Whether to crossfade from current track
  * @param {number} options.crossfadeSeconds - Crossfade duration in seconds
  * @param {string} options.trigger_method - Analytics source of the play (hotkey, search_result, ...)
+ * @param {boolean} options.replay - a loop restart, not counted as another play
  */
 async function playSongFromId(song_id, options = {}) {
   getDebugLog()?.info('Playing song from ID', {

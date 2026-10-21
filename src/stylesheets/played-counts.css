@@ -44,9 +44,18 @@
   min-width: 0;
 }
 
-/* Holding tank: the row holds its text directly, so the pill comes first
-   and floats to the right end of the first line */
+/* Holding tank: rows wrap, so the pill must not take any line width. It
+   sits at the top-right of the row, in right padding that every row keeps,
+   so a title that fits on one line still fits once a count appears and a
+   row never reflows when it is played or marked unplayed. */
+.holding_tank li.list-group-item {
+  padding-right: 52px;
+}
+
 .holding_tank li > .played-pill {
-  float: right;
-  margin-top: 1px;
+  position: absolute;
+  /* The row's top padding, plus half the difference between its line and the pill */
+  top: 11px;
+  right: 10px;
+  margin-left: 0;
 }

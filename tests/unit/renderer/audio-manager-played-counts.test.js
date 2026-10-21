@@ -102,6 +102,25 @@ describe('played counts at playback start', () => {
     expect(recordPlay).toHaveBeenCalledTimes(1);
   });
 
+  it('a loop restart does not count again; playing it again does', async () => {
+    sharedState.set('loop', true);
+    await play('7', { trigger_method: 'hotkey' });
+    sounds[0].end();
+    await vi.waitFor(() => expect(sounds).toHaveLength(2));
+    await settle();
+    sounds[1].end();
+    await vi.waitFor(() => expect(sounds).toHaveLength(3));
+    await settle();
+    expect(recordPlay.mock.calls).toEqual([['7']]);
+
+    // The operator presses play on it again
+    sharedState.set('loop', false);
+    await manager.playSongFromId('7', { trigger_method: 'hotkey' });
+    await vi.waitFor(() => expect(sounds).toHaveLength(4));
+    await settle();
+    expect(recordPlay.mock.calls).toEqual([['7'], ['7']]);
+  });
+
   it('does not count a song whose file fails to load', async () => {
     nextLoadFails = true;
     await manager.playSongFromId('7', { trigger_method: 'hotkey' });

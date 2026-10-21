@@ -107,7 +107,7 @@ async function saveActive(deps) {
  * latest layout, so it can't say the screen matches the saved show.
  */
 async function hasUnsavedChanges(deps) {
-  let flushFailed = false;
+  let flushFailed;
   try {
     const result = await deps.flushRecovery?.();
     // A save skipped by the restoration lock is not a failure

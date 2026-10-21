@@ -31,8 +31,10 @@
  * to the session, not the show: they start empty at open(), carry across
  * show changes (so a show mutation's fence doesn't stop them), never touch
  * `dirty`, and are retired by end() wherever the layout record is. A played
- * file found at open() counts as a show in progress; plays are refused
- * until resolveRecovery() settles it, so they can't replace it first.
+ * file found at open() counts as a show in progress. Until the open is
+ * settled (resolveRecovery(), or an open or startEmpty with nothing pending)
+ * plays are refused and a clean exit or switch keeps the file, so a failed,
+ * unreadable or still-prompting open can never replace or lose a crash's counts.
  *
  * @module show-session
  */
@@ -152,6 +154,8 @@ export function createShowSession({
   let openSeq = 0;
   // The played record read by open(), until resolveRecovery() settles it
   let pendingPlayed = null;
+  // Whether this open's crash records are settled, so the counts are this session's
+  let playedSettled = false;
 
   function refreshMenu(fn) {
     try {
@@ -200,6 +204,7 @@ export function createShowSession({
     pendingHandoff = null;
     pendingRecovery = null;
     pendingPlayed = null;
+    playedSettled = false;
     openSeq += 1;
     setPlayed(new Map());
     droppedIds = new Set();
@@ -231,6 +236,7 @@ export function createShowSession({
     doc = loaded.doc;
     pendingRecovery = record;
     pendingPlayed = playedRecord;
+    playedSettled = !record && !playedRecord;
     const show = activeShow();
     const result = {
       doc,
@@ -298,6 +304,8 @@ export function createShowSession({
     doc = emptyDoc;
     pendingRecovery = record;
     pendingPlayed = playedRecord;
+    // Without a record the page applies the empty show without resolving
+    playedSettled = !record && !playedRecord;
     setDirty(false);
     setStatus('loading');
     return { layout: normalizeLayout(activeShow().layout), generation, recovery: recoveryInfo(record, playedRecord) };
@@ -311,6 +319,7 @@ export function createShowSession({
     const playedRecord = pendingPlayed;
     pendingRecovery = null;
     pendingPlayed = null;
+    playedSettled = true;
     const saved = normalizeLayout(activeShow().layout);
     if (!record && !playedRecord) return { layout: saved, counts: playedCounts() };
     // Restored onto the active show, whatever showId the record names.
@@ -327,7 +336,7 @@ export function createShowSession({
     setPlayed(new Map());
     await queued(async () => {
       if (record) await recoveryStore.retire(p);
-      if (playedRecord) await recoveryStore.retirePlayed(p);
+      await recoveryStore.retirePlayed(p);
     });
     return { layout: saved, counts: {} };
   }
@@ -394,9 +403,10 @@ export function createShowSession({
     // must leave it for the next open
     const neverReady = status !== 'ready';
     const kept = (handedOff || neverReady) && KEPT_AFTER_HANDOFF.has(reason);
-    // The counts are kept only when handed off or still waiting at the
-    // prompt: a quit while a show change loads has nothing to restore
-    const keptPlayed = (handedOff || !!pendingPlayed) && KEPT_AFTER_HANDOFF.has(reason);
+    // The counts are kept only when handed off or never settled (a prompt
+    // still open, a failed or unreadable open): a quit while a show change
+    // loads has nothing to restore
+    const keptPlayed = (handedOff || !playedSettled) && KEPT_AFTER_HANDOFF.has(reason);
     const handoffDone = pendingHandoff;
     ended = true;
     fenced = true;
@@ -423,7 +433,7 @@ export function createShowSession({
     handedOff = true;
     // The counts are this session's once any played file at open is settled,
     // whatever show is loading; the next open restores them silently
-    const markPlayed = !pendingPlayed && played.size > 0;
+    const markPlayed = playedSettled && played.size > 0;
     // Before ready the record isn't this session's: it's an earlier crash
     // still waiting at the prompt, and the never-ready rule keeps it as is
     const markLayout = status === 'ready';
@@ -450,9 +460,9 @@ export function createShowSession({
 
   // --- Played counts ---
 
-  // Refused once the session has ended or handed off, and while a played
-  // file from open() waits to be restored or discarded
-  const playedRefused = () => !profile || ended || handedOff || !!pendingPlayed;
+  // Refused once the session has ended or handed off, and until the open is
+  // settled: while a crash record waits at the prompt, or the open failed
+  const playedRefused = () => !profile || ended || handedOff || !playedSettled;
 
   /** Write the counts as they are now, for the open() they were recorded in. */
   function persistPlayed(fn) {

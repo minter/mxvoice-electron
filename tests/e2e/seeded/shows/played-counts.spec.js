@@ -180,6 +180,36 @@ test.describe('Shows - played counts', () => {
     await expect.poll(() => fs.existsSync(playedPath(userDataDir))).toBe(false);
   });
 
+  test('a holding tank title that fits on one line still fits once it has a count', async () => {
+    await launch();
+    const row = page.locator(`#holding_tank_1 li[songid="${FAMILY}"]`);
+    // Lengthen the title until one more word would wrap it
+    const height = await row.evaluate((li) => {
+      const oneLine = li.offsetHeight;
+      let text = li.textContent;
+      for (let i = 0; i < 400; i++) {
+        li.textContent = `${text} word`;
+        if (li.offsetHeight > oneLine) break;
+        text = li.textContent;
+      }
+      li.textContent = text;
+      return oneLine;
+    });
+    expect(await row.evaluate((li) => li.offsetHeight)).toBe(height);
+
+    // A play counted for it, as playback start does
+    await page.evaluate(async (id) => {
+      const played = await import('./renderer/modules/shows/played-counts.js');
+      played.recordPlay(id);
+    }, FAMILY);
+    await expect(tankPill(page, FAMILY)).toHaveAttribute('data-count', '1');
+    expect(await row.evaluate((li) => li.offsetHeight)).toBe(height);
+    // Inside the row, at its right end
+    const [rowBox, pillBox] = [await row.boundingBox(), await tankPill(page, FAMILY).boundingBox()];
+    expect(pillBox.x + pillBox.width).toBeLessThanOrEqual(rowBox.x + rowBox.width);
+    expect(pillBox.x).toBeGreaterThan(rowBox.x + rowBox.width / 2);
+  });
+
   test('a kill with counts and no layout change asks; Restore keeps them, Open saved show clears them', async () => {
     await launch();
     await playEatItFromSearch();
