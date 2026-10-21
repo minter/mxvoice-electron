@@ -45,6 +45,10 @@ export default {
           description: 'Shows → Color gives the current show an accent color, so you can see which show is loaded at a glance.',
         },
         {
+          title: "See What You've Played",
+          description: "A ▶ count appears next to any track you've played tonight, in the hotkeys, the holding tank and search results. Shows → Reset Played clears them; right-click a song and choose Mark as Unplayed to clear just that one.",
+        },
+        {
           title: "Copy Someone's Show",
           description: 'Shows → Import Show copies a saved show from another profile on this computer. Your copy is yours to change.',
         },
