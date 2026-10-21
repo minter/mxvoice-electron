@@ -127,6 +127,16 @@ async function resolveRecovery(recovery, deps) {
  * @returns {Promise<{ status: 'ready'|'failed' }>}
  */
 export async function openSessionOnStartup(overrides = {}) {
+  try {
+    return await openSession(overrides);
+  } finally {
+    // Lets the release notes show, now that no startup prompt is waiting,
+    // however the open ended (even a throw before the try below)
+    settleStartup();
+  }
+}
+
+async function openSession(overrides) {
   const deps = defaultDeps(overrides);
   const { api } = deps;
   installHeaderListeners();
@@ -181,13 +191,8 @@ export async function openSessionOnStartup(overrides = {}) {
     deps.alert(LOAD_FAILED_MESSAGE, 'Show not loaded');
     return { status: 'failed' };
   } finally {
-    try {
-      deps.clearRestorationLock();
-      await deps.refreshHeader();
-    } finally {
-      // Lets the release notes show, now that no startup prompt is waiting
-      settleStartup();
-    }
+    deps.clearRestorationLock();
+    await deps.refreshHeader();
   }
 }
 

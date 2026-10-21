@@ -165,6 +165,7 @@ import AppBootstrap from './renderer/modules/app-bootstrap/index.js';
 import AppInitialization from './renderer/modules/app-initialization/index.js';
 
 import { setHeaderLabels } from './renderer/modules/shows/header.js';
+import { settleStartup } from './renderer/modules/shows/startup-gate.js';
 
 // Load and display current profile
 (async function loadProfileIndicator() {
@@ -646,6 +647,11 @@ import { setHeaderLabels } from './renderer/modules/shows/header.js';
     } catch (_error) {
       // Preserve the original initialization error.
     }
+  } finally {
+    // openSessionOnStartup settles the startup gate itself; this covers every
+    // path that never ran it (a module missing, or init throwing first), so
+    // the release notes aren't held back all session
+    settleStartup();
   }
 })();
 
