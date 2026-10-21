@@ -16,6 +16,8 @@ globalThis.document = {
   createElement: (tag) => node(tag), createDocumentFragment: () => node('fragment')
 };
 const sharedState = (await import('../../../src/renderer/modules/shared-state.js')).default;
+const appendPlayedPill = vi.fn();
+vi.mock('../../../src/renderer/modules/shows/played-pills.js', () => ({ appendPlayedPill }));
 const live = await import('../../../src/renderer/modules/search/live-search.js');
 
 describe('live search', () => {
@@ -25,6 +27,8 @@ describe('live search', () => {
     await live.performLiveSearch('so');
     expect(searchSongs).toHaveBeenCalledWith({ category: '*', searchTerm: 'so', advancedFilters: null });
     expect(tbody.children[0].children[0].textContent).toBe('Music');
+    expect(tbody.children[0].children).toHaveLength(5);
+    expect(appendPlayedPill).toHaveBeenCalledWith(tbody.children[0].children[2], 1);
     expect(recordSearch).toHaveBeenCalledWith({
       signature: JSON.stringify({ category: '*', searchTerm: 'so', advancedFilters: null }),
       resultCount: 1,

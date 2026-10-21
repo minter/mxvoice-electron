@@ -21,6 +21,7 @@ import { completeActivePlayback, handlePlaybackCompleted } from './playback-comp
 import { parseCrossfadePreference, prepareForPlaybackReplacement } from './playback-replacement.js';
 import { loadSongForPlayback } from './playback-song-loader.js';
 import { resolvePlaybackTrigger, trackSongPlayed } from './playback-analytics.js';
+import { recordPlay } from '../shows/played-counts.js';
 import {
   calculatePlaybackVolume,
   getCrossfadePolicy,
@@ -297,6 +298,8 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
               });
             }
 
+            // Howler fires play again on every resume; the night's count goes up once per start
+            let counted = false;
             let sound = createPlaybackSound({
               createHowl,
               source: sound_path,
@@ -307,6 +310,10 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                   ?.classList.contains('active') || false,
               debugLog: getDebugLog(),
               onPlay: function () {
+                if (!counted) {
+                  counted = true;
+                  recordPlay(song_id);
+                }
                 handlePlaybackStarted({
                   sound,
                   howlerContext: this,

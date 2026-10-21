@@ -18,6 +18,8 @@ import { unwrap } from './ipc-result.js';
 import { runShowCommand } from './commands.js';
 import { chooseImportShow } from './import-dialog.js';
 import { installHeaderListeners, refreshHeader } from './header.js';
+import playedCounts from './played-counts.js';
+import { installPlayedPills } from './played-pills.js';
 
 export { droppedSongsMessage };
 
@@ -69,6 +71,9 @@ function defaultDeps(overrides) {
     extractLayout,
     chooseImportShow: (groups) => chooseImportShow(groups),
     refreshHeader: () => refreshHeader(),
+    loadPlayedCounts: (counts) => playedCounts.load(counts),
+    installPlayedPills,
+    playedCounts,
     ...overrides
   };
   if (!deps.applyLayout) {
@@ -80,7 +85,8 @@ function defaultDeps(overrides) {
 
 /**
  * Settle a show in progress: a fresh handoff restores silently, any other
- * record asks, and no record opens the saved show.
+ * record asks, and no record opens the saved show. The night's played counts
+ * come back with it (none unless restored).
  * @returns {Promise<Object>} the layout to apply
  */
 async function resolveRecovery(recovery, deps) {
@@ -97,7 +103,8 @@ async function resolveRecovery(recovery, deps) {
     choice = restore ? 'restore' : 'discard';
     deps.track('crash_restore_chosen', { choice });
   }
-  const { layout } = unwrap(await deps.api.resolveRecovery(choice), 'Resolving recovery');
+  const { layout, counts } = unwrap(await deps.api.resolveRecovery(choice), 'Resolving recovery');
+  deps.loadPlayedCounts(counts ?? {});
   window.debugLog?.info('Opening show', { ...LOG_CONTEXT, choice, handoff: recovery?.handoff ?? null });
   return layout;
 }
@@ -117,6 +124,7 @@ export async function openSessionOnStartup(overrides = {}) {
   const deps = defaultDeps(overrides);
   const { api } = deps;
   installHeaderListeners();
+  deps.installPlayedPills();
   window.isRestoringProfileState = true;
   let generation = null;
   try {

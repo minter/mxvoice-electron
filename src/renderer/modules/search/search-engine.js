@@ -27,6 +27,7 @@ try {
 // Import live search functionality
 import * as liveSearch from './live-search.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
+import { appendPlayedPill } from '../shows/played-pills.js';
 
 // Track active search to prevent race conditions
 let activeSearchId = 0;
@@ -185,6 +186,7 @@ function searchData({ trackAnalytics = true } = {}) {
           const tdTitle = document.createElement('td');
           tdTitle.style.fontWeight = 'bold';
           tdTitle.textContent = row.title || '';
+          appendPlayedPill(tdTitle, row.id);
           tr.appendChild(tdTitle);
 
           const tdArtist = document.createElement('td');

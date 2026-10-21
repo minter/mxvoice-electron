@@ -10,6 +10,7 @@
 import sharedState from '../shared-state.js';
 import { getAdvancedSearchValues, hasSearchCriteria } from './search-form-utils.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
+import { appendPlayedPill } from '../shows/played-pills.js';
 import { secureDatabase } from '../adapters/secure-adapter.js';
 import { recordSearch } from '../analytics/search-tracker.js';
 import { scaleScrollable } from '../utils/index.js';
@@ -179,6 +180,7 @@ function performLiveSearch(searchTerm) {
           const tdTitle = document.createElement('td');
           tdTitle.style.fontWeight = 'bold';
           tdTitle.textContent = row.title || '';
+          appendPlayedPill(tdTitle, row.id);
           tr.appendChild(tdTitle);
 
           const tdArtist = document.createElement('td');

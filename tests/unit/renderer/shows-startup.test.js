@@ -25,7 +25,9 @@ function setup({ open, confirm = vi.fn(async () => false), dropped = 0 } = {}) {
     quit: vi.fn(async () => ok(null)),
     clearRestorationLock: vi.fn(() => { calls.push('unlock'); }),
     track: vi.fn(),
-    refreshHeader: vi.fn(async () => {})
+    refreshHeader: vi.fn(async () => {}),
+    loadPlayedCounts: vi.fn(),
+    installPlayedPills: vi.fn()
   };
   return { api, deps, calls };
 }
@@ -71,6 +73,20 @@ describe('openSessionOnStartup', () => {
     await openSessionOnStartup(deps);
     expect(api.resolveRecovery).toHaveBeenCalledWith('restore');
     expect(calls[0]).toBe('apply:Live');
+  });
+
+  it('loads the played counts the recovery hands back before applying the layout', async () => {
+    const { api, deps, calls } = setup({ open: opened({ savedAt: Date.now(), handoff: 'renderer-crash', showId: null }) });
+    api.resolveRecovery.mockResolvedValueOnce(ok({ layout: savedLayout, counts: { 12: 2 } }));
+    deps.loadPlayedCounts.mockImplementation((counts) => { calls.push(`played:${JSON.stringify(counts)}`); });
+    await openSessionOnStartup(deps);
+    expect(deps.installPlayedPills).toHaveBeenCalled();
+    expect(calls).toEqual(['played:{"12":2}', 'apply:Saved', 'ready:7:true', 'unlock']);
+
+    // Without counts in the result, none are loaded
+    const plain = setup({ open: opened() });
+    await openSessionOnStartup(plain.deps);
+    expect(plain.deps.loadPlayedCounts).toHaveBeenCalledWith({});
   });
 
   it('opens the saved show without asking when there is no recovery', async () => {

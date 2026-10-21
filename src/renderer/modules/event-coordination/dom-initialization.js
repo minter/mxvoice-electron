@@ -1,4 +1,5 @@
 import { customConfirm } from '../utils/index.js';
+import playedCounts from '../shows/played-counts.js';
 
 /**
  * DOM Initialization Module
@@ -171,7 +172,13 @@ export default class DOMInitialization {
         // This default handler is now managed dynamically in the show function
         // to prevent duplicate listeners.
       });
-      menu.append(playItem, editItem, deleteItem);
+      // Shown only for a song played tonight; the song is the row the menu opened on
+      let unplayedSongId = null;
+      const unplayedItem = mkItem('Mark as Unplayed', () => {
+        playedCounts.clear(unplayedSongId);
+        restoreHotkeyId();
+      });
+      menu.append(playItem, editItem, unplayedItem, deleteItem);
       document.body.appendChild(menu);
 
       // Track if we're waiting for a hotkey operation to complete
@@ -227,6 +234,9 @@ export default class DOMInitialization {
 
       const show = (x, y, dynamicDeleteLabel, onRemoveHotkey) => {
         deleteItem.textContent = dynamicDeleteLabel || 'Delete';
+        // Every caller makes the row it opened on the selected row first
+        unplayedSongId = document.getElementById('selected_row')?.getAttribute('songid') || null;
+        unplayedItem.style.display = playedCounts.count(unplayedSongId) > 0 ? '' : 'none';
         menu.style.left = `${x}px`;
         menu.style.top = `${y}px`;
         menu.style.display = 'block';

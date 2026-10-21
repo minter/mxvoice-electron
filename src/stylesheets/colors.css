@@ -722,3 +722,24 @@ select#data {
   background-color: #6c757d;
   color: white;
 }
+
+/* Played counts: the "▶ n" pill (structure in played-counts.css). Muted on
+   purpose, so a played row reads as a reminder, never as a state change. */
+body.theme-light .played-pill {
+  color: rgb(108, 117, 125);
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+body.theme-dark .played-pill {
+  color: rgb(150, 150, 150);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* On a selected (blue) row the pill stays subtle against the row's own color */
+body.theme-light .selected-row .played-pill,
+body.theme-light #selected_row .played-pill,
+body.theme-dark .selected-row .played-pill,
+body.theme-dark #selected_row .played-pill {
+  color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.15);
+}
