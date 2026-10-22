@@ -35,7 +35,10 @@ Provides custom modal dialog functionality to replace native browser dialogs.
 Dialogs use Bootstrap 5 via the UI `bootstrap-adapter` (no jQuery plugins).
 
 **Functions:**
-- `customConfirm(message, title = 'Confirm') => Promise<boolean>` - Show a custom confirmation dialog
+- `customConfirm(message, title = 'Confirm', options = {}) => Promise<boolean>` - Show a custom confirmation dialog. Resolves true for Confirm, false otherwise. Options:
+  - `confirmLabel` (default `'Confirm'`) and `cancelLabel` (default `'Cancel'`) - the button labels
+  - `defaultAction` - `'cancel'` focuses Cancel, so Return takes it; `'confirm'` focuses Confirm; unset moves no focus
+  - `dismissible` (default `true`) - Esc, a backdrop click and the close button answer false. With `false` there is no close button, Esc and the backdrop do nothing, and only the two buttons answer
 - `customPrompt(message, defaultValue = '', title = 'Input') => Promise<string|null>` - Show a custom prompt dialog
 - `restoreFocusToSearch()` - Restore focus to search fields after modal dismissal
 
