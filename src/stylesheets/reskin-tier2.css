@@ -4,8 +4,8 @@
  * strip is structural and lives in index.css, since the main process draws
  * the window without a title bar.)
  *
- * - Player: the song is the headline; times are small and tabular at the
- *   ends of a thin progress line; one button family (round transport,
+ * - Player: the song is the headline and time left is large; elapsed is
+ *   small; both tabular at the ends of a thin progress line; one button family (round transport,
  *   rounded-square tools); Play is the accent only when it can play.
  * - Search: category is a quiet tag, long titles clamp to two lines (full
  *   title on hover), the Info column hides itself when no row has info.
@@ -27,17 +27,46 @@
   letter-spacing: 0;
 }
 
+/* Elapsed small; time left is the number a show runs on, so it's large.
+   Even-width digits, so neither jitters as it counts */
 #timer,
 #duration {
   font-size: 12.5px !important;
   font-weight: 500 !important;
   color: var(--rs-muted) !important;
+  font-variant-numeric: tabular-nums;
   align-self: flex-end;
+  height: auto !important;
+  line-height: 1.2;
+}
+
+#duration {
+  font-size: 19px !important;
+  font-weight: 600 !important;
+  color: var(--rs-text) !important;
+  letter-spacing: -0.01em;
 }
 
 #now_playing_bar {
   align-items: baseline;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
+}
+
+/* A shorter bar: the lists get the room. index.css pads the middle column
+   and puts 8px under each time and the title; the bar's own padding is
+   what spaces it */
+#player-panel > .card-body {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+#player-col {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+#now_playing_bar > div {
+  padding-bottom: 0 !important;
 }
 
 /* index.css sets the track gray with !important; the lighter track gives the
@@ -94,13 +123,22 @@
   box-shadow: none !important;
 }
 
-/* Idle: nothing loaded reads as "waiting", not "broken" */
+/* Idle: each keeps its identity as an outline, so it reads as "not now",
+   not as an empty slot */
 #play_button:disabled,
 #stop_button:disabled {
   background: transparent !important;
-  color: var(--rs-muted) !important;
-  border: 2px dashed var(--rs-border) !important;
-  opacity: 0.6 !important;
+  opacity: 1 !important;
+}
+
+#play_button:disabled {
+  color: rgba(var(--rs-accent), 0.55) !important;
+  border: 2px solid rgba(var(--rs-accent), 0.35) !important;
+}
+
+#stop_button:disabled {
+  color: rgba(220, 53, 69, 0.55) !important;
+  border: 2px solid rgba(220, 53, 69, 0.35) !important;
 }
 
 /* Tools: rounded squares, quiet until on */
@@ -133,22 +171,69 @@
   color: var(--rs-accent-text) !important;
 }
 
-/* Volume: thin track, accent thumb */
+/* Shift held over Stop or Pause (fade-modifier-cue.js): a fading-speaker
+   icon in place of the usual one, since that click will fade */
+#stop_button .fade-cue-on,
+#pause_button .fade-cue-on,
+#stop_button.fade-cue .fade-cue-off,
+#pause_button.fade-cue .fade-cue-off {
+  display: none;
+}
+
+#stop_button.fade-cue .fade-cue-on,
+#pause_button.fade-cue .fade-cue-on {
+  display: inline-block;
+}
+
+/* Mute shows what's true now: a speaker, or a crossed-out one when muted */
+#mute_button .mute-icon-on,
+#mute_button.active .mute-icon-off {
+  display: none;
+}
+
+#mute_button.active .mute-icon-on {
+  display: inline-block;
+}
+
+/* Tools and volume run to the panel's right edge */
+#controls_column {
+  justify-content: flex-end;
+  gap: 10px;
+  padding-right: 6px;
+}
+
+/* Volume: the progress bar's thin track, an accent thumb. index.css draws
+   the input itself as a bordered gradient pill; that goes */
 #volume {
+  width: 120px !important;
+  height: 18px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
   accent-color: rgb(var(--rs-accent));
+  margin-left: 4px;
 }
 
 #volume::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 999px;
-  background: var(--rs-border);
+  background: var(--rs-border) !important;
 }
 
 #volume::-webkit-slider-thumb {
+  width: 16px !important;
+  height: 16px !important;
   margin-top: -6px;
+  transform: none !important;
   box-shadow: none !important;
   border: 2px solid var(--rs-surface) !important;
   background: rgb(var(--rs-accent)) !important;
+}
+
+#volume::-webkit-slider-thumb:hover,
+#volume::-webkit-slider-thumb:active {
+  transform: scale(1.1) !important;
+  box-shadow: none !important;
 }
 
 /* --- Search table --- */
