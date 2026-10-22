@@ -73,6 +73,12 @@ test.describe('UI - song rows', () => {
     expect(new Set(fit.slots).size).toBe(1);
   });
   test('the twelve slots share the column height at any window size, all the same height', async () => {
+    // Some loaded, some empty: they must still match
+    await page.evaluate(() => window.__showsTest.applyLayout({
+      hotkeys: [{ tabNumber: 1, hotkeys: { f2: '1001', f3: '1002' } }],
+      holdingTank: [{ tabNumber: 1, songIds: ['1004', '1001'] }]
+    }));
+    await expect(page.locator('#hotkeys_list_1 #f2_hotkey .song-label-title')).toBeVisible();
     for (const [width, height] of [[1200, 800], [1400, 1000], [1600, 1300]]) {
       await setContentSize(app, page, width, height);
       const fit = await page.evaluate(() => {
@@ -92,6 +98,15 @@ test.describe('UI - song rows', () => {
       expect(fit.spare).toBeLessThan(24);
     }
     await setContentSize(app, page, 1200, 800);
+    await applyLayout(page);
+  });
+
+  test('every slot is a rounded card, the first and last included', async () => {
+    const radii = await page.evaluate(() => [...document.querySelectorAll('#hotkeys_list_1 > li')].map((li) => {
+      const c = getComputedStyle(li);
+      return [c.borderTopLeftRadius, c.borderTopRightRadius, c.borderBottomLeftRadius, c.borderBottomRightRadius].join(' ');
+    }));
+    expect(new Set(radii)).toEqual(new Set(['6px 6px 6px 6px']));
   });
 
   test('a short window scrolls the slots instead of squashing them', async () => {

@@ -220,11 +220,18 @@ body {
   padding: 4px 8px;
   margin: 2px 0;
   /* Every slot at least the height of a loaded one (title and artist lines,
-     padding, border) at the current font size, empty or not, so they start
-     equal and grow equally */
+     padding, border) at the current font size, empty or not */
   min-height: max(40px, calc((var(--song-font-size) + 2px) * 2.26 + 10px));
-  flex: 1 0 auto;
+  /* Grown from zero, not from their content, so empty and loaded slots get
+     the same share */
+  flex: 1 1 0;
   transition: background-color 0.15s ease;
+}
+
+/* Bootstrap's flush list squares off the first slot's top corners and the
+   last slot's bottom ones; every slot is a rounded card here */
+.hotkeys .list-group-item {
+  border-radius: 6px;
 }
 
 /* colors.css paints every .list-group-item with !important; rows here are cards */
