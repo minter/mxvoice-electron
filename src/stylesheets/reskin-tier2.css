@@ -184,7 +184,7 @@ td.song-title-cell .played-pill {
   display: inline-block;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 0.85em;
+  font-size: max(11px, 0.85em); /* follows View > Font Size, never below 11px */
   font-weight: 500;
   line-height: 1.6;
   background: var(--rs-row-hover);

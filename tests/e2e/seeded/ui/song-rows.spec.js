@@ -14,9 +14,11 @@ async function applyLayout(page) {
   }), ALL_KEYS);
 }
 
-async function setWindowSize(app, page, width, height) {
+// The content area, not the outer window: on Windows the outer size includes
+// the title and menu bars, so the same numbers mean the same page everywhere
+async function setContentSize(app, page, width, height) {
   await app.evaluate(({ BrowserWindow }, size) => {
-    BrowserWindow.getAllWindows()[0].setSize(size.width, size.height);
+    BrowserWindow.getAllWindows()[0].setContentSize(size.width, size.height);
   }, { width, height });
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
@@ -58,13 +60,16 @@ test.describe('UI - song rows', () => {
     }
   });
 
-  test('all twelve hotkey slots fit the default 1200×800 window', async () => {
-    await setWindowSize(app, page, 1200, 800);
+  test('all twelve hotkey slots fit a 1200×800 page without scrolling', async () => {
+    await setContentSize(app, page, 1200, 800);
     const fit = await page.evaluate(() => {
       const column = document.querySelector('#hotkeys-column').getBoundingClientRect();
       const f12 = document.querySelector('#hotkeys_list_1 #f12_hotkey').getBoundingClientRect();
-      return { columnBottom: column.bottom, f12Bottom: f12.bottom };
+      const slots = [...document.querySelectorAll('#hotkeys_list_1 > li')].map((li) => Math.round(li.getBoundingClientRect().height));
+      return { columnBottom: column.bottom, f12Bottom: f12.bottom, slots };
     });
     expect(fit.f12Bottom).toBeLessThanOrEqual(fit.columnBottom);
+    // Empty and loaded slots are the same height
+    expect(new Set(fit.slots).size).toBe(1);
   });
 });
