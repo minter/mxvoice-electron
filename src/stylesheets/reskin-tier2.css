@@ -1,15 +1,14 @@
 /*
- * Tier 2 reskin (mockup, branch reskin-tier1): player bar, search table,
- * macOS title strip. Loaded after reskin.css; uses its tokens. Remove the
- * <link> to drop just this tier.
+ * Reskin, tier 2: player bar and search table. Loaded after reskin.css and
+ * uses its tokens. Remove the <link> to drop just this tier. (The macOS title
+ * strip is structural and lives in index.css, since the main process draws
+ * the window without a title bar.)
  *
  * - Player: the song is the headline; times are small and tabular at the
  *   ends of a thin progress line; one button family (round transport,
  *   rounded-square tools); Play is the accent only when it can play.
  * - Search: category is a quiet tag, long titles clamp to two lines (full
  *   title on hover), the Info column hides itself when no row has info.
- * - macOS: a 30px title strip under the inset traffic lights, in the
- *   window color, so the show color runs to the top edge.
  */
 
 /* --- Player bar --- */
@@ -41,11 +40,14 @@
   margin-bottom: 8px;
 }
 
+/* index.css sets the track gray with !important; the lighter track gives the
+   elapsed fill real contrast. 6px keeps it an easy seek target. */
 #progress_bar,
 #progress_bar.progress {
-  height: 5px !important;
+  height: 6px !important;
   border-radius: 999px;
-  background: var(--rs-border);
+  background-color: var(--rs-border) !important;
+  border-color: transparent !important;
   box-shadow: none;
 }
 
@@ -97,8 +99,8 @@
 #stop_button:disabled {
   background: transparent !important;
   color: var(--rs-muted) !important;
-  border: 1.5px solid var(--rs-border) !important;
-  opacity: 1 !important;
+  border: 2px dashed var(--rs-border) !important;
+  opacity: 0.6 !important;
 }
 
 /* Tools: rounded squares, quiet until on */
@@ -156,7 +158,11 @@
 }
 
 #search_results tbody tr:hover td {
-  background: var(--rs-row-hover);
+  background: var(--rs-row-hover) !important;
+}
+
+#search_results tbody tr#selected_row:hover td {
+  background: transparent !important;
 }
 
 td.song-title-cell .song-title-text {
@@ -178,7 +184,7 @@ td.song-title-cell .played-pill {
   display: inline-block;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 0.85em;
   font-weight: 500;
   line-height: 1.6;
   background: var(--rs-row-hover);
@@ -192,23 +198,6 @@ tr#selected_row .category-tag {
 }
 
 /* No row has info: the column goes away */
-table:not(:has(tbody td.hide-2:not(:empty))) .hide-2 {
+#search_results:not(:has(tbody td.hide-2:not(:empty))) .hide-2 {
   display: none;
-}
-
-/* --- macOS title strip --- */
-
-body.platform-mac .container-fluid::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 30px;
-  -webkit-app-region: drag;
-  z-index: 2000;
-}
-
-body.platform-mac #top-row {
-  padding-top: 30px;
 }

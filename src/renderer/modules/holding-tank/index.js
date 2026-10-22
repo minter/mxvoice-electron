@@ -142,7 +142,7 @@ export function applyHoldingTankSnapshot(snapshot, songsById) {
       const row = songsById.get(String(songId));
       if (!row) continue;
       const element = document.createElement('li');
-            element.className = 'song list-group-item context-menu';
+      element.className = 'song list-group-item context-menu';
       element.draggable = true;
       element.addEventListener('dragstart', songDrag);
       element.setAttribute('songid', songId);
@@ -265,7 +265,7 @@ function insertSongRow(row, song_id, element, insertPosition) {
     song_row = existing_song; // already in DOM; will be moved below
   } else {
     song_row = document.createElement("li");
-        song_row.className = "song list-group-item context-menu";
+    song_row.className = "song list-group-item context-menu";
     song_row.setAttribute("draggable", "true");
     song_row.addEventListener('dragstart', songDrag);
     song_row.setAttribute("songid", song_id);
@@ -457,7 +457,9 @@ export async function clearHoldingTank() {
  */
 export function holdingTankDrop(event) {
   event.preventDefault();
-  addToHoldingTank(event.dataTransfer.getData("text"), event.target).then(result => {
+  // A drop can land on a label piece inside a row; insert relative to the row
+  const target = event.target?.closest?.('li') ?? event.target;
+  addToHoldingTank(event.dataTransfer.getData("text"), target).then(result => {
     if (result && result.success) {
       // Save holding tank state after adding
       requestProfileStateSave();

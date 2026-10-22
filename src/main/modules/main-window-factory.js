@@ -41,7 +41,7 @@ function createMainWindow({
   };
 
   // macOS: draw the window to the top edge, with the traffic lights inset over
-  // the app's own title strip (index.css .platform-mac). Windows and Linux
+  // the app's own title strip (index.css body.platform-mac). Windows and Linux
   // keep the native title bar, and with it the menu bar.
   if (platform === 'darwin') {
     windowOptions.titleBarStyle = 'hiddenInset';
@@ -99,7 +99,7 @@ function createMainWindow({
 }
 
 // Full screen has no traffic lights, so the inset title strip would be empty
-// space: hide it while the window is full screen (reskin-tier2.css draws it)
+// space: hide it while the window is full screen (index.css draws it)
 const FULL_SCREEN_CSS = 'body.platform-mac #top-row { padding-top: var(--panel-gap) !important; }'
   + ' body.platform-mac .container-fluid::before { display: none; }';
 
@@ -107,7 +107,13 @@ function hideTitleStripInFullScreen(window) {
   let key = null;
   window.on('enter-full-screen', async () => {
     try {
-      key = await window.webContents.insertCSS(FULL_SCREEN_CSS);
+      const inserted = await window.webContents.insertCSS(FULL_SCREEN_CSS);
+      // Left full screen while the CSS was going in: take it straight back out
+      if (!window.isFullScreen()) {
+        window.webContents.removeInsertedCSS(inserted).catch(() => {});
+        return;
+      }
+      key = inserted;
     } catch {
       key = null;
     }

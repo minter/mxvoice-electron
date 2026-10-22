@@ -1,35 +1,34 @@
 /*
- * Tier 1 reskin (mockup, branch reskin-tier1)
+ * Reskin, tier 1: type, song rows, F-key badges, flat surfaces.
  *
- * Loaded last. Remove the <link> in index.html and the app looks as before
- * (song rows keep their new title / artist / time pieces, which read fine
- * without this file).
+ * Loaded after colors.css and index.css. Remove its <link> in index.html (and
+ * reskin-tier2.css's) and the app looks as it did: song rows keep their
+ * title / artist / time pieces, which read inline as "Title by Artist (0:21)"
+ * without this file.
  *
- * Plan
- * - Type: the system UI font everywhere (SF on macOS, Segoe UI on Windows),
- *   four sizes (11.5 / 12.5 / 13 / 15) and three weights (400 / 500 / 600),
- *   tabular figures so times line up. No monospace timer.
- * - Color: neutral surfaces; one accent (the Import button's blue) for
- *   selection and "armed"; the show color stays the window frame and tab
- *   underline. Muted text for secondary information.
- * - Shape: one border per row, no shadows or gradients, 6px row radius,
- *   pills only for chips.
- * - Hierarchy: a song is title (primary), artist (muted), time (right,
- *   tabular). Panel titles are plain labels, not button lookalikes.
- * - F-key badges: empty = outlined and muted, loaded = soft accent,
- *   playing = solid accent.
+ * - Type: the system UI font (SF on macOS, Segoe UI on Windows), sizes in em
+ *   so View > Font Size still scales the rows, tabular figures for times.
+ * - Color: neutral surfaces, one accent for selection and "loaded"; the show
+ *   color stays the window frame and tab underline. Light-theme text pairs
+ *   meet WCAG AA (4.5:1) on every tint used here.
+ * - Shape: one border per row, no shadows or gradients, 6px row radius.
+ * - Song: title (primary), artist (muted), time (right, tabular).
+ * - F-key badge: empty = outlined and muted, loaded = accent outline and tint,
+ *   playing or selected = solid accent.
  */
 
+/* Light values are the defaults, so nothing flashes before the theme class is set */
+:root,
 body.theme-light {
   --rs-surface: #ffffff;
   --rs-row-hover: #f3f5f8;
   --rs-border: #e1e4e9;
   --rs-text: #1d2127;
-  --rs-muted: #6b7280;
+  --rs-muted: #5f6672;
   --rs-accent: 13, 110, 253;
-  --rs-accent-text: #0b5ed7;
+  --rs-accent-text: #0a58ca;
   /* Behind white text and icons */
-  --rs-accent-fill: 13, 110, 253;
+  --rs-accent-fill: 11, 94, 215;
 }
 
 body.theme-dark {
@@ -46,9 +45,14 @@ body.theme-dark {
 
 /* Windows 11's variable Segoe UI has a true 500 weight; Windows 10's Segoe UI
    falls back to 400 for it, which still reads (title color carries the weight) */
-body {
+body,
+#song_now_playing,
+#now_playing_bar div {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+body {
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
@@ -59,13 +63,15 @@ body {
   box-shadow: none;
 }
 
-.header-button {
-  background: none;
-  border: 0;
+.header-button,
+.theme-dark .header-button,
+.theme-auto .header-button {
+  background: none !important;
+  border: 0 !important;
   padding: 0 2px;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--rs-text);
+  color: var(--rs-text) !important;
 }
 
 .header-button i {
@@ -77,6 +83,9 @@ body {
   font-size: 15px;
   font-weight: 600;
   color: var(--rs-text);
+  /* Tall enough for the colored show-name pill (show-colors.css: 2px above and
+     below the name), so a color never changes the header height */
+  min-height: calc(15px * 1.2 + 8px);
 }
 
 .profile-indicator i {
@@ -84,14 +93,8 @@ body {
   color: var(--rs-muted);
 }
 
-/* The colored pill (show-colors.css) adds 2px above and below the name. The
-   indicator is always tall enough for it, so a color never changes the header height. */
 #show-name {
   line-height: 1.2;
-}
-
-.profile-indicator {
-  min-height: calc(15px * 1.2 + 8px); /* the pill's line plus its padding, plus the indicator's own */
 }
 
 /* Holding / Playlist toggle: flat segmented control */
@@ -100,8 +103,6 @@ body {
 }
 
 .mode-btn {
-  font-size: 12px;
-  font-weight: 500;
   transition: background-color 0.15s ease;
 }
 
@@ -116,80 +117,86 @@ body {
   background: rgb(var(--rs-accent-fill));
   box-shadow: none;
   filter: none;
-  font-weight: 600;
 }
 
-/* --- Tabs --- */
+/* --- Tabs: size and weight stay as they were (widths are fitted to labels) --- */
 
-/* Size and weight stay as they were: tab widths are fitted to their labels */
-#hotkey_tabs .nav-link,
-#holding_tank_tabs .nav-link {
-  color: var(--rs-muted);
-}
-
-#hotkey_tabs .nav-link.active,
-#holding_tank_tabs .nav-link.active {
-  color: var(--rs-text);
+#hotkey_tabs .nav-link:not(.active),
+#holding_tank_tabs .nav-link:not(.active) {
+  color: var(--rs-muted) !important;
 }
 
 /* --- Song label: title / artist / time --- */
 
-.song-label-text {
+/* Joining words stay in the text ("Title by Artist (0:21)") but aren't drawn */
+.hotkeys li > span.song .song-label-sep,
+.holding_tank .list-group-item .song-label-sep {
+  display: none;
+}
+
+.hotkeys li > span.song .song-label-text,
+.holding_tank .list-group-item .song-label-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
   flex: 1 1 auto;
 }
 
-.song-label-title,
-.song-label-artist {
+.hotkeys .song-label-title,
+.hotkeys .song-label-artist,
+.holding_tank .song-label-title,
+.holding_tank .song-label-artist {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.25;
 }
 
-.hotkeys span.song-label-title,
+/* em, so View > Font Size (set inline on .song) scales the whole label */
+.hotkeys .song-label-title,
 .holding_tank .song-label-title {
-  font-size: 13px;
+  font-size: 1em;
   font-weight: 500;
-  line-height: 1.3;
   color: var(--rs-text);
 }
 
-.hotkeys span.song-label-artist,
+.hotkeys .song-label-artist,
 .holding_tank .song-label-artist {
-  font-size: 11.5px;
+  font-size: 0.88em;
   font-weight: 400;
-  line-height: 1.3;
   color: var(--rs-muted);
 }
 
-.hotkeys span.song-label-time,
+.hotkeys .song-label-time,
 .holding_tank .song-label-time {
   flex: none;
   margin-left: 10px;
-  font-size: 12px;
+  font-size: 0.92em;
   font-weight: 400;
   color: var(--rs-muted);
-  width: auto;
 }
 
 /* --- Hotkey slots --- */
 
 .hotkeys li {
-  padding: 6px 10px 6px 8px;
-  margin: 3px 0;
-  min-height: 46px;
-  background: var(--rs-surface);
-  border: 1px solid var(--rs-border);
-  box-shadow: none;
+  padding: 4px 8px;
+  margin: 2px 0;
   transition: background-color 0.15s ease;
 }
 
-.hotkeys li:hover {
-  background: var(--rs-row-hover);
-  box-shadow: none;
+/* colors.css paints every .list-group-item with !important; rows here are cards */
+.hotkeys .list-group-item,
+.holding_tank .list-group-item {
+  background-color: var(--rs-surface) !important;
+  border: 1px solid var(--rs-border) !important;
+  color: var(--rs-text) !important;
+  box-shadow: none !important;
+}
+
+.hotkeys .list-group-item:hover,
+.holding_tank .list-group-item:hover {
+  background-color: var(--rs-row-hover) !important;
 }
 
 .hotkeys li > span.song,
@@ -216,18 +223,19 @@ body {
   box-shadow: none;
 }
 
-/* A slot with a song is armed */
+/* A slot with a song is loaded: accent outline and tint, so the badge carries the state itself */
 .hotkeys li[songid] .badge {
   background: rgba(var(--rs-accent), 0.12);
   color: var(--rs-accent-text);
-  border-color: transparent;
+  border-color: rgb(var(--rs-accent));
 }
 
-/* Playing or selected slot: soft accent, text stays readable */
+/* Playing or selected slot (the app sets both classes together) */
 .hotkeys .list-group-item.active-hotkey,
 .hotkeys .list-group-item.selected-row {
-  background: rgba(var(--rs-accent), 0.1) !important;
-  border: 1px solid rgba(var(--rs-accent), 0.55) !important;
+  background-color: rgba(var(--rs-accent), 0.1) !important;
+  border-color: rgb(var(--rs-accent)) !important;
+  box-shadow: inset 3px 0 0 rgb(var(--rs-accent)) !important;
   color: var(--rs-text) !important;
 }
 
@@ -236,17 +244,24 @@ body {
   color: inherit !important;
 }
 
-.hotkeys .list-group-item.active-hotkey span.song-label-artist,
-.hotkeys .list-group-item.active-hotkey span.song-label-time,
-.hotkeys .list-group-item.selected-row span.song-label-artist,
-.hotkeys .list-group-item.selected-row span.song-label-time {
+.hotkeys .list-group-item.active-hotkey .song-label-artist,
+.hotkeys .list-group-item.active-hotkey .song-label-time,
+.hotkeys .list-group-item.selected-row .song-label-artist,
+.hotkeys .list-group-item.selected-row .song-label-time {
   color: var(--rs-muted) !important;
 }
 
-.hotkeys .list-group-item.active-hotkey .badge {
+.hotkeys .list-group-item.active-hotkey .badge,
+.hotkeys .list-group-item.selected-row .badge {
   background: rgb(var(--rs-accent-fill));
-  color: #fff !important;
   border-color: transparent;
+  color: #fff !important;
+}
+
+/* The column never clips the last slots: it scrolls when the window is short */
+#hotkeys-column .card-body {
+  overflow-y: auto;
+  min-height: 0;
 }
 
 /* --- Holding tank rows --- */
@@ -261,24 +276,17 @@ body {
   margin: 3px 0;
   padding: 6px 10px;
   border-radius: 6px;
-  background: var(--rs-surface);
-  border: 1px solid var(--rs-border);
-  box-shadow: none;
   transition: background-color 0.15s ease;
   font-size: 13px;
 }
 
-.holding_tank .list-group-item:hover {
-  background: var(--rs-row-hover);
-  box-shadow: none;
-}
-
+/* Selected (what Play and Return start): accent border and a bar, not just a tint */
 .holding_tank .list-group-item#selected_row,
 .holding_tank .list-group-item#selected_row:hover {
   background: rgba(var(--rs-accent), 0.1) !important;
-  border-color: rgba(var(--rs-accent), 0.55) !important;
+  border-color: rgb(var(--rs-accent)) !important;
+  box-shadow: inset 3px 0 0 rgb(var(--rs-accent)) !important;
   color: var(--rs-text) !important;
-  box-shadow: none !important;
 }
 
 .now_playing {
@@ -305,48 +313,42 @@ body {
   font-size: 14px;
 }
 
-#search_results thead th,
-#search_table thead th,
-.table thead th {
+#search_results thead th {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--rs-muted);
+  color: var(--rs-muted) !important;
 }
 
-td.song-title-cell {
+#search_results td.song-title-cell {
   font-weight: 500;
-  color: var(--rs-text);
+  color: var(--rs-text) !important;
 }
 
-td.song-artist-cell {
+#search_results td.song-artist-cell {
   font-weight: 400;
-  color: var(--rs-text);
+  color: var(--rs-text) !important;
 }
 
-td.song-time-cell {
-  color: var(--rs-muted);
-}
-
-tbody td.hide-1,
-tbody td.hide-2 {
-  color: var(--rs-muted);
+#search_results td.song-time-cell,
+#search_results tbody td.hide-1,
+#search_results tbody td.hide-2 {
+  color: var(--rs-muted) !important;
 }
 
 /* Selected search result: soft accent with a bar on the left */
-tr#selected_row {
+#search_results tr#selected_row {
   background: rgba(var(--rs-accent), 0.1) !important;
   box-shadow: inset 3px 0 0 rgb(var(--rs-accent)) !important;
   color: var(--rs-text) !important;
 }
 
-tr#selected_row td,
-table td#selected_row {
+#search_results tr#selected_row td {
   color: var(--rs-text) !important;
 }
 
-tr#selected_row td.song-time-cell,
-tr#selected_row td.hide-1,
-tr#selected_row td.hide-2 {
+#search_results tr#selected_row td.song-time-cell,
+#search_results tr#selected_row td.hide-1,
+#search_results tr#selected_row td.hide-2 {
   color: var(--rs-muted) !important;
 }
 
@@ -363,30 +365,4 @@ tr#selected_row td.hide-2 {
   text-transform: none;
   font-size: 14px;
   font-weight: 600;
-}
-
-/* colors.css paints every .list-group-item with !important; rows here are cards */
-.hotkeys .list-group-item,
-.holding_tank .list-group-item {
-  background-color: var(--rs-surface) !important;
-  border-color: var(--rs-border) !important;
-  border-bottom: 1px solid var(--rs-border) !important;
-  color: var(--rs-text) !important;
-}
-
-.hotkeys .list-group-item:hover,
-.holding_tank .list-group-item:hover {
-  background-color: var(--rs-row-hover) !important;
-}
-
-.hotkeys .list-group-item.active-hotkey,
-.hotkeys .list-group-item.selected-row,
-.holding_tank .list-group-item#selected_row {
-  background-color: rgba(var(--rs-accent), 0.12) !important;
-  border-color: rgba(var(--rs-accent), 0.6) !important;
-}
-
-/* Song labels keep "Title by Artist (0:21)" as their text; the joining words are not drawn */
-.song-label-sep {
-  display: none;
 }

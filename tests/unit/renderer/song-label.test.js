@@ -29,9 +29,13 @@ describe('setSongLabel', () => {
     setSongLabel(el, { title: 'We Are Family', artist: 'Sister Sledge', time: '00:07' }, doc);
 
     expect(el.textContent).toBe('We Are Family by Sister Sledge (0:07)');
-    expect(el.title).toBe('We Are Family by Sister Sledge (0:07)');
+    // The tooltip is on the pieces, so it leaves with them when the slot is cleared
+    expect(el.childNodes[0].title).toBe('We Are Family by Sister Sledge (0:07)');
+    expect(el.childNodes[2].title).toBe('We Are Family by Sister Sledge (0:07)');
     expect(classesOf(el)).toEqual(['song-label-text', 'song-label-sep', 'song-label-time', 'song-label-sep']);
     expect(classesOf(el.childNodes[0])).toEqual(['song-label-title', 'song-label-sep', 'song-label-artist']);
+    el.textContent = '';
+    expect(el.childNodes).toEqual([]);
   });
 
   it('fills in unknown title, artist and time', () => {
@@ -60,8 +64,8 @@ describe('swapSongLabels', () => {
 
     expect(a.textContent).toBe('Two by Y (2:00)');
     expect(b.textContent).toBe('One by X (1:00)');
-    expect(a.title).toBe('Two by Y (2:00)');
-    expect(b.title).toBe('One by X (1:00)');
+    expect(a.childNodes[0].title).toBe('Two by Y (2:00)');
+    expect(b.childNodes[0].title).toBe('One by X (1:00)');
   });
 
   it('swaps a label with an empty slot', () => {
@@ -72,7 +76,8 @@ describe('swapSongLabels', () => {
     swapSongLabels(a, empty);
 
     expect(a.textContent).toBe('');
-    expect(a.title).toBe('');
+    expect(a.childNodes).toEqual([]);
     expect(empty.textContent).toBe('One by X (1:00)');
+    expect(empty.childNodes[0].title).toBe('One by X (1:00)');
   });
 });

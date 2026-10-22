@@ -195,7 +195,7 @@ The module integrates with the following event handlers:
 - `#holding_tank` (dragleave) - Hide drop zone
 
 Implementation notes:
-- Song rows added to the holding tank are created via `document.createElement('li')` with text set via `textContent`.
+- Song rows added to the holding tank are created via `document.createElement('li')` and filled by `setSongLabel` (`ui/song-label.js`): title, artist and time pieces set via `textContent`, which together still read "Title by Artist (0:21)".
 - Drag behavior is bound with `addEventListener('dragstart', songDrag)` from `drag-drop/drag-drop-functions.js`. Inline attributes like `ondragstart` are not used.
 
 ### Keyboard Events

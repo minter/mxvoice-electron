@@ -48,24 +48,27 @@ export function setSongLabel(el, row, doc = globalThis.document) {
     piece(doc, 'song-label-sep', ' by '),
     piece(doc, 'song-label-artist', artist)
   );
+  // The tooltip lives on the label's own pieces, so clearing the slot
+  // (textContent = '') or swapping labels takes it along
+  const full = `${title} by ${artist} (${time || '[??:??]'})`;
+  text.title = full;
+  const timePiece = piece(doc, 'song-label-time', time || '[??:??]');
+  timePiece.title = full;
+  el.removeAttribute?.('title');
   el.replaceChildren(
     text,
     piece(doc, 'song-label-sep', ' ('),
-    piece(doc, 'song-label-time', time || '[??:??]'),
+    timePiece,
     piece(doc, 'song-label-sep', ')')
   );
-  el.title = `${title} by ${artist} (${time || '[??:??]'})`;
 }
 
-/** Swap two labels' contents (a hotkey drag between slots) */
+/** Swap two labels' contents (a hotkey drag between slots); tooltips go with them */
 export function swapSongLabels(a, b) {
   const aNodes = [...a.childNodes];
   const bNodes = [...b.childNodes];
-  const aTitle = a.title;
   a.replaceChildren(...bNodes);
   b.replaceChildren(...aNodes);
-  a.title = b.title;
-  b.title = aTitle;
 }
 
 export default { formatDuration, setSongLabel, swapSongLabels };
