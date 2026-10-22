@@ -72,6 +72,43 @@ test.describe('UI - song rows', () => {
     // Empty and loaded slots are the same height
     expect(new Set(fit.slots).size).toBe(1);
   });
+  test('the twelve slots share the column height at any window size, all the same height', async () => {
+    for (const [width, height] of [[1200, 800], [1400, 1000], [1600, 1300]]) {
+      await setContentSize(app, page, width, height);
+      const fit = await page.evaluate(() => {
+        const body = document.querySelector('#hotkeys-column .card-body');
+        const slots = [...document.querySelectorAll('#hotkeys_list_1 > li')].map((li) => li.getBoundingClientRect());
+        const box = body.getBoundingClientRect();
+        return {
+          heights: slots.map((r) => Math.round(r.height)),
+          // What's left under F12, inside the column
+          spare: box.bottom - slots.at(-1).bottom,
+          scrolls: body.scrollHeight > body.clientHeight + 1
+        };
+      });
+      expect(fit.scrolls).toBe(false);
+      expect(new Set(fit.heights).size).toBe(1);
+      // F12 ends at the bottom of the column, not partway down it
+      expect(fit.spare).toBeLessThan(24);
+    }
+    await setContentSize(app, page, 1200, 800);
+  });
+
+  test('a short window scrolls the slots instead of squashing them', async () => {
+    await setContentSize(app, page, 1200, 560);
+    const fit = await page.evaluate(() => {
+      const body = document.querySelector('#hotkeys-column .card-body');
+      return {
+        scrolls: body.scrollHeight > body.clientHeight + 1,
+        heights: [...document.querySelectorAll('#hotkeys_list_1 > li')].map((li) => Math.round(li.getBoundingClientRect().height))
+      };
+    });
+    expect(fit.scrolls).toBe(true);
+    expect(Math.min(...fit.heights)).toBeGreaterThanOrEqual(40);
+    expect(new Set(fit.heights).size).toBe(1);
+    await setContentSize(app, page, 1200, 800);
+  });
+
   test('View > Increase / Decrease Font Size scale search rows, hotkeys and the holding tank', async () => {
     const sizes = () => page.evaluate(() => {
       const px = (sel) => parseFloat(getComputedStyle(document.querySelector(sel)).fontSize);
@@ -94,6 +131,9 @@ test.describe('UI - song rows', () => {
     await menu('increase_font_size');
     await expect.poll(async () => (await sizes()).search).toBe(before.search + 2);
     const bigger = await sizes();
+    // Empty and loaded slots still match at the bigger size
+    const slotHeights = await page.evaluate(() => [...document.querySelectorAll('#hotkeys_list_1 > li')].map((li) => Math.round(li.getBoundingClientRect().height)));
+    expect(new Set(slotHeights).size).toBe(1);
     expect(bigger.hotkey).toBeGreaterThan(before.hotkey);
     expect(bigger.tank).toBeGreaterThan(before.tank);
     await expect.poll(() => page.evaluate(async () => (await window.secureElectronAPI.profile.getPreference('font_size'))?.value)).toBe(before.search + 2);

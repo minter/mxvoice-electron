@@ -202,11 +202,28 @@ body {
 
 /* --- Hotkey slots --- */
 
+/* The active tab's twelve slots share the column's height evenly, down to
+   each slot's minimum; below that the column scrolls */
+#hotkey-tab-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+
+#hotkey-tab-content > .hotkeys.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+
 .hotkeys li {
   padding: 4px 8px;
   margin: 2px 0;
-  /* Every slot the height of a loaded one (two label lines), empty or not */
-  min-height: 40px;
+  /* Every slot at least the height of a loaded one (title and artist lines,
+     padding, border) at the current font size, empty or not, so they start
+     equal and grow equally */
+  min-height: max(40px, calc((var(--song-font-size) + 2px) * 2.26 + 10px));
+  flex: 1 0 auto;
   transition: background-color 0.15s ease;
 }
 
@@ -289,6 +306,9 @@ body {
 #hotkeys-column .card-body {
   overflow-y: auto;
   min-height: 0;
+  /* Tighter top and bottom, so twelve minimum-height slots fit 1200x800 */
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 /* --- Holding tank rows --- */
