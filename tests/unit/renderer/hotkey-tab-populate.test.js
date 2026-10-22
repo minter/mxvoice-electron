@@ -1,13 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
+import { fakeCreateElement, makeTextNode } from '../../utils/fake-text-node.js';
 
 globalThis.window = { debugLog: {} };
-globalThis.document = { querySelectorAll: () => [], querySelector: () => null, getElementById: () => null };
+globalThis.document = { querySelectorAll: () => [], querySelector: () => null, getElementById: () => null, createElement: fakeCreateElement() };
 
 const { HotkeysModule } = await import('../../../src/renderer/modules/hotkeys/index.js');
 const { default: HotkeyState } = await import('../../../src/renderer/modules/hotkeys/hotkey-state.js');
 
 function slot(key) {
-  const span = { textContent: '' };
+  const span = makeTextNode();
   const attrs = new Map();
   return {
     id: `${key}_hotkey`,

@@ -41,10 +41,20 @@ export function setSongLabel(el, row, doc = globalThis.document) {
   const time = row?.time ? formatDuration(row.time) : '';
   const text = doc.createElement('span');
   text.className = 'song-label-text';
-  text.append(piece(doc, 'song-label-title', title), piece(doc, 'song-label-artist', artist));
-  el.replaceChildren(text, piece(doc, 'song-label-time', time));
-  // The whole label, for tooltips and anything that reads it as text
-  el.title = `${title} by ${artist}${time ? ` (${time})` : ''}`;
+  // The separators are hidden on screen but stay in the text, so the row
+  // still reads "Title by Artist (0:21)" to anything that reads it as text
+  text.append(
+    piece(doc, 'song-label-title', title),
+    piece(doc, 'song-label-sep', ' by '),
+    piece(doc, 'song-label-artist', artist)
+  );
+  el.replaceChildren(
+    text,
+    piece(doc, 'song-label-sep', ' ('),
+    piece(doc, 'song-label-time', time || '[??:??]'),
+    piece(doc, 'song-label-sep', ')')
+  );
+  el.title = `${title} by ${artist} (${time || '[??:??]'})`;
 }
 
 /** Swap two labels' contents (a hotkey drag between slots) */

@@ -27,14 +27,19 @@ async function measureGaps(page) {
       topsAligned: Math.max(tank.top, search.top, hotkeys.top) - Math.min(tank.top, search.top, hotkeys.top),
       bottomsAligned: topBottom - Math.min(tank.bottom, search.bottom, hotkeys.bottom),
       pageScrolls: document.documentElement.scrollHeight > window.innerHeight
-        || document.documentElement.scrollWidth > window.innerWidth
+        || document.documentElement.scrollWidth > window.innerWidth,
+      // macOS draws the traffic lights over a title strip at the top instead of a gap
+      titleStrip: document.body.classList.contains('platform-mac')
     };
   });
 }
 
 function expectEvenGaps(gaps) {
-  const { topsAligned, bottomsAligned, pageScrolls, ...edges } = gaps;
+  const { topsAligned, bottomsAligned, pageScrolls, titleStrip, ...sides } = gaps;
   console.log('panel gaps', JSON.stringify(gaps));
+  const { top, ...edges } = sides;
+  // The macOS title strip (30px, reskin-tier2.css) stands in for the top gap
+  expect(Math.abs(top - (titleStrip ? 30 : 12)), `top edge is ${top}px`).toBeLessThanOrEqual(1);
   const values = Object.values(edges);
   for (const [name, value] of Object.entries(edges)) {
     expect(Math.abs(value - 12), `${name} gap is ${value}px`).toBeLessThanOrEqual(1);

@@ -1,3 +1,4 @@
+import { makeTextNode } from '../../utils/fake-text-node.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getSongsByIds = vi.fn();
@@ -50,7 +51,7 @@ describe('populateHoldingTank import', () => {
       },
       createElement: () => {
         const attrs = new Map();
-        return { style: {}, setAttribute: (k, v) => attrs.set(k, v), getAttribute: k => attrs.get(k), addEventListener() {}, closest: () => globalThis.__tab, matches: () => true };
+        return makeTextNode({ style: {}, setAttribute: (k, v) => attrs.set(k, v), getAttribute: k => attrs.get(k), addEventListener() {}, closest: () => globalThis.__tab, matches: () => true });
       }
     };
   });

@@ -26,7 +26,11 @@ describe('live search', () => {
     searchSongs.mockResolvedValue({ success: true, data: [{ id: 1, category: 'MUS', title: 'Song', artist: 'A', info: '', time: '1:00' }] });
     await live.performLiveSearch('so');
     expect(searchSongs).toHaveBeenCalledWith({ category: '*', searchTerm: 'so', advancedFilters: null });
-    expect(tbody.children[0].children[0].textContent).toBe('Music');
+    // Category is a tag in its cell; the title is a span that clamps, with the full title as a tooltip
+    const [categoryCell, , titleCell] = tbody.children[0].children;
+    expect(categoryCell.children[0]).toMatchObject({ className: 'category-tag', textContent: 'Music' });
+    expect(titleCell.className).toBe('song-title-cell');
+    expect(titleCell.children[0].className).toBe('song-title-text');
     expect(tbody.children[0].children).toHaveLength(5);
     expect(appendPlayedPill).toHaveBeenCalledWith(tbody.children[0].children[2], 1);
     expect(recordSearch).toHaveBeenCalledWith({

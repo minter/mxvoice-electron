@@ -259,7 +259,7 @@ test.describe('Hotkeys - songid Persistence Bug Regression', () => {
         f6: { li: '1001', span: null },
         f12: { li: '1002', span: null }
       });
-      await expect(launched.page.locator('#hotkeys_list_1 #f6_hotkey span')).not.toHaveText('');
+      await expect(launched.page.locator('#hotkeys_list_1 #f6_hotkey span.song')).not.toHaveText('');
     } finally {
       await closeApp(launched.app).catch(() => {});
       fs.rmSync(launched.suiteRoot, { recursive: true, force: true });

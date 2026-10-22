@@ -95,11 +95,11 @@ describe('search engine orchestration', () => {
       source: 'submit',
     });
     const row = tbody.children.find((child) => child.songid === '7');
-    expect(row.children[0].textContent).toBe('Music');
+    expect(row.children[0].children[0]).toMatchObject({ className: 'category-tag', textContent: 'Music' });
     // The played pill goes at the end of the Title cell, not in a column of its own
     expect(row.children).toHaveLength(5);
     expect(appendPlayedPill).toHaveBeenCalledWith(row.children[2], 7);
-    expect(row.children[2].textContent).toBe('Anthem');
+    expect(row.children[2].children[0]).toMatchObject({ className: 'song-title-text', textContent: 'Anthem', title: 'Anthem' });
   });
 
   it('does not record programmatic refreshes such as after a song edit', async () => {

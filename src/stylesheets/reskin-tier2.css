@@ -70,12 +70,12 @@
 }
 
 #play_button {
-  background: rgb(var(--rs-accent)) !important;
+  background: rgb(var(--rs-accent-fill)) !important;
   color: #fff !important;
 }
 
 #pause_button {
-  background: rgb(var(--rs-accent)) !important;
+  background: rgb(var(--rs-accent-fill)) !important;
   color: #fff !important;
 }
 

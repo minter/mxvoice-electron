@@ -259,9 +259,6 @@ export async function populateHoldingTank(songIds) {
  */
 function insertSongRow(row, song_id, element, insertPosition) {
   const title = row.title || "[Unknown Title]";
-  const artist = row.artist || "[Unknown Artist]";
-  const time = row.time || "[??:??]";
-
   const existing_song = document.querySelector(`.holding_tank.active .list-group-item[songid="${song_id}"]`);
   let song_row;
   if (existing_song) {

@@ -28,6 +28,8 @@ body.theme-light {
   --rs-muted: #6b7280;
   --rs-accent: 13, 110, 253;
   --rs-accent-text: #0b5ed7;
+  /* Behind white text and icons */
+  --rs-accent-fill: 13, 110, 253;
 }
 
 body.theme-dark {
@@ -38,9 +40,15 @@ body.theme-dark {
   --rs-muted: #9aa1ab;
   --rs-accent: 92, 156, 255;
   --rs-accent-text: #8fbaff;
+  /* Deeper than --rs-accent so white text and icons on it stay readable */
+  --rs-accent-fill: 37, 99, 235;
 }
 
+/* Windows 11's variable Segoe UI has a true 500 weight; Windows 10's Segoe UI
+   falls back to 400 for it, which still reads (title color carries the weight) */
 body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif !important;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
@@ -76,6 +84,16 @@ body {
   color: var(--rs-muted);
 }
 
+/* The colored pill (show-colors.css) adds 2px above and below the name. The
+   indicator is always tall enough for it, so a color never changes the header height. */
+#show-name {
+  line-height: 1.2;
+}
+
+.profile-indicator {
+  min-height: calc(15px * 1.2 + 8px); /* the pill's line plus its padding, plus the indicator's own */
+}
+
 /* Holding / Playlist toggle: flat segmented control */
 .mode-toggle {
   box-shadow: none !important;
@@ -95,7 +113,7 @@ body {
 
 .mode-btn.active,
 .mode-btn.active:hover {
-  background: rgb(var(--rs-accent));
+  background: rgb(var(--rs-accent-fill));
   box-shadow: none;
   filter: none;
   font-weight: 600;
@@ -103,17 +121,15 @@ body {
 
 /* --- Tabs --- */
 
+/* Size and weight stay as they were: tab widths are fitted to their labels */
 #hotkey_tabs .nav-link,
 #holding_tank_tabs .nav-link {
-  font-size: 12.5px;
-  font-weight: 500;
   color: var(--rs-muted);
 }
 
 #hotkey_tabs .nav-link.active,
 #holding_tank_tabs .nav-link.active {
   color: var(--rs-text);
-  font-weight: 600;
 }
 
 /* --- Song label: title / artist / time --- */
@@ -228,7 +244,7 @@ body {
 }
 
 .hotkeys .list-group-item.active-hotkey .badge {
-  background: rgb(var(--rs-accent));
+  background: rgb(var(--rs-accent-fill));
   color: #fff !important;
   border-color: transparent;
 }
@@ -368,4 +384,9 @@ tr#selected_row td.hide-2 {
 .holding_tank .list-group-item#selected_row {
   background-color: rgba(var(--rs-accent), 0.12) !important;
   border-color: rgba(var(--rs-accent), 0.6) !important;
+}
+
+/* Song labels keep "Title by Artist (0:21)" as their text; the joining words are not drawn */
+.song-label-sep {
+  display: none;
 }
