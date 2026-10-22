@@ -1,18 +1,34 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { EscapeStopGesture, HOLD_TO_FADE_MS } = await import('../../../src/renderer/modules/keyboard-manager/escape-stop-gesture.js');
+const sharedState = (await import('../../../src/renderer/modules/shared-state.js')).default;
 
 describe('Esc stop gesture', () => {
   let stop;
   let fading;
+  let sound;
+  let clock;
   let gesture;
 
   beforeEach(() => {
     vi.useFakeTimers();
     stop = vi.fn();
     fading = false;
-    gesture = new EscapeStopGesture({ stop, isFadingOut: () => fading });
+    sound = { name: 'song A' };
+    clock = 0;
+    gesture = new EscapeStopGesture({
+      stop,
+      isFadingOut: () => fading,
+      currentSound: () => sound,
+      now: () => clock
+    });
   });
+
+  // Moves the fake timers and the gesture's clock together
+  const advance = (ms) => {
+    clock += ms;
+    vi.advanceTimersByTime(ms);
+  };
 
   afterEach(() => {
     vi.useRealTimers();
@@ -22,23 +38,23 @@ describe('Esc stop gesture', () => {
     gesture.keyDown({});
     expect(stop).not.toHaveBeenCalled();
 
-    vi.advanceTimersByTime(80);
+    advance(80);
     gesture.keyUp();
 
     expect(stop).toHaveBeenCalledTimes(1);
     expect(stop).toHaveBeenCalledWith(false);
 
     // The hold timer was cancelled, so no fade follows the cut
-    vi.advanceTimersByTime(HOLD_TO_FADE_MS * 2);
+    advance(HOLD_TO_FADE_MS * 2);
     expect(stop).toHaveBeenCalledTimes(1);
   });
 
   it('fades once the key has been held, and does nothing more on release', () => {
     gesture.keyDown({});
-    vi.advanceTimersByTime(HOLD_TO_FADE_MS - 1);
+    advance(HOLD_TO_FADE_MS - 1);
     expect(stop).not.toHaveBeenCalled();
 
-    vi.advanceTimersByTime(1);
+    advance(1);
     expect(stop).toHaveBeenCalledWith(true);
 
     gesture.keyUp();
@@ -47,9 +63,9 @@ describe('Esc stop gesture', () => {
 
   it('ignores key repeat while the key is held', () => {
     gesture.keyDown({});
-    vi.advanceTimersByTime(200);
+    advance(200);
     gesture.keyDown({ repeat: true });
-    vi.advanceTimersByTime(HOLD_TO_FADE_MS - 200);
+    advance(HOLD_TO_FADE_MS - 200);
 
     // The first keydown's timer still decides: fade at the original time
     expect(stop).toHaveBeenCalledTimes(1);
@@ -64,13 +80,13 @@ describe('Esc stop gesture', () => {
 
     // Neither the release nor the timer adds another stop
     gesture.keyUp();
-    vi.advanceTimersByTime(HOLD_TO_FADE_MS * 2);
+    advance(HOLD_TO_FADE_MS * 2);
     expect(stop).toHaveBeenCalledTimes(1);
   });
 
   it('still fades when the keyup never arrives', () => {
     gesture.keyDown({});
-    vi.advanceTimersByTime(HOLD_TO_FADE_MS);
+    advance(HOLD_TO_FADE_MS);
     expect(stop).toHaveBeenCalledWith(true);
   });
 
@@ -82,13 +98,132 @@ describe('Esc stop gesture', () => {
   it('cancelHold drops a pending fade', () => {
     gesture.keyDown({});
     gesture.cancelHold();
-    vi.advanceTimersByTime(HOLD_TO_FADE_MS * 2);
+    advance(HOLD_TO_FADE_MS * 2);
     gesture.keyUp();
     expect(stop).not.toHaveBeenCalled();
+  });
+
+  it('Esc down, a new song starts, Esc up: nothing is stopped', () => {
+    gesture.keyDown({});
+    sound = { name: 'song B' };
+    advance(80);
+    gesture.keyUp();
+
+    advance(HOLD_TO_FADE_MS * 2);
+    expect(stop).not.toHaveBeenCalled();
+  });
+
+  it('Esc down, a new song starts, the hold timer fires: nothing is stopped', () => {
+    gesture.keyDown({});
+    advance(100);
+    sound = { name: 'song B' };
+    advance(HOLD_TO_FADE_MS);
+    expect(stop).not.toHaveBeenCalled();
+
+    // The release after that is no stop either
+    gesture.keyUp();
+    expect(stop).not.toHaveBeenCalled();
+  });
+
+  it('Esc held 400 ms with the timer delayed past keyup: fades', () => {
+    // A stalled renderer: the hold timer is queued but never gets to run
+    const timers = [];
+    gesture = new EscapeStopGesture({
+      stop,
+      currentSound: () => sound,
+      now: () => clock,
+      setTimer: (fn) => timers.push(fn),
+      clearTimer: vi.fn()
+    });
+
+    gesture.keyDown({});
+    clock += 400;
+    gesture.keyUp();
+
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(stop).toHaveBeenCalledWith(true);
+  });
+
+  it('a tap under 300 ms cuts the song that was playing', () => {
+    gesture.keyDown({});
+    advance(HOLD_TO_FADE_MS - 1);
+    gesture.keyUp();
+
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(stop).toHaveBeenCalledWith(false);
+  });
+
+  it('does nothing when Esc goes down with no song playing', () => {
+    sound = null;
+    gesture.keyDown({});
+    sound = { name: 'song B' };
+    advance(80);
+    gesture.keyUp();
+    gesture.keyDown({});
+    advance(HOLD_TO_FADE_MS);
+
+    // Only the second press, made while song B played, stops anything
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(stop).toHaveBeenCalledWith(true);
   });
 });
 
 describe('Esc stop gesture wiring', () => {
+  // The gestures read the playing song from shared state
+  beforeEach(() => {
+    sharedState.set('sound', { name: 'playing song' });
+  });
+
+  afterEach(() => {
+    sharedState.set('sound', null);
+  });
+
+  const quietLog = () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() });
+
+  it('Shift+Esc key repeat during a fade does not cut', async () => {
+    const bind = vi.fn();
+    globalThis.Mousetrap = Object.assign(vi.fn(() => ({ bind, unbind: vi.fn() })), { bind, unbind: vi.fn() });
+    const { NavigationShortcuts } = await import('../../../src/renderer/modules/keyboard-manager/navigation-shortcuts.js');
+
+    // Global binding: the first keydown fades, held-key repeats change nothing
+    const navStop = vi.fn();
+    const nav = new NavigationShortcuts({
+      debugLog: quietLog(),
+      moduleRegistry: { audio: { stopPlaying: navStop, isFadingOut: () => navStop.mock.calls.length > 0 } }
+    });
+    nav.setupAudioControls();
+    const shiftEsc = nav.getBindings().get('shift+esc').handler;
+    shiftEsc({});
+    shiftEsc({ repeat: true });
+    shiftEsc({ repeat: true });
+    expect(navStop).toHaveBeenCalledTimes(1);
+    expect(navStop).toHaveBeenCalledWith(true);
+
+    // Search field: the same
+    globalThis.window = { debugLog: quietLog() };
+    const handlers = {};
+    const field = { name: 'omni_search', addEventListener: (n, h) => { handlers[n] = h; }, removeEventListener: vi.fn() };
+    const form = { addEventListener: vi.fn(), removeEventListener: vi.fn(), querySelectorAll: () => [field] };
+    globalThis.document = { getElementById: (id) => (id === 'search_form' ? form : null), querySelector: () => null, querySelectorAll: () => [] };
+    const SearchEvents = (await import('../../../src/renderer/modules/event-coordination/search-events.js')).default;
+
+    const searchStop = vi.fn();
+    const events = new SearchEvents({
+      debugLog: window.debugLog,
+      moduleRegistry: { audio: { stopPlaying: searchStop, isFadingOut: () => searchStop.mock.calls.length > 0 } }
+    });
+    events.attachSearchFormEvents();
+    const shiftEscKey = (extra = {}) => ({ key: 'Escape', code: 'Escape', shiftKey: true, preventDefault: vi.fn(), stopPropagation: vi.fn(), ...extra });
+    handlers.keydown(shiftEscKey());
+    const repeat = shiftEscKey({ repeat: true });
+    handlers.keydown(repeat);
+    handlers.keydown(shiftEscKey({ repeat: true }));
+    expect(searchStop).toHaveBeenCalledTimes(1);
+    expect(searchStop).toHaveBeenCalledWith(true);
+    // A repeat is still kept away from the field and the page
+    expect(repeat.preventDefault).toHaveBeenCalled();
+  });
+
   it('binds Esc keydown through the registry and Esc keyup directly', async () => {
     const bind = vi.fn();
     const unbind = vi.fn();
@@ -98,7 +233,7 @@ describe('Esc stop gesture wiring', () => {
     const stopPlaying = vi.fn();
     const isFadingOut = vi.fn(() => false);
     const nav = new NavigationShortcuts({
-      debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+      debugLog: quietLog(),
       moduleRegistry: { audio: { stopPlaying, isFadingOut } }
     });
     nav.setupAudioControls();

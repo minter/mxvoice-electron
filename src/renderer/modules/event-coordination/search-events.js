@@ -157,8 +157,9 @@ export default class SearchEvents {
         if (event.key === 'Escape' || event.code === 'Escape') {
           this.debugLog?.debug('Escape pressed in search input; attempting to stop playback');
           // Shift+Esc fades at once; plain Esc cuts on a tap, fades on a hold
+          // (a held Shift+Esc repeats, and a stop during a fade cuts)
           if (event.shiftKey) {
-            this.stopPlaying(true);
+            if (!event.repeat) this.stopPlaying(true);
           } else {
             this.escapeGesture.keyDown(event);
           }

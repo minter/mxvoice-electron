@@ -193,6 +193,37 @@ test.describe('Playback - fade out', () => {
     }
   });
 
+  test('holding Shift+Esc fades to silence without cutting', async () => {
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 2);
+    });
+    await startPlayback();
+
+    // Hold Shift+Esc: after the first keydown, each further keyboard.down
+    // sends a keydown with repeat set, as a held key does
+    await page.keyboard.down('Shift');
+    const started = Date.now();
+    await page.keyboard.down('Escape');
+    for (let i = 0; i < 16; i++) {
+      await page.waitForTimeout(50);
+      await page.keyboard.down('Escape');
+    }
+    await page.keyboard.up('Escape');
+    await page.keyboard.up('Shift');
+
+    // The repeats did not cut: the fade is still running
+    expect(await isFadingOut()).toBe(true);
+    await expect(page.locator('#pause_button')).toBeVisible();
+
+    if (!isCI) await waitForSilence(page, 1e-3, 4000);
+    await expect(page.locator('#play_button')).toBeVisible({ timeout: 5000 });
+    const elapsed = (Date.now() - started) / 1000;
+    console.log('Held Shift+Esc fade (s):', elapsed);
+    // Over the 2 second fade, not at once
+    expect(elapsed).toBeGreaterThan(1.5);
+    expect(await isFadingOut()).toBe(false);
+  });
+
   test('the fade lasts as long as the Preferences setting', async () => {
     // Time from Shift+Esc until the transport resets, for a given setting
     async function timedFade(seconds) {

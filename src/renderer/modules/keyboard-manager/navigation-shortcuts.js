@@ -132,7 +132,12 @@ export class NavigationShortcuts {
 
       this.bindings.set("shift+esc", {
         key: "shift+esc",
-        handler: (_event) => this.handleStopPlaying(true), // Explicitly pass true for fadeOut
+        // Fade. Key repeat is ignored: a held Shift+Esc would otherwise
+        // turn into a cut, since a stop during a fade cuts
+        handler: (event) => {
+          if (event?.repeat) return;
+          this.handleStopPlaying(true);
+        },
         context: 'global',
         description: 'Stop all audio'
       });
