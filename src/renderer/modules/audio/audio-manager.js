@@ -22,6 +22,7 @@ import { parseCrossfadePreference, prepareForPlaybackReplacement } from './playb
 import { loadSongForPlayback } from './playback-song-loader.js';
 import { resolvePlaybackTrigger, trackSongPlayed } from './playback-analytics.js';
 import { recordPlay } from '../shows/played-counts.js';
+import { getSongActionTarget } from '../ui/song-action-target.js';
 import {
   calculatePlaybackVolume,
   getCrossfadePolicy,
@@ -468,8 +469,9 @@ function playSelected() {
   });
 
   const song_id = getPlaybackSelectionSongId();
+  const selectedRow = getSongActionTarget();
   const trigger_method = resolvePlaybackTrigger({
-    selectedRow: document.getElementById('selected_row'),
+    selectedRow,
     holdingTankMode: sharedState.get('holdingTankMode'),
   });
 
@@ -477,8 +479,7 @@ function playSelected() {
   // (not from the holding tank/playlist)
   {
     const col = document.getElementById('holding-tank-column');
-    const sel = document.getElementById('selected_row');
-    if (!(col && sel && col.contains(sel))) {
+    if (!(col && selectedRow && col.contains(selectedRow))) {
       document
         .querySelectorAll('.now_playing')
         .forEach((el) => el.classList.remove('now_playing'));

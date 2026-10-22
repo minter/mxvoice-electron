@@ -24,6 +24,7 @@ import {
   secureStore
 } from '../adapters/secure-adapter.js';
 import { customConfirm } from '../utils/index.js';
+import { getSongActionTarget } from '../ui/song-action-target.js';
 
 let moduleRegistry = {};
 
@@ -144,9 +145,12 @@ export function removeFromHoldingTank() {
  * Clears the hotkey slot and updates the store
  */
 export async function removeFromHotkey() {
-  const songId = document.getElementById('selected_row')?.getAttribute('songid');
+  // The context menu's hotkey target, else #selected_row. Read once: the
+  // context menu drops its mark when the confirm below is clicked.
+  const selectedHotkey = getSongActionTarget();
+  const songId = selectedHotkey?.getAttribute('songid');
   debugLog?.info("removeFromHotkey called, songId:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
-  debugLog?.info("selected_row element:", { module: 'song-management', function: 'removeFromHotkey', selectedRow: document.getElementById('selected_row') });
+  debugLog?.info("selected hotkey element:", { module: 'song-management', function: 'removeFromHotkey', selectedRow: selectedHotkey });
   
   if (songId) {
     debugLog?.info(`Preparing to remove song ${songId} from hotkey`, { module: 'song-management', function: 'removeFromHotkey' });
@@ -159,7 +163,6 @@ export async function removeFromHotkey() {
       if (confirmed) {
         debugLog?.info("Proceeding with removal from hotkey", { module: 'song-management', function: 'removeFromHotkey' });
         // Clear the hotkey slot
-        const selectedHotkey = document.getElementById('selected_row');
         moduleRegistry.hotkeys?.clearHotkeyElement?.(selectedHotkey);
         // Clear the selection
         document.getElementById('selected_row')?.removeAttribute('id');
@@ -173,7 +176,6 @@ export async function removeFromHotkey() {
     } else {
       debugLog?.error("Song not found in database for ID:", { module: 'song-management', function: 'removeFromHotkey', songId: songId });
       // Still clear the hotkey even if song not found
-      const selectedHotkey = document.getElementById('selected_row');
       moduleRegistry.hotkeys?.clearHotkeyElement?.(selectedHotkey);
       document.getElementById('selected_row')?.removeAttribute('id');
       // Save the updated hotkeys to store and wait for completion

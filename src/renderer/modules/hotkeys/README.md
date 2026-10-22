@@ -313,7 +313,7 @@ The module includes comprehensive error handling:
 ### Context Menu Integration
 - Right-click context menu properly handles hotkey removal without breaking element IDs
 - The `removeFromHotkey` function preserves hotkey element structure during removal
-- Context menu temporarily sets elements as `selected_row` but restores original IDs afterward
+- The context menu marks a hotkey slot with `data-context-target="true"` instead of renaming it; its `fK_hotkey` id never changes
 
 ## Migration Guide
 

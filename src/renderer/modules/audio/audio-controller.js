@@ -12,6 +12,7 @@ import { getPreference } from '../preferences/profile-preference-adapter.js';
 
 // Import shared state
 import sharedState from '../shared-state.js';
+import { getSongActionTarget } from '../ui/song-action-target.js';
 
 // Import debug logger
 let debugLog = null;
@@ -293,7 +294,7 @@ function getSelectedHotkeyElement() {
 
 function getPlaybackSelectionSongId() {
   return (
-    document.getElementById('selected_row')?.getAttribute('songid') ||
+    getSongActionTarget()?.getAttribute('songid') ||
     getSelectedHotkeyElement()?.getAttribute('songid') ||
     null
   );

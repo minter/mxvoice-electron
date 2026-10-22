@@ -1398,8 +1398,7 @@ test.describe('Hotkeys - save & load', () => {
     await expect(confirmModal).not.toBeVisible({ timeout: 5000 });
     await clearModalBackdrop(page);
 
-    // The context-menu handler temporarily changes the slot id to selected_row.
-    // Wait for it to restore the real f3 id, then verify the assignment is empty.
+    // The slot keeps its f3 id through the context menu; its assignment is empty.
     const restoredF3 = activeTab.locator('[id^="f3_hotkey"]');
     await expect(restoredF3).toHaveCount(1);
     await expect(restoredF3).not.toHaveAttribute('songid');
