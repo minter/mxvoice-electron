@@ -182,7 +182,7 @@ td.song-title-cell .played-pill {
 
 .category-tag {
   display: inline-block;
-  padding: 1px 8px;
+  padding: 1px 6px;
   border-radius: 999px;
   font-size: max(11px, 0.85em); /* follows View > Font Size, never below 11px */
   font-weight: 500;
@@ -190,7 +190,10 @@ td.song-title-cell .played-pill {
   background: var(--rs-row-hover);
   color: var(--rs-muted);
   border: 1px solid var(--rs-border);
-  white-space: nowrap;
+  /* Long category names wrap rather than widening the column */
+  white-space: normal;
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 tr#selected_row .category-tag {

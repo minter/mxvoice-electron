@@ -153,6 +153,12 @@ body {
   line-height: 1.25;
 }
 
+/* Hotkeys are a little tighter, so all twelve slots fit a 1200x800 window */
+.hotkeys .song-label-title,
+.hotkeys .song-label-artist {
+  line-height: 1.2;
+}
+
 /* em, so View > Font Size (set inline on .song) scales the whole label */
 .hotkeys .song-label-title,
 .holding_tank .song-label-title {
@@ -183,7 +189,7 @@ body {
   padding: 4px 8px;
   margin: 2px 0;
   /* Every slot the height of a loaded one (two label lines), empty or not */
-  min-height: 42px;
+  min-height: 40px;
   transition: background-color 0.15s ease;
 }
 
