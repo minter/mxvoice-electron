@@ -1,6 +1,6 @@
 import { customConfirm } from '../utils/index.js';
 import playedCounts from '../shows/played-counts.js';
-import { clearContextTarget, getSongActionTarget, markContextTarget } from '../ui/song-action-target.js';
+import { CONTEXT_MENU_DISMISS_EVENT, clearContextTarget, getSongActionTarget, markContextTarget } from '../ui/song-action-target.js';
 
 /**
  * DOM Initialization Module
@@ -244,6 +244,8 @@ export default class DOMInitialization {
       });
       window.addEventListener('blur', dismiss);
       window.addEventListener('resize', dismiss);
+      // A show switch closes it: the slot it opened on now holds another song
+      window.addEventListener(CONTEXT_MENU_DISMISS_EVENT, dismiss);
 
       document.addEventListener('contextmenu', (event) => {
         const row = event.target?.closest('.context-menu');
@@ -309,7 +311,12 @@ export default class DOMInitialization {
                 // Show confirmation (using the simple modal approach)
                 const confirmed = await customConfirm(`Are you sure you want to remove ${songTitle} from this hotkey?`);
                 
-                if (confirmed) {
+                if (confirmed && hotkeyLi.getAttribute('songid') !== songid) {
+                  // A show switch landed while the confirm was open
+                  window.debugLog?.info('Context menu: hotkey changed songs during the confirm; not removing', {
+                    originalHotkeyId, songid, currentSongid: hotkeyLi.getAttribute('songid')
+                  });
+                } else if (confirmed) {
                   window.debugLog?.info('User confirmed hotkey removal');
                   
                   // Use the same direct approach as delete keypress

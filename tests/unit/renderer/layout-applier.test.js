@@ -26,6 +26,8 @@ function fakeDocument(elements) {
   return {
     getElementById: id => elements.find(element => element.id === id) || null,
     querySelectorAll(selector) {
+      const attr = selector.match(/^\[([\w-]+)\]$/);
+      if (attr) return elements.filter(element => element.getAttribute(attr[1]) !== null);
       const match = selector.match(/^\.([\w-]+)$/);
       if (!match) throw new Error(`Unexpected selector ${selector}`);
       return elements.filter(element => element.classList.contains(match[1]));
@@ -119,6 +121,22 @@ describe('applyLayout', () => {
     expect(elements.activeHotkey.classList.contains('active-hotkey')).toBe(false);
     expect(elements.activeHotkey.classList.contains('selected-row')).toBe(false);
     expect(deps.window.currentSelectedHotkey).toBeNull();
+  });
+
+  it('clears the context-menu target and closes the song context menu', async () => {
+    const target = fakeElement('f3_hotkey', ['list-group-item'], { songid: '5', 'data-context-target': 'true' });
+    const dispatchEvent = vi.fn();
+    const { deps } = createDeps({
+      document: fakeDocument([target]),
+      window: { currentSelectedHotkey: null, dispatchEvent, CustomEvent: globalThis.CustomEvent }
+    });
+
+    await applyLayout(layout, deps);
+
+    expect(target.getAttribute('data-context-target')).toBeNull();
+    expect(target.id).toBe('f3_hotkey');
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe('mxv-context-menu-dismiss');
   });
 
   it('does not touch sharedState.sound or #song_now_playing', async () => {

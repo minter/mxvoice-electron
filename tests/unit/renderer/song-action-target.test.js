@@ -95,4 +95,19 @@ describe('song action target', () => {
     expect(hotkeys.clearHotkeyElement).toHaveBeenCalledWith(f3);
     expect(f3.id).toBe('f3_hotkey');
   });
+
+  it('Remove from Hotkey clears nothing if the slot changed songs while the confirm was open', async () => {
+    elements = [f3, f2];
+    target.markContextTarget(f3);
+    db.getSongById.mockResolvedValue({ success: true, data: [{ title: 'Eat It' }] });
+    // A show switch lands while the confirm is open: F3 now holds another song
+    confirm.mockImplementation(async () => { f3.setAttribute('songid', '1004'); return true; });
+    const hotkeys = { clearHotkeyElement: vi.fn(), requestProfileStateSave: vi.fn(async () => ({ success: true })) };
+    removal.configureSongRemovalDependencies({ moduleRegistry: { hotkeys } });
+
+    await expect(removal.removeFromHotkey()).resolves.toMatchObject({ success: false });
+    expect(hotkeys.clearHotkeyElement).not.toHaveBeenCalled();
+    expect(hotkeys.requestProfileStateSave).not.toHaveBeenCalled();
+    expect(f3.getAttribute('songid')).toBe('1004');
+  });
 });

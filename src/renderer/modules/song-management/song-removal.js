@@ -160,6 +160,11 @@ export async function removeFromHotkey() {
   
     if (songRow) {
       const confirmed = await customConfirm(`Are you sure you want to remove ${songRow.title} from this hotkey?`);
+      if (confirmed && selectedHotkey.getAttribute('songid') !== songId) {
+        // A show switch put another song in the slot while the confirm was open
+        debugLog?.info("Hotkey changed songs during the confirm; not removing", { module: 'song-management', function: 'removeFromHotkey', songId: songId, currentSongId: selectedHotkey.getAttribute('songid') });
+        return { success: false, error: 'Hotkey changed' };
+      }
       if (confirmed) {
         debugLog?.info("Proceeding with removal from hotkey", { module: 'song-management', function: 'removeFromHotkey' });
         // Clear the hotkey slot

@@ -10,6 +10,12 @@
 
 const ATTR = 'data-context-target';
 
+/**
+ * Window event that closes the song context menu through its own dismiss
+ * path. Sent by a show switch, which makes no click to close the menu.
+ */
+export const CONTEXT_MENU_DISMISS_EVENT = 'mxv-context-menu-dismiss';
+
 /** Mark `element` as the context menu's target, replacing any earlier mark. */
 export function markContextTarget(element) {
   clearContextTarget();

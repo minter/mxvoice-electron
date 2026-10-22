@@ -9,6 +9,7 @@
  */
 
 import { safeShowTab } from '../ui/bootstrap-helpers.js';
+import { CONTEXT_MENU_DISMISS_EVENT } from '../ui/song-action-target.js';
 
 const LOG_CONTEXT = { module: 'shows', function: 'applyLayout' };
 
@@ -41,6 +42,13 @@ function clearLayoutMarks(doc, win) {
   doc.querySelectorAll('.active-hotkey')
     .forEach(element => element.classList.remove('active-hotkey', 'selected-row'));
   if (win) win.currentSelectedHotkey = null;
+  // A song context menu left open on the old layout would act on the new
+  // layout's song in the same slot, so its target and the menu both go
+  doc.querySelectorAll('[data-context-target]')
+    .forEach(element => element.removeAttribute('data-context-target'));
+  if (typeof win?.dispatchEvent === 'function' && typeof win.CustomEvent === 'function') {
+    win.dispatchEvent(new win.CustomEvent(CONTEXT_MENU_DISMISS_EVENT));
+  }
 }
 
 /**

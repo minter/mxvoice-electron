@@ -66,6 +66,9 @@ test.describe('Hotkeys - context menu target', () => {
     await clickShowMenu(app, 'Encore');
     await expect(page.locator('#show-name')).toHaveText('Encore', { timeout: 10000 });
 
+    // The switch closes the menu, so it can't act on the new show's song
+    await expect(menu(page)).toBeHidden();
+    await expect(page.locator('[data-context-target]')).toHaveCount(0);
     await expect(slot(page, 'f3')).toHaveAttribute('songid', '1004');
     await expect(slot(page, 'f3').locator('.song')).toContainText('We Are Family');
     await expect(slot(page, 'f2')).not.toHaveAttribute('songid');
@@ -73,6 +76,23 @@ test.describe('Hotkeys - context menu target', () => {
     await closeMenu();
     await page.keyboard.press('F3');
     await expect(nowPlaying(page)).toHaveAttribute('songid', '1004', { timeout: 5000 });
+  });
+
+  test('a show switch during the Remove from Hotkey confirm leaves the new show\'s song', async () => {
+    await rightClickF3();
+    await menuItem(page, 'Remove from Hotkey').click();
+    const confirmModal = page.locator('.modal.show').filter({ hasText: 'remove Eat It from this hotkey' });
+    await expect(confirmModal).toBeVisible({ timeout: 5000 });
+
+    await clickShowMenu(app, 'Encore');
+    await expect(page.locator('#show-name')).toHaveText('Encore', { timeout: 10000 });
+    await expect(slot(page, 'f3')).toHaveAttribute('songid', '1004');
+
+    await confirmModal.locator('.confirm-btn').click();
+    await expect(confirmModal).toBeHidden({ timeout: 5000 });
+    await clearModalBackdrop(page);
+    await expect(slot(page, 'f3')).toHaveAttribute('songid', '1004');
+    await expect(slot(page, 'f3').locator('.song')).toContainText('We Are Family');
   });
 
   test('context-menu Play / Edit / Mark as Unplayed on a hotkey act on that hotkey', async () => {
