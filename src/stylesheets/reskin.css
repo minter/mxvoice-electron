@@ -102,6 +102,23 @@ body {
   box-shadow: none !important;
 }
 
+/* The toggle has the header to itself now, so it keeps its words except in
+   a truly narrow window (the column is never under ~280px) */
+@media screen and (min-width: 601px) {
+  .mode-toggle .mode-btn-text {
+    display: inline;
+  }
+
+  .mode-toggle .mode-btn {
+    min-width: 0;
+    padding: 6px 10px;
+  }
+
+  .mode-toggle .mode-btn i {
+    margin-right: 5px;
+  }
+}
+
 .mode-btn {
   transition: background-color 0.15s ease;
 }
@@ -491,4 +508,19 @@ body.theme-dark #selected_row .played-pill {
   .holding_tank .list-group-item {
     transition: none;
   }
+}
+
+/* --- Panel chrome never gives up height --- */
+
+/* A long result list makes the panel body tall, and flex then shrinks every
+   item a little, headers included. Only the scrolling lists give up space */
+#holding-tank-column .card-header,
+#search-column .card-header,
+#hotkeys-column .card-header,
+#holding-tank-column .card > .nav-tabs,
+#hotkeys-column .card > .nav-tabs,
+#holding-tank-column .card > .nav,
+#hotkeys-column .card > .nav,
+#search_form {
+  flex-shrink: 0;
 }

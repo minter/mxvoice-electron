@@ -180,6 +180,7 @@ function searchData({ trackAnalytics = true } = {}) {
             const tag = document.createElement('span');
             tag.className = 'category-tag';
             tag.textContent = categoryName;
+            tag.title = categoryName;
             tdCategory.appendChild(tag);
           }
           tr.appendChild(tdCategory);
