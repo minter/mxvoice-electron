@@ -57,12 +57,37 @@ describe('atomic-json-file', () => {
     expect(JSON.parse(nodeFs.readFileSync(file, 'utf8'))).toEqual({ a: 3 });
   });
 
-  it('gives up after 5 attempts on win32 and removes the temp file', async () => {
-    const rename = vi.fn().mockRejectedValue(Object.assign(new Error('busy'), { code: 'EBUSY' }));
-    const fakeFs = { ...nodeFs, promises: { ...nodeFs.promises, rename } };
-    await expect(writeJsonAtomic(file, { a: 3 }, { fs: fakeFs, platform: 'win32' })).rejects.toThrow('busy');
-    expect(rename).toHaveBeenCalledTimes(5);
-    expect(nodeFs.readdirSync(dir)).toEqual([]);
+  it('renameWithRetry retries for about 2 s on win32, then gives up and removes the temp file', async () => {
+    vi.useFakeTimers();
+    try {
+      const renameTimes = [];
+      const rm = vi.fn(async () => {});
+      // An fs with no real I/O, so the fake clock alone drives the backoff
+      const fakeFs = {
+        promises: {
+          open: async () => ({ writeFile: async () => {}, sync: async () => {}, close: async () => {} }),
+          rename: vi.fn(async () => {
+            renameTimes.push(Date.now());
+            throw Object.assign(new Error('busy'), { code: 'EBUSY' });
+          }),
+          rm
+        }
+      };
+      const write = writeJsonAtomic(file, { a: 3 }, { fs: fakeFs, platform: 'win32' });
+      const settled = expect(write).rejects.toThrow('busy');
+      await vi.runAllTimersAsync();
+      await settled;
+
+      expect(renameTimes).toHaveLength(10);
+      const waited = renameTimes.at(-1) - renameTimes[0];
+      expect(waited).toBeGreaterThanOrEqual(1800);
+      expect(waited).toBeLessThanOrEqual(2500);
+      const gaps = renameTimes.slice(1).map((t, i) => t - renameTimes[i]);
+      expect(Math.max(...gaps)).toBeLessThanOrEqual(400);
+      expect(rm).toHaveBeenCalledWith(expect.stringContaining(`${file}.tmp-`), { force: true });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not retry EPERM off win32', async () => {

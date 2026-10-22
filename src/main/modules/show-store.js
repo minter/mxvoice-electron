@@ -14,6 +14,12 @@
  * `<file>.prev` is tried. A future-version document ('version') or an I/O read
  * error ('io') throws and leaves every file untouched.
  *
+ * A migration whose first write of shows.json fails with an I/O error (disk
+ * full, read-only folder, a Windows lock) still opens the migrated show, marked
+ * `unsaved` with UNSAVED_MIGRATION_NOTICE. Nothing is written or recorded, so
+ * the next save writes shows.json and the next launch migrates again, to the
+ * same show id.
+ *
  * @module show-store
  */
 
@@ -29,6 +35,9 @@ const LEGACY_PROFILE = 'Default User';
 
 export const RECOVERY_NOTICE =
   "Mx. Voice couldn't read this profile's shows and opened the previous copy.";
+
+export const UNSAVED_MIGRATION_NOTICE =
+  "Mx. Voice couldn't save this show yet. Your layout is safe; it will be saved the next time you save the show or open Mx. Voice.";
 
 /** Error thrown by the store; `code` is 'unreadable'|'version'|'unregistered'|'io'|'shape'. */
 export class ShowStoreError extends Error {
@@ -228,6 +237,9 @@ export function createShowStore({
     await writeJsonAtomic(showsPath, doc, { keepPrevious: false, fs });
   }
 
+  // An fs failure (it carries a string code such as 'ENOSPC'), not a store refusal or a bug
+  const isWriteFailure = (error) => !(error instanceof ShowStoreError) && typeof error?.code === 'string';
+
   function load(profileName) {
     return serialized(profileName, async () => {
       await requireRegistered(profileName);
@@ -248,7 +260,14 @@ export function createShowStore({
         return { doc: found.doc, source: 'recovered', notice: RECOVERY_NOTICE };
       }
       const migrated = await buildMigration(profileName);
-      await writeNew(profileName, migrated.doc);
+      try {
+        await writeNew(profileName, migrated.doc);
+      } catch (error) {
+        if (!isWriteFailure(error)) throw error;
+        // Open the migrated show anyway; migration_completed stays unset so it migrates again
+        debugLog?.warn?.('Could not save the migrated show', { ...logCtx('load'), source: migrated.source, code: error.code, error: error.message });
+        return { ...migrated, unsaved: true, notice: UNSAVED_MIGRATION_NOTICE };
+      }
       debugLog?.info?.('Migrated state.json into shows', { ...logCtx('load'), source: migrated.source });
       if (migrated.source === 'migrated-legacy-config') await recordLegacyMigration(profileName);
       return migrated;
@@ -304,6 +323,8 @@ export function createShowStore({
       const showsPath = getProfileShowsPath(profileName);
       // Throws 'io' or 'version' for a main file we must not overwrite.
       await classify(fs, showsPath);
+      // A migration that couldn't be saved may not have created the folder
+      await fs.promises.mkdir(path.dirname(showsPath), { recursive: true });
       await writeJsonAtomic(showsPath, doc, { keepPrevious: true, fs });
     });
   }

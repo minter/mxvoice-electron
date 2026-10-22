@@ -1943,3 +1943,82 @@ describe('settling the show in progress at open', () => {
     expect(ctx.debugLog.warn).toHaveBeenCalledWith('Could not save the restored played counts', expect.anything());
   });
 });
+
+describe('opening after a migration that could not be saved', () => {
+  const UNSAVED_NOTICE =
+    "Mx. Voice couldn't save this show yet. Your layout is safe; it will be saved the next time you save the show or open Mx. Voice.";
+  const dirs = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) nodeFs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  /** A real show store whose writes of a new shows file fail with ENOSPC while `failing.on`. */
+  function failingStoreSetup() {
+    const root = nodeFs.mkdtempSync(path.join(os.tmpdir(), 'show-unsaved-'));
+    dirs.push(root);
+    const failing = { on: true };
+    const promises = {
+      ...nodeFs.promises,
+      open: async (file, flags, ...rest) => {
+        if (failing.on && String(file).includes('shows.json.tmp') && flags === 'w') {
+          throw Object.assign(new Error('ENOSPC: no space left on device'), { code: 'ENOSPC' });
+        }
+        return nodeFs.promises.open(file, flags, ...rest);
+      },
+    };
+    const dir = path.join(root, 'Alice');
+    const showsFile = path.join(dir, 'shows.json');
+    const showStore = createShowStore({
+      fs: { ...nodeFs, promises },
+      getProfileShowsPath: () => showsFile,
+      getProfileStatePath: () => path.join(dir, 'state.json'),
+      profileExists: (name) => name === 'Alice',
+    });
+    nodeFs.mkdirSync(dir, { recursive: true });
+    nodeFs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify(layoutWith(7)));
+    return { showStore, failing, showsFile };
+  }
+
+  it('a migration whose first write fails with ENOSPC still opens the migrated layout, ready, with the unsaved notice', async () => {
+    const store = failingStoreSetup();
+    const ctx = setup({ showStore: store.showStore });
+    const opened = await ctx.session.open();
+    expect(opened.failed).toBeUndefined();
+    expect(opened.notice).toBe(UNSAVED_NOTICE);
+    expect(opened.show.layout.hotkeys[0].hotkeys.f1).toBe('7');
+    ctx.session.reportReady(opened.generation, true);
+    expect(ctx.session.state().status).toBe('ready');
+    expect(nodeFs.existsSync(store.showsFile)).toBe(false);
+  });
+
+  it('Save after an unsaved migration writes shows.json', async () => {
+    const store = failingStoreSetup();
+    const ctx = setup({ showStore: store.showStore });
+    const opened = await openReady(ctx);
+    store.failing.on = false;
+
+    await ctx.session.updateActive(layoutWith(8));
+    const saved = JSON.parse(nodeFs.readFileSync(store.showsFile, 'utf8'));
+    expect(saved.shows.map((s) => s.id)).toEqual([opened.show.id]);
+    expect(saved.shows[0].layout.hotkeys[0].hotkeys.f1).toBe('8');
+  });
+
+  it('Save As after an unsaved migration writes shows.json', async () => {
+    const store = failingStoreSetup();
+    const ctx = setup({ showStore: store.showStore });
+    await openReady(ctx);
+    store.failing.on = false;
+    await ctx.session.createShow('Copy', layoutWith(9));
+    const saved = JSON.parse(nodeFs.readFileSync(store.showsFile, 'utf8'));
+    expect(saved.shows.map((s) => s.name)).toEqual(['Default Show', 'Copy']);
+  });
+
+  it('a version refusal still fails the open', async () => {
+    const store = failingStoreSetup();
+    nodeFs.writeFileSync(store.showsFile, JSON.stringify({ version: 2, shows: [] }));
+    const ctx = setup({ showStore: store.showStore });
+    const opened = await ctx.session.open();
+    expect(opened).toMatchObject({ failed: true, error: 'version' });
+    expect(ctx.session.state().status).toBe('failed');
+  });
+});

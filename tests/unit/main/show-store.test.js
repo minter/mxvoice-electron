@@ -7,6 +7,28 @@ import { SHOW_DOCUMENT_VERSION } from '../../../src/main/modules/show-document.j
 
 const FIXTURE = path.resolve('tests/fixtures/state-4.3.json');
 const NOTICE = "Mx. Voice couldn't read this profile's shows and opened the previous copy.";
+const UNSAVED_NOTICE =
+  "Mx. Voice couldn't save this show yet. Your layout is safe; it will be saved the next time you save the show or open Mx. Voice.";
+
+/**
+ * Real fs whose writes of a new shows file fail with `code` while `failing.on`
+ * (open of a shows.json temp file, or mkdir when `failing.mkdir`).
+ */
+function failingWriteFs(code, failing = { on: true }) {
+  const fail = () => Object.assign(new Error(`${code}: simulated`), { code });
+  const promises = {
+    ...fs.promises,
+    open: async (file, flags, ...rest) => {
+      if (failing.on && String(file).includes('shows.json.tmp') && flags === 'w') throw fail();
+      return fs.promises.open(file, flags, ...rest);
+    },
+    mkdir: async (...args) => {
+      if (failing.on && failing.mkdir) throw fail();
+      return fs.promises.mkdir(...args);
+    }
+  };
+  return { ...fs, promises };
+}
 
 let root;
 let registered;
@@ -319,6 +341,78 @@ describe('show store', () => {
     expect(listing('p')).toEqual(['shows.json']);
   });
 
+  describe('a migration whose first write fails', () => {
+    it('a migration whose first write fails with ENOSPC still opens the migrated layout, with the unsaved notice', async () => {
+      const state = fs.readFileSync(FIXTURE, 'utf8');
+      addProfile('p', { 'state.json': state });
+      const failing = { on: true };
+      const failingStore = makeStore({ fs: failingWriteFs('ENOSPC', failing) });
+      const expectedId = (await store.peek('p')).shows[0].id;
+
+      const loaded = await failingStore.load('p');
+      expect(loaded.source).toBe('migrated-state');
+      expect(loaded.unsaved).toBe(true);
+      expect(loaded.notice).toBe(UNSAVED_NOTICE);
+      expect(loaded.doc.shows[0].id).toBe(expectedId);
+      expect(loaded.doc.shows[0].layout.hotkeys[0].hotkeys.f1).toBe('101');
+      expect(listing('p')).toEqual(['state.json']);
+      expect(fs.readFileSync(statePath('p'), 'utf8')).toBe(state);
+
+      // The next launch migrates again, to the same show id, and saves it
+      failing.on = false;
+      const next = await failingStore.load('p');
+      expect(next.source).toBe('migrated-state');
+      expect(next.unsaved).toBeUndefined();
+      expect(next.notice).toBeUndefined();
+      expect(next.doc.shows[0].id).toBe(expectedId);
+      expect((await failingStore.load('p')).source).toBe('shows');
+    });
+
+    it('opens the migrated layout when the profile folder is read-only (EACCES on mkdir)', async () => {
+      registered.add('p');
+      const failing = { on: true, mkdir: true };
+      const failingStore = makeStore({ fs: failingWriteFs('EACCES', failing) });
+      const loaded = await failingStore.load('p');
+      expect(loaded).toMatchObject({ source: 'migrated-empty', unsaved: true, notice: UNSAVED_NOTICE });
+      expect(fs.existsSync(dirOf('p'))).toBe(false);
+
+      // Once the folder can be created, Save creates it and writes shows.json
+      failing.on = false;
+      await failingStore.save('p', loaded.doc);
+      expect(JSON.parse(fs.readFileSync(showsPath('p'), 'utf8'))).toEqual(loaded.doc);
+    });
+
+    it('Save after an unsaved migration writes shows.json', async () => {
+      addProfile('p', { 'state.json': fs.readFileSync(FIXTURE, 'utf8') });
+      const failing = { on: true };
+      const failingStore = makeStore({ fs: failingWriteFs('EPERM', failing) });
+      const { doc } = await failingStore.load('p');
+      failing.on = false;
+      await failingStore.save('p', doc);
+      expect(JSON.parse(fs.readFileSync(showsPath('p'), 'utf8'))).toEqual(doc);
+      expect(fs.existsSync(`${showsPath('p')}.prev`)).toBe(false);
+      expect((await failingStore.load('p')).source).toBe('shows');
+    });
+
+    it('a version refusal still fails the load', async () => {
+      addProfile('p', {
+        'shows.json': JSON.stringify({ version: 2, shows: [] }),
+        'state.json': fs.readFileSync(FIXTURE, 'utf8')
+      });
+      await expect(makeStore({ fs: failingWriteFs('ENOSPC') }).load('p')).rejects.toMatchObject({ code: 'version' });
+    });
+
+    it('an unregistered profile still fails the load', async () => {
+      await expect(makeStore({ fs: failingWriteFs('ENOSPC') }).load('ghost')).rejects.toMatchObject({ code: 'unregistered' });
+    });
+
+    it('an error that is not an I/O failure still fails the load', async () => {
+      addProfile('p');
+      const brokenFs = { ...fs, promises: { ...fs.promises, open: async () => { throw new TypeError('not a function'); } } };
+      await expect(makeStore({ fs: brokenFs }).load('p')).rejects.toThrow(TypeError);
+    });
+  });
+
   it('migration of a real 4.3.x state.json fixture keeps every id', async () => {
     const state = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
     addProfile('p', { 'state.json': JSON.stringify(state) });
@@ -499,6 +593,25 @@ describe('show store', () => {
       expect(source).toBe('migrated-legacy-config');
       expect(fs.existsSync(showsPath(DEFAULT))).toBe(true);
       expect(warnings).toHaveLength(1);
+    });
+
+    it('does not record migration_completed when the migrated show could not be saved', async () => {
+      writeConfig(JSON.stringify({ hotkeys: LEGACY_HOTKEYS }));
+      addProfile(DEFAULT);
+      const failing = { on: true };
+      const failingStore = legacyStore({ fs: failingWriteFs('ENOSPC', failing) });
+      const loaded = await failingStore.load(DEFAULT);
+      expect(loaded).toMatchObject({ source: 'migrated-legacy-config', unsaved: true, notice: UNSAVED_NOTICE });
+      expect(loaded.doc.shows[0].layout.hotkeys[0].hotkeys).toEqual({ f1: '31' });
+      expect(marked).toEqual([]);
+      expect(fs.existsSync(showsPath(DEFAULT))).toBe(false);
+
+      // The next launch migrates config.json again, saves it, and records it
+      failing.on = false;
+      const next = await failingStore.load(DEFAULT);
+      expect(next.source).toBe('migrated-legacy-config');
+      expect(next.doc.shows[0].id).toBe(loaded.doc.shows[0].id);
+      expect(marked).toEqual([DEFAULT]);
     });
 
     it('does nothing with config.json when no config path is provided', async () => {

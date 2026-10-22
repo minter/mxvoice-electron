@@ -216,6 +216,15 @@ describe('openSessionOnStartup', () => {
     expect(deps.api.reportReady).toHaveBeenCalledWith(7, true, { droppedIds: ['77'] });
   });
 
+  it('opens an unsaved migration ready and toasts the unsaved notice', async () => {
+    const notice =
+      "Mx. Voice couldn't save this show yet. Your layout is safe; it will be saved the next time you save the show or open Mx. Voice.";
+    const { deps } = setup({ open: opened(null, { notice, unsaved: true }) });
+    expect(await openSessionOnStartup(deps)).toEqual({ status: 'ready' });
+    expect(deps.toast).toHaveBeenCalledWith(notice, expect.any(Number));
+    expect(deps.alert).not.toHaveBeenCalled();
+  });
+
   it('words the missing-songs toast in the singular and plural', () => {
     expect(droppedSongsMessage(0)).toBeNull();
     expect(droppedSongsMessage(1)).toBe("1 song in this show isn't in the library.");

@@ -8,8 +8,10 @@
 import nodeFs from 'fs';
 import path from 'path';
 
-const RENAME_MAX_ATTEMPTS = 5;
+// 10 attempts, doubling from 20 ms and capped at 400 ms: about 2 s in all
+const RENAME_MAX_ATTEMPTS = 10;
 const RENAME_BASE_DELAY_MS = 20;
+const RENAME_MAX_DELAY_MS = 400;
 const TRANSIENT_RENAME_CODES = new Set(['EPERM', 'EBUSY', 'EACCES']);
 
 let tempCounter = 0;
@@ -28,7 +30,7 @@ async function renameWithRetry(fs, from, to, platform) {
       return;
     } catch (error) {
       if (attempt >= attempts || !TRANSIENT_RENAME_CODES.has(error?.code)) throw error;
-      await sleep(RENAME_BASE_DELAY_MS * 2 ** (attempt - 1));
+      await sleep(Math.min(RENAME_BASE_DELAY_MS * 2 ** (attempt - 1), RENAME_MAX_DELAY_MS));
     }
   }
 }
