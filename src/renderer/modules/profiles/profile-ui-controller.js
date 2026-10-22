@@ -1,4 +1,4 @@
-let moduleRegistry = {};
+import { setHeaderLabels } from '../shows/header.js';
 
 /**
  * Show the new profile creation modal
@@ -51,24 +51,8 @@ async function handleNewProfileSubmit() {
       const modal = bootstrap.Modal.getInstance(document.getElementById('newProfileModal'));
       modal.hide();
       
-      // Save current state before switching to new profile
-      window.logInfo('💾 Saving current profile state before switching to new profile...');
-      if (moduleRegistry.profileState && moduleRegistry.profileState.extractProfileState) {
-        try {
-          const state = moduleRegistry.profileState.extractProfileState();
-          const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state);
-          
-          if (!saveResult.success) {
-            window.logError('Failed to save state before switching to new profile:', saveResult.error);
-          } else {
-            window.logInfo('✅ State saved successfully before switching to new profile');
-          }
-        } catch (stateError) {
-          window.logError('Error saving state before switching to new profile:', stateError);
-        }
-      }
-      
-      // Switch directly to the newly created profile
+      // Switch directly to the newly created profile. The switch ends this
+      // profile's session, which discards its live layout.
       try {
         const switchResult = await window.secureElectronAPI.profile.switchToProfile(name);
         if (!switchResult.success) {
@@ -170,24 +154,8 @@ async function handleDuplicateProfileSubmit() {
       const modal = bootstrap.Modal.getInstance(document.getElementById('duplicateProfileModal'));
       modal.hide();
       
-      // Save current state before switching to duplicated profile
-      window.logInfo('💾 Saving current profile state before switching to duplicated profile...');
-      if (moduleRegistry.profileState && moduleRegistry.profileState.extractProfileState) {
-        try {
-          const state = moduleRegistry.profileState.extractProfileState();
-          const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state);
-          
-          if (!saveResult.success) {
-            window.logError('Failed to save state before switching to duplicated profile:', saveResult.error);
-          } else {
-            window.logInfo('✅ State saved successfully before switching to duplicated profile');
-          }
-        } catch (stateError) {
-          window.logError('Error saving state before switching to duplicated profile:', stateError);
-        }
-      }
-      
-      // Switch directly to the newly duplicated profile
+      // Switch directly to the newly duplicated profile. The copy has the
+      // source's saved shows; the live layout is never flushed into them.
       try {
         const switchResult = await window.secureElectronAPI.profile.switchToProfile(targetName);
         if (!switchResult.success) {
@@ -217,10 +185,7 @@ async function refreshProfileIndicator() {
   try {
     const result = await window.secureElectronAPI.profile.getCurrent();
     if (result.success) {
-      const profileNameElement = document.getElementById('profile-name');
-      if (profileNameElement) {
-        profileNameElement.textContent = `Profile: ${result.profile}`;
-      }
+      setHeaderLabels({ profile: result.profile });
     }
   } catch (error) {
     window.logError('Failed to refresh profile indicator:', error);
@@ -228,8 +193,7 @@ async function refreshProfileIndicator() {
 }
 
 // Set up event listeners for the profile modals
-function initializeProfileUI(options = {}) {
-  moduleRegistry = options.moduleRegistry || {};
+function initializeProfileUI(_options = {}) {
   document.addEventListener('DOMContentLoaded', function() {
   // New profile modal handlers
   document.getElementById('createProfileBtn').addEventListener('click', handleNewProfileSubmit);

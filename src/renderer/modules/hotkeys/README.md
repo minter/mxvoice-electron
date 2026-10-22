@@ -12,9 +12,7 @@ The Hotkeys Module provides comprehensive F1-F12 hotkey functionality for quick 
 - Direct playback from hotkeys
 
 ### 📁 File Import/Export
-- Save/load hotkey configurations to files
-- Backup and restore hotkey states
-- Import/export functionality for sharing configurations
+- Save a tab to a `.mrv` file, or load one, from the tab's ⋯ menu (`ui/tab-files.js`); a whole layout is kept with shows
 
 ### 🏷️ Tab Management
 - Multiple hotkey sets (5 tabs)
@@ -28,7 +26,7 @@ The Hotkeys Module provides comprehensive F1-F12 hotkey functionality for quick 
 
 ### 💾 Persistence
 - `HotkeyState` is authoritative in memory.
-- Per-profile `state.json` is the only persistence path.
+- Per-profile shows (`shows.json`) and the crash-recovery record are the only persistence paths.
 - The DOM is rendered from model state and is never serialized as storage.
 
 ## Module Structure
@@ -52,10 +50,6 @@ hotkeys/
 - `populateHotkeys(fkeys, title)` - Populate hotkeys with song data
 - `setLabelFromSongId(song_id, element)` - Set hotkey label from song
 - `clearHotkeys()` - Clear all hotkeys
-
-### File Operations (2)
-- `openHotkeyFile()` - Open hotkey file for import
-- `saveHotkeyFile()` - Save hotkeys to file
 
 ### Playback Functions (2)
 - `playSongFromHotkey(hotkey)` - Play song from hotkey
@@ -86,8 +80,8 @@ const hotkeys = new HotkeysModule({
 ### Core Operations
 
 ```javascript
-// Save hotkeys to the active profile state
-hotkeys.requestProfileStateSave();
+// Record the live layout for crash recovery
+hotkeys.requestProfileStateSave(); // writes the crash-recovery record, not a saved show
 
 // Clear all hotkeys
 hotkeys.clearHotkeys();
@@ -102,12 +96,6 @@ hotkeys.sendToHotkeys();
 ### File Operations
 
 ```javascript
-// Open hotkey file
-hotkeys.openHotkeyFile();
-
-// Save hotkey file
-hotkeys.saveHotkeyFile();
-
 // Export configuration
 const config = hotkeys.exportHotkeyConfig();
 
@@ -190,19 +178,6 @@ Removes all song assignments from hotkeys.
 **Parameters:**
 - `options` - Options object with dependencies
 
-### File Operations
-
-#### `openHotkeyFile(options)`
-Imports hotkey configuration from file.
-
-**Parameters:**
-- `options` - Options object with dependencies
-
-#### `saveHotkeyFile(options)`
-Exports hotkey configuration to file.
-
-**Parameters:**
-- `options` - Options object with dependencies
 
 #### `exportHotkeyConfig()`
 Creates a configuration object for export.
@@ -280,7 +255,7 @@ The module automatically sets up the following event listeners:
 
 ## Profile Integration
 
-Hotkey snapshots are saved by Profile State to `profiles/<ProfileName>/state.json` and restored through `restoreHotkeySnapshot()`.
+Hotkey snapshots are written by Profile State to the crash-recovery record; shows are applied through the shows module's layout applier.
 
 ## Testing
 
@@ -338,7 +313,7 @@ The module includes comprehensive error handling:
 ### Context Menu Integration
 - Right-click context menu properly handles hotkey removal without breaking element IDs
 - The `removeFromHotkey` function preserves hotkey element structure during removal
-- Context menu temporarily sets elements as `selected_row` but restores original IDs afterward
+- The context menu marks a hotkey slot with `data-context-target="true"` instead of renaming it; its `fK_hotkey` id never changes
 
 ## Migration Guide
 

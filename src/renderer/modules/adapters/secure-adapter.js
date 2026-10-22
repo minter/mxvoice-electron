@@ -111,13 +111,7 @@ export const secureAnalytics = {
 /** Secure picker and collection-file operations exposed by the preload. */
 export const secureFileDialog = {
   showFilePicker: (options = {}) => invokeSecureAPI('app', 'showFilePicker', [options]),
-  showDirectoryPicker: (defaultPath) => invokeSecureAPI('app', 'showDirectoryPicker', [defaultPath]),
-  openHotkeyFile: () => invokeSecureAPI('fileOperations', 'openHotkeyFile'),
-  saveHotkeyFile: (hotkeyArray) => invokeSecureAPI('fileOperations', 'saveHotkeyFile', [hotkeyArray]),
-  openHoldingTankFile: () => invokeSecureAPI('fileOperations', 'openHoldingTankFile'),
-  saveHoldingTankFile: (holdingTankArray) => invokeSecureAPI(
-    'fileOperations', 'saveHoldingTankFile', [holdingTankArray]
-  )
+  showDirectoryPicker: (defaultPath) => invokeSecureAPI('app', 'showDirectoryPicker', [defaultPath])
 };
 
 /**

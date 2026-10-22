@@ -191,13 +191,13 @@ test.describe('Songs - edit and cancel', () => {
     console.log('✏️ Selecting Edit from context menu...');
 
     // Debug: Check if context menu is visible
-    const contextMenu = page.locator('.mxv-context-menu');
+    const contextMenu = page.locator('#mxv-context-menu');
     const isMenuVisible = await contextMenu.isVisible();
     console.log(`🔍 Context menu visible: ${isMenuVisible}`);
 
     if (isMenuVisible) {
       // Debug: Check what items are in the context menu
-      const menuItems = page.locator('.mxv-context-item');
+      const menuItems = contextMenu.locator('.mxv-context-item');
       const itemCount = await menuItems.count();
       console.log(`🔍 Context menu items found: ${itemCount}`);
 
@@ -208,7 +208,7 @@ test.describe('Songs - edit and cancel', () => {
       }
 
       // Try to find the Edit option with more specific selectors
-      const editOption = page.locator('.mxv-context-item').filter({ hasText: 'Edit' });
+      const editOption = contextMenu.locator('.mxv-context-item').filter({ hasText: 'Edit' });
       console.log(`🔍 Edit option found: ${await editOption.count() > 0}`);
 
       const isEditVisible = await editOption.isVisible();

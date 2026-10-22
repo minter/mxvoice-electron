@@ -69,3 +69,26 @@ describe('playSongFromId song_played tracking', () => {
     expect(trackEvent).not.toHaveBeenCalled();
   });
 });
+
+describe('playSongFromId show generation stamp', () => {
+  it('records the show generation the song was started on', async () => {
+    const sharedState = (await import('../../../src/renderer/modules/shared-state.js')).default;
+    loadSongForPlayback.mockResolvedValue({ success: false, error: 'missing' });
+    sharedState.set('showGeneration', 3);
+    sharedState.set('nowPlayingSource', null);
+
+    await manager.playSongFromId('7', { trigger_method: 'hotkey' });
+
+    expect(sharedState.get('nowPlayingSource')).toBe(3);
+  });
+
+  it('defaults the stamp to generation 0 before any show is applied', async () => {
+    const sharedState = (await import('../../../src/renderer/modules/shared-state.js')).default;
+    loadSongForPlayback.mockResolvedValue({ success: false, error: 'missing' });
+    sharedState.reset();
+
+    await manager.playSongFromId('7', { trigger_method: 'hotkey' });
+
+    expect(sharedState.get('nowPlayingSource')).toBe(0);
+  });
+});

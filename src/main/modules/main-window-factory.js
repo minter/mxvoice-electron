@@ -6,7 +6,8 @@ function createMainWindow({
   preloadPath,
   indexPath,
   testMode = false,
-  state = {}
+  state = {},
+  platform = process.platform
 }) {
   const {
     width = 1200,
@@ -39,6 +40,13 @@ function createMainWindow({
     }
   };
 
+  // macOS: draw the window to the top edge, with the traffic lights inset over
+  // the app's own title strip (index.css body.platform-mac). Windows and Linux
+  // keep the native title bar, and with it the menu bar.
+  if (platform === 'darwin') {
+    windowOptions.titleBarStyle = 'hiddenInset';
+  }
+
   if (validDisplay && x !== undefined && y !== undefined) {
     windowOptions.x = x;
     windowOptions.y = y;
@@ -50,6 +58,7 @@ function createMainWindow({
     windowOptions.webPreferences.backgroundThrottling = false;
   }
   const window = new BrowserWindow(windowOptions);
+  if (platform === 'darwin') hideTitleStripInFullScreen(window);
   if (testMode && process.env.E2E_BACKGROUND === '1') {
     // Background mode: keep the window hidden for the whole run. Parking it
     // offscreen doesn't work — macOS constrains a window back onto a visible
@@ -87,6 +96,43 @@ function createMainWindow({
     if (isFullScreen && !window.isDestroyed()) window.setFullScreen(true);
   });
   return window;
+}
+
+// Full screen has no traffic lights, so the inset title strip would be empty
+// space: hide it while the window is full screen (index.css draws it)
+const FULL_SCREEN_CSS = 'body.platform-mac #top-row { padding-top: var(--panel-gap) !important; }'
+  + ' body.platform-mac .container-fluid::before { display: none; }';
+
+function hideTitleStripInFullScreen(window) {
+  let key = null;
+  window.on('enter-full-screen', async () => {
+    try {
+      const inserted = await window.webContents.insertCSS(FULL_SCREEN_CSS);
+      // Left full screen while the CSS was going in: take it straight back out
+      if (!window.isFullScreen()) {
+        window.webContents.removeInsertedCSS(inserted).catch(() => {});
+        return;
+      }
+      key = inserted;
+    } catch {
+      key = null;
+    }
+  });
+  window.on('leave-full-screen', () => {
+    if (!key) return;
+    const done = key;
+    key = null;
+    window.webContents.removeInsertedCSS(done).catch(() => {});
+  });
+  // A reload drops inserted CSS; put it back if the window is still full screen
+  window.webContents.on('did-finish-load', async () => {
+    if (!window.isFullScreen()) return;
+    try {
+      key = await window.webContents.insertCSS(FULL_SCREEN_CSS);
+    } catch {
+      key = null;
+    }
+  });
 }
 
 export { createMainWindow };

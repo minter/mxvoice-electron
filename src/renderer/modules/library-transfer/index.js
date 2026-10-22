@@ -154,6 +154,13 @@ async function startExport() {
     return;
   }
 
+  // The export captures the saved profile; unsaved changes on screen live
+  // only in the crash-recovery record, which it doesn't include: ask first
+  const { askToSaveUnsavedChanges } = await import('../shows/index.js');
+  if (!await askToSaveUnsavedChanges('export')) {
+    return;
+  }
+
   info('Starting library export', { module: 'library-transfer', function: 'startExport' });
 
   resetProgressModal();
@@ -328,6 +335,16 @@ async function startImport() {
   }
 }
 
+/** Restart the app, or reload the window if it can't. */
+async function restartApp() {
+  try {
+    await electronAPI.app.restart();
+  } catch {
+    // Fallback: reload the window
+    window.location.reload();
+  }
+}
+
 /**
  * Confirm and execute the import
  */
@@ -372,14 +389,20 @@ async function confirmImport() {
       }
 
       // Restart after a brief delay to let the user see the message
-      setTimeout(async () => {
-        try {
-          await electronAPI.app.restart();
-        } catch {
-          // Fallback: reload the window
-          window.location.reload();
-        }
-      }, 2000);
+      setTimeout(restartApp, 2000);
+    } else if (result.sessionEnded) {
+      // The show session ended before the import failed, and the database
+      // may be closed: restart once the message is closed, as a finished
+      // import does, so the session reopens from disk
+      showError(`Import failed: ${result.error} Mx. Voice will reload the show.`);
+      error('Library import failed after the show session ended', {
+        module: 'library-transfer', function: 'confirmImport',
+        error: result.error
+      });
+      if (typeof window !== 'undefined') {
+        window.isRestoringProfileState = true;
+      }
+      document.getElementById('libraryTransferModal')?.addEventListener('hidden.bs.modal', restartApp, { once: true });
     } else {
       showError(`Import failed: ${result.error}`);
       error('Library import failed', {

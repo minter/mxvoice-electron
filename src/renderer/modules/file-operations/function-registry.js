@@ -16,14 +16,6 @@ try {
 }
 
 export const fileOperationsFunctions = {
-  // File loading functions
-  openHotkeyFile: 'openHotkeyFile',
-  openHoldingTankFile: 'openHoldingTankFile',
-  
-  // File saving functions
-  saveHotkeyFile: 'saveHotkeyFile',
-  saveHoldingTankFile: 'saveHoldingTankFile',
-  
   // System operations
   pickDirectory: 'pickDirectory',
   
@@ -31,22 +23,6 @@ export const fileOperationsFunctions = {
   startUpdateProcess: 'startUpdateProcess',
   
   // Fallback functions for when module fails to load
-  openHotkeyFileFallback: () => debugLog?.warn('⚠️ File operations not available - openHotkeyFile', { 
-    module: 'file-operations',
-    function: 'openHotkeyFileFallback'
-  }),
-  openHoldingTankFileFallback: () => debugLog?.warn('⚠️ File operations not available - openHoldingTankFile', { 
-    module: 'file-operations',
-    function: 'openHoldingTankFileFallback'
-  }),
-  saveHotkeyFileFallback: () => debugLog?.warn('⚠️ File operations not available - saveHotkeyFile', { 
-    module: 'file-operations',
-    function: 'saveHotkeyFileFallback'
-  }),
-  saveHoldingTankFileFallback: () => debugLog?.warn('⚠️ File operations not available - saveHoldingTankFile', { 
-    module: 'file-operations',
-    function: 'saveHoldingTankFileFallback'
-  }),
   pickDirectoryFallback: () => debugLog?.warn('⚠️ File operations not available - pickDirectory', { 
     module: 'file-operations',
     function: 'pickDirectoryFallback'

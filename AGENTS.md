@@ -23,26 +23,39 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 
 ## Database
 
-- **SQLite via WASM** (`node-sqlite3-wasm`) — not a Node.js native binding. Tables: `categories`, `mrvoice` (songs).
+- **SQLite via WASM** (`node-sqlite3-wasm`) — not a Node.js native binding. Tables: `categories`, `mrvoice` (songs). `mrvoice` uses `AUTOINCREMENT`, so song ids are never reused (shows store song ids); older tables are rebuilt once on startup.
 - **Raw SQL via IPC** — renderer calls `secureDatabase.query(sql, params)` / `secureDatabase.execute()` which invoke main-process handlers. No ORM.
 - **Schema auto-migration** — `CREATE TABLE IF NOT EXISTS` + idempotent `ALTER TABLE ADD COLUMN` for new columns. No migration framework.
 
 ## Profile System
 
-- **Directory structure** — `userData/profiles/<SanitizedName>/` contains `preferences.json`, `state.json` (hotkeys/holding-tank), `hotkeys/` subdirectory.
-- **Profile name sanitization is critical** — `sanitizeProfileName()` removes special chars. Inconsistent sanitization causes state to save/load from wrong directories.
+- **Directory structure** — `userData/profiles/<SanitizedName>/` contains `preferences.json`, `shows.json` (saved shows + active show; `shows.json.prev` is the last good copy), `state.json` (frozen), `hotkeys/` subdirectory.
+- **Profile name sanitization is critical** — `sanitizeProfileName()` removes special chars. A profile's `shows.json` lives in its sanitized directory, and its recovery record (`userData/recovery/<sanitized name, lowercased>.json`) is keyed by the same sanitized name; sanitize inconsistently and shows or recovery load from the wrong place.
 - **"Default User"** — auto-created on first run. Cannot be deleted. Switched via launcher UI or `--profile=` CLI arg.
-- **State persistence** — hotkeys/holding-tank auto-saved to `state.json` with restoration lock to prevent empty saves during app init.
+- **Shows** — a show is a saved hotkey + holding-tank layout. Only Shows menu commands (Save/Save As/Revert/Rename/Delete/Import) change a saved show; Rename and Delete act on the active show only; opening a profile can also create `shows.json` (migration) or repair it from `.prev`. Switching shows and Import Show ask to save unsaved changes first; quit, closing the window, profile switch and Log Out never ask and discard the live layout.
+- **Tab files** — a single hotkey tab (`.mrv`: `f1::<id>`…`f12::<id>`, optional `tab_name::<name_with_underscores>`) or holding-tank tab (`.hld`: one id per line) saves to and loads from a file via the tab's ⋯ menu (`src/renderer/modules/ui/tab-files.js`). Main shows the dialogs, writes, reads and validates (`file:save-hotkey-tab`, `file:load-hotkey-tab`, … in `file-operations.js`); keep the formats unchanged so files work with older versions. Loading changes the live session only.
+- **Show colors** — self-contained: a show's optional `color` (palette key or null, Shows → Color, saved at once) is mirrored by `shows/show-color.js` as `<html data-show-color>`, and every rule in `src/stylesheets/show-colors.css` is scoped under that attribute. The color paints only the window background behind the panels (`.container-fluid`), never `--panel-color`, so panels and dialogs stay neutral. Remove the link or the attribute and the window is uncolored.
+- **Played counts** — per-song play counts for the night (`shows/played-counts.js`, pills in `shows/played-pills.js` + `played-counts.css`), counted once at playback start in `audio-manager.js`; persisted by the main show session to `userData/recovery/<key>.played.json` for crash restore, not part of any show and never affecting `dirty`.
+- **Crash recovery** — live-session snapshots go to `userData/recovery/<key>.json`, outside the profile dir. After a crash the next open offers to restore it (default: restore the show in progress; Return takes it). `saveProfileState()` writes only there, behind the restoration lock.
+- **`state.json` is frozen** — a migration source only, never written. First open of a profile (or a restored pre-shows backup) turns it into a show named "Default Show".
 
 ## Dark/Light Theming
 
-- Uses `data-bs-theme` attribute on `<html>` (Bootstrap 5 standard). System preference detected via `matchMedia`.
+- The main window uses `body.theme-light` / `body.theme-dark`, applied by `theme-management`. `data-bs-theme` on `<html>` is used only by the launcher window. System preference detected via `matchMedia`.
 - User preference stored per-profile as `screen_mode` (auto/light/dark).
 - Structural styles in `index.css`, color-dependent styles in `colors.css` (separate light/dark sections).
+
+## Reskin (4.4)
+
+- **Two revertible stylesheets** — `src/stylesheets/reskin.css` (tier 1: type, song rows, F-key badges, flat surfaces) and `reskin-tier2.css` (player bar, search table) load last in `index.html`. Remove either `<link>` to drop that tier; remove both and the app looks as it did. To remove everything, `git revert -m 1` the reskin merge.
+- **Song labels** — hotkey slots and holding-tank rows are filled by `setSongLabel` (`src/renderer/modules/ui/song-label.js`): title, artist and time pieces, with hidden " by " / "( )" separators so the row's text still reads "Title by Artist (0:21)". Style the pieces, never `.hotkeys span` (index.css scopes its rules to `li > span.song`). One time format everywhere: `formatDuration`.
+- **macOS title bar is structural** — the main window uses `titleBarStyle: 'hiddenInset'` on macOS only (`main-window-factory.js`); `index.css` draws the 30px drag strip under `body.platform-mac` (set synchronously in `renderer.js`), and full screen hides it. Windows and Linux keep the native title bar and menu bar.
 
 ## State Management
 
 - **Shared state** — `window.sharedState` (singleton Map) holds runtime state: currentSong, hotkeys, holding-tank data, animation frame IDs.
+- **Show session status** — the main-process show session is `idle` / `loading` / `ready` / `failed` / `unreadable` (`idle` before the first open and after it ends). Save, Save As, Revert, Rename and Delete need `ready`, and Revert to Saved also needs `dirty`; recovery writes are refused until then. The Shows menu is rebuilt from the session, including whenever the visible `dirty` flag flips.
+- **Unsaved-changes dot** — the session's `dirty` flag (in `state()` and in each `saveRecovery` result) is set when a recovery save writes and cleared when it retires as equal, and by open, switch, revert, import, deleting the active show, Save, Save As and startEmpty; restoring a recovery record sets it. `profile-state` passes each result's `dirty` to the header through the `show-dirty-changed` window event, which shows `#show-dirty`.
 - **Cross-module events** — modules communicate via `window.addEventListener('custom-event')` for search, categories, audio control.
 
 ## Auto-Update
@@ -55,7 +68,7 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 
 1. Create module in `src/renderer/modules/<name>/index.js` with `export default`
 2. Register in `src/renderer/modules/app-bootstrap/module-config.js`
-3. For menu-triggered features: add IPC handler in `src/preload/modules/secure-api-exposer.cjs`, menu item in `src/main/modules/app-setup.js` (both macOS and Windows/Linux sections), listener in `src/renderer.js`
+3. For menu-triggered features: add IPC handler in `src/preload/modules/secure-api-exposer.cjs`, menu item in `src/main/modules/app-setup.js` (both macOS and Windows/Linux sections), listener in `src/renderer.js`. Shows menu items live in `src/main/modules/show-menu.js`.
 
 ## What's New Tour
 

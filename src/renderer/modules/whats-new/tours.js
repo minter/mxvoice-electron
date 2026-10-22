@@ -6,6 +6,66 @@ import { MULTI_SONG_THRESHOLD } from '../bulk-operations/multi-song-import.js';
  */
 export default {
   tours: {
+    // Next release: rename the key to match package.json when it is bumped
+    '4.4.0': {
+      title: "What's New in 4.4.0",
+      steps: [
+        {
+          element: '#profileSwitchModal .modal-content',
+          title: 'Switch Profiles Instantly',
+          description: 'Profile → Switch Profile now opens right here instead of restarting the app. Your current profile is grayed out; pick another to switch, or press Esc to go back to what you were doing.',
+          side: 'right',
+          align: 'center',
+          preAction: { type: 'function', name: 'openSwitchProfileForTour' },
+          postAction: { type: 'function', name: 'closeSwitchProfileForTour' },
+          skipIfMissing: true,
+        },
+        {
+          title: 'Closing the Window Asks First',
+          description: 'Closing the main window quits Mx. Voice, so it now asks first: a stray click mid-show can\'t stop the music. Quit (Exit on Windows) in the menu still quits right away.',
+        },
+        {
+          title: 'Your Layout Is Now a Show',
+          description: 'The hotkeys and holding tank you had are saved as a show named Default Show. Quitting or switching profiles doesn\'t save the show. Next time, it opens as you last saved it. From now on, changes made during a show are kept only if you Save the show or use Save As to make a new one.',
+        },
+        {
+          title: 'The Shows Menu',
+          description: 'Use the Shows menu to switch shows, Save the show on screen, Save As a new show, Revert to Saved (available when you have unsaved changes), or Rename or Delete the show on screen. To tidy another show, switch to it first. Switching to another show, or importing one, asks whether to save your changes first.',
+        },
+        {
+          element: '#profile-indicator',
+          title: 'Which Show Is Loaded',
+          description: 'The header now shows your profile and the show that is loaded. A dot after the show name means the layout on screen has unsaved changes.',
+          side: 'bottom',
+          align: 'center',
+          skipIfMissing: true,
+        },
+        {
+          title: 'Color-Code Your Shows',
+          description: 'Shows → Color gives the current show an accent color, so you can see which show is loaded at a glance.',
+        },
+        {
+          title: "See What You've Played",
+          description: "A ▶ count appears next to any track you've played tonight, in the hotkeys, the holding tank and search results. Right-click a song and choose Mark as Unplayed to clear just that one, or use Shows → Mark All Songs as Unplayed to clear them all.",
+        },
+        {
+          title: "Copy Someone's Show",
+          description: 'Shows → Import Show from Another Profile copies a saved show from another profile on this computer. Your copy is yours to change.',
+        },
+        {
+          element: '#hotkey_tabs .tab-actions-btn',
+          title: 'Tab Actions Moved',
+          description: 'To rename, clear, save or load a hotkey or holding tank tab, use the ⋯ menu at the end of its tab row, or right-click the tab. Clear empties only that tab; the songs stay in your library. Save Tab to File keeps one tab, like a pre-show playlist, and Load Tab from File puts it into any show. Double-click a tab to rename it, as before.',
+          side: 'bottom',
+          align: 'end',
+          skipIfMissing: true,
+        },
+        {
+          title: 'Fade Out With One Hand',
+          description: 'Tap Esc to stop the music right away, as before. Hold Esc to fade it out instead, leaving your other hand free for the lights. Press Esc again during a fade to cut it. Shift+Esc still fades too.',
+        },
+      ],
+    },
     '4.3.0': {
       title: "What's New in 4.3.0",
       steps: [

@@ -18,7 +18,8 @@ import {
   getBackupBaseDirectory,
   getBackupDirectory,
   getBackupMetadataPath,
-  getProfileDirectory
+  getProfileDirectory,
+  hasUsableDirectoryKey
 } from './profile-paths.js';
 import { createBackupMetadataCoordinator } from './backup-metadata-coordinator.js';
 import { createBackupMetadataStore } from './backup-metadata-store.js';
@@ -26,6 +27,7 @@ import { createBackupDirectoryScanner } from './backup-directory-scanner.js';
 import { createBackupFileOperations } from './backup-file-operations.js';
 import { selectBackupsForRetention } from './backup-retention-policy.js';
 import { createProfileChangeDetector } from './profile-change-detector.js';
+import { parseDocument } from './show-document.js';
 import { isPathInside } from './ipc/guards.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
@@ -318,6 +320,23 @@ async function createBackup(profileName, options = {}) {
 }
 
 /**
+ * Show names in a backup's shows.json, in document order.
+ * Null for a pre-shows backup or any unreadable file; never throws.
+ * @param {string} profileName - Profile name
+ * @param {string} backupId - Backup ID
+ * @returns {Promise<string[]|null>}
+ */
+async function readBackupShowNames(profileName, backupId) {
+  try {
+    const file = path.join(getBackupDirectory(profileName), backupId, 'shows.json');
+    const parsed = parseDocument(JSON.parse(await fs.promises.readFile(file, 'utf8')));
+    return parsed.ok ? parsed.doc.shows.map((b) => b.name) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * List all backups for a profile
  * @param {string} profileName - Profile name
  * @returns {Promise<{success: boolean, backups?: Array, error?: string}>}
@@ -325,10 +344,16 @@ async function createBackup(profileName, options = {}) {
 async function listBackups(profileName) {
   try {
     const metadata = await readMetadataSafe(profileName);
-    
+    const backups = await Promise.all(
+      (metadata.backups || []).map(async (backup) => ({
+        ...backup,
+        shows: await readBackupShowNames(profileName, backup.id)
+      }))
+    );
+
     return {
       success: true,
-      backups: metadata.backups || []
+      backups
     };
   } catch (error) {
     debugLog?.error('Failed to list backups', {
@@ -363,6 +388,30 @@ async function getBackupMetadata(profileName) {
     });
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * Whether a backup can be restored: a well-formed id that this profile's
+ * metadata lists and whose folder exists. Checked before the show session
+ * ends, so a restore that can't start leaves the session running.
+ * @param {string} profileName - Profile name
+ * @param {string} backupId - Backup ID (may come from IPC)
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function checkBackupRestorable(profileName, backupId) {
+  if (!hasUsableDirectoryKey(profileName)) {
+    return { success: false, error: 'Profile name has no usable folder name' };
+  }
+  const backupPath = resolveBackupPath(profileName, backupId);
+  if (!backupPath) {
+    return { success: false, error: 'Invalid backup ID' };
+  }
+  const metadata = await readMetadataSafe(profileName);
+  const listed = (metadata?.backups || []).some((backup) => backup.id === backupId);
+  if (!listed || !await pathExists(backupPath)) {
+    return { success: false, error: 'Backup does not exist' };
+  }
+  return { success: true };
 }
 
 /**
@@ -629,6 +678,7 @@ export {
   createBackup,
   listBackups,
   getBackupMetadata,
+  checkBackupRestorable,
   restoreBackup,
   deleteBackup,
   cleanupOldBackups,

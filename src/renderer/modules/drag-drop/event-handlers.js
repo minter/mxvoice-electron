@@ -84,6 +84,13 @@ export function setupDragDropEventHandlers() {
     }, { signal });
   }
 
+  // A drag that ends anywhere (dropped elsewhere, or cancelled with Esc)
+  // leaves no drop highlight behind
+  document.addEventListener('dragend', () => {
+    clearHoldingTankDropIndicators();
+    document.querySelectorAll('.hotkeys .drop_target').forEach((el) => el.classList.remove('drop_target'));
+  }, { signal });
+
   // Column drag and drop handlers - improved with better visual feedback
   setupColumnDragAndDrop();
 

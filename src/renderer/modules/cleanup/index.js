@@ -1,10 +1,9 @@
 /**
  * Cleanup Module
  * 
- * Handles cleanup of resources when the window is closing.
- * While profile switching uses app.exit(0) which cleans up the process,
- * this module ensures proper cleanup for normal quit scenarios and
- * follows best practices for resource management.
+ * Handles cleanup of resources when the window is closing or reloading.
+ * Profile switching reloads the main window in-process, so this is what
+ * stops the old profile's audio and animation frames.
  */
 
 import sharedState from '../shared-state.js';

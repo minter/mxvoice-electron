@@ -7,12 +7,18 @@ function createBrowserWindowMock() {
     constructor(options) {
       this.options = options;
       this.loadFile = vi.fn();
+      this.handlers = {};
+      this.contentHandlers = {};
       this.webContents = {
-        on: vi.fn(),
+        on: vi.fn((event, handler) => { this.contentHandlers[event] = handler; }),
         send: vi.fn(),
-        insertCSS: vi.fn()
+        insertCSS: vi.fn(async () => 'css-key'),
+        removeInsertedCSS: vi.fn(async () => {})
       };
       this.once = vi.fn((event, handler) => { this.readyHandler = handler; });
+      this.on = vi.fn((event, handler) => { this.handlers[event] = handler; });
+      this.fullScreen = false;
+      this.isFullScreen = () => this.fullScreen;
       this.isDestroyed = () => false;
       this.maximize = vi.fn();
       this.setFullScreen = vi.fn();
@@ -27,6 +33,7 @@ describe('main window factory', () => {
     const { BrowserWindow, instances } = createBrowserWindowMock();
     const autoUpdater = { checkForUpdatesAndNotify: vi.fn() };
     const window = createMainWindow({
+      platform: 'linux',
       BrowserWindow,
       screen: { getAllDisplays: () => [{ id: 7 }] },
       autoUpdater,
@@ -55,6 +62,7 @@ describe('main window factory', () => {
     const catchSpy = vi.spyOn(failure, 'catch');
     const autoUpdater = { checkForUpdatesAndNotify: vi.fn(() => failure) };
     const window = createMainWindow({
+      platform: 'linux',
       BrowserWindow,
       screen: { getAllDisplays: () => [] },
       autoUpdater,
@@ -70,6 +78,7 @@ describe('main window factory', () => {
   it('does not restore coordinates for a missing display', () => {
     const { BrowserWindow, instances } = createBrowserWindowMock();
     createMainWindow({
+      platform: 'linux',
       BrowserWindow,
       screen: { getAllDisplays: () => [] },
       iconPath: '/icon.ico',
@@ -84,6 +93,7 @@ describe('main window factory', () => {
   it('hides the window in test mode', () => {
     const { BrowserWindow, instances } = createBrowserWindowMock();
     createMainWindow({
+      platform: 'linux',
       BrowserWindow,
       screen: { getAllDisplays: () => [] },
       iconPath: '', preloadPath: '', indexPath: '', testMode: true
@@ -94,6 +104,7 @@ describe('main window factory', () => {
   it('disables CSS transitions in test mode', () => {
     const { BrowserWindow, instances } = createBrowserWindowMock();
     createMainWindow({
+      platform: 'linux',
       BrowserWindow,
       screen: { getAllDisplays: () => [] },
       iconPath: '', preloadPath: '', indexPath: '', testMode: true
@@ -109,6 +120,7 @@ describe('main window factory', () => {
   it('does not inject transition-disabling CSS outside test mode', () => {
     const { BrowserWindow, instances } = createBrowserWindowMock();
     createMainWindow({
+      platform: 'linux',
       BrowserWindow,
       screen: { getAllDisplays: () => [] },
       iconPath: '', preloadPath: '', indexPath: ''
@@ -120,4 +132,43 @@ describe('main window factory', () => {
   });
 
 
+
+  it('on macOS uses the inset title bar and hides its strip while full screen', async () => {
+    const { BrowserWindow, instances } = createBrowserWindowMock();
+    createMainWindow({
+      platform: 'darwin',
+      BrowserWindow,
+      screen: { getAllDisplays: () => [] },
+      autoUpdater: { checkForUpdatesAndNotify: vi.fn() },
+      iconPath: '', preloadPath: '', indexPath: ''
+    });
+    const win = instances[0];
+    expect(win.options.titleBarStyle).toBe('hiddenInset');
+
+    await win.handlers['enter-full-screen']();
+    expect(win.webContents.insertCSS).toHaveBeenCalledWith(expect.stringContaining('body.platform-mac'));
+    win.handlers['leave-full-screen']();
+    expect(win.webContents.removeInsertedCSS).toHaveBeenCalledWith('css-key');
+
+    // A reload while full screen puts the rule back
+    win.fullScreen = true;
+    win.webContents.insertCSS.mockClear();
+    await win.contentHandlers['did-finish-load']();
+    expect(win.webContents.insertCSS).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the native title bar on Windows and Linux', () => {
+    for (const platform of ['win32', 'linux']) {
+      const { BrowserWindow, instances } = createBrowserWindowMock();
+      createMainWindow({
+        platform,
+        BrowserWindow,
+        screen: { getAllDisplays: () => [] },
+        autoUpdater: { checkForUpdatesAndNotify: vi.fn() },
+        iconPath: '', preloadPath: '', indexPath: ''
+      });
+      expect(instances[0].options.titleBarStyle).toBeUndefined();
+      expect(instances[0].on).not.toHaveBeenCalledWith('enter-full-screen', expect.any(Function));
+    }
+  });
 });
