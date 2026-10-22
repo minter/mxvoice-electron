@@ -19,5 +19,5 @@
 - The folder and save icons are gone. Use Save and Save As to keep a show, and Import Show for another person on this computer. Hotkey and holding-tank files load and save from each tab's ⋯ menu.
 - Tap Esc to cut the music, or hold Esc to fade it out. Shift+Esc still fades.
 - Esc in a dialog now just closes the dialog and leaves the music playing.
-- Fades use the length set in Preferences, and each profile keeps the fade length it had before the update.
+- Fades use the length set in Preferences, and each profile keeps the fade length it used before the update.
 - After a crash, press Return on the "Restore show?" prompt to restore the show in progress.
