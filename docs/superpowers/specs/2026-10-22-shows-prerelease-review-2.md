@@ -89,3 +89,33 @@ These are in the per-area reports: copy, ARIA and CSS details, test-title and lo
 - **Release config:** version 4.4.0 matches the tour key, the 4.3.2 preload packaging fix is present, and the update channel is unchanged.
 - **Tests:** unit 1407 pass, including on a case-sensitive volume; coverage floors only went up; no skipped tests.
 - **First-launch walkthroughs:** the four paths (one profile, many profiles, 3.x, new install), Shows menu order and labels, each tour claim checked against behavior, colors, tab truncation, played pills.
+
+---
+
+## Status after the review-2 fix plan (2026-10-22)
+
+Plan: `docs/superpowers/plans/2026-10-22-shows-review-2-fixes.md`. Every task was reviewed and a final whole-branch review was run. Gates at `f313faf0`: 1447 unit tests, 321/321 E2E, no skipped tests.
+
+Real-data recheck: a copy of 13 real profiles gave an exact first show for every one, and every fade is 2 s (the length 4.3.2 actually used).
+
+| Item | Status | Commits |
+|---|---|---|
+| 1.1 First write of shows.json fails | Fixed. The migrated layout opens as ready with a "couldn't save this show yet" notice, and Save writes it later. The Windows rename retry is now about 2 s. | 8b4df3ef |
+| 1.2–1.4 Esc gesture | Fixed. Esc stops only the sound that was playing when it went down. Tap or hold is decided by how long the key was held. Shift+Esc ignores key repeat. | 697dcced, 178296ae |
+| 1.5 Hotkey context menu kills a slot | Fixed. A marker attribute replaces the id rename. A show switch closes the menu, and Remove re-checks the slot's song after the confirm. | 1fcee3aa, ea5d1f74 |
+| 1.6 Release notes / release body | Fixed. Stop-key, dialog Esc, fade and crash-prompt lines added. `build/README.md` now has a step to paste the notes into the GitHub release. | 40299a18, 535e73c5 |
+| 1.7 CI | E2E `timeout-minutes` is now 30. CI has still not run on this branch; push to run it. | 40299a18 |
+| 2.1 Fade length (decision) | One-time startup migration copies the app-wide `fade_out_seconds` into every profile (missing means 2). It never blocks startup. | 1b7bc593, 79e6cc2d, 00be485e |
+| 2.2 Crash prompt default (decision) | Restore is the default; Return takes it. | 39fdf89f |
+
+### Deferred (the final review says none blocks the PR)
+
+- An Esc press spanning a Loop restart or an autoplay hand-off is dropped. It's safe (no other song stops), and the operator presses again. Follow-up: a playback token that a replay keeps.
+- Restoring a 4.3.2-era backup, or re-registering an orphaned profile folder, brings back that profile's stale `fade_out_seconds` after the migration has run.
+- With an unwritable `config.json`, the fade migration reruns every launch.
+- `isWriteFailure` treats `ERR_*` programming errors as fs failures.
+- An unsaved legacy migration that is saved later doesn't record `migration_completed`.
+- The session drops the store's `unsaved` flag, so there's no header hint.
+- Coverage floors have little headroom (lines 53 vs 53.02).
+- Smaller test and doc gaps, listed in the plan's ledger.
+- Section 3 of this review is still open.
