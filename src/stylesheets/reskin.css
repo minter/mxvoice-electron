@@ -320,8 +320,18 @@ body {
 
 /* --- Holding tank rows --- */
 
+/* The tank sits on the panel's own color, like search and hotkeys.
+   Playlist mode keeps its green edge and only a faint wash: it tells you
+   the tank will play straight through */
 .holding-tank-storage-mode {
-  border-left-color: var(--rs-border);
+  background-color: transparent;
+  border-left-color: transparent;
+}
+
+.holding-tank-playlist-mode,
+.theme-dark .holding-tank-playlist-mode,
+.theme-auto .holding-tank-playlist-mode {
+  background-color: rgba(40, 167, 69, 0.06) !important;
 }
 
 .holding_tank .list-group-item {
