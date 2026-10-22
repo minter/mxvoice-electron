@@ -45,6 +45,12 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 - User preference stored per-profile as `screen_mode` (auto/light/dark).
 - Structural styles in `index.css`, color-dependent styles in `colors.css` (separate light/dark sections).
 
+## Reskin (4.4)
+
+- **Two revertible stylesheets** — `src/stylesheets/reskin.css` (tier 1: type, song rows, F-key badges, flat surfaces) and `reskin-tier2.css` (player bar, search table) load last in `index.html`. Remove either `<link>` to drop that tier; remove both and the app looks as it did. To remove everything, `git revert -m 1` the reskin merge.
+- **Song labels** — hotkey slots and holding-tank rows are filled by `setSongLabel` (`src/renderer/modules/ui/song-label.js`): title, artist and time pieces, with hidden " by " / "( )" separators so the row's text still reads "Title by Artist (0:21)". Style the pieces, never `.hotkeys span` (index.css scopes its rules to `li > span.song`). One time format everywhere: `formatDuration`.
+- **macOS title bar is structural** — the main window uses `titleBarStyle: 'hiddenInset'` on macOS only (`main-window-factory.js`); `index.css` draws the 30px drag strip under `body.platform-mac` (set synchronously in `renderer.js`), and full screen hides it. Windows and Linux keep the native title bar and menu bar.
+
 ## State Management
 
 - **Shared state** — `window.sharedState` (singleton Map) holds runtime state: currentSong, hotkeys, holding-tank data, animation frame IDs.

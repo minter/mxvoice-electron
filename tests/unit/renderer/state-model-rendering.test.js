@@ -5,7 +5,13 @@ class FakeElement {
     this.id = id;
     this.attributes = new Map();
     this.children = [];
-    this.textContent = '';
+    this.title = '';
+    // Like the DOM: reads through to the children, and setting it replaces them
+    let ownText = '';
+    Object.defineProperty(this, 'textContent', {
+      get: () => ownText + this.children.map((child) => child.textContent ?? '').join(''),
+      set: (value) => { ownText = String(value ?? ''); this.children = []; }
+    });
     this.style = {};
     this.className = '';
     this.draggable = false;
@@ -16,7 +22,8 @@ class FakeElement {
   removeAttribute(name) { this.attributes.delete(name); }
   addEventListener() {}
   appendChild(child) { this.children.push(child); return child; }
-  replaceChildren() { this.children = []; }
+  replaceChildren(...children) { this.children = children; }
+  append(...children) { this.children.push(...children); }
   querySelector(selector) {
     if (selector === 'span.song') return this.span || null;
     const match = selector.match(/^\[id\^="(.+)_hotkey"\]$/);

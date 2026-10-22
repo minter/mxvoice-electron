@@ -384,7 +384,8 @@ h6.card-header {
   box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
-.hotkeys span {
+/* The song label (ui/song-label.js) is made of child spans: style only the label itself */
+.hotkeys li > span.song {
   font-size: 13px;
   font-weight: 600;
   padding: 0;
@@ -399,7 +400,7 @@ h6.card-header {
   width: 100%;
 }
 
-.hotkeys li:hover span {
+.hotkeys li:hover > span.song {
   color: var(--card-text);
 }
 
@@ -428,6 +429,7 @@ h6.card-header {
 }
 
 .holding_tank .list-group-item {
+  font-size: 11px; /* the rows' default size; View > Font Size sets it inline */
   border-radius: 8px;
   margin: 4px 0;
   padding: 10px 12px;
@@ -938,7 +940,7 @@ legend {
   color: #fff !important;
 }
 
-/* .hotkeys span sets its own text color, so it doesn't inherit the white above */
+/* span.song sets its own text color, so it doesn't inherit the white above */
 .hotkeys .list-group-item.active-hotkey span,
 .hotkeys .list-group-item.selected-row span {
   color: #fff !important;
@@ -1216,4 +1218,28 @@ legend {
 .import-show-empty {
   font-size: 13px;
   margin: 4px 0 0;
+}
+
+/* macOS: the window has no title bar (main-window-factory.js hiddenInset), so a
+   30px strip at the top holds the traffic lights and drags the window. It
+   stays clickable-through over dialogs and the tour. Full screen hides it
+   (main-window-factory.js). Windows and Linux keep their native title bar. */
+body.platform-mac .container-fluid::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  -webkit-app-region: drag;
+  z-index: 2000;
+}
+
+body.platform-mac.modal-open .container-fluid::before,
+body.platform-mac.driver-active .container-fluid::before {
+  -webkit-app-region: no-drag;
+}
+
+body.platform-mac #top-row {
+  padding-top: 30px;
 }

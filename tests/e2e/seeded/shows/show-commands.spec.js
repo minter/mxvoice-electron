@@ -118,8 +118,8 @@ test.describe('Shows - menu commands', () => {
     await quitAndRelaunch();
     // On the li, never the span
     await expect(f1Hotkey(page)).toHaveAttribute('songid', '1004');
-    await expect(f1Hotkey(page).locator('span')).not.toHaveAttribute('songid', /.*/);
-    await expect(f1Hotkey(page).locator('span')).not.toHaveText('');
+    await expect(f1Hotkey(page).locator('span.song')).not.toHaveAttribute('songid', /.*/);
+    await expect(f1Hotkey(page).locator('span.song')).not.toHaveText('');
   });
 
   test('cancelling save keeps the saved show', async () => {

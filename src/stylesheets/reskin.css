@@ -1,0 +1,385 @@
+/*
+ * Reskin, tier 1: type, song rows, F-key badges, flat surfaces.
+ *
+ * Loaded after colors.css and index.css. Remove its <link> in index.html (and
+ * reskin-tier2.css's) and the app looks as it did: song rows keep their
+ * title / artist / time pieces, which read inline as "Title by Artist (0:21)"
+ * without this file.
+ *
+ * - Type: the system UI font (SF on macOS, Segoe UI on Windows), sizes in em
+ *   so View > Font Size still scales the rows, tabular figures for times.
+ * - Color: neutral surfaces, one accent for selection and "loaded"; the show
+ *   color stays the window frame and tab underline. Light-theme text pairs
+ *   meet WCAG AA (4.5:1) on every tint used here.
+ * - Shape: one border per row, no shadows or gradients, 6px row radius.
+ * - Song: title (primary), artist (muted), time (right, tabular).
+ * - F-key badge: empty = outlined and muted, loaded = accent outline and tint,
+ *   playing or selected = solid accent.
+ */
+
+/* Defaults match colors.css's :root (dark), so panels and rows agree before the theme class is set */
+:root,
+body.theme-dark {
+  --rs-surface: #25282d;
+  --rs-row-hover: #2c3036;
+  --rs-border: #383c44;
+  --rs-text: #e6e8eb;
+  --rs-muted: #9aa1ab;
+  --rs-accent: 92, 156, 255;
+  --rs-accent-text: #8fbaff;
+  /* Deeper than --rs-accent so white text and icons on it stay readable */
+  --rs-accent-fill: 37, 99, 235;
+}
+
+body.theme-light {
+  --rs-surface: #ffffff;
+  --rs-row-hover: #f3f5f8;
+  --rs-border: #e1e4e9;
+  --rs-text: #1d2127;
+  --rs-muted: #5f6672;
+  --rs-accent: 13, 110, 253;
+  --rs-accent-text: #0a58ca;
+  /* Behind white text and icons */
+  --rs-accent-fill: 11, 94, 215;
+}
+
+/* Windows 11's variable Segoe UI has a true 500 weight; Windows 10's Segoe UI
+   falls back to 400 for it, which still reads (title color carries the weight) */
+body,
+#song_now_playing,
+#now_playing_bar div {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+body {
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Panel headers: plain labels, no shadows --- */
+
+.card-header {
+  box-shadow: none;
+}
+
+.header-button,
+.theme-dark .header-button,
+.theme-auto .header-button {
+  background: none !important;
+  border: 0 !important;
+  padding: 0 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rs-text) !important;
+}
+
+.header-button i {
+  color: var(--rs-muted);
+  margin-right: 6px;
+}
+
+.profile-indicator {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rs-text);
+  /* Tall enough for the colored show-name pill (show-colors.css: 2px above and
+     below the name), so a color never changes the header height */
+  min-height: calc(15px * 1.2 + 8px);
+}
+
+.profile-indicator i {
+  font-size: 12px;
+  color: var(--rs-muted);
+}
+
+#show-name {
+  line-height: 1.2;
+}
+
+/* Holding / Playlist toggle: flat segmented control */
+.mode-toggle {
+  box-shadow: none !important;
+}
+
+.mode-btn {
+  transition: background-color 0.15s ease;
+}
+
+.mode-btn:hover {
+  box-shadow: none;
+  filter: none;
+  background: var(--rs-row-hover);
+}
+
+.mode-btn.active,
+.mode-btn.active:hover {
+  background: rgb(var(--rs-accent-fill));
+  box-shadow: none;
+  filter: none;
+}
+
+/* --- Tabs: size and weight stay as they were (widths are fitted to labels) --- */
+
+#hotkey_tabs .nav-link:not(.active),
+#holding_tank_tabs .nav-link:not(.active) {
+  color: var(--rs-muted) !important;
+}
+
+/* --- Song label: title / artist / time --- */
+
+/* Joining words stay in the text ("Title by Artist (0:21)") but aren't drawn */
+.hotkeys li > span.song .song-label-sep,
+.holding_tank .list-group-item .song-label-sep {
+  display: none;
+}
+
+.hotkeys li > span.song .song-label-text,
+.holding_tank .list-group-item .song-label-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.hotkeys .song-label-title,
+.hotkeys .song-label-artist,
+.holding_tank .song-label-title,
+.holding_tank .song-label-artist {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
+/* em, so View > Font Size (set inline on .song) scales the whole label */
+.hotkeys .song-label-title,
+.holding_tank .song-label-title {
+  font-size: 1em;
+  font-weight: 500;
+  color: var(--rs-text);
+}
+
+.hotkeys .song-label-artist,
+.holding_tank .song-label-artist {
+  font-size: 0.88em;
+  font-weight: 400;
+  color: var(--rs-muted);
+}
+
+.hotkeys .song-label-time,
+.holding_tank .song-label-time {
+  flex: none;
+  margin-left: 10px;
+  font-size: 0.92em;
+  font-weight: 400;
+  color: var(--rs-muted);
+}
+
+/* --- Hotkey slots --- */
+
+.hotkeys li {
+  padding: 4px 8px;
+  margin: 2px 0;
+  /* Every slot the height of a loaded one (two label lines), empty or not */
+  min-height: 42px;
+  transition: background-color 0.15s ease;
+}
+
+/* colors.css paints every .list-group-item with !important; rows here are cards */
+.hotkeys .list-group-item,
+.holding_tank .list-group-item {
+  background-color: var(--rs-surface) !important;
+  border: 1px solid var(--rs-border) !important;
+  color: var(--rs-text) !important;
+  box-shadow: none !important;
+}
+
+.hotkeys .list-group-item:hover,
+.holding_tank .list-group-item:hover {
+  background-color: var(--rs-row-hover) !important;
+}
+
+.hotkeys li > span.song,
+.hotkeys li:has(> .played-pill) > span.song {
+  display: flex;
+  align-items: center;
+  /* Fills the slot even when empty: it's the drop target and the drag handle */
+  align-self: stretch;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  font-weight: 400;
+}
+
+.hotkeys .badge,
+.hotkeys li:hover .badge {
+  width: 36px;
+  margin-right: 10px;
+  padding: 4px 0;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--rs-muted);
+  border: 1px solid var(--rs-border);
+  box-shadow: none;
+}
+
+/* A slot with a song is loaded: accent outline and tint, so the badge carries the state itself */
+.hotkeys li[songid] .badge {
+  background: rgba(var(--rs-accent), 0.12);
+  color: var(--rs-accent-text);
+  border-color: rgb(var(--rs-accent));
+}
+
+/* Playing or selected slot (the app sets both classes together) */
+.hotkeys .list-group-item.active-hotkey,
+.hotkeys .list-group-item.selected-row {
+  background-color: rgba(var(--rs-accent), 0.1) !important;
+  border-color: rgb(var(--rs-accent)) !important;
+  box-shadow: inset 3px 0 0 rgb(var(--rs-accent)) !important;
+  color: var(--rs-text) !important;
+}
+
+.hotkeys .list-group-item.active-hotkey span,
+.hotkeys .list-group-item.selected-row span {
+  color: inherit !important;
+}
+
+.hotkeys .list-group-item.active-hotkey .song-label-artist,
+.hotkeys .list-group-item.active-hotkey .song-label-time,
+.hotkeys .list-group-item.selected-row .song-label-artist,
+.hotkeys .list-group-item.selected-row .song-label-time {
+  color: var(--rs-muted) !important;
+}
+
+.hotkeys .list-group-item.active-hotkey .badge,
+.hotkeys .list-group-item.selected-row .badge {
+  background: rgb(var(--rs-accent-fill));
+  border-color: transparent;
+  color: #fff !important;
+}
+
+/* The column never clips the last slots: it scrolls when the window is short */
+#hotkeys-column .card-body {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* --- Holding tank rows --- */
+
+.holding-tank-storage-mode {
+  border-left-color: var(--rs-border);
+}
+
+.holding_tank .list-group-item {
+  display: flex;
+  align-items: center;
+  margin: 3px 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+  font-size: 13px;
+}
+
+/* Selected (what Play and Return start): accent border and a bar, not just a tint */
+.holding_tank .list-group-item#selected_row,
+.holding_tank .list-group-item#selected_row:hover {
+  background: rgba(var(--rs-accent), 0.1) !important;
+  border-color: rgb(var(--rs-accent)) !important;
+  box-shadow: inset 3px 0 0 rgb(var(--rs-accent)) !important;
+  color: var(--rs-text) !important;
+}
+
+.now_playing {
+  font-weight: inherit;
+}
+
+.now_playing::before {
+  color: rgb(var(--rs-accent));
+  padding-right: 8px;
+}
+
+.holding_tank .list-group-item#selected_row.now_playing::before {
+  color: rgb(var(--rs-accent)) !important;
+}
+
+.holding_tank li > .played-pill {
+  margin-left: 8px;
+}
+
+/* Selected rows are a light tint now, not solid blue: the pill keeps its usual colors */
+body.theme-light .selected-row .played-pill,
+body.theme-light #selected_row .played-pill {
+  color: rgb(95, 102, 114);
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+body.theme-dark .selected-row .played-pill,
+body.theme-dark #selected_row .played-pill {
+  color: rgb(150, 150, 150);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Search --- */
+
+#category_select,
+#omni_search {
+  font-size: 14px;
+}
+
+#search_results thead th {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--rs-muted) !important;
+}
+
+#search_results td.song-title-cell {
+  font-weight: 500;
+  color: var(--rs-text) !important;
+}
+
+#search_results td.song-artist-cell {
+  font-weight: 400;
+  color: var(--rs-text) !important;
+}
+
+#search_results td.song-time-cell,
+#search_results tbody td.hide-1,
+#search_results tbody td.hide-2 {
+  color: var(--rs-muted) !important;
+}
+
+/* Selected search result: soft accent with a bar on the left */
+#search_results tr#selected_row {
+  background: rgba(var(--rs-accent), 0.1) !important;
+  box-shadow: inset 3px 0 0 rgb(var(--rs-accent)) !important;
+  color: var(--rs-text) !important;
+}
+
+#search_results tr#selected_row td {
+  color: var(--rs-text) !important;
+}
+
+#search_results tr#selected_row td.song-time-cell,
+#search_results tr#selected_row td.hide-1,
+#search_results tr#selected_row td.hide-2 {
+  color: var(--rs-muted) !important;
+}
+
+/* --- Player: system figures instead of a monospace timer --- */
+
+#timer,
+#duration {
+  font-family: inherit !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+#now_playing_bar div {
+  text-transform: none;
+  font-size: 14px;
+  font-weight: 600;
+}
