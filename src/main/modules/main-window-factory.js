@@ -39,6 +39,13 @@ function createMainWindow({
     }
   };
 
+  // macOS: draw the window to the top edge, with the traffic lights inset over
+  // the app's own title strip (index.css .platform-mac). Windows and Linux
+  // keep the native title bar, and with it the menu bar.
+  if (process.platform === 'darwin') {
+    windowOptions.titleBarStyle = 'hiddenInset';
+  }
+
   if (validDisplay && x !== undefined && y !== undefined) {
     windowOptions.x = x;
     windowOptions.y = y;

@@ -1,0 +1,214 @@
+/*
+ * Tier 2 reskin (mockup, branch reskin-tier1): player bar, search table,
+ * macOS title strip. Loaded after reskin.css; uses its tokens. Remove the
+ * <link> to drop just this tier.
+ *
+ * - Player: the song is the headline; times are small and tabular at the
+ *   ends of a thin progress line; one button family (round transport,
+ *   rounded-square tools); Play is the accent only when it can play.
+ * - Search: category is a quiet tag, long titles clamp to two lines (full
+ *   title on hover), the Info column hides itself when no row has info.
+ * - macOS: a 30px title strip under the inset traffic lights, in the
+ *   window color, so the show color runs to the top edge.
+ */
+
+/* --- Player bar --- */
+
+#player-panel {
+  box-shadow: none;
+  border-color: var(--rs-border);
+  border-radius: 10px;
+}
+
+#song_now_playing,
+#now_playing_bar #song_now_playing {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--rs-text) !important;
+  letter-spacing: 0;
+}
+
+#timer,
+#duration {
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  color: var(--rs-muted) !important;
+  align-self: flex-end;
+}
+
+#now_playing_bar {
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+#progress_bar,
+#progress_bar.progress {
+  height: 5px !important;
+  border-radius: 999px;
+  background: var(--rs-border);
+  box-shadow: none;
+}
+
+#audio_progress,
+#progress_bar .progress-bar {
+  background: rgb(var(--rs-accent)) !important;
+  background-image: none !important;
+  animation: none !important;
+  border-radius: 999px;
+}
+
+/* Transport: one round family */
+#play_button,
+#pause_button,
+#stop_button {
+  width: 52px !important;
+  height: 52px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+#play_button {
+  background: rgb(var(--rs-accent)) !important;
+  color: #fff !important;
+}
+
+#pause_button {
+  background: rgb(var(--rs-accent)) !important;
+  color: #fff !important;
+}
+
+#stop_button {
+  background: #dc3545 !important;
+  color: #fff !important;
+}
+
+#play_button:hover:not(:disabled),
+#pause_button:hover,
+#stop_button:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Idle: nothing loaded reads as "waiting", not "broken" */
+#play_button:disabled,
+#stop_button:disabled {
+  background: transparent !important;
+  color: var(--rs-muted) !important;
+  border: 1.5px solid var(--rs-border) !important;
+  opacity: 1 !important;
+}
+
+/* Tools: rounded squares, quiet until on */
+#waveform_button,
+#loop_button,
+#mute_button {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  border: 1px solid var(--rs-border) !important;
+  color: var(--rs-muted) !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+#waveform_button:hover,
+#loop_button:hover,
+#mute_button:hover {
+  background: var(--rs-row-hover) !important;
+  color: var(--rs-text) !important;
+  transform: none !important;
+}
+
+#waveform_button.active,
+#loop_button.active,
+#mute_button.active {
+  background: rgba(var(--rs-accent), 0.14) !important;
+  border-color: rgba(var(--rs-accent), 0.5) !important;
+  color: var(--rs-accent-text) !important;
+}
+
+/* Volume: thin track, accent thumb */
+#volume {
+  accent-color: rgb(var(--rs-accent));
+}
+
+#volume::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--rs-border);
+}
+
+#volume::-webkit-slider-thumb {
+  margin-top: -6px;
+  box-shadow: none !important;
+  border: 2px solid var(--rs-surface) !important;
+  background: rgb(var(--rs-accent)) !important;
+}
+
+/* --- Search table --- */
+
+.table thead th {
+  border-bottom: 1px solid var(--rs-border) !important;
+}
+
+#search_results tbody tr:hover td {
+  background: var(--rs-row-hover);
+}
+
+td.song-title-cell .song-title-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+td.song-title-cell {
+  display: table-cell;
+}
+
+td.song-title-cell .played-pill {
+  margin-top: 2px;
+}
+
+.category-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.6;
+  background: var(--rs-row-hover);
+  color: var(--rs-muted);
+  border: 1px solid var(--rs-border);
+  white-space: nowrap;
+}
+
+tr#selected_row .category-tag {
+  background: transparent;
+}
+
+/* No row has info: the column goes away */
+table:not(:has(tbody td.hide-2:not(:empty))) .hide-2 {
+  display: none;
+}
+
+/* --- macOS title strip --- */
+
+body.platform-mac .container-fluid::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  -webkit-app-region: drag;
+  z-index: 2000;
+}
+
+body.platform-mac #top-row {
+  padding-top: 30px;
+}

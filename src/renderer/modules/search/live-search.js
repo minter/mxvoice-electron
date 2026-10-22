@@ -170,7 +170,12 @@ function performLiveSearch(searchTerm) {
 
           const tdCategory = document.createElement('td');
           tdCategory.className = 'hide-1';
-          tdCategory.textContent = categoryName || '';
+          if (categoryName) {
+            const tag = document.createElement('span');
+            tag.className = 'category-tag';
+            tag.textContent = categoryName;
+            tdCategory.appendChild(tag);
+          }
           tr.appendChild(tdCategory);
 
           const tdInfo = document.createElement('td');
@@ -180,7 +185,11 @@ function performLiveSearch(searchTerm) {
 
           const tdTitle = document.createElement('td');
           tdTitle.className = 'song-title-cell';
-          tdTitle.textContent = row.title || '';
+          const titleText = document.createElement('span');
+          titleText.className = 'song-title-text';
+          titleText.textContent = row.title || '';
+          titleText.title = row.title || '';
+          tdTitle.appendChild(titleText);
           appendPlayedPill(tdTitle, row.id);
           tr.appendChild(tdTitle);
 

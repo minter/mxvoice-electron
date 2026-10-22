@@ -21,6 +21,8 @@ async function setWindowTitle() {
     if (platform === 'darwin') {
       // macOS: use zero-width space character (completely invisible)
       document.title = '\u200B'; // Zero-width space
+      // The window draws under an inset title bar (main-window-factory.js)
+      document.body?.classList.add('platform-mac');
     }
     // For other platforms, leave the default title from HTML file
   } catch {
