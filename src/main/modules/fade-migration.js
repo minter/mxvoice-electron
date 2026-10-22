@@ -11,15 +11,27 @@ const MIGRATED_FLAG = 'fade_out_migrated_to_profiles';
 const LEGACY_FADE_OUT_SECONDS = 2;
 
 function legacyFadeSeconds(store) {
-  // Read the raw stored value: the store's own default is 3, which would
-  // hide that nothing was ever stored.
+  // Read the raw stored value. With conf 16 has() is true once the store is
+  // constructed (defaults are written), so a fresh install copies its 3; the
+  // fallback to 2 only covers a store that never held the key.
   const raw = store.has('fade_out_seconds') ? Number(store.get('fade_out_seconds')) : NaN;
   return Number.isFinite(raw) && raw > 0 ? raw : LEGACY_FADE_OUT_SECONDS;
 }
 
-async function migrateFadeToProfiles({ store, listProfiles, loadProfilePreferences, saveProfilePreferences, debugLog }) {
+async function migrateFadeToProfiles(deps) {
   const migrated = [];
-  if (store.get(MIGRATED_FLAG) === true) return { migrated };
+  try {
+    await runMigration(deps, migrated);
+  } catch (error) {
+    // A failed read or flag write must never block startup; the migration
+    // simply runs again next launch with the same value.
+    deps.debugLog?.error?.('Fade migration failed', { module: 'fade-migration', function: 'migrateFadeToProfiles', error: error.message });
+  }
+  return { migrated };
+}
+
+async function runMigration({ store, listProfiles, loadProfilePreferences, saveProfilePreferences, debugLog }, migrated) {
+  if (store.get(MIGRATED_FLAG) === true) return;
 
   const seconds = legacyFadeSeconds(store);
   let names = [];
@@ -43,7 +55,6 @@ async function migrateFadeToProfiles({ store, listProfiles, loadProfilePreferenc
 
   // Set even after skips so this never loops
   store.set(MIGRATED_FLAG, true);
-  return { migrated };
 }
 
 export { migrateFadeToProfiles, MIGRATED_FLAG, LEGACY_FADE_OUT_SECONDS };

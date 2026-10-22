@@ -83,4 +83,32 @@ describe('migrateFadeToProfiles', () => {
     await migrateFadeToProfiles(env.deps);
     expect(env.prefs.New.fade_out_seconds).toBe(3);
   });
+
+  it('resolves when the flag write throws, after migrating the profiles', async () => {
+    const env = makeEnv({ global: { fade_out_seconds: 2 } });
+    env.deps.store.set = () => { throw new Error('EROFS'); };
+    const result = await migrateFadeToProfiles(env.deps);
+    expect(result.migrated).toEqual(['A', 'B']);
+    expect(env.deps.debugLog.error).toHaveBeenCalled();
+  });
+
+  it('resolves when the store cannot be read', async () => {
+    const env = makeEnv();
+    env.deps.store.get = () => { throw new Error('EACCES'); };
+    await expect(migrateFadeToProfiles(env.deps)).resolves.toEqual({ migrated: [] });
+  });
+
+  it('resolves and still sets the flag when listProfiles throws', async () => {
+    const env = makeEnv();
+    env.deps.listProfiles = () => { throw new Error('registry'); };
+    await expect(migrateFadeToProfiles(env.deps)).resolves.toEqual({ migrated: [] });
+    expect(env.deps.debugLog.error).toHaveBeenCalled();
+  });
+
+  it('skips a profile whose preferences load rejects', async () => {
+    const env = makeEnv({ global: { fade_out_seconds: 2 } });
+    env.deps.loadProfilePreferences = async (n) => { if (n === 'A') throw new Error('bad json'); return { fade_out_seconds: 3 }; };
+    const result = await migrateFadeToProfiles(env.deps);
+    expect(result.migrated).toEqual(['B']);
+  });
 });
