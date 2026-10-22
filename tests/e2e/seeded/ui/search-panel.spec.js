@@ -81,4 +81,62 @@ test.describe('UI - search panel', () => {
       - document.querySelector('#search_form .input-group').getBoundingClientRect().bottom);
     expect(gap).toBeLessThanOrEqual(16);
   });
+  test('categories stay on one line (ellipsis, full name on hover); the first column clears the selection bar', async () => {
+    await searchAll();
+    const tag = await page.locator('#search_results tbody .category-tag').first().evaluate((el) => ({
+      wrap: getComputedStyle(el).whiteSpace,
+      overflow: getComputedStyle(el).textOverflow,
+      tooltip: el.title,
+      text: el.textContent,
+      pad: parseFloat(getComputedStyle(el.closest('td')).paddingLeft)
+    }));
+    expect(tag.wrap).toBe('nowrap');
+    expect(tag.overflow).toBe('ellipsis');
+    expect(tag.tooltip).toBe(tag.text);
+    expect(tag.pad).toBeGreaterThanOrEqual(10);
+  });
+
+  test('titles are never cut off: no line clamp', async () => {
+    await searchAll();
+    const clamp = await page.locator('#search_results tbody .song-title-text').first()
+      .evaluate((el) => getComputedStyle(el).webkitLineClamp);
+    expect(clamp).toBe('none');
+  });
+
+  test('the focused search field gets a tight ring, not a 4px glow', async () => {
+    await page.locator('#omni_search').focus();
+    const shadow = await page.locator('#omni_search').evaluate((el) => getComputedStyle(el).boxShadow);
+    expect(shadow).toContain('inset');
+    expect(shadow).not.toContain('0px 0px 0px 4px');
+  });
+
+  test('the column headings stay put while results scroll, and the panel header never shrinks', async () => {
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1200, 560));
+    await page.locator('#reset_button').click();
+    const headerBefore = await page.locator('#search-column .card-header').evaluate((el) => el.getBoundingClientRect().height);
+    await page.locator('#omni_search').fill('e');
+    await page.locator('#omni_search').press('Enter');
+    await expect(page.locator('#search_results tbody tr').first()).toBeVisible();
+    // The seeded library is small: copies of the rows make the list long, as
+    // a big library's would be (this is about layout only)
+    await page.evaluate(() => {
+      const tbody = document.querySelector('#search_results tbody');
+      const rows = [...tbody.children];
+      for (let i = 0; i < 8; i++) rows.forEach((tr) => tbody.appendChild(tr.cloneNode(true)));
+    });
+
+    const scrolled = await page.evaluate(() => {
+      const wrap = document.querySelector('#search_results').closest('.my-custom-scrollbar');
+      const canScroll = wrap.scrollHeight > wrap.clientHeight + 20;
+      wrap.scrollTop = 200;
+      return { canScroll, wrapTop: wrap.getBoundingClientRect().top, headTop: document.querySelector('#search_results thead th').getBoundingClientRect().top };
+    });
+    expect(scrolled.canScroll).toBe(true);
+    expect(Math.abs(scrolled.headTop - scrolled.wrapTop)).toBeLessThanOrEqual(1);
+
+    const headerAfter = await page.locator('#search-column .card-header').evaluate((el) => el.getBoundingClientRect().height);
+    expect(headerAfter).toBe(headerBefore);
+    await page.locator('#reset_button').click();
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1200, 800));
+  });
 });

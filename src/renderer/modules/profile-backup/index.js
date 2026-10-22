@@ -7,7 +7,6 @@
 import { info, warn, error } from '../debug-log/index.js';
 
 let electronAPI = null;
-let moduleRegistry = {};
 let isCreatingBackup = false; // Lock to prevent duplicate backup creation
 
 const SESSION_RELOAD_SENTENCE = 'Mx. Voice will reload the show.';
@@ -19,7 +18,6 @@ const SESSION_RELOAD_SENTENCE = 'Mx. Voice will reload the show.';
  */
 function initializeProfileBackup(options = {}) {
   electronAPI = options.electronAPI || (typeof window !== 'undefined' && window.secureElectronAPI);
-  moduleRegistry = options.moduleRegistry || {};
   
   info('Profile Backup module initialized', {
     module: 'profile-backup',
@@ -530,7 +528,6 @@ async function createBackupNow() {
  */
 function reinitializeProfileBackup(deps) {
   electronAPI = deps.electronAPI || (typeof window !== 'undefined' && window.secureElectronAPI);
-  moduleRegistry = deps.moduleRegistry || {};
 }
 
 export {
