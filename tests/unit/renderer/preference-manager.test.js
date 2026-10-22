@@ -35,7 +35,7 @@ describe('preference manager UI loading', () => {
     await manager.loadPreferences();
     expect(fields.get('preferences-database-directory').value).toBe('/db');
     expect(fields.get('preferences-song-directory').value).toBe('/music');
-    expect(fields.get('preferences-fadeout-seconds').value).toBe('3');
+    expect(fields.get('preferences-fadeout-seconds').value).toBe('5');
     expect(fields.get('preferences-screen-mode').value).toBe('dark');
     expect(fields.get('preferences-analytics-enabled').checked).toBe(false);
   });

@@ -61,8 +61,9 @@ function initializeProfileManager(dependencies) {
  */
 function getDefaultPreferences() {
   return {
-    // Audio settings
-    fade_out_seconds: 3,
+    // Audio settings. Keep in step with DEFAULT_FADE_OUT_SECONDS in
+    // src/renderer/modules/audio/audio-controller.js.
+    fade_out_seconds: 5,
     
     // Appearance & UI
     screen_mode: 'auto',

@@ -712,11 +712,8 @@ test.describe('Playback - basic', () => {
     await page.waitForTimeout(2000);
 
     // Test with a custom fade duration (set to 1 second)
-    await page.evaluate(() => {
-      // Mock the store to return a custom fade duration
-      if (window.sharedState) {
-        window.sharedState.set('fade_out_seconds', '1.0');
-      }
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 1);
     });
     
     // Press Shift+Escape for fade-out stop with custom duration

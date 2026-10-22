@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const secureStore = { get: vi.fn() };
-vi.mock('../../../src/renderer/modules/adapters/secure-adapter.js', () => ({ secureStore }));
+const getPreference = vi.fn();
+vi.mock('../../../src/renderer/modules/preferences/profile-preference-adapter.js', () => ({ getPreference }));
 
 const elements = new Map();
 function element() {
   const classes = new Set();
   return { classList: { add: x => classes.add(x), remove: x => classes.delete(x), contains: x => classes.has(x) }, style: {}, textContent: '', getAttribute: vi.fn(() => null), setAttribute: vi.fn(), removeAttribute: vi.fn() };
 }
-globalThis.window = { debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } };
+globalThis.window = { debugLog: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }, secureElectronAPI: {} };
 globalThis.document = {
   getElementById: id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
   querySelector: vi.fn(() => null),
@@ -27,7 +27,9 @@ function fakeSound() {
     fade: vi.fn(),
     on: vi.fn((name, fn) => { listeners[name] = fn; }),
     off: vi.fn(),
-    unload: vi.fn()
+    unload: vi.fn(),
+    playing: vi.fn(() => true),
+    pause: vi.fn()
   };
 }
 
@@ -36,7 +38,7 @@ describe('stop during a fade', () => {
     elements.clear();
     vi.clearAllMocks();
     sharedState.reset();
-    secureStore.get.mockResolvedValue({ success: true, value: '3' });
+    getPreference.mockResolvedValue({ success: true, value: '3' });
   });
 
   it('reports a fade for the current sound until it ends', async () => {
@@ -71,7 +73,7 @@ describe('stop during a fade', () => {
     const sound = fakeSound();
     sharedState.set('sound', sound);
     let resolveRead;
-    secureStore.get.mockReturnValue(new Promise(resolve => { resolveRead = resolve; }));
+    getPreference.mockReturnValue(new Promise(resolve => { resolveRead = resolve; }));
 
     audio.stopPlaying(true);
     audio.stopPlaying(false);
@@ -96,5 +98,55 @@ describe('stop during a fade', () => {
     audio.stopPlaying(true);
     await vi.waitFor(() => expect(second.fade).toHaveBeenCalledTimes(1));
     expect(second.unload).not.toHaveBeenCalled();
+  });
+});
+
+describe('fade length', () => {
+  beforeEach(() => {
+    elements.clear();
+    vi.clearAllMocks();
+    sharedState.reset();
+  });
+
+  async function stopFadeDuration(preference) {
+    if (preference instanceof Error) getPreference.mockRejectedValue(preference);
+    else getPreference.mockResolvedValue(preference);
+    const sound = fakeSound();
+    sharedState.set('sound', sound);
+    audio.stopPlaying(true);
+    await vi.waitFor(() => expect(sound.fade).toHaveBeenCalled());
+    return sound.fade.mock.calls[0][2];
+  }
+
+  it('reads the fade length from the profile', async () => {
+    expect(await stopFadeDuration({ success: true, value: 8 })).toBe(8000);
+    expect(getPreference).toHaveBeenCalledWith('fade_out_seconds', window.secureElectronAPI);
+    expect(await stopFadeDuration({ success: true, value: '1.5' })).toBe(1500);
+  });
+
+  it('falls back to the default when the profile has no usable value', async () => {
+    expect(audio.DEFAULT_FADE_OUT_SECONDS).toBe(5);
+    for (const preference of [
+      { success: true, value: null },
+      { success: true, value: 0 },
+      { success: true, value: 'soon' },
+      { success: false, error: 'no profile' },
+      new Error('IPC down')
+    ]) {
+      expect(await stopFadeDuration(preference)).toBe(5000);
+    }
+  });
+
+  it('fade-pause uses the same fade length', async () => {
+    getPreference.mockResolvedValue({ success: true, value: 4 });
+    const sound = fakeSound();
+    sharedState.set('sound', sound);
+
+    audio.pausePlaying(true);
+
+    await vi.waitFor(() => expect(sound.fade).toHaveBeenCalledWith(1, 0, 4000));
+    sound.listeners.fade();
+    expect(sound.pause).toHaveBeenCalled();
+    expect(sound.volume).toHaveBeenLastCalledWith(1);
   });
 });

@@ -165,7 +165,7 @@ function initializePreferenceManager(options = {}) {
         if (fadeSeconds.success) {
           const el = document.getElementById('preferences-fadeout-seconds');
           if (el) {
-            el.value = fadeSeconds.value || '3';
+            el.value = fadeSeconds.value || '5';
             debugLog?.info('[PREFS-LOAD] Set fade seconds field', { value: fadeSeconds.value, finalValue: el.value });
           }
         }

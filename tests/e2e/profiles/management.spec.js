@@ -557,7 +557,7 @@ test.describe('Profile Switching and Isolation', () => {
     // 2. Modify Profile A's preferences directly using Node.js fs
     const profileAPrefsPath = path.join(userDataDir, 'profiles', 'Profile A', 'preferences.json');
     const profileAPrefs = JSON.parse(fs.readFileSync(profileAPrefsPath, 'utf8'));
-    profileAPrefs.fade_out_seconds = 10; // Changed from default 3
+    profileAPrefs.fade_out_seconds = 10; // Changed from default 5
     profileAPrefs.custom_test_setting = 'ProfileA_CustomValue';
     fs.writeFileSync(profileAPrefsPath, JSON.stringify(profileAPrefs, null, 2));
     
@@ -568,10 +568,10 @@ test.describe('Profile Switching and Isolation', () => {
     const profileBPrefs = JSON.parse(fs.readFileSync(profileBPrefsPath, 'utf8'));
     
     // Verify Profile B was NOT affected by Profile A's changes
-    expect(profileBPrefs.fade_out_seconds).toBe(3); // Default value
+    expect(profileBPrefs.fade_out_seconds).toBe(5); // Default value
     expect(profileBPrefs.custom_test_setting).toBeUndefined(); // Should not exist
     
-    console.log('✅ Profile B unaffected: fade_out_seconds = 3 (default)');
+    console.log('✅ Profile B unaffected: fade_out_seconds = 5 (default)');
     
     // 4. Verify Profile A still has its custom values
     const profileAPrefsVerify = JSON.parse(fs.readFileSync(profileAPrefsPath, 'utf8'));

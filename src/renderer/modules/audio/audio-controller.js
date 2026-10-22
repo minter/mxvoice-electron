@@ -7,8 +7,8 @@
  * PHASE 2 SECURITY MIGRATION: Now uses secure adapters for store operations
  */
 
-// Import secure adapters for Phase 2 migration
-import { secureStore } from '../adapters/secure-adapter.js';
+// Fade length is a profile preference, set in Preferences
+import { getPreference } from '../preferences/profile-preference-adapter.js';
 
 // Import shared state
 import sharedState from '../shared-state.js';
@@ -26,6 +26,34 @@ try {
 
 // The sound a stop-with-fade is fading out, until it is unloaded
 let fadingOutSound = null;
+
+// Used when the profile has no usable fade length. Keep in step with
+// getDefaultPreferences() in src/main/modules/profile-manager.js.
+export const DEFAULT_FADE_OUT_SECONDS = 5;
+
+/**
+ * Read the profile's fade length, in milliseconds
+ * @returns {Promise<number>}
+ */
+async function readFadeOutMs() {
+  try {
+    const result = await getPreference('fade_out_seconds', window.secureElectronAPI);
+    const seconds = Number(result?.success ? result.value : NaN);
+    if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
+    debugLog?.warn('No usable fade_out_seconds; using the default', {
+      module: 'audio-controller',
+      function: 'readFadeOutMs',
+      result
+    });
+  } catch (error) {
+    debugLog?.warn('Could not read fade_out_seconds; using the default', {
+      module: 'audio-controller',
+      function: 'readFadeOutMs',
+      error: error?.message
+    });
+  }
+  return DEFAULT_FADE_OUT_SECONDS * 1000;
+}
 
 /**
  * Whether the current sound is fading out after a stop
@@ -103,34 +131,11 @@ function stopPlaying(fadeOut = false) {
         fadeOut: fadeOut
       });
       fadingOutSound = sound;
-      secureStore.get("fade_out_seconds").then(result => {
+      readFadeOutMs().then(fadeDuration => {
         // Cut or replaced while the fade length was being read
         if (sharedState.get('sound') !== sound) {
           return;
         }
-        if (!result.success || !result.value) {
-          debugLog?.warn('Failed to get fade_out_seconds:', { 
-            module: 'audio-controller',
-            function: 'stopPlaying',
-            result: result
-          });
-          // Fallback to immediate stop
-          sound.unload();
-          if (sharedState.get('sound') === sound) {
-            sharedState.set('sound', null);
-          }
-          resetUIState();
-          return;
-        }
-        const fadeSeconds = result.value;
-        debugLog?.info("Fade out seconds:", { 
-          module: 'audio-controller',
-          function: 'stopPlaying',
-          fadeSeconds: fadeSeconds
-        });
-        
-        // Extract the numeric value from the response  
-        const fadeDuration = parseFloat(fadeSeconds) * 1000;
         debugLog?.info("Fade duration:", { 
           module: 'audio-controller',
           function: 'stopPlaying',
@@ -175,18 +180,6 @@ function stopPlaying(fadeOut = false) {
           currentVolume: currentVolume,
           fadeDuration: fadeDuration
         });
-      }).catch(error => {
-        debugLog?.error("Error getting fade_out_seconds:", { 
-          module: 'audio-controller',
-          function: 'stopPlaying',
-          error: error.message
-        });
-        // Fallback to immediate stop
-        sound.unload();
-        if (sharedState.get('sound') === sound) {
-          sharedState.set('sound', null);
-        }
-        resetUIState();
       });
     } else {
       debugLog?.info('Taking immediate stop path', { 
@@ -260,19 +253,7 @@ function pausePlaying(fadeOut = false) {
           sound.pause();
           sound.volume(old_volume);
         });
-        secureStore.get("fade_out_seconds").then(result => {
-          if (!result.success || !result.value) {
-            debugLog?.warn('Failed to get fade_out_seconds:', { 
-              module: 'audio-controller',
-              function: 'pausePlaying',
-              result: result
-            });
-            // Fallback to immediate pause
-            sound.pause();
-            return;
-          }
-          const fadeSeconds = result.value;
-          const fadeDuration = fadeSeconds * 1000;
+        readFadeOutMs().then(fadeDuration => {
           sound.fade(sound.volume(), 0, fadeDuration);
         });
       } else {

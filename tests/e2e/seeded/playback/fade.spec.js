@@ -193,6 +193,29 @@ test.describe('Playback - fade out', () => {
     }
   });
 
+  test('the fade lasts as long as the Preferences setting', async () => {
+    // Time from Shift+Esc until the transport resets, for a given setting
+    async function timedFade(seconds) {
+      await page.evaluate(async (s) => {
+        await window.secureElectronAPI.profile.setPreference('fade_out_seconds', s);
+      }, seconds);
+      await startPlayback();
+      const started = Date.now();
+      await page.keyboard.press('Shift+Escape');
+      await expect(page.locator('#play_button')).toBeVisible({ timeout: (seconds + 5) * 1000 });
+      return (Date.now() - started) / 1000;
+    }
+
+    const short = await timedFade(1);
+    const long = await timedFade(4);
+    console.log('Fade timings (s):', { short, long });
+
+    expect(short).toBeGreaterThan(0.8);
+    expect(short).toBeLessThan(3);
+    expect(long).toBeGreaterThan(3.8);
+    expect(long - short).toBeGreaterThan(2.5);
+  });
+
   test('Esc in the search field: hold fades, tap cuts', async () => {
     await page.evaluate(async () => {
       await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 5);

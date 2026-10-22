@@ -76,7 +76,7 @@ function initializeSettingsController(options = {}) {
       database_directory: document.getElementById('preferences-database-directory')?.value || '',
       music_directory: document.getElementById('preferences-song-directory')?.value || '',
       hotkey_directory: document.getElementById('preferences-hotkey-directory')?.value || '',
-      fade_out_seconds: parseInt(document.getElementById('preferences-fadeout-seconds')?.value) || 3,
+      fade_out_seconds: parseInt(document.getElementById('preferences-fadeout-seconds')?.value) || 5,
       crossfade_seconds: parseInt(document.getElementById('preferences-crossfade-seconds')?.value) || 0,
       debug_log_enabled: !!document.getElementById('preferences-debug-log-enabled')?.checked,
       prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,

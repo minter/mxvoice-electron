@@ -50,3 +50,9 @@ describe('profile directory collision validation', () => {
     expect(fs.rmSync).not.toHaveBeenCalled();
   });
 });
+
+describe('profile defaults', () => {
+  it('gives new profiles a 5 second fade out', () => {
+    expect(profileManager.getDefaultPreferences().fade_out_seconds).toBe(5);
+  });
+});
