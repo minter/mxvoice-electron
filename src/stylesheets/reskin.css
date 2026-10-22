@@ -63,6 +63,18 @@ body {
   box-shadow: none;
 }
 
+/* All three panel headers one height, contents centered, so the tab rows
+   and lists below start on one line across the window */
+#holding-tank-column .card-header,
+#search-column .card-header,
+#hotkeys-column .card-header {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
 .header-button,
 .theme-dark .header-button,
 .theme-auto .header-button {
@@ -79,13 +91,26 @@ body {
   margin-right: 6px;
 }
 
+/* Profile and show at the panel titles' size: the profile is context, in
+   gray; the show is what you're running, so it keeps the weight (and its
+   color pill) */
 .profile-indicator {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--rs-text);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--rs-muted);
   /* Tall enough for the colored show-name pill (show-colors.css: 2px above and
      below the name), so a color never changes the header height */
-  min-height: calc(15px * 1.2 + 8px);
+  min-height: calc(12.5px * 1.2 + 8px);
+}
+
+#show-name {
+  font-weight: 600;
+  color: var(--rs-text);
+}
+
+/* The pill already sets the show apart; the dot before it is noise */
+[data-show-color] .show-separator {
+  display: none;
 }
 
 .profile-indicator i {
@@ -111,7 +136,7 @@ body {
 
   .mode-toggle .mode-btn {
     min-width: 0;
-    padding: 6px 10px;
+    padding: 4px 10px;
   }
 
   .mode-toggle .mode-btn i {
@@ -523,4 +548,18 @@ body.theme-dark #selected_row .played-pill {
 #hotkeys-column .card > .nav,
 #search_form {
   flex-shrink: 0;
+}
+
+/* Tab rows: one underline, in the border color. The ⋯ button drew its own
+   line 1px above the row's, doubling it */
+#holding_tank_tabs,
+#hotkey_tabs,
+#holding_tank_tabs .nav-link:not(.active),
+#hotkey_tabs .nav-link:not(.active) {
+  border-bottom-color: var(--rs-border) !important;
+}
+
+#holding_tank_tabs .tab-actions-btn,
+#hotkey_tabs .tab-actions-btn {
+  border-bottom: 0 !important;
 }
