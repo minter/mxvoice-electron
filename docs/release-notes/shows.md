@@ -17,3 +17,7 @@
 - A ▶ count now appears next to every track you've played tonight, in the hotkeys, the holding tank and search results, so you can see what's been played without removing it. Right-click a song and choose Mark as Unplayed to clear one, or use Shows → Mark All Songs as Unplayed to clear them all. Counts start fresh each time the profile opens and come back after a crash restore.
 - Profile backups made before this version have no shows. Restoring one turns its layout into a show named Default Show. That layout may be a mid-show backup rather than a prepared show.
 - The folder and save icons are gone. Use Save and Save As to keep a show, and Import Show for another person on this computer. Hotkey and holding-tank files load and save from each tab's ⋯ menu.
+- Tap Esc to cut the music, or hold Esc to fade it out. Shift+Esc still fades.
+- Esc in a dialog now just closes the dialog and leaves the music playing.
+- Fades use the length set in Preferences, and each profile keeps the fade length it had before the update.
+- After a crash, press Return on the "Restore show?" prompt to restore the show in progress.

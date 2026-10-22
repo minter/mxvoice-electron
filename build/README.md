@@ -57,6 +57,10 @@ Resolves and validates the full commit SHA at `HEAD` for release creation. Publi
 ### `win-sign-utils.cjs`
 Shared utilities for Windows code signing. Provides `findSigntool()` (signtool.exe path discovery), `buildSignCommand()` (certificate selection and command assembly), and `logCertInfo()` (log which cert method is active). Used by both `afterPack.js` and `signAllWindows.cjs`.
 
+## Release Steps
+
+When you publish the GitHub release, paste the contents of `docs/release-notes/shows.md` into the release body. Users on 4.3.2 see that text in Update Available.
+
 ## Build Process Flow
 
 1. **electron-builder** packages the app into `win-unpacked/`
