@@ -36,13 +36,5 @@
   content: attr(data-count);
 }
 
-/* Hotkeys: right after the song name, which keeps its ellipsis and shrinks
-   to leave the pill room */
-.hotkeys li:has(> .played-pill) > span.song {
-  width: auto;
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-/* Holding tank: right after the title, inline, so rows keep their full
-   width. A title that ends at the row's edge can wrap once it has a count. */
+/* The pill sits right after the song's title (shows/played-pills.js); the
+   label layout that keeps it on the title's line is in reskin.css */

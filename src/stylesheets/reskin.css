@@ -134,12 +134,29 @@ body {
   display: none;
 }
 
+/* Title (with the played pill right after it, when there is one) over artist */
 .hotkeys li > span.song .song-label-text,
 .holding_tank .list-group-item .song-label-text {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, max-content) 1fr;
+  column-gap: 6px;
+  align-items: center;
   min-width: 0;
   flex: 1 1 auto;
+}
+
+.song-label-text > .song-label-title {
+  grid-column: 1;
+}
+
+.song-label-text > .played-pill {
+  grid-column: 2;
+  justify-self: start;
+  margin-left: 0;
+}
+
+.song-label-text > .song-label-artist {
+  grid-column: 1 / -1;
 }
 
 .hotkeys .song-label-title,
@@ -287,7 +304,6 @@ body {
   padding: 6px 10px;
   border-radius: 6px;
   transition: background-color 0.15s ease;
-  font-size: 13px;
 }
 
 /* Selected (what Play and Return start): accent border and a bar, not just a tint */
@@ -310,10 +326,6 @@ body {
 
 .holding_tank .list-group-item#selected_row.now_playing::before {
   color: rgb(var(--rs-accent)) !important;
-}
-
-.holding_tank li > .played-pill {
-  margin-left: 8px;
 }
 
 /* Selected rows are a light tint now, not solid blue: the pill keeps its usual colors */
@@ -388,4 +400,56 @@ body.theme-dark #selected_row .played-pill {
   text-transform: none;
   font-size: 14px;
   font-weight: 600;
+}
+
+/* --- Drop targets --- */
+
+/* Hotkey slot under a dragged song (hotkeys-events.js adds .drop_target).
+   Dashed, so it never reads as the playing slot's solid outline */
+.hotkeys .list-group-item.drop_target {
+  background-color: rgba(var(--rs-accent), 0.16) !important;
+  box-shadow: none !important;
+  outline: 2px dashed rgb(var(--rs-accent));
+  outline-offset: -2px;
+  color: var(--rs-text) !important;
+}
+
+/* Holding tank: the rows part where the song will land, with a line in the gap
+   (drag-drop-functions.js adds .holding-tank-drop-above / -below) */
+.holding_tank .list-group-item {
+  transition: background-color 0.15s ease, margin 0.12s ease;
+}
+
+.holding_tank .list-group-item.holding-tank-drop-above {
+  margin-top: 30px;
+}
+
+.holding_tank .list-group-item.holding-tank-drop-below {
+  margin-bottom: 30px;
+}
+
+.holding_tank .list-group-item.holding-tank-drop-above::after,
+.holding_tank .list-group-item.holding-tank-drop-below::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgb(var(--rs-accent));
+  pointer-events: none;
+}
+
+.holding_tank .list-group-item.holding-tank-drop-above::after {
+  top: -17px;
+}
+
+.holding_tank .list-group-item.holding-tank-drop-below::after {
+  bottom: -17px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holding_tank .list-group-item {
+    transition: none;
+  }
 }

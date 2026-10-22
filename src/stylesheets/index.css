@@ -429,7 +429,6 @@ h6.card-header {
 }
 
 .holding_tank .list-group-item {
-  font-size: 11px; /* the rows' default size; View > Font Size sets it inline */
   border-radius: 8px;
   margin: 4px 0;
   padding: 10px 12px;
@@ -1242,4 +1241,20 @@ body.platform-mac.driver-active .container-fluid::before {
 
 body.platform-mac #top-row {
   padding-top: 30px;
+}
+
+/* View > Font Size (ui/song-font-size.js): one size for every song row, now and
+   later. Search rows use it as is; hotkey slots and holding tank rows 2px larger.
+   !important so it wins over the size older code sets inline on each row. */
+:root {
+  --song-font-size: 11px;
+}
+
+#search_results tbody tr {
+  font-size: var(--song-font-size) !important;
+}
+
+.hotkeys li > span.song,
+.holding_tank .list-group-item {
+  font-size: calc(var(--song-font-size) + 2px) !important;
 }

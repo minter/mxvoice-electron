@@ -165,8 +165,10 @@
   background: transparent !important;
 }
 
+/* Inline, so the played pill stays on the title's line */
 td.song-title-cell .song-title-text {
-  display: -webkit-box;
+  display: -webkit-inline-box;
+  vertical-align: top;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -176,8 +178,15 @@ td.song-title-cell {
   display: table-cell;
 }
 
+/* On the baseline of the title's first line (the title is top-aligned, so
+   the line's own baseline is that line's) */
 td.song-title-cell .played-pill {
-  margin-top: 2px;
+  vertical-align: baseline;
+}
+
+/* With a pill, a long title leaves it room on the same line */
+td.song-title-cell:has(.played-pill) .song-title-text {
+  max-width: calc(100% - 40px);
 }
 
 .category-tag {

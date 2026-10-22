@@ -2,9 +2,8 @@
  * Played Pills
  *
  * The small "▶ n" pill on every row that shows a song played tonight: a
- * hotkey slot (after the song name), a holding tank row (after the title)
- * and a search result (at the end of the Title cell). Shown only for a count
- * of 1 or more. The count is drawn from `data-count` by CSS, so the pill adds
+ * hotkey slot, a holding tank row or a search result, right after the song's
+ * title. Shown only for a count of 1 or more. The count is drawn from `data-count` by CSS, so the pill adds
  * no text to the row and never carries a `songid` itself.
  *
  * Pills follow the counts (`played-counts-changed`, re-rendering only the
@@ -41,12 +40,13 @@ function createPill(n) {
 }
 
 /**
- * Bring one host's pill in line with its song's count. The pill goes at the
- * end of the host, right after its text.
+ * Bring one host's pill in line with its song's count. The pill goes right
+ * after the song's title (ui/song-label.js), so it sits with the title and
+ * the time keeps its own column; a host without a label gets it at the end.
  */
 function syncHost(host, songId) {
   const n = songId ? count(songId) : 0;
-  const pill = host.querySelector(`:scope > .${PILL}`);
+  const pill = host.querySelector(`.${PILL}`);
   if (n < 1) {
     pill?.remove();
     return;
@@ -55,7 +55,9 @@ function syncHost(host, songId) {
     if (pill.dataset.count !== String(n)) setCount(pill, n);
     return;
   }
-  host.append(createPill(n));
+  const title = host.querySelector('.song-label-title, .song-title-text');
+  if (title) title.after(createPill(n));
+  else host.append(createPill(n));
 }
 
 function syncRow(li) {
@@ -74,7 +76,7 @@ function syncSearchCell(td) {
 export function appendPlayedPill(td, songId) {
   td.classList.add(SEARCH_HOST);
   const n = count(songId);
-  if (n > 0) td.append(createPill(n));
+  if (n > 0) syncHost(td, String(songId));
 }
 
 function syncSongs(songIds) {

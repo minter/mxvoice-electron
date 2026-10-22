@@ -45,10 +45,10 @@ function readPlayed(userDataDir) {
 }
 
 // The pill draws its count from data-count; it never carries a songid
-const hotkeyPill = (page, key) => page.locator(`#hotkeys_list_1 li:nth-child(${key}) > .played-pill`);
-const tankPill = (page, songId) => page.locator(`#holding_tank_1 li[songid="${songId}"] > .played-pill`);
+const hotkeyPill = (page, key) => page.locator(`#hotkeys_list_1 li:nth-child(${key}) .played-pill`);
+const tankPill = (page, songId) => page.locator(`#holding_tank_1 li[songid="${songId}"] .played-pill`);
 const searchRow = (page, songId) => page.locator(`#search_results tbody tr[songid="${songId}"]`);
-const searchPill = (page, songId) => searchRow(page, songId).locator('td:nth-child(3) > .played-pill');
+const searchPill = (page, songId) => searchRow(page, songId).locator('td:nth-child(3) .played-pill');
 
 async function search(page, term) {
   const input = page.locator('#omni_search');
@@ -120,6 +120,12 @@ test.describe('Shows - played counts', () => {
     await expect(tankPill(page, EAT_IT)).toHaveAttribute('data-count', '1');
     await expect(page.locator('#pause_button')).toBeVisible();
     await expect(searchPill(page, EAT_IT)).toBeVisible();
+    // In line with the title, not wrapped under it
+    expect(await searchRow(page, EAT_IT).locator('td:nth-child(3)').evaluate((td) => {
+      const pill = td.querySelector('.played-pill').getBoundingClientRect();
+      const title = td.querySelector('.song-title-text').getBoundingClientRect();
+      return pill.left >= title.right - 1 && pill.top < title.bottom;
+    })).toBe(true);
     // The pill adds no text and no songid
     await expect(searchRow(page, EAT_IT).locator('td:nth-child(3)')).toHaveText('Eat It');
     await expect(page.locator('.played-pill[songid]')).toHaveCount(0);
@@ -196,8 +202,23 @@ test.describe('Shows - played counts', () => {
     // A short title stays on one line, and the row's padding is unchanged
     expect(await row.evaluate((li) => li.offsetHeight)).toBe(before.height);
     expect(await row.evaluate((li) => getComputedStyle(li).paddingRight)).toBe(before.padding);
-    // Inline, after the text: the last child, inside the row
-    expect(await row.evaluate((li) => li.lastElementChild?.classList.contains('played-pill'))).toBe(true);
+    // Inline, right after the title on the title's line, left of the time
+    const placed = await row.evaluate((li) => {
+      const pill = li.querySelector('.played-pill').getBoundingClientRect();
+      const title = li.querySelector('.song-label-title').getBoundingClientRect();
+      const time = li.querySelector('.song-label-time').getBoundingClientRect();
+      return {
+        afterTitle: li.querySelector('.played-pill').previousElementSibling?.classList.contains('song-label-title'),
+        gap: pill.left - title.right,
+        sameLine: Math.abs((pill.top + pill.bottom) / 2 - (title.top + title.bottom) / 2) < 4,
+        beforeTime: pill.right < time.left
+      };
+    });
+    expect(placed.afterTitle).toBe(true);
+    expect(placed.sameLine).toBe(true);
+    expect(placed.beforeTime).toBe(true);
+    expect(placed.gap).toBeGreaterThanOrEqual(0);
+    expect(placed.gap).toBeLessThan(12);
     const [rowBox, pillBox] = [await row.boundingBox(), await tankPill(page, FAMILY).boundingBox()];
     expect(pillBox.x + pillBox.width).toBeLessThanOrEqual(rowBox.x + rowBox.width);
   });

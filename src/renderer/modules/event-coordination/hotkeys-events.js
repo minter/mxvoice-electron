@@ -179,7 +179,9 @@ export default class HotkeysEvents {
 
         // Drag leave event
         const dragLeaveHandler = (event) => {
-          event.currentTarget.classList.remove('drop_target');
+          // Moving onto the slot's own label isn't leaving the slot
+          if (event.relatedTarget && li.contains(event.relatedTarget)) return;
+          li.classList.remove('drop_target');
         };
 
         // Attach events

@@ -3,7 +3,7 @@
  * Provides UI helpers and delegates heavy actions to other modules.
  */
 
-import { secureStore } from '../adapters/secure-adapter.js';
+import { getSongFontSize, setSongFontSize } from './song-font-size.js';
 import { scaleScrollable } from '../utils/index.js';
 
 let debugLog = null;
@@ -15,32 +15,11 @@ try {
 
 export default function initializeUIManager(options = {}) {
   const { electronAPI, moduleRegistry = {} } = options;
-  let fontSize = 11;
-  
-  function getFontSize() { return fontSize; }
+  // One size for every song row (ui/song-font-size.js)
+  function getFontSize() { return getSongFontSize(); }
 
   function setFontSize(size) {
-    fontSize = size;
-    document.querySelectorAll('.song').forEach(el => { el.style.fontSize = fontSize + 'px'; });
-    try {
-      // Save to profile preferences (not global store)
-      if (electronAPI && electronAPI.profile) {
-        electronAPI.profile.setPreference('font_size', fontSize).catch(err => {
-          debugLog?.warn('Failed to save font size to profile', { module: 'ui-manager', function: 'setFontSize', error: err });
-        });
-      } else if (electronAPI && electronAPI.store) {
-        // Fallback to global store if profile API not available
-        secureStore.set('font_size', fontSize).catch(err => {
-          debugLog?.warn('Failed to save font size', { module: 'ui-manager', function: 'setFontSize', error: err });
-        });
-      }
-    } catch (error) {
-      debugLog?.warn('Failed to save font size', { 
-        module: 'ui-manager', 
-        function: 'setFontSize',
-        error: error?.message || 'Unknown error' 
-      });
-    }
+    return setSongFontSize(size, electronAPI);
   }
 
   async function editSelectedSong() {

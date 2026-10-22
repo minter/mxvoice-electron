@@ -72,4 +72,78 @@ test.describe('UI - song rows', () => {
     // Empty and loaded slots are the same height
     expect(new Set(fit.slots).size).toBe(1);
   });
+  test('View > Increase / Decrease Font Size scale search rows, hotkeys and the holding tank', async () => {
+    const sizes = () => page.evaluate(() => {
+      const px = (sel) => parseFloat(getComputedStyle(document.querySelector(sel)).fontSize);
+      return {
+        search: px('#search_results tbody tr'),
+        hotkey: px('#hotkeys_list_1 #f4_hotkey span.song .song-label-title'),
+        tank: px('#holding_tank_1 li[songid="1004"] .song-label-title')
+      };
+    });
+    const menu = (channel) => app.evaluate(({ BrowserWindow }, name) => {
+      BrowserWindow.getAllWindows()[0].webContents.send(name);
+    }, channel);
+
+    await page.locator('#omni_search').fill('a');
+    await page.locator('#omni_search').press('Enter');
+    await expect(page.locator('#search_results tbody tr').first()).toBeVisible();
+    const before = await sizes();
+
+    await menu('increase_font_size');
+    await menu('increase_font_size');
+    await expect.poll(async () => (await sizes()).search).toBe(before.search + 2);
+    const bigger = await sizes();
+    expect(bigger.hotkey).toBeGreaterThan(before.hotkey);
+    expect(bigger.tank).toBeGreaterThan(before.tank);
+    await expect.poll(() => page.evaluate(async () => (await window.secureElectronAPI.profile.getPreference('font_size'))?.value)).toBe(before.search + 2);
+
+    // Rows drawn after the change get the new size too
+    await page.locator('#omni_search').fill('e');
+    await page.locator('#omni_search').press('Enter');
+    await expect.poll(async () => (await sizes()).search).toBe(before.search + 2);
+
+    await menu('decrease_font_size');
+    await menu('decrease_font_size');
+    await expect.poll(async () => (await sizes()).search).toBe(before.search);
+    expect((await sizes()).hotkey).toBe(before.hotkey);
+  });
+
+  test('dragging a song over a hotkey highlights the slot, and the holding tank opens a gap where it will land', async () => {
+    const drag = (selector, type, where) => page.evaluate(({ selector, type, where }) => {
+      const el = document.querySelector(selector);
+      const box = el.getBoundingClientRect();
+      const dataTransfer = new DataTransfer();
+      dataTransfer.setData('text', '1002');
+      el.dispatchEvent(new DragEvent(type, {
+        bubbles: true, cancelable: true, dataTransfer,
+        clientX: box.left + 20, clientY: where === 'top' ? box.top + 3 : box.bottom - 3
+      }));
+    }, { selector, type, where });
+
+    const slot = page.locator('#hotkeys_list_1 #f2_hotkey');
+    await drag('#hotkeys_list_1 #f2_hotkey span.song', 'dragover', 'top');
+    await expect(slot).toHaveClass(/drop_target/);
+    // Dashed, unlike the playing slot's solid outline
+    expect(await slot.evaluate((li) => getComputedStyle(li).outlineStyle)).toBe('dashed');
+    // Crossing onto the slot's own label doesn't drop the highlight
+    await slot.evaluate((li) => li.dispatchEvent(new DragEvent('dragleave', { bubbles: true, relatedTarget: li.querySelector('span.song') })));
+    await expect(slot).toHaveClass(/drop_target/);
+    await slot.evaluate((li) => li.dispatchEvent(new DragEvent('dragleave', { bubbles: true, relatedTarget: document.body })));
+    await expect(slot).not.toHaveClass(/drop_target/);
+
+    // Lower half of the first row: the gap opens above the second row
+    const first = '#holding_tank_1 li[songid="1004"]';
+    const second = page.locator('#holding_tank_1 li[songid="1001"]');
+    const gapBefore = await second.evaluate((li) => li.getBoundingClientRect().top - li.previousElementSibling.getBoundingClientRect().bottom);
+    await drag(first, 'dragover', 'bottom');
+    await expect(second).toHaveClass(/holding-tank-drop-above/);
+    await expect(page.locator(first)).not.toHaveClass(/holding-tank-drop-below/);
+    await expect.poll(() => second.evaluate((li) => li.getBoundingClientRect().top - li.previousElementSibling.getBoundingClientRect().bottom))
+      .toBeGreaterThan(gapBefore + 20);
+
+    // A drag that ends anywhere leaves no highlight behind
+    await page.evaluate(() => document.dispatchEvent(new DragEvent('dragend', { bubbles: true })));
+    await expect(page.locator('.holding-tank-drop-above, .holding-tank-drop-below, .drop_target')).toHaveCount(0);
+  });
 });
