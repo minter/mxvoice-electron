@@ -194,9 +194,12 @@ test.describe('Playback - fade out', () => {
   });
 
   test('holding Shift+Esc fades to silence without cutting', async () => {
-    await page.evaluate(async () => {
-      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 2);
-    });
+    // Long enough that the held keys end well inside the fade, even on a
+    // slow runner
+    const fadeSeconds = 5;
+    await page.evaluate(async (s) => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', s);
+    }, fadeSeconds);
     await startPlayback();
 
     // Hold Shift+Esc: after the first keydown, each further keyboard.down
@@ -207,6 +210,8 @@ test.describe('Playback - fade out', () => {
     for (let i = 0; i < 16; i++) {
       await page.waitForTimeout(50);
       await page.keyboard.down('Escape');
+      // Each repeat leaves the fade running
+      expect(await isFadingOut()).toBe(true);
     }
     await page.keyboard.up('Escape');
     await page.keyboard.up('Shift');
@@ -215,12 +220,12 @@ test.describe('Playback - fade out', () => {
     expect(await isFadingOut()).toBe(true);
     await expect(page.locator('#pause_button')).toBeVisible();
 
-    if (!isCI) await waitForSilence(page, 1e-3, 4000);
-    await expect(page.locator('#play_button')).toBeVisible({ timeout: 5000 });
+    if (!isCI) await waitForSilence(page, 1e-3, (fadeSeconds + 3) * 1000);
+    await expect(page.locator('#play_button')).toBeVisible({ timeout: (fadeSeconds + 5) * 1000 });
     const elapsed = (Date.now() - started) / 1000;
     console.log('Held Shift+Esc fade (s):', elapsed);
-    // Over the 2 second fade, not at once
-    expect(elapsed).toBeGreaterThan(1.5);
+    // Over the fade time, not at once
+    expect(elapsed).toBeGreaterThan(fadeSeconds * 0.8);
     expect(await isFadingOut()).toBe(false);
   });
 
