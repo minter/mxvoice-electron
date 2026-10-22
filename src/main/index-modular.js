@@ -58,6 +58,7 @@ import * as fileOperations from './modules/file-operations.js';
 import initializeMainDebugLog from './modules/debug-log.js';
 import { initMainLogService } from './modules/log-service.js';
 import * as profileManager from './modules/profile-manager.js';
+import { migrateFadeToProfiles } from './modules/fade-migration.js';
 import * as profileBackupManager from './modules/profile-backup-manager.js';
 import * as autoBackupTimer from './modules/auto-backup-timer.js';
 import * as libraryTransferManager from './modules/library-transfer-manager.js';
@@ -1027,6 +1028,16 @@ function setupApp() {
     
     // Initialize auto-backup timer
     autoBackupTimer.initializeAutoBackupTimer({ debugLog });
+
+    // 4.3.2 faded with the app-wide length; copy it into each profile once,
+    // before any window reads a profile's value.
+    await migrateFadeToProfiles({
+      store,
+      listProfiles: () => profileManager.getAvailableProfiles().map((p) => p.name),
+      loadProfilePreferences: (name) => profileManager.loadProfilePreferences(name),
+      saveProfilePreferences: (name, prefs) => profileManager.saveProfilePreferences(name, prefs),
+      debugLog
+    });
 
     initializeMainProcessServices();
 
