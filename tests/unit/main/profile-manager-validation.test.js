@@ -52,7 +52,7 @@ describe('profile directory collision validation', () => {
 });
 
 describe('profile defaults', () => {
-  it('gives new profiles a 5 second fade out', () => {
-    expect(profileManager.getDefaultPreferences().fade_out_seconds).toBe(5);
+  it('gives new profiles a 3 second fade out', () => {
+    expect(profileManager.getDefaultPreferences().fade_out_seconds).toBe(3);
   });
 });

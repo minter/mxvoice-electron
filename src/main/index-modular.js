@@ -212,7 +212,7 @@ const defaults = {
   music_directory: path.join(app.getPath('userData'), 'mp3'),
   hotkey_directory: path.join(app.getPath('userData'), 'hotkeys'),
   database_directory: app.getPath('userData'),
-  fade_out_seconds: 5,
+  fade_out_seconds: 3,
   debug_log_enabled: true,
   first_run_completed: false,
   analytics_device_id: '',

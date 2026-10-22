@@ -60,7 +60,7 @@ export async function launchSeededApp(electron, suffix = '', { beforeLaunch } = 
     browser_width: 1200,
     browser_height: 800,
     // Copied into the Default User profile on first launch. Shorter than the
-    // 5 second default so suites that fade out don't wait on it.
+    // 3 second default so suites that fade out don't wait on it.
     fade_out_seconds: 2,
   };
   fs.writeFileSync(path.join(userDataDir, 'config.json'), JSON.stringify(config, null, 2));

@@ -29,7 +29,7 @@ let fadingOutSound = null;
 
 // Used when the profile has no usable fade length. Keep in step with
 // getDefaultPreferences() in src/main/modules/profile-manager.js.
-export const DEFAULT_FADE_OUT_SECONDS = 5;
+export const DEFAULT_FADE_OUT_SECONDS = 3;
 
 /**
  * Read the profile's fade length, in milliseconds

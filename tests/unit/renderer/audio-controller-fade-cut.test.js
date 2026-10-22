@@ -125,7 +125,7 @@ describe('fade length', () => {
   });
 
   it('falls back to the default when the profile has no usable value', async () => {
-    expect(audio.DEFAULT_FADE_OUT_SECONDS).toBe(5);
+    expect(audio.DEFAULT_FADE_OUT_SECONDS).toBe(3);
     for (const preference of [
       { success: true, value: null },
       { success: true, value: 0 },
@@ -133,7 +133,7 @@ describe('fade length', () => {
       { success: false, error: 'no profile' },
       new Error('IPC down')
     ]) {
-      expect(await stopFadeDuration(preference)).toBe(5000);
+      expect(await stopFadeDuration(preference)).toBe(3000);
     }
   });
 
