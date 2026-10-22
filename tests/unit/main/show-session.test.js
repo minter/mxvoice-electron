@@ -1370,10 +1370,11 @@ describe('show session imports', () => {
     const list = await ctx.session.listImportable();
 
     expect(list.map((entry) => entry.profile)).toEqual(['Default User', 'Bob', 'zed']);
-    expect(list[0].shows).toEqual([{ id: expect.any(String), name: 'Default Show', updatedAt: expect.any(Number) }]);
+    // Each show carries its color and what it holds, so same-named shows can be told apart
+    expect(list[0].shows).toEqual([{ id: expect.any(String), name: 'Default Show', updatedAt: expect.any(Number), color: null, hotkeyCount: 1, tankCount: 1 }]);
     expect(list[1].shows).toEqual([
-      { id: 'show-1', name: 'Default Show', updatedAt: T0 },
-      { id: 'show-2', name: 'Second', updatedAt: T0 },
+      { id: 'show-1', name: 'Default Show', updatedAt: T0, color: null, hotkeyCount: 1, tankCount: 1 },
+      { id: 'show-2', name: 'Second', updatedAt: T0, color: null, hotkeyCount: 1, tankCount: 1 },
     ]);
     expect(store.writes).toEqual([]);
     for (const [name, files] of Object.entries(before)) expect(store.snapshot(name), name).toEqual(files);

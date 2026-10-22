@@ -743,3 +743,66 @@ body.theme-dark #selected_row .played-pill {
   color: rgba(255, 255, 255, 0.8);
   background-color: rgba(255, 255, 255, 0.15);
 }
+
+/* Import Show dialog: the left bar is the show's color (neutral when it has none) */
+.import-show-intro,
+.import-show-profile,
+.import-show-contents,
+.import-show-empty {
+  color: var(--tab-actions-muted);
+}
+
+.import-show-profile-name {
+  color: var(--card-text);
+}
+
+.import-show-row {
+  background: var(--card-color);
+  color: var(--card-text);
+  border-color: var(--card-border);
+  border-left-color: var(--import-swatch, var(--card-border));
+}
+
+.import-show-row:hover {
+  background: var(--tab-actions-hover-bg);
+}
+
+/* Selection uses the Import Show button's blue, which reads in both themes
+   (the dark theme's --highlight-color is a neutral gray) */
+.import-show-row {
+  --import-selected: 13, 110, 253;
+}
+
+body.theme-dark .import-show-row {
+  --import-selected: 92, 156, 255;
+}
+
+.import-show-row.active {
+  border-color: rgb(var(--import-selected));
+  border-left-color: var(--import-swatch, rgb(var(--import-selected)));
+  background: rgba(var(--import-selected), 0.12);
+}
+
+.import-show-check {
+  color: rgb(var(--import-selected));
+}
+
+.import-show-row:focus-visible {
+  outline-color: rgb(var(--import-selected));
+}
+
+.import-show-row[data-color="teal"] { --import-swatch: #0F6E56; }
+.import-show-row[data-color="blue"] { --import-swatch: #185FA5; }
+.import-show-row[data-color="purple"] { --import-swatch: #534AB7; }
+.import-show-row[data-color="pink"] { --import-swatch: #993556; }
+.import-show-row[data-color="coral"] { --import-swatch: #993C1D; }
+.import-show-row[data-color="amber"] { --import-swatch: #854F0B; }
+.import-show-row[data-color="green"] { --import-swatch: #3B6D11; }
+
+body.theme-dark .import-show-row[data-color="teal"] { --import-swatch: #5DCAA5; }
+body.theme-dark .import-show-row[data-color="blue"] { --import-swatch: #85B7EB; }
+body.theme-dark .import-show-row[data-color="purple"] { --import-swatch: #AFA9EC; }
+body.theme-dark .import-show-row[data-color="pink"] { --import-swatch: #ED93B1; }
+body.theme-dark .import-show-row[data-color="coral"] { --import-swatch: #F0997B; }
+body.theme-dark .import-show-row[data-color="amber"] { --import-swatch: #EF9F27; }
+body.theme-dark .import-show-row[data-color="green"] { --import-swatch: #97C459; }

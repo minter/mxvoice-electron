@@ -718,6 +718,15 @@ export function createShowSession({
   }
 
   /** Every other registered profile's shows, read without writing. */
+  // What a show holds, so the Import dialog can tell same-named shows apart
+  function layoutCounts(layout) {
+    const hotkeyCount = (layout?.hotkeys ?? [])
+      .reduce((n, tab) => n + Object.values(tab?.hotkeys ?? {}).filter(Boolean).length, 0);
+    const tankCount = (layout?.holdingTank ?? [])
+      .reduce((n, tab) => n + (tab?.songIds?.length ?? 0), 0);
+    return { hotkeyCount, tankCount };
+  }
+
   async function listImportable() {
     const p = profile;
     if (!p) throw new Error('No profile is open');
@@ -733,7 +742,9 @@ export function createShowSession({
       if (!peeked) continue;
       result.push({
         profile: name,
-        shows: peeked.shows.map(({ id, name: showName, updatedAt }) => ({ id, name: showName, updatedAt }))
+        shows: peeked.shows.map(({ id, name: showName, updatedAt, color, layout }) => ({
+          id, name: showName, updatedAt, color: color ?? null, ...layoutCounts(layout)
+        }))
       });
     }
     return result;
