@@ -101,8 +101,11 @@ describe('migrateFadeToProfiles', () => {
   it('resolves and still sets the flag when listProfiles throws', async () => {
     const env = makeEnv();
     env.deps.listProfiles = () => { throw new Error('registry'); };
+    const set = vi.spyOn(env.deps.store, 'set');
     await expect(migrateFadeToProfiles(env.deps)).resolves.toEqual({ migrated: [] });
     expect(env.deps.debugLog.error).toHaveBeenCalled();
+    expect(set).toHaveBeenCalledWith('fade_out_migrated_to_profiles', true);
+    expect(env.data.fade_out_migrated_to_profiles).toBe(true);
   });
 
   it('skips a profile whose preferences load rejects', async () => {
