@@ -396,9 +396,11 @@ body.theme-dark #selected_row .played-pill {
   color: var(--rs-text) !important;
 }
 
+/* Title leads; artist, info and time step back, as on the hotkey and
+   holding tank cards */
 #search_results td.song-artist-cell {
   font-weight: 400;
-  color: var(--rs-text) !important;
+  color: var(--rs-muted) !important;
 }
 
 #search_results td.song-time-cell,
