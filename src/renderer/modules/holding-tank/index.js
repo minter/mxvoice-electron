@@ -28,6 +28,7 @@ try {
 
 // Use global electronAPI instead of importing services
 // Import secure adapters
+import { setSongLabel } from '../ui/song-label.js';
 import { secureDatabase } from '../adapters/secure-adapter.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 const database = secureDatabase;
@@ -141,12 +142,11 @@ export function applyHoldingTankSnapshot(snapshot, songsById) {
       const row = songsById.get(String(songId));
       if (!row) continue;
       const element = document.createElement('li');
-      element.style.fontSize = '11px';
-      element.className = 'song list-group-item context-menu';
+            element.className = 'song list-group-item context-menu';
       element.draggable = true;
       element.addEventListener('dragstart', songDrag);
       element.setAttribute('songid', songId);
-      element.textContent = `${row.title || '[Unknown Title]'} by ${row.artist || '[Unknown Artist]'} (${row.time || '[??:??]'})`;
+      setSongLabel(element, row);
       tabContent.appendChild(element);
     }
   }
@@ -268,12 +268,11 @@ function insertSongRow(row, song_id, element, insertPosition) {
     song_row = existing_song; // already in DOM; will be moved below
   } else {
     song_row = document.createElement("li");
-    song_row.style.fontSize = `11px`; // Default font size since getFontSize was removed
-    song_row.className = "song list-group-item context-menu";
+        song_row.className = "song list-group-item context-menu";
     song_row.setAttribute("draggable", "true");
     song_row.addEventListener('dragstart', songDrag);
     song_row.setAttribute("songid", song_id);
-    song_row.textContent = `${title} by ${artist} (${time})`;
+    setSongLabel(song_row, row);
   }
 
   const targetEl = element && element.nodeType ? element : Dom.$(element);

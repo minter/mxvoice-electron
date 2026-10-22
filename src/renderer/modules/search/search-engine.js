@@ -28,6 +28,7 @@ try {
 import * as liveSearch from './live-search.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 import { appendPlayedPill } from '../shows/played-pills.js';
+import { formatDuration } from '../ui/song-label.js';
 
 // Track active search to prevent race conditions
 let activeSearchId = 0;
@@ -184,18 +185,19 @@ function searchData({ trackAnalytics = true } = {}) {
           tr.appendChild(tdInfo);
 
           const tdTitle = document.createElement('td');
-          tdTitle.style.fontWeight = 'bold';
+          tdTitle.className = 'song-title-cell';
           tdTitle.textContent = row.title || '';
           appendPlayedPill(tdTitle, row.id);
           tr.appendChild(tdTitle);
 
           const tdArtist = document.createElement('td');
-          tdArtist.style.fontWeight = 'bold';
+          tdArtist.className = 'song-artist-cell';
           tdArtist.textContent = row.artist || '';
           tr.appendChild(tdArtist);
 
           const tdTime = document.createElement('td');
-          tdTime.textContent = row.time || '';
+          tdTime.className = 'song-time-cell';
+          tdTime.textContent = formatDuration(row.time || '');
           tr.appendChild(tdTime);
 
           fragment.appendChild(tr);

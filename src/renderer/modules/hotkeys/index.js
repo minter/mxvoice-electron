@@ -26,6 +26,7 @@ import { fetchSongsById } from '../shows/layout-applier.js';
 import { customConfirm, customPrompt } from '../utils/index.js';
 import { confirmClearTab } from '../ui/tab-actions-menu.js';
 import { setTabLabel } from '../ui/tab-label.js';
+import { setSongLabel, swapSongLabels } from '../ui/song-label.js';
 
 /**
  * Hotkeys Module Class
@@ -198,7 +199,7 @@ class HotkeysModule {
         const span = element.querySelector('span.song');
         if (songId && row) {
           element.setAttribute('songid', songId);
-          if (span) span.textContent = `${row.title || '[Unknown Title]'} by ${row.artist || '[Unknown Artist]'} (${row.time || '[??:??]'})`;
+          if (span) setSongLabel(span, row);
         } else {
           element.removeAttribute('songid');
           if (span) span.textContent = '';
@@ -312,7 +313,7 @@ class HotkeysModule {
       const span = hotkeyElement.querySelector('span.song');
       if (row) {
         hotkeyElement.setAttribute('songid', songId);
-        if (span) span.textContent = `${row.title || '[Unknown Title]'} by ${row.artist || '[Unknown Artist]'} (${row.time || '[??:??]'})`;
+        if (span) setSongLabel(span, row);
       } else {
         hotkeyElement.removeAttribute('songid');
         if (span) span.textContent = '';
@@ -353,7 +354,7 @@ class HotkeysModule {
       const otherSpan = other.querySelector('span.song');
       const targetSpan = element?.querySelector?.('span.song');
       if (otherSpan && targetSpan) {
-        [targetSpan.textContent, otherSpan.textContent] = [otherSpan.textContent || '', targetSpan.textContent || ''];
+        swapSongLabels(targetSpan, otherSpan);
       }
       const displacedSongId = element?.getAttribute?.('songid');
       if (displacedSongId) other.setAttribute('songid', displacedSongId);
@@ -361,7 +362,7 @@ class HotkeysModule {
     } else if (element) {
       const span = element.querySelector('span.song');
       if (span) {
-        span.textContent = `${row.title || '[Unknown Title]'} by ${row.artist || '[Unknown Artist]'} (${row.time || '[??:??]'})`;
+        setSongLabel(span, row);
       }
     }
     element?.setAttribute?.('songid', songId);
