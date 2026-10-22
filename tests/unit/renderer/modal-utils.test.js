@@ -77,6 +77,19 @@ describe('customConfirm', () => {
     await expect(answer).resolves.toBe(false);
   });
 
+  it('customConfirm with defaultAction confirm focuses the confirm button', async () => {
+    const answer = customConfirm('Restore?', 'Restore show?', {
+      confirmLabel: 'Restore show in progress',
+      cancelLabel: 'Open saved show',
+      defaultAction: 'confirm'
+    });
+    modal.dispatch('shown.bs.modal');
+    expect(document.activeElement).toBe(modal.querySelector('.confirm-btn'));
+
+    document.activeElement.click();
+    await expect(answer).resolves.toBe(true);
+  });
+
   it('customConfirm shows <3 Improv literally', async () => {
     const answer = customConfirm('Open <3 Improv?', '<b>Shows</b>');
     expect(modal.innerHTML).toContain('Open &lt;3 Improv?');

@@ -141,7 +141,7 @@ test.describe('Shows - session lifecycle', () => {
     const prompt = restorePrompt(page);
     await expect(prompt).toBeVisible({ timeout: 20000 });
     await expect(prompt).toContainText("Mx. Voice didn't close normally. Restore the show in progress from");
-    await expect(prompt.getByRole('button', { name: 'Open saved show' })).toBeFocused();
+    await expect(prompt.getByRole('button', { name: 'Restore show in progress' })).toBeFocused();
     await prompt.getByRole('button', { name: 'Restore show in progress' }).click();
     await expect(prompt).toHaveCount(0);
 
@@ -210,6 +210,24 @@ test.describe('Shows - session lifecycle', () => {
     expect(await inPage(`document.querySelector('#hotkeys_list_1 #f1_hotkey').getAttribute('songid')`)).toBe(LIVE_SONG);
     // The handoff is spent: another crash before any edit would ask
     expect(readRecovery(userDataDir, 'Default User')?.handoff).toBeNull();
+  });
+
+  test('Return on the crash prompt restores the show in progress', async () => {
+    await launch({ beforeLaunch: seedSavedShow() });
+    await assignF1(page, LIVE_SONG);
+    await waitForRecoveredF1(userDataDir, 'Default User', LIVE_SONG);
+
+    await crashApp(app);
+    await relaunch();
+
+    const prompt = restorePrompt(page);
+    await expect(prompt).toBeVisible({ timeout: 20000 });
+    await expect(prompt.getByRole('button', { name: 'Restore show in progress' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(prompt).toHaveCount(0);
+
+    await waitForAppReady(page, app);
+    await expect(f1SongId(page)).toHaveAttribute('songid', LIVE_SONG);
   });
 
   test('declining the prompt opens the saved show', async () => {

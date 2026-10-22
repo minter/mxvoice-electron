@@ -44,15 +44,16 @@ function hideAndRemoveModal(modal) {
  * @param {Object} [options]
  * @param {string} [options.confirmLabel='Confirm']
  * @param {string} [options.cancelLabel='Cancel']
- * @param {'confirm'|'cancel'} [options.defaultAction='confirm'] - 'cancel' focuses
- *   the cancel button, so Return takes it
+ * @param {'confirm'|'cancel'} [options.defaultAction] - unset moves no focus; 'cancel' focuses
+ *   the cancel button, so Return takes it; an explicit 'confirm' focuses the
+ *   confirm button
  * @param {boolean} [options.dismissible=true] - false: only the buttons answer
  * @returns {Promise<boolean>} - Promise that resolves to true if confirmed, false if cancelled
  */
 export function customConfirm(message, title = 'Confirm', {
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
-  defaultAction = 'confirm',
+  defaultAction,
   dismissible = true
 } = {}) {
   return new Promise((resolve) => {
@@ -118,8 +119,9 @@ export function customConfirm(message, title = 'Confirm', {
       });
     }
 
-    if (defaultAction === 'cancel') {
-      modal.addEventListener('shown.bs.modal', () => cancelBtn.focus(), dismissible ? { once: true } : undefined);
+    if (defaultAction === 'cancel' || defaultAction === 'confirm') {
+      const defaultBtn = defaultAction === 'cancel' ? cancelBtn : confirmBtn;
+      modal.addEventListener('shown.bs.modal', () => defaultBtn.focus(), dismissible ? { once: true } : undefined);
     }
 
     instance.show();

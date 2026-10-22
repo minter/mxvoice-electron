@@ -84,7 +84,7 @@ The prompt is the operator's moment, not the end of the night. The person switch
 
 While a session is open, the app may write a recovery copy of the live layout. That copy is not a show. A clean quit, a profile switch, or a show switch retires it.
 
-If the last exit of a profile was not clean, the next open of **that** profile asks whether to restore the show in progress. The default is the saved show. The person who just crashed can choose the recovery copy. Anyone else accepts the default and gets the saved show. Opening a different profile shows nothing about the crash.
+If the last exit of a profile was not clean, the next open of **that** profile asks whether to restore the show in progress. The default is to restore the show in progress, so Return restores it (user, 2026-10-22). Opening the saved show is a deliberate click on **Open saved show**. Esc and the backdrop do not answer the prompt. Opening a different profile shows nothing about the crash.
 
 Restoring a crashed session loads it as the live layout. It still does not change the saved show. A later clean quit throws it away again.
 
@@ -276,7 +276,7 @@ These are settled. A review that reopens them should say what new fact contradic
 | Switching shows asks to save unsaved changes | The operator is present. The person choosing another show is the one who made the changes and knows whether they matter. Cancel is the default, so Return or Esc never saves over a show or loses one. A show with no unsaved changes switches without asking. |
 | Save names the show and asks once | Replacing a show is the irreversible write. The name in the command and in the confirmation says which show will change. |
 | The commands are Save and Save As | They are the words people already know for keeping their work. The silent clean exit, not the vocabulary, is what keeps the night from becoming a document. The header dot shows when there is something to save. |
-| Crash restore defaults to the saved show | The person who crashed is motivated to choose restore. Everyone else is safe if they accept the default. |
+| Crash restore defaults to restoring the show in progress (user, 2026-10-22) | After a crash in a live show, Return must bring back the night's work. Opening the saved show is a deliberate click. |
 | Copy, never link or overwrite | Jesse's edits must not change Derek's show, and a second import must not clobber a show she already has. |
 | No private flag | It would not be real privacy, and it would hide the show Jesse is supposed to find. |
 | No show file, no shared folder, no send step | On this computer the show already lives in the owner's profile. |

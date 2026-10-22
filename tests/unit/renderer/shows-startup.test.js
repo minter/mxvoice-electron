@@ -60,7 +60,7 @@ describe('openSessionOnStartup', () => {
   it('the crash prompt and the unreadable prompt are opened with dismissible:false', async () => {
     const crash = setup({ open: opened({ savedAt: Date.now(), handoff: null, showId: 'b1' }) });
     await openSessionOnStartup(crash.deps);
-    expect(crash.deps.confirm.mock.calls[0][2]).toMatchObject({ dismissible: false, defaultAction: 'cancel' });
+    expect(crash.deps.confirm.mock.calls[0][2]).toMatchObject({ dismissible: false, defaultAction: 'confirm' });
 
     const unreadable = setup({ open: ok({ unreadable: true, generation: 4 }), confirm: vi.fn(async () => true) });
     unreadable.api.startEmpty.mockResolvedValue(ok({ layout: savedLayout, generation: 8, recovery: { savedAt: Date.now(), handoff: null, showId: 'b1' } }));
@@ -93,10 +93,21 @@ describe('openSessionOnStartup', () => {
     expect(deps.confirm).toHaveBeenCalledWith(
       `Mx. Voice didn't close normally. Restore the show in progress from ${time}?`,
       'Restore show?',
-      { confirmLabel: 'Restore show in progress', cancelLabel: 'Open saved show', defaultAction: 'cancel', dismissible: false }
+      { confirmLabel: 'Restore show in progress', cancelLabel: 'Open saved show', defaultAction: 'confirm', dismissible: false }
     );
     expect(api.resolveRecovery).toHaveBeenCalledWith('discard');
     expect(calls).toEqual(['apply:Saved', 'ready:7:true', 'unlock']);
+  });
+
+  it('the crash prompt defaults to restore', async () => {
+    const { deps } = setup({ open: opened({ savedAt: Date.now(), handoff: null, showId: 'b1' }) });
+    await openSessionOnStartup(deps);
+    expect(deps.confirm.mock.calls[0][2]).toMatchObject({
+      defaultAction: 'confirm',
+      confirmLabel: 'Restore show in progress',
+      cancelLabel: 'Open saved show',
+      dismissible: false
+    });
   });
 
   it('names the day as well when the show in progress is not from today', async () => {

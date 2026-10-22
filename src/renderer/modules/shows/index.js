@@ -103,7 +103,7 @@ async function resolveRecovery(recovery, deps) {
     const restore = await deps.confirm(crashMessage(recovery.savedAt), 'Restore show?', {
       confirmLabel: 'Restore show in progress',
       cancelLabel: 'Open saved show',
-      defaultAction: 'cancel',
+      defaultAction: 'confirm',
       dismissible: false
     });
     choice = restore ? 'restore' : 'discard';
