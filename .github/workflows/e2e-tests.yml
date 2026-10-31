@@ -81,6 +81,11 @@ jobs:
         run: npm test
         env:
           CI: true
+          # Keep app windows hidden, as local runs do. The runners' screens
+          # are 1024x768, and a shown window is shrunk to fit the screen, so
+          # tests that size the window (1200x800 and up) would measure a
+          # smaller one.
+          E2E_BACKGROUND: '1'
 
       - name: Upload Playwright HTML report
         if: always()

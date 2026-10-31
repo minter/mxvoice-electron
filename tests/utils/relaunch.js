@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { execFileSync } from 'child_process';
 import os from 'os';
 import electronPath from 'electron';
 
@@ -40,13 +41,25 @@ export async function waitForShowSettled(page) {
   await page.waitForFunction(() => window.isRestoringProfileState === false, null, { timeout: 20000 });
 }
 
-/** Kill the main process without any shutdown path, as a crash would. */
+/** Kill the app without any shutdown path, as a crash would. */
 export async function crashApp(app) {
   const child = app.process();
   const exited = new Promise((resolve) => {
     if (child.exitCode !== null || child.signalCode !== null) resolve();
     else child.once('exit', resolve);
   });
-  child.kill('SIGKILL');
+  if (process.platform === 'win32' && child.exitCode === null) {
+    // Killing only the main process on Windows leaves its renderer and GPU
+    // processes running for a while, holding the user-data folder; the
+    // relaunch then dies at startup. Take the whole tree down, as a crash of
+    // the app does.
+    try {
+      execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    } catch {
+      child.kill('SIGKILL');
+    }
+  } else {
+    child.kill('SIGKILL');
+  }
   await exited;
 }
