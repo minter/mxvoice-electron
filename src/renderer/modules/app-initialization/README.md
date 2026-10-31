@@ -59,7 +59,7 @@ Handles initial preference and layout loading:
 - Loads column order configuration
 - Loads font size preferences
 - Provides DOM-dependent initialization for post-load setup
-- Hotkeys and holding-tank contents are restored separately from profile `state.json`
+- Hotkeys and holding-tank contents are opened separately from the profile's active show (`shows.json`)
 
 ### 5. EnvironmentSetup (environment-setup.js)
 Configures the application environment and system:

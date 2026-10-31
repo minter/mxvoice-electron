@@ -296,13 +296,21 @@ export function holdingTankReorderDragOver(event) {
   event.preventDefault();
   event.dataTransfer.dropEffect = 'move';
 
-  const targetItem = event.target?.closest?.('.holding_tank li');
+  let targetItem = event.target?.closest?.('.holding_tank li');
   if (!targetItem) return;
 
   // Determine above/below based on cursor position
   const rect = targetItem.getBoundingClientRect();
   const midY = rect.top + rect.height / 2;
-  const above = event.clientY < midY;
+  let above = event.clientY < midY;
+  // Every insertion point is "above the next row" (only the last row has a
+  // "below"), so the gap the indicator opens has one place per point and
+  // doesn't jump between two rows as they move
+  const next = targetItem.nextElementSibling;
+  if (!above && next?.matches?.('li')) {
+    targetItem = next;
+    above = true;
+  }
 
   // Fast path: if indicator is already correct, skip DOM work
   if (
@@ -345,6 +353,17 @@ export function getLastDropIndication() {
   _snapshotItem = null;
   _snapshotPosition = null;
   return { item, position };
+}
+
+/**
+ * A drag has ended (dropped, or cancelled with Esc): clear the indicator and
+ * the snapshot, so a later drop that never passed over a row can't land
+ * next to a row from this drag.
+ */
+export function endHoldingTankDrag() {
+  clearHoldingTankDropIndicators();
+  _snapshotItem = null;
+  _snapshotPosition = null;
 }
 
 /**

@@ -5,7 +5,7 @@
  */
 
 // Import drag and drop functions
-import { holdingTankDrop, allowHotkeyDrop, holdingTankReorderDrop, holdingTankReorderDragOver, clearHoldingTankDropIndicators } from './drag-drop-functions.js';
+import { holdingTankDrop, allowHotkeyDrop, holdingTankReorderDrop, holdingTankReorderDragOver, clearHoldingTankDropIndicators, endHoldingTankDrag } from './drag-drop-functions.js';
 
 // Import debug logger
 let debugLog = null;
@@ -55,7 +55,9 @@ export function setupDragDropEventHandlers() {
       // themselves. Clearing here would wipe the position before they see it.
       const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
       if (!dt || !dt.getData('text')?.length) {
-        clearHoldingTankDropIndicators();
+        // Not a song (a file or text from another app): nothing lands, and
+        // its drop position must not carry over to a later drop
+        endHoldingTankDrag();
         return;
       }
 
@@ -83,6 +85,18 @@ export function setupDragDropEventHandlers() {
       }
     }, { signal });
   }
+
+  // A drag from another app never gets a dragend here; once it is dropped
+  // anywhere else on the page, its drop position is forgotten too. Bubble
+  // phase, so the holding tank's own drop reads the position first.
+  document.addEventListener('drop', () => endHoldingTankDrag(), { signal });
+
+  // A drag that ends anywhere (dropped elsewhere, or cancelled with Esc)
+  // leaves no drop highlight behind
+  document.addEventListener('dragend', () => {
+    endHoldingTankDrag();
+    document.querySelectorAll('.hotkeys .drop_target').forEach((el) => el.classList.remove('drop_target'));
+  }, { signal });
 
   // Column drag and drop handlers - improved with better visual feedback
   setupColumnDragAndDrop();

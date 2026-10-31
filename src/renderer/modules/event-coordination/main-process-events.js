@@ -10,8 +10,7 @@ function callFirstAvailable(candidates, args, warn) {
 function setupMainProcessEventBridge({
   electronAPI,
   moduleRegistry = {},
-  logWarn = () => {},
-  logError = () => {}
+  logWarn = () => {}
 }) {
   const events = electronAPI?.events;
   if (!events) return false;
@@ -20,20 +19,6 @@ function setupMainProcessEventBridge({
     if (typeof events[eventName] === 'function') events[eventName](handler);
   };
 
-  register('onHoldingTankLoad', (songIds) => {
-    if (!moduleRegistry.holdingTank?.populateHoldingTank) {
-      logWarn('Holding tank module not yet available when holding_tank_load fired');
-      return;
-    }
-    moduleRegistry.holdingTank.populateHoldingTank(songIds).catch((error) => {
-      logError('Error populating holding tank:', error);
-    });
-  });
-
-  register('onFkeyLoad', (fkeys, title) => callFirstAvailable(
-    [moduleRegistry.hotkeys?.populateHotkeys?.bind(moduleRegistry.hotkeys)], [fkeys, title],
-    () => logWarn('populateHotkeys not yet available when fkey_load fired')
-  ));
   register('onAddDialogLoad', (filename, metadata) => callFirstAvailable(
     [moduleRegistry.songManagement?.startAddNewSong?.bind(moduleRegistry.songManagement)], [filename, metadata],
     () => logWarn('startAddNewSong not available when add_dialog_load fired')
@@ -63,8 +48,7 @@ function setupMainProcessEventBridge({
     ['onIncreaseFontSize', 'increaseFontSize', 'increase_font_size'],
     ['onDecreaseFontSize', 'decreaseFontSize', 'decrease_font_size'],
     ['onToggleWaveform', 'toggleWaveform', 'toggle_wave_form'],
-    ['onToggleAdvancedSearch', 'toggleAdvancedSearch', 'toggle_advanced_search'],
-    ['onCloseAllTabs', 'closeAllTabs', 'close_all_tabs']
+    ['onToggleAdvancedSearch', 'toggleAdvancedSearch', 'toggle_advanced_search']
   ];
   uiEvents.forEach(([eventName, commandName, channelName]) => {
     register(eventName, () => callFirstAvailable(

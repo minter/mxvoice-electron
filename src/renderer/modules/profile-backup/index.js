@@ -7,8 +7,9 @@
 import { info, warn, error } from '../debug-log/index.js';
 
 let electronAPI = null;
-let moduleRegistry = {};
 let isCreatingBackup = false; // Lock to prevent duplicate backup creation
+
+const SESSION_RELOAD_SENTENCE = 'Mx. Voice will reload the show.';
 
 /**
  * Initialize the Profile Backup module
@@ -17,7 +18,6 @@ let isCreatingBackup = false; // Lock to prevent duplicate backup creation
  */
 function initializeProfileBackup(options = {}) {
   electronAPI = options.electronAPI || (typeof window !== 'undefined' && window.secureElectronAPI);
-  moduleRegistry = options.moduleRegistry || {};
   
   info('Profile Backup module initialized', {
     module: 'profile-backup',
@@ -165,7 +165,7 @@ function createBackupListItem(backup) {
   // Add restore button handler
   restoreBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    await restoreBackup(backup.id);
+    await restoreBackup(backup.id, backup.shows);
   });
   
   return item;
@@ -185,10 +185,37 @@ function formatBytes(bytes) {
 }
 
 /**
+ * Explain which shows a restore brings in and which it replaces
+ * @param {string[]|null|'unreadable'} backupShows - Show names in the backup, null for a
+ *   pre-shows backup, 'unreadable' when its shows can't be read
+ * @returns {Promise<string>}
+ */
+async function describeShowReplacement(backupShows) {
+  if (backupShows === 'unreadable') {
+    return "This backup's saved shows can't be read, so after the restore Mx. Voice may have to start with an empty show.";
+  }
+  if (!Array.isArray(backupShows)) {
+    return 'This backup is from before shows. Its layout will become a show named Default Show, and it may be a layout from the middle of a show.';
+  }
+  let count = null;
+  try {
+    const state = await electronAPI.shows?.getState?.();
+    const shows = state?.data?.doc?.shows;
+    if (Array.isArray(shows)) count = shows.length;
+  } catch {
+    // Fall back to wording without a count.
+  }
+  const has = `This backup has ${backupShows.length} ${backupShows.length === 1 ? 'show' : 'shows'}: ${backupShows.join(', ')}.`;
+  if (count === null) return `${has} Your current shows will be replaced.`;
+  return `${has} Your ${count === 1 ? '1 current show' : `${count} current shows`} will be replaced.`;
+}
+
+/**
  * Restore from backup
  * @param {string} backupId - Backup ID to restore
+ * @param {string[]|null|'unreadable'} [backupShows] - as describeShowReplacement's
  */
-async function restoreBackup(backupId) {
+async function restoreBackup(backupId, backupShows = null) {
   try {
     if (!electronAPI || !electronAPI.profile) {
       error('Electron API not available', {
@@ -198,10 +225,19 @@ async function restoreBackup(backupId) {
       return;
     }
     
+    // The restore replaces the show on screen, and its unsaved changes live
+    // only in the crash-recovery record, which no backup includes: ask first.
+    // The prompt opens over this dialog's backup list.
+    const { askToSaveUnsavedChanges } = await import('../shows/index.js');
+    if (!await askToSaveUnsavedChanges('restore', { allowOver: 'backupRestoreModal' })) {
+      return;
+    }
+
     // Confirm restore
     const { customConfirm } = await import('../utils/index.js');
+    const showsNote = await describeShowReplacement(backupShows);
     const confirmed = await customConfirm(
-      'This will replace your current profile with the selected backup. A backup of your current profile will be created first. Continue?',
+      `This will replace your current profile with the selected backup. ${showsNote} A backup of your current profile will be created first. Continue?`,
       'Restore Backup'
     );
     
@@ -227,9 +263,10 @@ async function restoreBackup(backupId) {
       );
       
       // IMPORTANT:
-      // Prevent the close-time flush from saving the current in-memory state
+      // Prevent the close-time flush from saving the current in-memory layout
       // after the backup has been restored on disk but before the new window loads.
-      // Otherwise, the pre-restore models could overwrite the restored state.json.
+      // Otherwise, the pre-restore layout could land in a crash-recovery record
+      // and be offered over the restored shows.
       if (typeof window !== 'undefined') {
         window.isRestoringProfileState = true;
       }
@@ -245,6 +282,19 @@ async function restoreBackup(backupId) {
       });
       
       const { customConfirm } = await import('../utils/index.js');
+      if (result.sessionEnded) {
+        // The show session ended before the restore failed: reload to reopen
+        // it from disk, or Shows and autosave stay off until a restart
+        await customConfirm(
+          `Failed to restore backup: ${result.error} ${SESSION_RELOAD_SENTENCE}`,
+          'Restore Failed'
+        );
+        if (typeof window !== 'undefined') {
+          window.isRestoringProfileState = true;
+        }
+        window.location.reload();
+        return;
+      }
       await customConfirm(
         `Failed to restore backup: ${result.error}`,
         'Restore Failed'
@@ -402,61 +452,9 @@ async function createBackupNow() {
       return;
     }
 
-    // First, ensure the current profile state (hotkeys, holding tank, etc.) is flushed to disk
-    // so that the backup represents the exact current UI state.
-    if (typeof window !== 'undefined' && !window.isRestoringProfileState) {
-      const hasProfileStateModule =
-        typeof moduleRegistry.profileState?.saveProfileState === 'function';
-
-      if (hasProfileStateModule) {
-        info('Saving profile state before manual backup', {
-          module: 'profile-backup',
-          function: 'createBackupNow'
-        });
-
-        let saveResult = null;
-        try {
-          saveResult = await moduleRegistry.profileState.saveProfileState();
-        } catch (err) {
-          error('Error saving profile state before backup', {
-            module: 'profile-backup',
-            function: 'createBackupNow',
-            error: err.message
-          });
-        }
-
-        // If state save failed or was skipped, do NOT proceed with backup
-        if (!saveResult || saveResult.success === false || saveResult.skipped) {
-          const reason =
-            (saveResult && saveResult.error) ||
-            (saveResult && saveResult.skipped && 'Profile state save was skipped') ||
-            'Unknown error';
-
-          // More specific message when restoration lock is active
-          const message =
-            saveResult && saveResult.skipped
-              ? 'Cannot create a backup while your profile is still being restored. Please wait for the app to finish loading and then try again.'
-              : `Failed to save the current profile state before creating a backup: ${reason}`;
-
-          error('Aborting manual backup because profile state could not be saved', {
-            module: 'profile-backup',
-            function: 'createBackupNow',
-            reason
-          });
-
-          const { customConfirm } = await import('../utils/index.js');
-          await customConfirm(message, 'Backup Not Created');
-          return;
-        }
-      } else {
-        // When profile state module is not available (legacy/edge cases), we still allow
-        // the backup to proceed, but log a warning since we cannot guarantee exact UI state.
-        warn('Profile state module not available - proceeding with backup without explicit state save', {
-          module: 'profile-backup',
-          function: 'createBackupNow'
-        });
-      }
-    } else if (typeof window !== 'undefined' && window.isRestoringProfileState) {
+    // Shows are saved data, so there is nothing to flush before a backup, and
+    // crash recovery is deliberately not backed up.
+    if (typeof window !== 'undefined' && window.isRestoringProfileState) {
       // If a restoration is currently in progress, we should not attempt a backup at all
       // because the on-disk state is in flux and not a reliable snapshot.
       warn('Refusing to create backup while profile restoration is in progress', {
@@ -534,7 +532,6 @@ async function createBackupNow() {
  */
 function reinitializeProfileBackup(deps) {
   electronAPI = deps.electronAPI || (typeof window !== 'undefined' && window.secureElectronAPI);
-  moduleRegistry = deps.moduleRegistry || {};
 }
 
 export {

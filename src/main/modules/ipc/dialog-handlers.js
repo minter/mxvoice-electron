@@ -20,22 +20,11 @@ export function register(deps) {
     return path;
   });
 
-  // File operations
-  ipcMain.handle(IPC.DIALOG.OPEN_HOTKEY_FILE, async () => {
-    return await fileOperations.loadHotkeysFile();
-  });
-
-  ipcMain.handle(IPC.DIALOG.SAVE_HOTKEY_FILE, async (event, hotkeyArray) => {
-    return await fileOperations.saveHotkeysFile(hotkeyArray);
-  });
-
-  ipcMain.handle(IPC.DIALOG.OPEN_HOLDING_TANK_FILE, async () => {
-    return await fileOperations.loadHoldingTankFile();
-  });
-
-  ipcMain.handle(IPC.DIALOG.SAVE_HOLDING_TANK_FILE, async (event, holdingTankArray) => {
-    return await fileOperations.saveHoldingTankFile(holdingTankArray);
-  });
+  // Tab files: each shows its own dialog and returns { success, data } or { success: false, error }
+  ipcMain.handle(IPC.FILE.SAVE_HOTKEY_TAB, (event, tab, label) => fileOperations.saveHotkeyTabFile(tab, label));
+  ipcMain.handle(IPC.FILE.SAVE_HOLDING_TANK_TAB, (event, songIds, label) => fileOperations.saveHoldingTankTabFile(songIds, label));
+  ipcMain.handle(IPC.FILE.LOAD_HOTKEY_TAB, () => fileOperations.loadHotkeyTabFile());
+  ipcMain.handle(IPC.FILE.LOAD_HOLDING_TANK_TAB, () => fileOperations.loadHoldingTankTabFile());
 
   ipcMain.handle(IPC.DIALOG.SHOW_FILE_PICKER, async (event, options = {}) => {
     try {

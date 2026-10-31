@@ -12,6 +12,7 @@ import * as profileManager from './profile-manager.js';
 import { isAllowedAboutExternalUrl } from './about-external-url.js';
 import { createRendererCommandDispatcher } from './renderer-command-dispatcher.js';
 import { buildApplicationMenu } from './application-menu.js';
+import { swatchImage } from './color-swatch-image.js';
 import { createWindowStateManager } from './window-state-manager.js';
 import { createMainWindow } from './main-window-factory.js';
 import { createAppLifecycle } from './app-lifecycle.js';
@@ -26,7 +27,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Dependencies that will be injected
-let mainWindow;
+let getMainWindow = () => null;
 let store;
 let autoUpdater;
 let fileOperations;
@@ -38,10 +39,11 @@ let appStartTime;
 let rendererCommands;
 let windowStateManager;
 let appLifecycle;
+let showSession;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
-  mainWindow = dependencies.mainWindow;
+  getMainWindow = dependencies.getMainWindow || (() => dependencies.mainWindow);
   store = dependencies.store;
   autoUpdater = dependencies.autoUpdater;
   fileOperations = dependencies.fileOperations;
@@ -50,31 +52,70 @@ function initializeAppSetup(dependencies) {
   autoBackupTimer = dependencies.autoBackupTimer;
   analytics = dependencies.analytics;
   appStartTime = dependencies.appStartTime;
+  showSession = dependencies.showSession;
   rendererCommands = createRendererCommandDispatcher({
-    getWindow: () => mainWindow,
+    getWindow: () => getMainWindow(),
     debugLog
   });
   windowStateManager = createWindowStateManager({
-    mainWindow,
+    getMainWindow: () => getMainWindow(),
     store,
     debugLog,
     screen,
     profileManager,
     getCurrentProfile,
     log,
-    isQuitting: () => appLifecycle?.isQuitting() || false
+    isQuitting: () => appLifecycle?.isQuitting() || false,
+    confirmClose: (window) => confirmQuitOnWindowClose(window),
+    showSession
   });
   appLifecycle = createAppLifecycle({
     app,
-    BrowserWindow,
     prepareWindowForClose: () => prepareMainWindowForClose(),
-    createWindow,
-    onClosed: () => { mainWindow = null; },
     autoBackupTimer,
     analytics,
     appStartTime,
     debugLog
   });
+}
+
+/**
+ * Detail line of the window-close Quit confirmation. Quitting never saves the
+ * show, so say so when the show on screen has unsaved changes.
+ * @param {string} appName
+ * @param {{ dirty?: boolean, doc?: object }} [state] - show session state
+ * @returns {string}
+ */
+function quitDetail(appName, state) {
+  const base = `Closing the window quits ${appName}. Anything playing will stop`;
+  if (!state?.dirty) return `${base}.`;
+  const active = state.doc?.shows?.find((b) => b.id === state.doc?.activeShowId);
+  return `${base}, and changes to "${active?.name ?? 'the show'}" since it was last saved won't be kept.`;
+}
+
+/**
+ * Closing the main window quits the app (all platforms), so ask first: a
+ * stray click on the close button mid-show would otherwise stop the audio and
+ * exit. Cmd-Q and File > Quit are explicit and don't ask.
+ * @param {BrowserWindow} window
+ * @returns {Promise<boolean>} true to close and quit
+ */
+async function confirmQuitOnWindowClose(window) {
+  if (process.env.APP_TEST_MODE === '1') {
+    // E2E seam: no native dialog. Tests set the answer and read the count.
+    globalThis.__e2eCloseConfirmations = (globalThis.__e2eCloseConfirmations || 0) + 1;
+    return (globalThis.__e2eCloseAnswer || 'quit') === 'quit';
+  }
+  const { response } = await dialog.showMessageBox(window, {
+    type: 'question',
+    buttons: ['Quit', 'Cancel'],
+    // Quitting mid-show is the costly mistake, so Return keeps the app open
+    defaultId: 1,
+    cancelId: 1,
+    message: `Quit ${app.name}?`,
+    detail: quitDetail(app.name, showSession?.state?.())
+  });
+  return response === 0;
 }
 
 // Create the main window
@@ -102,8 +143,9 @@ function setupWindowStateSaving() {
   return windowStateManager?.setupWindowStateSaving();
 }
 
-function prepareMainWindowForClose() {
-  return windowStateManager?.prepareMainWindowForClose();
+/** @param {{ exit?: 'clean'|'switch'|'handoff' }} [options] - see window-state-manager */
+function prepareMainWindowForClose(options) {
+  return windowStateManager?.prepareMainWindowForClose(options);
 }
 
 function saveWindowState(window) {
@@ -121,13 +163,21 @@ function createApplicationMenu() {
     app,
     Menu,
     shell,
-    mainWindow,
+    mainWindow: getMainWindow(),
     fileOperations,
     getCurrentProfile,
     showAboutDialog,
     debugLog,
     logService: getLogService(),
-    rendererCommands
+    rendererCommands,
+    getShowMenuState: () => {
+      const { status, doc, dirty, unsaved, hasPlayed } = showSession?.state?.() ?? {};
+      const shows = (doc?.shows ?? []).map((b) => ({ id: b.id, name: b.name, color: b.color ?? null }));
+      const activeShow = shows.find((b) => b.id === doc?.activeShowId) ?? null;
+      return { status: status ?? 'idle', activeShow, shows, dirty: !!dirty, unsaved: !!unsaved, hasPlayed: !!hasPlayed };
+    },
+    rebuildMenu: () => createApplicationMenu(),
+    swatchImage
   });
 }
 // UI operation functions
@@ -141,7 +191,7 @@ function showAboutDialog() {
     const mutedColor = isDarkMode ? '#bbbbbb' : '#666666';
 
     const aboutWindow = new BrowserWindow({
-      parent: mainWindow,
+      parent: getMainWindow(),
       modal: true,
       width: 460,
       height: 400,
@@ -331,7 +381,7 @@ function showAboutDialog() {
     // Fallback to simple message box if anything fails
     try {
       const name = app.name;
-      dialog.showMessageBox(mainWindow, {
+      dialog.showMessageBox(getMainWindow(), {
         type: 'info',
         title: `About ${name}`,
         message: `${name}`,
@@ -363,10 +413,6 @@ function toggleAdvancedSearch() {
   return rendererCommands?.toggleAdvancedSearch();
 }
 
-function closeAllTabs() {
-  return rendererCommands?.closeAllTabs();
-}
-
 function sendDeleteSong() {
   return rendererCommands?.deleteSelectedSong();
 }
@@ -379,12 +425,43 @@ function manageCategories() {
   return rendererCommands?.manageCategories();
 }
 
-// Setup app lifecycle events
+/**
+ * Installing an update: save state now, and hand the show session off so
+ * the relaunch restores the show in progress. quitAndInstall() then closes the
+ * window without the close-time flush; the "Quit?" question is skipped from
+ * Electron's before-quit-for-update (allowUnconfirmedClose), which fires only
+ * when the install really quits. The quit's own clean exit keeps the record.
+ */
+function prepareForUpdateInstall() {
+  return windowStateManager?.prepareMainWindowForClose({ exit: 'handoff' });
+}
+
+/** Ignore window-state saves caused by the next `ms` of programmatic resizing */
+function suppressWindowStateSaves(ms) {
+  windowStateManager?.suppressSaves(ms);
+}
+
+/** The app is closing the window itself right now: don't ask "Quit?" */
+function allowUnconfirmedClose() {
+  windowStateManager?.allowUnconfirmedClose();
+}
+
+/** An update install didn't quit after all: closes ask "Quit?" again */
+function requireCloseConfirmation() {
+  windowStateManager?.requireCloseConfirmation();
+}
+
+// Setup app lifecycle events. Call after initializeAppSetup(): before it
+// there is no lifecycle to set up, and the call would silently do nothing.
 function setupAppLifecycle() {
-  return appLifecycle?.setup();
+  if (!appLifecycle) {
+    throw new Error('setupAppLifecycle() called before initializeAppSetup()');
+  }
+  return appLifecycle.setup();
 }
 
 export {
+  quitDetail,
   initializeAppSetup,
   createWindow,
   createApplicationMenu,
@@ -393,12 +470,16 @@ export {
   decreaseFontSize,
   toggleWaveform,
   toggleAdvancedSearch,
-  closeAllTabs,
   sendDeleteSong,
   sendEditSong,
   manageCategories,
   showAboutDialog,
   setupWindowStateSaving,
+  prepareMainWindowForClose,
+  prepareForUpdateInstall,
+  allowUnconfirmedClose,
+  requireCloseConfirmation,
+  suppressWindowStateSaves,
   saveWindowState,
   loadWindowState
 };
@@ -413,12 +494,16 @@ export default {
   decreaseFontSize,
   toggleWaveform,
   toggleAdvancedSearch,
-  closeAllTabs,
   sendDeleteSong,
   sendEditSong,
   manageCategories,
   showAboutDialog,
   setupWindowStateSaving,
+  prepareMainWindowForClose,
+  prepareForUpdateInstall,
+  allowUnconfirmedClose,
+  requireCloseConfirmation,
+  suppressWindowStateSaves,
   saveWindowState,
   loadWindowState
 };

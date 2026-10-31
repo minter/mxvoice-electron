@@ -8,7 +8,12 @@ import electronPath from 'electron';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export async function launchSeededApp(electron, suffix = '') {
+/**
+ * @param {Object} [options]
+ * @param {(userDataDir: string) => void} [options.beforeLaunch] - seed files
+ *   (e.g. shows.json) into the fresh user-data directory before the app starts
+ */
+export async function launchSeededApp(electron, suffix = '', { beforeLaunch } = {}) {
   // Create a unique per-suite root and per-suite userDataDir
   const suiteId = `${suffix || 'suite'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const suiteRoot = path.join(__dirname, `../fixtures/suites/${suiteId}`);
@@ -54,8 +59,12 @@ export async function launchSeededApp(electron, suffix = '') {
     first_run_completed: true,
     browser_width: 1200,
     browser_height: 800,
+    // Copied into the Default User profile on first launch. Shorter than the
+    // 3 second default so suites that fade out don't wait on it.
+    fade_out_seconds: 2,
   };
   fs.writeFileSync(path.join(userDataDir, 'config.json'), JSON.stringify(config, null, 2));
+  beforeLaunch?.(userDataDir);
 
   // Diagnostics: output isolated paths and file listings
   try {
@@ -99,8 +108,27 @@ export async function launchSeededApp(electron, suffix = '') {
 
   const page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');
+  await restoreDefaultWindowSize(app);
 
   return { app, page, userDataDir, suiteRoot, suiteDbDir, suiteMusicDir, suiteHotkeysDir };
+}
+
+// The app opens its window at 1200x800
+const DEFAULT_WINDOW_SIZE = { width: 1200, height: 800 };
+
+/**
+ * Give the main window the app's default size again. On a small screen (CI
+ * runners have 1024x768) Windows shrinks a new window to fit the screen, even
+ * one that is never shown, and layout-dependent tests then measure a smaller
+ * page than they do anywhere else. A resize after creation isn't limited.
+ */
+export async function restoreDefaultWindowSize(app) {
+  await app.evaluate(({ BrowserWindow }, size) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win || win.isDestroyed()) return;
+    const [width, height] = win.getSize();
+    if (width < size.width || height < size.height) win.setSize(size.width, size.height);
+  }, DEFAULT_WINDOW_SIZE);
 }
 
 /**

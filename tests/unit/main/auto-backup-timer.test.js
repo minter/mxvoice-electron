@@ -69,4 +69,39 @@ describe('auto-backup timer', () => {
     expect(createBackupIfChanged).toHaveBeenCalledWith('Two', expect.any(Object));
     expect(timer.getCurrentProfile()).toBe('Two');
   });
+
+  it('a backup still running when the same profile restarts does not leave a second timer', async () => {
+    loadProfilePreferences.mockResolvedValue({
+      backup_settings: { autoBackupEnabled: true, backupInterval: 1000 }
+    });
+    let finishBackup;
+    createBackupIfChanged.mockImplementationOnce(() => new Promise((resolve) => { finishBackup = resolve; }));
+
+    await timer.startAutoBackupTimer('A');
+    await vi.advanceTimersByTimeAsync(1000); // A's backup starts and is still running
+    await timer.startAutoBackupTimer('B'); // switch away...
+    await timer.startAutoBackupTimer('A'); // ...and back
+    finishBackup({ created: false });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it('a start overtaken while its settings load schedules nothing', async () => {
+    let releaseSettings;
+    loadProfilePreferences
+      .mockImplementationOnce(() => new Promise((resolve) => { releaseSettings = resolve; }))
+      .mockResolvedValue({ backup_settings: { autoBackupEnabled: true, backupInterval: 1000 } });
+
+    const slowStart = timer.startAutoBackupTimer('Old');
+    await timer.startAutoBackupTimer('New');
+    releaseSettings({ backup_settings: { autoBackupEnabled: true, backupInterval: 1000 } });
+    await slowStart;
+
+    expect(vi.getTimerCount()).toBe(1);
+    createBackupIfChanged.mockResolvedValue({ created: false });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(createBackupIfChanged).toHaveBeenCalledWith('New', expect.any(Object));
+    expect(createBackupIfChanged).not.toHaveBeenCalledWith('Old', expect.any(Object));
+  });
 });

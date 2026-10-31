@@ -1,0 +1,102 @@
+/*
+ * Show colors
+ *
+ * The active show's accent color, set by src/renderer/modules/shows/show-color.js
+ * as <html data-show-color="<key>">. Every rule here is scoped under
+ * [data-show-color], so without the attribute (or without this file) the
+ * window looks exactly as it does without the feature.
+ *
+ * Applied in three places only: the window background behind the panels
+ * (.container-fluid, the surface that paints the gutters around and between
+ * the three panels and the transport; bold, saturated), the active hotkey and
+ * holding-tank tab (2px accent), and the show name in the header (a pill).
+ * Panels, headers, tab rows, the transport, dialogs, menus and song rows keep
+ * their normal colors, and no text is drawn directly on the background.
+ *
+ * Stops per key: background light 200 / dark 600; other tokens light
+ * 100/600/800, dark 900/400/100. The window's
+ * mode is the body's theme-light/theme-dark class (theme-management); light
+ * applies whenever body.theme-dark is absent.
+ */
+
+/* --- Palette stops --- */
+
+[data-show-color="teal"] {
+  --sc-l200: #5DCAA5; --sc-d600: #0F6E56;
+  --sc-l50: #E1F5EE; --sc-l100: #9FE1CB; --sc-l600: #0F6E56; --sc-l800: #085041;
+  --sc-d900: #04342C; --sc-d800: #085041; --sc-d400: #5DCAA5; --sc-d100: #9FE1CB;
+}
+
+[data-show-color="blue"] {
+  --sc-l200: #85B7EB; --sc-d600: #185FA5;
+  --sc-l50: #E6F1FB; --sc-l100: #B5D4F4; --sc-l600: #185FA5; --sc-l800: #0C447C;
+  --sc-d900: #042C53; --sc-d800: #0C447C; --sc-d400: #85B7EB; --sc-d100: #B5D4F4;
+}
+
+[data-show-color="purple"] {
+  --sc-l200: #AFA9EC; --sc-d600: #534AB7;
+  --sc-l50: #EEEDFE; --sc-l100: #CECBF6; --sc-l600: #534AB7; --sc-l800: #3C3489;
+  --sc-d900: #26215C; --sc-d800: #3C3489; --sc-d400: #AFA9EC; --sc-d100: #CECBF6;
+}
+
+[data-show-color="pink"] {
+  --sc-l200: #ED93B1; --sc-d600: #993556;
+  --sc-l50: #FBEAF0; --sc-l100: #F4C0D1; --sc-l600: #993556; --sc-l800: #72243E;
+  --sc-d900: #4B1528; --sc-d800: #72243E; --sc-d400: #ED93B1; --sc-d100: #F4C0D1;
+}
+
+[data-show-color="coral"] {
+  --sc-l200: #F0997B; --sc-d600: #993C1D;
+  --sc-l50: #FAECE7; --sc-l100: #F5C4B3; --sc-l600: #993C1D; --sc-l800: #712B13;
+  --sc-d900: #4A1B0C; --sc-d800: #712B13; --sc-d400: #F0997B; --sc-d100: #F5C4B3;
+}
+
+[data-show-color="amber"] {
+  --sc-l200: #EF9F27; --sc-d600: #854F0B;
+  --sc-l50: #FAEEDA; --sc-l100: #FAC775; --sc-l600: #854F0B; --sc-l800: #633806;
+  --sc-d900: #412402; --sc-d800: #633806; --sc-d400: #EF9F27; --sc-d100: #FAC775;
+}
+
+[data-show-color="green"] {
+  --sc-l200: #97C459; --sc-d600: #3B6D11;
+  --sc-l50: #EAF3DE; --sc-l100: #C0DD97; --sc-l600: #3B6D11; --sc-l800: #27500A;
+  --sc-d900: #173404; --sc-d800: #27500A; --sc-d400: #97C459; --sc-d100: #C0DD97;
+}
+
+/* --- Tokens: light (the default, with or without body.theme-light) and dark --- */
+
+[data-show-color] body {
+  --show-bg: var(--sc-l200);
+  --show-chip-bg: var(--sc-l100);
+  --show-chip-fg: var(--sc-l800);
+  --show-tab-accent: var(--sc-l600);
+}
+
+[data-show-color] body.theme-dark {
+  --show-bg: var(--sc-d600);
+  --show-chip-bg: var(--sc-d900);
+  --show-chip-fg: var(--sc-d100);
+  --show-tab-accent: var(--sc-d400);
+}
+
+/* (a) Window background: the wrapper that paints the gutters. Only this
+   surface is colored; --panel-color stays as is for cards, dialogs and rows. */
+[data-show-color] body .container-fluid {
+  background-color: var(--show-bg);
+}
+
+/* (b) Active tab: 2px accent along the bottom, drawn inside the tab */
+[data-show-color] #hotkey_tabs .nav-link.active,
+[data-show-color] #holding_tank_tabs .nav-link.active {
+  box-shadow: inset 0 -2px 0 var(--show-tab-accent);
+}
+
+/* (c) Show name as a pill; the unsaved dot after it keeps the header text color.
+   The padding is added to index.css's 16ch so colored names truncate at the same length. */
+[data-show-color] #show-name {
+  background-color: var(--show-chip-bg);
+  color: var(--show-chip-fg);
+  padding: 2px 12px;
+  max-width: calc(16ch + 24px); /* 16ch of name, as uncolored, plus the side padding */
+  border-radius: 999px;
+}

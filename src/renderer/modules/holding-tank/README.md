@@ -88,18 +88,6 @@ Clears all songs from the holding tank.
 
 **Returns:** Promise<{success: boolean}>
 
-### File Operations
-
-#### `openHoldingTankFile()`
-Opens a holding tank file for import.
-
-**Returns:** Promise<{success: boolean, error?: string}>
-
-#### `saveHoldingTankFile()`
-Saves the current holding tank to a file.
-
-**Returns:** Promise<{success: boolean, error?: string}>
-
 ### Mode Management
 
 #### `setHoldingTankMode(mode: string)`
@@ -193,24 +181,6 @@ const currentMode = holdingTank.getHoldingTankMode();
 console.log('Current mode:', currentMode);
 ```
 
-### File Operations
-
-```javascript
-// Save holding tank to file
-holdingTank.saveHoldingTankFile().then(result => {
-  if (result.success) {
-    console.log('Holding tank saved to file');
-  }
-});
-
-// Load holding tank from file
-holdingTank.openHoldingTankFile().then(result => {
-  if (result.success) {
-    console.log('Holding tank loaded from file');
-  }
-});
-```
-
 ## Event Handlers
 
 The module integrates with the following event handlers:
@@ -225,7 +195,7 @@ The module integrates with the following event handlers:
 - `#holding_tank` (dragleave) - Hide drop zone
 
 Implementation notes:
-- Song rows added to the holding tank are created via `document.createElement('li')` with text set via `textContent`.
+- Song rows added to the holding tank are created via `document.createElement('li')` and filled by `setSongLabel` (`ui/song-label.js`): title, artist and time pieces set via `textContent`, which together still read "Title by Artist (0:21)".
 - Drag behavior is bound with `addEventListener('dragstart', songDrag)` from `drag-drop/drag-drop-functions.js`. Inline attributes like `ondragstart` are not used.
 
 ### Keyboard Events

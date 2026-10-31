@@ -27,9 +27,18 @@
     
 
     <link rel="stylesheet" href="stylesheets/colors.css">
+    <!-- Per-show accent color; inert without html[data-show-color] -->
+    <link rel="stylesheet" href="stylesheets/show-colors.css">
+    <link rel="stylesheet" href="stylesheets/profile-picker.css">
+    <!-- Played counts: the "▶ n" pill on songs played tonight -->
+    <link rel="stylesheet" href="stylesheets/played-counts.css">
 
     <!-- Driver.js CSS for guided tours -->
     <link rel="stylesheet" href="../node_modules/driver.js/dist/driver.css">
+    <!-- Tier 1 reskin (mockup): remove this line to go back -->
+    <link rel="stylesheet" href="stylesheets/reskin.css">
+    <!-- Tier 2 reskin (mockup): remove this line to drop just Tier 2 -->
+    <link rel="stylesheet" href="stylesheets/reskin-tier2.css">
 
     <script src="../node_modules/mousetrap/mousetrap.min.js"></script>
     <script src="../node_modules/wavesurfer.js/dist/wavesurfer.min.js"></script>
@@ -64,20 +73,6 @@
                   <i class="fas fa-list"></i> <span class="mode-btn-text">Playlist</span>
                 </button>
               </div>
-              <div class="icon-bar">
-                <a href="#" id="holding-tank-load-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Load Holding Tank File">
-                  <i class="far fa-sm fa-folder-open"></i>
-                </a>
-                <a href="#" id="holding-tank-save-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Save Holding Tank To File">
-                  <i class="far fa-sm fa-save"></i>
-                </a>
-                <a href="#" id="holding-tank-rename-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Rename Hotkey Tab">
-                  <i class="far fa-sm fa-edit"></i>
-                </a>
-                <a href="#" id="holding-tank-clear-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Clear Holding Tank List">
-                  <i class="far fa-sm fa-trash-alt"></i>
-                </a>
-              </div>
             </h6>
             <ul class="nav nav-tabs nav-fill" id="holding_tank_tabs" role="tablist">
               <li class="nav-item">
@@ -94,6 +89,11 @@
               </li>
               <li class="nav-item">
                 <a class="nav-link" role="tab" data-bs-toggle="tab" href="#holding_tank_5">5</a>
+              </li>
+              <li class="nav-item tab-actions-item" role="presentation">
+                <button type="button" class="tab-actions-btn" aria-label="Tab actions" title="Tab actions" aria-haspopup="menu" aria-expanded="false">
+                  <i class="fas fa-ellipsis" aria-hidden="true"></i>
+                </button>
               </li>
             </ul>
             <div id="holding_tank" class="card-body table-wrapper-scroll-y my-custom-scrollbar">
@@ -120,6 +120,7 @@
               <button id="update_available_button" type="button" class="d-none btn btn-warning btn-sm text-nowrap py-0 ms-3" title="Update available"><i class="fas fa-arrow-circle-up"></i> <span class="update-label">Update</span></button>
               <div id="profile-indicator" class="profile-indicator">
                 <i class="fas fa-user" id="profile-indicator-icon"></i> <span id="profile-name">Loading...</span>
+                <span class="show-separator" hidden>·</span> <i class="fas fa-table-cells" id="show-icon" hidden></i> <span id="show-name" hidden></span><span id="show-dirty" title="Unsaved changes" aria-label="Unsaved changes" hidden>•</span>
               </div>
             </h6>
             <div class="card-body">
@@ -188,20 +189,6 @@
                   <div class="header-button">
                     <i class="fas fa-keyboard"></i> Hotkeys
                   </div>
-                                      <div class="icon-bar">
-                      <a href="#" id="hotkey-load-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Load Hotkey File">
-                        <i class="far fa-sm fa-folder-open"></i>
-                      </a>
-                      <a href="#" id="hotkey-save-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Save Hotkeys To File">
-                        <i class="far fa-sm fa-save"></i>
-                      </a>
-                      <a href="#" id="hotkey-rename-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Rename Hotkey Tab">
-                        <i class="far fa-sm fa-edit"></i>
-                      </a>
-                      <a href="#" id="hotkey-clear-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Clear Hotkey List">
-                        <i class="far fa-sm fa-trash-alt"></i>
-                      </a>
-                    </div>
                   </h6>
                   <ul class="nav nav-tabs nav-fill" id="hotkey_tabs" role="tablist">
                     <li class="nav-item">
@@ -218,6 +205,11 @@
                     </li>
                     <li class="nav-item">
                       <a class="nav-link" role="tab" data-bs-toggle="tab" href="#hotkeys_list_5">5</a>
+                    </li>
+                    <li class="nav-item tab-actions-item" role="presentation">
+                      <button type="button" class="tab-actions-btn" aria-label="Tab actions" title="Tab actions" aria-haspopup="menu" aria-expanded="false">
+                        <i class="fas fa-ellipsis" aria-hidden="true"></i>
+                      </button>
                     </li>
                   </ul>
                   <div class="card-body">
@@ -300,7 +292,7 @@
               <div class="row align-items-center">
                 <div id="play_column" class="col-1">
                   <button id="play_button" class="btn btn-success btn-lg" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="Play"><i class="fas fa-sm fa-play"></i></button>
-                  <button id="pause_button" class="d-none btn btn-warning btn-lg" data-bs-toggle="tooltip" data-bs-placement="top" title="Pause"><i class="fas fa-sm fa-pause"></i></button>
+                  <button id="pause_button" class="d-none btn btn-warning btn-lg" data-bs-toggle="tooltip" data-bs-placement="top" title="Pause (Shift-click to fade out, then pause)"><i class="fas fa-sm fa-pause fade-cue-off"></i><i class="fas fa-sm fa-volume-low fade-cue-on"></i></button>
                 </div>
                 <div id="player-col" class="col-7">
                   <div id="now_playing_bar" class="flex-row d-flex justify-content-between">
@@ -316,13 +308,13 @@
                   </div>
                 </div>
                 <div id="stop_column" class="col-1">
-                  <button id="stop_button" class="btn btn-danger btn-lg" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="Stop"><i class="fas fa-sm fa-stop"></i></button>
+                  <button id="stop_button" class="btn btn-danger btn-lg" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="Stop (Shift-click to fade out)"><i class="fas fa-sm fa-stop fade-cue-off"></i><i class="fas fa-sm fa-volume-low fade-cue-on"></i></button>
                 </div>
                 <div id="controls_column" class="col-3 d-flex align-items-center">
-                  <button id="waveform_button" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Waveform"><i class="fas fa-chart-bar"></i></button>
+                  <button id="waveform_button" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Waveform"><i class="fas fa-wave-square"></i></button>
                   <button id="loop_button"
                     class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Loop"><i class="fas fa-md fa-sync-alt fa-flip-vertical"></i></button>
-                  <button id="mute_button" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Mute"><i class="fas fa-md fa-volume-mute"></i></button>
+                  <button id="mute_button" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Mute"><i class="fas fa-md fa-volume-high mute-icon-off"></i><i class="fas fa-md fa-volume-xmark mute-icon-on"></i></button>
                   <input type="range" class="form-range mousetrap" value="100" id="volume">
                 </div>
               </div>
@@ -582,12 +574,12 @@
                   </div>
                 </div>
                 <div class="row g-2 mb-3">
-                  <label for="preferences-hotkey-directory" class="col-sm-3 col-form-label">Hotkeys / Holding Tank</label>
+                  <label for="preferences-hotkey-directory" class="col-sm-3 col-form-label">Folder for hotkey and holding-tank files</label>
                   <div class="col-sm-6">
                     <input type="text" class="form-control" id="preferences-hotkey-directory">
                   </div>
                   <div class="col-sm-3">
-                    <button type="button" class="btn btn-primary" data-directory-target="#preferences-hotkey-directory" data-bs-toggle="tooltip" data-bs-placement="top" title="Select the directory where your hotkey files are stored">Choose Location</button>
+                    <button type="button" class="btn btn-primary" data-directory-target="#preferences-hotkey-directory" data-bs-toggle="tooltip" data-bs-placement="top" title="Select the folder where your hotkey and holding-tank files are stored">Choose Location</button>
                   </div>
                 </div>
                 <div class="row g-2 mb-3">
@@ -810,6 +802,30 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
             <button type="button" class="btn btn-success btn-sm" id="duplicateProfileBtn">Duplicate Profile</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Show Modal: rows are built by shows/import-dialog.js -->
+    <div class="modal fade" id="importShowModal" tabindex="-1" role="dialog" aria-labelledby="importShowTitle" aria-describedby="importShowIntro">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable import-show-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title import-show-title" id="importShowTitle">Import Show from Another Profile</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body import-show-body">
+            <p id="importShowIntro" class="import-show-intro">Copy a show into this profile. The other profile isn't changed.</p>
+            <div class="import-show-filter d-none">
+              <input type="search" id="importShowFilter" class="form-control form-control-sm" placeholder="Find a profile or show" aria-label="Find a profile or show" autocomplete="off">
+            </div>
+            <div id="importShowList" class="import-show-list" role="listbox" aria-labelledby="importShowTitle"></div>
+            <p id="importShowEmpty" class="import-show-empty d-none">No other profiles have saved shows.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" id="importShowBtn" disabled>Import Show</button>
           </div>
         </div>
       </div>

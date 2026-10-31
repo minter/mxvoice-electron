@@ -29,6 +29,17 @@ describe('SharedState', () => {
       expect(sharedState.get('fontSize')).toBe(11);
       expect(sharedState.get('categories')).toEqual({});
     });
+
+    it('starts on show generation 0 with no now-playing source, and resets to it', () => {
+      expect(sharedState.get('showGeneration')).toBe(0);
+      expect(sharedState.get('nowPlayingSource')).toBe(null);
+      sharedState.set('showGeneration', 3);
+      sharedState.set('nowPlayingSource', 3);
+      sharedState.reset();
+      expect(sharedState.get('showGeneration')).toBe(0);
+      expect(sharedState.get('nowPlayingSource')).toBe(null);
+      expect(mockDebugLog.warn).not.toHaveBeenCalled();
+    });
   });
 
   // ── get / set ───────────────────────────────────────────────────────

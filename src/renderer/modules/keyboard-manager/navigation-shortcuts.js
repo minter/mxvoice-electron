@@ -7,6 +7,8 @@
  * Extracted from renderer.js as part of Phase 5 modularization.
  */
 
+import { EscapeStopGesture } from './escape-stop-gesture.js';
+
 /**
  * NavigationShortcuts class handles navigation and control shortcuts
  */
@@ -17,6 +19,11 @@ export class NavigationShortcuts {
     this.searchField = null;
     this.bindings = new Map();
     this.isInitialized = false;
+    // Tap Esc to cut, hold it to fade out
+    this.escapeGesture = new EscapeStopGesture({
+      stop: (fadeOut) => this.handleStopPlaying(fadeOut),
+      isFadingOut: () => this.dependencies.moduleRegistry?.audio?.isFadingOut?.() === true
+    });
   }
 
   /**
@@ -110,16 +117,28 @@ export class NavigationShortcuts {
       // Register shortcuts only in the bindings registry (avoid double registration)
       // The keyboard manager will handle the actual Mousetrap bindings
       
+      // Esc keydown goes through the registry; its keyup ends a tap. The
+      // overlay guard stops the keydown under a dialog but lets the keyup
+      // through, so a dialog opening mid-tap can't turn the cut into a fade.
       this.bindings.set("esc", {
         key: "esc",
-        handler: (_event) => this.handleStopPlaying(false), // Explicitly pass false for fadeOut
+        handler: (event) => this.escapeGesture.keyDown(event),
         context: 'global+search',
-        description: 'Stop playing audio'
+        description: 'Stop playing audio (tap), or fade it out (hold)'
       });
+      Mousetrap.bind("esc", () => {
+        this.escapeGesture.keyUp();
+        return false;
+      }, 'keyup');
 
       this.bindings.set("shift+esc", {
         key: "shift+esc",
-        handler: (_event) => this.handleStopPlaying(true), // Explicitly pass true for fadeOut
+        // Fade. Key repeat is ignored: a held Shift+Esc would otherwise
+        // turn into a cut, since a stop during a fade cuts
+        handler: (event) => {
+          if (event?.repeat) return;
+          this.handleStopPlaying(true);
+        },
         context: 'global',
         description: 'Stop all audio'
       });
@@ -256,13 +275,9 @@ export class NavigationShortcuts {
   handlePlaySelected() {
     try {
       this.logDebug('Play selected requested');
-      
-      // Don't play if modal is open
-      const modal = document.getElementById('songFormModal');
-      if (modal && modal.classList.contains('show')) {
-        return false;
-      }
-      
+
+      // Under a dialog (the song form included) the overlay shortcut guard
+      // keeps Return from reaching this handler
       const playSelected = this.dependencies.moduleRegistry?.audio?.playSelected;
       if (typeof playSelected === 'function') {
         playSelected();
@@ -337,6 +352,8 @@ export class NavigationShortcuts {
           Mousetrap.unbind(key);
         }
       }
+      Mousetrap.unbind("esc", 'keyup');
+      this.escapeGesture.cancelHold();
       
       this.bindings.clear();
       this.searchField = null;

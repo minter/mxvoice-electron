@@ -7,7 +7,7 @@ function createHarness(overrides = {}) {
     'onHoldingTankLoad', 'onFkeyLoad', 'onAddDialogLoad', 'onBulkAddDialogLoad',
     'onExternalFilesDrop', 'onManageCategories', 'onEditSelectedSong',
     'onDeleteSelectedSong', 'onIncreaseFontSize', 'onDecreaseFontSize',
-    'onToggleWaveform', 'onToggleAdvancedSearch', 'onCloseAllTabs'
+    'onToggleWaveform', 'onToggleAdvancedSearch'
   ];
   const events = Object.fromEntries(eventNames.map((name) => [name, (handler) => { handlers[name] = handler; }]));
   const harness = {
@@ -24,7 +24,13 @@ function createHarness(overrides = {}) {
 describe('main process event bridge', () => {
   it('registers every supported main-process event', () => {
     const { handlers } = createHarness();
-    expect(Object.keys(handlers)).toHaveLength(13);
+    expect(Object.keys(handlers)).toHaveLength(10);
+  });
+
+  it('no longer listens for main-initiated hotkey or holding tank loads', () => {
+    const { handlers } = createHarness();
+    expect(handlers.onFkeyLoad).toBeUndefined();
+    expect(handlers.onHoldingTankLoad).toBeUndefined();
   });
 
   it('routes song editing to the song management module', () => {
@@ -40,10 +46,10 @@ describe('main process event bridge', () => {
   it('falls back to the registered module when no global exists', () => {
     const moduleHandler = vi.fn();
     const { handlers } = createHarness({
-      moduleRegistry: { ui: { closeAllTabs: moduleHandler } }
+      moduleRegistry: { ui: { toggleWaveform: moduleHandler } }
     });
 
-    handlers.onCloseAllTabs();
+    handlers.onToggleWaveform();
     expect(moduleHandler).toHaveBeenCalledOnce();
   });
 

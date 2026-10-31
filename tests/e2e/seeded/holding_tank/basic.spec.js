@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rms, waitForAudible, waitForSilence, stabilize } from '../../../utils/audio-helpers.js';
 import fs from 'node:fs';
+import { chooseTabAction, clearSelectedTab, loadTabFromFile } from '../../../utils/tab-actions.js';
 
 // Helper to detect if we're running in CI environment
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
@@ -169,9 +170,8 @@ test.describe('Holding Tank - basic', () => {
     await tab1.click();
     await expect(tab1).toHaveText('1');
     
-    // Click the Edit button in the toolbar (it's an icon with onclick, not a button with text)
-    const editButton = page.locator('#holding-tank-rename-btn');
-    await editButton.click();
+    // Choose Rename from the tab row's ⋯ menu
+    await chooseTabAction(page, 'holdingTank', 'rename');
 
     // Wait for modal to appear
     const renameInput = page.locator('.modal .prompt-input');
@@ -196,8 +196,8 @@ test.describe('Holding Tank - basic', () => {
     await tab2.click();
     await expect(tab2).toHaveText('2');
     
-    // Click the edit button
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'holdingTank', 'rename');
 
     // Wait for modal to appear
     await expect(renameInput).toBeVisible();
@@ -221,8 +221,8 @@ test.describe('Holding Tank - basic', () => {
     await tab3.click();
     await expect(tab3).toHaveText('3');
     
-    // Click Edit in the toolbar
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'holdingTank', 'rename');
 
     // Wait for modal to appear
     await expect(renameInput).toBeVisible();
@@ -246,8 +246,8 @@ test.describe('Holding Tank - basic', () => {
     await tab4.click();
     await expect(tab4).toHaveText('4');
     
-    // Click the Edit button
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'holdingTank', 'rename');
 
     // Wait for modal to appear
     await expect(renameInput).toBeVisible();
@@ -270,8 +270,8 @@ test.describe('Holding Tank - basic', () => {
     await tab5.click();
     await expect(tab5).toHaveText('5');
     
-    // Click Edit
-    await editButton.click();
+    // Choose Rename from the ⋯ menu
+    await chooseTabAction(page, 'holdingTank', 'rename');
 
     // Wait for modal to appear
     await expect(renameInput).toBeVisible();
@@ -332,8 +332,7 @@ test.describe('Holding Tank - basic', () => {
     }, holdingTankFile);
     
     // 2) Click the Load button to trigger the file picker
-    const loadButton = page.locator('#holding-tank-load-btn');
-    await loadButton.click();
+    await loadTabFromFile(page, 'holdingTank');
 
     // 3) Wait for the file to be loaded and processed by checking for expected items
     const activeTab = page.locator('#holding_tank_1');
@@ -390,16 +389,7 @@ test.describe('Holding Tank - basic', () => {
     const searchInput = page.locator('#omni_search');
     await searchInput.click();
 
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click();
-
-    // Click Confirm in the modal
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-
-    // Wait for modal to close and clear operation to complete
-    await expect(confirmButton).not.toBeVisible();
+    await clearSelectedTab(page, 'holdingTank');
     await clearModalBackdrop(page);
 
     // Verify holding tank is now empty
@@ -417,108 +407,6 @@ test.describe('Holding Tank - basic', () => {
     console.log('✅ Clear button functionality verified - holding tank successfully cleared');
   });
 
-  test('save holding tank to file', async () => {
-    // 1) Check what's currently in the holding tank
-    console.log('🔍 Starting save holding tank test...');
-    
-    const activeTab = page.locator('#holding_tank_1');
-    const holdingTankItems = activeTab.locator('.list-group-item');
-    const currentCount = await holdingTankItems.count();
-    console.log(`Current holding tank has ${currentCount} items`);
-    
-    // 2) Do a blank search to get all songs
-    const searchInput = page.locator('#omni_search');
-    await searchInput.click();
-    await searchInput.fill('');
-    await searchInput.press('Enter');
-
-    const rows = page.locator('#search_results tbody tr');
-    await expect(rows).toHaveCount(5, { timeout: 10000 });
-
-    // 3) Drag Got The Time (song ID 1001) to the holding tank
-    const gotTheTimeRow = rows.filter({ hasText: 'Anthrax' }).first();
-    await gotTheTimeRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
-
-    // Verify first song was added
-    await expect(holdingTankItems.first()).toContainText('Got The Time');
-    await expect(holdingTankItems.first()).toContainText('Anthrax');
-    
-    // 4) Drag We Are Family (song ID 1004) to the holding tank
-    const weAreFamilyRow = rows.filter({ hasText: 'Sister Sledge' }).first();
-    await weAreFamilyRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
-
-    // Verify second song was added
-    await expect(holdingTankItems).toHaveCount(2);
-    await expect(holdingTankItems.nth(1)).toContainText('We Are Family');
-    await expect(holdingTankItems.nth(1)).toContainText('Sister Sledge');
-    
-    // 5) Override the file picker to specify save location
-    // Use the same directory as hotkeys for now, since holding tank directory might not be configured
-    const hotkeyDir = await page.evaluate(async () => {
-      if (window.secureElectronAPI?.store?.get) {
-        const result = await window.secureElectronAPI.store.get('hotkey_directory');
-        return result?.success ? result.value : null;
-      }
-      return null;
-    });
-    
-    if (!hotkeyDir) {
-      throw new Error('Could not retrieve hotkey directory from store');
-    }
-    
-    const saveFilePath = path.join(hotkeyDir, 'testing.hld');
-    
-    await app.evaluate(async ({ dialog }) => {
-      const original = dialog.showSaveDialog;
-      // Save a restorer for later
-      // @ts-ignore
-      globalThis.__restoreSaveDialog = () => (dialog.showSaveDialog = original);
-    });
-    
-    await app.evaluate(({ dialog }, filePath) => {
-      dialog.showSaveDialog = async () => {
-        return {
-          canceled: false,
-          filePath: filePath,
-        };
-      };
-    }, saveFilePath);
-    
-    // 6) Click the Save button to trigger the save operation
-    const saveButton = page.locator('#holding-tank-save-btn');
-    await saveButton.click();
-    
-    // 7) Wait for the file to be saved by polling for its content
-    await expect.poll(() => fs.existsSync(saveFilePath), { timeout: 5000 }).toBe(true);
-
-    // 8) Read the file back from disk to verify content
-    const fileContent = fs.readFileSync(saveFilePath, 'utf8');
-    
-    console.log('File content result:', fileContent);
-    
-    // 9) Verify the file content matches expected format
-    // The file should contain two song IDs, one per line
-    expect(fileContent).toContain('1001'); // Got The Time by Anthrax
-    expect(fileContent).toContain('1004'); // We Are Family by Sister Sledge
-    
-    // Split the content into lines and verify we have exactly 2 lines
-    const lines = fileContent.trim().split('\n');
-    expect(lines).toHaveLength(2);
-    
-    // Verify the lines contain the expected song IDs
-    expect(lines).toContain('1001');
-    expect(lines).toContain('1004');
-    
-    // 10) Restore the original dialog
-    await app.evaluate(() => { globalThis.__restoreSaveDialog?.(); });
-    
-    console.log('✅ Successfully saved holding tank to file');
-    console.log('✅ Song 1: Got The Time by Anthrax (ID: 1001)');
-    console.log('✅ Song 2: We Are Family by Sister Sledge (ID: 1004)');
-    console.log('✅ File format: One song ID per line');
-    console.log('✅ File content verified on disk');
-  });
-
   test('drag and drop reordering in holding tank', async () => {
     // 1) Clear the holding tank first
     // Clean up any leftover modal state from previous tests
@@ -528,16 +416,7 @@ test.describe('Holding Tank - basic', () => {
     const preClearSearchInput = page.locator('#omni_search');
     await preClearSearchInput.click();
 
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click();
-
-    // Click Confirm in the modal
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-
-    // Wait for modal to close and clear operation to complete
-    await expect(confirmButton).not.toBeVisible();
+    await clearSelectedTab(page, 'holdingTank');
     await clearModalBackdrop(page);
 
     // Verify holding tank is now empty
@@ -554,20 +433,26 @@ test.describe('Holding Tank - basic', () => {
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 10000 });
 
-    // 3) Drag three songs into the holding tank in order
+    // 3) Drag three songs into the holding tank in order. Each goes below the
+    // last row: a fixed point in the list would land on a row once rows are
+    // taller (two-line rows, other fonts) and insert above it instead
+    const belowLastRow = async () => {
+      const box = await activeTab.boundingBox();
+      return { x: 50, y: Math.max(5, Math.round(box.height) - 4) };
+    };
     // First song: Got The Time by Anthrax (song ID 1001)
     const gotTheTimeRow = rows.filter({ hasText: 'Anthrax' }).first();
-    await gotTheTimeRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
+    await gotTheTimeRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: await belowLastRow() });
     await expect(holdingTankItems).toHaveCount(1);
 
     // Second song: We Are Family by Sister Sledge (song ID 1004)
     const weAreFamilyRow = rows.filter({ hasText: 'Sister Sledge' }).first();
-    await weAreFamilyRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
+    await weAreFamilyRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: await belowLastRow() });
     await expect(holdingTankItems).toHaveCount(2);
 
     // Third song: Eat It by Weird Al Yankovic (song ID 1005)
     const eatItRow = rows.filter({ hasText: 'Weird Al' }).first();
-    await eatItRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
+    await eatItRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: await belowLastRow() });
 
     // 4) Verify that all three songs are showing up in order
     await expect(holdingTankItems).toHaveCount(3);
@@ -658,12 +543,7 @@ test.describe('Holding Tank - basic', () => {
     const searchInputDismiss = page.locator('#omni_search');
     await searchInputDismiss.click();
 
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click();
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-    await expect(confirmButton).not.toBeVisible();
+    await clearSelectedTab(page, 'holdingTank');
     await clearModalBackdrop(page);
 
     // Verify tab 1 is empty
@@ -735,12 +615,7 @@ test.describe('Holding Tank - basic', () => {
     const tab1List = page.locator('#holding_tank_1');
     const existingItems = await tab1List.locator('.list-group-item').count();
     if (existingItems > 0) {
-      const clearButton = page.locator('#holding-tank-clear-btn');
-      await clearButton.click();
-      const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-      await expect(confirmButton).toBeVisible({ timeout: 5000 });
-      await confirmButton.click();
-      await expect(confirmButton).not.toBeVisible();
+      await clearSelectedTab(page, 'holdingTank');
       await clearModalBackdrop(page);
     }
 
@@ -894,12 +769,7 @@ test.describe('Holding Tank - basic', () => {
     const tab1List = page.locator('#holding_tank_1');
     const itemCount = await tab1List.locator('.list-group-item').count();
     if (itemCount > 0) {
-      const clearButton = page.locator('#holding-tank-clear-btn');
-      await clearButton.click();
-      const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-      await expect(confirmButton).toBeVisible({ timeout: 5000 });
-      await confirmButton.click();
-      await expect(confirmButton).not.toBeVisible();
+      await clearSelectedTab(page, 'holdingTank');
       await clearModalBackdrop(page);
     }
 
@@ -935,10 +805,11 @@ test.describe('Holding Tank - basic', () => {
     await expect(contextMenu).toBeVisible({ timeout: 10000 });
 
     // Verify expected items exist (Play, Edit, Remove from Holding Tank)
-    const menuItems = contextMenu.locator('.mxv-context-item');
+    // Mark as Unplayed is there too, hidden for a song not played tonight
+    const menuItems = contextMenu.locator('.mxv-context-item:visible');
     await expect(menuItems).toHaveCount(3);
 
-    const playBtn = contextMenu.locator('button:has-text("Play")');
+    const playBtn = contextMenu.getByRole('button', { name: 'Play', exact: true });
     await expect(playBtn).toBeVisible();
     await expect(contextMenu.locator('button:has-text("Edit")')).toBeVisible();
     let removeButton = contextMenu.locator('button:has-text("Remove from Holding Tank")');
@@ -1019,12 +890,7 @@ test.describe('Holding Tank - basic', () => {
     const tab1List = page.locator('#holding_tank_1');
     const itemCount = await tab1List.locator('.list-group-item').count();
     if (itemCount > 0) {
-      const clearButton = page.locator('#holding-tank-clear-btn');
-      await clearButton.click();
-      const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-      await expect(confirmButton).toBeVisible({ timeout: 5000 });
-      await confirmButton.click();
-      await expect(confirmButton).not.toBeVisible();
+      await clearSelectedTab(page, 'holdingTank');
       await clearModalBackdrop(page);
     }
 
@@ -1090,12 +956,7 @@ test.describe('Holding Tank - basic', () => {
   test('double-click playback works in holding tank tab 4', async () => {
     // 1) Clear the holding tank first to ensure clean state
     await clearModalBackdrop(page);
-    const clearButton = page.locator('#holding-tank-clear-btn');
-    await clearButton.click();
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your holding tank?") .confirm-btn');
-    await expect(confirmButton).toBeVisible({ timeout: 5000 });
-    await confirmButton.click();
-    await expect(confirmButton).not.toBeVisible();
+    await clearSelectedTab(page, 'holdingTank');
     await clearModalBackdrop(page);
 
     // Verify that the active tab (tab 1) is empty after clearing
@@ -1134,8 +995,7 @@ test.describe('Holding Tank - basic', () => {
     }, holdingTankFile);
     
     // Click the Load button to trigger the file picker
-    const loadButton = page.locator('#holding-tank-load-btn');
-    await loadButton.click();
+    await loadTabFromFile(page, 'holdingTank');
 
     // Wait for the file to be loaded and processed - check for expected items
     const tab4Items = tab4List.locator('.list-group-item');

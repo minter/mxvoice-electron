@@ -195,10 +195,11 @@ const secureElectronAPI = {
 
   // File operations - secure file management
   fileOperations: {
-    openHotkeyFile: () => ipcRenderer.invoke(IPC.DIALOG.OPEN_HOTKEY_FILE),
-    saveHotkeyFile: (data) => ipcRenderer.invoke(IPC.DIALOG.SAVE_HOTKEY_FILE, data),
-    openHoldingTankFile: () => ipcRenderer.invoke(IPC.DIALOG.OPEN_HOLDING_TANK_FILE),
-    saveHoldingTankFile: (data) => ipcRenderer.invoke(IPC.DIALOG.SAVE_HOLDING_TANK_FILE, data),
+    // A hotkey or holding tank tab to or from a .mrv/.hld file; each shows its own dialog
+    saveHotkeyTab: (tab, label) => ipcRenderer.invoke(IPC.FILE.SAVE_HOTKEY_TAB, tab, label),
+    saveHoldingTankTab: (songIds, label) => ipcRenderer.invoke(IPC.FILE.SAVE_HOLDING_TANK_TAB, songIds, label),
+    loadHotkeyTab: () => ipcRenderer.invoke(IPC.FILE.LOAD_HOTKEY_TAB),
+    loadHoldingTankTab: () => ipcRenderer.invoke(IPC.FILE.LOAD_HOLDING_TANK_TAB),
     // Pending update for restoring the quiet indicator after a renderer reload
     getPendingUpdate: () => ipcRenderer.invoke(IPC.APP.GET_PENDING_UPDATE),
     // Auto-update operations - Three-stage process
@@ -284,7 +285,6 @@ const secureElectronAPI = {
     decreaseFontSize: () => ipcRenderer.invoke(IPC.UI.DECREASE_FONT_SIZE),
     toggleWaveform: () => ipcRenderer.invoke(IPC.UI.TOGGLE_WAVEFORM),
     toggleAdvancedSearch: () => ipcRenderer.invoke(IPC.UI.TOGGLE_ADVANCED_SEARCH),
-    closeAllTabs: () => ipcRenderer.invoke(IPC.UI.CLOSE_ALL_TABS),
     showPreferences: () => ipcRenderer.invoke(IPC.UI.SHOW_PREFERENCES),
     manageCategories: () => ipcRenderer.invoke(IPC.UI.MANAGE_CATEGORIES),
     editSelectedSong: () => ipcRenderer.invoke(IPC.DATABASE.EDIT_SELECTED_SONG),
@@ -293,18 +293,6 @@ const secureElectronAPI = {
   
   // Event listeners - secure event handling (limited and safe)
   events: {
-    onFkeyLoad: (callback) => {
-      const handler = (_event, ...args) => callback(...args);
-      ipcRenderer.on('fkey_load', handler);
-      return () => ipcRenderer.removeListener('fkey_load', handler);
-    },
-    
-    onHoldingTankLoad: (callback) => {
-      const handler = (_event, ...args) => callback(...args);
-      ipcRenderer.on('holding_tank_load', handler);
-      return () => ipcRenderer.removeListener('holding_tank_load', handler);
-    },
-    
     onBulkAddDialogLoad: (callback) => {
       const handler = (_event, ...args) => callback(...args);
       ipcRenderer.on('bulk_add_dialog_load', handler);
@@ -349,13 +337,6 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('toggle_advanced_search', handler);
     },
 
-    // Close all tabs event
-    onCloseAllTabs: (callback) => {
-      const handler = (_event, ...args) => callback(...args);
-      ipcRenderer.on('close_all_tabs', handler);
-      return () => ipcRenderer.removeListener('close_all_tabs', handler);
-    },
-    
     // Additional UI events
     onManageCategories: (callback) => {
       const handler = (_event, ...args) => callback(...args);
@@ -381,6 +362,12 @@ const secureElectronAPI = {
       return () => ipcRenderer.removeListener('delete_selected_song', handler);
     },
     
+    onShowCommand: (callback) => {
+      const handler = (_event, ...args) => callback(...args);
+      ipcRenderer.on('menu:show-command', handler);
+      return () => ipcRenderer.removeListener('menu:show-command', handler);
+    },
+
     onSwitchProfile: (callback) => {
       const handler = (_event, ...args) => callback(...args);
       ipcRenderer.on('menu:switch-profile', handler);
@@ -461,11 +448,9 @@ const secureElectronAPI = {
   profile: {
     getCurrent: () => ipcRenderer.invoke(IPC.PROFILE.GET_CURRENT),
     getDirectory: (type) => ipcRenderer.invoke(IPC.PROFILE.GET_DIRECTORY, type),
-    switchProfile: () => ipcRenderer.invoke(IPC.PROFILE.SWITCH),
-    switchToProfile: (name) => ipcRenderer.invoke(IPC.PROFILE.SWITCH_TO, name),
-    saveState: (state, profileName) => ipcRenderer.invoke(IPC.PROFILE.SAVE_STATE, state, profileName),
-    loadState: () => ipcRenderer.invoke(IPC.PROFILE.LOAD_STATE),
-    saveStateBeforeSwitch: (state, profileName) => ipcRenderer.invoke(IPC.PROFILE.SAVE_STATE_BEFORE_SWITCH, state, profileName),
+    listProfiles: () => ipcRenderer.invoke(IPC.PROFILE.LIST),
+    // method: 'launcher' when chosen in the Switch Profile dialog, else 'direct'
+    switchToProfile: (name, method) => ipcRenderer.invoke(IPC.PROFILE.SWITCH_TO, name, method),
     getPreference: (key) => ipcRenderer.invoke(IPC.PROFILE.GET_PREFERENCE, key),
     setPreference: (key, value) => ipcRenderer.invoke(IPC.PROFILE.SET_PREFERENCE, key, value),
     setPreferences: (preferencesObject) => ipcRenderer.invoke(IPC.PROFILE.SET_PREFERENCES, preferencesObject),
@@ -498,6 +483,27 @@ const secureElectronAPI = {
       ipcRenderer.on('library:import-progress', handler);
       return () => ipcRenderer.removeListener('library:import-progress', handler);
     }
+  },
+
+  // Shows: the session in main captured the profile at open
+  shows: {
+    open: () => ipcRenderer.invoke(IPC.SHOWS.OPEN),
+    startEmpty: () => ipcRenderer.invoke(IPC.SHOWS.START_EMPTY),
+    resolveRecovery: (choice) => ipcRenderer.invoke(IPC.SHOWS.RESOLVE_RECOVERY, choice),
+    reportReady: (generation, ok, details) => ipcRenderer.invoke(IPC.SHOWS.REPORT_READY, generation, ok, details),
+    saveRecovery: (layout) => ipcRenderer.invoke(IPC.SHOWS.SAVE_RECOVERY, layout),
+    getState: () => ipcRenderer.invoke(IPC.SHOWS.GET_STATE),
+    activate: (showId) => ipcRenderer.invoke(IPC.SHOWS.ACTIVATE, showId),
+    revert: () => ipcRenderer.invoke(IPC.SHOWS.REVERT),
+    updateActive: (layout) => ipcRenderer.invoke(IPC.SHOWS.UPDATE_ACTIVE, layout),
+    create: (name, layout) => ipcRenderer.invoke(IPC.SHOWS.CREATE, name, layout),
+    rename: (showId, name) => ipcRenderer.invoke(IPC.SHOWS.RENAME, showId, name),
+    remove: (showId) => ipcRenderer.invoke(IPC.SHOWS.DELETE, showId),
+    listImportable: () => ipcRenderer.invoke(IPC.SHOWS.LIST_IMPORTABLE),
+    importShow: (profile, showId) => ipcRenderer.invoke(IPC.SHOWS.IMPORT, profile, showId),
+    setColor: (showId, color) => ipcRenderer.invoke(IPC.SHOWS.SET_COLOR, showId, color),
+    recordPlay: (songId) => ipcRenderer.invoke(IPC.SHOWS.RECORD_PLAY, songId),
+    clearPlayed: (songId) => ipcRenderer.invoke(IPC.SHOWS.CLEAR_PLAYED, songId)
   },
 
   // Utility functions

@@ -7,6 +7,8 @@ const logError = vi.fn();
 
 vi.mock('../../../src/renderer/modules/ui/bootstrap-adapter.js', () => ({ showModal, hideModal }));
 vi.mock('../../../src/renderer/modules/debug-log/index.js', () => ({ info: logInfo, error: logError }));
+const askToSaveUnsavedChanges = vi.fn(async () => true);
+vi.mock('../../../src/renderer/modules/shows/index.js', () => ({ askToSaveUnsavedChanges }));
 
 const elements = new Map();
 function element() {
@@ -185,5 +187,80 @@ describe('library transfer renderer import workflow', () => {
     await vi.advanceTimersByTimeAsync(2000);
     expect(window.location.reload).toHaveBeenCalledOnce();
     vi.useRealTimers();
+  });
+});
+
+describe('library transfer and the show session', () => {
+  beforeEach(() => {
+    elements.clear();
+    vi.clearAllMocks();
+    window.isRestoringProfileState = false;
+    askToSaveUnsavedChanges.mockResolvedValue(true);
+  });
+
+  it('export asks to save unsaved changes first; Cancel stops', async () => {
+    const { api, library } = createAPI({ success: true, archiveSize: 10 });
+    const order = [];
+    askToSaveUnsavedChanges.mockImplementation(async () => { order.push('ask'); return false; });
+    library.exportLibrary.mockImplementation(async () => { order.push('export'); return { success: true }; });
+    libraryTransfer.initializeLibraryTransfer({ electronAPI: api });
+
+    await libraryTransfer.startExport();
+    expect(askToSaveUnsavedChanges).toHaveBeenCalledWith('export');
+    expect(order).toEqual(['ask']);
+    expect(showModal).not.toHaveBeenCalled();
+    expect(library.onExportProgress).not.toHaveBeenCalled();
+
+    // Going on opens the export, after the prompt
+    order.length = 0;
+    askToSaveUnsavedChanges.mockImplementation(async () => { order.push('ask'); return true; });
+    await libraryTransfer.startExport();
+    expect(order).toEqual(['ask', 'export']);
+  });
+
+  async function failImport(result) {
+    const { api, library } = createImportAPI({
+      success: true, archivePath: '/tmp/library.mxvlib', manifest: { createdAt: '2026-01-01', contents: {} }
+    });
+    library.confirmImport.mockResolvedValue(result);
+    libraryTransfer.initializeLibraryTransfer({ electronAPI: api });
+    await libraryTransfer.startImport();
+    await libraryTransfer.confirmImport();
+    return api;
+  }
+
+  function closeProgressModal() {
+    const modal = elements.get('libraryTransferModal');
+    for (const [type, listener] of modal?.addEventListener.mock.calls ?? []) {
+      if (type === 'hidden.bs.modal') listener();
+    }
+  }
+
+  it('a sessionEnded import failure restarts once the message is closed', async () => {
+    const api = await failImport({ success: false, error: 'EBUSY: resource busy or locked', sessionEnded: true });
+
+    expect(elements.get('library-transfer-message').textContent)
+      .toBe('Import failed: EBUSY: resource busy or locked Mx. Voice will reload the show.');
+    expect(window.isRestoringProfileState).toBe(true);
+    expect(api.app.restart).not.toHaveBeenCalled();
+
+    closeProgressModal();
+    await vi.waitFor(() => expect(api.app.restart).toHaveBeenCalledOnce());
+  });
+
+  it('a sessionEnded import failure reloads the window when restart fails', async () => {
+    const api = await failImport({ success: false, error: 'EBUSY', sessionEnded: true });
+    api.app.restart.mockRejectedValue(new Error('restart failed'));
+    closeProgressModal();
+    await vi.waitFor(() => expect(window.location.reload).toHaveBeenCalledOnce());
+  });
+
+  it('an import failure before the session ended keeps the page', async () => {
+    const api = await failImport({ success: false, error: 'Invalid archive: it has no database.' });
+    expect(elements.get('library-transfer-message').textContent).toBe('Import failed: Invalid archive: it has no database.');
+    closeProgressModal();
+    expect(api.app.restart).not.toHaveBeenCalled();
+    expect(window.location.reload).not.toHaveBeenCalled();
+    expect(window.isRestoringProfileState).toBe(false);
   });
 });
