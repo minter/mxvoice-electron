@@ -171,10 +171,10 @@ function createApplicationMenu() {
     logService: getLogService(),
     rendererCommands,
     getShowMenuState: () => {
-      const { status, doc, dirty, hasPlayed } = showSession?.state?.() ?? {};
+      const { status, doc, dirty, unsaved, hasPlayed } = showSession?.state?.() ?? {};
       const shows = (doc?.shows ?? []).map((b) => ({ id: b.id, name: b.name, color: b.color ?? null }));
       const activeShow = shows.find((b) => b.id === doc?.activeShowId) ?? null;
-      return { status: status ?? 'idle', activeShow, shows, dirty: !!dirty, hasPlayed: !!hasPlayed };
+      return { status: status ?? 'idle', activeShow, shows, dirty: !!dirty, unsaved: !!unsaved, hasPlayed: !!hasPlayed };
     },
     rebuildMenu: () => createApplicationMenu(),
     swatchImage

@@ -320,39 +320,51 @@ async function createBackup(profileName, options = {}) {
 }
 
 /**
- * Show names in a backup's shows, in document order, read as opening the
- * profile would: shows.json, else its previous copy. Null for a pre-shows
- * backup (neither file), and 'unreadable' when a shows file is there but
- * neither copy can be read; never throws.
+ * Classify one shows file as show-store does when it opens a profile:
+ * 'missing', 'bad' (not JSON, or the wrong shape, so the previous copy is
+ * tried) or 'good'; 'refused' for a read error or a newer version, which
+ * fail the open instead.
+ */
+async function classifyShowsFile(file) {
+  let text;
+  try {
+    text = await fs.promises.readFile(file, 'utf8');
+  } catch (error) {
+    return { state: error?.code === 'ENOENT' ? 'missing' : 'refused' };
+  }
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return { state: 'bad' };
+  }
+  const parsed = parseDocument(raw);
+  if (parsed.ok) return { state: 'good', doc: parsed.doc };
+  return { state: parsed.error === 'version' ? 'refused' : 'bad' };
+}
+
+/**
+ * Show names in a backup's shows, in document order, as opening the restored
+ * profile would find them: shows.json, else its previous copy. Null for a
+ * pre-shows backup (neither file), and 'unreadable' when the profile would
+ * not open its shows; never throws.
  * @param {string} profileName - Profile name
  * @param {string} backupId - Backup ID
  * @returns {Promise<string[]|null|'unreadable'>}
  */
 async function readBackupShowNames(profileName, backupId) {
-  let found = false;
   try {
     const file = path.join(getBackupDirectory(profileName), backupId, 'shows.json');
-    for (const candidate of [file, `${file}.prev`]) {
-      let text;
-      try {
-        text = await fs.promises.readFile(candidate, 'utf8');
-      } catch (error) {
-        if (error?.code === 'ENOENT') continue;
-        found = true;
-        continue;
-      }
-      found = true;
-      try {
-        const parsed = parseDocument(JSON.parse(text));
-        if (parsed.ok) return parsed.doc.shows.map((b) => b.name);
-      } catch {
-        // Not JSON: try the previous copy
-      }
-    }
+    const main = await classifyShowsFile(file);
+    if (main.state === 'good') return main.doc.shows.map((b) => b.name);
+    if (main.state === 'refused') return 'unreadable';
+    const prev = await classifyShowsFile(`${file}.prev`);
+    if (prev.state === 'good') return prev.doc.shows.map((b) => b.name);
+    if (main.state === 'missing' && prev.state === 'missing') return null;
+    return 'unreadable';
   } catch {
-    // No usable backup folder path
+    return 'unreadable';
   }
-  return found ? 'unreadable' : null;
 }
 
 /**

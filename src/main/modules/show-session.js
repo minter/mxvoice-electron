@@ -151,6 +151,9 @@ export function createShowSession({
   let droppedIds = new Set();
   // The layout on screen differs from the saved active show
   let dirty = false;
+  // The open document was never written (shows.json couldn't be written at
+  // open): Save stays available until a save succeeds
+  let docUnsaved = false;
   // Counts the recovery saves (writes and retires) saveRecovery performs, and
   // keeps the last one's layout, so a Save can tell what is on screen once it
   // has run
@@ -198,7 +201,15 @@ export function createShowSession({
     if (visibleDirty() !== before) refreshMenu('setDirty');
   }
 
-  const state = () => ({ profile, status, doc, generation, dirty: visibleDirty(), hasPlayed: played.size > 0 });
+  const state = () => ({
+    profile,
+    status,
+    doc,
+    generation,
+    dirty: visibleDirty(),
+    unsaved: status === 'ready' && docUnsaved,
+    hasPlayed: played.size > 0
+  });
 
   const playedCounts = () => Object.fromEntries(played);
 
@@ -217,6 +228,7 @@ export function createShowSession({
     setPlayed(new Map());
     droppedIds = new Set();
     setDirty(false);
+    docUnsaved = false;
     doc = null;
     setStatus('loading');
 
@@ -242,6 +254,7 @@ export function createShowSession({
     if (myGeneration !== generation) throw new Error('superseded by a newer open');
 
     doc = loaded.doc;
+    docUnsaved = loaded.unsaved === true;
     pendingRecovery = record;
     pendingPlayed = playedRecord;
     playedSettled = !record && !playedRecord;
@@ -603,6 +616,7 @@ export function createShowSession({
     await showStore.save(p, nextDoc);
     assertCurrent(g);
     doc = nextDoc;
+    docUnsaved = false;
     if (writeSeq === null) return;
     try {
       await queued(async () => {
@@ -635,7 +649,10 @@ export function createShowSession({
       lowerFence(g);
       throw error;
     }
-    if (nextDoc) doc = nextDoc;
+    if (nextDoc) {
+      doc = nextDoc;
+      docUnsaved = false;
+    }
     await retireRecovery(fn, p);
     assertCurrent(g);
     generation += 1;

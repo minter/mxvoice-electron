@@ -55,7 +55,9 @@ export function setupDragDropEventHandlers() {
       // themselves. Clearing here would wipe the position before they see it.
       const dt = e.dataTransfer || e.originalEvent?.dataTransfer;
       if (!dt || !dt.getData('text')?.length) {
-        clearHoldingTankDropIndicators();
+        // Not a song (a file or text from another app): nothing lands, and
+        // its drop position must not carry over to a later drop
+        endHoldingTankDrag();
         return;
       }
 
@@ -83,6 +85,11 @@ export function setupDragDropEventHandlers() {
       }
     }, { signal });
   }
+
+  // A drag from another app never gets a dragend here; once it is dropped
+  // anywhere else on the page, its drop position is forgotten too. Bubble
+  // phase, so the holding tank's own drop reads the position first.
+  document.addEventListener('drop', () => endHoldingTankDrag(), { signal });
 
   // A drag that ends anywhere (dropped elsewhere, or cancelled with Esc)
   // leaves no drop highlight behind

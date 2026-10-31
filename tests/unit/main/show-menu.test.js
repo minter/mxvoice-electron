@@ -57,6 +57,8 @@ describe('Shows menu', () => {
     expect(save({ ...readyState(), dirty: false })).toBe(false);
     expect(save({ ...readyState(), dirty: undefined })).toBe(false);
     expect(save({ ...readyState(), status: 'loading' })).toBe(false);
+    // A document that was never written can be saved with no layout change
+    expect(save({ ...readyState(), dirty: false, unsaved: true })).toBe(true);
   });
 
   it('enables Revert to Saved only when ready with unsaved changes', () => {

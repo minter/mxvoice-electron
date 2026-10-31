@@ -88,7 +88,8 @@ function setup() {
     getElementById: (id) => elements[id] ?? null,
     createElement: (tag) => new FakeElement(tag)
   };
-  const show = vi.fn(async () => {});
+  // Bootstrap reports 'shown' once the dialog has finished opening
+  const show = vi.fn(async () => { elements.importShowModal.dispatch('shown.bs.modal'); });
   const hide = vi.fn(async () => { elements.importShowModal.dispatch('hidden.bs.modal'); });
   return { elements, options: { document: doc, show, hide }, show, hide };
 }
@@ -168,6 +169,21 @@ describe('chooseImportShow', () => {
     expect(hide).toHaveBeenCalledOnce();
 
     elements.importShowModal.dispatch('hidden.bs.modal');
+    await expect(chosen).resolves.toEqual({ profile: 'Derek', showId: 'd1' });
+  });
+
+  it('a choice made while the dialog is still opening hides it once it has opened', async () => {
+    const { elements, options, show, hide } = setup();
+    // Still opening: Bootstrap would ignore a hide() now
+    show.mockImplementation(async () => {});
+    const chosen = chooseImportShow(groups, options);
+    await vi.waitFor(() => expect(rowsOf(elements.importShowList)).toHaveLength(3));
+    rowsOf(elements.importShowList)[0].click();
+    elements.importShowBtn.click();
+    expect(hide).not.toHaveBeenCalled();
+
+    elements.importShowModal.dispatch('shown.bs.modal');
+    expect(hide).toHaveBeenCalledOnce();
     await expect(chosen).resolves.toEqual({ profile: 'Derek', showId: 'd1' });
   });
 

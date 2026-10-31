@@ -16,7 +16,7 @@ function escapeLabel(name, platform) {
 }
 
 /**
- * @param {Object} state - { status, activeShow, shows, dirty, hasPlayed } from the show session
+ * @param {Object} state - { status, activeShow, shows, dirty, unsaved, hasPlayed } from the show session
  * @param {Object} [options]
  * @param {Function} [options.rebuild] - rebuilds the application menu from the session
  * @param {Function} [options.swatchImage] - (colorKey|null) => NativeImage for the Color items
@@ -54,8 +54,9 @@ function buildShowMenu(state, { platform, send, rebuild, swatchImage } = {}) {
         };
       }),
       { type: 'separator' },
-      // Save and Revert have nothing to do unless the layout on screen differs from the saved show
-      { label: `${quoted('Save')}…`, enabled: hasActive && !!state?.dirty, click: emit('save') },
+      // Save and Revert have nothing to do unless the layout on screen differs from the saved show;
+      // Save also stays available while the open document was never written (`unsaved`)
+      { label: `${quoted('Save')}…`, enabled: hasActive && (!!state?.dirty || !!state?.unsaved), click: emit('save') },
       { label: 'Save As…', enabled: ready, click: emit('save-as') },
       { label: 'Revert to Saved…', enabled: ready && !!state?.dirty, click: emit('revert') },
       { type: 'separator' },

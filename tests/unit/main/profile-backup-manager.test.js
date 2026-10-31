@@ -110,6 +110,11 @@ describe('profile backup manager orchestration', () => {
     await fs.promises.writeFile(`${backupShows}.prev`, '{nope');
     const corrupt = await manager.listBackups(profileName);
     expect(corrupt.backups.find((b) => b.id === created.backupId).shows).toBe('unreadable');
+    // A newer version's shows.json fails the open, so its previous copy isn't what restores
+    await fs.promises.writeFile(`${backupShows}.prev`, JSON.stringify(doc));
+    await fs.promises.writeFile(backupShows, JSON.stringify({ ...doc, version: 2 }));
+    const newer = await manager.listBackups(profileName);
+    expect(newer.backups.find((b) => b.id === created.backupId).shows).toBe('unreadable');
     await fs.promises.rm(showsFile);
   });
 

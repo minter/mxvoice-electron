@@ -133,6 +133,7 @@ export function chooseImportShow(groups, {
     let selectedRow = null;
     let selected = null;
     let chosen = null;
+    let shown = false;
     let settled = false;
 
     const finish = (value) => {
@@ -142,11 +143,13 @@ export function chooseImportShow(groups, {
       resolve(value);
     };
     // Resolved once the dialog is hidden, not on the click: the caller may
-    // open another dialog next (Save changes?), and dialogs don't stack
+    // open another dialog next (Save changes?), and dialogs don't stack.
+    // Bootstrap ignores hide() while the dialog is still opening, so a choice
+    // made then hides it once it has opened.
     const choose = () => {
       if (!selected || chosen) return;
       chosen = selected;
-      void hide(MODAL, LOG_CONTEXT);
+      if (shown) void hide(MODAL, LOG_CONTEXT);
     };
     const select = (row, choice) => {
       if (selectedRow) {
@@ -208,6 +211,10 @@ export function chooseImportShow(groups, {
     }, { signal });
 
     importButton.addEventListener('click', choose, { signal });
+    modal.addEventListener('shown.bs.modal', () => {
+      shown = true;
+      if (chosen) void hide(MODAL, LOG_CONTEXT);
+    }, { signal });
     // Import, or Esc, the backdrop, Cancel and the close button
     modal.addEventListener('hidden.bs.modal', () => finish(chosen), { signal });
 

@@ -2001,8 +2001,25 @@ describe('opening after a migration that could not be saved', () => {
     expect(opened.notice).toBe(UNSAVED_NOTICE);
     expect(opened.show.layout.hotkeys[0].hotkeys.f1).toBe('7');
     ctx.session.reportReady(opened.generation, true);
-    expect(ctx.session.state().status).toBe('ready');
+    expect(ctx.session.state()).toMatchObject({ status: 'ready', unsaved: true, dirty: false });
     expect(nodeFs.existsSync(store.showsFile)).toBe(false);
+  });
+
+  it('an unsaved document stays saveable until a save succeeds, and is clean after it', async () => {
+    const store = failingStoreSetup();
+    const ctx = setup({ showStore: store.showStore });
+    const opened = await openReady(ctx);
+    // The screen is the migrated show: nothing dirty, but never written
+    await ctx.session.saveRecovery(opened.show.layout);
+    expect(ctx.session.state()).toMatchObject({ unsaved: true, dirty: false });
+
+    await expect(ctx.session.updateActive(opened.show.layout)).rejects.toThrow();
+    expect(ctx.session.state().unsaved).toBe(true);
+
+    store.failing.on = false;
+    await ctx.session.updateActive(opened.show.layout);
+    expect(ctx.session.state().unsaved).toBe(false);
+    expect(nodeFs.existsSync(store.showsFile)).toBe(true);
   });
 
   it('Save after an unsaved migration writes shows.json', async () => {

@@ -154,6 +154,16 @@ function isProfileRegistryReadable() {
  * @returns {boolean} Success status
  */
 function saveProfileRegistry(registry) {
+  // The stand-in for an unreadable profiles.json lists only Default User:
+  // writing it would drop every other profile for good, and lose the file
+  // that could be repaired by hand
+  if (registry?.unreadable) {
+    debugLog?.warn('Not saving the profile registry: profiles.json is unreadable', {
+      module: 'profile-manager',
+      function: 'saveProfileRegistry'
+    });
+    return false;
+  }
   try {
     const registryPath = getProfileRegistryPath();
     fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2));
@@ -327,6 +337,10 @@ function createProfile(profileName, description = '') {
     
     // Load registry
     const registry = loadProfileRegistry();
+    // Refused before any folder is made: the profile could not be registered
+    if (registry.unreadable) {
+      return { success: false, error: "The profile list can't be read, so no profile can be created." };
+    }
     
     // Create profile directory
     const profileDir = getProfileDirectory(profileName);
