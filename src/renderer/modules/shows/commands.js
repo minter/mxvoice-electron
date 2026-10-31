@@ -19,7 +19,7 @@ const LOG_CONTEXT = { module: 'shows', function: 'runShowCommand' };
 
 const CHANGE_FAILED_MESSAGE = "Mx. Voice couldn't change the show. Your saved shows were not changed.";
 // The session refused the command; the menu is rebuilt in main, nothing to tell the user
-const REFUSED_ERRORS = new Set(['busy', 'session not ready']);
+const REFUSED_ERRORS = new Set(['busy', 'session not ready', 'nothing to revert']);
 
 let running = false;
 

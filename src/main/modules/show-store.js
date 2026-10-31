@@ -251,12 +251,20 @@ export function createShowStore({
       }
       if (found.kind === 'prev') {
         const showsPath = getProfileShowsPath(profileName);
-        if (found.mainBad) {
-          const moved = await quarantine(showsPath, { fs });
-          debugLog?.warn?.('Quarantined unreadable shows file', { ...logCtx('load'), moved });
+        try {
+          if (found.mainBad) {
+            const moved = await quarantine(showsPath, { fs });
+            debugLog?.warn?.('Quarantined unreadable shows file', { ...logCtx('load'), moved });
+          }
+          // keepPrevious: false leaves .prev intact for the next recovery.
+          await writeJsonAtomic(showsPath, found.doc, { keepPrevious: false, fs });
+        } catch (error) {
+          if (!isWriteFailure(error)) throw error;
+          // Open the previous copy anyway, as an unsaved migration does: .prev
+          // is untouched, and the next save writes shows.json
+          debugLog?.warn?.('Could not restore shows.json from its previous copy', { ...logCtx('load'), code: error.code, error: error.message });
+          return { doc: found.doc, source: 'recovered', unsaved: true, notice: RECOVERY_NOTICE };
         }
-        // keepPrevious: false leaves .prev intact for the next recovery.
-        await writeJsonAtomic(showsPath, found.doc, { keepPrevious: false, fs });
         return { doc: found.doc, source: 'recovered', notice: RECOVERY_NOTICE };
       }
       const migrated = await buildMigration(profileName);

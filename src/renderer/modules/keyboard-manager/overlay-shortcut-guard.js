@@ -42,10 +42,13 @@ export function isOverlayOpen(doc) {
  * @param {string} options.combo
  * @param {Document} options.doc
  * @param {() => boolean} options.baseStop - Mousetrap's own rule
+ * @param {string} [options.type] - the event type; a keyup only ends a press
+ *   whose keydown already passed (Esc's tap), so an overlay that opened
+ *   meanwhile must not turn that tap into a hold
  * @returns {boolean} true to skip the shortcut
  */
-export function shouldStopShortcut({ combo, doc, baseStop }) {
-  if (!isFunctionKeyCombo(combo) && isOverlayOpen(doc)) return true;
+export function shouldStopShortcut({ combo, doc, baseStop, type }) {
+  if (type !== 'keyup' && !isFunctionKeyCombo(combo) && isOverlayOpen(doc)) return true;
   return baseStop();
 }
 
@@ -63,7 +66,7 @@ export function installOverlayShortcutGuard(MousetrapCtor = globalThis.Mousetrap
 
   const base = proto.stopCallback;
   const guarded = function stopCallback(e, element, combo, sequence) {
-    return shouldStopShortcut({ combo, doc: getDoc(), baseStop: () => base.call(this, e, element, combo, sequence) });
+    return shouldStopShortcut({ combo, doc: getDoc(), type: e?.type, baseStop: () => base.call(this, e, element, combo, sequence) });
   };
   guarded.overlayGuard = true;
   proto.stopCallback = guarded;

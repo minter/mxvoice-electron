@@ -341,6 +341,22 @@ describe('show store', () => {
     expect(listing('p')).toEqual(['shows.json']);
   });
 
+  it('opens .prev, marked unsaved, when shows.json cannot be written back', async () => {
+    addProfile('p', { 'shows.json.prev': JSON.stringify(validDoc()) });
+    const failing = { on: true };
+    const failingStore = makeStore({ fs: failingWriteFs('EPERM', failing) });
+
+    const loaded = await failingStore.load('p');
+    expect(loaded).toMatchObject({ source: 'recovered', unsaved: true, notice: NOTICE });
+    expect(loaded.doc.activeShowId).toBe('good');
+    expect(listing('p')).toEqual(['shows.json.prev']);
+
+    // Once writable, the next load writes shows.json from .prev
+    failing.on = false;
+    expect((await failingStore.load('p')).unsaved).toBeUndefined();
+    expect((await failingStore.load('p')).source).toBe('shows');
+  });
+
   describe('a migration whose first write fails', () => {
     it('a migration whose first write fails with ENOSPC still opens the migrated layout, with the unsaved notice', async () => {
       const state = fs.readFileSync(FIXTURE, 'utf8');

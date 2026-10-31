@@ -658,6 +658,8 @@ export function createShowSession({
 
   function revert() {
     return mutation('revert', ({ p, g }) => {
+      // The screen already is the saved show: nothing to discard
+      if (!visibleDirty()) throw new Error('nothing to revert');
       fenced = true;
       return reload('revert', p, g, null);
     });

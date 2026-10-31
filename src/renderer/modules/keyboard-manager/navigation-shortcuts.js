@@ -117,8 +117,9 @@ export class NavigationShortcuts {
       // Register shortcuts only in the bindings registry (avoid double registration)
       // The keyboard manager will handle the actual Mousetrap bindings
       
-      // Esc keydown goes through the registry; its keyup ends a tap. Both
-      // pass Mousetrap's stopCallback, so the overlay guard covers them.
+      // Esc keydown goes through the registry; its keyup ends a tap. The
+      // overlay guard stops the keydown under a dialog but lets the keyup
+      // through, so a dialog opening mid-tap can't turn the cut into a fade.
       this.bindings.set("esc", {
         key: "esc",
         handler: (event) => this.escapeGesture.keyDown(event),

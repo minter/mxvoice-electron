@@ -132,6 +132,7 @@ export function chooseImportShow(groups, {
     const { signal } = listeners;
     let selectedRow = null;
     let selected = null;
+    let chosen = null;
     let settled = false;
 
     const finish = (value) => {
@@ -140,10 +141,11 @@ export function chooseImportShow(groups, {
       listeners.abort();
       resolve(value);
     };
+    // Resolved once the dialog is hidden, not on the click: the caller may
+    // open another dialog next (Save changes?), and dialogs don't stack
     const choose = () => {
-      if (!selected) return;
-      const choice = selected;
-      finish(choice);
+      if (!selected || chosen) return;
+      chosen = selected;
       void hide(MODAL, LOG_CONTEXT);
     };
     const select = (row, choice) => {
@@ -206,8 +208,8 @@ export function chooseImportShow(groups, {
     }, { signal });
 
     importButton.addEventListener('click', choose, { signal });
-    // Esc, the backdrop, Cancel and the close button
-    modal.addEventListener('hidden.bs.modal', () => finish(null), { signal });
+    // Import, or Esc, the backdrop, Cancel and the close button
+    modal.addEventListener('hidden.bs.modal', () => finish(chosen), { signal });
 
     void show(MODAL, LOG_CONTEXT, { backdrop: true, keyboard: true });
   });

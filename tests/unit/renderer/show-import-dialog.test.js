@@ -149,6 +149,28 @@ describe('chooseImportShow', () => {
     expect(hide).toHaveBeenCalledWith('#importShowModal', expect.any(Object));
   });
 
+  it('resolves the choice only once the dialog is hidden, so the next dialog never opens over it', async () => {
+    const { elements, options, hide } = setup();
+    hide.mockImplementation(async () => {});
+    const chosen = chooseImportShow(groups, options);
+    await vi.waitFor(() => expect(rowsOf(elements.importShowList)).toHaveLength(3));
+    rowsOf(elements.importShowList)[0].click();
+    elements.importShowBtn.click();
+    let settled = false;
+    void chosen.then(() => { settled = true; });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(hide).toHaveBeenCalledOnce();
+    expect(settled).toBe(false);
+
+    // A second Import click while it hides changes nothing
+    elements.importShowBtn.click();
+    expect(hide).toHaveBeenCalledOnce();
+
+    elements.importShowModal.dispatch('hidden.bs.modal');
+    await expect(chosen).resolves.toEqual({ profile: 'Derek', showId: 'd1' });
+  });
+
   it('a double-click imports that row', async () => {
     const { elements, options } = setup();
     const chosen = chooseImportShow(groups, options);

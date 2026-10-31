@@ -858,6 +858,17 @@ describe('show session mutations', () => {
     expect(ctx.recoveryStore.records.get('Alice')).toMatchObject({ showId: 'show-2', layout: layoutWith(9) });
   });
 
+  it('revert is refused when the screen already is the saved show', async () => {
+    const ctx = setup({ doc: twoShowDoc() });
+    const opened = await openReady(ctx);
+    await ctx.session.saveRecovery(layoutWith(1));
+
+    await expect(ctx.session.revert()).rejects.toThrow('nothing to revert');
+    expect(ctx.session.state()).toMatchObject({ status: 'ready', generation: opened.generation });
+    // Not fenced: recovery writes still land
+    await expect(ctx.session.saveRecovery(layoutWith(9))).resolves.toEqual({ dirty: true });
+  });
+
   it('revert retires recovery and reloads the saved active show', async () => {
     const ctx = setup({ doc: twoShowDoc() });
     const opened = await openReady(ctx);
@@ -1381,6 +1392,7 @@ describe('show session imports', () => {
     expect(nodeFs.existsSync(path.join(store.dir('Default User'), 'shows.json'))).toBe(false);
 
     // Allowed while loading, too: it only needs an opened profile
+    await ctx.session.saveRecovery(layoutWith(9));
     await ctx.session.revert();
     await expect(ctx.session.listImportable()).resolves.toHaveLength(3);
   });
@@ -1612,6 +1624,7 @@ describe('show session played counts', () => {
     // Plays while the next show loads still count
     await ctx.session.recordPlay('12');
     ctx.session.reportReady(switched.generation, true);
+    await ctx.session.saveRecovery(layoutWith(9));
     const reverted = await ctx.session.revert();
     ctx.session.reportReady(reverted.generation, true);
     await ctx.session.updateActive(layoutWith(5));

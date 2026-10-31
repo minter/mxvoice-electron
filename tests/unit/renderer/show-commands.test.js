@@ -131,6 +131,15 @@ describe('runShowCommand', () => {
     expect(api.revert).not.toHaveBeenCalled();
   });
 
+  it('a revert the session refuses as nothing to revert is logged, not alerted', async () => {
+    // The screen was saved between the prompt and the revert
+    const { api, deps } = setup({ dirty: true });
+    api.revert.mockResolvedValue(fail('nothing to revert'));
+    await runShowCommand({ command: 'revert' }, deps);
+    expect(deps.alert).not.toHaveBeenCalled();
+    expect(deps.applyLayout).not.toHaveBeenCalled();
+  });
+
   it('save-as creates a show from the on-screen layout', async () => {
     const { api, deps } = setup();
     deps.prompt.mockResolvedValueOnce('Late Show');

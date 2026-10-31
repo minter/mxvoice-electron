@@ -89,6 +89,13 @@ describe('shouldStopShortcut', () => {
     expect(shouldStopShortcut({ combo: 'f2', doc: fakeDoc({ modal: true }), baseStop: () => true })).toBe(true);
   });
 
+  it('lets a keyup through under a dialog, so an Esc tap still ends as a cut', () => {
+    expect(shouldStopShortcut({ combo: 'esc', type: 'keyup', doc: fakeDoc({ modal: true }), baseStop: () => false })).toBe(false);
+    expect(shouldStopShortcut({ combo: 'esc', type: 'keydown', doc: fakeDoc({ modal: true }), baseStop: () => false })).toBe(true);
+    // The base rule (text fields) still applies to the keyup
+    expect(shouldStopShortcut({ combo: 'esc', type: 'keyup', doc: fakeDoc({ modal: true }), baseStop: () => true })).toBe(true);
+  });
+
   it('uses the base rule with nothing open', () => {
     expect(shouldStopShortcut({ combo: 'return', doc: fakeDoc(), baseStop: () => false })).toBe(false);
     expect(shouldStopShortcut({ combo: 'return', doc: fakeDoc(), baseStop: () => true })).toBe(true);
@@ -124,6 +131,8 @@ describe('installOverlayShortcutGuard', () => {
     expect(instance.stopCallback(event, element, 'f5')).toBe(false);
     // Installed twice, but the base runs once per check
     expect(base).toHaveBeenCalledTimes(2);
+    // The event's type reaches the guard: a keyup passes under the dialog
+    expect(instance.stopCallback({ type: 'keyup' }, element, 'esc')).toBe(false);
   });
 
   it('does nothing without a Mousetrap prototype', () => {
