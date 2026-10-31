@@ -1046,6 +1046,8 @@ legend {
 }
 
 .whats-new-popover .driver-popover-next-btn,
+.whats-new-popover .driver-popover-next-btn:hover,
+.whats-new-popover .driver-popover-next-btn:focus,
 .whats-new-popover .driver-popover-close-btn {
   background: #6c63ff;
   border: none;

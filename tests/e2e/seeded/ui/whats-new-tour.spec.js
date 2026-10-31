@@ -288,6 +288,7 @@ test.describe("What's New Tour: next release", () => {
     // profiles. The tour focuses Next, so Enter advances it instead.
     await expect(page.locator('#profileSwitchModal #launch-btn')).toHaveText('Switch');
     await expect(page.locator('.driver-popover-next-btn')).toBeFocused({ timeout: 5000 });
+    await expect(page.locator('.driver-popover-next-btn')).toHaveCSS('background-color', 'rgb(108, 99, 255)');
     await page.keyboard.press('Enter');
     await expect(title).toHaveText('Closing the Window Asks First', { timeout: 5000 });
     expect(await page.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
