@@ -126,7 +126,7 @@ function loadProfileRegistry() {
       function: 'loadProfileRegistry',
       error: error.message 
     });
-    return {
+    const fallback = {
       profiles: {
         'Default User': {
           name: 'Default User',
@@ -137,7 +137,15 @@ function loadProfileRegistry() {
       },
       metadata: { version: '1.0.0', created_at: Date.now() }
     };
+    // Not saved with it: marks a stand-in that must not replace the file
+    Object.defineProperty(fallback, 'unreadable', { value: true });
+    return fallback;
   }
+}
+
+/** False when profiles.json exists but can't be read or parsed. */
+function isProfileRegistryReadable() {
+  return !loadProfileRegistry().unreadable;
 }
 
 /**
@@ -278,6 +286,15 @@ function adoptProfileDirectory(profileName) {
   if (!fs.existsSync(getProfileDirectory(profileName))) return false;
 
   const registry = loadProfileRegistry();
+  // Saving the stand-in would drop every other profile from profiles.json for good
+  if (registry.unreadable) {
+    debugLog?.warn('Profile registry is unreadable; not registering the profile directory', {
+      module: 'profile-manager',
+      function: 'adoptProfileDirectory',
+      profileName
+    });
+    return false;
+  }
   registry.profiles[profileName] = {
     name: profileName,
     description: '',
@@ -882,6 +899,7 @@ export {
   getAvailableProfiles,
   profileExists,
   adoptProfileDirectory,
+  isProfileRegistryReadable,
   validateProfileName,
   createProfile,
   updateProfileLastUsed,

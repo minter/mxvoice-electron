@@ -77,6 +77,19 @@ describe('unregistered profiles are never recreated on disk', () => {
     await expect(profiles.saveProfilePreferences('Survivor', { font_size: 12 })).resolves.toBe(true);
   });
 
+  it('never replaces an unreadable registry when adopting a directory', () => {
+    expect(profiles.createProfile('Survivor', '')).toEqual({ success: true });
+    expect(profiles.createProfile('Other', '')).toEqual({ success: true });
+    const registryPath = path.join(userDataDirectory, 'profiles.json');
+    expect(profiles.isProfileRegistryReadable()).toBe(true);
+    fs.writeFileSync(registryPath, '{ "profiles": { "Survivor"');
+    expect(profiles.isProfileRegistryReadable()).toBe(false);
+
+    expect(profiles.adoptProfileDirectory('Survivor')).toBe(false);
+    // Still the damaged file, which can be repaired by hand
+    expect(fs.readFileSync(registryPath, 'utf8')).toBe('{ "profiles": { "Survivor"');
+  });
+
   it('does not adopt a name without a directory, or one that collides with a registered profile', () => {
     expect(profiles.adoptProfileDirectory('Never Made')).toBe(false);
     expect(fs.existsSync(profileDirectory('Never Made'))).toBe(false);

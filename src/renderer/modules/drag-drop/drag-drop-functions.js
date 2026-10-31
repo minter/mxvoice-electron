@@ -356,6 +356,17 @@ export function getLastDropIndication() {
 }
 
 /**
+ * A drag has ended (dropped, or cancelled with Esc): clear the indicator and
+ * the snapshot, so a later drop that never passed over a row can't land
+ * next to a row from this drag.
+ */
+export function endHoldingTankDrag() {
+  clearHoldingTankDropIndicators();
+  _snapshotItem = null;
+  _snapshotPosition = null;
+}
+
+/**
  * Clear all holding tank drop indicators.
  * Uses tracked element for fast removal; falls back to document query.
  */

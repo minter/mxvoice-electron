@@ -1,4 +1,4 @@
-import { setHeaderLabels } from '../shows/header.js';
+import { refreshHeader } from '../shows/header.js';
 
 /**
  * Show the new profile creation modal
@@ -182,14 +182,9 @@ async function handleDuplicateProfileSubmit() {
  * Refresh the profile indicator after profile changes
  */
 async function refreshProfileIndicator() {
-  try {
-    const result = await window.secureElectronAPI.profile.getCurrent();
-    if (result.success) {
-      setHeaderLabels({ profile: result.profile });
-    }
-  } catch (error) {
-    window.logError('Failed to refresh profile indicator:', error);
-  }
+  // The whole header from the session: a profile-only update would hide the
+  // show name and the unsaved-changes dot. refreshHeader logs its own failures.
+  await refreshHeader();
 }
 
 // Set up event listeners for the profile modals

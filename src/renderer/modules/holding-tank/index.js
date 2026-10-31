@@ -39,7 +39,7 @@ import { confirmClearTab } from '../ui/tab-actions-menu.js';
 import { setTabLabel } from '../ui/tab-label.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 import HoldingTankState from './holding-tank-state.js';
-import { fetchSongsById } from '../shows/layout-applier.js';
+import { fetchSongsById, watchLayoutSwap } from '../shows/layout-applier.js';
 
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'
@@ -438,7 +438,12 @@ export function removeSelected() {
  * Clear all songs from the holding tank
  */
 export async function clearHoldingTank() {
+  const layoutSwapped = watchLayoutSwap();
   const confirmed = await confirmClearTab(document.querySelector('#holding_tank_tabs .nav-link.active'), customConfirm, holdingTankState.toSnapshot());
+  if (confirmed && layoutSwapped()) {
+    debugLog?.warn('Show changed while Clear was asked; nothing cleared', { module: 'holding-tank', function: 'clearHoldingTank' });
+    return { success: false, error: 'Show changed' };
+  }
   if (confirmed) {
     clearActiveHoldingTankState();
     Dom.empty('.holding_tank.active');
@@ -488,8 +493,13 @@ export function sendToHoldingTank() {
  * Rename holding tank tab
  */
 export async function renameHoldingTankTab() {
+  const layoutSwapped = watchLayoutSwap();
   const currentName = Dom.text('#holding_tank_tabs .nav-link.active');
   const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
+  if (newName && layoutSwapped()) {
+    debugLog?.warn('Show changed while Rename was asked; nothing renamed', { module: 'holding-tank', function: 'renameHoldingTankTab' });
+    return { success: false, error: 'Show changed' };
+  }
   if (newName && newName.trim() !== "") {
     setTabLabel(document.querySelector('#holding_tank_tabs .nav-link.active'), newName);
     const tabNumber = Number(document.querySelector('#holding_tank_tabs .nav-link.active')

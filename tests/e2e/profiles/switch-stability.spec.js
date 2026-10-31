@@ -168,6 +168,43 @@ test.describe('Profile switch stability', () => {
     expect(await page.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
     expect(await page.evaluate(async () => (await window.secureElectronAPI.profile.getCurrent()).profile)).toBe('Default User');
   });
+
+  test('Enter on a focused picker button presses that button, not Switch', async () => {
+    const page = await app.firstWindow();
+    await waitForProfile(page, 'Default User');
+    await page.evaluate(() => window.secureElectronAPI.profile.createProfile('Other', ''));
+    const firstRun = page.locator('#firstRunModal');
+    await expect(firstRun).toBeVisible({ timeout: 5000 });
+    await firstRun.getByRole('button', { name: 'Got It!' }).click();
+    await expect(firstRun).toBeHidden();
+    await page.evaluate(() => { window.__e2eSessionMarker = 'still-here'; });
+
+    const dialog = page.locator('#profileSwitchModal');
+    await page.evaluate(() => window.moduleRegistry.profilePicker.open());
+    // The only other profile starts selected, so Enter anywhere used to switch to it
+    await expect(dialog.locator('#launch-btn')).toHaveText('Switch to Other');
+    // Shown: the picker has put focus in its search box (Bootstrap moves focus until then)
+    await expect(dialog.locator('#profile-search')).toBeFocused();
+
+    // New profile, then the create form's Cancel: each takes its own Enter
+    await dialog.locator('#create-profile-btn').focus();
+    await page.keyboard.press('Enter');
+    // The create view focuses its name box shortly after it opens
+    await expect(dialog.locator('#profile-name-input')).toBeFocused();
+    await dialog.locator('#cancel-create-btn').focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog.locator('#profile-name-input')).toBeHidden();
+    await expect(dialog.locator('#profile-search')).toBeFocused();
+
+    // Cancel closes the dialog without switching
+    await dialog.locator('#cancel-switch-btn').focus();
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeHidden();
+    await page.waitForTimeout(800);
+
+    expect(await page.evaluate(() => window.__e2eSessionMarker)).toBe('still-here');
+    expect(await page.evaluate(async () => (await window.secureElectronAPI.profile.getCurrent()).profile)).toBe('Default User');
+  });
 });
 
 test.describe('Unknown --profile at startup', () => {

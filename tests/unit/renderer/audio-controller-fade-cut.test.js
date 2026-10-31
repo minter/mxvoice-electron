@@ -149,4 +149,21 @@ describe('fade length', () => {
     expect(sound.pause).toHaveBeenCalled();
     expect(sound.volume).toHaveBeenLastCalledWith(1);
   });
+
+  it('ignores Pause while a fade-out stop runs, so the fade still unloads the sound', async () => {
+    const sound = fakeSound();
+    sharedState.set('sound', sound);
+    audio.stopPlaying(true);
+    await vi.waitFor(() => expect(sound.fade).toHaveBeenCalledTimes(1));
+    sound.off.mockClear();
+
+    audio.pausePlaying();
+
+    expect(sound.pause).not.toHaveBeenCalled();
+    expect(sound.off).not.toHaveBeenCalled();
+    expect(audio.isFadingOut()).toBe(true);
+    sound.listeners.fade();
+    expect(sound.unload).toHaveBeenCalledTimes(1);
+    expect(sharedState.get('sound')).toBe(null);
+  });
 });

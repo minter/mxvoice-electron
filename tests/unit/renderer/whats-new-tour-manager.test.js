@@ -453,6 +453,52 @@ describe('TourManager', () => {
       cleanup();
     });
 
+    it('closing while a preAction settles cleans up the step it opened, not the old one', async () => {
+      const cleanup = appendEls(['s0', 's1']);
+      let resolvePre;
+      const tours = {
+        tours: {
+          '4.3.0': {
+            title: 't',
+            steps: [
+              { element: '#s0', title: 'A', description: 'a', postAction: { type: 'function', name: 'closeA' } },
+              {
+                element: '#s1',
+                title: 'B',
+                description: 'b',
+                preAction: { type: 'function', name: 'openB' },
+                postAction: { type: 'function', name: 'closeB' },
+              },
+            ],
+          },
+        },
+      };
+      const m = new TourManager(tours);
+      const closeA = vi.fn();
+      const closeB = vi.fn();
+      m.registerHelper('closeA', closeA);
+      m.registerHelper('closeB', closeB);
+      m.registerHelper('openB', () => new Promise((resolve) => { resolvePre = resolve; }));
+      mockDriver.destroy.mockImplementation(() => {});
+
+      await m.launchTour('4.3.0', { markSeen: false });
+      const cfg = lastDriverConfig();
+      const pNext = cfg.onNextClick();
+      await vi.waitFor(() => expect(resolvePre).toBeTypeOf('function'));
+      const pClose = cfg.onDestroyStarted();
+      resolvePre();
+      await pNext;
+      await pClose;
+
+      // Step A was already closed on the way out; B's modal is the one left open
+      expect(closeA).toHaveBeenCalledTimes(1);
+      expect(closeB).toHaveBeenCalledTimes(1);
+      expect(mockDriver.moveTo).not.toHaveBeenCalled();
+
+      mockDriver.destroy.mockReset();
+      cleanup();
+    });
+
     it('launching a tour while an old close is pending does not let the old close tear down the new tour', async () => {
       const cleanup = appendEls(['s0', 's1']);
       let resolvePost;

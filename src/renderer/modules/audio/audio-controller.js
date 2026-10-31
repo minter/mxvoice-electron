@@ -230,6 +230,15 @@ function pausePlaying(fadeOut = false) {
   });
   
   if (sound) {
+    // A fade-out stop owns the sound until it unloads it: a pause would drop
+    // that unload and leave the song paused at part volume
+    if (isFadingOut()) {
+      debugLog?.info('Pause ignored: the song is fading out to stop', {
+        module: 'audio-controller',
+        function: 'pausePlaying'
+      });
+      return;
+    }
     if (sound.playing()) {
       debugLog?.info('🔍 Sound is playing, pausing...', {
         module: 'audio-controller',

@@ -223,6 +223,11 @@ export class TourManager {
 
     this.currentSteps = activeSteps;
     let currentStepIndex = 0;
+    // The step whose preAction is in effect (a modal it opened, say), or
+    // null once its postAction has run. It runs ahead of currentStepIndex
+    // while a transition is in flight, so closing then cleans up the step
+    // whose actions actually ran.
+    let effectStepIndex = 0;
 
     const driverSteps = this.buildDriverSteps(activeSteps);
     const themeClass = this.getThemeClass();
@@ -271,6 +276,7 @@ export class TourManager {
         // PostAction for current step (unless redundant with next preAction)
         if (currentStep && postAction && !skipBoth) {
           await this.executeAction(postAction);
+          effectStepIndex = null;
           await this.waitForDomSettle();
           if (isStale()) return;
         }
@@ -278,6 +284,7 @@ export class TourManager {
         // PreAction for target step (unless redundant with previous postAction)
         if (targetStep && preAction && !skipBoth) {
           await this.executeAction(preAction);
+          effectStepIndex = targetIndex;
           await this.waitForDomSettle();
           if (isStale()) return;
         }
@@ -290,6 +297,7 @@ export class TourManager {
           });
           if (targetStep.postAction) {
             await this.executeAction(targetStep.postAction);
+            effectStepIndex = null;
             await this.waitForDomSettle();
             if (isStale()) return;
           }
@@ -306,6 +314,7 @@ export class TourManager {
 
         if (isStale()) return;
         currentStepIndex = targetIndex;
+        effectStepIndex = targetIndex;
         startDriver.moveTo(targetIndex);
       } finally {
         if (!wasTransitioning) this._transitioning = false;
@@ -371,7 +380,7 @@ export class TourManager {
             if (transitionInFlight) {
               await transitionInFlight.catch(() => {});
             }
-            await this.cleanupFromStep(activeSteps, currentStepIndex);
+            if (effectStepIndex !== null) await this.cleanupFromStep(activeSteps, effectStepIndex);
             await onComplete();
             if (driverRef) driverRef.destroy();
           } finally {

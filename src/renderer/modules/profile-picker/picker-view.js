@@ -327,6 +327,12 @@ export function createProfilePicker({
     if (event.key === 'Enter') {
       event.stopPropagation();
       event.preventDefault();
+      // A focused button (Cancel, New profile, ...) takes its own Enter
+      const button = event.target?.closest?.('button');
+      if (button && root.contains(button)) {
+        if (!button.disabled) button.click();
+        return;
+      }
       if (view === 'create') submitCreate();
       else choose();
     } else if (event.key === 'Escape') {

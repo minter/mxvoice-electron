@@ -10,6 +10,7 @@
 
 import { safeShowTab } from '../ui/bootstrap-helpers.js';
 import { CONTEXT_MENU_DISMISS_EVENT } from '../ui/song-action-target.js';
+import defaultSharedState from '../shared-state.js';
 
 const LOG_CONTEXT = { module: 'shows', function: 'applyLayout' };
 
@@ -34,6 +35,18 @@ export async function fetchSongsById(ids, getSongsByIds) {
   if (!Array.isArray(rows)) throw new Error('Failed to load song metadata');
   rows.forEach(row => songsById.set(String(row.id), row));
   return songsById;
+}
+
+/**
+ * Call before awaiting a dialog about a tab on screen. The returned check
+ * says whether a show layout has been applied since (a Shows menu switch
+ * can land while a dialog is open), which makes the answer stale.
+ * @param {{ get: Function }} [state]
+ * @returns {() => boolean}
+ */
+export function watchLayoutSwap(state = defaultSharedState) {
+  const at = state.get('showGeneration');
+  return () => state.get('showGeneration') !== at;
 }
 
 function clearLayoutMarks(doc, win) {

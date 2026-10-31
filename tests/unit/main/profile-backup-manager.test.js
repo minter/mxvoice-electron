@@ -100,9 +100,16 @@ describe('profile backup manager orchestration', () => {
     const listed = await manager.listBackups(profileName);
     expect(listed.backups.find((b) => b.id === created.backupId).shows).toEqual(['Show', 'Comedy Sports']);
 
-    await fs.promises.writeFile(path.join(manager.getBackupDirectory(profileName), created.backupId, 'shows.json'), '{nope');
+    const backupShows = path.join(manager.getBackupDirectory(profileName), created.backupId, 'shows.json');
+    // A damaged shows.json reads from its previous copy, as opening the profile would
+    await fs.promises.writeFile(`${backupShows}.prev`, JSON.stringify({ ...doc, shows: [doc.shows[0]] }));
+    await fs.promises.writeFile(backupShows, '{nope');
+    const recovered = await manager.listBackups(profileName);
+    expect(recovered.backups.find((b) => b.id === created.backupId).shows).toEqual(['Show']);
+    // Neither copy readable: said so, not mistaken for a pre-shows backup
+    await fs.promises.writeFile(`${backupShows}.prev`, '{nope');
     const corrupt = await manager.listBackups(profileName);
-    expect(corrupt.backups.find((b) => b.id === created.backupId).shows).toBeNull();
+    expect(corrupt.backups.find((b) => b.id === created.backupId).shows).toBe('unreadable');
     await fs.promises.rm(showsFile);
   });
 

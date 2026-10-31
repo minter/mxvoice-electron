@@ -8,6 +8,7 @@
  */
 
 import { setTabLabel } from './tab-label.js';
+import { watchLayoutSwap } from '../shows/layout-applier.js';
 
 /**
  * Initialize the Event Handlers module
@@ -44,8 +45,11 @@ function initializeEventHandlers(options = {}) {
    * Rename the currently active hotkey tab
    */
   async function renameHotkeyTab() {
+    const layoutSwapped = watchLayoutSwap();
     const currentName = document.querySelector('#hotkey_tabs .nav-link.active')?.textContent || '';
     const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
+    // A show switch landed while the prompt was open: the tab it named is gone
+    if (newName && layoutSwapped()) return { success: false, error: 'Show changed' };
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#hotkey_tabs .nav-link.active');
       setTabLabel(link, newName);
@@ -62,8 +66,11 @@ function initializeEventHandlers(options = {}) {
    * Rename the currently active holding tank tab
    */
   async function renameHoldingTankTab() {
+    const layoutSwapped = watchLayoutSwap();
     const currentName = document.querySelector('#holding_tank_tabs .nav-link.active')?.textContent || '';
     const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
+    // A show switch landed while the prompt was open: the tab it named is gone
+    if (newName && layoutSwapped()) return { success: false, error: 'Show changed' };
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#holding_tank_tabs .nav-link.active');
       setTabLabel(link, newName);

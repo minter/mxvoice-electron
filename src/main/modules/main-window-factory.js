@@ -104,35 +104,30 @@ const FULL_SCREEN_CSS = 'body.platform-mac #top-row { padding-top: var(--panel-g
   + ' body.platform-mac .container-fluid::before { display: none; }';
 
 function hideTitleStripInFullScreen(window) {
+  // At most one inserted rule, kept in step with full screen by one sync at
+  // a time: launching full screen fires both did-finish-load and
+  // enter-full-screen, and each inserting its own copy would leave one behind
   let key = null;
-  window.on('enter-full-screen', async () => {
-    try {
-      const inserted = await window.webContents.insertCSS(FULL_SCREEN_CSS);
-      // Left full screen while the CSS was going in: take it straight back out
-      if (!window.isFullScreen()) {
-        window.webContents.removeInsertedCSS(inserted).catch(() => {});
-        return;
+  let queue = Promise.resolve();
+  const sync = ({ reloaded = false } = {}) => {
+    queue = queue.then(async () => {
+      // A reload drops inserted CSS, so the old key names nothing
+      if (reloaded) key = null;
+      if (window.isDestroyed()) return;
+      const wanted = window.isFullScreen();
+      if (wanted && !key) {
+        key = await window.webContents.insertCSS(FULL_SCREEN_CSS);
+      } else if (!wanted && key) {
+        const done = key;
+        key = null;
+        await window.webContents.removeInsertedCSS(done);
       }
-      key = inserted;
-    } catch {
-      key = null;
-    }
-  });
-  window.on('leave-full-screen', () => {
-    if (!key) return;
-    const done = key;
-    key = null;
-    window.webContents.removeInsertedCSS(done).catch(() => {});
-  });
-  // A reload drops inserted CSS; put it back if the window is still full screen
-  window.webContents.on('did-finish-load', async () => {
-    if (!window.isFullScreen()) return;
-    try {
-      key = await window.webContents.insertCSS(FULL_SCREEN_CSS);
-    } catch {
-      key = null;
-    }
-  });
+    }).catch(() => {});
+    return queue;
+  };
+  window.on('enter-full-screen', () => sync());
+  window.on('leave-full-screen', () => sync());
+  window.webContents.on('did-finish-load', () => sync({ reloaded: true }));
 }
 
 export { createMainWindow };

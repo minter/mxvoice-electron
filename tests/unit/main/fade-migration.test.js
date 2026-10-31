@@ -108,6 +108,19 @@ describe('migrateFadeToProfiles', () => {
     expect(env.data.fade_out_migrated_to_profiles).toBe(true);
   });
 
+  it('waits for a launch whose profile registry is readable', async () => {
+    const env = makeEnv({ global: { fade_out_seconds: 2 } });
+    env.deps.isRegistryReadable = () => false;
+    await expect(migrateFadeToProfiles(env.deps)).resolves.toEqual({ migrated: [] });
+    expect(env.prefs.A.fade_out_seconds).toBe(3);
+    expect(env.data.fade_out_migrated_to_profiles).toBeUndefined();
+
+    // Repaired: every profile is migrated then
+    env.deps.isRegistryReadable = () => true;
+    await expect(migrateFadeToProfiles(env.deps)).resolves.toEqual({ migrated: ['A', 'B'] });
+    expect(env.data.fade_out_migrated_to_profiles).toBe(true);
+  });
+
   it('skips a profile whose preferences load rejects', async () => {
     const env = makeEnv({ global: { fade_out_seconds: 2 } });
     env.deps.loadProfilePreferences = async (n) => { if (n === 'A') throw new Error('bad json'); return { fade_out_seconds: 3 }; };

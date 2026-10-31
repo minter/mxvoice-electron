@@ -320,20 +320,39 @@ async function createBackup(profileName, options = {}) {
 }
 
 /**
- * Show names in a backup's shows.json, in document order.
- * Null for a pre-shows backup or any unreadable file; never throws.
+ * Show names in a backup's shows, in document order, read as opening the
+ * profile would: shows.json, else its previous copy. Null for a pre-shows
+ * backup (neither file), and 'unreadable' when a shows file is there but
+ * neither copy can be read; never throws.
  * @param {string} profileName - Profile name
  * @param {string} backupId - Backup ID
- * @returns {Promise<string[]|null>}
+ * @returns {Promise<string[]|null|'unreadable'>}
  */
 async function readBackupShowNames(profileName, backupId) {
+  let found = false;
   try {
     const file = path.join(getBackupDirectory(profileName), backupId, 'shows.json');
-    const parsed = parseDocument(JSON.parse(await fs.promises.readFile(file, 'utf8')));
-    return parsed.ok ? parsed.doc.shows.map((b) => b.name) : null;
+    for (const candidate of [file, `${file}.prev`]) {
+      let text;
+      try {
+        text = await fs.promises.readFile(candidate, 'utf8');
+      } catch (error) {
+        if (error?.code === 'ENOENT') continue;
+        found = true;
+        continue;
+      }
+      found = true;
+      try {
+        const parsed = parseDocument(JSON.parse(text));
+        if (parsed.ok) return parsed.doc.shows.map((b) => b.name);
+      } catch {
+        // Not JSON: try the previous copy
+      }
+    }
   } catch {
-    return null;
+    // No usable backup folder path
   }
+  return found ? 'unreadable' : null;
 }
 
 /**

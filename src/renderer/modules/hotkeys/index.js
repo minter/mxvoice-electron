@@ -20,7 +20,7 @@ try {
 import * as hotkeyOperations from './hotkey-operations.js';
 import * as hotkeyUI from './hotkey-ui.js';
 import HotkeyState from './hotkey-state.js';
-import { fetchSongsById } from '../shows/layout-applier.js';
+import { fetchSongsById, watchLayoutSwap } from '../shows/layout-applier.js';
 
 // Import secure adapters for UI operations
 import { customConfirm, customPrompt } from '../utils/index.js';
@@ -374,7 +374,12 @@ class HotkeysModule {
    * Removes all song assignments from hotkeys
    */
   async clearHotkeys() {
+    const layoutSwapped = watchLayoutSwap();
     const confirmed = await confirmClearTab(document.querySelector('#hotkey_tabs .nav-link.active'), customConfirm, this.state.toSnapshot());
+    if (confirmed && layoutSwapped()) {
+      debugLog?.warn('Show changed while Clear was asked; nothing cleared', { module: 'hotkeys', function: 'clearHotkeys' });
+      return;
+    }
     if (confirmed) {
       debugLog?.info('🧹 Executing clearHotkeys logic after confirmation...', { module: 'hotkeys', function: 'clearHotkeys' });
       
@@ -577,6 +582,7 @@ class HotkeysModule {
    * Allows user to rename the current hotkey tab
    */
   async renameHotkeyTab() {
+    const layoutSwapped = watchLayoutSwap();
     const currentName =
       document.querySelector('#hotkey_tabs .nav-link.active')?.textContent ||
       '';
@@ -585,6 +591,10 @@ class HotkeysModule {
       currentName,
       'Rename Tab'
     );
+    if (newName && layoutSwapped()) {
+      debugLog?.warn('Show changed while Rename was asked; nothing renamed', { module: 'hotkeys', function: 'renameHotkeyTab' });
+      return { success: false, error: 'Show changed' };
+    }
     if (newName && newName.trim() !== '') {
       const active = document.querySelector('#hotkey_tabs .nav-link.active');
       if (active) setTabLabel(active, newName);

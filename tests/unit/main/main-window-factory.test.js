@@ -145,9 +145,11 @@ describe('main window factory', () => {
     const win = instances[0];
     expect(win.options.titleBarStyle).toBe('hiddenInset');
 
+    win.fullScreen = true;
     await win.handlers['enter-full-screen']();
     expect(win.webContents.insertCSS).toHaveBeenCalledWith(expect.stringContaining('body.platform-mac'));
-    win.handlers['leave-full-screen']();
+    win.fullScreen = false;
+    await win.handlers['leave-full-screen']();
     expect(win.webContents.removeInsertedCSS).toHaveBeenCalledWith('css-key');
 
     // A reload while full screen puts the rule back
@@ -155,6 +157,30 @@ describe('main window factory', () => {
     win.webContents.insertCSS.mockClear();
     await win.contentHandlers['did-finish-load']();
     expect(win.webContents.insertCSS).toHaveBeenCalledOnce();
+  });
+
+  it('launching full screen inserts the rule once, and leaving removes it', async () => {
+    const { BrowserWindow, instances } = createBrowserWindowMock();
+    createMainWindow({
+      platform: 'darwin',
+      BrowserWindow,
+      screen: { getAllDisplays: () => [] },
+      autoUpdater: { checkForUpdatesAndNotify: vi.fn() },
+      iconPath: '', preloadPath: '', indexPath: ''
+    });
+    const win = instances[0];
+    let n = 0;
+    win.webContents.insertCSS.mockImplementation(async () => `css-${++n}`);
+    // Full screen restored at ready-to-show: the page loads mid-transition
+    win.fullScreen = true;
+    win.contentHandlers['did-finish-load']();
+    await win.handlers['enter-full-screen']();
+    expect(win.webContents.insertCSS).toHaveBeenCalledOnce();
+
+    win.fullScreen = false;
+    await win.handlers['leave-full-screen']();
+    expect(win.webContents.removeInsertedCSS).toHaveBeenCalledOnce();
+    expect(win.webContents.removeInsertedCSS).toHaveBeenCalledWith('css-1');
   });
 
   it('keeps the native title bar on Windows and Linux', () => {

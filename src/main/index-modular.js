@@ -1034,6 +1034,7 @@ function setupApp() {
     await migrateFadeToProfiles({
       store,
       listProfiles: () => profileManager.getAvailableProfiles().map((p) => p.name),
+      isRegistryReadable: () => profileManager.isProfileRegistryReadable(),
       loadProfilePreferences: (name) => profileManager.loadProfilePreferences(name),
       saveProfilePreferences: (name, prefs) => profileManager.saveProfilePreferences(name, prefs),
       debugLog

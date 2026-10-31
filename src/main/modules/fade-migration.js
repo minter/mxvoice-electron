@@ -30,8 +30,22 @@ async function migrateFadeToProfiles(deps) {
   return { migrated };
 }
 
-async function runMigration({ store, listProfiles, loadProfilePreferences, saveProfilePreferences, debugLog }, migrated) {
+async function runMigration({
+  store,
+  listProfiles,
+  isRegistryReadable = () => true,
+  loadProfilePreferences,
+  saveProfilePreferences,
+  debugLog
+}, migrated) {
   if (store.get(MIGRATED_FLAG) === true) return;
+  // An unreadable profiles.json lists only Default User. Setting the flag
+  // after that pass would leave every other profile unmigrated for good, so
+  // wait for a launch that can see them all.
+  if (!isRegistryReadable()) {
+    debugLog?.warn?.('Profile registry unreadable; the fade migration waits for the next launch', { module: 'fade-migration', function: 'migrateFadeToProfiles' });
+    return;
+  }
 
   const seconds = legacyFadeSeconds(store);
   let names = [];

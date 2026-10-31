@@ -186,10 +186,14 @@ function formatBytes(bytes) {
 
 /**
  * Explain which shows a restore brings in and which it replaces
- * @param {string[]|null} backupShows - Show names in the backup, null for a pre-shows backup
+ * @param {string[]|null|'unreadable'} backupShows - Show names in the backup, null for a
+ *   pre-shows backup, 'unreadable' when its shows can't be read
  * @returns {Promise<string>}
  */
 async function describeShowReplacement(backupShows) {
+  if (backupShows === 'unreadable') {
+    return "This backup's saved shows can't be read, so after the restore Mx. Voice may have to start with an empty show.";
+  }
   if (!Array.isArray(backupShows)) {
     return 'This backup is from before shows. Its layout will become a show named Default Show, and it may be a layout from the middle of a show.';
   }
@@ -209,7 +213,7 @@ async function describeShowReplacement(backupShows) {
 /**
  * Restore from backup
  * @param {string} backupId - Backup ID to restore
- * @param {string[]|null} [backupShows] - Show names in the backup, null for a pre-shows backup
+ * @param {string[]|null|'unreadable'} [backupShows] - as describeShowReplacement's
  */
 async function restoreBackup(backupId, backupShows = null) {
   try {

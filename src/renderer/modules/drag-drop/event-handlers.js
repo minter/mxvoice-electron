@@ -5,7 +5,7 @@
  */
 
 // Import drag and drop functions
-import { holdingTankDrop, allowHotkeyDrop, holdingTankReorderDrop, holdingTankReorderDragOver, clearHoldingTankDropIndicators } from './drag-drop-functions.js';
+import { holdingTankDrop, allowHotkeyDrop, holdingTankReorderDrop, holdingTankReorderDragOver, clearHoldingTankDropIndicators, endHoldingTankDrag } from './drag-drop-functions.js';
 
 // Import debug logger
 let debugLog = null;
@@ -87,7 +87,7 @@ export function setupDragDropEventHandlers() {
   // A drag that ends anywhere (dropped elsewhere, or cancelled with Esc)
   // leaves no drop highlight behind
   document.addEventListener('dragend', () => {
-    clearHoldingTankDropIndicators();
+    endHoldingTankDrag();
     document.querySelectorAll('.hotkeys .drop_target').forEach((el) => el.classList.remove('drop_target'));
   }, { signal });
 
