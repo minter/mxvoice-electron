@@ -57,6 +57,11 @@ test.describe("What's New Tour", () => {
     await expect(popover).toBeVisible({ timeout: 5000 });
 
     const closeBtn = page.locator('.driver-popover-close-btn');
+    // driver.css darkens the × on hover with a 0.2s color transition; wait
+    // it out so the check sees the settled color, which must stay white.
+    await closeBtn.hover();
+    await closeBtn.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+    await expect(closeBtn).toHaveCSS('color', 'rgb(255, 255, 255)');
     await closeBtn.click();
 
     const overlay = page.locator('.driver-overlay');
