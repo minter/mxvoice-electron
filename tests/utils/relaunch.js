@@ -2,6 +2,7 @@ import fs from 'fs';
 import { execFileSync } from 'child_process';
 import os from 'os';
 import electronPath from 'electron';
+import { restoreDefaultWindowSize } from './seeded-launch.js';
 
 /**
  * Launch the app again on an existing user-data directory, without wiping or
@@ -28,6 +29,7 @@ export async function relaunchApp(electron, userDataDir, { profile = 'Default Us
   });
   const page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');
+  await restoreDefaultWindowSize(app);
   return { app, page, fakeHome };
 }
 

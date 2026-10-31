@@ -107,7 +107,7 @@ When adding user-facing features, add tour steps to `src/renderer/modules/whats-
 
 ## CI/CD
 
-- **GitHub Actions** — the Ubuntu unit job builds preload, enforces the no-skips rule, runs Vitest with coverage thresholds, and retains the HTML report. The independent E2E job runs Playwright on macOS and Windows with `E2E_BACKGROUND=1` (the runners' 1024×768 screens would shrink shown windows below the sizes layout tests set). CodeQL runs separately. All run on PRs and pushes to main.
+- **GitHub Actions** — the Ubuntu unit job builds preload, enforces the no-skips rule, runs Vitest with coverage thresholds, and retains the HTML report. The independent E2E job runs Playwright on macOS and Windows with `E2E_BACKGROUND=1` (the runners' 1024×768 screens would shrink shown windows below the sizes layout tests set). Windows shrinks even a hidden new window to fit the screen, so the launch helpers (`launchSeededApp`, `relaunchApp`) resize it back to the app's 1200×800. CodeQL runs separately. All run on PRs and pushes to main.
 
 ## Code Style
 

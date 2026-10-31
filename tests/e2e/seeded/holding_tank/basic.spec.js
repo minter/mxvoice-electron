@@ -433,20 +433,26 @@ test.describe('Holding Tank - basic', () => {
     const rows = page.locator('#search_results tbody tr');
     await expect(rows).toHaveCount(5, { timeout: 10000 });
 
-    // 3) Drag three songs into the holding tank in order
+    // 3) Drag three songs into the holding tank in order. Each goes below the
+    // last row: a fixed point in the list would land on a row once rows are
+    // taller (two-line rows, other fonts) and insert above it instead
+    const belowLastRow = async () => {
+      const box = await activeTab.boundingBox();
+      return { x: 50, y: Math.max(5, Math.round(box.height) - 4) };
+    };
     // First song: Got The Time by Anthrax (song ID 1001)
     const gotTheTimeRow = rows.filter({ hasText: 'Anthrax' }).first();
-    await gotTheTimeRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
+    await gotTheTimeRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: await belowLastRow() });
     await expect(holdingTankItems).toHaveCount(1);
 
     // Second song: We Are Family by Sister Sledge (song ID 1004)
     const weAreFamilyRow = rows.filter({ hasText: 'Sister Sledge' }).first();
-    await weAreFamilyRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
+    await weAreFamilyRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: await belowLastRow() });
     await expect(holdingTankItems).toHaveCount(2);
 
     // Third song: Eat It by Weird Al Yankovic (song ID 1005)
     const eatItRow = rows.filter({ hasText: 'Weird Al' }).first();
-    await eatItRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: { x: 50, y: 50 } });
+    await eatItRow.dragTo(activeTab, { force: true, sourcePosition: { x: 10, y: 10 }, targetPosition: await belowLastRow() });
 
     // 4) Verify that all three songs are showing up in order
     await expect(holdingTankItems).toHaveCount(3);

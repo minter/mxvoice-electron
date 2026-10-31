@@ -171,10 +171,14 @@ test.describe('Playback - basic', () => {
     const timeElapsed = page.locator('#timer');
     const timeRemaining = page.locator('#duration');
     
-    // On Windows, pause may not take effect instantly so timer can advance to 0:01
-    await expect(timeElapsed).toHaveText(/0:0[01]/);
-    // Duration can round to -0:04 through -0:06 depending on audio decode precision and elapsed time
-    await expect(timeRemaining).toHaveText(/-0:0[456]/);
+    // Paused near the start (a slow runner can reach 0:02 before the click
+    // lands), and the timer stays put while paused
+    await expect(timeElapsed).toHaveText(/^0:0[012]$/);
+    const pausedAt = await timeElapsed.textContent();
+    await page.waitForTimeout(1500);
+    await expect(timeElapsed).toHaveText(pausedAt);
+    // Remaining is the 0:06 song less what played, give or take decode rounding
+    await expect(timeRemaining).toHaveText(/-0:0[3456]/);
     
     // Verify play button is visible again (not pause button)
     await expect(playButton).toBeVisible();

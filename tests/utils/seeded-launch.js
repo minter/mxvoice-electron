@@ -108,8 +108,27 @@ export async function launchSeededApp(electron, suffix = '', { beforeLaunch } = 
 
   const page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');
+  await restoreDefaultWindowSize(app);
 
   return { app, page, userDataDir, suiteRoot, suiteDbDir, suiteMusicDir, suiteHotkeysDir };
+}
+
+// The app opens its window at 1200x800
+const DEFAULT_WINDOW_SIZE = { width: 1200, height: 800 };
+
+/**
+ * Give the main window the app's default size again. On a small screen (CI
+ * runners have 1024x768) Windows shrinks a new window to fit the screen, even
+ * one that is never shown, and layout-dependent tests then measure a smaller
+ * page than they do anywhere else. A resize after creation isn't limited.
+ */
+export async function restoreDefaultWindowSize(app) {
+  await app.evaluate(({ BrowserWindow }, size) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win || win.isDestroyed()) return;
+    const [width, height] = win.getSize();
+    if (width < size.width || height < size.height) win.setSize(size.width, size.height);
+  }, DEFAULT_WINDOW_SIZE);
 }
 
 /**
