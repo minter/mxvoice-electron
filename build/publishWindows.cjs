@@ -4,8 +4,8 @@ const { Octokit } = require("@octokit/rest");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
-const { buildReleaseCreationOptions, resolveReleaseTarget } = require("./release-target.cjs");
-const { findReleaseForTag, deleteExistingAsset } = require("./github-release.cjs");
+const { resolveReleaseTarget } = require("./release-target.cjs");
+const { deleteExistingAsset, ensureRelease, releaseNotesBody } = require("./github-release.cjs");
 
 if (process.platform !== "win32") {
   console.log("[publishWindows] Skipping - not Windows platform");
@@ -134,48 +134,19 @@ const octokit = new Octokit({ auth: token });
     
     console.log(`[publishWindows] Release flags: draft=${isDraft}, prerelease=${isPrerelease}, releaseType=${releaseType}`);
     
-    // The macOS publish may already have made the release, as a draft too
-    let release = await findReleaseForTag(octokit, { owner, repo, tag, version });
-    if (release) {
-      console.log(`[publishWindows] Release ${tag} already exists${release.draft ? " (draft)" : ""}, uploading artifacts...`);
-
-      // Update release flags if needed (e.g., if prerelease flag should be set)
-      if (isPrerelease && !release.prerelease) {
-        console.log(`[publishWindows] Updating release to mark as prerelease...`);
-        const updateResponse = await octokit.repos.updateRelease({
-          owner,
-          repo,
-          release_id: release.id,
-          prerelease: true
-        });
-        release = updateResponse.data;
-        console.log(`[publishWindows] ✅ Release marked as prerelease`);
-      }
-      if (isDraft && !release.draft) {
-        console.log(`[publishWindows] Updating release to mark as draft...`);
-        const updateResponse = await octokit.repos.updateRelease({
-          owner,
-          repo,
-          release_id: release.id,
-          draft: true
-        });
-        release = updateResponse.data;
-        console.log(`[publishWindows] ✅ Release marked as draft`);
-      }
-    } else {
-      console.log(`[publishWindows] Creating new ${releaseType} release ${tag}...`);
-      const response = await octokit.repos.createRelease(buildReleaseCreationOptions({
-        owner,
-        repo,
-        tag,
-        releaseTarget,
-        isDraft,
-        isPrerelease,
-        releaseType
-      }));
-      release = response.data;
-      console.log(`[publishWindows] ✅ Created release ${tag}`);
-    }
+    // Another platform's publish may already have made the release, as a draft too
+    const { release } = await ensureRelease(octokit, {
+      owner,
+      repo,
+      tag,
+      version,
+      releaseTarget,
+      isDraft,
+      isPrerelease,
+      releaseType,
+      body: releaseNotesBody(process.cwd(), version),
+      log: (message) => console.log(`[publishWindows] ${message}`)
+    });
 
     // Upload artifacts
     for (const artifact of artifacts) {

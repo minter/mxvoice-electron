@@ -49,7 +49,13 @@ Post-build script that signs the installer and uninstaller after they're created
   - YubiKey PIN will be prompted once for all files
 
 ### `publishWindows.cjs`
-Publishes signed Windows builds to GitHub releases. Handles uploading the signed installer and associated files after the signing process is complete. New releases explicitly target the exact checked-out Git commit, so publishing from a maintenance branch cannot create the version tag from the repository's default branch. Supports `--draft` and `--prerelease` flags.
+Publishes signed Windows builds to GitHub releases. Handles uploading the signed installer and associated files after the signing process is complete. Finds or creates the release through `github-release.cjs`, so it adds to a release (draft or published) another platform already made. Re-uploading a file replaces it. Supports `--draft` and `--prerelease` flags.
+
+### `ensureRelease.cjs`
+Runs first in the macOS and Linux `release:*` scripts: finds or creates the version's release, with the requested `--draft` / `--prerelease` flags, before electron-builder uploads to it. electron-builder would otherwise create the release itself, and two artifacts finishing together can each create one (4.4.0-beta.1 got two). The scripts also set `EP_GH_IGNORE_TIME=true`, so electron-builder still uploads to a published release more than 2 hours old.
+
+### `github-release.cjs`
+One release per tag, whichever platform publishes first and in whichever mode. Lists releases (drafts included; GitHub's get-release-by-tag misses drafts), stops if the tag already has more than one release, and creates a missing release at the exact checked-out commit with `docs/release-notes/v<version>.md` as its notes when that file exists. A draft stays a draft until published on GitHub; a draft publish turns a published release back into a draft.
 
 ### `release-target.cjs`
 Resolves and validates the full commit SHA at `HEAD` for release creation. Publishing stops if the release commit cannot be determined.
@@ -59,7 +65,9 @@ Shared utilities for Windows code signing. Provides `findSigntool()` (signtool.e
 
 ## Release Steps
 
-When you publish the GitHub release, paste the contents of `docs/release-notes/shows.md` into the release body. Users on 4.3.2 see that text in Update Available.
+1. Set the version in `package.json` and write `docs/release-notes/v<version>.md`; it becomes the release body (users see it in Update Available).
+2. Publish each platform with the same mode, in any order: `release:mac:draft` / `release:win:draft` (recommended: nobody sees the release until you publish it on GitHub), or the `:prerelease` / plain scripts. Each run adds its files to the one release for the tag; a second run of the same platform replaces its files.
+3. For a draft, check the files on GitHub, then publish it (marked as a pre-release for a beta).
 
 ## Build Process Flow
 
