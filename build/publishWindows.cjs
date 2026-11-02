@@ -4,7 +4,6 @@ const { Octokit } = require("@octokit/rest");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
-const { execFileSync } = require("child_process");
 const { buildReleaseCreationOptions, resolveReleaseTarget } = require("./release-target.cjs");
 
 if (process.platform !== "win32") {
@@ -58,24 +57,20 @@ const artifacts = [{ name: installerFile, path: installerPath }];
 // hashes describe the unsigned binary.  electron-updater would then use the
 // stale blockmap for a differential download, reassemble a file whose sha512
 // doesn't match the signed installer, and report a checksum mismatch.
-// Re-running app-builder blockmap against the signed exe fixes this.
-try {
-  const { appBuilderPath: appBuilderBin } = require("app-builder-bin");
-  if (fs.existsSync(appBuilderBin)) {
+// Rebuilding the blockmap from the signed exe fixes this.  electron-builder 26
+// builds blockmaps in JS (app-builder-lib) rather than via app-builder-bin.
+// On failure the blockmap is not uploaded, and electron-updater falls back to
+// a full download.
+async function regenerateBlockMap() {
+  try {
+    const { buildBlockMap } = require("app-builder-lib/out/targets/blockmap/blockmap");
     console.log(`[publishWindows] Regenerating blockmap from signed installer...`);
-    execFileSync(appBuilderBin, [
-      "blockmap",
-      "--input", installerPath,
-      "--output", blockMapPath,
-      "--compression", "gzip"
-    ]);
+    await buildBlockMap(installerPath, "gzip", blockMapPath);
     console.log(`[publishWindows] ✅ Blockmap regenerated for signed installer`);
     artifacts.push({ name: blockMapFile, path: blockMapPath });
-  } else {
-    console.warn(`[publishWindows] ⚠️  app-builder not found at ${appBuilderBin} — skipping blockmap`);
+  } catch (err) {
+    console.warn(`[publishWindows] ⚠️  Failed to regenerate blockmap: ${err.message} — skipping blockmap`);
   }
-} catch (err) {
-  console.warn(`[publishWindows] ⚠️  Failed to regenerate blockmap: ${err.message} — skipping blockmap`);
 }
 
 // Recalculate latest.yml checksums to match the signed installer
@@ -114,7 +109,6 @@ console.log(`[publishWindows]   Owner: ${owner}`);
 console.log(`[publishWindows]   Repo: ${repo}`);
 console.log(`[publishWindows]   Tag: ${tag}`);
 console.log(`[publishWindows]   Target commit: ${releaseTarget}`);
-console.log(`[publishWindows]   Artifacts: ${artifacts.map(a => a.name).join(", ")}`);
 
 // Check for GitHub token
 const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
@@ -127,6 +121,9 @@ const octokit = new Octokit({ auth: token });
 
 (async () => {
   try {
+    await regenerateBlockMap();
+    console.log(`[publishWindows]   Artifacts: ${artifacts.map(a => a.name).join(", ")}`);
+
     // Determine release type from environment OR CLI arguments
     // CLI args take precedence (needed because cross-env doesn't persist across && on Windows)
     const args = process.argv.slice(2);
