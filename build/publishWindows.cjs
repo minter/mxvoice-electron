@@ -5,6 +5,7 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const { buildReleaseCreationOptions, resolveReleaseTarget } = require("./release-target.cjs");
+const { findReleaseForTag, deleteExistingAsset } = require("./github-release.cjs");
 
 if (process.platform !== "win32") {
   console.log("[publishWindows] Skipping - not Windows platform");
@@ -133,17 +134,11 @@ const octokit = new Octokit({ auth: token });
     
     console.log(`[publishWindows] Release flags: draft=${isDraft}, prerelease=${isPrerelease}, releaseType=${releaseType}`);
     
-    // Check if release exists
-    let release;
-    try {
-      const response = await octokit.repos.getReleaseByTag({
-        owner,
-        repo,
-        tag
-      });
-      release = response.data;
-      console.log(`[publishWindows] Release ${tag} already exists, uploading artifacts...`);
-      
+    // The macOS publish may already have made the release, as a draft too
+    let release = await findReleaseForTag(octokit, { owner, repo, tag, version });
+    if (release) {
+      console.log(`[publishWindows] Release ${tag} already exists${release.draft ? " (draft)" : ""}, uploading artifacts...`);
+
       // Update release flags if needed (e.g., if prerelease flag should be set)
       if (isPrerelease && !release.prerelease) {
         console.log(`[publishWindows] Updating release to mark as prerelease...`);
@@ -167,24 +162,19 @@ const octokit = new Octokit({ auth: token });
         release = updateResponse.data;
         console.log(`[publishWindows] ✅ Release marked as draft`);
       }
-    } catch (error) {
-      if (error.status === 404) {
-        // Create new release
-        console.log(`[publishWindows] Creating new ${releaseType} release ${tag}...`);
-        const response = await octokit.repos.createRelease(buildReleaseCreationOptions({
-          owner,
-          repo,
-          tag,
-          releaseTarget,
-          isDraft,
-          isPrerelease,
-          releaseType
-        }));
-        release = response.data;
-        console.log(`[publishWindows] ✅ Created release ${tag}`);
-      } else {
-        throw error;
-      }
+    } else {
+      console.log(`[publishWindows] Creating new ${releaseType} release ${tag}...`);
+      const response = await octokit.repos.createRelease(buildReleaseCreationOptions({
+        owner,
+        repo,
+        tag,
+        releaseTarget,
+        isDraft,
+        isPrerelease,
+        releaseType
+      }));
+      release = response.data;
+      console.log(`[publishWindows] ✅ Created release ${tag}`);
     }
 
     // Upload artifacts
@@ -193,6 +183,10 @@ const octokit = new Octokit({ auth: token });
       console.log(`[publishWindows] Uploading ${artifact.name} (${(fileSize / 1024 / 1024).toFixed(2)} MB)...`);
       
       const fileContent = fs.readFileSync(artifact.path);
+      // A re-run replaces what an earlier, failed run uploaded
+      if (await deleteExistingAsset(octokit, { owner, repo, release, name: artifact.name })) {
+        console.log(`[publishWindows] Replaced the existing ${artifact.name}`);
+      }
       
       await octokit.repos.uploadReleaseAsset({
         owner,
