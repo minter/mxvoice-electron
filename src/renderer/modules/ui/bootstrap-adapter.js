@@ -32,8 +32,11 @@ export function hideModal(selector) {
   instance.hide();
 }
 
+// A modal-utils question (data-mxv-prompt) is left open: only its own
+// buttons may close it
 export function hideAllModals() {
   document.querySelectorAll('.modal.show').forEach((element) => {
+    if (element.hasAttribute('data-mxv-prompt')) return;
     const bs = (typeof window !== 'undefined' ? window.bootstrap : undefined) || (typeof bootstrap !== 'undefined' ? bootstrap : undefined);
     if (!bs || !bs.Modal) return;
     bs.Modal.getOrCreateInstance(element).hide();
@@ -88,44 +91,6 @@ export function initTooltip(selector = '[data-bs-toggle="tooltip"]') {
       tooltip.hide();
     });
     
-    // Add special handling for file operation buttons to prevent tooltip after dialog
-    if (element.id === 'hotkey-load-btn' || element.id === 'holding-tank-load-btn' || 
-        element.id === 'hotkey-save-btn' || element.id === 'holding-tank-save-btn') {
-      
-      // Track when this button was clicked to prevent immediate tooltip on focus
-      element.addEventListener('click', () => {
-        element.dataset.tooltipSuppressUntil = Date.now() + 2000; // Suppress for 2 seconds
-      });
-      
-      // Override the show method to check suppression more robustly
-      const originalShow = tooltip.show;
-      tooltip.show = function() {
-        const suppressUntil = parseInt(element.dataset.tooltipSuppressUntil || '0');
-        const now = Date.now();
-        if (now < suppressUntil) {
-          debugLog?.debug(`Tooltip suppressed for ${element.id} until ${new Date(suppressUntil).toLocaleTimeString()}`);
-          return; // Suppress tooltip
-        }
-        // Clear the suppression timestamp if it's expired
-        if (suppressUntil > 0 && now >= suppressUntil) {
-          element.dataset.tooltipSuppressUntil = '0';
-        }
-        return originalShow.call(this);
-      };
-      
-      // Also override the _getConfig method to prevent tooltip from being created
-      // if suppression is active
-      const originalGetConfig = tooltip._getConfig;
-      if (originalGetConfig) {
-        tooltip._getConfig = function(config) {
-          const suppressUntil = parseInt(element.dataset.tooltipSuppressUntil || '0');
-          if (Date.now() < suppressUntil) {
-            return { ...config, trigger: 'manual' }; // Disable automatic triggers
-          }
-          return originalGetConfig.call(this, config);
-        };
-      }
-    }
   });
 }
 

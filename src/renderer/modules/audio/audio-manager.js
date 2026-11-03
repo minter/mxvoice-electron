@@ -21,6 +21,8 @@ import { completeActivePlayback, handlePlaybackCompleted } from './playback-comp
 import { parseCrossfadePreference, prepareForPlaybackReplacement } from './playback-replacement.js';
 import { loadSongForPlayback } from './playback-song-loader.js';
 import { resolvePlaybackTrigger, trackSongPlayed } from './playback-analytics.js';
+import { recordPlay } from '../shows/played-counts.js';
+import { getSongActionTarget } from '../ui/song-action-target.js';
 import {
   calculatePlaybackVolume,
   getCrossfadePolicy,
@@ -297,6 +299,8 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
               });
             }
 
+            // Howler fires play again on every resume; the night's count goes up once per start
+            let counted = false;
             let sound = createPlaybackSound({
               createHowl,
               source: sound_path,
@@ -307,6 +311,11 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
                   ?.classList.contains('active') || false,
               debugLog: getDebugLog(),
               onPlay: function () {
+                // A loop restart (options.replay) is the play the operator already started
+                if (!counted && !options.replay) {
+                  counted = true;
+                  recordPlay(song_id);
+                }
                 handlePlaybackStarted({
                   sound,
                   howlerContext: this,
@@ -405,6 +414,7 @@ function playSongWithFilename(filename, row, song_id, options = {}) {
  * @param {boolean} options.crossfade - Whether to crossfade from current track
  * @param {number} options.crossfadeSeconds - Crossfade duration in seconds
  * @param {string} options.trigger_method - Analytics source of the play (hotkey, search_result, ...)
+ * @param {boolean} options.replay - a loop restart, not counted as another play
  */
 async function playSongFromId(song_id, options = {}) {
   getDebugLog()?.info('Playing song from ID', {
@@ -422,6 +432,10 @@ async function playSongFromId(song_id, options = {}) {
     });
     return;
   }
+
+  // Stamp the show this song was started on, so Playlist mode never
+  // reattaches it to a holding tank that a later show swap loaded
+  sharedState.set('nowPlayingSource', sharedState.get('showGeneration') ?? 0);
 
   // Cache crossfade preference for the time tracker to use synchronously
   if (!options.crossfade) {
@@ -455,8 +469,9 @@ function playSelected() {
   });
 
   const song_id = getPlaybackSelectionSongId();
+  const selectedRow = getSongActionTarget();
   const trigger_method = resolvePlaybackTrigger({
-    selectedRow: document.getElementById('selected_row'),
+    selectedRow,
     holdingTankMode: sharedState.get('holdingTankMode'),
   });
 
@@ -464,8 +479,7 @@ function playSelected() {
   // (not from the holding tank/playlist)
   {
     const col = document.getElementById('holding-tank-column');
-    const sel = document.getElementById('selected_row');
-    if (!(col && sel && col.contains(sel))) {
+    if (!(col && selectedRow && col.contains(selectedRow))) {
       document
         .querySelectorAll('.now_playing')
         .forEach((el) => el.classList.remove('now_playing'));
@@ -576,18 +590,24 @@ async function autoplay_next() {
 
   if (autoplay && holdingTankMode === 'playlist') {
     const now_playing = document.querySelector('.now_playing');
-    let next_song = null;
-
-    if (now_playing) {
-      getDebugLog()?.info('Found currently playing song, finding next', {
+    if (!now_playing) {
+      // The playing row is gone (the holding tank was swapped mid-song), so
+      // there is no next row; leave the operator's selection alone
+      getDebugLog()?.info('No now-playing row; nothing to autoplay', {
         module: 'audio-manager',
         function: 'autoplay_next',
-        currentSongId: now_playing.getAttribute('songid'),
       });
-
-      now_playing.classList.remove('now_playing');
-      next_song = now_playing.nextElementSibling;
+      return;
     }
+
+    getDebugLog()?.info('Found currently playing song, finding next', {
+      module: 'audio-manager',
+      function: 'autoplay_next',
+      currentSongId: now_playing.getAttribute('songid'),
+    });
+
+    now_playing.classList.remove('now_playing');
+    const next_song = now_playing.nextElementSibling;
 
     if (next_song) {
       getDebugLog()?.info('Playing next song in playlist', {

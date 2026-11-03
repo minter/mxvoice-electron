@@ -31,7 +31,6 @@ export function initializeUI(options = {}) {
     // UI Manager functions
     editSelectedSong: manager.editSelectedSong,
     deleteSelectedSong: manager.deleteSelectedSong,
-    closeAllTabs: manager.closeAllTabs,
     
     // Event Handler functions
     toggleSelectedRow: handlers.toggleSelectedRow,

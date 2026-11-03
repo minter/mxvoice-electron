@@ -10,30 +10,7 @@
  */
 
 // Import secure adapters for UI operations
-import { secureFileDialog } from '../adapters/secure-adapter.js';
 
-
-/**
- * Open hotkey file
- * Imports hotkey configuration from file
- */
-function openHotkeyFile() {
-  // Use secureFileDialog directly since this is bound to the hotkeys module
-  secureFileDialog.openHotkeyFile();
-}
-
-/**
- * Save hotkey file
- * Exports hotkey configuration to file
- */
-function saveHotkeyFile() {
-  window.debugLog?.info("Renderer starting saveHotkeyFile", { module: 'hotkey-operations', function: 'saveHotkeyFile' });
-  const tabNumber = this?.getActiveTabNumber?.() || 1;
-  const tab = this?.getHotkeySnapshot?.()?.[tabNumber - 1];
-  const hotkeyArray = Array.from({ length: 12 }, (_, index) => tab?.hotkeys?.[`f${index + 1}`] || null);
-  if (tab?.tabName) hotkeyArray.push(tab.tabName);
-  secureFileDialog.saveHotkeyFile(hotkeyArray);
-}
 
 /**
  * Get hotkey element from active tab
@@ -288,8 +265,6 @@ function setHotkeyConfig(config, options = {}) {
 }
 
 export {
-  openHotkeyFile,
-  saveHotkeyFile,
   getHotkeyElementFromActiveTab,
   playSongFromHotkey,
   sendToHotkeys,
@@ -302,8 +277,6 @@ export {
 
 // Default export for module loading
 export default {
-  openHotkeyFile,
-  saveHotkeyFile,
   getHotkeyElementFromActiveTab,
   playSongFromHotkey,
   sendToHotkeys,

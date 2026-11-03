@@ -373,16 +373,16 @@ test.describe('Profile Backups - basic', () => {
     expect(fs.existsSync(path.join(backupPath, 'hotkeys'))).toBe(true);
     expect(fs.existsSync(path.join(backupPath, 'holding-tank'))).toBe(true);
 
-    // Verify state file contents are valid JSON and contain profile state structure.
-    // Since manual backups now save the live profile state before creating the backup,
-    // the backup's state.json will contain the full profile-state payload rather than
-    // the minimal test object written above.
+    // Shows (Task 9): the backup's layout is the saved shows. state.json is
+    // copied as it is (nothing writes it any more), and the pre-backup flush
+    // only writes the crash-recovery record, which lives outside the profile.
     const backupState = JSON.parse(fs.readFileSync(path.join(backupPath, 'state.json'), 'utf8'));
-    expect(typeof backupState).toBe('object');
-    expect(backupState).toHaveProperty('version');
-    expect(backupState).toHaveProperty('timestamp');
-    expect(backupState).toHaveProperty('hotkeys');
-    expect(backupState).toHaveProperty('holdingTank');
+    expect(backupState).toEqual({ test: 'state' });
+    const backupShows = JSON.parse(fs.readFileSync(path.join(backupPath, 'shows.json'), 'utf8'));
+    expect(backupShows).toEqual(JSON.parse(fs.readFileSync(path.join(profileDir, 'shows.json'), 'utf8')));
+    expect(backupShows.shows[0]).toHaveProperty('layout.hotkeys');
+    expect(backupShows.shows[0]).toHaveProperty('layout.holdingTank');
+    expect(fs.existsSync(path.join(backupPath, 'recovery'))).toBe(false);
   });
 
   test('metadata file can be recovered from backup', async () => {

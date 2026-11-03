@@ -2,8 +2,6 @@
  * File Operations Module
  * 
  * This module handles all file I/O operations including:
- * - Opening and saving hotkey files
- * - Opening and saving holding tank files
  * - Directory picking functionality
  * - Update installation
  * 
@@ -21,13 +19,6 @@ try {
   // Debug logger not available
 }
 
-import {
-  configureFileOperationDependencies,
-  openHotkeyFile,
-  openHoldingTankFile,
-  saveHotkeyFile,
-  saveHoldingTankFile
-} from './file-operations.js';
 import { pickDirectory, startUpdateProcess } from './system-operations.js';
 
 /**
@@ -38,10 +29,6 @@ import { pickDirectory, startUpdateProcess } from './system-operations.js';
 class FileOperationsModule {
   constructor() {
     // Bind all functions as methods
-    this.openHotkeyFile = openHotkeyFile;
-    this.openHoldingTankFile = openHoldingTankFile;
-    this.saveHotkeyFile = saveHotkeyFile;
-    this.saveHoldingTankFile = saveHoldingTankFile;
     this.pickDirectory = pickDirectory;
     this.startUpdateProcess = startUpdateProcess;
   }
@@ -51,14 +38,12 @@ class FileOperationsModule {
    * @param {Object} dependencies - Module dependencies
    * @returns {Promise<boolean>} Success status
    */
-  async init(dependencies = {}) {
+  async init(_dependencies = {}) {
     try {
       debugLog?.info('File operations module initializing...', { 
         module: 'file-operations', 
         function: 'init' 
       });
-
-      configureFileOperationDependencies(dependencies);
 
       // Initialize file operations functionality
       this.setupFileOperations();
@@ -96,10 +81,6 @@ class FileOperationsModule {
    */
   getAllFileOperations() {
     return {
-      openHotkeyFile: this.openHotkeyFile,
-      openHoldingTankFile: this.openHoldingTankFile,
-      saveHotkeyFile: this.saveHotkeyFile,
-      saveHoldingTankFile: this.saveHoldingTankFile,
       pickDirectory: this.pickDirectory,
       startUpdateProcess: this.startUpdateProcess
     };
@@ -115,10 +96,6 @@ class FileOperationsModule {
 
     // Test each function
     const functions = [
-      'openHotkeyFile',
-      'openHoldingTankFile',
-      'saveHotkeyFile',
-      'saveHoldingTankFile',
       'pickDirectory',
       'startUpdateProcess'
     ];

@@ -182,9 +182,15 @@ export class TourManager {
   }
 
   async launchTour(version, { markSeen = true } = {}) {
+    // A tour that is still closing (waiting out a transition, running cleanup)
+    // must finish first, or its late teardown would remove this new popover.
+    if (this._closingPromise) await this._closingPromise.catch(() => {});
     if (this.activeDriver) {
       const previousDriver = this.activeDriver;
       previousDriver.destroy();
+      // destroy() may start a close that waits on an in-flight transition;
+      // let it finish so its late teardown cannot hit the new tour.
+      if (this._closingPromise) await this._closingPromise.catch(() => {});
       await this.waitForDomSettle();
       if (this.activeDriver === previousDriver) {
         this.activeDriver = null;
@@ -217,12 +223,16 @@ export class TourManager {
 
     this.currentSteps = activeSteps;
     let currentStepIndex = 0;
+    // The step whose preAction is in effect (a modal it opened, say), or
+    // null once its postAction has run. It runs ahead of currentStepIndex
+    // while a transition is in flight, so closing then cleans up the step
+    // whose actions actually ran.
+    let effectStepIndex = 0;
 
     const driverSteps = this.buildDriverSteps(activeSteps);
     const themeClass = this.getThemeClass();
 
     const onComplete = async () => {
-      if (markSeen) await this.markTourSeen(version);
       this.activeDriver = null;
       this.currentSteps = null;
     };
@@ -236,7 +246,12 @@ export class TourManager {
      * target step's preAction reopens the same modal, skip both to avoid
      * a visible close/reopen flicker.
      */
-    const transitionTo = async (targetIndex) => {
+    const performTransition = async (targetIndex) => {
+      // The driver this transition belongs to. If the tour is closed (or
+      // replaced) while an action is awaited, bail before touching Driver.js,
+      // otherwise moveTo would draw a popover on a destroyed tour.
+      const startDriver = this.activeDriver;
+      const isStale = () => this._tourClosing || this.activeDriver !== startDriver;
       // Mark a transition as in flight. Nested recursive calls (the skip path
       // below) see wasTransitioning === true and must NOT clear the flag when
       // they finish — only the outermost call clears it.
@@ -261,13 +276,17 @@ export class TourManager {
         // PostAction for current step (unless redundant with next preAction)
         if (currentStep && postAction && !skipBoth) {
           await this.executeAction(postAction);
+          effectStepIndex = null;
           await this.waitForDomSettle();
+          if (isStale()) return;
         }
 
         // PreAction for target step (unless redundant with previous postAction)
         if (targetStep && preAction && !skipBoth) {
           await this.executeAction(preAction);
+          effectStepIndex = targetIndex;
           await this.waitForDomSettle();
+          if (isStale()) return;
         }
 
         // Runtime skip check after preAction
@@ -278,7 +297,9 @@ export class TourManager {
           });
           if (targetStep.postAction) {
             await this.executeAction(targetStep.postAction);
+            effectStepIndex = null;
             await this.waitForDomSettle();
+            if (isStale()) return;
           }
           // Skip forward or backward depending on direction. This recursive
           // call is intentionally not gated by the click guard — it continues
@@ -291,11 +312,25 @@ export class TourManager {
           return;
         }
 
+        if (isStale()) return;
         currentStepIndex = targetIndex;
-        this.activeDriver.moveTo(targetIndex);
+        effectStepIndex = targetIndex;
+        startDriver.moveTo(targetIndex);
       } finally {
         if (!wasTransitioning) this._transitioning = false;
       }
+    };
+
+    // Tracks the outermost in-flight transition so closing the tour can wait
+    // for it to finish or bail before cleaning up.
+    let transitionInFlight = null;
+    const transitionTo = (targetIndex) => {
+      if (transitionInFlight) return performTransition(targetIndex);
+      const run = performTransition(targetIndex).finally(() => {
+        transitionInFlight = null;
+      });
+      transitionInFlight = run;
+      return run;
     };
 
     this.activeDriver = driver({
@@ -305,6 +340,11 @@ export class TourManager {
       nextBtnText: 'Next',
       prevBtnText: 'Previous',
       doneBtnText: 'Done',
+      // Return takes the focused button, so focus Next (Done on the last
+      // step), not Driver.js's default ×. Deferred: Driver.js focuses after render.
+      onPopoverRender: (popover) => {
+        requestAnimationFrame(() => popover?.nextButton?.focus?.());
+      },
       // Intercept Next/Prev to run pre/post actions before Driver.js moves
       onNextClick: async () => {
         // Ignore clicks while a transition is mid-flight, otherwise a fast or
@@ -333,13 +373,23 @@ export class TourManager {
         if (this._tourClosing) return;
         this._tourClosing = true;
         const driverRef = this.activeDriver;
-        try {
-          await this.cleanupFromStep(activeSteps, currentStepIndex);
-          await onComplete();
-          if (driverRef) driverRef.destroy();
-        } finally {
-          this._tourClosing = false;
-        }
+        const closing = (async () => {
+          try {
+            // Let any in-flight step transition finish or bail first, so
+            // cleanup runs for the step actually shown.
+            if (transitionInFlight) {
+              await transitionInFlight.catch(() => {});
+            }
+            if (effectStepIndex !== null) await this.cleanupFromStep(activeSteps, effectStepIndex);
+            await onComplete();
+            if (driverRef) driverRef.destroy();
+          } finally {
+            this._tourClosing = false;
+            this._closingPromise = null;
+          }
+        })();
+        this._closingPromise = closing;
+        await closing;
       },
     });
 
@@ -358,5 +408,9 @@ export class TourManager {
     }
 
     this.activeDriver.drive();
+
+    // Seen once shown, not once closed: a profile switch or quit mid-tour
+    // reloads the page without closing it, and the tour would show again
+    if (markSeen) await this.markTourSeen(version);
   }
 }

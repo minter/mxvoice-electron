@@ -16,15 +16,25 @@ globalThis.document = {
   createElement: (tag) => node(tag), createDocumentFragment: () => node('fragment')
 };
 const sharedState = (await import('../../../src/renderer/modules/shared-state.js')).default;
+const appendPlayedPill = vi.fn();
+vi.mock('../../../src/renderer/modules/shows/played-pills.js', () => ({ appendPlayedPill }));
 const live = await import('../../../src/renderer/modules/search/live-search.js');
 
 describe('live search', () => {
   beforeEach(() => { vi.clearAllMocks(); tbody.children.length = 0; category.value = '*'; advanced.offsetParent = null; sharedState.set('categories', { MUS: 'Music' }); });
   it('builds a basic query and renders successful results', async () => {
-    searchSongs.mockResolvedValue({ success: true, data: [{ id: 1, category: 'MUS', title: 'Song', artist: 'A', info: '', time: '1:00' }] });
+    searchSongs.mockResolvedValue({ success: true, data: [{ id: 1, category: 'MUS', title: 'Song', artist: 'A', info: '', time: '01:00' }] });
     await live.performLiveSearch('so');
     expect(searchSongs).toHaveBeenCalledWith({ category: '*', searchTerm: 'so', advancedFilters: null });
-    expect(tbody.children[0].children[0].textContent).toBe('Music');
+    // Category is a tag in its cell; the title is a span that clamps, with the full title as a tooltip
+    const [categoryCell, , titleCell] = tbody.children[0].children;
+    expect(categoryCell.children[0]).toMatchObject({ className: 'category-tag', textContent: 'Music' });
+    expect(titleCell.className).toBe('song-title-cell');
+    expect(titleCell.children[0].className).toBe('song-title-text');
+    // One time format everywhere
+    expect(tbody.children[0].children[4]).toMatchObject({ className: 'song-time-cell', textContent: '1:00' });
+    expect(tbody.children[0].children).toHaveLength(5);
+    expect(appendPlayedPill).toHaveBeenCalledWith(tbody.children[0].children[2], 1);
     expect(recordSearch).toHaveBeenCalledWith({
       signature: JSON.stringify({ category: '*', searchTerm: 'so', advancedFilters: null }),
       resultCount: 1,

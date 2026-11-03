@@ -1,0 +1,383 @@
+/*
+ * Reskin, tier 2: player bar and search table. Loaded after reskin.css and
+ * uses its tokens. Remove the <link> to drop just this tier. (The macOS title
+ * strip is structural and lives in index.css, since the main process draws
+ * the window without a title bar.)
+ *
+ * - Player: the song is the headline and time left is large; elapsed is
+ *   small; both tabular at the ends of a thin progress line; one button family (round transport,
+ *   rounded-square tools); Play is the accent only when it can play.
+ * - Search: category is a quiet tag, long titles clamp to two lines (full
+ *   title on hover), the Info column hides itself when no row has info.
+ */
+
+/* --- Player bar --- */
+
+#player-panel {
+  box-shadow: none;
+  border-color: var(--rs-border);
+  border-radius: 10px;
+}
+
+#song_now_playing,
+#now_playing_bar #song_now_playing {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--rs-text) !important;
+  letter-spacing: 0;
+}
+
+/* Elapsed small; time left is the number a show runs on, so it's large.
+   Even-width digits, so neither jitters as it counts */
+#timer,
+#duration {
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  color: var(--rs-muted) !important;
+  font-variant-numeric: tabular-nums;
+  align-self: flex-end;
+  height: auto !important;
+  line-height: 1.2;
+}
+
+#duration {
+  font-size: 19px !important;
+  font-weight: 600 !important;
+  color: var(--rs-text) !important;
+  letter-spacing: -0.01em;
+}
+
+#now_playing_bar {
+  align-items: baseline;
+  margin-bottom: 7px;
+}
+
+/* A shorter bar: the lists get the room. index.css pads the middle column
+   and puts 8px under each time and the title; the bar's own padding is
+   what spaces it */
+#player-panel > .card-body {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+#player-col {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+#now_playing_bar > div {
+  padding-bottom: 0 !important;
+}
+
+/* index.css sets the track gray with !important; the lighter track gives the
+   elapsed fill real contrast. 6px keeps it an easy seek target. */
+#progress_bar,
+#progress_bar.progress {
+  height: 6px !important;
+  border-radius: 999px;
+  background-color: var(--rs-border) !important;
+  border-color: transparent !important;
+  box-shadow: none;
+}
+
+#audio_progress,
+#progress_bar .progress-bar {
+  background: rgb(var(--rs-accent)) !important;
+  background-image: none !important;
+  animation: none !important;
+  border-radius: 999px;
+}
+
+/* Transport: one round family */
+#play_button,
+#pause_button,
+#stop_button {
+  width: 52px !important;
+  height: 52px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+#play_button {
+  background: rgb(var(--rs-accent-fill)) !important;
+  color: #fff !important;
+}
+
+#pause_button {
+  background: rgb(var(--rs-accent-fill)) !important;
+  color: #fff !important;
+}
+
+#stop_button {
+  background: #dc3545 !important;
+  color: #fff !important;
+}
+
+#play_button:hover:not(:disabled),
+#pause_button:hover,
+#stop_button:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Idle: each keeps its identity as an outline, so it reads as "not now",
+   not as an empty slot */
+#play_button:disabled,
+#stop_button:disabled {
+  background: transparent !important;
+  opacity: 1 !important;
+}
+
+#play_button:disabled {
+  color: rgba(var(--rs-accent), 0.55) !important;
+  border: 2px solid rgba(var(--rs-accent), 0.35) !important;
+}
+
+#stop_button:disabled {
+  color: rgba(220, 53, 69, 0.55) !important;
+  border: 2px solid rgba(220, 53, 69, 0.35) !important;
+}
+
+/* Tools: rounded squares, quiet until on */
+#waveform_button,
+#loop_button,
+#mute_button {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  border: 1px solid var(--rs-border) !important;
+  color: var(--rs-muted) !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+#waveform_button:hover,
+#loop_button:hover,
+#mute_button:hover {
+  background: var(--rs-row-hover) !important;
+  color: var(--rs-text) !important;
+  transform: none !important;
+}
+
+#waveform_button.active,
+#loop_button.active,
+#mute_button.active {
+  background: rgba(var(--rs-accent), 0.14) !important;
+  border-color: rgba(var(--rs-accent), 0.5) !important;
+  color: var(--rs-accent-text) !important;
+}
+
+/* Shift held over Stop or Pause (fade-modifier-cue.js): a fading-speaker
+   icon in place of the usual one, since that click will fade */
+#stop_button .fade-cue-on,
+#pause_button .fade-cue-on,
+#stop_button.fade-cue .fade-cue-off,
+#pause_button.fade-cue .fade-cue-off {
+  display: none;
+}
+
+#stop_button.fade-cue .fade-cue-on,
+#pause_button.fade-cue .fade-cue-on {
+  display: inline-block;
+}
+
+/* Mute shows what's true now: a speaker, or a crossed-out one when muted */
+#mute_button .mute-icon-on,
+#mute_button.active .mute-icon-off {
+  display: none;
+}
+
+#mute_button.active .mute-icon-on {
+  display: inline-block;
+}
+
+/* Tools and volume run to the panel's right edge */
+#controls_column {
+  justify-content: flex-end;
+  gap: 10px;
+  padding-right: 6px;
+}
+
+/* Volume: the progress bar's thin track, an accent thumb. index.css draws
+   the input itself as a bordered gradient pill; that goes */
+#volume {
+  width: 120px !important;
+  height: 18px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  accent-color: rgb(var(--rs-accent));
+  margin-left: 4px;
+}
+
+#volume::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--rs-border) !important;
+}
+
+#volume::-webkit-slider-thumb {
+  width: 16px !important;
+  height: 16px !important;
+  margin-top: -6px;
+  transform: none !important;
+  box-shadow: none !important;
+  border: 2px solid var(--rs-surface) !important;
+  background: rgb(var(--rs-accent)) !important;
+}
+
+#volume::-webkit-slider-thumb:hover,
+#volume::-webkit-slider-thumb:active {
+  transform: scale(1.1) !important;
+  box-shadow: none !important;
+}
+
+/* --- Search table --- */
+
+.table thead th {
+  border-bottom: 1px solid var(--rs-border) !important;
+}
+
+#search_results tbody tr:hover td {
+  background: var(--rs-row-hover) !important;
+}
+
+#search_results tbody tr#selected_row:hover td {
+  background: transparent !important;
+}
+
+/* The whole title, wrapped as far as it needs: two songs can differ only in
+   their last word ("... (Drop)"). Inline, so the played pill follows it */
+td.song-title-cell .song-title-text {
+  display: inline;
+}
+
+td.song-title-cell {
+  display: table-cell;
+}
+
+td.song-title-cell .played-pill {
+  vertical-align: baseline;
+}
+
+/* Category as quiet text on one line; a long name ends in "…" (the full
+   name is its tooltip). It's the least important column, so it never wraps */
+.category-tag {
+  display: block;
+  max-width: 9em;
+  font-size: max(11px, 0.92em); /* follows View > Font Size, never below 11px */
+  font-weight: 400;
+  color: var(--rs-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Room between the selected row's bar and the first column's text,
+   whichever column is first */
+#search_results tr > .hide-1,
+#search_results tr > .hide-2 {
+  padding-left: 12px;
+}
+
+#search-column:not(:has(#category_select option[value="*"]:checked)) #search_results:not(:has(tbody td.hide-2:not(:empty))) tr > td.song-title-cell,
+#search-column:not(:has(#category_select option[value="*"]:checked)) #search_results:not(:has(tbody td.hide-2:not(:empty))) thead th:nth-child(3) {
+  padding-left: 12px;
+}
+
+@media screen and (max-width: 1045px) and (min-width: 935px) {
+  #search_results tr > td.song-title-cell,
+  #search_results thead th:nth-child(3) {
+    padding-left: 12px;
+  }
+}
+
+/* One category picked: every row would repeat it, so the column goes away */
+#search-column:not(:has(#category_select option[value="*"]:checked)) #search_results .hide-1 {
+  display: none;
+}
+
+/* Durations right-aligned on even-width digits, so they compare at a glance */
+#search_results th:last-child,
+#search_results td.song-time-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding-right: 10px;
+}
+
+/* --- Search field --- */
+
+/* Less air between the field and the results */
+#search_form {
+  padding-bottom: 0;
+}
+
+#search_form > .input-group {
+  position: relative;
+  margin-bottom: 12px !important;
+}
+
+/* Clear: a small ✕ at the end of the field, not a second button. Always
+   there, since it also clears advanced filters and a category */
+#search_form #advanced_search_button {
+  width: 44px;
+}
+
+#search_form #reset_button {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  right: 44px;
+  z-index: 5;
+  width: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--rs-muted);
+  box-shadow: none;
+}
+
+#search_form #reset_button:hover,
+#search_form #reset_button:focus-visible {
+  color: var(--rs-text);
+  background: transparent;
+}
+
+#search_form #omni_search,
+#search_form #title-search {
+  padding-right: 34px;
+}
+
+/* No row has info: the column goes away */
+#search_results:not(:has(tbody td.hide-2:not(:empty))) .hide-2 {
+  display: none;
+}
+
+/* Focus in the search form: a crisp 2px accent ring that hugs the field,
+   instead of Bootstrap's 4px glow spilling past it. The yellow fill
+   (index.css) stays, so it's unmistakable which field you're typing in */
+#search_form .form-control:focus,
+#search_form .form-select:focus {
+  border-color: rgb(var(--rs-accent));
+  box-shadow: inset 0 0 0 1px rgb(var(--rs-accent));
+}
+
+/* Keep the clear x above the focused field */
+#search_form #reset_button {
+  z-index: 6;
+}
+
+/* The column headings stay put while a long result list scrolls under them.
+   A sticky cell loses its collapsed bottom border, so the rule is drawn as
+   a shadow instead */
+#search_results thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: inset 0 -1px 0 var(--rs-border) !important;
+}

@@ -5,6 +5,8 @@
  * Includes modals, tabs, window resize, and form interactions.
  */
 
+import { installTabActionsMenus } from '../ui/tab-actions-menu.js';
+
 export default class UIInteractionEvents {
   constructor(dependencies = {}) {
     this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
@@ -55,15 +57,7 @@ export default class UIInteractionEvents {
   attachToolbarEvents() {
     const actions = {
       storage_mode_btn: () => this.moduleRegistry.modeManagement?.setHoldingTankMode?.('storage'),
-      playlist_mode_btn: () => this.moduleRegistry.modeManagement?.setHoldingTankMode?.('playlist'),
-      'holding-tank-load-btn': () => this.moduleRegistry.fileOperations?.openHoldingTankFile?.(),
-      'holding-tank-save-btn': () => this.moduleRegistry.fileOperations?.saveHoldingTankFile?.(),
-      'holding-tank-rename-btn': () => this.moduleRegistry.holdingTank?.renameHoldingTankTab?.(),
-      'holding-tank-clear-btn': () => this.moduleRegistry.holdingTank?.clearHoldingTank?.(),
-      'hotkey-load-btn': () => this.moduleRegistry.fileOperations?.openHotkeyFile?.(),
-      'hotkey-save-btn': () => this.moduleRegistry.fileOperations?.saveHotkeyFile?.(),
-      'hotkey-rename-btn': () => this.moduleRegistry.hotkeys?.renameHotkeyTab?.(),
-      'hotkey-clear-btn': () => this.moduleRegistry.hotkeys?.clearHotkeys?.()
+      playlist_mode_btn: () => this.moduleRegistry.modeManagement?.setHoldingTankMode?.('playlist')
     };
 
     Object.entries(actions).forEach(([id, action]) => {
@@ -76,6 +70,10 @@ export default class UIInteractionEvents {
       element.addEventListener('click', handler);
       this.uiHandlers.set(`toolbar:${id}`, { element, event: 'click', handler });
     });
+
+    // Rename and Clear for the selected tab: the ⋯ menu and tab right-clicks
+    installTabActionsMenus({ moduleRegistry: this.moduleRegistry, debugLog: this.debugLog })
+      .forEach(({ name, element, event, handler, options }) => this.uiHandlers.set(name, { element, event, handler, options }));
   }
 
   /**
@@ -99,10 +97,21 @@ export default class UIInteractionEvents {
     
     // Listen for preload-dispatched modal show events
     try {
-      const showModalListener = (e) => {
+      const showModalListener = async (e) => {
         const selector = e?.detail?.selector;
         if (!selector) return;
-        import('../ui/bootstrap-helpers.js').then(({ safeShowModal }) => safeShowModal(selector, { module: 'ui-interaction-events' }));
+        try {
+          // Release notes wait until any startup prompt is answered: showing
+          // them would close (hideAllModals) whatever modal is open
+          if (selector === '#newReleaseModal') {
+            const { whenStartupSettled } = await import('../shows/startup-gate.js');
+            await whenStartupSettled();
+          }
+          const { safeShowModal } = await import('../ui/bootstrap-helpers.js');
+          safeShowModal(selector, { module: 'ui-interaction-events' });
+        } catch (error) {
+          this.debugLog?.warn('Could not show a modal', { module: 'ui-interaction-events', function: 'showModalListener', selector, error: error?.message });
+        }
       };
       window.addEventListener('mxvoice:show-modal', showModalListener);
       this.uiHandlers.set('mxvoiceShowModal', { element: window, event: 'mxvoice:show-modal', handler: showModalListener });
@@ -516,11 +525,11 @@ export default class UIInteractionEvents {
         const target = handler.element;
         if (!target) continue;
         if (target === window) {
-          window.removeEventListener(handler.event, handler.handler);
+          window.removeEventListener(handler.event, handler.handler, handler.options);
         } else if (typeof target === 'string') {
           document.querySelectorAll(target).forEach((el) => el.removeEventListener(handler.event, handler.handler));
         } else if (target instanceof Element || target === document) {
-          target.removeEventListener(handler.event, handler.handler);
+          target.removeEventListener(handler.event, handler.handler, handler.options);
         }
         this.debugLog?.debug(`Removed UI handler: ${name}`);
       }

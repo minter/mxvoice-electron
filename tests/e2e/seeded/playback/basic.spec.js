@@ -1,6 +1,7 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import { TEST_CONFIG } from '../../../config/test-environment.js';
 import { launchSeededApp, closeApp } from '../../../utils/seeded-launch.js';
+import { chooseTabAction, clearTabDialog, loadTabFromFile } from '../../../utils/tab-actions.js';
 import { 
   rms, 
   waitForAudible, 
@@ -170,10 +171,14 @@ test.describe('Playback - basic', () => {
     const timeElapsed = page.locator('#timer');
     const timeRemaining = page.locator('#duration');
     
-    // On Windows, pause may not take effect instantly so timer can advance to 0:01
-    await expect(timeElapsed).toHaveText(/0:0[01]/);
-    // Duration can round to -0:04 through -0:06 depending on audio decode precision and elapsed time
-    await expect(timeRemaining).toHaveText(/-0:0[456]/);
+    // Paused near the start (a slow runner can reach 0:02 before the click
+    // lands), and the timer stays put while paused
+    await expect(timeElapsed).toHaveText(/^0:0[012]$/);
+    const pausedAt = await timeElapsed.textContent();
+    await page.waitForTimeout(1500);
+    await expect(timeElapsed).toHaveText(pausedAt);
+    // Remaining is the 0:06 song less what played, give or take decode rounding
+    await expect(timeRemaining).toHaveText(/-0:0[3456]/);
     
     // Verify play button is visible again (not pause button)
     await expect(playButton).toBeVisible();
@@ -711,11 +716,8 @@ test.describe('Playback - basic', () => {
     await page.waitForTimeout(2000);
 
     // Test with a custom fade duration (set to 1 second)
-    await page.evaluate(() => {
-      // Mock the store to return a custom fade duration
-      if (window.sharedState) {
-        window.sharedState.set('fade_out_seconds', '1.0');
-      }
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 1);
     });
     
     // Press Shift+Escape for fade-out stop with custom duration
@@ -1066,8 +1068,7 @@ test.describe('Playback - basic', () => {
       };
     }, hotkeyFile);
     
-    const loadButton = page.locator('#hotkey-load-btn');
-    await loadButton.click();
+    await loadTabFromFile(page, 'hotkeys');
     
     // Step 3: Verify that songs show up in the hotkeys
     const activeTab = page.locator('#hotkeys_list_3');
@@ -1091,35 +1092,11 @@ test.describe('Playback - basic', () => {
     // Verify the tab name is now "Intros"
     await expect(tab3).toHaveText('Intros');
     
-    // Step 4: Click the "Clear Hotkeys" icon in the menu bar
-    const clearButton = page.locator('#hotkey-clear-btn');
-    
-    // Debug: Check if clearHotkeys function is available
-    const clearFunctionInfo = await page.evaluate(() => {
-      return {
-        clearHotkeysGlobal: typeof window.moduleRegistry.hotkeys.clearHotkeys,
-        moduleRegistryHotkeys: !!window.moduleRegistry?.hotkeys,
-        moduleRegistryClearMethod: typeof window.moduleRegistry?.hotkeys?.clearHotkeys,
-        clearButtonExists: !!document.getElementById('hotkey-clear-btn'),
-        clearButtonOnclick: document.getElementById('hotkey-clear-btn')?.getAttribute('onclick')
-      };
-    });
-    console.log('🔍 Debug: Clear function availability:', clearFunctionInfo);
-    
-        // Since the onclick handler is missing, let's call the function directly
-    console.log('🔧 Calling clearHotkeys function directly since onclick is null...');
-    await page.evaluate(() => {
-      if (window.moduleRegistry?.hotkeys?.clearHotkeys) {
-        window.moduleRegistry.hotkeys.clearHotkeys();
-      } else if (window.moduleRegistry.hotkeys.clearHotkeys) {
-        window.moduleRegistry.hotkeys.clearHotkeys();
-      } else {
-        console.error('❌ No clearHotkeys function available');
-      }
-    });
-    
+    // Step 4: Choose Clear from the hotkey tab row's ⋯ menu
+    await chooseTabAction(page, 'hotkeys', 'clear');
+
     // Wait for confirmation modal to appear
-    const confirmButton = page.locator('.modal:has-text("Are you sure you want clear your hotkeys?") .confirm-btn');
+    const confirmButton = clearTabDialog(page).locator('.confirm-btn');
     await expect(confirmButton).toBeVisible({ timeout: 5000 });
 
     // Debug: Check what modals are visible

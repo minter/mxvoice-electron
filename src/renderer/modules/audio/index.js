@@ -40,6 +40,7 @@ class AudioModule {
     
     // Initialize audio controller functions
     this.stopPlaying = audioController.stopPlaying;
+    this.isFadingOut = audioController.isFadingOut;
     this.pausePlaying = audioController.pausePlaying;
     this.resetUIState = audioController.resetUIState;
     this.toggle_play_button = audioController.toggle_play_button;
@@ -247,6 +248,7 @@ class AudioModule {
       
       // Audio controller functions
       stopPlaying: this.stopPlaying,
+      isFadingOut: this.isFadingOut,
       pausePlaying: this.pausePlaying,
       resetUIState: this.resetUIState,
       toggle_play_button: this.toggle_play_button,
@@ -381,6 +383,7 @@ export const song_ended = audioModule.song_ended.bind(audioModule);
 export const autoplay_next = audioModule.autoplay_next.bind(audioModule);
 export const cancel_autoplay = audioModule.cancel_autoplay.bind(audioModule);
 export const stopPlaying = audioModule.stopPlaying.bind(audioModule);
+export const isFadingOut = audioModule.isFadingOut.bind(audioModule);
 export const pausePlaying = audioModule.pausePlaying.bind(audioModule);
 export const resetUIState = audioModule.resetUIState.bind(audioModule);
 export const toggle_play_button = audioModule.toggle_play_button.bind(audioModule);

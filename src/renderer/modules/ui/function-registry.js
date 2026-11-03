@@ -17,7 +17,6 @@ try {
 
 export const uiFunctions = {
   // UI Functions
-  closeAllTabs: 'closeAllTabs',
   toggleSelectedRow: 'toggleSelectedRow',
   increaseFontSize: 'increaseFontSize',
   decreaseFontSize: 'decreaseFontSize',
@@ -27,10 +26,6 @@ export const uiFunctions = {
   setFontSize: 'setFontSize',
   
   // Fallback functions for when module fails to load
-  closeAllTabsFallback: () => debugLog?.warn('UI module not available - closeAllTabs', { 
-    module: 'ui-function-registry',
-    function: 'closeAllTabsFallback'
-  }),
   toggleSelectedRowFallback: () => debugLog?.warn('UI module not available - toggleSelectedRow', { 
     module: 'ui-function-registry',
     function: 'toggleSelectedRowFallback'

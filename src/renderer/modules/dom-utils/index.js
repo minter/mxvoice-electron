@@ -5,6 +5,8 @@
  */
 
 import DebugLog from '../debug-log/index.js';
+// Dependency-free so the startup launcher can use it too
+export { escapeHtml } from './escape-html.js';
 const debugLog = DebugLog;
 
 // jQuery-like selector functions

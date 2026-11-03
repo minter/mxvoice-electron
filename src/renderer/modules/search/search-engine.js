@@ -27,6 +27,8 @@ try {
 // Import live search functionality
 import * as liveSearch from './live-search.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
+import { appendPlayedPill } from '../shows/played-pills.js';
+import { formatDuration } from '../ui/song-label.js';
 
 // Track active search to prevent race conditions
 let activeSearchId = 0;
@@ -174,7 +176,13 @@ function searchData({ trackAnalytics = true } = {}) {
 
           const tdCategory = document.createElement('td');
           tdCategory.className = 'hide-1';
-          tdCategory.textContent = categoryName || '';
+          if (categoryName) {
+            const tag = document.createElement('span');
+            tag.className = 'category-tag';
+            tag.textContent = categoryName;
+            tag.title = categoryName;
+            tdCategory.appendChild(tag);
+          }
           tr.appendChild(tdCategory);
 
           const tdInfo = document.createElement('td');
@@ -183,17 +191,23 @@ function searchData({ trackAnalytics = true } = {}) {
           tr.appendChild(tdInfo);
 
           const tdTitle = document.createElement('td');
-          tdTitle.style.fontWeight = 'bold';
-          tdTitle.textContent = row.title || '';
+          tdTitle.className = 'song-title-cell';
+          const titleText = document.createElement('span');
+          titleText.className = 'song-title-text';
+          titleText.textContent = row.title || '';
+          titleText.title = row.title || '';
+          tdTitle.appendChild(titleText);
+          appendPlayedPill(tdTitle, row.id);
           tr.appendChild(tdTitle);
 
           const tdArtist = document.createElement('td');
-          tdArtist.style.fontWeight = 'bold';
+          tdArtist.className = 'song-artist-cell';
           tdArtist.textContent = row.artist || '';
           tr.appendChild(tdArtist);
 
           const tdTime = document.createElement('td');
-          tdTime.textContent = row.time || '';
+          tdTime.className = 'song-time-cell';
+          tdTime.textContent = formatDuration(row.time || '');
           tr.appendChild(tdTime);
 
           fragment.appendChild(tr);

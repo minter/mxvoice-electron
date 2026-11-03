@@ -1,6 +1,7 @@
 import { _electron as electron, test, expect } from '@playwright/test';
 import electronPath from 'electron';
 import { launchSeededApp, closeApp, waitForAppReady } from '../../../utils/seeded-launch.js';
+import { showsDocument, hotkeyLayout, seedShows } from '../../../utils/seed-shows.js';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -191,20 +192,14 @@ test.describe('Profile Backups - restore', () => {
   });
 
   test('restore creates a pre-restore backup', async () => {
-    // Write some state
-    fs.writeFileSync(
-      path.join(profileDir, 'state.json'),
-      JSON.stringify({ testData: 'pre-restore-check', timestamp: Date.now() }, null, 2)
-    );
+    // Write a saved show (Shows, Task 9: shows.json holds the layout)
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1001' })));
 
     // Create a backup
     await createBackup();
 
-    // Modify state
-    fs.writeFileSync(
-      path.join(profileDir, 'state.json'),
-      JSON.stringify({ testData: 'modified-for-pre-restore', timestamp: Date.now() }, null, 2)
-    );
+    // Modify the saved show
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1002' })));
 
     // Count existing backups
     const metadataBefore = JSON.parse(
@@ -279,7 +274,10 @@ test.describe('Profile Backups - restore', () => {
     await expect(page.evaluate((key) => (
       window.secureElectronAPI.profile.setPreference(key, 'backed-up-state')
     ), markerKey)).resolves.toMatchObject({ success: true });
+    // Shows (Task 9): the backed-up layout is the saved show, not the live one
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1004' })));
     await createBackup();
+    seedShows(userDataDir, 'Default User', showsDocument(hotkeyLayout({ f1: '1005' })));
 
     const metadataPath = path.join(backupDir, 'backup-metadata.json');
     const metadataBefore = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
@@ -314,6 +312,8 @@ test.describe('Profile Backups - restore', () => {
     await expect(page.evaluate(async (key) => (
       window.secureElectronAPI.profile.getPreference(key)
     ), markerKey)).resolves.toMatchObject({ success: true, value: 'backed-up-state' });
+    // The reloaded page opened the restored show
+    await expect(page.locator('#hotkeys_list_1 #f1_hotkey')).toHaveAttribute('songid', '1004');
 
     const metadataAfter = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
     const preRestoreBackup = metadataAfter.backups.find(({ mode }) => mode === 'pre-restore');
@@ -335,5 +335,6 @@ test.describe('Profile Backups - restore', () => {
     await expect(page.evaluate(async (key) => (
       window.secureElectronAPI.profile.getPreference(key)
     ), markerKey)).resolves.toMatchObject({ success: true, value: 'backed-up-state' });
+    await expect(page.locator('#hotkeys_list_1 #f1_hotkey')).toHaveAttribute('songid', '1004');
   });
 });

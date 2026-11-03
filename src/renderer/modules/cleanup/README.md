@@ -4,7 +4,7 @@ The cleanup module handles proper resource cleanup when the application window i
 
 ## Purpose
 
-While profile switching uses `app.exit(0)` which cleans up the entire process, this module ensures proper cleanup for:
+Profile switching reloads the main window in-process, so this module is what releases the old profile's resources. It ensures proper cleanup for:
 - Normal application quit scenarios
 - Following best practices for resource management
 - Preventing potential resource leaks during development/testing

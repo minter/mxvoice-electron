@@ -159,7 +159,7 @@ The module includes comprehensive error handling:
 - Results are limited to 50 for live search
 - Database queries are optimized with prepared statements
 - UI updates are batched where possible
-- Rendering uses safe DOM creation (no HTML string concatenation). Rows are created with `document.createElement`, text is set via `textContent`, and drag handlers are attached with `addEventListener('dragstart', songDrag)`.
+- Rendering uses safe DOM creation (no HTML string concatenation). Rows are created with `document.createElement`, text is set via `textContent` (the category in a `.category-tag` span, the title in a `.song-title-text` span with the full title as its tooltip, the time through `formatDuration`), and drag handlers are attached with `addEventListener('dragstart', songDrag)`.
 - Result rows are appended using `DocumentFragment` to minimize layout thrash and improve rendering performance.
 
 ## Security Notes

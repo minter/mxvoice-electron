@@ -28,15 +28,18 @@ try {
 
 // Use global electronAPI instead of importing services
 // Import secure adapters
+import { setSongLabel } from '../ui/song-label.js';
 import { secureDatabase } from '../adapters/secure-adapter.js';
 import { songDrag } from '../drag-drop/drag-drop-functions.js';
 const database = secureDatabase;
 import Dom from '../dom-utils/index.js';
 // Import secure adapters
-import { secureFileDialog } from '../adapters/secure-adapter.js';
 import { customConfirm, customPrompt, scaleScrollable } from '../utils/index.js';
+import { confirmClearTab } from '../ui/tab-actions-menu.js';
+import { setTabLabel } from '../ui/tab-label.js';
 import { getPreference } from '../preferences/profile-preference-adapter.js';
 import HoldingTankState from './holding-tank-state.js';
+import { fetchSongsById, watchLayoutSwap } from '../shows/layout-applier.js';
 
 // Module state
 let holdingTankMode = "storage"; // 'storage' or 'playlist'
@@ -70,10 +73,6 @@ export function clearActiveHoldingTankState() {
   const activeTab = document.querySelector('.holding_tank.active');
   const tabNumber = Number(activeTab?.id?.match(/^holding_tank_(\d)$/)?.[1]);
   return tabNumber ? holdingTankState.clearTab(tabNumber) : false;
-}
-
-function getActiveHoldingTankTabNumber() {
-  return Number(document.querySelector('.holding_tank.active')?.id?.match(/^holding_tank_(\d)$/)?.[1]) || 1;
 }
 
 function updateStateForInsertion(songId, targetEl, insertPosition, existingElement) {
@@ -112,25 +111,30 @@ export function moveHoldingTankItem(sourceTabNumber, sourceIndex, targetTabNumbe
   return holdingTankState.move(sourceTabNumber, sourceIndex, targetTabNumber, targetIndex);
 }
 
-export async function restoreHoldingTankSnapshot(snapshot) {
+/** Distinct song ids a holding-tank snapshot lists, normalized as the model stores them. */
+export function collectSongIds(snapshot) {
+  const tabs = new HoldingTankState(snapshot).toSnapshot();
+  return [...new Set(tabs.flatMap(tab => tab.songIds))];
+}
+
+/**
+ * Load a holding-tank snapshot into the model and rebuild each tab's rows
+ * inside the existing list containers, synchronously. Songs missing from
+ * songsById are dropped.
+ * @returns {{ dropped: number }} distinct song ids missing from the library
+ */
+export function applyHoldingTankSnapshot(snapshot, songsById) {
   loadHoldingTankSnapshot(snapshot);
-  const songIds = [...new Set(holdingTankState.toSnapshot().flatMap(tab => tab.songIds))];
-  const songsById = new Map();
-  if (songIds.length > 0) {
-    const result = await database.getSongsByIds(songIds);
-    if (result?.success === false) throw new Error(result.error || 'Failed to load holding tank metadata');
-    const rows = result?.data || result || [];
-    if (!Array.isArray(rows)) throw new Error('Failed to load holding tank metadata');
-    rows.forEach(row => songsById.set(String(row.id), row));
+  const missing = collectSongIds(snapshot).filter(songId => !songsById.has(String(songId)));
+  if (missing.length > 0) {
     holdingTankState.batch(() => {
-      songIds.filter(songId => !songsById.has(String(songId)))
-        .forEach(songId => holdingTankState.clearSong(songId));
+      missing.forEach(songId => holdingTankState.clearSong(songId));
     });
   }
 
   for (const tab of holdingTankState.toSnapshot()) {
     const tabLink = document.querySelector(`#holding_tank_tabs .nav-item:nth-child(${tab.tabNumber}) a`);
-    if (tabLink) tabLink.textContent = tab.tabName || String(tab.tabNumber);
+    setTabLabel(tabLink, tab.tabName, tab.tabNumber);
     const tabContent = document.getElementById(`holding_tank_${tab.tabNumber}`);
     if (!tabContent) continue;
     tabContent.replaceChildren();
@@ -138,16 +142,15 @@ export async function restoreHoldingTankSnapshot(snapshot) {
       const row = songsById.get(String(songId));
       if (!row) continue;
       const element = document.createElement('li');
-      element.style.fontSize = '11px';
       element.className = 'song list-group-item context-menu';
       element.draggable = true;
       element.addEventListener('dragstart', songDrag);
       element.setAttribute('songid', songId);
-      element.textContent = `${row.title || '[Unknown Title]'} by ${row.artist || '[Unknown Artist]'} (${row.time || '[??:??]'})`;
+      setSongLabel(element, row);
       tabContent.appendChild(element);
     }
   }
-  return holdingTankState.toSnapshot();
+  return { dropped: missing.length };
 }
 
 /**
@@ -199,22 +202,27 @@ export async function populateHoldingTank(songIds) {
     databaseAvailable: !!electronAPI?.database
   });
   
-  // Extend tooltip suppression during holding tank population to prevent tooltips
-  // from appearing during DOM updates that happen after file loading
-  const fileButtons = ['hotkey-load-btn', 'hotkey-save-btn', 'holding-tank-load-btn', 'holding-tank-save-btn'];
-  fileButtons.forEach(btnId => {
-    const btn = document.getElementById(btnId);
-    if (btn) {
-      btn.dataset.tooltipSuppressUntil = Date.now() + 3000; // Extend suppression for 3 more seconds
-    }
-  });
-  
   if (!songIds || songIds.length === 0) {
     debugLog?.warn('No song IDs provided to populateHoldingTank', { 
       module: 'holding-tank',
       function: 'populateHoldingTank'
     });
-    return { success: false, error: 'No song IDs provided' };
+    return { success: false, error: 'No song IDs provided', dropped: 0 };
+  }
+
+  // One lookup for the whole file; ids missing from the library are dropped
+  const distinctIds = [...new Set(songIds.map(String))];
+  const songsById = await fetchSongsById(distinctIds, (ids) => database.getSongsByIds(ids));
+  const validIds = songIds.map(String).filter(songId => songsById.has(songId));
+  const dropped = distinctIds.filter(songId => !songsById.has(songId)).length;
+  if (validIds.length === 0) {
+    // Nothing to import: the current tab is left as it is
+    debugLog?.warn('None of the file\'s songs are in the library', {
+      module: 'holding-tank',
+      function: 'populateHoldingTank',
+      dropped
+    });
+    return { success: false, error: 'No songs in the library', dropped };
   }
 
   clearActiveHoldingTankState();
@@ -224,16 +232,16 @@ export async function populateHoldingTank(songIds) {
     function: 'populateHoldingTank'
   });
   
-  let addedCount = 0;
-  for (const songId of songIds) {
+  for (const songId of validIds) {
     debugLog?.info('Adding song ID to holding tank', { 
       module: 'holding-tank',
       function: 'populateHoldingTank',
       songId: songId
     });
-    const result = await addToHoldingTank(songId, Dom.$('.holding_tank.active'));
-    if (result?.success) addedCount += 1;
+    insertSongRow(songsById.get(songId), songId, Dom.$('.holding_tank.active'));
   }
+  // A repeated id moves its row rather than adding another
+  const addedCount = new Set(validIds).size;
 
   await requestProfileStateSave();
   scaleScrollable();
@@ -242,7 +250,46 @@ export async function populateHoldingTank(songIds) {
     function: 'populateHoldingTank',
     count: addedCount
   });
-  return { success: true, count: addedCount };
+  return { success: true, count: addedCount, dropped };
+}
+
+/**
+ * Insert a song row into a holding tank list. Synchronous; the caller supplies
+ * the library row and saves state afterwards.
+ */
+function insertSongRow(row, song_id, element, insertPosition) {
+  const title = row.title || "[Unknown Title]";
+  const existing_song = document.querySelector(`.holding_tank.active .list-group-item[songid="${song_id}"]`);
+  let song_row;
+  if (existing_song) {
+    song_row = existing_song; // already in DOM; will be moved below
+  } else {
+    song_row = document.createElement("li");
+    song_row.className = "song list-group-item context-menu";
+    song_row.setAttribute("draggable", "true");
+    song_row.addEventListener('dragstart', songDrag);
+    song_row.setAttribute("songid", song_id);
+    setSongLabel(song_row, row);
+  }
+
+  const targetEl = element && element.nodeType ? element : Dom.$(element);
+
+  updateStateForInsertion(song_id, targetEl, insertPosition, existing_song);
+
+  // Support precise insertion when a position is specified (from drop indicator)
+  if (insertPosition === 'before' && targetEl?.matches?.('li')) {
+    targetEl.parentNode.insertBefore(song_row, targetEl);
+  } else if (insertPosition === 'after' && targetEl?.matches?.('li')) {
+    targetEl.parentNode.insertBefore(song_row, targetEl.nextSibling);
+  } else if (targetEl?.matches?.('li')) {
+    targetEl.insertAdjacentElement('afterend', song_row);
+  } else if (targetEl?.matches?.('div')) {
+    const ul = targetEl.querySelector('ul.active');
+    (ul || targetEl).appendChild(song_row);
+  } else if (targetEl?.appendChild) {
+    targetEl.appendChild(song_row);
+  }
+  return { success: true, songId: song_id, title: title };
 }
 
 /**
@@ -254,45 +301,8 @@ export async function populateHoldingTank(songIds) {
 export function addToHoldingTank(song_id, element, insertPosition) {
   return database.getSongById(song_id).then(result => {
     if (result.success && result.data.length > 0) {
-      const row = result.data[0];
-      const title = row.title || "[Unknown Title]";
-      const artist = row.artist || "[Unknown Artist]";
-      const time = row.time || "[??:??]";
-
-      const existing_song = document.querySelector(`.holding_tank.active .list-group-item[songid="${song_id}"]`);
-      let song_row;
-      if (existing_song) {
-        song_row = existing_song; // already in DOM; will be moved below
-      } else {
-        song_row = document.createElement("li");
-        song_row.style.fontSize = `11px`; // Default font size since getFontSize was removed
-        song_row.className = "song list-group-item context-menu";
-        song_row.setAttribute("draggable", "true");
-        song_row.addEventListener('dragstart', songDrag);
-        song_row.setAttribute("songid", song_id);
-        song_row.textContent = `${title} by ${artist} (${time})`;
-      }
-
-      const targetEl = element && element.nodeType ? element : Dom.$(element);
-
-      updateStateForInsertion(song_id, targetEl, insertPosition, existing_song);
-
-      // Support precise insertion when a position is specified (from drop indicator)
-      if (insertPosition === 'before' && targetEl?.matches?.('li')) {
-        targetEl.parentNode.insertBefore(song_row, targetEl);
-      } else if (insertPosition === 'after' && targetEl?.matches?.('li')) {
-        targetEl.parentNode.insertBefore(song_row, targetEl.nextSibling);
-      } else if (targetEl?.matches?.('li')) {
-        targetEl.insertAdjacentElement('afterend', song_row);
-      } else if (targetEl?.matches?.('div')) {
-        const ul = targetEl.querySelector('ul.active');
-        (ul || targetEl).appendChild(song_row);
-      } else if (targetEl?.appendChild) {
-        targetEl.appendChild(song_row);
-      }
-
       // Note: Save is now done by caller, not here, to avoid N saves during batch operations
-      return { success: true, songId: song_id, title: title };
+      return insertSongRow(result.data[0], song_id, element, insertPosition);
     } else {
       debugLog?.warn('Failed to get song by ID', {
         module: 'holding-tank',
@@ -428,7 +438,12 @@ export function removeSelected() {
  * Clear all songs from the holding tank
  */
 export async function clearHoldingTank() {
-  const confirmed = await customConfirm("Are you sure you want clear your holding tank?");
+  const layoutSwapped = watchLayoutSwap();
+  const confirmed = await confirmClearTab(document.querySelector('#holding_tank_tabs .nav-link.active'), customConfirm, holdingTankState.toSnapshot());
+  if (confirmed && layoutSwapped()) {
+    debugLog?.warn('Show changed while Clear was asked; nothing cleared', { module: 'holding-tank', function: 'clearHoldingTank' });
+    return { success: false, error: 'Show changed' };
+  }
   if (confirmed) {
     clearActiveHoldingTankState();
     Dom.empty('.holding_tank.active');
@@ -440,25 +455,6 @@ export async function clearHoldingTank() {
   }
 }
 
-/**
- * Open holding tank file
- */
-export function openHoldingTankFile() {
-  return secureFileDialog.openHoldingTankFile();
-}
-
-/**
- * Save holding tank to file
- */
-export function saveHoldingTankFile() {
-  debugLog?.info('Renderer starting saveHoldingTankFile', { 
-    module: 'holding-tank',
-    function: 'saveHoldingTankFile'
-  });
-  const holdingTankArray = holdingTankState.toSnapshot()[getActiveHoldingTankTabNumber() - 1]?.songIds || [];
-  return secureFileDialog.saveHoldingTankFile(holdingTankArray);
-}
-
 // Mode management functions moved to dedicated mode-management module
 
 /**
@@ -466,7 +462,9 @@ export function saveHoldingTankFile() {
  */
 export function holdingTankDrop(event) {
   event.preventDefault();
-  addToHoldingTank(event.dataTransfer.getData("text"), event.target).then(result => {
+  // A drop can land on a label piece inside a row; insert relative to the row
+  const target = event.target?.closest?.('li') ?? event.target;
+  addToHoldingTank(event.dataTransfer.getData("text"), target).then(result => {
     if (result && result.success) {
       // Save holding tank state after adding
       requestProfileStateSave();
@@ -495,10 +493,15 @@ export function sendToHoldingTank() {
  * Rename holding tank tab
  */
 export async function renameHoldingTankTab() {
+  const layoutSwapped = watchLayoutSwap();
   const currentName = Dom.text('#holding_tank_tabs .nav-link.active');
-  const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Holding Tank Tab");
+  const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
+  if (newName && layoutSwapped()) {
+    debugLog?.warn('Show changed while Rename was asked; nothing renamed', { module: 'holding-tank', function: 'renameHoldingTankTab' });
+    return { success: false, error: 'Show changed' };
+  }
   if (newName && newName.trim() !== "") {
-    Dom.text('#holding_tank_tabs .nav-link.active', newName);
+    setTabLabel(document.querySelector('#holding_tank_tabs .nav-link.active'), newName);
     const tabNumber = Number(document.querySelector('#holding_tank_tabs .nav-link.active')
       ?.getAttribute('href')?.match(/^#holding_tank_(\d)$/)?.[1]);
     if (tabNumber) holdingTankState.renameTab(tabNumber, newName);
@@ -577,8 +580,6 @@ const holdingTankModule = {
   removeFromHoldingTank,
   removeSelected,
   clearHoldingTank,
-  openHoldingTankFile,
-  saveHoldingTankFile,
   holdingTankDrop,
   sendToHoldingTank,
   renameHoldingTankTab,
@@ -595,7 +596,8 @@ const holdingTankModule = {
   clearActiveHoldingTankState,
   renameHoldingTankStateTab,
   moveHoldingTankItem,
-  restoreHoldingTankSnapshot
+  collectSongIds,
+  applyHoldingTankSnapshot
 };
 
 function initializeHoldingTank(options = {}) {

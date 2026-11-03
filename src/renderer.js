@@ -28,6 +28,14 @@ async function setWindowTitle() {
   }
 }
 
+// macOS draws the window under an inset title bar (main-window-factory.js);
+// index.css reserves the strip for it. Set synchronously, before first paint,
+// so it never depends on an IPC round trip.
+if (/Mac/.test(navigator.platform || navigator.userAgent)) {
+  document.documentElement.classList.add('platform-mac');
+  document.body?.classList.add('platform-mac');
+}
+
 // Set title immediately when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', setWindowTitle);
@@ -156,7 +164,6 @@ let keyboardManager = null;
 // Data loading and initialization now handled by app-initialization module
 
 // File Operations Module - Functions extracted to src/renderer/modules/file-operations/
-// openHotkeyFile(), openHoldingTankFile(), saveHotkeyFile(), saveHoldingTankFile()
 // pickDirectory(), installUpdate() - All moved to file-operations module
 
 // Import bootstrap module for module loading
@@ -165,21 +172,18 @@ import AppBootstrap from './renderer/modules/app-bootstrap/index.js';
 // Import app initialization module for centralized initialization
 import AppInitialization from './renderer/modules/app-initialization/index.js';
 
+import { setHeaderLabels } from './renderer/modules/shows/header.js';
+import { settleStartup } from './renderer/modules/shows/startup-gate.js';
+
 // Load and display current profile
 (async function loadProfileIndicator() {
   try {
     const result = await window.secureElectronAPI.profile.getCurrent();
     if (result.success && result.profile) {
-      const profileNameElement = document.getElementById('profile-name');
-      if (profileNameElement) {
-        profileNameElement.textContent = result.profile;
-      }
+      setHeaderLabels({ profile: result.profile });
     } else {
       // Handle case where no profile is available (launcher mode)
-      const profileNameElement = document.getElementById('profile-name');
-      if (profileNameElement) {
-        profileNameElement.textContent = 'No Profile';
-      }
+      setHeaderLabels({ profile: 'No Profile' });
     }
   } catch (error) {
     // Use debugLog if available, fallback to console for early initialization
@@ -325,17 +329,23 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         holdingTankModule: moduleRegistry.holdingTank
       });
       
-      // Load saved profile state (hotkeys + holding tank)
-      window.logInfo('📂 Loading profile state...');
-      const loadResult = await moduleRegistry.profileState.loadProfileState({
-        hotkeysModule: moduleRegistry.hotkeys,
-        holdingTankModule: moduleRegistry.holdingTank
-      });
-      
-      if (loadResult.loaded) {
-        window.logInfo('✅ Profile state restored successfully');
+      // Open the profile's active show (asks first after a crash). Holds,
+      // then clears, the restoration lock.
+      window.logInfo('📂 Opening the active show...');
+      if (moduleRegistry.shows?.openSessionOnStartup) {
+        const openResult = await moduleRegistry.shows.openSessionOnStartup({
+          hotkeys: moduleRegistry.hotkeys,
+          holdingTank: moduleRegistry.holdingTank
+        });
+        window.logInfo(`Show session: ${openResult.status}`);
+        // Shows menu commands; the session refuses them until it is ready
+        moduleRegistry.shows.initializeShowCommands?.({
+          hotkeys: moduleRegistry.hotkeys,
+          holdingTank: moduleRegistry.holdingTank
+        });
       } else {
-        window.logInfo('ℹ️ No previous state found, starting fresh');
+        window.logError('Shows module not available; no show was opened');
+        moduleRegistry.profileState.clearProfileRestorationLock?.();
       }
       
       // Set up profile event listeners
@@ -346,10 +356,10 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         window.logInfo('🔀 Setting up profile switch event listener...');
         apiToUse.events.onSwitchProfile(async () => {
           window.logInfo('🔀 Profile switch requested from menu');
-          if (moduleRegistry.profileState && moduleRegistry.profileState.switchProfileWithSave) {
-            await moduleRegistry.profileState.switchProfileWithSave();
+          if (moduleRegistry.profilePicker && moduleRegistry.profilePicker.open) {
+            await moduleRegistry.profilePicker.open();
           } else {
-            window.logError('Profile state module not available for switch');
+            window.logError('Profile picker module not available for switch');
           }
         });
       }
@@ -360,23 +370,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
         apiToUse.events.onLogout(async () => {
           window.logInfo('🚪 Logout requested from menu');
           try {
-            // Save current state before logging out
-            window.logInfo('💾 Saving current profile state before logout...');
-            if (moduleRegistry.profileState && moduleRegistry.profileState.extractProfileState) {
-              try {
-                const state = moduleRegistry.profileState.extractProfileState();
-                const saveResult = await window.secureElectronAPI.profile.saveStateBeforeSwitch(state);
-                
-                if (!saveResult.success) {
-                  window.logError('Failed to save state before logout:', saveResult.error);
-                } else {
-                  window.logInfo('✅ State saved successfully before logout');
-                }
-              } catch (stateError) {
-                window.logError('Error saving state before logout:', stateError);
-              }
-            }
-            
+            // The switch ends this profile's session, which discards its live layout
             const result = await window.secureElectronAPI.profile.switchToProfile('Default User');
             if (!result.success) {
               window.logError('Failed to logout (switch to Default Profile):', result.error);
@@ -419,10 +413,15 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
               if (confirmed) {
                 const result = await window.secureElectronAPI.profile.deleteProfile(currentProfile.profile);
                 if (result.success) {
-                  // Profile deleted, switch to launcher to select a different profile
-                  if (moduleRegistry.profileState && moduleRegistry.profileState.switchProfileWithSave) {
-                    await moduleRegistry.profileState.switchProfileWithSave();
-                  }
+                  // Profile deleted: pick another one. Nothing may save into the
+                  // deleted profile now, that would write its directory back.
+                  window.isRestoringProfileState = true;
+                  await moduleRegistry.profilePicker?.open({ afterDelete: true });
+                } else if (result.sessionEnded) {
+                  // The show session ended before the delete failed: reload to
+                  // reopen it from disk, or Shows and autosave stay off
+                  alert(`Failed to delete profile: ${result.error} Mx. Voice will reload the show.`);
+                  window.location.reload();
                 } else {
                   alert(`Failed to delete profile: ${result.error}`);
                 }
@@ -518,12 +517,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       }
     }
     
-    // Clear profile restoration lock now that app initialization is complete.
-    if (moduleRegistry.profileState && moduleRegistry.profileState.clearProfileRestorationLock) {
-      moduleRegistry.profileState.clearProfileRestorationLock();
-      window.logInfo('✅ Profile restoration lock cleared - app fully initialized');
-    }
-
     // Restore holding tank mode (playlist/storage) from profile preferences
     // This runs after full initialization to ensure all UI elements and modules are ready
     if (moduleRegistry.holdingTank?.initHoldingTank) {
@@ -538,8 +531,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
       setupMainProcessEventBridge({
         electronAPI: window.secureElectronAPI,
         moduleRegistry,
-        logWarn: window.logWarn,
-        logError: window.logError
+        logWarn: window.logWarn
       });
     } catch (bridgeError) {
       window.logWarn('Failed setting up secure API event bridges', { error: bridgeError?.message });
@@ -547,7 +539,7 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
 
     // Legacy functions moved to modules - keeping only HTML-compatible functions
     // All other functions are now available through moduleRegistry
-    // Example: moduleRegistry.fileOperations.openHotkeyFile() instead of window.openHotkeyFile
+    // Example: moduleRegistry.fileOperations.pickDirectory() instead of window.pickDirectory
 
     // Initialize modules after loading
     try {
@@ -602,6 +594,18 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     // E2E readiness checks key on this to avoid racing app initialization.
     if (window.electronTest?.isE2E) {
       window.__e2eInitialSearchSettled = true;
+      // Test-only hook: E2E specs cannot import renderer ES modules, so expose
+      // the show layout applier wired to the live modules. electronTest is
+      // only exposed by the preload when APP_TEST_MODE=1.
+      window.__showsTest = {
+        applyLayout: async (layout) => {
+          const [{ applyLayout }, { buildLayoutDeps }] = await Promise.all([
+            import('./renderer/modules/shows/layout-applier.js'),
+            import('./renderer/modules/shows/index.js')
+          ]);
+          return applyLayout(layout, buildLayoutDeps(moduleRegistry));
+        }
+      };
     }
 
     // Auto-trigger What's New tour if applicable
@@ -656,6 +660,11 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
     } catch (_error) {
       // Preserve the original initialization error.
     }
+  } finally {
+    // openSessionOnStartup settles the startup gate itself; this covers every
+    // path that never ran it (a module missing, or init throwing first), so
+    // the release notes aren't held back all session
+    settleStartup();
   }
 })();
 
@@ -688,7 +697,6 @@ import AppInitialization from './renderer/modules/app-initialization/index.js';
 // Legacy functions removed - now handled by modules:
 // - toggle_selected_row() -> moduleRegistry.ui.toggleSelectedRow()
 // - loop_on() -> moduleRegistry.audio.loop_on()
-// - closeAllTabs() -> moduleRegistry.ui.closeAllTabs()
 
 // Keyboard shortcuts now handled by the keyboard-manager module
 // This function is kept for backward compatibility but now uses the KeyboardManager

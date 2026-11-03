@@ -16,7 +16,7 @@ whats-new/
 1. **Auto-trigger**: On app load, `TourManager.shouldAutoTrigger()` checks if the current app version has a tour and whether the profile has already seen it.
 2. **Manual trigger**: Users can launch the tour from the Help menu ("What's New").
 3. **Step execution**: Each step can have `preActions` (e.g., open a modal, scroll to an element) that run before the step is shown, and `skipIfMissing` to gracefully skip steps when target elements don't exist.
-4. **Seen tracking**: Once completed or dismissed, the version is added to the profile's `tours_seen` preference.
+4. **Seen tracking**: As soon as the tour is shown, the version is added to the profile's `tours_seen` preference.
 
 ### Tour Helpers
 

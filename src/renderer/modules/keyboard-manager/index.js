@@ -13,6 +13,7 @@
 import { HotkeyBindings } from './hotkey-bindings.js';
 import { NavigationShortcuts } from './navigation-shortcuts.js';
 import { ShortcutRegistry } from './shortcut-registry.js';
+import { installOverlayShortcutGuard } from './overlay-shortcut-guard.js';
 
 /**
  * KeyboardManager class coordinates all keyboard shortcut functionality
@@ -40,6 +41,11 @@ export class KeyboardManager {
   async init(dependencies = {}) {
     try {
       this.logInfo('Starting keyboard manager initialization...');
+
+      // Dialogs and menus own Return, Space and Esc; F1-F12 still play
+      if (!installOverlayShortcutGuard()) {
+        this.logWarn('Mousetrap not available; shortcuts are not paused under dialogs');
+      }
 
       // Step 1: Initialize shortcut registry first
       this.logInfo('Initializing shortcut registry...');

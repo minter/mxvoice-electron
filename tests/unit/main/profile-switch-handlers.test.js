@@ -1,61 +1,125 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const handlers = {};
-const app = { relaunch: vi.fn(), exit: vi.fn() };
 const ipcMain = { handle: (channel, handler) => { handlers[channel] = handler; } };
+const profileManager = vi.hoisted(() => ({
+  getAvailableProfiles: vi.fn(() => [{ name: 'Default User' }]),
+  deleteProfile: vi.fn(() => ({ success: true })),
+  getDeleteProfileBlocker: vi.fn(() => null),
+}));
 
-vi.mock('electron', () => ({ default: { ipcMain, app }, ipcMain, app }));
-vi.mock('../../../src/main/modules/profile-manager.js', () => ({}));
+vi.mock('electron', () => ({ default: { ipcMain }, ipcMain }));
+vi.mock('../../../src/main/modules/profile-manager.js', () => profileManager);
 
 const { register } = await import('../../../src/main/modules/ipc/profile-handlers.js');
 const { trackProfileSwitch } = await import('../../../src/main/modules/profile-switch-analytics.js');
 
 function setup() {
-  const calls = [];
-  const win = { close: vi.fn(() => calls.push('close')) };
-  const analytics = {
-    trackEvent: vi.fn((name) => calls.push(`track:${name}`)),
-    endSession: vi.fn(async () => { calls.push('endSession'); }),
+  const profileSwitcher = {
+    switchProfile: vi.fn(async () => ({ success: true })),
   };
-  app.relaunch.mockImplementation(() => calls.push('relaunch'));
-  app.exit.mockImplementation(() => calls.push('exit'));
   register({
     getCurrentProfile: () => 'Default User',
     getProfileDirectory: vi.fn(),
     store: { set: vi.fn(), get: vi.fn() },
     debugLog: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
-    getMainWindow: () => win,
-    analytics,
+    profileSwitcher,
   });
-  return { calls, analytics };
+  return { profileSwitcher };
 }
 
 describe('profile switch handlers', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('flushes analytics before closing the window, then relaunches (switch via launcher)', async () => {
-    const { calls } = setup();
-
-    await handlers['profile:switch']({});
-
-    expect(calls).toEqual(['endSession', 'close', 'relaunch', 'exit']);
+  it('lists profiles for the Switch Profile dialog', async () => {
+    setup();
+    await expect(handlers['profile:list']({})).resolves.toEqual({ success: true, profiles: [{ name: 'Default User' }] });
+    profileManager.getAvailableProfiles.mockImplementationOnce(() => { throw new Error('registry'); });
+    await expect(handlers['profile:list']({})).resolves.toEqual({ success: false, error: 'registry' });
   });
 
-  it('records the switch, flushes, then closes and relaunches (switch to a named profile)', async () => {
-    const { calls, analytics } = setup();
-
+  it('switch-to switches in-process, as a direct switch unless the picker chose it', async () => {
+    const { profileSwitcher } = setup();
     await handlers['profile:switch-to']({}, 'Saturday Show');
-
-    expect(analytics.trackEvent).toHaveBeenCalledWith('profile_switched', { method: 'direct' });
-    expect(calls).toEqual(['track:profile_switched', 'endSession', 'close', 'relaunch', 'exit']);
+    expect(profileSwitcher.switchProfile).toHaveBeenLastCalledWith('Saturday Show', { method: 'direct' });
+    await handlers['profile:switch-to']({}, 'Saturday Show', 'launcher');
+    expect(profileSwitcher.switchProfile).toHaveBeenLastCalledWith('Saturday Show', { method: 'launcher' });
+    await handlers['profile:switch-to']({}, 'Saturday Show', 'bogus');
+    expect(profileSwitcher.switchProfile).toHaveBeenLastCalledWith('Saturday Show', { method: 'direct' });
   });
 
-  it('does not record a switch to the profile already in use', async () => {
-    const { analytics } = setup();
+  it('reports switcher failures', async () => {
+    const { profileSwitcher } = setup();
+    profileSwitcher.switchProfile.mockRejectedValue(new Error('busy'));
+    await expect(handlers['profile:switch-to']({}, 'X')).resolves.toEqual({ success: false, error: 'busy' });
+  });
 
-    await handlers['profile:switch-to']({}, 'Default User');
+  it('registers no state.json channels: live edits go to the show session', () => {
+    setup();
+    expect(handlers['profile:load-state']).toBeUndefined();
+    expect(handlers['profile:save-state']).toBeUndefined();
+    expect(handlers['profile:save-state-before-switch']).toBeUndefined();
+  });
+});
 
-    expect(analytics.trackEvent).not.toHaveBeenCalled();
+describe('profile delete handler', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function setupDelete({ current = 'Saturday Show' } = {}) {
+    const calls = [];
+    const showSession = { end: vi.fn(async (reason) => { calls.push(`end:${reason}`); }) };
+    const recoveryStore = {
+      retire: vi.fn(async (name) => { calls.push(`retire:${name}`); }),
+      retirePlayed: vi.fn(async (name) => { calls.push(`retirePlayed:${name}`); }),
+    };
+    const debugLog = { info: vi.fn(), error: vi.fn(), warn: vi.fn() };
+    profileManager.deleteProfile.mockImplementation((name) => { calls.push(`delete:${name}`); return { success: true }; });
+    register({
+      getCurrentProfile: () => current,
+      getProfileDirectory: vi.fn(),
+      store: { set: vi.fn(), get: vi.fn() },
+      debugLog,
+      profileSwitcher: { switchProfile: vi.fn() },
+      showSession,
+      recoveryStore,
+    });
+    return { calls, showSession, recoveryStore, debugLog };
+  }
+
+  it('a failed recovery-record retire still removes the played counts', async () => {
+    const { calls, recoveryStore } = setupDelete({ current: 'Default User' });
+    recoveryStore.retire.mockRejectedValueOnce(new Error('locked'));
+    await expect(handlers['profile:delete']({}, 'Old Show')).resolves.toEqual({ success: true });
+    expect(calls).toEqual(['delete:Old Show', 'retirePlayed:Old Show']);
+  });
+
+  it('deleteProfile removes its recovery record and played counts', async () => {
+    const { calls, showSession } = setupDelete({ current: 'Default User' });
+    await expect(handlers['profile:delete']({}, 'Old Show')).resolves.toEqual({ success: true });
+    expect(calls).toEqual(['delete:Old Show', 'retire:Old Show', 'retirePlayed:Old Show']);
+    expect(showSession.end).not.toHaveBeenCalled();
+  });
+
+  it('deleting the current profile ends its session before deleting', async () => {
+    const { calls } = setupDelete({ current: 'Saturday Show' });
+    await handlers['profile:delete']({}, 'Saturday Show');
+    expect(calls).toEqual(['end:profile-deleted', 'delete:Saturday Show', 'retire:Saturday Show', 'retirePlayed:Saturday Show']);
+  });
+
+  it('a delete that will be refused leaves the session and record alone', async () => {
+    const { showSession, recoveryStore } = setupDelete({ current: 'Default User' });
+    profileManager.getDeleteProfileBlocker.mockReturnValue('Cannot delete Default User profile');
+    profileManager.deleteProfile.mockReturnValue({ success: false, error: 'Cannot delete Default User profile' });
+    await expect(handlers['profile:delete']({}, 'Default User')).resolves.toMatchObject({ success: false });
+    expect(showSession.end).not.toHaveBeenCalled();
+    expect(recoveryStore.retire).not.toHaveBeenCalled();
+  });
+
+  it('a failed recovery retire is logged, not fatal', async () => {
+    const { recoveryStore, debugLog } = setupDelete({ current: 'Default User' });
+    recoveryStore.retire.mockRejectedValue(new Error('locked'));
+    await expect(handlers['profile:delete']({}, 'Old Show')).resolves.toEqual({ success: true });
+    expect(debugLog.warn).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ error: 'locked' }));
   });
 });
 

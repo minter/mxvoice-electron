@@ -143,6 +143,132 @@ test.describe('Playback - fade out', () => {
     await expect(page.locator('#play_button')).toBeVisible({ timeout: 5000 });
   });
 
+  /**
+   * Helper: hold Esc past the tap window, then let go
+   */
+  async function holdEscape() {
+    await page.keyboard.down('Escape');
+    // Longer than HOLD_TO_FADE_MS (300ms), so this is a hold, not a tap
+    await page.waitForTimeout(600);
+    await page.keyboard.up('Escape');
+  }
+
+  const isFadingOut = () => page.evaluate(() => window.moduleRegistry.audio.isFadingOut());
+
+  test('holding Esc fades out instead of cutting', async () => {
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 2);
+    });
+    await startPlayback();
+
+    await holdEscape();
+
+    // Still playing after the key is released: the fade is running
+    expect(await isFadingOut()).toBe(true);
+    await expect(page.locator('#pause_button')).toBeVisible();
+
+    if (!isCI) await waitForSilence(page, 1e-3, 4000);
+    await expect(page.locator('#play_button')).toBeVisible({ timeout: 5000 });
+    expect(await isFadingOut()).toBe(false);
+  });
+
+  test('tapping Esc during a fade cuts at once', async () => {
+    // Long enough that a cut and a finished fade can't be confused
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 5);
+    });
+    await startPlayback();
+
+    await holdEscape();
+    expect(await isFadingOut()).toBe(true);
+
+    await page.keyboard.press('Escape');
+
+    // Well inside the 5 second fade
+    await expect(page.locator('#play_button')).toBeVisible({ timeout: 1000 });
+    expect(await isFadingOut()).toBe(false);
+    if (!isCI) {
+      await stabilize(page, 300);
+      expect(await rms(page)).toBeLessThan(1e-3);
+    }
+  });
+
+  test('holding Shift+Esc fades to silence without cutting', async () => {
+    // Long enough that the held keys end well inside the fade, even on a
+    // slow runner
+    const fadeSeconds = 5;
+    await page.evaluate(async (s) => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', s);
+    }, fadeSeconds);
+    await startPlayback();
+
+    // Hold Shift+Esc: after the first keydown, each further keyboard.down
+    // sends a keydown with repeat set, as a held key does
+    await page.keyboard.down('Shift');
+    const started = Date.now();
+    await page.keyboard.down('Escape');
+    for (let i = 0; i < 16; i++) {
+      await page.waitForTimeout(50);
+      await page.keyboard.down('Escape');
+      // Each repeat leaves the fade running
+      expect(await isFadingOut()).toBe(true);
+    }
+    await page.keyboard.up('Escape');
+    await page.keyboard.up('Shift');
+
+    // The repeats did not cut: the fade is still running
+    expect(await isFadingOut()).toBe(true);
+    await expect(page.locator('#pause_button')).toBeVisible();
+
+    if (!isCI) await waitForSilence(page, 1e-3, (fadeSeconds + 3) * 1000);
+    await expect(page.locator('#play_button')).toBeVisible({ timeout: (fadeSeconds + 5) * 1000 });
+    const elapsed = (Date.now() - started) / 1000;
+    console.log('Held Shift+Esc fade (s):', elapsed);
+    // Over the fade time, not at once
+    expect(elapsed).toBeGreaterThan(fadeSeconds * 0.8);
+    expect(await isFadingOut()).toBe(false);
+  });
+
+  test('the fade lasts as long as the Preferences setting', async () => {
+    // Time from Shift+Esc until the transport resets, for a given setting
+    async function timedFade(seconds) {
+      await page.evaluate(async (s) => {
+        await window.secureElectronAPI.profile.setPreference('fade_out_seconds', s);
+      }, seconds);
+      await startPlayback();
+      const started = Date.now();
+      await page.keyboard.press('Shift+Escape');
+      await expect(page.locator('#play_button')).toBeVisible({ timeout: (seconds + 5) * 1000 });
+      return (Date.now() - started) / 1000;
+    }
+
+    const short = await timedFade(1);
+    const long = await timedFade(4);
+    console.log('Fade timings (s):', { short, long });
+
+    expect(short).toBeGreaterThan(0.8);
+    expect(short).toBeLessThan(3);
+    expect(long).toBeGreaterThan(3.8);
+    expect(long - short).toBeGreaterThan(2.5);
+  });
+
+  test('Esc in the search field: hold fades, tap cuts', async () => {
+    await page.evaluate(async () => {
+      await window.secureElectronAPI.profile.setPreference('fade_out_seconds', 5);
+    });
+    await startPlayback();
+
+    // Search fields handle Esc themselves; Mousetrap skips text inputs
+    await page.locator('#omni_search').focus();
+    await holdEscape();
+    expect(await isFadingOut()).toBe(true);
+    await expect(page.locator('#pause_button')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#play_button')).toBeVisible({ timeout: 1000 });
+    expect(await isFadingOut()).toBe(false);
+  });
+
   test('fade-pause preserves song position for resume', async () => {
     // Set fade duration
     await page.evaluate(async () => {

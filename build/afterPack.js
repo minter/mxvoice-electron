@@ -96,7 +96,7 @@ export default async function afterPack(context) {
     // Recursively find DLLs and EXEs
     const filesToSign = walkFiles(appOutDir).filter((p) => {
       const lower = path.basename(p).toLowerCase();
-      return lower.endsWith(".dll") || lower.endsWith(".exe");
+      return lower.endsWith(".dll");
     });
 
     if (filesToSign.length === 0) return;

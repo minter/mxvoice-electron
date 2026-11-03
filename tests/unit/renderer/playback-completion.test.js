@@ -26,7 +26,8 @@ describe('playback completion', () => {
       sharedState: state({ sound, loop: true, autoplay: true, holdingTankMode: 'playlist' }),
       onSongEnded: vi.fn(), replaySong, autoplayNext: vi.fn()
     })).toBe('loop');
-    expect(replaySong).toHaveBeenCalledWith('42');
+    // A loop restart is the same play: it isn't counted again
+    expect(replaySong).toHaveBeenCalledWith('42', { replay: true });
   });
 
   it('advances playlist autoplay and otherwise stops', () => {

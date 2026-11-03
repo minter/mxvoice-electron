@@ -15,7 +15,8 @@ function completeActivePlayback({ songId, sharedState, onSongEnded, replaySong, 
     autoplay: sharedState.get('autoplay'),
     holdingTankMode: sharedState.get('holdingTankMode')
   });
-  if (action === 'loop' && songId) replaySong(songId);
+  // The same play restarting: not counted as another play tonight
+  if (action === 'loop' && songId) replaySong(songId, { replay: true });
   if (action === 'autoplay') autoplayNext();
   return action;
 }

@@ -7,6 +7,7 @@
  * @module controls
  */
 
+import { stepSongFontSize } from './song-font-size.js';
 import Dom from '../dom-utils/index.js';
 import { animateCSS, scaleScrollable } from '../utils/index.js';
 import sharedState from '../shared-state.js';
@@ -30,66 +31,16 @@ try {
  */
 function initializeControls(options = {}) {
   const { electronAPI } = options;
-  let fontSize = 11; // Default font size
-  
-  /**
-   * Increase font size
-   */
+  /** View > Increase Font Size: every song row, now and later (ui/song-font-size.js) */
   function increaseFontSize() {
-    if (fontSize < 25) {
-      fontSize++;
-      document.querySelectorAll('.song').forEach(el => { el.style.fontSize = fontSize + 'px'; });
-      // Save to profile preferences (not global store)
-      if (electronAPI && electronAPI.profile) {
-        electronAPI.profile.setPreference("font_size", fontSize).catch(error => {
-          debugLog?.warn('Failed to save font size to profile', { 
-            module: 'ui-controls',
-            function: 'increaseFontSize',
-            error: error
-          });
-        });
-      } else if (electronAPI && electronAPI.store) {
-        // Fallback to global store if profile API not available
-        electronAPI.store.set("font_size", fontSize).catch(error => {
-          debugLog?.warn('Failed to save font size', { 
-            module: 'ui-controls',
-            function: 'increaseFontSize',
-            error: error
-          });
-        });
-      }
-    }
+    return stepSongFontSize(1, electronAPI);
   }
-  
-  /**
-   * Decrease font size
-   */
+
+  /** View > Decrease Font Size */
   function decreaseFontSize() {
-    if (fontSize > 5) {
-      fontSize--;
-      document.querySelectorAll('.song').forEach(el => { el.style.fontSize = fontSize + 'px'; });
-      // Save to profile preferences (not global store)
-      if (electronAPI && electronAPI.profile) {
-        electronAPI.profile.setPreference("font_size", fontSize).catch(error => {
-          debugLog?.warn('Failed to save font size to profile', { 
-            module: 'ui-controls',
-            function: 'decreaseFontSize',
-            error: error
-          });
-        });
-      } else if (electronAPI && electronAPI.store) {
-        // Fallback to global store if profile API not available
-        electronAPI.store.set("font_size", fontSize).catch(error => {
-          debugLog?.warn('Failed to save font size', { 
-            module: 'ui-controls',
-            function: 'decreaseFontSize',
-            error: error
-          });
-        });
-      }
-    }
+    return stepSongFontSize(-1, electronAPI);
   }
-  
+
   /**
    * Toggle waveform display
    */

@@ -11,7 +11,7 @@ import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
-  const { getCurrentProfile, debugLog } = deps;
+  const { getCurrentProfile, debugLog, showSession, recoveryStore } = deps;
 
   // Profile Backup: Create backup
   ipcMain.handle(IPC.PROFILE_BACKUP.CREATE, async (_event) => {
@@ -109,6 +109,9 @@ export function register(deps) {
 
   // Profile Backup: Restore from backup
   ipcMain.handle(IPC.PROFILE_BACKUP.RESTORE, async (event, backupId) => {
+    // Once the session has ended, a failure must say so: the page reloads
+    // to reopen the session from disk, or Shows and autosave stay disabled
+    let sessionEnded = false;
     try {
       const currentProfile = getCurrentProfile();
 
@@ -123,6 +126,34 @@ export function register(deps) {
         backupId
       });
 
+      // A restore that can't start must leave the session running
+      const restorable = await profileBackupManager.checkBackupRestorable(currentProfile, backupId);
+      if (!restorable.success) {
+        debugLog?.warn('Backup cannot be restored', {
+          module: 'ipc-handlers',
+          function: 'profile:restoreBackup',
+          profileName: currentProfile,
+          backupId,
+          error: restorable.error
+        });
+        return restorable;
+      }
+
+      // Fence and retire the crash-recovery record before any file is copied:
+      // a late write would otherwise recreate it, and the restored profile
+      // would open with a crash prompt showing the pre-restore layout
+      sessionEnded = Boolean(showSession);
+      try {
+        await showSession?.end('backup-restore');
+      } catch (error) {
+        debugLog?.error('Could not retire crash recovery before restoring a backup', {
+          module: 'ipc-handlers',
+          function: 'profile:restoreBackup',
+          profileName: currentProfile,
+          error: error.message
+        });
+      }
+
       const result = await profileBackupManager.restoreBackup(currentProfile, backupId);
 
       if (result.success) {
@@ -132,6 +163,18 @@ export function register(deps) {
           profileName: currentProfile,
           backupId
         });
+        // end() left the night's played counts in case the restore failed;
+        // it succeeded, so they go, as the layout record already has
+        try {
+          await recoveryStore?.retirePlayed?.(currentProfile);
+        } catch (error) {
+          debugLog?.warn('Could not retire the played counts after restoring a backup', {
+            module: 'ipc-handlers',
+            function: 'profile:restoreBackup',
+            profileName: currentProfile,
+            error: error.message
+          });
+        }
       } else {
         debugLog?.error('Failed to restore profile backup', {
           module: 'ipc-handlers',
@@ -140,6 +183,7 @@ export function register(deps) {
           backupId,
           error: result.error
         });
+        return sessionEnded ? { ...result, sessionEnded: true } : result;
       }
 
       return result;
@@ -149,7 +193,9 @@ export function register(deps) {
         function: 'profile:restoreBackup',
         error: error.message
       });
-      return { success: false, error: error.message };
+      return sessionEnded
+        ? { success: false, error: error.message, sessionEnded: true }
+        : { success: false, error: error.message };
     }
   });
 
