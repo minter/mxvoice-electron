@@ -16,6 +16,7 @@ import { swatchImage } from './color-swatch-image.js';
 import { createWindowStateManager } from './window-state-manager.js';
 import { createMainWindow } from './main-window-factory.js';
 import { createAppLifecycle } from './app-lifecycle.js';
+import { runManualUpdateCheck } from './manual-update-check.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -40,6 +41,8 @@ let rendererCommands;
 let windowStateManager;
 let appLifecycle;
 let showSession;
+let updateState;
+let installUpdate;
 
 // Initialize the module with dependencies
 function initializeAppSetup(dependencies) {
@@ -53,6 +56,8 @@ function initializeAppSetup(dependencies) {
   analytics = dependencies.analytics;
   appStartTime = dependencies.appStartTime;
   showSession = dependencies.showSession;
+  updateState = dependencies.updateState;
+  installUpdate = dependencies.installUpdate;
   rendererCommands = createRendererCommandDispatcher({
     getWindow: () => getMainWindow(),
     debugLog
@@ -170,6 +175,7 @@ function createApplicationMenu() {
     debugLog,
     logService: getLogService(),
     rendererCommands,
+    checkForUpdates: () => checkForUpdatesFromMenu(),
     getShowMenuState: () => {
       const { status, doc, dirty, unsaved, hasPlayed } = showSession?.state?.() ?? {};
       const shows = (doc?.shows ?? []).map((b) => ({ id: b.id, name: b.name, color: b.color ?? null }));
@@ -180,6 +186,50 @@ function createApplicationMenu() {
     swatchImage
   });
 }
+/**
+ * Check for Updates… from the menu. A found update opens the release-notes
+ * modal; every other outcome is told in a message box.
+ *
+ * @param {Object} [options] - E2E seam: a stub updater stands in for the network
+ */
+async function checkForUpdatesFromMenu({ updater = autoUpdater, packaged = app.isPackaged } = {}) {
+  const showMessage = async (options) => {
+    if (process.env.APP_TEST_MODE === '1') {
+      // E2E seam: no native dialog. Tests read the messages and set the answer.
+      (globalThis.__e2eUpdateMessages ??= []).push(options);
+      return { response: globalThis.__e2eUpdateMessageAnswer ?? options.cancelId ?? 0 };
+    }
+    const window = getMainWindow();
+    return window && !window.isDestroyed()
+      ? dialog.showMessageBox(window, options)
+      : dialog.showMessageBox(options);
+  };
+  try {
+    const outcome = await runManualUpdateCheck({
+      autoUpdater: updater,
+      updateState,
+      isPackaged: packaged,
+      appName: app.name,
+      currentVersion: app.getVersion(),
+      hasWindow: () => {
+        const window = getMainWindow();
+        return !!window && !window.isDestroyed();
+      },
+      showMessage,
+      installUpdate: () => installUpdate(),
+    });
+    analytics?.trackEvent('update_check_manual', { outcome });
+    return outcome;
+  } catch (error) {
+    debugLog?.error('Check for Updates failed', {
+      module: 'app-setup',
+      function: 'checkForUpdatesFromMenu',
+      error: error?.message
+    });
+    return 'failed';
+  }
+}
+
 // UI operation functions
 function showAboutDialog() {
   try {
@@ -474,6 +524,7 @@ export {
   sendEditSong,
   manageCategories,
   showAboutDialog,
+  checkForUpdatesFromMenu,
   setupWindowStateSaving,
   prepareMainWindowForClose,
   prepareForUpdateInstall,
@@ -498,6 +549,7 @@ export default {
   sendEditSong,
   manageCategories,
   showAboutDialog,
+  checkForUpdatesFromMenu,
   setupWindowStateSaving,
   prepareMainWindowForClose,
   prepareForUpdateInstall,

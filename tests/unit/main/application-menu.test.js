@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { buildApplicationMenu } from '../../../src/main/modules/application-menu.js';
 
-function buildHarness() {
+function buildHarness({ checkForUpdates = vi.fn() } = {}) {
   const template = [];
   const Menu = {
     buildFromTemplate: vi.fn((value) => ({ value })),
@@ -27,6 +27,7 @@ function buildHarness() {
     debugLog: { warn: vi.fn() },
     logService: { exportLogs: vi.fn() },
     rendererCommands,
+    checkForUpdates,
     getShowMenuState: () => ({
       status: 'ready',
       activeShow: { id: 'b1', name: 'Comedy Sports' },
@@ -118,6 +119,26 @@ describe('application menu', () => {
     expect(last.label).toBe('Manage Categories…');
     last.click();
     expect(rendererCommands.manageCategories).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['darwin', 'Mx. Voice'],
+    ['win32', 'Help'],
+    ['linux', 'Help'],
+  ])('puts Check for Updates… under About on %s, in the %s menu', (platform, menuLabel) => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: platform });
+    try {
+      const checkForUpdates = vi.fn();
+      const { template } = buildHarness({ checkForUpdates });
+      const menu = template.find((m) => m.label === menuLabel);
+      const labels = menu.submenu.map((item) => item.label);
+      expect(labels.indexOf('Check for Updates…')).toBe(labels.indexOf('About Mx. Voice') + 1);
+      menu.submenu.find((item) => item.label === 'Check for Updates…').click();
+      expect(checkForUpdates).toHaveBeenCalledOnce();
+    } finally {
+      Object.defineProperty(process, 'platform', originalPlatform);
+    }
   });
 
   it('disables destructive actions for the default profile', () => {

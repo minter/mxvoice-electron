@@ -54,6 +54,7 @@ describe('runBackgroundCheck', () => {
     ['an update is downloading', { downloading: true }],
     ['an update is already downloaded', { downloaded: true }],
     ['a background check is already running', { backgroundCheck: true }],
+    ['a Check for Updates is running (its update must open the modal)', { manualCheck: true }],
   ])('skips when %s', async (_label, state) => {
     const autoUpdater = { checkForUpdates: vi.fn() };
 

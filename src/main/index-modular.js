@@ -87,6 +87,16 @@ if (process.env.APP_TEST_MODE === '1') {
     autoUpdater: { checkForUpdates: async () => autoUpdater.emit('update-available', info) },
   });
   globalThis.__e2eUpdateDownloaded = (info) => autoUpdater.emit('update-downloaded', info);
+  // Check for Updates… with the network stubbed: `info` is the update found, or null
+  globalThis.__e2eManualUpdate = (info) => appSetup.checkForUpdatesFromMenu({
+    packaged: true,
+    updater: {
+      checkForUpdates: async () => {
+        if (info) autoUpdater.emit('update-available', info);
+        return { isUpdateAvailable: !!info, updateInfo: info };
+      },
+    },
+  });
 }
 
 const appStartTime = Date.now();

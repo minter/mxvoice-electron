@@ -61,6 +61,7 @@ Vanilla JS + Bootstrap 5 renderer, no bundler. Native ES modules loaded via `<sc
 ## Auto-Update
 
 - **electron-updater + GitHub releases** — release notes fetched and sanitized via DOMPurify before display.
+- **Three kinds of check** — at launch (release-notes modal), every 12 hours in the background (quiet toolbar indicator, `update-scheduler.js`), and **Check for Updates…** in the macOS app menu / Help menu (`manual-update-check.js`). The manual check opens the modal for a found update and a message box for everything else (up to date, failed, downloading, downloaded, not an installed build); a background check never starts while it runs.
 - **Prerelease builds** — controlled by `EP_PRE_RELEASE` env var and per-profile `prerelease_updates` preference. The updater reads the global store's copy (it is set up before any profile opens), so `prerelease-preference.js` copies the profile's value there whenever a profile opens, at launch and on a switch. 4.3.2 only copied it on a Preferences save, from whichever profile saved last.
 - **Version prereleases as `X.Y.Z-beta.N`, never `-pre.N`** — installs with prereleases enabled are pinned to electron-updater's `beta` channel (`src/main/modules/update-channel.js`), which offers the newest stable *or* beta release. Any other prerelease id (e.g. `pre`) is a custom channel that only sees its own releases, which stranded `-pre` installs away from stable releases.
 

@@ -43,6 +43,9 @@ export async function runBackgroundCheck({ autoUpdater, updateState, now = Date.
   if (!autoUpdater || isDownloadGuardActive(updateState, now()) || updateState.downloaded || updateState.backgroundCheck) {
     return false;
   }
+  // electron-updater would merge it into the user's Check for Updates, and
+  // its flag would turn that check's modal into the quiet indicator
+  if (updateState.manualCheck) return false;
   updateState.backgroundCheck = true;
   try {
     await autoUpdater.checkForUpdates();

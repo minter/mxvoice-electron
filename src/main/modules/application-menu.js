@@ -11,6 +11,7 @@ function buildApplicationMenu({
   debugLog,
   logService,
   rendererCommands,
+  checkForUpdates,
   getShowMenuState,
   rebuildMenu,
   swatchImage
@@ -240,6 +241,10 @@ function buildApplicationMenu({
           role: 'about'
         },
         {
+          label: 'Check for Updates…',
+          click: () => checkForUpdates?.()
+        },
+        {
           label: 'Documentation',
           click: () => {
             shell.openExternal('https://mxvoice.app/docs/');
@@ -351,6 +356,10 @@ function buildApplicationMenu({
           click: () => {
             showAboutDialog();
           }
+        },
+        {
+          label: 'Check for Updates…',
+          click: () => checkForUpdates?.()
         },
         {
           label: 'Documentation',

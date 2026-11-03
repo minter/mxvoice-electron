@@ -64,6 +64,10 @@ export default {
           title: 'Fade Out With One Hand',
           description: 'Tap Esc to stop the music right away, as before. Hold Esc to fade it out instead, leaving your other hand free for the lights. Press Esc again during a fade to cut it. Shift+Esc still fades too.',
         },
+        {
+          title: 'Check for Updates',
+          description: 'Mx. Voice still checks for updates on its own. To check right now, choose Check for Updates… in the Mx. Voice menu (the Help menu on Windows and Linux). It tells you if you\'re already up to date.',
+        },
       ],
     },
     '4.3.0': {
