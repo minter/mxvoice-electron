@@ -70,6 +70,7 @@ import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-chan
 import { describeUpdateError } from './modules/update-analytics.js';
 import { decideUpdateNotice, runBackgroundCheck, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
 import { createProfileSwitcher, applyWindowState } from './modules/profile-switcher.js';
+import { syncPrereleasePreference } from './modules/prerelease-preference.js';
 import { createShowStore } from './modules/show-store.js';
 import { createRecoveryStore } from './modules/recovery-store.js';
 import { createShowSession } from './modules/show-session.js';
@@ -922,6 +923,15 @@ const createWindow = async () => {
   try {
     debugLog.info('Starting main window creation', { function: "createWindow" });
     
+    // The updater was set up before this profile opened; give it this
+    // profile's prerelease preference before the window's first update check
+    try {
+      const prerelease = await syncPrereleasePreference({ profileName: currentProfile, profileManager, store });
+      debugLog.info('Prerelease preference from the profile', { function: "createWindow", profile: currentProfile, prerelease });
+    } catch (error) {
+      debugLog.warn('Could not read the profile\'s prerelease preference', { function: "createWindow", error: error.message });
+    }
+
     // Check first run (which also checks old config)
     debugLog.info('Checking first run...', { function: "createWindow" });
     await checkFirstRun();

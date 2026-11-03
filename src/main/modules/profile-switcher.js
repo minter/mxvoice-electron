@@ -10,6 +10,7 @@
 
 import { trackProfileSwitch } from './profile-switch-analytics.js';
 import { withTimeout } from './with-timeout.js';
+import { syncPrereleasePreference } from './prerelease-preference.js';
 
 // Stops the old page's debounced collection saves; they would otherwise land
 // in the new profile once currentProfile changes
@@ -147,12 +148,7 @@ export function createProfileSwitcher({
       });
 
       // The auto-updater reads the global store, not profile preferences
-      await step('prerelease-sync', async () => {
-        const preferences = await profileManager.loadProfilePreferences(name);
-        if (preferences && 'prerelease_updates' in preferences) {
-          store.set('prerelease_updates', preferences.prerelease_updates);
-        }
-      });
+      await step('prerelease-sync', () => syncPrereleasePreference({ profileName: name, profileManager, store }));
 
       await step('menu', () => rebuildMenu());
       await step('window-bounds', async () => applyState(win, await loadWindowState(name)));
