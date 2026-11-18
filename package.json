@@ -218,5 +218,8 @@
     "fsevents@2.3.3": true,
     "fsevents@2.3.2": true,
     "esbuild@0.28.2": true
+  },
+  "overrides": {
+    "minimatch@>=7 <11": "^11.0.9"
   }
 }
