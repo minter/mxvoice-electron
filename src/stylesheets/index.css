@@ -3,6 +3,11 @@
   /* To change tooltip delay globally, modify this value */
   /* Examples: 500ms = 0.5 seconds, 2000ms = 2 seconds */
   --tooltip-delay: 1500ms;
+
+  /* One spacing value for the window background around and between the
+     panels: every outer edge, every gap between top panels, and the gap
+     above the player panel */
+  --panel-gap: 12px;
 }
 
 body {
@@ -21,19 +26,21 @@ input[type="text"]:focus {
 }
 
 #top-row {
-  height: calc(100vh - 140px);
+  flex: 1 1 auto; /* fills the window above the player row */
+  min-height: 0;
   display: flex;
   flex-direction: row;
-  gap: 8px;
-  padding: 8px;
+  gap: var(--panel-gap);
+  padding: var(--panel-gap);
   overflow-x: auto; /* allow horizontal scroll if columns cannot shrink further */
   overflow-y: hidden;
 }
 
 #player-row {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: row;
-  padding: 8px;
+  padding: 0 var(--panel-gap) var(--panel-gap); /* the top row's padding is the gap above */
   overflow: hidden;
   z-index: 1001; /* Ensure player row appears above waveform */
 }
@@ -80,17 +87,7 @@ input[type="text"]:focus {
   }
   
   .mode-toggle {
-    margin-right: 8px; /* Add some spacing from the icon bar */
-  }
-  
-  .icon-bar {
-    column-gap: 4px; /* Reduce spacing between icons */
-    row-gap: 2px;
-  }
-  
-  .icon-bar a {
-    padding: 6px; /* Slightly more padding for better touch targets */
-    font-size: 14px; /* Slightly smaller icons to fit better */
+    margin-right: 8px;
   }
 }
 
@@ -99,15 +96,6 @@ input[type="text"]:focus {
   .mode-toggle .mode-btn {
     padding: 6px;
     min-width: 32px;
-  }
-  
-  .icon-bar {
-    column-gap: 2px;
-  }
-  
-  .icon-bar a {
-    padding: 4px;
-    font-size: 12px;
   }
 }
 
@@ -241,30 +229,47 @@ h6.card-header {
   font-size: 11px;
 }
 
-.icon-bar {
-  margin-left: auto; /* push to the right in flex header */
+
+/* Tab actions: the ⋯ at the end of the hotkey and holding tank tab rows.
+   Its own fixed-width item, so the nav-fill tabs don't stretch it. */
+.nav-fill .nav-item.tab-actions-item {
+  flex: 0 0 auto;
   display: flex;
-  flex-wrap: wrap; /* wrap icons to next line when needed */
-  column-gap: 8px;
-  row-gap: 4px;
-  max-width: 100%;
+  align-items: stretch;
 }
 
-.icon-bar a {
-  margin-left: 7px;
-  font-size: 16px;
-  text-decoration: none;
-  color: var(--card-text);
-  transition: all 0.2s ease;
-  padding: 4px;
+.tab-actions-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  padding: 0 0.25rem;
+  font-size: 14px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
   border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
-.icon-bar a:hover {
-  color: #007bff;
-  background: rgba(0, 123, 255, 0.1);
-  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
-  filter: brightness(1.1);
+.tab-actions-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+.tab-actions-menu .tab-actions-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.tab-actions-menu .tab-actions-menu-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #search_form {
@@ -379,7 +384,8 @@ h6.card-header {
   box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
-.hotkeys span {
+/* The song label (ui/song-label.js) is made of child spans: style only the label itself */
+.hotkeys li > span.song {
   font-size: 13px;
   font-weight: 600;
   padding: 0;
@@ -394,7 +400,7 @@ h6.card-header {
   width: 100%;
 }
 
-.hotkeys li:hover span {
+.hotkeys li:hover > span.song {
   color: var(--card-text);
 }
 
@@ -686,6 +692,15 @@ h6 a {
   margin-right: 0;
 }
 
+/* Drag-and-drop targets between the top panels. They sit exactly in the
+   row gap: the negative margins cancel their own width plus one gap, so the
+   panels are a single --panel-gap apart whether or not the zones exist. */
+#top-row .column-drop-zone {
+  flex: 0 0 var(--panel-gap);
+  width: var(--panel-gap);
+  margin: 0 calc(-1 * var(--panel-gap));
+}
+
 /* Responsive breakpoints */
 @media screen and (max-width: 1400px) {
   #holding-tank-column,
@@ -707,7 +722,13 @@ h6 a {
 @media screen and (max-width: 934px) {
   #top-row {
     flex-direction: column;
-    height: calc(100vh - 160px);
+  }
+
+  #top-row .column-drop-zone {
+    width: auto;
+    height: var(--panel-gap);
+    flex-basis: var(--panel-gap);
+    margin: calc(-1 * var(--panel-gap)) 0;
   }
 
   #holding-tank-column,
@@ -716,7 +737,6 @@ h6 a {
     min-width: auto;
     max-width: none;
     width: 100%;
-    margin-bottom: 8px;
   }
 
   #player {
@@ -874,8 +894,8 @@ h6 a {
 #waveform-container {
   position: absolute;
   bottom: 140px; /* Position higher above the player panel to avoid overlap */
-  left: 8px;
-  right: 8px;
+  left: var(--panel-gap);
+  right: var(--panel-gap);
   z-index: 1000;
   pointer-events: none; /* Allow clicks to pass through when hidden */
 }
@@ -916,6 +936,12 @@ legend {
 .hotkeys .list-group-item.selected-row {
   background-color: #1a4d8f !important;
   border: 1.5px solid #0078d7 !important;
+  color: #fff !important;
+}
+
+/* span.song sets its own text color, so it doesn't inherit the white above */
+.hotkeys .list-group-item.active-hotkey span,
+.hotkeys .list-group-item.selected-row span {
   color: #fff !important;
 }
 
@@ -964,6 +990,25 @@ legend {
   white-space: nowrap;
 }
 
+.show-separator[hidden],
+#show-icon[hidden],
+#show-name[hidden],
+#show-dirty[hidden] {
+  display: none;
+}
+
+/* Stays visible when a long show name is truncated */
+#show-dirty {
+  flex-shrink: 0;
+}
+
+#show-name {
+  max-width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #update_available_button {
   flex-shrink: 0;
 }
@@ -1001,7 +1046,11 @@ legend {
 }
 
 .whats-new-popover .driver-popover-next-btn,
-.whats-new-popover .driver-popover-close-btn {
+.whats-new-popover .driver-popover-next-btn:hover,
+.whats-new-popover .driver-popover-next-btn:focus,
+.whats-new-popover .driver-popover-close-btn,
+.whats-new-popover .driver-popover-close-btn:hover,
+.whats-new-popover .driver-popover-close-btn:focus-visible {
   background: #6c63ff;
   border: none;
   color: #fff;
@@ -1033,4 +1082,183 @@ legend {
   background-image: none !important;
   box-shadow: 0 0 0 0.25rem rgba(255, 77, 77, 0.25) !important;
   outline: none !important;
+}
+
+/* Tab rows never wrap: each tab is sized by its content, so short labels leave
+   room for long names, and when the row is too narrow every tab shrinks and a
+   long name is cut off with an ellipsis (its full name is the link's tooltip).
+   The ⋯ item keeps its own fixed width at the right. */
+#hotkey_tabs.nav-fill,
+#holding_tank_tabs.nav-fill {
+  flex-wrap: nowrap;
+}
+
+#hotkey_tabs.nav-fill .nav-item,
+#holding_tank_tabs.nav-fill .nav-item {
+  flex: 1 1 auto;
+  min-width: 2.5rem;
+}
+
+#hotkey_tabs.nav-fill .nav-item.tab-actions-item,
+#holding_tank_tabs.nav-fill .nav-item.tab-actions-item {
+  flex: 0 0 auto;
+}
+
+#hotkey_tabs .nav-link,
+#holding_tank_tabs .nav-link {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Import Show dialog (shows/import-dialog.js): profiles are headings, shows are the choices */
+.import-show-dialog {
+  max-width: 460px;
+}
+
+.import-show-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.import-show-body {
+  padding: 12px 16px 16px;
+}
+
+.import-show-intro {
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.import-show-filter {
+  margin-bottom: 10px;
+}
+
+.import-show-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.import-show-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 2px 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.import-show-profile:first-child {
+  padding-top: 2px;
+}
+
+.import-show-profile i {
+  font-size: 11px;
+  width: 12px;
+  text-align: center;
+}
+
+.import-show-profile-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-show-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 4px 20px;
+  width: calc(100% - 20px);
+  padding: 7px 10px 7px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  border-left-width: 4px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.import-show-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.import-show-name {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-show-contents {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.import-show-check {
+  flex: none;
+  font-size: 12px;
+  visibility: hidden;
+}
+
+.import-show-row.active .import-show-check {
+  visibility: visible;
+}
+
+.import-show-row:focus-visible {
+  outline: 2px solid var(--highlight-color);
+  outline-offset: 1px;
+}
+
+.import-show-empty {
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+/* macOS: the window has no title bar (main-window-factory.js hiddenInset), so a
+   30px strip at the top holds the traffic lights and drags the window. It
+   stays clickable-through over dialogs and the tour. Full screen hides it
+   (main-window-factory.js). Windows and Linux keep their native title bar. */
+body.platform-mac .container-fluid::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  -webkit-app-region: drag;
+  z-index: 2000;
+}
+
+body.platform-mac.modal-open .container-fluid::before,
+body.platform-mac.driver-active .container-fluid::before {
+  -webkit-app-region: no-drag;
+}
+
+body.platform-mac #top-row {
+  padding-top: 30px;
+}
+
+/* View > Font Size (ui/song-font-size.js): one size for every song row, now and
+   later. Search rows use it as is; hotkey slots and holding tank rows 2px larger.
+   !important so it wins over the size older code sets inline on each row. */
+:root {
+  --song-font-size: 11px;
+}
+
+#search_results tbody tr {
+  font-size: var(--song-font-size) !important;
+}
+
+.hotkeys li > span.song,
+.holding_tank .list-group-item {
+  font-size: calc(var(--song-font-size) + 2px) !important;
 }

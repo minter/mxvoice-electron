@@ -327,6 +327,28 @@ describe('TourManager', () => {
       return mockDriverFactory.mock.calls.at(-1)[0];
     }
 
+    it('focuses Next on each step after Driver.js has placed its own focus', async () => {
+      const cleanup = appendEls(['f0']);
+      const m = new TourManager({ tours: { '4.3.0': { title: 't', steps: [{ element: '#f0', title: 'A', description: 'a' }] } } });
+      await m.launchTour('4.3.0', { markSeen: false });
+      const frames = [];
+      const previousRaf = globalThis.requestAnimationFrame;
+      globalThis.requestAnimationFrame = (callback) => frames.push(callback);
+      try {
+        const nextButton = { focus: vi.fn() };
+        lastDriverConfig().onPopoverRender({ nextButton });
+        expect(nextButton.focus).not.toHaveBeenCalled();
+        frames.forEach((callback) => callback());
+        expect(nextButton.focus).toHaveBeenCalledTimes(1);
+        // A popover without a Next button is fine
+        expect(() => lastDriverConfig().onPopoverRender({})).not.toThrow();
+        frames.splice(0).forEach((callback) => callback());
+      } finally {
+        globalThis.requestAnimationFrame = previousRaf;
+        cleanup();
+      }
+    });
+
     it('ignores a Next click while a transition is already running', async () => {
       const cleanup = appendEls(['s0', 's1', 's2']);
       let resolveSlow;
@@ -373,6 +395,177 @@ describe('TourManager', () => {
       // Only one step advance should have happened.
       expect(mockDriver.moveTo).toHaveBeenCalledTimes(1);
       expect(mockDriver.moveTo).toHaveBeenCalledWith(1);
+
+      cleanup();
+    });
+
+    it('closing the tour while a step transition is in flight leaves no popover and never moves the dead tour', async () => {
+      const cleanup = appendEls(['s0', 's1', 's2']);
+      let resolvePost;
+      const tours = {
+        tours: {
+          '4.3.0': {
+            title: 't',
+            steps: [
+              {
+                element: '#s0',
+                title: 'A',
+                description: 'a',
+                postAction: { type: 'function', name: 'slowPost' },
+              },
+              { element: '#s1', title: 'B', description: 'b' },
+              { element: '#s2', title: 'C', description: 'c' },
+            ],
+          },
+        },
+      };
+      const m = new TourManager(tours);
+      // Only the first call blocks; cleanup runs the same postAction again.
+      m.registerHelper('slowPost', () => (resolvePost
+        ? Promise.resolve()
+        : new Promise((resolve) => { resolvePost = resolve; })));
+      // Real Driver.js removes the popover on destroy; mimic that.
+      // document is faked in this file, so track the popover ourselves.
+      const popovers = new Set([{}]);
+      mockDriver.destroy.mockImplementation(() => popovers.clear());
+
+      await m.launchTour('4.3.0', { markSeen: false });
+      const cfg = lastDriverConfig();
+
+      const pNext = cfg.onNextClick();
+      await Promise.resolve();
+      await vi.waitFor(() => expect(resolvePost).toBeTypeOf('function'));
+      const pClose = cfg.onDestroyStarted();
+
+      await new Promise((r) => setTimeout(r, 0));
+      expect(mockDriver.destroy).not.toHaveBeenCalled();
+
+      resolvePost();
+      await pNext;
+      await pClose;
+
+      expect(mockDriver.moveTo).not.toHaveBeenCalled();
+      expect(mockDriver.destroy).toHaveBeenCalled();
+      expect(m.activeDriver).toBeNull();
+      expect(popovers.size).toBe(0);
+
+      mockDriver.destroy.mockReset();
+      cleanup();
+    });
+
+    it('closing while a preAction settles cleans up the step it opened, not the old one', async () => {
+      const cleanup = appendEls(['s0', 's1']);
+      let resolvePre;
+      const tours = {
+        tours: {
+          '4.3.0': {
+            title: 't',
+            steps: [
+              { element: '#s0', title: 'A', description: 'a', postAction: { type: 'function', name: 'closeA' } },
+              {
+                element: '#s1',
+                title: 'B',
+                description: 'b',
+                preAction: { type: 'function', name: 'openB' },
+                postAction: { type: 'function', name: 'closeB' },
+              },
+            ],
+          },
+        },
+      };
+      const m = new TourManager(tours);
+      const closeA = vi.fn();
+      const closeB = vi.fn();
+      m.registerHelper('closeA', closeA);
+      m.registerHelper('closeB', closeB);
+      m.registerHelper('openB', () => new Promise((resolve) => { resolvePre = resolve; }));
+      mockDriver.destroy.mockImplementation(() => {});
+
+      await m.launchTour('4.3.0', { markSeen: false });
+      const cfg = lastDriverConfig();
+      const pNext = cfg.onNextClick();
+      await vi.waitFor(() => expect(resolvePre).toBeTypeOf('function'));
+      const pClose = cfg.onDestroyStarted();
+      resolvePre();
+      await pNext;
+      await pClose;
+
+      // Step A was already closed on the way out; B's modal is the one left open
+      expect(closeA).toHaveBeenCalledTimes(1);
+      expect(closeB).toHaveBeenCalledTimes(1);
+      expect(mockDriver.moveTo).not.toHaveBeenCalled();
+
+      mockDriver.destroy.mockReset();
+      cleanup();
+    });
+
+    it('launching a tour while an old close is pending does not let the old close tear down the new tour', async () => {
+      const cleanup = appendEls(['s0', 's1']);
+      let resolvePost;
+      const tours = {
+        tours: {
+          '4.3.0': {
+            title: 't',
+            steps: [
+              {
+                element: '#s0',
+                title: 'A',
+                description: 'a',
+                postAction: { type: 'function', name: 'slowPost' },
+              },
+              { element: '#s1', title: 'B', description: 'b' },
+            ],
+          },
+        },
+      };
+      const m = new TourManager(tours);
+      m.registerHelper('slowPost', () => (resolvePost
+        ? Promise.resolve()
+        : new Promise((resolve) => { resolvePost = resolve; })));
+
+      const oldDriver = { drive: vi.fn(), moveTo: vi.fn(), destroy: vi.fn() };
+      const newDriver = { drive: vi.fn(), moveTo: vi.fn(), destroy: vi.fn() };
+      mockDriverFactory.mockImplementationOnce(() => oldDriver);
+      mockDriverFactory.mockImplementationOnce(() => newDriver);
+      // document is faked in this file, so track popovers ourselves.
+      const popovers = new Set();
+      let oldCfg;
+      // Real Driver.js: the first destroy() runs onDestroyStarted; the
+      // finalizing destroy() removes every popover on the page.
+      oldDriver.destroy.mockImplementation(() => {
+        if (oldDriver.closeStarted) {
+          popovers.clear();
+          return;
+        }
+        oldDriver.closeStarted = true;
+        oldCfg.onDestroyStarted();
+      });
+      // The new tour draws its popover when driven.
+      newDriver.drive.mockImplementation(() => {
+        const el = document.createElement('div');
+        el.className = 'driver-popover';
+        popovers.add(el);
+      });
+
+      await m.launchTour('4.3.0', { markSeen: false });
+      oldCfg = mockDriverFactory.mock.calls.at(-1)[0];
+
+      const pNext = oldCfg.onNextClick();
+      await vi.waitFor(() => expect(resolvePost).toBeTypeOf('function'));
+
+      const pLaunch = m.launchTour('4.3.0', { markSeen: false });
+      await new Promise((r) => setTimeout(r, 0));
+      expect(newDriver.drive).not.toHaveBeenCalled();
+
+      resolvePost();
+      await pNext;
+      await pLaunch;
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(newDriver.drive).toHaveBeenCalled();
+      expect(m.activeDriver).toBe(newDriver);
+      expect(popovers.size).toBe(1);
 
       cleanup();
     });
@@ -429,6 +622,36 @@ describe('TourManager', () => {
 
       expect(existingDriver.destroy).toHaveBeenCalled();
       expect(mockDriver.drive).toHaveBeenCalled();
+
+      document.body.removeChild(el);
+    });
+
+    it('marks the tour seen once shown, before it is closed', async () => {
+      // A profile switch reloads the page mid-tour; the tour never closes, so
+      // waiting for close would show it again on the next visit to this profile
+      mockGetPreference.mockResolvedValue({ success: true, value: [] });
+      const el = document.createElement('div');
+      el.id = 'some-element';
+      document.body.appendChild(el);
+
+      await manager.launchTour('4.3.0', { markSeen: true });
+
+      expect(mockDriver.drive).toHaveBeenCalled();
+      expect(mockDriver.destroy).not.toHaveBeenCalled();
+      expect(mockSetPreference).toHaveBeenCalledWith('tours_seen', ['4.3.0']);
+
+      document.body.removeChild(el);
+    });
+
+    it('does not mark the tour seen when replayed on demand', async () => {
+      const el = document.createElement('div');
+      el.id = 'some-element';
+      document.body.appendChild(el);
+
+      await manager.launchTour('4.3.0', { markSeen: false });
+      await mockDriverFactory.mock.calls.at(-1)[0].onDestroyStarted();
+
+      expect(mockSetPreference).not.toHaveBeenCalled();
 
       document.body.removeChild(el);
     });

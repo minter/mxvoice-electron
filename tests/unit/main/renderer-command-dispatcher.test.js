@@ -19,9 +19,9 @@ describe('renderer command dispatcher', () => {
     let currentWindow = { webContents: { send: firstSend } };
     const commands = createRendererCommandDispatcher({ getWindow: () => currentWindow });
 
-    commands.closeAllTabs();
+    commands.toggleWaveform();
     currentWindow = { webContents: { send: secondSend } };
-    commands.closeAllTabs();
+    commands.toggleWaveform();
 
     expect(firstSend).toHaveBeenCalledOnce();
     expect(secondSend).toHaveBeenCalledOnce();

@@ -68,6 +68,62 @@ describe('profile backup manager orchestration', () => {
     });
   });
 
+  it('checkBackupRestorable accepts a listed backup whose folder exists, and nothing else', async () => {
+    const created = await manager.createBackup(profileName, { mode: 'manual' });
+    await expect(manager.checkBackupRestorable(profileName, created.backupId)).resolves.toEqual({ success: true });
+
+    // A well-formed id this profile's metadata doesn't list
+    await expect(manager.checkBackupRestorable(profileName, 'backup-2001-01-01T00-00-00-000Z')).resolves.toEqual({
+      success: false, error: 'Backup does not exist'
+    });
+
+    // Listed, but its folder is gone
+    await fs.promises.rm(path.join(manager.getBackupDirectory(profileName), created.backupId), { recursive: true });
+    await expect(manager.checkBackupRestorable(profileName, created.backupId)).resolves.toEqual({
+      success: false, error: 'Backup does not exist'
+    });
+
+    // Another profile's backup is not this profile's
+    const other = await manager.createBackup(profileName, { mode: 'manual' });
+    await expect(manager.checkBackupRestorable('Missing Profile', other.backupId)).resolves.toEqual({
+      success: false, error: 'Backup does not exist'
+    });
+  });
+
+  it('listBackups reports show names from the backup', async () => {
+    const showsFile = path.join(profileDirectory, 'shows.json');
+    const doc = { version: 1, activeShowId: 'a', shows: [
+      { id: 'a', name: 'Show', layout: {} }, { id: 'b', name: 'Comedy Sports', layout: {} }
+    ] };
+    await fs.promises.writeFile(showsFile, JSON.stringify(doc));
+    const created = await manager.createBackup(profileName, { mode: 'manual' });
+    const listed = await manager.listBackups(profileName);
+    expect(listed.backups.find((b) => b.id === created.backupId).shows).toEqual(['Show', 'Comedy Sports']);
+
+    const backupShows = path.join(manager.getBackupDirectory(profileName), created.backupId, 'shows.json');
+    // A damaged shows.json reads from its previous copy, as opening the profile would
+    await fs.promises.writeFile(`${backupShows}.prev`, JSON.stringify({ ...doc, shows: [doc.shows[0]] }));
+    await fs.promises.writeFile(backupShows, '{nope');
+    const recovered = await manager.listBackups(profileName);
+    expect(recovered.backups.find((b) => b.id === created.backupId).shows).toEqual(['Show']);
+    // Neither copy readable: said so, not mistaken for a pre-shows backup
+    await fs.promises.writeFile(`${backupShows}.prev`, '{nope');
+    const corrupt = await manager.listBackups(profileName);
+    expect(corrupt.backups.find((b) => b.id === created.backupId).shows).toBe('unreadable');
+    // A newer version's shows.json fails the open, so its previous copy isn't what restores
+    await fs.promises.writeFile(`${backupShows}.prev`, JSON.stringify(doc));
+    await fs.promises.writeFile(backupShows, JSON.stringify({ ...doc, version: 2 }));
+    const newer = await manager.listBackups(profileName);
+    expect(newer.backups.find((b) => b.id === created.backupId).shows).toBe('unreadable');
+    await fs.promises.rm(showsFile);
+  });
+
+  it('listBackups reports null shows for a pre-shows backup', async () => {
+    const created = await manager.createBackup(profileName, { mode: 'manual' });
+    const listed = await manager.listBackups(profileName);
+    expect(listed.backups.find((b) => b.id === created.backupId).shows).toBeNull();
+  });
+
   describe('backup ID validation', () => {
     const invalidIds = [
       ['parent traversal', '../../profiles'],
@@ -86,6 +142,12 @@ describe('profile backup manager orchestration', () => {
       });
       await expect(fs.promises.access(path.join(profileDirectory, 'preferences.json'))).resolves.toBeUndefined();
       await expect(fs.promises.access(manager.getBackupDirectory(profileName))).resolves.toBeUndefined();
+    });
+
+    it.each(invalidIds)('rejects %s in checkBackupRestorable', async (_label, backupId) => {
+      await expect(manager.checkBackupRestorable(profileName, backupId)).resolves.toEqual({
+        success: false, error: 'Invalid backup ID'
+      });
     });
 
     it.each(invalidIds)('rejects %s in restoreBackup', async (_label, backupId) => {

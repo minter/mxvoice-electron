@@ -2,6 +2,7 @@
 // Extracted from renderer.js lines 195-296 for app-initialization module
 
 // Import secure adapters
+import { applySongFontSize } from '../ui/song-font-size.js';
 import { secureStore } from '../adapters/secure-adapter.js';
 
 /**
@@ -152,6 +153,7 @@ export class DataPreloader {
       if (window.secureElectronAPI?.profile) {
         const result = await window.secureElectronAPI.profile.getPreference('font_size');
         if (result && result.success && result.value !== undefined && result.value !== null) {
+          applySongFontSize(result.value);
           this.logInfo(`Font size loaded from profile preferences: ${result.value}`);
           return;
         }
@@ -164,6 +166,7 @@ export class DataPreloader {
         const size = sizeResult?.success ? sizeResult.value : null;
         if (size !== undefined && size !== null) {
           // Migrate to profile preferences if available
+          applySongFontSize(size);
           if (window.secureElectronAPI?.profile) {
             await window.secureElectronAPI.profile.setPreference('font_size', size);
             this.logInfo(`Font size migrated from legacy store to profile: ${size}`);

@@ -34,6 +34,13 @@ contextBridge.exposeInMainWorld('launcherAPI', {
    * @param {string} profileName - Profile to launch with
    * @returns {Promise<Object>} Result with success status
    */
-  launchApp: (profileName) => ipcRenderer.invoke('launcher:launch-app', profileName)
+  launchApp: (profileName) => ipcRenderer.invoke('launcher:launch-app', profileName),
+
+  /**
+   * Resize the launcher window to fit its content (clamped by the main process)
+   * @param {number} height - Desired content height in px
+   * @returns {Promise<Object>} Result with success status
+   */
+  fitToContent: (height) => ipcRenderer.invoke('launcher:fit-to-content', height)
 });
 

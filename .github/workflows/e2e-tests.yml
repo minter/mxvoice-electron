@@ -14,7 +14,7 @@ jobs:
   test:
     name: Run E2E on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -81,6 +81,13 @@ jobs:
         run: npm test
         env:
           CI: true
+          # macOS only: keep app windows hidden, as local runs do. The
+          # runner's screen is 1024x768 and macOS shrinks a shown window to
+          # fit it, so tests that size the window would measure a smaller one.
+          # Not on Windows: a never-shown window there is throttled, which
+          # doubled the run (dialog steps went from ~1s to ~40s), and the
+          # launch helpers resize its window after creation instead.
+          E2E_BACKGROUND: ${{ runner.os == 'macOS' && '1' || '' }}
 
       - name: Upload Playwright HTML report
         if: always()

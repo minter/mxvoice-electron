@@ -14,8 +14,8 @@ Global styles for the renderer UI.
 - Prefer utility classes for spacing where reasonable
 
 ### Layout notes
-- Headers (`.card-header`) now allow wrapping. This prevents icon bars in the Holding Tank and Hotkeys columns from clipping on narrow screens.
-- `.icon-bar` wraps to multiple rows when space is constrained.
+- Headers (`.card-header`) allow wrapping, so header controls don't clip on narrow screens.
+- The Hotkeys and Holding Tank tab rows end in a fixed-width `.tab-actions-item` (the ⋯ menu for Rename and Clear) that the `nav-fill` tabs don't stretch.
 - The main row `#top-row` allows horizontal scrolling if the fixed-width side columns can't shrink further.
 - The search column (`#search-column`) flexes to fill all remaining horizontal space.
 - **Mode toggle buttons** (`.mode-toggle`) are responsive and automatically hide text labels on smaller screens while maintaining icon visibility and hover tooltips.
@@ -26,7 +26,6 @@ Global styles for the renderer UI.
   - 1400px: Text labels hidden, icons remain with tooltips (prevents misalignment)
   - 1200px: Optimized spacing and touch targets
   - 1000px: Minimal spacing for extremely narrow columns
-- **Icon bars** (`.icon-bar`): Adjust spacing and icon sizes for different screen sizes
 - **Tooltips**: All tooltips use Bootstrap with centrally configured delay via CSS custom properties (`--tooltip-delay: 1000ms`) for easy global modification
 
 ### Import order

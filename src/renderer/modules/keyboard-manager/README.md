@@ -6,6 +6,7 @@ Comprehensive keyboard shortcut management including F1-F12 hotkey bindings, nav
 ```
 keyboard-manager/
 ├── index.js                # KeyboardManager class coordinator
+├── escape-stop-gesture.js  # Esc tap-to-cut / hold-to-fade gesture
 ├── hotkey-bindings.js      # F1-F12 hotkey tab playback bindings
 ├── navigation-shortcuts.js # Arrow key, Enter, Escape navigation
 ├── shortcut-registry.js    # Dynamic shortcut registration and management
@@ -19,6 +20,8 @@ keyboard-manager/
 - **HotkeyBindings** (`hotkey-bindings.js`) — Manages F1-F12 key bindings for playing songs from hotkey tabs. Handles binding/unbinding as hotkey tabs are loaded or cleared.
 
 - **NavigationShortcuts** (`navigation-shortcuts.js`) — Arrow key navigation through search results, Enter to play selected song, Escape to clear selection. Handles focus management between search field and results.
+
+- **EscapeStopGesture** (`escape-stop-gesture.js`) — One-handed stop on Esc: a tap cuts the music when the key comes back up, holding it for 300 ms fades out, and Esc during a fade cuts at once. Used by NavigationShortcuts (Esc keydown via the registry, keyup bound directly) and by the search form, whose inputs Mousetrap skips. Shift+Esc still fades straight away.
 
 - **ShortcutRegistry** (`shortcut-registry.js`) — Central registry for all keyboard shortcuts. Supports registering, unregistering, and listing active shortcuts. Prevents conflicts between shortcut groups.
 

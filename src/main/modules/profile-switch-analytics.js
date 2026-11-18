@@ -3,7 +3,7 @@
  *
  * Records `profile_switched` only when a different profile is actually chosen.
  * Tracking in the renderer counted attempts: the launcher can be closed without
- * choosing, which relaunches on the same profile.
+ * choosing, which leaves the same profile running.
  *
  * @module profile-switch-analytics
  */

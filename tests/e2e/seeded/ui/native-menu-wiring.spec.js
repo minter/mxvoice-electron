@@ -114,12 +114,12 @@ test.describe('Native menu wiring', () => {
 
   test('menu commands open renderer-owned modals and the What\'s New tour', async () => {
     const commands = [
-      ['Manage Categories', '#categoryManagementModal'],
+      ['Manage Categories…', '#categoryManagementModal'],
       ['Preferences', '#preferencesModal'],
-      ['New Profile...', '#newProfileModal'],
-      ['Duplicate Profile...', '#duplicateProfileModal'],
-      ['Restore from Backup...', '#backupRestoreModal'],
-      ['Backup Settings...', '#backupSettingsModal']
+      ['New Profile…', '#newProfileModal'],
+      ['Duplicate Profile…', '#duplicateProfileModal'],
+      ['Restore from Backup…', '#backupRestoreModal'],
+      ['Backup Settings…', '#backupSettingsModal']
     ];
 
     for (const [label, selector] of commands) {
@@ -137,7 +137,7 @@ test.describe('Native menu wiring', () => {
   test('profile, backup, and library menu events reach their registered handlers', async () => {
     await page.evaluate(() => {
       window.__nativeMenuCalls = { switchProfile: 0, createBackup: 0, exportLibrary: 0, importLibrary: 0 };
-      window.moduleRegistry.profileState.switchProfileWithSave = async () => {
+      window.moduleRegistry.profilePicker.open = async () => {
         window.__nativeMenuCalls.switchProfile += 1;
       };
       window.moduleRegistry.profileBackup.createBackupNow = async () => {
@@ -151,10 +151,10 @@ test.describe('Native menu wiring', () => {
       };
     });
 
-    await triggerMenuItem('Switch Profile...');
+    await triggerMenuItem('Switch Profile…');
     await triggerMenuItem('Create Backup Now');
-    await triggerMenuItem('Export Library...');
-    await triggerMenuItem('Import Library...');
+    await triggerMenuItem('Export Library…');
+    await triggerMenuItem('Import Library…');
 
     await expect.poll(() => page.evaluate(() => window.__nativeMenuCalls)).toEqual({
       switchProfile: 1,
@@ -164,14 +164,42 @@ test.describe('Native menu wiring', () => {
     });
 
     expect(await findMenuItem('Log Out')).toEqual({ found: true, enabled: false });
-    expect(await findMenuItem('Delete Current Profile...')).toEqual({ found: true, enabled: false });
+    expect(await findMenuItem('Delete Current Profile…')).toEqual({ found: true, enabled: false });
   });
 
-  test('Start a New Session reloads the renderer through the menu bridge', async () => {
-    const navigation = page.waitForEvent('domcontentloaded');
-    await triggerMenuItem('Start a New Session');
-    await navigation;
-    await page.waitForFunction(() => !!window.moduleRegistry, { timeout: 15000 });
-    await expect(page.locator('#hotkeys-column')).toBeVisible();
+  test('Shows menu replaces Hotkeys and Start a New Session', async () => {
+    const showName = await app.evaluate(({ app: electronApp }) => {
+      const fs = process.mainModule.require('fs');
+      const path = process.mainModule.require('path');
+      const file = path.join(electronApp.getPath('userData'), 'profiles', 'Default User', 'shows.json');
+      const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return doc.shows.find((b) => b.id === doc.activeShowId).name;
+    });
+    expect(showName).toBeTruthy();
+
+    const topLevel = await app.evaluate(({ Menu }) => Menu.getApplicationMenu().items.map((i) => i.label));
+    expect(topLevel).toContain('Shows');
+    expect(topLevel).not.toContain('Hotkeys');
+
+    expect(await findMenuItem(showName)).toEqual({ found: true, enabled: true });
+    // Nothing changed yet, so there is nothing to save or revert
+    expect(await findMenuItem(`Save "${showName}"…`)).toEqual({ found: true, enabled: false });
+    expect(await findMenuItem('Revert to Saved…')).toEqual({ found: true, enabled: false });
+    expect(await findMenuItem('Import Hotkey File…')).toEqual({ found: false });
+    expect(await findMenuItem('Import Holding Tank File…')).toEqual({ found: false });
+    expect(await findMenuItem('Start a New Session')).toEqual({ found: false });
+    expect(await findMenuItem('Open Hotkeys File')).toEqual({ found: false });
+  });
+
+  test('Shows menu commands reach the renderer as menu:show-command', async () => {
+    await page.evaluate(() => {
+      window.__showCommands = [];
+      // Task 11 consumes this in the renderer; here we listen at the preload boundary.
+      window.secureElectronAPI.events.onShowCommand((payload) => window.__showCommands.push(payload));
+    });
+    await triggerMenuItem('Save As…');
+    await expect.poll(() => page.evaluate(() => window.__showCommands)).toEqual([
+      { command: 'save-as' }
+    ]);
   });
 });

@@ -29,7 +29,8 @@ function buildReleaseCreationOptions({
   releaseTarget,
   isDraft,
   isPrerelease,
-  releaseType
+  releaseType,
+  body = null
 }) {
   return {
     owner,
@@ -39,7 +40,8 @@ function buildReleaseCreationOptions({
     name: tag,
     draft: isDraft,
     prerelease: isPrerelease || releaseType === "prerelease",
-    generate_release_notes: true
+    // Written notes when there are some; otherwise GitHub's generated list
+    ...(body ? { body, generate_release_notes: false } : { generate_release_notes: true })
   };
 }
 

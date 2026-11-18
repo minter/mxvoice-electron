@@ -1,0 +1,105 @@
+{
+  "version": "1.0.0",
+  "timestamp": 1760000000000,
+  "hotkeys": [
+    {
+      "tabNumber": 1,
+      "tabName": "Opening",
+      "hotkeys": {
+        "f1": "101",
+        "f2": "102",
+        "f3": "103",
+        "f4": "104"
+      }
+    },
+    {
+      "tabNumber": 2,
+      "tabName": null,
+      "hotkeys": {
+        "f1": "201",
+        "f2": "202",
+        "f3": "203",
+        "f4": "204",
+        "f5": "205"
+      }
+    },
+    {
+      "tabNumber": 3,
+      "tabName": "Act Two",
+      "hotkeys": {
+        "f1": "301",
+        "f2": "302",
+        "f3": "303",
+        "f4": "304",
+        "f5": "305",
+        "f6": "306"
+      }
+    },
+    {
+      "tabNumber": 4,
+      "tabName": null,
+      "hotkeys": {
+        "f1": "401",
+        "f2": "402",
+        "f3": "403"
+      }
+    },
+    {
+      "tabNumber": 5,
+      "tabName": "Finale",
+      "hotkeys": {
+        "f1": "501",
+        "f2": "502",
+        "f3": "503",
+        "f4": "504"
+      }
+    }
+  ],
+  "holdingTank": [
+    {
+      "tabNumber": 1,
+      "tabName": "Act Two",
+      "songIds": [
+        "200"
+      ]
+    },
+    {
+      "tabNumber": 2,
+      "tabName": null,
+      "songIds": [
+        "400",
+        "401"
+      ]
+    },
+    {
+      "tabNumber": 3,
+      "tabName": "Finale",
+      "songIds": [
+        "600",
+        "601",
+        "602"
+      ]
+    },
+    {
+      "tabNumber": 4,
+      "tabName": "Opening",
+      "songIds": [
+        "800",
+        "801",
+        "802",
+        "803"
+      ]
+    },
+    {
+      "tabNumber": 5,
+      "tabName": null,
+      "songIds": [
+        "1000",
+        "1001",
+        "1002",
+        "1003",
+        "1004"
+      ]
+    }
+  ]
+}

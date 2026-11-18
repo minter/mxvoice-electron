@@ -1,4 +1,5 @@
 import { safeShowModal, safeHideModal } from '../ui/bootstrap-helpers.js';
+import { getSongActionTarget } from '../ui/song-action-target.js';
 
 /**
  * Song CRUD Operations
@@ -265,7 +266,7 @@ export async function saveNewSong(event) {
  */
 export async function editSelectedSong() {
   try {
-    const songId = (document.getElementById('selected_row') || {}).getAttribute?.('songid');
+    const songId = getSongActionTarget()?.getAttribute('songid');
     if (!songId) {
       debugLog?.warn('No selected song to edit', { module: 'song-management', function: 'editSelectedSong' });
       return;
@@ -467,16 +468,16 @@ export async function startAddNewSong(filename, metadata = null) {
  */
 export function deleteSelectedSong() {
   debugLog?.info("deleteSelectedSong called", { module: 'song-management', function: 'deleteSelectedSong' });
-  debugLog?.info("selected_row:", { module: 'song-management', function: 'deleteSelectedSong', selectedRow: document.getElementById('selected_row') });
-  debugLog?.info("holding-tank-column has selected_row:", { module: 'song-management', function: 'deleteSelectedSong', hasSelectedRow: document.getElementById('holding-tank-column')?.contains?.(document.getElementById('selected_row')) ? 1 : 0 });
-  debugLog?.info("hotkey-tab-content has selected_row:", { module: 'song-management', function: 'deleteSelectedSong', hasSelectedRow: document.getElementById('hotkey-tab-content')?.contains?.(document.getElementById('selected_row')) ? 1 : 0 });
-  
+  // The context menu's hotkey target, else #selected_row
+  const target = getSongActionTarget();
+  debugLog?.info("selected row:", { module: 'song-management', function: 'deleteSelectedSong', selectedRow: target });
+
   // Check if the selected row is in the holding tank
-  if (document.getElementById('holding-tank-column')?.contains?.(document.getElementById('selected_row'))) {
+  if (document.getElementById('holding-tank-column')?.contains?.(target)) {
     debugLog?.info("Selected row is in holding tank", { module: 'song-management', function: 'deleteSelectedSong' });
     // If in holding tank, remove from holding tank
     return moduleRegistry.songManagement?.removeFromHoldingTank?.();
-  } else if (document.getElementById('hotkey-tab-content')?.contains?.(document.getElementById('selected_row'))) {
+  } else if (document.getElementById('hotkey-tab-content')?.contains?.(target)) {
     debugLog?.info("Selected row is in hotkey tab", { module: 'song-management', function: 'deleteSelectedSong' });
     // If in hotkey tab, remove from hotkey
     return moduleRegistry.songManagement?.removeFromHotkey?.();

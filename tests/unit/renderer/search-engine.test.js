@@ -55,6 +55,8 @@ globalThis.document = {
 };
 
 const sharedState = (await import('../../../src/renderer/modules/shared-state.js')).default;
+const appendPlayedPill = vi.fn();
+vi.mock('../../../src/renderer/modules/shows/played-pills.js', () => ({ appendPlayedPill }));
 const searchEngine = await import('../../../src/renderer/modules/search/search-engine.js');
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -93,7 +95,11 @@ describe('search engine orchestration', () => {
       source: 'submit',
     });
     const row = tbody.children.find((child) => child.songid === '7');
-    expect(row.children[0].textContent).toBe('Music');
+    expect(row.children[0].children[0]).toMatchObject({ className: 'category-tag', textContent: 'Music' });
+    // The played pill goes at the end of the Title cell, not in a column of its own
+    expect(row.children).toHaveLength(5);
+    expect(appendPlayedPill).toHaveBeenCalledWith(row.children[2], 7);
+    expect(row.children[2].children[0]).toMatchObject({ className: 'song-title-text', textContent: 'Anthem', title: 'Anthem' });
   });
 
   it('does not record programmatic refreshes such as after a song edit', async () => {

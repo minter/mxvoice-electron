@@ -7,10 +7,13 @@ import electron from 'electron';
 const { ipcMain, app } = electron;
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 import { getPendingUpdateNotice } from '../pending-update.js';
+import { withTimeout } from '../with-timeout.js';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
   const { autoUpdater, updateState, debugLog, analytics } = deps;
+  // Saves state and skips the close confirmation first (index-modular.js)
+  const installUpdate = deps.installUpdate || (async () => autoUpdater.quitAndInstall());
 
   // App operations for secure API
   ipcMain.handle(IPC.APP.GET_PATH, async (event, name) => {
@@ -63,20 +66,6 @@ export function register(deps) {
     }
   });
 
-  ipcMain.handle(IPC.APP.RESTART_AND_INSTALL, async () => {
-    try {
-      if (autoUpdater) {
-        autoUpdater.quitAndInstall();
-        return { success: true };
-      } else {
-        throw new Error('Auto updater not available');
-      }
-    } catch (error) {
-      debugLog?.error('Restart and install error:', { module: 'ipc-handlers', function: 'restart-and-install-new-version', error: error.message });
-      return { success: false, error: error.message };
-    }
-  });
-
   // Auto-update handlers - Three-stage process for better UX
 
   // Stage 1: Check for updates (no download)
@@ -118,7 +107,6 @@ export function register(deps) {
 
   // Stage 2: Download update (user-initiated)
   ipcMain.handle(IPC.APP.DOWNLOAD_UPDATE, async () => {
-    let downloadTimeout;
     try {
       debugLog.info('📥 Starting update download...', {
         module: 'ipc-handlers',
@@ -139,11 +127,7 @@ export function register(deps) {
       const downloadPromise = Promise.resolve()
         .then(() => autoUpdater.downloadUpdate())
         .finally(() => { updateState.downloading = false; });
-      const timeoutPromise = new Promise((_, reject) =>
-        downloadTimeout = setTimeout(() => reject(new Error('Download timeout after 60 seconds')), 60000)
-      );
-
-      await Promise.race([downloadPromise, timeoutPromise]);
+      await withTimeout(downloadPromise, 60000, 'Download timeout after 60 seconds');
       if (analytics) {
         analytics.trackEvent('auto_update_action', { action: 'accepted' });
       }
@@ -156,8 +140,6 @@ export function register(deps) {
         error: errorMessage
       });
       return { success: false, error: errorMessage };
-    } finally {
-      clearTimeout(downloadTimeout);
     }
   });
 
@@ -186,7 +168,9 @@ export function register(deps) {
 
       // Install and restart immediately
       setImmediate(() => {
-        autoUpdater.quitAndInstall();
+        installUpdate().catch((error) => {
+          debugLog?.error('Install update failed', { module: 'ipc-handlers', function: 'install-update', error: error?.message });
+        });
       });
 
       return { success: true, message: 'Installing and restarting...' };

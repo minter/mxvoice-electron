@@ -1,4 +1,6 @@
 import { customConfirm } from '../utils/index.js';
+import playedCounts from '../shows/played-counts.js';
+import { CONTEXT_MENU_DISMISS_EVENT, clearContextTarget, getSongActionTarget, markContextTarget } from '../ui/song-action-target.js';
 
 /**
  * DOM Initialization Module
@@ -149,72 +151,39 @@ export default class DOMInitialization {
         item.addEventListener('click', (e) => {
           e.stopPropagation();
           hide();
-          onClick?.();
+          // The action reads the target, so the mark goes once it has run
+          try {
+            onClick?.();
+          } finally {
+            clearContextTarget();
+          }
         });
         return item;
       };
       let playItem = mkItem('Play', () => {
         if (this.moduleRegistry.audio?.playSelected) {
           this.moduleRegistry.audio.playSelected();
-          // Delay ID restoration to allow Play function to complete
-          setTimeout(() => restoreHotkeyId(), 50);
         }
       });
       let editItem = mkItem('Edit', () => {
         if (this.moduleRegistry.songManagement?.editSelectedSong) {
           this.moduleRegistry.songManagement.editSelectedSong();
-          // Delay ID restoration to allow Edit function to complete
-          setTimeout(() => restoreHotkeyId(), 50);
         }
       });
       let deleteItem = mkItem('Delete', () => {
         // This default handler is now managed dynamically in the show function
         // to prevent duplicate listeners.
       });
-      menu.append(playItem, editItem, deleteItem);
+      // Shown only for a song played tonight; the song is the row the menu opened on
+      let unplayedSongId = null;
+      const unplayedItem = mkItem('Mark as Unplayed', () => {
+        playedCounts.clear(unplayedSongId);
+      });
+      menu.append(playItem, editItem, unplayedItem, deleteItem);
       document.body.appendChild(menu);
-
-      // Track if we're waiting for a hotkey operation to complete
-      let isHotkeyOperationPending = false;
-      
-      // Helper function to restore hotkey ID
-      const restoreHotkeyId = () => {
-        // Don't restore if we're in the middle of a hotkey operation
-        if (isHotkeyOperationPending) {
-          window.debugLog?.info('Context menu: skipping ID restoration - operation pending');
-          return;
-        }
-        
-        const selectedRow = document.getElementById('selected_row');
-        if (selectedRow && selectedRow.classList.contains('list-group-item') && 
-            selectedRow.closest('.hotkeys')) {
-          // This is a hotkey element that was temporarily renamed - restore its original ID
-          const originalId = selectedRow.getAttribute('data-original-hotkey-id');
-          if (originalId) {
-            selectedRow.id = originalId;
-            selectedRow.removeAttribute('data-original-hotkey-id');
-            window.debugLog?.info('Context menu: restored hotkey ID', { 
-              restoredId: originalId 
-            });
-          } else {
-            // Fallback: try to determine the original ID from the hotkey structure
-            const badge = selectedRow.querySelector('.badge');
-            if (badge) {
-              const keyText = badge.textContent.toLowerCase();
-              const restoredId = `${keyText}_hotkey`;
-              selectedRow.id = restoredId;
-              window.debugLog?.info('Context menu: restored hotkey ID via fallback', { 
-                restoredId: restoredId,
-                keyText: keyText
-              });
-            }
-          }
-        }
-      };
 
       const hide = () => {
         menu.style.display = 'none';
-        // Note: ID restoration is now handled by individual menu items or dismissal events
       };
 
       // Helper to remove all previous click listeners from deleteItem
@@ -227,6 +196,9 @@ export default class DOMInitialization {
 
       const show = (x, y, dynamicDeleteLabel, onRemoveHotkey) => {
         deleteItem.textContent = dynamicDeleteLabel || 'Delete';
+        // Every caller marks or selects the row it opened on first
+        unplayedSongId = getSongActionTarget()?.getAttribute('songid') || null;
+        unplayedItem.style.display = playedCounts.count(unplayedSongId) > 0 ? '' : 'none';
         menu.style.left = `${x}px`;
         menu.style.top = `${y}px`;
         menu.style.display = 'block';
@@ -238,14 +210,18 @@ export default class DOMInitialization {
           e.stopPropagation();
           hide(); // Hide menu immediately.
 
-          // Check which action to perform based on the label.
-          if (dynamicDeleteLabel === 'Remove from Hotkey') {
-            window.debugLog?.info('Context menu: Remove from Hotkey callback triggered');
-            onRemoveHotkey?.();
-          } else {
-            // This covers 'Delete' and 'Remove from Holding Tank'
-            window.debugLog?.info('Context menu: Default Delete callback triggered');
-            this.moduleRegistry.songManagement?.deleteSelectedSong?.();
+          try {
+            // Check which action to perform based on the label.
+            if (dynamicDeleteLabel === 'Remove from Hotkey') {
+              window.debugLog?.info('Context menu: Remove from Hotkey callback triggered');
+              onRemoveHotkey?.();
+            } else {
+              // This covers 'Delete' and 'Remove from Holding Tank'
+              window.debugLog?.info('Context menu: Default Delete callback triggered');
+              this.moduleRegistry.songManagement?.deleteSelectedSong?.();
+            }
+          } finally {
+            clearContextTarget();
           }
         };
 
@@ -254,20 +230,29 @@ export default class DOMInitialization {
         deleteItem._mxvHandler = newHandler;
       };
 
-      // For dismissal events (clicking away, blur, resize), immediately restore ID
-      const hideAndRestore = () => {
+      // Dismissal (clicking away, Esc, blur, resize) drops the hotkey mark
+      const dismiss = () => {
         hide();
-        restoreHotkeyId();
+        clearContextTarget();
       };
-      
-      document.addEventListener('click', hideAndRestore);
-      window.addEventListener('blur', hideAndRestore);
-      window.addEventListener('resize', hideAndRestore);
+
+      document.addEventListener('click', dismiss);
+      // Esc closes it too. Not stopped here: the Esc shortcut still stops
+      // playback, since this menu never takes the focus.
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && menu.style.display !== 'none') dismiss();
+      });
+      window.addEventListener('blur', dismiss);
+      window.addEventListener('resize', dismiss);
+      // A show switch closes it: the slot it opened on now holds another song
+      window.addEventListener(CONTEXT_MENU_DISMISS_EVENT, dismiss);
 
       document.addEventListener('contextmenu', (event) => {
         const row = event.target?.closest('.context-menu');
         if (!row) return;
         event.preventDefault();
+        // A menu opened on an earlier hotkey no longer targets it
+        clearContextTarget();
 
         // Check if this is a hotkey element
         const hotkeyLi = event.target.closest('li[id*="_hotkey"]');
@@ -294,29 +279,21 @@ export default class DOMInitialization {
             });
             window.currentSelectedHotkey = null;
             
-            // Set the hotkey as selected_row so Play/Edit functions work with existing logic
-            const prev = document.getElementById('selected_row');
-            if (prev) prev.removeAttribute('id');
-            
-            // Store the original ID so we can restore it when the menu is dismissed
-            hotkeyLi.setAttribute('data-original-hotkey-id', originalHotkeyId);
-            hotkeyLi.id = 'selected_row';
+            // Deselect the search or holding-tank row, as a hotkey click does,
+            // and mark the slot as the menu's target. Its id stays: the F-keys
+            // and a show switch find the slot by it.
+            document.getElementById('selected_row')?.removeAttribute('id');
+            markContextTarget(hotkeyLi);
             hotkeyLi.classList.add('active-hotkey', 'selected-row');
-            if (songid) {
-              hotkeyLi.setAttribute('songid', songid);
-            }
             window.currentSelectedHotkey = originalHotkeyId;
-            window.debugLog?.info('Context menu: set hotkey as selected_row', {
+            window.debugLog?.info('Context menu: marked hotkey as the menu target', {
               originalHotkeyId: originalHotkeyId,
               songid: songid
             });
 
             show(event.clientX, event.clientY, 'Remove from Hotkey', async () => {
               window.debugLog?.info('Context menu: Remove from Hotkey pressed', { originalHotkeyId: originalHotkeyId });
-              
-              // Prevent ID restoration while operation is in progress
-              isHotkeyOperationPending = true;
-              
+
               try {
                 // Get song title for confirmation (same as the complex function)
                 let songTitle = 'this song';
@@ -334,12 +311,17 @@ export default class DOMInitialization {
                 // Show confirmation (using the simple modal approach)
                 const confirmed = await customConfirm(`Are you sure you want to remove ${songTitle} from this hotkey?`);
                 
-                if (confirmed) {
+                if (confirmed && hotkeyLi.getAttribute('songid') !== songid) {
+                  // A show switch landed while the confirm was open
+                  window.debugLog?.info('Context menu: hotkey changed songs during the confirm; not removing', {
+                    originalHotkeyId, songid, currentSongid: hotkeyLi.getAttribute('songid')
+                  });
+                } else if (confirmed) {
                   window.debugLog?.info('User confirmed hotkey removal');
                   
-                  // Use the same direct approach as delete keypress (no ID manipulation needed)
-                  const element = document.getElementById('selected_row'); // This is our hotkeyLi
-                  if (element) {
+                  // Use the same direct approach as delete keypress
+                  const element = hotkeyLi;
+                  if (element.isConnected) {
                     this.moduleRegistry.hotkeys?.clearHotkeyElement?.(element);
                     element.classList.remove('active-hotkey', 'selected-row');
                     window.currentSelectedHotkey = null;
@@ -357,10 +339,6 @@ export default class DOMInitialization {
                 }
               } catch (error) {
                 window.debugLog?.error('Error in context menu hotkey removal:', error);
-              } finally {
-                // Restore ID and allow future operations
-                isHotkeyOperationPending = false;
-                restoreHotkeyId();
               }
             });
           }

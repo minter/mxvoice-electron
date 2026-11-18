@@ -7,6 +7,9 @@
  * @module event-handlers
  */
 
+import { setTabLabel } from './tab-label.js';
+import { watchLayoutSwap } from '../shows/layout-applier.js';
+
 /**
  * Initialize the Event Handlers module
  * @param {Object} options - Configuration options
@@ -42,11 +45,14 @@ function initializeEventHandlers(options = {}) {
    * Rename the currently active hotkey tab
    */
   async function renameHotkeyTab() {
+    const layoutSwapped = watchLayoutSwap();
     const currentName = document.querySelector('#hotkey_tabs .nav-link.active')?.textContent || '';
-    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Hotkey Tab");
+    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
+    // A show switch landed while the prompt was open: the tab it named is gone
+    if (newName && layoutSwapped()) return { success: false, error: 'Show changed' };
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#hotkey_tabs .nav-link.active');
-      if (link) link.textContent = newName;
+      setTabLabel(link, newName);
       const tabNumber = Number(link?.getAttribute('href')?.match(/^#hotkeys_list_(\d)$/)?.[1]);
       moduleRegistry.hotkeys?.renameHotkeyStateTab?.(tabNumber, newName);
       moduleRegistry.hotkeys?.requestProfileStateSave?.();
@@ -60,11 +66,14 @@ function initializeEventHandlers(options = {}) {
    * Rename the currently active holding tank tab
    */
   async function renameHoldingTankTab() {
+    const layoutSwapped = watchLayoutSwap();
     const currentName = document.querySelector('#holding_tank_tabs .nav-link.active')?.textContent || '';
-    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Holding Tank Tab");
+    const newName = await customPrompt("Enter a new name for this tab:", currentName, "Rename Tab");
+    // A show switch landed while the prompt was open: the tab it named is gone
+    if (newName && layoutSwapped()) return { success: false, error: 'Show changed' };
     if (newName && newName.trim() !== "") {
       const link = document.querySelector('#holding_tank_tabs .nav-link.active');
-      if (link) link.textContent = newName;
+      setTabLabel(link, newName);
       const tabNumber = Number(link?.getAttribute('href')?.match(/^#holding_tank_(\d)$/)?.[1]);
       moduleRegistry.holdingTank?.renameHoldingTankStateTab?.(tabNumber, newName);
       moduleRegistry.holdingTank?.requestProfileStateSave?.();

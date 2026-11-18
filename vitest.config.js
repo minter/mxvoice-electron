@@ -15,10 +15,10 @@ export default defineConfig({
       thresholds: {
         // Initial floor based on the first whole-source report. Raise these as
         // previously E2E-only modules gain focused unit coverage.
-        lines: 40,
-        functions: 39,
-        statements: 39,
-        branches: 33,
+        lines: 54,
+        functions: 55,
+        statements: 54,
+        branches: 49,
       },
       reportOnFailure: true,
     },

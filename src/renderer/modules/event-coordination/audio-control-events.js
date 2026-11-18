@@ -5,6 +5,8 @@
  * Includes play/pause/stop buttons, volume control, progress bar, and waveform.
  */
 
+import { initFadeModifierCue } from '../ui/fade-modifier-cue.js';
+
 export default class AudioControlEvents {
   constructor(dependencies = {}) {
     this.electronAPI = dependencies.electronAPI || window.secureElectronAPI;
@@ -129,6 +131,13 @@ export default class AudioControlEvents {
     document.getElementById('pause_button')?.addEventListener('click', pauseButtonHandler);
     document.getElementById('play_button')?.addEventListener('click', playButtonHandler);
     document.getElementById('stop_button')?.addEventListener('click', stopButtonHandler);
+    // Shift over Stop or Pause shows the fade those clicks will do. Only a
+    // cue: if it can't set up, the buttons still work
+    try {
+      initFadeModifierCue();
+    } catch (error) {
+      this.debugLog?.warn('Shift fade cue not available', { module: 'audio-control-events', function: 'attachPlaybackControlEvents', error: error?.message });
+    }
 
     this.audioHandlers.set('pauseButton', { element: '#pause_button', event: 'click', handler: pauseButtonHandler });
     this.audioHandlers.set('playButton', { element: '#play_button', event: 'click', handler: playButtonHandler });

@@ -54,10 +54,10 @@ src/main/
     - `guards.js` — Path authorization helpers (path validation and canonicalization)
 
 - `file-operations.js`
-  - User-facing dialogs for opening/saving hotkey (`.mrv`) and holding-tank (`.hld`) files
+  - Save and open dialogs for one hotkey tab (`.mrv`) or holding-tank tab (`.hld`), returned to the renderer over `file:*` IPC
   - Kicks bulk add / add single file flows in renderer via IPC
   - Migrates legacy preferences into `electron-store`
-  - Exports: `initializeFileOperations`, `loadHotkeysFile`, `saveHotkeysFile`, `loadHoldingTankFile`, `saveHoldingTankFile`, `addDirectoryDialog`, `addFileDialog`, `migrateOldPreferences`
+  - Exports: `initializeFileOperations`, `saveHotkeyTabFile`, `saveHoldingTankTabFile`, `loadHotkeyTabFile`, `loadHoldingTankTabFile`, `addDirectoryDialog`, `addFileDialog`, `migrateOldPreferences`
 
 - `debug-log.js`
   - Main-process DebugLog with level control and preference-backed enablement via `electron-store`

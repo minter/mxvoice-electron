@@ -15,12 +15,14 @@ const { runBackgroundCheck } = await import('../../../src/main/modules/update-sc
 const { describeUpdateError } = await import('../../../src/main/modules/update-analytics.js');
 
 const { register } = await import('../../../src/main/modules/ipc/app-update-handlers.js');
+const { createUpdateInstaller } = await import('../../../src/main/modules/update-install.js');
+const { createWindowStateManager } = await import('../../../src/main/modules/window-state-manager.js');
 
-function setup(autoUpdater = null) {
+function setup(autoUpdater = null, extra = {}) {
   const updateState = { downloaded: true, userApprovedInstall: true };
   const analytics = { trackEvent: vi.fn() };
   const debugLog = { info: vi.fn(), error: vi.fn() };
-  register({ autoUpdater, updateState, analytics, debugLog });
+  register({ autoUpdater, updateState, analytics, debugLog, ...extra });
   return { updateState, analytics, debugLog };
 }
 
@@ -210,5 +212,69 @@ describe('app update IPC handlers', () => {
     await vi.runAllTimersAsync();
     expect(autoUpdater.quitAndInstall).toHaveBeenCalledOnce();
     vi.useRealTimers();
+  });
+
+  it('installs through the app hook that saves state and skips the close confirmation', async () => {
+    vi.useFakeTimers();
+    const autoUpdater = { quitAndInstall: vi.fn() };
+    const installUpdate = vi.fn(async () => {});
+    setup(autoUpdater, { installUpdate });
+
+    await invoke('install-update');
+    await vi.runAllTimersAsync();
+
+    expect(installUpdate).toHaveBeenCalledTimes(1);
+    expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled();
+    // install-update, gated on a finished download, is the only way to install
+    expect(handlers['restart-and-install-new-version']).toBeUndefined();
+    vi.useRealTimers();
+  });
+
+  describe('installing the update now', () => {
+    function installHarness() {
+      const calls = [];
+      const window = {
+        isDestroyed: () => false,
+        webContents: { isDestroyed: () => false, executeJavaScript: vi.fn(async () => { calls.push('flush'); }) },
+        getBounds: () => ({ x: 0, y: 0, width: 800, height: 600 }),
+        isMaximized: () => false,
+        isFullScreen: () => false
+      };
+      const showSession = {
+        end: vi.fn(async (reason) => { calls.push(`end:${reason}`); }),
+        handoff: vi.fn(async (reason) => { calls.push(`handoff:${reason}`); })
+      };
+      const manager = createWindowStateManager({
+        getMainWindow: () => window,
+        store: { get: vi.fn(), set: vi.fn() },
+        screen: { getDisplayNearestPoint: () => ({ id: 1 }) },
+        getCurrentProfile: () => null,
+        isQuitting: () => false,
+        showSession
+      });
+      const autoUpdater = { quitAndInstall: vi.fn(() => calls.push('quitAndInstall')) };
+      const debugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+      const installUpdate = createUpdateInstaller({
+        prepareForUpdateInstall: () => manager.prepareMainWindowForClose({ exit: 'handoff' }),
+        getAutoUpdater: () => autoUpdater,
+        debugLog
+      });
+      return { calls, installUpdate, autoUpdater, showSession, debugLog };
+    }
+
+    it('hands the show session off before quitAndInstall, and never retires it', async () => {
+      const { calls, installUpdate, showSession } = installHarness();
+      await installUpdate();
+      expect(calls).toEqual(['flush', 'handoff:update', 'quitAndInstall']);
+      expect(showSession.end).not.toHaveBeenCalled();
+    });
+
+    it('still installs when saving state fails', async () => {
+      const { installUpdate, autoUpdater, showSession, debugLog } = installHarness();
+      showSession.handoff.mockRejectedValueOnce(new Error('disk full'));
+      await installUpdate();
+      expect(autoUpdater.quitAndInstall).toHaveBeenCalledOnce();
+      expect(debugLog.warn).toHaveBeenCalled();
+    });
   });
 });

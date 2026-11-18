@@ -4,8 +4,8 @@ const { Octokit } = require("@octokit/rest");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
-const { execFileSync } = require("child_process");
-const { buildReleaseCreationOptions, resolveReleaseTarget } = require("./release-target.cjs");
+const { resolveReleaseTarget } = require("./release-target.cjs");
+const { deleteExistingAsset, ensureRelease, releaseNotesBody } = require("./github-release.cjs");
 
 if (process.platform !== "win32") {
   console.log("[publishWindows] Skipping - not Windows platform");
@@ -58,24 +58,20 @@ const artifacts = [{ name: installerFile, path: installerPath }];
 // hashes describe the unsigned binary.  electron-updater would then use the
 // stale blockmap for a differential download, reassemble a file whose sha512
 // doesn't match the signed installer, and report a checksum mismatch.
-// Re-running app-builder blockmap against the signed exe fixes this.
-try {
-  const { appBuilderPath: appBuilderBin } = require("app-builder-bin");
-  if (fs.existsSync(appBuilderBin)) {
+// Rebuilding the blockmap from the signed exe fixes this.  electron-builder 26
+// builds blockmaps in JS (app-builder-lib) rather than via app-builder-bin.
+// On failure the blockmap is not uploaded, and electron-updater falls back to
+// a full download.
+async function regenerateBlockMap() {
+  try {
+    const { buildBlockMap } = require("app-builder-lib/out/targets/blockmap/blockmap");
     console.log(`[publishWindows] Regenerating blockmap from signed installer...`);
-    execFileSync(appBuilderBin, [
-      "blockmap",
-      "--input", installerPath,
-      "--output", blockMapPath,
-      "--compression", "gzip"
-    ]);
+    await buildBlockMap(installerPath, "gzip", blockMapPath);
     console.log(`[publishWindows] ✅ Blockmap regenerated for signed installer`);
     artifacts.push({ name: blockMapFile, path: blockMapPath });
-  } else {
-    console.warn(`[publishWindows] ⚠️  app-builder not found at ${appBuilderBin} — skipping blockmap`);
+  } catch (err) {
+    console.warn(`[publishWindows] ⚠️  Failed to regenerate blockmap: ${err.message} — skipping blockmap`);
   }
-} catch (err) {
-  console.warn(`[publishWindows] ⚠️  Failed to regenerate blockmap: ${err.message} — skipping blockmap`);
 }
 
 // Recalculate latest.yml checksums to match the signed installer
@@ -114,7 +110,6 @@ console.log(`[publishWindows]   Owner: ${owner}`);
 console.log(`[publishWindows]   Repo: ${repo}`);
 console.log(`[publishWindows]   Tag: ${tag}`);
 console.log(`[publishWindows]   Target commit: ${releaseTarget}`);
-console.log(`[publishWindows]   Artifacts: ${artifacts.map(a => a.name).join(", ")}`);
 
 // Check for GitHub token
 const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
@@ -127,6 +122,9 @@ const octokit = new Octokit({ auth: token });
 
 (async () => {
   try {
+    await regenerateBlockMap();
+    console.log(`[publishWindows]   Artifacts: ${artifacts.map(a => a.name).join(", ")}`);
+
     // Determine release type from environment OR CLI arguments
     // CLI args take precedence (needed because cross-env doesn't persist across && on Windows)
     const args = process.argv.slice(2);
@@ -136,59 +134,19 @@ const octokit = new Octokit({ auth: token });
     
     console.log(`[publishWindows] Release flags: draft=${isDraft}, prerelease=${isPrerelease}, releaseType=${releaseType}`);
     
-    // Check if release exists
-    let release;
-    try {
-      const response = await octokit.repos.getReleaseByTag({
-        owner,
-        repo,
-        tag
-      });
-      release = response.data;
-      console.log(`[publishWindows] Release ${tag} already exists, uploading artifacts...`);
-      
-      // Update release flags if needed (e.g., if prerelease flag should be set)
-      if (isPrerelease && !release.prerelease) {
-        console.log(`[publishWindows] Updating release to mark as prerelease...`);
-        const updateResponse = await octokit.repos.updateRelease({
-          owner,
-          repo,
-          release_id: release.id,
-          prerelease: true
-        });
-        release = updateResponse.data;
-        console.log(`[publishWindows] ✅ Release marked as prerelease`);
-      }
-      if (isDraft && !release.draft) {
-        console.log(`[publishWindows] Updating release to mark as draft...`);
-        const updateResponse = await octokit.repos.updateRelease({
-          owner,
-          repo,
-          release_id: release.id,
-          draft: true
-        });
-        release = updateResponse.data;
-        console.log(`[publishWindows] ✅ Release marked as draft`);
-      }
-    } catch (error) {
-      if (error.status === 404) {
-        // Create new release
-        console.log(`[publishWindows] Creating new ${releaseType} release ${tag}...`);
-        const response = await octokit.repos.createRelease(buildReleaseCreationOptions({
-          owner,
-          repo,
-          tag,
-          releaseTarget,
-          isDraft,
-          isPrerelease,
-          releaseType
-        }));
-        release = response.data;
-        console.log(`[publishWindows] ✅ Created release ${tag}`);
-      } else {
-        throw error;
-      }
-    }
+    // Another platform's publish may already have made the release, as a draft too
+    const { release } = await ensureRelease(octokit, {
+      owner,
+      repo,
+      tag,
+      version,
+      releaseTarget,
+      isDraft,
+      isPrerelease,
+      releaseType,
+      body: releaseNotesBody(process.cwd(), version),
+      log: (message) => console.log(`[publishWindows] ${message}`)
+    });
 
     // Upload artifacts
     for (const artifact of artifacts) {
@@ -196,6 +154,10 @@ const octokit = new Octokit({ auth: token });
       console.log(`[publishWindows] Uploading ${artifact.name} (${(fileSize / 1024 / 1024).toFixed(2)} MB)...`);
       
       const fileContent = fs.readFileSync(artifact.path);
+      // A re-run replaces what an earlier, failed run uploaded
+      if (await deleteExistingAsset(octokit, { owner, repo, release, name: artifact.name })) {
+        console.log(`[publishWindows] Replaced the existing ${artifact.name}`);
+      }
       
       await octokit.repos.uploadReleaseAsset({
         owner,

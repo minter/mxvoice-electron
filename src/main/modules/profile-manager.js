@@ -12,15 +12,14 @@
  */
 
 import fs from 'fs';
-import { promises as fsPromises } from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import {
   getProfileDirectory,
   getProfileDirectoryKey,
   getProfilePreferencesPath,
+  hasUsableDirectoryKey,
   getProfileRegistryPath,
-  getProfileStatePath,
   getProfilesDirectory,
   sanitizeProfileName
 } from './profile-paths.js';
@@ -62,7 +61,8 @@ function initializeProfileManager(dependencies) {
  */
 function getDefaultPreferences() {
   return {
-    // Audio settings
+    // Audio settings. Keep in step with DEFAULT_FADE_OUT_SECONDS in
+    // src/renderer/modules/audio/audio-controller.js.
     fade_out_seconds: 3,
     
     // Appearance & UI
@@ -126,7 +126,7 @@ function loadProfileRegistry() {
       function: 'loadProfileRegistry',
       error: error.message 
     });
-    return {
+    const fallback = {
       profiles: {
         'Default User': {
           name: 'Default User',
@@ -137,7 +137,15 @@ function loadProfileRegistry() {
       },
       metadata: { version: '1.0.0', created_at: Date.now() }
     };
+    // Not saved with it: marks a stand-in that must not replace the file
+    Object.defineProperty(fallback, 'unreadable', { value: true });
+    return fallback;
   }
+}
+
+/** False when profiles.json exists but can't be read or parsed. */
+function isProfileRegistryReadable() {
+  return !loadProfileRegistry().unreadable;
 }
 
 /**
@@ -146,6 +154,16 @@ function loadProfileRegistry() {
  * @returns {boolean} Success status
  */
 function saveProfileRegistry(registry) {
+  // The stand-in for an unreadable profiles.json lists only Default User:
+  // writing it would drop every other profile for good, and lose the file
+  // that could be repaired by hand
+  if (registry?.unreadable) {
+    debugLog?.warn('Not saving the profile registry: profiles.json is unreadable', {
+      module: 'profile-manager',
+      function: 'saveProfileRegistry'
+    });
+    return false;
+  }
   try {
     const registryPath = getProfileRegistryPath();
     fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2));
@@ -206,6 +224,18 @@ function profileExists(profileName) {
 }
 
 /**
+ * True when writing for this profile would create its directory although the
+ * profile isn't registered: it was deleted (the running window can still name
+ * it until another profile opens) or never existed. Such reads and writes must
+ * not bring the directory back.
+ * @param {string} profileName
+ * @param {string} profileDir
+ */
+function wouldRecreateUnregisteredProfile(profileName, profileDir) {
+  return !fs.existsSync(profileDir) && !profileExists(profileName);
+}
+
+/**
  * Validate profile name
  * @param {string} name - Profile name to validate
  * @returns {Object} Validation result { valid: boolean, error?: string }
@@ -253,6 +283,45 @@ function validateProfileName(name) {
 }
 
 /**
+ * Register a profile whose directory exists but that is missing from the
+ * registry (e.g. profiles.json was corrupted and reset to the default), so
+ * its data is reachable again. Never creates a directory, and refuses a name
+ * that would share another registered profile's directory.
+ * @param {string} profileName
+ * @returns {boolean} true when the profile is (now) registered
+ */
+function adoptProfileDirectory(profileName) {
+  if (profileExists(profileName)) return true;
+  if (!validateProfileName(profileName).valid) return false;
+  if (!fs.existsSync(getProfileDirectory(profileName))) return false;
+
+  const registry = loadProfileRegistry();
+  // Saving the stand-in would drop every other profile from profiles.json for good
+  if (registry.unreadable) {
+    debugLog?.warn('Profile registry is unreadable; not registering the profile directory', {
+      module: 'profile-manager',
+      function: 'adoptProfileDirectory',
+      profileName
+    });
+    return false;
+  }
+  registry.profiles[profileName] = {
+    name: profileName,
+    description: '',
+    created_at: Date.now(),
+    last_used: Date.now()
+  };
+  const saved = saveProfileRegistry(registry);
+  debugLog?.info('Registered existing profile directory', {
+    module: 'profile-manager',
+    function: 'adoptProfileDirectory',
+    profileName,
+    saved
+  });
+  return saved;
+}
+
+/**
  * Create a new profile
  * @param {string} profileName - Name for the new profile
  * @param {string} description - Optional description
@@ -268,6 +337,10 @@ function createProfile(profileName, description = '') {
     
     // Load registry
     const registry = loadProfileRegistry();
+    // Refused before any folder is made: the profile could not be registered
+    if (registry.unreadable) {
+      return { success: false, error: "The profile list can't be read, so no profile can be created." };
+    }
     
     // Create profile directory
     const profileDir = getProfileDirectory(profileName);
@@ -372,27 +445,35 @@ function updateProfileLastUsed(profileName) {
 }
 
 /**
+ * Why deleteProfile would refuse this profile, checked without deleting, so
+ * a caller can end the profile's session only for a delete that will happen.
+ * @param {string} profileName
+ * @returns {string|null} The refusal, or null when it can be deleted
+ */
+const UNUSABLE_FOLDER_DELETE_MESSAGE =
+  "This profile's name can't be used for a folder, so Mx. Voice can't delete it safely. Rename it in a newer version or contact support.";
+
+function getDeleteProfileBlocker(profileName) {
+  // Prevent deletion of Default User
+  if (profileName === 'Default User') return 'Cannot delete Default User profile';
+  // Check if profile exists
+  if (!profileExists(profileName)) return 'Profile does not exist';
+  // A name with no usable folder name would resolve to the shared profiles folder
+  if (!hasUsableDirectoryKey(profileName)) return UNUSABLE_FOLDER_DELETE_MESSAGE;
+  // Get available profiles to ensure we don't delete the last one
+  if (getAvailableProfiles().length <= 1) return 'Cannot delete the last profile';
+  return null;
+}
+
+/**
  * Delete a profile
  * @param {string} profileName - Profile name to delete
  * @returns {Object} Result { success: boolean, error?: string }
  */
 function deleteProfile(profileName) {
   try {
-    // Prevent deletion of Default User
-    if (profileName === 'Default User') {
-      return { success: false, error: 'Cannot delete Default User profile' };
-    }
-    
-    // Check if profile exists
-    if (!profileExists(profileName)) {
-      return { success: false, error: 'Profile does not exist' };
-    }
-    
-    // Get available profiles to ensure we don't delete the last one
-    const profiles = getAvailableProfiles();
-    if (profiles.length <= 1) {
-      return { success: false, error: 'Cannot delete the last profile' };
-    }
+    const blocker = getDeleteProfileBlocker(profileName);
+    if (blocker) return { success: false, error: blocker };
     
     // Load registry
     const registry = loadProfileRegistry();
@@ -410,6 +491,11 @@ function deleteProfile(profileName) {
       exists: fs.existsSync(profileDir)
     });
     
+    // Last line of defence: never remove the folder that holds every profile
+    if (path.resolve(profileDir) === path.resolve(getProfilesDirectory())) {
+      return { success: false, error: UNUSABLE_FOLDER_DELETE_MESSAGE };
+    }
+
     if (fs.existsSync(profileDir)) {
       // List contents before deletion for debugging
       const contents = fs.readdirSync(profileDir);
@@ -544,8 +630,16 @@ async function loadProfilePreferences(profileName) {
     const preferencesPath = getProfilePreferencesPath(profileName);
     
     if (!fs.existsSync(preferencesPath)) {
-      // Create preferences, migrating from global store if available
       const profileDir = path.dirname(preferencesPath);
+      if (wouldRecreateUnregisteredProfile(profileName, profileDir)) {
+        debugLog?.warn('Preferences read for an unregistered profile; returning defaults without creating it', {
+          module: 'profile-manager',
+          function: 'loadProfilePreferences',
+          profileName
+        });
+        return getDefaultPreferences();
+      }
+      // Create preferences, migrating from global store if available
       if (!fs.existsSync(profileDir)) {
         fs.mkdirSync(profileDir, { recursive: true });
       }
@@ -606,6 +700,15 @@ async function saveProfilePreferences(profileName, preferences) {
   try {
     const preferencesPath = getProfilePreferencesPath(profileName);
     const profileDir = path.dirname(preferencesPath);
+
+    if (wouldRecreateUnregisteredProfile(profileName, profileDir)) {
+      debugLog?.warn('Refusing to save preferences for an unregistered profile', {
+        module: 'profile-manager',
+        function: 'saveProfilePreferences',
+        profileName
+      });
+      return false;
+    }
     
     // Ensure profile directory exists
     if (!fs.existsSync(profileDir)) {
@@ -649,6 +752,10 @@ async function duplicateProfile(sourceProfileName, targetProfileName, descriptio
       return { success: false, error: 'Source profile does not exist' };
     }
     
+    if (!hasUsableDirectoryKey(sourceProfileName)) {
+      return { success: false, error: 'Profile name has no usable folder name' };
+    }
+
     // Check if target profile already exists
     if (profileExists(targetProfileName)) {
       return { success: false, error: 'Target profile already exists' };
@@ -801,111 +908,21 @@ async function duplicateProfile(sourceProfileName, targetProfileName, descriptio
   }
 }
 
-/**
- * Save a profile's hotkey/holding-tank state to its state.json,
- * backing up the existing file first. Warns (but does not block) when
- * an empty state would overwrite existing data — renderer-side
- * protection is primary; this is backup logging.
- * @param {string} profileName - Display name of the profile
- * @param {Object} state - { hotkeys: [...], holdingTank: [...] }
- * @param {Object} [options]
- * @param {string} [options.reason] - Context string for logs (e.g. 'window-close', 'profile-switch')
- * @returns {Promise<{success: boolean}>}
- */
-async function saveProfileState(profileName, state, { reason = 'save' } = {}) {
-  if (!profileName) {
-    throw new Error('No profile name available for state save');
-  }
-
-  const profileDir = getProfileDirectory(profileName);
-  const stateFile = getProfileStatePath(profileName);
-  const sanitizedName = sanitizeProfileName(profileName);
-
-  const hotkeyCount = state?.hotkeys?.reduce((sum, tab) => sum + Object.keys(tab.hotkeys || {}).length, 0) || 0;
-  const holdingTankCount = state?.holdingTank?.reduce((sum, tab) => sum + (tab.songIds?.length || 0), 0) || 0;
-  const hasData = hotkeyCount > 0 || holdingTankCount > 0;
-
-  debugLog?.info('Saving profile state', {
-    module: 'profile-manager',
-    function: 'saveProfileState',
-    reason,
-    profileName,
-    sanitizedName,
-    file: stateFile,
-    hotkeyCount,
-    holdingTankCount,
-    hasData
-  });
-
-  if (!hasData) {
-    try {
-      const existingState = JSON.parse(await fsPromises.readFile(stateFile, 'utf8'));
-      const existingHotkeyCount = existingState.hotkeys?.reduce((sum, tab) => sum + Object.keys(tab.hotkeys || {}).length, 0) || 0;
-      const existingHoldingTankCount = existingState.holdingTank?.reduce((sum, tab) => sum + (tab.songIds?.length || 0), 0) || 0;
-
-      if (existingHotkeyCount > 0 || existingHoldingTankCount > 0) {
-        debugLog?.warn('Saving empty state over existing data (renderer allowed this)', {
-          module: 'profile-manager',
-          function: 'saveProfileState',
-          reason,
-          profileName,
-          existingHotkeys: existingHotkeyCount,
-          existingHoldingTank: existingHoldingTankCount,
-          file: stateFile,
-          note: 'User may have cleared data intentionally'
-        });
-      }
-    } catch (readError) {
-      debugLog?.info('No existing state file or could not read it', {
-        module: 'profile-manager',
-        function: 'saveProfileState',
-        reason,
-        error: readError.message
-      });
-    }
-  }
-
-  await fsPromises.mkdir(profileDir, { recursive: true });
-
-  try {
-    const backupFile = path.join(profileDir, 'state.json.backup');
-    const existingData = await fsPromises.readFile(stateFile, 'utf8');
-    await fsPromises.writeFile(backupFile, existingData, 'utf8');
-  } catch (backupError) {
-    debugLog?.info('Could not create backup (file may not exist)', {
-      module: 'profile-manager',
-      function: 'saveProfileState',
-      reason,
-      error: backupError.message
-    });
-  }
-
-  await fsPromises.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
-
-  debugLog?.info('Profile state saved successfully', {
-    module: 'profile-manager',
-    function: 'saveProfileState',
-    reason,
-    profileName,
-    file: stateFile
-  });
-
-  return { success: true };
-}
-
 export {
   initializeProfileManager,
   getAvailableProfiles,
   profileExists,
+  adoptProfileDirectory,
+  isProfileRegistryReadable,
   validateProfileName,
   createProfile,
   updateProfileLastUsed,
   duplicateProfile,
   deleteProfile,
+  getDeleteProfileBlocker,
   loadProfilePreferences,
   saveProfilePreferences,
   getDefaultPreferences,
   getProfilesDirectory,
-  sanitizeProfileName,
-  saveProfileState
+  sanitizeProfileName
 };

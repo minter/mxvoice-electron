@@ -22,7 +22,6 @@ ui/
 - **scaleScrollable()** - Scale scrollable elements based on window size
 - **editSelectedSong()** - Edit the currently selected song
 - **deleteSelectedSong()** - Delete the currently selected song
-- **closeAllTabs()** - Close all tabs and clear stored data
 - **getFontSize()** - Get current font size
 - **setFontSize()** - Set font size
 
@@ -76,9 +75,6 @@ Opens the edit modal for the currently selected song.
 
 #### `deleteSelectedSong()`
 Deletes the currently selected song based on its location (holding tank, hotkey, or search results).
-
-#### `closeAllTabs()`
-Closes all tabs and clears stored data with confirmation dialog.
 
 ### Event Handler Functions
 
@@ -226,7 +222,6 @@ The UI module extracts the following functions from `renderer.js`:
 - `scale_scrollable()` → `scaleScrollable()`
 - `editSelectedSong()` → `editSelectedSong()`
 - `deleteSelectedSong()` → `deleteSelectedSong()`
-- `closeAllTabs()` → `closeAllTabs()`
 
 **Event Handlers:**
 - `toggle_selected_row()` → `toggleSelectedRow()`

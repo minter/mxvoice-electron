@@ -25,6 +25,9 @@ describe('profile paths', () => {
     expect(profilePaths.getProfileStatePath(profileName)).toBe(
       path.join(userDataDirectory, 'profiles', sanitizedName, 'state.json')
     );
+    expect(profilePaths.getProfileShowsPath(profileName)).toBe(
+      path.join(userDataDirectory, 'profiles', sanitizedName, 'shows.json')
+    );
     expect(profilePaths.getBackupDirectory(profileName)).toBe(
       path.join(userDataDirectory, 'profile-backups', sanitizedName)
     );
@@ -32,5 +35,13 @@ describe('profile paths', () => {
 
   it('normalizes profile directory keys for collision checks', () => {
     expect(profilePaths.getProfileDirectoryKey('MY: SHOW')).toBe('my show');
+  });
+
+  it('puts recovery records outside the profiles directory, keyed by normalized name', () => {
+    expect(profilePaths.getRecoveryDirectory()).toBe(path.join(userDataDirectory, 'recovery'));
+    expect(profilePaths.getRecoveryPath('MY: SHOW')).toBe(
+      path.join(userDataDirectory, 'recovery', 'my show.json')
+    );
+    expect(profilePaths.getRecoveryPath('My Show').startsWith(profilePaths.getProfilesDirectory())).toBe(false);
   });
 });

@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'node:path';
 import os from 'os';
 import { fileURLToPath } from 'node:url';
+import { loadTabFromFile } from '../../../utils/tab-actions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,10 +78,10 @@ test.describe('Hotkeys - file operations', () => {
       });
     }, mrvPath);
 
-    // Click the load hotkey button
-    await page.locator('#hotkey-load-btn').click();
+    // ⋯ > Load Tab from File…
+    await loadTabFromFile(page, 'hotkeys');
 
-    // Wait for the fkey_load IPC to be processed
+    // Wait for the load to be processed
     const f1Hotkey = page.locator('#hotkeys_list_1 #f1_hotkey');
     await expect(f1Hotkey).toHaveAttribute('songid', '1001', { timeout: 5000 });
     const f1SongId = await f1Hotkey.getAttribute('songid');
@@ -102,62 +103,6 @@ test.describe('Hotkeys - file operations', () => {
     await app.evaluate(() => { globalThis.__restoreHotkeyOpenDialog?.(); });
   });
 
-  test('save hotkeys to .mrv file writes correct format', async () => {
-    // First, assign some songs to hotkeys via drag-drop evaluate
-    await performEmptySearch(page);
-
-    // Assign song 1002 to F5 in active tab
-    await page.evaluate(({ songId }) => {
-      const target = document.querySelector('#hotkeys_list_1 #f5_hotkey');
-      if (!target) return;
-      const dataTransfer = new DataTransfer();
-      dataTransfer.setData('text', songId);
-      target.dispatchEvent(new DragEvent('drop', {
-        bubbles: true, cancelable: true, dataTransfer,
-      }));
-    }, { songId: '1002' });
-
-    // Wait for the drop to be processed
-    await expect(page.locator('#hotkeys_list_1 #f5_hotkey')).toHaveAttribute('songid', '1002', { timeout: 5000 });
-
-    // Set up save dialog stub
-    const outputPath = path.join(tempDir, 'saved-hotkeys.mrv');
-    await app.evaluate(async ({ dialog }) => {
-      const original = dialog.showSaveDialog;
-      globalThis.__restoreHotkeySaveDialog = () => (dialog.showSaveDialog = original);
-    });
-    await app.evaluate(({ dialog }, filePath) => {
-      dialog.showSaveDialog = async () => ({
-        canceled: false,
-        filePath: filePath,
-      });
-    }, outputPath);
-
-    // Click the save hotkey button
-    await page.locator('#hotkey-save-btn').click();
-
-    // Wait for file to be written
-    await expect.poll(() => fs.existsSync(outputPath), { timeout: 10000 }).toBe(true);
-
-    // Read and verify the file content
-    const content = fs.readFileSync(outputPath, 'utf-8');
-    console.log('Saved .mrv content:', content);
-
-    // Should contain f1:: through f12:: lines
-    expect(content).toContain('f1::');
-    expect(content).toContain('f5::');
-    expect(content).toContain('f12::');
-
-    // F5 should have song 1002
-    const lines = content.split('\n').filter(l => l.trim());
-    const f5Line = lines.find(l => l.startsWith('f5::'));
-    expect(f5Line).toBeTruthy();
-    expect(f5Line).toContain('1002');
-
-    // Restore dialog
-    await app.evaluate(() => { globalThis.__restoreHotkeySaveDialog?.(); });
-  });
-
   test('cancel load dialog leaves hotkeys unchanged', async () => {
     // Get current F1 songid
     const f1Before = await page.locator('#hotkeys_list_1 #f1_hotkey').getAttribute('songid');
@@ -174,8 +119,8 @@ test.describe('Hotkeys - file operations', () => {
       });
     });
 
-    // Click load button
-    await page.locator('#hotkey-load-btn').click();
+    // ⋯ > Load Tab from File…; the canceled dialog asks nothing
+    await loadTabFromFile(page, 'hotkeys', { confirm: 'none' });
 
     // Verify F1 is unchanged
     const f1After = await page.locator('#hotkeys_list_1 #f1_hotkey').getAttribute('songid');

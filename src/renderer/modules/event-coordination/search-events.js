@@ -6,6 +6,7 @@
  */
 
 import { clearSearchTimeout } from '../search/search-timeout.js';
+import { EscapeStopGesture } from '../keyboard-manager/escape-stop-gesture.js';
 
 export default class SearchEvents {
   constructor(dependencies = {}) {
@@ -15,6 +16,11 @@ export default class SearchEvents {
     
     this.eventsAttached = false;
     this.searchHandlers = new Map();
+    // Mousetrap skips text fields, so search inputs run the Esc gesture here
+    this.escapeGesture = new EscapeStopGesture({
+      stop: (fadeOut) => this.stopPlaying(fadeOut),
+      isFadingOut: () => this.moduleRegistry.audio?.isFadingOut?.() === true
+    });
   }
 
   /**
@@ -150,11 +156,12 @@ export default class SearchEvents {
         // Esc should stop playback even when focus is inside a search field
         if (event.key === 'Escape' || event.code === 'Escape') {
           this.debugLog?.debug('Escape pressed in search input; attempting to stop playback');
-          if (typeof this.moduleRegistry.audio?.stopPlaying === 'function') {
-            // Support Shift+Esc for fade-out, mirroring global behavior
-            this.moduleRegistry.audio.stopPlaying(Boolean(event.shiftKey));
+          // Shift+Esc fades at once; plain Esc cuts on a tap, fades on a hold
+          // (a held Shift+Esc repeats, and a stop during a fade cuts)
+          if (event.shiftKey) {
+            if (!event.repeat) this.stopPlaying(true);
           } else {
-            this.debugLog?.warn('stopPlaying function not available');
+            this.escapeGesture.keyDown(event);
           }
           // Cancel any pending live-search debounce to avoid unintended result clearing
           clearSearchTimeout();
@@ -203,11 +210,19 @@ export default class SearchEvents {
       }
     };
 
+    const searchFormKeyupHandler = (event) => {
+      if ((event.key === 'Escape' || event.code === 'Escape') && !event.shiftKey) {
+        this.escapeGesture.keyUp();
+      }
+    };
+
     const form = document.getElementById('search_form');
     if (form) {
       form.querySelectorAll(':is(input,select,textarea)').forEach(input => {
         input.addEventListener('keydown', searchFormKeydownHandler);
         this.searchHandlers.set(`searchFormKeydown:${input.name || input.id}`, { element: '#search_form :input', el: input, event: 'keydown', handler: searchFormKeydownHandler });
+        input.addEventListener('keyup', searchFormKeyupHandler);
+        this.searchHandlers.set(`searchFormKeyup:${input.name || input.id}`, { element: '#search_form :input', el: input, event: 'keyup', handler: searchFormKeyupHandler });
       });
       form.addEventListener('submit', searchFormSubmitHandler);
       this.searchHandlers.set('searchFormSubmit', { element: '#search_form', el: form, event: 'submit', handler: searchFormSubmitHandler });
@@ -410,6 +425,17 @@ export default class SearchEvents {
     this.searchHandlers.set('advancedSearchButton', { element: '#advanced_search_button', el: advBtn, event: 'click', handler: advancedSearchButtonHandler });
     
     this.debugLog?.debug('Advanced search events attached');
+  }
+
+  /**
+   * @param {boolean} fadeOut
+   */
+  stopPlaying(fadeOut) {
+    if (typeof this.moduleRegistry.audio?.stopPlaying === 'function') {
+      this.moduleRegistry.audio.stopPlaying(fadeOut);
+    } else {
+      this.debugLog?.warn('stopPlaying function not available');
+    }
   }
 
   /**

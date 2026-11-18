@@ -153,6 +153,8 @@ tests/fixtures/**
 !tests/fixtures/test-holding-tank/**
 !tests/fixtures/test-hotkeys/
 !tests/fixtures/test-hotkeys/**
+# A 4.3 state.json the show-store unit tests migrate
+!tests/fixtures/state-4.3.json
 tests/test-results/
 tests/playwright-report/
 

@@ -145,3 +145,15 @@ describe('profile:set-preferences', () => {
     expect(storeData).not.toHaveProperty('screen_mode');
   });
 });
+
+describe('preference saves that do not reach disk', () => {
+  it('report failure instead of success, and leave the global store alone', async () => {
+    const profileManager = await import('../../../src/main/modules/profile-manager.js');
+    profileManager.saveProfilePreferences.mockResolvedValueOnce(false);
+    await expect(invoke('profile:set-preference', 'font_size', 14)).resolves.toMatchObject({ success: false });
+
+    profileManager.saveProfilePreferences.mockResolvedValueOnce(false);
+    await expect(invoke('profile:set-preferences', { prerelease_updates: true })).resolves.toMatchObject({ success: false });
+    expect(mockStore.set).not.toHaveBeenCalledWith('prerelease_updates', true);
+  });
+});

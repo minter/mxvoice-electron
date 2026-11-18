@@ -6,7 +6,8 @@ function createMainWindow({
   preloadPath,
   indexPath,
   testMode = false,
-  state = {}
+  state = {},
+  platform = process.platform
 }) {
   const {
     width = 1200,
@@ -39,6 +40,13 @@ function createMainWindow({
     }
   };
 
+  // macOS: draw the window to the top edge, with the traffic lights inset over
+  // the app's own title strip (index.css body.platform-mac). Windows and Linux
+  // keep the native title bar, and with it the menu bar.
+  if (platform === 'darwin') {
+    windowOptions.titleBarStyle = 'hiddenInset';
+  }
+
   if (validDisplay && x !== undefined && y !== undefined) {
     windowOptions.x = x;
     windowOptions.y = y;
@@ -50,6 +58,7 @@ function createMainWindow({
     windowOptions.webPreferences.backgroundThrottling = false;
   }
   const window = new BrowserWindow(windowOptions);
+  if (platform === 'darwin') hideTitleStripInFullScreen(window);
   if (testMode && process.env.E2E_BACKGROUND === '1') {
     // Background mode: keep the window hidden for the whole run. Parking it
     // offscreen doesn't work — macOS constrains a window back onto a visible
@@ -87,6 +96,38 @@ function createMainWindow({
     if (isFullScreen && !window.isDestroyed()) window.setFullScreen(true);
   });
   return window;
+}
+
+// Full screen has no traffic lights, so the inset title strip would be empty
+// space: hide it while the window is full screen (index.css draws it)
+const FULL_SCREEN_CSS = 'body.platform-mac #top-row { padding-top: var(--panel-gap) !important; }'
+  + ' body.platform-mac .container-fluid::before { display: none; }';
+
+function hideTitleStripInFullScreen(window) {
+  // At most one inserted rule, kept in step with full screen by one sync at
+  // a time: launching full screen fires both did-finish-load and
+  // enter-full-screen, and each inserting its own copy would leave one behind
+  let key = null;
+  let queue = Promise.resolve();
+  const sync = ({ reloaded = false } = {}) => {
+    queue = queue.then(async () => {
+      // A reload drops inserted CSS, so the old key names nothing
+      if (reloaded) key = null;
+      if (window.isDestroyed()) return;
+      const wanted = window.isFullScreen();
+      if (wanted && !key) {
+        key = await window.webContents.insertCSS(FULL_SCREEN_CSS);
+      } else if (!wanted && key) {
+        const done = key;
+        key = null;
+        await window.webContents.removeInsertedCSS(done);
+      }
+    }).catch(() => {});
+    return queue;
+  };
+  window.on('enter-full-screen', () => sync());
+  window.on('leave-full-screen', () => sync());
+  window.webContents.on('did-finish-load', () => sync({ reloaded: true }));
 }
 
 export { createMainWindow };

@@ -377,20 +377,16 @@ test.describe('Profile Management', () => {
     await expect(modal).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('clicking outside modal closes it', async () => {
-    // Click the "Create Profile" button
-    const createButton = page.locator('#create-profile-btn');
-    await createButton.click();
-    
-    // Wait for modal to appear
-    const modal = page.locator('#create-profile-modal');
-    await expect(modal).toBeVisible();
-    
-    // Click on the modal backdrop (outside the modal content)
-    await modal.click({ position: { x: 10, y: 10 } });
-    
-    // Modal should close
-    await expect(modal).not.toBeVisible({ timeout: 5000 });
+  test('Esc closes the new profile form and keeps the launcher open', async () => {
+    await page.locator('#create-profile-btn').click();
+    const form = page.locator('#create-profile-modal');
+    await expect(form).toBeVisible();
+
+    await page.keyboard.press('Escape');
+
+    await expect(form).not.toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#profile-list')).toBeVisible();
+    expect(app.windows()).toHaveLength(1);
   });
 
   test('profiles are sorted with Default User first', async () => {

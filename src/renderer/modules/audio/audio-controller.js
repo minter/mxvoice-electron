@@ -7,11 +7,12 @@
  * PHASE 2 SECURITY MIGRATION: Now uses secure adapters for store operations
  */
 
-// Import secure adapters for Phase 2 migration
-import { secureStore } from '../adapters/secure-adapter.js';
+// Fade length is a profile preference, set in Preferences
+import { getPreference } from '../preferences/profile-preference-adapter.js';
 
 // Import shared state
 import sharedState from '../shared-state.js';
+import { getSongActionTarget } from '../ui/song-action-target.js';
 
 // Import debug logger
 let debugLog = null;
@@ -24,12 +25,55 @@ try {
   // Debug logger not available
 }
 
+// The sound a stop-with-fade is fading out, until it is unloaded
+let fadingOutSound = null;
+
+// Used when the profile has no usable fade length. Keep in step with
+// getDefaultPreferences() in src/main/modules/profile-manager.js.
+export const DEFAULT_FADE_OUT_SECONDS = 3;
+
 /**
- * Stop audio playback
+ * Read the profile's fade length, in milliseconds
+ * @returns {Promise<number>}
+ */
+async function readFadeOutMs() {
+  try {
+    const result = await getPreference('fade_out_seconds', window.secureElectronAPI);
+    const seconds = Number(result?.success ? result.value : NaN);
+    if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
+    debugLog?.warn('No usable fade_out_seconds; using the default', {
+      module: 'audio-controller',
+      function: 'readFadeOutMs',
+      result
+    });
+  } catch (error) {
+    debugLog?.warn('Could not read fade_out_seconds; using the default', {
+      module: 'audio-controller',
+      function: 'readFadeOutMs',
+      error: error?.message
+    });
+  }
+  return DEFAULT_FADE_OUT_SECONDS * 1000;
+}
+
+/**
+ * Whether the current sound is fading out after a stop
+ * @returns {boolean}
+ */
+function isFadingOut() {
+  return fadingOutSound !== null && sharedState.get('sound') === fadingOutSound;
+}
+
+/**
+ * Stop audio playback. A stop while the current sound is already fading
+ * out cuts it, so a second press never restarts or stretches the fade.
  * 
  * @param {boolean} fadeOut - Whether to fade out the audio
  */
 function stopPlaying(fadeOut = false) {
+  if (fadeOut && isFadingOut()) {
+    fadeOut = false;
+  }
   debugLog?.info('stopPlaying called with parameters', { 
     module: 'audio-controller',
     function: 'stopPlaying',
@@ -87,30 +131,12 @@ function stopPlaying(fadeOut = false) {
         function: 'stopPlaying',
         fadeOut: fadeOut
       });
-      secureStore.get("fade_out_seconds").then(result => {
-        if (!result.success || !result.value) {
-          debugLog?.warn('Failed to get fade_out_seconds:', { 
-            module: 'audio-controller',
-            function: 'stopPlaying',
-            result: result
-          });
-          // Fallback to immediate stop
-          sound.unload();
-          if (sharedState.get('sound') === sound) {
-            sharedState.set('sound', null);
-          }
-          resetUIState();
+      fadingOutSound = sound;
+      readFadeOutMs().then(fadeDuration => {
+        // Cut or replaced while the fade length was being read
+        if (sharedState.get('sound') !== sound) {
           return;
         }
-        const fadeSeconds = result.value;
-        debugLog?.info("Fade out seconds:", { 
-          module: 'audio-controller',
-          function: 'stopPlaying',
-          fadeSeconds: fadeSeconds
-        });
-        
-        // Extract the numeric value from the response  
-        const fadeDuration = parseFloat(fadeSeconds) * 1000;
         debugLog?.info("Fade duration:", { 
           module: 'audio-controller',
           function: 'stopPlaying',
@@ -155,18 +181,6 @@ function stopPlaying(fadeOut = false) {
           currentVolume: currentVolume,
           fadeDuration: fadeDuration
         });
-      }).catch(error => {
-        debugLog?.error("Error getting fade_out_seconds:", { 
-          module: 'audio-controller',
-          function: 'stopPlaying',
-          error: error.message
-        });
-        // Fallback to immediate stop
-        sound.unload();
-        if (sharedState.get('sound') === sound) {
-          sharedState.set('sound', null);
-        }
-        resetUIState();
       });
     } else {
       debugLog?.info('Taking immediate stop path', { 
@@ -174,6 +188,7 @@ function stopPlaying(fadeOut = false) {
         function: 'stopPlaying',
         fadeOut: fadeOut
       });
+      fadingOutSound = null;
       sound.unload();
       if (sharedState.get('sound') === sound) {
         sharedState.set('sound', null);
@@ -215,6 +230,15 @@ function pausePlaying(fadeOut = false) {
   });
   
   if (sound) {
+    // A fade-out stop owns the sound until it unloads it: a pause would drop
+    // that unload and leave the song paused at part volume
+    if (isFadingOut()) {
+      debugLog?.info('Pause ignored: the song is fading out to stop', {
+        module: 'audio-controller',
+        function: 'pausePlaying'
+      });
+      return;
+    }
     if (sound.playing()) {
       debugLog?.info('🔍 Sound is playing, pausing...', {
         module: 'audio-controller',
@@ -239,19 +263,7 @@ function pausePlaying(fadeOut = false) {
           sound.pause();
           sound.volume(old_volume);
         });
-        secureStore.get("fade_out_seconds").then(result => {
-          if (!result.success || !result.value) {
-            debugLog?.warn('Failed to get fade_out_seconds:', { 
-              module: 'audio-controller',
-              function: 'pausePlaying',
-              result: result
-            });
-            // Fallback to immediate pause
-            sound.pause();
-            return;
-          }
-          const fadeSeconds = result.value;
-          const fadeDuration = fadeSeconds * 1000;
+        readFadeOutMs().then(fadeDuration => {
           sound.fade(sound.volume(), 0, fadeDuration);
         });
       } else {
@@ -291,7 +303,7 @@ function getSelectedHotkeyElement() {
 
 function getPlaybackSelectionSongId() {
   return (
-    document.getElementById('selected_row')?.getAttribute('songid') ||
+    getSongActionTarget()?.getAttribute('songid') ||
     getSelectedHotkeyElement()?.getAttribute('songid') ||
     null
   );
@@ -385,6 +397,7 @@ function loop_on(bool) {
 // Export individual functions for direct access
 export {
   stopPlaying,
+  isFadingOut,
   pausePlaying,
   getPlaybackSelectionSongId,
   resetUIState,
@@ -397,6 +410,7 @@ export {
 // Default export for module loading
 export default {
   stopPlaying,
+  isFadingOut,
   pausePlaying,
   getPlaybackSelectionSongId,
   resetUIState,
