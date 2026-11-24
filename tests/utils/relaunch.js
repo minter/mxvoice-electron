@@ -9,13 +9,16 @@ import { restoreDefaultWindowSize } from './seeded-launch.js';
  * reseeding it. Mirrors launchSeededApp's environment (E2E_USER_DATA_DIR,
  * --profile=, an isolated HOME/APPDATA).
  *
+ * @param {Object} [options]
+ * @param {string} [options.profile]
+ * @param {string[]} [options.extraArgs] - Chromium/Electron switches for the launch
  * @returns {Promise<{ app, page, fakeHome }>}
  */
-export async function relaunchApp(electron, userDataDir, { profile = 'Default User' } = {}) {
+export async function relaunchApp(electron, userDataDir, { profile = 'Default User', extraArgs = [] } = {}) {
   const fakeHome = fs.mkdtempSync(`${os.tmpdir()}/mxv-home-`);
   const app = await electron.launch({
     executablePath: electronPath,
-    args: ['.', `--profile=${profile}`],
+    args: [...extraArgs, '.', `--profile=${profile}`],
     env: {
       ...process.env,
       NODE_ENV: 'test',

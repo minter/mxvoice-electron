@@ -37,6 +37,9 @@ const DISPLAY_PATHS = {
   '#preferences-hotkey-directory': '/Users/you/Documents/Mx. Voice'
 };
 
+// Twice the pixels on any display, so the images are sharp on the site
+const SCALE_ARGS = ['--force-device-scale-factor=2'];
+
 const file = (group, name) => path.join(OUT[group], `${name}.png`);
 
 test.describe('Documentation screenshots', () => {
@@ -164,8 +167,7 @@ test.describe('Documentation screenshots', () => {
 
   test.beforeAll(async () => {
     ({ app, page, userDataDir } = await launchSeededApp(electron, 'docs-screenshots', {
-      // Twice the pixels on any display, so the images are sharp on the site
-      extraArgs: ['--force-device-scale-factor=2'],
+      extraArgs: SCALE_ARGS,
       beforeLaunch: (dir) => {
         seedDemoLibrary(dir);
         seedShows(dir, PROFILE, demoShows());
@@ -368,7 +370,7 @@ test.describe('Documentation screenshots', () => {
     // Give the recovery record time to be written, then crash and relaunch
     await page.waitForTimeout(3000);
     await crashApp(app);
-    ({ app, page } = await relaunchApp(electron, userDataDir, { profile: PROFILE }));
+    ({ app, page } = await relaunchApp(electron, userDataDir, { profile: PROFILE, extraArgs: SCALE_ARGS }));
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.showInactive());
     const prompt = shownDialog(page, 'Restore show?');
     await expect(prompt).toBeVisible({ timeout: 20000 });
@@ -382,7 +384,7 @@ test.describe('Documentation screenshots', () => {
     const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'mxv-home-'));
     app = await electron.launch({
       executablePath: electronPath,
-      args: ['--force-device-scale-factor=2', '.'],
+      args: [...SCALE_ARGS, '.'],
       env: {
         ...process.env,
         NODE_ENV: 'test',
