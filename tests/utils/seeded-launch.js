@@ -12,8 +12,9 @@ const __dirname = path.dirname(__filename);
  * @param {Object} [options]
  * @param {(userDataDir: string) => void} [options.beforeLaunch] - seed files
  *   (e.g. shows.json) into the fresh user-data directory before the app starts
+ * @param {string[]} [options.extraArgs] - Chromium/Electron switches for the launch
  */
-export async function launchSeededApp(electron, suffix = '', { beforeLaunch } = {}) {
+export async function launchSeededApp(electron, suffix = '', { beforeLaunch, extraArgs = [] } = {}) {
   // Create a unique per-suite root and per-suite userDataDir
   const suiteId = `${suffix || 'suite'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const suiteRoot = path.join(__dirname, `../fixtures/suites/${suiteId}`);
@@ -93,7 +94,7 @@ export async function launchSeededApp(electron, suffix = '', { beforeLaunch } = 
 
   const app = await electron.launch({
     executablePath: electronPath,
-    args: ['.', '--profile=Default User'],
+    args: [...extraArgs, '.', '--profile=Default User'],
     env: {
       ...process.env,
       NODE_ENV: 'test',
