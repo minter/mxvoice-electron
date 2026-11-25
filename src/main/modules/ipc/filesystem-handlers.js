@@ -11,19 +11,22 @@ import { promises as fsPromises } from 'fs';
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 import { isSupportedAudioFile, copyFileStreaming } from '../file-utils.js';
-import { isPathInside, isPathAllowed } from './guards.js';
+import { assertTrustedMainFrame, isPathAllowed } from './guards.js';
 
 export function register(deps) {
-  const { store, debugLog } = deps;
+  const { debugLog, getMainWindow, directoryPreferenceAuthority, trustedRendererUrl } = deps;
 
   ipcMain.handle(IPC.FILESYSTEM.FILE_EXISTS, async (event, filePath) => {
     try {
+      assertTrustedMainFrame(event, getMainWindow, trustedRendererUrl);
       if (!filePath || typeof filePath !== 'string') throw new Error('Invalid file path');
-      const musicDirectory = store.get('music_directory');
-      if (!musicDirectory || !isPathInside(filePath, musicDirectory)) {
+      const musicDirectory = directoryPreferenceAuthority.getMusicDirectory();
+      if (!musicDirectory) throw new Error('Music directory is not configured');
+      const { canonicalPath, allowed } = await isPathAllowed(filePath, [musicDirectory]);
+      if (!allowed) {
         throw new Error('Access denied: Path must be inside the managed music directory');
       }
-      return { success: true, exists: fs.existsSync(path.resolve(filePath)) };
+      return { success: true, exists: fs.existsSync(canonicalPath) };
     } catch (error) {
       debugLog?.error('File exists error:', { module: 'ipc-handlers', function: 'file-exists', error: error.message });
       return { success: false, error: error.message };
@@ -32,13 +35,14 @@ export function register(deps) {
 
   ipcMain.handle(IPC.FILESYSTEM.FILE_DELETE, async (event, filePath) => {
     try {
+      assertTrustedMainFrame(event, getMainWindow, trustedRendererUrl);
       // Security: Validate input
       if (!filePath || typeof filePath !== 'string') {
         throw new Error('Invalid file path');
       }
 
       // Security: Restrict to allowed directories (same pattern as file-read)
-      const musicDirectory = store.get('music_directory');
+      const musicDirectory = directoryPreferenceAuthority.getMusicDirectory();
       if (!musicDirectory) throw new Error('Music directory is not configured');
       const allowedPaths = [musicDirectory];
 
@@ -74,23 +78,27 @@ export function register(deps) {
 
   ipcMain.handle(IPC.FILESYSTEM.FILE_COPY, async (event, sourcePath, destPath) => {
     try {
+      assertTrustedMainFrame(event, getMainWindow, trustedRendererUrl);
       if (!sourcePath || !destPath || !isSupportedAudioFile(sourcePath)) {
         throw new Error('Only supported audio files can be imported');
       }
-      const musicDirectory = store.get('music_directory');
-      if (!musicDirectory || !isPathInside(destPath, musicDirectory)) {
+      const musicDirectory = directoryPreferenceAuthority.getMusicDirectory();
+      if (!musicDirectory) throw new Error('Music directory is not configured');
+      const { canonicalPath, allowed } = await isPathAllowed(destPath, [musicDirectory]);
+      if (!allowed) {
         throw new Error('Access denied: Destination must be inside the managed music directory');
       }
       // Use streaming for better memory efficiency with large files
-      return await copyFileStreaming(sourcePath, destPath, { debugLog });
+      return await copyFileStreaming(sourcePath, canonicalPath, { debugLog });
     } catch (error) {
       debugLog?.error('File copy error:', { module: 'ipc-handlers', function: 'file-copy', error: error.message });
       return { success: false, error: error.message };
     }
   });
 
-  ipcMain.handle(IPC.FILESYSTEM.SCAN_AUDIO_DIRECTORY, async (_event, rootPath) => {
+  ipcMain.handle(IPC.FILESYSTEM.SCAN_AUDIO_DIRECTORY, async (event, rootPath) => {
     try {
+      assertTrustedMainFrame(event, getMainWindow, trustedRendererUrl);
       if (!rootPath || typeof rootPath !== 'string') throw new Error('Invalid directory path');
       const canonicalRoot = await fsPromises.realpath(path.resolve(rootPath));
       const rootStats = await fsPromises.stat(canonicalRoot);

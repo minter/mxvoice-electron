@@ -7,6 +7,7 @@
  */
 
 import {
+  DIRECTORY_PREFERENCES,
   PROFILE_PREFERENCES,
   setPreference as setPreferenceViaAdapter,
   getPreference as getPreferenceViaAdapter
@@ -82,6 +83,11 @@ function initializeSettingsController(options = {}) {
       prerelease_updates: !!document.getElementById('preferences-prerelease-updates')?.checked,
       screen_mode: document.getElementById('preferences-screen-mode')?.value || 'auto',
       analytics_enabled: !!document.getElementById('preferences-analytics-enabled')?.checked
+    };
+    const directoryAuthorizationTokens = {
+      database_directory: document.getElementById('preferences-database-directory')?.dataset?.directoryAuthorization,
+      music_directory: document.getElementById('preferences-song-directory')?.dataset?.directoryAuthorization,
+      hotkey_directory: document.getElementById('preferences-hotkey-directory')?.dataset?.directoryAuthorization
     };
     
     debugLog?.info("[PREFS-SAVE] Captured form values", {
@@ -176,9 +182,19 @@ function initializeSettingsController(options = {}) {
         });
         
         // Save global preferences in parallel (no race condition)
-        const globalResults = await Promise.all(
-          globalPrefs.map(pref => setPreferenceViaAdapter(pref.key, pref.value, electronAPI))
-        );
+        const currentDirectories = {
+          database_directory: currentDbDir,
+          music_directory: currentMusicDir,
+          hotkey_directory: currentHotkeyDir
+        };
+        const globalResults = await Promise.all(globalPrefs.map((pref) => {
+          if (DIRECTORY_PREFERENCES.includes(pref.key) && pref.value === currentDirectories[pref.key]) {
+            return { success: true, value: pref.value };
+          }
+          return setPreferenceViaAdapter(pref.key, pref.value, electronAPI, {
+            authorizationToken: directoryAuthorizationTokens[pref.key]
+          });
+        }));
         
         // Save profile preferences atomically in a single operation to avoid race conditions
         let profileResults = [];
@@ -218,10 +234,12 @@ function initializeSettingsController(options = {}) {
         debugLog?.info("[PREFS-SAVE] Save results", { results, profileCount: profilePrefs.length, globalCount: globalPrefs.length });
         
         // Update audio module's music directory cache if it changed
-        if (preferences.music_directory && moduleRegistry.audio?.updateMusicDirectoryCache) {
-          moduleRegistry.audio.updateMusicDirectoryCache(preferences.music_directory);
+        const musicDirectoryResult = globalResults[globalPrefs.findIndex(pref => pref.key === 'music_directory')];
+        const committedMusicDirectory = musicDirectoryResult?.value;
+        if (musicDirectoryResult?.success && committedMusicDirectory && moduleRegistry.audio?.updateMusicDirectoryCache) {
+          moduleRegistry.audio.updateMusicDirectoryCache(committedMusicDirectory);
           debugLog?.info("[PREFS-SAVE] Updated audio module music directory cache", { 
-            musicDirectory: preferences.music_directory 
+            musicDirectory: committedMusicDirectory
           });
         }
         
