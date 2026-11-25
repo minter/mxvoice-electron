@@ -40,3 +40,51 @@ describe('mxvoice:show-modal', () => {
     expect(safeShowModal).toHaveBeenCalledWith('#newReleaseModal', expect.any(Object));
   });
 });
+
+describe('mxvoice:update-release-notes', () => {
+  function setup() {
+    const title = { textContent: '' };
+    const innerHTMLWrites = [];
+    const body = {
+      textContent: '',
+      set innerHTML(value) { innerHTMLWrites.push(value); },
+      get innerHTML() { return ''; }
+    };
+    // The entity-decoding scratch element the handler makes
+    const textarea = {
+      set innerHTML(value) { this.value = value.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"'); },
+      value: ''
+    };
+    globalThis.document = {
+      querySelectorAll: () => [],
+      querySelector: (selector) => (selector.endsWith('.modal-title') ? title : selector.endsWith('.modal-body') ? body : null),
+      createElement: () => textarea
+    };
+    new UIInteractionEvents({ debugLog: window.debugLog }).attachModalEvents();
+    return { title, body, innerHTMLWrites, notify: listeners.get('mxvoice:update-release-notes') };
+  }
+  const hostile = '&lt;img src=x onerror=&quot;globalThis.pwned=true&quot;&gt;&lt;p&gt;Fixes&lt;/p&gt;';
+
+  it('shows the notes as plain text, never parsed, when DOMPurify is missing', async () => {
+    delete window.DOMPurify;
+    const { body, innerHTMLWrites, notify } = setup();
+
+    await notify({ detail: { name: '4.5.0', notes: hostile } });
+
+    expect(innerHTMLWrites).toEqual([]);
+    expect(body.textContent).toBe('<img src=x onerror="globalThis.pwned=true"><p>Fixes</p>');
+  });
+
+  it('renders DOMPurify-sanitized notes when it is available', async () => {
+    const sanitize = vi.fn(() => '<p>Fixes</p>');
+    window.DOMPurify = { sanitize };
+    const { body, innerHTMLWrites, notify } = setup();
+
+    await notify({ detail: { name: '4.5.0', notes: hostile } });
+
+    expect(sanitize).toHaveBeenCalledWith(expect.stringContaining('<img'), expect.objectContaining({ ALLOWED_ATTR: ['href', 'target', 'rel'] }));
+    expect(innerHTMLWrites).toEqual(['<p>Fixes</p>']);
+    expect(body.textContent).toBe('');
+    delete window.DOMPurify;
+  });
+});

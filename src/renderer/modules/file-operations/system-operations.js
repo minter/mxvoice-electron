@@ -133,7 +133,11 @@ export async function startUpdateProcess(options = {}) {
     // Show error in modal body
     const modalBody = document.querySelector('#newReleaseModal .modal-body');
     if (modalBody) {
-      modalBody.innerHTML += `<div class="alert alert-danger mt-2">Update failed: ${error?.message}</div>`;
+      // Text, not markup: the message can carry text from the update server
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-danger mt-2';
+      alert.textContent = `Update failed: ${error?.message}`;
+      modalBody.appendChild(alert);
     }
     
     return { success: false, error: error?.message };
