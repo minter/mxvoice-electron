@@ -22,6 +22,68 @@ try {
 import * as categoryOperations from './category-operations.js';
 
 /**
+ * Build a category management row without parsing database values as markup.
+ *
+ * @param {{code: string, description: string}} row - Category data from the database
+ * @returns {HTMLDivElement} - The populated category row
+ */
+function createCategoryRow(row) {
+  const rowDiv = document.createElement('div');
+  rowDiv.className = 'row g-2 mb-3';
+
+  const descriptionColumn = document.createElement('div');
+  descriptionColumn.className = 'col-sm-8';
+
+  const description = document.createElement('div');
+  description.className = 'category-description';
+  description.setAttribute('catcode', row.code);
+  description.textContent = row.description;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'form-control form-control-sm categoryDescription';
+  input.style.display = 'none';
+  input.setAttribute('catcode', row.code);
+  input.id = `categoryDescription-${row.code}`;
+  input.value = row.description;
+  input.required = true;
+
+  descriptionColumn.appendChild(description);
+  descriptionColumn.appendChild(input);
+
+  const actionsColumn = document.createElement('div');
+  actionsColumn.className = 'col-sm-4';
+
+  const editBtn = document.createElement('a');
+  editBtn.className = 'btn btn-primary btn-xs category-edit-btn';
+  editBtn.setAttribute('href', '#');
+  editBtn.setAttribute('data-event-setup', 'true');
+  editBtn.textContent = 'Edit';
+  editBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    editCategoryUI(row.code);
+  });
+
+  const spacer = document.createElement('span');
+  spacer.textContent = '\u00a0';
+
+  const deleteBtn = document.createElement('a');
+  deleteBtn.className = 'delete_link btn btn-danger btn-xs category-delete-btn';
+  deleteBtn.setAttribute('href', '#');
+  deleteBtn.setAttribute('data-event-setup', 'true');
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.addEventListener('click', (event) => deleteCategoryUI(event, row.code, row.description));
+
+  actionsColumn.appendChild(editBtn);
+  actionsColumn.appendChild(spacer);
+  actionsColumn.appendChild(deleteBtn);
+  rowDiv.appendChild(descriptionColumn);
+  rowDiv.appendChild(actionsColumn);
+
+  return rowDiv;
+}
+
+/**
  * Populate the category select dropdown
  * Fetches categories from database and populates the category select dropdown
  * Preserves the currently selected category if one is selected
@@ -126,25 +188,7 @@ function populateCategoriesModal(preserveScroll = false) {
         debugLog?.info('Code:', { module: 'categories', function: 'populateCategoriesModal', code: row.code, description: row.description });
         const container = document.getElementById('categoryList');
         if (container) {
-          const rowDiv = document.createElement('div');
-          rowDiv.className = 'row g-2 mb-3';
-          const safeCode = window.DOMPurify ? window.DOMPurify.sanitize(row.code) : row.code;
-          const safeDesc = window.DOMPurify ? window.DOMPurify.sanitize(row.description) : row.description;
-          rowDiv.innerHTML = `
-            <div class="col-sm-8">
-              <div catcode="${safeCode}" class="category-description">${safeDesc}</div>
-              <input style="display: none;" type="text" class="form-control form-control-sm categoryDescription" catcode="${safeCode}" id="categoryDescription-${safeCode}" value="${safeDesc}" required>
-            </div>
-            <div class="col-sm-4">
-              <a href="#" class="btn btn-primary btn-xs category-edit-btn" data-event-setup="true">Edit</a>&nbsp;
-              <a class="delete_link btn btn-danger btn-xs category-delete-btn" href="#" data-event-setup="true">Delete</a>
-            </div>
-          `;
-          const editBtn = rowDiv.querySelector('.category-edit-btn');
-          if (editBtn) editBtn.addEventListener('click', (e) => { e.preventDefault(); editCategoryUI(row.code); });
-          const deleteBtn = rowDiv.querySelector('.category-delete-btn');
-          if (deleteBtn) deleteBtn.addEventListener('click', (e) => deleteCategoryUI(e, row.code, row.description));
-          container.appendChild(rowDiv);
+          container.appendChild(createCategoryRow(row));
         }
       });
       debugLog?.info('✅ Categories modal populated successfully', { module: 'categories', function: 'populateCategoriesModal' });
@@ -175,9 +219,12 @@ function populateCategoriesModal(preserveScroll = false) {
 function editCategoryUI(code) {
   document.querySelectorAll('.categoryDescription').forEach(el => el.style.display = 'none');
   document.querySelectorAll('.category-description').forEach(el => el.style.display = 'block');
-  const desc = document.querySelector(`.category-description[catcode="${code}"]`);
+  const categoryCode = String(code);
+  const desc = Array.from(document.querySelectorAll('.category-description'))
+    .find(el => el.getAttribute('catcode') === categoryCode);
   if (desc) desc.style.display = 'none';
-  const input = document.querySelector(`.categoryDescription[catcode="${code}"]`);
+  const input = Array.from(document.querySelectorAll('.categoryDescription'))
+    .find(el => el.getAttribute('catcode') === categoryCode);
   if (input) { input.style.display = 'block'; input.select(); }
 }
 
