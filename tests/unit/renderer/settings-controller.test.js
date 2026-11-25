@@ -11,8 +11,9 @@ const { initializeSettingsController } = await import('../../../src/renderer/mod
 
 function setFields(overrides = {}) {
   const defaults = {
-    'preferences-database-directory': { value: '' }, 'preferences-song-directory': { value: '/new-music' },
-    'preferences-hotkey-directory': { value: '' }, 'preferences-fadeout-seconds': { value: '5' },
+    'preferences-database-directory': { value: '', dataset: {} },
+    'preferences-song-directory': { value: '/new-music', dataset: { directoryAuthorization: 'music-token' } },
+    'preferences-hotkey-directory': { value: '', dataset: {} }, 'preferences-fadeout-seconds': { value: '5' },
     'preferences-crossfade-seconds': { value: '2' }, 'preferences-debug-log-enabled': { checked: true },
     'preferences-prerelease-updates': { checked: false }, 'preferences-screen-mode': { value: 'dark' },
     'preferences-analytics-enabled': { checked: true }
@@ -26,7 +27,11 @@ function createAPI() {
   return {
     store: {
       get: vi.fn(async (key) => ({ success: true, value: stored[key] })),
-      set: vi.fn(async () => ({ success: true }))
+      setDirectoryPreference: vi.fn(async (key) => ({
+        success: true,
+        value: key === 'music_directory' ? '/new-music' : stored[key]
+      })),
+      setDebugLogEnabled: vi.fn(async () => ({ success: true }))
     },
     profile: {
       getPreference: vi.fn(async (key) => ({ success: true, value: profileStored[key] })),
@@ -50,8 +55,8 @@ describe('settings controller', () => {
     await controller.savePreferences(event);
 
     expect(event.preventDefault).toHaveBeenCalledOnce();
-    expect(electronAPI.store.set).toHaveBeenCalledWith('database_directory', '/db');
-    expect(electronAPI.store.set).toHaveBeenCalledWith('music_directory', '/new-music');
+    expect(electronAPI.store.setDirectoryPreference).not.toHaveBeenCalledWith('database_directory', expect.anything());
+    expect(electronAPI.store.setDirectoryPreference).toHaveBeenCalledWith('music_directory', 'music-token');
     expect(electronAPI.profile.setPreferences).toHaveBeenCalledWith(expect.objectContaining({
       fade_out_seconds: 5, crossfade_seconds: 2, screen_mode: 'dark'
     }));

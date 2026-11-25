@@ -16,12 +16,12 @@ async function showAnalyticsBannerIfNeeded({
 
   documentTarget.getElementById('analytics-consent-ok')?.addEventListener('click', async () => {
     banner.classList.add('d-none');
-    await electronAPI.store.set('analytics_banner_shown', true);
+    await electronAPI.store.markAnalyticsBannerShown();
   });
 
   documentTarget.getElementById('analytics-consent-disable')?.addEventListener('click', async () => {
     banner.classList.add('d-none');
-    await electronAPI.store.set('analytics_banner_shown', true);
+    await electronAPI.store.markAnalyticsBannerShown();
     await electronAPI.analytics?.setOptOut(true);
   });
 }

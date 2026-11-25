@@ -29,4 +29,13 @@ describe('preload filesystem capability surface', () => {
     expect(contents).toContain('ipcRenderer.invoke(IPC.FILESYSTEM.FILE_DELETE');
     expect(contents).toContain('ipcRenderer.invoke(IPC.FILESYSTEM.SCAN_AUDIO_DIRECTORY');
   });
+
+  it.each(preloadSources)('exposes only typed store mutation in %s', source => {
+    const contents = fs.readFileSync(source, 'utf8');
+    expect(contents).not.toMatch(/IPC\.STORE\.SET(?:[^A-Z_]|$)/);
+    expect(contents).not.toContain('IPC.STORE.DELETE');
+    expect(contents).not.toContain('IPC.STORE.CLEAR');
+    expect(contents).toContain('IPC.STORE.SET_DIRECTORY_PREFERENCE');
+    expect(contents).toContain('IPC.STORE.SET_DEBUG_LOG_ENABLED');
+  });
 });

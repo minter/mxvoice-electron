@@ -226,13 +226,13 @@ describe('secureStore', () => {
     expect(res.success).toBe(false);
   });
 
-  it('set passes key and value', async () => {
+  it('setDebugLogEnabled passes a boolean', async () => {
     setupSecureAPI('store', {
-      set: async (key, val) => ({ success: true }),
+      setDebugLogEnabled: async () => ({ success: true }),
     });
 
-    await secureStore.set('volume', 0.7);
-    expect(window.secureElectronAPI.store.set).toHaveBeenCalledWith('volume', 0.7);
+    await secureStore.setDebugLogEnabled(false);
+    expect(window.secureElectronAPI.store.setDebugLogEnabled).toHaveBeenCalledWith(false);
   });
 
   it('has returns result', async () => {
@@ -244,13 +244,14 @@ describe('secureStore', () => {
     expect(res.has).toBe(true);
   });
 
-  it('delete passes key', async () => {
+  it('setDirectoryPreference passes only a picker capability', async () => {
     setupSecureAPI('store', {
-      delete: async (key) => ({ success: true }),
+      setDirectoryPreference: async () => ({ success: true }),
     });
 
-    await secureStore.delete('oldKey');
-    expect(window.secureElectronAPI.store.delete).toHaveBeenCalledWith('oldKey');
+    await secureStore.setDirectoryPreference('music_directory', 'picker-token');
+    expect(window.secureElectronAPI.store.setDirectoryPreference)
+      .toHaveBeenCalledWith('music_directory', 'picker-token');
   });
 });
 
@@ -313,6 +314,7 @@ describe('secureFileDialog', () => {
 
     const res = await secureFileDialog.showDirectoryPicker('/home');
     expect(res.path).toBe('/home');
+    expect(window.secureElectronAPI.app.showDirectoryPicker).toHaveBeenCalledWith('/home', undefined);
   });
 
   it('returns error when no dialog API available', async () => {

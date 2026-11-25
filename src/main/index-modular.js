@@ -18,11 +18,12 @@ import readlines from 'n-readlines';
 import Store from 'electron-store';
 import log from 'electron-log';
 import electronUpdater from 'electron-updater';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 // Get __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const trustedRendererUrl = pathToFileURL(path.join(__dirname, '..', 'index.html')).href;
 
 // In test mode, allow overriding Electron's userData path to ensure isolation
 // Must run BEFORE creating the Store or computing defaults that depend on userData
@@ -880,7 +881,8 @@ function initializeMainProcessServices() {
     profileSwitcher,
     showSession,
     recoveryStore,
-    installUpdate: installUpdateNow
+    installUpdate: installUpdateNow,
+    trustedRendererUrl
   };
 
   appSetup.initializeAppSetup(dependencies);
@@ -945,6 +947,7 @@ const createWindow = async () => {
     // Check first run (which also checks old config)
     debugLog.info('Checking first run...', { function: "createWindow" });
     await checkFirstRun();
+    ipcHandlers.refreshDirectoryPreferenceAuthority();
     debugLog.info('First run check completed', { function: "createWindow" });
     
     // Initialize database connection for main process
@@ -989,6 +992,7 @@ const createWindow = async () => {
 
     // Migrate old preferences after modules are initialized
     fileOperations.migrateOldPreferences();
+    ipcHandlers.refreshDirectoryPreferenceAuthority();
 
     // Create the menu
     appSetup.createApplicationMenu();

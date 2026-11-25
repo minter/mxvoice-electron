@@ -17,7 +17,10 @@ describe('analytics consent banner', () => {
   it('shows an unseen banner and persists acceptance', async () => {
     const banner = createElement();
     const ok = createElement();
-    const store = { get: vi.fn().mockResolvedValue({ success: true, value: false }), set: vi.fn() };
+    const store = {
+      get: vi.fn().mockResolvedValue({ success: true, value: false }),
+      markAnalyticsBannerShown: vi.fn()
+    };
     const documentTarget = {
       getElementById: (id) => ({
         'analytics-consent-banner': banner,
@@ -28,7 +31,7 @@ describe('analytics consent banner', () => {
     await showAnalyticsBannerIfNeeded({ electronAPI: { store }, documentTarget });
     expect(banner.classList.remove).toHaveBeenCalledWith('d-none');
     await ok.handlers.click();
-    expect(store.set).toHaveBeenCalledWith('analytics_banner_shown', true);
+    expect(store.markAnalyticsBannerShown).toHaveBeenCalledOnce();
   });
 
   it('does not read preferences in the E2E environment', async () => {

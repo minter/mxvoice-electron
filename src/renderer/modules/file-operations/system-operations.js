@@ -15,6 +15,12 @@ try {
   // Debug logger not available
 }
 
+const DIRECTORY_PREFERENCES_BY_ELEMENT_ID = Object.freeze({
+  'preferences-database-directory': 'database_directory',
+  'preferences-song-directory': 'music_directory',
+  'preferences-hotkey-directory': 'hotkey_directory'
+});
+
 /**
  * Opens a directory picker dialog and updates the specified element with the selected path
  * 
@@ -27,14 +33,18 @@ export function pickDirectory(event, element) {
   // Handle both selector strings and element objects
   const el = typeof element === 'string' ? document.querySelector(element) : element;
   const defaultPath = (el && el instanceof Element) ? (el.value || '') : '';
+  const preferenceKey = el?.id ? DIRECTORY_PREFERENCES_BY_ELEMENT_ID[el.id] : undefined;
   
   try {
     if (window.secureElectronAPI?.app?.showDirectoryPicker) {
-      window.secureElectronAPI.app.showDirectoryPicker(defaultPath).then((res) => {
+      window.secureElectronAPI.app.showDirectoryPicker(defaultPath, preferenceKey).then((res) => {
         if (res && res.success && res.data && !res.data.canceled && Array.isArray(res.data.filePaths)) {
           const dir = res.data.filePaths[0];
           if (dir && el && el instanceof Element) {
             el.value = dir;
+            if (preferenceKey && res.data.authorizationToken) {
+              el.dataset.directoryAuthorization = res.data.authorizationToken;
+            }
           }
         }
       });
