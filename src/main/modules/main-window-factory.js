@@ -15,8 +15,21 @@ function openAllowedExternalUrl(shell, rawUrl) {
 
 function installNavigationPolicy(window, { indexPath, shell }) {
   const applicationUrl = pathToFileURL(indexPath).href;
-  const keepInApplication = (event, url) => {
-    if (url === applicationUrl) return;
+  // The page itself, with or without a fragment (an anchor click leaves one,
+  // and a reload then asks for the same document with it)
+  const isApplicationUrl = (rawUrl) => {
+    try {
+      const url = new URL(rawUrl);
+      url.hash = '';
+      return url.href === applicationUrl;
+    } catch {
+      return false;
+    }
+  };
+  // Electron passes the URL on the event; the positional argument is deprecated
+  const keepInApplication = (event, legacyUrl) => {
+    const url = event?.url ?? legacyUrl;
+    if (isApplicationUrl(url)) return;
     event.preventDefault();
     openAllowedExternalUrl(shell, url);
   };
