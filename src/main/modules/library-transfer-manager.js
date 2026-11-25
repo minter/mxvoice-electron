@@ -20,6 +20,7 @@ import os from 'os';
 import electron from 'electron';
 import { createRequire } from 'module';
 import yauzl from 'yauzl';
+import { normalizePreferencesFile } from './profile-preference-files.js';
 
 const { app } = electron;
 const require = createRequire(import.meta.url);
@@ -115,6 +116,32 @@ async function copyDirectoryRecursive(src, dest) {
       await fs.promises.copyFile(srcPath, destPath);
     }
   }
+}
+
+/**
+ * Make each imported profile's backup policy safe before it is copied in.
+ * Out-of-range settings are corrected (older versions could save them); a
+ * preferences file that is unreadable or not JSON refuses the import.
+ */
+async function validateImportedProfilePreferences(profilesDir) {
+  const entries = await fs.promises.readdir(profilesDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+
+    const result = await normalizePreferencesFile(path.join(profilesDir, entry.name, 'preferences.json'));
+    if (!result.success) {
+      return { success: false, error: `Profile ${entry.name} preferences ${result.error}` };
+    }
+    if (result.changed) {
+      debugLog?.warn('Corrected out-of-range backup settings in an imported profile', {
+        module: 'library-transfer-manager',
+        function: 'importLibrary',
+        profile: entry.name,
+        reason: result.warning
+      });
+    }
+  }
+  return { success: true };
 }
 
 /**
@@ -649,6 +676,18 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
         return { success: false, error: 'Invalid archive: it has no database.' };
       }
 
+      const extractedProfiles = path.join(tempDir, 'profiles');
+      if (await pathExists(extractedProfiles)) {
+        const preferencesCheck = await validateImportedProfilePreferences(extractedProfiles);
+        if (!preferencesCheck.success) {
+          debugLog?.warn('Archive has unusable profile preferences', {
+            ...logCtx,
+            error: preferencesCheck.error
+          });
+          return { success: false, error: `Invalid archive: ${preferencesCheck.error}` };
+        }
+      }
+
       // The library is replaced, so every crash-recovery record is stale.
       // End the session first: its fence stops a late write from recreating
       // one before the database or any profile file moves. The records are
@@ -735,7 +774,6 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       }
 
       // Import profiles
-      const extractedProfiles = path.join(tempDir, 'profiles');
       if (await pathExists(extractedProfiles)) {
         progressCallback({ percent: 78, message: 'Importing profiles...' });
         const targetProfilesDir = path.join(userData, 'profiles');

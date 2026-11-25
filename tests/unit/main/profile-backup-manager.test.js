@@ -55,6 +55,69 @@ describe('profile backup manager orchestration', () => {
     expect(listed.backups.some((backup) => backup.mode === 'pre-restore')).toBe(true);
   });
 
+  it.each([
+    ['hostile values', { autoBackupEnabled: true, backupInterval: 1, maxBackupCount: -1, maxBackupAge: -1 }],
+    ['a cleared count field, saved as null by older versions', { autoBackupEnabled: true, backupInterval: 1800000, maxBackupCount: null, maxBackupAge: 2592000000 }],
+    ['a count typed past the limit', { autoBackupEnabled: true, backupInterval: 1800000, maxBackupCount: 150, maxBackupAge: 2592000000 }],
+  ])('restores a backup with out-of-range backup settings (%s), correcting only the restored copy', async (_label, backupSettings) => {
+    await fs.promises.writeFile(path.join(profileDirectory, 'state.json'), '{"tab":"live"}');
+    const created = await manager.createBackup(profileName);
+    const backupPreferences = path.join(
+      manager.getBackupDirectory(profileName),
+      created.backupId,
+      'preferences.json'
+    );
+    const original = JSON.stringify({ volume: 55, backup_settings: backupSettings });
+    await fs.promises.writeFile(backupPreferences, original);
+
+    await expect(manager.checkBackupRestorable(profileName, created.backupId)).resolves.toEqual({ success: true });
+    await expect(manager.restoreBackup(profileName, created.backupId)).resolves.toEqual({ success: true });
+
+    const restored = JSON.parse(await fs.promises.readFile(path.join(profileDirectory, 'preferences.json'), 'utf8'));
+    expect(restored.volume).toBe(55);
+    expect(restored.backup_settings).toMatchObject({
+      autoBackupEnabled: true,
+      maxBackupCount: 25,
+    });
+    expect(restored.backup_settings.backupInterval).toBeGreaterThanOrEqual(15 * 60 * 1000);
+    expect(restored.backup_settings.maxBackupAge).toBeGreaterThanOrEqual(0);
+    // The backup stays exactly as it was taken
+    await expect(fs.promises.readFile(backupPreferences, 'utf8')).resolves.toBe(original);
+  });
+
+  it('keeps automatic backups disabled when correcting a restored policy', async () => {
+    const created = await manager.createBackup(profileName);
+    await fs.promises.writeFile(
+      path.join(manager.getBackupDirectory(profileName), created.backupId, 'preferences.json'),
+      JSON.stringify({ backup_settings: { autoBackupEnabled: false, backupInterval: 1 } })
+    );
+
+    await expect(manager.restoreBackup(profileName, created.backupId)).resolves.toEqual({ success: true });
+
+    const restored = JSON.parse(await fs.promises.readFile(path.join(profileDirectory, 'preferences.json'), 'utf8'));
+    expect(restored.backup_settings.autoBackupEnabled).toBe(false);
+  });
+
+  it('still refuses a backup whose preferences cannot be parsed, before replacing the live profile', async () => {
+    await fs.promises.writeFile(path.join(profileDirectory, 'state.json'), '{"tab":"live"}');
+    const created = await manager.createBackup(profileName);
+    await fs.promises.writeFile(
+      path.join(manager.getBackupDirectory(profileName), created.backupId, 'preferences.json'),
+      '{ not json'
+    );
+
+    await expect(manager.checkBackupRestorable(profileName, created.backupId)).resolves.toMatchObject({
+      success: false,
+      error: 'Backup preferences are not valid JSON'
+    });
+    await expect(manager.restoreBackup(profileName, created.backupId)).resolves.toMatchObject({
+      success: false,
+      error: 'Backup preferences are not valid JSON'
+    });
+    await expect(fs.promises.readFile(path.join(profileDirectory, 'state.json'), 'utf8'))
+      .resolves.toBe('{"tab":"live"}');
+  });
+
   it('reports missing profiles and backup IDs without throwing', async () => {
     await expect(manager.createBackup('Missing Profile')).resolves.toEqual({
       success: false, error: 'Profile directory does not exist'
@@ -183,6 +246,19 @@ describe('profile backup manager orchestration', () => {
   it('skips change-aware backup creation when disabled', async () => {
     await expect(manager.createBackupIfChanged(profileName, { autoBackupEnabled: false })).resolves.toEqual({
       success: true, created: false, reason: 'auto-backup disabled'
+    });
+  });
+
+  it('rejects invalid automatic backup policy before hashing the profile', async () => {
+    await expect(manager.createBackupIfChanged(profileName, {
+      autoBackupEnabled: true,
+      backupInterval: 1,
+      maxBackupCount: -1,
+      maxBackupAge: -1
+    })).resolves.toMatchObject({
+      success: false,
+      created: false,
+      error: expect.stringContaining('Invalid backup settings')
     });
   });
 });

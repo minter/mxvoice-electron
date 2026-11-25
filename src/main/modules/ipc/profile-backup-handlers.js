@@ -7,6 +7,10 @@ import electron from 'electron';
 const { ipcMain } = electron;
 import * as profileManager from '../profile-manager.js';
 import * as profileBackupManager from '../profile-backup-manager.js';
+import {
+  getDefaultBackupSettings,
+  validateBackupSettings
+} from '../profile-preference-validator.js';
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 const { IPC } = ipcChannels;
 
@@ -238,12 +242,7 @@ export function register(deps) {
       }
 
       const preferences = await profileManager.loadProfilePreferences(currentProfile);
-      const backupSettings = preferences?.backup_settings || {
-        autoBackupEnabled: true,
-        backupInterval: 30 * 60 * 1000, // 30 minutes
-        maxBackupCount: 25,
-        maxBackupAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-      };
+      const backupSettings = preferences?.backup_settings || getDefaultBackupSettings();
 
       return { success: true, settings: backupSettings };
     } catch (error) {
@@ -265,6 +264,11 @@ export function register(deps) {
         return { success: false, error: 'No active profile' };
       }
 
+      const validation = validateBackupSettings(settings, { allowMissing: false });
+      if (!validation.valid) {
+        return { success: false, error: `Invalid backup settings: ${validation.error}` };
+      }
+
       debugLog?.info('Profile backup settings save requested', {
         module: 'ipc-handlers',
         function: 'profile:saveBackupSettings',
@@ -275,7 +279,7 @@ export function register(deps) {
       const preferences = await profileManager.loadProfilePreferences(currentProfile);
       const updatedPreferences = {
         ...preferences,
-        backup_settings: settings
+        backup_settings: validation.value
       };
 
       const result = await profileManager.saveProfilePreferences(currentProfile, updatedPreferences);

@@ -27,6 +27,8 @@ import { createBackupDirectoryScanner } from './backup-directory-scanner.js';
 import { createBackupFileOperations } from './backup-file-operations.js';
 import { selectBackupsForRetention } from './backup-retention-policy.js';
 import { createProfileChangeDetector } from './profile-change-detector.js';
+import { validateBackupSettings } from './profile-preference-validator.js';
+import { normalizePreferencesFile } from './profile-preference-files.js';
 import { parseDocument } from './show-document.js';
 import { isPathInside } from './ipc/guards.js';
 
@@ -344,6 +346,17 @@ async function classifyShowsFile(file) {
 }
 
 /**
+ * A backup is restorable unless its preferences cannot be read at all.
+ * Out-of-range backup settings do not block a restore: the backup is the
+ * recovery path, and the restored file is corrected after it is copied in.
+ */
+async function validateBackupPreferences(backupPath) {
+  const result = await normalizePreferencesFile(path.join(backupPath, 'preferences.json'), { write: false });
+  if (!result.success) return { success: false, error: `Backup preferences ${result.error}` };
+  return { success: true };
+}
+
+/**
  * Show names in a backup's shows, in document order, as opening the restored
  * profile would find them: shows.json, else its previous copy. Null for a
  * pre-shows backup (neither file), and 'unreadable' when the profile would
@@ -442,7 +455,7 @@ async function checkBackupRestorable(profileName, backupId) {
   if (!listed || !await pathExists(backupPath)) {
     return { success: false, error: 'Backup does not exist' };
   }
-  return { success: true };
+  return validateBackupPreferences(backupPath);
 }
 
 /**
@@ -463,6 +476,9 @@ async function restoreBackup(profileName, backupId) {
     if (!await pathExists(backupPath)) {
       return { success: false, error: 'Backup does not exist' };
     }
+
+    const preferencesCheck = await validateBackupPreferences(backupPath);
+    if (!preferencesCheck.success) return preferencesCheck;
 
     debugLog?.info('Restoring backup', {
       module: 'profile-backup-manager',
@@ -499,6 +515,28 @@ async function restoreBackup(profileName, backupId) {
     await backupFiles.removeDirectory(profileDir);
     await fs.promises.mkdir(profileDir, { recursive: true });
     await copyDirectoryRecursive(backupPath, profileDir);
+
+    // Correct out-of-range backup settings in the restored copy only; the
+    // backup itself stays as it was taken
+    try {
+      const normalized = await normalizePreferencesFile(path.join(profileDir, 'preferences.json'));
+      if (normalized.success && normalized.changed) {
+        debugLog?.warn('Corrected out-of-range backup settings in a restored profile', {
+          module: 'profile-backup-manager',
+          function: 'restoreBackup',
+          profileName,
+          backupId,
+          reason: normalized.warning
+        });
+      }
+    } catch (error) {
+      debugLog?.warn('Could not correct restored preferences', {
+        module: 'profile-backup-manager',
+        function: 'restoreBackup',
+        profileName,
+        error: error.message
+      });
+    }
     
     debugLog?.info('Backup restored successfully', {
       module: 'profile-backup-manager',
@@ -584,10 +622,20 @@ async function deleteBackup(profileName, backupId) {
 async function cleanupOldBackups(profileName, maxCount, maxAge) {
   try {
     const metadata = await readMetadataSafe(profileName);
-    const { keep: backupsToKeep, remove: backupsToDelete } = selectBackupsForRetention(
+    const selection = selectBackupsForRetention(
       metadata.backups,
       { maxCount, maxAge }
     );
+    if (!selection.valid) {
+      debugLog?.warn('Refusing to clean up backups with an invalid retention policy', {
+        module: 'profile-backup-manager',
+        function: 'cleanupOldBackups',
+        profileName,
+        error: selection.error
+      });
+      return { success: false, error: selection.error };
+    }
+    const { keep: backupsToKeep, remove: backupsToDelete } = selection;
     
     // Delete old backups
     const backupDir = getBackupDirectory(profileName);
@@ -659,8 +707,14 @@ async function hasProfileChanged(profileName) {
  */
 async function createBackupIfChanged(profileName, settings = {}) {
   try {
+    const validation = validateBackupSettings(settings);
+    if (!validation.valid) {
+      return { success: false, created: false, error: `Invalid backup settings: ${validation.error}` };
+    }
+    const validatedSettings = validation.value;
+
     // Check if auto-backup is enabled
-    if (settings.autoBackupEnabled === false) {
+    if (validatedSettings.autoBackupEnabled === false) {
       return { success: true, created: false, reason: 'auto-backup disabled' };
     }
     
@@ -686,10 +740,12 @@ async function createBackupIfChanged(profileName, settings = {}) {
         return metadata;
       });
       
-      // Run cleanup if settings provided
-      if (settings.maxBackupCount && settings.maxBackupAge) {
-        await cleanupOldBackups(profileName, settings.maxBackupCount, settings.maxBackupAge);
-      }
+      // Run cleanup only with the validated retention policy
+      await cleanupOldBackups(
+        profileName,
+        validatedSettings.maxBackupCount,
+        validatedSettings.maxBackupAge
+      );
     }
     
     return { ...result, created: result.success };

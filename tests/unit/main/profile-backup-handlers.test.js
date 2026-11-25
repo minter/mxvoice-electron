@@ -159,8 +159,27 @@ describe('profile backup IPC handlers', () => {
 
     await expect(invoke('profile:saveBackupSettings', settings)).resolves.toEqual({ success: true });
     expect(profiles.saveProfilePreferences).toHaveBeenCalledWith('Default User', {
-      screen_mode: 'dark', backup_settings: settings
+      screen_mode: 'dark',
+      backup_settings: {
+        autoBackupEnabled: false,
+        backupInterval: 30 * 60 * 1000,
+        maxBackupCount: 3,
+        maxBackupAge: 30 * 24 * 60 * 60 * 1000
+      }
     });
+  });
+
+  it('rejects unsafe backup settings before saving profile preferences', async () => {
+    const result = await invoke('profile:saveBackupSettings', {
+      autoBackupEnabled: true,
+      backupInterval: 1,
+      maxBackupCount: -1,
+      maxBackupAge: -1
+    });
+
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('Invalid backup settings') });
+    expect(profiles.loadProfilePreferences).not.toHaveBeenCalled();
+    expect(profiles.saveProfilePreferences).not.toHaveBeenCalled();
   });
 
   it('wraps manager exceptions instead of rejecting IPC calls', async () => {

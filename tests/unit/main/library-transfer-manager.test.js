@@ -591,6 +591,65 @@ describe('importLibrary', () => {
     return importUserData;
   }
 
+  it('imports a profile with out-of-range backup settings, correcting them', async () => {
+    fs.writeFileSync(
+      path.join(testUserData, 'profiles', 'Default User', 'preferences.json'),
+      JSON.stringify({
+        fade_out_seconds: 4,
+        backup_settings: {
+          autoBackupEnabled: true,
+          backupInterval: 1,
+          maxBackupCount: null,
+          maxBackupAge: -1
+        }
+      })
+    );
+    const archivePath = path.join(testUserData, 'unsafe-preferences.mxvlib');
+    await exportLibrary(archivePath);
+
+    const showSession = { end: vi.fn(async () => {}) };
+    const recoveryStore = { clearAll: vi.fn(async () => {}) };
+    const importUserData = importTarget({ showSession, recoveryStore });
+
+    const result = await importLibrary(archivePath);
+
+    expect(result.error).toBeUndefined();
+    expect(result.success).toBe(true);
+    const imported = JSON.parse(fs.readFileSync(
+      path.join(importUserData, 'profiles', 'Default User', 'preferences.json'), 'utf8'
+    ));
+    expect(imported.fade_out_seconds).toBe(4);
+    expect(imported.backup_settings).toMatchObject({ autoBackupEnabled: true, maxBackupCount: 25 });
+    expect(imported.backup_settings.backupInterval).toBeGreaterThanOrEqual(15 * 60 * 1000);
+    expect(imported.backup_settings.maxBackupAge).toBeGreaterThanOrEqual(0);
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  });
+
+  it('refuses an import whose profile preferences are not JSON, before replacing live data', async () => {
+    fs.writeFileSync(
+      path.join(testUserData, 'profiles', 'Default User', 'preferences.json'),
+      '{ not json'
+    );
+    const archivePath = path.join(testUserData, 'broken-preferences.mxvlib');
+    await exportLibrary(archivePath);
+
+    const showSession = { end: vi.fn(async () => {}) };
+    const recoveryStore = { clearAll: vi.fn(async () => {}) };
+    const importUserData = importTarget({ showSession, recoveryStore });
+
+    const result = await importLibrary(archivePath);
+
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringContaining('preferences are not valid JSON')
+    });
+    expect(showSession.end).not.toHaveBeenCalled();
+    expect(recoveryStore.clearAll).not.toHaveBeenCalled();
+    expect(fs.readFileSync(path.join(importUserData, 'mxvoice.db'), 'utf8')).toBe('current-db');
+    expect(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show'))).toBe(true);
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  });
+
   it('a library import that fails validation leaves the session and recovery files alone', async () => {
     // An archive with no database: the export finds none to include
     fs.rmSync(path.join(testUserData, 'mxvoice.db'));
