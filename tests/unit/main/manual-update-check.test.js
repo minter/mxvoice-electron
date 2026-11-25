@@ -102,6 +102,16 @@ describe('runManualUpdateCheck', () => {
     expect(deps.showMessage).toHaveBeenCalledOnce();
   });
 
+  it('does not call an installed build "not installed" when the platform has no updater', async () => {
+    const { deps } = setup({ autoUpdater: null });
+
+    await runManualUpdateCheck(deps);
+
+    const { detail } = deps.showMessage.mock.calls[0][0];
+    expect(detail).toBe("Mx. Voice can't update itself on this system. Download new versions from the releases page.");
+    expect(detail).not.toMatch(/isn't an installed release/);
+  });
+
   it('treats a skipped check (the updater returns null) like a build that cannot update', async () => {
     const { deps } = setup({ checkResult: null });
 
