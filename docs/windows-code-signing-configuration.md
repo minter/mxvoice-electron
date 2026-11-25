@@ -59,36 +59,17 @@ This approach ensures that signed files are included in the installer, and all a
 | Variable | Description | Example | When to Use |
 |----------|-------------|---------|-------------|
 | `SIGNTOOL_PATH` | Custom path to signtool.exe | `C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe` | If signtool not in standard location |
-| `YUBIKEY_CERT_THUMBPRINT` | Certificate thumbprint (SHA1) | `EDE7C77FF916B935C83E7EF7A6BC125A3BDB79D9` | **Recommended** - most reliable |
-| `YUBIKEY_CERT_NAME` | Certificate subject name | `CN=Your Name, O=Your Org` | Alternative to thumbprint |
+
+The allowed publisher certificate thumbprint is pinned in
+`build/win-sign-utils.cjs`. Certificate rotation requires a reviewed source
+change so a mutable release environment cannot select another publisher.
 
 ### Setting Environment Variables
 
 **PowerShell (Temporary - Session Only):**
 ```powershell
-# Recommended: Use thumbprint for precise certificate selection
-$env:YUBIKEY_CERT_THUMBPRINT="EDE7C77FF916B935C83E7EF7A6BC125A3BDB79D9"
-
-# Alternative: Use certificate name
-$env:YUBIKEY_CERT_NAME="Your Certificate Name"
-
 # Optional: Custom signtool path
 $env:SIGNTOOL_PATH="C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
-```
-
-**PowerShell (Permanent - User Level):**
-```powershell
-[Environment]::SetEnvironmentVariable("YUBIKEY_CERT_THUMBPRINT", "EDE7C77FF916B935C83E7EF7A6BC125A3BDB79D9", "User")
-```
-
-**Command Prompt (Temporary - Session Only):**
-```cmd
-set YUBIKEY_CERT_THUMBPRINT=EDE7C77FF916B935C83E7EF7A6BC125A3BDB79D9
-```
-
-**Command Prompt (Permanent - System Level):**
-```cmd
-setx YUBIKEY_CERT_THUMBPRINT "EDE7C77FF916B935C83E7EF7A6BC125A3BDB79D9"
 ```
 
 ### Finding Your Certificate Thumbprint
@@ -205,8 +186,8 @@ SignTool Error: No certificates were found that met all the given criteria.
 **Solution**: 
 - Ensure YubiKey is inserted
 - Verify certificate is in Windows certificate store: `Get-ChildItem Cert:\CurrentUser\My`
-- Set `YUBIKEY_CERT_THUMBPRINT` with correct thumbprint
-- Or set `YUBIKEY_CERT_NAME` with exact certificate subject name
+- Verify its thumbprint matches the publisher pinned in `build/win-sign-utils.cjs`
+- Update the pinned source value through review when the publisher certificate rotates
 
 **PIN prompt for every file:**
 **Solution**: This shouldn't happen with batch signing. If it does, check that:
@@ -333,11 +314,10 @@ Add the following to your `package.json`:
 
 Add Windows signing code to your `afterPack.js` (see this project's `build/afterPack.js` for the implementation).
 
-#### 4. Set Environment Variables
+#### 4. Pin the Publisher Certificate
 
-```powershell
-$env:YUBIKEY_CERT_THUMBPRINT="YOUR_CERTIFICATE_THUMBPRINT"
-```
+Set the expected SHA-1 publisher certificate thumbprint in the signing utility
+and require review for future rotations.
 
 #### 5. Test the Configuration
 

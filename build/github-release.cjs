@@ -33,19 +33,56 @@ async function findReleaseForTag(octokit, { owner, repo, tag, version }) {
   return matches[0] ?? null;
 }
 
-/**
- * Delete an asset of the same name from the release, so a re-run replaces it
- * instead of failing on GitHub's "already_exists".
- *
- * @param {Object} octokit
- * @param {{ owner: string, repo: string, release: Object, name: string }} target
- * @returns {Promise<boolean>} whether an asset was deleted
- */
-async function deleteExistingAsset(octokit, { owner, repo, release, name }) {
-  const existing = (release.assets ?? []).find((asset) => asset.name === name);
-  if (!existing) return false;
-  await octokit.repos.deleteReleaseAsset({ owner, repo, asset_id: existing.id });
-  return true;
+function assertReleaseAssetsAvailable(release, names) {
+  const existingNames = new Set((release.assets ?? []).map((asset) => asset.name));
+  const conflicts = [...new Set(names.filter((name) => existingNames.has(name)))];
+  if (conflicts.length > 0) {
+    throw new Error(
+      `Refusing to replace existing release asset(s): ${conflicts.join(", ")}. ` +
+      "Delete the assets explicitly on GitHub before retrying if replacement is intentional."
+    );
+  }
+}
+
+async function resolveRemoteTagCommit(octokit, { owner, repo, tag }) {
+  let object;
+  try {
+    const response = await octokit.git.getRef({ owner, repo, ref: `tags/${tag}` });
+    object = response.data.object;
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
+
+  const visitedTags = new Set();
+  while (object?.type === "tag") {
+    if (visitedTags.has(object.sha)) {
+      throw new Error(`GitHub tag ${tag} contains a tag cycle`);
+    }
+    visitedTags.add(object.sha);
+    object = (await octokit.git.getTag({ owner, repo, tag_sha: object.sha })).data.object;
+  }
+
+  if (object?.type !== "commit" || !object.sha) {
+    throw new Error(`GitHub tag ${tag} does not resolve to a commit`);
+  }
+  return object.sha;
+}
+
+async function assertRemoteTagTarget(octokit, { owner, repo, tag, release, releaseTarget }) {
+  const remoteTag = release?.tag_name ?? tag;
+  const remoteTarget = await resolveRemoteTagCommit(octokit, { owner, repo, tag: remoteTag });
+  if (!remoteTarget) {
+    if (release) {
+      throw new Error(`GitHub release ${release.id} refers to missing tag ${remoteTag}`);
+    }
+    return;
+  }
+  if (remoteTarget.toLowerCase() !== releaseTarget.toLowerCase()) {
+    throw new Error(
+      `GitHub tag ${remoteTag} targets ${remoteTarget}, not checked-out release commit ${releaseTarget}`
+    );
+  }
 }
 
 /**
@@ -72,6 +109,7 @@ async function ensureRelease(octokit, {
   owner, repo, tag, version, releaseTarget, isDraft, isPrerelease, releaseType, body = null, log = () => {}
 }) {
   let release = await findReleaseForTag(octokit, { owner, repo, tag, version });
+  await assertRemoteTagTarget(octokit, { owner, repo, tag, release, releaseTarget });
   if (!release) {
     log(`Creating new ${isDraft ? "draft " : ""}${releaseType} release ${tag}...`);
     const response = await octokit.repos.createRelease(buildReleaseCreationOptions({
@@ -111,4 +149,11 @@ function releaseNotesBody(projectDir, version, readFile = fs.readFileSync) {
   }
 }
 
-module.exports = { findReleaseForTag, deleteExistingAsset, ensureRelease, releaseNotesBody };
+module.exports = {
+  assertReleaseAssetsAvailable,
+  assertRemoteTagTarget,
+  ensureRelease,
+  findReleaseForTag,
+  releaseNotesBody,
+  resolveRemoteTagCommit
+};

@@ -1,14 +1,16 @@
 // build/win-sign-utils.cjs
 // Shared utilities for Windows code signing with signtool.exe and YubiKey.
-const { execSync, spawnSync } = require("child_process");
+const { execFileSync, spawnSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
+
+const WINDOWS_PUBLISHER_THUMBPRINT = "EDE7C77FF916B935C83E7EF7A6BC125A3BDB79D9";
 
 /**
  * Locate signtool.exe by checking common Windows SDK paths and PATH.
  * @returns {string|null} Resolved path to signtool.exe, or null if not found.
  */
-function findSigntool() {
+function findSigntool(fileSystem = fs, runFile = execFileSync) {
   const candidates = [
     process.env.SIGNTOOL_PATH,
     "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64\\signtool.exe",
@@ -21,9 +23,9 @@ function findSigntool() {
   for (const candidate of candidates) {
     try {
       if (path.isAbsolute(candidate)) {
-        if (fs.existsSync(candidate)) return candidate;
+        if (fileSystem.existsSync(candidate)) return candidate;
       } else {
-        execSync(`where ${candidate}`, { stdio: "ignore" });
+        runFile("where.exe", [candidate], { stdio: "ignore" });
         return candidate;
       }
     } catch {
@@ -36,36 +38,60 @@ function findSigntool() {
 /**
  * Build a signtool sign command for one or more files.
  *
- * Certificate selection priority:
- *   1. YUBIKEY_CERT_THUMBPRINT (/sha1)
- *   2. YUBIKEY_CERT_NAME       (/n)
- *   3. Auto-select             (/a)
- *
- * @param {string}   signtoolPath  Absolute path to signtool.exe
  * @param {string[]} filesToSign   Paths of files to sign
- * @returns {string} The assembled command string ready for execSync.
+ * @returns {string[]} Arguments for signtool.exe.
  */
-function buildSignCommand(signtoolPath, filesToSign) {
-  const certThumbprint = process.env.YUBIKEY_CERT_THUMBPRINT;
-  const certName = process.env.YUBIKEY_CERT_NAME;
+function buildSignArgs(filesToSign) {
+  return [
+    "sign",
+    "/s", "My",
+    "/sha1", WINDOWS_PUBLISHER_THUMBPRINT,
+    "/fd", "sha256",
+    "/td", "sha256",
+    "/tr", "http://ts.ssl.com",
+    ...filesToSign
+  ];
+}
 
-  const parts = [`"${signtoolPath}"`, "sign", "/s", "My"];
+function signFiles(signtoolPath, filesToSign, runFile = execFileSync) {
+  runFile(signtoolPath, buildSignArgs(filesToSign), { stdio: "inherit", timeout: 300000 });
+}
 
-  if (certThumbprint) {
-    parts.push("/sha1", certThumbprint);
-  } else if (certName) {
-    parts.push("/n", `"${certName}"`);
-  } else {
-    parts.push("/a");
+function normalizeThumbprint(value) {
+  return String(value ?? "").replace(/\s/g, "").toUpperCase();
+}
+
+function verifySignedFile(signtoolPath, file, runFile = execFileSync) {
+  runFile(signtoolPath, ["verify", "/pa", "/all", file], { stdio: "ignore" });
+
+  // The path travels in the environment, never in PowerShell's command text:
+  // -Command re-joins its extra arguments without their quotes, which would
+  // cut a path with a space (C:\Users\Some Name\...) at the space
+  const script = [
+    "$signature = Get-AuthenticodeSignature -LiteralPath $env:MXVOICE_SIGNATURE_PATH",
+    "if ($null -eq $signature.SignerCertificate) { exit 2 }",
+    "Write-Output ($signature.Status.ToString() + '|' + $signature.SignerCertificate.Thumbprint)"
+  ].join("; ");
+  const output = runFile(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-Command", script],
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, MXVOICE_SIGNATURE_PATH: file }
+    }
+  ).trim();
+  const result = output.split(/\r?\n/).filter(Boolean).at(-1) ?? "";
+  const separator = result.indexOf("|");
+  const status = separator === -1 ? result : result.slice(0, separator);
+  const thumbprint = separator === -1 ? "" : normalizeThumbprint(result.slice(separator + 1));
+
+  if (status !== "Valid") {
+    throw new Error(`Authenticode status for ${file} is ${status || "missing"}`);
   }
-
-  parts.push("/fd", "sha256", "/td", "sha256", "/tr", "http://ts.ssl.com");
-
-  for (const file of filesToSign) {
-    parts.push(`"${file}"`);
+  if (thumbprint !== WINDOWS_PUBLISHER_THUMBPRINT) {
+    throw new Error(`Signer thumbprint for ${file} is ${thumbprint || "missing"}, expected pinned publisher`);
   }
-
-  return parts.join(" ");
 }
 
 /**
@@ -73,15 +99,7 @@ function buildSignCommand(signtoolPath, filesToSign) {
  * @param {string} prefix  Log prefix, e.g. "[afterPack]"
  */
 function logCertInfo(prefix) {
-  const certThumbprint = process.env.YUBIKEY_CERT_THUMBPRINT;
-  const certName = process.env.YUBIKEY_CERT_NAME;
-  if (certThumbprint) {
-    console.log(`${prefix} Certificate: thumbprint ${certThumbprint}`);
-  } else if (certName) {
-    console.log(`${prefix} Certificate: ${certName}`);
-  } else {
-    console.log(`${prefix} Certificate: auto-select`);
-  }
+  console.log(`${prefix} Certificate: pinned thumbprint ${WINDOWS_PUBLISHER_THUMBPRINT}`);
 }
 
 const AUTHENTICODE_INSPECTION = `
@@ -175,9 +193,12 @@ function verifyExpectedPublisher(filePath, expectedPublishers, runPowerShell = s
 }
 
 module.exports = {
+  WINDOWS_PUBLISHER_THUMBPRINT,
+  buildSignArgs,
   findSigntool,
-  buildSignCommand,
-  logCertInfo,
   inspectAuthenticodeSignature,
-  verifyExpectedPublisher
+  logCertInfo,
+  signFiles,
+  verifyExpectedPublisher,
+  verifySignedFile
 };

@@ -27,7 +27,7 @@ Signs all Windows executables and DLLs in `win-unpacked` BEFORE the installer is
 - Runs during `afterPack` hook (before installer creation)
 - Uses YubiKey smart card certificate for signing
 - **Reduces PIN prompts to ONE** by signing all files in one command (YubiKey caches PIN per process)
-- Auto-selects certificate or uses specified certificate name/thumbprint
+- Selects the repository-pinned certificate thumbprint
 - Ensures signed files are included in the installer
 
 ### `signAllWindows.cjs`
@@ -44,12 +44,15 @@ Post-build script that signs the installer and uninstaller after they're created
 - YubiKey with code signing certificate imported into Windows certificate store
 - Optional environment variables:
   - `SIGNTOOL_PATH` - Custom path to signtool.exe (if not in standard location)
-  - `YUBIKEY_CERT_THUMBPRINT` - Certificate thumbprint (recommended, most reliable)
-  - `YUBIKEY_CERT_NAME` - Certificate subject name (alternative to thumbprint)
   - YubiKey PIN will be prompted once for all files
 
+The publisher certificate thumbprint is pinned in `win-sign-utils.cjs`. Signing
+selects only the configured installer and NSIS uninstaller names, rejects extra
+top-level executables, and stops unless every produced signature is valid and
+matches that pinned publisher.
+
 ### `publishWindows.cjs`
-Publishes signed Windows builds to GitHub releases. Handles uploading the signed installer and associated files after the signing process is complete. Finds or creates the release through `github-release.cjs`, so it adds to a release (draft or published) another platform already made. Re-uploading a file replaces it. Supports `--draft` and `--prerelease` flags.
+Publishes signed Windows builds to GitHub releases. Handles uploading the signed installer and associated files after the signing process is complete. Finds or creates the release through `github-release.cjs`, so it adds to a release (draft or published) another platform already made. Existing same-named assets are rejected instead of replaced. Supports `--draft` and `--prerelease` flags.
 
 ### `ensureRelease.cjs`
 Runs first in the macOS and Linux `release:*` scripts: finds or creates the version's release, with the requested `--draft` / `--prerelease` flags, before electron-builder uploads to it. electron-builder would otherwise create the release itself, and two artifacts finishing together can each create one (4.4.0-beta.1 got two). The scripts also set `EP_GH_IGNORE_TIME=true`, so electron-builder still uploads to a published release more than 2 hours old.
@@ -57,16 +60,19 @@ Runs first in the macOS and Linux `release:*` scripts: finds or creates the vers
 ### `github-release.cjs`
 One release per tag, whichever platform publishes first and in whichever mode. Lists releases (drafts included; GitHub's get-release-by-tag misses drafts), stops if the tag already has more than one release, and creates a missing release at the exact checked-out commit with `docs/release-notes/v<version>.md` as its notes when that file exists. A draft stays a draft until published on GitHub; a draft publish turns a published release back into a draft.
 
-### `release-target.cjs`
-Resolves and validates the full commit SHA at `HEAD` for release creation. Publishing stops if the release commit cannot be determined.
+### `prepareRelease.cjs` and `release-target.cjs`
+Release commands first require a clean detached checkout at the exact local
+`v<package version>` tag, including no untracked files, and an absent or empty
+`dist/` directory. Existing GitHub tags must resolve to that same commit before
+their release can be reused.
 
 ### `win-sign-utils.cjs`
-Shared utilities for Windows code signing. Provides `findSigntool()` (signtool.exe path discovery), `buildSignCommand()` (certificate selection and command assembly), and `logCertInfo()` (log which cert method is active). Used by both `afterPack.js` and `signAllWindows.cjs`.
+Shared utilities for Windows code signing. Provides signtool.exe discovery, pinned certificate selection, batch signing, and fail-closed signature verification. Used by both `afterPack.js` and `signAllWindows.cjs`.
 
 ## Release Steps
 
 1. Set the version in `package.json` and write `docs/release-notes/v<version>.md`; it becomes the release body (users see it in Update Available).
-2. Publish each platform with the same mode, in any order: `release:mac:draft` / `release:win:draft` (recommended: nobody sees the release until you publish it on GitHub), or the `:prerelease` / plain scripts. Each run adds its files to the one release for the tag; a second run of the same platform replaces its files.
+2. Create and check out the version tag in detached mode, then publish each platform with the same mode: `release:mac:draft` / `release:win:draft` (recommended: nobody sees the release until you publish it on GitHub), or the `:prerelease` / plain scripts. Each run needs an empty `dist/` and adds new files to the one release for the tag. Existing same-named assets are never replaced automatically.
 3. For a draft, check the files on GitHub, then publish it (marked as a pre-release for a beta).
 
 ## Build Process Flow

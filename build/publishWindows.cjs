@@ -5,8 +5,9 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const { resolveReleaseTarget } = require("./release-target.cjs");
-const { deleteExistingAsset, ensureRelease, releaseNotesBody } = require("./github-release.cjs");
-const { verifyExpectedPublisher } = require("./win-sign-utils.cjs");
+const { resolveWindowsReleaseArtifacts } = require("./release-artifacts.cjs");
+const { assertReleaseAssetsAvailable, ensureRelease, releaseNotesBody } = require("./github-release.cjs");
+const { findSigntool, verifyExpectedPublisher, verifySignedFile } = require("./win-sign-utils.cjs");
 
 if (process.platform !== "win32") {
   console.log("[publishWindows] Skipping - not Windows platform");
@@ -32,29 +33,39 @@ if (!publishConfig || publishConfig.provider !== "github") {
 const owner = publishConfig.owner;
 const repo = publishConfig.repo;
 const tag = `v${version}`;
-const releaseTarget = resolveReleaseTarget(process.cwd());
+const releaseTarget = resolveReleaseTarget(process.cwd(), tag);
 
-// Find artifacts matching the current version
-const entries = fs.readdirSync(distDir);
-const installerFile = entries.find(entry => {
-  const lower = entry.toLowerCase();
-  // Must be a setup exe AND match the current version
-  return lower.endsWith(".exe") && lower.includes("setup") && entry.includes(version);
-});
-
-if (!installerFile) {
-  console.error(`[publishWindows] Installer file for version ${version} not found in dist/`);
-  console.error(`[publishWindows] Available files: ${entries.filter(e => e.endsWith(".exe")).join(", ")}`);
+let windowsArtifacts;
+try {
+  windowsArtifacts = resolveWindowsReleaseArtifacts(distDir, packageJson);
+} catch (error) {
+  console.error(`[publishWindows] ${error.message}`);
   process.exit(1);
 }
 
-const installerPath = path.join(distDir, installerFile);
+const { installerName: installerFile, installerPath } = windowsArtifacts;
+const signtoolPath = findSigntool();
+if (!signtoolPath) {
+  console.error("[publishWindows] signtool.exe not found; cannot verify the publisher signature");
+  process.exit(1);
+}
+
+try {
+  verifySignedFile(signtoolPath, installerPath);
+} catch (error) {
+  console.error(`[publishWindows] Refusing to publish an untrusted installer: ${error.message}`);
+  process.exit(1);
+}
+
+const signedInstallerData = fs.readFileSync(installerPath);
 const blockMapFile = installerFile + ".blockmap";
 const blockMapPath = path.join(distDir, blockMapFile);
 
 // Metadata hashes only prove that the host served self-consistent bytes. The
-// installer's Authenticode identity is the independent publisher boundary, so
-// verify it before regenerating metadata or contacting GitHub.
+// installer's Authenticode identity is the independent publisher boundary.
+// verifySignedFile (above) pins the exact certificate; this also confirms the
+// signer's name is the publisherName that installed clients enforce, so a
+// release can never be signed by a certificate the clients would then refuse.
 let installerSignature;
 try {
   installerSignature = verifyExpectedPublisher(installerPath, packageJson.build?.win?.publisherName);
@@ -64,7 +75,7 @@ try {
 }
 console.log(`[publishWindows] Verified publisher ${installerSignature.publisher} (${installerSignature.thumbprint})`);
 
-const artifacts = [{ name: installerFile, path: installerPath }];
+const artifacts = [{ name: installerFile, path: installerPath, data: signedInstallerData }];
 
 // Regenerate the blockmap from the signed installer.
 // electron-builder generates the blockmap before code signing, so its block
@@ -91,9 +102,8 @@ async function regenerateBlockMap() {
 // electron-builder generates latest.yml before signing, so the sha512 is stale
 const latestYmlPath = path.join(distDir, "latest.yml");
 if (fs.existsSync(latestYmlPath)) {
-  const installerData = fs.readFileSync(installerPath);
-  const newSha512 = crypto.createHash("sha512").update(installerData).digest("base64");
-  const newSize = installerData.length;
+  const newSha512 = crypto.createHash("sha512").update(signedInstallerData).digest("base64");
+  const newSize = signedInstallerData.length;
 
   let latestYml = fs.readFileSync(latestYmlPath, "utf8");
   const oldSha512Match = latestYml.match(/sha512: (.+)/);
@@ -160,18 +170,14 @@ const octokit = new Octokit({ auth: token });
       body: releaseNotesBody(process.cwd(), version),
       log: (message) => console.log(`[publishWindows] ${message}`)
     });
+    assertReleaseAssetsAvailable(release, artifacts.map((artifact) => artifact.name));
 
     // Upload artifacts
     for (const artifact of artifacts) {
-      const fileSize = fs.statSync(artifact.path).size;
+      const fileContent = artifact.data ?? fs.readFileSync(artifact.path);
+      const fileSize = fileContent.length;
       console.log(`[publishWindows] Uploading ${artifact.name} (${(fileSize / 1024 / 1024).toFixed(2)} MB)...`);
-      
-      const fileContent = fs.readFileSync(artifact.path);
-      // A re-run replaces what an earlier, failed run uploaded
-      if (await deleteExistingAsset(octokit, { owner, repo, release, name: artifact.name })) {
-        console.log(`[publishWindows] Replaced the existing ${artifact.name}`);
-      }
-      
+
       await octokit.repos.uploadReleaseAsset({
         owner,
         repo,

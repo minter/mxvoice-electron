@@ -2,9 +2,16 @@ import { createRequire } from 'node:module';
 import { describe, expect, it, vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const { findReleaseForTag, deleteExistingAsset, ensureRelease, releaseNotesBody } = require('../../../build/github-release.cjs');
+const {
+  assertReleaseAssetsAvailable,
+  ensureRelease,
+  findReleaseForTag,
+  releaseNotesBody,
+  resolveRemoteTagCommit
+} = require('../../../build/github-release.cjs');
 
 const target = { owner: 'minter', repo: 'mxvoice-electron', tag: 'v4.4.0-beta.2', version: '4.4.0-beta.2' };
+const SHA = '535cab792e0eb49f83c17def861fa969ce7f0b3c';
 
 function octokitWith(releases) {
   const listReleases = vi.fn();
@@ -13,9 +20,12 @@ function octokitWith(releases) {
     octokit: {
       repos: {
         listReleases,
-        deleteReleaseAsset: vi.fn().mockResolvedValue({}),
         createRelease: vi.fn(async (options) => ({ data: { id: 500, tag_name: options.tag_name, draft: options.draft, prerelease: options.prerelease, assets: [] } })),
         updateRelease: vi.fn(async ({ release_id, ...flags }) => ({ data: { id: release_id, tag_name: 'v4.4.0-beta.2', draft: false, prerelease: false, ...flags } }))
+      },
+      git: {
+        getRef: vi.fn().mockResolvedValue({ data: { object: { type: 'commit', sha: SHA } } }),
+        getTag: vi.fn()
       },
       paginate: vi.fn().mockResolvedValue(releases)
     }
@@ -52,24 +62,42 @@ describe('findReleaseForTag', () => {
   });
 });
 
-describe('deleteExistingAsset', () => {
-  it('deletes an asset of the same name so the upload replaces it', async () => {
+describe('remote release tag', () => {
+  it('dereferences an annotated GitHub tag to its commit', async () => {
     const { octokit } = octokitWith([]);
-    const release = { id: 1, assets: [{ id: 77, name: 'latest.yml' }, { id: 78, name: 'Setup.exe' }] };
+    octokit.git.getRef.mockResolvedValue({ data: { object: { type: 'tag', sha: 'tag-object-sha' } } });
+    octokit.git.getTag.mockResolvedValue({ data: { object: { type: 'commit', sha: SHA } } });
 
-    await expect(deleteExistingAsset(octokit, { ...target, release, name: 'latest.yml' })).resolves.toBe(true);
-    expect(octokit.repos.deleteReleaseAsset).toHaveBeenCalledWith({ owner: 'minter', repo: 'mxvoice-electron', asset_id: 77 });
+    await expect(resolveRemoteTagCommit(octokit, { ...target, tag: target.tag })).resolves.toBe(SHA);
+    expect(octokit.git.getTag).toHaveBeenCalledWith({
+      owner: target.owner,
+      repo: target.repo,
+      tag_sha: 'tag-object-sha'
+    });
   });
 
-  it('leaves the release alone when there is no such asset', async () => {
+  it('reports an absent remote tag without substituting a branch', async () => {
     const { octokit } = octokitWith([]);
-    await expect(deleteExistingAsset(octokit, { ...target, release: { id: 1, assets: [] }, name: 'latest.yml' })).resolves.toBe(false);
-    await expect(deleteExistingAsset(octokit, { ...target, release: { id: 1 }, name: 'latest.yml' })).resolves.toBe(false);
-    expect(octokit.repos.deleteReleaseAsset).not.toHaveBeenCalled();
+    octokit.git.getRef.mockRejectedValue(Object.assign(new Error('Not Found'), { status: 404 }));
+    await expect(resolveRemoteTagCommit(octokit, { ...target, tag: target.tag })).resolves.toBeNull();
   });
 });
 
-const SHA = '535cab792e0eb49f83c17def861fa969ce7f0b3c';
+describe('release assets', () => {
+  it('rejects replacing any existing same-named asset', () => {
+    const release = { id: 1, assets: [{ id: 77, name: 'latest.yml' }, { id: 78, name: 'Setup.exe' }] };
+
+    expect(() => assertReleaseAssetsAvailable(release, ['Setup.exe', 'latest.yml']))
+      .toThrow('Refusing to replace existing release asset(s): Setup.exe, latest.yml');
+  });
+
+  it('allows a first upload and additions from another platform', () => {
+    const release = { id: 1, assets: [{ id: 70, name: 'Mx.-Voice-4.4.0-universal.dmg' }] };
+    expect(() => assertReleaseAssetsAvailable(release, ['Mx.-Voice-Setup-4.4.0.exe', 'latest.yml']))
+      .not.toThrow();
+  });
+});
+
 const publish = (mode) => ({
   ...target,
   releaseTarget: SHA,
@@ -99,6 +127,14 @@ describe('ensureRelease', () => {
     const { octokit } = octokitWith([]);
     await ensureRelease(octokit, publish('draft'));
     expect(octokit.repos.createRelease).toHaveBeenCalledWith(expect.objectContaining({ draft: true, generate_release_notes: true }));
+  });
+
+  it('creates a release when the exact local tag has not been pushed yet', async () => {
+    const { octokit } = octokitWith([]);
+    octokit.git.getRef.mockRejectedValue(Object.assign(new Error('Not Found'), { status: 404 }));
+
+    await expect(ensureRelease(octokit, publish('release'))).resolves.toMatchObject({ created: true });
+    expect(octokit.repos.createRelease).toHaveBeenCalledWith(expect.objectContaining({ target_commitish: SHA }));
   });
 
   // Whichever platform went first, the second reuses its release
@@ -131,6 +167,28 @@ describe('ensureRelease', () => {
     const { release } = await ensureRelease(octokit, publish('draft'));
     expect(octokit.repos.updateRelease).toHaveBeenCalledWith({ owner: 'minter', repo: 'mxvoice-electron', release_id: 7, draft: true });
     expect(release.draft).toBe(true);
+  });
+
+  it('rejects an existing release whose tag targets another commit', async () => {
+    const existing = { id: 7, tag_name: 'v4.4.0-beta.2', draft: true, prerelease: false };
+    const { octokit } = octokitWith([existing]);
+    octokit.git.getRef.mockResolvedValue({
+      data: { object: { type: 'commit', sha: '635cab792e0eb49f83c17def861fa969ce7f0b3c' } }
+    });
+
+    await expect(ensureRelease(octokit, publish('prerelease')))
+      .rejects.toThrow('not checked-out release commit');
+    expect(octokit.repos.createRelease).not.toHaveBeenCalled();
+    expect(octokit.repos.updateRelease).not.toHaveBeenCalled();
+  });
+
+  it('rejects an existing release whose tag is missing', async () => {
+    const existing = { id: 7, tag_name: 'v4.4.0-beta.2', draft: true, prerelease: false };
+    const { octokit } = octokitWith([existing]);
+    octokit.git.getRef.mockRejectedValue(Object.assign(new Error('Not Found'), { status: 404 }));
+
+    await expect(ensureRelease(octokit, publish('prerelease')))
+      .rejects.toThrow('GitHub release 7 refers to missing tag v4.4.0-beta.2');
   });
 
   it('stops before creating anything when the tag already has two releases', async () => {
