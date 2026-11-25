@@ -316,6 +316,34 @@ describe('importLibrary', () => {
     fs.rmSync(importUserData, { recursive: true, force: true });
   });
 
+  it('does not make imported files owner-only', async () => {
+    const archivePath = path.join(testUserData, 'for-modes.mxvlib');
+    await exportLibrary(archivePath);
+
+    const importUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-import-'));
+    fakeApp.getPath.mockReturnValue(importUserData);
+    const importConfigPath = path.join(importUserData, 'config.json');
+    fs.writeFileSync(importConfigPath, '{}');
+    initializeLibraryTransferManager({
+      debugLog: mockDebugLog,
+      getDb: () => ({ close: vi.fn() }),
+      store: { get: vi.fn(() => undefined), path: importConfigPath },
+    });
+
+    const result = await importLibrary(archivePath);
+    expect(result.success).toBe(true);
+
+    // The extraction root is already private, and copyFile carries a file's
+    // mode into the library: a music folder shared with other accounts or a
+    // network share must stay readable. (Windows has no group/other bits.)
+    if (process.platform !== 'win32') {
+      const mode = fs.statSync(path.join(importUserData, 'mp3', 'song1.mp3')).mode;
+      expect(mode & 0o044).not.toBe(0);
+    }
+
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  });
+
   it('library import clears all recovery records', async () => {
     const archivePath = path.join(testUserData, 'for-import.mxvlib');
     await exportLibrary(archivePath);

@@ -27,7 +27,6 @@ const { ZipArchive } = require('archiver');
 
 const MANIFEST_VERSION = 1;
 const PRIVATE_DIRECTORY_MODE = 0o700;
-const PRIVATE_FILE_MODE = 0o600;
 const EXTRACTION_WRITE_FLAGS = fs.constants.O_WRONLY
   | fs.constants.O_CREAT
   | fs.constants.O_EXCL
@@ -518,9 +517,11 @@ function extractZipWithProgress(archivePath, destDir, onProgress = () => {}) {
                 return;
               }
 
+              // No explicit mode: the private extraction root already keeps other
+              // users out, and the later copyFile carries a file's mode into the
+              // library, so 0600 here would make imported music owner-only
               const writeStream = fs.createWriteStream(normalizedDest, {
-                flags: EXTRACTION_WRITE_FLAGS,
-                mode: PRIVATE_FILE_MODE
+                flags: EXTRACTION_WRITE_FLAGS
               });
               readStream.pipe(writeStream);
 
