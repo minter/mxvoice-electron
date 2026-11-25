@@ -7,6 +7,7 @@
  * @module analytics
  */
 
+import os from 'os';
 import { PostHog } from 'posthog-node';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,7 +16,7 @@ const POSTHOG_API_KEY = 'phc_qJdKChSMdVxUjNJZyx7dnTaeti64Vd2F5R2rvM8iDXkH';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 // Error events are throttled so one install stuck in an error loop can't flood
-// the project: each distinct safe diagnostic is reported once per session, up to a cap.
+// the project: each distinct diagnostic is reported once per session, up to a cap.
 const ERROR_EVENTS = new Set(['app_error', 'renderer_error']);
 const ALLOWED_ERROR_CODES = new Set([
   'main_uncaught_exception',
@@ -29,6 +30,9 @@ const DEFAULT_ERROR_CODES = {
 };
 const MAX_ERROR_EVENTS_PER_SESSION = 20;
 const MAX_APP_STACK_FRAMES = 10;
+// Keeps repeats grouping together and stops a message that embeds a stack or
+// headers (e.g. electron-updater HTTP errors) from being sent whole
+const MAX_ERROR_MESSAGE_LENGTH = 300;
 const APP_STACK_LOCATION = /(?:^|[/(])(src\/(?:(?:main|renderer|preload|shared)(?:\/[A-Za-z0-9_][A-Za-z0-9_.-]*)+|(?:launcher|renderer)\.js)(?::\d+){0,2})\)?\s*$/;
 // Bound the final flush on exit: posthog-node defaults to 30s with retries,
 // which would stall quitting or switching profiles when offline
@@ -48,17 +52,48 @@ function reduceStackTrace(stack) {
 }
 
 /**
- * Error telemetry accepts only a stable category and safe app source frames.
- * Raw messages and all other caller-supplied properties are intentionally dropped.
+ * Best-effort removal of local file paths from an error message: the user's
+ * home directory, quoted absolute paths (which may contain spaces), and any
+ * other absolute path, which runs to the end of the line because an unquoted
+ * path cannot be told apart from the words after it. App-relative paths such
+ * as src/main/index.js are left alone.
+ */
+function redactPaths(text) {
+  let out = text;
+  const home = os.homedir?.();
+  if (home && home.length > 1) {
+    out = out.split(home).join('~').split(home.replace(/\\/g, '/')).join('~');
+  }
+  return out
+    .replace(/(['"`])(?:[A-Za-z]:[\\/]|\/|file:\/\/)[^\n]*?\1/g, '<path>')
+    .replace(/(^|[\s(=:])(?:[A-Za-z]:[\\/]|\/[^\s/]|file:\/\/)[^\n]*/g, '$1<path>');
+}
+
+/**
+ * First line of an error message, paths redacted and length capped.
+ */
+function reduceErrorMessage(message) {
+  if (typeof message !== 'string') return undefined;
+  const firstLine = message.split('\n')[0].trim();
+  if (!firstLine) return undefined;
+  return redactPaths(firstLine).slice(0, MAX_ERROR_MESSAGE_LENGTH);
+}
+
+/**
+ * Error telemetry accepts a stable category, the first line of the message with
+ * local paths redacted, and safe app source frames. Every other caller-supplied
+ * property is dropped.
  */
 function reduceErrorProperties(name, properties) {
   const requestedCode = properties?.error_code;
   const errorCode = ALLOWED_ERROR_CODES.has(requestedCode)
     ? requestedCode
     : DEFAULT_ERROR_CODES[name];
+  const errorMessage = reduceErrorMessage(properties?.error_message);
   const stackTrace = reduceStackTrace(properties?.stack_trace);
   return {
     error_code: errorCode,
+    ...(errorMessage && { error_message: errorMessage }),
     ...(stackTrace && { stack_trace: stackTrace }),
   };
 }
@@ -90,7 +125,7 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessi
    */
   function shouldThrottleError(name, properties) {
     if (!ERROR_EVENTS.has(name)) return false;
-    const key = `${name}:${properties.error_code}:${properties.stack_trace ?? ''}`;
+    const key = `${name}:${properties.error_code}:${properties.error_message ?? ''}:${properties.stack_trace ?? ''}`;
     if (reportedErrors.has(key) || reportedErrors.size >= MAX_ERROR_EVENTS_PER_SESSION) return true;
     reportedErrors.add(key);
     return false;

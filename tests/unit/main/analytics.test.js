@@ -8,6 +8,7 @@
  * - Safe error diagnostic reduction
  * - Shutdown/flush behavior
  */
+import os from 'os';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock posthog-node
@@ -175,23 +176,64 @@ describe('analytics module', () => {
   });
 
   describe('error diagnostics', () => {
-    it('drops messages and reduces paths with spaces or Unicode to app-relative frames', () => {
+    it('keeps the first line of the message with paths redacted, and app-relative frames', () => {
       const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 
       analytics.trackEvent('app_error', {
         error_code: 'main_uncaught_exception',
-        error_message: 'Failed to open /Users/Zoë Smith/private/audio.mp3',
+        error_message: 'Failed to open /Users/Zoë Smith/private/audio.mp3\n    at second line',
         stack_trace: 'Error: /Users/Zoë Smith/private/audio.mp3\n    at load (file:///Users/Zoë Smith/Mx Voice/src/main/index.js:42:5)',
       });
 
       const capturedProps = mockCapture.mock.calls[0][0].properties;
       expect(capturedProps).toMatchObject({
         error_code: 'main_uncaught_exception',
+        error_message: 'Failed to open <path>',
         stack_trace: 'src/main/index.js:42:5',
       });
-      expect(capturedProps).not.toHaveProperty('error_message');
-      expect(capturedProps.stack_trace).not.toContain('Zoë Smith');
+      expect(JSON.stringify(capturedProps)).not.toContain('Zoë');
+      expect(JSON.stringify(capturedProps)).not.toContain('Smith');
+    });
+
+    it.each([
+      ['ENOENT: no such file or directory, open \'/Users/alice/My Music/a b.mp3\'', 'ENOENT: no such file or directory, open <path>'],
+      ['ENOENT: no such file or directory, open "C:\\Users\\Renée Smith\\a.mp3"', 'ENOENT: no such file or directory, open <path>'],
+      ['Cannot load C:\\Users\\Renée Smith\\Mx Voice\\x.js', 'Cannot load <path>'],
+      ['Failed to fetch file:///Users/alice/My Music/a.mp3', 'Failed to fetch <path>'],
+      ['(/Volumes/Shows/Spring Gala/a.mp3) is missing', '(<path>'],
+      ['Cannot read properties of undefined (reading \'title\')', 'Cannot read properties of undefined (reading \'title\')'],
+      ['Unexpected token < in JSON at position 0', 'Unexpected token < in JSON at position 0'],
+      ['Request failed with application/json', 'Request failed with application/json'],
+    ])('redacts local paths in a message: %s', (message, expected) => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      analytics.trackEvent('renderer_error', { error_code: 'renderer_uncaught_exception', error_message: message });
+
+      expect(mockCapture.mock.calls[0][0].properties.error_message).toBe(expected);
+    });
+
+    it('redacts the home directory wherever it appears', async () => {
+      const home = os.homedir();
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      analytics.trackEvent('app_error', { error_code: 'main_uncaught_exception', error_message: `bad config in ${home}x, see ${home}` });
+
+      const message = mockCapture.mock.calls[0][0].properties.error_message;
+      expect(message).not.toContain(home);
+    });
+
+    it('caps the message length and ignores a missing or non-string message', () => {
+      const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
+      analytics.init();
+
+      analytics.trackEvent('app_error', { error_code: 'main_uncaught_exception', error_message: 'x'.repeat(1000) });
+      analytics.trackEvent('renderer_error', { error_code: 'renderer_uncaught_exception', error_message: 42 });
+
+      expect(mockCapture.mock.calls[0][0].properties.error_message).toHaveLength(300);
+      expect(mockCapture.mock.calls[1][0].properties).not.toHaveProperty('error_message');
     });
 
     it('handles Windows paths and drops frames that are not safe app source locations', () => {
@@ -212,7 +254,7 @@ describe('analytics module', () => {
       expect(mockCapture.mock.calls[0][0].properties.stack_trace).toBe('src/renderer/audio.js:7:9');
     });
 
-    it('replaces unrecognized error codes and drops caller-supplied diagnostic fields', () => {
+    it('replaces unrecognized error codes and drops other caller-supplied fields', () => {
       const analytics = createAnalytics({ store: mockStore, debugLog: mockDebugLog, appVersion: '1.0.0', isPackaged: true });
       analytics.init();
 

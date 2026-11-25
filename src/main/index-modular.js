@@ -687,7 +687,8 @@ async function initializeAnalytics() {
     if (analytics) {
       analytics.trackEvent('app_error', {
         error_code: 'main_uncaught_exception',
-        stack_trace: error.stack,
+        error_message: error?.message,
+        stack_trace: error?.stack,
       });
     }
   });
@@ -696,6 +697,7 @@ async function initializeAnalytics() {
     if (analytics) {
       analytics.trackEvent('app_error', {
         error_code: 'main_unhandled_rejection',
+        error_message: reason instanceof Error ? reason.message : String(reason),
         stack_trace: reason instanceof Error ? reason.stack : undefined,
       });
     }
