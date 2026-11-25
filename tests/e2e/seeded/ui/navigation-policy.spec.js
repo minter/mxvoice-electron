@@ -42,10 +42,15 @@ test.describe('Main window navigation policy', () => {
       window.open('https://example.com/popup');
       window.open('javascript:alert(1)');
       window.open('file:///etc/hosts');
+      window.open('data:text/html,<script>alert(1)</script>');
+      window.open('vbscript:msgbox(1)');
     });
     await expect.poll(opened).toContain('https://example.com/popup');
+    // An allowlist, not a list of bad schemes: whatever else was tried, only
+    // these schemes may have reached the system browser
     const urls = await opened();
-    expect(urls.some((u) => u.startsWith('javascript:') || u.startsWith('file:'))).toBe(false);
+    expect(urls.length).toBeGreaterThan(0);
+    for (const url of urls) expect(url).toMatch(/^(https?|mailto):/);
     expect(app.windows()).toHaveLength(1);
   });
 
