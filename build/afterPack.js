@@ -90,8 +90,7 @@ export default async function afterPack(context) {
 
   // Windows signing - sign all DLLs/EXEs before installer is created
   if (electronPlatformName === "win32") {
-    const { findSigntool, buildSignCommand, logCertInfo } = await import("./win-sign-utils.cjs");
-    const { execSync } = await import("node:child_process");
+    const { findSigntool, logCertInfo, signFiles } = await import("./win-sign-utils.cjs");
 
     // Recursively find DLLs and EXEs
     const filesToSign = walkFiles(appOutDir).filter((p) => {
@@ -114,8 +113,7 @@ export default async function afterPack(context) {
     console.log(`[afterPack] Note: You will be prompted for YubiKey PIN once for all files`);
 
     try {
-      const cmd = buildSignCommand(signtoolPath, filesToSign);
-      execSync(cmd, { stdio: "inherit", timeout: 300000 });
+      signFiles(signtoolPath, filesToSign);
       console.log(`[afterPack] Successfully signed ${filesToSign.length} Windows files`);
     } catch (error) {
       console.error("[afterPack] Failed to sign Windows files:", error.message);

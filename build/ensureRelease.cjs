@@ -36,15 +36,16 @@ const args = process.argv.slice(2);
 const isDraft = args.includes("--draft") || process.env.EP_DRAFT === "true";
 const isPrerelease = args.includes("--prerelease") || process.env.EP_PRE_RELEASE === "true";
 const releaseType = isPrerelease ? "prerelease" : (publishConfig.releaseType || "release");
+const tag = `v${version}`;
 
 (async () => {
   try {
     const { release } = await ensureRelease(new Octokit({ auth: token }), {
       owner: publishConfig.owner,
       repo: publishConfig.repo,
-      tag: `v${version}`,
+      tag,
       version,
-      releaseTarget: resolveReleaseTarget(projectDir),
+      releaseTarget: resolveReleaseTarget(projectDir, tag),
       isDraft,
       isPrerelease,
       releaseType,
