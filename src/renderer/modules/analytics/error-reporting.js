@@ -17,14 +17,18 @@ export function isAbortError(error) {
 
 /**
  * Build `renderer_error` properties, or null when the error should be ignored.
+ * The message is sent as-is here; the analytics sink in the main process keeps
+ * only its first line, redacts local paths and caps its length.
  *
  * @param {*} error - The thrown value or rejection reason
+ * @param {string} errorCode - Stable category assigned by the global error handler
  * @param {string} [fallbackMessage] - Message to use when `error` carries none
- * @returns {{ error_message: string, stack_trace: string|undefined }|null}
+ * @returns {{ error_code: string, error_message: string, stack_trace: string|undefined }|null}
  */
-export function buildRendererErrorReport(error, fallbackMessage) {
+export function buildRendererErrorReport(error, errorCode, fallbackMessage) {
   if (isAbortError(error)) return null;
   return {
+    error_code: errorCode,
     error_message: error instanceof Error ? error.message : (fallbackMessage ?? String(error)),
     stack_trace: error instanceof Error ? error.stack : undefined,
   };

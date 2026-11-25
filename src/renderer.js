@@ -1,11 +1,11 @@
 // Track renderer errors via analytics (intentional aborts are ignored)
 window.addEventListener('error', (event) => {
-  const report = buildRendererErrorReport(event.error, event.message);
+  const report = buildRendererErrorReport(event.error, 'renderer_uncaught_exception', event.message);
   if (report) window.secureElectronAPI?.analytics?.trackEvent?.('renderer_error', report);
 });
 
 window.addEventListener('unhandledrejection', (event) => {
-  const report = buildRendererErrorReport(event.reason);
+  const report = buildRendererErrorReport(event.reason, 'renderer_unhandled_rejection');
   if (report) window.secureElectronAPI?.analytics?.trackEvent?.('renderer_error', report);
 });
 

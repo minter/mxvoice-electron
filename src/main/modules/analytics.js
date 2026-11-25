@@ -1,12 +1,13 @@
 /**
  * Analytics Module
  *
- * Wraps PostHog Node.js SDK for anonymous product analytics.
- * All tracking calls are no-ops when the user has opted out.
+ * Wraps PostHog Node.js SDK for consent-based product analytics.
+ * All tracking calls are no-ops until the user has affirmatively consented.
  *
  * @module analytics
  */
 
+import os from 'os';
 import { PostHog } from 'posthog-node';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,22 +16,86 @@ const POSTHOG_API_KEY = 'phc_qJdKChSMdVxUjNJZyx7dnTaeti64Vd2F5R2rvM8iDXkH';
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 // Error events are throttled so one install stuck in an error loop can't flood
-// the project: each distinct message is reported once per session, up to a cap.
+// the project: each distinct diagnostic is reported once per session, up to a cap.
 const ERROR_EVENTS = new Set(['app_error', 'renderer_error']);
+const ALLOWED_ERROR_CODES = new Set([
+  'main_uncaught_exception',
+  'main_unhandled_rejection',
+  'renderer_uncaught_exception',
+  'renderer_unhandled_rejection',
+]);
+const DEFAULT_ERROR_CODES = {
+  app_error: 'main_uncaught_exception',
+  renderer_error: 'renderer_uncaught_exception',
+};
 const MAX_ERROR_EVENTS_PER_SESSION = 20;
-// Some messages (e.g. electron-updater HTTP errors) embed stacks and headers
+const MAX_APP_STACK_FRAMES = 10;
+// Keeps repeats grouping together and stops a message that embeds a stack or
+// headers (e.g. electron-updater HTTP errors) from being sent whole
 const MAX_ERROR_MESSAGE_LENGTH = 300;
+const APP_STACK_LOCATION = /(?:^|[/(])(src\/(?:(?:main|renderer|preload|shared)(?:\/[A-Za-z0-9_][A-Za-z0-9_.-]*)+|(?:launcher|renderer)\.js)(?::\d+){0,2})\)?\s*$/;
 // Bound the final flush on exit: posthog-node defaults to 30s with retries,
 // which would stall quitting or switching profiles when offline
 const SESSION_END_FLUSH_TIMEOUT_MS = 3000;
 
 /**
- * Reduce an error message to its first line, truncated, so repeats group
- * together and embedded stacks/headers are not sent.
+ * Reduce a stack to allowlisted app-relative source locations. Every other
+ * frame is dropped rather than trying to redact an unknown absolute path.
  */
-function normalizeErrorMessage(message) {
-  if (typeof message !== 'string') return message;
-  return message.split('\n')[0].trim().slice(0, MAX_ERROR_MESSAGE_LENGTH);
+function reduceStackTrace(stack) {
+  if (typeof stack !== 'string') return undefined;
+  const frames = stack.split('\n')
+    .map((line) => line.replace(/\\/g, '/').match(APP_STACK_LOCATION)?.[1])
+    .filter(Boolean)
+    .slice(0, MAX_APP_STACK_FRAMES);
+  return frames.length ? frames.join('\n') : undefined;
+}
+
+/**
+ * Best-effort removal of local file paths from an error message: the user's
+ * home directory, quoted absolute paths (which may contain spaces), and any
+ * other absolute path, which runs to the end of the line because an unquoted
+ * path cannot be told apart from the words after it. App-relative paths such
+ * as src/main/index.js are left alone.
+ */
+function redactPaths(text) {
+  let out = text;
+  const home = os.homedir?.();
+  if (home && home.length > 1) {
+    out = out.split(home).join('~').split(home.replace(/\\/g, '/')).join('~');
+  }
+  return out
+    .replace(/(['"`])(?:[A-Za-z]:[\\/]|\/|file:\/\/)[^\n]*?\1/g, '<path>')
+    .replace(/(^|[\s(=:])(?:[A-Za-z]:[\\/]|\/[^\s/]|file:\/\/)[^\n]*/g, '$1<path>');
+}
+
+/**
+ * First line of an error message, paths redacted and length capped.
+ */
+function reduceErrorMessage(message) {
+  if (typeof message !== 'string') return undefined;
+  const firstLine = message.split('\n')[0].trim();
+  if (!firstLine) return undefined;
+  return redactPaths(firstLine).slice(0, MAX_ERROR_MESSAGE_LENGTH);
+}
+
+/**
+ * Error telemetry accepts a stable category, the first line of the message with
+ * local paths redacted, and safe app source frames. Every other caller-supplied
+ * property is dropped.
+ */
+function reduceErrorProperties(name, properties) {
+  const requestedCode = properties?.error_code;
+  const errorCode = ALLOWED_ERROR_CODES.has(requestedCode)
+    ? requestedCode
+    : DEFAULT_ERROR_CODES[name];
+  const errorMessage = reduceErrorMessage(properties?.error_message);
+  const stackTrace = reduceStackTrace(properties?.stack_trace);
+  return {
+    error_code: errorCode,
+    ...(errorMessage && { error_message: errorMessage }),
+    ...(stackTrace && { stack_trace: stackTrace }),
+  };
 }
 
 /**
@@ -46,8 +111,8 @@ function normalizeErrorMessage(message) {
 export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessionStartTime = Date.now() }) {
   let client = null;
   let deviceId = null;
-  let optedOut = false;
   let initialized = false;
+  let initializationRequested = false;
   let disabled = false;
   const reportedErrors = new Set();
   let sessionEnd = null;
@@ -60,32 +125,34 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessi
    */
   function shouldThrottleError(name, properties) {
     if (!ERROR_EVENTS.has(name)) return false;
-    const key = `${name}:${properties.error_message ?? ''}`;
+    const key = `${name}:${properties.error_code}:${properties.error_message ?? ''}:${properties.stack_trace ?? ''}`;
     if (reportedErrors.has(key) || reportedErrors.size >= MAX_ERROR_EVENTS_PER_SESSION) return true;
     reportedErrors.add(key);
     return false;
   }
 
-  /**
-   * Scrub absolute file paths from a stack trace string.
-   * Keeps the relative path from the project root onward.
-   */
-  function scrubStackTrace(stack) {
-    if (typeof stack !== 'string') return stack;
-    // Replace absolute paths, keeping from src/ or node_modules/ onward
-    return stack.replace(/(?:\/[\w.-]+)+\/(src\/)/g, '$1')
-               .replace(/(?:\/[\w.-]+)+\/(node_modules\/)/g, '$1')
-               .replace(/(?:[A-Z]:\\[\w.-\\]+\\)(src\\)/gi, '$1')
-               .replace(/(?:[A-Z]:\\[\w.-\\]+\\)(node_modules\\)/gi, '$1');
+  function hasAffirmativeConsent() {
+    return store.get('analytics_banner_shown') === true
+      && store.get('analytics_opt_out') === false;
   }
 
   function init() {
-    if (initialized) return;
+    initializationRequested = true;
+    if (initialized || disabled) return;
 
     // Only run analytics in packaged builds unless ANALYTICS_ENABLED=1 is set
     if (!isPackaged && process.env.ANALYTICS_ENABLED !== '1') {
       disabled = true;
       debugLog.info('Analytics disabled (dev/test mode). Set ANALYTICS_ENABLED=1 to override.', {
+        module: 'analytics',
+        function: 'init',
+      });
+      return;
+    }
+
+    // Do not create an identifier or remote client before a stored affirmative choice.
+    if (!hasAffirmativeConsent()) {
+      debugLog.info('Analytics awaiting consent', {
         module: 'analytics',
         function: 'init',
       });
@@ -99,8 +166,6 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessi
       store.set('analytics_device_id', deviceId);
     }
 
-    // Read opt-out preference
-    optedOut = !!store.get('analytics_opt_out');
     pendingInternalTag = !isPackaged || !!store.get('analytics_internal_user');
 
     // Initialize PostHog client
@@ -115,23 +180,21 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessi
       module: 'analytics',
       function: 'init',
       deviceId,
-      optedOut,
+      optedOut: false,
     });
   }
 
   function trackEvent(name, properties = {}) {
-    if (disabled || !initialized || optedOut || !client) return;
+    // This is the shared enforcement boundary for main and renderer callers.
+    if (disabled || !initializationRequested || !hasAffirmativeConsent()) return;
+    // Consent may have been granted after startup; initialize on the first later event.
+    if (!initialized) init();
+    if (!initialized || !client) return;
 
-    const scrubbed = { ...properties };
-    if (ERROR_EVENTS.has(name)) {
-      scrubbed.error_message = normalizeErrorMessage(scrubbed.error_message);
-    }
+    const scrubbed = ERROR_EVENTS.has(name)
+      ? reduceErrorProperties(name, properties)
+      : { ...properties };
     if (shouldThrottleError(name, scrubbed)) return;
-
-    // Scrub stack traces in error events
-    if (scrubbed.stack_trace) {
-      scrubbed.stack_trace = scrubStackTrace(scrubbed.stack_trace);
-    }
 
     client.capture({
       distinctId: deviceId,
@@ -146,7 +209,7 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessi
   }
 
   function setOptOut(value) {
-    optedOut = !!value;
+    const optedOut = !!value;
     store.set('analytics_opt_out', optedOut);
     debugLog.info('Analytics opt-out changed', {
       module: 'analytics',
@@ -156,7 +219,7 @@ export function createAnalytics({ store, debugLog, appVersion, isPackaged, sessi
   }
 
   function getOptOutStatus() {
-    return optedOut;
+    return !!store.get('analytics_opt_out');
   }
 
   async function shutdown(timeoutMs) {

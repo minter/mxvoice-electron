@@ -19,16 +19,25 @@ describe('renderer error reporting', () => {
     expect(buildRendererErrorReport(abortError('The user aborted a request.'))).toBeNull();
   });
 
-  it('reports Error instances with message and stack', () => {
+  it('reports Error instances with a stable code, the message and the stack', () => {
     const error = new Error('boom');
-    expect(buildRendererErrorReport(error)).toEqual({ error_message: 'boom', stack_trace: error.stack });
+    expect(buildRendererErrorReport(error, 'renderer_uncaught_exception')).toEqual({
+      error_code: 'renderer_uncaught_exception',
+      error_message: 'boom',
+      stack_trace: error.stack,
+    });
   });
 
-  it('reports non-Error rejection reasons as strings', () => {
-    expect(buildRendererErrorReport('plain failure')).toEqual({ error_message: 'plain failure', stack_trace: undefined });
-  });
-
-  it('prefers the event message when the error object is missing', () => {
-    expect(buildRendererErrorReport(undefined, 'Script error.')).toEqual({ error_message: 'Script error.', stack_trace: undefined });
+  it('uses the fallback message, then the value itself, when there is no Error', () => {
+    expect(buildRendererErrorReport(null, 'renderer_uncaught_exception', 'Script error.')).toEqual({
+      error_code: 'renderer_uncaught_exception',
+      error_message: 'Script error.',
+      stack_trace: undefined,
+    });
+    expect(buildRendererErrorReport('rejected with text', 'renderer_unhandled_rejection')).toEqual({
+      error_code: 'renderer_unhandled_rejection',
+      error_message: 'rejected with text',
+      stack_trace: undefined,
+    });
   });
 });
