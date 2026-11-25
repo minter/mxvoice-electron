@@ -1,6 +1,38 @@
+import { pathToFileURL } from 'url';
+
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+
+function openAllowedExternalUrl(shell, rawUrl) {
+  if (!shell?.openExternal) return;
+  try {
+    const url = new URL(rawUrl);
+    if (!ALLOWED_EXTERNAL_PROTOCOLS.has(url.protocol)) return;
+    shell.openExternal(url.href)?.catch?.(() => {});
+  } catch {
+    // Invalid and unsupported URLs stay closed.
+  }
+}
+
+function installNavigationPolicy(window, { indexPath, shell }) {
+  const applicationUrl = pathToFileURL(indexPath).href;
+  const keepInApplication = (event, url) => {
+    if (url === applicationUrl) return;
+    event.preventDefault();
+    openAllowedExternalUrl(shell, url);
+  };
+
+  window.webContents.on('will-navigate', keepInApplication);
+  window.webContents.on('will-redirect', keepInApplication);
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    openAllowedExternalUrl(shell, url);
+    return { action: 'deny' };
+  });
+}
+
 function createMainWindow({
   BrowserWindow,
   screen,
+  shell,
   autoUpdater,
   iconPath,
   preloadPath,
@@ -87,6 +119,7 @@ function createMainWindow({
       );
     });
   }
+  installNavigationPolicy(window, { indexPath, shell });
   window.loadFile(indexPath);
   window.once('ready-to-show', () => {
     // Failures are reported by the autoUpdater 'error' handler (update_failed);
