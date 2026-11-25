@@ -6,6 +6,7 @@ const fs = require("fs");
 const crypto = require("crypto");
 const { resolveReleaseTarget } = require("./release-target.cjs");
 const { deleteExistingAsset, ensureRelease, releaseNotesBody } = require("./github-release.cjs");
+const { verifyExpectedPublisher } = require("./win-sign-utils.cjs");
 
 if (process.platform !== "win32") {
   console.log("[publishWindows] Skipping - not Windows platform");
@@ -50,6 +51,18 @@ if (!installerFile) {
 const installerPath = path.join(distDir, installerFile);
 const blockMapFile = installerFile + ".blockmap";
 const blockMapPath = path.join(distDir, blockMapFile);
+
+// Metadata hashes only prove that the host served self-consistent bytes. The
+// installer's Authenticode identity is the independent publisher boundary, so
+// verify it before regenerating metadata or contacting GitHub.
+let installerSignature;
+try {
+  installerSignature = verifyExpectedPublisher(installerPath, packageJson.build?.win?.publisherName);
+} catch (error) {
+  console.error(`[publishWindows] Refusing to publish ${installerFile}: ${error.message}`);
+  process.exit(1);
+}
+console.log(`[publishWindows] Verified publisher ${installerSignature.publisher} (${installerSignature.thumbprint})`);
 
 const artifacts = [{ name: installerFile, path: installerPath }];
 

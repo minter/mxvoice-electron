@@ -41,7 +41,11 @@ export async function runManualUpdateCheck({
     await showMessage({
       type: 'info',
       message: "Can't check for updates",
-      detail: `This copy of ${appName} isn't an installed release, so it can't update itself.`,
+      // No updater at all means this platform has no in-app updates (Linux,
+      // until its artifacts have an independent signature)
+      detail: autoUpdater
+        ? `This copy of ${appName} isn't an installed release, so it can't update itself.`
+        : `${appName} can't update itself on this system. Download new versions from the releases page.`,
     });
     return 'unavailable';
   };
