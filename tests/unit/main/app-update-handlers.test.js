@@ -94,6 +94,26 @@ describe('app update IPC handlers', () => {
     expect(analytics.trackEvent).toHaveBeenCalledWith('auto_update_action', { action: 'accepted' });
   });
 
+  it('arms macOS staging only when the user requests the download', async () => {
+    const autoUpdater = { autoInstallOnAppQuit: false, downloadUpdate: vi.fn().mockResolvedValue([]) };
+    setup(autoUpdater, { platform: 'darwin' });
+
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
+    await invoke('download-update');
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
+  });
+
+  it('disarms macOS staging when the approved download fails', async () => {
+    const autoUpdater = {
+      autoInstallOnAppQuit: false,
+      downloadUpdate: vi.fn().mockRejectedValue(new Error('signature rejected')),
+    };
+    setup(autoUpdater, { platform: 'darwin' });
+
+    await expect(invoke('download-update')).resolves.toMatchObject({ success: false });
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(false);
+  });
+
   it('marks a download in progress so background checks skip it, then clears the mark', async () => {
     let downloadingDuringDownload;
     const autoUpdater = { downloadUpdate: vi.fn(async () => { downloadingDuringDownload = updateState.downloading; return []; }) };
