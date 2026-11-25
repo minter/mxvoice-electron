@@ -144,34 +144,11 @@ export default class UIInteractionEvents {
                 ALLOWED_ATTR: ['href', 'target', 'rel']
               });
             } else {
-              // Fallback: Simple HTML sanitization using browser APIs
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = decodedNotes;
-              
-              // Remove script tags and other dangerous elements
-              const scripts = tempDiv.querySelectorAll('script, style, iframe, object, embed, form, input, button, select, textarea');
-              scripts.forEach(el => el.remove());
-              
-              // Remove dangerous attributes
-              const allElements = tempDiv.querySelectorAll('*');
-              allElements.forEach(el => {
-                // Remove dangerous attributes
-                const dangerousAttrs = ['onload', 'onerror', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'onchange', 'onsubmit'];
-                dangerousAttrs.forEach(attr => el.removeAttribute(attr));
-                
-                // Only allow safe attributes for links
-                if (el.tagName === 'A') {
-                  const href = el.getAttribute('href');
-                  if (href && (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:'))) {
-                    el.setAttribute('target', '_blank');
-                    el.setAttribute('rel', 'noopener noreferrer');
-                  } else {
-                    el.removeAttribute('href');
-                  }
-                }
-              });
-              
-              cleanHTML = tempDiv.innerHTML;
+              // No DOMPurify: show the notes as plain text. Parsing untrusted
+              // HTML (even into a detached node) can run handlers such as
+              // <img onerror>, and a blocklist would miss some.
+              modalBody.textContent = decodedNotes;
+              return;
             }
             
             modalBody.innerHTML = cleanHTML;

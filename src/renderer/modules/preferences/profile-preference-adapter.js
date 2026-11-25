@@ -23,6 +23,12 @@ const GLOBAL_PREFERENCES = [
   'debug_log_enabled'
 ];
 
+const DIRECTORY_PREFERENCES = [
+  'database_directory',
+  'music_directory',
+  'hotkey_directory'
+];
+
 const PROFILE_PREFERENCES = [
   'screen_mode',
   'font_size',
@@ -92,7 +98,7 @@ export async function getPreference(key, electronAPI) {
  * @param {Object} electronAPI - Electron API object
  * @returns {Promise<{success: boolean}>}
  */
-export async function setPreference(key, value, electronAPI) {
+export async function setPreference(key, value, electronAPI, options = {}) {
   // Validate electronAPI
   if (!electronAPI) {
     debugLog?.error('[PREF-ADAPTER] electronAPI is undefined in setPreference', { 
@@ -104,7 +110,6 @@ export async function setPreference(key, value, electronAPI) {
   }
   
   if (GLOBAL_PREFERENCES.includes(key)) {
-    // Use global store for directories
     if (!electronAPI.store) {
       debugLog?.error('[PREF-ADAPTER] electronAPI.store is undefined in setPreference', { 
         module: 'profile-preference-adapter', 
@@ -113,7 +118,16 @@ export async function setPreference(key, value, electronAPI) {
       });
       return { success: false, error: 'electronAPI.store is undefined' };
     }
-    return await electronAPI.store.set(key, value);
+    if (DIRECTORY_PREFERENCES.includes(key)) {
+      if (!electronAPI.store.setDirectoryPreference) {
+        return { success: false, error: 'Directory preference API is unavailable' };
+      }
+      return await electronAPI.store.setDirectoryPreference(key, options.authorizationToken);
+    }
+    if (key === 'debug_log_enabled' && electronAPI.store.setDebugLogEnabled) {
+      return await electronAPI.store.setDebugLogEnabled(value);
+    }
+    return { success: false, error: `Global preference is not renderer-writable: ${key}` };
   }
 
   if (PROFILE_PREFERENCES.includes(key)) {
@@ -146,12 +160,13 @@ export async function getAllProfilePreferences(electronAPI) {
 }
 
 // Export constants as named exports for easier importing
-export { GLOBAL_PREFERENCES, PROFILE_PREFERENCES };
+export { DIRECTORY_PREFERENCES, GLOBAL_PREFERENCES, PROFILE_PREFERENCES };
 
 export default {
   getPreference,
   setPreference,
   getAllProfilePreferences,
+  DIRECTORY_PREFERENCES,
   GLOBAL_PREFERENCES,
   PROFILE_PREFERENCES
 };

@@ -9,7 +9,8 @@ function createAPI() {
   return {
     store: {
       get: vi.fn().mockResolvedValue({ success: true, value: '/music' }),
-      set: vi.fn().mockResolvedValue({ success: true })
+      setDirectoryPreference: vi.fn().mockResolvedValue({ success: true }),
+      setDebugLogEnabled: vi.fn().mockResolvedValue({ success: true })
     },
     profile: {
       getPreference: vi.fn().mockResolvedValue({ success: true, value: 'dark' }),
@@ -26,10 +27,10 @@ describe('profile preference adapter', () => {
       success: true,
       value: '/music'
     });
-    await setPreference('music_directory', '/new-music', api);
+    await setPreference('music_directory', '/new-music', api, { authorizationToken: 'picker-token' });
 
     expect(api.store.get).toHaveBeenCalledWith('music_directory');
-    expect(api.store.set).toHaveBeenCalledWith('music_directory', '/new-music');
+    expect(api.store.setDirectoryPreference).toHaveBeenCalledWith('music_directory', 'picker-token');
     expect(api.profile.getPreference).not.toHaveBeenCalled();
     expect(api.profile.setPreference).not.toHaveBeenCalled();
   });
@@ -46,7 +47,7 @@ describe('profile preference adapter', () => {
     expect(api.profile.getPreference).toHaveBeenCalledWith('screen_mode');
     expect(api.profile.setPreference).toHaveBeenCalledWith('screen_mode', 'light');
     expect(api.store.get).not.toHaveBeenCalled();
-    expect(api.store.set).not.toHaveBeenCalled();
+    expect(api.store.setDirectoryPreference).not.toHaveBeenCalled();
   });
 
   it('does not fall back to global storage when the profile API is missing', async () => {
@@ -63,7 +64,7 @@ describe('profile preference adapter', () => {
     });
 
     expect(api.store.get).not.toHaveBeenCalled();
-    expect(api.store.set).not.toHaveBeenCalled();
+    expect(api.store.setDirectoryPreference).not.toHaveBeenCalled();
   });
 
   it('rejects unknown keys instead of storing them globally', async () => {
@@ -79,6 +80,6 @@ describe('profile preference adapter', () => {
     });
 
     expect(api.store.get).not.toHaveBeenCalled();
-    expect(api.store.set).not.toHaveBeenCalled();
+    expect(api.store.setDirectoryPreference).not.toHaveBeenCalled();
   });
 });

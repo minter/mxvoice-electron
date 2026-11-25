@@ -121,11 +121,11 @@ const secureElectronAPI = {
   // Store operations - secure preference management
   store: {
     get: (key) => ipcRenderer.invoke(IPC.STORE.GET, key),
-    set: (key, value) => ipcRenderer.invoke(IPC.STORE.SET, key, value),
-    delete: (key) => ipcRenderer.invoke(IPC.STORE.DELETE, key),
     has: (key) => ipcRenderer.invoke(IPC.STORE.HAS, key),
-    keys: () => ipcRenderer.invoke(IPC.STORE.KEYS),
-    clear: () => ipcRenderer.invoke(IPC.STORE.CLEAR)
+    setDebugLogEnabled: (enabled) => ipcRenderer.invoke(IPC.STORE.SET_DEBUG_LOG_ENABLED, enabled),
+    markAnalyticsBannerShown: () => ipcRenderer.invoke(IPC.STORE.MARK_ANALYTICS_BANNER_SHOWN),
+    setDirectoryPreference: (key, authorizationToken) =>
+      ipcRenderer.invoke(IPC.STORE.SET_DIRECTORY_PREFERENCE, key, authorizationToken)
   },
   
   // File system operations - secure file access with validation
@@ -176,7 +176,8 @@ const secureElectronAPI = {
     getName: () => ipcRenderer.invoke(IPC.APP.GET_NAME),
     quit: () => ipcRenderer.invoke(IPC.APP.QUIT),
     restart: () => ipcRenderer.invoke(IPC.APP.RESTART),
-    showDirectoryPicker: (defaultPath) => ipcRenderer.invoke(IPC.DIALOG.SHOW_DIRECTORY_PICKER, defaultPath),
+    showDirectoryPicker: (defaultPath, preferenceKey) =>
+      ipcRenderer.invoke(IPC.DIALOG.SHOW_DIRECTORY_PICKER, defaultPath, preferenceKey),
     showFilePicker: (options) => ipcRenderer.invoke(IPC.DIALOG.SHOW_FILE_PICKER, options)
   },
 

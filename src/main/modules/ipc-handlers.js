@@ -22,6 +22,7 @@ import * as profileBackupHandlers from './ipc/profile-backup-handlers.js';
 import * as libraryHandlers from './ipc/library-handlers.js';
 import * as analyticsHandlers from './ipc/analytics-handlers.js';
 import * as showHandlers from './ipc/show-handlers.js';
+import { createDirectoryPreferenceAuthority } from './directory-preference-authority.js';
 
 // Dependencies that will be injected
 let getMainWindow = () => null;
@@ -39,6 +40,8 @@ let profileSwitcher;
 let showSession;
 let recoveryStore;
 let installUpdate;
+let directoryPreferenceAuthority;
+let trustedRendererUrl;
 
 // Initialize the module with dependencies
 function initializeIpcHandlers(dependencies) {
@@ -57,6 +60,8 @@ function initializeIpcHandlers(dependencies) {
   showSession = dependencies.showSession;
   recoveryStore = dependencies.recoveryStore;
   installUpdate = dependencies.installUpdate;
+  directoryPreferenceAuthority = createDirectoryPreferenceAuthority({ store });
+  trustedRendererUrl = dependencies.trustedRendererUrl;
 
   // Initialize file operations module
   fileOperations.initializeFileOperations(dependencies);
@@ -77,6 +82,8 @@ function initializeIpcHandlers(dependencies) {
     showSession,
     recoveryStore,
     installUpdate,
+    directoryPreferenceAuthority,
+    trustedRendererUrl,
   };
 
   registerAllHandlers(deps);
@@ -108,13 +115,19 @@ function registerAllHandlers(deps) {
   });
 }
 
+function refreshDirectoryPreferenceAuthority() {
+  return directoryPreferenceAuthority?.refreshFromStore();
+}
+
 export {
   initializeIpcHandlers,
-  registerAllHandlers
+  registerAllHandlers,
+  refreshDirectoryPreferenceAuthority
 };
 
 // Default export for module loading
 export default {
   initializeIpcHandlers,
-  registerAllHandlers
+  registerAllHandlers,
+  refreshDirectoryPreferenceAuthority
 };

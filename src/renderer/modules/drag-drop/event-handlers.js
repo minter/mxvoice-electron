@@ -264,7 +264,8 @@ if (typeof window !== 'undefined') {
       
       // Test saving
       const testOrder = ['holding-tank-column', 'search-column', 'hotkeys-column'];
-      const saveResult = await secureStore.set('column_order', testOrder);
+      const saveResult = await window.secureElectronAPI?.profile?.setPreference('column_order', testOrder)
+        || { success: false, error: 'Profile preference API unavailable' };
       debugLog?.info('Save test result:', { 
         module: 'drag-drop-event-handlers',
         function: 'testColumnOrderStorage',
@@ -272,7 +273,8 @@ if (typeof window !== 'undefined') {
       });
       
       // Test loading
-      const hasResult = await secureStore.has('column_order');
+      const loadResult = await window.secureElectronAPI?.profile?.getPreference('column_order');
+      const hasResult = { success: true, has: Array.isArray(loadResult?.value) };
       debugLog?.info('Has check result:', { 
         module: 'drag-drop-event-handlers',
         function: 'testColumnOrderStorage',
@@ -280,7 +282,6 @@ if (typeof window !== 'undefined') {
       });
       
       if (hasResult) {
-        const loadResult = await secureStore.get('column_order');
         debugLog?.info('Load test result:', { 
           module: 'drag-drop-event-handlers',
           function: 'testColumnOrderStorage',
@@ -529,18 +530,10 @@ async function saveColumnOrder(columnOrder) {
   try {
     const electronAPI = window.secureElectronAPI;
     if (!electronAPI || !electronAPI.profile) {
-      debugLog?.warn('[COLUMN-ORDER] Profile API not available, falling back to global store', {
+      debugLog?.warn('[COLUMN-ORDER] Profile API not available; column order was not saved', {
         module: 'drag-drop-event-handlers',
         function: 'saveColumnOrder'
       });
-      const result = await secureStore.set("column_order", columnOrder);
-      if (!result.success) {
-        debugLog?.warn('[COLUMN-ORDER] Failed to save column order to global store', {
-          module: 'drag-drop-event-handlers',
-          function: 'saveColumnOrder',
-          error: result.error
-        });
-      }
       return;
     }
     

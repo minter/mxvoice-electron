@@ -41,21 +41,6 @@ export const domUtils = {
     return el.textContent;
   },
 
-  // HTML content management
-  html: (element, html) => {
-    const el = $(element);
-    if (!el) {
-      debugLog.warn('Element not found for html operation');
-      return null;
-    }
-    
-    if (html !== undefined) {
-      el.innerHTML = html;
-      return el;
-    }
-    return el.innerHTML;
-  },
-
   // Form value management
   val: (element, value) => {
     const el = $(element);
@@ -239,8 +224,6 @@ export const domUtils = {
         element.className = value;
       } else if (key === 'textContent') {
         element.textContent = value;
-      } else if (key === 'innerHTML') {
-        element.innerHTML = value;
       } else {
         element.setAttribute(key, value);
       }
@@ -283,7 +266,8 @@ export const domUtils = {
     const el = $(element);
     if (el) {
       if (typeof content === 'string') {
-        el.insertAdjacentHTML('beforeend', content);
+        // Text, never markup: callers that need elements build them
+        el.appendChild(document.createTextNode(content));
       } else {
         el.appendChild(content);
       }

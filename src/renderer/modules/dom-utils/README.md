@@ -13,15 +13,14 @@ dom-utils/
 
 - `$` — Single element selector (like `document.querySelector`)
 - `$$` — Multiple element selector (like `document.querySelectorAll`)
-- `domUtils` — Object with DOM manipulation helpers:
+- `domUtils` — Object with DOM manipulation helpers (none of them parse HTML; build elements instead):
   - `text(element, text?)` — Get/set text content
-  - `html(element, html?)` — Get/set inner HTML
   - `val(element, value?)` — Get/set form element value
   - `addClass/removeClass/toggleClass/hasClass` — CSS class manipulation
   - `show/hide/toggle` — Element visibility
   - `attr/removeAttr/data` — Attribute management
   - `on/off/trigger` — Event handling
-  - `append/prepend/remove/empty` — DOM manipulation
+  - `append/prepend/remove/empty` — DOM manipulation (`append` adds strings as text, never markup)
   - `css/prop` — Style and property access
 - `Dom` — Default export combining `$`, `$$`, and all `domUtils` methods
 
