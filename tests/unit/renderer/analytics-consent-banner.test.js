@@ -20,7 +20,7 @@ describe('analytics consent banner', () => {
     const ok = createElement();
     const store = {
       get: vi.fn().mockResolvedValue({ success: true, value: false }),
-      set: vi.fn(async () => {
+      markAnalyticsBannerShown: vi.fn(async () => {
         calls.push('banner-shown');
         return { success: true };
       })
@@ -42,7 +42,7 @@ describe('analytics consent banner', () => {
     expect(banner.classList.remove).toHaveBeenCalledWith('d-none');
     await ok.handlers.click();
     expect(analytics.setOptOut).toHaveBeenCalledWith(false);
-    expect(store.set).toHaveBeenCalledWith('analytics_banner_shown', true);
+    expect(store.markAnalyticsBannerShown).toHaveBeenCalledOnce();
     expect(calls).toEqual(['opted-in', 'banner-shown']);
   });
 
@@ -52,7 +52,7 @@ describe('analytics consent banner', () => {
     const disable = createElement();
     const store = {
       get: vi.fn().mockResolvedValue({ success: true, value: false }),
-      set: vi.fn(async () => {
+      markAnalyticsBannerShown: vi.fn(async () => {
         calls.push('banner-shown');
         return { success: true };
       })
@@ -80,7 +80,7 @@ describe('analytics consent banner', () => {
   it('keeps the banner open when opt-out cannot be persisted', async () => {
     const banner = createElement();
     const disable = createElement();
-    const store = { get: vi.fn().mockResolvedValue({ success: true, value: false }), set: vi.fn() };
+    const store = { get: vi.fn().mockResolvedValue({ success: true, value: false }), markAnalyticsBannerShown: vi.fn() };
     const analytics = { setOptOut: vi.fn().mockResolvedValue({ success: false }) };
     const documentTarget = {
       getElementById: (id) => ({
@@ -92,7 +92,7 @@ describe('analytics consent banner', () => {
     await showAnalyticsBannerIfNeeded({ electronAPI: { store, analytics }, documentTarget });
     await disable.handlers.click();
 
-    expect(store.set).not.toHaveBeenCalled();
+    expect(store.markAnalyticsBannerShown).not.toHaveBeenCalled();
     expect(banner.classList.add).not.toHaveBeenCalledWith('d-none');
   });
 

@@ -169,6 +169,27 @@ describe('exportLibrary', () => {
     expect(result.manifest.contents.mp3Count).toBe(0);
   });
 
+  it('does not reuse a predictable export snapshot path', async () => {
+    let timestamp = Date.now() + process.pid;
+    let predictableSnapshot = path.join(os.tmpdir(), `mxvoice-export-${timestamp}.db`);
+    while (fs.existsSync(predictableSnapshot)) {
+      predictableSnapshot = path.join(os.tmpdir(), `mxvoice-export-${++timestamp}.db`);
+    }
+    const outputPath = path.join(testUserData, 'private-snapshot.mxvlib');
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(timestamp);
+
+    fs.writeFileSync(predictableSnapshot, 'attacker-controlled');
+    try {
+      const result = await exportLibrary(outputPath);
+
+      expect(result.success).toBe(true);
+      expect(fs.readFileSync(predictableSnapshot, 'utf-8')).toBe('attacker-controlled');
+    } finally {
+      nowSpy.mockRestore();
+      fs.rmSync(predictableSnapshot, { force: true });
+    }
+  });
+
   it('cleans up partial file on failure', async () => {
     const badPath = path.join(testUserData, 'nonexistent', 'deep', 'nested', '\0invalid');
     const result = await exportLibrary(badPath);
@@ -292,6 +313,34 @@ describe('importLibrary', () => {
     expect(progressUpdates[progressUpdates.length - 1].percent).toBe(100);
 
     // Clean up
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  });
+
+  it('does not make imported files owner-only', async () => {
+    const archivePath = path.join(testUserData, 'for-modes.mxvlib');
+    await exportLibrary(archivePath);
+
+    const importUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-import-'));
+    fakeApp.getPath.mockReturnValue(importUserData);
+    const importConfigPath = path.join(importUserData, 'config.json');
+    fs.writeFileSync(importConfigPath, '{}');
+    initializeLibraryTransferManager({
+      debugLog: mockDebugLog,
+      getDb: () => ({ close: vi.fn() }),
+      store: { get: vi.fn(() => undefined), path: importConfigPath },
+    });
+
+    const result = await importLibrary(archivePath);
+    expect(result.success).toBe(true);
+
+    // The extraction root is already private, and copyFile carries a file's
+    // mode into the library: a music folder shared with other accounts or a
+    // network share must stay readable. (Windows has no group/other bits.)
+    if (process.platform !== 'win32') {
+      const mode = fs.statSync(path.join(importUserData, 'mp3', 'song1.mp3')).mode;
+      expect(mode & 0o044).not.toBe(0);
+    }
+
     fs.rmSync(importUserData, { recursive: true, force: true });
   });
 
@@ -463,6 +512,66 @@ describe('importLibrary', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/invalid archive/i);
+  });
+
+  it('ignores a predictable import root containing a redirected directory', async () => {
+    const archivePath = path.join(testUserData, 'for-private-import.mxvlib');
+    await exportLibrary(archivePath);
+    let timestamp = Date.now() + process.pid;
+    let predictableRoot = path.join(os.tmpdir(), `mxvlib-import-${timestamp}`);
+    while (fs.existsSync(predictableRoot)) {
+      predictableRoot = path.join(os.tmpdir(), `mxvlib-import-${++timestamp}`);
+    }
+    const redirectedDatabase = path.join(testUserData, 'redirected-database');
+    const importUserData = importTarget({});
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(timestamp);
+
+    fs.mkdirSync(predictableRoot);
+    fs.mkdirSync(redirectedDatabase);
+    fs.symlinkSync(
+      redirectedDatabase,
+      path.join(predictableRoot, 'database'),
+      process.platform === 'win32' ? 'junction' : 'dir'
+    );
+
+    try {
+      const result = await importLibrary(archivePath);
+
+      expect(result.success).toBe(true);
+      expect(fs.existsSync(path.join(redirectedDatabase, 'mxvoice.db'))).toBe(false);
+    } finally {
+      nowSpy.mockRestore();
+      fs.rmSync(predictableRoot, { recursive: true, force: true });
+      fs.rmSync(importUserData, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a link inside the extraction directory', async () => {
+    const archivePath = path.join(testUserData, 'for-link-check.mxvlib');
+    await exportLibrary(archivePath);
+    const extractionRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-link-check-'));
+    const redirectedDatabase = path.join(testUserData, 'linked-database');
+    const importUserData = importTarget({});
+
+    fs.mkdirSync(redirectedDatabase);
+    fs.symlinkSync(
+      redirectedDatabase,
+      path.join(extractionRoot, 'database'),
+      process.platform === 'win32' ? 'junction' : 'dir'
+    );
+    const mkdtempSpy = vi.spyOn(fs.promises, 'mkdtemp').mockResolvedValueOnce(extractionRoot);
+
+    try {
+      const result = await importLibrary(archivePath);
+
+      expect(mkdtempSpy).toHaveBeenCalledWith(path.join(os.tmpdir(), 'mxvlib-import-'));
+      expect(result).toMatchObject({ success: false, error: expect.stringMatching(/no database/i) });
+      expect(fs.existsSync(path.join(redirectedDatabase, 'mxvoice.db'))).toBe(false);
+    } finally {
+      mkdtempSpy.mockRestore();
+      fs.rmSync(extractionRoot, { recursive: true, force: true });
+      fs.rmSync(importUserData, { recursive: true, force: true });
+    }
   });
 
   function importTarget({ showSession, recoveryStore }) {

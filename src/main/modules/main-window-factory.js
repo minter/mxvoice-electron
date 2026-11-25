@@ -1,6 +1,51 @@
+import { pathToFileURL } from 'url';
+
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+
+function openAllowedExternalUrl(shell, rawUrl) {
+  if (!shell?.openExternal) return;
+  try {
+    const url = new URL(rawUrl);
+    if (!ALLOWED_EXTERNAL_PROTOCOLS.has(url.protocol)) return;
+    shell.openExternal(url.href)?.catch?.(() => {});
+  } catch {
+    // Invalid and unsupported URLs stay closed.
+  }
+}
+
+function installNavigationPolicy(window, { indexPath, shell }) {
+  const applicationUrl = pathToFileURL(indexPath).href;
+  // The page itself, with or without a fragment (an anchor click leaves one,
+  // and a reload then asks for the same document with it)
+  const isApplicationUrl = (rawUrl) => {
+    try {
+      const url = new URL(rawUrl);
+      url.hash = '';
+      return url.href === applicationUrl;
+    } catch {
+      return false;
+    }
+  };
+  // Electron passes the URL on the event; the positional argument is deprecated
+  const keepInApplication = (event, legacyUrl) => {
+    const url = event?.url ?? legacyUrl;
+    if (isApplicationUrl(url)) return;
+    event.preventDefault();
+    openAllowedExternalUrl(shell, url);
+  };
+
+  window.webContents.on('will-navigate', keepInApplication);
+  window.webContents.on('will-redirect', keepInApplication);
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    openAllowedExternalUrl(shell, url);
+    return { action: 'deny' };
+  });
+}
+
 function createMainWindow({
   BrowserWindow,
   screen,
+  shell,
   autoUpdater,
   iconPath,
   preloadPath,
@@ -87,6 +132,7 @@ function createMainWindow({
       );
     });
   }
+  installNavigationPolicy(window, { indexPath, shell });
   window.loadFile(indexPath);
   window.once('ready-to-show', () => {
     // Failures are reported by the autoUpdater 'error' handler (update_failed);

@@ -8,6 +8,12 @@
 
 import { customConfirm, customPrompt } from '../utils/index.js';
 
+const DIRECTORY_PREFERENCES_BY_ELEMENT_ID = Object.freeze({
+  'preferences-database-directory': 'database_directory',
+  'preferences-song-directory': 'music_directory',
+  'preferences-hotkey-directory': 'hotkey_directory'
+});
+
 // Import debug logger
 let debugLog = null;
 try {
@@ -50,13 +56,19 @@ function initializeModals(options = {}) {
     event.preventDefault();
     const el = typeof element === 'string' ? document.querySelector(element) : element;
     const defaultPath = el?.value || '';
+    const preferenceKey = el?.id ? DIRECTORY_PREFERENCES_BY_ELEMENT_ID[el.id] : undefined;
     
     try {
       if (electronAPI?.app?.showDirectoryPicker) {
-        electronAPI.app.showDirectoryPicker(defaultPath).then(res => {
+        electronAPI.app.showDirectoryPicker(defaultPath, preferenceKey).then(res => {
           if (res?.success && res.data && !res.data.canceled && Array.isArray(res.data.filePaths)) {
             const dir = res.data.filePaths[0];
-            if (dir && el) el.value = dir;
+            if (dir && el) {
+              el.value = dir;
+              if (preferenceKey && res.data.authorizationToken) {
+                el.dataset.directoryAuthorization = res.data.authorizationToken;
+              }
+            }
           }
         });
       }

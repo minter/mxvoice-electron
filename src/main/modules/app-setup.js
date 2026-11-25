@@ -130,6 +130,7 @@ function createWindow({ width = 1200, height = 800, x, y, isMaximized, isFullScr
   return createMainWindow({
     BrowserWindow,
     screen,
+    shell,
     autoUpdater,
     iconPath: path.join(__dirname, '../../assets/icons/mxvoice.ico'),
     preloadPath: path.join(__dirname, '../../preload/preload-bundle.cjs'),

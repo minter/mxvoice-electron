@@ -18,7 +18,7 @@ async function showAnalyticsBannerIfNeeded({
     // Persist both parts of the affirmative decision before enabling the sink.
     const optInResult = await electronAPI.analytics?.setOptOut(false);
     if (!optInResult || optInResult.success === false) return;
-    const result = await electronAPI.store.set('analytics_banner_shown', true);
+    const result = await electronAPI.store.markAnalyticsBannerShown();
     if (result?.success !== false) banner.classList.add('d-none');
   });
 
@@ -26,7 +26,7 @@ async function showAnalyticsBannerIfNeeded({
     // Persist opt-out first so no event can observe a completed decision as consent.
     const optOutResult = await electronAPI.analytics?.setOptOut(true);
     if (!optOutResult || optOutResult.success === false) return;
-    const bannerResult = await electronAPI.store.set('analytics_banner_shown', true);
+    const bannerResult = await electronAPI.store.markAnalyticsBannerShown();
     if (bannerResult?.success !== false) banner.classList.add('d-none');
   });
 }

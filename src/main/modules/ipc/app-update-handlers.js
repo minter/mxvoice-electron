@@ -7,11 +7,13 @@ import electron from 'electron';
 const { ipcMain, app } = electron;
 import ipcChannels from '../../../shared/ipc-channels.cjs';
 import { getPendingUpdateNotice } from '../pending-update.js';
+import { allowInstallAfterUserApproval, disableAutomaticUpdateInstall } from '../update-security.js';
 import { withTimeout } from '../with-timeout.js';
 const { IPC } = ipcChannels;
 
 export function register(deps) {
   const { autoUpdater, updateState, debugLog, analytics } = deps;
+  const platform = deps.platform || process.platform;
   // Saves state and skips the close confirmation first (index-modular.js)
   const installUpdate = deps.installUpdate || (async () => autoUpdater.quitAndInstall());
 
@@ -124,8 +126,16 @@ export function register(deps) {
       // Download with timeout to prevent hangs
       // The IPC timeout does not cancel the transfer. Keep the guard until
       // the actual download settles, including errors emitted after timeout.
+      let automaticInstallArmed = false;
       const downloadPromise = Promise.resolve()
-        .then(() => autoUpdater.downloadUpdate())
+        .then(() => {
+          automaticInstallArmed = allowInstallAfterUserApproval(autoUpdater, platform);
+          return autoUpdater.downloadUpdate();
+        })
+        .catch((error) => {
+          if (automaticInstallArmed) disableAutomaticUpdateInstall(autoUpdater);
+          throw error;
+        })
         .finally(() => { updateState.downloading = false; });
       await withTimeout(downloadPromise, 60000, 'Download timeout after 60 seconds');
       if (analytics) {

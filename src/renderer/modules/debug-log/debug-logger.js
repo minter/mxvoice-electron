@@ -77,7 +77,7 @@ function initializeDebugLogger(options = {}) {
   async function setDebugEnabled(enabled) {
     try {
       if (electronAPI && electronAPI.store) {
-        const result = await electronAPI.store.set("debug_log_enabled", enabled);
+        const result = await electronAPI.store.setDebugLogEnabled(enabled);
         if (result.success) {
           debugEnabledCache = enabled;
           debugEnabledCacheTime = Date.now();

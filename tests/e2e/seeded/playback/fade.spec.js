@@ -61,16 +61,12 @@ test.describe('Playback - fade out', () => {
     }
   }
 
-  test('fade out preference can be set via store', async () => {
-    // Set fade_out_seconds to 2 seconds via the secure store
+  test('fade out preference can be set via profile preferences', async () => {
+    // Set fade_out_seconds to 2 seconds via the scoped profile API
     const result = await page.evaluate(async () => {
       const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.setPreference) {
         return electronAPI.profile.setPreference('fade_out_seconds', 2);
-      }
-      // Fallback to store
-      if (window.secureStore?.set) {
-        return window.secureStore.set('fade_out_seconds', 2);
       }
       return { success: false, error: 'No API available' };
     });
@@ -83,9 +79,6 @@ test.describe('Playback - fade out', () => {
       const electronAPI = window.secureElectronAPI;
       if (electronAPI?.profile?.getPreference) {
         return electronAPI.profile.getPreference('fade_out_seconds');
-      }
-      if (window.secureStore?.get) {
-        return window.secureStore.get('fade_out_seconds');
       }
       return { success: false };
     });

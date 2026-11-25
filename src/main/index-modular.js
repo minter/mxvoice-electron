@@ -18,11 +18,12 @@ import readlines from 'n-readlines';
 import Store from 'electron-store';
 import log from 'electron-log';
 import electronUpdater from 'electron-updater';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 // Get __dirname equivalent for ES6 modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const trustedRendererUrl = pathToFileURL(path.join(__dirname, '..', 'index.html')).href;
 
 // In test mode, allow overriding Electron's userData path to ensure isolation
 // Must run BEFORE creating the Store or computing defaults that depend on userData
@@ -67,6 +68,7 @@ import { selfHealDirectoryPreferences } from './modules/preferences-self-heal.js
 import { isSupportedAudioFile, copyFileStreaming } from './modules/file-utils.js';
 import { collectLibraryStats } from './modules/library-stats.js';
 import { configureUpdateChannel, usesGitHubUpdates } from './modules/update-channel.js';
+import { configureUpdateSecurity } from './modules/update-security.js';
 import { describeUpdateError } from './modules/update-analytics.js';
 import { decideUpdateNotice, runBackgroundCheck, startBackgroundUpdateChecks } from './modules/update-scheduler.js';
 import { createProfileSwitcher, applyWindowState } from './modules/profile-switcher.js';
@@ -292,7 +294,7 @@ const logService = initMainLogService({ store, getDebugPreference });
 debugLog.info('Electron Store initialized', { function: 'store-init', storePath: store.path, appName: app.getName() });
 
 // Auto-updater configuration
-const { autoUpdater } = electronUpdater;
+const autoUpdater = configureUpdateSecurity(electronUpdater.autoUpdater);
 
 debugLog.info('Auto-updater module loaded', { 
   function: "auto-updater setup",
@@ -304,36 +306,38 @@ debugLog.info('Auto-updater module loaded', {
 });
 
 // Configure auto-updater to use our debug logger instead of electron-log
-autoUpdater.logger = {
-  info: (message) => debugLog.info(`[AutoUpdater] ${message}`, { 
-    module: 'auto-updater',
-    platform: process.platform,
-    arch: process.arch
-  }),
-  warn: (message) => debugLog.warn(`[AutoUpdater] ${message}`, { 
-    module: 'auto-updater',
-    platform: process.platform,
-    arch: process.arch
-  }),
-  error: (message) => debugLog.error(`[AutoUpdater] ${message}`, { 
-    module: 'auto-updater',
-    platform: process.platform,
-    arch: process.arch
-  }),
-  debug: (message) => debugLog.debug(`[AutoUpdater] ${message}`, { 
-    module: 'auto-updater',
-    platform: process.platform,
-    arch: process.arch
-  }),
-  log: (message) => debugLog.info(`[AutoUpdater] ${message}`, { 
-    module: 'auto-updater',
-    platform: process.platform,
-    arch: process.arch
-  })
-};
+if (autoUpdater) {
+  autoUpdater.logger = {
+    info: (message) => debugLog.info(`[AutoUpdater] ${message}`, {
+      module: 'auto-updater',
+      platform: process.platform,
+      arch: process.arch
+    }),
+    warn: (message) => debugLog.warn(`[AutoUpdater] ${message}`, {
+      module: 'auto-updater',
+      platform: process.platform,
+      arch: process.arch
+    }),
+    error: (message) => debugLog.error(`[AutoUpdater] ${message}`, {
+      module: 'auto-updater',
+      platform: process.platform,
+      arch: process.arch
+    }),
+    debug: (message) => debugLog.debug(`[AutoUpdater] ${message}`, {
+      module: 'auto-updater',
+      platform: process.platform,
+      arch: process.arch
+    }),
+    log: (message) => debugLog.info(`[AutoUpdater] ${message}`, {
+      module: 'auto-updater',
+      platform: process.platform,
+      arch: process.arch
+    })
+  };
+}
 
 // Set architecture-aware update feed URL for macOS and Windows
-if (process.platform === "darwin" || process.platform === "win32") {
+if (autoUpdater) {
   const currentVersion = app.getVersion(); // Use actual app version for auto-update config
   
   debugLog.info(`Configuring auto-updater for ${process.platform}`, { 
@@ -370,9 +374,6 @@ if (process.platform === "darwin" || process.platform === "win32") {
       platform: process.platform,
       arch: process.arch
     });
-    // Do not auto-download; wait for explicit user action
-    autoUpdater.autoDownload = false;
-    
     // Explicitly configure GitHub provider; allow prereleases and let provider resolve URLs
     const feedConfig = {
       provider: "github",
@@ -877,7 +878,8 @@ function initializeMainProcessServices() {
     profileSwitcher,
     showSession,
     recoveryStore,
-    installUpdate: installUpdateNow
+    installUpdate: installUpdateNow,
+    trustedRendererUrl
   };
 
   appSetup.initializeAppSetup(dependencies);
@@ -942,6 +944,7 @@ const createWindow = async () => {
     // Check first run (which also checks old config)
     debugLog.info('Checking first run...', { function: "createWindow" });
     await checkFirstRun();
+    ipcHandlers.refreshDirectoryPreferenceAuthority();
     debugLog.info('First run check completed', { function: "createWindow" });
     
     // Initialize database connection for main process
@@ -986,6 +989,7 @@ const createWindow = async () => {
 
     // Migrate old preferences after modules are initialized
     fileOperations.migrateOldPreferences();
+    ipcHandlers.refreshDirectoryPreferenceAuthority();
 
     // Create the menu
     appSetup.createApplicationMenu();
@@ -1111,6 +1115,10 @@ function setupApp() {
       await launcherWindow.createLauncherWindow();
     }
   });
+
+  // Linux artifacts do not yet have independent publisher authentication.
+  // Its updater is null, so launch checks, IPC and the menu cannot reach it.
+  if (!autoUpdater) return;
 
   // Setup auto-updater events
   autoUpdater.on('update-available', (updateInfo) => {

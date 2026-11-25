@@ -126,7 +126,8 @@
           ]
         }
       ],
-      "verifyUpdateCodeSignature": false,
+      "publisherName": "Haynie Minter",
+      "verifyUpdateCodeSignature": true,
       "signAndEditExecutable": true
     },
     "nsis": {
