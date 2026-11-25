@@ -254,6 +254,43 @@ describe('validateArchive', () => {
   });
 });
 
+describe('large libraries', () => {
+  it('exports and imports a 15,000-song library', async () => {
+    // Installs report libraries this size; every song is one archive entry
+    const songs = 15000;
+    expect(songs + 100).toBeLessThan(archiveLimits.entryCount);
+    for (let i = 0; i < songs; i++) {
+      fs.writeFileSync(path.join(testUserData, 'mp3', `bulk${i}.mp3`), `song ${i}`);
+    }
+
+    const archivePath = path.join(testUserData, 'large-library.mxvlib');
+    const exported = await exportLibrary(archivePath);
+    expect(exported.error).toBeUndefined();
+    expect(exported.success).toBe(true);
+
+    const validated = await validateArchive(archivePath);
+    expect(validated.error).toBeUndefined();
+    expect(validated.success).toBe(true);
+
+    const importUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-import-'));
+    fakeApp.getPath.mockReturnValue(importUserData);
+    const importConfigPath = path.join(importUserData, 'config.json');
+    fs.writeFileSync(importConfigPath, '{}');
+    initializeLibraryTransferManager({
+      debugLog: mockDebugLog,
+      getDb: () => ({ close: vi.fn() }),
+      store: { get: vi.fn(() => undefined), path: importConfigPath },
+    });
+
+    const result = await importLibrary(archivePath);
+    expect(result.error).toBeUndefined();
+    expect(result.success).toBe(true);
+    expect(fs.readdirSync(path.join(importUserData, 'mp3')).length).toBeGreaterThanOrEqual(songs);
+
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  }, 120000);
+});
+
 describe('archive resource limits', () => {
   const entry = (overrides = {}) => ({
     fileName: 'music/song.mp3',

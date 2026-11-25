@@ -30,13 +30,16 @@ const { ZipArchive } = require('archiver');
 const MANIFEST_VERSION = 1;
 const MEBIBYTE = 1024 ** 2;
 const GIBIBYTE = 1024 ** 3;
-// Keep normal audio-library transfers practical while placing finite bounds on untrusted ZIP work.
+// Finite bounds on untrusted ZIP work, sized for real libraries. Every song is
+// one archive entry, and installs report libraries of 15,000+ songs (tens to
+// hundreds of GiB), so these are ceilings for abuse, not for normal use. The
+// export side has no matching limit: a library you can export must import.
 const ARCHIVE_LIMITS = Object.freeze({
-  compressedArchiveBytes: 32 * GIBIBYTE,
-  entryCount: 10_000,
+  compressedArchiveBytes: 512 * GIBIBYTE,
+  entryCount: 250_000,
   manifestBytes: MEBIBYTE,
   entryUncompressedBytes: 8 * GIBIBYTE,
-  totalUncompressedBytes: 64 * GIBIBYTE,
+  totalUncompressedBytes: 512 * GIBIBYTE,
   compressionRatio: 200,
   diskHeadroomBytes: 256 * MEBIBYTE
 });
