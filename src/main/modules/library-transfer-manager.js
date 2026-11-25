@@ -20,7 +20,7 @@ import os from 'os';
 import electron from 'electron';
 import { createRequire } from 'module';
 import yauzl from 'yauzl';
-import { validateProfilePreferences } from './profile-preference-validator.js';
+import { normalizePreferencesFile } from './profile-preference-files.js';
 
 const { app } = electron;
 const require = createRequire(import.meta.url);
@@ -53,33 +53,27 @@ async function copyDirectoryRecursive(src, dest) {
   }
 }
 
+/**
+ * Make each imported profile's backup policy safe before it is copied in.
+ * Out-of-range settings are corrected (older versions could save them); a
+ * preferences file that is unreadable or not JSON refuses the import.
+ */
 async function validateImportedProfilePreferences(profilesDir) {
   const entries = await fs.promises.readdir(profilesDir, { withFileTypes: true });
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
 
-    const preferencesPath = path.join(profilesDir, entry.name, 'preferences.json');
-    let text;
-    try {
-      text = await fs.promises.readFile(preferencesPath, 'utf8');
-    } catch (error) {
-      if (error?.code === 'ENOENT') continue;
-      return { success: false, error: `Profile ${entry.name} preferences cannot be read` };
+    const result = await normalizePreferencesFile(path.join(profilesDir, entry.name, 'preferences.json'));
+    if (!result.success) {
+      return { success: false, error: `Profile ${entry.name} preferences ${result.error}` };
     }
-
-    let preferences;
-    try {
-      preferences = JSON.parse(text);
-    } catch {
-      return { success: false, error: `Profile ${entry.name} preferences are not valid JSON` };
-    }
-
-    const validation = validateProfilePreferences(preferences);
-    if (!validation.valid) {
-      return {
-        success: false,
-        error: `Profile ${entry.name} preferences are invalid: ${validation.error}`
-      };
+    if (result.changed) {
+      debugLog?.warn('Corrected out-of-range backup settings in an imported profile', {
+        module: 'library-transfer-manager',
+        function: 'importLibrary',
+        profile: entry.name,
+        reason: result.warning
+      });
     }
   }
   return { success: true };
@@ -612,7 +606,7 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
       if (await pathExists(extractedProfiles)) {
         const preferencesCheck = await validateImportedProfilePreferences(extractedProfiles);
         if (!preferencesCheck.success) {
-          debugLog?.warn('Archive has unsafe profile preferences', {
+          debugLog?.warn('Archive has unusable profile preferences', {
             ...logCtx,
             error: preferencesCheck.error
           });

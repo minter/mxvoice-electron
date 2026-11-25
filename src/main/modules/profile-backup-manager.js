@@ -27,10 +27,8 @@ import { createBackupDirectoryScanner } from './backup-directory-scanner.js';
 import { createBackupFileOperations } from './backup-file-operations.js';
 import { selectBackupsForRetention } from './backup-retention-policy.js';
 import { createProfileChangeDetector } from './profile-change-detector.js';
-import {
-  validateBackupSettings,
-  validateProfilePreferences
-} from './profile-preference-validator.js';
+import { validateBackupSettings } from './profile-preference-validator.js';
+import { normalizePreferencesFile } from './profile-preference-files.js';
 import { parseDocument } from './show-document.js';
 import { isPathInside } from './ipc/guards.js';
 
@@ -347,27 +345,14 @@ async function classifyShowsFile(file) {
   return { state: parsed.error === 'version' ? 'refused' : 'bad' };
 }
 
+/**
+ * A backup is restorable unless its preferences cannot be read at all.
+ * Out-of-range backup settings do not block a restore: the backup is the
+ * recovery path, and the restored file is corrected after it is copied in.
+ */
 async function validateBackupPreferences(backupPath) {
-  const preferencesPath = path.join(backupPath, 'preferences.json');
-  let text;
-  try {
-    text = await fs.promises.readFile(preferencesPath, 'utf8');
-  } catch (error) {
-    if (error?.code === 'ENOENT') return { success: true };
-    return { success: false, error: 'Backup preferences cannot be read' };
-  }
-
-  let preferences;
-  try {
-    preferences = JSON.parse(text);
-  } catch {
-    return { success: false, error: 'Backup preferences are not valid JSON' };
-  }
-
-  const validation = validateProfilePreferences(preferences);
-  if (!validation.valid) {
-    return { success: false, error: `Backup preferences are invalid: ${validation.error}` };
-  }
+  const result = await normalizePreferencesFile(path.join(backupPath, 'preferences.json'), { write: false });
+  if (!result.success) return { success: false, error: `Backup preferences ${result.error}` };
   return { success: true };
 }
 
@@ -530,6 +515,28 @@ async function restoreBackup(profileName, backupId) {
     await backupFiles.removeDirectory(profileDir);
     await fs.promises.mkdir(profileDir, { recursive: true });
     await copyDirectoryRecursive(backupPath, profileDir);
+
+    // Correct out-of-range backup settings in the restored copy only; the
+    // backup itself stays as it was taken
+    try {
+      const normalized = await normalizePreferencesFile(path.join(profileDir, 'preferences.json'));
+      if (normalized.success && normalized.changed) {
+        debugLog?.warn('Corrected out-of-range backup settings in a restored profile', {
+          module: 'profile-backup-manager',
+          function: 'restoreBackup',
+          profileName,
+          backupId,
+          reason: normalized.warning
+        });
+      }
+    } catch (error) {
+      debugLog?.warn('Could not correct restored preferences', {
+        module: 'profile-backup-manager',
+        function: 'restoreBackup',
+        profileName,
+        error: error.message
+      });
+    }
     
     debugLog?.info('Backup restored successfully', {
       module: 'profile-backup-manager',
