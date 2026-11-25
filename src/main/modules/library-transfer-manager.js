@@ -19,6 +19,8 @@ import path from 'path';
 import os from 'os';
 import electron from 'electron';
 import { createRequire } from 'module';
+import { Transform } from 'stream';
+import { pipeline } from 'stream/promises';
 import yauzl from 'yauzl';
 
 const { app } = electron;
@@ -26,6 +28,29 @@ const require = createRequire(import.meta.url);
 const { ZipArchive } = require('archiver');
 
 const MANIFEST_VERSION = 1;
+const MEBIBYTE = 1024 ** 2;
+const GIBIBYTE = 1024 ** 3;
+// Keep normal audio-library transfers practical while placing finite bounds on untrusted ZIP work.
+const ARCHIVE_LIMITS = Object.freeze({
+  compressedArchiveBytes: 32 * GIBIBYTE,
+  entryCount: 10_000,
+  manifestBytes: MEBIBYTE,
+  entryUncompressedBytes: 8 * GIBIBYTE,
+  totalUncompressedBytes: 64 * GIBIBYTE,
+  compressionRatio: 200,
+  diskHeadroomBytes: 256 * MEBIBYTE
+});
+
+class ArchiveLimitError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ArchiveLimitError';
+  }
+}
+
+function isArchiveLimitError(error) {
+  return error instanceof ArchiveLimitError || error?.name === 'ArchiveLimitError';
+}
 
 let debugLog = null;
 let getDb = () => null;
@@ -307,8 +332,150 @@ async function exportLibrary(outputPath, progressCallback = () => {}) {
   }
 }
 
+function entryByteLimit(entry) {
+  return entry.fileName === 'manifest.json'
+    ? ARCHIVE_LIMITS.manifestBytes
+    : ARCHIVE_LIMITS.entryUncompressedBytes;
+}
+
+function validateArchiveSize(archiveSize) {
+  if (!Number.isSafeInteger(archiveSize) || archiveSize < 0) {
+    throw new ArchiveLimitError('Archive has an invalid compressed size');
+  }
+  if (archiveSize > ARCHIVE_LIMITS.compressedArchiveBytes) {
+    throw new ArchiveLimitError('Archive exceeds the maximum compressed size');
+  }
+}
+
+function validateArchiveEntryCount(entryCount) {
+  if (!Number.isSafeInteger(entryCount) || entryCount < 0) {
+    throw new ArchiveLimitError('Archive has an invalid entry count');
+  }
+  if (entryCount > ARCHIVE_LIMITS.entryCount) {
+    throw new ArchiveLimitError('Archive contains too many entries');
+  }
+}
+
 /**
- * Read a single entry from a zip archive by name using yauzl.
+ * Validate declared entry sizes and add the entry to the aggregate budget.
+ * @returns {number} the updated declared uncompressed byte count
+ */
+function validateArchiveEntryMetadata(entry, totalUncompressedBytes = 0) {
+  const { compressedSize, uncompressedSize } = entry;
+  if (!Number.isSafeInteger(compressedSize) || compressedSize < 0 ||
+      !Number.isSafeInteger(uncompressedSize) || uncompressedSize < 0) {
+    throw new ArchiveLimitError(`Archive entry has invalid size metadata: ${entry.fileName}`);
+  }
+
+  if (uncompressedSize > entryByteLimit(entry)) {
+    const label = entry.fileName === 'manifest.json' ? 'manifest.json' : 'Archive entry';
+    throw new ArchiveLimitError(`${label} exceeds its uncompressed size limit`);
+  }
+
+  if (uncompressedSize > 0 &&
+      (compressedSize === 0 || uncompressedSize / compressedSize > ARCHIVE_LIMITS.compressionRatio)) {
+    throw new ArchiveLimitError(`Archive entry exceeds the compression ratio limit: ${entry.fileName}`);
+  }
+
+  if (!Number.isSafeInteger(totalUncompressedBytes) || totalUncompressedBytes < 0 ||
+      totalUncompressedBytes > ARCHIVE_LIMITS.totalUncompressedBytes - uncompressedSize) {
+    throw new ArchiveLimitError('Archive exceeds the total uncompressed size limit');
+  }
+
+  return totalUncompressedBytes + uncompressedSize;
+}
+
+/**
+ * Validate actual decompressed bytes while an entry is streaming.
+ */
+function validateArchiveStreamBytes(entry, entryBytes, totalBytes) {
+  if (!Number.isSafeInteger(entryBytes) || entryBytes < 0 ||
+      !Number.isSafeInteger(totalBytes) || totalBytes < entryBytes) {
+    throw new ArchiveLimitError(`Archive entry has invalid streamed size: ${entry.fileName}`);
+  }
+  if (entryBytes > entry.uncompressedSize) {
+    throw new ArchiveLimitError(`Archive entry exceeded its declared uncompressed size: ${entry.fileName}`);
+  }
+  if (entryBytes > entryByteLimit(entry)) {
+    const label = entry.fileName === 'manifest.json' ? 'manifest.json' : 'Archive entry';
+    throw new ArchiveLimitError(`${label} exceeded its streamed size limit`);
+  }
+  if (totalBytes > ARCHIVE_LIMITS.totalUncompressedBytes) {
+    throw new ArchiveLimitError('Archive exceeded the streamed uncompressed size limit');
+  }
+  if (entryBytes > 0 &&
+      (entry.compressedSize === 0 || entryBytes / entry.compressedSize > ARCHIVE_LIMITS.compressionRatio)) {
+    throw new ArchiveLimitError(`Archive entry exceeded the streamed compression ratio limit: ${entry.fileName}`);
+  }
+}
+
+/**
+ * Inspect the central directory without extracting data and enforce declared budgets.
+ */
+async function inspectArchiveMetadata(archivePath) {
+  const archiveStat = await fs.promises.stat(archivePath);
+  validateArchiveSize(archiveStat.size);
+
+  return new Promise((resolve, reject) => {
+    yauzl.open(archivePath, { lazyEntries: true, validateEntrySizes: true }, (err, zipfile) => {
+      if (err) return reject(err);
+
+      let settled = false;
+      let entriesSeen = 0;
+      let manifestCount = 0;
+      let totalUncompressedBytes = 0;
+
+      const fail = (inspectionError) => {
+        if (settled) return;
+        settled = true;
+        zipfile.close();
+        reject(inspectionError);
+      };
+
+      try {
+        validateArchiveEntryCount(zipfile.entryCount);
+      } catch (limitError) {
+        fail(limitError);
+        return;
+      }
+
+      zipfile.on('entry', (entry) => {
+        try {
+          entriesSeen++;
+          validateArchiveEntryCount(entriesSeen);
+          totalUncompressedBytes = validateArchiveEntryMetadata(entry, totalUncompressedBytes);
+
+          if (entry.fileName === 'manifest.json') {
+            manifestCount++;
+            if (manifestCount > 1) {
+              throw new ArchiveLimitError('Archive contains multiple manifest.json entries');
+            }
+          }
+
+          zipfile.readEntry();
+        } catch (entryError) {
+          fail(entryError);
+        }
+      });
+
+      zipfile.on('end', () => {
+        if (settled) return;
+        settled = true;
+        resolve({
+          archiveSize: archiveStat.size,
+          entryCount: entriesSeen,
+          totalUncompressedBytes,
+          hasManifest: manifestCount === 1
+        });
+      });
+      zipfile.on('error', fail);
+      zipfile.readEntry();
+    });
+  });
+}
+
+/**
+ * Read a single bounded entry from a zip archive by name using yauzl.
  * Returns the entry contents as a string, or null if not found.
  * @param {string} archivePath - Path to the zip file
  * @param {string} entryName - Name of the entry to read (e.g. 'manifest.json')
@@ -316,24 +483,71 @@ async function exportLibrary(outputPath, progressCallback = () => {}) {
  */
 function readZipEntry(archivePath, entryName) {
   return new Promise((resolve, reject) => {
-    yauzl.open(archivePath, { lazyEntries: true }, (err, zipfile) => {
+    yauzl.open(archivePath, { lazyEntries: true, validateEntrySizes: true }, (err, zipfile) => {
       if (err) return reject(err);
 
+      let settled = false;
       let found = false;
+      let entriesSeen = 0;
+
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        zipfile.close();
+        resolve(value);
+      };
+      const fail = (readError) => {
+        if (settled) return;
+        settled = true;
+        zipfile.close();
+        reject(readError);
+      };
+
+      try {
+        validateArchiveEntryCount(zipfile.entryCount);
+      } catch (limitError) {
+        fail(limitError);
+        return;
+      }
+
       zipfile.readEntry();
 
       zipfile.on('entry', (entry) => {
+        try {
+          entriesSeen++;
+          validateArchiveEntryCount(entriesSeen);
+        } catch (limitError) {
+          fail(limitError);
+          return;
+        }
+
         if (entry.fileName === entryName) {
           found = true;
+          try {
+            validateArchiveEntryMetadata(entry);
+          } catch (limitError) {
+            fail(limitError);
+            return;
+          }
+
           zipfile.openReadStream(entry, (streamErr, readStream) => {
-            if (streamErr) return reject(streamErr);
+            if (streamErr) return fail(streamErr);
             const chunks = [];
-            readStream.on('data', (chunk) => chunks.push(chunk));
-            readStream.on('end', () => {
-              zipfile.close();
-              resolve(Buffer.concat(chunks).toString('utf-8'));
+            let totalBytes = 0;
+            readStream.on('data', (chunk) => {
+              try {
+                const nextTotal = totalBytes + chunk.length;
+                validateArchiveStreamBytes(entry, nextTotal, nextTotal);
+                totalBytes = nextTotal;
+                chunks.push(chunk);
+              } catch (limitError) {
+                readStream.destroy(limitError);
+              }
             });
-            readStream.on('error', reject);
+            readStream.on('end', () => {
+              finish(Buffer.concat(chunks, totalBytes).toString('utf-8'));
+            });
+            readStream.on('error', fail);
           });
         } else {
           zipfile.readEntry();
@@ -341,10 +555,10 @@ function readZipEntry(archivePath, entryName) {
       });
 
       zipfile.on('end', () => {
-        if (!found) resolve(null);
+        if (!found) finish(null);
       });
 
-      zipfile.on('error', reject);
+      zipfile.on('error', fail);
     });
   });
 }
@@ -380,7 +594,7 @@ function sanitizeEntryPath(entryFileName) {
 
 /**
  * Extract a zip archive to a directory using yauzl, with progress reporting.
- * Sanitizes filenames for the current platform and continues past per-file errors.
+ * Sanitizes filenames, bounds resource use, and continues past per-file I/O errors.
  * @param {string} archivePath - Path to the zip file
  * @param {string} destDir - Directory to extract into
  * @param {Function} onProgress - Called with (entriesProcessed, totalEntries) after each entry
@@ -388,17 +602,37 @@ function sanitizeEntryPath(entryFileName) {
  *   renamedFiles maps original zip entry name → sanitized name (only entries that changed)
  *   errors lists entries that could not be extracted
  */
-function extractZipWithProgress(archivePath, destDir, onProgress = () => {}) {
+async function extractZipWithProgress(archivePath, destDir, onProgress = () => {}) {
+  const metadata = await inspectArchiveMetadata(archivePath);
+  const diskStats = await fs.promises.statfs(destDir, { bigint: true });
+  const availableBytes = diskStats.bavail * diskStats.bsize;
+  const requiredBytes = BigInt(metadata.totalUncompressedBytes + ARCHIVE_LIMITS.diskHeadroomBytes);
+  if (availableBytes < requiredBytes) {
+    throw new ArchiveLimitError('Insufficient disk space to extract archive with required headroom');
+  }
+
   return new Promise((resolve, reject) => {
-    yauzl.open(archivePath, { lazyEntries: true }, (err, zipfile) => {
+    yauzl.open(archivePath, { lazyEntries: true, validateEntrySizes: true }, (err, zipfile) => {
       if (err) return reject(err);
 
       const totalEntries = zipfile.entryCount;
+      let settled = false;
       let entriesProcessed = 0;
+      let entriesSeen = 0;
+      let declaredBytes = 0;
+      const streamedBytes = { total: 0 };
       const renamedFiles = new Map();
       const errors = [];
 
+      function failExtraction(extractError) {
+        if (settled) return;
+        settled = true;
+        zipfile.close();
+        reject(extractError);
+      }
+
       function advance() {
+        if (settled) return;
         entriesProcessed++;
         onProgress(entriesProcessed, totalEntries);
         zipfile.readEntry();
@@ -415,9 +649,25 @@ function extractZipWithProgress(archivePath, destDir, onProgress = () => {}) {
         advance();
       }
 
+      try {
+        validateArchiveEntryCount(totalEntries);
+      } catch (limitError) {
+        failExtraction(limitError);
+        return;
+      }
+
       zipfile.readEntry();
 
       zipfile.on('entry', (entry) => {
+        try {
+          entriesSeen++;
+          validateArchiveEntryCount(entriesSeen);
+          declaredBytes = validateArchiveEntryMetadata(entry, declaredBytes);
+        } catch (limitError) {
+          failExtraction(limitError);
+          return;
+        }
+
         const { sanitized, wasRenamed } = sanitizeEntryPath(entry.fileName);
         if (wasRenamed) {
           renamedFiles.set(entry.fileName, sanitized);
@@ -448,18 +698,43 @@ function extractZipWithProgress(archivePath, destDir, onProgress = () => {}) {
               }
 
               const writeStream = fs.createWriteStream(destPath);
-              readStream.pipe(writeStream);
+              let entryBytes = 0;
+              const limitStream = new Transform({
+                transform(chunk, _encoding, callback) {
+                  try {
+                    const nextEntryBytes = entryBytes + chunk.length;
+                    const nextTotalBytes = streamedBytes.total + chunk.length;
+                    validateArchiveStreamBytes(entry, nextEntryBytes, nextTotalBytes);
+                    entryBytes = nextEntryBytes;
+                    streamedBytes.total = nextTotalBytes;
+                    callback(null, chunk);
+                  } catch (limitError) {
+                    callback(limitError);
+                  }
+                }
+              });
 
-              writeStream.on('close', advance);
-              writeStream.on('error', (writeErr) => handleEntryError(entry.fileName, writeErr));
-              readStream.on('error', (readErr) => handleEntryError(entry.fileName, readErr));
+              pipeline(readStream, limitStream, writeStream)
+                .then(advance)
+                .catch(async (streamError) => {
+                  try { await fs.promises.rm(destPath, { force: true }); } catch { /* best effort */ }
+                  if (isArchiveLimitError(streamError)) {
+                    failExtraction(streamError);
+                  } else {
+                    handleEntryError(entry.fileName, streamError);
+                  }
+                });
             });
           }).catch((mkdirErr) => handleEntryError(entry.fileName, mkdirErr));
         }
       });
 
-      zipfile.on('end', () => resolve({ renamedFiles, errors }));
-      zipfile.on('error', reject);
+      zipfile.on('end', () => {
+        if (settled) return;
+        settled = true;
+        resolve({ renamedFiles, errors });
+      });
+      zipfile.on('error', failExtraction);
     });
   });
 }
@@ -478,7 +753,13 @@ async function validateArchive(archivePath) {
       return { success: false, error: 'Archive file not found' };
     }
 
-    // Read only the manifest entry from the zip (no full extraction)
+    // Inspect every central-directory record before decompressing any content.
+    const metadata = await inspectArchiveMetadata(archivePath);
+    if (!metadata.hasManifest) {
+      return { success: false, error: 'Invalid archive: missing manifest.json' };
+    }
+
+    // Read only the bounded manifest entry from the zip (no full extraction)
     const manifestContent = await readZipEntry(archivePath, 'manifest.json');
 
     if (manifestContent === null) {
@@ -494,9 +775,7 @@ async function validateArchive(archivePath) {
       };
     }
 
-    // Get archive file size
-    const archiveStat = await fs.promises.stat(archivePath);
-    manifest.archiveSize = archiveStat.size;
+    manifest.archiveSize = metadata.archiveSize;
 
     debugLog?.info('Archive validated successfully', { ...logCtx, manifest });
     return { success: true, manifest };
@@ -533,8 +812,7 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
     progressCallback({ percent: 5, message: 'Extracting archive...' });
 
     // Extract to temp directory with progress reporting
-    const tempDir = path.join(os.tmpdir(), `mxvlib-import-${Date.now()}`);
-    await fs.promises.mkdir(tempDir, { recursive: true });
+    const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'mxvlib-import-'));
 
     try {
       const { renamedFiles, errors: extractErrors } = await extractZipWithProgress(
@@ -757,8 +1035,11 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
 }
 
 export {
+  ARCHIVE_LIMITS,
   initializeLibraryTransferManager,
   exportLibrary,
   importLibrary,
-  validateArchive
+  validateArchive,
+  validateArchiveEntryMetadata,
+  validateArchiveStreamBytes
 };
