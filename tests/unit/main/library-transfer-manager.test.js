@@ -9,6 +9,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vites
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { randomBytes } from 'crypto';
 import { createRequire } from 'module';
 
 // ── Stubs for Electron APIs ───────────────────────────────────────────
@@ -81,14 +82,19 @@ function setupTestUserData() {
 
 // ── Setup ─────────────────────────────────────────────────────────────
 
+let archiveLimits;
 let exportLibrary, importLibrary, validateArchive, initializeLibraryTransferManager;
+let validateArchiveEntryMetadata, validateArchiveStreamBytes;
 
 beforeAll(async () => {
   const mod = await import('../../../src/main/modules/library-transfer-manager.js');
+  archiveLimits = mod.ARCHIVE_LIMITS;
   exportLibrary = mod.exportLibrary;
   importLibrary = mod.importLibrary;
   validateArchive = mod.validateArchive;
   initializeLibraryTransferManager = mod.initializeLibraryTransferManager;
+  validateArchiveEntryMetadata = mod.validateArchiveEntryMetadata;
+  validateArchiveStreamBytes = mod.validateArchiveStreamBytes;
 });
 
 beforeEach(() => {
@@ -248,6 +254,118 @@ describe('validateArchive', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/missing manifest/i);
+  });
+
+  it('rejects an oversized manifest before parsing it', async () => {
+    const { ZipArchive } = require('archiver');
+    const archivePath = path.join(testUserData, 'oversized-manifest.mxvlib');
+    const output = fs.createWriteStream(archivePath);
+    const archive = new ZipArchive();
+
+    const done = new Promise((resolve) => output.on('close', resolve));
+    archive.pipe(output);
+    archive.append(randomBytes(archiveLimits.manifestBytes + 1), { name: 'manifest.json' });
+    await archive.finalize();
+    await done;
+
+    const result = await validateArchive(archivePath);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/manifest\.json.*size limit/i);
+  });
+});
+
+describe('large libraries', () => {
+  it('exports and imports a 15,000-song library', async () => {
+    // Installs report libraries this size; every song is one archive entry
+    const songs = 15000;
+    expect(songs + 100).toBeLessThan(archiveLimits.entryCount);
+    for (let i = 0; i < songs; i++) {
+      fs.writeFileSync(path.join(testUserData, 'mp3', `bulk${i}.mp3`), `song ${i}`);
+    }
+
+    const archivePath = path.join(testUserData, 'large-library.mxvlib');
+    const exported = await exportLibrary(archivePath);
+    expect(exported.error).toBeUndefined();
+    expect(exported.success).toBe(true);
+
+    const validated = await validateArchive(archivePath);
+    expect(validated.error).toBeUndefined();
+    expect(validated.success).toBe(true);
+
+    const importUserData = fs.mkdtempSync(path.join(os.tmpdir(), 'mxvlib-import-'));
+    fakeApp.getPath.mockReturnValue(importUserData);
+    const importConfigPath = path.join(importUserData, 'config.json');
+    fs.writeFileSync(importConfigPath, '{}');
+    initializeLibraryTransferManager({
+      debugLog: mockDebugLog,
+      getDb: () => ({ close: vi.fn() }),
+      store: { get: vi.fn(() => undefined), path: importConfigPath },
+    });
+
+    const result = await importLibrary(archivePath);
+    expect(result.error).toBeUndefined();
+    expect(result.success).toBe(true);
+    expect(fs.readdirSync(path.join(importUserData, 'mp3')).length).toBeGreaterThanOrEqual(songs);
+
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  }, 120000);
+});
+
+describe('archive resource limits', () => {
+  const entry = (overrides = {}) => ({
+    fileName: 'music/song.mp3',
+    compressedSize: 100,
+    uncompressedSize: 100,
+    ...overrides
+  });
+
+  it('accepts ordinary declared and streamed entry sizes', () => {
+    expect(validateArchiveEntryMetadata(entry(), 0)).toBe(100);
+    expect(() => validateArchiveStreamBytes(entry(), 100, 100)).not.toThrow();
+  });
+
+  it('rejects declared per-entry, aggregate, and compression-ratio excesses', () => {
+    expect(() => validateArchiveEntryMetadata(entry({
+      compressedSize: archiveLimits.entryUncompressedBytes + 1,
+      uncompressedSize: archiveLimits.entryUncompressedBytes + 1
+    }))).toThrow(/entry.*size limit/i);
+
+    expect(() => validateArchiveEntryMetadata(
+      entry({ compressedSize: 2, uncompressedSize: 2 }),
+      archiveLimits.totalUncompressedBytes - 1
+    )).toThrow(/total uncompressed size limit/i);
+
+    expect(() => validateArchiveEntryMetadata(entry({
+      compressedSize: 1,
+      uncompressedSize: archiveLimits.compressionRatio + 1
+    }))).toThrow(/compression ratio limit/i);
+  });
+
+  it('rejects actual streamed bytes that cross extraction budgets', () => {
+    expect(() => validateArchiveStreamBytes(entry(), 101, 101))
+      .toThrow(/declared uncompressed size/i);
+
+    expect(() => validateArchiveStreamBytes(
+      entry({
+        compressedSize: archiveLimits.entryUncompressedBytes + 1,
+        uncompressedSize: archiveLimits.entryUncompressedBytes + 1
+      }),
+      archiveLimits.entryUncompressedBytes + 1,
+      archiveLimits.entryUncompressedBytes + 1
+    )).toThrow(/streamed size limit/i);
+
+    expect(() => validateArchiveStreamBytes(
+      entry({ compressedSize: 1, uncompressedSize: 1 }),
+      1,
+      archiveLimits.totalUncompressedBytes + 1
+    )).toThrow(/streamed uncompressed size limit/i);
+
+    expect(() => validateArchiveStreamBytes(
+      entry({ compressedSize: 1, uncompressedSize: archiveLimits.compressionRatio + 1 }),
+      archiveLimits.compressionRatio + 1,
+      archiveLimits.compressionRatio + 1
+    )).toThrow(/streamed compression ratio limit/i);
   });
 });
 
