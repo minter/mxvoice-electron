@@ -47,13 +47,23 @@ describe('Windows publisher signing', () => {
       { stdio: 'ignore' }
     ]);
     expect(runFile.mock.calls[1][0]).toBe('powershell.exe');
-    expect(runFile.mock.calls[1][1]).toEqual(expect.arrayContaining([
-      '-NoProfile',
-      '-NonInteractive',
-      '-Command',
-      'C:\\dist\\Setup.exe'
-    ]));
-    expect(runFile.mock.calls[1][1][3]).toContain('param([string]$File)');
+    expect(runFile.mock.calls[1][1].slice(0, 3)).toEqual(['-NoProfile', '-NonInteractive', '-Command']);
+    expect(runFile.mock.calls[1][1]).toHaveLength(4);
+  });
+
+  it('keeps the path out of the PowerShell command, so a space cannot split it', () => {
+    const runFile = vi.fn()
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce(`Valid|${WINDOWS_PUBLISHER_THUMBPRINT}\n`);
+    const file = 'C:\\Users\\Some Name\\dist\\Setup; Write-Error injected.exe';
+
+    verifySignedFile('signtool.exe', file, runFile);
+
+    const [, args, options] = runFile.mock.calls[1];
+    expect(args.join(' ')).not.toContain('Some Name');
+    expect(args.join(' ')).not.toContain('injected');
+    expect(args[3]).toContain('$env:MXVOICE_SIGNATURE_PATH');
+    expect(options.env.MXVOICE_SIGNATURE_PATH).toBe(file);
   });
 
   it('rejects a valid signature from a different publisher', () => {

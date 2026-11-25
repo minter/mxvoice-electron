@@ -11,7 +11,8 @@ function gitOutput(projectDir, args, runGit, description) {
       cwd: projectDir,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"]
-    }).trim();
+    // trimEnd: the first column of a porcelain status line can be a space
+    }).trimEnd();
   } catch (error) {
     throw new Error(`${description}: ${error.message}`);
   }

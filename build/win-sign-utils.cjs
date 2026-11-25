@@ -64,17 +64,22 @@ function normalizeThumbprint(value) {
 function verifySignedFile(signtoolPath, file, runFile = execFileSync) {
   runFile(signtoolPath, ["verify", "/pa", "/all", file], { stdio: "ignore" });
 
+  // The path travels in the environment, never in PowerShell's command text:
+  // -Command re-joins its extra arguments without their quotes, which would
+  // cut a path with a space (C:\Users\Some Name\...) at the space
   const script = [
-    "& { param([string]$File)",
-    "$signature = Get-AuthenticodeSignature -LiteralPath $File",
+    "$signature = Get-AuthenticodeSignature -LiteralPath $env:MXVOICE_SIGNATURE_PATH",
     "if ($null -eq $signature.SignerCertificate) { exit 2 }",
-    "Write-Output ($signature.Status.ToString() + '|' + $signature.SignerCertificate.Thumbprint)",
-    "}"
+    "Write-Output ($signature.Status.ToString() + '|' + $signature.SignerCertificate.Thumbprint)"
   ].join("; ");
   const output = runFile(
     "powershell.exe",
-    ["-NoProfile", "-NonInteractive", "-Command", script, file],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }
+    ["-NoProfile", "-NonInteractive", "-Command", script],
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, MXVOICE_SIGNATURE_PATH: file }
+    }
   ).trim();
   const result = output.split(/\r?\n/).filter(Boolean).at(-1) ?? "";
   const separator = result.indexOf("|");
