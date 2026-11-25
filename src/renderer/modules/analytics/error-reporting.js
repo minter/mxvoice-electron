@@ -19,13 +19,13 @@ export function isAbortError(error) {
  * Build `renderer_error` properties, or null when the error should be ignored.
  *
  * @param {*} error - The thrown value or rejection reason
- * @param {string} [fallbackMessage] - Message to use when `error` carries none
- * @returns {{ error_message: string, stack_trace: string|undefined }|null}
+ * @param {string} errorCode - Stable category assigned by the global error handler
+ * @returns {{ error_code: string, stack_trace: string|undefined }|null}
  */
-export function buildRendererErrorReport(error, fallbackMessage) {
+export function buildRendererErrorReport(error, errorCode) {
   if (isAbortError(error)) return null;
   return {
-    error_message: error instanceof Error ? error.message : (fallbackMessage ?? String(error)),
+    error_code: errorCode,
     stack_trace: error instanceof Error ? error.stack : undefined,
   };
 }

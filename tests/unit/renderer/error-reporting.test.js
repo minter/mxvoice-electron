@@ -19,16 +19,18 @@ describe('renderer error reporting', () => {
     expect(buildRendererErrorReport(abortError('The user aborted a request.'))).toBeNull();
   });
 
-  it('reports Error instances with message and stack', () => {
+  it('reports Error instances with a stable code and stack', () => {
     const error = new Error('boom');
-    expect(buildRendererErrorReport(error)).toEqual({ error_message: 'boom', stack_trace: error.stack });
+    expect(buildRendererErrorReport(error, 'renderer_uncaught_exception')).toEqual({
+      error_code: 'renderer_uncaught_exception',
+      stack_trace: error.stack,
+    });
   });
 
-  it('reports non-Error rejection reasons as strings', () => {
-    expect(buildRendererErrorReport('plain failure')).toEqual({ error_message: 'plain failure', stack_trace: undefined });
-  });
-
-  it('prefers the event message when the error object is missing', () => {
-    expect(buildRendererErrorReport(undefined, 'Script error.')).toEqual({ error_message: 'Script error.', stack_trace: undefined });
+  it('does not include non-Error rejection values', () => {
+    expect(buildRendererErrorReport('/Users/alice/private', 'renderer_unhandled_rejection')).toEqual({
+      error_code: 'renderer_unhandled_rejection',
+      stack_trace: undefined,
+    });
   });
 });
