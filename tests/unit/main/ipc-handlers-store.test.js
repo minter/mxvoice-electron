@@ -19,8 +19,11 @@ const fakeIpcMain = {
   on: () => {},
 };
 
-const fakeDialog = { showOpenDialogSync: vi.fn() };
+const fakeDialog = { showOpenDialog: vi.fn() };
 const fakeApp = { getAppPath: vi.fn(() => '/fake'), getPath: vi.fn(() => '/fake') };
+const mainFrame = { url: 'file:///fake/index.html' };
+const mainWebContents = { send: vi.fn(), mainFrame };
+const mainWindow = { webContents: mainWebContents, isDestroyed: () => false };
 
 vi.mock('electron', () => ({
   default: { ipcMain: fakeIpcMain, dialog: fakeDialog, app: fakeApp },
@@ -58,7 +61,7 @@ function makeStore() {
 let db;
 let mockStore;
 const mockDebugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-const fakeEvent = {};
+const fakeEvent = { sender: mainWebContents, senderFrame: mainFrame };
 
 beforeAll(async () => {
   await onRuntimeInitialized;
@@ -83,7 +86,7 @@ beforeAll(async () => {
   );
 
   initializeIpcHandlers({
-    mainWindow: { webContents: { send: vi.fn() } },
+    mainWindow,
     getDb: () => db,
     store: mockStore,
     audioInstances: new Map(),
@@ -91,6 +94,7 @@ beforeAll(async () => {
     debugLog: mockDebugLog,
     logService: null,
     updateState: { downloaded: false },
+    trustedRendererUrl: mainFrame.url,
   });
 });
 
@@ -152,18 +156,74 @@ describe('store-get', () => {
   });
 });
 
-describe('store-set', () => {
-  it('sets and verifies value', async () => {
-    const res = await invoke('store-set', 'theme', 'dark');
-    expect(res.success).toBe(true);
-    expect(res.value).toBe('dark');
-    expect(storeData.theme).toBe('dark');
+describe('bounded store mutation', () => {
+  it('does not register generic mutation channels', () => {
+    expect(handlers['store-set']).toBeUndefined();
+    expect(handlers['store-delete']).toBeUndefined();
+    expect(handlers['store-clear']).toBeUndefined();
   });
 
-  it('overwrites existing value', async () => {
-    storeData.volume = 0.5;
-    await invoke('store-set', 'volume', 0.8);
-    expect(storeData.volume).toBe(0.8);
+  it('sets only the typed debug logging preference', async () => {
+    const res = await invoke('store:set-debug-log-enabled', false);
+    expect(res.success).toBe(true);
+    expect(res.value).toBe(false);
+    expect(storeData).toEqual({ debug_log_enabled: false });
+  });
+
+  it('rejects non-boolean debug logging values', async () => {
+    const res = await invoke('store:set-debug-log-enabled', '/attacker/path');
+    expect(res.success).toBe(false);
+    expect(storeData).not.toHaveProperty('debug_log_enabled');
+  });
+
+  it('rejects typed mutations from another frame', async () => {
+    const result = await handlers['store:set-debug-log-enabled']({
+      sender: mainWebContents,
+      senderFrame: { url: 'file:///fake/other.html' }
+    }, true);
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/untrusted ipc sender/i);
+    expect(storeData).not.toHaveProperty('debug_log_enabled');
+  });
+
+  it('marks only the analytics banner flag', async () => {
+    const res = await invoke('store:mark-analytics-banner-shown');
+    expect(res).toEqual({ success: true, value: true });
+    expect(storeData).toEqual({ analytics_banner_shown: true });
+  });
+
+  it('rejects directory changes without native picker authorization', async () => {
+    const res = await invoke('store:set-directory-preference', 'music_directory', 'attacker-token');
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/invalid|expired/i);
+    expect(storeData).not.toHaveProperty('music_directory');
+  });
+
+  it('persists a native-picker directory capability once', async () => {
+    fakeDialog.showOpenDialog.mockResolvedValueOnce({
+      canceled: false,
+      filePaths: ['/selected/music']
+    });
+    const picker = await invoke('show-directory-picker', '/old/music', 'music_directory');
+    const token = picker.data.authorizationToken;
+
+    await expect(invoke('store:set-directory-preference', 'database_directory', token))
+      .resolves.toMatchObject({ success: false });
+    expect(storeData).not.toHaveProperty('database_directory');
+    expect(storeData).not.toHaveProperty('music_directory');
+
+    fakeDialog.showOpenDialog.mockResolvedValueOnce({
+      canceled: false,
+      filePaths: ['/selected/music']
+    });
+    const approved = await invoke('show-directory-picker', '/old/music', 'music_directory');
+    const approvedToken = approved.data.authorizationToken;
+    await expect(invoke('store:set-directory-preference', 'music_directory', approvedToken))
+      .resolves.toEqual({ success: true, value: '/selected/music' });
+    expect(storeData.music_directory).toBe('/selected/music');
+
+    await expect(invoke('store:set-directory-preference', 'music_directory', approvedToken))
+      .resolves.toMatchObject({ success: false });
   });
 });
 
@@ -179,34 +239,6 @@ describe('store-has', () => {
     const res = await invoke('store-has', 'nope');
     expect(res.success).toBe(true);
     expect(res.has).toBe(false);
-  });
-});
-
-describe('store-delete', () => {
-  it('removes the key', async () => {
-    storeData.toRemove = 'bye';
-    const res = await invoke('store-delete', 'toRemove');
-    expect(res.success).toBe(true);
-    expect(storeData).not.toHaveProperty('toRemove');
-  });
-});
-
-describe('store-keys', () => {
-  it('returns all store keys', async () => {
-    storeData.a = 1;
-    storeData.b = 2;
-    const res = await invoke('store-keys');
-    expect(res.success).toBe(true);
-    expect(res.keys).toEqual(expect.arrayContaining(['a', 'b']));
-  });
-});
-
-describe('store-clear', () => {
-  it('removes all data', async () => {
-    storeData.x = 1;
-    storeData.y = 2;
-    const res = await invoke('store-clear');
-    expect(res.success).toBe(true);
   });
 });
 

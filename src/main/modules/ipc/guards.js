@@ -6,6 +6,30 @@
 import path from 'path';
 import { promises as fsPromises } from 'fs';
 
+export function assertTrustedMainFrame(event, getMainWindow, trustedRendererUrl) {
+  const mainWindow = getMainWindow?.();
+  const webContents = mainWindow?.webContents;
+  const senderFrame = event?.senderFrame;
+  if (!webContents || webContents.isDestroyed?.()) {
+    throw new Error('Access denied: Main window is unavailable');
+  }
+  if (event?.sender !== webContents || senderFrame !== webContents.mainFrame) {
+    throw new Error('Access denied: Untrusted IPC sender');
+  }
+
+  let senderUrl;
+  let expectedUrl;
+  try {
+    senderUrl = new URL(senderFrame.url);
+    expectedUrl = new URL(trustedRendererUrl);
+  } catch {
+    throw new Error('Access denied: Invalid IPC sender origin');
+  }
+  if (senderUrl.protocol !== 'file:' || senderUrl.href !== expectedUrl.href) {
+    throw new Error('Access denied: Untrusted IPC sender origin');
+  }
+}
+
 export function isPathInside(candidatePath, allowedPath) {
   const relative = path.relative(path.resolve(allowedPath), path.resolve(candidatePath));
   return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));

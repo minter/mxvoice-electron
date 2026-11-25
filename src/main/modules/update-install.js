@@ -106,9 +106,9 @@ export function createUpdateInstaller({
 
   // Resolves true once Squirrel has the update, false past the ceiling.
   // electron-updater starts Squirrel's fetch itself right after its own
-  // download only because autoInstallOnAppQuit is left at its default, true
-  // (MacUpdater); with it false nothing would fetch and this would only end
-  // at the ceiling.
+  // download because the explicit download handler enables
+  // autoInstallOnAppQuit for that user-approved MacUpdater transfer; with it
+  // false nothing would fetch and this would only end at the ceiling.
   function untilInstallReady() {
     let timer = null;
     const ceiling = new Promise((resolve) => {

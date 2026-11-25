@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const { resolveReleaseTarget } = require("./release-target.cjs");
 const { resolveWindowsReleaseArtifacts } = require("./release-artifacts.cjs");
 const { assertReleaseAssetsAvailable, ensureRelease, releaseNotesBody } = require("./github-release.cjs");
-const { findSigntool, verifySignedFile } = require("./win-sign-utils.cjs");
+const { findSigntool, verifyExpectedPublisher, verifySignedFile } = require("./win-sign-utils.cjs");
 
 if (process.platform !== "win32") {
   console.log("[publishWindows] Skipping - not Windows platform");
@@ -60,6 +60,20 @@ try {
 const signedInstallerData = fs.readFileSync(installerPath);
 const blockMapFile = installerFile + ".blockmap";
 const blockMapPath = path.join(distDir, blockMapFile);
+
+// Metadata hashes only prove that the host served self-consistent bytes. The
+// installer's Authenticode identity is the independent publisher boundary.
+// verifySignedFile (above) pins the exact certificate; this also confirms the
+// signer's name is the publisherName that installed clients enforce, so a
+// release can never be signed by a certificate the clients would then refuse.
+let installerSignature;
+try {
+  installerSignature = verifyExpectedPublisher(installerPath, packageJson.build?.win?.publisherName);
+} catch (error) {
+  console.error(`[publishWindows] Refusing to publish ${installerFile}: ${error.message}`);
+  process.exit(1);
+}
+console.log(`[publishWindows] Verified publisher ${installerSignature.publisher} (${installerSignature.thumbprint})`);
 
 const artifacts = [{ name: installerFile, path: installerPath, data: signedInstallerData }];
 

@@ -67,11 +67,10 @@ const IPC = deepFreeze({
   },
   STORE: {
     GET: 'store-get',
-    SET: 'store-set',
-    DELETE: 'store-delete',
     HAS: 'store-has',
-    KEYS: 'store-keys',
-    CLEAR: 'store-clear',
+    SET_DEBUG_LOG_ENABLED: 'store:set-debug-log-enabled',
+    MARK_ANALYTICS_BANNER_SHOWN: 'store:mark-analytics-banner-shown',
+    SET_DIRECTORY_PREFERENCE: 'store:set-directory-preference',
   },
   AUDIO: {
     PLAY: 'audio-play',

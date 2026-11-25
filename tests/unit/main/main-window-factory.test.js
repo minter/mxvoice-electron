@@ -11,6 +11,7 @@ function createBrowserWindowMock() {
       this.contentHandlers = {};
       this.webContents = {
         on: vi.fn((event, handler) => { this.contentHandlers[event] = handler; }),
+        setWindowOpenHandler: vi.fn((handler) => { this.windowOpenHandler = handler; }),
         send: vi.fn(),
         insertCSS: vi.fn(async () => 'css-key'),
         removeInsertedCSS: vi.fn(async () => {})
@@ -88,6 +89,92 @@ describe('main window factory', () => {
     });
     expect(instances[0].options).not.toHaveProperty('x');
     expect(instances[0].options).not.toHaveProperty('y');
+  });
+
+  it('keeps the packaged page loaded and sends allowed remote navigation to the browser', () => {
+    const { BrowserWindow, instances } = createBrowserWindowMock();
+    const shell = { openExternal: vi.fn(() => Promise.resolve()) };
+    createMainWindow({
+      platform: 'linux',
+      BrowserWindow,
+      screen: { getAllDisplays: () => [] },
+      shell,
+      iconPath: '', preloadPath: '', indexPath: '/app/index.html'
+    });
+    const win = instances[0];
+    const localEvent = { preventDefault: vi.fn() };
+    const remoteEvent = { preventDefault: vi.fn() };
+
+    win.contentHandlers['will-navigate'](localEvent, 'file:///app/index.html');
+    win.contentHandlers['will-navigate'](remoteEvent, 'https://example.com/release-notes');
+
+    expect(localEvent.preventDefault).not.toHaveBeenCalled();
+    expect(remoteEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(shell.openExternal).toHaveBeenCalledWith('https://example.com/release-notes');
+  });
+
+  it('lets the packaged page reload with a fragment, and reads the URL from the event', () => {
+    const { BrowserWindow, instances } = createBrowserWindowMock();
+    const shell = { openExternal: vi.fn(() => Promise.resolve()) };
+    createMainWindow({
+      platform: 'linux',
+      BrowserWindow,
+      screen: { getAllDisplays: () => [] },
+      shell,
+      iconPath: '', preloadPath: '', indexPath: '/app/index.html'
+    });
+    const win = instances[0];
+    const fragment = { url: 'file:///app/index.html#hotkeys', preventDefault: vi.fn() };
+    const query = { url: 'file:///app/index.html?x=1', preventDefault: vi.fn() };
+    const other = { url: 'file:///app/other.html', preventDefault: vi.fn() };
+    const remote = { url: 'https://example.com/a', preventDefault: vi.fn() };
+
+    win.contentHandlers['will-navigate'](fragment);
+    win.contentHandlers['will-navigate'](query);
+    win.contentHandlers['will-navigate'](other);
+    win.contentHandlers['will-navigate'](remote);
+
+    expect(fragment.preventDefault).not.toHaveBeenCalled();
+    expect(query.preventDefault).toHaveBeenCalledOnce();
+    expect(other.preventDefault).toHaveBeenCalledOnce();
+    expect(remote.preventDefault).toHaveBeenCalledOnce();
+    expect(shell.openExternal).toHaveBeenCalledOnce();
+    expect(shell.openExternal).toHaveBeenCalledWith('https://example.com/a');
+  });
+
+  it('blocks redirects and does not launch unapproved URL protocols', () => {
+    const { BrowserWindow, instances } = createBrowserWindowMock();
+    const shell = { openExternal: vi.fn(() => Promise.resolve()) };
+    createMainWindow({
+      platform: 'linux',
+      BrowserWindow,
+      screen: { getAllDisplays: () => [] },
+      shell,
+      iconPath: '', preloadPath: '', indexPath: '/app/index.html'
+    });
+    const redirectEvent = { preventDefault: vi.fn() };
+
+    instances[0].contentHandlers['will-redirect'](redirectEvent, 'javascript:alert(1)');
+
+    expect(redirectEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(shell.openExternal).not.toHaveBeenCalled();
+  });
+
+  it('denies child windows while opening allowed targets externally', () => {
+    const { BrowserWindow, instances } = createBrowserWindowMock();
+    const shell = { openExternal: vi.fn(() => Promise.resolve()) };
+    createMainWindow({
+      platform: 'linux',
+      BrowserWindow,
+      screen: { getAllDisplays: () => [] },
+      shell,
+      iconPath: '', preloadPath: '', indexPath: '/app/index.html'
+    });
+
+    expect(instances[0].windowOpenHandler({ url: 'https://example.com/help' })).toEqual({ action: 'deny' });
+    expect(instances[0].windowOpenHandler({ url: 'javascript:alert(1)' })).toEqual({ action: 'deny' });
+    expect(shell.openExternal).toHaveBeenCalledOnce();
+    expect(shell.openExternal).toHaveBeenCalledWith('https://example.com/help');
   });
 
   it('hides the window in test mode', () => {

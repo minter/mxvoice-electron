@@ -86,9 +86,11 @@ export const securePath = {
 /** Secure store operations exposed by the preload. */
 export const secureStore = {
   get: (key) => invokeSecureAPI('store', 'get', [key]),
-  set: (key, value) => invokeSecureAPI('store', 'set', [key, value]),
   has: (key) => invokeSecureAPI('store', 'has', [key]),
-  delete: (key) => invokeSecureAPI('store', 'delete', [key])
+  setDebugLogEnabled: (enabled) => invokeSecureAPI('store', 'setDebugLogEnabled', [enabled]),
+  markAnalyticsBannerShown: () => invokeSecureAPI('store', 'markAnalyticsBannerShown'),
+  setDirectoryPreference: (key, authorizationToken) =>
+    invokeSecureAPI('store', 'setDirectoryPreference', [key, authorizationToken])
 };
 
 /** Secure audio operations exposed by the preload. */
@@ -111,7 +113,8 @@ export const secureAnalytics = {
 /** Secure picker and collection-file operations exposed by the preload. */
 export const secureFileDialog = {
   showFilePicker: (options = {}) => invokeSecureAPI('app', 'showFilePicker', [options]),
-  showDirectoryPicker: (defaultPath) => invokeSecureAPI('app', 'showDirectoryPicker', [defaultPath])
+  showDirectoryPicker: (defaultPath, preferenceKey) =>
+    invokeSecureAPI('app', 'showDirectoryPicker', [defaultPath, preferenceKey])
 };
 
 /**

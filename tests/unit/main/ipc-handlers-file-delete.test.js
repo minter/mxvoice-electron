@@ -21,6 +21,9 @@ const fakeIpcMain = {
 };
 
 const fakeDialog = { showOpenDialogSync: vi.fn() };
+const mainFrame = { url: 'file:///fake/index.html' };
+const mainWebContents = { send: vi.fn(), mainFrame };
+const mainWindow = { webContents: mainWebContents, isDestroyed: () => false };
 // Return realistic paths so the allowedPaths whitelist resolves correctly
 const fakeApp = {
   getAppPath: vi.fn(() => '/fake'),
@@ -100,6 +103,15 @@ describe('restricted filesystem capabilities', () => {
     expect(res.error).toMatch(/destination.*managed music directory/i);
   });
 
+  it('rejects copy destinations whose canonical path escapes through a symlink', async () => {
+    realpathMock.mockImplementation(async value =>
+      value === '/Users/testuser/Music/linked-target.mp3' ? '/etc/target.mp3' : value
+    );
+    const res = await invoke('file-copy', '/tmp/source.mp3', '/Users/testuser/Music/linked-target.mp3');
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/destination.*managed music directory/i);
+  });
+
   it('rejects unsupported copy source types', async () => {
     const res = await invoke('file-copy', '/tmp/source.txt', '/Users/testuser/Music/source.txt');
     expect(res.success).toBe(false);
@@ -138,8 +150,10 @@ describe('restricted filesystem capabilities', () => {
 // ── Setup ─────────────────────────────────────────────────────────────
 
 let db;
+let refreshDirectoryPreferenceAuthority;
 const mockDebugLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-const fakeEvent = {};
+const fakeEvent = { sender: mainWebContents, senderFrame: mainFrame };
+let configuredMusicDirectory = '/Users/testuser/Music';
 
 beforeAll(async () => {
   await onRuntimeInitialized;
@@ -152,19 +166,22 @@ beforeAll(async () => {
     );
   `);
 
-  const { initializeIpcHandlers } = await import(
+  const ipcHandlers = await import(
     '../../../src/main/modules/ipc-handlers.js'
   );
+  const { initializeIpcHandlers } = ipcHandlers;
+  refreshDirectoryPreferenceAuthority = ipcHandlers.refreshDirectoryPreferenceAuthority;
 
   initializeIpcHandlers({
-    mainWindow: { webContents: { send: vi.fn() } },
+    mainWindow,
     getDb: () => db,
-    store: { get: vi.fn(key => key === 'music_directory' ? '/Users/testuser/Music' : undefined), set: vi.fn(), has: vi.fn(), delete: vi.fn(), clear: vi.fn() },
+    store: { get: vi.fn(key => key === 'music_directory' ? configuredMusicDirectory : undefined), set: vi.fn(), has: vi.fn() },
     audioInstances: new Map(),
     autoUpdater: null,
     debugLog: mockDebugLog,
     logService: null,
     updateState: { downloaded: false },
+    trustedRendererUrl: mainFrame.url,
   });
 });
 
@@ -190,6 +207,16 @@ describe('file-delete handler', () => {
     const res = await invoke('file-delete', 42);
     expect(res.success).toBe(false);
     expect(res.error).toMatch(/invalid file path/i);
+  });
+
+  it('rejects deletion from a non-main sender frame', async () => {
+    const result = await handlers['file-delete']({
+      sender: mainWebContents,
+      senderFrame: { url: 'file:///fake/other.html' }
+    }, '/Users/testuser/Music/old-track.mp3');
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/untrusted ipc sender/i);
+    expect(unlinkMock).not.toHaveBeenCalled();
   });
 
   it('rejects empty string file path', async () => {
@@ -243,6 +270,27 @@ describe('file-delete handler', () => {
     expect(res.success).toBe(false);
     expect(res.error).toMatch(/access denied/i);
     expect(unlinkMock).not.toHaveBeenCalled();
+  });
+
+  it('does not trust later store changes as filesystem authorization roots', async () => {
+    configuredMusicDirectory = '/Users/testuser';
+    const res = await invoke('file-delete', '/Users/testuser/Documents/notes.txt');
+    expect(res.success).toBe(false);
+    expect(res.error).toMatch(/access denied/i);
+    expect(unlinkMock).not.toHaveBeenCalled();
+    configuredMusicDirectory = '/Users/testuser/Music';
+  });
+
+  it('accepts a trusted main-process refresh after startup migration', async () => {
+    configuredMusicDirectory = '/Users/testuser/Documents';
+    refreshDirectoryPreferenceAuthority();
+    unlinkMock.mockResolvedValueOnce(undefined);
+    const filePath = '/Users/testuser/Documents/old-track.mp3';
+    const res = await invoke('file-delete', filePath);
+    expect(res.success).toBe(true);
+    expect(unlinkMock).toHaveBeenCalledWith(path.resolve(filePath));
+    configuredMusicDirectory = '/Users/testuser/Music';
+    refreshDirectoryPreferenceAuthority();
   });
 
   it('treats ENOENT as success (file already gone)', async () => {
