@@ -55,6 +55,35 @@ describe('profile backup manager orchestration', () => {
     expect(listed.backups.some((backup) => backup.mode === 'pre-restore')).toBe(true);
   });
 
+  it('rejects unsafe restored preferences before replacing the live profile', async () => {
+    await fs.promises.writeFile(path.join(profileDirectory, 'state.json'), '{"tab":"live"}');
+    const created = await manager.createBackup(profileName);
+    const backupPreferences = path.join(
+      manager.getBackupDirectory(profileName),
+      created.backupId,
+      'preferences.json'
+    );
+    await fs.promises.writeFile(backupPreferences, JSON.stringify({
+      backup_settings: {
+        autoBackupEnabled: true,
+        backupInterval: 1,
+        maxBackupCount: -1,
+        maxBackupAge: -1
+      }
+    }));
+
+    await expect(manager.checkBackupRestorable(profileName, created.backupId)).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('Backup preferences are invalid')
+    });
+    await expect(manager.restoreBackup(profileName, created.backupId)).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('Backup preferences are invalid')
+    });
+    await expect(fs.promises.readFile(path.join(profileDirectory, 'state.json'), 'utf8'))
+      .resolves.toBe('{"tab":"live"}');
+  });
+
   it('reports missing profiles and backup IDs without throwing', async () => {
     await expect(manager.createBackup('Missing Profile')).resolves.toEqual({
       success: false, error: 'Profile directory does not exist'
@@ -183,6 +212,19 @@ describe('profile backup manager orchestration', () => {
   it('skips change-aware backup creation when disabled', async () => {
     await expect(manager.createBackupIfChanged(profileName, { autoBackupEnabled: false })).resolves.toEqual({
       success: true, created: false, reason: 'auto-backup disabled'
+    });
+  });
+
+  it('rejects invalid automatic backup policy before hashing the profile', async () => {
+    await expect(manager.createBackupIfChanged(profileName, {
+      autoBackupEnabled: true,
+      backupInterval: 1,
+      maxBackupCount: -1,
+      maxBackupAge: -1
+    })).resolves.toMatchObject({
+      success: false,
+      created: false,
+      error: expect.stringContaining('Invalid backup settings')
     });
   });
 });

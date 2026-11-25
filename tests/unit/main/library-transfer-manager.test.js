@@ -482,6 +482,38 @@ describe('importLibrary', () => {
     return importUserData;
   }
 
+  it('rejects unsafe imported profile settings before replacing live data', async () => {
+    fs.writeFileSync(
+      path.join(testUserData, 'profiles', 'Default User', 'preferences.json'),
+      JSON.stringify({
+        backup_settings: {
+          autoBackupEnabled: true,
+          backupInterval: 1,
+          maxBackupCount: -1,
+          maxBackupAge: -1
+        }
+      })
+    );
+    const archivePath = path.join(testUserData, 'unsafe-preferences.mxvlib');
+    await exportLibrary(archivePath);
+
+    const showSession = { end: vi.fn(async () => {}) };
+    const recoveryStore = { clearAll: vi.fn(async () => {}) };
+    const importUserData = importTarget({ showSession, recoveryStore });
+
+    const result = await importLibrary(archivePath);
+
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringContaining('preferences are invalid')
+    });
+    expect(showSession.end).not.toHaveBeenCalled();
+    expect(recoveryStore.clearAll).not.toHaveBeenCalled();
+    expect(fs.readFileSync(path.join(importUserData, 'mxvoice.db'), 'utf8')).toBe('current-db');
+    expect(fs.existsSync(path.join(importUserData, 'profiles', 'Old Show'))).toBe(true);
+    fs.rmSync(importUserData, { recursive: true, force: true });
+  });
+
   it('a library import that fails validation leaves the session and recovery files alone', async () => {
     // An archive with no database: the export finds none to include
     fs.rmSync(path.join(testUserData, 'mxvoice.db'));

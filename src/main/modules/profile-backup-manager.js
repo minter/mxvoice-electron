@@ -27,6 +27,10 @@ import { createBackupDirectoryScanner } from './backup-directory-scanner.js';
 import { createBackupFileOperations } from './backup-file-operations.js';
 import { selectBackupsForRetention } from './backup-retention-policy.js';
 import { createProfileChangeDetector } from './profile-change-detector.js';
+import {
+  validateBackupSettings,
+  validateProfilePreferences
+} from './profile-preference-validator.js';
 import { parseDocument } from './show-document.js';
 import { isPathInside } from './ipc/guards.js';
 
@@ -343,6 +347,30 @@ async function classifyShowsFile(file) {
   return { state: parsed.error === 'version' ? 'refused' : 'bad' };
 }
 
+async function validateBackupPreferences(backupPath) {
+  const preferencesPath = path.join(backupPath, 'preferences.json');
+  let text;
+  try {
+    text = await fs.promises.readFile(preferencesPath, 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') return { success: true };
+    return { success: false, error: 'Backup preferences cannot be read' };
+  }
+
+  let preferences;
+  try {
+    preferences = JSON.parse(text);
+  } catch {
+    return { success: false, error: 'Backup preferences are not valid JSON' };
+  }
+
+  const validation = validateProfilePreferences(preferences);
+  if (!validation.valid) {
+    return { success: false, error: `Backup preferences are invalid: ${validation.error}` };
+  }
+  return { success: true };
+}
+
 /**
  * Show names in a backup's shows, in document order, as opening the restored
  * profile would find them: shows.json, else its previous copy. Null for a
@@ -442,7 +470,7 @@ async function checkBackupRestorable(profileName, backupId) {
   if (!listed || !await pathExists(backupPath)) {
     return { success: false, error: 'Backup does not exist' };
   }
-  return { success: true };
+  return validateBackupPreferences(backupPath);
 }
 
 /**
@@ -463,6 +491,9 @@ async function restoreBackup(profileName, backupId) {
     if (!await pathExists(backupPath)) {
       return { success: false, error: 'Backup does not exist' };
     }
+
+    const preferencesCheck = await validateBackupPreferences(backupPath);
+    if (!preferencesCheck.success) return preferencesCheck;
 
     debugLog?.info('Restoring backup', {
       module: 'profile-backup-manager',
@@ -584,10 +615,20 @@ async function deleteBackup(profileName, backupId) {
 async function cleanupOldBackups(profileName, maxCount, maxAge) {
   try {
     const metadata = await readMetadataSafe(profileName);
-    const { keep: backupsToKeep, remove: backupsToDelete } = selectBackupsForRetention(
+    const selection = selectBackupsForRetention(
       metadata.backups,
       { maxCount, maxAge }
     );
+    if (!selection.valid) {
+      debugLog?.warn('Refusing to clean up backups with an invalid retention policy', {
+        module: 'profile-backup-manager',
+        function: 'cleanupOldBackups',
+        profileName,
+        error: selection.error
+      });
+      return { success: false, error: selection.error };
+    }
+    const { keep: backupsToKeep, remove: backupsToDelete } = selection;
     
     // Delete old backups
     const backupDir = getBackupDirectory(profileName);
@@ -659,8 +700,14 @@ async function hasProfileChanged(profileName) {
  */
 async function createBackupIfChanged(profileName, settings = {}) {
   try {
+    const validation = validateBackupSettings(settings);
+    if (!validation.valid) {
+      return { success: false, created: false, error: `Invalid backup settings: ${validation.error}` };
+    }
+    const validatedSettings = validation.value;
+
     // Check if auto-backup is enabled
-    if (settings.autoBackupEnabled === false) {
+    if (validatedSettings.autoBackupEnabled === false) {
       return { success: true, created: false, reason: 'auto-backup disabled' };
     }
     
@@ -686,10 +733,12 @@ async function createBackupIfChanged(profileName, settings = {}) {
         return metadata;
       });
       
-      // Run cleanup if settings provided
-      if (settings.maxBackupCount && settings.maxBackupAge) {
-        await cleanupOldBackups(profileName, settings.maxBackupCount, settings.maxBackupAge);
-      }
+      // Run cleanup only with the validated retention policy
+      await cleanupOldBackups(
+        profileName,
+        validatedSettings.maxBackupCount,
+        validatedSettings.maxBackupAge
+      );
     }
     
     return { ...result, created: result.success };

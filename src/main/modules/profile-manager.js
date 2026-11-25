@@ -23,6 +23,10 @@ import {
   getProfilesDirectory,
   sanitizeProfileName
 } from './profile-paths.js';
+import {
+  getDefaultBackupSettings,
+  validateProfilePreferences
+} from './profile-preference-validator.js';
 
 // Note: __dirname/__filename equivalents removed — not currently needed in this module
 
@@ -76,6 +80,9 @@ function getDefaultPreferences() {
     
     // UI State & Layout (stored per-profile)
     holding_tank_mode: 'storage',
+
+    // Automatic profile backups
+    backup_settings: getDefaultBackupSettings(),
     
     // Metadata
     created_at: Date.now(),
@@ -665,7 +672,17 @@ async function loadProfilePreferences(profileName) {
       preferences[key] = unwrapValue(preferences[key]);
     }
     
-    return preferences;
+    const validation = validateProfilePreferences(preferences);
+    if (!validation.valid) {
+      debugLog?.warn('Unsafe backup settings found in profile preferences; using safe values', {
+        module: 'profile-manager',
+        function: 'loadProfilePreferences',
+        profileName,
+        error: validation.error
+      });
+    }
+
+    return validation.value;
   } catch (error) {
     debugLog?.error('Failed to load profile preferences', { 
       module: 'profile-manager', 
@@ -698,6 +715,17 @@ function unwrapValue(value) {
  */
 async function saveProfilePreferences(profileName, preferences) {
   try {
+    const validation = validateProfilePreferences(preferences);
+    if (!validation.valid) {
+      debugLog?.warn('Refusing to save invalid profile preferences', {
+        module: 'profile-manager',
+        function: 'saveProfilePreferences',
+        profileName,
+        error: validation.error
+      });
+      return false;
+    }
+
     const preferencesPath = getProfilePreferencesPath(profileName);
     const profileDir = path.dirname(preferencesPath);
 
@@ -715,7 +743,7 @@ async function saveProfilePreferences(profileName, preferences) {
       fs.mkdirSync(profileDir, { recursive: true });
     }
     
-    fs.writeFileSync(preferencesPath, JSON.stringify(preferences, null, 2));
+    fs.writeFileSync(preferencesPath, JSON.stringify(validation.value, null, 2));
     
     debugLog?.info('Profile preferences saved', { 
       module: 'profile-manager', 

@@ -7,6 +7,10 @@
 
 import * as profileManager from './profile-manager.js';
 import * as profileBackupManager from './profile-backup-manager.js';
+import {
+  getSafeBackupSettings,
+  validateBackupSettings
+} from './profile-preference-validator.js';
 
 let debugLog = null;
 let backupTimer = null;
@@ -44,12 +48,19 @@ async function startAutoBackupTimer(profileName) {
   const preferences = await profileManager.loadProfilePreferences(profileName);
   // Stopped or restarted while the settings were loading
   if (generation !== timerGeneration) return;
-  const settings = preferences?.backup_settings || {
-    autoBackupEnabled: true,
-    backupInterval: 30 * 60 * 1000, // 30 minutes default
-    maxBackupCount: 25,
-    maxBackupAge: 30 * 24 * 60 * 60 * 1000 // 30 days default
-  };
+  const validation = validateBackupSettings(preferences?.backup_settings);
+  const settings = validation.valid
+    ? validation.value
+    : getSafeBackupSettings(preferences?.backup_settings);
+
+  if (!validation.valid) {
+    debugLog?.warn?.('Unsafe auto-backup settings were replaced with safe values', {
+      module: 'auto-backup-timer',
+      function: 'startAutoBackupTimer',
+      profileName,
+      error: validation.error
+    });
+  }
   
   if (!settings.autoBackupEnabled) {
     debugLog?.info('Auto-backup disabled for profile', {
@@ -60,7 +71,7 @@ async function startAutoBackupTimer(profileName) {
     return;
   }
   
-  const interval = settings.backupInterval || 30 * 60 * 1000;
+  const interval = settings.backupInterval;
   
   debugLog?.info('Starting auto-backup timer', {
     module: 'auto-backup-timer',
