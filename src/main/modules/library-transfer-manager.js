@@ -26,6 +26,12 @@ const require = createRequire(import.meta.url);
 const { ZipArchive } = require('archiver');
 
 const MANIFEST_VERSION = 1;
+const PRIVATE_DIRECTORY_MODE = 0o700;
+const PRIVATE_FILE_MODE = 0o600;
+const EXTRACTION_WRITE_FLAGS = fs.constants.O_WRONLY
+  | fs.constants.O_CREAT
+  | fs.constants.O_EXCL
+  | (process.platform === 'win32' ? 0 : (fs.constants.O_NOFOLLOW || 0));
 
 let debugLog = null;
 let getDb = () => null;
@@ -36,6 +42,66 @@ let recoveryStore = null;
 
 async function pathExists(p) {
   try { await fs.promises.access(p); return true; } catch { return false; }
+}
+
+async function createPrivateTempDirectory(prefix) {
+  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), prefix));
+
+  try {
+    if (process.platform !== 'win32') {
+      await fs.promises.chmod(tempDir, PRIVATE_DIRECTORY_MODE);
+    }
+
+    const stat = await fs.promises.lstat(tempDir);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      throw new Error('Temporary path is not a private directory');
+    }
+    if (typeof process.getuid === 'function' && stat.uid !== process.getuid()) {
+      throw new Error('Temporary directory is not owned by the current user');
+    }
+    if (process.platform !== 'win32' && (stat.mode & 0o077) !== 0) {
+      throw new Error('Temporary directory permissions are not private');
+    }
+
+    return tempDir;
+  } catch (error) {
+    try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch { /* ignore */ }
+    throw error;
+  }
+}
+
+async function ensureSafeExtractionDirectory(rootDir, targetDir) {
+  const normalizedRoot = path.resolve(rootDir);
+  const normalizedTarget = path.resolve(targetDir);
+  const relativeTarget = path.relative(normalizedRoot, normalizedTarget);
+
+  if (relativeTarget === '..'
+      || relativeTarget.startsWith(`..${path.sep}`)
+      || path.isAbsolute(relativeTarget)) {
+    throw new Error('Extraction directory escapes the temporary root');
+  }
+
+  const directories = [normalizedRoot];
+  let currentDir = normalizedRoot;
+  if (relativeTarget) {
+    for (const segment of relativeTarget.split(path.sep)) {
+      currentDir = path.join(currentDir, segment);
+      directories.push(currentDir);
+    }
+  }
+
+  for (const directory of directories) {
+    try {
+      await fs.promises.mkdir(directory, { mode: PRIVATE_DIRECTORY_MODE });
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+    }
+
+    const stat = await fs.promises.lstat(directory);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      throw new Error(`Extraction path component is not a directory: ${directory}`);
+    }
+  }
 }
 
 async function copyDirectoryRecursive(src, dest) {
@@ -191,6 +257,7 @@ async function buildManifest(paths) {
  */
 async function exportLibrary(outputPath, progressCallback = () => {}) {
   const logCtx = { module: 'library-transfer-manager', function: 'exportLibrary' };
+  let tempDir = null;
 
   try {
     const paths = getLibraryPaths();
@@ -207,8 +274,9 @@ async function exportLibrary(outputPath, progressCallback = () => {}) {
     // Copy database to temp location for safe snapshot
     let tempDbPath = null;
     if (manifest.contents.hasDatabase) {
-      tempDbPath = path.join(os.tmpdir(), `mxvoice-export-${Date.now()}.db`);
-      await fs.promises.copyFile(paths.dbPath, tempDbPath);
+      tempDir = await createPrivateTempDirectory('mxvoice-export-');
+      tempDbPath = path.join(tempDir, 'mxvoice.db');
+      await fs.promises.copyFile(paths.dbPath, tempDbPath, fs.constants.COPYFILE_EXCL);
       debugLog?.info('Database snapshot created', { ...logCtx, tempDbPath });
     }
 
@@ -283,11 +351,6 @@ async function exportLibrary(outputPath, progressCallback = () => {}) {
     await archive.finalize();
     await archivePromise;
 
-    // Clean up temp database
-    if (tempDbPath) {
-      try { await fs.promises.unlink(tempDbPath); } catch { /* ignore */ }
-    }
-
     const archiveStat = await fs.promises.stat(outputPath);
     progressCallback({ percent: 100, message: 'Export complete!' });
 
@@ -304,6 +367,14 @@ async function exportLibrary(outputPath, progressCallback = () => {}) {
     // Clean up partial output file
     try { if (await pathExists(outputPath)) await fs.promises.unlink(outputPath); } catch { /* ignore */ }
     return { success: false, error: error.message };
+  } finally {
+    if (tempDir) {
+      try {
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+      } catch {
+        debugLog?.warn('Could not clean up export temp directory', { ...logCtx, tempDir });
+      }
+    }
   }
 }
 
@@ -435,19 +506,22 @@ function extractZipWithProgress(archivePath, destDir, onProgress = () => {}) {
 
         if (/\/$/.test(entry.fileName)) {
           // Directory entry
-          fs.promises.mkdir(destPath, { recursive: true })
+          ensureSafeExtractionDirectory(normalizedDir, normalizedDest)
             .then(advance)
             .catch((dirErr) => handleEntryError(entry.fileName, dirErr));
         } else {
           // File entry — ensure parent directory exists, then extract
-          fs.promises.mkdir(path.dirname(destPath), { recursive: true }).then(() => {
+          ensureSafeExtractionDirectory(normalizedDir, path.dirname(normalizedDest)).then(() => {
             zipfile.openReadStream(entry, (streamErr, readStream) => {
               if (streamErr) {
                 handleEntryError(entry.fileName, streamErr);
                 return;
               }
 
-              const writeStream = fs.createWriteStream(destPath);
+              const writeStream = fs.createWriteStream(normalizedDest, {
+                flags: EXTRACTION_WRITE_FLAGS,
+                mode: PRIVATE_FILE_MODE
+              });
               readStream.pipe(writeStream);
 
               writeStream.on('close', advance);
@@ -532,9 +606,8 @@ async function importLibrary(archivePath, progressCallback = () => {}) {
 
     progressCallback({ percent: 5, message: 'Extracting archive...' });
 
-    // Extract to temp directory with progress reporting
-    const tempDir = path.join(os.tmpdir(), `mxvlib-import-${Date.now()}`);
-    await fs.promises.mkdir(tempDir, { recursive: true });
+    // Extract to an atomically created private directory with progress reporting
+    const tempDir = await createPrivateTempDirectory('mxvlib-import-');
 
     try {
       const { renamedFiles, errors: extractErrors } = await extractZipWithProgress(
